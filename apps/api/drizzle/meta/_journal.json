@@ -15,6 +15,13 @@
       "when": 1794596885819,
       "tag": "0001_papel_acesso_total",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794596945980,
+      "tag": "0002_auditoria",
+      "breakpoints": true
     }
   ]
 }
