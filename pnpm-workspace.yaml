@@ -1,0 +1,20 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Segurança da cadeia de suprimentos.
+# Só instala versões publicadas há pelo menos 7 dias (em minutos). Com o valor explícito,
+# o pnpm também valida o lockfile e falha em vez de aceitar versões novas em silêncio.
+minimumReleaseAge: 10080
+# Falha se uma versão nova de um pacote tiver menos garantias de procedência que as anteriores
+# (ex.: deixou de ser publicada com provenance), sinal comum de conta comprometida.
+trustPolicy: no-downgrade
+# Scripts de instalação de dependências só rodam se liberados em `allowBuilds`; o resto falha o install.
+strictDepBuilds: true
+engineStrict: true
+saveExact: true
+
+allowBuilds:
+  '@swc/core': false
+  '@scarf/scarf': false
+  esbuild: false

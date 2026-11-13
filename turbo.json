@@ -1,0 +1,39 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!.env*", "!**/*.test.*"],
+      "outputs": ["dist/**"]
+    },
+    "openapi": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "!src/**/*.test.ts"],
+      "outputs": ["openapi.json"]
+    },
+    "generate": {
+      "dependsOn": ["@repo/api#openapi"],
+      "inputs": ["kubb.config.ts", "../api/openapi.json"],
+      "outputs": ["src/gen/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

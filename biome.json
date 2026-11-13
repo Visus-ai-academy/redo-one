@@ -1,0 +1,65 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "extends": ["@repo/config/biome"],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!apps/web/src/routeTree.gen.ts",
+      "!apps/web/src/gen",
+      "!apps/api/openapi.json",
+      "!apps/api/drizzle",
+      "!**/*.md"
+    ]
+  },
+  "overrides": [
+    {
+      "includes": ["apps/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/**"],
+      "linter": {
+        "domains": {
+          "react": "recommended"
+        },
+        "rules": {
+          "correctness": {
+            "useHookAtTopLevel": "error"
+          },
+          "style": {
+            "useComponentExportOnlyModules": "error"
+          },
+          "nursery": {
+            "noTailwindRawColors": "error",
+            "useTailwindSortedClasses": {
+              "level": "error",
+              "fix": "safe"
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/routes/**", "apps/web/**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useComponentExportOnlyModules": "off"
+          }
+        }
+      }
+    }
+  ]
+}

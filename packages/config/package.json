@@ -1,0 +1,26 @@
+{
+  "name": "@repo/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/node.json": "./tsconfig/node.json",
+    "./tsconfig/react.json": "./tsconfig/react.json",
+    "./biome": "./biome/biome.json"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.18.0",
+      "onFail": "error"
+    }
+  },
+  "scripts": {
+    "lint": "biome lint --error-on-warnings ."
+  },
+  "peerDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "typescript": "6.0.3"
+  }
+}

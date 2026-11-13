@@ -1,0 +1,29 @@
+import { QueryClient } from '@tanstack/react-query';
+import { createRouter } from '@tanstack/react-router';
+import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
+
+import { routeTree } from './routeTree.gen';
+
+export function getRouter() {
+  // Um QueryClient por router: no SSR, um singleton vazaria dados entre requisições.
+  const queryClient = new QueryClient();
+
+  const router = createRouter({
+    routeTree,
+    context: { queryClient },
+    scrollRestoration: true,
+    // Deixa o TanStack Query controlar a validade dos dados, não o cache de preload do router.
+    defaultPreloadStaleTime: 0,
+  });
+
+  // Provê o QueryClientProvider e faz a desidratação/hidratação do cache entre servidor e cliente.
+  setupRouterSsrQueryIntegration({ router, queryClient });
+
+  return router;
+}
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: ReturnType<typeof getRouter>;
+  }
+}
