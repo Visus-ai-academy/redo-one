@@ -33,7 +33,8 @@ API em NestJS 12 (`@nestjs/platform-express`), CommonJS com `module: NodeNext`.
 | --- | --- | --- |
 | hexagonal | `ingestao`, `faturamento`, `repasse`, `credito-pre-pago`, `contratos`, `distribuicao` | `hexagonal-architecture` |
 | modular-ddd | `escala` | `nest-module` (variante modular-ddd) |
-| modular | `qualidade`, `analytics`, `catalogo`, `medicos`, `identidade` | `nest-module` |
+| modular | `qualidade`, `catalogo`, `medicos`, `identidade` | `nest-module` |
+| vertical slice | `analytics` | convenção abaixo |
 
 Critério para o nível de um contexto:
 
@@ -44,6 +45,24 @@ Critério para o nível de um contexto:
 **Por quê:** no legado, a mesma ação (ex.: fechar competência, reprocessar laudos) era disparada por tela, cron, RPA e webhook, e cada caminho reimplementava parte da regra; faturamento, repasse e distribuição tinham contas duplicadas e regras espalhadas. Os seis contextos hexagonais concentram regra rica, integrações (Omie, ClickSign, Altis, MobileMed, MySuite) e várias entradas. Nos demais, hexagonal só acrescentaria cerimônia.
 
 **Revisar se:** um contexto ganhar regra rica ou uma 2ª integração/entrada (sobe de nível) ou virar só CRUD (desce). A mudança vale só para aquele módulo; atualize esta tabela.
+
+**Vertical slice (`analytics`):** painéis e relatórios só de leitura (volumetria, painel executivo, painel TV, análise preditiva, painel IA, painel do médico).
+
+```
+src/analytics/
+  analytics.module.ts
+  indicadores/                          # fórmula oficial de cada KPI e filtros comuns (período, cliente, exclusões)
+  <painel>/                             # uma fatia por painel ou consulta, ex.: volumetria-mensal/
+    <painel>.controller.ts
+    <painel>.query.ts                   # interface da consulta + token de injeção
+    drizzle-<painel>.query.ts           # implementação: lê só as tabelas de totais pré-somados
+    <painel>.query.test.ts
+```
+
+- Uma fatia nunca define a própria fórmula de KPI: usa a de `indicadores/`. Painel novo é fatia nova; KPI novo entra em `indicadores/`.
+- Sem escrita: os dados vêm dos contextos que os produzem (ingestão, faturamento, repasse...).
+- **Por quê:** o módulo é só leitura e feito de consultas independentes (no legado, ~2.000 linhas num arquivo e 112 KPIs); centralizar as fórmulas resolve as contas duplicadas do legado.
+- **Revisar se:** surgir regra de negócio com escrita no `analytics` (ela pertence a outro contexto).
 
 <!-- Definida pelo /init-project. Níveis possíveis:
      - modular: módulos Nest com controller/service/repositório (skill `nest-module`)

@@ -62,7 +62,7 @@ Nomes do domínio em português, sem acento; termos técnicos do framework em in
 | Estilo de API | REST + OpenAPI | Alimenta o cliente gerado pelo Kubb; fixo pela stack | — |
 | Idioma | pt-BR, datas em UTC no banco | Fixo pela stack | — |
 | Escala | Moderada | Poucos usuários simultâneos (<30), mas ~1 milhão de laudos e importação a cada 30 min; a lentidão do legado veio do desenho, não do volume | >100 usuários simultâneos ou exigência de alta disponibilidade |
-| Arquitetura | Por contexto (ver `apps/api/CLAUDE.md`) | Regra rica → DDD tático; regra rica + várias integrações ou entradas → hexagonal; senão modular | Um contexto ganha ou perde regra rica, integrações ou entradas |
+| Arquitetura | Por contexto (ver `apps/api/CLAUDE.md`); vertical slice no `analytics` | Regra rica → DDD tático; regra rica + várias integrações ou entradas → hexagonal; painéis só de leitura → vertical slice com fórmulas de KPI centralizadas; senão modular | Um contexto ganha ou perde regra rica, integrações ou entradas |
 | Nomes no código | Domínio em pt-BR sem acento, técnico em inglês | Linguagem ubíqua: termos como competência e repasse não têm tradução fiel | — |
 | Multi-tenancy | Nenhum | Uma empresa com muitos clientes; contratados só emitem nota | O One for vendido para outras empresas |
 | Login | Próprio (e-mail ou CPF + senha), sessão no banco em cookie `httpOnly`; robôs com chave de API própria | Sem custo externo; permite derrubar sessões | A equipe quiser SSO Google/Microsoft |
