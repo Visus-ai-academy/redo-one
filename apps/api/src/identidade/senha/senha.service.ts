@@ -85,22 +85,24 @@ export class SenhaService {
     nome: string;
     email: string;
     papel: string;
-    convidadoPor: { id: string; nome: string };
+    /** Nulo no primeiro Administrador, criado pelo comando `admin:criar`. */
+    convidadoPor: { id: string; nome: string } | null;
   }) {
     const agora = this.clock.now();
     const token = randomBytes(32).toString('base64url');
     return {
+      link: this.link(token),
       token: {
         tipo: 'convite' as const,
         tokenHash: hashDoToken(token),
         criadoEm: agora,
         expiraEm: new Date(agora.getTime() + CONVITE_VALIDADE_MS),
-        criadoPorId: dados.convidadoPor.id,
+        criadoPorId: dados.convidadoPor?.id ?? null,
       },
       email: emailConvite({
         para: dados.email,
         nome: dados.nome,
-        convidadoPor: dados.convidadoPor.nome,
+        convidadoPor: dados.convidadoPor?.nome ?? 'A equipe do One',
         papel: dados.papel,
         link: this.link(token),
       }),

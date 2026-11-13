@@ -20,6 +20,9 @@ import { PapeisController } from './papeis/papeis.controller';
 import { PAPEIS_REPOSITORY } from './papeis/papeis.repository';
 import { PapeisService } from './papeis/papeis.service';
 import { PermissoesController } from './papeis/permissoes.controller';
+import { DrizzlePapeisSistemaRepository } from './primeiro-acesso/drizzle-papeis-sistema.repository';
+import { PAPEIS_SISTEMA_REPOSITORY } from './primeiro-acesso/papeis-sistema.repository';
+import { PrimeiroAcessoService } from './primeiro-acesso/primeiro-acesso.service';
 import { ChaveRoboAutenticador } from './robos/chave-robo-autenticador';
 import { ChavesRoboController } from './robos/chaves-robo.controller';
 import { CHAVES_ROBO_REPOSITORY } from './robos/chaves-robo.repository';
@@ -53,6 +56,8 @@ import { UsuariosService } from './usuarios/usuarios.service';
     ChavesRoboController,
   ],
   providers: [
+    PrimeiroAcessoService,
+    { provide: PAPEIS_SISTEMA_REPOSITORY, useClass: DrizzlePapeisSistemaRepository },
     ChavesRoboService,
     ChaveRoboAutenticador,
     { provide: CHAVES_ROBO_REPOSITORY, useClass: DrizzleChavesRoboRepository },
