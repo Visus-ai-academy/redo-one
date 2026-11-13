@@ -1,4 +1,4 @@
-/** Quem fez a requisição: uma pessoa logada (sessão). Robôs entram na etapa das chaves de API. */
+/** Quem fez a requisição: uma pessoa logada (sessão) ou um robô (chave de API). */
 export interface PrincipalUsuario {
   tipo: 'usuario';
   usuarioId: string;
@@ -11,7 +11,16 @@ export interface PrincipalUsuario {
   permissoes: ReadonlySet<string>;
 }
 
-export type Principal = PrincipalUsuario;
+/** Robô autenticado por chave. Só entra em rotas marcadas com `@PermiteRobo()`. */
+export interface PrincipalRobo {
+  tipo: 'robo';
+  chaveId: string;
+  nome: string;
+  acessoTotal: false;
+  permissoes: ReadonlySet<string>;
+}
+
+export type Principal = PrincipalUsuario | PrincipalRobo;
 
 export function temPermissao(principal: Principal, chave: string): boolean {
   return principal.acessoTotal || principal.permissoes.has(chave);

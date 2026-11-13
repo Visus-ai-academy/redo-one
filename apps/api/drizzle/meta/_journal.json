@@ -29,6 +29,13 @@
       "when": 1794597923968,
       "tag": "0003_tokens_senha",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794598490555,
+      "tag": "0004_chaves_robo",
+      "breakpoints": true
     }
   ]
 }

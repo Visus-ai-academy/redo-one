@@ -851,6 +851,142 @@
           "identidade"
         ]
       }
+    },
+    "/chaves-robo": {
+      "get": {
+        "operationId": "ChavesRoboController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChaveRoboDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "post": {
+        "operationId": "ChavesRoboController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaChaveRoboDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaveCriadaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/chaves-robo/permissoes": {
+      "get": {
+        "operationId": "ChavesRoboController_permissoes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "O que uma chave de robô pode receber.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PermissaoRoboDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/chaves-robo/{id}/nova": {
+      "post": {
+        "operationId": "ChavesRoboController_gerarNova",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Outra chave ativa para o mesmo robô; a antiga vale até ser revogada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaveCriadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/chaves-robo/{id}/revogar": {
+      "post": {
+        "operationId": "ChavesRoboController_revogar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "O robô para de funcionar na próxima chamada."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
     }
   },
   "info": {
@@ -1633,6 +1769,140 @@
           "sucesso",
           "ip",
           "userAgent"
+        ]
+      },
+      "ChaveRoboDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "permissoes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prefixo": {
+            "type": "string",
+            "example": "one_7f3a9c2e",
+            "description": "Começo da chave, para reconhecer."
+          },
+          "expiraEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "revogadaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "ultimoUsoEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "ultimoIp": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadaEm": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "permissoes",
+          "prefixo",
+          "expiraEm",
+          "revogadaEm",
+          "ultimoUsoEm",
+          "ultimoIp",
+          "criadaEm"
+        ]
+      },
+      "PermissaoRoboDto": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "example": "ingestao.laudos.importar"
+          },
+          "rotulo": {
+            "type": "string",
+            "example": "Importar laudos"
+          }
+        },
+        "required": [
+          "chave",
+          "rotulo"
+        ]
+      },
+      "NovaChaveRoboDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Importação de laudos",
+            "maxLength": 80
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "permissoes": {
+            "example": [
+              "ingestao.laudos.importar"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validadeDias": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              90,
+              365
+            ],
+            "description": "Dias até vencer; null = sem validade."
+          }
+        },
+        "required": [
+          "nome",
+          "permissoes",
+          "validadeDias"
+        ]
+      },
+      "ChaveCriadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chave": {
+            "type": "string",
+            "description": "A chave inteira. Só aparece nesta resposta: guarde no cofre de senhas do servidor do robô."
+          }
+        },
+        "required": [
+          "id",
+          "chave"
         ]
       }
     }

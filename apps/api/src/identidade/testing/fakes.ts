@@ -14,6 +14,11 @@ import type {
   PapelResumo,
 } from '../papeis/gestao-papeis.repository';
 import type { AcessoDoPapel, PapeisRepository } from '../papeis/papeis.repository';
+import type {
+  ChaveRobo,
+  ChavesRoboRepository,
+  NovaChaveRobo,
+} from '../robos/chaves-robo.repository';
 import type { PasswordHasher } from '../senha/password-hasher';
 import type {
   NovoTokenSenha,
@@ -431,5 +436,44 @@ export class InMemoryContaRepository implements ContaRepository {
       .sort((a, b) => b.em.getTime() - a.em.getTime())
       .slice(0, limite)
       .map((t) => ({ em: t.em, sucesso: t.sucesso, ip: t.ip, userAgent: t.userAgent }));
+  }
+}
+
+export class InMemoryChavesRoboRepository implements ChavesRoboRepository {
+  readonly chaves: (ChaveRobo & { tokenHash: string; criadaPorId: string })[] = [];
+  usosRegistrados = 0;
+
+  async listar() {
+    return this.chaves.map(({ tokenHash, criadaPorId, ...chave }) => chave);
+  }
+
+  async buscar(id: string) {
+    return (await this.listar()).find((c) => c.id === id) ?? null;
+  }
+
+  async buscarPorHash(tokenHash: string) {
+    const achada = this.chaves.find((c) => c.tokenHash === tokenHash);
+    return achada ? this.buscar(achada.id) : null;
+  }
+
+  async criar(chave: NovaChaveRobo) {
+    const id = `k-${this.chaves.length + 1}`;
+    this.chaves.push({ ...chave, id, revogadaEm: null, ultimoUsoEm: null, ultimoIp: null });
+    return id;
+  }
+
+  async revogar(id: string, em: Date) {
+    this.porId(id).revogadaEm = em;
+  }
+
+  async registrarUso(id: string, em: Date, ip: string) {
+    Object.assign(this.porId(id), { ultimoUsoEm: em, ultimoIp: ip });
+    this.usosRegistrados++;
+  }
+
+  porId(id: string) {
+    const chave = this.chaves.find((c) => c.id === id);
+    if (!chave) throw new Error(`chave ${id} não existe no fake`);
+    return chave;
   }
 }

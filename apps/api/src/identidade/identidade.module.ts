@@ -20,6 +20,11 @@ import { PapeisController } from './papeis/papeis.controller';
 import { PAPEIS_REPOSITORY } from './papeis/papeis.repository';
 import { PapeisService } from './papeis/papeis.service';
 import { PermissoesController } from './papeis/permissoes.controller';
+import { ChaveRoboAutenticador } from './robos/chave-robo-autenticador';
+import { ChavesRoboController } from './robos/chaves-robo.controller';
+import { CHAVES_ROBO_REPOSITORY } from './robos/chaves-robo.repository';
+import { ChavesRoboService } from './robos/chaves-robo.service';
+import { DrizzleChavesRoboRepository } from './robos/drizzle-chaves-robo.repository';
 import { Argon2PasswordHasher } from './senha/argon2-password-hasher';
 import { DrizzleTokensSenhaRepository } from './senha/drizzle-tokens-senha.repository';
 import { PASSWORD_HASHER } from './senha/password-hasher';
@@ -45,8 +50,12 @@ import { UsuariosService } from './usuarios/usuarios.service';
     SenhaController,
     UsuariosController,
     ContaController,
+    ChavesRoboController,
   ],
   providers: [
+    ChavesRoboService,
+    ChaveRoboAutenticador,
+    { provide: CHAVES_ROBO_REPOSITORY, useClass: DrizzleChavesRoboRepository },
     ContaService,
     { provide: CONTA_REPOSITORY, useClass: DrizzleContaRepository },
     UsuariosService,

@@ -22,7 +22,7 @@ import {
 
 import { COOKIE_SESSAO, gravarCookieSessao, type RespostaComCookie } from '../acesso/cookie';
 import { PrincipalAtual, Public } from '../acesso/decorators';
-import type { Principal } from '../principal';
+import type { PrincipalUsuario } from '../principal';
 import { AcessoBloqueadoError, CredenciaisInvalidasError } from './autenticacao.errors';
 import { AutenticacaoService } from './autenticacao.service';
 import { LoginDto } from './dto/login.dto';
@@ -62,7 +62,7 @@ export class SessaoController {
   @Get()
   @ApiOkResponse({ type: SessaoAtualDto, description: 'Quem está logado e o que pode fazer.' })
   @ApiUnauthorizedResponse({ description: 'Sem sessão válida.' })
-  atual(@PrincipalAtual() principal: Principal): SessaoAtualDto {
+  atual(@PrincipalAtual() principal: PrincipalUsuario): SessaoAtualDto {
     return {
       usuario: {
         id: principal.usuarioId,
@@ -80,7 +80,7 @@ export class SessaoController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Sessão encerrada e cookie apagado.' })
   async sair(
-    @PrincipalAtual({ opcional: true }) principal: Principal | undefined,
+    @PrincipalAtual({ opcional: true }) principal: PrincipalUsuario | undefined,
     @Res({ passthrough: true }) resposta: RespostaComCookie,
   ): Promise<void> {
     if (principal) await this.autenticacao.sair(principal.sessaoId);

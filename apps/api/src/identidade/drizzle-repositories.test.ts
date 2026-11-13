@@ -12,6 +12,7 @@ import * as schema from '../database/schema';
 import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentativas-login.repository';
 import { DrizzleGestaoPapeisRepository } from './papeis/drizzle-gestao-papeis.repository';
 import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
+import { DrizzleChavesRoboRepository } from './robos/drizzle-chaves-robo.repository';
 import { DrizzleTokensSenhaRepository } from './senha/drizzle-tokens-senha.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { DrizzleGestaoUsuariosRepository } from './usuarios/drizzle-gestao-usuarios.repository';
@@ -46,7 +47,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table tokens_senha, tentativas_login, sessoes, usuarios, papeis_permissoes, papeis cascade`,
+      sql`truncate table chaves_robo, tokens_senha, tentativas_login, sessoes, usuarios, papeis_permissoes, papeis cascade`,
     );
     papelId = primeira(
       await db.insert(schema.papeis).values({ nome: 'Financeiro' }).returning(),
@@ -292,6 +293,33 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
       cpfFinal: '01',
       papel: { id: papelId, nome: 'Financeiro' },
     });
+  });
+
+  it('chaves de robô: cria, acha pelo hash, registra uso e revoga', async () => {
+    const repo = new DrizzleChavesRoboRepository(db);
+    const em = new Date('2026-11-13T12:00:00Z');
+
+    const id = await repo.criar({
+      nome: 'Importação de laudos',
+      descricao: null,
+      permissoes: ['ingestao.laudos.importar'],
+      prefixo: 'one_abcdefgh',
+      tokenHash: 'hash-da-chave',
+      expiraEm: null,
+      criadaPorId: usuarioId,
+      criadaEm: em,
+    });
+    await repo.registrarUso(id, em, '10.0.4.12');
+    await repo.revogar(id, em);
+
+    await expect(repo.buscarPorHash('hash-da-chave')).resolves.toMatchObject({
+      id,
+      permissoes: ['ingestao.laudos.importar'],
+      ultimoUsoEm: em,
+      ultimoIp: '10.0.4.12',
+      revogadaEm: em,
+    });
+    await expect(repo.listar()).resolves.toHaveLength(1);
   });
 
   it('conta só as falhas do IP a partir do instante pedido', async () => {

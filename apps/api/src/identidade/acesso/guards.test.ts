@@ -2,11 +2,12 @@ import { type ExecutionContext, ForbiddenException, UnauthorizedException } from
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { PrincipalUsuario } from '../principal';
+import type { PrincipalRobo, PrincipalUsuario } from '../principal';
+import type { ChaveRoboAutenticador } from '../robos/chave-robo-autenticador';
 import type { SessaoAutenticador } from '../sessoes/sessao-autenticador';
 import { AutenticacaoGuard } from './autenticacao.guard';
 import { lerCookie } from './cookie';
-import { Permissao, Public } from './decorators';
+import { Permissao, PermiteRobo, Public } from './decorators';
 import { PermissaoGuard } from './permissao.guard';
 
 class Rotas {
@@ -17,6 +18,10 @@ class Rotas {
 
   @Permissao('usuarios.ver')
   usuarios() {}
+
+  @PermiteRobo()
+  @Permissao('ingestao.laudos.importar')
+  importar() {}
 }
 
 function contexto(rota: keyof Rotas, request: Record<string, unknown>): ExecutionContext {
@@ -50,14 +55,62 @@ describe('lerCookie', () => {
 });
 
 describe('AutenticacaoGuard', () => {
-  const montar = (principal: PrincipalUsuario | null) => {
+  const montar = (principal: PrincipalUsuario | null, robo: PrincipalRobo | null = null) => {
     const autenticador = { autenticar: vi.fn(async () => principal) };
+    const chaves = { autenticar: vi.fn(async () => robo) };
     const guard = new AutenticacaoGuard(
       new Reflector(),
       autenticador as unknown as SessaoAutenticador,
+      chaves as unknown as ChaveRoboAutenticador,
     );
-    return { guard, autenticador };
+    return { guard, autenticador, chaves };
   };
+
+  const robo: PrincipalRobo = {
+    tipo: 'robo',
+    chaveId: 'k-1',
+    nome: 'Importação de laudos',
+    acessoTotal: false,
+    permissoes: new Set(['ingestao.laudos.importar']),
+  };
+
+  it('robô com chave válida (Bearer) entra em rota @PermiteRobo()', async () => {
+    const { guard, chaves } = montar(null, robo);
+    const request: Record<string, unknown> = {
+      headers: { authorization: 'Bearer one_abc' },
+      ip: '10.0.4.12',
+    };
+
+    await expect(guard.canActivate(contexto('importar', request))).resolves.toBe(true);
+    expect(chaves.autenticar).toHaveBeenCalledWith('one_abc', '10.0.4.12');
+    expect(request.principal).toBe(robo);
+  });
+
+  it('aceita a chave no x-api-key, como o legado, durante a transição', async () => {
+    const { guard, chaves } = montar(null, robo);
+    const request = { headers: { 'x-api-key': 'one_abc' }, ip: '10.0.4.12' };
+
+    await expect(guard.canActivate(contexto('importar', request))).resolves.toBe(true);
+    expect(chaves.autenticar).toHaveBeenCalledWith('one_abc', '10.0.4.12');
+  });
+
+  it('robô com chave válida não entra em rota de pessoa (sem @PermiteRobo())', async () => {
+    const { guard } = montar(null, robo);
+    const request = { headers: { authorization: 'Bearer one_abc' }, ip: '10.0.4.12' };
+
+    await expect(guard.canActivate(contexto('fechada', request))).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('chave inválida responde 401, mesmo em rota @PermiteRobo()', async () => {
+    const { guard } = montar(null, null);
+    const request = { headers: { authorization: 'Bearer one_errada' }, ip: '10.0.4.12' };
+
+    await expect(guard.canActivate(contexto('importar', request))).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
 
   it('deixa passar rota @Public() sem cookie', async () => {
     const { guard } = montar(null);

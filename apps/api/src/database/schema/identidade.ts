@@ -117,3 +117,24 @@ export const tokensSenha = pgTable(
   },
   (t) => [index('tokens_senha_usuario_tipo_idx').on(t.usuarioId, t.tipo, t.criadoEm)],
 );
+
+/** Chaves de API dos robôs (importação, distribuição, comentários, Service Desk). */
+export const chavesRobo = pgTable('chaves_robo', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** Nome do robô; ao trocar a chave, a nova repete o nome. */
+  nome: text('nome').notNull(),
+  descricao: text('descricao'),
+  /** Começo da chave (`one_` + 8), para reconhecer; a chave inteira nunca é gravada. */
+  prefixo: text('prefixo').notNull(),
+  /** SHA-256 da chave. Chave longa e aleatória: não precisa de hash lento. */
+  tokenHash: text('token_hash').notNull().unique(),
+  /** Chaves `ingestao.laudos.importar`... (catálogo `PERMISSOES_ROBO`). */
+  permissoes: text('permissoes').array().notNull(),
+  /** Nulo: sem validade. */
+  expiraEm: timestamp('expira_em', { withTimezone: true }),
+  revogadaEm: timestamp('revogada_em', { withTimezone: true }),
+  ultimoUsoEm: timestamp('ultimo_uso_em', { withTimezone: true }),
+  ultimoIp: text('ultimo_ip'),
+  criadaPorId: uuid('criada_por_id').references(() => usuarios.id, { onDelete: 'set null' }),
+  criadaEm: timestamp('criada_em', { withTimezone: true }).notNull().defaultNow(),
+});
