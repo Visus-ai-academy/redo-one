@@ -9,6 +9,10 @@ import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentati
 import { SessaoController } from './autenticacao/sessao.controller';
 import { TENTATIVAS_LOGIN_REPOSITORY } from './autenticacao/tentativas-login.repository';
 import { CLOCK, systemClock } from './clock';
+import { ContaController } from './conta/conta.controller';
+import { CONTA_REPOSITORY } from './conta/conta.repository';
+import { ContaService } from './conta/conta.service';
+import { DrizzleContaRepository } from './conta/drizzle-conta.repository';
 import { DrizzleGestaoPapeisRepository } from './papeis/drizzle-gestao-papeis.repository';
 import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
 import { GESTAO_PAPEIS_REPOSITORY } from './papeis/gestao-papeis.repository';
@@ -40,8 +44,11 @@ import { UsuariosService } from './usuarios/usuarios.service';
     PermissoesController,
     SenhaController,
     UsuariosController,
+    ContaController,
   ],
   providers: [
+    ContaService,
+    { provide: CONTA_REPOSITORY, useClass: DrizzleContaRepository },
     UsuariosService,
     { provide: GESTAO_USUARIOS_REPOSITORY, useClass: DrizzleGestaoUsuariosRepository },
     SenhaService,

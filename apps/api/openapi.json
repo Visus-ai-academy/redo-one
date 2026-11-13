@@ -713,6 +713,144 @@
           "identidade"
         ]
       }
+    },
+    "/conta": {
+      "get": {
+        "operationId": "ContaController_obter",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinhaContaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "patch": {
+        "operationId": "ContaController_atualizar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarContaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/conta/senha": {
+      "post": {
+        "operationId": "ContaController_trocarSenha",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrocarSenhaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenhaTrocadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Senha atual errada ou senha nova fraca."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/conta/sessoes": {
+      "delete": {
+        "operationId": "ContaController_encerrarOutrasSessoes",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Todas as outras sessões encerradas (esta continua)."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/conta/sessoes/{sessaoId}": {
+      "delete": {
+        "operationId": "ContaController_encerrarSessao",
+        "parameters": [
+          {
+            "name": "sessaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/conta/acessos": {
+      "get": {
+        "operationId": "ContaController_acessos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Entradas dos últimos 30 dias.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AcessoRecenteDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
     }
   },
   "info": {
@@ -1353,6 +1491,148 @@
         },
         "required": [
           "papelId"
+        ]
+      },
+      "MinhaSessaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadaEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "ultimoUsoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "atual": {
+            "type": "boolean",
+            "description": "É a sessão desta requisição."
+          }
+        },
+        "required": [
+          "id",
+          "ip",
+          "userAgent",
+          "criadaEm",
+          "ultimoUsoEm",
+          "atual"
+        ]
+      },
+      "MinhaContaDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "cpfFinal": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só os 2 últimos dígitos do CPF."
+          },
+          "papel": {
+            "$ref": "#/components/schemas/PapelDoUsuarioDto"
+          },
+          "senhaAlteradaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "sessoesAbertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MinhaSessaoDto"
+            }
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "cpfFinal",
+          "papel",
+          "senhaAlteradaEm",
+          "sessoesAbertas"
+        ]
+      },
+      "AtualizarContaDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "nome"
+        ]
+      },
+      "TrocarSenhaDto": {
+        "type": "object",
+        "properties": {
+          "senhaAtual": {
+            "type": "string",
+            "format": "password"
+          },
+          "novaSenha": {
+            "type": "string",
+            "format": "password",
+            "description": "Pelo menos 8 caracteres, com letras e números."
+          }
+        },
+        "required": [
+          "senhaAtual",
+          "novaSenha"
+        ]
+      },
+      "SenhaTrocadaDto": {
+        "type": "object",
+        "properties": {
+          "sessoesEncerradas": {
+            "type": "number",
+            "description": "Outras sessões encerradas pela troca."
+          }
+        },
+        "required": [
+          "sessoesEncerradas"
+        ]
+      },
+      "AcessoRecenteDto": {
+        "type": "object",
+        "properties": {
+          "em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sucesso": {
+            "type": "boolean"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "em",
+          "sucesso",
+          "ip",
+          "userAgent"
         ]
       }
     }

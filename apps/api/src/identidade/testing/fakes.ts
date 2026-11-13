@@ -6,6 +6,7 @@ import type {
   TentativasLoginRepository,
 } from '../autenticacao/tentativas-login.repository';
 import type { Clock } from '../clock';
+import type { ContaRepository } from '../conta/conta.repository';
 import type {
   DadosPapel,
   GestaoPapeisRepository,
@@ -397,5 +398,38 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
       situacao,
       ultimoAcessoEm: usos.length ? new Date(Math.max(...usos)) : null,
     };
+  }
+}
+
+export class InMemoryContaRepository implements ContaRepository {
+  readonly senhasAlteradasEm = new Map<string, Date>();
+
+  constructor(
+    private readonly usuarios: InMemoryUsuariosRepository,
+    private readonly tentativas: InMemoryTentativasLoginRepository,
+  ) {}
+
+  async senha(usuarioId: string) {
+    return {
+      hash: this.usuarios.porId(usuarioId).senhaHash,
+      alteradaEm: this.senhasAlteradasEm.get(usuarioId) ?? null,
+    };
+  }
+
+  async atualizarNome(usuarioId: string, nome: string) {
+    this.usuarios.porId(usuarioId).nome = nome;
+  }
+
+  async trocarSenha(usuarioId: string, hash: string, em: Date) {
+    this.usuarios.porId(usuarioId).senhaHash = hash;
+    this.senhasAlteradasEm.set(usuarioId, em);
+  }
+
+  async acessosRecentes(usuarioId: string, desde: Date, limite: number) {
+    return this.tentativas.tentativas
+      .filter((t) => t.usuarioId === usuarioId && t.em >= desde)
+      .sort((a, b) => b.em.getTime() - a.em.getTime())
+      .slice(0, limite)
+      .map((t) => ({ em: t.em, sucesso: t.sucesso, ip: t.ip, userAgent: t.userAgent }));
   }
 }
