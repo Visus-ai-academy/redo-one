@@ -17,4 +17,18 @@ describe('createOpenApiDocument', () => {
 
     await app.close();
   });
+
+  it('documenta o login (POST /sessao) com as respostas 201, 401 e 429', async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const app = moduleRef.createNestApplication();
+    await app.init();
+
+    const document = createOpenApiDocument(app);
+
+    expect(Object.keys(document.paths['/sessao']?.post?.responses ?? {})).toEqual(
+      expect.arrayContaining(['201', '401', '429']),
+    );
+
+    await app.close();
+  });
 });

@@ -1,6 +1,58 @@
 {
   "openapi": "3.0.0",
-  "paths": {},
+  "paths": {
+    "/sessao": {
+      "post": {
+        "operationId": "SessaoController_entrar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sessão aberta; o token vai no cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessaoDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroLoginDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcessoBloqueadoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    }
+  },
   "info": {
     "title": "One API",
     "description": "",
@@ -10,6 +62,96 @@
   "tags": [],
   "servers": [],
   "components": {
-    "schemas": {}
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "identificador": {
+            "type": "string",
+            "description": "E-mail ou CPF (com ou sem pontuação).",
+            "example": "nome@empresa.com.br"
+          },
+          "senha": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "identificador",
+          "senha"
+        ]
+      },
+      "UsuarioSessaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papelId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "papelId"
+        ]
+      },
+      "SessaoDto": {
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioSessaoDto"
+          },
+          "expiraEm": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Quando a sessão expira se não for usada."
+          }
+        },
+        "required": [
+          "usuario",
+          "expiraEm"
+        ]
+      },
+      "ErroLoginDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "E-mail, CPF ou senha incorretos."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AcessoBloqueadoDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Acesso bloqueado por excesso de tentativas."
+          },
+          "bloqueadoAte": {
+            "type": "string",
+            "description": "Quando o login volta a ser aceito."
+          }
+        },
+        "required": [
+          "message",
+          "bloqueadoAte"
+        ]
+      }
+    }
   }
 }
