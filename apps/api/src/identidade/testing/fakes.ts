@@ -1,4 +1,6 @@
 // Implementações em memória para os testes do contexto `identidade`.
+
+import type { Email } from '../../comum/email/envio-email';
 import type {
   TentativaLogin,
   TentativasLoginRepository,
@@ -12,6 +14,12 @@ import type {
 } from '../papeis/gestao-papeis.repository';
 import type { AcessoDoPapel, PapeisRepository } from '../papeis/papeis.repository';
 import type { PasswordHasher } from '../senha/password-hasher';
+import type {
+  NovoTokenSenha,
+  TipoTokenSenha,
+  TokenSenhaEncontrado,
+  TokensSenhaRepository,
+} from '../senha/tokens-senha.repository';
 import type {
   NovaSessao,
   SessaoComUsuario,
@@ -129,6 +137,14 @@ export class InMemorySessoesRepository implements SessoesRepository {
     return abertas.length;
   }
 
+  async encerrarDoUsuario(usuarioId: string, em: Date, excetoSessaoId?: string) {
+    const abertas = this.sessoes.filter(
+      (s) => !s.encerradaEm && s.usuarioId === usuarioId && s.id !== excetoSessaoId,
+    );
+    for (const sessao of abertas) sessao.encerradaEm = em;
+    return abertas.length;
+  }
+
   porId(id: string) {
     const sessao = this.sessoes.find((s) => s.id === id);
     if (!sessao) throw new Error(`sessão ${id} não existe no fake`);
@@ -202,5 +218,70 @@ export class InMemoryTentativasLoginRepository implements TentativasLoginReposit
 
   async contarFalhasPorIp(ip: string, desde: Date) {
     return this.tentativas.filter((t) => t.ip === ip && !t.sucesso && t.em >= desde).length;
+  }
+}
+
+export interface TokenSenhaGuardado extends NovoTokenSenha {
+  id: string;
+  usadoEm: Date | null;
+}
+
+export class InMemoryTokensSenhaRepository implements TokensSenhaRepository {
+  readonly tokens: TokenSenhaGuardado[] = [];
+  readonly emails: Email[] = [];
+
+  constructor(
+    private readonly usuarios: InMemoryUsuariosRepository,
+    private readonly nomesDosPapeis: Record<string, string> = {},
+  ) {}
+
+  async emitir(token: NovoTokenSenha, email: Email) {
+    for (const anterior of this.tokens) {
+      if (anterior.usuarioId === token.usuarioId && anterior.tipo === token.tipo) {
+        anterior.usadoEm ??= token.criadoEm;
+      }
+    }
+    this.tokens.push({ ...token, id: `t-${this.tokens.length + 1}`, usadoEm: null });
+    this.emails.push(email);
+  }
+
+  async buscarPorHash(tokenHash: string): Promise<TokenSenhaEncontrado | null> {
+    const token = this.tokens.find((t) => t.tokenHash === tokenHash);
+    if (!token) return null;
+    const usuario = this.usuarios.porId(token.usuarioId);
+    return {
+      id: token.id,
+      usuarioId: token.usuarioId,
+      tipo: token.tipo,
+      expiraEm: token.expiraEm,
+      usadoEm: token.usadoEm,
+      usuario: {
+        nome: usuario.nome,
+        email: usuario.email,
+        papelId: usuario.papelId,
+        papelNome: this.nomesDosPapeis[usuario.papelId] ?? usuario.papelId,
+        ativo: usuario.ativo,
+      },
+      convidadoPorNome: token.criadoPorId ? this.usuarios.porId(token.criadoPorId).nome : null,
+    };
+  }
+
+  async ultimaEmissao(usuarioId: string, tipo: TipoTokenSenha) {
+    const datas = this.tokens
+      .filter((t) => t.usuarioId === usuarioId && t.tipo === tipo)
+      .map((t) => t.criadoEm.getTime());
+    return datas.length ? new Date(Math.max(...datas)) : null;
+  }
+
+  async usar(tokenId: string, usuarioId: string, senhaHash: string, em: Date) {
+    const token = this.tokens.find((t) => t.id === tokenId);
+    if (!token || token.usadoEm) return false;
+    token.usadoEm = em;
+    Object.assign(this.usuarios.porId(usuarioId), {
+      senhaHash,
+      tentativasFalhas: 0,
+      bloqueadoAte: null,
+    });
+    return true;
   }
 }

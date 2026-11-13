@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-
-import { hashDoToken } from '../autenticacao/autenticacao.service';
 import { CLOCK, type Clock } from '../clock';
 import { PAPEIS_REPOSITORY, type PapeisRepository } from '../papeis/papeis.repository';
 import type { PrincipalUsuario } from '../principal';
+import { hashDoToken } from './abrir-sessao';
 import { SESSAO_INATIVIDADE_MS, SESSAO_RENOVACAO_MINIMA_MS } from './politica-sessao';
 import { SESSOES_REPOSITORY, type SessoesRepository } from './sessoes.repository';
 

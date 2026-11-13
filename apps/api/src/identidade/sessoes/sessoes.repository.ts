@@ -29,4 +29,6 @@ export interface SessoesRepository {
   encerrar(id: string, em: Date): Promise<void>;
   /** Encerra as sessões abertas de todos os usuários do papel; devolve quantas encerrou. */
   encerrarDoPapel(papelId: string, em: Date): Promise<number>;
+  /** Encerra as sessões abertas do usuário, menos a indicada; devolve quantas encerrou. */
+  encerrarDoUsuario(usuarioId: string, em: Date, excetoSessaoId?: string): Promise<number>;
 }

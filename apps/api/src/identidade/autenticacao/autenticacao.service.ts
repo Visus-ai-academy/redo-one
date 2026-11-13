@@ -1,10 +1,10 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import { Inject, Injectable } from '@nestjs/common';
 
 import { CLOCK, type Clock } from '../clock';
 import { PASSWORD_HASHER, type PasswordHasher } from '../senha/password-hasher';
-import { SESSAO_INATIVIDADE_MS, SESSAO_LIMITE_ABSOLUTO_MS } from '../sessoes/politica-sessao';
+import { abrirSessao, type SessaoAberta } from '../sessoes/abrir-sessao';
 import { SESSOES_REPOSITORY, type SessoesRepository } from '../sessoes/sessoes.repository';
 import {
   type IdentificadorLogin,
@@ -29,13 +29,6 @@ export interface EntrarComando {
   senha: string;
   ip: string;
   userAgent: string | null;
-}
-
-export interface SessaoAberta {
-  /** Vai para o cookie; o banco guarda só o hash. */
-  token: string;
-  expiraEm: Date;
-  usuario: { id: string; nome: string; email: string; papelId: string };
 }
 
 @Injectable()
@@ -87,20 +80,11 @@ export class AutenticacaoService {
     await this.usuarios.registrarSucesso(usuario.id);
     await this.registrarTentativa(comando, usuario.id, true, agora);
 
-    const token = randomBytes(32).toString('base64url');
-    const expiraEm = new Date(agora.getTime() + SESSAO_INATIVIDADE_MS);
-    await this.sessoes.criar({
-      usuarioId: usuario.id,
-      tokenHash: hashDoToken(token),
-      criadaEm: agora,
-      expiraEm,
-      expiraAbsolutoEm: new Date(agora.getTime() + SESSAO_LIMITE_ABSOLUTO_MS),
+    return abrirSessao(this.sessoes, usuario, {
       ip: comando.ip,
       userAgent: comando.userAgent,
+      agora,
     });
-
-    const { id, nome, email, papelId } = usuario;
-    return { token, expiraEm, usuario: { id, nome, email, papelId } };
   }
 
   /** Logout: a sessão deixa de valer na hora, mesmo que o cookie continue no navegador. */
@@ -141,8 +125,4 @@ export class AutenticacaoService {
 function lerIdentificador(texto: string): IdentificadorLogin {
   if (texto.includes('@')) return { email: texto.trim().toLowerCase() };
   return { cpf: texto.replace(/\D/g, '') };
-}
-
-export function hashDoToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
 }

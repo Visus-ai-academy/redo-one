@@ -20,19 +20,13 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { COOKIE_SESSAO } from '../acesso/cookie';
+import { COOKIE_SESSAO, gravarCookieSessao, type RespostaComCookie } from '../acesso/cookie';
 import { PrincipalAtual, Public } from '../acesso/decorators';
 import type { Principal } from '../principal';
 import { AcessoBloqueadoError, CredenciaisInvalidasError } from './autenticacao.errors';
 import { AutenticacaoService } from './autenticacao.service';
 import { LoginDto } from './dto/login.dto';
 import { AcessoBloqueadoDto, ErroLoginDto, SessaoAtualDto, SessaoDto } from './dto/sessao.dto';
-
-/** Só o que o controller usa da resposta do Express. */
-interface RespostaComCookie {
-  cookie(nome: string, valor: string, opcoes: Record<string, unknown>): void;
-  clearCookie(nome: string, opcoes: Record<string, unknown>): void;
-}
 
 @ApiTags('identidade')
 @Controller('sessao')
@@ -58,13 +52,7 @@ export class SessaoController {
         ip,
         userAgent: userAgent ?? null,
       });
-      resposta.cookie(COOKIE_SESSAO, sessao.token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        path: '/',
-        expires: sessao.expiraEm,
-      });
+      gravarCookieSessao(resposta, sessao);
       return { usuario: sessao.usuario, expiraEm: sessao.expiraEm };
     } catch (erro) {
       throw paraHttp(erro);

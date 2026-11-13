@@ -266,6 +266,108 @@
           "identidade"
         ]
       }
+    },
+    "/senha/recuperacao": {
+      "post": {
+        "operationId": "SenhaController_solicitarRecuperacao",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecuperacaoSenhaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Sempre 202, exista a conta ou não: não revela quais e-mails têm cadastro."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/senha/link": {
+      "post": {
+        "operationId": "SenhaController_consultarLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsultaLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfoLinkDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Link desconhecido, vencido ou já usado."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/senha/definir": {
+      "post": {
+        "operationId": "SenhaController_definir",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefinirSenhaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Senha gravada e sessão aberta (cookie).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessaoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenhaFracaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Link desconhecido, vencido ou já usado."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
     }
   },
   "info": {
@@ -579,6 +681,103 @@
           "rotulo",
           "area",
           "acoes"
+        ]
+      },
+      "RecuperacaoSenhaDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "nome@empresa.com.br"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ConsultaLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "O token do link recebido por e-mail."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "InfoLinkDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "convite",
+              "recuperacao"
+            ]
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "type": "string",
+            "description": "Nome do papel da conta."
+          },
+          "convidadoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem convidou (só no convite)."
+          }
+        },
+        "required": [
+          "tipo",
+          "nome",
+          "email",
+          "papel",
+          "convidadoPor"
+        ]
+      },
+      "DefinirSenhaDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "O token do link recebido por e-mail."
+          },
+          "senha": {
+            "type": "string",
+            "format": "password",
+            "description": "Pelo menos 8 caracteres, com letras e números."
+          }
+        },
+        "required": [
+          "token",
+          "senha"
+        ]
+      },
+      "SenhaFracaDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "problemas": {
+            "example": [
+              "Use pelo menos 8 caracteres."
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "message",
+          "problemas"
         ]
       }
     }

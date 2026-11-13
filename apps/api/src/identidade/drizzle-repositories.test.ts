@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -11,6 +12,7 @@ import * as schema from '../database/schema';
 import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentativas-login.repository';
 import { DrizzleGestaoPapeisRepository } from './papeis/drizzle-gestao-papeis.repository';
 import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
+import { DrizzleTokensSenhaRepository } from './senha/drizzle-tokens-senha.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
 
@@ -34,6 +36,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../drizzle') });
+    await runMigrations({ pgPool: pool });
   });
 
   afterAll(async () => {
@@ -42,7 +45,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table tentativas_login, sessoes, usuarios, papeis_permissoes, papeis cascade`,
+      sql`truncate table tokens_senha, tentativas_login, sessoes, usuarios, papeis_permissoes, papeis cascade`,
     );
     papelId = primeira(
       await db.insert(schema.papeis).values({ nome: 'Financeiro' }).returning(),
@@ -206,6 +209,47 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
 
     await expect(repo.encerrarDoPapel(papelId, new Date('2026-11-14T12:00:00Z'))).resolves.toBe(2);
     await expect(repo.encerrarDoPapel(papelId, new Date('2026-11-15T12:00:00Z'))).resolves.toBe(0);
+  });
+
+  it('tokens de senha: emite com o e-mail na fila, substitui o anterior e vale uma vez', async () => {
+    const repo = new DrizzleTokensSenhaRepository(db);
+    const email = { para: 'maria@empresa.com.br', assunto: 'Nova senha', texto: 't', html: 'h' };
+    const base = {
+      usuarioId,
+      tipo: 'recuperacao' as const,
+      criadoEm: new Date('2026-11-13T12:00:00Z'),
+      expiraEm: new Date('2026-11-13T13:00:00Z'),
+      criadoPorId: null,
+    };
+
+    await repo.emitir({ ...base, tokenHash: 'primeiro' }, email);
+    await repo.emitir({ ...base, tokenHash: 'segundo' }, email);
+
+    await expect(repo.buscarPorHash('primeiro')).resolves.toMatchObject({ usadoEm: base.criadoEm });
+    const segundo = await repo.buscarPorHash('segundo');
+    expect(segundo).toMatchObject({
+      tipo: 'recuperacao',
+      usadoEm: null,
+      usuario: { nome: 'Maria Souza', papelNome: 'Financeiro', ativo: true },
+      convidadoPorNome: null,
+    });
+    await expect(repo.ultimaEmissao(usuarioId, 'recuperacao')).resolves.toEqual(base.criadoEm);
+    const jobs = await db.execute(
+      sql`select count(*)::int as total from graphile_worker.jobs where task_identifier = 'email.enviar'`,
+    );
+    expect(jobs.rows[0]).toMatchObject({ total: 2 });
+
+    await expect(repo.usar(segundo?.id ?? '', usuarioId, 'hash-novo', base.criadoEm)).resolves.toBe(
+      true,
+    );
+    await expect(repo.usar(segundo?.id ?? '', usuarioId, 'outro', base.criadoEm)).resolves.toBe(
+      false,
+    );
+    await expect(
+      new DrizzleUsuariosRepository(db).buscarParaLogin({ cpf: '12345678901' }),
+    ).resolves.toMatchObject({
+      senhaHash: 'hash-novo',
+    });
   });
 
   it('conta só as falhas do IP a partir do instante pedido', async () => {

@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-
-import { hashDoToken } from '../autenticacao/autenticacao.service';
 import {
   FixedClock,
   InMemoryPapeisRepository,
   InMemorySessoesRepository,
   InMemoryUsuariosRepository,
 } from '../testing/fakes';
+import { hashDoToken } from './abrir-sessao';
 import { SessaoAutenticador } from './sessao-autenticador';
 
 const MIN = 60 * 1000;

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 
 import { AutenticacaoGuard } from './acesso/autenticacao.guard';
@@ -16,7 +17,11 @@ import { PAPEIS_REPOSITORY } from './papeis/papeis.repository';
 import { PapeisService } from './papeis/papeis.service';
 import { PermissoesController } from './papeis/permissoes.controller';
 import { Argon2PasswordHasher } from './senha/argon2-password-hasher';
+import { DrizzleTokensSenhaRepository } from './senha/drizzle-tokens-senha.repository';
 import { PASSWORD_HASHER } from './senha/password-hasher';
+import { SenhaController } from './senha/senha.controller';
+import { SenhaService, URL_APP } from './senha/senha.service';
+import { TOKENS_SENHA_REPOSITORY } from './senha/tokens-senha.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { SessaoAutenticador } from './sessoes/sessao-autenticador';
 import { SESSOES_REPOSITORY } from './sessoes/sessoes.repository';
@@ -25,8 +30,16 @@ import { USUARIOS_REPOSITORY } from './usuarios/usuarios.repository';
 
 /** Contexto `identidade`: login, sessões, usuários, papéis e permissões. */
 @Module({
-  controllers: [SessaoController, PapeisController, PermissoesController],
+  controllers: [SessaoController, PapeisController, PermissoesController, SenhaController],
   providers: [
+    SenhaService,
+    { provide: TOKENS_SENHA_REPOSITORY, useClass: DrizzleTokensSenhaRepository },
+    {
+      provide: URL_APP,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        (config.get<string>('APP_URL') ?? 'http://localhost:5173').replace(/\/$/, ''),
+    },
     PapeisService,
     { provide: GESTAO_PAPEIS_REPOSITORY, useClass: DrizzleGestaoPapeisRepository },
     // Guards globais, nesta ordem: primeiro identifica quem é, depois confere a permissão.

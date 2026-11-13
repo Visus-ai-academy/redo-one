@@ -16,3 +16,23 @@ export function lerCookie(cabecalho: string | undefined, nome: string): string |
   }
   return null;
 }
+
+/** Só o que é preciso da resposta do Express para gravar e apagar o cookie. */
+export interface RespostaComCookie {
+  cookie(nome: string, valor: string, opcoes: Record<string, unknown>): void;
+  clearCookie(nome: string, opcoes: Record<string, unknown>): void;
+}
+
+/** Cookie da sessão: só o servidor lê (httpOnly), só por HTTPS e não vai em POST de outro site. */
+export function gravarCookieSessao(
+  resposta: Pick<RespostaComCookie, 'cookie'>,
+  sessao: { token: string; expiraEm: Date },
+) {
+  resposta.cookie(COOKIE_SESSAO, sessao.token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    expires: sessao.expiraEm,
+  });
+}

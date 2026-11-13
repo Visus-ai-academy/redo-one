@@ -95,3 +95,25 @@ export const tentativasLogin = pgTable(
     index('tentativas_login_usuario_id_criado_em_idx').on(t.usuarioId, t.criadoEm),
   ],
 );
+
+/** Links de convite (7 dias) e de recuperação de senha (1 hora), de uso único. */
+export const tokensSenha = pgTable(
+  'tokens_senha',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    usuarioId: uuid('usuario_id')
+      .notNull()
+      .references(() => usuarios.id, { onDelete: 'cascade' }),
+    /** `convite` ou `recuperacao`. */
+    tipo: text('tipo').notNull(),
+    /** SHA-256 do token do link; o token só existe no e-mail. */
+    tokenHash: text('token_hash').notNull().unique(),
+    expiraEm: timestamp('expira_em', { withTimezone: true }).notNull(),
+    /** Usado ou substituído por um link mais novo. */
+    usadoEm: timestamp('usado_em', { withTimezone: true }),
+    /** Quem convidou; nulo na recuperação. */
+    criadoPorId: uuid('criado_por_id').references(() => usuarios.id, { onDelete: 'set null' }),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index('tokens_senha_usuario_tipo_idx').on(t.usuarioId, t.tipo, t.criadoEm)],
+);
