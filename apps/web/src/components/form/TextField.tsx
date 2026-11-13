@@ -1,14 +1,33 @@
 import { Field } from '@base-ui/react/field';
 
+import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
+import { controlClassName } from './control-class';
+import { FieldError, FieldLabel } from './field-parts';
 
 type TextFieldProps = {
   label: string;
-  type?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url';
+  /** Exemplo do formato esperado (`nome@empresa.com.br`, `Ex.: Maria Souza`). Nunca substitui o rótulo. */
+  placeholder: string;
+  required?: boolean;
+  type?: 'text' | 'email' | 'search' | 'tel' | 'url';
   description?: string;
+  autoComplete?: string;
+  /** `acesso`: controles de 44px das telas de login, recuperação e convite. */
+  size?: 'app' | 'acesso';
+  className?: string;
 };
 
-export function TextField({ label, type = 'text', description }: TextFieldProps) {
+export function TextField({
+  label,
+  placeholder,
+  required = false,
+  type = 'text',
+  description,
+  autoComplete,
+  size = 'app',
+  className,
+}: TextFieldProps) {
   const field = useFieldContext<string>();
   const errors = field.state.meta.errors.map((error) =>
     typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
@@ -20,24 +39,25 @@ export function TextField({ label, type = 'text', description }: TextFieldProps)
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
-      className="flex flex-col gap-1.5"
+      className={cn('flex flex-col gap-1.5', className)}
     >
-      <Field.Label className="text-sm font-medium">{label}</Field.Label>
+      <FieldLabel required={required}>{label}</FieldLabel>
       <Field.Control
         type={type}
+        required={required}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
         value={field.state.value}
         onValueChange={(value) => field.handleChange(value)}
         onBlur={field.handleBlur}
-        className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 data-[invalid]:border-destructive data-[invalid]:ring-destructive/20 h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+        className={controlClassName(size)}
       />
       {description && (
-        <Field.Description className="text-muted-foreground text-sm">
+        <Field.Description className="text-muted-foreground text-[13px]">
           {description}
         </Field.Description>
       )}
-      <Field.Error match={invalid} className="text-destructive text-sm">
-        {errors.join(', ')}
-      </Field.Error>
+      <FieldError invalid={invalid}>{errors.join(', ')}</FieldError>
     </Field.Root>
   );
 }

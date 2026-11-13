@@ -1,0 +1,88 @@
+import { Field } from '@base-ui/react/field';
+import { Eye, EyeSlash, Warning } from '@phosphor-icons/react';
+import { type KeyboardEvent, useState } from 'react';
+
+import { cn } from '../../lib/cn';
+import { useFieldContext } from './context';
+import { controlClassName } from './control-class';
+import { FieldError, FieldLabel } from './field-parts';
+
+type PasswordFieldProps = {
+  label: string;
+  placeholder: string;
+  autoComplete: 'current-password' | 'new-password';
+  required?: boolean;
+  description?: string;
+  size?: 'app' | 'acesso';
+  className?: string;
+};
+
+export function PasswordField({
+  label,
+  placeholder,
+  autoComplete,
+  required = false,
+  description,
+  size = 'app',
+  className,
+}: PasswordFieldProps) {
+  const field = useFieldContext<string>();
+  const [visivel, setVisivel] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+  const errors = field.state.meta.errors.map((error) =>
+    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
+  );
+  const invalid = errors.length > 0;
+
+  const verificarCapsLock = (event: KeyboardEvent<HTMLInputElement>) =>
+    setCapsLock(event.getModifierState('CapsLock'));
+
+  return (
+    <Field.Root
+      name={field.name}
+      invalid={invalid}
+      touched={field.state.meta.isTouched}
+      className={cn('flex flex-col gap-1.5', className)}
+    >
+      <FieldLabel required={required}>{label}</FieldLabel>
+      <div className="relative">
+        <Field.Control
+          type={visivel ? 'text' : 'password'}
+          required={required}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          value={field.state.value}
+          onValueChange={(value) => field.handleChange(value)}
+          onBlur={field.handleBlur}
+          onKeyUp={verificarCapsLock}
+          onKeyDown={verificarCapsLock}
+          className={controlClassName(size, size === 'acesso' ? 'pr-12' : 'pr-10')}
+        />
+        <button
+          type="button"
+          aria-label={visivel ? 'Ocultar senha' : 'Mostrar senha'}
+          aria-pressed={visivel}
+          onClick={() => setVisivel((atual) => !atual)}
+          className={cn(
+            'text-muted-foreground hover:text-foreground focus-visible:outline-ring absolute top-0.5 right-0.5 flex items-center justify-center rounded-sm focus-visible:outline-2',
+            size === 'acesso' ? 'size-10' : 'size-8',
+          )}
+        >
+          {visivel ? <EyeSlash size={20} aria-hidden /> : <Eye size={20} aria-hidden />}
+        </button>
+      </div>
+      {capsLock && (
+        <Field.Description className="text-warning flex items-center gap-1.5 text-[13px]">
+          <Warning size={16} aria-hidden />
+          Caps Lock está ativado.
+        </Field.Description>
+      )}
+      {description && (
+        <Field.Description className="text-muted-foreground text-[13px]">
+          {description}
+        </Field.Description>
+      )}
+      <FieldError invalid={invalid}>{errors.join(', ')}</FieldError>
+    </Field.Root>
+  );
+}

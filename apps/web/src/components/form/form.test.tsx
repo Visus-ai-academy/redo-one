@@ -21,7 +21,9 @@ function SignupForm({ onSubmit }: { onSubmit: (value: z.infer<typeof schema>) =>
         void form.handleSubmit();
       }}
     >
-      <form.AppField name="email">{(field) => <field.TextField label="E-mail" />}</form.AppField>
+      <form.AppField name="email">
+        {(field) => <field.TextField label="E-mail" placeholder="nome@empresa.com.br" />}
+      </form.AppField>
       <form.AppForm>
         <form.SubmitButton>Enviar</form.SubmitButton>
       </form.AppForm>

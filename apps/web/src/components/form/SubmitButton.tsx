@@ -1,9 +1,19 @@
 import { Button } from '@base-ui/react/button';
+import { CircleNotch } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 
+import { type ButtonSize, buttonClassName } from '../button/button-class';
 import { useFormContext } from './context';
 
-export function SubmitButton({ children }: { children: ReactNode }) {
+type SubmitButtonProps = {
+  children: ReactNode;
+  /** Texto enquanto envia, no gerúndio da mesma ação ("Entrando…", "Salvando…"). */
+  pendingLabel?: string;
+  size?: ButtonSize;
+  className?: string;
+};
+
+export function SubmitButton({ children, pendingLabel, size, className }: SubmitButtonProps) {
   const form = useFormContext();
 
   return (
@@ -12,9 +22,17 @@ export function SubmitButton({ children }: { children: ReactNode }) {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/50 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium shadow-xs focus-visible:ring-[3px] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          focusableWhenDisabled
+          className={buttonClassName({ size, className })}
         >
-          {children}
+          {isSubmitting && (
+            <CircleNotch
+              size={18}
+              aria-hidden
+              className="animate-spin motion-reduce:animate-none"
+            />
+          )}
+          {isSubmitting && pendingLabel ? pendingLabel : children}
         </Button>
       )}
     </form.Subscribe>
