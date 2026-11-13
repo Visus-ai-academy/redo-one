@@ -1,84 +1,81 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/ibm-plex-sans/wght.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/orbitron/700.css";
 
-/* Tema no padrão do shadcn/ui: tokens semânticos em variáveis CSS, claro em :root e escuro em .dark.
-   Use sempre os tokens (bg-background, text-muted-foreground, border-border...), nunca cores cruas. */
-
-@custom-variant dark (&:where(.dark, .dark *));
+/* Tokens do sistema visual do One ("Claro e denso, menu verde"), definidos em
+   .claude/skills/ui-design/sistema.md. Nomes no padrão do shadcn/ui; use sempre os tokens
+   (bg-background, text-muted-foreground, border-border...), nunca cores cruas.
+   Só tema claro por enquanto. */
 
 :root {
   color-scheme: light;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 8px;
+
+  --background: #f7f8f8;
+  --foreground: #121917;
+  --card: #ffffff;
+  --card-foreground: #121917;
+  --popover: #ffffff;
+  --popover-foreground: #121917;
+
+  /* Acento: botão primário, link, ícone do item ativo. */
+  --primary: #214037;
+  --primary-hover: #112622;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f4f3;
+  --secondary-foreground: #121917;
+  --muted: #f1f4f3;
+  --muted-foreground: #4f5b58;
+  /* Texto terciário: rótulos de grupo, cabeçalho de tabela, legendas, placeholder. */
+  --subtle-foreground: #66726f;
+  /* Acento suave: item ativo e linha selecionada. */
+  --accent: #eaf2ef;
+  --accent-foreground: #214037;
+
+  --destructive: #a1251c;
+  --destructive-soft: #fce8e6;
+  --success: #17603f;
+  --success-soft: #e3f3ea;
+  --warning: #7a4d00;
+  --warning-soft: #fcf1dc;
+  --info: #1d4e89;
+  --info-soft: #e5eefa;
+  --inactive: #4f5b58;
+  --inactive-soft: #eef1f0;
+
+  --border: #e3e7e6;
+  --input: #c9d1cf;
+  --ring: #34594f;
+
+  --chart-1: #214037;
+  --chart-2: #6d8c84;
+  --chart-3: #1d4e89;
+  --chart-4: #7a4d00;
+  --chart-5: #a1251c;
+
+  /* Menu lateral verde (também a barra do topo no celular e o painel das telas de acesso). */
+  --sidebar: #112622;
+  --sidebar-foreground: #c1d9d4;
+  --sidebar-icon: #7fa096;
+  --sidebar-muted: #9db8b1;
+  --sidebar-hover: #1a332c;
+  --sidebar-accent: #2b4d43;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-avatar: #34594f;
+  --sidebar-line: #6d8c84;
+  --sidebar-border: #234038;
+  --sidebar-ring: #c1d9d4;
 }
 
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-/* Expõe os tokens como utilitários do Tailwind (bg-primary, text-card-foreground, rounded-lg...). */
+/* Expõe os tokens como utilitários do Tailwind (bg-primary, text-subtle-foreground, rounded-lg...). */
 @theme inline {
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-brand: "Orbitron", sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -86,14 +83,25 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-inactive: var(--inactive);
+  --color-inactive-soft: var(--inactive-soft);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -104,12 +112,18 @@
   --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-icon: var(--sidebar-icon);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-avatar: var(--sidebar-avatar);
+  --color-sidebar-line: var(--sidebar-line);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Raios do sistema: 6px controles (md), 8px painéis e tabelas (lg), 12px modal (xl). */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -118,13 +132,24 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
+  }
+
+  html {
+    font-size: 14px;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
     /* Base UI: necessário para backdrops no Safari do iOS. */
     position: relative;
+  }
+
+  /* Números que mudam (tabelas, valores, datas, contadores) não "dançam". */
+  table,
+  time,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Base UI: portais (dialog, popover, menu) precisam de um stacking context isolado na raiz do app. */

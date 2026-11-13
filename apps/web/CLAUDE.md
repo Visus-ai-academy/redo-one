@@ -13,7 +13,9 @@ Front em TanStack Start (React 19, SSR) sobre Vite.
 | Uso               | Biblioteca                                     | Onde está configurado                                |
 | ----------------- | ---------------------------------------------- | ---------------------------------------------------- |
 | Estilo            | Tailwind CSS v4 + `cn` (clsx + tailwind-merge) | `src/styles.css` (tokens), `src/lib/cn.ts`           |
-| Tema claro/escuro | Tokens no padrão shadcn/ui (sem o shadcn)      | `src/styles.css`, `src/lib/theme.ts`, `useTheme`     |
+| Tema              | Tokens no padrão shadcn/ui (sem o shadcn), só claro | `src/styles.css` (valores do `sistema.md` da skill `ui-design`) |
+| Ícones            | Phosphor (`@phosphor-icons/react`), peso regular | Import por ícone: `import { Gear } from '@phosphor-icons/react'` |
+| Fontes            | Fontsource (IBM Plex Sans, IBM Plex Mono, Orbitron), hospedadas no app | `@import` em `src/styles.css`; `font-sans`, `font-mono`, `font-brand` |
 | Animações         | `tw-animate-css`                               | `@import` em `src/styles.css`                        |
 | Componentes de UI | Base UI (`@base-ui/react`), headless           | Estilizados com Tailwind; isolamento em `styles.css` |
 | Formulários       | TanStack Form (`@tanstack/react-form`)         | `src/components/form/` (`useAppForm`)                |
@@ -25,8 +27,8 @@ Front em TanStack Start (React 19, SSR) sobre Vite.
 
 ### Como usar
 
-- **Cores e tema**: só tokens semânticos, nunca cores cruas (`bg-blue-500` falha no lint, regra `noTailwindRawColors`). Fundo/texto: `bg-background text-foreground`; superfícies: `bg-card`, `bg-popover`; ação principal: `bg-primary text-primary-foreground`; secundário/neutro: `secondary`, `muted`, `accent`; erro: `destructive`; bordas e foco: `border-border`, `border-input`, `ring-ring`; gráficos: `chart-1`…`chart-5`; raio: `rounded-sm|md|lg|xl` (derivados de `--radius`). Cor nova vira token em `:root` **e** `.dark` e é exposta em `@theme inline`.
-- **Dark mode**: classe `.dark` no `<html>` (variante `dark:`). Troca com `useTheme()` de `src/lib/use-theme.ts` (`light`, `dark` ou `system`); o script em `__root.tsx` aplica o tema salvo antes da pintura.
+- **Cores e tema**: só tokens semânticos, nunca cores cruas (`bg-blue-500` falha no lint, regra `noTailwindRawColors`). Fundo/texto: `bg-background text-foreground`; superfícies: `bg-card`, `bg-popover`; ação principal: `bg-primary text-primary-foreground`; secundário/neutro: `secondary`, `muted`, `accent`; texto terciário (legendas, cabeçalho de tabela, placeholder): `text-subtle-foreground`; estados: `destructive`, `success`, `warning`, `info`, `inactive` (texto) com `*-soft` (fundo); menu verde: `sidebar-*`; bordas e foco: `border-border`, `border-input` (controles), `ring-ring`; gráficos: `chart-1`…`chart-5`; raio: `rounded-md` (6px, controles), `rounded-lg` (8px, painéis), `rounded-xl` (12px, modal). Cor nova vira token em `:root` e é exposta em `@theme inline`.
+- **Tema escuro**: não há, por decisão do usuário (só a paleta clara aprovada). Revisar se surgir demanda.
 - **Classes**: combine com `cn()` (`src/lib/cn.ts`), que resolve conflitos do Tailwind; componentes aceitam `className` e repassam via `cn`. A ordem das classes é corrigida pelo Biome.
 - **Componentes interativos** (dialog, select, menu, tabs, popover) partem do Base UI, não de HTML feito à mão. O Base UI não tem estilo próprio; estilize com Tailwind usando os atributos de estado dele (`data-[invalid]:`, `data-[open]:`, `data-[disabled]:`).
 - **Formulários**: `useAppForm` de `src/components/form/form.ts`, com schema Zod em `validators`. Campos via `<form.AppField name="x">{(field) => <field.TextField label="..." />}</form.AppField>`, botão via `<form.AppForm><form.SubmitButton>`. Campo novo: crie o componente com `useFieldContext` em `src/components/form/` e registre em `fieldComponents`.

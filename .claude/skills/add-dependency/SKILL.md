@@ -54,7 +54,7 @@ Critérios eliminatórios (qualquer um descarta o candidato):
 
 - `deprecated`, ou repositório arquivado.
 - Sem release há mais de 18 meses (exceto libs pequenas e "terminadas", sem issues de segurança abertas).
-- Licença fora de MIT, MIT-0, Apache-2.0, BSD-2/3-Clause, ISC, 0BSD ou MPL-2.0.
+- Licença fora de MIT, MIT-0, Apache-2.0, BSD-2/3-Clause, ISC, 0BSD ou MPL-2.0 (para fontes, OFL-1.1 também é aceita).
 - `peerDependencies` incompatíveis com as versões do repo (React 19, TypeScript 6, Node do `.nvmrc`, Zod 4).
 - Vulnerabilidade conhecida sem correção.
 - Pacote com nome parecido com um popular (typosquatting). Confira o repositório e o autor.

@@ -23,6 +23,8 @@ Conteúdo claro e denso; **menu lateral verde-escuro da marca**, que é a identi
 
 ### Cores (papéis)
 
+Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir demanda). No código, os papéis viram tokens em `apps/web/src/styles.css`.
+
 | Papel | Valor | Uso |
 | --- | --- | --- |
 | Fundo do app | `#F7F8F8` | área de conteúdo |
@@ -46,6 +48,7 @@ Conteúdo claro e denso; **menu lateral verde-escuro da marca**, que é a identi
 ### Tipografia
 
 - **IBM Plex Sans** 400/500/600 na interface inteira; **IBM Plex Mono** 400 só para chaves técnicas (permissões, ids).
+- Fontes hospedadas no próprio app (pacotes Fontsource), nunca carregadas do Google Fonts.
 - Escala: 12 (legenda, cabeçalho de tabela) · 13 (metadados) · 14 (corpo, controles) · 16 (título de seção) · 22 (título de página) · 28 (título das telas de acesso).
 - Números com `tabular-nums`.
 
