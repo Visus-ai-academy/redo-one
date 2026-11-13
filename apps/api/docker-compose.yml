@@ -2,7 +2,7 @@
 
 # Nome do projeto no Docker (prefixo de containers e volumes). Troque ao criar um projeto a partir do
 # template; sem isso, projetos diferentes na mesma máquina compartilhariam o volume do banco.
-name: monorepo-template
+name: one
 
 services:
   postgres:

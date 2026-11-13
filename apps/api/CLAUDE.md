@@ -27,7 +27,23 @@ API em NestJS 12 (`@nestjs/platform-express`), CommonJS com `module: NodeNext`.
 
 ## Arquitetura
 
-**Arquitetura deste projeto: modular (padrão).**
+**Arquitetura deste projeto: por contexto (hexagonal, modular-ddd e modular).** Cada módulo segue o nível da tabela abaixo; use a skill indicada.
+
+| Nível | Contextos | Skill |
+| --- | --- | --- |
+| hexagonal | `ingestao`, `faturamento`, `repasse`, `credito-pre-pago`, `contratos`, `distribuicao` | `hexagonal-architecture` |
+| modular-ddd | `escala` | `nest-module` (variante modular-ddd) |
+| modular | `qualidade`, `analytics`, `catalogo`, `medicos`, `identidade` | `nest-module` |
+
+Critério para o nível de um contexto:
+
+1. A regra tem estados, invariantes ou cálculos que precisam ser protegidos? Se sim, no mínimo `modular-ddd`.
+2. Além disso, fala com 2 ou mais sistemas externos ou é disparado por várias entradas (tela, cron, webhook, robô)? Se sim, `hexagonal`: cada ação vira um caso de uso único, chamado igual por todas as entradas.
+3. Nenhum dos dois: `modular`.
+
+**Por quê:** no legado, a mesma ação (ex.: fechar competência, reprocessar laudos) era disparada por tela, cron, RPA e webhook, e cada caminho reimplementava parte da regra; faturamento, repasse e distribuição tinham contas duplicadas e regras espalhadas. Os seis contextos hexagonais concentram regra rica, integrações (Omie, ClickSign, Altis, MobileMed, MySuite) e várias entradas. Nos demais, hexagonal só acrescentaria cerimônia.
+
+**Revisar se:** um contexto ganhar regra rica ou uma 2ª integração/entrada (sobe de nível) ou virar só CRUD (desce). A mudança vale só para aquele módulo; atualize esta tabela.
 
 <!-- Definida pelo /init-project. Níveis possíveis:
      - modular: módulos Nest com controller/service/repositório (skill `nest-module`)
@@ -42,5 +58,27 @@ API em NestJS 12 (`@nestjs/platform-express`), CommonJS com `module: NodeNext`.
   - Uma responsabilidade por classe. Um service que cresce demais vira dois.
   - Dependências entram pelo construtor (DI do Nest). Dependências externas (banco, HTTP, fila, relógio) ficam atrás de uma interface com token de injeção, para poderem ser trocadas e mockadas nos testes.
   - Interfaces pequenas e focadas em quem as consome.
+
+## Regras do projeto (desde o primeiro módulo)
+
+- **Nomes:** domínio em pt-BR sem acento, seguindo o glossário do `CLAUDE.md` da raiz (`Competencia`, `FecharCompetencia`, tabela `laudos`); sufixos e métodos técnicos em inglês (`LaudoController`, `CompetenciaRepository`, `findById`).
+- **Autenticação:** login próprio (e-mail ou CPF + senha, hash forte), sessão guardada no banco e enviada em cookie `httpOnly`. A sessão é derrubada ao trocar senha, papel ou permissões. Bloqueio após tentativas falhas, recuperação de senha por e-mail, primeiro acesso por convite (nunca senha padrão). Robôs (RPA de importação, distribuição, comentários) usam chave de API própria por robô, comparada em tempo constante, com permissões restritas ao que cada um faz. Webhooks validam assinatura e recusam a chamada se o segredo não estiver configurado.
+- **Permissões:** RBAC com papéis configuráveis e permissões `tela.ação`, checadas por guard em todo endpoint. Recortes por atributo ficam no service/domínio, com teste: médico só acessa os próprios dados; gestora de escala só os turnos e especialidades do seu escopo; coordenador só a sua especialidade. Acesso a dados de paciente exige permissão específica.
+- **Escala moderada:**
+  - Toda listagem é paginada.
+  - Índices são planejados junto com cada tabela, a partir das consultas que ela vai atender.
+  - Nada pesado dentro da requisição: importação, fechamento, geração de PDF/DOCX, e-mails e chamadas a Omie, ClickSign, Altis e MySuite vão para a fila de jobs.
+  - Dashboards leem tabelas de totais pré-somados (por dia × cliente × modalidade × especialidade × prioridade), atualizadas pela ingestão; nunca agregam sobre os laudos crus.
+  - Listas de filtros vêm dos cadastros, não de `DISTINCT` sobre laudos. Exclusões (médico ou cliente oculto) são colunas booleanas indexadas, não `ILIKE`.
+  - Importação incremental: upsert pela identidade do laudo, nunca apagar e reinserir o período. Dado bruto da planilha fica fora da tabela principal.
+- **Jobs:** fila no Postgres, trabalhador no processo da API. Todo job é idempotente (rodar duas vezes dá o mesmo resultado que rodar uma) e, quando não pode rodar em paralelo, é único por tipo/chave. Agendamentos usam o mesmo mecanismo. Gravar o dado e enfileirar o job acontecem na mesma transação. Falha definitiva de job crítico (importação, fechamento, recarga, integração financeira) gera alerta.
+- **LGPD:**
+  - Campos pessoais e de saúde marcados com comentário no schema Drizzle (`// LGPD: pessoal` ou `// LGPD: saúde`).
+  - Guardar só o que a regra usa; dado de paciente só nos contextos que precisam dele (distribuição, qualidade); analytics usa pseudônimo.
+  - Nada pessoal em logs, mensagens de erro ou serviços externos sem necessidade; nenhum dado de paciente vai para provedores de IA.
+  - Cada tabela com dado pessoal tem retenção definida, e o dado de uma pessoa pode ser exportado e excluído ou anonimizado.
+- **Auditoria:** tabela de eventos (quem, quando, o quê, valor anterior e novo) nas entidades críticas: abrir/fechar competência e ajustes de faturamento, repasse e adicionais, preços e regras de apuração, crédito pré-pago, escala, usuários/papéis/permissões e acesso a dados de paciente.
+- **Arquivos:** storage compatível com S3, atrás de interface. Tudo privado: upload e download por URL assinada e temporária, com validação de tipo e tamanho. Nunca no banco nem no disco da API.
+- **Observabilidade:** logs estruturados em JSON, endpoint de health check e monitoramento de erros.
 
 Skills deste app: `nest-module` (criar módulo/controller/service), `api-security-checklist` (revisar segurança de endpoints e bootstrap) e `hexagonal-architecture` (só quando o projeto declarar essa arquitetura acima).

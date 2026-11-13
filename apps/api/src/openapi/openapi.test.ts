@@ -13,7 +13,7 @@ describe('createOpenApiDocument', () => {
     const document = createOpenApiDocument(app);
 
     expect(document.openapi).toMatch(/^3\./);
-    expect(document.info).toMatchObject({ title: 'API', version: '0.0.0' });
+    expect(document.info).toMatchObject({ title: 'One API', version: '0.0.0' });
 
     await app.close();
   });

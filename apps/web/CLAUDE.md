@@ -34,4 +34,12 @@ Front em TanStack Start (React 19, SSR) sobre Vite.
 - **Dados**: nos loaders, use `context.queryClient.ensureQueryData(...)`; nos componentes, os hooks gerados pelo Kubb. Ver skill `consume-api`.
 - `src/gen/` é gerado (`pnpm generate` na raiz). Não edite à mão.
 
+## Regras do projeto
+
+- **SEO:** sistema todo atrás de login. `noindex` no `head` do `__root.tsx` e `public/robots.txt` bloqueando tudo. Se surgir página pública, ela ganha `title`, `description` e Open Graph próprios no `head` da rota, e o `robots.txt`/sitemap são revistos.
+- **PWA:** nenhum. Revisar se o portal do médico for liberado e usado pelo celular (nível `instalável`).
+- **Atualização automática (polling):** via `refetchInterval` do TanStack Query, só onde a tela precisa e consultando endpoints leves de status, nunca recarregando a página inteira. Intervalos: robô de distribuição a cada 3–5 s só enquanto a rodada está em etapa ativa; status de importação a cada 30 s só enquanto há importação rodando; painéis a cada 1–5 min. Nada consulta com a aba oculta (`refetchIntervalInBackground: false`).
+- **Listagens:** sempre paginadas pela API; nada de carregar tudo e filtrar no cliente.
+- **Dados pessoais:** exibir dado de paciente só nas telas que precisam dele e para quem tem a permissão; nunca em logs do cliente.
+
 Skills deste app: `react-component` (componentes e rotas) e `consume-api` (integração com a API via Kubb). Para trabalho visual, use também o plugin `frontend-design`.

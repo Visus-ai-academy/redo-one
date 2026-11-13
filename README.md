@@ -1,6 +1,8 @@
-# monorepo-template
+# one
 
-Template de monorepo TypeScript com pnpm workspaces e Turborepo: uma API em NestJS, um front em TanStack Start e pacotes compartilhados.
+Plataforma interna da TeleImagem (telerradiologia): ingestão dos laudos da MobileMed, distribuição de exames aos médicos, escala médica, SLA e qualidade, faturamento dos clientes, repasse dos médicos, crédito pré-pago, contratos e painéis. Reescrita do `dashboards-one`.
+
+Monorepo TypeScript com pnpm workspaces e Turborepo: uma API em NestJS, um front em TanStack Start e pacotes compartilhados. Contexto do projeto, glossário e decisões no `CLAUDE.md`.
 
 ## Começando um projeto novo
 
