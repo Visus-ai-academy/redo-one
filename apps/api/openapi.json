@@ -1094,6 +1094,11 @@
           "usuario": {
             "$ref": "#/components/schemas/UsuarioSessaoDto"
           },
+          "papel": {
+            "type": "string",
+            "description": "Nome do papel do usuário.",
+            "example": "Financeiro"
+          },
           "acessoTotal": {
             "type": "boolean",
             "description": "Papel Administrador: pode tudo, mesmo sem listar as permissões."
@@ -1111,6 +1116,7 @@
         },
         "required": [
           "usuario",
+          "papel",
           "acessoTotal",
           "permissoes"
         ]

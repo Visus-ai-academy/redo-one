@@ -34,7 +34,11 @@ describe('SessaoAutenticador.autenticar', () => {
     ]);
     sessoes = new InMemorySessoesRepository(usuarios);
     papeis = new InMemoryPapeisRepository({
-      'p-financeiro': { acessoTotal: false, permissoes: ['faturamento.ver', 'repasse.ver'] },
+      'p-financeiro': {
+        papel: 'Financeiro',
+        acessoTotal: false,
+        permissoes: ['faturamento.ver', 'repasse.ver'],
+      },
     });
     relogio = new FixedClock(LOGIN);
     autenticador = new SessaoAutenticador(sessoes, papeis, relogio);
@@ -59,13 +63,14 @@ describe('SessaoAutenticador.autenticar', () => {
       nome: 'Maria Souza',
       email: 'maria@empresa.com.br',
       papelId: 'p-financeiro',
+      papel: 'Financeiro',
       acessoTotal: false,
     });
     expect([...(principal?.permissoes ?? [])]).toEqual(['faturamento.ver', 'repasse.ver']);
   });
 
   it('marca acesso total para o papel Administrador', async () => {
-    papeis.acessos['p-financeiro'] = { acessoTotal: true, permissoes: [] };
+    papeis.acessos['p-financeiro'] = { papel: 'Administrador', acessoTotal: true, permissoes: [] };
 
     await expect(autenticador.autenticar('token-da-maria')).resolves.toMatchObject({
       acessoTotal: true,

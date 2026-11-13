@@ -39,6 +39,7 @@ const maria: PrincipalUsuario = {
   nome: 'Maria',
   email: 'maria@empresa.com.br',
   papelId: 'p-1',
+  papel: 'Administrador',
   acessoTotal: false,
   permissoes: new Set(['faturamento.ver']),
 };

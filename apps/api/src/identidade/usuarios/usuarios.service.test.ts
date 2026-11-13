@@ -34,6 +34,7 @@ const ator = (dados: Partial<PrincipalUsuario>): PrincipalUsuario => ({
   nome: 'Carlos Andrade',
   email: 'carlos@empresa.com.br',
   papelId: 'p-admin',
+  papel: 'Administrador',
   acessoTotal: true,
   permissoes: new Set(),
   ...dados,

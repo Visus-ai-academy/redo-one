@@ -6,6 +6,8 @@ export interface PrincipalUsuario {
   nome: string;
   email: string;
   papelId: string;
+  /** Nome do papel. */
+  papel: string;
   /** Papel Administrador: todas as permissões, inclusive as que ainda vão existir. */
   acessoTotal: boolean;
   permissoes: ReadonlySet<string>;

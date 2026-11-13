@@ -44,6 +44,7 @@ export class SessaoAutenticador {
       nome: sessao.usuario.nome,
       email: sessao.usuario.email,
       papelId: sessao.usuario.papelId,
+      papel: acesso.papel,
       acessoTotal: acesso.acessoTotal,
       permissoes: new Set(acesso.permissoes),
     };

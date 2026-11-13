@@ -170,7 +170,7 @@ export class InMemoryPapeisRepository implements PapeisRepository {
   constructor(public readonly acessos: Record<string, AcessoDoPapel> = {}) {}
 
   async acessoDoPapel(papelId: string) {
-    return this.acessos[papelId] ?? { acessoTotal: false, permissoes: [] };
+    return this.acessos[papelId] ?? { papel: '', acessoTotal: false, permissoes: [] };
   }
 }
 

@@ -27,6 +27,7 @@ const admin: PrincipalUsuario = {
   nome: 'Carlos',
   email: 'carlos@empresa.com.br',
   papelId: 'p-admin',
+  papel: 'Administrador',
   acessoTotal: true,
   permissoes: new Set(),
 };

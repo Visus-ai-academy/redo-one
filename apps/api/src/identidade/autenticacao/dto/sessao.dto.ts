@@ -26,6 +26,9 @@ export class SessaoAtualDto {
   @ApiProperty({ type: UsuarioSessaoDto })
   usuario!: UsuarioSessaoDto;
 
+  @ApiProperty({ description: 'Nome do papel do usuário.', example: 'Financeiro' })
+  papel!: string;
+
   @ApiProperty({ description: 'Papel Administrador: pode tudo, mesmo sem listar as permissões.' })
   acessoTotal!: boolean;
 

@@ -28,6 +28,7 @@ const maria: PrincipalUsuario = {
   nome: 'Maria',
   email: 'maria@empresa.com.br',
   papelId: 'p-1',
+  papel: 'Financeiro',
   acessoTotal: false,
   permissoes: new Set(['repasse.ver', 'faturamento.ver']),
 };
@@ -43,11 +44,12 @@ describe('SessaoController (rotas)', () => {
 });
 
 describe('SessaoController.atual', () => {
-  it('devolve quem está logado com as permissões em ordem alfabética', () => {
+  it('devolve quem está logado, o nome do papel e as permissões em ordem alfabética', () => {
     const { controller } = montar();
 
     expect(controller.atual(maria)).toEqual({
       usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
+      papel: 'Financeiro',
       acessoTotal: false,
       permissoes: ['faturamento.ver', 'repasse.ver'],
     });

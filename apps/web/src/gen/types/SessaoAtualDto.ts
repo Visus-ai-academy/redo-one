@@ -8,6 +8,12 @@ import type { UsuarioSessaoDto } from './UsuarioSessaoDto'
 export type SessaoAtualDto = {
   usuario: UsuarioSessaoDto;
   /**
+   * @description Nome do papel do usuário.
+   * @example Financeiro
+   * @type string
+   */
+  papel: string;
+  /**
    * @description Papel Administrador: pode tudo, mesmo sem listar as permissões.
    * @type boolean
    */

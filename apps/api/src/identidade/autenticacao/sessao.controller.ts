@@ -70,6 +70,7 @@ export class SessaoController {
         email: principal.email,
         papelId: principal.papelId,
       },
+      papel: principal.papel,
       acessoTotal: principal.acessoTotal,
       permissoes: [...principal.permissoes].sort(),
     };

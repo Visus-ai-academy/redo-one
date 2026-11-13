@@ -8,6 +8,7 @@ import { usuarioSessaoDtoSchema } from './usuarioSessaoDtoSchema'
 
 export const sessaoAtualDtoSchema = z.object({
   usuario: usuarioSessaoDtoSchema,
+  papel: z.string().describe('Nome do papel do usuário.').meta({ examples: ['Financeiro'] }),
   acessoTotal: z.boolean().describe('Papel Administrador: pode tudo, mesmo sem listar as permissões.'),
   permissoes: z.array(z.string()).meta({ examples: [["faturamento.ver","usuarios.ver"]] }),
 })

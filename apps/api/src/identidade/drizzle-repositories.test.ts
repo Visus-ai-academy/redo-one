@@ -161,9 +161,11 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     );
 
     const financeiro = await repo.acessoDoPapel(papelId);
+    expect(financeiro.papel).toBe('Financeiro');
     expect(financeiro.acessoTotal).toBe(false);
     expect(financeiro.permissoes.sort()).toEqual(['faturamento.ver', 'repasse.ver']);
     await expect(repo.acessoDoPapel(admin.id)).resolves.toEqual({
+      papel: 'Administrador',
       acessoTotal: true,
       permissoes: [],
     });
