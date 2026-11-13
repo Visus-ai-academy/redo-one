@@ -1,6 +1,6 @@
 import { Field } from '@base-ui/react/field';
 import { Eye, EyeSlash, Warning } from '@phosphor-icons/react';
-import { type KeyboardEvent, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
@@ -13,6 +13,7 @@ type PasswordFieldProps = {
   autoComplete: 'current-password' | 'new-password';
   required?: boolean;
   description?: string;
+  labelAction?: ReactNode;
   size?: 'app' | 'acesso';
   className?: string;
 };
@@ -23,6 +24,7 @@ export function PasswordField({
   autoComplete,
   required = false,
   description,
+  labelAction,
   size = 'app',
   className,
 }: PasswordFieldProps) {
@@ -42,9 +44,11 @@ export function PasswordField({
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
-      className={cn('flex flex-col gap-1.5', className)}
+      className={cn('flex flex-col gap-2', className)}
     >
-      <FieldLabel required={required}>{label}</FieldLabel>
+      <FieldLabel required={required} action={labelAction}>
+        {label}
+      </FieldLabel>
       <div className="relative">
         <Field.Control
           type={visivel ? 'text' : 'password'}
@@ -64,7 +68,7 @@ export function PasswordField({
           aria-pressed={visivel}
           onClick={() => setVisivel((atual) => !atual)}
           className={cn(
-            'text-muted-foreground hover:text-foreground focus-visible:outline-ring absolute top-0.5 right-0.5 flex items-center justify-center rounded-sm focus-visible:outline-2',
+            'text-muted-foreground hover:text-foreground focus-visible:outline-ring absolute top-0.5 right-0.5 flex items-center justify-center rounded-md focus-visible:outline-2',
             size === 'acesso' ? 'size-10' : 'size-8',
           )}
         >
@@ -72,7 +76,7 @@ export function PasswordField({
         </button>
       </div>
       {capsLock && (
-        <Field.Description className="text-warning flex items-center gap-1.5 text-[13px]">
+        <Field.Description className="text-warning flex items-center gap-2 text-[13px]">
           <Warning size={16} aria-hidden />
           Caps Lock está ativado.
         </Field.Description>

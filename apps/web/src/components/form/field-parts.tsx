@@ -2,7 +2,16 @@
 import { Field } from '@base-ui/react/field';
 import type { ReactNode } from 'react';
 
-export function FieldLabel({ required, children }: { required: boolean; children: ReactNode }) {
+export function FieldLabel({
+  required,
+  action,
+  children,
+}: {
+  required: boolean;
+  /** Link ou botão alinhado à direita do rótulo (ex.: "Esqueci minha senha"). */
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     // O `*` fica fora do <label> para não entrar no nome do campo; `required` já informa o leitor de tela.
     <div className="flex items-baseline gap-1">
@@ -12,6 +21,7 @@ export function FieldLabel({ required, children }: { required: boolean; children
           *
         </span>
       )}
+      {action && <span className="ml-auto text-[13px]">{action}</span>}
     </div>
   );
 }

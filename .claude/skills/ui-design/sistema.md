@@ -55,7 +55,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 ### Medidas
 
 - Menu lateral 240px (recolhido 64px); item 36px; ícone 20px.
-- Controles 36px de altura no app, 44px nas telas de acesso.
+- Controles 36px de altura no app, 44px nas telas de acesso (com texto de 16px, que evita o zoom automático do iOS ao focar).
 - Linha de tabela 44px; padding de painel 16px; espaço entre seções 24–32px.
 - Raio: 6px controles, 8px painéis e tabelas, 12px modal.
 

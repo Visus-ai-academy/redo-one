@@ -24,7 +24,7 @@ export function buttonClassName({
     'inline-flex items-center justify-center gap-2 rounded-md px-4 font-medium',
     'focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2',
     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
-    size === 'acesso' ? 'h-11 text-[15px]' : 'h-9',
+    size === 'acesso' ? 'h-11 text-base' : 'h-9',
     variants[variant],
     className,
   );

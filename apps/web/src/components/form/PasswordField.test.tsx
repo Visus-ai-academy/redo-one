@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { useAppForm } from './form';
 
-function Formulario() {
+function Formulario({ acaoDoRotulo }: { acaoDoRotulo?: React.ReactNode }) {
   const form = useAppForm({ defaultValues: { senha: '' } });
 
   return (
@@ -15,6 +15,7 @@ function Formulario() {
           placeholder="Digite sua senha"
           autoComplete="current-password"
           required
+          labelAction={acaoDoRotulo}
         />
       )}
     </form.AppField>
@@ -51,5 +52,12 @@ describe('PasswordField', () => {
 
     fireEvent.keyUp(campo, { key: 'a', modifierCapsLock: false });
     expect(screen.queryByText('Caps Lock está ativado.')).not.toBeInTheDocument();
+  });
+
+  it('mostra uma ação ao lado do rótulo sem mudar o nome do campo', () => {
+    render(<Formulario acaoDoRotulo={<a href="/recuperar-senha">Esqueci minha senha</a>} />);
+
+    expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument();
   });
 });

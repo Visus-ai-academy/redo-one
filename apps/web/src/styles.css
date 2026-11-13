@@ -135,12 +135,9 @@
     @apply border-border outline-ring;
   }
 
-  html {
-    font-size: 14px;
-  }
-
+  /* Corpo da interface em 14px; o rem continua 16px para a escala de espaçamento do Tailwind valer. */
   body {
-    @apply bg-background font-sans text-foreground antialiased;
+    @apply bg-background font-sans text-foreground text-sm antialiased;
     /* Base UI: necessário para backdrops no Safari do iOS. */
     position: relative;
   }
@@ -155,5 +152,16 @@
   /* Base UI: portais (dialog, popover, menu) precisam de um stacking context isolado na raiz do app. */
   #app {
     isolation: isolate;
+  }
+}
+
+@layer components {
+  /* Grade sutil do painel verde das telas de acesso. */
+  .grade-acesso {
+    --linha: color-mix(in srgb, var(--sidebar-foreground) 6%, transparent);
+    background-image:
+      linear-gradient(var(--linha) 1px, transparent 1px),
+      linear-gradient(90deg, var(--linha) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 }

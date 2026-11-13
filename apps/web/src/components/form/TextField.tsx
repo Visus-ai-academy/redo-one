@@ -39,7 +39,7 @@ export function TextField({
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
-      className={cn('flex flex-col gap-1.5', className)}
+      className={cn('flex flex-col gap-2', className)}
     >
       <FieldLabel required={required}>{label}</FieldLabel>
       <Field.Control

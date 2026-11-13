@@ -2,7 +2,10 @@ import { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 
+import { configurarApi } from './lib/api';
 import { routeTree } from './routeTree.gen';
+
+configurarApi();
 
 export function getRouter() {
   // Um QueryClient por router: no SSR, um singleton vazaria dados entre requisições.
