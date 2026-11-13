@@ -1,10 +1,12 @@
 import { EnvelopeSimple } from '@phosphor-icons/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 
 import { ResponseError } from '../../gen/.kubb/client';
 import { useSessaoControllerEntrar } from '../../gen/hooks/useSessaoControllerEntrar';
 import { horaDeBrasilia } from '../../lib/acesso';
+import { SESSAO_QUERY_KEY } from '../../lib/sessao';
 import { Alerta } from '../alerta/Alerta';
 import { useAppForm } from '../form/form';
 import { linkClassName } from './link-class';
@@ -17,6 +19,7 @@ const schema = z.object({
 /** Formulário da tela Entrar. `destino` é o caminho interno já validado (ver `destinoSeguro`). */
 export function LoginForm({ destino }: { destino: string }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const entrar = useSessaoControllerEntrar();
 
   const form = useAppForm({
@@ -28,6 +31,7 @@ export function LoginForm({ destino }: { destino: string }) {
       } catch {
         return; // A mensagem vem de `entrar.error`.
       }
+      queryClient.removeQueries({ queryKey: SESSAO_QUERY_KEY });
       await navigate({ href: destino, replace: true });
     },
   });

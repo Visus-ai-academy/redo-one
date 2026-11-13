@@ -35,6 +35,8 @@ Front em TanStack Start (React 19, SSR) sobre Vite.
 - **Tabelas**: `createDataTableColumnHelper<T>()` + `<DataTable columns={...} data={...} />`. Defina `columns` fora do componente (ou com `useMemo`). Sorting, paginação etc.: registre a feature em `dataTableFeatures` (`columns.ts`).
 - **Dados**: nos loaders, use `context.queryClient.ensureQueryData(...)`; nos componentes, os hooks gerados pelo Kubb. Ver skill `consume-api`.
 - `src/gen/` é gerado (`pnpm generate` na raiz). Não edite à mão.
+- **Sessão e permissões**: telas autenticadas ficam em `src/routes/_app/` (o `beforeLoad` de `_app.tsx` usa `exigirSessao`); a sessão vem de `sessaoQueryOptions()` (`src/lib/sessao.ts`) e `pode()` (`src/lib/permissoes.ts`) decide o que mostrar. No SSR, o cookie do navegador é repassado à API pelo interceptor de `configurarApi` (`src/lib/api.ts`). Tela de trabalho nova entra em `GRUPOS_MENU` (`src/components/app-shell/menu.ts`) com a permissão `ver`.
+- **Dependências no dev**: pacote novo usado no cliente (cada `@base-ui/react/<componente>`) entra em `optimizeDeps.include` do `vite.config.ts`; sem isso, o Vite recarrega a página na primeira visita e a tela para de responder.
 
 ## Regras do projeto
 

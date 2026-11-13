@@ -1,4 +1,5 @@
 import { CheckCircle, Circle, Clock } from '@phosphor-icons/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import { useSenhaControllerDefinir } from '../../gen/hooks/useSenhaControllerDef
 import type { InfoLinkDto } from '../../gen/types/InfoLinkDto';
 import { cn } from '../../lib/cn';
 import { requisitosDaSenha, senhaTemLetraENumero, TAMANHO_MINIMO_SENHA } from '../../lib/senha';
+import { SESSAO_QUERY_KEY } from '../../lib/sessao';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useAppForm } from '../form/form';
@@ -31,6 +33,7 @@ const destaque = 'font-semibold text-foreground';
 /** Formulário de Definir senha, para o link de convite ou de recuperação já consultado na API. */
 export function DefinirSenhaForm({ token, link }: { token: string; link: InfoLinkDto }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const definir = useSenhaControllerDefinir();
   const [expirou, setExpirou] = useState(false);
   const convite = link.tipo === 'convite';
@@ -45,6 +48,7 @@ export function DefinirSenhaForm({ token, link }: { token: string; link: InfoLin
         if (ResponseError.is(erro) && erro.status === 404) setExpirou(true);
         return;
       }
+      queryClient.removeQueries({ queryKey: SESSAO_QUERY_KEY });
       await navigate({ to: '/', replace: true });
     },
   });

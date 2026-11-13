@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResponseError } from '../../gen/.kubb/client';
 import { sessaoControllerEntrar } from '../../gen/clients/sessaoControllerEntrar';
+import { SESSAO_QUERY_KEY } from '../../lib/sessao';
 import { renderComRotas } from '../../test/render';
 import { LoginForm } from './LoginForm';
 
@@ -46,6 +47,16 @@ describe('LoginForm', () => {
       }),
     );
     await waitFor(() => expect(router.state.location.pathname).toBe('/configuracoes/usuarios'));
+  });
+
+  it('esquece a sessão anterior em cache para a guarda buscar a nova', async () => {
+    responder(async () => ({}));
+    const { queryClient } = renderComRotas(<LoginForm destino="/" />);
+    queryClient.setQueryData(SESSAO_QUERY_KEY, null);
+
+    await preencherEEntrar();
+
+    await waitFor(() => expect(queryClient.getQueryData(SESSAO_QUERY_KEY)).toBeUndefined());
   });
 
   it('pede os dois campos antes de enviar', async () => {

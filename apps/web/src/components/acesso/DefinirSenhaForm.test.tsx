@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResponseError } from '../../gen/.kubb/client';
 import { senhaControllerDefinir } from '../../gen/clients/senhaControllerDefinir';
 import type { InfoLinkDto } from '../../gen/types/InfoLinkDto';
+import { SESSAO_QUERY_KEY } from '../../lib/sessao';
 import { renderComRotas } from '../../test/render';
 import { DefinirSenhaForm, LinkExpirado } from './DefinirSenhaForm';
 
@@ -98,6 +99,16 @@ describe('DefinirSenhaForm', () => {
       expect.objectContaining({ body: { token: 'tok-123', senha: 'abcdefg1' } }),
     );
     await waitFor(() => expect(router.state.location.href).toBe('/'));
+  });
+
+  it('esquece a sessão anterior em cache depois de criar a senha', async () => {
+    const { queryClient } = renderComRotas(<DefinirSenhaForm token="t" link={convite} />);
+    queryClient.setQueryData(SESSAO_QUERY_KEY, null);
+
+    await digitarSenhas('abcdefg1', 'abcdefg1');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar senha e entrar' }));
+
+    await waitFor(() => expect(queryClient.getQueryData(SESSAO_QUERY_KEY)).toBeUndefined());
   });
 
   it('mostra o que a API recusou na senha', async () => {
