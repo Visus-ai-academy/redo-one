@@ -368,6 +368,351 @@
           "identidade"
         ]
       }
+    },
+    "/usuarios": {
+      "get": {
+        "operationId": "UsuariosController_listar",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou do e-mail, ou o CPF.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "papelId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ativo",
+                "convite_pendente",
+                "bloqueado",
+                "desativado"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaUsuariosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "post": {
+        "operationId": "UsuariosController_convidar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConviteUsuarioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conta criada e convite enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioCriadoDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel com permissões que quem convida não tem."
+          },
+          "409": {
+            "description": "E-mail ou CPF já cadastrados."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}": {
+      "get": {
+        "operationId": "UsuariosController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/convite": {
+      "post": {
+        "operationId": "UsuariosController_reenviarConvite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Convite reenviado; o link anterior deixa de valer."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/papel": {
+      "patch": {
+        "operationId": "UsuariosController_trocarPapel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrocarPapelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Papel trocado; as sessões da pessoa foram encerradas."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/desbloquear": {
+      "post": {
+        "operationId": "UsuariosController_desbloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/desativar": {
+      "post": {
+        "operationId": "UsuariosController_desativar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Conta desativada; as sessões foram encerradas."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/reativar": {
+      "post": {
+        "operationId": "UsuariosController_reativar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/link-senha": {
+      "post": {
+        "operationId": "UsuariosController_enviarLinkSenha",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Link de nova senha (1 hora) enviado à pessoa."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/sessoes": {
+      "delete": {
+        "operationId": "UsuariosController_encerrarSessoes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Todas as sessões da pessoa foram encerradas."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/usuarios/{id}/sessoes/{sessaoId}": {
+      "delete": {
+        "operationId": "UsuariosController_encerrarSessao",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
     }
   },
   "info": {
@@ -778,6 +1123,236 @@
         "required": [
           "message",
           "problemas"
+        ]
+      },
+      "PapelDoUsuarioDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "UsuarioResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "$ref": "#/components/schemas/PapelDoUsuarioDto"
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "convite_pendente",
+              "bloqueado",
+              "desativado"
+            ]
+          },
+          "ultimoAcessoEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "papel",
+          "situacao",
+          "ultimoAcessoEm"
+        ]
+      },
+      "PaginaUsuariosDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsuarioResumoDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "SessaoAbertaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadaEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "ultimoUsoEm": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ip",
+          "userAgent",
+          "criadaEm",
+          "ultimoUsoEm"
+        ]
+      },
+      "UsuarioDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "$ref": "#/components/schemas/PapelDoUsuarioDto"
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "convite_pendente",
+              "bloqueado",
+              "desativado"
+            ]
+          },
+          "ultimoAcessoEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "cpfFinal": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só os 2 últimos dígitos do CPF."
+          },
+          "bloqueadoAte": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sessoesAbertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessaoAbertaDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "papel",
+          "situacao",
+          "ultimoAcessoEm",
+          "cpfFinal",
+          "bloqueadoAte",
+          "criadoEm",
+          "sessoesAbertas"
+        ]
+      },
+      "ConviteUsuarioDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Maria Souza",
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "example": "nome@empresa.com.br"
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true,
+            "example": "000.000.000-00"
+          },
+          "papelId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "papelId"
+        ]
+      },
+      "UsuarioCriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "TrocarPapelDto": {
+        "type": "object",
+        "properties": {
+          "papelId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "papelId"
         ]
       }
     }

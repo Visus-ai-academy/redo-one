@@ -25,13 +25,25 @@ import { TOKENS_SENHA_REPOSITORY } from './senha/tokens-senha.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { SessaoAutenticador } from './sessoes/sessao-autenticador';
 import { SESSOES_REPOSITORY } from './sessoes/sessoes.repository';
+import { DrizzleGestaoUsuariosRepository } from './usuarios/drizzle-gestao-usuarios.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
+import { GESTAO_USUARIOS_REPOSITORY } from './usuarios/gestao-usuarios.repository';
+import { UsuariosController } from './usuarios/usuarios.controller';
 import { USUARIOS_REPOSITORY } from './usuarios/usuarios.repository';
+import { UsuariosService } from './usuarios/usuarios.service';
 
 /** Contexto `identidade`: login, sessões, usuários, papéis e permissões. */
 @Module({
-  controllers: [SessaoController, PapeisController, PermissoesController, SenhaController],
+  controllers: [
+    SessaoController,
+    PapeisController,
+    PermissoesController,
+    SenhaController,
+    UsuariosController,
+  ],
   providers: [
+    UsuariosService,
+    { provide: GESTAO_USUARIOS_REPOSITORY, useClass: DrizzleGestaoUsuariosRepository },
     SenhaService,
     { provide: TOKENS_SENHA_REPOSITORY, useClass: DrizzleTokensSenhaRepository },
     {

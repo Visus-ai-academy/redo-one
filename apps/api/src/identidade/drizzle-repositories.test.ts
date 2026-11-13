@@ -14,6 +14,7 @@ import { DrizzleGestaoPapeisRepository } from './papeis/drizzle-gestao-papeis.re
 import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
 import { DrizzleTokensSenhaRepository } from './senha/drizzle-tokens-senha.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
+import { DrizzleGestaoUsuariosRepository } from './usuarios/drizzle-gestao-usuarios.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
 
 // Roda contra um Postgres de verdade (ex.: o do docker-compose, num banco só de teste).
@@ -249,6 +250,47 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
       new DrizzleUsuariosRepository(db).buscarParaLogin({ cpf: '12345678901' }),
     ).resolves.toMatchObject({
       senhaHash: 'hash-novo',
+    });
+  });
+
+  it('gestão de usuários: convida (conta, token e job juntos), filtra por situação e mascara o CPF', async () => {
+    const repo = new DrizzleGestaoUsuariosRepository(db);
+    const agora = new Date('2026-11-13T12:00:00Z');
+
+    const id = await repo.convidar(
+      { nome: 'Ana Lima', email: 'ana@empresa.com.br', cpf: null, papelId },
+      {
+        tipo: 'convite',
+        tokenHash: 'convite-ana',
+        criadoEm: agora,
+        expiraEm: new Date('2026-11-20T12:00:00Z'),
+        criadoPorId: usuarioId,
+      },
+      () => ({ para: 'ana@empresa.com.br', assunto: 'Convite', texto: 't', html: 'h' }),
+    );
+    await expect(
+      new DrizzleTokensSenhaRepository(db).buscarPorHash('convite-ana'),
+    ).resolves.toMatchObject({
+      usuarioId: id,
+      convidadoPorNome: 'Maria Souza',
+    });
+    await expect(repo.existeEmail('ana@empresa.com.br')).resolves.toBe(true);
+
+    const pendentes = await repo.listar({
+      situacao: 'convite_pendente',
+      pagina: 1,
+      porPagina: 25,
+      agora,
+    });
+    expect(pendentes).toMatchObject({ total: 1, itens: [{ id, situacao: 'convite_pendente' }] });
+    const busca = await repo.listar({ busca: 'mari', pagina: 1, porPagina: 25, agora });
+    expect(busca.itens.map((u) => u.nome)).toEqual(['Maria Souza']);
+
+    await repo.definirAtivo(usuarioId, false);
+    await expect(repo.buscar(usuarioId, agora)).resolves.toMatchObject({
+      situacao: 'desativado',
+      cpfFinal: '01',
+      papel: { id: papelId, nome: 'Financeiro' },
     });
   });
 

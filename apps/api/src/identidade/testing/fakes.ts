@@ -26,6 +26,14 @@ import type {
   SessoesRepository,
 } from '../sessoes/sessoes.repository';
 import type {
+  FiltroUsuarios,
+  GestaoUsuariosRepository,
+  NovoUsuario,
+  SituacaoUsuario,
+  UsuarioDetalhe,
+  UsuarioResumo,
+} from '../usuarios/gestao-usuarios.repository';
+import type {
   IdentificadorLogin,
   UsuarioLogin,
   UsuariosRepository,
@@ -283,5 +291,111 @@ export class InMemoryTokensSenhaRepository implements TokensSenhaRepository {
       bloqueadoAte: null,
     });
     return true;
+  }
+}
+
+export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepository {
+  constructor(
+    private readonly usuarios: InMemoryUsuariosRepository,
+    private readonly papeis: InMemoryGestaoPapeisRepository,
+    private readonly sessoes: InMemorySessoesRepository,
+    private readonly tokens: InMemoryTokensSenhaRepository,
+  ) {}
+
+  async listar(filtro: FiltroUsuarios) {
+    const busca = filtro.busca?.toLowerCase();
+    const todos = this.usuarios.usuarios
+      .map((u) => this.resumo(u, filtro.agora))
+      .filter(
+        (u) =>
+          (!busca || u.nome.toLowerCase().includes(busca) || u.email.includes(busca)) &&
+          (!filtro.papelId || u.papel.id === filtro.papelId) &&
+          (!filtro.situacao || u.situacao === filtro.situacao),
+      )
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+    const inicio = (filtro.pagina - 1) * filtro.porPagina;
+    return { itens: todos.slice(inicio, inicio + filtro.porPagina), total: todos.length };
+  }
+
+  async buscar(id: string, agora: Date): Promise<UsuarioDetalhe | null> {
+    const usuario = this.usuarios.usuarios.find((u) => u.id === id);
+    if (!usuario) return null;
+    return {
+      ...this.resumo(usuario, agora),
+      cpfFinal: usuario.cpf ? usuario.cpf.slice(-2) : null,
+      bloqueadoAte: usuario.bloqueadoAte,
+      criadoEm: agora,
+      sessoesAbertas: this.sessoes.sessoes
+        .filter((s) => s.usuarioId === id && !s.encerradaEm)
+        .map((s) => ({
+          id: s.id,
+          ip: s.ip,
+          userAgent: s.userAgent,
+          criadaEm: s.criadaEm,
+          ultimoUsoEm: s.ultimoUsoEm,
+        })),
+    };
+  }
+
+  async existeEmail(email: string) {
+    return this.usuarios.usuarios.some((u) => u.email === email);
+  }
+
+  async existeCpf(cpf: string) {
+    return this.usuarios.usuarios.some((u) => u.cpf === cpf);
+  }
+
+  async convidar(
+    novo: NovoUsuario,
+    token: Omit<NovoTokenSenha, 'usuarioId'>,
+    email: (usuarioId: string) => Email,
+  ) {
+    const id = `u-${this.usuarios.usuarios.length + 1}`;
+    this.usuarios.usuarios.push({
+      id,
+      ...novo,
+      senhaHash: null,
+      ativo: true,
+      tentativasFalhas: 0,
+      bloqueadoAte: null,
+    });
+    await this.tokens.emitir({ ...token, usuarioId: id }, email(id));
+    return id;
+  }
+
+  async trocarPapel(id: string, papelId: string) {
+    this.usuarios.porId(id).papelId = papelId;
+  }
+
+  async definirAtivo(id: string, ativo: boolean) {
+    this.usuarios.porId(id).ativo = ativo;
+  }
+
+  async desbloquear(id: string) {
+    Object.assign(this.usuarios.porId(id), { tentativasFalhas: 0, bloqueadoAte: null });
+  }
+
+  private resumo(u: UsuarioLogin, agora: Date): UsuarioResumo {
+    const situacao: SituacaoUsuario = !u.ativo
+      ? 'desativado'
+      : !u.senhaHash
+        ? 'convite_pendente'
+        : u.bloqueadoAte && u.bloqueadoAte > agora
+          ? 'bloqueado'
+          : 'ativo';
+    const usos = this.sessoes.sessoes
+      .filter((s) => s.usuarioId === u.id)
+      .map((s) => s.ultimoUsoEm.getTime());
+    return {
+      id: u.id,
+      nome: u.nome,
+      email: u.email,
+      papel: {
+        id: u.papelId,
+        nome: this.papeis.papeis.find((p) => p.id === u.papelId)?.nome ?? '',
+      },
+      situacao,
+      ultimoAcessoEm: usos.length ? new Date(Math.max(...usos)) : null,
+    };
   }
 }

@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { CLOCK, type Clock } from '../clock';
-import { emailRecuperacao } from '../emails';
+import { emailConvite, emailRecuperacao } from '../emails';
 import { abrirSessao, hashDoToken, type SessaoAberta } from '../sessoes/abrir-sessao';
 import { SESSOES_REPOSITORY, type SessoesRepository } from '../sessoes/sessoes.repository';
 import { USUARIOS_REPOSITORY, type UsuariosRepository } from '../usuarios/usuarios.repository';
@@ -22,6 +22,7 @@ export const URL_APP = Symbol('URL_APP');
 
 const MIN = 60 * 1000;
 const RECUPERACAO_VALIDADE_MS = 60 * MIN;
+const CONVITE_VALIDADE_MS = 7 * 24 * 60 * MIN;
 const INTERVALO_MINIMO_ENTRE_EMAILS_MS = MIN;
 
 export interface InfoLink {
@@ -56,6 +57,15 @@ export class SenhaService {
     const ultima = await this.tokens.ultimaEmissao(usuario.id, 'recuperacao');
     if (ultima && agora.getTime() - ultima.getTime() < INTERVALO_MINIMO_ENTRE_EMAILS_MS) return;
 
+    await this.emitirRecuperacao(usuario, null);
+  }
+
+  /** Link de nova senha (1 hora). Também usado por quem administra, pela tela de Usuários. */
+  async emitirRecuperacao(
+    usuario: { id: string; nome: string; email: string },
+    pedidoPorId: string | null,
+  ): Promise<void> {
+    const agora = this.clock.now();
     const token = randomBytes(32).toString('base64url');
     await this.tokens.emitir(
       {
@@ -64,10 +74,37 @@ export class SenhaService {
         tokenHash: hashDoToken(token),
         criadoEm: agora,
         expiraEm: new Date(agora.getTime() + RECUPERACAO_VALIDADE_MS),
-        criadoPorId: null,
+        criadoPorId: pedidoPorId,
       },
       emailRecuperacao({ para: usuario.email, nome: usuario.nome, link: this.link(token) }),
     );
+  }
+
+  /** Link de convite (7 dias) e o e-mail dele, para o convite e o reenvio. */
+  prepararConvite(dados: {
+    nome: string;
+    email: string;
+    papel: string;
+    convidadoPor: { id: string; nome: string };
+  }) {
+    const agora = this.clock.now();
+    const token = randomBytes(32).toString('base64url');
+    return {
+      token: {
+        tipo: 'convite' as const,
+        tokenHash: hashDoToken(token),
+        criadoEm: agora,
+        expiraEm: new Date(agora.getTime() + CONVITE_VALIDADE_MS),
+        criadoPorId: dados.convidadoPor.id,
+      },
+      email: emailConvite({
+        para: dados.email,
+        nome: dados.nome,
+        convidadoPor: dados.convidadoPor.nome,
+        papel: dados.papel,
+        link: this.link(token),
+      }),
+    };
   }
 
   /** Para a tela de definir senha mostrar de quem é a conta (e quem convidou). */
