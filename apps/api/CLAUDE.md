@@ -81,7 +81,13 @@ src/analytics/
 ## Regras do projeto (desde o primeiro módulo)
 
 - **Nomes:** domínio em pt-BR sem acento, seguindo o glossário do `CLAUDE.md` da raiz (`Competencia`, `FecharCompetencia`, tabela `laudos`); sufixos e métodos técnicos em inglês (`LaudoController`, `CompetenciaRepository`, `findById`).
-- **Autenticação:** login próprio (e-mail ou CPF + senha, hash forte), sessão guardada no banco e enviada em cookie `httpOnly`. A sessão é derrubada ao trocar senha, papel ou permissões. Bloqueio após tentativas falhas, recuperação de senha por e-mail, primeiro acesso por convite (nunca senha padrão). Robôs (RPA de importação, distribuição, comentários) usam chave de API própria por robô, comparada em tempo constante, com permissões restritas ao que cada um faz. Webhooks validam assinatura e recusam a chamada se o segredo não estiver configurado.
+- **Autenticação:** login próprio (e-mail ou CPF + senha, hash forte), sessão guardada no banco e enviada em cookie `httpOnly`. A sessão é derrubada ao trocar senha, papel ou permissões. Bloqueio após tentativas falhas, recuperação de senha por e-mail, primeiro acesso por convite (nunca senha padrão). Robôs (RPA de importação, distribuição, comentários) usam chave de API própria por robô, comparada em tempo constante, com permissões restritas ao que cada um faz. Webhooks validam assinatura e recusam a chamada se o segredo não estiver configurado. Valores aprovados:
+  - **Senha:** mínimo de 8 caracteres, com pelo menos uma letra e um número; sem checagem de senha vazada. Hash com Argon2id.
+  - **Bloqueio:** 5 falhas seguidas bloqueiam por 15 minutos, contando por conta e por IP; a mensagem de erro não diz se o e-mail existe. Quem tem `usuarios.desbloquear` libera na hora pela tela Usuários, o que zera o contador e gera evento de auditoria.
+  - **Links:** convite vale 7 dias, recuperação vale 1 hora; ambos de uso único, com só o hash do token no banco.
+  - **Sessão:** expira após 7 dias sem uso (renovada a cada uso), com limite absoluto de 30 dias. Cookie `httpOnly`, `Secure`, `SameSite=Lax`; token novo a cada login; só o hash do token no banco.
+  - **Chaves dos robôs:** enviadas em `Authorization: Bearer` (o `x-api-key` do legado é aceito durante a transição). Validade de 1 ano; até duas chaves ativas por robô durante a troca. No banco, só o prefixo (para identificar) e o hash SHA-256.
+  - **E-mail:** envio atrás de interface com token de injeção; em produção, Amazon SES (ou Resend/Postmark se não houver AWS); em desenvolvimento, Mailpit.
 - **Permissões:** RBAC com papéis configuráveis e permissões `tela.ação`, checadas por guard em todo endpoint. Recortes por atributo ficam no service/domínio, com teste: médico só acessa os próprios dados; gestora de escala só os turnos e especialidades do seu escopo; coordenador só a sua especialidade. Acesso a dados de paciente exige permissão específica.
 - **Escala moderada:**
   - Toda listagem é paginada.

@@ -60,6 +60,8 @@ Conteúdo claro e denso; **menu lateral verde-escuro da marca**, que é a identi
 
 - Nome: **One**. Wordmark em Orbitron 700 com espaçamento largo, herdado do legado; só no logotipo, nunca em títulos ou textos.
 - Verdes da marca no legado: `#112622`, `#214037`, `#34594F`, `#6D8C84`, `#C1D9D4`.
+- O One foi feito **para** a TeleImagem, mas não é produto **dela**: nenhuma tela leva "TeleImagem" como marca ou assinatura (nem em textos como "equipe da TeleImagem"). E-mails `@teleimagem.com.br` como dado de exemplo de usuário podem.
+- Telas de acesso (login, recuperar e definir senha): painel verde `#112622` à esquerda com grade sutil, "One" grande e o desenho de anéis concêntricos com mira (o anel tracejado gira devagar e para com `prefers-reduced-motion`); formulário à direita sobre `#F7F8F8`.
 
 ## Navegação
 
@@ -122,7 +124,8 @@ Conteúdo claro e denso; **menu lateral verde-escuro da marca**, que é a identi
 ## Formulários
 
 - `*` vermelho no rótulo de todo campo obrigatório + `required`; legenda "* Campo obrigatório" quando há campos opcionais.
+- Todo campo de texto tem placeholder com um exemplo do formato esperado (`nome@empresa.com.br`, `000.000.000-00`, `Ex.: Maria Souza`). O placeholder nunca substitui o rótulo.
 
 ## Acesso (login, recuperação, convite)
 
-- Entrada por e-mail ou CPF + senha; primeiro acesso por convite (link de 7 dias); recuperação por link de 1 hora, de uso único; bloqueio temporário após tentativas falhas. Os prazos e o limite de tentativas são suposições do protótipo, a confirmar.
+- Regras de senha, bloqueio, links e sessão: `apps/api/CLAUDE.md`, item "Autenticação". As telas mostram esses valores (requisitos da senha: "Pelo menos 8 caracteres", "Letras e números", "As duas senhas são iguais").
