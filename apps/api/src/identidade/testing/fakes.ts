@@ -4,6 +4,12 @@ import type {
   TentativasLoginRepository,
 } from '../autenticacao/tentativas-login.repository';
 import type { Clock } from '../clock';
+import type {
+  DadosPapel,
+  GestaoPapeisRepository,
+  PapelDetalhe,
+  PapelResumo,
+} from '../papeis/gestao-papeis.repository';
 import type { AcessoDoPapel, PapeisRepository } from '../papeis/papeis.repository';
 import type { PasswordHasher } from '../senha/password-hasher';
 import type {
@@ -115,6 +121,14 @@ export class InMemorySessoesRepository implements SessoesRepository {
     this.porId(id).encerradaEm = em;
   }
 
+  async encerrarDoPapel(papelId: string, em: Date) {
+    const abertas = this.sessoes.filter(
+      (s) => !s.encerradaEm && this.usuarios?.porId(s.usuarioId).papelId === papelId,
+    );
+    for (const sessao of abertas) sessao.encerradaEm = em;
+    return abertas.length;
+  }
+
   porId(id: string) {
     const sessao = this.sessoes.find((s) => s.id === id);
     if (!sessao) throw new Error(`sessão ${id} não existe no fake`);
@@ -127,6 +141,55 @@ export class InMemoryPapeisRepository implements PapeisRepository {
 
   async acessoDoPapel(papelId: string) {
     return this.acessos[papelId] ?? { acessoTotal: false, permissoes: [] };
+  }
+}
+
+export class InMemoryGestaoPapeisRepository implements GestaoPapeisRepository {
+  constructor(
+    public readonly papeis: PapelDetalhe[] = [],
+    private readonly usuarios?: InMemoryUsuariosRepository,
+  ) {}
+
+  async listar(): Promise<PapelResumo[]> {
+    return this.papeis.map(({ permissoes, ...papel }) => ({
+      ...papel,
+      totalUsuarios: this.totalUsuarios(papel.id),
+      totalPermissoes: permissoes.length,
+    }));
+  }
+
+  async buscar(id: string) {
+    const papel = this.papeis.find((p) => p.id === id);
+    return papel ? { ...papel, totalUsuarios: this.totalUsuarios(id) } : null;
+  }
+
+  async buscarPorNome(nome: string) {
+    const papel = this.papeis.find((p) => p.nome.toLowerCase() === nome.toLowerCase());
+    return papel ? { id: papel.id } : null;
+  }
+
+  async criar(dados: DadosPapel) {
+    const id = `p-${this.papeis.length + 1}`;
+    this.papeis.push({ id, sistema: false, acessoTotal: false, totalUsuarios: 0, ...dados });
+    return id;
+  }
+
+  async atualizar(id: string, dados: DadosPapel) {
+    Object.assign(this.porId(id), dados);
+  }
+
+  async excluir(id: string) {
+    this.papeis.splice(this.papeis.indexOf(this.porId(id)), 1);
+  }
+
+  porId(id: string) {
+    const papel = this.papeis.find((p) => p.id === id);
+    if (!papel) throw new Error(`papel ${id} não existe no fake`);
+    return papel;
+  }
+
+  private totalUsuarios(papelId: string) {
+    return this.usuarios?.usuarios.filter((u) => u.papelId === papelId).length ?? 0;
   }
 }
 

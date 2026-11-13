@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../database/database';
 import { sessoes, usuarios } from '../../database/schema';
@@ -52,5 +52,22 @@ export class DrizzleSessoesRepository implements SessoesRepository {
 
   async encerrar(id: string, em: Date) {
     await this.db.update(sessoes).set({ encerradaEm: em }).where(eq(sessoes.id, id));
+  }
+
+  async encerrarDoPapel(papelId: string, em: Date) {
+    const encerradas = await this.db
+      .update(sessoes)
+      .set({ encerradaEm: em })
+      .where(
+        and(
+          isNull(sessoes.encerradaEm),
+          inArray(
+            sessoes.usuarioId,
+            this.db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.papelId, papelId)),
+          ),
+        ),
+      )
+      .returning({ id: sessoes.id });
+    return encerradas.length;
   }
 }

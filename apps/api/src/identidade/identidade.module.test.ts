@@ -2,6 +2,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 
+import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { DatabaseModule } from '../database/database.module';
 import { AutenticacaoService } from './autenticacao/autenticacao.service';
 import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentativas-login.repository';
@@ -18,10 +19,18 @@ import { SESSOES_REPOSITORY } from './sessoes/sessoes.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
 import { USUARIOS_REPOSITORY } from './usuarios/usuarios.repository';
 
+// O mesmo que o AppModule monta para o contexto: config, banco e auditoria (globais) + identidade.
+const MODULOS = [
+  ConfigModule.forRoot({ isGlobal: true }),
+  DatabaseModule,
+  AuditoriaModule,
+  IdentidadeModule,
+];
+
 describe('IdentidadeModule', () => {
   it('liga o controller de sessão às implementações reais', async () => {
     const modulo = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, IdentidadeModule],
+      imports: MODULOS,
     }).compile();
 
     expect(modulo.get(SessaoController)).toBeInstanceOf(SessaoController);
@@ -40,7 +49,7 @@ describe('IdentidadeModule', () => {
 
   it('fecha toda rota por padrão: sem cookie, GET /sessao responde 401', async () => {
     const modulo = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, IdentidadeModule],
+      imports: MODULOS,
     }).compile();
     const app = modulo.createNestApplication();
     await app.listen(0);

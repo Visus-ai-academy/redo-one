@@ -9,6 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
 import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentativas-login.repository';
+import { DrizzleGestaoPapeisRepository } from './papeis/drizzle-gestao-papeis.repository';
 import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
@@ -161,6 +162,50 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
       acessoTotal: true,
       permissoes: [],
     });
+  });
+
+  it('gestão de papéis: cria, lista com totais, busca por nome, atualiza e exclui', async () => {
+    const repo = new DrizzleGestaoPapeisRepository(db);
+
+    const id = await repo.criar({
+      nome: 'Operação',
+      descricao: 'Fila',
+      permissoes: ['distribuicao.ver', 'distribuicao.rodada.iniciar'],
+    });
+    await expect(repo.buscarPorNome('OPERAÇÃO')).resolves.toEqual({ id });
+    await expect(repo.buscar(id)).resolves.toMatchObject({
+      nome: 'Operação',
+      totalUsuarios: 0,
+      permissoes: ['distribuicao.rodada.iniciar', 'distribuicao.ver'],
+    });
+
+    await repo.atualizar(id, { nome: 'Operação 2', descricao: null, permissoes: ['sla.ver'] });
+    const lista = await repo.listar();
+    expect(lista.find((p) => p.id === id)).toMatchObject({
+      nome: 'Operação 2',
+      totalPermissoes: 1,
+    });
+    expect(lista.find((p) => p.id === papelId)).toMatchObject({ totalUsuarios: 1 });
+
+    await repo.excluir(id);
+    await expect(repo.buscar(id)).resolves.toBeNull();
+  });
+
+  it('encerra só as sessões abertas dos usuários do papel', async () => {
+    const repo = new DrizzleSessoesRepository(db);
+    const base = {
+      usuarioId,
+      criadaEm: new Date('2026-11-13T12:00:00Z'),
+      expiraEm: new Date('2026-11-20T12:00:00Z'),
+      expiraAbsolutoEm: new Date('2026-12-13T12:00:00Z'),
+      ip: null,
+      userAgent: null,
+    };
+    await repo.criar({ ...base, tokenHash: 'a' });
+    await repo.criar({ ...base, tokenHash: 'b' });
+
+    await expect(repo.encerrarDoPapel(papelId, new Date('2026-11-14T12:00:00Z'))).resolves.toBe(2);
+    await expect(repo.encerrarDoPapel(papelId, new Date('2026-11-15T12:00:00Z'))).resolves.toBe(0);
   });
 
   it('conta só as falhas do IP a partir do instante pedido', async () => {

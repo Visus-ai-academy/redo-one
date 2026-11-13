@@ -27,4 +27,6 @@ export interface SessoesRepository {
   buscarPorTokenHash(tokenHash: string): Promise<SessaoComUsuario | null>;
   renovar(id: string, expiraEm: Date, ultimoUsoEm: Date): Promise<void>;
   encerrar(id: string, em: Date): Promise<void>;
+  /** Encerra as sessões abertas de todos os usuários do papel; devolve quantas encerrou. */
+  encerrarDoPapel(papelId: string, em: Date): Promise<number>;
 }

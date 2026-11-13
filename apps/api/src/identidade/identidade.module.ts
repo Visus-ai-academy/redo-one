@@ -8,8 +8,13 @@ import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentati
 import { SessaoController } from './autenticacao/sessao.controller';
 import { TENTATIVAS_LOGIN_REPOSITORY } from './autenticacao/tentativas-login.repository';
 import { CLOCK, systemClock } from './clock';
+import { DrizzleGestaoPapeisRepository } from './papeis/drizzle-gestao-papeis.repository';
 import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
+import { GESTAO_PAPEIS_REPOSITORY } from './papeis/gestao-papeis.repository';
+import { PapeisController } from './papeis/papeis.controller';
 import { PAPEIS_REPOSITORY } from './papeis/papeis.repository';
+import { PapeisService } from './papeis/papeis.service';
+import { PermissoesController } from './papeis/permissoes.controller';
 import { Argon2PasswordHasher } from './senha/argon2-password-hasher';
 import { PASSWORD_HASHER } from './senha/password-hasher';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
@@ -20,8 +25,10 @@ import { USUARIOS_REPOSITORY } from './usuarios/usuarios.repository';
 
 /** Contexto `identidade`: login, sessões, usuários, papéis e permissões. */
 @Module({
-  controllers: [SessaoController],
+  controllers: [SessaoController, PapeisController, PermissoesController],
   providers: [
+    PapeisService,
+    { provide: GESTAO_PAPEIS_REPOSITORY, useClass: DrizzleGestaoPapeisRepository },
     // Guards globais, nesta ordem: primeiro identifica quem é, depois confere a permissão.
     { provide: APP_GUARD, useClass: AutenticacaoGuard },
     { provide: APP_GUARD, useClass: PermissaoGuard },

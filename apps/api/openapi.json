@@ -85,6 +85,187 @@
           "identidade"
         ]
       }
+    },
+    "/papeis": {
+      "get": {
+        "operationId": "PapeisController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PapelResumoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "post": {
+        "operationId": "PapeisController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PapelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PapelCriadoDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Concede permissão que quem pede não tem."
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/papeis/{id}": {
+      "get": {
+        "operationId": "PapeisController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PapelDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "put": {
+        "operationId": "PapeisController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PapelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PapelAtualizadoDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nome já usado ou papel do sistema."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "delete": {
+        "operationId": "PapeisController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Papel com usuários ou papel do sistema."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/permissoes": {
+      "get": {
+        "operationId": "PermissoesController_catalogo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tudo o que um papel pode conceder.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TelaCatalogoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
     }
   },
   "info": {
@@ -211,6 +392,193 @@
           "usuario",
           "acessoTotal",
           "permissoes"
+        ]
+      },
+      "PapelResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "sistema": {
+            "type": "boolean",
+            "description": "Papel fixo: não se edita nem se exclui."
+          },
+          "acessoTotal": {
+            "type": "boolean"
+          },
+          "totalUsuarios": {
+            "type": "number"
+          },
+          "totalPermissoes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "sistema",
+          "acessoTotal",
+          "totalUsuarios",
+          "totalPermissoes"
+        ]
+      },
+      "PapelDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "sistema": {
+            "type": "boolean"
+          },
+          "acessoTotal": {
+            "type": "boolean"
+          },
+          "totalUsuarios": {
+            "type": "number"
+          },
+          "permissoes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "sistema",
+          "acessoTotal",
+          "totalUsuarios",
+          "permissoes"
+        ]
+      },
+      "PapelDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Financeiro",
+            "maxLength": 60
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "permissoes": {
+            "example": [
+              "faturamento.ver",
+              "faturamento.competencia.fechar"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "nome",
+          "permissoes"
+        ]
+      },
+      "PapelCriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PapelAtualizadoDto": {
+        "type": "object",
+        "properties": {
+          "sessoesEncerradas": {
+            "type": "number",
+            "description": "Sessões encerradas porque as permissões mudaram."
+          }
+        },
+        "required": [
+          "sessoesEncerradas"
+        ]
+      },
+      "AcaoCatalogoDto": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "example": "usuarios.desbloquear"
+          },
+          "rotulo": {
+            "type": "string",
+            "example": "Desbloquear"
+          },
+          "sensivel": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave",
+          "rotulo",
+          "sensivel"
+        ]
+      },
+      "TelaCatalogoDto": {
+        "type": "object",
+        "properties": {
+          "tela": {
+            "type": "string",
+            "example": "usuarios"
+          },
+          "rotulo": {
+            "type": "string",
+            "example": "Usuários"
+          },
+          "area": {
+            "type": "string",
+            "enum": [
+              "Painéis",
+              "Operação",
+              "Cadastros",
+              "Financeiro",
+              "Configurações"
+            ]
+          },
+          "acoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcaoCatalogoDto"
+            }
+          }
+        },
+        "required": [
+          "tela",
+          "rotulo",
+          "area",
+          "acoes"
         ]
       }
     }
