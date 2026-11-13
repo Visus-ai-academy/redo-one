@@ -22,7 +22,7 @@ import * as schema from './schema';
       useFactory: (pool: Pool) => drizzle({ client: pool, schema }),
     },
   ],
-  exports: [DATABASE],
+  exports: [DATABASE, PG_POOL],
 })
 export class DatabaseModule implements OnApplicationShutdown {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}

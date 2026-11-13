@@ -22,5 +22,14 @@ services:
       timeout: 5s
       retries: 10
 
+  # Caixa de e-mail falsa para o dev: recebe tudo que a API manda por SMTP (porta 1025) e mostra
+  # em http://localhost:8025. Nada sai para a internet.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
 volumes:
   postgres-data:

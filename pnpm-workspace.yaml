@@ -14,6 +14,12 @@ strictDepBuilds: true
 engineStrict: true
 saveExact: true
 
+# Um só @types/node no monorepo (o mesmo do apps/api). O graphile-worker pede o 22.x, que puxa o
+# undici-types 6.21.0: publicado sem provenance depois de versões com, o trustPolicy barra (falso
+# positivo, mudança no processo de publicação do Undici em 2024). Só tipos: não muda o runtime.
+overrides:
+  '@types/node': 26.6.6
+
 allowBuilds:
   '@swc/core': false
   '@scarf/scarf': false
