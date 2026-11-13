@@ -10,3 +10,6 @@ coverage/
 
 # Anotações locais de pendências (temporário)
 TODO.md
+/.cortex/*
+!/.cortex/config
+!/.cortex/decisions/
