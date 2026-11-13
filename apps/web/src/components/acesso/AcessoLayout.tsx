@@ -17,11 +17,11 @@ export function AcessoLayout({ children }: { children: ReactNode }) {
         </p>
       </section>
 
-      <main className="flex flex-[999_1_420px] flex-col px-6 pt-12 pb-8">
-        <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-[380px]">{children}</div>
-        </div>
-        <p className="text-subtle-foreground mt-6 text-center text-[13px]">
+      {/* Três linhas (1fr auto 1fr): o formulário fica no centro da altura da tela inteira e o
+          rodapé vai para o fim da última linha, sem empurrar o formulário. */}
+      <main className="grid flex-[999_1_420px] grid-rows-[1fr_auto_1fr] px-6 pt-12 pb-8">
+        <div className="row-start-2 mx-auto w-full max-w-[380px]">{children}</div>
+        <p className="text-subtle-foreground row-start-3 self-end pt-6 text-center text-[13px]">
           Problemas para entrar? Fale com quem administra o One na sua equipe.
         </p>
       </main>
