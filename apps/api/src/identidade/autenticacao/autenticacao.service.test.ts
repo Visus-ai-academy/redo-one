@@ -31,6 +31,32 @@ function usuario(dados: Partial<UsuarioLogin & { cpf: string | null }> = {}) {
   };
 }
 
+describe('AutenticacaoService.sair', () => {
+  it('encerra a sessão no instante do logout', async () => {
+    const usuarios = new InMemoryUsuariosRepository([usuario()]);
+    const sessoes = new InMemorySessoesRepository(usuarios);
+    const relogio = new FixedClock(AGORA);
+    const service = new AutenticacaoService(
+      usuarios,
+      sessoes,
+      new InMemoryTentativasLoginRepository(),
+      new FakePasswordHasher(),
+      relogio,
+    );
+    await service.entrar({
+      identificador: 'maria@empresa.com.br',
+      senha: 'cafe2026',
+      ip: '1.1.1.1',
+      userAgent: null,
+    });
+    relogio.avancar(60_000);
+
+    await service.sair('s-1');
+
+    expect(sessoes.porId('s-1').encerradaEm).toEqual(new Date(AGORA.getTime() + 60_000));
+  });
+});
+
 describe('AutenticacaoService.entrar', () => {
   let usuarios: InMemoryUsuariosRepository;
   let sessoes: InMemorySessoesRepository;

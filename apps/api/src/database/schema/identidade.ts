@@ -19,6 +19,8 @@ export const papeis = pgTable('papeis', {
   descricao: text('descricao'),
   /** Papel fixo do sistema (Administrador, Médico): não pode ser editado nem excluído. */
   sistema: boolean('sistema').notNull().default(false),
+  /** Administrador: todas as permissões, inclusive as criadas depois. Ignora `papeis_permissoes`. */
+  acessoTotal: boolean('acesso_total').notNull().default(false),
   criadoEm: criadoEm(),
 });
 

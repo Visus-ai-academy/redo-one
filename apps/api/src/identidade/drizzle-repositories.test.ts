@@ -9,6 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
 import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentativas-login.repository';
+import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
 
@@ -107,6 +108,59 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
 
     const [sessao] = await db.select().from(schema.sessoes);
     expect(sessao).toMatchObject({ usuarioId, tokenHash: 'abc123', ultimoUsoEm: criada });
+  });
+
+  it('acha a sessão pelo hash do token, com o dono, e renova e encerra', async () => {
+    const repo = new DrizzleSessoesRepository(db);
+    const criada = new Date('2026-11-13T12:00:00Z');
+    await repo.criar({
+      usuarioId,
+      tokenHash: 'hash-do-token',
+      criadaEm: criada,
+      expiraEm: new Date('2026-11-20T12:00:00Z'),
+      expiraAbsolutoEm: new Date('2026-12-13T12:00:00Z'),
+      ip: null,
+      userAgent: null,
+    });
+
+    const sessao = await repo.buscarPorTokenHash('hash-do-token');
+    expect(sessao).toMatchObject({
+      usuarioId,
+      encerradaEm: null,
+      usuario: { nome: 'Maria Souza', email: 'maria@empresa.com.br', papelId, ativo: true },
+    });
+    await expect(repo.buscarPorTokenHash('outro')).resolves.toBeNull();
+
+    const depois = new Date('2026-11-15T12:00:00Z');
+    await repo.renovar(sessao?.id ?? '', new Date('2026-11-22T12:00:00Z'), depois);
+    await repo.encerrar(sessao?.id ?? '', depois);
+    await expect(repo.buscarPorTokenHash('hash-do-token')).resolves.toMatchObject({
+      expiraEm: new Date('2026-11-22T12:00:00Z'),
+      ultimoUsoEm: depois,
+      encerradaEm: depois,
+    });
+  });
+
+  it('lê o acesso do papel: lista de permissões ou acesso total', async () => {
+    const repo = new DrizzlePapeisRepository(db);
+    await db.insert(schema.papeisPermissoes).values([
+      { papelId, permissao: 'repasse.ver' },
+      { papelId, permissao: 'faturamento.ver' },
+    ]);
+    const admin = primeira(
+      await db
+        .insert(schema.papeis)
+        .values({ nome: 'Administrador', acessoTotal: true })
+        .returning(),
+    );
+
+    const financeiro = await repo.acessoDoPapel(papelId);
+    expect(financeiro.acessoTotal).toBe(false);
+    expect(financeiro.permissoes.sort()).toEqual(['faturamento.ver', 'repasse.ver']);
+    await expect(repo.acessoDoPapel(admin.id)).resolves.toEqual({
+      acessoTotal: true,
+      permissoes: [],
+    });
   });
 
   it('conta só as falhas do IP a partir do instante pedido', async () => {

@@ -50,6 +50,40 @@
         "tags": [
           "identidade"
         ]
+      },
+      "get": {
+        "operationId": "SessaoController_atual",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Quem está logado e o que pode fazer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessaoAtualDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão válida."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "delete": {
+        "operationId": "SessaoController_sair",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Sessão encerrada e cookie apagado."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
       }
     }
   },
@@ -150,6 +184,33 @@
         "required": [
           "message",
           "bloqueadoAte"
+        ]
+      },
+      "SessaoAtualDto": {
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioSessaoDto"
+          },
+          "acessoTotal": {
+            "type": "boolean",
+            "description": "Papel Administrador: pode tudo, mesmo sem listar as permissões."
+          },
+          "permissoes": {
+            "example": [
+              "faturamento.ver",
+              "usuarios.ver"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "usuario",
+          "acessoTotal",
+          "permissoes"
         ]
       }
     }

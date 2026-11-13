@@ -8,6 +8,13 @@
       "when": 1794596377339,
       "tag": "0000_identidade_login",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794596885819,
+      "tag": "0001_papel_acesso_total",
+      "breakpoints": true
     }
   ]
 }

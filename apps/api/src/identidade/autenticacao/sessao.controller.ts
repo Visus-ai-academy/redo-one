@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Headers,
   HttpCode,
   HttpException,
@@ -11,21 +13,25 @@ import {
 } from '@nestjs/common';
 import {
   ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { COOKIE_SESSAO } from '../acesso/cookie';
+import { PrincipalAtual, Public } from '../acesso/decorators';
+import type { Principal } from '../principal';
 import { AcessoBloqueadoError, CredenciaisInvalidasError } from './autenticacao.errors';
 import { AutenticacaoService } from './autenticacao.service';
 import { LoginDto } from './dto/login.dto';
-import { AcessoBloqueadoDto, ErroLoginDto, SessaoDto } from './dto/sessao.dto';
-
-export const COOKIE_SESSAO = 'one_sessao';
+import { AcessoBloqueadoDto, ErroLoginDto, SessaoAtualDto, SessaoDto } from './dto/sessao.dto';
 
 /** Só o que o controller usa da resposta do Express. */
 interface RespostaComCookie {
   cookie(nome: string, valor: string, opcoes: Record<string, unknown>): void;
+  clearCookie(nome: string, opcoes: Record<string, unknown>): void;
 }
 
 @ApiTags('identidade')
@@ -34,6 +40,7 @@ export class SessaoController {
   constructor(private readonly autenticacao: AutenticacaoService) {}
 
   @Post()
+  @Public()
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: SessaoDto, description: 'Sessão aberta; o token vai no cookie.' })
   @ApiUnauthorizedResponse({ type: ErroLoginDto })
@@ -62,6 +69,34 @@ export class SessaoController {
     } catch (erro) {
       throw paraHttp(erro);
     }
+  }
+
+  @Get()
+  @ApiOkResponse({ type: SessaoAtualDto, description: 'Quem está logado e o que pode fazer.' })
+  @ApiUnauthorizedResponse({ description: 'Sem sessão válida.' })
+  atual(@PrincipalAtual() principal: Principal): SessaoAtualDto {
+    return {
+      usuario: {
+        id: principal.usuarioId,
+        nome: principal.nome,
+        email: principal.email,
+        papelId: principal.papelId,
+      },
+      acessoTotal: principal.acessoTotal,
+      permissoes: [...principal.permissoes].sort(),
+    };
+  }
+
+  @Delete()
+  @Public()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Sessão encerrada e cookie apagado.' })
+  async sair(
+    @PrincipalAtual({ opcional: true }) principal: Principal | undefined,
+    @Res({ passthrough: true }) resposta: RespostaComCookie,
+  ): Promise<void> {
+    if (principal) await this.autenticacao.sair(principal.sessaoId);
+    resposta.clearCookie(COOKIE_SESSAO, { path: '/' });
   }
 }
 

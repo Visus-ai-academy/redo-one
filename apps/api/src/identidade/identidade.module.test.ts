@@ -8,9 +8,12 @@ import { DrizzleTentativasLoginRepository } from './autenticacao/drizzle-tentati
 import { SessaoController } from './autenticacao/sessao.controller';
 import { TENTATIVAS_LOGIN_REPOSITORY } from './autenticacao/tentativas-login.repository';
 import { IdentidadeModule } from './identidade.module';
+import { DrizzlePapeisRepository } from './papeis/drizzle-papeis.repository';
+import { PAPEIS_REPOSITORY } from './papeis/papeis.repository';
 import { Argon2PasswordHasher } from './senha/argon2-password-hasher';
 import { PASSWORD_HASHER } from './senha/password-hasher';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
+import { SessaoAutenticador } from './sessoes/sessao-autenticador';
 import { SESSOES_REPOSITORY } from './sessoes/sessoes.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
 import { USUARIOS_REPOSITORY } from './usuarios/usuarios.repository';
@@ -29,7 +32,23 @@ describe('IdentidadeModule', () => {
       DrizzleTentativasLoginRepository,
     );
     expect(modulo.get(PASSWORD_HASHER)).toBeInstanceOf(Argon2PasswordHasher);
+    expect(modulo.get(PAPEIS_REPOSITORY)).toBeInstanceOf(DrizzlePapeisRepository);
+    expect(modulo.get(SessaoAutenticador)).toBeInstanceOf(SessaoAutenticador);
 
     await modulo.close();
+  });
+
+  it('fecha toda rota por padrão: sem cookie, GET /sessao responde 401', async () => {
+    const modulo = await Test.createTestingModule({
+      imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, IdentidadeModule],
+    }).compile();
+    const app = modulo.createNestApplication();
+    await app.listen(0);
+    const url = await app.getUrl();
+
+    const resposta = await fetch(`${url.replace('[::1]', 'localhost')}/sessao`);
+
+    expect(resposta.status).toBe(401);
+    await app.close();
   });
 });

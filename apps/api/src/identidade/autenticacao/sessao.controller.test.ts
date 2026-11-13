@@ -1,18 +1,78 @@
 import { HttpException, HttpStatus, ValidationPipe } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
 
+import { COOKIE_SESSAO } from '../acesso/cookie';
+import { ROTA_PUBLICA } from '../acesso/decorators';
+import type { PrincipalUsuario } from '../principal';
 import { AcessoBloqueadoError, CredenciaisInvalidasError } from './autenticacao.errors';
 import type { AutenticacaoService, EntrarComando } from './autenticacao.service';
 import { LoginDto } from './dto/login.dto';
-import { COOKIE_SESSAO, SessaoController } from './sessao.controller';
+import { SessaoController } from './sessao.controller';
 
 const EXPIRA = new Date('2026-11-20T12:00:00Z');
 
-function montar(entrar: (comando: EntrarComando) => Promise<unknown>) {
-  const service = { entrar: vi.fn(entrar) } as unknown as AutenticacaoService;
-  const resposta = { cookie: vi.fn() };
+function montar(entrar: (comando: EntrarComando) => Promise<unknown> = async () => undefined) {
+  const service = {
+    entrar: vi.fn(entrar),
+    sair: vi.fn(async () => undefined),
+  } as unknown as AutenticacaoService;
+  const resposta = { cookie: vi.fn(), clearCookie: vi.fn() };
   return { controller: new SessaoController(service), service, resposta };
 }
+
+const maria: PrincipalUsuario = {
+  tipo: 'usuario',
+  usuarioId: 'u-maria',
+  sessaoId: 's-1',
+  nome: 'Maria',
+  email: 'maria@empresa.com.br',
+  papelId: 'p-1',
+  acessoTotal: false,
+  permissoes: new Set(['repasse.ver', 'faturamento.ver']),
+};
+
+describe('SessaoController (rotas)', () => {
+  const reflector = new Reflector();
+
+  it('POST /sessao (login) e DELETE /sessao (logout) são públicos; GET /sessao não', () => {
+    expect(reflector.get(ROTA_PUBLICA, SessaoController.prototype.entrar)).toBe(true);
+    expect(reflector.get(ROTA_PUBLICA, SessaoController.prototype.sair)).toBe(true);
+    expect(reflector.get(ROTA_PUBLICA, SessaoController.prototype.atual)).toBeUndefined();
+  });
+});
+
+describe('SessaoController.atual', () => {
+  it('devolve quem está logado com as permissões em ordem alfabética', () => {
+    const { controller } = montar();
+
+    expect(controller.atual(maria)).toEqual({
+      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
+      acessoTotal: false,
+      permissoes: ['faturamento.ver', 'repasse.ver'],
+    });
+  });
+});
+
+describe('SessaoController.sair', () => {
+  it('encerra a sessão e apaga o cookie', async () => {
+    const { controller, service, resposta } = montar();
+
+    await controller.sair(maria, resposta);
+
+    expect(service.sair).toHaveBeenCalledWith('s-1');
+    expect(resposta.clearCookie).toHaveBeenCalledWith(COOKIE_SESSAO, { path: '/' });
+  });
+
+  it('sem sessão, só apaga o cookie', async () => {
+    const { controller, service, resposta } = montar();
+
+    await controller.sair(undefined, resposta);
+
+    expect(service.sair).not.toHaveBeenCalled();
+    expect(resposta.clearCookie).toHaveBeenCalled();
+  });
+});
 
 const corpo = Object.assign(new LoginDto(), {
   identificador: 'maria@empresa.com.br',

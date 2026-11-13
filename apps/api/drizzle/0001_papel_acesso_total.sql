@@ -1,0 +1,1 @@
+ALTER TABLE "papeis" ADD COLUMN "acesso_total" boolean DEFAULT false NOT NULL;

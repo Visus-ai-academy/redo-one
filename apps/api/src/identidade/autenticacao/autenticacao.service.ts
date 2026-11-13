@@ -4,6 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { CLOCK, type Clock } from '../clock';
 import { PASSWORD_HASHER, type PasswordHasher } from '../senha/password-hasher';
+import { SESSAO_INATIVIDADE_MS, SESSAO_LIMITE_ABSOLUTO_MS } from '../sessoes/politica-sessao';
 import { SESSOES_REPOSITORY, type SessoesRepository } from '../sessoes/sessoes.repository';
 import {
   type IdentificadorLogin,
@@ -16,9 +17,6 @@ import {
   type TentativasLoginRepository,
 } from './tentativas-login.repository';
 
-const DIA = 24 * 60 * 60 * 1000;
-const SESSAO_INATIVIDADE_MS = 7 * DIA;
-const SESSAO_LIMITE_ABSOLUTO_MS = 30 * DIA;
 const MAX_FALHAS_CONTA = 5;
 const BLOQUEIO_MS = 15 * 60 * 1000;
 // Bem acima do limite da conta: a equipe sai pelo mesmo IP do escritório, e 5 falhas somadas de
@@ -103,6 +101,11 @@ export class AutenticacaoService {
 
     const { id, nome, email, papelId } = usuario;
     return { token, expiraEm, usuario: { id, nome, email, papelId } };
+  }
+
+  /** Logout: a sessão deixa de valer na hora, mesmo que o cookie continue no navegador. */
+  async sair(sessaoId: string): Promise<void> {
+    await this.sessoes.encerrar(sessaoId, this.clock.now());
   }
 
   private registrarTentativa(
