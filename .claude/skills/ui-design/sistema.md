@@ -76,6 +76,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 - Rodapé do menu: Avisos (com contador), Configurações e a conta do usuário (com Sair).
 - Menu recolhível (só ícones).
 - Subtelas do legado viram abas dentro da tela (ex.: Volumetria › Periódico, Mensal, Cliente, Comparativo).
+- Detalhe e edição de um item da lista abrem no `PainelLateral`: o Drawer do Base UI, não modal (a lista continua à vista e clicável; Esc, X ou arrastar fecham), 400px à direita no computador e tela cheia abaixo de `lg`. Componente que o Base UI já tem nunca é imitado com HTML.
 - **Configurações** é uma central com submenu por assunto:
   - Sua conta: Meu perfil (dados, senha, sessões e acessos numa tela só; um item por destino, nunca dois itens para a mesma tela).
   - Acesso: Usuários, Papéis, Chaves dos robôs.
