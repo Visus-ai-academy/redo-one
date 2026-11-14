@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { DatabaseModule } from '../database/database.module';
 import { CatalogoModule } from './catalogo.module';
+import { ContratadosController } from './contratados/contratados.controller';
 import { ModalidadesController, PrioridadesController } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
@@ -29,6 +30,8 @@ describe('CatalogoModule', () => {
     expect(modulo.get(PrioridadesController)).toBeInstanceOf(PrioridadesController);
 
     expect(modulo.get(SubespecialidadesController)).toBeInstanceOf(SubespecialidadesController);
+
+    expect(modulo.get(ContratadosController)).toBeInstanceOf(ContratadosController);
 
     await modulo.close();
   });

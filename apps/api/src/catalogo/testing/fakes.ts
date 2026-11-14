@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import type { Pagina } from '../comum/paginacao';
 import type {
+  Contratado,
+  ContratadosRepository,
+  DadosContratado,
+} from '../contratados/contratados.repository';
+import type {
   DadosLista,
   FiltroLista,
   ItemLista,
@@ -50,6 +55,66 @@ export class InMemoryListaRepository<T extends DadosLista = DadosLista>
   }
 
   async atualizar(id: string, dados: T) {
+    this.itens.set(id, { ...dados, id });
+  }
+
+  async excluir(id: string) {
+    if (this.emUso.has(id)) return false;
+    this.itens.delete(id);
+    return true;
+  }
+}
+
+export class InMemoryContratadosRepository implements ContratadosRepository {
+  readonly itens = new Map<string, DadosContratado & { id: string }>();
+  readonly emUso = new Set<string>();
+
+  private completo(c: DadosContratado & { id: string }): Contratado {
+    const repasse = c.contratadoRepasseId ? this.itens.get(c.contratadoRepasseId) : undefined;
+    return { ...c, contratadoRepasseNome: repasse?.razaoSocial ?? null };
+  }
+
+  async listar(filtro: FiltroLista) {
+    const filtrados = [...this.itens.values()]
+      .filter((c) => filtro.ativo === undefined || c.ativo === filtro.ativo)
+      .filter(
+        (c) => !filtro.busca || contem(c.razaoSocial, filtro.busca) || c.cnpj === filtro.busca,
+      )
+      .sort((a, b) => a.razaoSocial.localeCompare(b.razaoSocial))
+      .map((c) => this.completo(c));
+    return paginar(filtrados, filtro);
+  }
+
+  async buscar(id: string) {
+    const c = this.itens.get(id);
+    return c ? this.completo(c) : null;
+  }
+
+  async buscarPorRazaoSocial(razaoSocial: string) {
+    const c = [...this.itens.values()].find(
+      (i) => i.razaoSocial.toLowerCase() === razaoSocial.toLowerCase(),
+    );
+    return c ? { id: c.id } : null;
+  }
+
+  async buscarPorCnpj(cnpj: string) {
+    const c = [...this.itens.values()].find((i) => i.cnpj === cnpj);
+    return c ? { id: c.id } : null;
+  }
+
+  async consolidadosEm(id: string) {
+    return [...this.itens.values()]
+      .filter((c) => c.contratadoRepasseId === id)
+      .map((c) => c.razaoSocial);
+  }
+
+  async criar(dados: DadosContratado) {
+    const id = randomUUID();
+    this.itens.set(id, { ...dados, id });
+    return id;
+  }
+
+  async atualizar(id: string, dados: DadosContratado) {
     this.itens.set(id, { ...dados, id });
   }
 

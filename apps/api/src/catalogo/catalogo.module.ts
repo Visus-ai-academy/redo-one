@@ -4,6 +4,10 @@ import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import { DATABASE, type Database } from '../database/database';
 import { CLOCK, type Clock, systemClock } from '../identidade/clock';
 import type { Rotulo } from './comum/rotulo';
+import { ContratadosController } from './contratados/contratados.controller';
+import { CONTRATADOS_REPOSITORY } from './contratados/contratados.repository';
+import { ContratadosService } from './contratados/contratados.service';
+import { DrizzleContratadosRepository } from './contratados/drizzle-contratados.repository';
 import {
   DrizzleListaRepository,
   LISTAS,
@@ -39,9 +43,12 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
     CategoriasExameController,
     PrioridadesController,
     SubespecialidadesController,
+    ContratadosController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
+    ContratadosService,
+    { provide: CONTRATADOS_REPOSITORY, useClass: DrizzleContratadosRepository },
     lista(
       MODALIDADES,
       { entidade: 'modalidade', singular: 'Modalidade', genero: 'f' },

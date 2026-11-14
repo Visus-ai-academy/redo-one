@@ -31,3 +31,12 @@ export class ItemEmUsoError extends ErroDeDominio {
     );
   }
 }
+
+/** CNPJ, CPF, CEP ou UF fora do formato. */
+export class DocumentoInvalidoError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor(mensagem: string) {
+    super(mensagem);
+  }
+}
