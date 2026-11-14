@@ -80,4 +80,21 @@ describe('Select', () => {
 
     expect(screen.getByRole('combobox', { name: 'Papel' })).toBeDisabled();
   });
+
+  it('sem valor, mostra o placeholder, que não é uma opção', async () => {
+    render(
+      <Select
+        aria-label="Papel"
+        value=""
+        onValueChange={vi.fn()}
+        placeholder="Escolha um papel"
+        opcoes={[{ valor: 'p-fin', rotulo: 'Financeiro' }]}
+      />,
+    );
+
+    const campo = screen.getByRole('combobox', { name: 'Papel' });
+    expect(campo).toHaveTextContent('Escolha um papel');
+    await userEvent.click(campo);
+    expect(await screen.findAllByRole('option')).toHaveLength(1);
+  });
 });
