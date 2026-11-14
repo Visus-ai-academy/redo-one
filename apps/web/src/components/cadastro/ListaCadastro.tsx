@@ -1,6 +1,6 @@
 import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
@@ -27,6 +27,8 @@ type ListaCadastroProps<T extends RowData> = {
   temFiltro?: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: o TValue de cada coluna varia; o helper garante a tipagem por coluna.
   colunas: ColumnDef<DataTableFeatures, T, any>[];
+  /** Ids das colunas que saem com o painel aberto (a lista estreita; o detalhe está no painel). */
+  ocultarComPainel?: string[];
   itens: T[];
   getRowId: (item: T) => string;
   /** Item aberto no painel. */
@@ -56,6 +58,7 @@ export function ListaCadastro<T extends RowData>({
   filtros,
   temFiltro = false,
   colunas,
+  ocultarComPainel = [],
   itens,
   getRowId,
   selecionadoId,
@@ -84,6 +87,10 @@ export function ListaCadastro<T extends RowData>({
   useEffect(() => setTermo(busca.valor ?? ''), [busca.valor]);
 
   const filtrando = Boolean(busca.valor) || temFiltro;
+  const colunasVisiveis = useMemo(
+    () => (painel ? colunas.filter((c) => !ocultarComPainel.includes(c.id ?? '')) : colunas),
+    [colunas, painel, ocultarComPainel],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -163,7 +170,7 @@ export function ListaCadastro<T extends RowData>({
             </div>
           ) : (
             <DataTable
-              columns={colunas}
+              columns={colunasVisiveis}
               data={itens}
               getRowId={getRowId}
               selectedRowId={selecionadoId}

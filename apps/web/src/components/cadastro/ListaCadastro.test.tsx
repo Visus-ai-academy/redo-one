@@ -50,6 +50,23 @@ describe('ListaCadastro', () => {
     expect(screen.getByText('1 de 1')).toBeInTheDocument();
   });
 
+  it('com o painel aberto, esconde as colunas secundárias', () => {
+    const colunasDuas = [...colunas, coluna.accessor('id', { id: 'codigo', header: 'Código' })];
+    render(
+      <ListaCadastro
+        {...props}
+        colunas={colunasDuas}
+        ocultarComPainel={['codigo']}
+        itens={[{ id: 'c-1', nome: 'A' }]}
+        total={1}
+        painel={<aside>painel</aside>}
+      />,
+    );
+
+    expect(screen.queryByRole('columnheader', { name: 'Código' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Nome', hidden: true })).toBeInTheDocument();
+  });
+
   it('sem nenhum item, diz o que fazer', () => {
     render(<ListaCadastro {...props} itens={[]} total={0} />);
 
