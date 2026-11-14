@@ -53,7 +53,9 @@ describe('PainelConvite', () => {
       'Com o CPF, a pessoa também pode entrar digitando o CPF.',
     );
     await userEvent.click(screen.getByRole('combobox', { name: 'Papel' }));
-    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Financeiro']);
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
+      'Financeiro',
+    ]);
   });
 
   it('envia o convite e abre a pessoa nova', async () => {
