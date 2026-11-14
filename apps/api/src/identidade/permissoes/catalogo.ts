@@ -148,6 +148,18 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     acoes: [ver('papeis'), { chave: 'papeis.editar', rotulo: 'Criar e editar', sensivel: true }],
   },
   {
+    tela: 'catalogo',
+    rotulo: 'Catálogo (modalidades, especialidades, categorias, prioridades, contratados)',
+    area: 'Configurações',
+    acoes: [ver('catalogo'), { chave: 'catalogo.editar', rotulo: 'Criar e editar' }],
+  },
+  {
+    tela: 'de-para',
+    rotulo: 'De-paras da importação',
+    area: 'Configurações',
+    acoes: [ver('de-para'), { chave: 'de-para.editar', rotulo: 'Criar e editar', sensivel: true }],
+  },
+  {
     tela: 'chaves-robo',
     rotulo: 'Chaves dos robôs',
     area: 'Configurações',

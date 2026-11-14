@@ -18,6 +18,16 @@ describe('catálogo de permissões', () => {
     expect(existePermissao('usuarios.apagar-tudo')).toBe(false);
   });
 
+  it('tem as telas do catálogo e dos de-paras na área Configurações', () => {
+    for (const chave of ['catalogo.ver', 'catalogo.editar', 'de-para.ver', 'de-para.editar']) {
+      expect(existePermissao(chave)).toBe(true);
+    }
+    const areas = CATALOGO_PERMISSOES.filter((t) => ['catalogo', 'de-para'].includes(t.tela)).map(
+      (t) => t.area,
+    );
+    expect(areas).toEqual(['Configurações', 'Configurações']);
+  });
+
   it('normaliza: acrescenta o ver da tela, tira repetição e ordena', () => {
     expect(
       normalizarPermissoes([
