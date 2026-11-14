@@ -1,0 +1,81 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsHexColor,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+import { aparar } from '../../comum/dto';
+
+/** Corpo de criar e editar um item de lista (modalidade, especialidade, categoria). */
+export class ListaDto {
+  @ApiProperty({
+    example: 'NEURO',
+    maxLength: 60,
+    description: 'Na modalidade, o código (MR, CT).',
+  })
+  @Transform(aparar)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(60)
+  nome!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 200 })
+  @Transform(aparar)
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  descricao: string | null = null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, example: '#1F7A4D' })
+  @IsOptional()
+  @IsHexColor()
+  cor: string | null = null;
+
+  @ApiProperty({ type: 'integer', minimum: 0, maximum: 9999 })
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  ordem!: number;
+
+  @ApiProperty()
+  @IsBoolean()
+  ativo!: boolean;
+}
+
+export class PrioridadeDto extends ListaDto {
+  @ApiProperty({ description: 'Urgente para a distribuição.' })
+  @IsBoolean()
+  urgente!: boolean;
+}
+
+export class ItemListaDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: String, nullable: true }) descricao!: string | null;
+  @ApiProperty({ type: String, nullable: true }) cor!: string | null;
+  @ApiProperty() ordem!: number;
+  @ApiProperty() ativo!: boolean;
+}
+
+export class PrioridadeItemDto extends ItemListaDto {
+  @ApiProperty() urgente!: boolean;
+}
+
+export class PaginaListaDto {
+  @ApiProperty({ type: [ItemListaDto] }) itens!: ItemListaDto[];
+  @ApiProperty() total!: number;
+  @ApiProperty() pagina!: number;
+  @ApiProperty() porPagina!: number;
+}
+
+export class PaginaPrioridadesDto extends PaginaListaDto {
+  @ApiProperty({ type: [PrioridadeItemDto] }) declare itens: PrioridadeItemDto[];
+}

@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
 
 import { AuditoriaModule } from './auditoria/auditoria.module';
+import { CatalogoModule } from './catalogo/catalogo.module';
 import { ComumModule } from './comum/comum.module';
 import { ErroDeDominioFilter } from './comum/erro-de-dominio.filter';
 import { validarAmbiente } from './config/ambiente';
@@ -17,6 +18,7 @@ import { IdentidadeModule } from './identidade/identidade.module';
     ComumModule,
     AuditoriaModule,
     IdentidadeModule,
+    CatalogoModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ErroDeDominioFilter }],
 })
