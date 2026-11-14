@@ -203,6 +203,21 @@ describe('UsuariosService', () => {
     });
   });
 
+  describe('papeisParaAtribuir', () => {
+    it('lista os papéis marcando os que quem pede pode atribuir', async () => {
+      await expect(service.papeisParaAtribuir(coordenadora)).resolves.toEqual([
+        { id: 'p-admin', nome: 'Administrador', atribuivel: false },
+        { id: 'p-coord', nome: 'Coordenação', atribuivel: true },
+        { id: 'p-fin', nome: 'Financeiro', atribuivel: false },
+      ]);
+    });
+
+    it('o Administrador pode atribuir qualquer papel', async () => {
+      const papeisDoAdmin = await service.papeisParaAtribuir(admin);
+      expect(papeisDoAdmin.every((p) => p.atribuivel)).toBe(true);
+    });
+  });
+
   describe('reenviarConvite', () => {
     it('manda um link novo e invalida o anterior', async () => {
       const id = await service.convidar(admin, {

@@ -157,13 +157,26 @@ export class UsuariosService {
     await this.auditar(ator, id, 'link_senha_enviado');
   }
 
+  /**
+   * Papéis para os seletores da tela Usuários (filtro, convite, troca de papel), com `atribuivel`
+   * pela mesma regra que vale ao salvar. Não exige `papeis.ver`: quem gere usuários precisa
+   * escolher o papel sem poder abrir a tela Papéis.
+   */
+  async papeisParaAtribuir(
+    ator: PrincipalUsuario,
+  ): Promise<{ id: string; nome: string; atribuivel: boolean }[]> {
+    const resumos = await this.papeis.listar();
+    // Poucos papéis (dezenas no máximo): buscar cada um traz as permissões sem uma consulta nova.
+    const detalhes = await Promise.all(resumos.map((p) => this.papeis.buscar(p.id)));
+    return detalhes
+      .filter((papel): papel is PapelDetalhe => papel !== null)
+      .map((papel) => ({ id: papel.id, nome: papel.nome, atribuivel: podeAtribuir(ator, papel) }));
+  }
+
   private async papelAtribuivel(ator: PrincipalUsuario, papelId: string): Promise<PapelDetalhe> {
     const papel = await this.papeis.buscar(papelId);
     if (!papel) throw new PapelNaoEncontradoError();
-    if (ator.acessoTotal) return papel;
-    if (papel.acessoTotal || !papel.permissoes.every((chave) => temPermissao(ator, chave))) {
-      throw new PapelNaoAtribuivelError();
-    }
+    if (!podeAtribuir(ator, papel)) throw new PapelNaoAtribuivelError();
     return papel;
   }
 
@@ -184,4 +197,10 @@ export class UsuariosService {
       em: this.clock.now(),
     });
   }
+}
+
+/** Só atribui um papel quem tem todas as permissões dele; papel de acesso total, só o Administrador. */
+function podeAtribuir(ator: PrincipalUsuario, papel: PapelDetalhe): boolean {
+  if (ator.acessoTotal) return true;
+  return !papel.acessoTotal && papel.permissoes.every((chave) => temPermissao(ator, chave));
 }

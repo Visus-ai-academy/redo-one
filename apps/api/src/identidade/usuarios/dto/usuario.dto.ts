@@ -86,6 +86,16 @@ export class PapelDoUsuarioDto {
   @ApiProperty() nome!: string;
 }
 
+export class PapelAtribuivelDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+
+  @ApiProperty({
+    description: 'Quem está logado pode dar este papel a alguém (tem todas as permissões dele).',
+  })
+  atribuivel!: boolean;
+}
+
 export class UsuarioResumoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;

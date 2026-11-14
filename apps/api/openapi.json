@@ -479,6 +479,30 @@
         ]
       }
     },
+    "/usuarios/papeis": {
+      "get": {
+        "operationId": "UsuariosController_papeis",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Papéis para os seletores da tela Usuários, marcando os que se pode atribuir.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PapelAtribuivelDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
     "/usuarios/{id}": {
       "get": {
         "operationId": "UsuariosController_obter",
@@ -1485,6 +1509,27 @@
           "total",
           "pagina",
           "porPagina"
+        ]
+      },
+      "PapelAtribuivelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "atribuivel": {
+            "type": "boolean",
+            "description": "Quem está logado pode dar este papel a alguém (tem todas as permissões dele)."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "atribuivel"
         ]
       },
       "SessaoAbertaDto": {

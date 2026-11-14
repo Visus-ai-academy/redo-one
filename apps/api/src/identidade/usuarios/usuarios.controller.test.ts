@@ -17,6 +17,7 @@ describe('UsuariosController', () => {
 
   it('cada rota exige a sua permissão', () => {
     expect(exigidas('listar')).toEqual(['usuarios.ver']);
+    expect(exigidas('papeis')).toEqual(['usuarios.ver']);
     expect(exigidas('obter')).toEqual(['usuarios.ver']);
     expect(exigidas('convidar')).toEqual(['usuarios.convidar']);
     expect(exigidas('reenviarConvite')).toEqual(['usuarios.convidar']);
@@ -45,6 +46,20 @@ describe('UsuariosController', () => {
       porPagina: 25,
     });
     expect(resultado).toEqual({ itens: [], total: 47, pagina: 2, porPagina: 25 });
+  });
+
+  it('lista os papéis que quem está logado pode atribuir', async () => {
+    const papeis = [{ id: 'p-1', nome: 'Financeiro', atribuivel: true }];
+    const service = { papeisParaAtribuir: vi.fn(async () => papeis) };
+    const controller = new UsuariosController(service as unknown as UsuariosService);
+
+    await expect(controller.papeis(admin)).resolves.toEqual(papeis);
+    expect(service.papeisParaAtribuir).toHaveBeenCalledWith(admin);
+  });
+
+  it('a rota /usuarios/papeis vem antes de /usuarios/:id, senão o :id a capturaria', () => {
+    const metodos = Object.getOwnPropertyNames(UsuariosController.prototype);
+    expect(metodos.indexOf('papeis')).toBeLessThan(metodos.indexOf('obter'));
   });
 
   it('convida em nome de quem está logado', async () => {

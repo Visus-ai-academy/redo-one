@@ -27,6 +27,7 @@ import {
   ConviteUsuarioDto,
   ListarUsuariosDto,
   PaginaUsuariosDto,
+  PapelAtribuivelDto,
   TrocarPapelDto,
   UsuarioCriadoDto,
   UsuarioDetalheDto,
@@ -52,6 +53,17 @@ export class UsuariosController {
       porPagina: query.porPagina,
     });
     return { itens, total, pagina: query.pagina, porPagina: query.porPagina };
+  }
+
+  // Antes de :id, senão a rota :id capturaria "papeis".
+  @Get('papeis')
+  @Permissao('usuarios.ver')
+  @ApiOkResponse({
+    type: [PapelAtribuivelDto],
+    description: 'Papéis para os seletores da tela Usuários, marcando os que se pode atribuir.',
+  })
+  papeis(@PrincipalAtual() eu: PrincipalUsuario): Promise<PapelAtribuivelDto[]> {
+    return this.usuarios.papeisParaAtribuir(eu);
   }
 
   @Get(':id')
