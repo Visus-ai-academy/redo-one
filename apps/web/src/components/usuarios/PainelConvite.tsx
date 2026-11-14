@@ -1,6 +1,4 @@
-import { X } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useId } from 'react';
 import { z } from 'zod';
 
 import { ResponseError } from '../../gen/.kubb/client';
@@ -9,6 +7,7 @@ import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useAppForm } from '../form/form';
+import { PainelLateral } from '../painel/PainelLateral';
 
 const soDigitos = (texto: string) => texto.replace(/\D/g, '');
 
@@ -34,7 +33,6 @@ type PainelConviteProps = {
 export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConviteProps) {
   const queryClient = useQueryClient();
   const convidar = useUsuariosControllerConvidar();
-  const tituloId = useId();
 
   const form = useAppForm({
     defaultValues: { nome: '', email: '', cpf: '', papelId: '' },
@@ -60,23 +58,7 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
   });
 
   return (
-    <aside
-      aria-labelledby={tituloId}
-      className="bg-card flex min-w-0 flex-[1_1_340px] flex-col self-start rounded-lg border lg:max-w-[400px]"
-    >
-      <div className="flex items-center justify-between gap-3 border-b p-4">
-        <h2 id={tituloId} className="text-base font-semibold">
-          Convidar usuário
-        </h2>
-        <button
-          type="button"
-          onClick={onCancelar}
-          aria-label="Fechar painel"
-          className={buttonClassName({ variant: 'ghost', className: 'size-9 flex-none px-0' })}
-        >
-          <X size={18} aria-hidden />
-        </button>
-      </div>
+    <PainelLateral titulo="Convidar usuário" onFechar={onCancelar}>
       <form
         noValidate
         onSubmit={(evento) => {
@@ -147,7 +129,7 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
           </div>
         </form.AppForm>
       </form>
-    </aside>
+    </PainelLateral>
   );
 }
 

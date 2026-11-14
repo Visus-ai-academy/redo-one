@@ -1,4 +1,4 @@
-import { DeviceMobile, Monitor, X } from '@phosphor-icons/react';
+import { DeviceMobile, Monitor } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type ReactNode, useId, useState } from 'react';
@@ -23,6 +23,7 @@ import { iniciais } from '../app-shell/iniciais';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { PainelLateral } from '../painel/PainelLateral';
 import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
 
@@ -59,7 +60,6 @@ export function PainelUsuario({
   onFechar,
 }: PainelUsuarioProps) {
   const [referencia] = useState(() => agora ?? new Date());
-  const tituloId = useId();
   const acao = useAcaoNoUsuario(usuario.id, avisoInicial);
   const desbloquear = useUsuariosControllerDesbloquear();
   const enviarLink = useUsuariosControllerEnviarLinkSenha();
@@ -77,33 +77,19 @@ export function PainelUsuario({
   const bloqueado = usuario.bloqueadoAte !== null && new Date(usuario.bloqueadoAte) > referencia;
 
   return (
-    <aside
-      aria-labelledby={tituloId}
-      className="bg-card flex min-w-0 flex-[1_1_340px] flex-col self-start rounded-lg border lg:max-w-[400px]"
-    >
-      <div className="flex items-start gap-3 border-b p-4">
+    <PainelLateral
+      titulo={usuario.nome}
+      subtitulo={usuario.email}
+      inicio={
         <span
           aria-hidden="true"
           className="bg-inactive-soft text-muted-foreground flex size-10 flex-none items-center justify-center rounded-full text-sm font-semibold"
         >
           {iniciais(usuario.nome)}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <h2 id={tituloId} className="truncate text-base font-semibold">
-            {usuario.nome}
-          </h2>
-          <span className="text-muted-foreground truncate text-[13px]">{usuario.email}</span>
-        </span>
-        <button
-          type="button"
-          onClick={onFechar}
-          aria-label="Fechar painel"
-          className={buttonClassName({ variant: 'ghost', className: 'size-9 flex-none px-0' })}
-        >
-          <X size={18} aria-hidden />
-        </button>
-      </div>
-
+      }
+      onFechar={onFechar}
+    >
       <div className="flex flex-col gap-5 p-4">
         {acao.aviso && <Alerta tom="sucesso">{acao.aviso}</Alerta>}
         {acao.falhou && (
@@ -220,7 +206,7 @@ export function PainelUsuario({
           </div>
         )}
       </div>
-    </aside>
+    </PainelLateral>
   );
 }
 
