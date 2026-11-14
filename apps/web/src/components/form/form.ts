@@ -1,6 +1,7 @@
 // Kit de formulários: TanStack Form com campos do Base UI. Novos campos entram em `fieldComponents`.
 import { createFormHook } from '@tanstack/react-form';
 
+import { BuscaField } from './BuscaField';
 import { CheckboxField } from './CheckboxField';
 import { CheckboxListField } from './CheckboxListField';
 import { fieldContext, formContext } from './context';
@@ -21,6 +22,7 @@ export const { useAppForm, withForm } = createFormHook({
     SelectField,
     CheckboxField,
     CheckboxListField,
+    BuscaField,
     TextAreaField,
     NumberField,
   },
