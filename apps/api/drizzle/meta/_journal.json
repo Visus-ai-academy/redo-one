@@ -36,6 +36,13 @@
       "when": 1794598490555,
       "tag": "0004_chaves_robo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794673472669,
+      "tag": "0005_catalogo",
+      "breakpoints": true
     }
   ]
 }
