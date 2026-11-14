@@ -1,12 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsHexColor,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -56,6 +59,14 @@ export class PrioridadeDto extends ListaDto {
   urgente!: boolean;
 }
 
+export class SubespecialidadeDto extends ListaDto {
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Ao menos uma.' })
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  especialidadeIds!: string[];
+}
+
 export class ItemListaDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;
@@ -78,4 +89,12 @@ export class PaginaListaDto {
 
 export class PaginaPrioridadesDto extends PaginaListaDto {
   @ApiProperty({ type: [PrioridadeItemDto] }) declare itens: PrioridadeItemDto[];
+}
+
+export class SubespecialidadeItemDto extends ItemListaDto {
+  @ApiProperty({ type: [String], format: 'uuid' }) especialidadeIds!: string[];
+}
+
+export class PaginaSubespecialidadesDto extends PaginaListaDto {
+  @ApiProperty({ type: [SubespecialidadeItemDto] }) declare itens: SubespecialidadeItemDto[];
 }

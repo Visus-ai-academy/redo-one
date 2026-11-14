@@ -18,6 +18,11 @@ export interface DadosPrioridade extends DadosLista {
   urgente: boolean;
 }
 
+/** A subespecialidade pertence a uma ou mais especialidades. */
+export interface DadosSubespecialidade extends DadosLista {
+  especialidadeIds: string[];
+}
+
 export type ItemLista<T extends DadosLista = DadosLista> = T & { id: string };
 
 export interface FiltroLista extends Paginacao {

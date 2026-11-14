@@ -17,6 +17,9 @@ import {
 } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
+import { DrizzleSubespecialidadesRepository } from './subespecialidades/drizzle-subespecialidades.repository';
+import { SubespecialidadesController } from './subespecialidades/subespecialidades.controller';
+import { SubespecialidadesService } from './subespecialidades/subespecialidades.service';
 
 /** Um `ListaService` para a lista: o rótulo das mensagens e a tabela onde ela fica. */
 function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
@@ -35,6 +38,7 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
     EspecialidadesController,
     CategoriasExameController,
     PrioridadesController,
+    SubespecialidadesController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -58,6 +62,17 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
       { entidade: 'prioridade', singular: 'Prioridade', genero: 'f' },
       LISTAS.prioridades,
     ),
+    {
+      provide: SubespecialidadesService,
+      inject: [DATABASE, AUDITORIA, CLOCK],
+      useFactory: (db: Database, auditoria: Auditoria, clock: Clock) =>
+        new SubespecialidadesService(
+          new DrizzleSubespecialidadesRepository(db),
+          new DrizzleListaRepository(db, LISTAS.especialidades),
+          auditoria,
+          clock,
+        ),
+    },
   ],
 })
 export class CatalogoModule {}

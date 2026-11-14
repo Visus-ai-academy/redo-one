@@ -53,16 +53,16 @@ export class DrizzleListaRepository<T extends DadosLista = DadosLista>
   implements ListaRepository<T>
 {
   constructor(
-    private readonly db: Database,
-    private readonly t: TabelaDeLista,
+    protected readonly db: Database,
+    protected readonly t: TabelaDeLista,
   ) {}
 
-  private get selecao() {
+  protected get selecao(): Record<string, AnyPgColumn | SQL.Aliased | SQL> {
     return { id: this.t.id, ...this.t.colunas, ...this.t.extras };
   }
 
   /** Converte os dados do domínio para os nomes de propriedade da tabela. */
-  private valores(dados: T) {
+  protected valores(dados: T): Record<string, unknown> {
     const { nome, ...resto } = dados;
     return { ...resto, [this.t.chaveNome]: nome };
   }
@@ -86,7 +86,7 @@ export class DrizzleListaRepository<T extends DadosLista = DadosLista>
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(this.t.tabela).where(onde),
     ]);
-    return { itens: itens as ItemLista<T>[], total: totalLinha?.total ?? 0 };
+    return { itens: itens as unknown as ItemLista<T>[], total: totalLinha?.total ?? 0 };
   }
 
   async buscar(id: string) {
@@ -95,7 +95,7 @@ export class DrizzleListaRepository<T extends DadosLista = DadosLista>
       .from(this.t.tabela)
       .where(eq(this.t.id, id))
       .limit(1);
-    return (item as ItemLista<T> | undefined) ?? null;
+    return (item as unknown as ItemLista<T> | undefined) ?? null;
   }
 
   async buscarPorNome(nome: string) {

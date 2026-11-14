@@ -8,6 +8,7 @@ import { CatalogoModule } from './catalogo.module';
 import { ModalidadesController, PrioridadesController } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
+import { SubespecialidadesController } from './subespecialidades/subespecialidades.controller';
 
 const MODULOS = [
   ConfigModule.forRoot({ isGlobal: true }),
@@ -26,6 +27,8 @@ describe('CatalogoModule', () => {
     expect(modulo.get(MODALIDADES)).not.toBe(modulo.get(PRIORIDADES));
     expect(modulo.get(ModalidadesController)).toBeInstanceOf(ModalidadesController);
     expect(modulo.get(PrioridadesController)).toBeInstanceOf(PrioridadesController);
+
+    expect(modulo.get(SubespecialidadesController)).toBeInstanceOf(SubespecialidadesController);
 
     await modulo.close();
   });

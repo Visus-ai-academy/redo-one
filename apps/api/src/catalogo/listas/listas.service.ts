@@ -52,7 +52,8 @@ export class ListaService<T extends DadosLista = DadosLista> {
     await this.registro.excluido(ator, id, atual);
   }
 
-  private async validar(dados: T, idAtual: string | null): Promise<T> {
+  /** Lista com regra a mais estende e chama `super.validar`. */
+  protected async validar(dados: T, idAtual: string | null): Promise<T> {
     const nome = dados.nome.trim();
     const mesmoNome = await this.repo.buscarPorNome(nome);
     if (mesmoNome && mesmoNome.id !== idAtual) throw new NomeEmUsoError(this.rotulo, nome);
