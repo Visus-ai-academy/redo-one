@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { ConfiguracoesLayout } from '../../../components/configuracoes/Configura
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { contratadosControllerAtualizar } from '../../../gen/clients/contratadosControllerAtualizar';
 import { contratadosControllerCriar } from '../../../gen/clients/contratadosControllerCriar';
@@ -46,13 +47,14 @@ export const Route = createFileRoute('/_app/configuracoes/contratados')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'catalogo.ver')) return;
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id)
+      void context.queryClient.prefetchQuery(
+        contratadosControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
     await Promise.all([
       context.queryClient.ensureQueryData(contratadosControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          contratadosControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Contratados | One' }] }),
@@ -192,17 +194,24 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
-  const { data: contratado } = useSuspenseQuery({
+  const consulta = useQuery({
     ...contratadosControllerObterQueryOptions({ path: { id: id ?? '' } }),
-    queryFn: id
-      ? contratadosControllerObterQueryOptions({ path: { id } }).queryFn
-      : () => null as never,
+    enabled: Boolean(id),
   });
+  const contratado = consulta.data;
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  if (id && !contratado)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
 
   return (
     <PainelContratado
-      contratado={id ? contratado : undefined}
+      contratado={contratado}
       contratados={opcoes.contratados}
       podeEditar={podeEditar}
       onFechar={fechar}

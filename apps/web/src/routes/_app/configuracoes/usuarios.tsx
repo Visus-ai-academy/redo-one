@@ -1,10 +1,11 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 import { z } from 'zod';
 
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
 import { PainelConvite } from '../../../components/usuarios/PainelConvite';
 import {
@@ -49,15 +50,17 @@ export const Route = createFileRoute('/_app/configuracoes/usuarios')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'usuarios.ver')) return;
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id) {
+      void context.queryClient.prefetchQuery(
+        usuariosControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
+    }
     await Promise.all([
       context.queryClient.ensureQueryData(
         usuariosControllerListarQueryOptions(consultaDaLista(deps)),
       ),
       context.queryClient.ensureQueryData(usuariosControllerPapeisQueryOptions()),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          usuariosControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Usuários | One' }] }),
@@ -161,7 +164,16 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
 }
 
 function Detalhe({ id, ...props }: { id: string } & Omit<PainelUsuarioProps, 'usuario'>) {
-  const { data: usuario } = useSuspenseQuery(usuariosControllerObterQueryOptions({ path: { id } }));
+  const consulta = useQuery(usuariosControllerObterQueryOptions({ path: { id } }));
+  const usuario = consulta.data;
+  if (!usuario)
+    return (
+      <PainelCarregando
+        onFechar={props.onFechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
   // `key`: trocar de pessoa recomeça o painel (papel escolhido, avisos).
   return <PainelUsuario key={usuario.id} usuario={usuario} {...props} />;
 }

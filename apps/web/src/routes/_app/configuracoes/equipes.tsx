@@ -9,6 +9,7 @@ import { createDataTableColumnHelper } from '../../../components/data-table/colu
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelEquipe } from '../../../components/medicos/PainelEquipe';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { equipesControllerAtualizar } from '../../../gen/clients/equipesControllerAtualizar';
 import { equipesControllerCriar } from '../../../gen/clients/equipesControllerCriar';
@@ -49,14 +50,14 @@ export const Route = createFileRoute('/_app/configuracoes/equipes')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'medicos.ver')) return;
-    await Promise.all([
-      context.queryClient.ensureQueryData(equipesControllerListarQueryOptions(consulta(deps))),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          equipesControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
-      deps.id && context.queryClient.ensureQueryData(membrosDa(deps.id)),
-    ]);
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id) {
+      void context.queryClient.prefetchQuery(
+        equipesControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
+      void context.queryClient.prefetchQuery(membrosDa(deps.id));
+    }
+    await context.queryClient.ensureQueryData(equipesControllerListarQueryOptions(consulta(deps)));
   },
   head: () => ({ meta: [{ title: 'Equipes médicas | One' }] }),
   component: PaginaEquipes,
@@ -209,13 +210,24 @@ function PainelDaEquipe({
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
 }) {
-  const { data: equipe } = useQuery({
+  const consultaEquipe = useQuery({
     ...equipesControllerObterQueryOptions({ path: { id: id ?? '' } }),
     enabled: Boolean(id),
   });
-  const { data: membros } = useQuery({ ...membrosDa(id ?? ''), enabled: Boolean(id) });
-  // Abrindo uma equipe, espera o detalhe e os membros (o loader já os trouxe na navegação direta).
-  if (id && (!equipe || !membros)) return null;
+  const consultaMembros = useQuery({ ...membrosDa(id ?? ''), enabled: Boolean(id) });
+  const equipe = consultaEquipe.data;
+  const membros = consultaMembros.data;
+  if (id && (!equipe || !membros))
+    return (
+      <PainelCarregando
+        onFechar={onFechar}
+        erro={consultaEquipe.isError || consultaMembros.isError}
+        onTentarDeNovo={() => {
+          void consultaEquipe.refetch();
+          void consultaMembros.refetch();
+        }}
+      />
+    );
   return (
     <PainelEquipe
       equipe={id ? equipe : undefined}

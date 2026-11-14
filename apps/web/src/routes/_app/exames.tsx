@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { PainelExame } from '../../components/catalogo/PainelExame';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
 import { examesControllerAtualizar } from '../../gen/clients/examesControllerAtualizar';
 import { examesControllerAtualizarRegraQuebra } from '../../gen/clients/examesControllerAtualizarRegraQuebra';
@@ -52,13 +53,14 @@ export const Route = createFileRoute('/_app/exames')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'exames.ver')) return;
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id)
+      void context.queryClient.prefetchQuery(
+        examesControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
     await Promise.all([
       context.queryClient.ensureQueryData(examesControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          examesControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Exames | One' }] }),
@@ -228,15 +230,24 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
-  const { data: exame } = useSuspenseQuery({
+  const consulta = useQuery({
     ...examesControllerObterQueryOptions({ path: { id: id ?? '' } }),
-    queryFn: id ? examesControllerObterQueryOptions({ path: { id } }).queryFn : () => null as never,
+    enabled: Boolean(id),
   });
+  const exame = consulta.data;
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  if (id && !exame)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
 
   return (
     <PainelExame
-      exame={id ? exame : undefined}
+      exame={exame}
       opcoes={opcoes}
       // O próprio exame não aparece como destino da quebra dele.
       buscarExames={async (termo) => (await buscarExames(termo)).filter((e) => e.valor !== id)}

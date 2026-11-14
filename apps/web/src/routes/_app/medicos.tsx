@@ -10,7 +10,9 @@ import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { FormPagamento } from '../../components/medicos/FormPagamento';
 import { PainelMedico } from '../../components/medicos/PainelMedico';
 import { SecaoAcesso } from '../../components/medicos/SecaoAcesso';
+import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
+import { CamposCarregando } from '../../components/skeleton/CamposCarregando';
 import { medicosControllerAtualizar } from '../../gen/clients/medicosControllerAtualizar';
 import { medicosControllerCriar } from '../../gen/clients/medicosControllerCriar';
 import { medicosControllerCriarAlias } from '../../gen/clients/medicosControllerCriarAlias';
@@ -61,13 +63,14 @@ export const Route = createFileRoute('/_app/medicos')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'medicos.ver')) return;
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id)
+      void context.queryClient.prefetchQuery(
+        medicosControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
     await Promise.all([
       context.queryClient.ensureQueryData(medicosControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(niveisAtivos()),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          medicosControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Médicos | One' }] }),
@@ -242,12 +245,19 @@ function PainelDoMedico({
 }) {
   const { sessao } = Route.useRouteContext();
   const queryClient = useQueryClient();
-  const { data: medico } = useQuery({
+  const consulta = useQuery({
     ...medicosControllerObterQueryOptions({ path: { id: id ?? '' } }),
     enabled: Boolean(id),
   });
-  // Abrindo um médico, espera o detalhe (o loader já o trouxe na navegação direta).
-  if (id && !medico) return null;
+  const medico = consulta.data;
+  if (id && !medico)
+    return (
+      <PainelCarregando
+        onFechar={onFechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
   const atualizar = () => invalidarMedicos(queryClient);
 
   return (
@@ -314,7 +324,7 @@ function AbaPagamento({ medicoId, podeEditar }: { medicoId: string; podeEditar: 
       </p>
     );
   }
-  if (!data) return <p className="text-muted-foreground p-4">Carregando…</p>;
+  if (!data) return <CamposCarregando quantidade={8} />;
   return (
     <FormPagamento
       dados={data}
@@ -344,7 +354,7 @@ function AbaAcesso({
     ...usuariosControllerPapeisQueryOptions(),
     enabled: podeConvidar,
   });
-  if (!contas) return <p className="text-muted-foreground p-4">Carregando…</p>;
+  if (!contas) return <CamposCarregando quantidade={2} />;
   const conta = contas.itens[0] ?? null;
 
   return (

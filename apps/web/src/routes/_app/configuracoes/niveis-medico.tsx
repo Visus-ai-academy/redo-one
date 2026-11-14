@@ -9,6 +9,7 @@ import { ConfiguracoesLayout } from '../../../components/configuracoes/Configura
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { niveisMedicoControllerAtualizar } from '../../../gen/clients/niveisMedicoControllerAtualizar';
 import { niveisMedicoControllerCriar } from '../../../gen/clients/niveisMedicoControllerCriar';
@@ -52,12 +53,13 @@ export const Route = createFileRoute('/_app/configuracoes/niveis-medico')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'medicos.ver')) return;
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id)
+      void context.queryClient.prefetchQuery(
+        niveisMedicoControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
     await Promise.all([
       context.queryClient.ensureQueryData(niveisMedicoControllerListarQueryOptions(consulta(deps))),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          niveisMedicoControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Níveis dos médicos | One' }] }),
@@ -212,12 +214,19 @@ function PainelNivel({
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
 }) {
-  const { data: item } = useQuery({
+  const consulta = useQuery({
     ...niveisMedicoControllerObterQueryOptions({ path: { id: id ?? '' } }),
     enabled: Boolean(id),
   });
-  // Abrindo um nível, espera o detalhe (o loader já o trouxe na navegação direta).
-  if (id && !item) return null;
+  const item = consulta.data;
+  if (id && !item)
+    return (
+      <PainelCarregando
+        onFechar={onFechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
   return (
     <PainelItemLista
       rotulos={ROTULOS}

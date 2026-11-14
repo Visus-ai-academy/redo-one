@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { PainelCliente } from '../../components/catalogo/PainelCliente';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
 import { clientesControllerAtualizar } from '../../gen/clients/clientesControllerAtualizar';
 import { clientesControllerCriar } from '../../gen/clients/clientesControllerCriar';
@@ -49,13 +50,14 @@ export const Route = createFileRoute('/_app/clientes')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'clientes.ver')) return;
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id)
+      void context.queryClient.prefetchQuery(
+        clientesControllerObterQueryOptions({ path: { id: deps.id } }),
+      );
     await Promise.all([
       context.queryClient.ensureQueryData(clientesControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
-      deps.id &&
-        context.queryClient.ensureQueryData(
-          clientesControllerObterQueryOptions({ path: { id: deps.id } }),
-        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Clientes | One' }] }),
@@ -221,17 +223,24 @@ function Painel({
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
-  const { data: cliente } = useSuspenseQuery({
+  const consulta = useQuery({
     ...clientesControllerObterQueryOptions({ path: { id: id ?? '' } }),
-    queryFn: id
-      ? clientesControllerObterQueryOptions({ path: { id } }).queryFn
-      : () => null as never,
+    enabled: Boolean(id),
   });
+  const cliente = consulta.data;
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  if (id && !cliente)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
 
   return (
     <PainelCliente
-      cliente={id ? cliente : undefined}
+      cliente={cliente}
       contratados={contratados}
       podeEditar={podeEditar}
       onFechar={fechar}

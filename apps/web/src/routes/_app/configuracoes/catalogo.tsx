@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
@@ -18,6 +18,7 @@ import { ConfiguracoesLayout } from '../../../components/configuracoes/Configura
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { invalidarCatalogo } from '../../../lib/catalogo';
@@ -53,10 +54,11 @@ export const Route = createFileRoute('/_app/configuracoes/catalogo')({
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'catalogo.ver')) return;
     const lista = LISTAS[deps.aba ?? 'modalidades'];
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id) void context.queryClient.prefetchQuery(lista.obter(deps.id));
     await Promise.all([
       context.queryClient.ensureQueryData(lista.listar(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
-      deps.id && context.queryClient.ensureQueryData(lista.obter(deps.id)),
     ]);
   },
   head: () => ({ meta: [{ title: 'Classificação dos exames | One' }] }),
@@ -267,7 +269,18 @@ function ConteudoDoPainel({
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
 }) {
-  const item = useItem(lista, id);
+  const consulta = useQuery({ ...lista.obter(id ?? ''), enabled: Boolean(id) } as ReturnType<
+    typeof lista.obter
+  >);
+  const item = id ? (consulta.data as unknown as ItemDaLista | undefined) : undefined;
+  if (id && !item)
+    return (
+      <PainelCarregando
+        onFechar={onFechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
   return (
     <PainelItemLista
       rotulos={lista.rotulos}
@@ -295,13 +308,4 @@ function ConteudoDoPainel({
       }
     />
   );
-}
-
-/** O item do painel, ou `undefined` na criação. */
-function useItem(lista: (typeof LISTAS)[AbaLista], id: string | undefined) {
-  const { data } = useSuspenseQuery({
-    ...lista.obter(id ?? ''),
-    queryFn: id ? lista.obter(id).queryFn : () => null,
-  } as ReturnType<typeof lista.obter>);
-  return id ? (data as unknown as ItemDaLista) : undefined;
 }
