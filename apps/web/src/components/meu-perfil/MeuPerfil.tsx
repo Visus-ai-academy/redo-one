@@ -1,10 +1,18 @@
+import type { AcessoRecenteDto } from '../../gen/types/AcessoRecenteDto';
 import type { MinhaContaDto } from '../../gen/types/MinhaContaDto';
 import { iniciais } from '../app-shell/iniciais';
+import { AcessosRecentes } from './AcessosRecentes';
 import { DadosDaConta } from './DadosDaConta';
 import { SessoesAbertas } from './SessoesAbertas';
 import { TrocarSenha } from './TrocarSenha';
 
-export function MeuPerfil({ conta }: { conta: MinhaContaDto }) {
+export function MeuPerfil({
+  conta,
+  acessos,
+}: {
+  conta: MinhaContaDto;
+  acessos: AcessoRecenteDto[];
+}) {
   return (
     <div className="flex max-w-[760px] flex-col gap-6">
       <div className="flex items-center gap-4">
@@ -24,6 +32,7 @@ export function MeuPerfil({ conta }: { conta: MinhaContaDto }) {
       <DadosDaConta conta={conta} />
       <TrocarSenha senhaAlteradaEm={conta.senhaAlteradaEm} />
       <SessoesAbertas sessoes={conta.sessoesAbertas} />
+      <AcessosRecentes acessos={acessos} />
     </div>
   );
 }

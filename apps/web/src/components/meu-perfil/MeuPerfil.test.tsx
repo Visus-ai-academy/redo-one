@@ -21,7 +21,7 @@ const conta: MinhaContaDto = {
 
 describe('MeuPerfil', () => {
   it('mostra quem é a conta e as seções', async () => {
-    renderComRotas(<MeuPerfil conta={conta} />);
+    renderComRotas(<MeuPerfil conta={conta} acessos={[]} />);
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Meu perfil' }),
@@ -31,5 +31,6 @@ describe('MeuPerfil', () => {
     expect(screen.getByRole('region', { name: 'Dados da conta' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Senha' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /Sessões abertas/ })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Acessos recentes' })).toBeInTheDocument();
   });
 });
