@@ -10,7 +10,16 @@ import type { GrupoConfiguracoes } from './itens';
 const grupos: GrupoConfiguracoes[] = [
   {
     titulo: 'Sua conta',
-    itens: [{ nome: 'Meu perfil', descricao: '', icone: UserCircle, to: '/configuracoes' }],
+    itens: [
+      { nome: 'Meu perfil', descricao: '', icone: UserCircle, to: '/configuracoes' },
+      {
+        nome: 'Segurança',
+        descricao: '',
+        icone: UserCircle,
+        to: '/configuracoes',
+        hash: 'seguranca',
+      },
+    ],
   },
   {
     titulo: 'Acesso',
@@ -27,7 +36,7 @@ const grupos: GrupoConfiguracoes[] = [
   },
 ];
 
-function montar() {
+function montar(caminho = '/configuracoes') {
   return renderComRotas(
     <ConfiguracoesLayout
       acesso={{ acessoTotal: false, permissoes: ['usuarios.ver'] }}
@@ -35,7 +44,7 @@ function montar() {
     >
       <h1>Meu perfil</h1>
     </ConfiguracoesLayout>,
-    { caminho: '/configuracoes' },
+    { caminho },
   );
 }
 
@@ -61,6 +70,19 @@ describe('ConfiguracoesLayout', () => {
     expect(within(submenu).getByRole('link', { name: 'Meu perfil' })).toHaveAttribute(
       'aria-current',
       'page',
+    );
+  });
+
+  it('na âncora de Segurança, só Segurança fica marcado', async () => {
+    montar('/configuracoes#seguranca');
+
+    const submenu = await screen.findByRole('navigation', { name: 'Configurações' });
+    expect(within(submenu).getByRole('link', { name: 'Segurança' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(submenu).getByRole('link', { name: 'Meu perfil' })).not.toHaveAttribute(
+      'aria-current',
     );
   });
 });

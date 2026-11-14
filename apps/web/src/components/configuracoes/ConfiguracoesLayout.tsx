@@ -44,7 +44,7 @@ export function ConfiguracoesLayout({
                 key={item.nome}
                 to={item.to}
                 hash={item.hash}
-                activeOptions={{ includeHash: Boolean(item.hash), exact: true }}
+                activeOptions={{ includeHash: true, exact: true }}
                 className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-ring data-[status=active]:bg-accent data-[status=active]:text-accent-foreground flex h-8 items-center rounded-md px-2 focus-visible:outline-2 data-[status=active]:font-medium"
               >
                 {item.nome}
