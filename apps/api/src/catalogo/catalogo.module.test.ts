@@ -14,6 +14,7 @@ import { ExamesController } from './exames/exames.controller';
 import { ModalidadesController, PrioridadesController } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
+import { OpcoesController } from './opcoes/opcoes.controller';
 import { SubespecialidadesController } from './subespecialidades/subespecialidades.controller';
 
 const MODULOS = [
@@ -47,6 +48,8 @@ describe('CatalogoModule', () => {
     expect(modulo.get(DeParaEspecialidadesController)).toBeInstanceOf(
       DeParaEspecialidadesController,
     );
+
+    expect(modulo.get(OpcoesController)).toBeInstanceOf(OpcoesController);
 
     await modulo.close();
   });

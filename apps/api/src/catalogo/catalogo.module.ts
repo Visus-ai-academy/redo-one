@@ -11,7 +11,10 @@ import { ClientesService } from './clientes/clientes.service';
 import { DrizzleClientesRepository } from './clientes/drizzle-clientes.repository';
 import type { Rotulo } from './comum/rotulo';
 import { ContratadosController } from './contratados/contratados.controller';
-import { CONTRATADOS_REPOSITORY } from './contratados/contratados.repository';
+import {
+  CONTRATADOS_REPOSITORY,
+  type ContratadosRepository,
+} from './contratados/contratados.repository';
 import { ContratadosService } from './contratados/contratados.service';
 import { DrizzleContratadosRepository } from './contratados/drizzle-contratados.repository';
 import {
@@ -44,7 +47,7 @@ import {
 } from './de-para/tokens';
 import { DrizzleExamesRepository } from './exames/drizzle-exames.repository';
 import { ExamesController } from './exames/exames.controller';
-import { EXAMES_REPOSITORY } from './exames/exames.repository';
+import { EXAMES_REPOSITORY, type ExamesRepository } from './exames/exames.repository';
 import { ExamesService } from './exames/exames.service';
 import {
   DrizzleListaRepository,
@@ -59,6 +62,8 @@ import {
 } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
+import { OpcoesController } from './opcoes/opcoes.controller';
+import { OpcoesService } from './opcoes/opcoes.service';
 import { DrizzleSubespecialidadesRepository } from './subespecialidades/drizzle-subespecialidades.repository';
 import { SubespecialidadesController } from './subespecialidades/subespecialidades.controller';
 import { SubespecialidadesService } from './subespecialidades/subespecialidades.service';
@@ -102,6 +107,7 @@ function dePara<D extends object>(
     DeParaEspecialidadesController,
     DeParaValoresExameController,
     SufixosClienteController,
+    OpcoesController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -153,6 +159,22 @@ function dePara<D extends object>(
     ),
     dePara(DE_PARA_VALOR, () => REGRA_VALOR_EXAME, TABELA_DE_PARA_VALOR),
     dePara(SUFIXOS_CLIENTE, () => REGRA_SUFIXO, TABELA_SUFIXO),
+    {
+      provide: OpcoesService,
+      inject: [DATABASE, CONTRATADOS_REPOSITORY, EXAMES_REPOSITORY],
+      useFactory: (db: Database, contratados: ContratadosRepository, exames: ExamesRepository) =>
+        new OpcoesService(
+          {
+            modalidades: new DrizzleListaRepository(db, LISTAS.modalidades),
+            especialidades: new DrizzleListaRepository(db, LISTAS.especialidades),
+            subespecialidades: new DrizzleSubespecialidadesRepository(db),
+            categoriasExame: new DrizzleListaRepository(db, LISTAS.categoriasExame),
+            prioridades: new DrizzleListaRepository(db, LISTAS.prioridades),
+          },
+          contratados,
+          exames,
+        ),
+    },
   ],
 })
 export class CatalogoModule {}
