@@ -130,10 +130,14 @@ describe('PainelUsuario', () => {
     expect(papel).toHaveAccessibleDescription(
       'Ao trocar o papel, as sessões abertas desta pessoa são encerradas.',
     );
-    expect(within(papel).getByRole('option', { name: 'Administrador' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Trocar papel' })).toBeDisabled();
 
-    await userEvent.selectOptions(papel, 'Coordenação');
+    await userEvent.click(papel);
+    expect(await screen.findByRole('option', { name: 'Administrador' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await userEvent.click(screen.getByRole('option', { name: 'Coordenação' }));
     await userEvent.click(screen.getByRole('button', { name: 'Trocar papel' }));
 
     await waitFor(() =>

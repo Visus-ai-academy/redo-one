@@ -23,7 +23,7 @@ import { iniciais } from '../app-shell/iniciais';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
-import { controlClassName } from '../form/control-class';
+import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
 
 export type PermissoesUsuarios = {
@@ -284,25 +284,20 @@ function TrocarPapel({
         </span>
       </div>
       <div className="flex gap-2">
-        <select
+        <Select
           id={campoId}
           required
           disabled={proprio}
           value={papelId}
-          onChange={(evento) => setPapelId(evento.target.value)}
+          onValueChange={setPapelId}
           aria-describedby={ajudaId}
-          className={controlClassName('app', 'flex-1 px-2')}
-        >
-          {papeis.map((papel) => (
-            <option
-              key={papel.id}
-              value={papel.id}
-              disabled={!papel.atribuivel && papel.id !== usuario.papel.id}
-            >
-              {papel.nome}
-            </option>
-          ))}
-        </select>
+          opcoes={papeis.map((papel) => ({
+            valor: papel.id,
+            rotulo: papel.nome,
+            desabilitada: !papel.atribuivel && papel.id !== usuario.papel.id,
+          }))}
+          className="flex-1"
+        />
         {!proprio && (
           <button
             type="submit"

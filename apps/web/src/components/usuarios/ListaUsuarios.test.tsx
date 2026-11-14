@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PaginaUsuariosDto } from '../../gen/types/PaginaUsuariosDto';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import { renderComRotas } from '../../test/render';
+import { escolherOpcao } from '../../test/select';
 import { ListaUsuarios, type ListaUsuariosProps } from './ListaUsuarios';
 
 const AGORA = new Date('2026-11-14T15:00:00.000Z'); // 12:00 em Brasília
@@ -83,8 +84,8 @@ describe('ListaUsuarios', () => {
   it('filtra por papel e por situação', async () => {
     const { onFiltrar } = montar();
 
-    await userEvent.selectOptions(await screen.findByLabelText('Filtrar por papel'), 'Financeiro');
-    await userEvent.selectOptions(screen.getByLabelText('Filtrar por situação'), 'Bloqueado');
+    await escolherOpcao('Filtrar por papel', 'Financeiro');
+    await escolherOpcao('Filtrar por situação', 'Bloqueado');
 
     expect(onFiltrar).toHaveBeenCalledWith({ papelId: 'p-fin' });
     expect(onFiltrar).toHaveBeenCalledWith({ situacao: 'bloqueado' });

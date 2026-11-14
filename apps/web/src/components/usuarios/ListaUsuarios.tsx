@@ -12,6 +12,7 @@ import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { controlClassName } from '../form/control-class';
 import { Paginacao } from '../paginacao/Paginacao';
+import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
 import { SITUACOES, type Situacao } from './situacoes';
 
@@ -163,40 +164,28 @@ export function ListaUsuarios({
                 className={controlClassName('app', 'pl-8')}
               />
             </div>
-            <select
+            <Select
               aria-label="Filtrar por papel"
               value={filtros.papelId ?? ''}
-              onChange={(evento) => onFiltrar({ papelId: evento.target.value || undefined })}
-              className={controlClassName(
-                'app',
-                'w-auto flex-[1_1_180px] px-2 md:flex-[0_1_200px]',
-              )}
-            >
-              <option value="">Todos os papéis</option>
-              {papeis.map((papel) => (
-                <option key={papel.id} value={papel.id}>
-                  {papel.nome}
-                </option>
-              ))}
-            </select>
-            <select
+              onValueChange={(valor) => onFiltrar({ papelId: valor || undefined })}
+              opcoes={[
+                { valor: '', rotulo: 'Todos os papéis' },
+                ...papeis.map((papel) => ({ valor: papel.id, rotulo: papel.nome })),
+              ]}
+              className="flex-[1_1_180px] md:flex-[0_1_200px]"
+            />
+            <Select
               aria-label="Filtrar por situação"
               value={filtros.situacao ?? ''}
-              onChange={(evento) =>
-                onFiltrar({ situacao: (evento.target.value || undefined) as Situacao | undefined })
+              onValueChange={(valor) =>
+                onFiltrar({ situacao: (valor || undefined) as Situacao | undefined })
               }
-              className={controlClassName(
-                'app',
-                'w-auto flex-[1_1_180px] px-2 md:flex-[0_1_200px]',
-              )}
-            >
-              <option value="">Todas as situações</option>
-              {Object.entries(SITUACOES).map(([valor, { rotulo }]) => (
-                <option key={valor} value={valor}>
-                  {rotulo}
-                </option>
-              ))}
-            </select>
+              opcoes={[
+                { valor: '', rotulo: 'Todas as situações' },
+                ...Object.entries(SITUACOES).map(([valor, { rotulo }]) => ({ valor, rotulo })),
+              ]}
+              className="flex-[1_1_180px] md:flex-[0_1_200px]"
+            />
           </div>
 
           {pagina.itens.length === 0 && temFiltro ? (
