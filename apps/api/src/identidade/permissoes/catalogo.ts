@@ -84,6 +84,7 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
       ver('medicos'),
       { chave: 'medicos.editar', rotulo: 'Editar' },
       { chave: 'medicos.pagamento.ver', rotulo: 'Ver dados de pagamento', sensivel: true },
+      { chave: 'medicos.pagamento.editar', rotulo: 'Editar dados de pagamento', sensivel: true },
     ],
   },
   {

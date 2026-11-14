@@ -10,6 +10,7 @@ import { ErroDeDominioFilter } from './comum/erro-de-dominio.filter';
 import { validarAmbiente } from './config/ambiente';
 import { DatabaseModule } from './database/database.module';
 import { IdentidadeModule } from './identidade/identidade.module';
+import { MedicosModule } from './medicos/medicos.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { IdentidadeModule } from './identidade/identidade.module';
     AuditoriaModule,
     IdentidadeModule,
     CatalogoModule,
+    MedicosModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ErroDeDominioFilter }],
 })
