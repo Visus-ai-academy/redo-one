@@ -1,4 +1,4 @@
-import { ArrowClockwise, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
+import { ArrowClockwise, LockKey, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
 import { Link, useRouter } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
@@ -40,6 +40,22 @@ export function NaoEncontrada() {
       texto="O endereço não existe ou mudou. Confira o link ou volte ao início."
       acao={
         <Link to="/" className={buttonClassName()}>
+          Voltar ao início
+        </Link>
+      }
+    />
+  );
+}
+
+/** Endereço aberto direto por quem o papel não permite (o item já some do menu). */
+export function SemPermissao({ tela }: { tela: string }) {
+  return (
+    <Estado
+      icone={<LockKey size={24} aria-hidden />}
+      titulo="Sem acesso a esta tela"
+      texto={`Seu papel não permite abrir ${tela}. Se precisar, fale com quem administra o One.`}
+      acao={
+        <Link to="/" className={buttonClassName({ variant: 'secondary' })}>
           Voltar ao início
         </Link>
       }
