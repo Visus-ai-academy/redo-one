@@ -21,6 +21,7 @@ export default defineConfig({
       '@base-ui/react/select',
       '@base-ui/react/switch',
       '@base-ui/react/tabs',
+      '@base-ui/react/toggle',
       '@phosphor-icons/react',
       '@tanstack/react-form',
       '@tanstack/react-table',

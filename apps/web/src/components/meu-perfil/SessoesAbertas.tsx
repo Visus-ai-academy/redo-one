@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { DeviceMobile, Monitor } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -56,7 +57,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
       descricao="Encerre o que você não reconhece e troque a senha em seguida."
       acao={
         temOutras && (
-          <button
+          <Button
             type="button"
             disabled={ocupado}
             onClick={() =>
@@ -68,7 +69,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
             className={buttonClassName({ variant: 'secondary' })}
           >
             Encerrar as outras
-          </button>
+          </Button>
         )
       }
     >
@@ -105,7 +106,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
                   Esta sessão
                 </span>
               ) : (
-                <button
+                <Button
                   type="button"
                   disabled={ocupado}
                   aria-label={`Encerrar sessão ${aparelho.nome}`}
@@ -118,7 +119,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
                   className={buttonClassName({ variant: 'secondary' })}
                 >
                   Encerrar
-                </button>
+                </Button>
               )}
             </li>
           );

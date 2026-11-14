@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
@@ -93,13 +94,13 @@ export function ListaUsuarios({
           );
           if (!onAbrir) return conteudo;
           return (
-            <button
+            <Button
               type="button"
               onClick={() => onAbrir(usuario.id)}
               className="focus-visible:outline-ring -mx-1 rounded-md px-1 text-left focus-visible:outline-2"
             >
               {conteudo}
-            </button>
+            </Button>
           );
         },
       }),
@@ -146,10 +147,10 @@ export function ListaUsuarios({
           <span className="text-subtle-foreground font-normal tabular-nums">{pagina.total}</span>
         </h1>
         {onConvidar && (
-          <button type="button" onClick={onConvidar} className={buttonClassName()}>
+          <Button type="button" onClick={onConvidar} className={buttonClassName()}>
             <Plus size={16} aria-hidden />
             Convidar usuário
-          </button>
+          </Button>
         )}
       </div>
 
@@ -220,7 +221,7 @@ export function ListaUsuarios({
                   Confira a grafia ou limpe os filtros. Se a pessoa ainda não tem acesso, convide-a.
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() =>
                   onFiltrar({ busca: undefined, papelId: undefined, situacao: undefined })
@@ -228,7 +229,7 @@ export function ListaUsuarios({
                 className={buttonClassName({ variant: 'secondary' })}
               >
                 Limpar filtros
-              </button>
+              </Button>
             </div>
           ) : (
             <DataTable

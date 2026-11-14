@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { Trash } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { z } from 'zod';
@@ -346,7 +347,7 @@ function Apelidos({
                 </span>
               </span>
               {podeEditar && (
-                <button
+                <Button
                   type="button"
                   aria-label={`Remover apelido ${apelido.padrao}`}
                   onClick={async () => {
@@ -365,7 +366,7 @@ function Apelidos({
                   })}
                 >
                   <Trash size={16} aria-hidden />
-                </button>
+                </Button>
               )}
             </li>
           ))}

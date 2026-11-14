@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { z } from 'zod';
@@ -244,22 +245,22 @@ export function EditarPapel({
               />
             )}
             {podeEditar && papel && !papel.acessoTotal && (
-              <button
+              <Button
                 type="button"
                 onClick={onDuplicar}
                 className={buttonClassName({ variant: 'secondary' })}
               >
                 Duplicar
-              </button>
+              </Button>
             )}
             {novo && (
-              <button
+              <Button
                 type="button"
                 onClick={onCancelar}
                 className={buttonClassName({ variant: 'secondary' })}
               >
                 Cancelar
-              </button>
+              </Button>
             )}
             {!somenteLeitura && (
               <form.AppForm>

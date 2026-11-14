@@ -35,10 +35,15 @@ describe('PasswordField', () => {
   it('alterna entre mostrar e ocultar a senha', async () => {
     render(<Formulario />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mostrar senha' }));
-    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'text');
+    const mostrar = screen.getByRole('button', { name: 'Mostrar senha' });
+    expect(mostrar).toHaveAttribute('aria-pressed', 'false');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ocultar senha' }));
+    await userEvent.click(mostrar);
+    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'text');
+    expect(mostrar).toHaveAttribute('aria-pressed', 'true');
+    expect(mostrar).toHaveAccessibleName('Mostrar senha');
+
+    await userEvent.click(mostrar);
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password');
   });
 

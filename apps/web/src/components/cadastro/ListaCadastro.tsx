@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -163,13 +164,13 @@ export function ListaCadastro<T extends RowData>({
                 </p>
               </div>
               {filtrando ? (
-                <button
+                <Button
                   type="button"
                   onClick={onLimparFiltros}
                   className={buttonClassName({ variant: 'secondary' })}
                 >
                   Limpar filtros
-                </button>
+                </Button>
               ) : (
                 novo && <BotaoNovo {...novo} />
               )}
@@ -201,22 +202,22 @@ function idDaColuna(coluna: { id?: string }) {
 
 function BotaoNovo({ rotulo, onClick }: { rotulo: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={buttonClassName()}>
+    <Button type="button" onClick={onClick} className={buttonClassName()}>
       <Plus size={16} aria-hidden />
       {rotulo}
-    </button>
+    </Button>
   );
 }
 
 /** Célula principal da linha: abre o item no painel. */
 export function BotaoAbrir({ onAbrir, children }: { onAbrir: () => void; children: ReactNode }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onAbrir}
       className="focus-visible:outline-ring -mx-1 rounded-md px-1 text-left font-medium focus-visible:outline-2"
     >
       {children}
-    </button>
+    </Button>
   );
 }

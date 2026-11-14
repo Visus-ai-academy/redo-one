@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { Trash } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { z } from 'zod';
@@ -393,7 +394,7 @@ function RegrasQuebra({
                   </span>
                 </span>
                 {podeEditar && (
-                  <button
+                  <Button
                     type="button"
                     aria-label={`Remover regra para ${regra.exameDestino.nome}`}
                     onClick={() => void tentar(() => onExcluir(regra.id))}
@@ -403,7 +404,7 @@ function RegrasQuebra({
                     })}
                   >
                     <Trash size={16} aria-hidden />
-                  </button>
+                  </Button>
                 )}
               </li>
             );

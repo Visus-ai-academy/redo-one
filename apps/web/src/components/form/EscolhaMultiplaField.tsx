@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { X } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 
@@ -71,7 +72,7 @@ export function EscolhaMultiplaField({
             <li key={item.valor} className="flex min-h-10 items-center gap-3 px-3 py-1">
               <span className="min-w-0 flex-1 truncate">{item.rotulo}</span>
               {!somenteLeitura && (
-                <button
+                <Button
                   type="button"
                   aria-label={`Remover ${item.rotulo}`}
                   onClick={() => remover(item.valor)}
@@ -81,7 +82,7 @@ export function EscolhaMultiplaField({
                   })}
                 >
                   <X size={16} aria-hidden />
-                </button>
+                </Button>
               )}
             </li>
           ))}

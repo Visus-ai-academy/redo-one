@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 
 import { buttonClassName } from '../button/button-class';
@@ -21,7 +22,7 @@ export function Paginacao({ pagina, porPagina, total, onIrPara }: PaginacaoProps
         {faixaDaPagina(pagina, porPagina, total)}
       </span>
       <span className="flex gap-2">
-        <button
+        <Button
           type="button"
           aria-label="Página anterior"
           disabled={pagina <= 1}
@@ -29,8 +30,8 @@ export function Paginacao({ pagina, porPagina, total, onIrPara }: PaginacaoProps
           className={botao}
         >
           <CaretLeft size={16} aria-hidden />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           aria-label="Próxima página"
           disabled={pagina >= ultima}
@@ -38,7 +39,7 @@ export function Paginacao({ pagina, porPagina, total, onIrPara }: PaginacaoProps
           className={botao}
         >
           <CaretRight size={16} aria-hidden />
-        </button>
+        </Button>
       </span>
     </div>
   );

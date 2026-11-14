@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { Lock } from '@phosphor-icons/react';
 
 import type { PapelResumoDto } from '../../gen/types/PapelResumoDto';
@@ -32,7 +33,7 @@ export function ListaPapeis({ papeis, selecionadoId, onEscolher }: ListaPapeisPr
           const atual = papel.id === selecionadoId;
           return (
             <li key={papel.id} className={cn(posicao > 0 && 'border-t')}>
-              <button
+              <Button
                 type="button"
                 aria-current={atual ? 'true' : undefined}
                 onClick={() => onEscolher(papel.id)}
@@ -57,7 +58,7 @@ export function ListaPapeis({ papeis, selecionadoId, onEscolher }: ListaPapeisPr
                     className="text-subtle-foreground flex-none"
                   />
                 )}
-              </button>
+              </Button>
             </li>
           );
         })}

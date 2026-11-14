@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { ArrowClockwise, LockKey, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
 import { Link, useRouter } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
@@ -71,14 +72,14 @@ export function ErroInesperado({ onTentarDeNovo }: { onTentarDeNovo: () => void 
       titulo="Algo deu errado"
       texto="Não foi possível carregar esta página. Confira sua conexão e tente de novo; se continuar, avise quem administra o One."
       acao={
-        <button
+        <Button
           type="button"
           onClick={onTentarDeNovo}
           className={buttonClassName({ variant: 'secondary' })}
         >
           <ArrowClockwise size={16} aria-hidden />
           Tentar de novo
-        </button>
+        </Button>
       }
     />
   );

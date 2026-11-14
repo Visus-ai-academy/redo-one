@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { useState } from 'react';
 import { z } from 'zod';
 
@@ -243,13 +244,13 @@ export function PainelItemLista({
               />
             )}
             <span className="ml-auto flex gap-2">
-              <button
+              <Button
                 type="button"
                 onClick={onFechar}
                 className={buttonClassName({ variant: 'secondary' })}
               >
                 Cancelar
-              </button>
+              </Button>
               <form.SubmitButton pendingLabel="Salvando…">
                 {item ? 'Salvar' : `Criar ${rotulos.singular}`}
               </form.SubmitButton>

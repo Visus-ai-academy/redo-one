@@ -1,4 +1,5 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog';
+import { Button } from '@base-ui/react/button';
 import { useRef, useState } from 'react';
 
 import { buttonClassName } from '../button/button-class';
@@ -48,7 +49,7 @@ export function ConfirmarAcao({
             <AlertDialog.Close ref={cancelar} className={buttonClassName({ variant: 'secondary' })}>
               Cancelar
             </AlertDialog.Close>
-            <button
+            <Button
               type="button"
               onClick={async () => {
                 setAberto(false);
@@ -57,7 +58,7 @@ export function ConfirmarAcao({
               className={buttonClassName({ variant: 'destructive' })}
             >
               {acao}
-            </button>
+            </Button>
           </div>
         </AlertDialog.Popup>
       </AlertDialog.Portal>

@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { SidebarSimple, SignOut } from '@phosphor-icons/react';
 import { Link } from '@tanstack/react-router';
 
@@ -47,7 +48,7 @@ export function MenuLateral({
           </span>
         )}
         {onAlternar && (
-          <button
+          <Button
             type="button"
             onClick={onAlternar}
             aria-label={recolhido ? 'Expandir menu' : 'Recolher menu'}
@@ -55,7 +56,7 @@ export function MenuLateral({
             className={botaoIcone}
           >
             <SidebarSimple size={20} aria-hidden />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -99,7 +100,7 @@ export function MenuLateral({
               <span className="text-sidebar-muted truncate text-xs">{sessao.papel}</span>
             </span>
           )}
-          <button
+          <Button
             type="button"
             onClick={onSair}
             disabled={saindo}
@@ -108,7 +109,7 @@ export function MenuLateral({
             className={botaoIcone}
           >
             <SignOut size={18} aria-hidden />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

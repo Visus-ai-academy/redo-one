@@ -1,4 +1,5 @@
 import { Field } from '@base-ui/react/field';
+import { Toggle } from '@base-ui/react/toggle';
 import { Eye, EyeSlash, Warning } from '@phosphor-icons/react';
 import { type KeyboardEvent, type ReactNode, useState } from 'react';
 
@@ -62,18 +63,17 @@ export function PasswordField({
           onKeyDown={verificarCapsLock}
           className={controlClassName(size, size === 'acesso' ? 'pr-12' : 'pr-10')}
         />
-        <button
-          type="button"
-          aria-label={visivel ? 'Ocultar senha' : 'Mostrar senha'}
-          aria-pressed={visivel}
-          onClick={() => setVisivel((atual) => !atual)}
+        <Toggle
+          aria-label="Mostrar senha"
+          pressed={visivel}
+          onPressedChange={setVisivel}
           className={cn(
             'text-muted-foreground hover:text-foreground focus-visible:outline-ring absolute top-0.5 right-0.5 flex items-center justify-center rounded-md focus-visible:outline-2',
             size === 'acesso' ? 'size-10' : 'size-8',
           )}
         >
           {visivel ? <EyeSlash size={20} aria-hidden /> : <Eye size={20} aria-hidden />}
-        </button>
+        </Toggle>
       </div>
       {capsLock && (
         <Field.Description className="text-warning flex items-center gap-2 text-[13px]">

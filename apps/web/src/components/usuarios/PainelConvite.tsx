@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -118,13 +119,13 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
         <form.AppForm>
           <form.RequiredLegend />
           <div className="flex justify-end gap-2">
-            <button
+            <Button
               type="button"
               onClick={onCancelar}
               className={buttonClassName({ variant: 'secondary' })}
             >
               Cancelar
-            </button>
+            </Button>
             <form.SubmitButton pendingLabel="Enviando…">Enviar convite</form.SubmitButton>
           </div>
         </form.AppForm>

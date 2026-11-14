@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { EnvelopeSimple, Info } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { z } from 'zod';
@@ -46,13 +47,13 @@ export function RecuperarSenhaForm() {
           </div>
           <p className="text-muted-foreground border-t pt-5 leading-normal">
             Não chegou? Veja a caixa de spam ou{' '}
-            <button
+            <Button
               type="button"
               onClick={() => setEnviado(false)}
               className="text-primary hover:text-primary-hover font-medium underline underline-offset-2"
             >
               envie de novo
-            </button>
+            </Button>
             .
           </p>
         </div>

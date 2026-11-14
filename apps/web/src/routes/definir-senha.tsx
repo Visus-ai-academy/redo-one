@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { z } from 'zod';
@@ -53,13 +54,13 @@ function Erro() {
     <AcessoLayout>
       <div className="flex flex-col gap-4">
         <Alerta tom="erro">Não foi possível abrir o link agora. Confira sua conexão.</Alerta>
-        <button
+        <Button
           type="button"
           onClick={() => void router.invalidate()}
           className="text-primary hover:text-primary-hover self-start font-medium underline underline-offset-2"
         >
           Tentar de novo
-        </button>
+        </Button>
       </div>
     </AcessoLayout>
   );

@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { DeviceMobile, Monitor } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -106,7 +107,7 @@ export function PainelUsuario({
               Bloqueado até {horaDeBrasilia(usuario.bloqueadoAte)} por excesso de tentativas de
               senha.
               {permissoes.desbloquear && (
-                <button
+                <Button
                   type="button"
                   disabled={acao.ocupado}
                   onClick={() =>
@@ -115,7 +116,7 @@ export function PainelUsuario({
                   className={buttonClassName({ variant: 'secondary' })}
                 >
                   Desbloquear agora
-                </button>
+                </Button>
               )}
             </span>
           </Alerta>
@@ -151,7 +152,7 @@ export function PainelUsuario({
           <div className="flex flex-wrap gap-2 border-t pt-4">
             {podeConviteOuLink &&
               (pendente ? (
-                <button
+                <Button
                   type="button"
                   disabled={acao.ocupado}
                   onClick={() =>
@@ -163,9 +164,9 @@ export function PainelUsuario({
                   className={buttonClassName({ variant: 'secondary' })}
                 >
                   Reenviar convite
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   type="button"
                   disabled={acao.ocupado}
                   onClick={() =>
@@ -177,11 +178,11 @@ export function PainelUsuario({
                   className={buttonClassName({ variant: 'secondary' })}
                 >
                   Enviar link de nova senha
-                </button>
+                </Button>
               ))}
             {podeDesativar &&
               (desativado ? (
-                <button
+                <Button
                   type="button"
                   disabled={acao.ocupado}
                   onClick={() =>
@@ -193,7 +194,7 @@ export function PainelUsuario({
                   className={buttonClassName({ variant: 'secondary' })}
                 >
                   Reativar usuário
-                </button>
+                </Button>
               ) : (
                 <ConfirmarAcao
                   acao="Desativar usuário"
@@ -290,13 +291,13 @@ function TrocarPapel({
           className="flex-1"
         />
         {!proprio && (
-          <button
+          <Button
             type="submit"
             disabled={papelId === usuario.papel.id || trocar.isPending}
             className={buttonClassName({ variant: 'secondary' })}
           >
             Trocar papel
-          </button>
+          </Button>
         )}
       </div>
       <span id={ajudaId} className="text-muted-foreground text-[13px]">
@@ -336,7 +337,7 @@ function SessoesDoUsuario({
           </span>
         </span>
         {acao && usuario.sessoesAbertas.length > 0 && (
-          <button
+          <Button
             type="button"
             disabled={acao.ocupado}
             onClick={() =>
@@ -348,7 +349,7 @@ function SessoesDoUsuario({
             className={buttonClassName({ variant: 'secondary' })}
           >
             Encerrar todas
-          </button>
+          </Button>
         )}
       </div>
       {usuario.sessoesAbertas.length === 0 ? (
@@ -374,7 +375,7 @@ function SessoesDoUsuario({
                     </span>
                   </span>
                   {acao && (
-                    <button
+                    <Button
                       type="button"
                       disabled={acao.ocupado}
                       aria-label={`Encerrar sessão ${aparelho.nome}`}
@@ -390,7 +391,7 @@ function SessoesDoUsuario({
                       className={buttonClassName({ variant: 'secondary' })}
                     >
                       Encerrar
-                    </button>
+                    </Button>
                   )}
                 </li>
               );

@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -99,14 +100,14 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">Papéis</h1>
         {podeEditar && !novo && (
-          <button
+          <Button
             type="button"
             onClick={() => void navigate({ search: { novo: 1 } })}
             className={buttonClassName()}
           >
             <Plus size={16} aria-hidden />
             Novo papel
-          </button>
+          </Button>
         )}
       </div>
 

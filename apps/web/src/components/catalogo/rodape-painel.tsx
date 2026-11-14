@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { RequiredLegend } from '../form/RequiredLegend';
@@ -24,13 +25,13 @@ export function RodapePainel({ rotuloCriar, editando, excluir, onCancelar }: Rod
       <div className="flex flex-wrap items-center gap-2">
         {excluir && <ConfirmarAcao {...excluir} />}
         <span className="ml-auto flex gap-2">
-          <button
+          <Button
             type="button"
             onClick={onCancelar}
             className={buttonClassName({ variant: 'secondary' })}
           >
             Cancelar
-          </button>
+          </Button>
           <SubmitButton pendingLabel="Salvando…">{editando ? 'Salvar' : rotuloCriar}</SubmitButton>
         </span>
       </div>

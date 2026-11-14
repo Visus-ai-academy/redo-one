@@ -1,3 +1,4 @@
+import { Button } from '@base-ui/react/button';
 import { Trash } from '@phosphor-icons/react';
 import { type ReactNode, useId, useState } from 'react';
 import { z } from 'zod';
@@ -444,7 +445,7 @@ function Apelidos({
             <li key={apelido.id} className="flex items-center gap-3 px-3 py-2">
               <span className="min-w-0 flex-1 truncate font-medium">{apelido.nomeOrigem}</span>
               {podeEditar && (
-                <button
+                <Button
                   type="button"
                   aria-label={`Remover apelido ${apelido.nomeOrigem}`}
                   onClick={async () => {
@@ -463,7 +464,7 @@ function Apelidos({
                   })}
                 >
                   <Trash size={16} aria-hidden />
-                </button>
+                </Button>
               )}
             </li>
           ))}
