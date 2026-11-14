@@ -20,18 +20,20 @@ export function DataTable<TData extends RowData>({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="w-full overflow-x-auto rounded-md border">
-      <table className="w-full caption-bottom text-sm">
-        {caption && <caption className="text-muted-foreground mt-4 text-sm">{caption}</caption>}
+    // Sem borda própria: a tabela fica dentro de um Painel (ou seção com borda), nunca cartão no cartão.
+    // Rola na horizontal dentro da caixa no celular.
+    <div className="w-full overflow-x-auto">
+      <table className="w-full caption-bottom tabular-nums">
+        {caption && <caption className="text-muted-foreground mt-4 text-[13px]">{caption}</caption>}
         <thead>
           {table.getHeaderGroups().map((group) => (
-            <tr key={group.id} className="border-b">
+            <tr key={group.id}>
               {group.headers.map((header) => (
                 <th
                   key={header.id}
                   colSpan={header.colSpan}
                   scope="col"
-                  className="text-muted-foreground h-10 px-3 text-left align-middle font-medium"
+                  className="text-subtle-foreground h-10 px-4 text-left align-middle text-xs font-medium"
                 >
                   {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </th>
@@ -42,18 +44,18 @@ export function DataTable<TData extends RowData>({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="text-muted-foreground h-24 text-center">
+              <td
+                colSpan={columns.length}
+                className="text-muted-foreground h-24 border-t px-4 text-center"
+              >
                 {emptyMessage}
               </td>
             </tr>
           ) : (
             rows.map((row) => (
-              <tr
-                key={row.id}
-                className="hover:bg-muted/50 border-b transition-colors last:border-0"
-              >
+              <tr key={row.id} className="hover:bg-muted border-t">
                 {row.getAllCells().map((cell) => (
-                  <td key={cell.id} className="p-3 align-middle">
+                  <td key={cell.id} className="h-11 px-4 py-2 align-middle">
                     <table.FlexRender cell={cell} />
                   </td>
                 ))}
