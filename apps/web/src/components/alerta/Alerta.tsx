@@ -18,17 +18,21 @@ export function Alerta({
   tom,
   children,
   className,
+  role,
 }: {
   tom: Tom;
   children: ReactNode;
   className?: string;
+  /** Padrão: `alert` para erro, bloqueio e atenção; `status` para o resto. Informação parada (que
+   * não acabou de acontecer) passa `role="note"`, para o leitor de tela não interromper. */
+  role?: 'alert' | 'status' | 'note';
 }) {
   const { classe, Icone } = tons[tom];
   const urgente = tom === 'erro' || tom === 'bloqueio' || tom === 'atencao';
 
   return (
     <div
-      role={urgente ? 'alert' : 'status'}
+      role={role ?? (urgente ? 'alert' : 'status')}
       className={cn('flex items-start gap-3 rounded-md p-3 leading-normal', classe, className)}
     >
       <Icone size={18} aria-hidden className="mt-px flex-none" />

@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
-import { PainelUsuario, type PainelUsuarioProps } from '../../../components/usuarios/PainelUsuario';
+import {
+  PainelUsuario,
+  type PainelUsuarioProps,
+  type PermissoesUsuarios,
+} from '../../../components/usuarios/PainelUsuario';
 import { usuariosControllerListarQueryOptions } from '../../../gen/hooks/useUsuariosControllerListar';
 import { usuariosControllerObterQueryOptions } from '../../../gen/hooks/useUsuariosControllerObter';
 import { usuariosControllerPapeisQueryOptions } from '../../../gen/hooks/useUsuariosControllerPapeis';
@@ -59,7 +63,15 @@ function PaginaUsuarios() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'usuarios.ver') ? (
-        <Usuarios euId={sessao.usuario.id} podeEditar={pode(sessao, 'usuarios.editar')} />
+        <Usuarios
+          euId={sessao.usuario.id}
+          permissoes={{
+            editar: pode(sessao, 'usuarios.editar'),
+            desbloquear: pode(sessao, 'usuarios.desbloquear'),
+            desativar: pode(sessao, 'usuarios.desativar'),
+            convidar: pode(sessao, 'usuarios.convidar'),
+          }}
+        />
       ) : (
         <SemPermissao tela="Usuários" />
       )}
@@ -67,7 +79,7 @@ function PaginaUsuarios() {
   );
 }
 
-function Usuarios({ euId, podeEditar }: { euId: string; podeEditar: boolean }) {
+function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUsuarios }) {
   const filtros = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(
@@ -113,7 +125,7 @@ function Usuarios({ euId, podeEditar }: { euId: string; podeEditar: boolean }) {
             id={filtros.id}
             papeis={papeis}
             euId={euId}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
             onFechar={fechar}
           />
         )

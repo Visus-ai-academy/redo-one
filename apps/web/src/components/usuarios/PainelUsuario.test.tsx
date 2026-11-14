@@ -2,6 +2,9 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { usuariosControllerDesbloquear } from '../../gen/clients/usuariosControllerDesbloquear';
+import { usuariosControllerEnviarLinkSenha } from '../../gen/clients/usuariosControllerEnviarLinkSenha';
+import { usuariosControllerReenviarConvite } from '../../gen/clients/usuariosControllerReenviarConvite';
 import { usuariosControllerTrocarPapel } from '../../gen/clients/usuariosControllerTrocarPapel';
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
@@ -10,8 +13,16 @@ import { renderComRotas } from '../../test/render';
 import { PainelUsuario, type PainelUsuarioProps } from './PainelUsuario';
 
 vi.mock('../../gen/clients/usuariosControllerTrocarPapel');
+vi.mock('../../gen/clients/usuariosControllerDesbloquear');
+vi.mock('../../gen/clients/usuariosControllerEnviarLinkSenha');
+vi.mock('../../gen/clients/usuariosControllerReenviarConvite');
 
 const trocarPapel = vi.mocked(usuariosControllerTrocarPapel);
+const desbloquear = vi.mocked(usuariosControllerDesbloquear);
+const enviarLink = vi.mocked(usuariosControllerEnviarLinkSenha);
+const reenviarConvite = vi.mocked(usuariosControllerReenviarConvite);
+
+const TODAS = { editar: true, desbloquear: true, desativar: true, convidar: true };
 
 const AGORA = new Date('2026-11-14T15:00:00.000Z'); // 12:00 em Brasília
 
@@ -50,7 +61,7 @@ function montar(props: Partial<PainelUsuarioProps> = {}) {
       usuario={maria}
       papeis={papeis}
       euId="u-carlos"
-      podeEditar
+      permissoes={TODAS}
       agora={AGORA}
       onFechar={onFechar}
       {...props}
@@ -65,8 +76,10 @@ const valor = (painel: HTMLElement, rotulo: string) =>
 
 describe('PainelUsuario', () => {
   beforeEach(() => {
-    trocarPapel.mockReset();
-    trocarPapel.mockReturnValue({ unwrap: async () => undefined } as never);
+    for (const mock of [trocarPapel, desbloquear, enviarLink, reenviarConvite]) {
+      mock.mockReset();
+      mock.mockReturnValue({ unwrap: async () => undefined } as never);
+    }
   });
 
   it('mostra quem é, a situação, o último acesso, o CPF mascarado e quando foi convidada', async () => {
@@ -125,7 +138,7 @@ describe('PainelUsuario', () => {
   });
 
   it('sem usuarios.editar, o papel é só leitura', async () => {
-    montar({ podeEditar: false });
+    montar({ permissoes: { ...TODAS, editar: false } });
 
     expect(await screen.findByRole('textbox', { name: 'Papel' })).toHaveValue('Financeiro');
     expect(screen.queryByRole('button', { name: 'Trocar papel' })).not.toBeInTheDocument();
@@ -137,5 +150,84 @@ describe('PainelUsuario', () => {
     const sessoes = await screen.findByRole('list', { name: 'Sessões abertas' });
     expect(sessoes).toHaveTextContent('Safari no iPhone');
     expect(sessoes).toHaveTextContent('Ontem, 21:40, IP 189.6.x.x');
+  });
+
+  it('desbloqueia na hora quem está bloqueado', async () => {
+    montar({
+      usuario: { ...maria, situacao: 'bloqueado', bloqueadoAte: '2026-11-14T17:32:00.000Z' },
+    });
+
+    const aviso = await screen.findByText(/Bloqueado até 14:32/);
+    expect(aviso).toHaveTextContent('Bloqueado até 14:32 por excesso de tentativas de senha.');
+    await userEvent.click(screen.getByRole('button', { name: 'Desbloquear agora' }));
+
+    await waitFor(() =>
+      expect(desbloquear).toHaveBeenCalledWith(
+        expect.objectContaining({ path: { id: 'u-maria' } }),
+      ),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Acesso liberado.');
+  });
+
+  it('mostra o bloqueio mesmo quando a situação é outra (convite pendente bloqueado)', async () => {
+    montar({
+      usuario: { ...maria, situacao: 'convite_pendente', bloqueadoAte: '2026-11-14T17:32:00.000Z' },
+    });
+
+    expect(await screen.findByText(/Bloqueado até 14:32/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Desbloquear agora' })).toBeInTheDocument();
+  });
+
+  it('não mostra bloqueio que já passou', async () => {
+    montar({ usuario: { ...maria, bloqueadoAte: '2026-11-14T14:00:00.000Z' } });
+
+    await screen.findByRole('complementary', { name: 'Maria Souza' });
+    expect(screen.queryByText(/Bloqueado até/)).not.toBeInTheDocument();
+  });
+
+  it('sem usuarios.desbloquear, só mostra o bloqueio', async () => {
+    montar({
+      usuario: { ...maria, situacao: 'bloqueado', bloqueadoAte: '2026-11-14T17:32:00.000Z' },
+      permissoes: { ...TODAS, desbloquear: false },
+    });
+
+    await screen.findByText(/Bloqueado até 14:32/);
+    expect(screen.queryByRole('button', { name: 'Desbloquear agora' })).not.toBeInTheDocument();
+  });
+
+  it('envia o link de nova senha para o e-mail da pessoa', async () => {
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Enviar link de nova senha' }));
+
+    await waitFor(() =>
+      expect(enviarLink).toHaveBeenCalledWith(expect.objectContaining({ path: { id: 'u-maria' } })),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Link enviado para maria@empresa.com.br. Ele vale por 1 hora.',
+    );
+  });
+
+  it('com convite pendente, reenvia o convite em vez do link de senha', async () => {
+    montar({ usuario: { ...maria, situacao: 'convite_pendente', ultimoAcessoEm: null } });
+
+    expect(
+      screen.queryByRole('button', { name: 'Enviar link de nova senha' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Reenviar convite' }));
+
+    await waitFor(() => expect(reenviarConvite).toHaveBeenCalled());
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Convite reenviado para maria@empresa.com.br. Ele vale por 7 dias; o anterior deixa de valer.',
+    );
+  });
+
+  it('avisa quando a ação falha', async () => {
+    enviarLink.mockReturnValue({ unwrap: () => Promise.reject(new Error('rede')) } as never);
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Enviar link de nova senha' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível concluir');
   });
 });
