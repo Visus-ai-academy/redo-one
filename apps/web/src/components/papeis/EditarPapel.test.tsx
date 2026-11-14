@@ -131,21 +131,34 @@ describe('EditarPapel', () => {
     );
   });
 
-  it('papel do sistema é só leitura e oferece Duplicar', async () => {
+  it('papel do sistema: nome fixo, sem excluir, mas permissões e descrição editáveis', async () => {
     const { onDuplicar } = montar({
       papel: { ...financeiro, nome: 'Médico', sistema: true },
     });
 
     expect(await screen.findByRole('note')).toHaveTextContent(
-      'Papel do sistema: não pode ser editado nem excluído. Para criar um parecido, use Duplicar.',
+      'Papel do sistema: o nome é fixo e ele não pode ser excluído.',
     );
-    expect(screen.queryByRole('textbox', { name: /Nome \*/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Repasse' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    expect(screen.queryByRole('button', { name: 'Salvar alterações' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveAttribute('readonly');
     expect(screen.queryByRole('button', { name: 'Excluir papel' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Para excluir/)).not.toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Descrição' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Portal');
+    await userEvent.click(screen.getByRole('switch', { name: 'Volumetria' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() =>
+      expect(atualizar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: {
+            nome: 'Médico',
+            descricao: 'Portal',
+            permissoes: ['repasse.ver', 'volumetria.ver'],
+          },
+        }),
+      ),
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Duplicar' }));
     expect(onDuplicar).toHaveBeenCalled();

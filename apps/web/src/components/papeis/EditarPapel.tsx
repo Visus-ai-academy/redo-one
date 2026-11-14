@@ -72,7 +72,9 @@ export function EditarPapel({
   const [erro, setErro] = useState<unknown>();
 
   const novo = !papel;
-  const somenteLeitura = !podeEditar || Boolean(papel?.sistema);
+  // O de acesso total não tem lista para editar; os outros do sistema só não mudam de nome.
+  const somenteLeitura = !podeEditar || Boolean(papel?.acessoTotal);
+  const nomeFixo = Boolean(papel?.sistema);
   const mudouPermissoes = papel ? !mesmasPermissoes(papel.permissoes, marcadas) : false;
   const meuPapel = papel?.id === meuPapelId;
   const aviso =
@@ -150,13 +152,16 @@ export function EditarPapel({
           <h2 id={tituloId} className="text-base font-semibold">
             {papel?.nome ?? 'Novo papel'}
           </h2>
-          {papel?.sistema && (
-            <Alerta tom="bloqueio" role="note">
-              {papel.acessoTotal
-                ? 'Papel do sistema: não pode ser editado nem excluído.'
-                : 'Papel do sistema: não pode ser editado nem excluído. Para criar um parecido, use Duplicar.'}
-            </Alerta>
-          )}
+          {papel?.sistema &&
+            (papel.acessoTotal ? (
+              <Alerta tom="bloqueio" role="note">
+                Papel do sistema: não pode ser editado nem excluído.
+              </Alerta>
+            ) : (
+              <Alerta tom="info" role="note">
+                Papel do sistema: o nome é fixo e ele não pode ser excluído.
+              </Alerta>
+            ))}
           {erro !== undefined && <ErroDoPapel erro={erro} novo={novo} />}
           {somenteLeitura ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -166,16 +171,20 @@ export function EditarPapel({
           ) : (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
-                <form.AppField name="nome">
-                  {(field) => (
-                    <field.TextField
-                      label="Nome"
-                      placeholder="Ex.: Coordenação"
-                      autoComplete="off"
-                      required
-                    />
-                  )}
-                </form.AppField>
+                {nomeFixo ? (
+                  <CampoSomenteLeitura label="Nome" value={papel?.nome ?? ''} />
+                ) : (
+                  <form.AppField name="nome">
+                    {(field) => (
+                      <field.TextField
+                        label="Nome"
+                        placeholder="Ex.: Coordenação"
+                        autoComplete="off"
+                        required
+                      />
+                    )}
+                  </form.AppField>
+                )}
                 <form.AppField name="descricao">
                   {(field) => (
                     <field.TextField
@@ -186,9 +195,11 @@ export function EditarPapel({
                   )}
                 </form.AppField>
               </div>
-              <form.AppForm>
-                <form.RequiredLegend />
-              </form.AppForm>
+              {!nomeFixo && (
+                <form.AppForm>
+                  <form.RequiredLegend />
+                </form.AppForm>
+              )}
             </>
           )}
         </div>
@@ -219,7 +230,7 @@ export function EditarPapel({
             resumo={resumoDasPermissoes(marcadas)}
             aviso={aviso}
             bloqueioDeExclusao={
-              papel && !somenteLeitura && papel.totalUsuarios > 0
+              papel && !somenteLeitura && !papel.sistema && papel.totalUsuarios > 0
                 ? `Para excluir, troque antes o papel ${papel.totalUsuarios === 1 ? 'do único usuário' : `dos ${papel.totalUsuarios} usuários`}.`
                 : undefined
             }
