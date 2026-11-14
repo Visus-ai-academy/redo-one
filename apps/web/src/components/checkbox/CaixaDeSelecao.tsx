@@ -4,15 +4,18 @@ import { Check } from '@phosphor-icons/react';
 import { cn } from '../../lib/cn';
 
 type CaixaDeSelecaoProps = {
-  checked: boolean;
-  onCheckedChange: (marcada: boolean, detalhes: unknown) => void;
+  /** Sozinha. Dentro de um `CheckboxGroup`, use `value` e deixe o grupo marcar. */
+  checked?: boolean;
+  onCheckedChange?: (marcada: boolean, detalhes: unknown) => void;
+  /** Valor no `CheckboxGroup`. */
+  value?: string;
   disabled?: boolean;
   className?: string;
   'aria-label'?: string;
   'aria-describedby'?: string;
 };
 
-/** Checkbox do One (Base UI): ponha dentro de um `<label>` com o texto, ou passe `aria-label`. */
+/** Checkbox do One (Base UI): ponha dentro de um `Field.Label` com o texto, ou passe `aria-label`. */
 export function CaixaDeSelecao({ className, ...props }: CaixaDeSelecaoProps) {
   return (
     <Checkbox.Root

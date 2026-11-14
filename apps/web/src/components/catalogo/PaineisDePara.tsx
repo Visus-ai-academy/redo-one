@@ -1,3 +1,4 @@
+import { Fieldset } from '@base-ui/react/fieldset';
 import { z } from 'zod';
 
 import type { DeParaEspecialidadeDto } from '../../gen/types/DeParaEspecialidadeDto';
@@ -82,7 +83,7 @@ export function PainelDeParaPrioridade({
         className="flex flex-col gap-4 p-4"
       >
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <fieldset disabled={!podeEditar} className="flex flex-col gap-4">
+        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
           <form.AppField name="origem">
             {(field) => (
               <field.TextField
@@ -107,7 +108,7 @@ export function PainelDeParaPrioridade({
           <form.AppField name="ativo">
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
-        </fieldset>
+        </Fieldset.Root>
         {podeEditar && (
           <form.AppForm>
             <RodapePainel
@@ -204,7 +205,7 @@ export function PainelDeParaEspecialidade({
         className="flex flex-col gap-4 p-4"
       >
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <fieldset disabled={!podeEditar} className="flex flex-col gap-4">
+        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
           <form.Subscribe selector={(estado) => estado.values.tipo}>
             {(tipo) => (
               <>
@@ -256,7 +257,7 @@ export function PainelDeParaEspecialidade({
           <form.AppField name="ativo">
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
-        </fieldset>
+        </Fieldset.Root>
         {podeEditar && (
           <form.AppForm>
             <RodapePainel
@@ -333,7 +334,7 @@ export function PainelDeParaValor({
           Vale para o laudo que chega com VALORES zerado. Sem de-para, ele conta como 1.
         </p>
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <fieldset disabled={!podeEditar} className="flex flex-col gap-4">
+        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
           <form.AppField name="estudoDescricao">
             {(field) => (
               <field.TextField
@@ -371,7 +372,7 @@ export function PainelDeParaValor({
           <form.AppField name="ativo">
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
-        </fieldset>
+        </Fieldset.Root>
         {podeEditar && (
           <form.AppForm>
             <RodapePainel
@@ -433,7 +434,7 @@ export function PainelSufixo({
           “CLINICA”).
         </p>
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <fieldset disabled={!podeEditar} className="flex flex-col gap-4">
+        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
           <form.AppField name="sufixo">
             {(field) => (
               <field.TextField
@@ -452,7 +453,7 @@ export function PainelSufixo({
           <form.AppField name="ativo">
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
-        </fieldset>
+        </Fieldset.Root>
         {podeEditar && (
           <form.AppForm>
             <RodapePainel

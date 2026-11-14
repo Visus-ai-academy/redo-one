@@ -31,6 +31,7 @@ function Formulario({ onSubmit }: { onSubmit: (v: { exame: OpcaoBusca | null }) 
             label="Exame de destino"
             placeholder="Digite o nome do exame"
             required
+            description="Só exames ativos."
             chave="exames"
             buscar={async () => [{ valor: 'e-1', rotulo: 'TC ABDOME' }]}
           />
@@ -52,6 +53,9 @@ describe('BuscaField', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByText('Escolha o exame.')).toBeInTheDocument();
+    const campo = screen.getByRole('combobox', { name: 'Exame de destino' });
+    expect(campo).toHaveAccessibleDescription(expect.stringContaining('Só exames ativos.'));
+    expect(campo).toHaveAttribute('aria-invalid', 'true');
 
     await userEvent.type(screen.getByRole('combobox', { name: 'Exame de destino' }), 'tc');
     await userEvent.click(await screen.findByRole('option', { name: 'TC ABDOME' }));

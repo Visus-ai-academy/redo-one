@@ -1,3 +1,4 @@
+import { Fieldset } from '@base-ui/react/fieldset';
 import { Switch } from '@base-ui/react/switch';
 import { useId, useState } from 'react';
 import type { TelaCatalogoDto } from '../../gen/types/TelaCatalogoDto';
@@ -91,7 +92,10 @@ function Tela({
   const marcadasDaTela = tela.acoes.filter((acao) => marcadas.has(acao.chave)).length;
 
   return (
-    <fieldset aria-labelledby={rotuloId} className={cn('m-0 min-w-0 p-0', !primeira && 'border-t')}>
+    <Fieldset.Root
+      aria-labelledby={rotuloId}
+      className={cn('m-0 min-w-0 p-0', !primeira && 'border-t')}
+    >
       <div className="flex min-h-11 items-center justify-between gap-3 px-3 py-2">
         <span className="flex min-w-0 flex-col">
           <span id={rotuloId} className="font-medium">
@@ -143,6 +147,6 @@ function Tela({
           })}
         </div>
       )}
-    </fieldset>
+    </Fieldset.Root>
   );
 }

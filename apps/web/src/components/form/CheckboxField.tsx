@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { Field } from '@base-ui/react/field';
 
 import { cn } from '../../lib/cn';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
@@ -10,30 +10,27 @@ type CheckboxFieldProps = {
   className?: string;
 };
 
-/** Caixa de marcar no kit de formulário: o texto ao lado, a ajuda abaixo dele. */
+/** Caixa de marcar no kit de formulário (Field do Base UI): o texto ao lado, a ajuda abaixo. */
 export function CheckboxField({ label, description, className }: CheckboxFieldProps) {
   const field = useFieldContext<boolean>();
-  const ajudaId = useId();
 
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
-      {/* biome-ignore lint/a11y/noLabelWithoutControl: o controle do Base UI fica dentro do label. */}
-      <label className="flex items-center gap-2 font-medium">
+    <Field.Root name={field.name} className={cn('flex flex-col gap-1', className)}>
+      <Field.Label className="flex items-center gap-2 font-medium">
         <CaixaDeSelecao
           checked={field.state.value}
           onCheckedChange={(marcada) => {
             field.handleChange(marcada);
             field.handleBlur();
           }}
-          aria-describedby={description ? ajudaId : undefined}
         />
         {label}
-      </label>
+      </Field.Label>
       {description && (
-        <span id={ajudaId} className="text-muted-foreground pl-6 text-[13px]">
+        <Field.Description className="text-muted-foreground pl-6 text-[13px]">
           {description}
-        </span>
+        </Field.Description>
       )}
-    </div>
+    </Field.Root>
   );
 }

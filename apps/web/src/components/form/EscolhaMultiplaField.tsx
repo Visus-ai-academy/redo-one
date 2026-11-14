@@ -1,4 +1,6 @@
 import { Button } from '@base-ui/react/button';
+import { Field } from '@base-ui/react/field';
+import { Fieldset } from '@base-ui/react/fieldset';
 import { X } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 
@@ -44,8 +46,6 @@ export function EscolhaMultiplaField({
 }: EscolhaMultiplaFieldProps) {
   const field = useFieldContext<OpcaoBusca[]>();
   const tituloId = useId();
-  const buscaId = useId();
-  const ajudaId = useId();
   // Remonta a busca depois de cada escolha: o campo volta vazio para a próxima.
   const [rodada, setRodada] = useState(0);
   const escolhidos = field.state.value;
@@ -55,15 +55,11 @@ export function EscolhaMultiplaField({
     field.handleChange(escolhidos.filter((item) => item.valor !== valor));
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      <span id={tituloId} className="text-foreground font-medium">
+    <Fieldset.Root className={cn('flex flex-col gap-2', className)}>
+      <Fieldset.Legend id={tituloId} className="text-foreground font-medium">
         {label}
-      </span>
-      {description && (
-        <span id={ajudaId} className="text-muted-foreground -mt-1 text-[13px]">
-          {description}
-        </span>
-      )}
+      </Fieldset.Legend>
+      {description && <p className="text-muted-foreground -mt-1 text-[13px]">{description}</p>}
       {escolhidos.length === 0 ? (
         <p className="text-muted-foreground">{vazio}</p>
       ) : (
@@ -97,13 +93,10 @@ export function EscolhaMultiplaField({
         />
       )}
       {!somenteLeitura && (
-        <div className="flex flex-col gap-2">
-          <label htmlFor={buscaId} className="text-muted-foreground text-[13px]">
-            {rotuloAdicionar}
-          </label>
+        <Field.Root className="flex flex-col gap-2">
+          <Field.Label className="text-muted-foreground text-[13px]">{rotuloAdicionar}</Field.Label>
           <BuscaSelecao
             key={rodada}
-            id={buscaId}
             chave={chave}
             buscar={buscar}
             valor={null}
@@ -115,10 +108,9 @@ export function EscolhaMultiplaField({
               setRodada((n) => n + 1);
             }}
             placeholder={placeholder}
-            aria-describedby={description ? ajudaId : undefined}
           />
-        </div>
+        </Field.Root>
       )}
-    </div>
+    </Fieldset.Root>
   );
 }

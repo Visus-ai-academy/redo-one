@@ -1,9 +1,10 @@
-import { useId } from 'react';
+import { Field } from '@base-ui/react/field';
 
 import { cn } from '../../lib/cn';
 
 import { type OpcaoSelect, Select } from '../select/Select';
 import { useFieldContext } from './context';
+import { FieldError, FieldLabel } from './field-parts';
 
 type SelectFieldProps = {
   label: string;
@@ -25,29 +26,20 @@ export function SelectField({
   className,
 }: SelectFieldProps) {
   const field = useFieldContext<string>();
-  const id = useId();
-  const ajudaId = useId();
-  const erroId = useId();
   const errors = field.state.meta.errors.map((error) =>
     typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
   );
   const invalid = errors.length > 0;
-  const descricoes = [description && ajudaId, invalid && erroId].filter(Boolean).join(' ');
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      <div className="flex items-baseline gap-1">
-        <label htmlFor={id} className="text-foreground font-medium">
-          {label}
-        </label>
-        {required && (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        )}
-      </div>
+    <Field.Root
+      name={field.name}
+      invalid={invalid}
+      touched={field.state.meta.isTouched}
+      className={cn('flex flex-col gap-2', className)}
+    >
+      <FieldLabel required={required}>{label}</FieldLabel>
       <Select
-        id={id}
         value={field.state.value}
         onValueChange={(valor) => {
           field.handleChange(valor);
@@ -56,19 +48,13 @@ export function SelectField({
         opcoes={opcoes}
         placeholder={placeholder}
         required={required}
-        aria-describedby={descricoes || undefined}
-        aria-invalid={invalid}
       />
       {description && (
-        <span id={ajudaId} className="text-muted-foreground text-[13px]">
+        <Field.Description className="text-muted-foreground text-[13px]">
           {description}
-        </span>
+        </Field.Description>
       )}
-      {invalid && (
-        <span id={erroId} className="text-destructive text-[13px]">
-          {errors.join(', ')}
-        </span>
-      )}
-    </div>
+      <FieldError invalid={invalid}>{errors.join(', ')}</FieldError>
+    </Field.Root>
   );
 }

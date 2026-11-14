@@ -86,4 +86,30 @@ describe('painéis dos de-paras', () => {
 
     expect(onSalvar).toHaveBeenCalledWith({ sufixo: '_RMX', ativo: true, observacoes: null });
   });
+
+  it('sem permissão de editar, os campos ficam desabilitados', () => {
+    comConsultas(
+      <PainelDeParaPrioridade
+        podeEditar={false}
+        onFechar={vi.fn()}
+        item={
+          {
+            id: 'd-1',
+            origem: 'ELETIVO',
+            prioridadeId: 'p-1',
+            prioridade: 'ROTINA',
+            ativo: true,
+          } as never
+        }
+        prioridades={[{ id: 'p-1', nome: 'ROTINA' }]}
+        onSalvar={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Valor que chega' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Ativo' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
 });
