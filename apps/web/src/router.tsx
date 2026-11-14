@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 
+import { ErroDeRota, NaoEncontrada } from './components/estado/estados';
 import { configurarApi } from './lib/api';
 import { cookieDaRequisicao } from './lib/cookie-da-requisicao';
 import { routeTree } from './routeTree.gen';
@@ -18,6 +19,9 @@ export function getRouter() {
     scrollRestoration: true,
     // Deixa o TanStack Query controlar a validade dos dados, não o cache de preload do router.
     defaultPreloadStaleTime: 0,
+    // Erro ou rota inexistente aparecem dentro do layout, com o menu de pé.
+    defaultErrorComponent: ErroDeRota,
+    defaultNotFoundComponent: NaoEncontrada,
   });
 
   // Provê o QueryClientProvider e faz a desidratação/hidratação do cache entre servidor e cliente.

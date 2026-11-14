@@ -14,7 +14,9 @@ import { Route as DefinirSenhaRouteImport } from './routes/definir-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
+import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -40,24 +42,39 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSplatRoute = AppSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesIndexRoute = AppConfiguracoesIndexRouteImport.update({
   id: '/configuracoes/',
   path: '/configuracoes/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesMeuPerfilRoute =
+  AppConfiguracoesMeuPerfilRouteImport.update({
+    id: '/configuracoes/meu-perfil',
+    path: '/configuracoes/meu-perfil',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/definir-senha': typeof DefinirSenhaRoute
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/$': typeof AppSplatRoute
+  '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/': typeof AppConfiguracoesIndexRoute
 }
 export interface FileRoutesByTo {
   '/definir-senha': typeof DefinirSenhaRoute
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/$': typeof AppSplatRoute
   '/': typeof AppIndexRoute
+  '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes': typeof AppConfiguracoesIndexRoute
 }
 export interface FileRoutesById {
@@ -66,22 +83,39 @@ export interface FileRoutesById {
   '/definir-senha': typeof DefinirSenhaRoute
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/_app/$': typeof AppSplatRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/': typeof AppConfiguracoesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/definir-senha' | '/login' | '/recuperar-senha' | '/configuracoes/'
+    | '/'
+    | '/definir-senha'
+    | '/login'
+    | '/recuperar-senha'
+    | '/$'
+    | '/configuracoes/meu-perfil'
+    | '/configuracoes/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/definir-senha' | '/login' | '/recuperar-senha' | '/' | '/configuracoes'
+  to:
+    | '/definir-senha'
+    | '/login'
+    | '/recuperar-senha'
+    | '/$'
+    | '/'
+    | '/configuracoes/meu-perfil'
+    | '/configuracoes'
   id:
     | '__root__'
     | '/_app'
     | '/definir-senha'
     | '/login'
     | '/recuperar-senha'
+    | '/_app/$'
     | '/_app/'
+    | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/'
   fileRoutesById: FileRoutesById
 }
@@ -129,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/$': {
+      id: '/_app/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof AppSplatRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/': {
       id: '/_app/configuracoes/'
       path: '/configuracoes'
@@ -136,16 +177,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/meu-perfil': {
+      id: '/_app/configuracoes/meu-perfil'
+      path: '/configuracoes/meu-perfil'
+      fullPath: '/configuracoes/meu-perfil'
+      preLoaderRoute: typeof AppConfiguracoesMeuPerfilRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppSplatRoute: typeof AppSplatRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesIndexRoute: typeof AppConfiguracoesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppSplatRoute: AppSplatRoute,
   AppIndexRoute: AppIndexRoute,
+  AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesIndexRoute: AppConfiguracoesIndexRoute,
 }
 

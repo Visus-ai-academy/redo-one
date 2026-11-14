@@ -1,10 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { CentralConfiguracoes } from '../../../components/configuracoes/CentralConfiguracoes';
+
 export const Route = createFileRoute('/_app/configuracoes/')({
   head: () => ({ meta: [{ title: 'Configurações | One' }] }),
   component: Configuracoes,
 });
 
 function Configuracoes() {
-  return <h1 className="text-[22px] font-semibold">Configurações</h1>;
+  const { sessao } = Route.useRouteContext();
+  return <CentralConfiguracoes acesso={sessao} />;
 }

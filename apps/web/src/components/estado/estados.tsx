@@ -1,5 +1,5 @@
 import { ArrowClockwise, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
-import { Link } from '@tanstack/react-router';
+import { Link, useRouter } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 import { buttonClassName } from '../button/button-class';
@@ -66,4 +66,10 @@ export function ErroInesperado({ onTentarDeNovo }: { onTentarDeNovo: () => void 
       }
     />
   );
+}
+
+/** Erro de rota: o "Tentar de novo" recarrega os dados da página. */
+export function ErroDeRota() {
+  const router = useRouter();
+  return <ErroInesperado onTentarDeNovo={() => void router.invalidate()} />;
 }

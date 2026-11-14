@@ -1,13 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
-import {
-  createRootRouteWithContext,
-  HeadContent,
-  Outlet,
-  Scripts,
-  useRouter,
-} from '@tanstack/react-router';
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 
-import { ErroInesperado, NaoEncontrada } from '../components/estado/estados';
+import { ErroDeRota, NaoEncontrada } from '../components/estado/estados';
 import appCss from '../styles.css?url';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -23,13 +17,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   component: RootComponent,
   notFoundComponent: NaoEncontrada,
-  errorComponent: ErroDaRaiz,
+  errorComponent: ErroDeRota,
 });
-
-function ErroDaRaiz() {
-  const router = useRouter();
-  return <ErroInesperado onTentarDeNovo={() => void router.invalidate()} />;
-}
 
 function RootComponent() {
   return (
