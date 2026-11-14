@@ -1,4 +1,4 @@
-import { Dialog } from '@base-ui/react/dialog';
+import { Drawer } from '@base-ui/react/drawer';
 import { List } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -76,32 +76,34 @@ export function AppShell({
   return (
     <div className="bg-background flex min-h-dvh flex-col md:flex-row">
       <header className="bg-sidebar sticky top-0 z-10 flex h-14 items-center gap-2 px-2 md:hidden">
-        <Dialog.Root open={gavetaAberta} onOpenChange={setGavetaAberta}>
-          <Dialog.Trigger
+        <Drawer.Root open={gavetaAberta} onOpenChange={setGavetaAberta} swipeDirection="left">
+          <Drawer.Trigger
             aria-label="Abrir menu"
             className="text-sidebar-foreground hover:bg-sidebar-hover focus-visible:outline-sidebar-ring flex size-11 items-center justify-center rounded-md focus-visible:outline-2"
           >
             <List size={20} aria-hidden />
-          </Dialog.Trigger>
-          <Dialog.Portal>
-            <Dialog.Backdrop className="bg-foreground/40 fixed inset-0 transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
-            <Dialog.Popup
-              aria-label="Menu"
-              className="fixed inset-y-0 left-0 w-[280px] max-w-[85vw] shadow-xl transition-transform duration-200 ease-out data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full motion-reduce:transition-none"
-            >
-              <Dialog.Title className="sr-only">Menu</Dialog.Title>
-              {/* Fecha a gaveta ao escolher um item. */}
-              <div
-                className="h-full"
-                onClickCapture={(e) =>
-                  (e.target as HTMLElement).closest('a') && setGavetaAberta(false)
-                }
+          </Drawer.Trigger>
+          <Drawer.Portal>
+            <Drawer.Backdrop className="bg-foreground/40 fixed inset-0 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+            <Drawer.Viewport className="fixed inset-0 flex justify-start">
+              <Drawer.Popup
+                aria-label="Menu"
+                className="h-dvh w-[280px] max-w-[85vw] [transform:translateX(var(--drawer-swipe-movement-x))] shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(-100%)] data-[starting-style]:[transform:translateX(-100%)] data-[swiping]:select-none motion-reduce:transition-none"
               >
-                {menu({ recolhido: false })}
-              </div>
-            </Dialog.Popup>
-          </Dialog.Portal>
-        </Dialog.Root>
+                <Drawer.Title className="sr-only">Menu</Drawer.Title>
+                {/* Fecha a gaveta ao escolher um item. */}
+                <div
+                  className="h-full"
+                  onClickCapture={(e) =>
+                    (e.target as HTMLElement).closest('a') && setGavetaAberta(false)
+                  }
+                >
+                  {menu({ recolhido: false })}
+                </div>
+              </Drawer.Popup>
+            </Drawer.Viewport>
+          </Drawer.Portal>
+        </Drawer.Root>
         <span className="font-brand text-sidebar-primary text-lg font-bold tracking-[0.14em]">
           One
         </span>
