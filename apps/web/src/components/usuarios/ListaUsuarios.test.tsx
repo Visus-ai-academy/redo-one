@@ -151,4 +151,20 @@ describe('ListaUsuarios', () => {
         .map((c) => c.textContent),
     ).toEqual(['Nome', 'Papel', 'Situação']);
   });
+
+  it('quem pode convidar tem o botão no cabeçalho', async () => {
+    const onConvidar = vi.fn();
+    montar({ onConvidar });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Convidar usuário' }));
+
+    expect(onConvidar).toHaveBeenCalled();
+  });
+
+  it('sem usuarios.convidar, não há o botão', async () => {
+    montar();
+
+    await screen.findByRole('heading', { name: 'Usuários 47' });
+    expect(screen.queryByRole('button', { name: 'Convidar usuário' })).not.toBeInTheDocument();
+  });
 });

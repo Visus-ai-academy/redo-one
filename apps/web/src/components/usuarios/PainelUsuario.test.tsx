@@ -344,4 +344,12 @@ describe('PainelUsuario', () => {
     await screen.findByRole('complementary', { name: 'Maria Souza' });
     expect(screen.queryByRole('button', { name: /ativar usuário/ })).not.toBeInTheDocument();
   });
+
+  it('abre com o aviso do convite recém-enviado', async () => {
+    montar({ avisoInicial: 'Convite enviado para maria@empresa.com.br.' });
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Convite enviado para maria@empresa.com.br.',
+    );
+  });
 });

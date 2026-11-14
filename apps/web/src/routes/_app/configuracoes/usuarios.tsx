@@ -1,11 +1,12 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { z } from 'zod';
 
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
+import { PainelConvite } from '../../../components/usuarios/PainelConvite';
 import {
   PainelUsuario,
   type PainelUsuarioProps,
@@ -30,10 +31,16 @@ const buscaSchema = z.object({
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   /** Usuário aberto no painel de detalhe. */
   id: z.uuid().optional().catch(undefined),
+  /** Painel de convite aberto. */
+  convidar: z.literal(1).optional().catch(undefined),
 });
 
 // O `id` do painel não entra na consulta da lista: abrir ou fechar o painel não a refaz.
-const consultaDaLista = ({ id: _painel, ...filtros }: z.infer<typeof buscaSchema>) => ({
+const consultaDaLista = ({
+  id: _painel,
+  convidar: _convite,
+  ...filtros
+}: z.infer<typeof buscaSchema>) => ({
   query: { ...filtros, pagina: filtros.pagina ?? 1, porPagina: POR_PAGINA },
 });
 
@@ -101,7 +108,20 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
     [navigate],
   );
   const fechar = useCallback(
-    () => void navigate({ search: (atual) => ({ ...atual, id: undefined }) }),
+    () => void navigate({ search: (atual) => ({ ...atual, id: undefined, convidar: undefined }) }),
+    [navigate],
+  );
+  const abrirConvite = useCallback(
+    () => void navigate({ search: (atual) => ({ ...atual, id: undefined, convidar: 1 as const }) }),
+    [navigate],
+  );
+  // O aviso do convite acompanha a pessoa nova até outro painel abrir.
+  const [avisoDoConvite, setAvisoDoConvite] = useState<{ id: string; texto: string }>();
+  const convidado = useCallback(
+    (id: string, email: string) => {
+      setAvisoDoConvite({ id, texto: `Convite enviado para ${email}.` });
+      void navigate({ search: (atual) => ({ ...atual, convidar: undefined, id }), replace: true });
+    },
     [navigate],
   );
   const irPara = useCallback(
@@ -119,15 +139,21 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
       onIrPara={irPara}
       onAbrir={abrir}
       selecionadoId={filtros.id}
+      onConvidar={permissoes.convidar ? abrirConvite : undefined}
       painel={
-        filtros.id && (
-          <Detalhe
-            id={filtros.id}
-            papeis={papeis}
-            euId={euId}
-            permissoes={permissoes}
-            onFechar={fechar}
-          />
+        filtros.convidar && permissoes.convidar ? (
+          <PainelConvite papeis={papeis} onConvidado={convidado} onCancelar={fechar} />
+        ) : (
+          filtros.id && (
+            <Detalhe
+              id={filtros.id}
+              papeis={papeis}
+              euId={euId}
+              permissoes={permissoes}
+              avisoInicial={avisoDoConvite?.id === filtros.id ? avisoDoConvite?.texto : undefined}
+              onFechar={fechar}
+            />
+          )
         )
       }
     />

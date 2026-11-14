@@ -1,4 +1,4 @@
-import { MagnifyingGlass } from '@phosphor-icons/react';
+import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { PaginaUsuariosDto } from '../../gen/types/PaginaUsuariosDto';
@@ -32,6 +32,8 @@ export type ListaUsuariosProps = {
   selecionadoId?: string;
   /** Painel de detalhe, ao lado da lista (no celular, no lugar dela). */
   painel?: ReactNode;
+  /** Abre o convite; presente só para quem tem usuarios.convidar. */
+  onConvidar?: () => void;
 };
 
 const coluna = createDataTableColumnHelper<UsuarioResumoDto>();
@@ -48,6 +50,7 @@ export function ListaUsuarios({
   onAbrir,
   selecionadoId,
   painel,
+  onConvidar,
 }: ListaUsuariosProps) {
   const [referencia] = useState(() => agora ?? new Date());
   const [termo, setTermo] = useState(filtros.busca ?? '');
@@ -131,10 +134,18 @@ export function ListaUsuarios({
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-[22px] leading-snug font-semibold">
-        Usuários{' '}
-        <span className="text-subtle-foreground font-normal tabular-nums">{pagina.total}</span>
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-[22px] leading-snug font-semibold">
+          Usuários{' '}
+          <span className="text-subtle-foreground font-normal tabular-nums">{pagina.total}</span>
+        </h1>
+        {onConvidar && (
+          <button type="button" onClick={onConvidar} className={buttonClassName()}>
+            <Plus size={16} aria-hidden />
+            Convidar usuário
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-start gap-5">
         <section

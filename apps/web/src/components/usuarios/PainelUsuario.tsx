@@ -43,6 +43,8 @@ export type PainelUsuarioProps = {
   /** O que quem está logado pode fazer aqui (cada ação aparece só com a sua permissão). */
   permissoes: PermissoesUsuarios;
   agora?: Date;
+  /** Aviso com que o painel abre (ex.: "Convite enviado para…" ao vir do convite). */
+  avisoInicial?: string;
   onFechar: () => void;
 };
 
@@ -53,11 +55,12 @@ export function PainelUsuario({
   euId,
   permissoes,
   agora,
+  avisoInicial,
   onFechar,
 }: PainelUsuarioProps) {
   const [referencia] = useState(() => agora ?? new Date());
   const tituloId = useId();
-  const acao = useAcaoNoUsuario(usuario.id);
+  const acao = useAcaoNoUsuario(usuario.id, avisoInicial);
   const desbloquear = useUsuariosControllerDesbloquear();
   const enviarLink = useUsuariosControllerEnviarLinkSenha();
   const reenviarConvite = useUsuariosControllerReenviarConvite();
@@ -423,9 +426,9 @@ function SessoesDoUsuario({
 type AcaoNoUsuario = ReturnType<typeof useAcaoNoUsuario>;
 
 /** Executa uma ação sobre a pessoa e recarrega a lista e o detalhe (chaves diferentes). */
-function useAcaoNoUsuario(id: string) {
+function useAcaoNoUsuario(id: string, avisoInicial?: string) {
   const queryClient = useQueryClient();
-  const [aviso, setAviso] = useState<string>();
+  const [aviso, setAviso] = useState(avisoInicial);
   const [falhou, setFalhou] = useState(false);
   const [ocupado, setOcupado] = useState(false);
 
