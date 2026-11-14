@@ -1,4 +1,4 @@
-import { type Icon, UserCircle, Users } from '@phosphor-icons/react';
+import { type Icon, IdentificationBadge, UserCircle, Users } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemConfiguracao = {
@@ -39,6 +39,13 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: Users,
         to: '/configuracoes/usuarios',
         permissao: 'usuarios.ver',
+      },
+      {
+        nome: 'Papéis',
+        descricao: 'Permissões de cada papel',
+        icone: IdentificationBadge,
+        to: '/configuracoes/papeis',
+        permissao: 'papeis.ver',
       },
     ],
   },

@@ -124,7 +124,7 @@ export function EditarPapel({
       setErro(falha);
       return;
     }
-    await invalidarPapeis(queryClient);
+    await invalidarPapeis(queryClient, { detalhe: false });
     onExcluido();
   };
 
@@ -152,8 +152,9 @@ export function EditarPapel({
           </h2>
           {papel?.sistema && (
             <Alerta tom="bloqueio" role="note">
-              Papel do sistema: não pode ser editado nem excluído. Para criar um parecido, use
-              Duplicar.
+              {papel.acessoTotal
+                ? 'Papel do sistema: não pode ser editado nem excluído.'
+                : 'Papel do sistema: não pode ser editado nem excluído. Para criar um parecido, use Duplicar.'}
             </Alerta>
           )}
           {erro !== undefined && <ErroDoPapel erro={erro} novo={novo} />}
@@ -212,49 +213,52 @@ export function EditarPapel({
           )}
         </div>
 
-        <Rodape
-          resumo={papel?.acessoTotal ? 'Acesso total' : resumoDasPermissoes(marcadas)}
-          aviso={aviso}
-          bloqueioDeExclusao={
-            papel && !somenteLeitura && papel.totalUsuarios > 0
-              ? `Para excluir, troque antes o papel ${papel.totalUsuarios === 1 ? 'do único usuário' : `dos ${papel.totalUsuarios} usuários`}.`
-              : undefined
-          }
-        >
-          {podeEditar && papel && !papel.sistema && papel.totalUsuarios === 0 && (
-            <ConfirmarAcao
-              acao="Excluir papel"
-              titulo={`Excluir o papel “${papel.nome}”?`}
-              consequencia="Nenhum usuário tem este papel. A exclusão não pode ser desfeita."
-              onConfirmar={excluirPapel}
-            />
-          )}
-          {podeEditar && papel && (
-            <button
-              type="button"
-              onClick={onDuplicar}
-              className={buttonClassName({ variant: 'secondary' })}
-            >
-              Duplicar
-            </button>
-          )}
-          {novo && (
-            <button
-              type="button"
-              onClick={onCancelar}
-              className={buttonClassName({ variant: 'secondary' })}
-            >
-              Cancelar
-            </button>
-          )}
-          {!somenteLeitura && (
-            <form.AppForm>
-              <form.SubmitButton pendingLabel={novo ? 'Criando…' : 'Salvando…'}>
-                {novo ? 'Criar papel' : 'Salvar alterações'}
-              </form.SubmitButton>
-            </form.AppForm>
-          )}
-        </Rodape>
+        {/* Acesso total não tem resumo nem ação: o parágrafo acima já diz tudo. */}
+        {!papel?.acessoTotal && (
+          <Rodape
+            resumo={resumoDasPermissoes(marcadas)}
+            aviso={aviso}
+            bloqueioDeExclusao={
+              papel && !somenteLeitura && papel.totalUsuarios > 0
+                ? `Para excluir, troque antes o papel ${papel.totalUsuarios === 1 ? 'do único usuário' : `dos ${papel.totalUsuarios} usuários`}.`
+                : undefined
+            }
+          >
+            {podeEditar && papel && !papel.sistema && papel.totalUsuarios === 0 && (
+              <ConfirmarAcao
+                acao="Excluir papel"
+                titulo={`Excluir o papel “${papel.nome}”?`}
+                consequencia="Nenhum usuário tem este papel. A exclusão não pode ser desfeita."
+                onConfirmar={excluirPapel}
+              />
+            )}
+            {podeEditar && papel && !papel.acessoTotal && (
+              <button
+                type="button"
+                onClick={onDuplicar}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Duplicar
+              </button>
+            )}
+            {novo && (
+              <button
+                type="button"
+                onClick={onCancelar}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Cancelar
+              </button>
+            )}
+            {!somenteLeitura && (
+              <form.AppForm>
+                <form.SubmitButton pendingLabel={novo ? 'Criando…' : 'Salvando…'}>
+                  {novo ? 'Criar papel' : 'Salvar alterações'}
+                </form.SubmitButton>
+              </form.AppForm>
+            )}
+          </Rodape>
+        )}
       </form>
     </section>
   );
@@ -272,7 +276,7 @@ function Rodape({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
+    <div className="bg-card sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-b-lg border-t p-4">
       <span className="flex min-w-0 flex-[1_1_240px] flex-col gap-0.5 text-[13px]">
         <span className="text-foreground font-medium tabular-nums">{resumo}</span>
         {aviso && <span className="text-warning">{aviso}</span>}
@@ -296,10 +300,14 @@ function ErroDoPapel({ erro, novo }: { erro: unknown; novo: boolean }) {
   );
 }
 
-// A lista (`/papeis`), o detalhe (`/papeis/:id`) e os papéis do convite (`/usuarios/papeis`).
-const invalidarPapeis = (queryClient: ReturnType<typeof useQueryClient>) =>
+// A lista (`/papeis`), o detalhe (`/papeis/:id`) e os papéis do convite (`/usuarios/papeis`). Ao
+// excluir, o detalhe fica de fora: buscá-lo de novo daria 404 enquanto a tela troca de papel.
+const invalidarPapeis = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  { detalhe = true }: { detalhe?: boolean } = {},
+) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: [{ url: '/papeis' }] }),
-    queryClient.invalidateQueries({ queryKey: [{ url: '/papeis/:id' }] }),
+    detalhe && queryClient.invalidateQueries({ queryKey: [{ url: '/papeis/:id' }] }),
     queryClient.invalidateQueries({ queryKey: [{ url: '/usuarios/papeis' }] }),
   ]);

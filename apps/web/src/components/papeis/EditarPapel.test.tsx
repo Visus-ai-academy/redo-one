@@ -56,7 +56,7 @@ function montar(props: Partial<EditarPapelProps> = {}) {
     onExcluido: vi.fn(),
     onCancelar: vi.fn(),
   };
-  renderComRotas(
+  const { queryClient } = renderComRotas(
     <EditarPapel
       papel={financeiro}
       catalogo={catalogo}
@@ -67,7 +67,7 @@ function montar(props: Partial<EditarPapelProps> = {}) {
       {...props}
     />,
   );
-  return callbacks;
+  return { ...callbacks, queryClient };
 }
 
 const conflito = (message: string) =>
@@ -164,6 +164,11 @@ describe('EditarPapel', () => {
 
     expect(await screen.findByText(/tem acesso a todas as telas e ações/)).toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    // A cópia sairia vazia: o acesso total não é uma lista de permissões.
+    expect(screen.queryByRole('button', { name: 'Duplicar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(
+      /^Papel do sistema: não pode ser editado nem excluído\.$/,
+    );
   });
 
   it('sem permissão de editar, nada muda e não há ações', async () => {
@@ -223,7 +228,8 @@ describe('EditarPapel', () => {
   });
 
   it('exclui com confirmação um papel sem usuários', async () => {
-    const { onExcluido } = montar({ papel: { ...financeiro, totalUsuarios: 0 } });
+    const { onExcluido, queryClient } = montar({ papel: { ...financeiro, totalUsuarios: 0 } });
+    const invalidar = vi.spyOn(queryClient, 'invalidateQueries');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Excluir papel' }));
     const dialogo = await screen.findByRole('alertdialog');
@@ -234,6 +240,9 @@ describe('EditarPapel', () => {
       expect(excluir).toHaveBeenCalledWith(expect.objectContaining({ path: { id: 'p-fin' } })),
     );
     expect(onExcluido).toHaveBeenCalled();
+    // O detalhe do papel excluído não é buscado de novo (daria 404 enquanto a tela troca).
+    expect(invalidar).toHaveBeenCalledWith({ queryKey: [{ url: '/papeis' }] });
+    expect(invalidar).not.toHaveBeenCalledWith({ queryKey: [{ url: '/papeis/:id' }] });
   });
 
   it('papel com usuários não oferece excluir e explica o porquê', async () => {

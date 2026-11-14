@@ -26,7 +26,7 @@ export function ListaPapeis({ papeis, selecionadoId, onEscolher }: ListaPapeisPr
   );
 
   return (
-    <div className="bg-card min-w-0 self-start overflow-hidden rounded-lg border">
+    <div className="bg-card min-w-0 overflow-hidden rounded-lg border">
       <ul aria-label="Papéis">
         {paginacao.itensDaPagina.map((papel, posicao) => {
           const atual = papel.id === selecionadoId;

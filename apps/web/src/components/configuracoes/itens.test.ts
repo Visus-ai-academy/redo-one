@@ -18,6 +18,16 @@ describe('GRUPOS_CONFIGURACOES', () => {
   });
 });
 
+describe('grupo Acesso', () => {
+  it('tem Usuários e Papéis, cada um exigindo o ver da própria tela', () => {
+    const acesso = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Acesso');
+    expect(acesso?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
+      ['Usuários', '/configuracoes/usuarios', 'usuarios.ver'],
+      ['Papéis', '/configuracoes/papeis', 'papeis.ver'],
+    ]);
+  });
+});
+
 describe('buscarConfiguracoes', () => {
   it('ignora acento e maiúscula e acha pela descrição', () => {
     const achados = buscarConfiguracoes(GRUPOS_CONFIGURACOES, 'SESSÕES');

@@ -17,6 +17,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
+import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
 import { Route as AppConfiguracoesUsuariosRouteImport } from './routes/_app/configuracoes/usuarios'
 
 const AppRoute = AppRouteImport.update({
@@ -59,6 +60,11 @@ const AppConfiguracoesMeuPerfilRoute =
     path: '/configuracoes/meu-perfil',
     getParentRoute: () => AppRoute,
   } as any)
+const AppConfiguracoesPapeisRoute = AppConfiguracoesPapeisRouteImport.update({
+  id: '/configuracoes/papeis',
+  path: '/configuracoes/papeis',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesUsuariosRoute =
   AppConfiguracoesUsuariosRouteImport.update({
     id: '/configuracoes/usuarios',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
+  '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/configuracoes/': typeof AppConfiguracoesIndexRoute
 }
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/$': typeof AppSplatRoute
   '/': typeof AppIndexRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
+  '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/configuracoes': typeof AppConfiguracoesIndexRoute
 }
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_app/$': typeof AppSplatRoute
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
+  '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/_app/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/_app/configuracoes/': typeof AppConfiguracoesIndexRoute
 }
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/$'
     | '/configuracoes/meu-perfil'
+    | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
     | '/configuracoes/'
   fileRoutesByTo: FileRoutesByTo
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/'
     | '/configuracoes/meu-perfil'
+    | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
     | '/configuracoes'
   id:
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_app/$'
     | '/_app/'
     | '/_app/configuracoes/meu-perfil'
+    | '/_app/configuracoes/papeis'
     | '/_app/configuracoes/usuarios'
     | '/_app/configuracoes/'
   fileRoutesById: FileRoutesById
@@ -197,6 +209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesMeuPerfilRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/papeis': {
+      id: '/_app/configuracoes/papeis'
+      path: '/configuracoes/papeis'
+      fullPath: '/configuracoes/papeis'
+      preLoaderRoute: typeof AppConfiguracoesPapeisRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/usuarios': {
       id: '/_app/configuracoes/usuarios'
       path: '/configuracoes/usuarios'
@@ -211,6 +230,7 @@ interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
+  AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
   AppConfiguracoesUsuariosRoute: typeof AppConfiguracoesUsuariosRoute
   AppConfiguracoesIndexRoute: typeof AppConfiguracoesIndexRoute
 }
@@ -219,6 +239,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
+  AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,
   AppConfiguracoesUsuariosRoute: AppConfiguracoesUsuariosRoute,
   AppConfiguracoesIndexRoute: AppConfiguracoesIndexRoute,
 }
