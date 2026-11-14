@@ -1,10 +1,10 @@
-import { Checkbox } from '@base-ui/react/checkbox';
 import { Switch } from '@base-ui/react/switch';
-import { Check, MagnifyingGlass } from '@phosphor-icons/react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 
 import type { TelaCatalogoDto } from '../../gen/types/TelaCatalogoDto';
 import { cn } from '../../lib/cn';
+import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { controlClassName } from '../form/control-class';
 import {
@@ -139,16 +139,11 @@ function Tela({
                   (somenteLeitura || !concedivel) && 'cursor-not-allowed',
                 )}
               >
-                <Checkbox.Root
+                <CaixaDeSelecao
                   checked={marcadas.has(acao.chave)}
                   onCheckedChange={() => onChange(alternarAcao(marcadas, tela, acao.chave))}
                   disabled={somenteLeitura || !concedivel}
-                  className="border-input bg-card text-primary-foreground focus-visible:outline-ring data-[checked]:border-primary data-[checked]:bg-primary flex size-4 flex-none items-center justify-center rounded-sm border focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled]:opacity-60"
-                >
-                  <Checkbox.Indicator>
-                    <Check size={12} weight="bold" aria-hidden />
-                  </Checkbox.Indicator>
-                </Checkbox.Root>
+                />
                 <span>{acao.rotulo}</span>
                 {acao.sensivel && <Etiqueta tom="atencao">Sensível</Etiqueta>}
                 <code className="text-subtle-foreground font-mono text-xs">{acao.chave}</code>
