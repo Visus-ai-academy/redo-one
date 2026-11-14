@@ -7,6 +7,8 @@ import { dataHoraCurta } from '../../lib/datas';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Etiqueta } from '../etiqueta/Etiqueta';
+import { Paginacao } from '../paginacao/Paginacao';
+import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Painel } from '../painel/Painel';
 
 const coluna = createDataTableColumnHelper<AcessoRecenteDto>();
@@ -17,6 +19,7 @@ type AcessosRecentesProps = { acessos: AcessoRecenteDto[]; agora?: Date };
 export function AcessosRecentes({ acessos, agora }: AcessosRecentesProps) {
   // Um instante por montagem: as colunas ("Hoje", "Ontem") não são recriadas a cada render.
   const [referencia] = useState(() => agora ?? new Date());
+  const paginacao = usePaginaLocal(acessos, 10);
   const colunas = useMemo(
     () => [
       coluna.accessor('em', {
@@ -57,9 +60,17 @@ export function AcessosRecentes({ acessos, agora }: AcessosRecentesProps) {
     >
       <DataTable
         columns={colunas}
-        data={acessos}
+        data={paginacao.itensDaPagina}
         emptyMessage="Nenhuma entrada nos últimos 30 dias."
       />
+      {paginacao.precisaPaginar && (
+        <Paginacao
+          pagina={paginacao.pagina}
+          porPagina={paginacao.porPagina}
+          total={paginacao.total}
+          onIrPara={paginacao.irPara}
+        />
+      )}
     </Painel>
   );
 }

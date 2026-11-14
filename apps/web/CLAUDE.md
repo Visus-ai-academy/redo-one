@@ -44,7 +44,7 @@ Front em TanStack Start (React 19, SSR) sobre Vite.
 - **SEO:** sistema todo atrás de login. `noindex` no `head` do `__root.tsx` e `public/robots.txt` bloqueando tudo. Se surgir página pública, ela ganha `title`, `description` e Open Graph próprios no `head` da rota, e o `robots.txt`/sitemap são revistos.
 - **PWA:** nenhum. Revisar se o portal do médico for liberado e usado pelo celular (nível `instalável`).
 - **Atualização automática (polling):** via `refetchInterval` do TanStack Query, só onde a tela precisa e consultando endpoints leves de status, nunca recarregando a página inteira. Intervalos: robô de distribuição a cada 3–5 s só enquanto a rodada está em etapa ativa; status de importação a cada 30 s só enquanto há importação rodando; painéis a cada 1–5 min. Nada consulta com a aba oculta (`refetchIntervalInBackground: false`).
-- **Listagens:** sempre paginadas pela API; nada de carregar tudo e filtrar no cliente.
+- **Listagens:** sempre paginadas pela API; nada de carregar tudo e filtrar no cliente. A exceção é lista curta e limitada que a API já devolve inteira (ex.: sessões abertas, acessos dos últimos 30 dias): pagine no navegador com `usePaginaLocal` (`src/components/paginacao/`) e o rodapé `Paginacao`, 10 por página numa página e 5 num painel lateral.
 - **Dados pessoais:** exibir dado de paciente só nas telas que precisam dele e para quem tem a permissão; nunca em logs do cliente.
 
 ## Onde cada interação acontece

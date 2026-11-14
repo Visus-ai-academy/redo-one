@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import type { AcessoRecenteDto } from '../../gen/types/AcessoRecenteDto';
@@ -33,5 +34,19 @@ describe('AcessosRecentes', () => {
     renderComRotas(<AcessosRecentes acessos={[]} agora={AGORA} />);
 
     expect(await screen.findByText('Nenhuma entrada nos últimos 30 dias.')).toBeInTheDocument();
+  });
+
+  it('pagina de 10 em 10', async () => {
+    const muitos = Array.from({ length: 12 }, (_, i) => ({
+      ...acessos[0],
+      em: `2026-11-1${i % 4}T12:${String(i).padStart(2, '0')}:00.000Z`,
+    })) as AcessoRecenteDto[];
+    renderComRotas(<AcessosRecentes acessos={muitos} agora={AGORA} />);
+
+    const secao = await screen.findByRole('region', { name: 'Acessos recentes' });
+    expect(within(secao).getAllByRole('row')).toHaveLength(11);
+    expect(within(secao).getByText('1–10 de 12')).toBeInTheDocument();
+    await userEvent.click(within(secao).getByRole('button', { name: 'Próxima página' }));
+    expect(within(secao).getAllByRole('row')).toHaveLength(3);
   });
 });

@@ -106,4 +106,31 @@ describe('SessoesAbertas', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível encerrar');
   });
+
+  it('pagina de 10 em 10, com a sessão atual na primeira página', async () => {
+    const outras = Array.from({ length: 11 }, (_, i) => ({
+      ...iphone,
+      id: `s-${i}`,
+      ultimoUsoEm: `2026-11-13T1${i % 10}:00:00.000Z`,
+    }));
+    montar([...outras, atual]);
+
+    const secao = await screen.findByRole('region', { name: /Sessões abertas/ });
+    const itens = within(secao).getAllByRole('listitem');
+    expect(itens).toHaveLength(10);
+    expect(itens[0]).toHaveTextContent('Esta sessão');
+    expect(within(secao).getByText('1–10 de 12')).toBeInTheDocument();
+
+    await userEvent.click(within(secao).getByRole('button', { name: 'Próxima página' }));
+
+    expect(within(secao).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(secao).getByText('11–12 de 12')).toBeInTheDocument();
+  });
+
+  it('com poucas sessões, não mostra paginação', async () => {
+    montar([atual, iphone]);
+
+    await screen.findByRole('region', { name: /Sessões abertas/ });
+    expect(screen.queryByRole('button', { name: 'Próxima página' })).not.toBeInTheDocument();
+  });
 });

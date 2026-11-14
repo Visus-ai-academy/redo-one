@@ -352,4 +352,16 @@ describe('PainelUsuario', () => {
       'Convite enviado para maria@empresa.com.br.',
     );
   });
+
+  it('pagina as sessões da pessoa de 5 em 5', async () => {
+    const sessoes = Array.from({ length: 7 }, (_, i) => ({
+      ...(maria.sessoesAbertas[0] as UsuarioDetalheDto['sessoesAbertas'][number]),
+      id: `s-${i}`,
+    }));
+    montar({ usuario: { ...maria, sessoesAbertas: sessoes } });
+
+    const lista = await screen.findByRole('list', { name: 'Sessões abertas' });
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getByText('1–5 de 7')).toBeInTheDocument();
+  });
 });

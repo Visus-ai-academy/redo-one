@@ -30,7 +30,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - **Campo obrigatório leva `*`** no rótulo (cor de erro, `aria-hidden`) + `required`. Formulário com campos opcionais leva a legenda "* Campo obrigatório".
 - **Ícones: Phosphor**, peso regular, um só conjunto. 20px no menu, 16–18px em botões e linhas. Ícone sozinho só em ação óbvia e sempre com `aria-label`; no resto, ícone + texto. Nunca emoji nem caractere Unicode como ícone.
 - **Texto em pt-BR**, frase com inicial maiúscula (sentence case), sem caixa alta em rótulos. Botão diz a ação ("Enviar convite", não "Confirmar"); a mesma ação mantém o nome no fluxo inteiro (botão "Desativar" → aviso "Usuário desativado").
-- **Listagens sempre paginadas pela API**, com o total ("1–25 de 47").
+- **Toda lista que pode passar de ~10 itens é paginada**, com o total ("1–10 de 26"), inclusive as que ficam dentro de uma seção ou de um painel (sessões abertas, acessos, histórico). Nunca uma lista que cresce sem fim na tela. Dado sem limite: paginação pela API. Lista curta e limitada que a API já devolve inteira: paginação no navegador, 10 por página numa página e 5 num painel lateral.
 - **Dado de paciente** só em tela que precisa e para quem tem permissão; CPF mascarado por padrão.
 - **Ação destrutiva ou irreversível** (fechar competência, desativar, excluir papel) pede confirmação que diz a consequência ("6 usuários perdem o acesso"). Ação comum não pede confirmação.
 - **Sem texto de marketing** dentro do sistema (nem no login): nada de slogan, "tudo em um só lugar", números de vaidade.

@@ -23,6 +23,8 @@ import { iniciais } from '../app-shell/iniciais';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { Paginacao } from '../paginacao/Paginacao';
+import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
 import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
@@ -320,6 +322,8 @@ function SessoesDoUsuario({
   proprio?: boolean;
 }) {
   const encerrarSessao = useUsuariosControllerEncerrarSessao();
+  // O painel é estreito: 5 por página.
+  const paginacao = usePaginaLocal(usuario.sessoesAbertas, 5);
   const encerrarSessoes = useUsuariosControllerEncerrarSessoes();
 
   return (
@@ -350,47 +354,57 @@ function SessoesDoUsuario({
       {usuario.sessoesAbertas.length === 0 ? (
         <p className="text-muted-foreground text-[13px]">Nenhuma sessão aberta.</p>
       ) : (
-        <ul aria-label="Sessões abertas" className="rounded-md border">
-          {usuario.sessoesAbertas.map((sessao, indice) => {
-            const aparelho = descreverAparelho(sessao.userAgent);
-            const Icone = aparelho.movel ? DeviceMobile : Monitor;
-            const ip = ipParcial(sessao.ip);
-            const quando = dataHoraCurta(sessao.ultimoUsoEm, agora);
-            return (
-              <li
-                key={sessao.id}
-                className={cn('flex items-center gap-3 px-3 py-2', indice > 0 && 'border-t')}
-              >
-                <Icone size={20} aria-hidden className="text-muted-foreground flex-none" />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-medium">{aparelho.nome}</span>
-                  <span className="text-muted-foreground text-[13px] tabular-nums">
-                    {ip ? `${quando}, IP ${ip}` : quando}
+        <div className="rounded-md border">
+          <ul aria-label="Sessões abertas">
+            {paginacao.itensDaPagina.map((sessao, indice) => {
+              const aparelho = descreverAparelho(sessao.userAgent);
+              const Icone = aparelho.movel ? DeviceMobile : Monitor;
+              const ip = ipParcial(sessao.ip);
+              const quando = dataHoraCurta(sessao.ultimoUsoEm, agora);
+              return (
+                <li
+                  key={sessao.id}
+                  className={cn('flex items-center gap-3 px-3 py-2', indice > 0 && 'border-t')}
+                >
+                  <Icone size={20} aria-hidden className="text-muted-foreground flex-none" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-medium">{aparelho.nome}</span>
+                    <span className="text-muted-foreground text-[13px] tabular-nums">
+                      {ip ? `${quando}, IP ${ip}` : quando}
+                    </span>
                   </span>
-                </span>
-                {acao && (
-                  <button
-                    type="button"
-                    disabled={acao.ocupado}
-                    aria-label={`Encerrar sessão ${aparelho.nome}`}
-                    onClick={() =>
-                      acao.executar(
-                        () =>
-                          encerrarSessao.mutateAsync({
-                            path: { id: usuario.id, sessaoId: sessao.id },
-                          }),
-                        'Sessão encerrada.',
-                      )
-                    }
-                    className={buttonClassName({ variant: 'secondary' })}
-                  >
-                    Encerrar
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {acao && (
+                    <button
+                      type="button"
+                      disabled={acao.ocupado}
+                      aria-label={`Encerrar sessão ${aparelho.nome}`}
+                      onClick={() =>
+                        acao.executar(
+                          () =>
+                            encerrarSessao.mutateAsync({
+                              path: { id: usuario.id, sessaoId: sessao.id },
+                            }),
+                          'Sessão encerrada.',
+                        )
+                      }
+                      className={buttonClassName({ variant: 'secondary' })}
+                    >
+                      Encerrar
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {paginacao.precisaPaginar && (
+            <Paginacao
+              pagina={paginacao.pagina}
+              porPagina={paginacao.porPagina}
+              total={paginacao.total}
+              onIrPara={paginacao.irPara}
+            />
+          )}
+        </div>
       )}
       {proprio && (
         <p className="text-muted-foreground text-[13px]">

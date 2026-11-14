@@ -11,6 +11,8 @@ import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
+import { Paginacao } from '../paginacao/Paginacao';
+import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Painel } from '../painel/Painel';
 
 type SessoesAbertasProps = { sessoes: MinhaSessaoDto[]; agora?: Date };
@@ -26,6 +28,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
   const ordenadas = [...sessoes].sort(
     (a, b) => Number(b.atual) - Number(a.atual) || b.ultimoUsoEm.localeCompare(a.ultimoUsoEm),
   );
+  const paginacao = usePaginaLocal(ordenadas, 10);
   const temOutras = ordenadas.some((sessao) => !sessao.atual);
   const ocupado = encerrar.isPending || encerrarOutras.isPending;
 
@@ -80,7 +83,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
         </div>
       )}
       <ul>
-        {ordenadas.map((sessao, indice) => {
+        {paginacao.itensDaPagina.map((sessao, indice) => {
           const aparelho = descreverAparelho(sessao.userAgent);
           const Icone = aparelho.movel ? DeviceMobile : Monitor;
           const ip = ipParcial(sessao.ip);
@@ -121,6 +124,14 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
           );
         })}
       </ul>
+      {paginacao.precisaPaginar && (
+        <Paginacao
+          pagina={paginacao.pagina}
+          porPagina={paginacao.porPagina}
+          total={paginacao.total}
+          onIrPara={paginacao.irPara}
+        />
+      )}
     </Painel>
   );
 }
