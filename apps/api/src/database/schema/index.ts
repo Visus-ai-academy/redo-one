@@ -2,3 +2,4 @@
 export * from './auditoria';
 export * from './catalogo';
 export * from './identidade';
+export * from './medicos';

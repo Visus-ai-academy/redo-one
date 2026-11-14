@@ -43,6 +43,13 @@
       "when": 1794673472669,
       "tag": "0005_catalogo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794687047348,
+      "tag": "0006_medicos",
+      "breakpoints": true
     }
   ]
 }

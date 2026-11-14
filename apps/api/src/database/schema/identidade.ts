@@ -9,6 +9,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { medicos } from './medicos';
+
 // Contexto `identidade`: usuários, papéis com permissões `tela.acao`, sessões e tentativas de login.
 
 const criadoEm = () => timestamp('criado_em', { withTimezone: true }).notNull().defaultNow();
@@ -50,6 +52,10 @@ export const usuarios = pgTable('usuarios', {
     .notNull()
     .references(() => papeis.id),
   ativo: boolean('ativo').notNull().default(true),
+  /** Médico desta conta (portal): ele só vê os próprios dados. Um usuário por médico. */
+  medicoId: uuid('medico_id')
+    .unique()
+    .references(() => medicos.id, { onDelete: 'set null' }),
   /** Falhas seguidas de senha; zera no login com sucesso ou no desbloqueio. */
   tentativasFalhas: integer('tentativas_falhas').notNull().default(0),
   bloqueadoAte: timestamp('bloqueado_ate', { withTimezone: true }),
