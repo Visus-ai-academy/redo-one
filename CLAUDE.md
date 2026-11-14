@@ -29,6 +29,8 @@ Monorepo TypeScript com pnpm workspaces e Turborepo. Visão geral, setup e conve
 
 Competência e fechamento são conceitos compartilhados entre ingestão, faturamento, repasse e pré-pago. O portal do médico é UI sobre repasse, escala e qualidade, não um contexto.
 
+**Cliente e contratado se dividem por contexto.** O `catalogo` guarda o cadastro básico do cliente (nome na MobileMed, nome fantasia, razão social, tipo de pessoa, CNPJ/CPF, contratado emissor, ativo, oculto nos painéis, observações e apelidos) e o do contratado (razão social, CNPJ, endereço, ativo, contratado de repasse). O resto entra com o contexto dono: endereço, contato, e-mail de NF, banco e códigos Omie no `faturamento`; representante e testemunha no `contratos`; pré-pago no `credito-pre-pago`; médicos permitidos no `distribuicao`. O painel do cliente ganha uma aba por contexto.
+
 ### Glossário
 
 Nomes do domínio em português, sem acento; termos técnicos do framework em inglês (`LaudoController`, `CompetenciaRepository`).
