@@ -20,7 +20,7 @@ export function Dica({ rotulo, children, lado = 'right', desativada = false }: D
       <Tooltip.Trigger render={children} delay={300} />
       <Tooltip.Portal>
         <Tooltip.Positioner side={lado} sideOffset={8} className="z-50">
-          <Tooltip.Popup className="bg-foreground text-background rounded-md px-2 py-1 text-[13px] shadow-md transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none">
+          <Tooltip.Popup className="bg-foreground text-background rounded-md px-2 py-1 text-[13px] shadow-md transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none">
             {rotulo}
           </Tooltip.Popup>
         </Tooltip.Positioner>

@@ -37,7 +37,7 @@ export function ConfirmarAcao({
         <AlertDialog.Backdrop className="bg-foreground/40 fixed inset-0 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
         <AlertDialog.Popup
           initialFocus={cancelar}
-          className="bg-popover text-popover-foreground fixed top-1/2 left-1/2 flex w-[min(440px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl p-6 shadow-xl transition-[opacity,transform] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none"
+          className="bg-popover text-popover-foreground fixed top-1/2 left-1/2 flex w-[min(440px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl p-6 shadow-xl transition-[opacity,scale] duration-150 ease-out data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         >
           <div className="flex flex-col gap-2">
             <AlertDialog.Title className="text-lg font-semibold">{titulo}</AlertDialog.Title>

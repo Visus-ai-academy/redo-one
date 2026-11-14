@@ -95,7 +95,7 @@ export function BuscaSelecao({
       </div>
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} className="z-50 outline-none">
-          <Combobox.Popup className="bg-popover text-popover-foreground max-h-[min(var(--available-height),320px)] w-[var(--anchor-width)] overflow-y-auto rounded-lg border p-1 shadow-lg transition-[opacity,transform] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
+          <Combobox.Popup className="bg-popover text-popover-foreground max-h-[min(var(--available-height),320px)] w-[var(--anchor-width)] origin-(--transform-origin) overflow-y-auto rounded-lg border p-1 shadow-lg transition-[opacity,scale] duration-150 ease-out data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
             <Combobox.Empty className="text-muted-foreground px-2 py-2 text-[13px] empty:hidden">
               {procurando && !isFetching && `Nada encontrado para “${termo}”.`}
               {!procurando && 'Digite parte do nome para buscar.'}

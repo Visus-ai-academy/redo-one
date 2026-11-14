@@ -77,7 +77,7 @@ export function Select({
           alignItemWithTrigger={false}
           className="z-50 outline-none"
         >
-          <BaseSelect.Popup className="bg-popover text-popover-foreground max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-y-auto rounded-lg border p-1 shadow-lg transition-[opacity,transform] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
+          <BaseSelect.Popup className="bg-popover text-popover-foreground max-h-[var(--available-height)] min-w-[var(--anchor-width)] origin-(--transform-origin) overflow-y-auto rounded-lg border p-1 shadow-lg transition-[opacity,scale] duration-150 ease-out data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
             <BaseSelect.List>
               {opcoes.map((opcao) => (
                 <BaseSelect.Item
