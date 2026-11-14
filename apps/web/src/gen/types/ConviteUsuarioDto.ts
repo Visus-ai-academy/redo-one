@@ -26,4 +26,11 @@ export type ConviteUsuarioDto = {
    * @type string
    */
   papelId: string;
+  /**
+   * @description Médico desta conta (portal); um usuário por médico.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  medicoId?: string | null;
 };

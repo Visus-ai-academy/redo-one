@@ -10,6 +10,7 @@ export const conviteUsuarioDtoSchema = z.object({
   email: z.string().meta({ examples: ['nome@empresa.com.br'] }),
   cpf: z.string().nullish().meta({ examples: ['000.000.000-00'] }),
   papelId: z.uuid(),
+  medicoId: z.uuid().nullish().describe('Médico desta conta (portal); um usuário por médico.'),
 })
 
 export type ConviteUsuarioDtoSchemaType = z.infer<typeof conviteUsuarioDtoSchema>

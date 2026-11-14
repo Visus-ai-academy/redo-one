@@ -28,6 +28,13 @@ export type UsuariosControllerListarQuery = {
   papelId?: string;
   situacao?: UsuariosControllerListarSituacaoKey;
   /**
+   * @description Só a conta ligada a este médico.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  medicoId?: string;
+  /**
    * @minimum 1
    * @default 1
    * @type integer | undefined

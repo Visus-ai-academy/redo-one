@@ -18,6 +18,10 @@ export const usuariosControllerListarQuerySituacaoSchema = z.enum(['ativo', 'con
 
 export type UsuariosControllerListarQuerySituacaoSchemaType = z.infer<typeof usuariosControllerListarQuerySituacaoSchema>
 
+export const usuariosControllerListarQueryMedicoIdSchema = z.uuid().optional().describe('Só a conta ligada a este médico.')
+
+export type UsuariosControllerListarQueryMedicoIdSchemaType = z.infer<typeof usuariosControllerListarQueryMedicoIdSchema>
+
 export const usuariosControllerListarQueryPaginaSchema = z.int().min(1).optional().default(1)
 
 export type UsuariosControllerListarQueryPaginaSchemaType = z.infer<typeof usuariosControllerListarQueryPaginaSchema>
@@ -38,6 +42,7 @@ export const usuariosControllerListarQuerySchema = z.object({
   busca: z.string().optional().describe('Parte do nome ou do e-mail, ou o CPF.'),
   papelId: z.uuid().optional(),
   situacao: z.enum(['ativo', 'convite_pendente', 'bloqueado', 'desativado']).optional(),
+  medicoId: z.uuid().optional().describe('Só a conta ligada a este médico.'),
   pagina: z.int().min(1).optional().default(1),
   porPagina: z.int().min(1).max(100).optional().default(25),
 })
