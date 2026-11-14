@@ -5,6 +5,7 @@ import { BuscaField } from './BuscaField';
 import { CheckboxField } from './CheckboxField';
 import { CheckboxListField } from './CheckboxListField';
 import { fieldContext, formContext } from './context';
+import { EscolhaMultiplaField } from './EscolhaMultiplaField';
 import { NumberField } from './NumberField';
 import { PasswordField } from './PasswordField';
 import { RequiredLegend } from './RequiredLegend';
@@ -23,6 +24,7 @@ export const { useAppForm, withForm } = createFormHook({
     CheckboxField,
     CheckboxListField,
     BuscaField,
+    EscolhaMultiplaField,
     TextAreaField,
     NumberField,
   },
