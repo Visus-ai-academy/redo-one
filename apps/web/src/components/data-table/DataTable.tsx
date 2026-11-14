@@ -1,5 +1,6 @@
 import { type ColumnDef, type RowData, useTable } from '@tanstack/react-table';
 
+import { cn } from '../../lib/cn';
 import { type DataTableFeatures, dataTableFeatures } from './columns';
 
 type DataTableProps<TData extends RowData> = {
@@ -12,6 +13,8 @@ type DataTableProps<TData extends RowData> = {
   getRowId?: (row: TData) => string;
   /** Linha aberta no painel de detalhe: fundo do acento suave e `aria-selected`. */
   selectedRowId?: string;
+  /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
+  className?: string;
 };
 
 export function DataTable<TData extends RowData>({
@@ -21,6 +24,7 @@ export function DataTable<TData extends RowData>({
   emptyMessage = 'Nenhum registro encontrado.',
   getRowId,
   selectedRowId,
+  className,
 }: DataTableProps<TData>) {
   const table = useTable({
     features: dataTableFeatures,
@@ -33,7 +37,7 @@ export function DataTable<TData extends RowData>({
   return (
     // Sem borda própria: a tabela fica dentro de um Painel (ou seção com borda), nunca cartão no cartão.
     // Rola na horizontal dentro da caixa no celular.
-    <div className="w-full overflow-x-auto">
+    <div className={cn('w-full overflow-x-auto', className)}>
       <table className="w-full caption-bottom tabular-nums">
         {caption && <caption className="text-muted-foreground mt-4 text-[13px]">{caption}</caption>}
         <thead>
@@ -44,7 +48,8 @@ export function DataTable<TData extends RowData>({
                   key={header.id}
                   colSpan={header.colSpan}
                   scope="col"
-                  className="text-subtle-foreground h-10 px-4 text-left align-middle text-xs font-medium"
+                  // Fixo no topo quando a tabela rola por dentro do contêiner.
+                  className="bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]"
                 >
                   {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </th>

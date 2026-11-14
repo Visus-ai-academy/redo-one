@@ -152,11 +152,14 @@ export function ListaUsuarios({
           aria-label="Lista de usuários"
           className={cn(
             'bg-card min-w-0 flex-[999_1_480px] rounded-lg border',
+            // No computador a lista cabe na tela: a tabela rola por dentro e a paginação fica à
+            // vista (8rem = respiro do main e o título acima).
+            'md:flex md:max-h-[calc(100dvh-8rem)] md:flex-col',
             // No celular o painel ocupa o lugar da lista; "Fechar" volta para ela.
-            painel && 'hidden md:block',
+            painel && 'hidden',
           )}
         >
-          <div className="flex flex-wrap gap-2 border-b p-3">
+          <div className="flex flex-none flex-wrap gap-2 border-b p-3">
             <div className="relative flex-[1_1_220px]">
               <MagnifyingGlass
                 size={16}
@@ -227,15 +230,18 @@ export function ListaUsuarios({
               data={pagina.itens}
               getRowId={(usuario) => usuario.id}
               selectedRowId={selecionadoId}
+              className="md:min-h-0 md:flex-1 md:overflow-y-auto"
             />
           )}
 
-          <Paginacao
-            pagina={pagina.pagina}
-            porPagina={pagina.porPagina}
-            total={pagina.total}
-            onIrPara={onIrPara}
-          />
+          <div className="flex-none">
+            <Paginacao
+              pagina={pagina.pagina}
+              porPagina={pagina.porPagina}
+              total={pagina.total}
+              onIrPara={onIrPara}
+            />
+          </div>
         </section>
         {painel}
       </div>

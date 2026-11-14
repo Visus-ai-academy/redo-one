@@ -70,6 +70,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - Sem zebra; divisória de 1px entre linhas; hover sutil; linha selecionada com fundo do acento bem claro.
 - Ações da linha: a linha inteira abre o detalhe; ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
 - Filtros acima da tabela, na mesma faixa da busca; contagem e paginação no rodapé.
+- Lista que é o trabalho principal da tela cabe na altura da janela no computador: a tabela rola por dentro, com o cabeçalho fixo, e o rodapé com contagem e paginação fica sempre à vista; a página em si não rola. No celular, a página rola normalmente.
 
 **Formulários**
 - Rótulo acima do campo, ajuda abaixo, erro abaixo (texto que diz o problema e como resolver). Largura de leitura: 480–640px.
