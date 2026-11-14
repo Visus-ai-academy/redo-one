@@ -11,6 +11,8 @@ type PainelLateralProps = {
   /** À esquerda do título (ex.: avatar). */
   inicio?: ReactNode;
   onFechar: () => void;
+  /** O conteúdo ainda está carregando (avisa o leitor de tela). */
+  ocupado?: boolean;
   children: ReactNode;
 };
 
@@ -30,6 +32,7 @@ export function PainelLateral({
   subtitulo,
   inicio,
   onFechar,
+  ocupado,
   children,
 }: PainelLateralProps) {
   // Monta fechado e abre em seguida: o Base UI só anima a entrada quando `open` muda.
@@ -63,6 +66,7 @@ export function PainelLateral({
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
           <Drawer.Popup
             data-painel-lateral
+            aria-busy={ocupado || undefined}
             className="bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none lg:w-[400px]"
           >
             <div className="flex flex-none items-center gap-3 border-b p-4">
