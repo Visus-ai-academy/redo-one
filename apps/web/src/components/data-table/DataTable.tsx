@@ -8,6 +8,10 @@ type DataTableProps<TData extends RowData> = {
   data: TData[];
   caption?: string;
   emptyMessage?: string;
+  /** Id estável de cada registro (padrão: a posição). Necessário para `selectedRowId`. */
+  getRowId?: (row: TData) => string;
+  /** Linha aberta no painel de detalhe: fundo do acento suave e `aria-selected`. */
+  selectedRowId?: string;
 };
 
 export function DataTable<TData extends RowData>({
@@ -15,8 +19,15 @@ export function DataTable<TData extends RowData>({
   data,
   caption,
   emptyMessage = 'Nenhum registro encontrado.',
+  getRowId,
+  selectedRowId,
 }: DataTableProps<TData>) {
-  const table = useTable({ features: dataTableFeatures, columns, data });
+  const table = useTable({
+    features: dataTableFeatures,
+    columns,
+    data,
+    ...(getRowId && { getRowId: (row: TData) => getRowId(row) }),
+  });
   const rows = table.getRowModel().rows;
 
   return (
@@ -53,7 +64,11 @@ export function DataTable<TData extends RowData>({
             </tr>
           ) : (
             rows.map((row) => (
-              <tr key={row.id} className="hover:bg-muted border-t">
+              <tr
+                key={row.id}
+                aria-selected={row.id === selectedRowId || undefined}
+                className="hover:bg-muted aria-selected:bg-accent border-t"
+              >
                 {row.getAllCells().map((cell) => (
                   <td key={cell.id} className="h-11 px-4 py-2 align-middle">
                     <table.FlexRender cell={cell} />

@@ -34,4 +34,23 @@ describe('DataTable', () => {
 
     expect(screen.getByRole('cell', { name: 'Nenhum usuário' })).toBeInTheDocument();
   });
+
+  it('marca a linha selecionada pelo id do registro', () => {
+    const data: User[] = [
+      { name: 'Ada', email: 'ada@example.com' },
+      { name: 'Alan', email: 'alan@example.com' },
+    ];
+    render(
+      <DataTable
+        columns={columns}
+        data={data}
+        getRowId={(u) => u.email}
+        selectedRowId="alan@example.com"
+      />,
+    );
+
+    const [, ada, alan] = screen.getAllByRole('row');
+    expect(alan).toHaveAttribute('aria-selected', 'true');
+    expect(ada).not.toHaveAttribute('aria-selected');
+  });
 });
