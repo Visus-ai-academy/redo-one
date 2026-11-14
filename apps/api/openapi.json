@@ -211,7 +211,7 @@
             }
           },
           "409": {
-            "description": "Nome já usado ou papel do sistema."
+            "description": "Nome já usado, nome de papel do sistema ou papel de acesso total."
           }
         },
         "tags": [

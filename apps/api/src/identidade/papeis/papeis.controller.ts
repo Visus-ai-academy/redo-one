@@ -66,7 +66,9 @@ export class PapeisController {
   @Put(':id')
   @Permissao('papeis.editar')
   @ApiOkResponse({ type: PapelAtualizadoDto })
-  @ApiConflictResponse({ description: 'Nome já usado ou papel do sistema.' })
+  @ApiConflictResponse({
+    description: 'Nome já usado, nome de papel do sistema ou papel de acesso total.',
+  })
   atualizar(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,

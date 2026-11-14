@@ -39,7 +39,7 @@ export class PapelDoSistemaError extends ErroDeDominio {
   readonly tipo = 'conflito';
 
   constructor() {
-    super('Papel do sistema não pode ser editado nem excluído. Use Duplicar.');
+    super('Papel do sistema não pode ser excluído.');
   }
 }
 
@@ -61,5 +61,23 @@ export class PapelSemPermissaoError extends ErroDeDominio {
 
   constructor() {
     super('Conceda acesso a ao menos uma tela.');
+  }
+}
+
+/** O Administrador tem acesso total por definição; não há lista de permissões para editar. */
+export class PapelDeAcessoTotalError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+
+  constructor() {
+    super('O papel com acesso total não pode ser editado.');
+  }
+}
+
+/** Papel do sistema é encontrado pelo nome (primeiro acesso, portal do médico): o nome não muda. */
+export class NomeDePapelDoSistemaError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+
+  constructor() {
+    super('O nome de um papel do sistema não pode ser mudado.');
   }
 }

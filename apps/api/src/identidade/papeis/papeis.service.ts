@@ -13,7 +13,9 @@ import {
   type PapelResumo,
 } from './gestao-papeis.repository';
 import {
+  NomeDePapelDoSistemaError,
   NomeDePapelEmUsoError,
+  PapelDeAcessoTotalError,
   PapelDoSistemaError,
   PapelEmUsoError,
   PapelNaoEncontradoError,
@@ -54,7 +56,11 @@ export class PapeisService {
     id: string,
     dados: DadosPapel,
   ): Promise<{ sessoesEncerradas: number }> {
-    const atual = await this.editavel(id);
+    const atual = await this.obter(id);
+    // O Administrador vale por `acessoTotal`, não por lista: não há o que editar. Os outros papéis
+    // do sistema (Médico) têm permissões editáveis, mas o nome é fixo (o código os acha pelo nome).
+    if (atual.acessoTotal) throw new PapelDeAcessoTotalError();
+    if (atual.sistema && dados.nome.trim() !== atual.nome) throw new NomeDePapelDoSistemaError();
     const validos = await this.validar(ator, dados, id);
     await this.papeis.atualizar(id, validos);
 
@@ -67,16 +73,11 @@ export class PapeisService {
   }
 
   async excluir(ator: PrincipalUsuario, id: string): Promise<void> {
-    const atual = await this.editavel(id);
+    const atual = await this.obter(id);
+    if (atual.sistema) throw new PapelDoSistemaError();
     if (atual.totalUsuarios > 0) throw new PapelEmUsoError(atual.totalUsuarios);
     await this.papeis.excluir(id);
     await this.auditar(ator, id, 'excluido', resumo(atual));
-  }
-
-  private async editavel(id: string): Promise<PapelDetalhe> {
-    const papel = await this.obter(id);
-    if (papel.sistema) throw new PapelDoSistemaError();
-    return papel;
   }
 
   private async validar(

@@ -9,7 +9,9 @@ import {
   InMemoryUsuariosRepository,
 } from '../testing/fakes';
 import {
+  NomeDePapelDoSistemaError,
   NomeDePapelEmUsoError,
+  PapelDeAcessoTotalError,
   PapelDoSistemaError,
   PapelEmUsoError,
   PapelNaoEncontradoError,
@@ -83,6 +85,15 @@ describe('PapeisService', () => {
           acessoTotal: false,
           totalUsuarios: 0,
           permissoes: ['faturamento.ver'],
+        },
+        {
+          id: 'p-medico',
+          nome: 'Médico',
+          descricao: 'Portal do médico',
+          sistema: true,
+          acessoTotal: false,
+          totalUsuarios: 0,
+          permissoes: [],
         },
       ],
       usuarios,
@@ -207,10 +218,34 @@ describe('PapeisService', () => {
       expect(sessoes.sessoes.some((s) => s.encerradaEm)).toBe(false);
     });
 
-    it('recusa papel do sistema e papel inexistente', async () => {
-      const dados = { nome: 'Admin', descricao: null, permissoes: [] };
+    it('papel do sistema muda permissões e descrição, mas não o nome', async () => {
+      await expect(
+        service.atualizar(admin, 'p-medico', {
+          nome: 'Médico',
+          descricao: 'Portal: repasse e escala',
+          permissoes: ['repasse.ver'],
+        }),
+      ).resolves.toEqual({ sessoesEncerradas: 0 });
+      await expect(papeis.buscar('p-medico')).resolves.toMatchObject({
+        descricao: 'Portal: repasse e escala',
+        permissoes: ['repasse.ver'],
+      });
 
-      await expect(service.atualizar(admin, 'p-admin', dados)).rejects.toThrow(PapelDoSistemaError);
+      await expect(
+        service.atualizar(admin, 'p-medico', {
+          nome: 'Médicos',
+          descricao: null,
+          permissoes: ['repasse.ver'],
+        }),
+      ).rejects.toThrow(NomeDePapelDoSistemaError);
+    });
+
+    it('recusa o papel de acesso total e papel inexistente', async () => {
+      const dados = { nome: 'Administrador', descricao: null, permissoes: ['repasse.ver'] };
+
+      await expect(service.atualizar(admin, 'p-admin', dados)).rejects.toThrow(
+        PapelDeAcessoTotalError,
+      );
       await expect(service.atualizar(admin, 'p-nada', dados)).rejects.toThrow(
         PapelNaoEncontradoError,
       );
@@ -257,6 +292,7 @@ describe('PapeisService', () => {
 
     it('recusa papel do sistema', async () => {
       await expect(service.excluir(admin, 'p-admin')).rejects.toThrow(PapelDoSistemaError);
+      await expect(service.excluir(admin, 'p-medico')).rejects.toThrow(PapelDoSistemaError);
     });
   });
 });
