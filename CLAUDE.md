@@ -31,6 +31,8 @@ Competência e fechamento são conceitos compartilhados entre ingestão, faturam
 
 **Cliente e contratado se dividem por contexto.** O `catalogo` guarda o cadastro básico do cliente (nome na MobileMed, nome fantasia, razão social, tipo de pessoa, CNPJ/CPF, contratado emissor, ativo, oculto nos painéis, observações e apelidos) e o do contratado (razão social, CNPJ, endereço, ativo, contratado de repasse). O resto entra com o contexto dono: endereço, contato, e-mail de NF, banco e códigos Omie no `faturamento`; representante e testemunha no `contratos`; pré-pago no `credito-pre-pago`; médicos permitidos no `distribuicao`. O painel do cliente ganha uma aba por contexto.
 
+**O médico também se divide por contexto.** O `medicos` guarda o cadastro (nome, CRM, id na MobileMed, contato, ativo, oculto nos painéis, sênior, fellowship, função, nível, início do vínculo, observações), os apelidos, os dados de pagamento numa tabela à parte com permissão própria (CPF, CNPJ, razão social, Pix, sócio, optante do Simples, fornecedor no Omie), as equipes e o vínculo com o usuário do portal. O que ele lauda (arranjos) e os parâmetros do robô ficam na `distribuicao`; regras, restrições e adicionais de repasse no `repasse`; os grupos de médicos da tipificação no `faturamento`.
+
 ### Glossário
 
 Nomes do domínio em português, sem acento; termos técnicos do framework em inglês (`LaudoController`, `CompetenciaRepository`).
