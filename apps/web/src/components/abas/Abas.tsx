@@ -11,8 +11,8 @@ type AbasProps = {
   /** Quem usa guarda a aba na URL (`?aba=`): dá para voltar, recarregar e mandar o link. */
   onMudar: (valor: string) => void;
   'aria-label': string;
-  /** Conteúdo da aba atual (só ele é montado). */
-  children: ReactNode;
+  /** Conteúdo da aba atual (só ele é montado). Sem conteúdo, as abas são só a navegação. */
+  children?: ReactNode;
   className?: string;
 };
 
@@ -46,12 +46,14 @@ export function Abas({
           </Tabs.Tab>
         ))}
       </Tabs.List>
-      <Tabs.Panel
-        value={valor}
-        className="focus-visible:outline-ring flex flex-col gap-5 focus-visible:outline-2"
-      >
-        {children}
-      </Tabs.Panel>
+      {children != null && (
+        <Tabs.Panel
+          value={valor}
+          className="focus-visible:outline-ring flex flex-col gap-5 focus-visible:outline-2"
+        >
+          {children}
+        </Tabs.Panel>
+      )}
     </Tabs.Root>
   );
 }

@@ -31,4 +31,12 @@ describe('Abas', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Prioridades' }));
     expect(onMudar).toHaveBeenCalledWith('prioridades');
   });
+
+  it('sem conteúdo, serve só de navegação (o conteúdo fica logo abaixo, sem espaço a mais)', () => {
+    render(
+      <Abas aria-label="Listas" valor="a" onMudar={vi.fn()} abas={[{ valor: 'a', rotulo: 'A' }]} />,
+    );
+
+    expect(screen.queryByRole('tabpanel')).not.toBeInTheDocument();
+  });
 });
