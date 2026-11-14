@@ -178,6 +178,7 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
         />
       }
       colunas={colunas}
+      ocultarComPainel={['descricao']}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

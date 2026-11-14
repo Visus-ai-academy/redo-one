@@ -33,6 +33,7 @@ describe('grupo Catálogo', () => {
     const catalogo = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Catálogo');
     expect(catalogo?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Classificação dos exames', '/configuracoes/catalogo', 'catalogo.ver'],
+      ['Contratados', '/configuracoes/contratados', 'catalogo.ver'],
     ]);
   });
 });
