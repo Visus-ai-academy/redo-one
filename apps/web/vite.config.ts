@@ -14,6 +14,7 @@ export default defineConfig({
       '@base-ui/react/button',
       '@base-ui/react/dialog',
       '@base-ui/react/field',
+      '@base-ui/react/select',
       '@phosphor-icons/react',
       '@tanstack/react-form',
       '@tanstack/react-table',
