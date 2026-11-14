@@ -1,6 +1,6 @@
 import type { AcessoRecenteDto } from '../../gen/types/AcessoRecenteDto';
 import type { MinhaContaDto } from '../../gen/types/MinhaContaDto';
-import { iniciais } from '../app-shell/iniciais';
+import { Avatar } from '../avatar/Avatar';
 import { AcessosRecentes } from './AcessosRecentes';
 import { DadosDaConta } from './DadosDaConta';
 import { SessoesAbertas } from './SessoesAbertas';
@@ -16,12 +16,7 @@ export function MeuPerfil({
   return (
     <div className="flex max-w-[760px] flex-col gap-6">
       <div className="flex items-center gap-4">
-        <span
-          aria-hidden="true"
-          className="bg-accent text-accent-foreground flex size-14 flex-none items-center justify-center rounded-full text-lg font-semibold"
-        >
-          {iniciais(conta.nome)}
-        </span>
+        <Avatar nome={conta.nome} tamanho="lg" className="bg-accent text-accent-foreground" />
         <div className="flex flex-col gap-0.5">
           <h1 className="text-[22px] leading-snug font-semibold">Meu perfil</h1>
           <span className="text-muted-foreground">

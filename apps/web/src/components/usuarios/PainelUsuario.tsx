@@ -20,7 +20,7 @@ import { cn } from '../../lib/cn';
 import { cpfMascarado } from '../../lib/cpf';
 import { dataDeBrasilia, dataHoraCurta } from '../../lib/datas';
 import { Alerta } from '../alerta/Alerta';
-import { iniciais } from '../app-shell/iniciais';
+import { Avatar } from '../avatar/Avatar';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
@@ -83,14 +83,7 @@ export function PainelUsuario({
     <PainelLateral
       titulo={usuario.nome}
       subtitulo={usuario.email}
-      inicio={
-        <span
-          aria-hidden="true"
-          className="bg-inactive-soft text-muted-foreground flex size-10 flex-none items-center justify-center rounded-full text-sm font-semibold"
-        >
-          {iniciais(usuario.nome)}
-        </span>
-      }
+      inicio={<Avatar nome={usuario.nome} tamanho="md" />}
       onFechar={onFechar}
     >
       <div className="flex flex-col gap-5 p-4">

@@ -6,7 +6,7 @@ import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import type { UsuarioResumoDto } from '../../gen/types/UsuarioResumoDto';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
-import { iniciais } from '../app-shell/iniciais';
+import { Avatar } from '../avatar/Avatar';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
@@ -76,12 +76,7 @@ export function ListaUsuarios({
           const usuario = info.row.original;
           const conteudo = (
             <span className="flex items-center gap-3">
-              <span
-                aria-hidden="true"
-                className="bg-inactive-soft text-muted-foreground flex size-7 flex-none items-center justify-center rounded-full text-xs font-semibold"
-              >
-                {iniciais(usuario.nome)}
-              </span>
+              <Avatar nome={usuario.nome} tamanho="sm" />
               <span className="flex min-w-0 flex-col leading-snug">
                 <span className="font-medium">
                   {usuario.nome}

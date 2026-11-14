@@ -11,6 +11,7 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       '@base-ui/react/alert-dialog',
+      '@base-ui/react/avatar',
       '@base-ui/react/button',
       '@base-ui/react/checkbox',
       '@base-ui/react/combobox',
@@ -23,6 +24,7 @@ export default defineConfig({
       '@base-ui/react/switch',
       '@base-ui/react/tabs',
       '@base-ui/react/toggle',
+      '@base-ui/react/tooltip',
       '@phosphor-icons/react',
       '@tanstack/react-form',
       '@tanstack/react-table',

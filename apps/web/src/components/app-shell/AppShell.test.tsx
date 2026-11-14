@@ -75,7 +75,7 @@ describe('AppShell', () => {
     expect(screen.getByText('MS')).toBeInTheDocument();
   });
 
-  it('recolhe o menu deixando só os ícones, com o nome no título', async () => {
+  it('recolhe o menu deixando só os ícones, com o nome na dica', async () => {
     montar();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Recolher menu' }));
@@ -83,11 +83,9 @@ describe('AppShell', () => {
     const expandir = screen.getByRole('button', { name: 'Expandir menu' });
     expect(expandir).toHaveAttribute('aria-expanded', 'false');
     const menu = screen.getByRole('navigation', { name: 'Menu principal' });
-    expect(within(menu).getByRole('link', { name: 'Usuários' })).toHaveAttribute(
-      'title',
-      'Usuários',
-    );
     expect(screen.queryByText('Maria Souza')).not.toBeInTheDocument();
+    await userEvent.hover(within(menu).getByRole('link', { name: 'Usuários' }));
+    expect(await screen.findByText('Usuários', { selector: 'div' })).toBeVisible();
   });
 
   it('sai do One e volta para o login', async () => {

@@ -5,7 +5,8 @@ import { Link } from '@tanstack/react-router';
 import type { SessaoAtualDto } from '../../gen/types/SessaoAtualDto';
 import { cn } from '../../lib/cn';
 import { filtrarPorPermissao, pode } from '../../lib/permissoes';
-import { iniciais } from './iniciais';
+import { Avatar } from '../avatar/Avatar';
+import { Dica } from '../dica/Dica';
 import type { GrupoMenu, ItemMenu } from './menu';
 
 type MenuLateralProps = {
@@ -48,15 +49,17 @@ export function MenuLateral({
           </span>
         )}
         {onAlternar && (
-          <Button
-            type="button"
-            onClick={onAlternar}
-            aria-label={recolhido ? 'Expandir menu' : 'Recolher menu'}
-            aria-expanded={!recolhido}
-            className={botaoIcone}
-          >
-            <SidebarSimple size={20} aria-hidden />
-          </Button>
+          <Dica rotulo={recolhido ? 'Expandir menu' : 'Recolher menu'}>
+            <Button
+              type="button"
+              onClick={onAlternar}
+              aria-label={recolhido ? 'Expandir menu' : 'Recolher menu'}
+              aria-expanded={!recolhido}
+              className={botaoIcone}
+            >
+              <SidebarSimple size={20} aria-hidden />
+            </Button>
+          </Dica>
         )}
       </div>
 
@@ -85,13 +88,15 @@ export function MenuLateral({
             recolhido ? 'flex-col py-2' : 'h-12 pr-1 pl-1.5',
           )}
         >
-          <span
-            aria-hidden="true"
-            title={recolhido ? `${sessao.usuario.nome} (${sessao.papel})` : undefined}
-            className="bg-sidebar-avatar text-sidebar-accent-foreground flex size-7 flex-none items-center justify-center rounded-full text-xs font-semibold"
-          >
-            {iniciais(sessao.usuario.nome)}
-          </span>
+          <Dica rotulo={`${sessao.usuario.nome} (${sessao.papel})`} desativada={!recolhido}>
+            <span className="flex">
+              <Avatar
+                nome={sessao.usuario.nome}
+                tamanho="sm"
+                className="bg-sidebar-avatar text-sidebar-accent-foreground"
+              />
+            </span>
+          </Dica>
           {!recolhido && (
             <span className="flex min-w-0 flex-1 flex-col leading-tight">
               <span className="text-sidebar-primary truncate text-[13px] font-semibold">
@@ -100,16 +105,17 @@ export function MenuLateral({
               <span className="text-sidebar-muted truncate text-xs">{sessao.papel}</span>
             </span>
           )}
-          <Button
-            type="button"
-            onClick={onSair}
-            disabled={saindo}
-            aria-label="Sair do One"
-            title="Sair do One"
-            className={botaoIcone}
-          >
-            <SignOut size={18} aria-hidden />
-          </Button>
+          <Dica rotulo="Sair do One">
+            <Button
+              type="button"
+              onClick={onSair}
+              disabled={saindo}
+              aria-label="Sair do One"
+              className={botaoIcone}
+            >
+              <SignOut size={18} aria-hidden />
+            </Button>
+          </Dica>
         </div>
       </div>
     </div>
@@ -120,24 +126,25 @@ function ItemDoMenu({ item, recolhido }: { item: ItemMenu; recolhido: boolean })
   const Icone = item.icone;
 
   return (
-    <Link
-      to={item.to}
-      title={recolhido ? item.nome : undefined}
-      aria-label={recolhido ? item.nome : undefined}
-      className={cn(
-        'group text-sidebar-foreground flex h-9 items-center gap-2.5 rounded-md px-2.5 font-medium',
-        'hover:bg-sidebar-hover hover:text-sidebar-accent-foreground',
-        'focus-visible:outline-sidebar-ring focus-visible:outline-2',
-        'data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-accent-foreground data-[status=active]:font-semibold',
-        recolhido && 'justify-center px-0',
-      )}
-    >
-      <Icone
-        size={20}
-        aria-hidden
-        className="text-sidebar-icon group-hover:text-sidebar-accent-foreground group-data-[status=active]:text-sidebar-accent-foreground flex-none"
-      />
-      {!recolhido && <span className="flex-1 truncate">{item.nome}</span>}
-    </Link>
+    <Dica rotulo={item.nome} desativada={!recolhido}>
+      <Link
+        to={item.to}
+        aria-label={recolhido ? item.nome : undefined}
+        className={cn(
+          'group text-sidebar-foreground flex h-9 items-center gap-2.5 rounded-md px-2.5 font-medium',
+          'hover:bg-sidebar-hover hover:text-sidebar-accent-foreground',
+          'focus-visible:outline-sidebar-ring focus-visible:outline-2',
+          'data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-accent-foreground data-[status=active]:font-semibold',
+          recolhido && 'justify-center px-0',
+        )}
+      >
+        <Icone
+          size={20}
+          aria-hidden
+          className="text-sidebar-icon group-hover:text-sidebar-accent-foreground group-data-[status=active]:text-sidebar-accent-foreground flex-none"
+        />
+        {!recolhido && <span className="flex-1 truncate">{item.nome}</span>}
+      </Link>
+    </Dica>
   );
 }
