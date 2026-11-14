@@ -16,6 +16,7 @@ import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
+import { Route as AppExamesRouteImport } from './routes/_app/exames'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
@@ -56,6 +57,11 @@ const AppSplatRoute = AppSplatRouteImport.update({
 const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExamesRoute = AppExamesRouteImport.update({
+  id: '/exames',
+  path: '/exames',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConfiguracoesIndexRoute = AppConfiguracoesIndexRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
   '/clientes': typeof AppClientesRoute
+  '/exames': typeof AppExamesRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
   '/clientes': typeof AppClientesRoute
+  '/exames': typeof AppExamesRoute
   '/': typeof AppIndexRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/_app/$': typeof AppSplatRoute
   '/_app/clientes': typeof AppClientesRoute
+  '/_app/exames': typeof AppExamesRoute
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/$'
     | '/clientes'
+    | '/exames'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/$'
     | '/clientes'
+    | '/exames'
     | '/'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/_app/$'
     | '/_app/clientes'
+    | '/_app/exames'
     | '/_app/'
     | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/contratados'
@@ -252,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/exames': {
+      id: '/_app/exames'
+      path: '/exames'
+      fullPath: '/exames'
+      preLoaderRoute: typeof AppExamesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/': {
       id: '/_app/configuracoes/'
       path: '/configuracoes'
@@ -307,6 +326,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
   AppClientesRoute: typeof AppClientesRoute
+  AppExamesRoute: typeof AppExamesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
@@ -320,6 +340,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
   AppClientesRoute: AppClientesRoute,
+  AppExamesRoute: AppExamesRoute,
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
