@@ -2,11 +2,13 @@ import { DeviceMobile, Monitor, X } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type ReactNode, useId, useState } from 'react';
+import { useUsuariosControllerDesativar } from '../../gen/hooks/useUsuariosControllerDesativar';
 import { useUsuariosControllerDesbloquear } from '../../gen/hooks/useUsuariosControllerDesbloquear';
 import { useUsuariosControllerEncerrarSessao } from '../../gen/hooks/useUsuariosControllerEncerrarSessao';
 import { useUsuariosControllerEncerrarSessoes } from '../../gen/hooks/useUsuariosControllerEncerrarSessoes';
 import { useUsuariosControllerEnviarLinkSenha } from '../../gen/hooks/useUsuariosControllerEnviarLinkSenha';
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
+import { useUsuariosControllerReativar } from '../../gen/hooks/useUsuariosControllerReativar';
 import { useUsuariosControllerReenviarConvite } from '../../gen/hooks/useUsuariosControllerReenviarConvite';
 import { useUsuariosControllerTrocarPapel } from '../../gen/hooks/useUsuariosControllerTrocarPapel';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
@@ -19,6 +21,7 @@ import { dataDeBrasilia, dataHoraCurta } from '../../lib/datas';
 import { Alerta } from '../alerta/Alerta';
 import { iniciais } from '../app-shell/iniciais';
 import { buttonClassName } from '../button/button-class';
+import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { controlClassName } from '../form/control-class';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
@@ -58,8 +61,15 @@ export function PainelUsuario({
   const desbloquear = useUsuariosControllerDesbloquear();
   const enviarLink = useUsuariosControllerEnviarLinkSenha();
   const reenviarConvite = useUsuariosControllerReenviarConvite();
+  const desativar = useUsuariosControllerDesativar();
+  const reativar = useUsuariosControllerReativar();
+  const proprio = usuario.id === euId;
+  const desativado = usuario.situacao === 'desativado';
   const caminho = { path: { id: usuario.id } };
   const pendente = usuario.situacao === 'convite_pendente';
+  const podeConviteOuLink = pendente ? permissoes.convidar : permissoes.editar && !desativado;
+  // Ninguém se desativa (a API também recusa).
+  const podeDesativar = permissoes.desativar && !proprio;
   // Bloqueio vale pela data, não pela situação: quem tem convite pendente também pode ser bloqueado.
   const bloqueado = usuario.bloqueadoAte !== null && new Date(usuario.bloqueadoAte) > referencia;
 
@@ -134,7 +144,7 @@ export function PainelUsuario({
         </dl>
 
         {permissoes.editar ? (
-          <TrocarPapel usuario={usuario} papeis={papeis} proprio={usuario.id === euId} />
+          <TrocarPapel usuario={usuario} papeis={papeis} proprio={proprio} />
         ) : (
           <CampoSomenteLeitura label="Papel" value={usuario.papel.nome} />
         )}
@@ -142,41 +152,68 @@ export function PainelUsuario({
         <SessoesDoUsuario
           usuario={usuario}
           agora={referencia}
-          acao={permissoes.editar && usuario.id !== euId ? acao : undefined}
-          proprio={usuario.id === euId}
+          acao={permissoes.editar && !proprio ? acao : undefined}
+          proprio={proprio}
         />
 
-        {((pendente && permissoes.convidar) || (!pendente && permissoes.editar)) && (
+        {(podeConviteOuLink || podeDesativar) && (
           <div className="flex flex-wrap gap-2 border-t pt-4">
-            {pendente ? (
-              <button
-                type="button"
-                disabled={acao.ocupado}
-                onClick={() =>
-                  acao.executar(
-                    () => reenviarConvite.mutateAsync(caminho),
-                    `Convite reenviado para ${usuario.email}. Ele vale por 7 dias; o anterior deixa de valer.`,
-                  )
-                }
-                className={buttonClassName({ variant: 'secondary' })}
-              >
-                Reenviar convite
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={acao.ocupado}
-                onClick={() =>
-                  acao.executar(
-                    () => enviarLink.mutateAsync(caminho),
-                    `Link enviado para ${usuario.email}. Ele vale por 1 hora.`,
-                  )
-                }
-                className={buttonClassName({ variant: 'secondary' })}
-              >
-                Enviar link de nova senha
-              </button>
-            )}
+            {podeConviteOuLink &&
+              (pendente ? (
+                <button
+                  type="button"
+                  disabled={acao.ocupado}
+                  onClick={() =>
+                    acao.executar(
+                      () => reenviarConvite.mutateAsync(caminho),
+                      `Convite reenviado para ${usuario.email}. Ele vale por 7 dias; o anterior deixa de valer.`,
+                    )
+                  }
+                  className={buttonClassName({ variant: 'secondary' })}
+                >
+                  Reenviar convite
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={acao.ocupado}
+                  onClick={() =>
+                    acao.executar(
+                      () => enviarLink.mutateAsync(caminho),
+                      `Link enviado para ${usuario.email}. Ele vale por 1 hora.`,
+                    )
+                  }
+                  className={buttonClassName({ variant: 'secondary' })}
+                >
+                  Enviar link de nova senha
+                </button>
+              ))}
+            {podeDesativar &&
+              (desativado ? (
+                <button
+                  type="button"
+                  disabled={acao.ocupado}
+                  onClick={() =>
+                    acao.executar(
+                      () => reativar.mutateAsync(caminho),
+                      'Usuário reativado. A pessoa já pode entrar de novo.',
+                    )
+                  }
+                  className={buttonClassName({ variant: 'secondary' })}
+                >
+                  Reativar usuário
+                </button>
+              ) : (
+                <ConfirmarAcao
+                  acao="Desativar usuário"
+                  titulo={`Desativar ${usuario.nome}?`}
+                  consequencia={consequenciaDeDesativar(usuario.sessoesAbertas.length)}
+                  desabilitado={acao.ocupado}
+                  onConfirmar={() =>
+                    acao.executar(() => desativar.mutateAsync(caminho), 'Usuário desativado.')
+                  }
+                />
+              ))}
           </div>
         )}
       </div>
@@ -423,4 +460,14 @@ function useAcaoNoUsuario(id: string) {
     falhou,
     ocupado,
   };
+}
+
+function consequenciaDeDesativar(sessoes: number) {
+  const queda =
+    sessoes === 0
+      ? ''
+      : sessoes === 1
+        ? ': a sessão aberta é encerrada'
+        : `: as ${sessoes} sessões abertas são encerradas`;
+  return `A pessoa perde o acesso na hora${queda} e não dá para entrar até alguém reativar.`;
 }

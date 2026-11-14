@@ -2,10 +2,12 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { usuariosControllerDesativar } from '../../gen/clients/usuariosControllerDesativar';
 import { usuariosControllerDesbloquear } from '../../gen/clients/usuariosControllerDesbloquear';
 import { usuariosControllerEncerrarSessao } from '../../gen/clients/usuariosControllerEncerrarSessao';
 import { usuariosControllerEncerrarSessoes } from '../../gen/clients/usuariosControllerEncerrarSessoes';
 import { usuariosControllerEnviarLinkSenha } from '../../gen/clients/usuariosControllerEnviarLinkSenha';
+import { usuariosControllerReativar } from '../../gen/clients/usuariosControllerReativar';
 import { usuariosControllerReenviarConvite } from '../../gen/clients/usuariosControllerReenviarConvite';
 import { usuariosControllerTrocarPapel } from '../../gen/clients/usuariosControllerTrocarPapel';
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
@@ -20,6 +22,8 @@ vi.mock('../../gen/clients/usuariosControllerEnviarLinkSenha');
 vi.mock('../../gen/clients/usuariosControllerReenviarConvite');
 vi.mock('../../gen/clients/usuariosControllerEncerrarSessao');
 vi.mock('../../gen/clients/usuariosControllerEncerrarSessoes');
+vi.mock('../../gen/clients/usuariosControllerDesativar');
+vi.mock('../../gen/clients/usuariosControllerReativar');
 
 const trocarPapel = vi.mocked(usuariosControllerTrocarPapel);
 const desbloquear = vi.mocked(usuariosControllerDesbloquear);
@@ -27,6 +31,8 @@ const enviarLink = vi.mocked(usuariosControllerEnviarLinkSenha);
 const reenviarConvite = vi.mocked(usuariosControllerReenviarConvite);
 const encerrarSessao = vi.mocked(usuariosControllerEncerrarSessao);
 const encerrarSessoes = vi.mocked(usuariosControllerEncerrarSessoes);
+const desativar = vi.mocked(usuariosControllerDesativar);
+const reativar = vi.mocked(usuariosControllerReativar);
 
 const TODAS = { editar: true, desbloquear: true, desativar: true, convidar: true };
 
@@ -89,6 +95,8 @@ describe('PainelUsuario', () => {
       reenviarConvite,
       encerrarSessao,
       encerrarSessoes,
+      desativar,
+      reativar,
     ]) {
       mock.mockReset();
       mock.mockReturnValue({ unwrap: async () => undefined } as never);
@@ -286,5 +294,50 @@ describe('PainelUsuario', () => {
       'href',
       '/configuracoes/meu-perfil#seguranca',
     );
+  });
+
+  it('desativar pede confirmação dizendo a consequência', async () => {
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Desativar usuário' }));
+
+    const dialogo = await screen.findByRole('alertdialog', { name: 'Desativar Maria Souza?' });
+    expect(dialogo).toHaveAccessibleDescription(
+      'Ela perde o acesso na hora: a sessão aberta é encerrada e não dá para entrar até alguém reativar.'.replace(
+        'Ela',
+        'A pessoa',
+      ),
+    );
+    expect(desativar).not.toHaveBeenCalled();
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Desativar usuário' }));
+
+    await waitFor(() =>
+      expect(desativar).toHaveBeenCalledWith(expect.objectContaining({ path: { id: 'u-maria' } })),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Usuário desativado.');
+  });
+
+  it('reativa sem pedir confirmação', async () => {
+    montar({ usuario: { ...maria, situacao: 'desativado', sessoesAbertas: [] } });
+
+    expect(screen.queryByRole('button', { name: 'Desativar usuário' })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Reativar usuário' }));
+
+    await waitFor(() => expect(reativar).toHaveBeenCalled());
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Usuário reativado. A pessoa já pode entrar de novo.',
+    );
+  });
+
+  it('ninguém se desativa, e sem usuarios.desativar não há a ação', async () => {
+    montar({ euId: 'u-maria' });
+    expect(await screen.findByRole('complementary', { name: 'Maria Souza' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Desativar usuário' })).not.toBeInTheDocument();
+  });
+
+  it('sem usuarios.desativar não há desativar nem reativar', async () => {
+    montar({ permissoes: { ...TODAS, desativar: false } });
+    await screen.findByRole('complementary', { name: 'Maria Souza' });
+    expect(screen.queryByRole('button', { name: /ativar usuário/ })).not.toBeInTheDocument();
   });
 });
