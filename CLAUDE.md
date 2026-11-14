@@ -107,6 +107,13 @@ pnpm add --save-exact <pacote> --filter @repo/web
 - Nunca edite arquivos gerados (`apps/web/src/routeTree.gen.ts`, `apps/web/src/gen/`, `apps/api/openapi.json`, migrations em `apps/api/drizzle/`).
 - Para APIs de bibliotecas, consulte a documentação atual (MCP do Context7, ou as skills que vêm dentro dos pacotes em `node_modules/<pacote>/skills/`, como as do TanStack). As versões do template são recentes e podem diferir do que você conhece.
 
+## Reconstrução a partir do legado
+
+Enquanto o One estiver em reconstrução:
+
+- **Valide toda regra de negócio no sistema antigo** antes de implementar: `../dashboards-one` (app) e `../rpa-dashboards-one` (robôs). Confira o cálculo, os casos de borda e os números com dados reais; os testes devem cobrir os casos encontrados lá. Se o legado divergir do que foi pedido ou parecer errado, aponte a divergência e pergunte antes de seguir, sem copiar o erro nem "corrigir" por conta própria.
+- **Nada de regra de negócio fixa no código.** No legado, regras como as do robô de distribuição ficavam hardcoded, e qualquer ajuste exigia editar código e fazer deploy. No One, parâmetros e regras que o negócio muda (prioridades, limites, pesos, prazos, exceções por cliente, médico, exame ou especialidade, horários etc.) ficam no banco, editáveis por tela com permissão e auditoria. O código implementa o mecanismo; os valores e as combinações vêm da configuração. Constante no código só para o que é invariante do domínio (ex.: a fórmula da competência). Na dúvida se algo é configurável, pergunte.
+
 ## Ferramentas do Claude Code neste repo
 
 Configuradas em `.claude/settings.json`:
