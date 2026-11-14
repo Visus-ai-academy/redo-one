@@ -18,6 +18,7 @@ import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
+import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
 import { Route as AppConfiguracoesUsuariosRouteImport } from './routes/_app/configuracoes/usuarios'
@@ -68,6 +69,11 @@ const AppConfiguracoesContratadosRoute =
     path: '/configuracoes/contratados',
     getParentRoute: () => AppRoute,
   } as any)
+const AppConfiguracoesDeParasRoute = AppConfiguracoesDeParasRouteImport.update({
+  id: '/configuracoes/de-paras',
+  path: '/configuracoes/de-paras',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesMeuPerfilRoute =
   AppConfiguracoesMeuPerfilRouteImport.update({
     id: '/configuracoes/meu-perfil',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof AppSplatRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
+  '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
+  '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
+  '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/_app/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
+    | '/configuracoes/de-paras'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
+    | '/configuracoes/de-paras'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/contratados'
+    | '/_app/configuracoes/de-paras'
     | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/papeis'
     | '/_app/configuracoes/usuarios'
@@ -242,6 +254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesContratadosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/de-paras': {
+      id: '/_app/configuracoes/de-paras'
+      path: '/configuracoes/de-paras'
+      fullPath: '/configuracoes/de-paras'
+      preLoaderRoute: typeof AppConfiguracoesDeParasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/meu-perfil': {
       id: '/_app/configuracoes/meu-perfil'
       path: '/configuracoes/meu-perfil'
@@ -271,6 +290,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
+  AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
   AppConfiguracoesUsuariosRoute: typeof AppConfiguracoesUsuariosRoute
@@ -282,6 +302,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
+  AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,
   AppConfiguracoesUsuariosRoute: AppConfiguracoesUsuariosRoute,

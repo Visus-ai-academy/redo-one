@@ -1,4 +1,5 @@
 import {
+  ArrowsLeftRight,
   BookOpen,
   Certificate,
   type Icon,
@@ -72,6 +73,14 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: Certificate,
         to: '/configuracoes/contratados',
         permissao: 'catalogo.ver',
+      },
+      {
+        nome: 'De-paras',
+        descricao:
+          'Tradução de prioridade, especialidade, valores de exame e nomes de cliente na importação',
+        icone: ArrowsLeftRight,
+        to: '/configuracoes/de-paras',
+        permissao: 'de-para.ver',
       },
     ],
   },
