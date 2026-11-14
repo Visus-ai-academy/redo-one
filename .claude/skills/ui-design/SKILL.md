@@ -109,7 +109,8 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 - Todo bloco de dados: carregando (skeleton com o formato do conteúdo, não spinner no meio), vazio (diz o que fazer e oferece a ação), erro (o que houve + como tentar de novo), sem permissão.
 
 **Movimento**
-- 150–200ms, ease-out, só `opacity` e `transform`, só para mostrar mudança de estado (abrir, expandir, confirmar). Nada de animação de entrada da página. Respeitar `prefers-reduced-motion`.
+- Leve animação em tudo que abre e fecha por cima da tela (painel lateral, gaveta, modal, lista suspensa, dica): 150–200ms, ease-out, só opacidade e posição/escala (`opacity`, `transform`, `translate`, `scale`), só para mostrar mudança de estado (abrir, expandir, confirmar). Valores por peça na seção "Movimento" do `sistema.md`.
+- Nada de animação de entrada da página nem de conteúdo. Respeitar `prefers-reduced-motion` (`motion-reduce:transition-none`).
 
 ## Anti-padrões (recuse)
 

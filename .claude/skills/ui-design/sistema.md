@@ -59,6 +59,23 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 - Linha de tabela 44px; padding de painel 16px; espaço entre seções 24–32px.
 - Raio: 6px controles, 8px painéis e tabelas, 12px modal.
 
+### Movimento (aprovado em 14/11/2026)
+
+Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde veio e para onde foi. Sempre pelos atributos de estado do Base UI (`data-[starting-style]:` e `data-[ending-style]:`), com `motion-reduce:transition-none` em cada peça.
+
+| Peça | Entrada e saída | Duração |
+| --- | --- | --- |
+| Painel lateral e gaveta do menu (Drawer) | Desliza do lado em que fica (`translateX(100%)` à direita, `-100%` à esquerda); arrastar acompanha o dedo | 200ms, ease-out |
+| Fundo escurecido (Backdrop) | Esmaece (opacidade) | igual à da peça que acompanha |
+| Modal (AlertDialog, Dialog) | Esmaece e cresce de 95% para 100% (`scale`) | 150ms, ease-out |
+| Lista suspensa (Select, Combobox, Menu, Popover) | Esmaece e cresce de 95%, a partir do gatilho (`origin-(--transform-origin)`) | 150ms, ease-out |
+| Dica (Tooltip) | Só esmaece | 150ms, ease-out |
+| Menu lateral recolhendo | Largura | 200ms, ease-out |
+
+- **No Tailwind 4, `scale-*` e `translate-*` são propriedades CSS próprias**, não `transform`: a transição lista o que muda (`transition-[opacity,scale]`). Com `transition-[opacity,transform]` o `scale-95` pula sem animar.
+- O painel lateral sai deslizando antes de avisar a tela (`onFechar` só depois da saída); trocar de linha troca o conteúdo no lugar, sem deslizar de novo.
+- Sem animação de entrada de página, de lista, de linha de tabela ou de número; sem mola, quique ou atraso escalonado.
+
 ## Marca
 
 - Nome: **One**. Wordmark em Orbitron 700 com espaçamento largo, herdado do legado; só no logotipo, nunca em títulos ou textos.
