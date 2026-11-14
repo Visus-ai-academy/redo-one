@@ -10,8 +10,11 @@ import type {
   PapelResumo,
 } from './gestao-papeis.repository';
 
-const totalUsuarios = sql<number>`(select count(*)::int from ${usuarios} where ${usuarios.papelId} = ${papeis.id})`;
-const totalPermissoes = sql<number>`(select count(*)::int from ${papeisPermissoes} where ${papeisPermissoes.papelId} = ${papeis.id})`;
+// Numa consulta de uma tabela só, o Drizzle escreve `papeis.id` como "id", e dentro da subconsulta
+// o Postgres o resolveria na tabela de dentro (contagem sempre 0). Por isso o nome vai explícito.
+const idDoPapel = sql`${papeis}.${sql.identifier(papeis.id.name)}`;
+const totalUsuarios = sql<number>`(select count(*)::int from ${usuarios} where ${usuarios}.${sql.identifier(usuarios.papelId.name)} = ${idDoPapel})`;
+const totalPermissoes = sql<number>`(select count(*)::int from ${papeisPermissoes} where ${papeisPermissoes}.${sql.identifier(papeisPermissoes.papelId.name)} = ${idDoPapel})`;
 
 @Injectable()
 export class DrizzleGestaoPapeisRepository implements GestaoPapeisRepository {
