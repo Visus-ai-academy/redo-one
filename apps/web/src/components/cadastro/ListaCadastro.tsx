@@ -8,6 +8,7 @@ import { buttonClassName } from '../button/button-class';
 import type { DataTableFeatures } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Paginacao } from '../paginacao/Paginacao';
+import { RESERVA_DO_PAINEL } from '../painel/reserva';
 
 const ESPERA_DA_BUSCA_MS = 300;
 
@@ -96,8 +97,8 @@ export function ListaCadastro<T extends RowData>({
     <div
       className={cn(
         'flex flex-col gap-5',
-        // O painel é um drawer de 400px à direita: reserva a faixa dele (menos o padding da página).
-        painel && 'lg:pr-[392px]',
+        // O painel é um drawer de 400px à direita: a lista abre espaço junto com o deslize dele.
+        RESERVA_DO_PAINEL,
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">

@@ -1,6 +1,6 @@
 import { Drawer } from '@base-ui/react/drawer';
 import { X } from '@phosphor-icons/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { buttonClassName } from '../button/button-class';
 
@@ -14,11 +14,16 @@ type PainelLateralProps = {
   children: ReactNode;
 };
 
+// Painéis montados agora. Trocar de linha remonta o painel (outra `key`) com o anterior ainda na
+// tela: aí o novo aparece no lugar, sem deslizar de novo.
+let montados = 0;
+
 /**
  * Painel ao lado de uma lista (detalhe, convite, edição), sobre o Drawer do Base UI. Não modal:
  * a lista continua à vista e clicável (abrir outra linha troca o painel), e clicar fora não fecha.
  * Fecha pelo X, pelo Esc ou arrastando para a direita. No computador ocupa 400px à direita (a
- * `ListaCadastro` reserva o espaço); abaixo disso, a tela inteira.
+ * `ListaCadastro` reserva o espaço); abaixo disso, a tela inteira. Entra e sai deslizando; quem usa
+ * só fica sabendo do fechamento (`onFechar`) depois que ele saiu.
  */
 export function PainelLateral({
   titulo,
@@ -27,11 +32,28 @@ export function PainelLateral({
   onFechar,
   children,
 }: PainelLateralProps) {
+  // Monta fechado e abre em seguida: o Base UI só anima a entrada quando `open` muda.
+  const [aberto, setAberto] = useState(() => montados > 0);
+  const fechando = useRef(false);
+
+  useEffect(() => {
+    montados += 1;
+    setAberto(true);
+    return () => {
+      montados -= 1;
+    };
+  }, []);
+
   return (
     <Drawer.Root
-      open
-      onOpenChange={(aberto) => {
-        if (!aberto) onFechar();
+      open={aberto}
+      onOpenChange={(abrir) => {
+        if (abrir) return;
+        fechando.current = true;
+        setAberto(false);
+      }}
+      onOpenChangeComplete={(abriu) => {
+        if (!abriu && fechando.current) onFechar();
       }}
       modal={false}
       disablePointerDismissal
@@ -39,7 +61,10 @@ export function PainelLateral({
     >
       <Drawer.Portal>
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
-          <Drawer.Popup className="bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none lg:w-[400px]">
+          <Drawer.Popup
+            data-painel-lateral
+            className="bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none lg:w-[400px]"
+          >
             <div className="flex flex-none items-center gap-3 border-b p-4">
               {inicio}
               <span className="flex min-w-0 flex-1 flex-col">

@@ -60,6 +60,7 @@ describe('PainelContratado', () => {
     );
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Consolida o repasse em' }));
+    await screen.findByRole('listbox');
     expect(screen.queryByRole('option', { name: '001 TELEIMAGEM' })).not.toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));

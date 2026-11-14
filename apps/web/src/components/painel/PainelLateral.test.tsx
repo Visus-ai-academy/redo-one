@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Select } from '../select/Select';
 import { PainelLateral } from './PainelLateral';
 
 function montar() {
@@ -29,15 +30,48 @@ describe('PainelLateral', () => {
     expect(screen.getByRole('textbox', { name: 'Nome' })).toBeInTheDocument();
   });
 
-  it('fecha pelo botão e pelo Esc', async () => {
+  it('fecha pelo botão', async () => {
     const { onFechar } = montar();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Fechar painel' }));
-    expect(onFechar).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(screen.getByRole('textbox', { name: 'Nome' }));
+    await waitFor(() => expect(onFechar).toHaveBeenCalledTimes(1));
+  });
+
+  it('fecha pelo Esc', async () => {
+    const { onFechar } = montar();
+
+    await userEvent.click(await screen.findByRole('textbox', { name: 'Nome' }));
     await userEvent.keyboard('{Escape}');
-    expect(onFechar).toHaveBeenCalledTimes(2);
+
+    await waitFor(() => expect(onFechar).toHaveBeenCalledTimes(1));
+  });
+
+  it('entra deslizando quando abre', async () => {
+    montar();
+
+    const painel = screen.getByRole('dialog', { name: 'Ana Reis' });
+    expect(painel).toHaveAttribute('data-starting-style');
+    await waitFor(() => expect(painel).not.toHaveAttribute('data-starting-style'));
+  });
+
+  it('trocando de linha, o painel novo aparece no lugar, sem deslizar de novo', async () => {
+    const { rerender } = render(
+      <PainelLateral key="a" titulo="Ana Reis" onFechar={vi.fn()}>
+        conteúdo
+      </PainelLateral>,
+    );
+    await screen.findByRole('dialog', { name: 'Ana Reis' });
+
+    rerender(
+      <PainelLateral key="b" titulo="Bruno Lima" onFechar={vi.fn()}>
+        conteúdo
+      </PainelLateral>,
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Bruno Lima' })).not.toHaveAttribute(
+      'data-starting-style',
+    );
   });
 
   it('não bloqueia a lista: clicar fora não fecha e a lista responde', async () => {
@@ -48,5 +82,30 @@ describe('PainelLateral', () => {
 
     expect(naLista).toHaveBeenCalled();
     expect(onFechar).not.toHaveBeenCalled();
+  });
+
+  it('o Esc numa lista de opções aberta dentro do painel fecha só a lista', async () => {
+    const onFechar = vi.fn();
+    render(
+      <PainelLateral titulo="Ana Reis" onFechar={onFechar}>
+        <Select
+          aria-label="Nível"
+          value=""
+          onValueChange={vi.fn()}
+          opcoes={[
+            { valor: '', rotulo: 'Nenhum' },
+            { valor: 'a', rotulo: 'Sênior' },
+          ]}
+        />
+      </PainelLateral>,
+    );
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Nível' }));
+    await screen.findByRole('option', { name: 'Sênior' });
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    expect(onFechar).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Ana Reis' })).toBeInTheDocument();
   });
 });
