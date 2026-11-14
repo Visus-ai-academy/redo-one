@@ -13,6 +13,7 @@ import {
   PapelDoSistemaError,
   PapelEmUsoError,
   PapelNaoEncontradoError,
+  PapelSemPermissaoError,
   PermissaoInexistenteError,
   PermissaoNaoConcedivelError,
 } from './papeis.errors';
@@ -135,6 +136,15 @@ describe('PapeisService', () => {
       ).rejects.toThrow(NomeDePapelEmUsoError);
     });
 
+    it('recusa papel sem nenhuma permissão (como no legado: ao menos uma tela)', async () => {
+      await expect(
+        service.criar(admin, { nome: 'Vazio', descricao: null, permissoes: [] }),
+      ).rejects.toThrow(PapelSemPermissaoError);
+      await expect(
+        service.atualizar(admin, 'p-fin', { nome: 'Financeiro', descricao: null, permissoes: [] }),
+      ).rejects.toThrow('Conceda acesso a ao menos uma tela.');
+    });
+
     it('recusa permissão que não existe no catálogo', async () => {
       await expect(
         service.criar(admin, { nome: 'Novo', descricao: null, permissoes: ['usuarios.tudo'] }),
@@ -208,7 +218,11 @@ describe('PapeisService', () => {
 
     it('permite manter o próprio nome, mas não usar o de outro papel', async () => {
       await expect(
-        service.atualizar(admin, 'p-fin', { nome: 'FINANCEIRO', descricao: null, permissoes: [] }),
+        service.atualizar(admin, 'p-fin', {
+          nome: 'FINANCEIRO',
+          descricao: null,
+          permissoes: ['faturamento.ver'],
+        }),
       ).resolves.toBeDefined();
       await expect(
         service.atualizar(admin, 'p-fin', {
@@ -229,7 +243,11 @@ describe('PapeisService', () => {
     });
 
     it('exclui papel sem usuários e registra na auditoria', async () => {
-      const id = await service.criar(admin, { nome: 'Vazio', descricao: null, permissoes: [] });
+      const id = await service.criar(admin, {
+        nome: 'Sem uso',
+        descricao: null,
+        permissoes: ['faturamento.ver'],
+      });
 
       await service.excluir(admin, id);
 

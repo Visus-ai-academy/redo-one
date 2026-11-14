@@ -54,3 +54,12 @@ export class PapelEmUsoError extends ErroDeDominio {
     );
   }
 }
+
+/** Papel sem nenhuma permissão não abre tela alguma (o legado também recusava). */
+export class PapelSemPermissaoError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor() {
+    super('Conceda acesso a ao menos uma tela.');
+  }
+}

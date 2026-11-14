@@ -17,6 +17,7 @@ import {
   PapelDoSistemaError,
   PapelEmUsoError,
   PapelNaoEncontradoError,
+  PapelSemPermissaoError,
   PermissaoInexistenteError,
   PermissaoNaoConcedivelError,
 } from './papeis.errors';
@@ -86,6 +87,8 @@ export class PapeisService {
     const nome = dados.nome.trim();
     const mesmoNome = await this.papeis.buscarPorNome(nome);
     if (mesmoNome && mesmoNome.id !== idAtual) throw new NomeDePapelEmUsoError(nome);
+
+    if (dados.permissoes.length === 0) throw new PapelSemPermissaoError();
 
     const inexistentes = dados.permissoes.filter((chave) => !existePermissao(chave));
     if (inexistentes.length) throw new PermissaoInexistenteError(inexistentes);
