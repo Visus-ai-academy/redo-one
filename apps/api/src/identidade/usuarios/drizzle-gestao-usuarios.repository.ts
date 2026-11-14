@@ -5,7 +5,7 @@ import type { Email } from '../../comum/email/envio-email';
 import { adicionarJob } from '../../comum/jobs/adicionar-job';
 import { TAREFA_ENVIAR_EMAIL } from '../../comum/jobs/tarefa-enviar-email';
 import { DATABASE, type Database } from '../../database/database';
-import { papeis, sessoes, tokensSenha, usuarios } from '../../database/schema';
+import { medicos, papeis, sessoes, tokensSenha, usuarios } from '../../database/schema';
 import type { NovoTokenSenha } from '../senha/tokens-senha.repository';
 import type {
   FiltroUsuarios,
@@ -57,6 +57,7 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
     }
     if (filtro.papelId) condicoes.push(eq(usuarios.papelId, filtro.papelId));
     if (filtro.situacao) condicoes.push(sql`(${situacao(filtro.agora)}) = ${filtro.situacao}`);
+    if (filtro.medicoId) condicoes.push(eq(usuarios.medicoId, filtro.medicoId));
     const onde = and(...condicoes);
 
     const [itens, [totalLinha]] = await Promise.all([
@@ -154,5 +155,36 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
       .update(usuarios)
       .set({ tentativasFalhas: 0, bloqueadoAte: null })
       .where(eq(usuarios.id, id));
+  }
+
+  async buscarMedico(medicoId: string) {
+    const [medico] = await this.db
+      .select({ id: medicos.id, nome: medicos.nome })
+      .from(medicos)
+      .where(eq(medicos.id, medicoId))
+      .limit(1);
+    return medico ?? null;
+  }
+
+  async usuarioDoMedico(medicoId: string) {
+    const [usuario] = await this.db
+      .select({ id: usuarios.id, nome: usuarios.nome })
+      .from(usuarios)
+      .where(eq(usuarios.medicoId, medicoId))
+      .limit(1);
+    return usuario ?? null;
+  }
+
+  async medicoDoUsuario(usuarioId: string) {
+    const [usuario] = await this.db
+      .select({ medicoId: usuarios.medicoId })
+      .from(usuarios)
+      .where(eq(usuarios.id, usuarioId))
+      .limit(1);
+    return usuario?.medicoId ?? null;
+  }
+
+  async vincularMedico(usuarioId: string, medicoId: string | null) {
+    await this.db.update(usuarios).set({ medicoId }).where(eq(usuarios.id, usuarioId));
   }
 }

@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -31,6 +32,7 @@ import {
   TrocarPapelDto,
   UsuarioCriadoDto,
   UsuarioDetalheDto,
+  VincularMedicoDto,
 } from './dto/usuario.dto';
 import { UsuariosService } from './usuarios.service';
 
@@ -49,6 +51,7 @@ export class UsuariosController {
       busca: query.busca,
       papelId: query.papelId,
       situacao: query.situacao,
+      medicoId: query.medicoId,
       pagina: query.pagina,
       porPagina: query.porPagina,
     });
@@ -77,7 +80,7 @@ export class UsuariosController {
   @Post()
   @Permissao('usuarios.convidar')
   @ApiCreatedResponse({ type: UsuarioCriadoDto, description: 'Conta criada e convite enviado.' })
-  @ApiConflictResponse({ description: 'E-mail ou CPF já cadastrados.' })
+  @ApiConflictResponse({ description: 'E-mail ou CPF já cadastrados, ou médico já com acesso.' })
   @ApiForbiddenResponse({ description: 'Papel com permissões que quem convida não tem.' })
   async convidar(
     @PrincipalAtual() ator: PrincipalUsuario,
@@ -105,6 +108,20 @@ export class UsuariosController {
     @Body() corpo: TrocarPapelDto,
   ): Promise<void> {
     return this.usuarios.trocarPapel(ator, id, corpo.papelId);
+  }
+
+  @Put(':id/medico')
+  @Permissao('usuarios.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Médico ligado ou desligado; as sessões foram encerradas.' })
+  @ApiNotFoundResponse({ description: 'Usuário ou médico não encontrado.' })
+  @ApiConflictResponse({ description: 'O médico já tem acesso por outra conta.' })
+  vincularMedico(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Id() id: string,
+    @Body() corpo: VincularMedicoDto,
+  ): Promise<void> {
+    return this.usuarios.vincularMedico(ator, id, corpo.medicoId ?? null);
   }
 
   @Post(':id/desbloquear')

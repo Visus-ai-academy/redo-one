@@ -29,6 +29,8 @@ import {
   CpfEmUsoError,
   CpfInvalidoError,
   EmailEmUsoError,
+  MedicoJaTemAcessoError,
+  MedicoNaoEncontradoError,
   PapelNaoAtribuivelError,
   SessaoNaoEncontradaError,
   UsuarioNaoEncontradoError,
@@ -40,6 +42,8 @@ export interface ConviteUsuario {
   /** Com ou sem pontuação; opcional (permite entrar pelo CPF). */
   cpf: string | null;
   papelId: string;
+  /** Liga a conta ao médico (portal); só um usuário por médico. */
+  medicoId?: string | null;
 }
 
 @Injectable()
@@ -74,6 +78,8 @@ export class UsuariosService {
     if (await this.usuarios.existeEmail(email)) throw new EmailEmUsoError();
     if (cpf && (await this.usuarios.existeCpf(cpf))) throw new CpfEmUsoError();
     const papel = await this.papelAtribuivel(ator, dados.papelId);
+    const medicoId = dados.medicoId ?? null;
+    if (medicoId) await this.garantirMedicoLivre(medicoId, null);
 
     const convite = this.senha.prepararConvite({
       nome,
@@ -82,11 +88,16 @@ export class UsuariosService {
       convidadoPor: { id: ator.usuarioId, nome: ator.nome },
     });
     const id = await this.usuarios.convidar(
-      { nome, email, cpf, papelId: papel.id },
+      { nome, email, cpf, papelId: papel.id, medicoId },
       convite.token,
       () => convite.email,
     );
-    await this.auditar(ator, id, 'convidado', undefined, { nome, email, papelId: papel.id });
+    await this.auditar(ator, id, 'convidado', undefined, {
+      nome,
+      email,
+      papelId: papel.id,
+      ...(medicoId ? { medicoId } : {}),
+    });
     return id;
   }
 
@@ -111,6 +122,24 @@ export class UsuariosService {
     await this.usuarios.trocarPapel(id, papel.id);
     await this.sessoes.encerrarDoUsuario(id, this.clock.now());
     await this.auditar(ator, id, 'papel_trocado', { papelId: usuario.papel.id }, { papelId });
+  }
+
+  /**
+   * Liga a conta ao médico (ou desliga, com `null`). Muda o que a pessoa enxerga no portal, então
+   * as sessões dela são encerradas, como na troca de papel.
+   */
+  async vincularMedico(ator: PrincipalUsuario, id: string, medicoId: string | null): Promise<void> {
+    await this.obter(id);
+    const atual = await this.usuarios.medicoDoUsuario(id);
+    if (atual === medicoId) return;
+    if (medicoId) await this.garantirMedicoLivre(medicoId, id);
+    await this.usuarios.vincularMedico(id, medicoId);
+    await this.sessoes.encerrarDoUsuario(id, this.clock.now());
+    if (medicoId) {
+      await this.auditar(ator, id, 'medico_vinculado', { medicoId: atual }, { medicoId });
+    } else {
+      await this.auditar(ator, id, 'medico_desvinculado', { medicoId: atual });
+    }
   }
 
   async desbloquear(ator: PrincipalUsuario, id: string): Promise<void> {
@@ -171,6 +200,12 @@ export class UsuariosService {
     return detalhes
       .filter((papel): papel is PapelDetalhe => papel !== null)
       .map((papel) => ({ id: papel.id, nome: papel.nome, atribuivel: podeAtribuir(ator, papel) }));
+  }
+
+  private async garantirMedicoLivre(medicoId: string, usuarioId: string | null) {
+    if (!(await this.usuarios.buscarMedico(medicoId))) throw new MedicoNaoEncontradoError();
+    const dono = await this.usuarios.usuarioDoMedico(medicoId);
+    if (dono && dono.id !== usuarioId) throw new MedicoJaTemAcessoError(dono.nome);
   }
 
   private async papelAtribuivel(ator: PrincipalUsuario, papelId: string): Promise<PapelDetalhe> {

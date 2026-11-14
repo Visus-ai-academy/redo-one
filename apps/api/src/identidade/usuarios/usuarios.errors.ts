@@ -72,3 +72,20 @@ export class SessaoNaoEncontradaError extends ErroDeDominio {
     super('Sessão não encontrada para este usuário.');
   }
 }
+
+export class MedicoNaoEncontradoError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+
+  constructor() {
+    super('Médico não encontrado.');
+  }
+}
+
+/** Um médico, uma conta: o portal mostra os dados de um médico só para quem é ele. */
+export class MedicoJaTemAcessoError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+
+  constructor(nomeDaConta: string) {
+    super(`Este médico já tem acesso pela conta de ${nomeDaConta}.`);
+  }
+}

@@ -19,6 +19,8 @@ import {
   CpfEmUsoError,
   CpfInvalidoError,
   EmailEmUsoError,
+  MedicoJaTemAcessoError,
+  MedicoNaoEncontradoError,
   PapelNaoAtribuivelError,
   SessaoNaoEncontradaError,
 } from './usuarios.errors';
@@ -56,6 +58,7 @@ describe('UsuariosService', () => {
   let auditoria: InMemoryAuditoria;
   let relogio: FixedClock;
   let service: UsuariosService;
+  let gestao: InMemoryGestaoUsuariosRepository;
 
   const pessoa = (id: string, nome: string, papelId: string, extra = {}) => ({
     id,
@@ -113,15 +116,10 @@ describe('UsuariosService', () => {
       relogio,
       'https://one.app',
     );
-    service = new UsuariosService(
-      new InMemoryGestaoUsuariosRepository(usuarios, papeis, sessoes, tokens),
-      papeis,
-      sessoes,
-      tokens,
-      senha,
-      auditoria,
-      relogio,
-    );
+    gestao = new InMemoryGestaoUsuariosRepository(usuarios, papeis, sessoes, tokens);
+    gestao.medicos.set('m-augusto', 'Augusto Lima');
+    gestao.medicos.set('m-carla', 'Carla Souza');
+    service = new UsuariosService(gestao, papeis, sessoes, tokens, senha, auditoria, relogio);
   });
 
   const abrirSessao = (usuarioId: string, tokenHash: string) =>
@@ -336,5 +334,83 @@ describe('UsuariosService', () => {
     const pagina2 = await service.listar({ pagina: 2, porPagina: 3 });
     expect(pagina2.total).toBe(4);
     expect(pagina2.itens.map((u) => u.nome)).toEqual(['Paula']);
+  });
+  describe('médico do portal', () => {
+    const convite = {
+      nome: 'Augusto Lima',
+      email: 'augusto@clinica.com',
+      cpf: null,
+      papelId: 'p-fin',
+    };
+
+    it('convida já ligado ao médico e registra o médico na auditoria', async () => {
+      const id = await service.convidar(admin, { ...convite, medicoId: 'm-augusto' });
+
+      expect(gestao.medicoDoUsuarioMap.get(id)).toBe('m-augusto');
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        acao: 'convidado',
+        depois: { medicoId: 'm-augusto' },
+      });
+    });
+
+    it('recusa médico inexistente e médico que já tem acesso', async () => {
+      await expect(
+        service.convidar(admin, { ...convite, medicoId: 'm-nao-existe' }),
+      ).rejects.toThrow(MedicoNaoEncontradoError);
+
+      await service.vincularMedico(admin, 'u-joao', 'm-augusto');
+      await expect(service.convidar(admin, { ...convite, medicoId: 'm-augusto' })).rejects.toThrow(
+        MedicoJaTemAcessoError,
+      );
+      await expect(service.convidar(admin, { ...convite, medicoId: 'm-augusto' })).rejects.toThrow(
+        'Este médico já tem acesso pela conta de João.',
+      );
+    });
+
+    it('liga uma conta existente, encerra as sessões dela e audita', async () => {
+      await abrirSessao('u-joao', 'a');
+
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+
+      expect(gestao.medicoDoUsuarioMap.get('u-joao')).toBe('m-carla');
+      expect(sessoes.porId('s-1').encerradaEm).toEqual(AGORA);
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        entidadeId: 'u-joao',
+        acao: 'medico_vinculado',
+        antes: { medicoId: null },
+        depois: { medicoId: 'm-carla' },
+      });
+    });
+
+    it('desliga e audita; ligar o mesmo médico de novo não muda nada', async () => {
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+      const eventos = auditoria.eventos.length;
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+      expect(auditoria.eventos).toHaveLength(eventos);
+
+      await service.vincularMedico(admin, 'u-joao', null);
+
+      expect(gestao.medicoDoUsuarioMap.has('u-joao')).toBe(false);
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        acao: 'medico_desvinculado',
+        antes: { medicoId: 'm-carla' },
+      });
+    });
+
+    it('não liga um médico que já está em outra conta', async () => {
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+
+      await expect(service.vincularMedico(admin, 'u-paula', 'm-carla')).rejects.toThrow(
+        MedicoJaTemAcessoError,
+      );
+    });
+
+    it('lista a conta de um médico', async () => {
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+
+      const { itens } = await service.listar({ medicoId: 'm-carla', pagina: 1, porPagina: 10 });
+
+      expect(itens.map((u) => u.id)).toEqual(['u-joao']);
+    });
   });
 });

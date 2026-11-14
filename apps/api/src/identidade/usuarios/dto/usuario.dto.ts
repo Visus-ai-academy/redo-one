@@ -37,6 +37,11 @@ export class ListarUsuariosDto {
   @IsIn(SITUACOES)
   situacao?: SituacaoUsuario;
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Só a conta ligada a este médico.' })
+  @IsOptional()
+  @IsUUID()
+  medicoId?: string;
+
   @ApiPropertyOptional({ type: 'integer', default: 1, minimum: 1 })
   @Type(() => Number)
   @IsInt()
@@ -73,6 +78,23 @@ export class ConviteUsuarioDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   papelId!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Médico desta conta (portal); um usuário por médico.',
+  })
+  @IsOptional()
+  @IsUUID()
+  medicoId?: string | null;
+}
+
+export class VincularMedicoDto {
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Nulo desliga.' })
+  @IsOptional()
+  @IsUUID()
+  medicoId!: string | null;
 }
 
 export class TrocarPapelDto {

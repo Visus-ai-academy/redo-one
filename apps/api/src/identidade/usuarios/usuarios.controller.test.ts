@@ -28,6 +28,18 @@ describe('UsuariosController', () => {
     expect(exigidas('desbloquear')).toEqual(['usuarios.desbloquear']);
     expect(exigidas('desativar')).toEqual(['usuarios.desativar']);
     expect(exigidas('reativar')).toEqual(['usuarios.desativar']);
+    expect(exigidas('vincularMedico')).toEqual(['usuarios.editar']);
+  });
+
+  it('liga e desliga o médico da conta em nome de quem está logado', async () => {
+    const service = { vincularMedico: vi.fn(async () => undefined) };
+    const controller = new UsuariosController(service as unknown as UsuariosService);
+
+    await controller.vincularMedico(admin, 'u-1', { medicoId: 'm-1' });
+    await controller.vincularMedico(admin, 'u-1', { medicoId: null });
+
+    expect(service.vincularMedico).toHaveBeenNthCalledWith(1, admin, 'u-1', 'm-1');
+    expect(service.vincularMedico).toHaveBeenNthCalledWith(2, admin, 'u-1', null);
   });
 
   it('lista devolvendo a página pedida e o total', async () => {
@@ -42,6 +54,7 @@ describe('UsuariosController', () => {
       busca: undefined,
       papelId: undefined,
       situacao: 'bloqueado',
+      medicoId: undefined,
       pagina: 2,
       porPagina: 25,
     });

@@ -11,6 +11,8 @@ export interface FiltroUsuarios {
   busca?: string;
   papelId?: string;
   situacao?: SituacaoUsuario;
+  /** Só a conta ligada a este médico. */
+  medicoId?: string;
   pagina: number;
   porPagina: number;
   /** Referência para saber quem está bloqueado agora. */
@@ -48,6 +50,8 @@ export interface NovoUsuario {
   email: string;
   cpf: string | null;
   papelId: string;
+  /** Médico desta conta (portal). */
+  medicoId: string | null;
 }
 
 export interface GestaoUsuariosRepository {
@@ -64,4 +68,10 @@ export interface GestaoUsuariosRepository {
   trocarPapel(id: string, papelId: string): Promise<void>;
   definirAtivo(id: string, ativo: boolean): Promise<void>;
   desbloquear(id: string): Promise<void>;
+  /** O médico do cadastro (contexto `medicos`), para ligar à conta. */
+  buscarMedico(medicoId: string): Promise<{ id: string; nome: string } | null>;
+  /** Conta já ligada ao médico, se houver. */
+  usuarioDoMedico(medicoId: string): Promise<{ id: string; nome: string } | null>;
+  medicoDoUsuario(usuarioId: string): Promise<string | null>;
+  vincularMedico(usuarioId: string, medicoId: string | null): Promise<void>;
 }

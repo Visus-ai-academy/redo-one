@@ -47,7 +47,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table chaves_robo, tokens_senha, tentativas_login, sessoes, usuarios, papeis_permissoes, papeis cascade`,
+      sql`truncate table chaves_robo, tokens_senha, tentativas_login, sessoes, usuarios, papeis_permissoes, papeis, medicos cascade`,
     );
     papelId = primeira(
       await db.insert(schema.papeis).values({ nome: 'Financeiro' }).returning(),
@@ -261,7 +261,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     const agora = new Date('2026-11-13T12:00:00Z');
 
     const id = await repo.convidar(
-      { nome: 'Ana Lima', email: 'ana@empresa.com.br', cpf: null, papelId },
+      { nome: 'Ana Lima', email: 'ana@empresa.com.br', cpf: null, papelId, medicoId: null },
       {
         tipo: 'convite',
         tokenHash: 'convite-ana',
@@ -295,6 +295,34 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
       cpfFinal: '01',
       papel: { id: papelId, nome: 'Financeiro' },
     });
+  });
+
+  it('gestão de usuários: liga a conta ao médico, acha pelos dois lados e filtra', async () => {
+    const repo = new DrizzleGestaoUsuariosRepository(db);
+    const agora = new Date('2026-11-13T12:00:00Z');
+    const [medico] = await db
+      .insert(schema.medicos)
+      .values({ nome: 'Augusto Lima', chaveNormalizada: 'augusto lima' })
+      .returning();
+    const medicoId = medico?.id ?? '';
+
+    await expect(repo.buscarMedico(medicoId)).resolves.toEqual({
+      id: medicoId,
+      nome: 'Augusto Lima',
+    });
+    await expect(repo.usuarioDoMedico(medicoId)).resolves.toBeNull();
+
+    await repo.vincularMedico(usuarioId, medicoId);
+    await expect(repo.medicoDoUsuario(usuarioId)).resolves.toBe(medicoId);
+    await expect(repo.usuarioDoMedico(medicoId)).resolves.toEqual({
+      id: usuarioId,
+      nome: 'Maria Souza',
+    });
+    const daConta = await repo.listar({ medicoId, pagina: 1, porPagina: 25, agora });
+    expect(daConta.itens.map((u) => u.id)).toEqual([usuarioId]);
+
+    await repo.vincularMedico(usuarioId, null);
+    await expect(repo.medicoDoUsuario(usuarioId)).resolves.toBeNull();
   });
 
   it('chaves de robô: cria, acha pelo hash, registra uso e revoga', async () => {

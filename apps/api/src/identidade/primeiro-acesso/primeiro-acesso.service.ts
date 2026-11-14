@@ -42,7 +42,7 @@ export class PrimeiroAcessoService {
       convidadoPor: null,
     });
     await this.usuarios.convidar(
-      { nome, email, cpf: null, papelId: administradorId },
+      { nome, email, cpf: null, papelId: administradorId, medicoId: null },
       convite.token,
       () => convite.email,
     );

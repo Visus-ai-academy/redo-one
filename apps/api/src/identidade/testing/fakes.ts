@@ -301,6 +301,11 @@ export class InMemoryTokensSenhaRepository implements TokensSenhaRepository {
 }
 
 export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepository {
+  /** Médicos do cadastro (id → nome). */
+  readonly medicos = new Map<string, string>();
+  /** Conta → médico ligado. */
+  readonly medicoDoUsuarioMap = new Map<string, string>();
+
   constructor(
     private readonly usuarios: InMemoryUsuariosRepository,
     private readonly papeis: InMemoryGestaoPapeisRepository,
@@ -316,7 +321,8 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
         (u) =>
           (!busca || u.nome.toLowerCase().includes(busca) || u.email.includes(busca)) &&
           (!filtro.papelId || u.papel.id === filtro.papelId) &&
-          (!filtro.situacao || u.situacao === filtro.situacao),
+          (!filtro.situacao || u.situacao === filtro.situacao) &&
+          (!filtro.medicoId || this.medicoDoUsuarioMap.get(u.id) === filtro.medicoId),
       )
       .sort((a, b) => a.nome.localeCompare(b.nome));
     const inicio = (filtro.pagina - 1) * filtro.porPagina;
@@ -357,9 +363,11 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
     email: (usuarioId: string) => Email,
   ) {
     const id = `u-${this.usuarios.usuarios.length + 1}`;
+    const { medicoId, ...dados } = novo;
+    if (medicoId) this.medicoDoUsuarioMap.set(id, medicoId);
     this.usuarios.usuarios.push({
       id,
-      ...novo,
+      ...dados,
       senhaHash: null,
       ativo: true,
       tentativasFalhas: 0,
@@ -379,6 +387,25 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
 
   async desbloquear(id: string) {
     Object.assign(this.usuarios.porId(id), { tentativasFalhas: 0, bloqueadoAte: null });
+  }
+
+  async buscarMedico(medicoId: string) {
+    const nome = this.medicos.get(medicoId);
+    return nome ? { id: medicoId, nome } : null;
+  }
+
+  async usuarioDoMedico(medicoId: string) {
+    const entrada = [...this.medicoDoUsuarioMap].find(([, m]) => m === medicoId);
+    return entrada ? { id: entrada[0], nome: this.usuarios.porId(entrada[0]).nome } : null;
+  }
+
+  async medicoDoUsuario(usuarioId: string) {
+    return this.medicoDoUsuarioMap.get(usuarioId) ?? null;
+  }
+
+  async vincularMedico(usuarioId: string, medicoId: string | null) {
+    if (medicoId) this.medicoDoUsuarioMap.set(usuarioId, medicoId);
+    else this.medicoDoUsuarioMap.delete(usuarioId);
   }
 
   private resumo(u: UsuarioLogin, agora: Date): UsuarioResumo {
