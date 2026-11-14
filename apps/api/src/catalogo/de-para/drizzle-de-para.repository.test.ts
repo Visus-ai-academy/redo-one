@@ -1,0 +1,110 @@
+import { resolve } from 'node:path';
+import { sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import type { Database } from '../../database/database';
+import * as schema from '../../database/schema';
+import { ReferenciaInexistenteError } from '../comum/catalogo.errors';
+import {
+  DrizzleDeParaRepository,
+  TABELA_DE_PARA_ESPECIALIDADE,
+  TABELA_DE_PARA_PRIORIDADE,
+  TABELA_DE_PARA_VALOR,
+  TABELA_SUFIXO,
+} from './drizzle-de-para.repository';
+
+const url = process.env.TEST_DATABASE_URL;
+
+describe.skipIf(!url)('DrizzleDeParaRepository', () => {
+  let pool: Pool;
+  let db: Database;
+
+  beforeAll(async () => {
+    pool = new Pool({ connectionString: url });
+    db = drizzle({ client: pool, schema });
+    await migrate(db, { migrationsFolder: resolve(__dirname, '../../../drizzle') });
+  });
+
+  beforeEach(async () => {
+    await db.execute(
+      sql`truncate table prioridades, especialidades, exames, sufixos_nome_cliente cascade`,
+    );
+  });
+
+  afterAll(async () => {
+    await pool.end();
+  });
+
+  it('prioridade: lista com o nome do destino e acha a mesma origem', async () => {
+    const [p] = await db.insert(schema.prioridades).values({ nome: 'ROTINA' }).returning();
+    const repo = new DrizzleDeParaRepository(db, TABELA_DE_PARA_PRIORIDADE);
+    const id = await repo.criar({ origem: 'Eletivo', prioridadeId: p?.id ?? '', ativo: true });
+
+    expect((await repo.listar({ busca: 'elet', pagina: 1, porPagina: 10 })).itens).toEqual([
+      { id, origem: 'Eletivo', prioridadeId: p?.id, ativo: true, destinoNome: 'ROTINA' },
+    ]);
+    expect(await repo.buscarIgual({ origem: 'Eletivo', prioridadeId: 'x', ativo: true })).toEqual({
+      id,
+    });
+    await expect(
+      repo.criar({
+        origem: 'X',
+        prioridadeId: '00000000-0000-4000-8000-000000000000',
+        ativo: true,
+      }),
+    ).rejects.toThrow(ReferenciaInexistenteError);
+  });
+
+  it('especialidade: filtra por tipo; inválida fica sem destino', async () => {
+    const [e] = await db.insert(schema.especialidades).values({ nome: 'MAMA' }).returning();
+    const repo = new DrizzleDeParaRepository(db, TABELA_DE_PARA_ESPECIALIDADE);
+    const base = { ativo: true, observacoes: null };
+    await repo.criar({
+      ...base,
+      tipo: 'normalizacao',
+      origem: 'MAMO',
+      especialidadeId: e?.id ?? null,
+    });
+    await repo.criar({ ...base, tipo: 'invalida', origem: 'RX', especialidadeId: null });
+
+    const invalidas = await repo.listar({ tipo: 'invalida', pagina: 1, porPagina: 10 });
+    expect(invalidas.itens).toEqual([expect.objectContaining({ origem: 'RX', destinoNome: null })]);
+    expect(
+      await repo.buscarIgual({ ...base, tipo: 'invalida', origem: 'MAMO', especialidadeId: null }),
+    ).toBeNull();
+  });
+
+  it('valores: grava a chave normalizada e acha grafias equivalentes', async () => {
+    const repo = new DrizzleDeParaRepository(db, TABELA_DE_PARA_VALOR);
+    const id = await repo.criar({
+      estudoDescricao: 'RM CRÂNIO',
+      valores: 2.5,
+      exameId: null,
+      ativo: true,
+    });
+
+    expect(await repo.buscar(id)).toMatchObject({ valores: 2.5, destinoNome: null });
+    expect(
+      await repo.buscarIgual({
+        estudoDescricao: 'rm-cranio',
+        valores: 1,
+        exameId: null,
+        ativo: true,
+      }),
+    ).toEqual({ id });
+  });
+
+  it('sufixo: acha sem diferenciar maiúsculas', async () => {
+    const repo = new DrizzleDeParaRepository(db, TABELA_SUFIXO);
+    const id = await repo.criar({ sufixo: '_RMX', ativo: true, observacoes: null });
+
+    expect(await repo.buscarIgual({ sufixo: '_rmx', ativo: true, observacoes: null })).toEqual({
+      id,
+    });
+    await repo.excluir(id);
+    expect(await repo.buscar(id)).toBeNull();
+  });
+});

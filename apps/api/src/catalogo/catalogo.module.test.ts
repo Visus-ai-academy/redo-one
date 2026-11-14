@@ -7,6 +7,9 @@ import { DatabaseModule } from '../database/database.module';
 import { CatalogoModule } from './catalogo.module';
 import { ClientesController } from './clientes/clientes.controller';
 import { ContratadosController } from './contratados/contratados.controller';
+import { DeParaEspecialidadesController } from './de-para/de-para.controller';
+import { DeParaService } from './de-para/de-para.service';
+import { DE_PARA_ESPECIALIDADE, SUFIXOS_CLIENTE } from './de-para/tokens';
 import { ExamesController } from './exames/exames.controller';
 import { ModalidadesController, PrioridadesController } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
@@ -38,6 +41,12 @@ describe('CatalogoModule', () => {
     expect(modulo.get(ClientesController)).toBeInstanceOf(ClientesController);
 
     expect(modulo.get(ExamesController)).toBeInstanceOf(ExamesController);
+
+    expect(modulo.get(DE_PARA_ESPECIALIDADE)).toBeInstanceOf(DeParaService);
+    expect(modulo.get(SUFIXOS_CLIENTE)).toBeInstanceOf(DeParaService);
+    expect(modulo.get(DeParaEspecialidadesController)).toBeInstanceOf(
+      DeParaEspecialidadesController,
+    );
 
     await modulo.close();
   });

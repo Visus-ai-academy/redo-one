@@ -14,6 +14,34 @@ import { ContratadosController } from './contratados/contratados.controller';
 import { CONTRATADOS_REPOSITORY } from './contratados/contratados.repository';
 import { ContratadosService } from './contratados/contratados.service';
 import { DrizzleContratadosRepository } from './contratados/drizzle-contratados.repository';
+import {
+  DeParaEspecialidadesController,
+  DeParaPrioridadesController,
+  DeParaValoresExameController,
+  SufixosClienteController,
+} from './de-para/de-para.controller';
+import { DeParaService } from './de-para/de-para.service';
+import {
+  criarRepoDePara,
+  TABELA_DE_PARA_ESPECIALIDADE,
+  TABELA_DE_PARA_PRIORIDADE,
+  TABELA_DE_PARA_VALOR,
+  TABELA_SUFIXO,
+  type TabelaDePara,
+} from './de-para/drizzle-de-para.repository';
+import {
+  REGRA_ESPECIALIDADE,
+  REGRA_PRIORIDADE,
+  REGRA_SUFIXO,
+  REGRA_VALOR_EXAME,
+  type RegraDePara,
+} from './de-para/regras';
+import {
+  DE_PARA_ESPECIALIDADE,
+  DE_PARA_PRIORIDADE,
+  DE_PARA_VALOR,
+  SUFIXOS_CLIENTE,
+} from './de-para/tokens';
 import { DrizzleExamesRepository } from './exames/drizzle-exames.repository';
 import { ExamesController } from './exames/exames.controller';
 import { EXAMES_REPOSITORY } from './exames/exames.repository';
@@ -45,6 +73,20 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
   };
 }
 
+/** Um `DeParaService` para a tabela: a regra (validação e chave) e onde ela fica. */
+function dePara<D extends object>(
+  token: symbol,
+  regra: (db: Database) => RegraDePara<D>,
+  tabela: TabelaDePara<D>,
+): Provider {
+  return {
+    provide: token,
+    inject: [DATABASE, AUDITORIA, CLOCK],
+    useFactory: (db: Database, auditoria: Auditoria, clock: Clock) =>
+      new DeParaService(regra(db), criarRepoDePara(db, tabela), auditoria, clock),
+  };
+}
+
 /** Contexto `catalogo`: listas do domínio, exames, de-paras, contratados e clientes. */
 @Module({
   controllers: [
@@ -56,6 +98,10 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
     ContratadosController,
     ClientesController,
     ExamesController,
+    DeParaPrioridadesController,
+    DeParaEspecialidadesController,
+    DeParaValoresExameController,
+    SufixosClienteController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -99,6 +145,14 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
           clock,
         ),
     },
+    dePara(DE_PARA_PRIORIDADE, () => REGRA_PRIORIDADE, TABELA_DE_PARA_PRIORIDADE),
+    dePara(
+      DE_PARA_ESPECIALIDADE,
+      (db) => REGRA_ESPECIALIDADE(new DrizzleListaRepository(db, LISTAS.especialidades)),
+      TABELA_DE_PARA_ESPECIALIDADE,
+    ),
+    dePara(DE_PARA_VALOR, () => REGRA_VALOR_EXAME, TABELA_DE_PARA_VALOR),
+    dePara(SUFIXOS_CLIENTE, () => REGRA_SUFIXO, TABELA_SUFIXO),
   ],
 })
 export class CatalogoModule {}

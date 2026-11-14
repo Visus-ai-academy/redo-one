@@ -14,6 +14,7 @@ import type {
   ContratadosRepository,
   DadosContratado,
 } from '../contratados/contratados.repository';
+import type { DeParaRepository, FiltroDePara, ItemDePara } from '../de-para/de-para.repository';
 import type {
   DadosExame,
   DadosRegraQuebra,
@@ -323,5 +324,48 @@ export class InMemoryExamesRepository implements ExamesRepository {
   async excluirRegraQuebra(regraId: string) {
     const i = this.regras.findIndex((r) => r.id === regraId);
     if (i >= 0) this.regras.splice(i, 1);
+  }
+}
+
+export class InMemoryDeParaRepository<D extends object> implements DeParaRepository<D> {
+  readonly itens = new Map<string, ItemDePara<D>>();
+
+  constructor(private readonly chave: (dados: D) => string) {}
+
+  async listar(filtro: FiltroDePara) {
+    const filtrados = [...this.itens.values()].filter((i) => {
+      const campos = i as Record<string, unknown>;
+      if (filtro.ativo !== undefined && campos.ativo !== filtro.ativo) return false;
+      if (filtro.tipo && campos.tipo !== filtro.tipo) return false;
+      return (
+        !filtro.busca ||
+        Object.values(campos).some((v) => typeof v === 'string' && contem(v, filtro.busca ?? ''))
+      );
+    });
+    return paginar(filtrados, filtro);
+  }
+
+  async buscar(id: string) {
+    return this.itens.get(id) ?? null;
+  }
+
+  async buscarIgual(dados: D) {
+    const chave = this.chave(dados);
+    const igual = [...this.itens.values()].find((i) => this.chave(i) === chave);
+    return igual ? { id: igual.id } : null;
+  }
+
+  async criar(dados: D) {
+    const id = randomUUID();
+    this.itens.set(id, { ...dados, id });
+    return id;
+  }
+
+  async atualizar(id: string, dados: D) {
+    this.itens.set(id, { ...dados, id });
+  }
+
+  async excluir(id: string) {
+    this.itens.delete(id);
   }
 }
