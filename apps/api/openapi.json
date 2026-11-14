@@ -1011,6 +1011,2533 @@
           "identidade"
         ]
       }
+    },
+    "/catalogo/modalidades": {
+      "get": {
+        "operationId": "ModalidadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaListaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "ModalidadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/modalidades/{id}": {
+      "get": {
+        "operationId": "ModalidadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemListaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "ModalidadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "ModalidadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por outro cadastro: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/especialidades": {
+      "get": {
+        "operationId": "EspecialidadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaListaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "EspecialidadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/especialidades/{id}": {
+      "get": {
+        "operationId": "EspecialidadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemListaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "EspecialidadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "EspecialidadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por outro cadastro: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/categorias-exame": {
+      "get": {
+        "operationId": "CategoriasExameController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaListaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "CategoriasExameController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/categorias-exame/{id}": {
+      "get": {
+        "operationId": "CategoriasExameController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemListaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "CategoriasExameController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "CategoriasExameController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por outro cadastro: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/prioridades": {
+      "get": {
+        "operationId": "PrioridadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaPrioridadesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "PrioridadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrioridadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/prioridades/{id}": {
+      "get": {
+        "operationId": "PrioridadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrioridadeItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "PrioridadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrioridadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "PrioridadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por outro cadastro: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/subespecialidades": {
+      "get": {
+        "operationId": "SubespecialidadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaSubespecialidadesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "SubespecialidadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubespecialidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sem especialidade ou especialidade inexistente."
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/subespecialidades/{id}": {
+      "get": {
+        "operationId": "SubespecialidadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubespecialidadeItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "SubespecialidadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubespecialidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Sem especialidade ou especialidade inexistente."
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "SubespecialidadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por exames: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/contratados": {
+      "get": {
+        "operationId": "ContratadosController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaContratadosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "ContratadosController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContratadoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Documento inválido ou consolidação de repasse inválida."
+          },
+          "409": {
+            "description": "Razão social ou CNPJ já usados."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/contratados/{id}": {
+      "get": {
+        "operationId": "ContratadosController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContratadoItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "ContratadosController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContratadoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Documento inválido ou consolidação de repasse inválida."
+          },
+          "409": {
+            "description": "Razão social ou CNPJ já usados."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "ContratadosController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por clientes ou contratados: desative."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/clientes": {
+      "get": {
+        "operationId": "ClientesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "contratadoId",
+            "required": false,
+            "in": "query",
+            "description": "Só os clientes desta empresa que fatura.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaClientesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "ClientesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClienteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sem empresa que fatura ou documento inválido."
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/clientes/{id}": {
+      "get": {
+        "operationId": "ClientesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "ClientesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClienteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Sem empresa que fatura ou documento inválido."
+          },
+          "409": {
+            "description": "Nome já usado."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "ClientesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso por outro cadastro: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/clientes/{id}/aliases": {
+      "post": {
+        "operationId": "ClientesController_criarAlias",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Grafia vazia ou igual à do próprio cliente."
+          },
+          "409": {
+            "description": "Apelido ligado a outro cliente ou nome de outro cliente."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/clientes/{id}/aliases/{aliasId}": {
+      "delete": {
+        "operationId": "ClientesController_excluirAlias",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "aliasId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/exames": {
+      "get": {
+        "operationId": "ExamesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "modalidadeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "especialidadeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaExamesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "ExamesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExameDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cadastro ligado inexistente."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/exames/{id}": {
+      "get": {
+        "operationId": "ExamesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExameDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "ExamesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExameDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Cadastro ligado inexistente."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "ExamesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Destino de regra de quebra: desative em vez de excluir."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/exames/{id}/regras-quebra": {
+      "post": {
+        "operationId": "ExamesController_criarRegraQuebra",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegraQuebraDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Destino inexistente ou o próprio exame."
+          },
+          "409": {
+            "description": "O exame já se quebra nesse destino."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/exames/{id}/regras-quebra/{regraId}": {
+      "put": {
+        "operationId": "ExamesController_atualizarRegraQuebra",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "regraId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegraQuebraDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Destino inexistente ou o próprio exame."
+          },
+          "409": {
+            "description": "O exame já se quebra nesse destino."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "ExamesController_excluirRegraQuebra",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "regraId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/prioridades": {
+      "get": {
+        "operationId": "DeParaPrioridadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeParaPrioridadeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "DeParaPrioridadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaPrioridadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/prioridades/{id}": {
+      "get": {
+        "operationId": "DeParaPrioridadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeParaPrioridadeItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "DeParaPrioridadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaPrioridadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "DeParaPrioridadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/especialidades": {
+      "get": {
+        "operationId": "DeParaEspecialidadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "normalizacao",
+                "invalida",
+                "regiao_anatomica"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeParaEspecialidadeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "DeParaEspecialidadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaEspecialidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/especialidades/{id}": {
+      "get": {
+        "operationId": "DeParaEspecialidadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeParaEspecialidadeItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "DeParaEspecialidadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaEspecialidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "DeParaEspecialidadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/valores-exame": {
+      "get": {
+        "operationId": "DeParaValoresExameController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeParaValorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "DeParaValoresExameController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaValorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/valores-exame/{id}": {
+      "get": {
+        "operationId": "DeParaValoresExameController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeParaValorItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "DeParaValoresExameController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaValorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "DeParaValoresExameController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/sufixos-cliente": {
+      "get": {
+        "operationId": "SufixosClienteController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaSufixosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "SufixosClienteController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SufixoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/sufixos-cliente/{id}": {
+      "get": {
+        "operationId": "SufixosClienteController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SufixoItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "SufixosClienteController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SufixoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "SufixosClienteController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/opcoes": {
+      "get": {
+        "operationId": "OpcoesController_listas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpcoesCatalogoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/opcoes/exames": {
+      "get": {
+        "operationId": "OpcoesController_exames",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou o código.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Até 20 exames ativos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpcaoExameDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
     }
   },
   "info": {
@@ -1954,6 +4481,1540 @@
         "required": [
           "id",
           "chave"
+        ]
+      },
+      "ItemListaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          },
+          "ordem": {
+            "type": "number"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "cor",
+          "ordem",
+          "ativo"
+        ]
+      },
+      "PaginaListaDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemListaDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "ListaDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "NEURO",
+            "maxLength": 60,
+            "description": "Na modalidade, o código (MR, CT)."
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#1F7A4D"
+          },
+          "ordem": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nome",
+          "ordem",
+          "ativo"
+        ]
+      },
+      "IdCriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PrioridadeItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          },
+          "ordem": {
+            "type": "number"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "urgente": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "cor",
+          "ordem",
+          "ativo",
+          "urgente"
+        ]
+      },
+      "PaginaPrioridadesDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrioridadeItemDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "PrioridadeDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "NEURO",
+            "maxLength": 60,
+            "description": "Na modalidade, o código (MR, CT)."
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#1F7A4D"
+          },
+          "ordem": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "urgente": {
+            "type": "boolean",
+            "description": "Urgente para a distribuição."
+          }
+        },
+        "required": [
+          "nome",
+          "ordem",
+          "ativo",
+          "urgente"
+        ]
+      },
+      "SubespecialidadeItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          },
+          "ordem": {
+            "type": "number"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "especialidadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "cor",
+          "ordem",
+          "ativo",
+          "especialidadeIds"
+        ]
+      },
+      "PaginaSubespecialidadesDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubespecialidadeItemDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "SubespecialidadeDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "NEURO",
+            "maxLength": 60,
+            "description": "Na modalidade, o código (MR, CT)."
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#1F7A4D"
+          },
+          "ordem": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "especialidadeIds": {
+            "description": "Ao menos uma.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "nome",
+          "ordem",
+          "ativo",
+          "especialidadeIds"
+        ]
+      },
+      "ContratadoItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "razaoSocial": {
+            "type": "string"
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só dígitos."
+          },
+          "endereco": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só dígitos."
+          },
+          "contratadoRepasseId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "contratadoRepasseNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "razaoSocial",
+          "cnpj",
+          "endereco",
+          "cidade",
+          "uf",
+          "cep",
+          "contratadoRepasseId",
+          "contratadoRepasseNome",
+          "ativo"
+        ]
+      },
+      "PaginaContratadosDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContratadoItemDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "ContratadoDto": {
+        "type": "object",
+        "properties": {
+          "razaoSocial": {
+            "type": "string",
+            "example": "001 TELEIMAGEM LTDA",
+            "maxLength": 150
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true,
+            "example": "12.345.678/0001-90"
+          },
+          "endereco": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true,
+            "example": "SP"
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true,
+            "example": "01310-100"
+          },
+          "contratadoRepasseId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "razaoSocial",
+          "ativo"
+        ]
+      },
+      "ContratadoResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "razaoSocial": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "razaoSocial"
+        ]
+      },
+      "ClienteResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só dígitos."
+          },
+          "contratado": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContratadoResumoDto"
+              }
+            ]
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "ocultoDashboards": {
+            "type": "boolean"
+          },
+          "totalAliases": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "nomeFantasia",
+          "cnpj",
+          "contratado",
+          "ativo",
+          "ocultoDashboards",
+          "totalAliases"
+        ]
+      },
+      "PaginaClientesDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClienteResumoDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "AliasItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "exato",
+              "prefixo",
+              "normalizado"
+            ]
+          },
+          "padrao": {
+            "type": "string"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "padrao",
+          "observacoes"
+        ]
+      },
+      "ClienteDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true
+          },
+          "razaoSocial": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipoPessoa": {
+            "type": "string",
+            "enum": [
+              "PJ",
+              "PF"
+            ],
+            "nullable": true
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
+          },
+          "contratado": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContratadoResumoDto"
+              }
+            ]
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "ocultoDashboards": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AliasItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "nomeFantasia",
+          "razaoSocial",
+          "tipoPessoa",
+          "cnpj",
+          "cpf",
+          "contratado",
+          "ativo",
+          "ocultoDashboards",
+          "observacoes",
+          "aliases"
+        ]
+      },
+      "ClienteDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "CEDIDIAG",
+            "maxLength": 150,
+            "description": "Nome igual ao da MobileMed."
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 150
+          },
+          "razaoSocial": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "tipoPessoa": {
+            "type": "string",
+            "enum": [
+              "PJ",
+              "PF"
+            ],
+            "nullable": true
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true,
+            "example": "12.345.678/0001-90"
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true,
+            "example": "000.000.000-00"
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Empresa que fatura."
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "ocultoDashboards": {
+            "type": "boolean",
+            "description": "Fora dos painéis; continua no faturamento."
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "nome",
+          "contratadoId",
+          "ativo",
+          "ocultoDashboards"
+        ]
+      },
+      "AliasDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "exato",
+              "prefixo",
+              "normalizado"
+            ]
+          },
+          "padrao": {
+            "type": "string",
+            "example": "PRN TELE_",
+            "maxLength": 150
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "tipo",
+          "padrao"
+        ]
+      },
+      "ReferenciaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "ExameResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "modalidade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaDto"
+              }
+            ]
+          },
+          "especialidade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaDto"
+              }
+            ]
+          },
+          "subespecialidade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaDto"
+              }
+            ]
+          },
+          "categoria": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaDto"
+              }
+            ]
+          },
+          "prioridade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaDto"
+              }
+            ]
+          },
+          "exigeRevisaoManual": {
+            "type": "boolean"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "codigo",
+          "modalidade",
+          "especialidade",
+          "subespecialidade",
+          "categoria",
+          "prioridade",
+          "exigeRevisaoManual",
+          "ativo"
+        ]
+      },
+      "PaginaExamesDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExameResumoDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "RegraQuebraItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "exameDestino": {
+            "$ref": "#/components/schemas/ReferenciaDto"
+          },
+          "categoria": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaDto"
+              }
+            ]
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "exameDestino",
+          "categoria",
+          "ativo"
+        ]
+      },
+      "ExameDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "subespecialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "permiteQuebra": {
+            "type": "boolean"
+          },
+          "exigeRevisaoManual": {
+            "type": "boolean"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "regrasQuebra": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegraQuebraItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "codigo",
+          "descricao",
+          "modalidadeId",
+          "especialidadeId",
+          "subespecialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "permiteQuebra",
+          "exigeRevisaoManual",
+          "ativo",
+          "regrasQuebra"
+        ]
+      },
+      "ExameDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "TC CRANIO",
+            "maxLength": 200
+          },
+          "codigo": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "subespecialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "permiteQuebra": {
+            "type": "boolean"
+          },
+          "exigeRevisaoManual": {
+            "type": "boolean",
+            "description": "O robô separa para revisão em vez de distribuir."
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nome",
+          "permiteQuebra",
+          "exigeRevisaoManual",
+          "ativo"
+        ]
+      },
+      "RegraQuebraDto": {
+        "type": "object",
+        "properties": {
+          "exameDestinoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "exameDestinoId",
+          "ativo"
+        ]
+      },
+      "DeParaPrioridadeItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origem": {
+            "type": "string"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "destinoNome": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "origem",
+          "prioridadeId",
+          "ativo",
+          "destinoNome"
+        ]
+      },
+      "PaginaDeParaPrioridadeDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeParaPrioridadeItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "porPagina",
+          "itens"
+        ]
+      },
+      "DeParaPrioridadeDto": {
+        "type": "object",
+        "properties": {
+          "origem": {
+            "type": "string",
+            "example": "ELETIVO",
+            "maxLength": 150,
+            "description": "Como chega da MobileMed."
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "origem",
+          "prioridadeId",
+          "ativo"
+        ]
+      },
+      "DeParaEspecialidadeItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "normalizacao",
+              "invalida",
+              "regiao_anatomica"
+            ]
+          },
+          "origem": {
+            "type": "string"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinoNome": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "origem",
+          "especialidadeId",
+          "ativo",
+          "observacoes",
+          "destinoNome"
+        ]
+      },
+      "PaginaDeParaEspecialidadeDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeParaEspecialidadeItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "porPagina",
+          "itens"
+        ]
+      },
+      "DeParaEspecialidadeDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "normalizacao",
+              "invalida",
+              "regiao_anatomica"
+            ]
+          },
+          "origem": {
+            "type": "string",
+            "example": "MAMO",
+            "maxLength": 150,
+            "description": "Como chega da MobileMed."
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Vazio só em inválida."
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "tipo",
+          "origem",
+          "ativo"
+        ]
+      },
+      "DeParaValorItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estudoDescricao": {
+            "type": "string"
+          },
+          "valores": {
+            "type": "number"
+          },
+          "exameId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "destinoNome": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "estudoDescricao",
+          "valores",
+          "exameId",
+          "ativo",
+          "destinoNome"
+        ]
+      },
+      "PaginaDeParaValorDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeParaValorItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "porPagina",
+          "itens"
+        ]
+      },
+      "DeParaValorDto": {
+        "type": "object",
+        "properties": {
+          "estudoDescricao": {
+            "type": "string",
+            "example": "RM CRANIO",
+            "maxLength": 150,
+            "description": "Como chega da MobileMed."
+          },
+          "valores": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 999,
+            "description": "Unidades que o laudo vale."
+          },
+          "exameId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "estudoDescricao",
+          "valores",
+          "ativo"
+        ]
+      },
+      "SufixoItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sufixo": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "sufixo",
+          "ativo",
+          "observacoes"
+        ]
+      },
+      "PaginaSufixosDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SufixoItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "porPagina",
+          "itens"
+        ]
+      },
+      "SufixoDto": {
+        "type": "object",
+        "properties": {
+          "sufixo": {
+            "type": "string",
+            "example": "_PLANTÃO",
+            "maxLength": 50
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "sufixo",
+          "ativo"
+        ]
+      },
+      "OpcaoComCorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor"
+        ]
+      },
+      "OpcaoSubespecialidadeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          },
+          "especialidadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor",
+          "especialidadeIds"
+        ]
+      },
+      "OpcaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "OpcoesCatalogoDto": {
+        "type": "object",
+        "properties": {
+          "modalidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoComCorDto"
+            }
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoComCorDto"
+            }
+          },
+          "subespecialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoSubespecialidadeDto"
+            }
+          },
+          "categoriasExame": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoComCorDto"
+            }
+          },
+          "prioridades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoComCorDto"
+            }
+          },
+          "contratados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoDto"
+            }
+          }
+        },
+        "required": [
+          "modalidades",
+          "especialidades",
+          "subespecialidades",
+          "categoriasExame",
+          "prioridades",
+          "contratados"
+        ]
+      },
+      "OpcaoExameDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "modalidade": {
+            "type": "string",
+            "nullable": true,
+            "description": "Código da modalidade."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "modalidade"
         ]
       }
     }
