@@ -26,6 +26,7 @@ export default defineConfig({
       '@base-ui/react/tabs',
       '@base-ui/react/toggle',
       '@base-ui/react/tooltip',
+      '@base-ui/react/progress',
       '@phosphor-icons/react',
       '@tanstack/react-form',
       '@tanstack/react-table',

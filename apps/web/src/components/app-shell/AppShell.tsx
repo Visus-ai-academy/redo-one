@@ -1,12 +1,13 @@
 import { Drawer } from '@base-ui/react/drawer';
 import { List } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { useSessaoControllerSair } from '../../gen/hooks/useSessaoControllerSair';
 import type { SessaoAtualDto } from '../../gen/types/SessaoAtualDto';
 import { cn } from '../../lib/cn';
+import { BarraDeCarregamento } from './BarraDeCarregamento';
 import { MenuLateral } from './MenuLateral';
 import { GRUPOS_MENU, type GrupoMenu, type ItemMenu, RODAPE_MENU } from './menu';
 
@@ -31,6 +32,8 @@ export function AppShell({
   const sair = useSessaoControllerSair();
   const [recolhido, setRecolhido] = useState(false);
   const [gavetaAberta, setGavetaAberta] = useState(false);
+  // Troca de tela, filtro ou página: o loader da rota está buscando os dados novos.
+  const carregando = useRouterState({ select: (estado) => estado.status === 'pending' });
 
   // Preferência por navegador; lida depois da hidratação para o SSR e o cliente renderizarem igual.
   useEffect(() => {
@@ -75,6 +78,7 @@ export function AppShell({
 
   return (
     <div className="bg-background flex min-h-dvh flex-col md:flex-row">
+      <BarraDeCarregamento ativa={carregando} />
       <header className="bg-sidebar sticky top-0 z-10 flex h-14 items-center gap-2 px-2 md:hidden">
         <Drawer.Root open={gavetaAberta} onOpenChange={setGavetaAberta} swipeDirection="left">
           <Drawer.Trigger
