@@ -1,10 +1,9 @@
-import { CaretRight, MagnifyingGlass } from '@phosphor-icons/react';
+import { CaretRight } from '@phosphor-icons/react';
 import { Link } from '@tanstack/react-router';
 import { useId, useState } from 'react';
-
 import { cn } from '../../lib/cn';
 import { filtrarPorPermissao } from '../../lib/permissoes';
-import { controlClassName } from '../form/control-class';
+import { CampoBusca } from '../busca/CampoBusca';
 import { buscarConfiguracoes, GRUPOS_CONFIGURACOES, type GrupoConfiguracoes } from './itens';
 
 type CentralProps = {
@@ -24,24 +23,13 @@ export function CentralConfiguracoes({ acesso, grupos = GRUPOS_CONFIGURACOES }: 
           <h1 className="text-[22px] leading-snug font-semibold">Configurações</h1>
           <p className="text-muted-foreground">Você vê só o que o seu papel permite ajustar.</p>
         </div>
-        <div className="relative flex-[0_1_320px]">
-          <MagnifyingGlass
-            size={16}
-            aria-hidden
-            className="text-subtle-foreground absolute top-2.5 left-2.5"
-          />
-          <label htmlFor="busca-configuracao" className="sr-only">
-            Buscar configuração
-          </label>
-          <input
-            id="busca-configuracao"
-            type="search"
-            value={termo}
-            onChange={(evento) => setTermo(evento.target.value)}
-            placeholder="Buscar configuração"
-            className={controlClassName('app', 'pl-8')}
-          />
-        </div>
+        <CampoBusca
+          rotulo="Buscar configuração"
+          placeholder="Buscar configuração"
+          valor={termo}
+          onMudar={setTermo}
+          className="flex-[0_1_320px]"
+        />
       </div>
 
       {visiveis.length === 0 ? (

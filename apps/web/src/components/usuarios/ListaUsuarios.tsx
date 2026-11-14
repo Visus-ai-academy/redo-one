@@ -1,17 +1,16 @@
 import { Button } from '@base-ui/react/button';
-import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
+import { Plus } from '@phosphor-icons/react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-
 import type { PaginaUsuariosDto } from '../../gen/types/PaginaUsuariosDto';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import type { UsuarioResumoDto } from '../../gen/types/UsuarioResumoDto';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
 import { iniciais } from '../app-shell/iniciais';
+import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
-import { controlClassName } from '../form/control-class';
 import { Paginacao } from '../paginacao/Paginacao';
 import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
@@ -167,24 +166,13 @@ export function ListaUsuarios({
           )}
         >
           <div className="flex flex-none flex-wrap gap-2 border-b p-3">
-            <div className="relative flex-[1_1_220px]">
-              <MagnifyingGlass
-                size={16}
-                aria-hidden
-                className="text-subtle-foreground absolute top-2.5 left-2.5"
-              />
-              <label htmlFor="busca-usuarios" className="sr-only">
-                Buscar usuários
-              </label>
-              <input
-                id="busca-usuarios"
-                type="search"
-                value={termo}
-                onChange={(evento) => setTermo(evento.target.value)}
-                placeholder="Nome, e-mail ou CPF"
-                className={controlClassName('app', 'pl-8')}
-              />
-            </div>
+            <CampoBusca
+              rotulo="Buscar usuários"
+              placeholder="Nome, e-mail ou CPF"
+              valor={termo}
+              onMudar={setTermo}
+              className="flex-[1_1_220px]"
+            />
             <Select
               aria-label="Filtrar por papel"
               value={filtros.papelId ?? ''}

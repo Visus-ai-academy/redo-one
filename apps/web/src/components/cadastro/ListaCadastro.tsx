@@ -1,13 +1,12 @@
 import { Button } from '@base-ui/react/button';
-import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
+import { Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-
 import { cn } from '../../lib/cn';
+import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import type { DataTableFeatures } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
-import { controlClassName } from '../form/control-class';
 import { Paginacao } from '../paginacao/Paginacao';
 
 const ESPERA_DA_BUSCA_MS = 300;
@@ -130,21 +129,13 @@ export function ListaCadastro<T extends RowData>({
           )}
         >
           <div className="flex flex-none flex-wrap gap-2 border-b p-3">
-            <div className="relative flex-[1_1_220px]">
-              <MagnifyingGlass
-                size={16}
-                aria-hidden
-                className="text-subtle-foreground absolute top-2.5 left-2.5"
-              />
-              <input
-                type="search"
-                aria-label={busca.rotulo}
-                value={termo}
-                onChange={(evento) => setTermo(evento.target.value)}
-                placeholder={busca.placeholder}
-                className={controlClassName('app', 'pl-8')}
-              />
-            </div>
+            <CampoBusca
+              rotulo={busca.rotulo}
+              placeholder={busca.placeholder}
+              valor={termo}
+              onMudar={setTermo}
+              className="flex-[1_1_220px]"
+            />
             {filtros}
             {novo && abas && <BotaoNovo {...novo} />}
           </div>

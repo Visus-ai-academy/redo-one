@@ -1,12 +1,10 @@
 import { Switch } from '@base-ui/react/switch';
-import { MagnifyingGlass } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
-
 import type { TelaCatalogoDto } from '../../gen/types/TelaCatalogoDto';
 import { cn } from '../../lib/cn';
+import { CampoBusca } from '../busca/CampoBusca';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
-import { controlClassName } from '../form/control-class';
 import {
   agruparPorArea,
   alternarAcao,
@@ -34,29 +32,17 @@ export function EditorPermissoes({
   somenteLeitura = false,
 }: EditorPermissoesProps) {
   const [termo, setTermo] = useState('');
-  const buscaId = useId();
   const grupos = agruparPorArea(buscarNoCatalogo(catalogo, termo));
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative max-w-[320px]">
-        <MagnifyingGlass
-          size={16}
-          aria-hidden
-          className="text-subtle-foreground absolute top-2.5 left-2.5"
-        />
-        <label htmlFor={buscaId} className="sr-only">
-          Buscar tela ou ação
-        </label>
-        <input
-          id={buscaId}
-          type="search"
-          value={termo}
-          onChange={(evento) => setTermo(evento.target.value)}
-          placeholder="Buscar tela ou ação"
-          className={controlClassName('app', 'pl-8')}
-        />
-      </div>
+      <CampoBusca
+        rotulo="Buscar tela ou ação"
+        placeholder="Buscar tela ou ação"
+        valor={termo}
+        onMudar={setTermo}
+        className="max-w-[320px]"
+      />
 
       {grupos.length === 0 && (
         <p className="text-muted-foreground">Nenhuma tela ou ação com “{termo.trim()}”.</p>
