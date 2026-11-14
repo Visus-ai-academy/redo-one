@@ -1,4 +1,4 @@
-import { type Icon, IdentificationBadge, UserCircle, Users } from '@phosphor-icons/react';
+import { BookOpen, type Icon, IdentificationBadge, UserCircle, Users } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemConfiguracao = {
@@ -46,6 +46,18 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: IdentificationBadge,
         to: '/configuracoes/papeis',
         permissao: 'papeis.ver',
+      },
+    ],
+  },
+  {
+    titulo: 'Catálogo',
+    itens: [
+      {
+        nome: 'Classificação dos exames',
+        descricao: 'Modalidades, especialidades, subespecialidades, categorias e prioridades',
+        icone: BookOpen,
+        to: '/configuracoes/catalogo',
+        permissao: 'catalogo.ver',
       },
     ],
   },

@@ -1,0 +1,262 @@
+import { useState } from 'react';
+import { z } from 'zod';
+
+import { Alerta } from '../alerta/Alerta';
+import { mensagemDaApi } from '../alerta/mensagem-da-api';
+import { buttonClassName } from '../button/button-class';
+import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
+import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { useAppForm } from '../form/form';
+import { PainelLateral } from '../painel/PainelLateral';
+
+/** Campos comuns às listas do catálogo; a prioridade tem `urgente` e a subespecialidade as especialidades. */
+export type DadosItemLista = {
+  nome: string;
+  descricao: string | null;
+  cor: string | null;
+  ordem: number;
+  ativo: boolean;
+  urgente?: boolean;
+  especialidadeIds?: string[];
+};
+
+export type VarianteLista = 'simples' | 'prioridade' | 'subespecialidade';
+
+export type RotulosLista = {
+  /** Em minúsculas: `modalidade`, `categoria`. */
+  singular: string;
+  genero: 'f' | 'm';
+  /** Rótulo do campo nome: `Código` na modalidade. */
+  campoNome: string;
+  exemploNome: string;
+  exemploDescricao: string;
+};
+
+export type PainelItemListaProps = {
+  rotulos: RotulosLista;
+  variante: VarianteLista;
+  /** Sem item, o painel cria um novo. */
+  item?: DadosItemLista & { id: string };
+  /** Opções da subespecialidade. */
+  especialidades?: { id: string; nome: string }[];
+  podeEditar: boolean;
+  onSalvar: (dados: DadosItemLista) => Promise<void>;
+  onExcluir?: () => Promise<void>;
+  onFechar: () => void;
+};
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+function schema(rotulos: RotulosLista, variante: VarianteLista) {
+  return z.object({
+    nome: z.string().trim().min(1, `Informe o ${rotulos.campoNome.toLowerCase()}.`),
+    descricao: z.string(),
+    cor: z
+      .string()
+      .refine(
+        (cor) => cor.trim() === '' || HEX.test(cor.trim()),
+        'Use o formato #RRGGBB, como #1F7A4D.',
+      ),
+    ordem: z.string().regex(/^\d{1,4}$/, 'Informe um número inteiro de 0 a 9999.'),
+    ativo: z.boolean(),
+    urgente: z.boolean(),
+    especialidadeIds:
+      variante === 'subespecialidade'
+        ? z.array(z.string()).min(1, 'Escolha ao menos uma especialidade.')
+        : z.array(z.string()),
+  });
+}
+
+/** Criar, ver e editar um item de uma lista do catálogo, no painel ao lado da lista. */
+export function PainelItemLista({
+  rotulos,
+  variante,
+  item,
+  especialidades = [],
+  podeEditar,
+  onSalvar,
+  onExcluir,
+  onFechar,
+}: PainelItemListaProps) {
+  const [erro, setErro] = useState<string>();
+  const novo = rotulos.genero === 'f' ? 'Nova' : 'Novo';
+  const titulo = item ? item.nome : `${novo} ${rotulos.singular}`;
+
+  const form = useAppForm({
+    defaultValues: {
+      nome: item?.nome ?? '',
+      descricao: item?.descricao ?? '',
+      cor: item?.cor ?? '',
+      ordem: String(item?.ordem ?? 0),
+      ativo: item?.ativo ?? true,
+      urgente: item?.urgente ?? false,
+      especialidadeIds: item?.especialidadeIds ?? [],
+    },
+    validators: { onSubmit: schema(rotulos, variante) },
+    onSubmit: async ({ value }) => {
+      setErro(undefined);
+      try {
+        await onSalvar({
+          nome: value.nome.trim(),
+          descricao: value.descricao.trim() || null,
+          cor: value.cor.trim() || null,
+          ordem: Number(value.ordem),
+          ativo: value.ativo,
+          ...(variante === 'prioridade' && { urgente: value.urgente }),
+          ...(variante === 'subespecialidade' && { especialidadeIds: value.especialidadeIds }),
+        });
+      } catch (falha) {
+        setErro(
+          mensagemDaApi(
+            falha,
+            'Não foi possível salvar agora. Confira sua conexão e tente de novo.',
+          ),
+        );
+      }
+    },
+  });
+
+  if (!podeEditar && item) {
+    return (
+      <PainelLateral titulo={titulo} onFechar={onFechar}>
+        <div className="flex flex-col gap-4 p-4">
+          <CampoSomenteLeitura label={rotulos.campoNome} value={item.nome} />
+          <CampoSomenteLeitura label="Descrição" value={item.descricao ?? '—'} />
+          {variante === 'subespecialidade' && (
+            <CampoSomenteLeitura
+              label="Especialidades"
+              value={especialidades
+                .filter((e) => item.especialidadeIds?.includes(e.id))
+                .map((e) => e.nome)
+                .join(', ')}
+            />
+          )}
+          <CampoSomenteLeitura label="Situação" value={item.ativo ? 'Ativo' : 'Inativo'} />
+        </div>
+      </PainelLateral>
+    );
+  }
+
+  const artigo = rotulos.genero === 'f' ? 'a' : 'o';
+  return (
+    <PainelLateral titulo={titulo} onFechar={onFechar}>
+      <form
+        noValidate
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          void form.handleSubmit();
+        }}
+        className="flex flex-col gap-4 p-4"
+      >
+        {erro && <Alerta tom="erro">{erro}</Alerta>}
+        <form.AppField name="nome">
+          {(field) => (
+            <field.TextField
+              label={rotulos.campoNome}
+              placeholder={rotulos.exemploNome}
+              autoComplete="off"
+              required
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="descricao">
+          {(field) => (
+            <field.TextField
+              label="Descrição"
+              placeholder={rotulos.exemploDescricao}
+              autoComplete="off"
+            />
+          )}
+        </form.AppField>
+        {variante === 'subespecialidade' && (
+          <form.AppField name="especialidadeIds">
+            {(field) => (
+              <field.CheckboxListField
+                label="Especialidades"
+                required
+                description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
+                opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome }))}
+              />
+            )}
+          </form.AppField>
+        )}
+        <div className="flex flex-wrap gap-4">
+          <form.AppField name="cor">
+            {(field) => (
+              <field.TextField
+                label="Cor"
+                placeholder="#1F7A4D"
+                autoComplete="off"
+                description="Cor do selo nas telas."
+                className="flex-[1_1_160px]"
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="ordem">
+            {(field) => (
+              <field.NumberField
+                label="Ordem"
+                placeholder="0"
+                min={0}
+                max={9999}
+                required
+                description="Menor aparece primeiro."
+                className="flex-[1_1_120px]"
+              />
+            )}
+          </form.AppField>
+        </div>
+        {variante === 'prioridade' && (
+          <form.AppField name="urgente">
+            {(field) => (
+              <field.CheckboxField
+                label="Urgente"
+                description="A distribuição trata como urgente."
+              />
+            )}
+          </form.AppField>
+        )}
+        <form.AppField name="ativo">
+          {(field) => (
+            <field.CheckboxField
+              label="Ativo"
+              description={`Inativ${artigo} some das listas de escolha, mas continua nos cadastros que já usam.`}
+            />
+          )}
+        </form.AppField>
+        <form.AppForm>
+          <form.RequiredLegend />
+          <div className="flex flex-wrap items-center gap-2">
+            {item && onExcluir && (
+              <ConfirmarAcao
+                acao={`Excluir ${rotulos.singular}`}
+                titulo={`Excluir ${item.nome}?`}
+                consequencia={`${item.nome} sai do catálogo. Se algum cadastro usa est${artigo} ${rotulos.singular}, a exclusão é recusada: desative em vez de excluir.`}
+                onConfirmar={async () => {
+                  setErro(undefined);
+                  try {
+                    await onExcluir();
+                  } catch (falha) {
+                    setErro(mensagemDaApi(falha, 'Não foi possível excluir agora. Tente de novo.'));
+                  }
+                }}
+              />
+            )}
+            <span className="ml-auto flex gap-2">
+              <button
+                type="button"
+                onClick={onFechar}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Cancelar
+              </button>
+              <form.SubmitButton pendingLabel="Salvando…">
+                {item ? 'Salvar' : `Criar ${rotulos.singular}`}
+              </form.SubmitButton>
+            </span>
+          </div>
+        </form.AppForm>
+      </form>
+    </PainelLateral>
+  );
+}

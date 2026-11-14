@@ -28,6 +28,15 @@ describe('grupo Acesso', () => {
   });
 });
 
+describe('grupo Catálogo', () => {
+  it('tem as listas do catálogo, exigindo catalogo.ver', () => {
+    const catalogo = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Catálogo');
+    expect(catalogo?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
+      ['Classificação dos exames', '/configuracoes/catalogo', 'catalogo.ver'],
+    ]);
+  });
+});
+
 describe('buscarConfiguracoes', () => {
   it('ignora acento e maiúscula e acha pela descrição', () => {
     const achados = buscarConfiguracoes(GRUPOS_CONFIGURACOES, 'SESSÕES');

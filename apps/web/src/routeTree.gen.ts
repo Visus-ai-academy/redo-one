@@ -16,6 +16,7 @@ import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
+import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
 import { Route as AppConfiguracoesUsuariosRouteImport } from './routes/_app/configuracoes/usuarios'
@@ -54,6 +55,12 @@ const AppConfiguracoesIndexRoute = AppConfiguracoesIndexRouteImport.update({
   path: '/configuracoes/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesCatalogoRoute =
+  AppConfiguracoesCatalogoRouteImport.update({
+    id: '/configuracoes/catalogo',
+    path: '/configuracoes/catalogo',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppConfiguracoesMeuPerfilRoute =
   AppConfiguracoesMeuPerfilRouteImport.update({
     id: '/configuracoes/meu-perfil',
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
+  '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
@@ -89,6 +97,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
   '/': typeof AppIndexRoute
+  '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
@@ -102,6 +111,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/_app/$': typeof AppSplatRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/_app/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/$'
+    | '/configuracoes/catalogo'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/$'
     | '/'
+    | '/configuracoes/catalogo'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/_app/$'
     | '/_app/'
+    | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/papeis'
     | '/_app/configuracoes/usuarios'
@@ -202,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/catalogo': {
+      id: '/_app/configuracoes/catalogo'
+      path: '/configuracoes/catalogo'
+      fullPath: '/configuracoes/catalogo'
+      preLoaderRoute: typeof AppConfiguracoesCatalogoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/meu-perfil': {
       id: '/_app/configuracoes/meu-perfil'
       path: '/configuracoes/meu-perfil'
@@ -229,6 +249,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
   AppConfiguracoesUsuariosRoute: typeof AppConfiguracoesUsuariosRoute
@@ -238,6 +259,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
   AppIndexRoute: AppIndexRoute,
+  AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,
   AppConfiguracoesUsuariosRoute: AppConfiguracoesUsuariosRoute,

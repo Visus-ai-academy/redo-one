@@ -79,7 +79,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 - **Configurações** é uma central com submenu por assunto:
   - Sua conta: Meu perfil (dados, senha, sessões e acessos numa tela só; um item por destino, nunca dois itens para a mesma tela).
   - Acesso: Usuários, Papéis, Chaves dos robôs.
-  - Catálogo: Modalidades e especialidades, De-paras, Equipes médicas.
+  - Catálogo: Classificação dos exames (modalidades, especialidades, subespecialidades, categorias e prioridades, em abas), Contratados, De-paras, Equipes médicas.
   - Operação: Robô de distribuição, Escala médica.
   - Financeiro: Tipificação, Impostos, Parâmetros de contrato.
   - Avisos e metas: Notificações, Metas mensais.
@@ -111,7 +111,8 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 | Usuários | `Users` |
 | Papéis | `IdentificationBadge` |
 | Chaves dos robôs | `Key` |
-| Modalidades e especialidades | `BookOpen` |
+| Classificação dos exames | `BookOpen` |
+| Contratados | `Certificate` |
 | De-paras | `ArrowsLeftRight` |
 | Equipes médicas | `UsersThree` |
 | Robô de distribuição | `Robot` |
