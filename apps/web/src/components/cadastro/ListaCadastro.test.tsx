@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { BotaoAbrir, ListaCadastro } from './ListaCadastro';
 
-type Item = { id: string; nome: string };
+type Item = { id: string; nome: string; cnpj?: string };
 const coluna = createDataTableColumnHelper<Item>();
 const onAbrir = vi.fn();
 const colunas = [
@@ -51,12 +51,17 @@ describe('ListaCadastro', () => {
   });
 
   it('com o painel aberto, esconde as colunas secundárias', () => {
-    const colunasDuas = [...colunas, coluna.accessor('id', { id: 'codigo', header: 'Código' })];
+    const colunasDuas = [
+      ...colunas,
+      coluna.accessor('id', { id: 'codigo', header: 'Código' }),
+      // Coluna criada por chave: o helper não dá `id`, só `accessorKey`.
+      coluna.accessor('cnpj', { header: 'CNPJ' }),
+    ];
     render(
       <ListaCadastro
         {...props}
         colunas={colunasDuas}
-        ocultarComPainel={['codigo']}
+        ocultarComPainel={['codigo', 'cnpj']}
         itens={[{ id: 'c-1', nome: 'A' }]}
         total={1}
         painel={<aside>painel</aside>}
@@ -64,6 +69,7 @@ describe('ListaCadastro', () => {
     );
 
     expect(screen.queryByRole('columnheader', { name: 'Código' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'CNPJ' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Nome', hidden: true })).toBeInTheDocument();
   });
 

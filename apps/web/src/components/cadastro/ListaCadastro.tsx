@@ -88,7 +88,7 @@ export function ListaCadastro<T extends RowData>({
 
   const filtrando = Boolean(busca.valor) || temFiltro;
   const colunasVisiveis = useMemo(
-    () => (painel ? colunas.filter((c) => !ocultarComPainel.includes(c.id ?? '')) : colunas),
+    () => (painel ? colunas.filter((c) => !ocultarComPainel.includes(idDaColuna(c))) : colunas),
     [colunas, painel, ocultarComPainel],
   );
 
@@ -186,6 +186,11 @@ export function ListaCadastro<T extends RowData>({
       </div>
     </div>
   );
+}
+
+/** Coluna criada por chave (`accessor('cnpj')`) não tem `id` próprio: vale a chave. */
+function idDaColuna(coluna: { id?: string }) {
+  return coluna.id ?? (coluna as { accessorKey?: string }).accessorKey ?? '';
 }
 
 function BotaoNovo({ rotulo, onClick }: { rotulo: string; onClick: () => void }) {
