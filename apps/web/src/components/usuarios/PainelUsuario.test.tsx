@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { usuariosControllerDesbloquear } from '../../gen/clients/usuariosControllerDesbloquear';
+import { usuariosControllerEncerrarSessao } from '../../gen/clients/usuariosControllerEncerrarSessao';
+import { usuariosControllerEncerrarSessoes } from '../../gen/clients/usuariosControllerEncerrarSessoes';
 import { usuariosControllerEnviarLinkSenha } from '../../gen/clients/usuariosControllerEnviarLinkSenha';
 import { usuariosControllerReenviarConvite } from '../../gen/clients/usuariosControllerReenviarConvite';
 import { usuariosControllerTrocarPapel } from '../../gen/clients/usuariosControllerTrocarPapel';
@@ -16,11 +18,15 @@ vi.mock('../../gen/clients/usuariosControllerTrocarPapel');
 vi.mock('../../gen/clients/usuariosControllerDesbloquear');
 vi.mock('../../gen/clients/usuariosControllerEnviarLinkSenha');
 vi.mock('../../gen/clients/usuariosControllerReenviarConvite');
+vi.mock('../../gen/clients/usuariosControllerEncerrarSessao');
+vi.mock('../../gen/clients/usuariosControllerEncerrarSessoes');
 
 const trocarPapel = vi.mocked(usuariosControllerTrocarPapel);
 const desbloquear = vi.mocked(usuariosControllerDesbloquear);
 const enviarLink = vi.mocked(usuariosControllerEnviarLinkSenha);
 const reenviarConvite = vi.mocked(usuariosControllerReenviarConvite);
+const encerrarSessao = vi.mocked(usuariosControllerEncerrarSessao);
+const encerrarSessoes = vi.mocked(usuariosControllerEncerrarSessoes);
 
 const TODAS = { editar: true, desbloquear: true, desativar: true, convidar: true };
 
@@ -76,7 +82,14 @@ const valor = (painel: HTMLElement, rotulo: string) =>
 
 describe('PainelUsuario', () => {
   beforeEach(() => {
-    for (const mock of [trocarPapel, desbloquear, enviarLink, reenviarConvite]) {
+    for (const mock of [
+      trocarPapel,
+      desbloquear,
+      enviarLink,
+      reenviarConvite,
+      encerrarSessao,
+      encerrarSessoes,
+    ]) {
       mock.mockReset();
       mock.mockReturnValue({ unwrap: async () => undefined } as never);
     }
@@ -229,5 +242,49 @@ describe('PainelUsuario', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Enviar link de nova senha' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível concluir');
+  });
+
+  it('encerra uma sessão da pessoa', async () => {
+    montar();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Encerrar sessão Safari no iPhone' }),
+    );
+
+    await waitFor(() =>
+      expect(encerrarSessao).toHaveBeenCalledWith(
+        expect.objectContaining({ path: { id: 'u-maria', sessaoId: 's-1' } }),
+      ),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Sessão encerrada.');
+  });
+
+  it('encerra todas as sessões da pessoa', async () => {
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Encerrar todas' }));
+
+    await waitFor(() => expect(encerrarSessoes).toHaveBeenCalled());
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Todas as sessões de Maria Souza foram encerradas.',
+    );
+  });
+
+  it('sem usuarios.editar, as sessões são só para ver', async () => {
+    montar({ permissoes: { ...TODAS, editar: false } });
+
+    await screen.findByRole('list', { name: 'Sessões abertas' });
+    expect(screen.queryByRole('button', { name: /Encerrar/ })).not.toBeInTheDocument();
+  });
+
+  it('as próprias sessões se encerram em Meu perfil, não aqui', async () => {
+    montar({ euId: 'u-maria' });
+
+    await screen.findByRole('list', { name: 'Sessões abertas' });
+    expect(screen.queryByRole('button', { name: /Encerrar/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Meu perfil' })).toHaveAttribute(
+      'href',
+      '/configuracoes/meu-perfil#seguranca',
+    );
   });
 });

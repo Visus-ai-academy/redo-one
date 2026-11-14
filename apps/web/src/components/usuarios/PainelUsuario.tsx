@@ -1,7 +1,10 @@
 import { DeviceMobile, Monitor, X } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { type ReactNode, useId, useState } from 'react';
 import { useUsuariosControllerDesbloquear } from '../../gen/hooks/useUsuariosControllerDesbloquear';
+import { useUsuariosControllerEncerrarSessao } from '../../gen/hooks/useUsuariosControllerEncerrarSessao';
+import { useUsuariosControllerEncerrarSessoes } from '../../gen/hooks/useUsuariosControllerEncerrarSessoes';
 import { useUsuariosControllerEnviarLinkSenha } from '../../gen/hooks/useUsuariosControllerEnviarLinkSenha';
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
 import { useUsuariosControllerReenviarConvite } from '../../gen/hooks/useUsuariosControllerReenviarConvite';
@@ -136,7 +139,12 @@ export function PainelUsuario({
           <CampoSomenteLeitura label="Papel" value={usuario.papel.nome} />
         )}
 
-        <SessoesDoUsuario usuario={usuario} agora={referencia} />
+        <SessoesDoUsuario
+          usuario={usuario}
+          agora={referencia}
+          acao={permissoes.editar && usuario.id !== euId ? acao : undefined}
+          proprio={usuario.id === euId}
+        />
 
         {((pendente && permissoes.convidar) || (!pendente && permissoes.editar)) && (
           <div className="flex flex-wrap gap-2 border-t pt-4">
@@ -277,16 +285,47 @@ function TrocarPapel({
   );
 }
 
-function SessoesDoUsuario({ usuario, agora }: { usuario: UsuarioDetalheDto; agora: Date }) {
-  const tituloId = useId();
+function SessoesDoUsuario({
+  usuario,
+  agora,
+  acao,
+  proprio,
+}: {
+  usuario: UsuarioDetalheDto;
+  agora: Date;
+  /** Presente quando quem está logado pode encerrar as sessões (usuarios.editar). */
+  acao?: AcaoNoUsuario;
+  /** As próprias sessões se encerram em Meu perfil, que não derruba a sessão em uso. */
+  proprio?: boolean;
+}) {
+  const encerrarSessao = useUsuariosControllerEncerrarSessao();
+  const encerrarSessoes = useUsuariosControllerEncerrarSessoes();
+
   return (
     <div className="flex flex-col gap-2">
-      <span id={tituloId} className="font-medium">
-        Sessões abertas{' '}
-        <span className="text-subtle-foreground font-normal tabular-nums">
-          {usuario.sessoesAbertas.length}
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-medium">
+          Sessões abertas{' '}
+          <span className="text-subtle-foreground font-normal tabular-nums">
+            {usuario.sessoesAbertas.length}
+          </span>
         </span>
-      </span>
+        {acao && usuario.sessoesAbertas.length > 0 && (
+          <button
+            type="button"
+            disabled={acao.ocupado}
+            onClick={() =>
+              acao.executar(
+                () => encerrarSessoes.mutateAsync({ path: { id: usuario.id } }),
+                `Todas as sessões de ${usuario.nome} foram encerradas.`,
+              )
+            }
+            className={buttonClassName({ variant: 'secondary' })}
+          >
+            Encerrar todas
+          </button>
+        )}
+      </div>
       {usuario.sessoesAbertas.length === 0 ? (
         <p className="text-muted-foreground text-[13px]">Nenhuma sessão aberta.</p>
       ) : (
@@ -302,20 +341,54 @@ function SessoesDoUsuario({ usuario, agora }: { usuario: UsuarioDetalheDto; agor
                 className={cn('flex items-center gap-3 px-3 py-2', indice > 0 && 'border-t')}
               >
                 <Icone size={20} aria-hidden className="text-muted-foreground flex-none" />
-                <span className="flex min-w-0 flex-col">
+                <span className="flex min-w-0 flex-1 flex-col">
                   <span className="font-medium">{aparelho.nome}</span>
                   <span className="text-muted-foreground text-[13px] tabular-nums">
                     {ip ? `${quando}, IP ${ip}` : quando}
                   </span>
                 </span>
+                {acao && (
+                  <button
+                    type="button"
+                    disabled={acao.ocupado}
+                    aria-label={`Encerrar sessão ${aparelho.nome}`}
+                    onClick={() =>
+                      acao.executar(
+                        () =>
+                          encerrarSessao.mutateAsync({
+                            path: { id: usuario.id, sessaoId: sessao.id },
+                          }),
+                        'Sessão encerrada.',
+                      )
+                    }
+                    className={buttonClassName({ variant: 'secondary' })}
+                  >
+                    Encerrar
+                  </button>
+                )}
               </li>
             );
           })}
         </ul>
       )}
+      {proprio && (
+        <p className="text-muted-foreground text-[13px]">
+          Para encerrar as suas sessões, use{' '}
+          <Link
+            to="/configuracoes/meu-perfil"
+            hash="seguranca"
+            className="text-primary hover:text-primary-hover font-medium underline underline-offset-2"
+          >
+            Meu perfil
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }
+
+type AcaoNoUsuario = ReturnType<typeof useAcaoNoUsuario>;
 
 /** Executa uma ação sobre a pessoa e recarrega a lista e o detalhe (chaves diferentes). */
 function useAcaoNoUsuario(id: string) {
