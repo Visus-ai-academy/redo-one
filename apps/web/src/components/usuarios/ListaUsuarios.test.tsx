@@ -41,6 +41,7 @@ const papeis: PapelAtribuivelDto[] = [
 function montar(props: Partial<ListaUsuariosProps> = {}) {
   const onFiltrar = vi.fn();
   const onIrPara = vi.fn();
+  const onAbrir = vi.fn();
   renderComRotas(
     <ListaUsuarios
       pagina={pagina}
@@ -50,10 +51,11 @@ function montar(props: Partial<ListaUsuariosProps> = {}) {
       agora={AGORA}
       onFiltrar={onFiltrar}
       onIrPara={onIrPara}
+      onAbrir={onAbrir}
       {...props}
     />,
   );
-  return { onFiltrar, onIrPara };
+  return { onFiltrar, onIrPara, onAbrir };
 }
 
 describe('ListaUsuarios', () => {
@@ -121,5 +123,31 @@ describe('ListaUsuarios', () => {
         .getAllByRole('columnheader')
         .map((c) => c.textContent),
     ).toEqual(['Nome', 'Papel', 'Situação', 'Último acesso']);
+  });
+
+  it('abre o detalhe pelo nome e marca a linha aberta, com o painel ao lado', async () => {
+    const { onAbrir } = montar({
+      selecionadoId: 'u-maria',
+      painel: <aside aria-label="Painel de teste" />,
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: /Carlos Andrade/ }));
+
+    expect(onAbrir).toHaveBeenCalledWith('u-carlos');
+    const [, carlos, maria] = screen.getAllByRole('row');
+    expect(maria).toHaveAttribute('aria-selected', 'true');
+    expect(carlos).not.toHaveAttribute('aria-selected');
+    expect(screen.getByRole('complementary', { name: 'Painel de teste' })).toBeInTheDocument();
+  });
+
+  it('com o painel aberto, esconde o último acesso (o painel já mostra) para a lista caber', async () => {
+    montar({ selecionadoId: 'u-maria', painel: <aside aria-label="Painel de teste" /> });
+
+    const [cabecalho] = await screen.findAllByRole('row');
+    expect(
+      within(cabecalho as HTMLElement)
+        .getAllByRole('columnheader')
+        .map((c) => c.textContent),
+    ).toEqual(['Nome', 'Papel', 'Situação']);
   });
 });

@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
+import { PainelUsuario, type PainelUsuarioProps } from '../../../components/usuarios/PainelUsuario';
 import { usuariosControllerListarQueryOptions } from '../../../gen/hooks/useUsuariosControllerListar';
+import { usuariosControllerObterQueryOptions } from '../../../gen/hooks/useUsuariosControllerObter';
 import { usuariosControllerPapeisQueryOptions } from '../../../gen/hooks/useUsuariosControllerPapeis';
 import { pode } from '../../../lib/permissoes';
 
@@ -22,9 +24,12 @@ const buscaSchema = z.object({
     .optional()
     .catch(undefined),
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
+  /** Usuário aberto no painel de detalhe. */
+  id: z.uuid().optional().catch(undefined),
 });
 
-const consultaDaLista = (filtros: z.infer<typeof buscaSchema>) => ({
+// O `id` do painel não entra na consulta da lista: abrir ou fechar o painel não a refaz.
+const consultaDaLista = ({ id: _painel, ...filtros }: z.infer<typeof buscaSchema>) => ({
   query: { ...filtros, pagina: filtros.pagina ?? 1, porPagina: POR_PAGINA },
 });
 
@@ -38,6 +43,10 @@ export const Route = createFileRoute('/_app/configuracoes/usuarios')({
         usuariosControllerListarQueryOptions(consultaDaLista(deps)),
       ),
       context.queryClient.ensureQueryData(usuariosControllerPapeisQueryOptions()),
+      deps.id &&
+        context.queryClient.ensureQueryData(
+          usuariosControllerObterQueryOptions({ path: { id: deps.id } }),
+        ),
     ]);
   },
   head: () => ({ meta: [{ title: 'Usuários | One' }] }),
@@ -50,7 +59,7 @@ function PaginaUsuarios() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'usuarios.ver') ? (
-        <Usuarios euId={sessao.usuario.id} />
+        <Usuarios euId={sessao.usuario.id} podeEditar={pode(sessao, 'usuarios.editar')} />
       ) : (
         <SemPermissao tela="Usuários" />
       )}
@@ -58,7 +67,7 @@ function PaginaUsuarios() {
   );
 }
 
-function Usuarios({ euId }: { euId: string }) {
+function Usuarios({ euId, podeEditar }: { euId: string; podeEditar: boolean }) {
   const filtros = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(
@@ -75,6 +84,14 @@ function Usuarios({ euId }: { euId: string }) {
       }),
     [navigate],
   );
+  const abrir = useCallback(
+    (id: string) => void navigate({ search: (atual) => ({ ...atual, id }) }),
+    [navigate],
+  );
+  const fechar = useCallback(
+    () => void navigate({ search: (atual) => ({ ...atual, id: undefined }) }),
+    [navigate],
+  );
   const irPara = useCallback(
     (numero: number) => void navigate({ search: (atual) => ({ ...atual, pagina: numero }) }),
     [navigate],
@@ -88,6 +105,25 @@ function Usuarios({ euId }: { euId: string }) {
       euId={euId}
       onFiltrar={filtrar}
       onIrPara={irPara}
+      onAbrir={abrir}
+      selecionadoId={filtros.id}
+      painel={
+        filtros.id && (
+          <Detalhe
+            id={filtros.id}
+            papeis={papeis}
+            euId={euId}
+            podeEditar={podeEditar}
+            onFechar={fechar}
+          />
+        )
+      }
     />
   );
+}
+
+function Detalhe({ id, ...props }: { id: string } & Omit<PainelUsuarioProps, 'usuario'>) {
+  const { data: usuario } = useSuspenseQuery(usuariosControllerObterQueryOptions({ path: { id } }));
+  // `key`: trocar de pessoa recomeça o painel (papel escolhido, avisos).
+  return <PainelUsuario key={usuario.id} usuario={usuario} {...props} />;
 }
