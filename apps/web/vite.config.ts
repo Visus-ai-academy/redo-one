@@ -10,6 +10,7 @@ export default defineConfig({
   // Pré-empacotar na subida evita isso. Novo componente do Base UI entra nesta lista.
   optimizeDeps: {
     include: [
+      '@base-ui/react/alert-dialog',
       '@base-ui/react/button',
       '@base-ui/react/dialog',
       '@base-ui/react/field',
