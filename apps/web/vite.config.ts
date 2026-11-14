@@ -12,9 +12,11 @@ export default defineConfig({
     include: [
       '@base-ui/react/alert-dialog',
       '@base-ui/react/button',
+      '@base-ui/react/checkbox',
       '@base-ui/react/dialog',
       '@base-ui/react/field',
       '@base-ui/react/select',
+      '@base-ui/react/switch',
       '@phosphor-icons/react',
       '@tanstack/react-form',
       '@tanstack/react-table',
