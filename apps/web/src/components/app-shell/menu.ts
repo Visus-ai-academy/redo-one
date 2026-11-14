@@ -1,4 +1,4 @@
-import { Gear, type Icon } from '@phosphor-icons/react';
+import { Buildings, Gear, type Icon } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemMenu = {
@@ -15,7 +15,12 @@ export type GrupoMenu = { titulo: string; itens: ItemMenu[] };
  * Telas de trabalho, por área (Painéis, Operação, Cadastros, Financeiro; ver o sistema.md da
  * skill ui-design). Cada tela entra aqui quando for construída, com o ícone e a permissão `ver`.
  */
-export const GRUPOS_MENU: GrupoMenu[] = [];
+export const GRUPOS_MENU: GrupoMenu[] = [
+  {
+    titulo: 'Cadastros',
+    itens: [{ nome: 'Clientes', to: '/clientes', icone: Buildings, permissao: 'clientes.ver' }],
+  },
+];
 
 /** Rodapé do menu. Configurações sempre aparece: Meu perfil vale para qualquer usuário. */
 export const RODAPE_MENU: ItemMenu[] = [

@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
+import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
@@ -50,6 +51,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppSplatRoute = AppSplatRouteImport.update({
   id: '/$',
   path: '/$',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConfiguracoesIndexRoute = AppConfiguracoesIndexRouteImport.update({
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
+  '/clientes': typeof AppClientesRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
+  '/clientes': typeof AppClientesRoute
   '/': typeof AppIndexRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/_app/$': typeof AppSplatRoute
+  '/_app/clientes': typeof AppClientesRoute
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/$'
+    | '/clientes'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/$'
+    | '/clientes'
     | '/'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/_app/$'
+    | '/_app/clientes'
     | '/_app/'
     | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/contratados'
@@ -233,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSplatRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/clientes': {
+      id: '/_app/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/': {
       id: '/_app/configuracoes/'
       path: '/configuracoes'
@@ -287,6 +306,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
+  AppClientesRoute: typeof AppClientesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
@@ -299,6 +319,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
+  AppClientesRoute: AppClientesRoute,
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,

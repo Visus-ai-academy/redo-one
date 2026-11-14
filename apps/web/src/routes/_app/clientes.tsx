@@ -1,0 +1,266 @@
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
+import { useCallback, useMemo } from 'react';
+import { z } from 'zod';
+
+import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
+import { PainelCliente } from '../../components/catalogo/PainelCliente';
+import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { SemPermissao } from '../../components/estado/estados';
+import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { Select } from '../../components/select/Select';
+import { clientesControllerAtualizar } from '../../gen/clients/clientesControllerAtualizar';
+import { clientesControllerCriar } from '../../gen/clients/clientesControllerCriar';
+import { clientesControllerCriarAlias } from '../../gen/clients/clientesControllerCriarAlias';
+import { clientesControllerExcluir } from '../../gen/clients/clientesControllerExcluir';
+import { clientesControllerExcluirAlias } from '../../gen/clients/clientesControllerExcluirAlias';
+import { clientesControllerListarQueryOptions } from '../../gen/hooks/useClientesControllerListar';
+import { clientesControllerObterQueryOptions } from '../../gen/hooks/useClientesControllerObter';
+import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
+import type { ClienteResumoDto } from '../../gen/types/ClienteResumoDto';
+import { invalidarCatalogo } from '../../lib/catalogo';
+import { formatarCnpj } from '../../lib/documentos';
+import { pode } from '../../lib/permissoes';
+
+const POR_PAGINA = 25;
+
+const buscaSchema = z.object({
+  busca: z.string().trim().min(1).optional().catch(undefined),
+  contratadoId: z.uuid().optional().catch(undefined),
+  situacao: z.enum(['ativos', 'inativos']).optional().catch(undefined),
+  pagina: z.coerce.number().int().min(1).optional().catch(undefined),
+  id: z.uuid().optional().catch(undefined),
+  novo: z.literal(1).optional().catch(undefined),
+});
+type Busca = z.infer<typeof buscaSchema>;
+
+const consulta = (b: Busca) => ({
+  query: {
+    busca: b.busca,
+    contratadoId: b.contratadoId,
+    ativo: b.situacao === undefined ? undefined : b.situacao === 'ativos',
+    pagina: b.pagina ?? 1,
+    porPagina: POR_PAGINA,
+  },
+});
+
+export const Route = createFileRoute('/_app/clientes')({
+  validateSearch: buscaSchema,
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    if (!pode(context.sessao, 'clientes.ver')) return;
+    await Promise.all([
+      context.queryClient.ensureQueryData(clientesControllerListarQueryOptions(consulta(deps))),
+      context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
+      deps.id &&
+        context.queryClient.ensureQueryData(
+          clientesControllerObterQueryOptions({ path: { id: deps.id } }),
+        ),
+    ]);
+  },
+  head: () => ({ meta: [{ title: 'Clientes | One' }] }),
+  component: PaginaClientes,
+});
+
+function PaginaClientes() {
+  const { sessao } = Route.useRouteContext();
+  return pode(sessao, 'clientes.ver') ? (
+    <Clientes podeEditar={pode(sessao, 'clientes.editar')} />
+  ) : (
+    <SemPermissao tela="Clientes" />
+  );
+}
+
+const coluna = createDataTableColumnHelper<ClienteResumoDto>();
+const OCULTAR_COM_PAINEL = ['cnpj', 'totalAliases'];
+
+function Clientes({ podeEditar }: { podeEditar: boolean }) {
+  const busca = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data: pagina } = useSuspenseQuery(clientesControllerListarQueryOptions(consulta(busca)));
+  const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
+
+  const ir = useCallback(
+    (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
+    [navigate],
+  );
+  const filtrar = useCallback(
+    (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
+    [ir],
+  );
+  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
+
+  const colunas = useMemo(
+    () => [
+      coluna.accessor('nome', {
+        header: 'Cliente',
+        cell: (info) => (
+          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
+            <span className="flex flex-col leading-snug">
+              <span>{info.getValue()}</span>
+              {info.row.original.nomeFantasia && (
+                <span className="text-muted-foreground text-[13px] font-normal">
+                  {info.row.original.nomeFantasia}
+                </span>
+              )}
+            </span>
+          </BotaoAbrir>
+        ),
+      }),
+      coluna.accessor('cnpj', {
+        header: 'CNPJ',
+        cell: (info) => <span className="whitespace-nowrap">{formatarCnpj(info.getValue())}</span>,
+      }),
+      coluna.accessor((c) => c.contratado?.razaoSocial ?? '—', {
+        id: 'contratado',
+        header: 'Empresa que fatura',
+      }),
+      coluna.accessor('totalAliases', {
+        header: () => <span className="block text-right">Apelidos</span>,
+        cell: (info) => <span className="block text-right">{info.getValue()}</span>,
+      }),
+      coluna.accessor('ativo', {
+        header: 'Situação',
+        cell: (info) => (
+          <span className="flex flex-wrap gap-1">
+            {info.getValue() ? (
+              <Etiqueta tom="sucesso">Ativo</Etiqueta>
+            ) : (
+              <Etiqueta tom="inativo">Inativo</Etiqueta>
+            )}
+            {info.row.original.ocultoDashboards && (
+              <Etiqueta tom="info">Oculto nos painéis</Etiqueta>
+            )}
+          </span>
+        ),
+      }),
+    ],
+    [abrir],
+  );
+
+  return (
+    <ListaCadastro
+      titulo="Clientes"
+      novo={
+        podeEditar
+          ? { rotulo: 'Novo cliente', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
+          : undefined
+      }
+      busca={{
+        valor: busca.busca,
+        rotulo: 'Buscar clientes',
+        placeholder: 'Nome, razão social ou CNPJ',
+      }}
+      temFiltro={busca.situacao !== undefined || busca.contratadoId !== undefined}
+      filtros={
+        <>
+          <Select
+            aria-label="Filtrar por empresa que fatura"
+            value={busca.contratadoId ?? ''}
+            onValueChange={(v) => filtrar({ contratadoId: v || undefined })}
+            opcoes={[
+              { valor: '', rotulo: 'Todas as empresas' },
+              ...opcoes.contratados.map((c) => ({ valor: c.id, rotulo: c.nome })),
+            ]}
+            className="flex-[1_1_180px] md:flex-[0_1_220px]"
+          />
+          <Select
+            aria-label="Filtrar por situação"
+            value={busca.situacao ?? ''}
+            onValueChange={(v) => filtrar({ situacao: (v || undefined) as Busca['situacao'] })}
+            opcoes={[
+              { valor: '', rotulo: 'Todas as situações' },
+              { valor: 'ativos', rotulo: 'Ativos' },
+              { valor: 'inativos', rotulo: 'Inativos' },
+            ]}
+            className="flex-[1_1_180px] md:flex-[0_1_200px]"
+          />
+        </>
+      }
+      colunas={colunas}
+      ocultarComPainel={OCULTAR_COM_PAINEL}
+      itens={pagina.itens}
+      getRowId={(c) => c.id}
+      selecionadoId={busca.id}
+      pagina={pagina.pagina}
+      porPagina={pagina.porPagina}
+      total={pagina.total}
+      vazio={{
+        titulo: 'Nenhum cliente cadastrado.',
+        texto: podeEditar
+          ? 'Cadastre o cliente com o nome igual ao da MobileMed para os laudos dele serem reconhecidos.'
+          : 'Quem cuida do cadastro de clientes os inclui aqui.',
+      }}
+      onFiltrar={filtrar}
+      onLimparFiltros={() =>
+        filtrar({ busca: undefined, situacao: undefined, contratadoId: undefined })
+      }
+      onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
+      painel={
+        busca.id || (busca.novo && podeEditar) ? (
+          <Painel
+            key={busca.id ?? 'novo'}
+            id={busca.id}
+            contratados={opcoes.contratados}
+            podeEditar={podeEditar}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+function Painel({
+  id,
+  contratados,
+  podeEditar,
+}: {
+  id?: string;
+  contratados: { id: string; nome: string }[];
+  podeEditar: boolean;
+}) {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const { data: cliente } = useSuspenseQuery({
+    ...clientesControllerObterQueryOptions({ path: { id: id ?? '' } }),
+    queryFn: id
+      ? clientesControllerObterQueryOptions({ path: { id } }).queryFn
+      : () => null as never,
+  });
+  const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+
+  return (
+    <PainelCliente
+      cliente={id ? cliente : undefined}
+      contratados={contratados}
+      podeEditar={podeEditar}
+      onFechar={fechar}
+      onSalvar={async (body) => {
+        let alvo = id;
+        if (id) await clientesControllerAtualizar({ path: { id }, body }).unwrap();
+        else alvo = (await clientesControllerCriar({ body }).unwrap()).id;
+        await invalidarCatalogo(queryClient);
+        void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
+      }}
+      onExcluir={
+        id
+          ? async () => {
+              await clientesControllerExcluir({ path: { id } }).unwrap();
+              fechar();
+              await invalidarCatalogo(queryClient);
+            }
+          : undefined
+      }
+      onCriarApelido={async (body) => {
+        if (!id) return;
+        await clientesControllerCriarAlias({ path: { id }, body }).unwrap();
+        await invalidarCatalogo(queryClient);
+      }}
+      onExcluirApelido={async (aliasId) => {
+        if (!id) return;
+        await clientesControllerExcluirAlias({ path: { id, aliasId } }).unwrap();
+        await invalidarCatalogo(queryClient);
+      }}
+    />
+  );
+}
