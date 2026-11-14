@@ -33,7 +33,7 @@ describe('PainelItemLista', () => {
   it('cria com os campos do catálogo e a ordem convertida em número', async () => {
     const { onSalvar } = montar();
 
-    expect(screen.getByRole('complementary', { name: 'Nova modalidade' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Nova modalidade' })).toBeInTheDocument();
     await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'MR');
     await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Ressonância');
     await userEvent.type(screen.getByRole('textbox', { name: 'Cor' }), '#1F7A4D');
@@ -76,7 +76,7 @@ describe('PainelItemLista', () => {
       },
     });
 
-    expect(screen.getByRole('complementary', { name: 'URGENTE' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'URGENTE' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Urgente' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 

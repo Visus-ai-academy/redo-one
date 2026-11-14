@@ -1,5 +1,6 @@
+import { Drawer } from '@base-ui/react/drawer';
 import { X } from '@phosphor-icons/react';
-import { type ReactNode, useId } from 'react';
+import type { ReactNode } from 'react';
 
 import { buttonClassName } from '../button/button-class';
 
@@ -14,8 +15,10 @@ type PainelLateralProps = {
 };
 
 /**
- * Painel ao lado de uma lista (detalhe, convite, edição): a lista continua à vista. No celular,
- * quem o usa esconde a lista e o painel ocupa a tela; "Fechar" volta para ela.
+ * Painel ao lado de uma lista (detalhe, convite, edição), sobre o Drawer do Base UI. Não modal:
+ * a lista continua à vista e clicável (abrir outra linha troca o painel), e clicar fora não fecha.
+ * Fecha pelo X, pelo Esc ou arrastando para a direita. No computador ocupa 400px à direita (a
+ * `ListaCadastro` reserva o espaço); abaixo disso, a tela inteira.
  */
 export function PainelLateral({
   titulo,
@@ -24,33 +27,43 @@ export function PainelLateral({
   onFechar,
   children,
 }: PainelLateralProps) {
-  const tituloId = useId();
-
   return (
-    <aside
-      aria-labelledby={tituloId}
-      className="bg-card flex min-w-0 flex-[1_1_340px] flex-col self-start rounded-lg border lg:max-w-[400px]"
+    <Drawer.Root
+      open
+      onOpenChange={(aberto) => {
+        if (!aberto) onFechar();
+      }}
+      modal={false}
+      disablePointerDismissal
+      swipeDirection="right"
     >
-      <div className="flex items-center gap-3 border-b p-4">
-        {inicio}
-        <span className="flex min-w-0 flex-1 flex-col">
-          <h2 id={tituloId} className="truncate text-base font-semibold">
-            {titulo}
-          </h2>
-          {subtitulo && (
-            <span className="text-muted-foreground truncate text-[13px]">{subtitulo}</span>
-          )}
-        </span>
-        <button
-          type="button"
-          onClick={onFechar}
-          aria-label="Fechar painel"
-          className={buttonClassName({ variant: 'ghost', className: 'size-9 flex-none px-0' })}
-        >
-          <X size={18} aria-hidden />
-        </button>
-      </div>
-      {children}
-    </aside>
+      <Drawer.Portal>
+        <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
+          <Drawer.Popup className="bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none lg:w-[400px]">
+            <div className="flex flex-none items-center gap-3 border-b p-4">
+              {inicio}
+              <span className="flex min-w-0 flex-1 flex-col">
+                <Drawer.Title className="truncate text-base font-semibold">{titulo}</Drawer.Title>
+                {subtitulo && (
+                  <Drawer.Description className="text-muted-foreground truncate text-[13px]">
+                    {subtitulo}
+                  </Drawer.Description>
+                )}
+              </span>
+              <Drawer.Close
+                aria-label="Fechar painel"
+                className={buttonClassName({
+                  variant: 'ghost',
+                  className: 'size-9 flex-none px-0',
+                })}
+              >
+                <X size={18} aria-hidden />
+              </Drawer.Close>
+            </div>
+            <Drawer.Content className="flex flex-col">{children}</Drawer.Content>
+          </Drawer.Popup>
+        </Drawer.Viewport>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }

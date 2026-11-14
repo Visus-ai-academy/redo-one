@@ -106,7 +106,7 @@ describe('PainelUsuario', () => {
   it('mostra quem é, a situação, o último acesso, o CPF mascarado e quando foi convidada', async () => {
     montar();
 
-    const painel = await screen.findByRole('complementary', { name: 'Maria Souza' });
+    const painel = await screen.findByRole('dialog', { name: 'Maria Souza' });
     expect(painel).toHaveTextContent('maria@empresa.com.br');
     expect(valor(painel, 'Situação')).toHaveTextContent('Ativo');
     expect(valor(painel, 'Último acesso')).toHaveTextContent('Ontem, 21:40');
@@ -206,7 +206,7 @@ describe('PainelUsuario', () => {
   it('não mostra bloqueio que já passou', async () => {
     montar({ usuario: { ...maria, bloqueadoAte: '2026-11-14T14:00:00.000Z' } });
 
-    await screen.findByRole('complementary', { name: 'Maria Souza' });
+    await screen.findByRole('dialog', { name: 'Maria Souza' });
     expect(screen.queryByText(/Bloqueado até/)).not.toBeInTheDocument();
   });
 
@@ -335,13 +335,13 @@ describe('PainelUsuario', () => {
 
   it('ninguém se desativa, e sem usuarios.desativar não há a ação', async () => {
     montar({ euId: 'u-maria' });
-    expect(await screen.findByRole('complementary', { name: 'Maria Souza' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Maria Souza' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Desativar usuário' })).not.toBeInTheDocument();
   });
 
   it('sem usuarios.desativar não há desativar nem reativar', async () => {
     montar({ permissoes: { ...TODAS, desativar: false } });
-    await screen.findByRole('complementary', { name: 'Maria Souza' });
+    await screen.findByRole('dialog', { name: 'Maria Souza' });
     expect(screen.queryByRole('button', { name: /ativar usuário/ })).not.toBeInTheDocument();
   });
 

@@ -133,7 +133,13 @@ export function ListaUsuarios({
   const temFiltro = Boolean(filtros.busca || filtros.papelId || filtros.situacao);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div
+      className={cn(
+        'flex flex-col gap-5',
+        // O painel é um drawer de 400px à direita: reserva a faixa dele (menos o padding da página).
+        painel && 'lg:pr-[392px]',
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">
           Usuários{' '}
@@ -155,8 +161,8 @@ export function ListaUsuarios({
             // No computador a lista cabe na tela: a tabela rola por dentro e a paginação fica à
             // vista (8rem = respiro do main e o título acima).
             'md:flex md:max-h-[calc(100dvh-8rem)] md:flex-col',
-            // No celular o painel ocupa o lugar da lista; "Fechar" volta para ela.
-            painel && 'hidden',
+            // Abaixo do computador o painel ocupa a tela; "Fechar" volta para a lista.
+            painel && 'max-lg:hidden!',
           )}
         >
           <div className="flex flex-none flex-wrap gap-2 border-b p-3">

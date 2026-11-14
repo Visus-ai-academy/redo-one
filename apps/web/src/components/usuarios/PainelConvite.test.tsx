@@ -44,9 +44,7 @@ describe('PainelConvite', () => {
   it('explica o convite e só oferece os papéis que se pode atribuir', async () => {
     montar();
 
-    expect(
-      await screen.findByRole('complementary', { name: 'Convidar usuário' }),
-    ).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Convidar usuário' })).toHaveTextContent(
       'A pessoa recebe um e-mail com o link para criar a senha. O link vale por 7 dias.',
     );
     expect(screen.getByRole('textbox', { name: 'CPF' })).toHaveAccessibleDescription(

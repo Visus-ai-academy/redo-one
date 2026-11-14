@@ -41,7 +41,7 @@ type ListaCadastroProps<T extends RowData> = {
   onFiltrar: (filtros: { busca: string | undefined }) => void;
   onLimparFiltros: () => void;
   onIrPara: (pagina: number) => void;
-  /** Painel de detalhe ou edição, ao lado da lista (no celular, no lugar dela). */
+  /** Painel de detalhe ou edição (`PainelLateral`): drawer à direita da lista (no celular, a tela toda). */
   painel?: ReactNode;
 };
 
@@ -93,7 +93,13 @@ export function ListaCadastro<T extends RowData>({
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <div
+      className={cn(
+        'flex flex-col gap-5',
+        // O painel é um drawer de 400px à direita: reserva a faixa dele (menos o padding da página).
+        painel && 'lg:pr-[392px]',
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">
           {titulo}
@@ -118,8 +124,8 @@ export function ListaCadastro<T extends RowData>({
             abas
               ? 'md:flex md:max-h-[calc(100dvh-12rem)] md:flex-col'
               : 'md:flex md:max-h-[calc(100dvh-8rem)] md:flex-col',
-            // No celular o painel ocupa o lugar da lista; "Fechar" volta para ela.
-            painel && 'hidden',
+            // Abaixo do computador o painel ocupa a tela; "Fechar" volta para a lista.
+            painel && 'max-lg:hidden!',
           )}
         >
           <div className="flex flex-none flex-wrap gap-2 border-b p-3">
