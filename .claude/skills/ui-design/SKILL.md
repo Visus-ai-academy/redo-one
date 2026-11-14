@@ -12,12 +12,13 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 ## Processo (não pule etapas)
 
 1. **Contexto real.** Abra a tela equivalente no legado (`../dashboards-one/src/app/(dashboard)/…` e `src/components/…`) e anote o que ela faz, os dados, as ações e as permissões (`src/lib/permissoes.ts`). Leia `docs/redesenho-banco.md` para o que muda no modelo. Nunca desenhe só de memória.
-2. **Brief da tela**, em 5 linhas, antes de qualquer pixel:
+2. **Brief da tela**, em poucas linhas, antes de qualquer pixel:
    - Quem usa (papel) e com que frequência (várias vezes por hora? uma vez por mês?).
    - O verbo principal (ex.: "aprovar a rodada", "achar um usuário e trocar o papel").
    - Os dados e o volume (quantas linhas, paginação, filtros).
    - Os estados: vazio, carregando, erro, sem permissão, sucesso.
    - O que é sensível (LGPD, financeiro, ação irreversível).
+   - Onde cada interação acontece (no lugar, popover, painel, diálogo, aba, página...) e por quê; ver "Onde cada interação acontece" abaixo.
 3. **Direção.** Se o `sistema.md` ainda não tem a direção visual, proponha 2–3 direções de verdade diferentes (eixo nomeável: "denso claro" × "marca escura"…), com prévia low-fi, e espere o usuário escolher. Depois grave a escolha no `sistema.md`. Com direção gravada, não reabra a discussão.
 4. **Checkpoint por tela** (escreva para si antes de montar): hierarquia (o que se vê primeiro, segundo, terceiro), densidade (px de linha e padding), superfícies, o que é ação primária, e o que você está deliberadamente **não** colocando.
 5. **Construir** seguindo as regras abaixo e o `sistema.md`.
@@ -74,8 +75,33 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - Rótulo acima do campo, ajuda abaixo, erro abaixo (texto que diz o problema e como resolver). Largura de leitura: 480–640px.
 - Um botão primário por formulário, à direita no rodapé (ou largura total em formulários estreitos de acesso); "Cancelar" secundário ao lado.
 
-**Painel lateral × modal**
-- Detalhe e edição de um item: painel lateral ou página. Modal só para interromper com propósito (confirmação destrutiva, tarefa curta que bloqueia o resto).
+**Onde cada interação acontece**
+
+Nem toda funcionalidade é uma tela nova. Antes de desenhar, pondere onde a interação cabe melhor e escreva a escolha (e o porquê) no brief da tela. As opções abaixo são exemplos, não uma lista fechada: se outro padrão resolver melhor (passo a passo, edição em massa, arrastar e soltar, linha que expande...), use-o.
+
+Perguntas para decidir:
+
+- **Quanto contexto a pessoa precisa manter à vista?** Se ela compara com a lista ou volta a ela em seguida, não tire a lista da tela (edição na linha, painel lateral, linha que expande).
+- **Qual o tamanho da tarefa?** Um campo ou um clique resolve no lugar; um formulário curto cabe num painel ou diálogo; um fluxo longo, com várias seções ou etapas, pede página.
+- **Precisa de endereço próprio?** Se alguém vai mandar o link, voltar pelo histórico, recarregar ou abrir em outra aba, o estado vai para a URL (rota ou parâmetro de busca, como o `?id=` de um painel).
+- **É para interromper?** Modal só quando bloquear o resto é o objetivo: confirmação destrutiva, decisão obrigatória antes de seguir, tarefa curta que não faz sentido fazer pela metade.
+- **Com que frequência e em que ritmo?** Ação feita dezenas de vezes por dia não pode custar abrir e fechar camadas; prefira o caminho mais curto (na linha, atalho, ação em massa).
+- **Como fica no celular (390px)?** Painel lateral vira tela cheia ou gaveta de baixo; tabela larga rola dentro da caixa; popover pequeno pode virar folha inferior.
+
+Exemplos de quando cada um costuma servir:
+
+| Padrão | Costuma servir para | Evite quando |
+| --- | --- | --- |
+| No lugar (edição na linha, alternar, campo que salva sozinho) | Ajuste rápido e frequente de um valor | A mudança tem consequência que precisa de explicação |
+| Popover / menu suspenso | Ação rara de um item (menu "⋯"), filtro, escolha curta | O conteúdo tem formulário ou passa de poucas linhas |
+| Painel lateral (drawer) | Ver ou editar um item sem perder a lista; convite, detalhe | A tarefa é longa ou é o trabalho principal da tela |
+| Diálogo (modal) | Confirmar ação destrutiva, decisão que bloqueia, tarefa curta e atômica | É só para mostrar detalhe, ou o conteúdo tem rolagem longa |
+| Linha que expande / acordeão | Detalhe secundário de itens de uma lista | O detalhe tem ações ou formulário próprios |
+| Aba | Subtelas do mesmo assunto (ex.: Volumetria › Mensal) | As partes são independentes e mereciam item no menu |
+| Página / rota nova | Trabalho principal, fluxo longo, conteúdo que merece link | Um painel ou a própria lista resolveriam sem trocar de contexto |
+| Toast / aviso no fluxo | Confirmar que algo foi feito; aviso no fluxo para erro que exige ação | A mensagem é a única fonte de informação essencial |
+
+O visual de cada padrão segue as regras desta skill (sombra só no que flutua, raio de 12px no modal, foco preso em diálogo e gaveta via Base UI).
 
 **Estados**
 - Todo controle: padrão, hover, foco visível (anel de 2px na cor do acento), ativo, desabilitado.
@@ -108,7 +134,8 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 6. **Estados:** vazio, carregando, erro, sem permissão e foco desenhados ou previstos?
 7. **Regras do One:** `*` nos obrigatórios, Phosphor em tudo, pt-BR sentence case, sem caixa alta, paginação com total, confirmação só no destrutivo.
 8. **Anti-padrões:** passe a lista acima item por item.
-9. **Celular:** a tela funciona em 390px (menu vira gaveta, tabela rola dentro da caixa, filtros quebram linha)?
+9. **Onde cada interação acontece:** cada ação está no padrão que o brief escolheu? Nada virou tela nova, modal ou painel por hábito?
+10. **Celular:** a tela funciona em 390px (menu vira gaveta, tabela rola dentro da caixa, filtros quebram linha)?
 
 ## Onde desenhar
 

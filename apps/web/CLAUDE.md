@@ -48,30 +48,6 @@ Front em TanStack Start (React 19, SSR) sobre Vite.
 
 ## Onde cada interação acontece
 
-Nem toda funcionalidade é uma tela nova. Antes de desenhar, pondere onde a interação cabe melhor e escreva a escolha (e o porquê) no brief da tela. As opções abaixo são exemplos, não uma lista fechada: se outro padrão resolver melhor (passo a passo, edição em massa, arrastar e soltar, linha que expande...), use-o.
-
-Perguntas para decidir:
-
-- **Quanto contexto a pessoa precisa manter à vista?** Se ela compara com a lista ou volta a ela em seguida, não tire a lista da tela (edição na linha, painel lateral, linha que expande).
-- **Qual o tamanho da tarefa?** Um campo ou um clique resolve no lugar; um formulário curto cabe num painel ou diálogo; um fluxo longo, com várias seções ou etapas, pede página.
-- **Precisa de endereço próprio?** Se alguém vai mandar o link, voltar pelo histórico, recarregar ou abrir em outra aba, o estado vai para a URL (rota ou parâmetro de busca, como o `?id=` de um painel).
-- **É para interromper?** Modal só quando bloquear o resto é o objetivo: confirmação destrutiva, decisão obrigatória antes de seguir, tarefa curta que não faz sentido fazer pela metade.
-- **Com que frequência e em que ritmo?** Ação feita dezenas de vezes por dia não pode custar abrir e fechar camadas; prefira o caminho mais curto (na linha, atalho, ação em massa).
-- **Como fica no celular (390px)?** Painel lateral vira tela cheia ou gaveta de baixo; tabela larga rola dentro da caixa; popover pequeno pode virar folha inferior.
-
-Exemplos de quando cada um costuma servir:
-
-| Padrão | Costuma servir para | Evite quando |
-| --- | --- | --- |
-| No lugar (edição na linha, alternar, campo que salva sozinho) | Ajuste rápido e frequente de um valor | A mudança tem consequência que precisa de explicação |
-| Popover / menu suspenso | Ação rara de um item (menu "⋯"), filtro, escolha curta | O conteúdo tem formulário ou passa de poucas linhas |
-| Painel lateral (drawer) | Ver ou editar um item sem perder a lista; convite, detalhe | A tarefa é longa ou é o trabalho principal da tela |
-| Diálogo (modal) | Confirmar ação destrutiva, decisão que bloqueia, tarefa curta e atômica | É só para mostrar detalhe, ou o conteúdo tem rolagem longa |
-| Linha que expande / acordeão | Detalhe secundário de itens de uma lista | O detalhe tem ações ou formulário próprios |
-| Aba | Subtelas do mesmo assunto (ex.: Volumetria › Mensal) | As partes são independentes e mereciam item no menu |
-| Página / rota nova | Trabalho principal, fluxo longo, conteúdo que merece link | Um painel ou a própria lista resolveriam sem trocar de contexto |
-| Toast / aviso no fluxo | Confirmar que algo foi feito; aviso no fluxo para erro que exige ação | A mensagem é a única fonte de informação essencial |
-
-O visual de cada padrão segue a skill `ui-design` (sombra só no que flutua, raio de 12px no modal, foco preso em diálogo e gaveta via Base UI).
+Nem toda funcionalidade é uma tela nova: antes de desenhar, pondere se cabe no lugar, num popover, num painel lateral, num diálogo, numa aba, numa página ou em outro padrão. O guia (perguntas e exemplos) está na skill `ui-design`, seção "Onde cada interação acontece"; a escolha e o porquê vão no brief da tela.
 
 Skills deste app: `react-component` (componentes e rotas) e `consume-api` (integração com a API via Kubb). Para trabalho visual, use também o plugin `frontend-design`.
