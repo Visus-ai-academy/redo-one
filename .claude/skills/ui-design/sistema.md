@@ -77,7 +77,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 - Menu recolhível (só ícones).
 - Subtelas do legado viram abas dentro da tela (ex.: Volumetria › Periódico, Mensal, Cliente, Comparativo).
 - **Configurações** é uma central com submenu por assunto:
-  - Sua conta: Meu perfil, Segurança.
+  - Sua conta: Meu perfil (dados, senha, sessões e acessos numa tela só; um item por destino, nunca dois itens para a mesma tela).
   - Acesso: Usuários, Papéis, Chaves dos robôs.
   - Catálogo: Modalidades e especialidades, De-paras, Equipes médicas.
   - Operação: Robô de distribuição, Escala médica.
@@ -108,7 +108,6 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 | Recolher menu | `SidebarSimple` |
 | Sair | `SignOut` |
 | Meu perfil | `UserCircle` |
-| Segurança | `Lock` |
 | Usuários | `Users` |
 | Papéis | `IdentificationBadge` |
 | Chaves dos robôs | `Key` |

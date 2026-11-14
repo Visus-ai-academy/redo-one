@@ -2,18 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import { buscarConfiguracoes, GRUPOS_CONFIGURACOES } from './itens';
 
+const destinos = () =>
+  GRUPOS_CONFIGURACOES.flatMap((g) => g.itens).map((i) => `${i.to}#${i.hash ?? ''}`);
+
 describe('GRUPOS_CONFIGURACOES', () => {
-  it('Segurança leva à parte de senha de Meu perfil', () => {
-    const seguranca = GRUPOS_CONFIGURACOES.flatMap((g) => g.itens).find(
-      (item) => item.nome === 'Segurança',
-    );
-    expect(seguranca).toMatchObject({ to: '/configuracoes/meu-perfil', hash: 'seguranca' });
+  it('cada item leva a um lugar diferente (nada de dois itens para a mesma tela)', () => {
+    expect(new Set(destinos()).size).toBe(destinos().length);
+  });
+
+  it('Sua conta tem só Meu perfil, que reúne dados, senha, sessões e acessos', () => {
+    const conta = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Sua conta');
+    expect(conta?.itens.map((i) => [i.nome, i.descricao])).toEqual([
+      ['Meu perfil', 'Dados, senha, sessões e acessos'],
+    ]);
   });
 });
 
 describe('buscarConfiguracoes', () => {
-  it('ignora acento e maiúscula', () => {
-    const achados = buscarConfiguracoes(GRUPOS_CONFIGURACOES, 'SEGURANCA');
-    expect(achados.flatMap((g) => g.itens.map((i) => i.nome))).toEqual(['Segurança']);
+  it('ignora acento e maiúscula e acha pela descrição', () => {
+    const achados = buscarConfiguracoes(GRUPOS_CONFIGURACOES, 'SESSÕES');
+    expect(achados.flatMap((g) => g.itens.map((i) => i.nome))).toEqual(['Meu perfil']);
   });
 });

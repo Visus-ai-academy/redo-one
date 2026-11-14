@@ -1,4 +1,4 @@
-import { type Icon, Lock, UserCircle, Users } from '@phosphor-icons/react';
+import { type Icon, UserCircle, Users } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemConfiguracao = {
@@ -24,16 +24,9 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
     itens: [
       {
         nome: 'Meu perfil',
-        descricao: 'Nome, e-mail e CPF',
+        descricao: 'Dados, senha, sessões e acessos',
         icone: UserCircle,
         to: '/configuracoes/meu-perfil',
-      },
-      {
-        nome: 'Segurança',
-        descricao: 'Senha e sessões abertas',
-        icone: Lock,
-        to: '/configuracoes/meu-perfil',
-        hash: 'seguranca',
       },
     ],
   },
