@@ -1,4 +1,4 @@
-import { Buildings, Flask, Gear, type Icon } from '@phosphor-icons/react';
+import { Buildings, Flask, Gear, type Icon, Stethoscope } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemMenu = {
@@ -20,6 +20,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
     titulo: 'Cadastros',
     itens: [
       { nome: 'Clientes', to: '/clientes', icone: Buildings, permissao: 'clientes.ver' },
+      { nome: 'Médicos', to: '/medicos', icone: Stethoscope, permissao: 'medicos.ver' },
       { nome: 'Exames', to: '/exames', icone: Flask, permissao: 'exames.ver' },
     ],
   },

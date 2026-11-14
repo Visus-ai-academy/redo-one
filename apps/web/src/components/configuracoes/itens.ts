@@ -4,8 +4,10 @@ import {
   Certificate,
   type Icon,
   IdentificationBadge,
+  Ranking,
   UserCircle,
   Users,
+  UsersThree,
 } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
@@ -81,6 +83,20 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: ArrowsLeftRight,
         to: '/configuracoes/de-paras',
         permissao: 'de-para.ver',
+      },
+      {
+        nome: 'Equipes médicas',
+        descricao: 'Equipes de médicos e plantões',
+        icone: UsersThree,
+        to: '/configuracoes/equipes',
+        permissao: 'medicos.ver',
+      },
+      {
+        nome: 'Níveis dos médicos',
+        descricao: 'Níveis usados na tabela de referência do repasse',
+        icone: Ranking,
+        to: '/configuracoes/niveis-medico',
+        permissao: 'medicos.ver',
       },
     ],
   },

@@ -1,0 +1,513 @@
+import { Trash } from '@phosphor-icons/react';
+import { type ReactNode, useId, useState } from 'react';
+import { z } from 'zod';
+
+import type { AliasMedicoDto } from '../../gen/types/AliasMedicoDto';
+import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
+import type { MedicoDto } from '../../gen/types/MedicoDto';
+import { Abas } from '../abas/Abas';
+import { Alerta } from '../alerta/Alerta';
+import { mensagemDaApi } from '../alerta/mensagem-da-api';
+import { buttonClassName } from '../button/button-class';
+import { RodapePainel } from '../catalogo/rodape-painel';
+import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
+import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { useAppForm } from '../form/form';
+import { Paginacao } from '../paginacao/Paginacao';
+import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { PainelLateral } from '../painel/PainelLateral';
+
+export type PainelMedicoProps = {
+  /** Sem médico, o painel cria um novo (apelidos e as outras abas aparecem depois de criado). */
+  medico?: MedicoDetalheDto;
+  /** Níveis ativos. */
+  niveis: { id: string; nome: string }[];
+  podeEditar: boolean;
+  onSalvar: (dados: MedicoDto) => Promise<void>;
+  onExcluir?: () => Promise<void>;
+  onCriarApelido: (dados: AliasMedicoDto) => Promise<void>;
+  onExcluirApelido: (id: string) => Promise<void>;
+  onFechar: () => void;
+  /** Conteúdo da aba Pagamento; sem ele (sem permissão), a aba não aparece. */
+  pagamento?: ReactNode;
+  /** Conteúdo da aba Acesso; sem ele (sem permissão), a aba não aparece. */
+  acesso?: ReactNode;
+};
+
+const FUNCOES = {
+  STAFF: 'Staff',
+  FELLOW: 'Fellow (em formação)',
+} as const;
+
+const schema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome do médico.'),
+  crm: z.string(),
+  idMobilemed: z
+    .string()
+    .refine(
+      (v) => v.trim() === '' || /^[1-9]\d{0,9}$/.test(v.trim()),
+      'Informe um número inteiro positivo.',
+    ),
+  email: z
+    .string()
+    .refine(
+      (v) => v.trim() === '' || z.email().safeParse(v.trim()).success,
+      'Informe um e-mail válido, como nome@clinica.com.br.',
+    ),
+  telefone: z.string(),
+  nivelId: z.string(),
+  funcao: z.string(),
+  dataInicioVinculo: z.string(),
+  senior: z.boolean(),
+  fellowship: z.boolean(),
+  ocultoDashboards: z.boolean(),
+  ativo: z.boolean(),
+  observacoes: z.string(),
+});
+
+const opcional = (texto: string) => texto.trim() || null;
+/** "2024-03-01" → "01/03/2024" (data sem hora: não passa por fuso). */
+const formatarData = (data: string) => data.split('-').reverse().join('/');
+
+/** Cadastro do médico e apelidos; pagamento e acesso em abas próprias, no painel ao lado da lista. */
+export function PainelMedico({
+  medico,
+  niveis,
+  podeEditar,
+  onSalvar,
+  onExcluir,
+  onCriarApelido,
+  onExcluirApelido,
+  onFechar,
+  pagamento,
+  acesso,
+}: PainelMedicoProps) {
+  const [aba, setAba] = useState('cadastro');
+  const abas = medico
+    ? [
+        { valor: 'cadastro', rotulo: 'Cadastro' },
+        ...(pagamento ? [{ valor: 'pagamento', rotulo: 'Pagamento' }] : []),
+        ...(acesso ? [{ valor: 'acesso', rotulo: 'Acesso' }] : []),
+      ]
+    : [];
+
+  const cadastro = (
+    <>
+      {podeEditar ? (
+        <FormCadastro
+          medico={medico}
+          niveis={niveis}
+          onSalvar={onSalvar}
+          onExcluir={onExcluir}
+          onFechar={onFechar}
+        />
+      ) : (
+        medico && <CadastroSomenteLeitura medico={medico} />
+      )}
+      {medico && (
+        <Apelidos
+          apelidos={medico.aliases}
+          podeEditar={podeEditar}
+          onCriar={onCriarApelido}
+          onExcluir={onExcluirApelido}
+        />
+      )}
+    </>
+  );
+
+  return (
+    <PainelLateral
+      titulo={medico?.nome ?? 'Novo médico'}
+      subtitulo={medico?.crm ? `CRM ${medico.crm}` : undefined}
+      onFechar={onFechar}
+    >
+      {abas.length > 1 ? (
+        <Abas
+          aria-label="Partes do cadastro do médico"
+          valor={aba}
+          onMudar={setAba}
+          abas={abas}
+          className="gap-0 pt-2"
+        >
+          {aba === 'pagamento' ? pagamento : aba === 'acesso' ? acesso : cadastro}
+        </Abas>
+      ) : (
+        cadastro
+      )}
+    </PainelLateral>
+  );
+}
+
+function FormCadastro({
+  medico,
+  niveis,
+  onSalvar,
+  onExcluir,
+  onFechar,
+}: Pick<PainelMedicoProps, 'medico' | 'niveis' | 'onSalvar' | 'onExcluir' | 'onFechar'>) {
+  const { erro, tentar } = useErroDoPainel();
+  const form = useAppForm({
+    defaultValues: {
+      nome: medico?.nome ?? '',
+      crm: medico?.crm ?? '',
+      idMobilemed: medico?.idMobilemed != null ? String(medico.idMobilemed) : '',
+      email: medico?.email ?? '',
+      telefone: medico?.telefone ?? '',
+      nivelId: medico?.nivel?.id ?? '',
+      funcao: medico?.funcao ?? '',
+      dataInicioVinculo: medico?.dataInicioVinculo ?? '',
+      senior: medico?.senior ?? false,
+      fellowship: medico?.fellowship ?? false,
+      ocultoDashboards: medico?.ocultoDashboards ?? false,
+      ativo: medico?.ativo ?? true,
+      observacoes: medico?.observacoes ?? '',
+    },
+    validators: { onSubmit: schema },
+    onSubmit: ({ value }) =>
+      tentar(() =>
+        onSalvar({
+          nome: value.nome.trim(),
+          crm: opcional(value.crm),
+          idMobilemed: value.idMobilemed.trim() ? Number(value.idMobilemed) : null,
+          email: opcional(value.email),
+          telefone: opcional(value.telefone),
+          ativo: value.ativo,
+          ocultoDashboards: value.ocultoDashboards,
+          senior: value.senior,
+          fellowship: value.fellowship,
+          funcao: (value.funcao || null) as MedicoDto['funcao'],
+          nivelId: value.nivelId || null,
+          dataInicioVinculo: value.dataInicioVinculo || null,
+          observacoes: opcional(value.observacoes),
+        }),
+      ),
+  });
+
+  // Nível inativo que o médico já tem continua na lista, para não sumir da tela.
+  const opcoesNivel = [
+    ...niveis,
+    ...(medico?.nivel && !niveis.some((n) => n.id === medico.nivel?.id) ? [medico.nivel] : []),
+  ];
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.handleSubmit();
+      }}
+      className="flex flex-col gap-4 p-4"
+    >
+      {erro && <Alerta tom="erro">{erro}</Alerta>}
+      <form.AppField name="nome">
+        {(field) => (
+          <field.TextField
+            label="Nome"
+            placeholder="Ex.: Dr. Augusto Lima"
+            description="Nome de exibição; outras grafias que chegam da MobileMed vão nos apelidos."
+            autoComplete="off"
+            required
+          />
+        )}
+      </form.AppField>
+      <div className="flex flex-wrap gap-4">
+        <form.AppField name="crm">
+          {(field) => (
+            <field.TextField
+              label="CRM"
+              placeholder="Ex.: 123456-SP"
+              autoComplete="off"
+              className="flex-[1_1_160px]"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="idMobilemed">
+          {(field) => (
+            <field.NumberField
+              label="ID na MobileMed"
+              placeholder="Ex.: 1234"
+              min={1}
+              description="O robô escolhe a conta por ele, não pelo nome."
+              className="flex-[1_1_160px]"
+            />
+          )}
+        </form.AppField>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <form.AppField name="email">
+          {(field) => (
+            <field.TextField
+              label="E-mail"
+              type="email"
+              placeholder="nome@clinica.com.br"
+              autoComplete="off"
+              description="Sem e-mail, o médico não recebe o demonstrativo."
+              className="flex-[1_1_200px]"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="telefone">
+          {(field) => (
+            <field.TextField
+              label="Telefone"
+              type="tel"
+              placeholder="(11) 98888-7777"
+              autoComplete="off"
+              className="flex-[1_1_160px]"
+            />
+          )}
+        </form.AppField>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <form.AppField name="nivelId">
+          {(field) => (
+            <field.SelectField
+              label="Nível"
+              placeholder="Sem nível"
+              description="Usado na tabela de referência do repasse."
+              opcoes={[
+                { valor: '', rotulo: 'Sem nível' },
+                ...opcoesNivel.map((n) => ({ valor: n.id, rotulo: n.nome })),
+              ]}
+              className="flex-[1_1_160px]"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="funcao">
+          {(field) => (
+            <field.SelectField
+              label="Função"
+              placeholder="Não informada"
+              opcoes={[
+                { valor: '', rotulo: 'Não informada' },
+                ...Object.entries(FUNCOES).map(([valor, rotulo]) => ({ valor, rotulo })),
+              ]}
+              className="flex-[1_1_160px]"
+            />
+          )}
+        </form.AppField>
+      </div>
+      <form.AppField name="dataInicioVinculo">
+        {(field) => (
+          <field.TextField
+            label="Início do vínculo"
+            type="date"
+            placeholder="AAAA-MM-DD"
+            description="Quando começou a prestar serviço."
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="senior">
+        {(field) => (
+          <field.CheckboxField
+            label="Sênior"
+            description="Independe da função: um staff pode ou não ser sênior."
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="fellowship">
+        {(field) => (
+          <field.CheckboxField
+            label="Fez fellowship"
+            description="Formação concluída; entra na classificação da qualidade."
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="ocultoDashboards">
+        {(field) => (
+          <field.CheckboxField
+            label="Oculto nos painéis"
+            description="Some da volumetria e do painel executivo."
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="ativo">
+        {(field) => (
+          <field.CheckboxField
+            label="Ativo"
+            description="Inativo some das listas de escolha; o histórico continua."
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="observacoes">
+        {(field) => (
+          <field.TextAreaField label="Observações" placeholder="Ex.: lauda só às terças" />
+        )}
+      </form.AppField>
+      {medico && (
+        <CampoSomenteLeitura
+          label="Equipes"
+          value={medico.equipes.map((e) => e.nome).join(', ') || 'Nenhuma'}
+          description="As equipes ficam em Configurações › Equipes médicas."
+        />
+      )}
+      <form.AppForm>
+        <RodapePainel
+          rotuloCriar="Criar médico"
+          editando={Boolean(medico)}
+          excluir={
+            medico && onExcluir
+              ? {
+                  acao: 'Excluir médico',
+                  titulo: `Excluir ${medico.nome}?`,
+                  consequencia:
+                    'O médico, os apelidos e os dados de pagamento saem do cadastro, e a conta do portal (se houver) deixa de estar ligada a ele. Se algum outro cadastro usa o médico, a exclusão é recusada: desative em vez de excluir.',
+                  onConfirmar: () =>
+                    tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+                }
+              : undefined
+          }
+          onCancelar={onFechar}
+        />
+      </form.AppForm>
+    </form>
+  );
+}
+
+function CadastroSomenteLeitura({ medico }: { medico: MedicoDetalheDto }) {
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <CampoSomenteLeitura label="CRM" value={medico.crm ?? '—'} />
+      <CampoSomenteLeitura
+        label="ID na MobileMed"
+        value={medico.idMobilemed != null ? String(medico.idMobilemed) : '—'}
+      />
+      <CampoSomenteLeitura label="E-mail" value={medico.email ?? '—'} />
+      <CampoSomenteLeitura label="Nível" value={medico.nivel?.nome ?? '—'} />
+      <CampoSomenteLeitura label="Função" value={medico.funcao ? FUNCOES[medico.funcao] : '—'} />
+      <CampoSomenteLeitura
+        label="Início do vínculo"
+        value={medico.dataInicioVinculo ? formatarData(medico.dataInicioVinculo) : '—'}
+      />
+      <CampoSomenteLeitura
+        label="Equipes"
+        value={medico.equipes.map((e) => e.nome).join(', ') || 'Nenhuma'}
+      />
+      <CampoSomenteLeitura label="Situação" value={medico.ativo ? 'Ativo' : 'Inativo'} />
+    </div>
+  );
+}
+
+const POR_PAGINA_APELIDOS = 5;
+
+function Apelidos({
+  apelidos,
+  podeEditar,
+  onCriar,
+  onExcluir,
+}: {
+  apelidos: MedicoDetalheDto['aliases'];
+  podeEditar: boolean;
+  onCriar: (dados: AliasMedicoDto) => Promise<void>;
+  onExcluir: (id: string) => Promise<void>;
+}) {
+  const tituloId = useId();
+  const [erro, setErro] = useState<string>();
+  const pagina = usePaginaLocal(apelidos, POR_PAGINA_APELIDOS);
+  const form = useAppForm({
+    defaultValues: { nomeOrigem: '' },
+    validators: {
+      onSubmit: z.object({
+        nomeOrigem: z.string().trim().min(1, 'Informe a grafia que chega da MobileMed.'),
+      }),
+    },
+    onSubmit: async ({ value, formApi }) => {
+      setErro(undefined);
+      try {
+        await onCriar({ nomeOrigem: value.nomeOrigem.trim(), observacoes: null });
+        formApi.reset();
+      } catch (falha) {
+        setErro(mensagemDaApi(falha, 'Não foi possível adicionar agora. Tente de novo.'));
+      }
+    },
+  });
+
+  return (
+    <section aria-labelledby={tituloId} className="flex flex-col gap-3 border-t p-4">
+      <div className="flex flex-col gap-1">
+        <h3 id={tituloId} className="text-base font-semibold">
+          Apelidos
+        </h3>
+        <p className="text-muted-foreground text-[13px]">
+          Outras grafias do nome que chegam da MobileMed. A comparação ignora acento, maiúsculas,
+          “Dr.”/“Dra.” e o que vem entre parênteses.
+        </p>
+      </div>
+      {erro && <Alerta tom="erro">{erro}</Alerta>}
+      {apelidos.length === 0 ? (
+        <p className="text-muted-foreground">
+          Nenhum apelido: só o nome do cadastro é reconhecido.
+        </p>
+      ) : (
+        <ul className="flex flex-col divide-y rounded-md border">
+          {pagina.itensDaPagina.map((apelido) => (
+            <li key={apelido.id} className="flex items-center gap-3 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate font-medium">{apelido.nomeOrigem}</span>
+              {podeEditar && (
+                <button
+                  type="button"
+                  aria-label={`Remover apelido ${apelido.nomeOrigem}`}
+                  onClick={async () => {
+                    setErro(undefined);
+                    try {
+                      await onExcluir(apelido.id);
+                    } catch (falha) {
+                      setErro(
+                        mensagemDaApi(falha, 'Não foi possível remover agora. Tente de novo.'),
+                      );
+                    }
+                  }}
+                  className={buttonClassName({
+                    variant: 'ghost',
+                    className: 'text-muted-foreground size-9 flex-none px-0',
+                  })}
+                >
+                  <Trash size={16} aria-hidden />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {pagina.precisaPaginar && (
+        <div className="-mx-4 -mb-4">
+          <Paginacao
+            pagina={pagina.pagina}
+            porPagina={pagina.porPagina}
+            total={pagina.total}
+            onIrPara={pagina.irPara}
+          />
+        </div>
+      )}
+      {podeEditar && (
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <form.AppField name="nomeOrigem">
+            {(field) => (
+              <field.TextField
+                label="Grafia na origem"
+                placeholder="Ex.: Dr. A. Lima (E2)"
+                autoComplete="off"
+              />
+            )}
+          </form.AppField>
+          <form.AppForm>
+            <form.SubmitButton
+              pendingLabel="Adicionando…"
+              variant="secondary"
+              className="self-start"
+            >
+              Adicionar apelido
+            </form.SubmitButton>
+          </form.AppForm>
+        </form>
+      )}
+    </section>
+  );
+}

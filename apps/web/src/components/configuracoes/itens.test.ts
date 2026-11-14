@@ -29,12 +29,14 @@ describe('grupo Acesso', () => {
 });
 
 describe('grupo Catálogo', () => {
-  it('tem as listas do catálogo, exigindo catalogo.ver', () => {
+  it('tem as listas do catálogo e as dos médicos, cada uma exigindo o ver da tela', () => {
     const catalogo = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Catálogo');
     expect(catalogo?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Classificação dos exames', '/configuracoes/catalogo', 'catalogo.ver'],
       ['Contratados', '/configuracoes/contratados', 'catalogo.ver'],
       ['De-paras', '/configuracoes/de-paras', 'de-para.ver'],
+      ['Equipes médicas', '/configuracoes/equipes', 'medicos.ver'],
+      ['Níveis dos médicos', '/configuracoes/niveis-medico', 'medicos.ver'],
     ]);
   });
 });
