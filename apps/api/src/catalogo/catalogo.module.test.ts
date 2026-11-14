@@ -7,6 +7,7 @@ import { DatabaseModule } from '../database/database.module';
 import { CatalogoModule } from './catalogo.module';
 import { ClientesController } from './clientes/clientes.controller';
 import { ContratadosController } from './contratados/contratados.controller';
+import { ExamesController } from './exames/exames.controller';
 import { ModalidadesController, PrioridadesController } from './listas/listas.controller';
 import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
@@ -35,6 +36,8 @@ describe('CatalogoModule', () => {
     expect(modulo.get(ContratadosController)).toBeInstanceOf(ContratadosController);
 
     expect(modulo.get(ClientesController)).toBeInstanceOf(ClientesController);
+
+    expect(modulo.get(ExamesController)).toBeInstanceOf(ExamesController);
 
     await modulo.close();
   });

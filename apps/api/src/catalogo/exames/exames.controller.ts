@@ -1,0 +1,140 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+
+import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
+import type { PrincipalUsuario } from '../../identidade/principal';
+import { IdCriadoDto } from '../comum/dto';
+import {
+  ExameDetalheDto,
+  ExameDto,
+  ListarExamesDto,
+  PaginaExamesDto,
+  RegraQuebraDto,
+} from './dto/exame.dto';
+import { ExamesService } from './exames.service';
+
+@ApiTags('catalogo')
+@Controller('catalogo/exames')
+export class ExamesController {
+  constructor(private readonly service: ExamesService) {}
+
+  @Get()
+  @Permissao('exames.ver')
+  @ApiOkResponse({ type: PaginaExamesDto })
+  async listar(@Query() query: ListarExamesDto): Promise<PaginaExamesDto> {
+    const { itens, total } = await this.service.listar({
+      busca: query.busca,
+      modalidadeId: query.modalidadeId,
+      especialidadeId: query.especialidadeId,
+      ativo: query.ativo,
+      pagina: query.pagina,
+      porPagina: query.porPagina,
+    });
+    return { itens, total, pagina: query.pagina, porPagina: query.porPagina };
+  }
+
+  @Get(':id')
+  @Permissao('exames.ver')
+  @ApiOkResponse({ type: ExameDetalheDto })
+  @ApiNotFoundResponse()
+  obter(@Param('id', ParseUUIDPipe) id: string): Promise<ExameDetalheDto> {
+    return this.service.obter(id);
+  }
+
+  @Post()
+  @Permissao('exames.editar')
+  @ApiCreatedResponse({ type: IdCriadoDto })
+  @ApiBadRequestResponse({ description: 'Cadastro ligado inexistente.' })
+  async criar(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Body() corpo: ExameDto,
+  ): Promise<IdCriadoDto> {
+    return { id: await this.service.criar({ usuarioId: ator.usuarioId }, corpo) };
+  }
+
+  @Put(':id')
+  @Permissao('exames.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({ description: 'Cadastro ligado inexistente.' })
+  atualizar(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corpo: ExameDto,
+  ): Promise<void> {
+    return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
+  }
+
+  @Delete(':id')
+  @Permissao('exames.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiConflictResponse({ description: 'Destino de regra de quebra: desative em vez de excluir.' })
+  excluir(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.service.excluir({ usuarioId: ator.usuarioId }, id);
+  }
+
+  @Post(':id/regras-quebra')
+  @Permissao('exames.editar')
+  @ApiCreatedResponse({ type: IdCriadoDto })
+  @ApiBadRequestResponse({ description: 'Destino inexistente ou o próprio exame.' })
+  @ApiConflictResponse({ description: 'O exame já se quebra nesse destino.' })
+  async criarRegraQuebra(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corpo: RegraQuebraDto,
+  ): Promise<IdCriadoDto> {
+    return { id: await this.service.criarRegraQuebra({ usuarioId: ator.usuarioId }, id, corpo) };
+  }
+
+  @Put(':id/regras-quebra/:regraId')
+  @Permissao('exames.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({ description: 'Destino inexistente ou o próprio exame.' })
+  @ApiConflictResponse({ description: 'O exame já se quebra nesse destino.' })
+  atualizarRegraQuebra(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('regraId', ParseUUIDPipe) regraId: string,
+    @Body() corpo: RegraQuebraDto,
+  ): Promise<void> {
+    return this.service.atualizarRegraQuebra({ usuarioId: ator.usuarioId }, id, regraId, corpo);
+  }
+
+  @Delete(':id/regras-quebra/:regraId')
+  @Permissao('exames.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse()
+  excluirRegraQuebra(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('regraId', ParseUUIDPipe) regraId: string,
+  ): Promise<void> {
+    return this.service.excluirRegraQuebra({ usuarioId: ator.usuarioId }, id, regraId);
+  }
+}

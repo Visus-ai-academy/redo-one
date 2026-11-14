@@ -15,6 +15,12 @@ import type {
   DadosContratado,
 } from '../contratados/contratados.repository';
 import type {
+  DadosExame,
+  DadosRegraQuebra,
+  ExamesRepository,
+  FiltroExames,
+} from '../exames/exames.repository';
+import type {
   DadosLista,
   FiltroLista,
   ItemLista,
@@ -234,5 +240,88 @@ export class InMemoryClientesRepository implements ClientesRepository, AliasesCl
   async excluirAlias(aliasId: string) {
     const i = this.aliases.findIndex((a) => a.id === aliasId);
     if (i >= 0) this.aliases.splice(i, 1);
+  }
+}
+
+type ExameGuardado = DadosExame & { id: string; chaveNormalizada: string };
+type RegraGuardada = DadosRegraQuebra & { id: string; exameOrigemId: string };
+
+export class InMemoryExamesRepository implements ExamesRepository {
+  readonly itens = new Map<string, ExameGuardado>();
+  readonly regras: RegraGuardada[] = [];
+  readonly emUso = new Set<string>();
+
+  async listar(filtro: FiltroExames) {
+    const filtrados = [...this.itens.values()]
+      .filter((e) => filtro.ativo === undefined || e.ativo === filtro.ativo)
+      .filter((e) => !filtro.modalidadeId || e.modalidadeId === filtro.modalidadeId)
+      .filter((e) => !filtro.especialidadeId || e.especialidadeId === filtro.especialidadeId)
+      .filter((e) => !filtro.busca || contem(e.nome, filtro.busca) || e.codigo === filtro.busca)
+      .sort((a, b) => a.nome.localeCompare(b.nome))
+      .map((e) => ({
+        id: e.id,
+        nome: e.nome,
+        codigo: e.codigo,
+        modalidade: null,
+        especialidade: null,
+        subespecialidade: null,
+        categoria: null,
+        prioridade: null,
+        exigeRevisaoManual: e.exigeRevisaoManual,
+        ativo: e.ativo,
+      }));
+    return paginar(filtrados, filtro);
+  }
+
+  async buscar(id: string) {
+    const e = this.itens.get(id);
+    if (!e) return null;
+    const { chaveNormalizada: _, ...resto } = e;
+    return {
+      ...resto,
+      regrasQuebra: this.regras
+        .filter((r) => r.exameOrigemId === id)
+        .map((r) => ({
+          id: r.id,
+          exameDestino: {
+            id: r.exameDestinoId,
+            nome: this.itens.get(r.exameDestinoId)?.nome ?? '',
+          },
+          categoria: r.categoriaId ? { id: r.categoriaId, nome: r.categoriaId } : null,
+          ativo: r.ativo,
+        })),
+    };
+  }
+
+  async criar(dados: DadosExame & { chaveNormalizada: string }) {
+    const id = randomUUID();
+    this.itens.set(id, { ...dados, id });
+    return id;
+  }
+
+  async atualizar(id: string, dados: DadosExame & { chaveNormalizada: string }) {
+    this.itens.set(id, { ...dados, id });
+  }
+
+  async excluir(id: string) {
+    if (this.emUso.has(id)) return false;
+    this.itens.delete(id);
+    return true;
+  }
+
+  async criarRegraQuebra(exameOrigemId: string, dados: DadosRegraQuebra) {
+    const id = randomUUID();
+    this.regras.push({ ...dados, id, exameOrigemId });
+    return id;
+  }
+
+  async atualizarRegraQuebra(regraId: string, dados: DadosRegraQuebra) {
+    const r = this.regras.find((i) => i.id === regraId);
+    if (r) Object.assign(r, dados);
+  }
+
+  async excluirRegraQuebra(regraId: string) {
+    const i = this.regras.findIndex((r) => r.id === regraId);
+    if (i >= 0) this.regras.splice(i, 1);
   }
 }

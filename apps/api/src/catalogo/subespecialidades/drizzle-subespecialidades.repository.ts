@@ -44,14 +44,12 @@ export class DrizzleSubespecialidadesRepository extends DrizzleListaRepository<D
         .values(this.valores(dados) as typeof subespecialidades.$inferInsert)
         .returning({ id: subespecialidades.id });
       if (!criada) throw new Error('insert não devolveu o id');
-      await tx
-        .insert(subespecialidadesEspecialidades)
-        .values(
-          dados.especialidadeIds.map((especialidadeId) => ({
-            subespecialidadeId: criada.id,
-            especialidadeId,
-          })),
-        );
+      await tx.insert(subespecialidadesEspecialidades).values(
+        dados.especialidadeIds.map((especialidadeId) => ({
+          subespecialidadeId: criada.id,
+          especialidadeId,
+        })),
+      );
       return criada.id;
     });
   }
@@ -65,14 +63,12 @@ export class DrizzleSubespecialidadesRepository extends DrizzleListaRepository<D
       await tx
         .delete(subespecialidadesEspecialidades)
         .where(eq(subespecialidadesEspecialidades.subespecialidadeId, id));
-      await tx
-        .insert(subespecialidadesEspecialidades)
-        .values(
-          dados.especialidadeIds.map((especialidadeId) => ({
-            subespecialidadeId: id,
-            especialidadeId,
-          })),
-        );
+      await tx.insert(subespecialidadesEspecialidades).values(
+        dados.especialidadeIds.map((especialidadeId) => ({
+          subespecialidadeId: id,
+          especialidadeId,
+        })),
+      );
     });
   }
 }

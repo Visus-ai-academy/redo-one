@@ -14,6 +14,10 @@ import { ContratadosController } from './contratados/contratados.controller';
 import { CONTRATADOS_REPOSITORY } from './contratados/contratados.repository';
 import { ContratadosService } from './contratados/contratados.service';
 import { DrizzleContratadosRepository } from './contratados/drizzle-contratados.repository';
+import { DrizzleExamesRepository } from './exames/drizzle-exames.repository';
+import { ExamesController } from './exames/exames.controller';
+import { EXAMES_REPOSITORY } from './exames/exames.repository';
+import { ExamesService } from './exames/exames.service';
 import {
   DrizzleListaRepository,
   LISTAS,
@@ -51,10 +55,13 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
     SubespecialidadesController,
     ContratadosController,
     ClientesController,
+    ExamesController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
     ContratadosService,
+    ExamesService,
+    { provide: EXAMES_REPOSITORY, useClass: DrizzleExamesRepository },
     ClientesService,
     AliasesClienteService,
     DrizzleClientesRepository,

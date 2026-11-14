@@ -40,3 +40,12 @@ export class DocumentoInvalidoError extends ErroDeDominio {
     super(mensagem);
   }
 }
+
+/** Um cadastro ligado (modalidade, categoria...) foi excluído ou nunca existiu. */
+export class ReferenciaInexistenteError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor() {
+    super('Um dos cadastros escolhidos não existe mais. Recarregue a página e escolha de novo.');
+  }
+}
