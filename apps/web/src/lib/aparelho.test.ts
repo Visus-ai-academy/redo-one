@@ -50,6 +50,13 @@ describe('ipParcial', () => {
     expect(ipParcial('2804:14c:5b81:8ab1::1')).toBe('2804:14c:x:x');
   });
 
+  it.each(['::1', '127.0.0.1', '::ffff:127.0.0.1'])(
+    'acesso da própria máquina (%s) vira "local"',
+    (ip) => {
+      expect(ipParcial(ip)).toBe('local');
+    },
+  );
+
   it('sem IP, não mostra nada', () => {
     expect(ipParcial(null)).toBeNull();
   });

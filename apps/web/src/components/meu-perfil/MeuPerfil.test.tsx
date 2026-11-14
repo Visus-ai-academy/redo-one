@@ -7,6 +7,8 @@ import { MeuPerfil } from './MeuPerfil';
 
 vi.mock('../../gen/clients/contaControllerAtualizar');
 vi.mock('../../gen/clients/contaControllerTrocarSenha');
+vi.mock('../../gen/clients/contaControllerEncerrarSessao');
+vi.mock('../../gen/clients/contaControllerEncerrarOutrasSessoes');
 
 const conta: MinhaContaDto = {
   nome: 'Carlos Andrade',
@@ -28,5 +30,6 @@ describe('MeuPerfil', () => {
     expect(screen.getByText('CA')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Dados da conta' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Senha' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Sessões abertas/ })).toBeInTheDocument();
   });
 });

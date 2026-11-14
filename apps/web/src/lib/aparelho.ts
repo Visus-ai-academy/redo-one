@@ -30,6 +30,7 @@ export function descreverAparelho(userAgent: string | null) {
 export function ipParcial(ip: string | null) {
   if (!ip) return null;
   const v4 = ip.replace(/^::ffff:/, '');
+  if (v4 === '::1' || v4.startsWith('127.')) return 'local';
   if (/^\d+\.\d+\.\d+\.\d+$/.test(v4)) return `${v4.split('.').slice(0, 2).join('.')}.x.x`;
   return `${ip.split(':').slice(0, 2).join(':')}:x:x`;
 }

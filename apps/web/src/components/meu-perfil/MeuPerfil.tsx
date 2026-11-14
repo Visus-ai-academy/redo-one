@@ -1,6 +1,7 @@
 import type { MinhaContaDto } from '../../gen/types/MinhaContaDto';
 import { iniciais } from '../app-shell/iniciais';
 import { DadosDaConta } from './DadosDaConta';
+import { SessoesAbertas } from './SessoesAbertas';
 import { TrocarSenha } from './TrocarSenha';
 
 export function MeuPerfil({ conta }: { conta: MinhaContaDto }) {
@@ -22,6 +23,7 @@ export function MeuPerfil({ conta }: { conta: MinhaContaDto }) {
       </div>
       <DadosDaConta conta={conta} />
       <TrocarSenha senhaAlteradaEm={conta.senhaAlteradaEm} />
+      <SessoesAbertas sessoes={conta.sessoesAbertas} />
     </div>
   );
 }
