@@ -20,7 +20,7 @@ export function Painel({ titulo, descricao, acao, id, children, className }: Pai
     <section
       id={id}
       aria-labelledby={tituloId}
-      className={cn('bg-card scroll-mt-6 rounded-lg border', className)}
+      className={cn('bg-card scroll-mt-20 rounded-lg border md:scroll-mt-6', className)}
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b p-4">
         <div className="flex flex-col gap-1">
