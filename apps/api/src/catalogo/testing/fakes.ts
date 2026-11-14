@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
+import type { AliasesClienteRepository } from '../clientes/aliases-cliente.repository';
+import type {
+  AliasCliente,
+  ClientesRepository,
+  DadosCliente,
+  FiltroClientes,
+  TipoAlias,
+} from '../clientes/clientes.repository';
 import type { Pagina } from '../comum/paginacao';
 import type {
   Contratado,
@@ -122,5 +130,109 @@ export class InMemoryContratadosRepository implements ContratadosRepository {
     if (this.emUso.has(id)) return false;
     this.itens.delete(id);
     return true;
+  }
+}
+
+type ClienteGuardado = DadosCliente & { id: string; chaveNormalizada: string };
+type AliasGuardado = AliasCliente & { clienteId: string; chave: string };
+
+/** Clientes e apelidos em memória (os dois repositórios num objeto só, como no banco). */
+export class InMemoryClientesRepository implements ClientesRepository, AliasesClienteRepository {
+  readonly itens = new Map<string, ClienteGuardado>();
+  readonly aliases: AliasGuardado[] = [];
+  readonly emUso = new Set<string>();
+
+  constructor(private readonly contratados: InMemoryContratadosRepository) {}
+
+  private contratado(id: string | null) {
+    const c = id ? this.contratados.itens.get(id) : undefined;
+    return c ? { id: c.id, razaoSocial: c.razaoSocial } : null;
+  }
+
+  async listar(filtro: FiltroClientes) {
+    const filtrados = [...this.itens.values()]
+      .filter((c) => filtro.ativo === undefined || c.ativo === filtro.ativo)
+      .filter((c) => !filtro.contratadoId || c.contratadoId === filtro.contratadoId)
+      .filter(
+        (c) =>
+          !filtro.busca || contem(c.nome, filtro.busca) || contem(c.nomeFantasia, filtro.busca),
+      )
+      .sort((a, b) => a.nome.localeCompare(b.nome))
+      .map((c) => ({
+        id: c.id,
+        nome: c.nome,
+        nomeFantasia: c.nomeFantasia,
+        cnpj: c.cnpj,
+        contratado: this.contratado(c.contratadoId),
+        ativo: c.ativo,
+        ocultoDashboards: c.ocultoDashboards,
+        totalAliases: this.aliases.filter((a) => a.clienteId === c.id).length,
+      }));
+    return paginar(filtrados, filtro);
+  }
+
+  async buscar(id: string) {
+    const c = this.itens.get(id);
+    if (!c) return null;
+    const { contratadoId, chaveNormalizada: _, ...resto } = c;
+    return {
+      ...resto,
+      contratado: this.contratado(contratadoId),
+      aliases: this.aliases
+        .filter((a) => a.clienteId === id)
+        .map(({ clienteId: __, chave: ___, ...a }) => a),
+    };
+  }
+
+  async buscarPorNome(nome: string) {
+    const c = [...this.itens.values()].find((i) => i.nome.toLowerCase() === nome.toLowerCase());
+    return c ? { id: c.id } : null;
+  }
+
+  async criar(dados: DadosCliente & { chaveNormalizada: string }) {
+    const id = randomUUID();
+    this.itens.set(id, { ...dados, id });
+    return id;
+  }
+
+  async atualizar(id: string, dados: DadosCliente & { chaveNormalizada: string }) {
+    this.itens.set(id, { ...dados, id });
+  }
+
+  async excluir(id: string) {
+    if (this.emUso.has(id)) return false;
+    this.itens.delete(id);
+    return true;
+  }
+
+  async buscarAlias(tipo: TipoAlias, chave: string) {
+    const a = this.aliases.find((i) => i.tipo === tipo && i.chave === chave);
+    if (!a) return null;
+    return {
+      id: a.id,
+      clienteId: a.clienteId,
+      clienteNome: this.itens.get(a.clienteId)?.nome ?? '',
+    };
+  }
+
+  async buscarClientePorChave(chaveNormalizada: string) {
+    const c = [...this.itens.values()].find((i) => i.chaveNormalizada === chaveNormalizada);
+    return c ? { id: c.id, nome: c.nome } : null;
+  }
+
+  async criarAlias(clienteId: string, alias: Omit<AliasGuardado, 'id' | 'clienteId'>) {
+    const id = randomUUID();
+    this.aliases.push({ ...alias, id, clienteId });
+    return id;
+  }
+
+  async buscarAliasDoCliente(clienteId: string, aliasId: string) {
+    const a = this.aliases.find((i) => i.id === aliasId && i.clienteId === clienteId);
+    return a ? { id: a.id, tipo: a.tipo, padrao: a.padrao, observacoes: a.observacoes } : null;
+  }
+
+  async excluirAlias(aliasId: string) {
+    const i = this.aliases.findIndex((a) => a.id === aliasId);
+    if (i >= 0) this.aliases.splice(i, 1);
   }
 }

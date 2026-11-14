@@ -39,7 +39,8 @@ export class RegistroAuditoria {
     return this.registrar(ator, id, 'excluido', antes);
   }
 
-  private registrar(ator: AtorCatalogo, id: string, acao: string, antes?: Campos, depois?: Campos) {
+  /** Evento com ação própria (ex.: `alias_criado` no cliente). */
+  registrar(ator: AtorCatalogo, id: string, acao: string, antes?: Campos, depois?: Campos) {
     return this.auditoria.registrar({
       ator: { tipo: 'usuario', id: ator.usuarioId },
       entidade: this.rotulo.entidade,

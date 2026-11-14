@@ -3,6 +3,12 @@ import { Module, type Provider } from '@nestjs/common';
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import { DATABASE, type Database } from '../database/database';
 import { CLOCK, type Clock, systemClock } from '../identidade/clock';
+import { ALIASES_CLIENTE_REPOSITORY } from './clientes/aliases-cliente.repository';
+import { AliasesClienteService } from './clientes/aliases-cliente.service';
+import { ClientesController } from './clientes/clientes.controller';
+import { CLIENTES_REPOSITORY } from './clientes/clientes.repository';
+import { ClientesService } from './clientes/clientes.service';
+import { DrizzleClientesRepository } from './clientes/drizzle-clientes.repository';
 import type { Rotulo } from './comum/rotulo';
 import { ContratadosController } from './contratados/contratados.controller';
 import { CONTRATADOS_REPOSITORY } from './contratados/contratados.repository';
@@ -44,10 +50,16 @@ function lista(token: symbol, rotulo: Rotulo, tabela: TabelaDeLista): Provider {
     PrioridadesController,
     SubespecialidadesController,
     ContratadosController,
+    ClientesController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
     ContratadosService,
+    ClientesService,
+    AliasesClienteService,
+    DrizzleClientesRepository,
+    { provide: CLIENTES_REPOSITORY, useExisting: DrizzleClientesRepository },
+    { provide: ALIASES_CLIENTE_REPOSITORY, useExisting: DrizzleClientesRepository },
     { provide: CONTRATADOS_REPOSITORY, useClass: DrizzleContratadosRepository },
     lista(
       MODALIDADES,
