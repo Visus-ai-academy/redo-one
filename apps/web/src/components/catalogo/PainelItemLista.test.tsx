@@ -37,8 +37,8 @@ describe('PainelItemLista', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'MR');
     await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Ressonância');
     await userEvent.type(screen.getByRole('textbox', { name: 'Cor' }), '#1F7A4D');
-    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Ordem' }));
-    await userEvent.type(screen.getByRole('spinbutton', { name: 'Ordem' }), '2');
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Ordem' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ordem' }), '2');
     await userEvent.click(screen.getByRole('button', { name: 'Criar modalidade' }));
 
     expect(onSalvar).toHaveBeenCalledWith({

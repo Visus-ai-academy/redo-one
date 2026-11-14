@@ -52,7 +52,7 @@ describe('campos de caixa de marcar, texto longo e número', () => {
     expect(ativo).toHaveAccessibleDescription('Inativo some das listas de escolha.');
     await userEvent.click(ativo);
     await userEvent.type(screen.getByRole('textbox', { name: 'Observações' }), 'Unidade nova');
-    await userEvent.type(screen.getByRole('spinbutton', { name: 'Ordem' }), '3');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ordem' }), '3');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -68,6 +68,19 @@ describe('campos de caixa de marcar, texto longo e número', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Informe um número inteiro.')).toBeInTheDocument();
-    expect(screen.getByRole('spinbutton', { name: 'Ordem' })).toBeRequired();
+    expect(screen.getByRole('textbox', { name: 'Ordem' })).toBeRequired();
+  });
+
+  it('número: ignora letras e mostra números grandes sem separador de milhar', async () => {
+    const onSubmit = vi.fn();
+    render(<Formulario onSubmit={onSubmit} />);
+
+    const ordem = screen.getByRole('textbox', { name: 'Ordem' });
+    await userEvent.type(ordem, 'a990001');
+    await userEvent.tab();
+    expect(ordem).toHaveValue('990001');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ ordem: '990001' }));
   });
 });

@@ -17,6 +17,7 @@ export default defineConfig({
       '@base-ui/react/dialog',
       '@base-ui/react/drawer',
       '@base-ui/react/field',
+      '@base-ui/react/number-field',
       '@base-ui/react/select',
       '@base-ui/react/switch',
       '@base-ui/react/tabs',

@@ -66,7 +66,7 @@ describe('painéis dos de-paras', () => {
     comConsultas(<PainelDeParaValor {...base} buscarExames={async () => []} onSalvar={onSalvar} />);
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Descrição do estudo' }), 'RM CRANIO');
-    await userEvent.type(screen.getByRole('spinbutton', { name: 'Vale (unidades)' }), '1.5');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Vale (unidades)' }), '1.5');
     await userEvent.click(screen.getByRole('button', { name: 'Criar de-para' }));
 
     expect(onSalvar).toHaveBeenCalledWith({

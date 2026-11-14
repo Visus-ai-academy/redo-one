@@ -55,7 +55,7 @@ describe('PainelMedico', () => {
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), ' Dra. Carla Souza ');
     await userEvent.type(screen.getByRole('textbox', { name: 'CRM' }), '999-RJ');
-    await userEvent.type(screen.getByRole('spinbutton', { name: 'ID na MobileMed' }), '42');
+    await userEvent.type(screen.getByRole('textbox', { name: 'ID na MobileMed' }), '42');
     await userEvent.type(screen.getByRole('textbox', { name: 'E-mail' }), 'carla@clinica.com');
     await escolherOpcao('Nível', 'Nível 1');
     await escolherOpcao('Função', 'Fellow (em formação)');

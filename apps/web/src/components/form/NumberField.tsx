@@ -1,4 +1,5 @@
 import { Field } from '@base-ui/react/field';
+import { NumberField as BaseNumberField } from '@base-ui/react/number-field';
 
 import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
@@ -18,8 +19,9 @@ type NumberFieldProps = {
 };
 
 /**
- * Número no kit de formulário. O valor fica como texto (o que a pessoa digitou); o schema Zod
- * valida e converte, para o erro poder dizer o que está errado em vez de virar `NaN`.
+ * Número no kit de formulário, sobre o NumberField do Base UI (aceita só número, setas sobem e
+ * descem pelo `step`). O valor do campo fica como texto ("" quando vazio); o schema Zod valida e
+ * converte.
  */
 export function NumberField({
   label,
@@ -45,19 +47,23 @@ export function NumberField({
       className={cn('flex flex-col gap-2', className)}
     >
       <FieldLabel required={required}>{label}</FieldLabel>
-      <Field.Control
-        type="number"
-        inputMode={step < 1 ? 'decimal' : 'numeric'}
+      <BaseNumberField.Root
+        value={field.state.value.trim() === '' ? null : Number(field.state.value)}
+        onValueChange={(valor) => field.handleChange(valor === null ? '' : String(valor))}
         min={min}
         max={max}
         step={step}
         required={required}
-        placeholder={placeholder}
-        value={field.state.value}
-        onValueChange={(value) => field.handleChange(value)}
-        onBlur={field.handleBlur}
-        className={controlClassName('app', 'tabular-nums')}
-      />
+        // Sem separador de milhar: código e ID (990001) não viram "990.001".
+        format={{ useGrouping: false, maximumFractionDigits: step < 1 ? 2 : 0 }}
+        locale="pt-BR"
+      >
+        <BaseNumberField.Input
+          placeholder={placeholder}
+          onBlur={field.handleBlur}
+          className={controlClassName('app', 'tabular-nums')}
+        />
+      </BaseNumberField.Root>
       {description && (
         <Field.Description className="text-muted-foreground text-[13px]">
           {description}
