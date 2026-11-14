@@ -8,6 +8,7 @@ describe('iniciais', () => {
     ['Maria da Silva Souza', 'MS'],
     ['carlos', 'C'],
     ['  ', ''],
+    ['Pessoa Teste 07', 'PT'],
   ])('%s → %s', (nome, esperado) => {
     expect(iniciais(nome)).toBe(esperado);
   });
