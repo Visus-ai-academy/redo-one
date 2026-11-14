@@ -107,6 +107,12 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 **Estados**
 - Todo controle: padrão, hover, foco visível (anel de 2px na cor do acento), ativo, desabilitado.
 - Todo bloco de dados: carregando (skeleton com o formato do conteúdo, não spinner no meio), vazio (diz o que fazer e oferece a ação), erro (o que houve + como tentar de novo), sem permissão.
+- **Nunca deixar a pessoa sem resposta.** Todo clique e toda espera mostram algo em até ~100ms; nada de tela, painel ou área em branco (`return null` enquanto carrega) nem de clique que parece não ter feito nada.
+  - Carregando dados (página, painel, aba, lista, gráfico): **skeleton** com o formato do conteúdo que vem (linhas da tabela, campos do formulário, título do painel), na mesma posição e tamanho, para nada pular quando os dados chegam. O que já se sabe aparece na hora (título, abas, botão de fechar); só o que falta vira skeleton.
+  - Recarregando o que já está na tela (filtro, página seguinte, atualização automática): mantém os dados antigos à vista, esmaecidos ou com indicador discreto, em vez de trocar por skeleton.
+  - Ação em andamento (salvar, enviar, excluir): o botão fica desabilitado e diz que está trabalhando ("Salvando…"); terminou, confirma ("Dados salvos.") ou explica o erro.
+  - Espera longa (importação, fechamento, geração de arquivo): progresso ou etapa atual, e a pessoa pode seguir usando o resto da tela.
+  - Spinner solto no meio da tela só onde não há formato a imitar (ex.: a troca de rota inteira antes de saber o que vem).
 
 **Movimento**
 - Leve animação em tudo que abre e fecha por cima da tela (painel lateral, gaveta, modal, lista suspensa, dica): 150–200ms, ease-out, só opacidade e posição/escala (`opacity`, `transform`, `translate`, `scale`), só para mostrar mudança de estado (abrir, expandir, confirmar). Valores por peça na seção "Movimento" do `sistema.md`.
@@ -122,6 +128,7 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 - Frases de marketing, slogans, números inventados, texto de preenchimento.
 - Strings de metadados unidas por "·" em todo lugar; "→" pendurado em botões; numeração 01/02/03 sem sequência real.
 - Modal como primeira opção; tooltips para informação essencial.
+- Área em branco ou spinner no meio enquanto carrega, quando dá para mostrar o skeleton do conteúdo; clique sem resposta visível.
 - Ícones de conjuntos misturados, emoji, ícone decorativo sem função.
 - Componente reinventado (barra de rolagem, select, checkbox feitos à mão) quando há nativo ou Base UI.
 - Telas do mesmo tipo com padrões diferentes (cada lista com um jeito de filtrar, cada formulário com um jeito de salvar).
@@ -133,7 +140,7 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 3. **Escalas:** todos os tamanhos de fonte, espaçamentos e raios estão nas escalas acima?
 4. **Profundidade:** só bordas no conteúdo; sombra só no que flutua?
 5. **Cor:** o acento aparece só em ação, seleção, foco e link? Status têm rótulo além da cor? Contrastes passam (cinza de legenda incluso)?
-6. **Estados:** vazio, carregando, erro, sem permissão e foco desenhados ou previstos?
+6. **Estados:** vazio, carregando (skeleton com o formato do conteúdo), erro, sem permissão e foco desenhados ou previstos? Algum clique ou espera fica sem resposta visível?
 7. **Regras do One:** `*` nos obrigatórios, Phosphor em tudo, pt-BR sentence case, sem caixa alta, paginação com total, confirmação só no destrutivo.
 8. **Anti-padrões:** passe a lista acima item por item.
 9. **Onde cada interação acontece:** cada ação está no padrão que o brief escolheu? Nada virou tela nova, modal ou painel por hábito?
