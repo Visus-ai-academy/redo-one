@@ -1,4 +1,4 @@
-import { CheckCircle, Circle, Clock } from '@phosphor-icons/react';
+import { Clock } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -7,26 +7,17 @@ import { z } from 'zod';
 import { ResponseError } from '../../gen/.kubb/client';
 import { useSenhaControllerDefinir } from '../../gen/hooks/useSenhaControllerDefinir';
 import type { InfoLinkDto } from '../../gen/types/InfoLinkDto';
-import { cn } from '../../lib/cn';
-import { requisitosDaSenha, senhaTemLetraENumero, TAMANHO_MINIMO_SENHA } from '../../lib/senha';
+import { ERRO_CONFIRMACAO, regraNovaSenha, senhasIguais } from '../../lib/senha';
 import { SESSAO_QUERY_KEY } from '../../lib/sessao';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useAppForm } from '../form/form';
+import { RequisitosSenha } from '../senha/RequisitosSenha';
 import { VoltarParaLogin } from './VoltarParaLogin';
 
 const schema = z
-  .object({
-    senha: z
-      .string()
-      .min(TAMANHO_MINIMO_SENHA, 'Use pelo menos 8 caracteres.')
-      .refine(senhaTemLetraENumero, 'Use letras e números.'),
-    confirmacao: z.string(),
-  })
-  .refine((valores) => valores.senha === valores.confirmacao, {
-    path: ['confirmacao'],
-    message: 'As senhas não são iguais.',
-  });
+  .object({ senha: regraNovaSenha, confirmacao: z.string() })
+  .refine(senhasIguais, ERRO_CONFIRMACAO);
 
 const destaque = 'font-semibold text-foreground';
 
@@ -108,34 +99,7 @@ export function DefinirSenhaForm({ token, link }: { token: string; link: InfoLin
       </form.AppField>
 
       <form.Subscribe selector={(state) => state.values}>
-        {({ senha, confirmacao }) => (
-          <ul
-            aria-label="Requisitos da senha"
-            className="bg-card flex flex-col gap-2 rounded-md border p-3 text-[13px]"
-          >
-            {requisitosDaSenha(senha, confirmacao).map((requisito) => (
-              <li
-                key={requisito.texto}
-                className={cn(
-                  'flex items-center gap-2',
-                  requisito.atendido ? 'text-success' : 'text-muted-foreground',
-                )}
-              >
-                {requisito.atendido ? (
-                  <CheckCircle size={16} aria-hidden className="flex-none" />
-                ) : (
-                  <Circle size={16} aria-hidden className="flex-none" />
-                )}
-                <span>
-                  {requisito.texto}
-                  <span className="sr-only">
-                    {requisito.atendido ? ' (atendido)' : ' (pendente)'}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        {({ senha, confirmacao }) => <RequisitosSenha senha={senha} confirmacao={confirmacao} />}
       </form.Subscribe>
 
       <form.AppForm>
