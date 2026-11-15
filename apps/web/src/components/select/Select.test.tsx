@@ -97,4 +97,56 @@ describe('Select', () => {
     await userEvent.click(campo);
     expect(await screen.findAllByRole('option')).toHaveLength(1);
   });
+
+  describe('com mais de 7 opções', () => {
+    const categorias = [
+      { valor: '', rotulo: 'A do exame' },
+      ...['ANGIO', 'CABEÇA', 'COEFICIENTE', 'COLUNAS', 'ONCO', 'PESCOÇO', 'PROSTATA', 'SC'].map(
+        (nome) => ({ valor: nome.toLowerCase(), rotulo: nome }),
+      ),
+    ];
+
+    it('digita para filtrar, sem diferença de acento e maiúscula, e escolhe', async () => {
+      const onValueChange = vi.fn();
+      render(
+        <Select
+          aria-label="Categoria"
+          value=""
+          onValueChange={onValueChange}
+          opcoes={categorias}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }));
+      const busca = await screen.findByRole('combobox', { name: 'Buscar na lista' });
+      await vi.waitFor(() => expect(busca).toHaveFocus());
+      await userEvent.type(busca, 'cabeca');
+
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['CABEÇA']);
+      await userEvent.click(screen.getByRole('option', { name: 'CABEÇA' }));
+      expect(onValueChange).toHaveBeenCalledWith('cabeça');
+    });
+
+    it('sem resultado, diz que nada foi encontrado', async () => {
+      render(
+        <Select aria-label="Categoria" value="onco" onValueChange={vi.fn()} opcoes={categorias} />,
+      );
+
+      expect(screen.getByRole('combobox', { name: 'Categoria' })).toHaveTextContent('ONCO');
+      await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }));
+      await userEvent.type(await screen.findByRole('combobox', { name: 'Buscar na lista' }), 'xyz');
+
+      expect(screen.getByText('Nada encontrado para “xyz”.')).toBeInTheDocument();
+    });
+  });
+
+  it('lista curta não tem busca', async () => {
+    render(
+      <Select aria-label="Filtrar por papel" value="" onValueChange={vi.fn()} opcoes={opcoes} />,
+    );
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Filtrar por papel' }));
+    await screen.findByRole('option', { name: 'Financeiro' });
+    expect(screen.queryByRole('combobox', { name: 'Buscar na lista' })).not.toBeInTheDocument();
+  });
 });

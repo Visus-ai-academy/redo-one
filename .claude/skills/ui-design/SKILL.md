@@ -76,6 +76,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 **Formulários**
 - **Campo de formato fixo tem máscara** (CPF, CNPJ, CEP, telefone, chave Pix desses tipos): formata enquanto a pessoa digita, sem pular o cursor, com teclado numérico no celular.
 - Rótulo acima do campo, ajuda abaixo, erro abaixo (texto que diz o problema e como resolver). Largura de leitura: 480–640px.
+- Seleção com mais de 7 opções abre com um campo de busca no topo da lista, com o foco nele: a pessoa digita parte do nome (sem acento nem maiúscula) em vez de rolar. Lista curta (situação, tipo) fica sem busca.
 - Um botão primário por formulário, à direita no rodapé (ou largura total em formulários estreitos de acesso); "Cancelar" secundário ao lado.
 
 **Onde cada interação acontece**
