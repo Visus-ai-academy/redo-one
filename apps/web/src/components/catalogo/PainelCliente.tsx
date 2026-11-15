@@ -16,6 +16,7 @@ import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel } from './rodape-painel';
+import { UnidadesCliente, type UnidadesClienteProps } from './UnidadesCliente';
 import { useErroDoPainel } from './use-erro-do-painel';
 
 export type PainelClienteProps = {
@@ -28,6 +29,8 @@ export type PainelClienteProps = {
   onExcluir?: () => Promise<void>;
   onCriarApelido: (dados: AliasDto) => Promise<void>;
   onExcluirApelido: (id: string) => Promise<void>;
+  /** Unificação (unidades que respondem por um principal); sem ela, a seção não aparece. */
+  unificacao?: Omit<UnidadesClienteProps, 'unificadoEm' | 'unidades' | 'podeEditar'>;
   onFechar: () => void;
 };
 
@@ -73,6 +76,7 @@ export function PainelCliente({
   onExcluir,
   onCriarApelido,
   onExcluirApelido,
+  unificacao,
   onFechar,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
@@ -280,6 +284,14 @@ export function PainelCliente({
           podeEditar={podeEditar}
           onCriar={onCriarApelido}
           onExcluir={onExcluirApelido}
+        />
+      )}
+      {cliente && unificacao && (
+        <UnidadesCliente
+          unificadoEm={cliente.unificadoEm}
+          unidades={cliente.unidades}
+          podeEditar={podeEditar}
+          {...unificacao}
         />
       )}
     </PainelLateral>

@@ -10,11 +10,14 @@ import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
+import { clientesControllerAdicionarUnidade } from '../../gen/clients/clientesControllerAdicionarUnidade';
 import { clientesControllerAtualizar } from '../../gen/clients/clientesControllerAtualizar';
 import { clientesControllerCriar } from '../../gen/clients/clientesControllerCriar';
 import { clientesControllerCriarAlias } from '../../gen/clients/clientesControllerCriarAlias';
 import { clientesControllerExcluir } from '../../gen/clients/clientesControllerExcluir';
 import { clientesControllerExcluirAlias } from '../../gen/clients/clientesControllerExcluirAlias';
+import { clientesControllerListar } from '../../gen/clients/clientesControllerListar';
+import { clientesControllerRemoverUnidade } from '../../gen/clients/clientesControllerRemoverUnidade';
 import { clientesControllerListarQueryOptions } from '../../gen/hooks/useClientesControllerListar';
 import { clientesControllerObterQueryOptions } from '../../gen/hooks/useClientesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
@@ -100,10 +103,16 @@ function Clientes({ podeEditar }: { podeEditar: boolean }) {
           <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
             <span className="flex flex-col leading-snug">
               <span>{info.getValue()}</span>
-              {info.row.original.nomeFantasia && (
+              {info.row.original.unificadoEm ? (
                 <span className="text-muted-foreground text-[13px] font-normal">
-                  {info.row.original.nomeFantasia}
+                  Unidade de {info.row.original.unificadoEm.nome}
                 </span>
+              ) : (
+                info.row.original.nomeFantasia && (
+                  <span className="text-muted-foreground text-[13px] font-normal">
+                    {info.row.original.nomeFantasia}
+                  </span>
+                )
               )}
             </span>
           </BotaoAbrir>
@@ -270,6 +279,43 @@ function Painel({
         await clientesControllerExcluirAlias({ path: { id, aliasId } }).unwrap();
         await invalidarCatalogo(queryClient);
       }}
+      unificacao={
+        id && cliente
+          ? {
+              buscarClientes: async (termo) => {
+                const { itens } = await clientesControllerListar({
+                  query: { busca: termo, porPagina: 10 },
+                }).unwrap();
+                return itens
+                  .filter((c) => c.id !== id)
+                  .map((c) => ({
+                    valor: c.id,
+                    rotulo: c.nome,
+                    detalhe: c.unificadoEm ? `Unidade de ${c.unificadoEm.nome}` : undefined,
+                  }));
+              },
+              onAdicionar: async (clienteId) => {
+                await clientesControllerAdicionarUnidade({
+                  path: { id },
+                  body: { clienteId },
+                }).unwrap();
+                await invalidarCatalogo(queryClient);
+              },
+              onRemover: async (unidadeId) => {
+                await clientesControllerRemoverUnidade({ path: { id, unidadeId } }).unwrap();
+                await invalidarCatalogo(queryClient);
+              },
+              onDesfazer: async () => {
+                if (!cliente.unificadoEm) return;
+                await clientesControllerRemoverUnidade({
+                  path: { id: cliente.unificadoEm.id, unidadeId: id },
+                }).unwrap();
+                await invalidarCatalogo(queryClient);
+              },
+              onAbrir: (outro) => void navigate({ search: (a) => ({ ...a, id: outro }) }),
+            }
+          : undefined
+      }
     />
   );
 }
