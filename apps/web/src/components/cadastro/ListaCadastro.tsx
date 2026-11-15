@@ -1,16 +1,15 @@
 import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback } from 'react';
 import { cn } from '../../lib/cn';
 import { CampoBusca } from '../busca/CampoBusca';
+import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import type { DataTableFeatures } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Paginacao } from '../paginacao/Paginacao';
 import { RESERVA_DO_PAINEL } from '../painel/reserva';
-
-const ESPERA_DA_BUSCA_MS = 300;
 
 type ListaCadastroProps<T extends RowData> = {
   /** Título da página (h1). */
@@ -78,20 +77,10 @@ export function ListaCadastro<T extends RowData>({
   onIrPara,
   painel,
 }: ListaCadastroProps<T>) {
-  const [termo, setTermo] = useState(busca.valor ?? '');
-
-  // A busca vai para a URL (e para a API) só depois de uma pausa na digitação.
-  useEffect(() => {
-    if (termo.trim() === (busca.valor ?? '')) return;
-    const espera = setTimeout(
-      () => onFiltrar({ busca: termo.trim() || undefined }),
-      ESPERA_DA_BUSCA_MS,
-    );
-    return () => clearTimeout(espera);
-  }, [termo, busca.valor, onFiltrar]);
-
-  // "Limpar filtros", troca de aba e o voltar do navegador mudam a busca por fora.
-  useEffect(() => setTermo(busca.valor ?? ''), [busca.valor]);
+  const [termo, setTermo] = useBuscaComEspera(
+    busca.valor,
+    useCallback((texto: string | undefined) => onFiltrar({ busca: texto }), [onFiltrar]),
+  );
 
   const filtrando = Boolean(busca.valor) || temFiltro;
 

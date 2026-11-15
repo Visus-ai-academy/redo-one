@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import type { PaginaUsuariosDto } from '../../gen/types/PaginaUsuariosDto';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import type { UsuarioResumoDto } from '../../gen/types/UsuarioResumoDto';
@@ -8,6 +8,7 @@ import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
 import { Avatar } from '../avatar/Avatar';
 import { CampoBusca } from '../busca/CampoBusca';
+import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
@@ -38,7 +39,6 @@ export type ListaUsuariosProps = {
 };
 
 const coluna = createDataTableColumnHelper<UsuarioResumoDto>();
-const ESPERA_DA_BUSCA_MS = 300;
 
 export function ListaUsuarios({
   pagina,
@@ -54,20 +54,10 @@ export function ListaUsuarios({
   onConvidar,
 }: ListaUsuariosProps) {
   const [referencia] = useState(() => agora ?? new Date());
-  const [termo, setTermo] = useState(filtros.busca ?? '');
-
-  // A busca vai para a URL (e para a API) só depois de uma pausa na digitação.
-  useEffect(() => {
-    if (termo.trim() === (filtros.busca ?? '')) return;
-    const espera = setTimeout(
-      () => onFiltrar({ busca: termo.trim() || undefined }),
-      ESPERA_DA_BUSCA_MS,
-    );
-    return () => clearTimeout(espera);
-  }, [termo, filtros.busca, onFiltrar]);
-
-  // "Limpar filtros" e a navegação do navegador mudam a busca por fora.
-  useEffect(() => setTermo(filtros.busca ?? ''), [filtros.busca]);
+  const [termo, setTermo] = useBuscaComEspera(
+    filtros.busca,
+    useCallback((texto: string | undefined) => onFiltrar({ busca: texto }), [onFiltrar]),
+  );
 
   const colunas = useMemo(
     () => [

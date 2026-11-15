@@ -30,4 +30,17 @@ describe('CampoBusca', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('ana');
   });
+
+  it('com texto, mostra o botão de limpar, que esvazia e devolve o foco ao campo', async () => {
+    render(<Controlado />);
+    const campo = screen.getByRole('searchbox', { name: 'Buscar médicos' });
+    expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
+
+    await userEvent.type(campo, 'ana');
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
+
+    expect(campo).toHaveValue('');
+    expect(campo).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
+  });
 });

@@ -110,4 +110,38 @@ describe('ListaCadastro', () => {
     expect(onFiltrar).toHaveBeenCalledWith({ busca: 'tele' });
     vi.useRealTimers();
   });
+
+  it('não apaga o que se digitou enquanto a busca anterior chega na URL', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const onFiltrar = vi.fn();
+    const { rerender } = render(
+      <ListaCadastro {...props} itens={[]} total={0} onFiltrar={onFiltrar} />,
+    );
+    const campo = screen.getByRole('searchbox', { name: 'Buscar contratados' });
+
+    await userEvent.type(campo, 'rm');
+    await act(() => vi.advanceTimersByTimeAsync(350));
+    await userEvent.type(campo, ' ab');
+    rerender(
+      <ListaCadastro
+        {...props}
+        busca={{ ...props.busca, valor: 'rm' }}
+        itens={[]}
+        total={0}
+        onFiltrar={onFiltrar}
+      />,
+    );
+
+    expect(campo).toHaveValue('rm ab');
+    vi.useRealTimers();
+  });
+
+  it('busca mudada por fora (limpar filtros, voltar) aparece no campo', () => {
+    const { rerender } = render(
+      <ListaCadastro {...props} busca={{ ...props.busca, valor: 'tele' }} itens={[]} total={0} />,
+    );
+    rerender(<ListaCadastro {...props} itens={[]} total={0} />);
+
+    expect(screen.getByRole('searchbox', { name: 'Buscar contratados' })).toHaveValue('');
+  });
 });
