@@ -198,4 +198,14 @@ describe.skipIf(!url)('gravarMigracao', () => {
     );
     expect(linhas.rows).toEqual([{ estudo_descricao: 'LOMBAR', valores: '1.00' }]);
   });
+
+  it('descrição vazia no dashboards-one não apaga a que foi preenchida no redo-one', async () => {
+    await gravarMigracao(db, catalogo, medicos);
+    await db.execute(sql`update modalidades set descricao = 'Tomografia Computadorizada'`);
+
+    await gravarMigracao(db, catalogo, medicos);
+
+    const linhas = await db.execute<{ descricao: string }>(sql`select descricao from modalidades`);
+    expect(linhas.rows).toEqual([{ descricao: 'Tomografia Computadorizada' }]);
+  });
 });

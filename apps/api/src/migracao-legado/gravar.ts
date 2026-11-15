@@ -1,4 +1,4 @@
-import { eq, getTableColumns, inArray, type SQL, sql } from 'drizzle-orm';
+import { eq, getTableColumns, getTableName, inArray, type SQL, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
@@ -11,12 +11,18 @@ const LOTE = 300;
 
 type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
-/** `coluna = excluded.coluna` para todas as colunas menos as da chave. */
+/**
+ * `coluna = excluded.coluna` para todas as colunas menos as da chave. A descrição é complemento:
+ * vazia no dashboards-one, fica a que alguém preencheu no redo-one.
+ */
 function atualizarTudo(tabela: PgTable, chave: string[]): Record<string, SQL> {
   const set: Record<string, SQL> = {};
   for (const [prop, coluna] of Object.entries(getTableColumns(tabela))) {
     if (chave.includes(prop) || prop === 'criadoEm') continue;
-    set[prop] = sql.raw(`excluded."${coluna.name}"`);
+    set[prop] =
+      prop === 'descricao'
+        ? sql.raw(`coalesce(excluded."${coluna.name}", "${getTableName(tabela)}"."${coluna.name}")`)
+        : sql.raw(`excluded."${coluna.name}"`);
   }
   return set;
 }
