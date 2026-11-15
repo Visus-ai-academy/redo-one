@@ -24,9 +24,12 @@ import { Select } from '../../../components/select/Select';
 import { CamposCarregando } from '../../../components/skeleton/CamposCarregando';
 import { deParaEspecialidadesControllerCriar } from '../../../gen/clients/deParaEspecialidadesControllerCriar';
 import { deParaEspecialidadesControllerExcluir } from '../../../gen/clients/deParaEspecialidadesControllerExcluir';
+import { deParaModalidadesControllerCriar } from '../../../gen/clients/deParaModalidadesControllerCriar';
+import { deParaModalidadesControllerExcluir } from '../../../gen/clients/deParaModalidadesControllerExcluir';
 import { deParaPrioridadesControllerCriar } from '../../../gen/clients/deParaPrioridadesControllerCriar';
 import { deParaPrioridadesControllerExcluir } from '../../../gen/clients/deParaPrioridadesControllerExcluir';
 import { deParaEspecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaEspecialidadesControllerListar';
+import { deParaModalidadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaModalidadesControllerListar';
 import { deParaPrioridadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerListar';
 import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { invalidarCatalogo } from '../../../lib/catalogo';
@@ -133,7 +136,7 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
         header: () => <span className="block text-right">Ordem</span>,
         cell: (info) => <span className="block text-right">{info.getValue()}</span>,
       }),
-      ...(aba === 'prioridades' || aba === 'especialidades'
+      ...(aba === 'prioridades' || aba === 'especialidades' || aba === 'modalidades'
         ? [
             coluna.accessor((i) => (i as { totalVariacoes?: number }).totalVariacoes ?? 0, {
               id: 'variacoes',
@@ -326,7 +329,7 @@ function ConteudoDoPainel({
       }
     >
       {/* Prioridade e especialidade são a forma certa; as variações chegam da MobileMed. */}
-      {item && (aba === 'prioridades' || aba === 'especialidades') && (
+      {item && (aba === 'prioridades' || aba === 'especialidades' || aba === 'modalidades') && (
         <VariacoesDoItem aba={aba} id={item.id} forma={item.nome} />
       )}
     </PainelItemLista>
@@ -352,21 +355,26 @@ function VariacoesDoItem({
   id,
   forma,
 }: {
-  aba: 'prioridades' | 'especialidades';
+  aba: 'prioridades' | 'especialidades' | 'modalidades';
   id: string;
   forma: string;
 }) {
   const { sessao } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const prioridade = aba === 'prioridades';
+  const modalidade = aba === 'modalidades';
   const consulta = useQuery({
     ...((prioridade
       ? deParaPrioridadesControllerListarQueryOptions({
           query: { prioridadeId: id, porPagina: 100 },
         })
-      : deParaEspecialidadesControllerListarQueryOptions({
-          query: { especialidadeId: id, porPagina: 100 },
-        })) as ReturnType<typeof deParaPrioridadesControllerListarQueryOptions>),
+      : modalidade
+        ? deParaModalidadesControllerListarQueryOptions({
+            query: { modalidadeId: id, porPagina: 100 },
+          })
+        : deParaEspecialidadesControllerListarQueryOptions({
+            query: { especialidadeId: id, porPagina: 100 },
+          })) as ReturnType<typeof deParaPrioridadesControllerListarQueryOptions>),
     enabled: pode(sessao, 'de-para.ver'),
   });
   if (!pode(sessao, 'de-para.ver')) return null;
@@ -376,12 +384,16 @@ function VariacoesDoItem({
     <VariacoesForma
       forma={forma}
       variacoes={consulta.data.itens as unknown as Variacao[]}
-      tipos={prioridade ? undefined : TIPOS_VARIACAO_ESPECIALIDADE}
+      tipos={aba === 'especialidades' ? TIPOS_VARIACAO_ESPECIALIDADE : undefined}
       podeEditar={pode(sessao, 'de-para.editar')}
       onAdicionar={async ({ origem, tipo }) => {
         if (prioridade) {
           await deParaPrioridadesControllerCriar({
             body: { origem, prioridadeId: id, ativo: true },
+          }).unwrap();
+        } else if (modalidade) {
+          await deParaModalidadesControllerCriar({
+            body: { origem, modalidadeId: id, ativo: true },
           }).unwrap();
         } else {
           await deParaEspecialidadesControllerCriar({
@@ -399,6 +411,8 @@ function VariacoesDoItem({
       onRemover={async (variacaoId) => {
         if (prioridade) {
           await deParaPrioridadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
+        } else if (modalidade) {
+          await deParaModalidadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
         } else {
           await deParaEspecialidadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
         }
