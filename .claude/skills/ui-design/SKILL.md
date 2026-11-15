@@ -134,6 +134,7 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 - Área em branco ou spinner no meio enquanto carrega, quando dá para mostrar o skeleton do conteúdo; clique sem resposta visível.
 - Ícones de conjuntos misturados, emoji, ícone decorativo sem função.
 - Componente reinventado (barra de rolagem, select, checkbox feitos à mão) quando há nativo ou Base UI.
+- Enfeite nativo do navegador fora do sistema (o "x" azul do campo de busca, setas do campo numérico): esconda e use o ícone Phosphor, com cursor de clique.
 - Telas do mesmo tipo com padrões diferentes (cada lista com um jeito de filtrar, cada formulário com um jeito de salvar).
 
 ## Auditoria (antes de entregar)
