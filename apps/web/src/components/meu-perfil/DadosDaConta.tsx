@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
 import { z } from 'zod';
 
 import { useContaControllerAtualizar } from '../../gen/hooks/useContaControllerAtualizar';
@@ -11,25 +10,25 @@ import { Alerta } from '../alerta/Alerta';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { Painel } from '../painel/Painel';
+import { useAvisos } from '../toast/use-avisos';
 
 const schema = z.object({ nome: z.string().trim().min(1, 'Informe o nome.') });
 
 export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
   const queryClient = useQueryClient();
   const atualizar = useContaControllerAtualizar();
-  const [salvo, setSalvo] = useState(false);
+  const avisos = useAvisos();
 
   const form = useAppForm({
     defaultValues: { nome: conta.nome },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
-      setSalvo(false);
       try {
         await atualizar.mutateAsync({ body: { nome: value.nome.trim() } });
       } catch {
         return; // A mensagem vem de `atualizar.error`.
       }
-      setSalvo(true);
+      avisos.sucesso('Dados salvos.');
       // O nome aparece no menu (sessão) e no cabeçalho desta tela (conta).
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: SESSAO_QUERY_KEY }),
@@ -48,7 +47,6 @@ export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
         }}
         className="flex flex-col gap-4 p-4"
       >
-        {salvo && <Alerta tom="sucesso">Dados salvos.</Alerta>}
         {atualizar.error && (
           <Alerta tom="erro">
             Não foi possível salvar agora. Confira sua conexão e tente de novo.

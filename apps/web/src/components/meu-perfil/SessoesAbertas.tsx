@@ -15,6 +15,7 @@ import { buttonClassName } from '../button/button-class';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Painel } from '../painel/Painel';
+import { useAvisos } from '../toast/use-avisos';
 
 type SessoesAbertasProps = { sessoes: MinhaSessaoDto[]; agora?: Date };
 
@@ -23,7 +24,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
   const queryClient = useQueryClient();
   const encerrar = useContaControllerEncerrarSessao();
   const encerrarOutras = useContaControllerEncerrarOutrasSessoes();
-  const [aviso, setAviso] = useState<string>();
+  const avisos = useAvisos();
   const [falhou, setFalhou] = useState(false);
 
   const ordenadas = [...sessoes].sort(
@@ -34,7 +35,6 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
   const ocupado = encerrar.isPending || encerrarOutras.isPending;
 
   const executar = async (acao: () => Promise<unknown>, sucesso: string) => {
-    setAviso(undefined);
     setFalhou(false);
     try {
       await acao();
@@ -43,7 +43,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
       return;
     }
     await queryClient.invalidateQueries({ queryKey: contaControllerObterQueryKey() });
-    setAviso(sucesso);
+    avisos.sucesso(sucesso);
   };
 
   return (
@@ -73,14 +73,11 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
         )
       }
     >
-      {(aviso || falhou) && (
+      {falhou && (
         <div className="border-b p-4">
-          {aviso && <Alerta tom="sucesso">{aviso}</Alerta>}
-          {falhou && (
-            <Alerta tom="erro">
-              Não foi possível encerrar agora. Confira sua conexão e tente de novo.
-            </Alerta>
-          )}
+          <Alerta tom="erro">
+            Não foi possível encerrar agora. Confira sua conexão e tente de novo.
+          </Alerta>
         </div>
       )}
       <ul>

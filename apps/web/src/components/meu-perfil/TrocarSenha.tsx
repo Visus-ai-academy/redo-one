@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
 import { z } from 'zod';
 
 import { ResponseError } from '../../gen/.kubb/client';
@@ -11,6 +10,7 @@ import { Alerta } from '../alerta/Alerta';
 import { useAppForm } from '../form/form';
 import { Painel } from '../painel/Painel';
 import { RequisitosSenha } from '../senha/RequisitosSenha';
+import { useAvisos } from '../toast/use-avisos';
 
 const schema = z
   .object({
@@ -30,13 +30,12 @@ function avisoDeTroca(sessoesEncerradas: number) {
 export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | null }) {
   const queryClient = useQueryClient();
   const trocar = useContaControllerTrocarSenha();
-  const [aviso, setAviso] = useState<string>();
+  const avisos = useAvisos();
 
   const form = useAppForm({
     defaultValues: { senhaAtual: '', senha: '', confirmacao: '' },
     validators: { onSubmit: schema },
     onSubmit: async ({ value, formApi }) => {
-      setAviso(undefined);
       let resultado: { sessoesEncerradas: number };
       try {
         resultado = await trocar.mutateAsync({
@@ -49,7 +48,7 @@ export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | nul
       // a data nova aparecerem juntos.
       await queryClient.invalidateQueries({ queryKey: contaControllerObterQueryKey() });
       formApi.reset();
-      setAviso(avisoDeTroca(resultado.sessoesEncerradas));
+      avisos.sucesso(avisoDeTroca(resultado.sessoesEncerradas));
     },
   });
 
@@ -67,7 +66,6 @@ export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | nul
         }}
         className="flex flex-col gap-4 p-4"
       >
-        {aviso && <Alerta tom="sucesso">{aviso}</Alerta>}
         {trocar.error && <ErroAoTrocar erro={trocar.error} />}
         <form.AppField name="senhaAtual">
           {(field) => (

@@ -6,6 +6,7 @@ import { contaControllerEncerrarOutrasSessoes } from '../../gen/clients/contaCon
 import { contaControllerEncerrarSessao } from '../../gen/clients/contaControllerEncerrarSessao';
 import { contaControllerObterQueryKey } from '../../gen/hooks/useContaControllerObter';
 import type { MinhaSessaoDto } from '../../gen/types/MinhaSessaoDto';
+import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { SessoesAbertas } from './SessoesAbertas';
 
@@ -74,7 +75,7 @@ describe('SessoesAbertas', () => {
         expect.objectContaining({ path: { sessaoId: 's-iphone' } }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Sessão encerrada.');
+    expect(await acharAviso()).toHaveTextContent('Sessão encerrada.');
     expect(invalidar).toHaveBeenCalledWith({ queryKey: contaControllerObterQueryKey() });
   });
 
@@ -84,9 +85,7 @@ describe('SessoesAbertas', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Encerrar as outras' }));
 
     await waitFor(() => expect(encerrarOutras).toHaveBeenCalled());
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'As outras sessões foram encerradas.',
-    );
+    expect(await acharAviso()).toHaveTextContent('As outras sessões foram encerradas.');
   });
 
   it('só com a sessão atual, não oferece encerrar', async () => {

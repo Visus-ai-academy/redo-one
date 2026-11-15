@@ -1,11 +1,12 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { z } from 'zod';
 
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
 import { PainelConvite } from '../../../components/usuarios/PainelConvite';
 import {
@@ -118,14 +119,13 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
     () => void navigate({ search: (atual) => ({ ...atual, id: undefined, convidar: 1 as const }) }),
     [navigate],
   );
-  // O aviso do convite acompanha a pessoa nova até outro painel abrir.
-  const [avisoDoConvite, setAvisoDoConvite] = useState<{ id: string; texto: string }>();
+  const avisos = useAvisos();
   const convidado = useCallback(
     (id: string, email: string) => {
-      setAvisoDoConvite({ id, texto: `Convite enviado para ${email}.` });
+      avisos.sucesso(`Convite enviado para ${email}.`);
       void navigate({ search: (atual) => ({ ...atual, convidar: undefined, id }), replace: true });
     },
-    [navigate],
+    [navigate, avisos],
   );
   const irPara = useCallback(
     (numero: number) => void navigate({ search: (atual) => ({ ...atual, pagina: numero }) }),
@@ -153,7 +153,6 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
               papeis={papeis}
               euId={euId}
               permissoes={permissoes}
-              avisoInicial={avisoDoConvite?.id === filtros.id ? avisoDoConvite?.texto : undefined}
               onFechar={fechar}
             />
           )

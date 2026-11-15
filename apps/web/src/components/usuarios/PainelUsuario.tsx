@@ -28,6 +28,7 @@ import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
 import { Select } from '../select/Select';
+import { useAvisos } from '../toast/use-avisos';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
 
 export type PermissoesUsuarios = {
@@ -47,8 +48,6 @@ export type PainelUsuarioProps = {
   /** O que quem está logado pode fazer aqui (cada ação aparece só com a sua permissão). */
   permissoes: PermissoesUsuarios;
   agora?: Date;
-  /** Aviso com que o painel abre (ex.: "Convite enviado para…" ao vir do convite). */
-  avisoInicial?: string;
   onFechar: () => void;
 };
 
@@ -59,11 +58,10 @@ export function PainelUsuario({
   euId,
   permissoes,
   agora,
-  avisoInicial,
   onFechar,
 }: PainelUsuarioProps) {
   const [referencia] = useState(() => agora ?? new Date());
-  const acao = useAcaoNoUsuario(usuario.id, avisoInicial);
+  const acao = useAcaoNoUsuario(usuario.id);
   const desbloquear = useUsuariosControllerDesbloquear();
   const enviarLink = useUsuariosControllerEnviarLinkSenha();
   const reenviarConvite = useUsuariosControllerReenviarConvite();
@@ -87,7 +85,6 @@ export function PainelUsuario({
       onFechar={onFechar}
     >
       <div className="flex flex-col gap-5 p-4">
-        {acao.aviso && <Alerta tom="sucesso">{acao.aviso}</Alerta>}
         {acao.falhou && (
           <Alerta tom="erro">
             Não foi possível concluir agora. Confira sua conexão e tente de novo.
@@ -227,12 +224,11 @@ function TrocarPapel({
   const queryClient = useQueryClient();
   const trocar = useUsuariosControllerTrocarPapel();
   const [papelId, setPapelId] = useState(usuario.papel.id);
-  const [aviso, setAviso] = useState<string>();
+  const avisos = useAvisos();
   const campoId = useId();
   const ajudaId = useId();
 
   const enviar = async () => {
-    setAviso(undefined);
     try {
       await trocar.mutateAsync({ path: { id: usuario.id }, body: { papelId } });
     } catch {
@@ -245,7 +241,7 @@ function TrocarPapel({
         queryKey: usuariosControllerObterQueryKey({ path: { id: usuario.id } }),
       }),
     ]);
-    setAviso(`Papel trocado. As sessões abertas de ${usuario.nome} foram encerradas.`);
+    avisos.sucesso(`Papel trocado. As sessões abertas de ${usuario.nome} foram encerradas.`);
   };
 
   return (
@@ -256,7 +252,6 @@ function TrocarPapel({
       }}
       className="flex flex-col gap-2"
     >
-      {aviso && <Alerta tom="sucesso">{aviso}</Alerta>}
       {trocar.error && (
         <Alerta tom="erro">Não foi possível trocar o papel agora. Tente de novo.</Alerta>
       )}
@@ -420,14 +415,13 @@ function SessoesDoUsuario({
 type AcaoNoUsuario = ReturnType<typeof useAcaoNoUsuario>;
 
 /** Executa uma ação sobre a pessoa e recarrega a lista e o detalhe (chaves diferentes). */
-function useAcaoNoUsuario(id: string, avisoInicial?: string) {
+function useAcaoNoUsuario(id: string) {
   const queryClient = useQueryClient();
-  const [aviso, setAviso] = useState(avisoInicial);
+  const avisos = useAvisos();
   const [falhou, setFalhou] = useState(false);
   const [ocupado, setOcupado] = useState(false);
 
   const executar = async (chamada: () => Promise<unknown>, sucesso: string) => {
-    setAviso(undefined);
     setFalhou(false);
     setOcupado(true);
     try {
@@ -438,7 +432,7 @@ function useAcaoNoUsuario(id: string, avisoInicial?: string) {
           queryKey: usuariosControllerObterQueryKey({ path: { id } }),
         }),
       ]);
-      setAviso(sucesso);
+      avisos.sucesso(sucesso);
     } catch {
       setFalhou(true);
     } finally {
@@ -448,7 +442,6 @@ function useAcaoNoUsuario(id: string, avisoInicial?: string) {
 
   return {
     executar: (chamada: () => Promise<unknown>, sucesso: string) => void executar(chamada, sucesso),
-    aviso,
     falhou,
     ocupado,
   };

@@ -6,6 +6,7 @@ import { contaControllerAtualizar } from '../../gen/clients/contaControllerAtual
 import { contaControllerObterQueryKey } from '../../gen/hooks/useContaControllerObter';
 import type { MinhaContaDto } from '../../gen/types/MinhaContaDto';
 import { SESSAO_QUERY_KEY } from '../../lib/sessao';
+import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { DadosDaConta } from './DadosDaConta';
 
@@ -56,7 +57,7 @@ describe('DadosDaConta', () => {
         expect.objectContaining({ body: { nome: 'Carlos A. Silva' } }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Dados salvos.');
+    expect(await acharAviso()).toHaveTextContent('Dados salvos.');
     expect(invalidar).toHaveBeenCalledWith({ queryKey: SESSAO_QUERY_KEY });
     expect(invalidar).toHaveBeenCalledWith({ queryKey: contaControllerObterQueryKey() });
   });

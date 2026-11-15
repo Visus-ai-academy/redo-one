@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResponseError } from '../../gen/.kubb/client';
 import { contaControllerTrocarSenha } from '../../gen/clients/contaControllerTrocarSenha';
 import { contaControllerObterQueryKey } from '../../gen/hooks/useContaControllerObter';
+import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { TrocarSenha } from './TrocarSenha';
 
@@ -60,7 +61,7 @@ describe('TrocarSenha', () => {
         expect.objectContaining({ body: { senhaAtual: 'antiga123', novaSenha: 'novaSenha9' } }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await acharAviso()).toHaveTextContent(
       'Senha trocada. As outras 2 sessões foram encerradas.',
     );
     expect(screen.getByLabelText('Senha atual')).toHaveValue('');
@@ -77,7 +78,7 @@ describe('TrocarSenha', () => {
 
     await preencher('antiga123', 'novaSenha9', 'novaSenha9');
 
-    expect(await screen.findByRole('status')).toHaveTextContent(new RegExp(`^${texto}$`));
+    expect(await acharAviso()).toHaveTextContent(new RegExp(`^${texto}$`));
   });
 
   it('mostra a recusa da API (senha atual errada)', async () => {

@@ -8,13 +8,15 @@ import {
 import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
-/** Renderiza `ui` dentro de um router em memória e de um QueryClient sem retentativas. */
+import { Avisos } from '../components/toast/Avisos';
+
+/** Renderiza `ui` dentro de um router em memória, de um QueryClient sem retentativas e dos avisos. */
 export function renderComRotas(ui: ReactNode, { caminho = '/' }: { caminho?: string } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const router = createRouter({
-    routeTree: createRootRoute({ component: () => ui }),
+    routeTree: createRootRoute({ component: () => <Avisos>{ui}</Avisos> }),
     history: createMemoryHistory({ initialEntries: [caminho] }),
   });
 

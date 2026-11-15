@@ -13,6 +13,7 @@ import { usuariosControllerTrocarPapel } from '../../gen/clients/usuariosControl
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import type { UsuarioDetalheDto } from '../../gen/types/UsuarioDetalheDto';
+import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { PainelUsuario, type PainelUsuarioProps } from './PainelUsuario';
 
@@ -145,7 +146,7 @@ describe('PainelUsuario', () => {
         expect.objectContaining({ path: { id: 'u-maria' }, body: { papelId: 'p-coord' } }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await acharAviso()).toHaveTextContent(
       'Papel trocado. As sessões abertas de Maria Souza foram encerradas.',
     );
     expect(invalidar).toHaveBeenCalledWith({ queryKey: [{ url: '/usuarios' }] });
@@ -191,7 +192,7 @@ describe('PainelUsuario', () => {
         expect.objectContaining({ path: { id: 'u-maria' } }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Acesso liberado.');
+    expect(await acharAviso()).toHaveTextContent('Acesso liberado.');
   });
 
   it('mostra o bloqueio mesmo quando a situação é outra (convite pendente bloqueado)', async () => {
@@ -228,7 +229,7 @@ describe('PainelUsuario', () => {
     await waitFor(() =>
       expect(enviarLink).toHaveBeenCalledWith(expect.objectContaining({ path: { id: 'u-maria' } })),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await acharAviso()).toHaveTextContent(
       'Link enviado para maria@empresa.com.br. Ele vale por 1 hora.',
     );
   });
@@ -242,7 +243,7 @@ describe('PainelUsuario', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Reenviar convite' }));
 
     await waitFor(() => expect(reenviarConvite).toHaveBeenCalled());
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await acharAviso()).toHaveTextContent(
       'Convite reenviado para maria@empresa.com.br. Ele vale por 7 dias; o anterior deixa de valer.',
     );
   });
@@ -268,7 +269,7 @@ describe('PainelUsuario', () => {
         expect.objectContaining({ path: { id: 'u-maria', sessaoId: 's-1' } }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Sessão encerrada.');
+    expect(await acharAviso()).toHaveTextContent('Sessão encerrada.');
   });
 
   it('encerra todas as sessões da pessoa', async () => {
@@ -277,7 +278,7 @@ describe('PainelUsuario', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Encerrar todas' }));
 
     await waitFor(() => expect(encerrarSessoes).toHaveBeenCalled());
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await acharAviso()).toHaveTextContent(
       'Todas as sessões de Maria Souza foram encerradas.',
     );
   });
@@ -318,7 +319,7 @@ describe('PainelUsuario', () => {
     await waitFor(() =>
       expect(desativar).toHaveBeenCalledWith(expect.objectContaining({ path: { id: 'u-maria' } })),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Usuário desativado.');
+    expect(await acharAviso()).toHaveTextContent('Usuário desativado.');
   });
 
   it('reativa sem pedir confirmação', async () => {
@@ -328,7 +329,7 @@ describe('PainelUsuario', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Reativar usuário' }));
 
     await waitFor(() => expect(reativar).toHaveBeenCalled());
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await acharAviso()).toHaveTextContent(
       'Usuário reativado. A pessoa já pode entrar de novo.',
     );
   });
@@ -343,14 +344,6 @@ describe('PainelUsuario', () => {
     montar({ permissoes: { ...TODAS, desativar: false } });
     await screen.findByRole('dialog', { name: 'Maria Souza' });
     expect(screen.queryByRole('button', { name: /ativar usuário/ })).not.toBeInTheDocument();
-  });
-
-  it('abre com o aviso do convite recém-enviado', async () => {
-    montar({ avisoInicial: 'Convite enviado para maria@empresa.com.br.' });
-
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Convite enviado para maria@empresa.com.br.',
-    );
   });
 
   it('pagina as sessões da pessoa de 5 em 5', async () => {

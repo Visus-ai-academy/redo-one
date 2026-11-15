@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { useSessaoControllerSair } from '../../gen/hooks/useSessaoControllerSair';
 import type { SessaoAtualDto } from '../../gen/types/SessaoAtualDto';
 import { cn } from '../../lib/cn';
+import { Avisos } from '../toast/Avisos';
 import { BarraDeCarregamento } from './BarraDeCarregamento';
 import { MenuLateral } from './MenuLateral';
 import { GRUPOS_MENU, type GrupoMenu, type ItemMenu, RODAPE_MENU } from './menu';
@@ -77,52 +78,54 @@ export function AppShell({
   );
 
   return (
-    <div className="bg-background flex min-h-dvh flex-col md:flex-row">
-      <BarraDeCarregamento ativa={carregando} />
-      <header className="bg-sidebar sticky top-0 z-10 flex h-14 items-center gap-2 px-2 md:hidden">
-        <Drawer.Root open={gavetaAberta} onOpenChange={setGavetaAberta} swipeDirection="left">
-          <Drawer.Trigger
-            aria-label="Abrir menu"
-            className="text-sidebar-foreground hover:bg-sidebar-hover focus-visible:outline-sidebar-ring flex size-11 items-center justify-center rounded-md focus-visible:outline-2"
-          >
-            <List size={20} aria-hidden />
-          </Drawer.Trigger>
-          <Drawer.Portal>
-            <Drawer.Backdrop className="bg-foreground/40 fixed inset-0 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
-            <Drawer.Viewport className="fixed inset-0 flex justify-start">
-              <Drawer.Popup
-                aria-label="Menu"
-                className="h-dvh w-[280px] max-w-[85vw] [transform:translateX(var(--drawer-swipe-movement-x))] shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(-100%)] data-[starting-style]:[transform:translateX(-100%)] data-[swiping]:select-none motion-reduce:transition-none"
-              >
-                <Drawer.Title className="sr-only">Menu</Drawer.Title>
-                {/* Fecha a gaveta ao escolher um item. */}
-                <div
-                  className="h-full"
-                  onClickCapture={(e) =>
-                    (e.target as HTMLElement).closest('a') && setGavetaAberta(false)
-                  }
+    <Avisos>
+      <div className="bg-background flex min-h-dvh flex-col md:flex-row">
+        <BarraDeCarregamento ativa={carregando} />
+        <header className="bg-sidebar sticky top-0 z-10 flex h-14 items-center gap-2 px-2 md:hidden">
+          <Drawer.Root open={gavetaAberta} onOpenChange={setGavetaAberta} swipeDirection="left">
+            <Drawer.Trigger
+              aria-label="Abrir menu"
+              className="text-sidebar-foreground hover:bg-sidebar-hover focus-visible:outline-sidebar-ring flex size-11 items-center justify-center rounded-md focus-visible:outline-2"
+            >
+              <List size={20} aria-hidden />
+            </Drawer.Trigger>
+            <Drawer.Portal>
+              <Drawer.Backdrop className="bg-foreground/40 fixed inset-0 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+              <Drawer.Viewport className="fixed inset-0 flex justify-start">
+                <Drawer.Popup
+                  aria-label="Menu"
+                  className="h-dvh w-[280px] max-w-[85vw] [transform:translateX(var(--drawer-swipe-movement-x))] shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(-100%)] data-[starting-style]:[transform:translateX(-100%)] data-[swiping]:select-none motion-reduce:transition-none"
                 >
-                  {menu({ recolhido: false })}
-                </div>
-              </Drawer.Popup>
-            </Drawer.Viewport>
-          </Drawer.Portal>
-        </Drawer.Root>
-        <span className="font-brand text-sidebar-primary text-lg font-bold tracking-[0.14em]">
-          One
-        </span>
-      </header>
+                  <Drawer.Title className="sr-only">Menu</Drawer.Title>
+                  {/* Fecha a gaveta ao escolher um item. */}
+                  <div
+                    className="h-full"
+                    onClickCapture={(e) =>
+                      (e.target as HTMLElement).closest('a') && setGavetaAberta(false)
+                    }
+                  >
+                    {menu({ recolhido: false })}
+                  </div>
+                </Drawer.Popup>
+              </Drawer.Viewport>
+            </Drawer.Portal>
+          </Drawer.Root>
+          <span className="font-brand text-sidebar-primary text-lg font-bold tracking-[0.14em]">
+            One
+          </span>
+        </header>
 
-      <aside
-        className={cn(
-          'sticky top-0 hidden h-dvh flex-none transition-[width] duration-200 ease-out motion-reduce:transition-none md:block',
-          recolhido ? 'w-16' : 'w-60',
-        )}
-      >
-        {menu({ recolhido, onAlternar: alternar })}
-      </aside>
+        <aside
+          className={cn(
+            'sticky top-0 hidden h-dvh flex-none transition-[width] duration-200 ease-out motion-reduce:transition-none md:block',
+            recolhido ? 'w-16' : 'w-60',
+          )}
+        >
+          {menu({ recolhido, onAlternar: alternar })}
+        </aside>
 
-      <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
-    </div>
+        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+      </div>
+    </Avisos>
   );
 }

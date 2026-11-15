@@ -2,16 +2,15 @@ import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
 import { z } from 'zod';
 
-import { Alerta } from '../../../components/alerta/Alerta';
 import { buttonClassName } from '../../../components/button/button-class';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
 import { EditarPapel, type PapelSalvo } from '../../../components/papeis/EditarPapel';
 import { ListaPapeis } from '../../../components/papeis/ListaPapeis';
 import { nomeDaCopia } from '../../../components/papeis/permissoes-papel';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { papeisControllerListarQueryOptions } from '../../../gen/hooks/usePapeisControllerListar';
 import { papeisControllerObterQueryOptions } from '../../../gen/hooks/usePapeisControllerObter';
 import { permissoesControllerCatalogoQueryOptions } from '../../../gen/hooks/usePermissoesControllerCatalogo';
@@ -66,8 +65,7 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
   const { data: papeis } = useSuspenseQuery(papeisControllerListarQueryOptions());
   const { data: catalogo } = useSuspenseQuery(permissoesControllerCatalogoQueryOptions());
   const podeEditar = pode(sessao, 'papeis.editar');
-  // O aviso acompanha o papel até outro abrir.
-  const [aviso, setAviso] = useState<{ id?: string; texto: string }>();
+  const avisos = useAvisos();
 
   const novo = Boolean(busca.novo && podeEditar);
   const selecionadoId = novo ? undefined : (busca.id ?? papeis[0]?.id);
@@ -91,7 +89,7 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
         : sessoesEncerradas === 1
           ? ' 1 sessão foi encerrada.'
           : ` ${sessoesEncerradas} sessões foram encerradas.`;
-    setAviso({ id, texto: `${novo ? 'Papel criado.' : 'Papel salvo.'}${sessoes}` });
+    avisos.sucesso(`${novo ? 'Papel criado.' : 'Papel salvo.'}${sessoes}`);
     abrir(id);
   };
 
@@ -111,8 +109,6 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
         )}
       </div>
 
-      {aviso && !aviso.id && <Alerta tom="sucesso">{aviso.texto}</Alerta>}
-
       <div className="flex flex-wrap items-start gap-5">
         <div className="flex min-w-0 flex-[1_1_220px] flex-col lg:max-w-[280px]">
           <ListaPapeis
@@ -120,14 +116,10 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
             key={selecionadoId}
             papeis={papeis}
             selecionadoId={selecionadoId}
-            onEscolher={(id) => {
-              setAviso(undefined);
-              abrir(id);
-            }}
+            onEscolher={abrir}
           />
         </div>
         <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-4">
-          {aviso?.id && aviso.id === selecionadoId && <Alerta tom="sucesso">{aviso.texto}</Alerta>}
           {novo ? (
             <PapelNovo
               key={busca.de ?? 'vazio'}
@@ -146,12 +138,9 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
                 catalogo={catalogo}
                 podeEditar={podeEditar}
                 onSalvo={salvo}
-                onDuplicar={() => {
-                  setAviso(undefined);
-                  void navigate({ search: { novo: 1, de: selecionadoId } });
-                }}
+                onDuplicar={() => void navigate({ search: { novo: 1, de: selecionadoId } })}
                 onExcluido={() => {
-                  setAviso({ texto: 'Papel excluído.' });
+                  avisos.sucesso('Papel excluído.');
                   abrir();
                 }}
               />
