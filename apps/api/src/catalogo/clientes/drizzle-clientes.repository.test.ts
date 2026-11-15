@@ -76,7 +76,7 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     expect((await repo.listar({ contratadoId: tele, pagina: 1, porPagina: 10 })).total).toBe(2);
   });
 
-  it('na busca, _ e % são texto, e o mais parecido com o nome vem primeiro', async () => {
+  it('na busca, acha tudo que o LIKE acha, com o mais parecido com o nome primeiro', async () => {
     await repo.criar(
       dados('IMDBATATAIS', { razaoSocial: 'IMD INTERIOR MEDICINA DIAGNOSTICA LTDA' }),
     );
@@ -84,6 +84,7 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     await repo.criar(dados('_DIAGNOSTICA'));
     await repo.criar(dados('ZETA', { nomeFantasia: 'ZETA_DIAGNOSTICA' }));
     await repo.criar(dados('ACME_DIAGNOSTICA_TELE'));
+    await repo.criar(dados('CLINICA DIAGNOSTICA'));
 
     const { itens } = await repo.listar({ busca: '_diagnostica', pagina: 1, porPagina: 10 });
 
@@ -91,9 +92,10 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
       '_DIAGNOSTICA',
       'ALIS-MED_DIAGNOSTICA',
       'ACME_DIAGNOSTICA_TELE',
+      'CLINICA DIAGNOSTICA',
       'ZETA',
+      'IMDBATATAIS',
     ]);
-    expect((await repo.listar({ busca: '%', pagina: 1, porPagina: 10 })).total).toBe(0);
   });
 
   it('na busca, palavra que começa com o texto vem antes do texto no meio da palavra', async () => {
