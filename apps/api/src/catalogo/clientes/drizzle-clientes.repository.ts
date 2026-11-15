@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import { DATABASE, type Database } from '../../database/database';
 import { clientes, clientesAliases, contratados } from '../../database/schema';
@@ -12,6 +13,7 @@ import type {
   FiltroClientes,
   TipoAlias,
 } from './clientes.repository';
+import type { UnidadesClienteRepository } from './unidades-cliente.repository';
 
 const totalAliases = sql<number>`(select count(*) from ${clientesAliases}
   where ${clientesAliases.clienteId} = ${clientes.id})`.mapWith(Number);
@@ -21,8 +23,16 @@ const contratado = sql<{ id: string; razaoSocial: string } | null>`case
   when ${contratados.id} is null then null
   else json_build_object('id', ${contratados.id}, 'razaoSocial', ${contratados.razaoSocial}) end`;
 
+/** O cliente principal, na consulta que junta o cliente com ele mesmo. */
+const principal = alias(clientes, 'principal');
+const unificadoEm = sql<{ id: string; nome: string } | null>`case
+  when ${principal.id} is null then null
+  else json_build_object('id', ${principal.id}, 'nome', ${principal.nome}) end`;
+
 @Injectable()
-export class DrizzleClientesRepository implements ClientesRepository, AliasesClienteRepository {
+export class DrizzleClientesRepository
+  implements ClientesRepository, AliasesClienteRepository, UnidadesClienteRepository
+{
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async listar(filtro: FiltroClientes) {
@@ -54,9 +64,11 @@ export class DrizzleClientesRepository implements ClientesRepository, AliasesCli
           ativo: clientes.ativo,
           ocultoDashboards: clientes.ocultoDashboards,
           totalAliases,
+          unificadoEm,
         })
         .from(clientes)
         .leftJoin(contratados, eq(contratados.id, clientes.contratadoId))
+        .leftJoin(principal, eq(principal.id, clientes.unificadoEmId))
         .where(onde)
         .orderBy(asc(clientes.nome))
         .limit(filtro.porPagina)
@@ -80,12 +92,20 @@ export class DrizzleClientesRepository implements ClientesRepository, AliasesCli
         ativo: clientes.ativo,
         ocultoDashboards: clientes.ocultoDashboards,
         observacoes: clientes.observacoes,
+        unificadoEm,
       })
       .from(clientes)
       .leftJoin(contratados, eq(contratados.id, clientes.contratadoId))
+      .leftJoin(principal, eq(principal.id, clientes.unificadoEmId))
       .where(eq(clientes.id, id))
       .limit(1);
     if (!cliente) return null;
+
+    const unidades = await this.db
+      .select({ id: clientes.id, nome: clientes.nome })
+      .from(clientes)
+      .where(eq(clientes.unificadoEmId, id))
+      .orderBy(asc(clientes.nome));
 
     const aliases = await this.db
       .select({
@@ -97,7 +117,7 @@ export class DrizzleClientesRepository implements ClientesRepository, AliasesCli
       .from(clientesAliases)
       .where(eq(clientesAliases.clienteId, id))
       .orderBy(asc(clientesAliases.tipo), asc(clientesAliases.padrao));
-    return { ...cliente, aliases };
+    return { ...cliente, aliases, unidades };
   }
 
   async buscarPorNome(nome: string) {
@@ -177,5 +197,28 @@ export class DrizzleClientesRepository implements ClientesRepository, AliasesCli
 
   async excluirAlias(aliasId: string) {
     await this.db.delete(clientesAliases).where(eq(clientesAliases.id, aliasId));
+  }
+
+  async buscarVinculo(id: string) {
+    const [linha] = await this.db
+      .select({
+        id: clientes.id,
+        nome: clientes.nome,
+        unificadoEm,
+        totalUnidades: sql<number>`(select count(*) from ${clientes} as u
+          where u.unificado_em_id = ${clientes.id})`.mapWith(Number),
+      })
+      .from(clientes)
+      .leftJoin(principal, eq(principal.id, clientes.unificadoEmId))
+      .where(eq(clientes.id, id))
+      .limit(1);
+    return linha ?? null;
+  }
+
+  async definirPrincipal(unidadeId: string, principalId: string | null) {
+    await this.db
+      .update(clientes)
+      .set({ unificadoEmId: principalId })
+      .where(eq(clientes.id, unidadeId));
   }
 }

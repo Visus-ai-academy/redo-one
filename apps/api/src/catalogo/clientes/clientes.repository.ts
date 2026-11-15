@@ -39,12 +39,18 @@ export interface ClienteResumo {
   ativo: boolean;
   ocultoDashboards: boolean;
   totalAliases: number;
+  /** Cliente principal, quando este é unidade de outro (unificação). */
+  unificadoEm: { id: string; nome: string } | null;
 }
 
 export interface ClienteDetalhe extends Omit<DadosCliente, 'contratadoId'> {
   id: string;
   contratado: { id: string; razaoSocial: string } | null;
   aliases: AliasCliente[];
+  /** Cliente principal, quando este é unidade de outro: os laudos dele são do principal. */
+  unificadoEm: { id: string; nome: string } | null;
+  /** Unidades unificadas neste cliente. */
+  unidades: { id: string; nome: string }[];
 }
 
 export interface FiltroClientes extends Paginacao {

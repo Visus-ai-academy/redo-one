@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { ClienteRefDto } from './ClienteRefDto'
 import type { ContratadoResumoDto } from './ContratadoResumoDto'
 
 export type ClienteResumoDto = {
@@ -23,4 +24,9 @@ export type ClienteResumoDto = {
   ativo: boolean;
   ocultoDashboards: boolean;
   totalAliases: number;
+  /**
+   * @description Principal, se for unidade.
+   * @type object
+   */
+  unificadoEm: ClienteRefDto | null;
 };

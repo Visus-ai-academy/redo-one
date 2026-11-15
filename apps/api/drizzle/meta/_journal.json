@@ -50,6 +50,13 @@
       "when": 1794687047348,
       "tag": "0006_medicos",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794701545460,
+      "tag": "0007_clientes_unificacao",
+      "breakpoints": true
     }
   ]
 }

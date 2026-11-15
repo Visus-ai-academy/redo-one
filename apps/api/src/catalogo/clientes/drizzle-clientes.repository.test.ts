@@ -107,4 +107,25 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     expect(await repo.excluir(prn)).toBe(true);
     expect(await db.select().from(schema.clientesAliases)).toEqual([]);
   });
+  it('unifica: a unidade aponta o principal, o principal lista as unidades, e desfaz', async () => {
+    const prn = await repo.criar(dados('PRN'));
+    const unidade = await repo.criar(dados('PRN TELE_ARARAQUARA'));
+
+    await repo.definirPrincipal(unidade, prn);
+
+    expect(await repo.buscarVinculo(prn)).toMatchObject({ unificadoEm: null, totalUnidades: 1 });
+    expect(await repo.buscarVinculo(unidade)).toMatchObject({
+      unificadoEm: { id: prn, nome: 'PRN' },
+      totalUnidades: 0,
+    });
+    expect((await repo.buscar(prn))?.unidades).toEqual([
+      { id: unidade, nome: 'PRN TELE_ARARAQUARA' },
+    ]);
+    const { itens } = await repo.listar({ busca: 'ARARAQUARA', pagina: 1, porPagina: 10 });
+    expect(itens[0]?.unificadoEm).toEqual({ id: prn, nome: 'PRN' });
+    expect(await repo.excluir(prn)).toBe(false);
+
+    await repo.definirPrincipal(unidade, null);
+    expect((await repo.buscar(unidade))?.unificadoEm).toBeNull();
+  });
 });

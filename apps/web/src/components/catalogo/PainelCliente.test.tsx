@@ -20,6 +20,8 @@ const cliente: ClienteDetalheDto = {
   ocultoDashboards: false,
   observacoes: null,
   aliases: [{ id: 'a-1', tipo: 'prefixo', padrao: 'PRN TELE_', observacoes: null }],
+  unificadoEm: null,
+  unidades: [],
 };
 
 function montar(props: Partial<PainelClienteProps> = {}) {

@@ -8,6 +8,7 @@ import type {
   FiltroClientes,
   TipoAlias,
 } from '../clientes/clientes.repository';
+import type { UnidadesClienteRepository } from '../clientes/unidades-cliente.repository';
 import type { Pagina } from '../comum/paginacao';
 import type {
   Contratado,
@@ -140,11 +141,17 @@ export class InMemoryContratadosRepository implements ContratadosRepository {
   }
 }
 
-type ClienteGuardado = DadosCliente & { id: string; chaveNormalizada: string };
+type ClienteGuardado = DadosCliente & {
+  id: string;
+  chaveNormalizada: string;
+  unificadoEmId?: string | null;
+};
 type AliasGuardado = AliasCliente & { clienteId: string; chave: string };
 
 /** Clientes e apelidos em memória (os dois repositórios num objeto só, como no banco). */
-export class InMemoryClientesRepository implements ClientesRepository, AliasesClienteRepository {
+export class InMemoryClientesRepository
+  implements ClientesRepository, AliasesClienteRepository, UnidadesClienteRepository
+{
   readonly itens = new Map<string, ClienteGuardado>();
   readonly aliases: AliasGuardado[] = [];
   readonly emUso = new Set<string>();
@@ -174,6 +181,7 @@ export class InMemoryClientesRepository implements ClientesRepository, AliasesCl
         ativo: c.ativo,
         ocultoDashboards: c.ocultoDashboards,
         totalAliases: this.aliases.filter((a) => a.clienteId === c.id).length,
+        unificadoEm: this.ref(c.unificadoEmId),
       }));
     return paginar(filtrados, filtro);
   }
@@ -181,10 +189,14 @@ export class InMemoryClientesRepository implements ClientesRepository, AliasesCl
   async buscar(id: string) {
     const c = this.itens.get(id);
     if (!c) return null;
-    const { contratadoId, chaveNormalizada: _, ...resto } = c;
+    const { contratadoId, chaveNormalizada: _, unificadoEmId, ...resto } = c;
     return {
       ...resto,
       contratado: this.contratado(contratadoId),
+      unificadoEm: this.ref(unificadoEmId),
+      unidades: [...this.itens.values()]
+        .filter((u) => u.unificadoEmId === id)
+        .map((u) => ({ id: u.id, nome: u.nome })),
       aliases: this.aliases
         .filter((a) => a.clienteId === id)
         .map(({ clienteId: __, chave: ___, ...a }) => a),
@@ -203,7 +215,28 @@ export class InMemoryClientesRepository implements ClientesRepository, AliasesCl
   }
 
   async atualizar(id: string, dados: DadosCliente & { chaveNormalizada: string }) {
-    this.itens.set(id, { ...dados, id });
+    this.itens.set(id, { ...dados, id, unificadoEmId: this.itens.get(id)?.unificadoEmId });
+  }
+
+  private ref(id: string | null | undefined) {
+    const c = id ? this.itens.get(id) : undefined;
+    return c ? { id: c.id, nome: c.nome } : null;
+  }
+
+  async buscarVinculo(id: string) {
+    const c = this.itens.get(id);
+    if (!c) return null;
+    return {
+      id: c.id,
+      nome: c.nome,
+      unificadoEm: this.ref(c.unificadoEmId),
+      totalUnidades: [...this.itens.values()].filter((u) => u.unificadoEmId === id).length,
+    };
+  }
+
+  async definirPrincipal(unidadeId: string, principalId: string | null) {
+    const c = this.itens.get(unidadeId);
+    if (c) c.unificadoEmId = principalId;
   }
 
   async excluir(id: string) {

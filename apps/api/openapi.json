@@ -2450,6 +2450,82 @@
         ]
       }
     },
+    "/catalogo/clientes/{id}/unidades": {
+      "post": {
+        "operationId": "ClientesController_adicionarUnidade",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "O cliente do corpo passa a ser unidade deste."
+          },
+          "400": {
+            "description": "Unificação de mais de um nível ou no próprio cliente."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "O cliente já é unidade (deste ou de outro principal)."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/clientes/{id}/unidades/{unidadeId}": {
+      "delete": {
+        "operationId": "ClientesController_removerUnidade",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unidadeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "A unidade volta a ser cliente independente."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
     "/catalogo/exames": {
       "get": {
         "operationId": "ExamesController_listar",
@@ -5749,6 +5825,22 @@
           "razaoSocial"
         ]
       },
+      "ClienteRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
       "ClienteResumoDto": {
         "type": "object",
         "properties": {
@@ -5785,6 +5877,16 @@
           },
           "totalAliases": {
             "type": "number"
+          },
+          "unificadoEm": {
+            "nullable": true,
+            "description": "Principal, se for unidade.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClienteRefDto"
+              }
+            ]
           }
         },
         "required": [
@@ -5795,7 +5897,8 @@
           "contratado",
           "ativo",
           "ocultoDashboards",
-          "totalAliases"
+          "totalAliases",
+          "unificadoEm"
         ]
       },
       "PaginaClientesDto": {
@@ -5912,6 +6015,23 @@
             "items": {
               "$ref": "#/components/schemas/AliasItemDto"
             }
+          },
+          "unificadoEm": {
+            "nullable": true,
+            "description": "Principal, se for unidade.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClienteRefDto"
+              }
+            ]
+          },
+          "unidades": {
+            "description": "Unidades unificadas neste cliente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClienteRefDto"
+            }
           }
         },
         "required": [
@@ -5926,7 +6046,9 @@
           "ativo",
           "ocultoDashboards",
           "observacoes",
-          "aliases"
+          "aliases",
+          "unificadoEm",
+          "unidades"
         ]
       },
       "ClienteDto": {
@@ -6017,6 +6139,19 @@
         "required": [
           "tipo",
           "padrao"
+        ]
+      },
+      "UnidadeDto": {
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Cliente que passa a responder pelo principal."
+          }
+        },
+        "required": [
+          "clienteId"
         ]
       },
       "ReferenciaDto": {

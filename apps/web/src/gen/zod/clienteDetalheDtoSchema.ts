@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { aliasItemDtoSchema } from './aliasItemDtoSchema'
+import { clienteRefDtoSchema } from './clienteRefDtoSchema'
 import { contratadoResumoDtoSchema } from './contratadoResumoDtoSchema'
 
 export const clienteDetalheDtoSchema = z.object({
@@ -20,6 +21,8 @@ export const clienteDetalheDtoSchema = z.object({
   ocultoDashboards: z.boolean(),
   observacoes: z.string().nullable(),
   aliases: z.array(aliasItemDtoSchema),
+  unificadoEm: clienteRefDtoSchema.nullable().describe('Principal, se for unidade.'),
+  unidades: z.array(clienteRefDtoSchema).describe('Unidades unificadas neste cliente.'),
 })
 
 export type ClienteDetalheDtoSchemaType = z.infer<typeof clienteDetalheDtoSchema>

@@ -100,6 +100,17 @@ export class AliasDto {
   observacoes: string | null = null;
 }
 
+export class UnidadeDto {
+  @ApiProperty({ format: 'uuid', description: 'Cliente que passa a responder pelo principal.' })
+  @IsUUID()
+  clienteId!: string;
+}
+
+export class ClienteRefDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+}
+
 export class ContratadoResumoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() razaoSocial!: string;
@@ -122,6 +133,8 @@ export class ClienteResumoDto {
   @ApiProperty() ativo!: boolean;
   @ApiProperty() ocultoDashboards!: boolean;
   @ApiProperty() totalAliases!: number;
+  @ApiProperty({ type: ClienteRefDto, nullable: true, description: 'Principal, se for unidade.' })
+  unificadoEm!: ClienteRefDto | null;
 }
 
 export class ClienteDetalheDto {
@@ -138,6 +151,10 @@ export class ClienteDetalheDto {
   @ApiProperty() ocultoDashboards!: boolean;
   @ApiProperty({ type: String, nullable: true }) observacoes!: string | null;
   @ApiProperty({ type: [AliasItemDto] }) aliases!: AliasItemDto[];
+  @ApiProperty({ type: ClienteRefDto, nullable: true, description: 'Principal, se for unidade.' })
+  unificadoEm!: ClienteRefDto | null;
+  @ApiProperty({ type: [ClienteRefDto], description: 'Unidades unificadas neste cliente.' })
+  unidades!: ClienteRefDto[];
 }
 
 export class PaginaClientesDto {

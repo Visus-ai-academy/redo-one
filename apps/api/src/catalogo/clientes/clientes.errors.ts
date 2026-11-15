@@ -12,3 +12,12 @@ export class AliasInvalidoError extends ErroDeDominio {
 export class AliasEmUsoError extends ErroDeDominio {
   readonly tipo = 'conflito';
 }
+
+/** Unificação que quebraria a regra de um nível só (principal → unidades). */
+export class UnificacaoInvalidaError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+}
+
+export class UnificacaoEmUsoError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+}

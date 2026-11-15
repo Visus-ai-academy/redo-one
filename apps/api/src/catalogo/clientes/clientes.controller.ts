@@ -32,7 +32,9 @@ import {
   ClienteDto,
   ListarClientesDto,
   PaginaClientesDto,
+  UnidadeDto,
 } from './dto/cliente.dto';
+import { UnidadesClienteService } from './unidades-cliente.service';
 
 @ApiTags('catalogo')
 @Controller('catalogo/clientes')
@@ -40,6 +42,7 @@ export class ClientesController {
   constructor(
     private readonly clientes: ClientesService,
     private readonly aliases: AliasesClienteService,
+    private readonly unidades: UnidadesClienteService,
   ) {}
 
   @Get()
@@ -126,5 +129,33 @@ export class ClientesController {
     @Param('aliasId', ParseUUIDPipe) aliasId: string,
   ): Promise<void> {
     return this.aliases.excluir({ usuarioId: ator.usuarioId }, id, aliasId);
+  }
+
+  @Post(':id/unidades')
+  @Permissao('clientes.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'O cliente do corpo passa a ser unidade deste.' })
+  @ApiBadRequestResponse({ description: 'Unificação de mais de um nível ou no próprio cliente.' })
+  @ApiConflictResponse({ description: 'O cliente já é unidade (deste ou de outro principal).' })
+  @ApiNotFoundResponse()
+  adicionarUnidade(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corpo: UnidadeDto,
+  ): Promise<void> {
+    return this.unidades.adicionar({ usuarioId: ator.usuarioId }, id, corpo.clienteId);
+  }
+
+  @Delete(':id/unidades/:unidadeId')
+  @Permissao('clientes.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'A unidade volta a ser cliente independente.' })
+  @ApiNotFoundResponse()
+  removerUnidade(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('unidadeId', ParseUUIDPipe) unidadeId: string,
+  ): Promise<void> {
+    return this.unidades.remover({ usuarioId: ator.usuarioId }, id, unidadeId);
   }
 }

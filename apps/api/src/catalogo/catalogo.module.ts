@@ -9,6 +9,8 @@ import { ClientesController } from './clientes/clientes.controller';
 import { CLIENTES_REPOSITORY } from './clientes/clientes.repository';
 import { ClientesService } from './clientes/clientes.service';
 import { DrizzleClientesRepository } from './clientes/drizzle-clientes.repository';
+import { UNIDADES_CLIENTE_REPOSITORY } from './clientes/unidades-cliente.repository';
+import { UnidadesClienteService } from './clientes/unidades-cliente.service';
 import type { Rotulo } from './comum/rotulo';
 import { ContratadosController } from './contratados/contratados.controller';
 import {
@@ -116,9 +118,11 @@ function dePara<D extends object>(
     { provide: EXAMES_REPOSITORY, useClass: DrizzleExamesRepository },
     ClientesService,
     AliasesClienteService,
+    UnidadesClienteService,
     DrizzleClientesRepository,
     { provide: CLIENTES_REPOSITORY, useExisting: DrizzleClientesRepository },
     { provide: ALIASES_CLIENTE_REPOSITORY, useExisting: DrizzleClientesRepository },
+    { provide: UNIDADES_CLIENTE_REPOSITORY, useExisting: DrizzleClientesRepository },
     { provide: CONTRATADOS_REPOSITORY, useClass: DrizzleContratadosRepository },
     lista(
       MODALIDADES,

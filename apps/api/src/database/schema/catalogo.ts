@@ -258,6 +258,11 @@ export const clientes = pgTable(
     /** Só dígitos; cliente pessoa física. */
     cpf: text('cpf'), // LGPD: pessoal
     contratadoId: uuid('contratado_id').references(() => contratados.id),
+    /**
+     * Cliente principal, quando este é unidade de outro (ex.: as "PRN TELE_…" no PRN): os laudos
+     * da unidade são do principal. Um nível só; vazio = cliente independente.
+     */
+    unificadoEmId: uuid('unificado_em_id').references((): AnyPgColumn => clientes.id),
     ativo: boolean('ativo').notNull().default(true),
     /** Fora dos painéis (volumetria, executivo); continua no faturamento. */
     ocultoDashboards: boolean('oculto_dashboards').notNull().default(false),
@@ -270,6 +275,8 @@ export const clientes = pgTable(
     index('clientes_ativo_idx').on(t.ativo),
     index('clientes_oculto_dashboards_idx').on(t.ocultoDashboards),
     index('clientes_contratado_idx').on(t.contratadoId),
+    index('clientes_unificado_em_idx').on(t.unificadoEmId),
+    check('clientes_unificado_em_check', sql`${t.unificadoEmId} <> ${t.id}`),
   ],
 );
 

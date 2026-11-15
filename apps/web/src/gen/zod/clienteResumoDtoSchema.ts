@@ -4,6 +4,7 @@
 */
 
 import * as z from 'zod'
+import { clienteRefDtoSchema } from './clienteRefDtoSchema'
 import { contratadoResumoDtoSchema } from './contratadoResumoDtoSchema'
 
 export const clienteResumoDtoSchema = z.object({
@@ -15,6 +16,7 @@ export const clienteResumoDtoSchema = z.object({
   ativo: z.boolean(),
   ocultoDashboards: z.boolean(),
   totalAliases: z.number(),
+  unificadoEm: clienteRefDtoSchema.nullable().describe('Principal, se for unidade.'),
 })
 
 export type ClienteResumoDtoSchemaType = z.infer<typeof clienteResumoDtoSchema>

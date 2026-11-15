@@ -4,6 +4,7 @@
 */
 
 import type { AliasItemDto } from './AliasItemDto'
+import type { ClienteRefDto } from './ClienteRefDto'
 import type { ContratadoResumoDto } from './ContratadoResumoDto'
 
 export const clienteDetalheDtoTipoPessoaEnum = {
@@ -31,4 +32,14 @@ export type ClienteDetalheDto = {
   ocultoDashboards: boolean;
   observacoes: string | null;
   aliases: AliasItemDto[];
+  /**
+   * @description Principal, se for unidade.
+   * @type object
+   */
+  unificadoEm: ClienteRefDto | null;
+  /**
+   * @description Unidades unificadas neste cliente.
+   * @type array
+   */
+  unidades: ClienteRefDto[];
 };
