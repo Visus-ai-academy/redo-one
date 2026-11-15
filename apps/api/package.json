@@ -16,6 +16,7 @@
     "start": "node dist/main.js",
     "openapi": "nest build && node dist/openapi/export.js",
     "admin:criar": "nest build && node dist/scripts/criar-admin.js",
+    "migrar:legado": "nest build && node dist/scripts/migrar-legado.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
