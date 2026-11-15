@@ -166,4 +166,36 @@ describe.skipIf(!url)('gravarMigracao', () => {
       { nome: 'PRN TELE_MARABA', principal: 'PRN' },
     ]);
   });
+
+  it('valor fora do padrão casa pela grafia: regravar com outro id não quebra a chave única', async () => {
+    const valor = {
+      id: '00000000-0000-5000-8000-000000000001',
+      estudoDescricao: 'Lombar',
+      chaveNormalizada: 'lombar',
+      valores: 0,
+      exameId: null,
+      ativo: true,
+    };
+    const com = (v: typeof valor) => ({
+      ...catalogo,
+      tabelas: { ...catalogo.tabelas, examesDeParaValores: [v] },
+    });
+
+    await gravarMigracao(db, com(valor), medicos);
+    await gravarMigracao(
+      db,
+      com({
+        ...valor,
+        id: '00000000-0000-5000-8000-000000000002',
+        estudoDescricao: 'LOMBAR',
+        valores: 1,
+      }),
+      medicos,
+    );
+
+    const linhas = await db.execute<{ estudo_descricao: string; valores: string }>(
+      sql`select estudo_descricao, valores from exames_de_para_valores`,
+    );
+    expect(linhas.rows).toEqual([{ estudo_descricao: 'LOMBAR', valores: '1.00' }]);
+  });
 });

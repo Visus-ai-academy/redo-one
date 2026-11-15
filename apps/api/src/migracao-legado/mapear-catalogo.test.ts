@@ -327,4 +327,52 @@ describe('mapearCatalogo', () => {
       motivo: 'O campo CNPJ tinha um CPF (11 dígitos): foi para o CPF, como pessoa física.',
     });
   });
+
+  it('valores fora do padrão repetidos: junta como o dashboards-one lê (primeiro valor > 0, primeiro exame vinculado)', () => {
+    const { tabelas, avisos } = mapearCatalogo(
+      legado({
+        examesForaPadrao: [
+          {
+            id: 'fp-1',
+            estudoDescricao: 'TC. ABDOME TOTAL',
+            valores: 0,
+            exameId: null,
+            ativo: true,
+          },
+          {
+            id: 'fp-2',
+            estudoDescricao: 'TC ABDOME TOTAL',
+            valores: 2,
+            exameId: 'ex-cranio',
+            ativo: true,
+          },
+          {
+            id: 'fp-3',
+            estudoDescricao: 'TC ABDOME TOTAL .',
+            valores: 3,
+            exameId: null,
+            ativo: true,
+          },
+          { id: 'fp-4', estudoDescricao: 'Lombar', valores: 0, exameId: null, ativo: true },
+        ],
+      }),
+    );
+
+    expect(tabelas.examesDeParaValores).toEqual([
+      expect.objectContaining({
+        estudoDescricao: 'TC ABDOME TOTAL',
+        chaveNormalizada: 'tc abdome total',
+        valores: 2,
+        exameId: idDoLegado('exames', 'ex-cranio'),
+        ativo: true,
+      }),
+      expect.objectContaining({ estudoDescricao: 'Lombar', valores: 0, exameId: null }),
+    ]);
+    expect(avisos).toContainEqual({
+      tabela: 'exames_de_para_valores',
+      item: 'TC ABDOME TOTAL',
+      motivo:
+        '3 grafias com a mesma chave (TC. ABDOME TOTAL, TC ABDOME TOTAL, TC ABDOME TOTAL .): ficou o valor 2, o primeiro maior que zero, como o dashboards-one lê.',
+    });
+  });
 });

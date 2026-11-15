@@ -291,30 +291,42 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
     });
   }
 
-  // Valores de exame fora do padrão: a chave normalizada é única no redo-one.
+  // Valores de exame fora do padrão: a chave normalizada é única no redo-one, e lá há grafias
+  // repetidas com valores diferentes ("Lombar" 0, "LOMBAR" 1). O faturamento do dashboards-one lê
+  // só as ativas, na ordem física: o valor é o primeiro maior que zero (zero não conta) e o exame
+  // vinculado, o primeiro que houver. Repetidas viram uma linha só com esse resultado.
   const exameIds = new Set(legado.exames.map((e) => e.id));
+  const gruposValores = new Map<string, LegadoCatalogo['examesForaPadrao']>();
+  for (const v of legado.examesForaPadrao) {
+    const chave = normalizarNome(v.estudoDescricao);
+    if (chave) gruposValores.set(chave, [...(gruposValores.get(chave) ?? []), v]);
+  }
   const tabValores: CatalogoMigrado['tabelas']['examesDeParaValores'] = [];
-  const chavesValores = new Map<string, number>();
-  for (const v of [...legado.examesForaPadrao].sort((a, b) => Number(b.ativo) - Number(a.ativo))) {
-    const estudoDescricao = v.estudoDescricao.trim();
-    const chave = normalizarNome(estudoDescricao);
-    if (!chave) continue;
-    if (chavesValores.has(chave)) {
+  for (const [chave, grupo] of gruposValores) {
+    const ativos = grupo.filter((v) => v.ativo);
+    const fonte = ativos.length > 0 ? ativos : grupo;
+    const comValor = fonte.find((v) => Number(v.valores) > 0);
+    const comExame = fonte.find((v) => v.exameId && exameIds.has(v.exameId));
+    const base = comValor ?? comExame ?? fonte[0];
+    if (!base) continue;
+    const valores = comValor ? Number(comValor.valores) : 0;
+    if (grupo.length > 1) {
       avisar(
         'exames_de_para_valores',
-        estudoDescricao,
-        'Grafia repetida no dashboards-one: ficou só a primeira (a ativa, se houver).',
+        base.estudoDescricao.trim(),
+        `${grupo.length} grafias com a mesma chave (${grupo.map((v) => v.estudoDescricao.trim()).join(', ')}): ` +
+          (comValor
+            ? `ficou o valor ${valores}, o primeiro maior que zero, como o dashboards-one lê.`
+            : 'nenhuma tem valor maior que zero; ficou 0, que o dashboards-one ignora.'),
       );
-      continue;
     }
-    chavesValores.set(chave, tabValores.length);
     tabValores.push({
-      id: idDoLegado('exames_fora_padrao', v.id),
-      estudoDescricao,
+      id: idDoLegado('exames_fora_padrao', base.id),
+      estudoDescricao: base.estudoDescricao.trim(),
       chaveNormalizada: chave,
-      valores: Number(v.valores),
-      exameId: v.exameId && exameIds.has(v.exameId) ? idDoLegado('exames', v.exameId) : null,
-      ativo: v.ativo,
+      valores,
+      exameId: comExame?.exameId ? idDoLegado('exames', comExame.exameId) : null,
+      ativo: ativos.length > 0,
     });
   }
 
