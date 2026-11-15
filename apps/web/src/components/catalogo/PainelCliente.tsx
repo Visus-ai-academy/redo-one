@@ -187,6 +187,7 @@ export function PainelCliente({
                     {(field) => (
                       <field.TextField
                         label="CNPJ"
+                        mascara="cnpj"
                         placeholder="00.000.000/0000-00"
                         autoComplete="off"
                         className="flex-[1_1_180px]"
@@ -198,6 +199,7 @@ export function PainelCliente({
                     {(field) => (
                       <field.TextField
                         label="CPF"
+                        mascara="cpf"
                         placeholder="000.000.000-00"
                         autoComplete="off"
                         className="flex-[1_1_180px]"

@@ -251,6 +251,7 @@ function FormCadastro({
           {(field) => (
             <field.TextField
               label="Telefone"
+              mascara="telefone"
               type="tel"
               placeholder="(11) 98888-7777"
               autoComplete="off"

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import type { Mascara } from '../../lib/mascaras';
 import { useAppForm } from './form';
 
 function Formulario({ required }: { required?: boolean }) {
@@ -34,7 +35,49 @@ function Formulario({ required }: { required?: boolean }) {
   );
 }
 
+function ComMascara({ mascara, inicial = '' }: { mascara: Mascara; inicial?: string }) {
+  const form = useAppForm({ defaultValues: { doc: inicial } });
+  return (
+    <form.AppField name="doc">
+      {(field) => <field.TextField label="Documento" placeholder="" mascara={mascara} />}
+    </form.AppField>
+  );
+}
+
 describe('TextField', () => {
+  describe('com máscara', () => {
+    it('ajusta enquanto digita, e abre o teclado numérico', async () => {
+      render(<ComMascara mascara="telefone" />);
+      const campo = screen.getByRole('textbox', { name: 'Documento' });
+
+      await userEvent.type(campo, '67982060704');
+
+      expect(campo).toHaveValue('(67) 98206-0704');
+      expect(campo).toHaveAttribute('inputmode', 'numeric');
+    });
+
+    it('mostra formatado o valor que veio só com dígitos', () => {
+      render(<ComMascara mascara="cnpj" inicial="11222333000181" />);
+
+      expect(screen.getByRole('textbox', { name: 'Documento' })).toHaveValue('11.222.333/0001-81');
+    });
+
+    it('editar no meio não joga o cursor para o fim', async () => {
+      render(<ComMascara mascara="cpf" inicial="12345678909" />);
+      const campo = screen.getByRole('textbox', { name: 'Documento' }) as HTMLInputElement;
+
+      // Cursor depois do "4" (123.4|56.789-09); apaga o 4.
+      campo.focus();
+      campo.setSelectionRange(5, 5);
+      await userEvent.keyboard('{Backspace}');
+      await new Promise((r) => requestAnimationFrame(r));
+
+      expect(campo).toHaveValue('123.567.890-9');
+      // Logo depois do 3 (o último dígito antes do que foi apagado), não no fim.
+      expect(campo.selectionStart).toBe(3);
+    });
+  });
+
   it('marca o campo obrigatório com * escondido do leitor de tela e o atributo required', () => {
     render(<Formulario required />);
 

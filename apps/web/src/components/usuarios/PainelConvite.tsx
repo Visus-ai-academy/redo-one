@@ -97,6 +97,7 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
           {(field) => (
             <field.TextField
               label="CPF"
+              mascara="cpf"
               placeholder="000.000.000-00"
               autoComplete="off"
               description="Com o CPF, a pessoa também pode entrar digitando o CPF."

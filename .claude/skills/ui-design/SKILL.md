@@ -74,6 +74,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - Lista que é o trabalho principal da tela cabe na altura da janela no computador: a tabela rola por dentro, com o cabeçalho fixo, e o rodapé com contagem e paginação fica sempre à vista; a página em si não rola. No celular, a página rola normalmente.
 
 **Formulários**
+- **Campo de formato fixo tem máscara** (CPF, CNPJ, CEP, telefone, chave Pix desses tipos): formata enquanto a pessoa digita, sem pular o cursor, com teclado numérico no celular.
 - Rótulo acima do campo, ajuda abaixo, erro abaixo (texto que diz o problema e como resolver). Largura de leitura: 480–640px.
 - Um botão primário por formulário, à direita no rodapé (ou largura total em formulários estreitos de acesso); "Cancelar" secundário ao lado.
 

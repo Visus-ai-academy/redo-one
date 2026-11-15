@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { PagamentoMedicoDto } from '../../gen/types/PagamentoMedicoDto';
 import { formatarCnpj, formatarCpf, soDigitos } from '../../lib/documentos';
+import type { Mascara } from '../../lib/mascaras';
 import { Alerta } from '../alerta/Alerta';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
@@ -56,6 +57,13 @@ const paraBooleano = (texto: string) => (texto === 'sim' ? true : texto === 'nao
 const opcional = (texto: string) => texto.trim() || null;
 
 /** Dados de pagamento do médico (LGPD: pessoal), na aba Pagamento do painel. */
+/** Chave Pix de CPF, CNPJ ou telefone ganha a máscara do tipo. */
+const MASCARA_PIX: Record<string, Mascara | undefined> = {
+  CPF: 'cpf',
+  CNPJ: 'cnpj',
+  TELEFONE: 'telefone',
+};
+
 export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProps) {
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
@@ -77,7 +85,10 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
           cnpj: value.cnpj.trim() ? soDigitos(value.cnpj) : null,
           razaoSocial: opcional(value.razaoSocial),
           tipoChavePix: (value.tipoChavePix || null) as PagamentoMedicoDto['tipoChavePix'],
-          chavePix: opcional(value.chavePix),
+          // CPF, CNPJ e telefone vão só com os dígitos; e-mail e chave aleatória, como digitados.
+          chavePix: MASCARA_PIX[value.tipoChavePix]
+            ? soDigitos(value.chavePix) || null
+            : opcional(value.chavePix),
           socio: paraBooleano(value.socio),
           optanteSimples: paraBooleano(value.optanteSimples),
           omieCodigoFornecedor: opcional(value.omieCodigoFornecedor),
@@ -144,6 +155,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
           {(field) => (
             <field.TextField
               label="CPF"
+              mascara="cpf"
               placeholder="000.000.000-00"
               autoComplete="off"
               className="flex-[1_1_160px]"
@@ -154,6 +166,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
           {(field) => (
             <field.TextField
               label="CNPJ"
+              mascara="cnpj"
               placeholder="00.000.000/0000-00"
               autoComplete="off"
               description="Quando recebe como pessoa jurídica."
@@ -194,16 +207,23 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
             />
           )}
         </form.AppField>
-        <form.AppField name="chavePix">
-          {(field) => (
-            <field.TextField
-              label="Chave Pix"
-              placeholder="Onde o médico recebe"
-              autoComplete="off"
-              className="flex-[1_1_200px]"
-            />
+        <form.Subscribe selector={(estado) => estado.values.tipoChavePix}>
+          {(tipo) => (
+            <form.AppField name="chavePix">
+              {(field) => (
+                <field.TextField
+                  // Remonta ao trocar o tipo: a máscara nova vale do zero.
+                  key={tipo}
+                  label="Chave Pix"
+                  mascara={MASCARA_PIX[tipo]}
+                  placeholder="Onde o médico recebe"
+                  autoComplete="off"
+                  className="flex-[1_1_200px]"
+                />
+              )}
+            </form.AppField>
           )}
-        </form.AppField>
+        </form.Subscribe>
       </div>
       <form.AppField name="omieCodigoFornecedor">
         {(field) => (

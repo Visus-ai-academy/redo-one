@@ -145,7 +145,12 @@ export function PainelContratado({
         </form.AppField>
         <form.AppField name="cnpj">
           {(field) => (
-            <field.TextField label="CNPJ" placeholder="00.000.000/0000-00" autoComplete="off" />
+            <field.TextField
+              label="CNPJ"
+              mascara="cnpj"
+              placeholder="00.000.000/0000-00"
+              autoComplete="off"
+            />
           )}
         </form.AppField>
         <form.AppField name="endereco">
@@ -182,6 +187,7 @@ export function PainelContratado({
             {(field) => (
               <field.TextField
                 label="CEP"
+                mascara="cep"
                 placeholder="00000-000"
                 autoComplete="off"
                 className="flex-[1_1_120px]"
