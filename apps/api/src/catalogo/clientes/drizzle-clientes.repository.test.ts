@@ -76,6 +76,40 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     expect((await repo.listar({ contratadoId: tele, pagina: 1, porPagina: 10 })).total).toBe(2);
   });
 
+  it('na busca, _ e % são texto, e o mais parecido com o nome vem primeiro', async () => {
+    await repo.criar(
+      dados('IMDBATATAIS', { razaoSocial: 'IMD INTERIOR MEDICINA DIAGNOSTICA LTDA' }),
+    );
+    await repo.criar(dados('ALIS-MED_DIAGNOSTICA'));
+    await repo.criar(dados('_DIAGNOSTICA'));
+    await repo.criar(dados('ZETA', { nomeFantasia: 'ZETA_DIAGNOSTICA' }));
+    await repo.criar(dados('ACME_DIAGNOSTICA_TELE'));
+
+    const { itens } = await repo.listar({ busca: '_diagnostica', pagina: 1, porPagina: 10 });
+
+    expect(itens.map((c) => c.nome)).toEqual([
+      '_DIAGNOSTICA',
+      'ALIS-MED_DIAGNOSTICA',
+      'ACME_DIAGNOSTICA_TELE',
+      'ZETA',
+    ]);
+    expect((await repo.listar({ busca: '%', pagina: 1, porPagina: 10 })).total).toBe(0);
+  });
+
+  it('na busca, palavra que começa com o texto vem antes do texto no meio da palavra', async () => {
+    await repo.criar(dados('Dra. Tamara Mohana'));
+    await repo.criar(dados('Dra. Ana Carolina Ottaiano'));
+    await repo.criar(dados('CLINICA_ANALISE_TELE'));
+
+    const { itens } = await repo.listar({ busca: 'ana', pagina: 1, porPagina: 10 });
+
+    expect(itens.map((c) => c.nome)).toEqual([
+      'CLINICA_ANALISE_TELE',
+      'Dra. Ana Carolina Ottaiano',
+      'Dra. Tamara Mohana',
+    ]);
+  });
+
   it('detalhe traz os apelidos; busca apelido e cliente pela chave', async () => {
     const prn = await repo.criar(dados('PRN'));
     const alias = await repo.criarAlias(prn, {

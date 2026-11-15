@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
 
 import { violouChaveEstrangeira } from '../../catalogo/comum/erros-do-banco';
+import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import {
   equipes,
@@ -47,7 +48,7 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
       const digitos = /^\d+$/.test(filtro.busca) ? Number(filtro.busca) : null;
       condicoes.push(
         or(
-          ilike(medicos.nome, `%${filtro.busca}%`),
+          ilike(medicos.nome, contem(filtro.busca)),
           eq(medicos.crm, filtro.busca),
           digitos !== null && digitos <= 2_147_483_647
             ? eq(medicos.idMobilemed, digitos)
@@ -83,7 +84,10 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
         .leftJoin(niveisMedico, eq(niveisMedico.id, medicos.nivelId))
         .where(onde)
         // Pela chave: "Dra. Rafaela" não vem antes de "Dr. Augusto" (como no legado).
-        .orderBy(asc(medicos.chaveNormalizada))
+        .orderBy(
+          ...(filtro.busca ? relevancia(medicos.nome, filtro.busca) : []),
+          asc(medicos.chaveNormalizada),
+        )
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(medicos).where(onde),

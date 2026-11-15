@@ -1,6 +1,7 @@
 import { and, asc, count, eq, ilike, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
+import { contem, relevancia } from '../../database/busca';
 import type { Database } from '../../database/database';
 import {
   especialidades,
@@ -53,7 +54,7 @@ export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
 
   async listar(filtro: FiltroDePara) {
     const condicoes: (SQL | undefined)[] = [];
-    if (filtro.busca) condicoes.push(ilike(this.t.origem, `%${filtro.busca}%`));
+    if (filtro.busca) condicoes.push(ilike(this.t.origem, contem(filtro.busca)));
     if (filtro.ativo !== undefined) condicoes.push(eq(this.t.ativo, filtro.ativo));
     if (filtro.tipo && this.t.tipo) condicoes.push(eq(this.t.tipo, filtro.tipo));
     if (filtro.destinoId && this.t.destino) condicoes.push(eq(this.t.destino, filtro.destinoId));
@@ -64,7 +65,10 @@ export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
         .select(this.t.selecao)
         .from(this.t.tabela)
         .where(onde)
-        .orderBy(asc(this.t.origem))
+        .orderBy(
+          ...(filtro.busca ? relevancia(this.t.origem, filtro.busca) : []),
+          asc(this.t.origem),
+        )
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(this.t.tabela).where(onde),

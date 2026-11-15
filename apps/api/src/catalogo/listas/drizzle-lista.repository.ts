@@ -1,6 +1,7 @@
 import { and, asc, count, eq, getTableName, ilike, or, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
+import { contem, relevancia } from '../../database/busca';
 import type { Database } from '../../database/database';
 import {
   categoriasExame,
@@ -120,7 +121,7 @@ export class DrizzleListaRepository<T extends DadosLista = DadosLista>
     const { nome, descricao, ativo, ordem } = this.t.colunas;
     const condicoes: (SQL | undefined)[] = [];
     if (filtro.busca) {
-      condicoes.push(or(ilike(nome, `%${filtro.busca}%`), ilike(descricao, `%${filtro.busca}%`)));
+      condicoes.push(or(ilike(nome, contem(filtro.busca)), ilike(descricao, contem(filtro.busca))));
     }
     if (filtro.ativo !== undefined) condicoes.push(eq(ativo, filtro.ativo));
     const onde = and(...condicoes);
@@ -130,7 +131,7 @@ export class DrizzleListaRepository<T extends DadosLista = DadosLista>
         .select(this.selecao)
         .from(this.t.tabela)
         .where(onde)
-        .orderBy(asc(ordem), asc(nome))
+        .orderBy(...(filtro.busca ? relevancia(nome, filtro.busca) : []), asc(ordem), asc(nome))
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(this.t.tabela).where(onde),

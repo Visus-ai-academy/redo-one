@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
+import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import { clientes, clientesAliases, contratados } from '../../database/schema';
 import { violouChaveEstrangeira } from '../comum/erros-do-banco';
@@ -38,7 +39,7 @@ export class DrizzleClientesRepository
   async listar(filtro: FiltroClientes) {
     const condicoes: (SQL | undefined)[] = [];
     if (filtro.busca) {
-      const termo = `%${filtro.busca}%`;
+      const termo = contem(filtro.busca);
       const digitos = filtro.busca.replace(/\D/g, '');
       condicoes.push(
         or(
@@ -70,7 +71,10 @@ export class DrizzleClientesRepository
         .leftJoin(contratados, eq(contratados.id, clientes.contratadoId))
         .leftJoin(principal, eq(principal.id, clientes.unificadoEmId))
         .where(onde)
-        .orderBy(asc(clientes.nome))
+        .orderBy(
+          ...(filtro.busca ? relevancia(clientes.nome, filtro.busca) : []),
+          asc(clientes.nome),
+        )
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(clientes).where(onde),

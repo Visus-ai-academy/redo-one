@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
+import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import {
   categoriasExame,
@@ -70,7 +71,7 @@ export class DrizzleExamesRepository implements ExamesRepository {
   async listar(filtro: FiltroExames) {
     const condicoes: (SQL | undefined)[] = [];
     if (filtro.busca) {
-      condicoes.push(or(ilike(exames.nome, `%${filtro.busca}%`), eq(exames.codigo, filtro.busca)));
+      condicoes.push(or(ilike(exames.nome, contem(filtro.busca)), eq(exames.codigo, filtro.busca)));
     }
     if (filtro.modalidadeId) condicoes.push(eq(exames.modalidadeId, filtro.modalidadeId));
     if (filtro.especialidadeId) condicoes.push(eq(exames.especialidadeId, filtro.especialidadeId));
@@ -89,7 +90,7 @@ export class DrizzleExamesRepository implements ExamesRepository {
         })
         .from(exames)
         .where(onde)
-        .orderBy(asc(exames.nome))
+        .orderBy(...(filtro.busca ? relevancia(exames.nome, filtro.busca) : []), asc(exames.nome))
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(exames).where(onde),

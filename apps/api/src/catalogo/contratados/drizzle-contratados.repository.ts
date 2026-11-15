@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
+import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import { contratados } from '../../database/schema';
 import { violouChaveEstrangeira } from '../comum/erros-do-banco';
@@ -38,7 +39,7 @@ export class DrizzleContratadosRepository implements ContratadosRepository {
       const digitos = filtro.busca.replace(/\D/g, '');
       condicoes.push(
         or(
-          ilike(contratados.razaoSocial, `%${filtro.busca}%`),
+          ilike(contratados.razaoSocial, contem(filtro.busca)),
           digitos.length === 14 ? eq(contratados.cnpj, digitos) : undefined,
         ),
       );
@@ -49,7 +50,10 @@ export class DrizzleContratadosRepository implements ContratadosRepository {
     const [itens, [totalLinha]] = await Promise.all([
       this.consulta()
         .where(onde)
-        .orderBy(asc(contratados.razaoSocial))
+        .orderBy(
+          ...(filtro.busca ? relevancia(contratados.razaoSocial, filtro.busca) : []),
+          asc(contratados.razaoSocial),
+        )
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(contratados).where(onde),

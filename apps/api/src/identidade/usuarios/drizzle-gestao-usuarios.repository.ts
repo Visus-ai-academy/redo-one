@@ -4,6 +4,7 @@ import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from 'drizzle-o
 import type { Email } from '../../comum/email/envio-email';
 import { adicionarJob } from '../../comum/jobs/adicionar-job';
 import { TAREFA_ENVIAR_EMAIL } from '../../comum/jobs/tarefa-enviar-email';
+import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import { medicos, papeis, sessoes, tokensSenha, usuarios } from '../../database/schema';
 import type { NovoTokenSenha } from '../senha/tokens-senha.repository';
@@ -49,8 +50,8 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
       const digitos = filtro.busca.replace(/\D/g, '');
       condicoes.push(
         or(
-          ilike(usuarios.nome, `%${filtro.busca}%`),
-          ilike(usuarios.email, `%${filtro.busca}%`),
+          ilike(usuarios.nome, contem(filtro.busca)),
+          ilike(usuarios.email, contem(filtro.busca)),
           digitos.length === 11 ? eq(usuarios.cpf, digitos) : undefined,
         ),
       );
@@ -66,7 +67,10 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
         .from(usuarios)
         .innerJoin(papeis, eq(papeis.id, usuarios.papelId))
         .where(onde)
-        .orderBy(asc(usuarios.nome))
+        .orderBy(
+          ...(filtro.busca ? relevancia(usuarios.nome, filtro.busca) : []),
+          asc(usuarios.nome),
+        )
         .limit(filtro.porPagina)
         .offset((filtro.pagina - 1) * filtro.porPagina),
       this.db.select({ total: count() }).from(usuarios).where(onde),
