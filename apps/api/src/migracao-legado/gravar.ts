@@ -83,6 +83,11 @@ export async function gravarMigracao(
         .delete(schema.especialidades)
         .where(inArray(schema.especialidades.id, removidos.especialidades));
     }
+    if (removidos.especialidadesDePara.length > 0) {
+      await tx
+        .delete(schema.especialidadesDePara)
+        .where(inArray(schema.especialidadesDePara.id, removidos.especialidadesDePara));
+    }
     if (removidos.modalidades.length > 0) {
       await tx
         .delete(schema.modalidades)

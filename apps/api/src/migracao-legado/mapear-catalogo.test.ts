@@ -35,7 +35,14 @@ function legado(extra: Partial<LegadoCatalogo> = {}): LegadoCatalogo {
         ativo: true,
         observacoes: null,
       },
-      { id: 'er-2', tipo: 'INVALIDA', origem: 'CT', destino: null, ativo: true, observacoes: null },
+      {
+        id: 'er-2',
+        tipo: 'INVALIDA',
+        origem: 'ONCOLÓGICO',
+        destino: null,
+        ativo: true,
+        observacoes: null,
+      },
     ],
     exames: [
       {
@@ -174,7 +181,7 @@ describe('mapearCatalogo', () => {
         origem: 'JOELHO',
         especialidadeId: idDoLegado('especialidades', 'es-msk'),
       }),
-      expect.objectContaining({ tipo: 'invalida', origem: 'CT', especialidadeId: null }),
+      expect.objectContaining({ tipo: 'invalida', origem: 'ONCOLÓGICO', especialidadeId: null }),
     ]);
     expect(tabelas.prioridadesDePara).toEqual([
       expect.objectContaining({
@@ -453,6 +460,8 @@ describe('mapearCatalogo', () => {
       ['BMD', idDoLegado('modalidades', 'mo-do')],
       ['CR', idDoLegado('modalidades', 'mo-rx')],
       ['DX', idDoLegado('modalidades', 'mo-rx')],
+      ['RAIO X', idDoLegado('modalidades', 'mo-rx')],
+      ['RAIO X OIT', idDoLegado('modalidades', 'mo-rx')],
     ]);
     const exame = (nome: string) => tabelas.exames.find((e) => e.nome === nome);
     expect(exame('MAMOGRAFIA BILATERAL')).toMatchObject({
@@ -466,5 +475,47 @@ describe('mapearCatalogo', () => {
     // As grafias continuam chegando: viram variações da forma certa.
     expect(tabelas.especialidadesDePara.map((d) => d.origem)).toEqual(['MAMO', 'D.O']);
     expect(avisos.filter((a) => a.tabela === 'exames')).toEqual([]);
+  });
+
+  it('modalidade no campo especialidade vira variação da modalidade, não "não é especialidade"', () => {
+    const invalida = (id: string, origem: string) => ({
+      id,
+      tipo: 'INVALIDA',
+      origem,
+      destino: null,
+      ativo: true,
+      observacoes: 'Modalidade no lugar da especialidade',
+    });
+    const { tabelas, removidos } = mapearCatalogo(
+      legado({
+        modalidades: [
+          { id: 'mo-rx', nome: 'RX', ...lista },
+          { id: 'mo-ct', nome: 'CT', ...lista },
+        ],
+        especialidadeRegras: [
+          invalida('r-ct', 'CT'),
+          invalida('r-cr', 'CR'),
+          invalida('r-rx', 'RX'),
+          invalida('r-raiox', 'RAIO X'),
+          invalida('r-oit', 'RAIO X OIT'),
+          { ...invalida('r-onco', 'ONCOLÓGICO'), observacoes: 'Não é especialidade' },
+        ],
+        exames: [],
+        regrasQuebra: [],
+      }),
+    );
+
+    expect(tabelas.especialidadesDePara.map((d) => d.origem)).toEqual(['ONCOLÓGICO']);
+    expect(tabelas.modalidadesDePara.map((d) => d.origem)).toEqual([
+      'CR',
+      'DX',
+      'RAIO X',
+      'RAIO X OIT',
+    ]);
+    expect(removidos.especialidadesDePara).toEqual(
+      ['r-ct', 'r-cr', 'r-rx', 'r-raiox', 'r-oit'].map((id) =>
+        idDoLegado('especialidade_regra', id),
+      ),
+    );
   });
 });

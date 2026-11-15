@@ -41,7 +41,7 @@ export interface CatalogoMigrado {
   };
   avisos: Aviso[];
   /** Ids (no redo-one) do que uma carga anterior gravou e esta não traz mais: a gravação apaga. */
-  removidos: { especialidades: string[]; modalidades: string[] };
+  removidos: { especialidades: string[]; modalidades: string[]; especialidadesDePara: string[] };
 }
 
 /**
@@ -61,6 +61,10 @@ const VARIACOES_MODALIDADE: [origem: string, destino: string][] = [
   ['BMD', 'DO'],
   ['CR', 'RX'],
   ['DX', 'RX'],
+  // Nomes de raio-x que chegam no campo especialidade (no dashboards-one, "não é especialidade",
+  // com a observação "Modalidade no lugar da especialidade"). OIT é a radiografia de pneumoconiose.
+  ['RAIO X', 'RX'],
+  ['RAIO X OIT', 'RX'],
 ];
 
 const semAcento = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -219,11 +223,21 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
   }
 
   const tabEspDePara: CatalogoMigrado['tabelas']['especialidadesDePara'] = [];
+  // Modalidade no campo especialidade (CT, RX, CR, RAIO X...): a modalidade do catálogo ou a
+  // variação dela já diz o que é; a importação ignora como especialidade.
+  const ehModalidade = (origem: string) =>
+    modalidadePorCodigo.has(chaveCadastro(origem)) ||
+    modalidadeDaVariacao.has(chaveCadastro(origem));
+  const deParasQueSairam: string[] = [];
   const chavesEspDePara = new Set<string>();
   for (const r of legado.especialidadeRegras) {
     const tipo = TIPO_DE_PARA[r.tipo.toUpperCase() as keyof typeof TIPO_DE_PARA];
     if (!tipo) {
       avisar('especialidades_de_para', r.origem, `Tipo "${r.tipo}" desconhecido: ficou de fora.`);
+      continue;
+    }
+    if (tipo === 'invalida' && ehModalidade(r.origem)) {
+      deParasQueSairam.push(idDoLegado('especialidade_regra', r.id));
       continue;
     }
     const maiusculas = r.origem.trim().replace(/\s+/g, ' ').toUpperCase();
@@ -644,6 +658,7 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
       modalidades: legado.modalidades
         .filter(modalidadeSai)
         .map((m) => idDoLegado('modalidades', m.id)),
+      especialidadesDePara: deParasQueSairam,
     },
   };
 }
