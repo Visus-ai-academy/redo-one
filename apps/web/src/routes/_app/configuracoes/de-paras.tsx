@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
@@ -8,13 +8,13 @@ import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCad
 import {
   PainelDeParaEspecialidade,
   PainelDeParaPrioridade,
-  PainelDeParaValor,
   PainelSufixo,
 } from '../../../components/catalogo/PaineisDePara';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { deParaEspecialidadesControllerAtualizar } from '../../../gen/clients/deParaEspecialidadesControllerAtualizar';
 import { deParaEspecialidadesControllerCriar } from '../../../gen/clients/deParaEspecialidadesControllerCriar';
@@ -22,21 +22,18 @@ import { deParaEspecialidadesControllerExcluir } from '../../../gen/clients/dePa
 import { deParaPrioridadesControllerAtualizar } from '../../../gen/clients/deParaPrioridadesControllerAtualizar';
 import { deParaPrioridadesControllerCriar } from '../../../gen/clients/deParaPrioridadesControllerCriar';
 import { deParaPrioridadesControllerExcluir } from '../../../gen/clients/deParaPrioridadesControllerExcluir';
-import { deParaValoresExameControllerAtualizar } from '../../../gen/clients/deParaValoresExameControllerAtualizar';
-import { deParaValoresExameControllerCriar } from '../../../gen/clients/deParaValoresExameControllerCriar';
-import { deParaValoresExameControllerExcluir } from '../../../gen/clients/deParaValoresExameControllerExcluir';
-import { opcoesControllerExames } from '../../../gen/clients/opcoesControllerExames';
 import { sufixosClienteControllerAtualizar } from '../../../gen/clients/sufixosClienteControllerAtualizar';
 import { sufixosClienteControllerCriar } from '../../../gen/clients/sufixosClienteControllerCriar';
 import { sufixosClienteControllerExcluir } from '../../../gen/clients/sufixosClienteControllerExcluir';
 import { deParaEspecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaEspecialidadesControllerListar';
+import { deParaEspecialidadesControllerObterQueryOptions } from '../../../gen/hooks/useDeParaEspecialidadesControllerObter';
 import { deParaPrioridadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerListar';
-import { deParaValoresExameControllerListarQueryOptions } from '../../../gen/hooks/useDeParaValoresExameControllerListar';
+import { deParaPrioridadesControllerObterQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { sufixosClienteControllerListarQueryOptions } from '../../../gen/hooks/useSufixosClienteControllerListar';
+import { sufixosClienteControllerObterQueryOptions } from '../../../gen/hooks/useSufixosClienteControllerObter';
 import type { DeParaEspecialidadeItemDto } from '../../../gen/types/DeParaEspecialidadeItemDto';
 import type { DeParaPrioridadeItemDto } from '../../../gen/types/DeParaPrioridadeItemDto';
-import type { DeParaValorItemDto } from '../../../gen/types/DeParaValorItemDto';
 import type { SufixoItemDto } from '../../../gen/types/SufixoItemDto';
 import { invalidarCatalogo } from '../../../lib/catalogo';
 import { pode } from '../../../lib/permissoes';
@@ -45,7 +42,6 @@ const POR_PAGINA = 25;
 const ABAS = [
   { valor: 'prioridades', rotulo: 'Prioridade' },
   { valor: 'especialidades', rotulo: 'Especialidade' },
-  { valor: 'valores', rotulo: 'Valores de exame' },
   { valor: 'sufixos', rotulo: 'Sufixos de cliente' },
 ] as const;
 type Aba = (typeof ABAS)[number]['valor'];
@@ -57,7 +53,7 @@ const TIPOS_ESPECIALIDADE = {
 } as const;
 
 const buscaSchema = z.object({
-  aba: z.enum(['prioridades', 'especialidades', 'valores', 'sufixos']).optional().catch(undefined),
+  aba: z.enum(['prioridades', 'especialidades', 'sufixos']).optional().catch(undefined),
   busca: z.string().trim().min(1).optional().catch(undefined),
   situacao: z.enum(['ativos', 'inativos']).optional().catch(undefined),
   tipo: z.enum(['normalizacao', 'regiao_anatomica', 'invalida']).optional().catch(undefined),
@@ -74,11 +70,16 @@ const filtro = (b: Busca) => ({
   porPagina: POR_PAGINA,
 });
 
+const obterPorAba = {
+  prioridades: (id: string) => deParaPrioridadesControllerObterQueryOptions({ path: { id } }),
+  especialidades: (id: string) => deParaEspecialidadesControllerObterQueryOptions({ path: { id } }),
+  sufixos: (id: string) => sufixosClienteControllerObterQueryOptions({ path: { id } }),
+};
+
 const consultas = {
   prioridades: (b: Busca) => deParaPrioridadesControllerListarQueryOptions({ query: filtro(b) }),
   especialidades: (b: Busca) =>
     deParaEspecialidadesControllerListarQueryOptions({ query: { ...filtro(b), tipo: b.tipo } }),
-  valores: (b: Busca) => deParaValoresExameControllerListarQueryOptions({ query: filtro(b) }),
   sufixos: (b: Busca) => sufixosClienteControllerListarQueryOptions({ query: filtro(b) }),
 };
 
@@ -117,9 +118,7 @@ const destino = (nome: string | null | undefined, vazio = '—') => (
 
 const cPri = createDataTableColumnHelper<DeParaPrioridadeItemDto>();
 const cEsp = createDataTableColumnHelper<DeParaEspecialidadeItemDto>();
-const cVal = createDataTableColumnHelper<DeParaValorItemDto>();
 const cSuf = createDataTableColumnHelper<SufixoItemDto>();
-const numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
 
 type Item = { id: string };
 
@@ -178,24 +177,6 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
           }),
           cEsp.accessor('ativo', { header: 'Situação', cell: (i) => situacao(i.getValue()) }),
         ];
-      case 'valores':
-        return [
-          cVal.accessor('estudoDescricao', {
-            header: 'Descrição do estudo',
-            cell: (i) => (
-              <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
-            ),
-          }),
-          cVal.accessor('valores', {
-            header: () => <span className="block text-right">Vale</span>,
-            cell: (i) => <span className="block text-right">{numero.format(i.getValue())}</span>,
-          }),
-          cVal.accessor('destinoNome', {
-            header: 'Exame do catálogo',
-            cell: (i) => destino(i.getValue()),
-          }),
-          cVal.accessor('ativo', { header: 'Situação', cell: (i) => situacao(i.getValue()) }),
-        ];
       case 'sufixos':
         return [
           cSuf.accessor('sufixo', {
@@ -237,8 +218,7 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
       busca={{
         valor: busca.busca,
         rotulo: 'Buscar de-paras',
-        placeholder:
-          aba === 'valores' ? 'Descrição do estudo' : sufixos ? 'Sufixo' : 'Valor que chega',
+        placeholder: sufixos ? 'Sufixo' : 'Valor que chega',
       }}
       temFiltro={busca.situacao !== undefined || busca.tipo !== undefined}
       filtros={
@@ -302,11 +282,6 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
   );
 }
 
-const buscarExames = async (termo: string) => {
-  const exames = await opcoesControllerExames({ query: { busca: termo } }).unwrap();
-  return exames.map((e) => ({ valor: e.id, rotulo: e.nome, detalhe: e.modalidade }));
-};
-
 /** Atualiza (com id) ou cria, devolvendo o id do item salvo. */
 async function gravar<B>(
   id: string | undefined,
@@ -343,10 +318,22 @@ function Painel({
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
-  const item = id ? itens.find((i) => i.id === id) : undefined;
+  const daPagina = id ? itens.find((i) => i.id === id) : undefined;
+  // Fora da página aberta (recém-criado, link direto): busca pelo id.
+  const consulta = useQuery({
+    ...(obterPorAba[aba](id ?? '') as ReturnType<typeof obterPorAba.prioridades>),
+    enabled: Boolean(id) && !daPagina,
+  });
+  const item = (daPagina ?? consulta.data) as Item | undefined;
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  // Item que não está nesta página (link antigo ou excluído): fecha em vez de mostrar vazio.
-  if (id && !item) return null;
+  if (id && !item)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
 
   const salvo = async (alvo: string) => {
     await invalidarCatalogo(queryClient);
@@ -398,27 +385,6 @@ function Painel({
           }
           onExcluir={
             id ? () => excluir(deParaEspecialidadesControllerExcluir, id, excluido) : undefined
-          }
-        />
-      );
-    case 'valores':
-      return (
-        <PainelDeParaValor
-          {...comum}
-          item={item as DeParaValorItemDto | undefined}
-          buscarExames={buscarExames}
-          onSalvar={async (body) =>
-            salvo(
-              await gravar(
-                id,
-                body,
-                deParaValoresExameControllerCriar,
-                deParaValoresExameControllerAtualizar,
-              ),
-            )
-          }
-          onExcluir={
-            id ? () => excluir(deParaValoresExameControllerExcluir, id, excluido) : undefined
           }
         />
       );

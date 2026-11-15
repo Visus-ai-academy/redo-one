@@ -3,13 +3,18 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
+import { Abas } from '../../components/abas/Abas';
 import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelExame } from '../../components/catalogo/PainelExame';
+import { PainelExameForaPadrao } from '../../components/catalogo/PainelExameForaPadrao';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
+import { deParaValoresExameControllerAtualizar } from '../../gen/clients/deParaValoresExameControllerAtualizar';
+import { deParaValoresExameControllerCriar } from '../../gen/clients/deParaValoresExameControllerCriar';
+import { deParaValoresExameControllerExcluir } from '../../gen/clients/deParaValoresExameControllerExcluir';
 import { examesControllerAtualizar } from '../../gen/clients/examesControllerAtualizar';
 import { examesControllerAtualizarRegraQuebra } from '../../gen/clients/examesControllerAtualizarRegraQuebra';
 import { examesControllerCriar } from '../../gen/clients/examesControllerCriar';
@@ -17,16 +22,27 @@ import { examesControllerCriarRegraQuebra } from '../../gen/clients/examesContro
 import { examesControllerExcluir } from '../../gen/clients/examesControllerExcluir';
 import { examesControllerExcluirRegraQuebra } from '../../gen/clients/examesControllerExcluirRegraQuebra';
 import { opcoesControllerExames } from '../../gen/clients/opcoesControllerExames';
+import { deParaValoresExameControllerListarQueryOptions } from '../../gen/hooks/useDeParaValoresExameControllerListar';
+import { deParaValoresExameControllerObterQueryOptions } from '../../gen/hooks/useDeParaValoresExameControllerObter';
 import { examesControllerListarQueryOptions } from '../../gen/hooks/useExamesControllerListar';
 import { examesControllerObterQueryOptions } from '../../gen/hooks/useExamesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
+import type { DeParaValorItemDto } from '../../gen/types/DeParaValorItemDto';
 import type { ExameResumoDto } from '../../gen/types/ExameResumoDto';
 import { invalidarCatalogo } from '../../lib/catalogo';
 import { pode } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
+/** Padronizados (o cadastro) e fora do padrão (grafias da MobileMed): listas separadas, nunca juntas. */
+const ABAS = [
+  { valor: 'padronizados', rotulo: 'Padronizados' },
+  { valor: 'fora-do-padrao', rotulo: 'Fora do padrão' },
+] as const;
+type Aba = (typeof ABAS)[number]['valor'];
+
 const buscaSchema = z.object({
+  aba: z.enum(['padronizados', 'fora-do-padrao']).optional().catch(undefined),
   busca: z.string().trim().min(1).optional().catch(undefined),
   modalidadeId: z.uuid().optional().catch(undefined),
   especialidadeId: z.uuid().optional().catch(undefined),
@@ -48,11 +64,25 @@ const consulta = (b: Busca) => ({
   },
 });
 
+const consultaForaPadrao = (b: Busca) =>
+  deParaValoresExameControllerListarQueryOptions({
+    query: {
+      busca: b.busca,
+      ativo: b.situacao === undefined ? undefined : b.situacao === 'ativos',
+      pagina: b.pagina ?? 1,
+      porPagina: POR_PAGINA,
+    },
+  });
+
 export const Route = createFileRoute('/_app/exames')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'exames.ver')) return;
+    if (deps.aba === 'fora-do-padrao') {
+      await context.queryClient.ensureQueryData(consultaForaPadrao(deps));
+      return;
+    }
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id)
       void context.queryClient.prefetchQuery(
@@ -69,10 +99,28 @@ export const Route = createFileRoute('/_app/exames')({
 
 function PaginaExames() {
   const { sessao } = Route.useRouteContext();
-  return pode(sessao, 'exames.ver') ? (
-    <Exames podeEditar={pode(sessao, 'exames.editar')} />
+  const { aba } = Route.useSearch();
+  if (!pode(sessao, 'exames.ver')) return <SemPermissao tela="Exames" />;
+  const podeEditar = pode(sessao, 'exames.editar');
+  return aba === 'fora-do-padrao' ? (
+    <ForaDoPadrao podeEditar={podeEditar} />
   ) : (
-    <SemPermissao tela="Exames" />
+    <Exames podeEditar={podeEditar} />
+  );
+}
+
+/** Abas da tela; trocar de aba recomeça busca, filtros e página. */
+function AbasExames({ aba }: { aba: Aba }) {
+  const navigate = Route.useNavigate();
+  return (
+    <Abas
+      aria-label="Exames"
+      valor={aba}
+      onMudar={(v) =>
+        void navigate({ search: { aba: v === 'padronizados' ? undefined : (v as Aba) } })
+      }
+      abas={[...ABAS]}
+    />
   );
 }
 
@@ -146,6 +194,8 @@ function Exames({ podeEditar }: { podeEditar: boolean }) {
   return (
     <ListaCadastro
       titulo="Exames"
+      totalNoTitulo={false}
+      abas={<AbasExames aba="padronizados" />}
       novo={
         podeEditar
           ? { rotulo: 'Novo exame', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
@@ -284,6 +334,177 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
         await examesControllerExcluirRegraQuebra({ path: { id, regraId } }).unwrap();
         await invalidarCatalogo(queryClient);
       }}
+    />
+  );
+}
+
+const cFora = createDataTableColumnHelper<DeParaValorItemDto>();
+const numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+
+/** Estudos que chegam fora do padrão do cadastro, com quanto valem e o exame padronizado ligado. */
+function ForaDoPadrao({ podeEditar }: { podeEditar: boolean }) {
+  const busca = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data: pagina } = useSuspenseQuery(consultaForaPadrao(busca));
+
+  const ir = useCallback(
+    (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
+    [navigate],
+  );
+  const filtrar = useCallback(
+    (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
+    [ir],
+  );
+  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
+
+  const colunas = useMemo(
+    () => [
+      cFora.accessor('estudoDescricao', {
+        header: 'Descrição do estudo',
+        cell: (i) => (
+          <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
+        ),
+      }),
+      cFora.accessor('valores', {
+        header: () => <span className="block text-right">Vale</span>,
+        cell: (i) => (
+          <span className="block text-right tabular-nums">{numero.format(i.getValue())}</span>
+        ),
+      }),
+      cFora.accessor('destinoNome', {
+        header: 'Exame padronizado',
+        cell: (i) => (
+          <span className={i.getValue() ? undefined : 'text-muted-foreground'}>
+            {i.getValue() ?? '—'}
+          </span>
+        ),
+      }),
+      cFora.accessor('ativo', {
+        header: 'Situação',
+        cell: (i) =>
+          i.getValue() ? (
+            <Etiqueta tom="sucesso">Ativo</Etiqueta>
+          ) : (
+            <Etiqueta tom="inativo">Inativo</Etiqueta>
+          ),
+      }),
+    ],
+    [abrir],
+  );
+
+  return (
+    <ListaCadastro
+      titulo="Exames"
+      totalNoTitulo={false}
+      abas={<AbasExames aba="fora-do-padrao" />}
+      novo={
+        podeEditar
+          ? {
+              rotulo: 'Novo exame fora do padrão',
+              onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
+            }
+          : undefined
+      }
+      busca={{
+        valor: busca.busca,
+        rotulo: 'Buscar exames fora do padrão',
+        placeholder: 'Descrição do estudo',
+      }}
+      temFiltro={busca.situacao !== undefined}
+      filtros={
+        <Select
+          aria-label="Filtrar por situação"
+          value={busca.situacao ?? ''}
+          onValueChange={(v) => filtrar({ situacao: (v || undefined) as Busca['situacao'] })}
+          opcoes={[
+            { valor: '', rotulo: 'Todas as situações' },
+            { valor: 'ativos', rotulo: 'Ativos' },
+            { valor: 'inativos', rotulo: 'Inativos' },
+          ]}
+          className="flex-[1_1_160px] md:flex-[0_1_180px]"
+        />
+      }
+      colunas={colunas}
+      ocultarComPainel={['destinoNome']}
+      itens={pagina.itens}
+      getRowId={(i) => i.id}
+      selecionadoId={busca.id}
+      pagina={pagina.pagina}
+      porPagina={pagina.porPagina}
+      total={pagina.total}
+      vazio={{
+        titulo: 'Nenhum exame fora do padrão.',
+        texto:
+          'Estudos que chegam da MobileMed com outra grafia ou fora do cadastro aparecem aqui.',
+      }}
+      onFiltrar={filtrar}
+      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
+      onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
+      painel={
+        busca.id || (busca.novo && podeEditar) ? (
+          <PainelForaPadrao
+            key={busca.id ?? 'novo'}
+            id={busca.id}
+            itens={pagina.itens}
+            podeEditar={podeEditar}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+/** O item aberto vem da página atual (o `?id=` aponta para uma linha visível). */
+function PainelForaPadrao({
+  id,
+  itens,
+  podeEditar,
+}: {
+  id?: string;
+  itens: DeParaValorItemDto[];
+  podeEditar: boolean;
+}) {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const daPagina = id ? itens.find((i) => i.id === id) : undefined;
+  // Fora da página aberta (recém-criado, link direto): busca pelo id.
+  const consulta = useQuery({
+    ...deParaValoresExameControllerObterQueryOptions({ path: { id: id ?? '' } }),
+    enabled: Boolean(id) && !daPagina,
+  });
+  const item = daPagina ?? consulta.data;
+  const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  if (id && !item)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
+
+  return (
+    <PainelExameForaPadrao
+      item={item}
+      buscarExames={buscarExames}
+      podeEditar={podeEditar}
+      onFechar={fechar}
+      onSalvar={async (body) => {
+        let alvo = id;
+        if (id) await deParaValoresExameControllerAtualizar({ path: { id }, body }).unwrap();
+        else alvo = (await deParaValoresExameControllerCriar({ body }).unwrap()).id;
+        await invalidarCatalogo(queryClient);
+        void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
+      }}
+      onExcluir={
+        id
+          ? async () => {
+              await deParaValoresExameControllerExcluir({ path: { id } }).unwrap();
+              fechar();
+              await invalidarCatalogo(queryClient);
+            }
+          : undefined
+      }
     />
   );
 }

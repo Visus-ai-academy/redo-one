@@ -5,12 +5,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { escolherOpcao } from '../../test/select';
-import {
-  PainelDeParaEspecialidade,
-  PainelDeParaPrioridade,
-  PainelDeParaValor,
-  PainelSufixo,
-} from './PaineisDePara';
+import { PainelDeParaEspecialidade, PainelDeParaPrioridade, PainelSufixo } from './PaineisDePara';
 
 const comConsultas = (ui: ReactNode) =>
   render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
@@ -58,22 +53,6 @@ describe('painéis dos de-paras', () => {
       especialidadeId: null,
       ativo: true,
       observacoes: null,
-    });
-  });
-
-  it('valores: aceita centavos e o exame é opcional', async () => {
-    const onSalvar = vi.fn(async () => undefined);
-    comConsultas(<PainelDeParaValor {...base} buscarExames={async () => []} onSalvar={onSalvar} />);
-
-    await userEvent.type(screen.getByRole('textbox', { name: 'Descrição do estudo' }), 'RM CRANIO');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Vale (unidades)' }), '1.5');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar de-para' }));
-
-    expect(onSalvar).toHaveBeenCalledWith({
-      estudoDescricao: 'RM CRANIO',
-      valores: 1.5,
-      exameId: null,
-      ativo: true,
     });
   });
 
