@@ -152,4 +152,5 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 ## Onde desenhar
 
 - **Protótipo (Claude Design):** siga o tipo Design; cada tela é um artboard `.dc.html` com raiz fluida (`expand: "fill"`). Ícones Phosphor como `<svg viewBox="0 0 256 256" fill="currentColor"><path d="…"/></svg>`, peso regular; os paths saem de `@phosphor-icons/react` (`dist/defs/<Nome>.es.js`, entrada `"regular"`). Tokens do `sistema.md` no lugar de cores soltas, repetidos igual em todas as telas.
+- **Base UI sempre:** antes de montar qualquer peça (botão, campo, drawer, diálogo, select, abas, tooltip, avatar, progresso…), confira se o Base UI tem; se tem, use o dele, nunca uma imitação com HTML. HTML puro só onde não há equivalente (`<ul>`, `<nav>` simples).
 - **Código (apps/web):** Tailwind + tokens semânticos, Base UI para componentes interativos, `useAppForm` para formulários, `DataTable` para tabelas (ver `apps/web/CLAUDE.md` e a skill `react-component`). O pacote `@phosphor-icons/react` entra pela skill `add-dependency` quando a primeira tela for codada.
