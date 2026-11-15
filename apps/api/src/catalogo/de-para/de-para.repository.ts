@@ -9,6 +9,13 @@ export interface DadosDeParaPrioridade {
   ativo: boolean;
 }
 
+/** Código de modalidade que chega na importação → modalidade do catálogo (`OT` → `DO`). */
+export interface DadosDeParaModalidade {
+  origem: string;
+  modalidadeId: string;
+  ativo: boolean;
+}
+
 /** Valor do campo especialidade na importação → especialidade (ou marcado como não especialidade). */
 export interface DadosDeParaEspecialidade {
   tipo: TipoDeParaEspecialidade;

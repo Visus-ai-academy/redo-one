@@ -2852,6 +2852,202 @@
         ]
       }
     },
+    "/catalogo/de-para/modalidades": {
+      "get": {
+        "operationId": "DeParaModalidadesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou da descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "modalidadeId",
+            "required": false,
+            "in": "query",
+            "description": "Só as variações desta modalidade.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeParaModalidadeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "post": {
+        "operationId": "DeParaModalidadesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaModalidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/de-para/modalidades/{id}": {
+      "get": {
+        "operationId": "DeParaModalidadesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeParaModalidadeItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "DeParaModalidadesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeParaModalidadeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Dados inválidos ou destino inexistente."
+          },
+          "409": {
+            "description": "Já existe um de-para para essa origem."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "DeParaModalidadesController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
     "/catalogo/de-para/prioridades": {
       "get": {
         "operationId": "DeParaPrioridadesController_listar",
@@ -6491,6 +6687,85 @@
         },
         "required": [
           "exameDestinoId",
+          "ativo"
+        ]
+      },
+      "DeParaModalidadeItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origem": {
+            "type": "string"
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "destinoNome": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "origem",
+          "modalidadeId",
+          "ativo",
+          "destinoNome"
+        ]
+      },
+      "PaginaDeParaModalidadeDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeParaModalidadeItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "porPagina",
+          "itens"
+        ]
+      },
+      "DeParaModalidadeDto": {
+        "type": "object",
+        "properties": {
+          "origem": {
+            "type": "string",
+            "example": "OT",
+            "maxLength": 150,
+            "description": "Como chega da MobileMed."
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "origem",
+          "modalidadeId",
           "ativo"
         ]
       },

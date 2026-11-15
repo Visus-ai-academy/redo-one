@@ -12,7 +12,8 @@ interface ItemDeLista {
 
 export interface LegadoCatalogo {
   modalidades: ItemDeLista[];
-  especialidades: ItemDeLista[];
+  /** `modalidade` preenchida = a linha era frente da escala (D.O, DO, MG, TC, RX), não especialidade. */
+  especialidades: (ItemDeLista & { modalidade?: string | null })[];
   subespecialidades: ItemDeLista[];
   subespecialidadesEspecialidades: { especialidadeId: string; subespecialidadeId: string }[];
   categorias: ItemDeLista[];

@@ -7,6 +7,7 @@ import {
   especialidades,
   especialidadesDePara,
   modalidades,
+  modalidadesDePara,
   prioridades,
   prioridadesDePara,
 } from '../../database/schema';
@@ -62,7 +63,15 @@ const lista = (
 });
 
 export const LISTAS = {
-  modalidades: lista(modalidades, modalidades.codigo, 'codigo'),
+  modalidades: lista(
+    modalidades,
+    modalidades.codigo,
+    'codigo',
+    {},
+    {
+      totalVariacoes: variacoes(modalidadesDePara, modalidadesDePara.modalidadeId, modalidades),
+    },
+  ),
   especialidades: lista(
     especialidades,
     especialidades.nome,

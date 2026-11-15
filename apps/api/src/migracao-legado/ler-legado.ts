@@ -30,7 +30,9 @@ export async function lerLegado(
     );
     const catalogo: LegadoCatalogo = {
       modalidades: await lista('modalidades'),
-      especialidades: await lista('especialidades', false),
+      especialidades: await ler(
+        'select id, nome, null as descricao, cor, ordem, ativo, modalidade from especialidades order by ctid',
+      ),
       subespecialidades: await lista('subespecialidades', false),
       subespecialidadesEspecialidades: await ler(
         'select "A" as "especialidadeId", "B" as "subespecialidadeId" from "_EspecialidadeToSubespecialidade"',

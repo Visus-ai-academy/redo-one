@@ -9,6 +9,7 @@ import type {
   exames,
   examesDeParaValores,
   modalidades,
+  modalidadesDePara,
   prioridades,
   prioridadesDePara,
   regrasQuebraExame,
@@ -22,6 +23,7 @@ import type { LegadoCatalogo } from './legado';
 export interface CatalogoMigrado {
   tabelas: {
     modalidades: (typeof modalidades.$inferInsert)[];
+    modalidadesDePara: (typeof modalidadesDePara.$inferInsert)[];
     especialidades: (typeof especialidades.$inferInsert)[];
     subespecialidades: (typeof subespecialidades.$inferInsert)[];
     subespecialidadesEspecialidades: (typeof subespecialidadesEspecialidades.$inferInsert)[];
@@ -38,7 +40,28 @@ export interface CatalogoMigrado {
     sufixosNomeCliente: (typeof sufixosNomeCliente.$inferInsert)[];
   };
   avisos: Aviso[];
+  /** Ids (no redo-one) do que uma carga anterior gravou e esta não traz mais: a gravação apaga. */
+  removidos: { especialidades: string[]; modalidades: string[] };
 }
+
+/**
+ * Decisão do usuário (15/11/2026): MAMO não é especialidade (mamografia é o arranjo MG + MAMA) e
+ * GERAL não existe no redo-one. As frentes da escala (especialidade com modalidade no
+ * dashboards-one: D.O, DO, MG, TC, RX) também saem: voltam como frentes quando vier a escala.
+ */
+const ESPECIALIDADES_QUE_SAEM = new Set(['MAMO', 'GERAL']);
+
+/**
+ * Traduções de modalidade cravadas no faturamento do dashboards-one (`laudosFaturaveis.ts`:
+ * OT/BMD → DO; CR/DX → RX, ou MG quando o estudo é mamografia). No redo-one viram variações da
+ * modalidade; a mamografia em CR/DX vem do exame do cadastro, que já diz MG.
+ */
+const VARIACOES_MODALIDADE: [origem: string, destino: string][] = [
+  ['OT', 'DO'],
+  ['BMD', 'DO'],
+  ['CR', 'RX'],
+  ['DX', 'RX'],
+];
 
 const semAcento = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '');
 /** Casa texto livre com um cadastro sem diferenciar maiúsculas, espaços nem acentos. */
@@ -96,14 +119,25 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
     ativo: item.ativo,
   });
 
-  const tabModalidades = legado.modalidades.map((m) => ({
-    ...lista('modalidades', m),
-    codigo: m.nome.trim(),
-  }));
-  const tabEspecialidades = legado.especialidades.map((e) => ({
-    ...lista('especialidades', e),
-    nome: e.nome.trim(),
-  }));
+  // Modalidade que é só outro código de uma do catálogo (OT = DO) vira variação dela.
+  const codigosLegado = new Set(legado.modalidades.map((m) => chaveCadastro(m.nome)));
+  const variacoesModalidade = VARIACOES_MODALIDADE.filter(([, destino]) =>
+    codigosLegado.has(destino),
+  );
+  const modalidadeSai = (m: LegadoCatalogo['modalidades'][number]) =>
+    variacoesModalidade.some(([origem]) => origem === chaveCadastro(m.nome));
+  const tabModalidades = legado.modalidades
+    .filter((m) => !modalidadeSai(m))
+    .map((m) => ({ ...lista('modalidades', m), codigo: m.nome.trim() }));
+
+  const especialidadeSai = (e: LegadoCatalogo['especialidades'][number]) =>
+    Boolean(texto(e.modalidade)) || ESPECIALIDADES_QUE_SAEM.has(chaveCadastro(e.nome));
+  const tabEspecialidades = legado.especialidades
+    .filter((e) => !especialidadeSai(e))
+    .map((e) => ({ ...lista('especialidades', e), nome: e.nome.trim() }));
+  const especialidadesQueSairam = new Set(
+    legado.especialidades.filter(especialidadeSai).map((e) => chaveCadastro(e.nome)),
+  );
   const tabSubespecialidades = legado.subespecialidades.map((s) => ({
     ...lista('subespecialidades', s),
     nome: s.nome.trim(),
@@ -119,7 +153,9 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
     urgente: urgentes.has(chaveCadastro(p.nome)),
   }));
 
-  const especialidadeIds = new Set(legado.especialidades.map((e) => e.id));
+  const especialidadeIds = new Set(
+    legado.especialidades.filter((e) => !especialidadeSai(e)).map((e) => e.id),
+  );
   const subespecialidadeIds = new Set(legado.subespecialidades.map((s) => s.id));
   const tabSubEsp = legado.subespecialidadesEspecialidades
     .filter(
@@ -136,6 +172,27 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
   const subPorNome = indice(tabSubespecialidades, (s) => chaveCadastro(s.nome));
   const categoriaPorNome = indice(tabCategorias, (c) => chaveCadastro(c.nome));
   const prioridadePorNome = indice(tabPrioridades, (p) => chaveCadastro(p.nome));
+
+  const tabModalidadesDePara = variacoesModalidade.flatMap(([origem, destino]) => {
+    const alvo = modalidadePorCodigo.get(destino);
+    return alvo
+      ? [
+          {
+            id: idDoLegado('modalidade_variacao', origem),
+            origem,
+            modalidadeId: alvo.id,
+            ativo: true,
+          },
+        ]
+      : [];
+  });
+  const modalidadeDaVariacao = new Map(variacoesModalidade);
+  // Especialidade que saiu (MAMO, D.O) vai para o destino do de-para de grafia dela.
+  const grafiaParaForma = new Map(
+    legado.especialidadeRegras
+      .filter((r) => r.ativo && r.tipo.toUpperCase() === 'NORMALIZACAO' && texto(r.destino))
+      .map((r) => [chaveCadastro(r.origem), r.destino as string]),
+  );
 
   // De-paras de prioridade e de especialidade.
   const tabPrioridadesDePara: CatalogoMigrado['tabelas']['prioridadesDePara'] = [];
@@ -225,8 +282,18 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
       chaveNormalizada: normalizarNome(nome),
       codigo: texto(e.codigoExame),
       descricao: texto(e.descricao),
-      modalidadeId: resolver('Modalidade', e.modalidade, modalidadePorCodigo),
-      especialidadeId: resolver('Especialidade', e.especialidade, especialidadePorNome),
+      modalidadeId: resolver(
+        'Modalidade',
+        modalidadeDaVariacao.get(chaveCadastro(e.modalidade)) ?? e.modalidade,
+        modalidadePorCodigo,
+      ),
+      especialidadeId: resolver(
+        'Especialidade',
+        especialidadesQueSairam.has(chaveCadastro(e.especialidade))
+          ? (grafiaParaForma.get(chaveCadastro(e.especialidade)) ?? e.especialidade)
+          : e.especialidade,
+        especialidadePorNome,
+      ),
       subespecialidadeId: resolver('Subespecialidade', e.subespecialidade, subPorNome),
       categoriaId: resolver('Categoria', e.categoria, categoriaPorNome),
       prioridadeId: resolver('Prioridade', e.prioridade, prioridadePorNome),
@@ -553,6 +620,7 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
   return {
     tabelas: {
       modalidades: tabModalidades,
+      modalidadesDePara: tabModalidadesDePara,
       especialidades: tabEspecialidades,
       subespecialidades: tabSubespecialidades,
       subespecialidadesEspecialidades: tabSubEsp,
@@ -569,5 +637,13 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
       sufixosNomeCliente: tabSufixos,
     },
     avisos,
+    removidos: {
+      especialidades: legado.especialidades
+        .filter(especialidadeSai)
+        .map((e) => idDoLegado('especialidades', e.id)),
+      modalidades: legado.modalidades
+        .filter(modalidadeSai)
+        .map((m) => idDoLegado('modalidades', m.id)),
+    },
   };
 }

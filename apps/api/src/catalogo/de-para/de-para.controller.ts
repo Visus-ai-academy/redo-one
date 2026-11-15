@@ -27,6 +27,7 @@ import type { PrincipalUsuario } from '../../identidade/principal';
 import { IdCriadoDto, ListarDto } from '../comum/dto';
 import type {
   DadosDeParaEspecialidade,
+  DadosDeParaModalidade,
   DadosDeParaPrioridade,
   DadosDeParaValor,
   DadosSufixo,
@@ -35,13 +36,17 @@ import type { DeParaService } from './de-para.service';
 import {
   DeParaEspecialidadeDto,
   DeParaEspecialidadeItemDto,
+  DeParaModalidadeDto,
+  DeParaModalidadeItemDto,
   DeParaPrioridadeDto,
   DeParaPrioridadeItemDto,
   DeParaValorDto,
   DeParaValorItemDto,
   ListarDeParaEspecialidadeDto,
+  ListarDeParaModalidadeDto,
   ListarDeParaPrioridadeDto,
   PaginaDeParaEspecialidadeDto,
+  PaginaDeParaModalidadeDto,
   PaginaDeParaPrioridadeDto,
   PaginaDeParaValorDto,
   PaginaSufixosDto,
@@ -50,6 +55,7 @@ import {
 } from './dto/de-para.dto';
 import {
   DE_PARA_ESPECIALIDADE,
+  DE_PARA_MODALIDADE,
   DE_PARA_PRIORIDADE,
   DE_PARA_VALOR,
   SUFIXOS_CLIENTE,
@@ -113,6 +119,78 @@ export class DeParaPrioridadesController {
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corpo: DeParaPrioridadeDto,
+  ): Promise<void> {
+    return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
+  }
+
+  @Delete(':id')
+  @Permissao('de-para.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  excluir(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.service.excluir({ usuarioId: ator.usuarioId }, id);
+  }
+}
+
+@ApiTags('catalogo')
+@Controller('catalogo/de-para/modalidades')
+export class DeParaModalidadesController {
+  constructor(
+    @Inject(DE_PARA_MODALIDADE) private readonly service: DeParaService<DadosDeParaModalidade>,
+  ) {}
+
+  @Get()
+  @Permissao('de-para.ver')
+  @ApiOkResponse({ type: PaginaDeParaModalidadeDto })
+  async listar(@Query() query: ListarDeParaModalidadeDto): Promise<PaginaDeParaModalidadeDto> {
+    const { itens, total } = await this.service.listar({
+      busca: query.busca,
+      ativo: query.ativo,
+      destinoId: query.modalidadeId,
+      pagina: query.pagina,
+      porPagina: query.porPagina,
+    });
+    return {
+      itens,
+      total,
+      pagina: query.pagina,
+      porPagina: query.porPagina,
+    } as PaginaDeParaModalidadeDto;
+  }
+
+  @Get(':id')
+  @Permissao('de-para.ver')
+  @ApiOkResponse({ type: DeParaModalidadeItemDto })
+  @ApiNotFoundResponse()
+  obter(@Param('id', ParseUUIDPipe) id: string): Promise<DeParaModalidadeItemDto> {
+    return this.service.obter(id) as Promise<DeParaModalidadeItemDto>;
+  }
+
+  @Post()
+  @Permissao('de-para.editar')
+  @ApiCreatedResponse({ type: IdCriadoDto })
+  @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
+  @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
+  async criar(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Body() corpo: DeParaModalidadeDto,
+  ): Promise<IdCriadoDto> {
+    return { id: await this.service.criar({ usuarioId: ator.usuarioId }, corpo) };
+  }
+
+  @Put(':id')
+  @Permissao('de-para.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
+  @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
+  atualizar(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corpo: DeParaModalidadeDto,
   ): Promise<void> {
     return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
   }

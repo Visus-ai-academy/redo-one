@@ -57,6 +57,13 @@
       "when": 1794701545460,
       "tag": "0007_clientes_unificacao",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794750017352,
+      "tag": "0008_modalidades_de_para",
+      "breakpoints": true
     }
   ]
 }

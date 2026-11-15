@@ -122,6 +122,27 @@ export const prioridadesDePara = pgTable(
   (t) => [index('prioridades_de_para_prioridade_idx').on(t.prioridadeId)],
 );
 
+/**
+ * Código de modalidade que chega na importação → modalidade do catálogo (`OT` e `BMD` → `DO`,
+ * `CR`/`DX` → `RX`). Quando o exame do laudo está no cadastro, vale a modalidade dele (é assim que
+ * a mamografia em CR/DX vira `MG`).
+ */
+export const modalidadesDePara = pgTable(
+  'modalidades_de_para',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Em maiúsculas. */
+    origem: text('origem').notNull().unique(),
+    modalidadeId: uuid('modalidade_id')
+      .notNull()
+      .references(() => modalidades.id),
+    ativo: boolean('ativo').notNull().default(true),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [index('modalidades_de_para_modalidade_idx').on(t.modalidadeId)],
+);
+
 export const tipoDeParaEspecialidade = pgEnum('tipo_de_para_especialidade', [
   /** Grafia de especialidade → especialidade do catálogo (`MAMO` → `MAMA`). */
   'normalizacao',

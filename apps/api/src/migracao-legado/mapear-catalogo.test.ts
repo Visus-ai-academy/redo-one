@@ -98,6 +98,17 @@ function legado(extra: Partial<LegadoCatalogo> = {}): LegadoCatalogo {
   };
 }
 
+const exameBase = {
+  codigoExame: null,
+  descricao: null,
+  subespecialidade: null,
+  categoria: null,
+  prioridade: null,
+  permiteQuebra: false,
+  exigeRevisaoManual: false,
+  ativo: true,
+};
+
 const cliente = (id: string, nome: string, fantasia: string | null = null) => ({
   id,
   nome,
@@ -374,5 +385,86 @@ describe('mapearCatalogo', () => {
       motivo:
         '3 grafias com a mesma chave (TC. ABDOME TOTAL, TC ABDOME TOTAL, TC ABDOME TOTAL .): ficou o valor 2, o primeiro maior que zero, como o dashboards-one lê.',
     });
+  });
+
+  it('frente de escala, MAMO e GERAL não viram especialidade; o exame vai para a forma certa', () => {
+    const { tabelas, removidos, avisos } = mapearCatalogo(
+      legado({
+        modalidades: [
+          { id: 'mo-mg', nome: 'MG', ...lista },
+          { id: 'mo-do', nome: 'DO', ...lista },
+          { id: 'mo-ot', nome: 'OT', ...lista },
+          { id: 'mo-rx', nome: 'RX', ...lista },
+        ],
+        especialidades: [
+          { id: 'es-mama', nome: 'MAMA', ...lista },
+          { id: 'es-msk', nome: 'MUSCULO ESQUELETICO', ...lista },
+          { id: 'es-mamo', nome: 'MAMO', ...lista },
+          { id: 'es-do', nome: 'D.O', ...lista, modalidade: 'OT' },
+          { id: 'es-tc', nome: 'TC', ...lista, modalidade: 'CT' },
+          { id: 'es-geral', nome: 'GERAL', ...lista },
+        ],
+        especialidadeRegras: [
+          {
+            id: 'r1',
+            tipo: 'NORMALIZACAO',
+            origem: 'MAMO',
+            destino: 'MAMA',
+            ativo: true,
+            observacoes: null,
+          },
+          {
+            id: 'r2',
+            tipo: 'NORMALIZACAO',
+            origem: 'D.O',
+            destino: 'MUSCULO ESQUELETICO',
+            ativo: true,
+            observacoes: null,
+          },
+        ],
+        exames: [
+          {
+            ...exameBase,
+            id: 'ex-mamo',
+            nome: 'MAMOGRAFIA BILATERAL',
+            modalidade: 'MG',
+            especialidade: 'MAMO',
+          },
+          {
+            ...exameBase,
+            id: 'ex-do',
+            nome: 'DENSITOMETRIA',
+            modalidade: 'OT',
+            especialidade: 'D.O',
+          },
+        ],
+        regrasQuebra: [],
+      }),
+    );
+
+    expect(tabelas.especialidades.map((e) => e.nome)).toEqual(['MAMA', 'MUSCULO ESQUELETICO']);
+    expect(removidos.especialidades).toEqual(
+      ['es-mamo', 'es-do', 'es-tc', 'es-geral'].map((id) => idDoLegado('especialidades', id)),
+    );
+    expect(tabelas.modalidades.map((m) => m.codigo)).toEqual(['MG', 'DO', 'RX']);
+    expect(removidos.modalidades).toEqual([idDoLegado('modalidades', 'mo-ot')]);
+    expect(tabelas.modalidadesDePara.map((d) => [d.origem, d.modalidadeId])).toEqual([
+      ['OT', idDoLegado('modalidades', 'mo-do')],
+      ['BMD', idDoLegado('modalidades', 'mo-do')],
+      ['CR', idDoLegado('modalidades', 'mo-rx')],
+      ['DX', idDoLegado('modalidades', 'mo-rx')],
+    ]);
+    const exame = (nome: string) => tabelas.exames.find((e) => e.nome === nome);
+    expect(exame('MAMOGRAFIA BILATERAL')).toMatchObject({
+      modalidadeId: idDoLegado('modalidades', 'mo-mg'),
+      especialidadeId: idDoLegado('especialidades', 'es-mama'),
+    });
+    expect(exame('DENSITOMETRIA')).toMatchObject({
+      modalidadeId: idDoLegado('modalidades', 'mo-do'),
+      especialidadeId: idDoLegado('especialidades', 'es-msk'),
+    });
+    // As grafias continuam chegando: viram variações da forma certa.
+    expect(tabelas.especialidadesDePara.map((d) => d.origem)).toEqual(['MAMO', 'D.O']);
+    expect(avisos.filter((a) => a.tabela === 'exames')).toEqual([]);
   });
 });

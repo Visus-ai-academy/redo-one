@@ -1,4 +1,4 @@
-import { eq, getTableColumns, type SQL, sql } from 'drizzle-orm';
+import { eq, getTableColumns, inArray, type SQL, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
@@ -47,11 +47,12 @@ async function upsert<T extends PgTable>(
  */
 export async function gravarMigracao(
   db: Database,
-  { tabelas: c }: CatalogoMigrado,
+  { tabelas: c, removidos }: CatalogoMigrado,
   { tabelas: m }: MedicosMigrados,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
+    await upsert(tx, schema.modalidadesDePara, c.modalidadesDePara, ['origem']);
     await upsert(tx, schema.especialidades, c.especialidades);
     await upsert(tx, schema.subespecialidades, c.subespecialidades);
     await upsert(tx, schema.subespecialidadesEspecialidades, c.subespecialidadesEspecialidades, [
@@ -66,6 +67,27 @@ export async function gravarMigracao(
     await upsert(tx, schema.regrasQuebraExame, c.regrasQuebraExame);
     // Casa pela grafia: a linha que representa as repetidas pode mudar de uma carga para outra.
     await upsert(tx, schema.examesDeParaValores, c.examesDeParaValores, ['chaveNormalizada']);
+
+    // O que uma carga anterior trouxe e esta não traz mais (MAMO, D.O, GERAL, frentes da escala,
+    // OT): os exames já foram reapontados acima; sai o que ainda apontar para elas no catálogo.
+    if (removidos.especialidades.length > 0) {
+      await tx
+        .delete(schema.subespecialidadesEspecialidades)
+        .where(
+          inArray(schema.subespecialidadesEspecialidades.especialidadeId, removidos.especialidades),
+        );
+      await tx
+        .delete(schema.especialidadesDePara)
+        .where(inArray(schema.especialidadesDePara.especialidadeId, removidos.especialidades));
+      await tx
+        .delete(schema.especialidades)
+        .where(inArray(schema.especialidades.id, removidos.especialidades));
+    }
+    if (removidos.modalidades.length > 0) {
+      await tx
+        .delete(schema.modalidades)
+        .where(inArray(schema.modalidades.id, removidos.modalidades));
+    }
 
     await upsert(
       tx,

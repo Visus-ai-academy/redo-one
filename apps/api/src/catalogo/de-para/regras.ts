@@ -3,6 +3,7 @@ import type { Rotulo } from '../comum/rotulo';
 import { DeParaInvalidoError } from './de-para.errors';
 import type {
   DadosDeParaEspecialidade,
+  DadosDeParaModalidade,
   DadosDeParaPrioridade,
   DadosDeParaValor,
   DadosSufixo,
@@ -24,6 +25,14 @@ const semAcento = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const REGRA_PRIORIDADE: RegraDePara<DadosDeParaPrioridade> = {
   rotulo: { entidade: 'de_para_prioridade', singular: 'De-para de prioridade', genero: 'm' },
   normalizar: async (d) => ({ ...d, origem: d.origem.trim() }),
+  chave: (d) => d.origem,
+  origem: (d) => d.origem,
+};
+
+/** O código da modalidade chega em maiúsculas (`OT`, `CR`); guardar assim deixa a chave valer. */
+export const REGRA_MODALIDADE: RegraDePara<DadosDeParaModalidade> = {
+  rotulo: { entidade: 'de_para_modalidade', singular: 'Variação de modalidade', genero: 'f' },
+  normalizar: async (d) => ({ ...d, origem: d.origem.trim().toUpperCase() }),
   chave: (d) => d.origem,
   origem: (d) => d.origem,
 };

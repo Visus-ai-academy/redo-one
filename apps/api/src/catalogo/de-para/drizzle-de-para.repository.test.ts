@@ -11,6 +11,7 @@ import { ReferenciaInexistenteError } from '../comum/catalogo.errors';
 import {
   DrizzleDeParaRepository,
   TABELA_DE_PARA_ESPECIALIDADE,
+  TABELA_DE_PARA_MODALIDADE,
   TABELA_DE_PARA_PRIORIDADE,
   TABELA_DE_PARA_VALOR,
   TABELA_SUFIXO,
@@ -30,7 +31,7 @@ describe.skipIf(!url)('DrizzleDeParaRepository', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table prioridades, especialidades, exames, sufixos_nome_cliente cascade`,
+      sql`truncate table prioridades, especialidades, exames, modalidades, sufixos_nome_cliente cascade`,
     );
   });
 
@@ -98,6 +99,23 @@ describe.skipIf(!url)('DrizzleDeParaRepository', () => {
     });
     expect(total).toBe(2);
     expect(itens.map((i) => i.origem)).toEqual(['URGENCIA', 'Urgência']);
+  });
+
+  it('modalidade: variações pela modalidade de destino', async () => {
+    const [dens, rx] = await db
+      .insert(schema.modalidades)
+      .values([{ codigo: 'DO' }, { codigo: 'RX' }])
+      .returning();
+    const repo = new DrizzleDeParaRepository(db, TABELA_DE_PARA_MODALIDADE);
+    const ot = await repo.criar({ origem: 'OT', modalidadeId: dens?.id ?? '', ativo: true });
+    await repo.criar({ origem: 'CR', modalidadeId: rx?.id ?? '', ativo: true });
+
+    expect((await repo.listar({ destinoId: dens?.id, pagina: 1, porPagina: 10 })).itens).toEqual([
+      { id: ot, origem: 'OT', modalidadeId: dens?.id, ativo: true, destinoNome: 'DO' },
+    ]);
+    expect(await repo.buscarIgual({ origem: 'OT', modalidadeId: 'x', ativo: true })).toEqual({
+      id: ot,
+    });
   });
 
   it('valores: grava a chave normalizada e acha grafias equivalentes', async () => {

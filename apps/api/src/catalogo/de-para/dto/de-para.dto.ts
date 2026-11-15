@@ -30,6 +30,13 @@ export class ListarDeParaEspecialidadeDto extends ListarDto {
   especialidadeId?: string;
 }
 
+export class ListarDeParaModalidadeDto extends ListarDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Só as variações desta modalidade.' })
+  @IsOptional()
+  @IsUUID()
+  modalidadeId?: string;
+}
+
 export class ListarDeParaPrioridadeDto extends ListarDto {
   @ApiPropertyOptional({ format: 'uuid', description: 'Só as variações desta prioridade.' })
   @IsOptional()
@@ -49,6 +56,18 @@ export class DeParaPrioridadeDto {
   origem!: string;
 
   @ApiProperty({ format: 'uuid' }) @IsUUID() prioridadeId!: string;
+  @ApiProperty() @IsBoolean() ativo!: boolean;
+}
+
+export class DeParaModalidadeDto {
+  @origem('OT')
+  @Transform(aparar)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  origem!: string;
+
+  @ApiProperty({ format: 'uuid' }) @IsUUID() modalidadeId!: string;
   @ApiProperty() @IsBoolean() ativo!: boolean;
 }
 
@@ -133,6 +152,14 @@ export class DeParaPrioridadeItemDto {
   @destinoNome() destinoNome!: string | null;
 }
 
+export class DeParaModalidadeItemDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() origem!: string;
+  @ApiProperty({ format: 'uuid' }) modalidadeId!: string;
+  @ApiProperty() ativo!: boolean;
+  @destinoNome() destinoNome!: string | null;
+}
+
 export class DeParaEspecialidadeItemDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ enum: TIPOS }) tipo!: TipoDeParaEspecialidade;
@@ -167,6 +194,10 @@ class PaginaBase {
 
 export class PaginaDeParaPrioridadeDto extends PaginaBase {
   @ApiProperty({ type: [DeParaPrioridadeItemDto] }) itens!: DeParaPrioridadeItemDto[];
+}
+
+export class PaginaDeParaModalidadeDto extends PaginaBase {
+  @ApiProperty({ type: [DeParaModalidadeItemDto] }) itens!: DeParaModalidadeItemDto[];
 }
 
 export class PaginaDeParaEspecialidadeDto extends PaginaBase {

@@ -7,6 +7,8 @@ import {
   especialidadesDePara,
   exames,
   examesDeParaValores,
+  modalidades,
+  modalidadesDePara,
   prioridades,
   prioridadesDePara,
   sufixosNomeCliente,
@@ -16,6 +18,7 @@ import { violouChaveEstrangeira } from '../comum/erros-do-banco';
 import { normalizarNome } from '../comum/nomes';
 import type {
   DadosDeParaEspecialidade,
+  DadosDeParaModalidade,
   DadosDeParaPrioridade,
   DadosDeParaValor,
   DadosSufixo,
@@ -144,6 +147,28 @@ export const TABELA_DE_PARA_PRIORIDADE: TabelaDePara<DadosDeParaPrioridade> = {
   },
   igual: (d) => eq(prioridadesDePara.origem, d.origem),
   valores: (d) => ({ origem: d.origem, prioridadeId: d.prioridadeId, ativo: d.ativo }),
+};
+
+export const TABELA_DE_PARA_MODALIDADE: TabelaDePara<DadosDeParaModalidade> = {
+  tabela: modalidadesDePara,
+  id: modalidadesDePara.id,
+  origem: modalidadesDePara.origem,
+  ativo: modalidadesDePara.ativo,
+  destino: modalidadesDePara.modalidadeId,
+  selecao: {
+    id: modalidadesDePara.id,
+    origem: modalidadesDePara.origem,
+    modalidadeId: modalidadesDePara.modalidadeId,
+    ativo: modalidadesDePara.ativo,
+    destinoNome: nomeDe(
+      modalidades,
+      modalidades.id,
+      modalidades.codigo,
+      modalidadesDePara.modalidadeId,
+    ),
+  },
+  igual: (d) => eq(modalidadesDePara.origem, d.origem),
+  valores: (d) => ({ origem: d.origem, modalidadeId: d.modalidadeId, ativo: d.ativo }),
 };
 
 export const TABELA_DE_PARA_ESPECIALIDADE: TabelaDePara<DadosDeParaEspecialidade> = {

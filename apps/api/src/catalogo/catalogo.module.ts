@@ -21,6 +21,7 @@ import { ContratadosService } from './contratados/contratados.service';
 import { DrizzleContratadosRepository } from './contratados/drizzle-contratados.repository';
 import {
   DeParaEspecialidadesController,
+  DeParaModalidadesController,
   DeParaPrioridadesController,
   DeParaValoresExameController,
   SufixosClienteController,
@@ -29,6 +30,7 @@ import { DeParaService } from './de-para/de-para.service';
 import {
   criarRepoDePara,
   TABELA_DE_PARA_ESPECIALIDADE,
+  TABELA_DE_PARA_MODALIDADE,
   TABELA_DE_PARA_PRIORIDADE,
   TABELA_DE_PARA_VALOR,
   TABELA_SUFIXO,
@@ -36,6 +38,7 @@ import {
 } from './de-para/drizzle-de-para.repository';
 import {
   REGRA_ESPECIALIDADE,
+  REGRA_MODALIDADE,
   REGRA_PRIORIDADE,
   REGRA_SUFIXO,
   REGRA_VALOR_EXAME,
@@ -43,6 +46,7 @@ import {
 } from './de-para/regras';
 import {
   DE_PARA_ESPECIALIDADE,
+  DE_PARA_MODALIDADE,
   DE_PARA_PRIORIDADE,
   DE_PARA_VALOR,
   SUFIXOS_CLIENTE,
@@ -105,6 +109,7 @@ function dePara<D extends object>(
     ContratadosController,
     ClientesController,
     ExamesController,
+    DeParaModalidadesController,
     DeParaPrioridadesController,
     DeParaEspecialidadesController,
     DeParaValoresExameController,
@@ -156,6 +161,7 @@ function dePara<D extends object>(
         ),
     },
     dePara(DE_PARA_PRIORIDADE, () => REGRA_PRIORIDADE, TABELA_DE_PARA_PRIORIDADE),
+    dePara(DE_PARA_MODALIDADE, () => REGRA_MODALIDADE, TABELA_DE_PARA_MODALIDADE),
     dePara(
       DE_PARA_ESPECIALIDADE,
       (db) => REGRA_ESPECIALIDADE(new DrizzleListaRepository(db, LISTAS.especialidades)),
