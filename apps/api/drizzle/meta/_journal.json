@@ -64,6 +64,20 @@
       "when": 1794750017352,
       "tag": "0008_modalidades_de_para",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794774092829,
+      "tag": "0009_quebra_por_estudo_remove_antiga",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794774093132,
+      "tag": "0010_quebra_por_estudo",
+      "breakpoints": true
     }
   ]
 }

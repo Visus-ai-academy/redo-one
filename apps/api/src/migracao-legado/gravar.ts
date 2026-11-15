@@ -64,7 +64,8 @@ export async function gravarMigracao(
     await upsert(tx, schema.prioridadesDePara, c.prioridadesDePara);
     await upsert(tx, schema.especialidadesDePara, c.especialidadesDePara);
     await upsert(tx, schema.exames, c.exames);
-    await upsert(tx, schema.regrasQuebraExame, c.regrasQuebraExame);
+    await upsert(tx, schema.quebrasEstudo, c.quebrasEstudo);
+    await upsert(tx, schema.quebrasEstudoPecas, c.quebrasEstudoPecas);
     // Casa pela grafia: a linha que representa as repetidas pode mudar de uma carga para outra.
     await upsert(tx, schema.examesDeParaValores, c.examesDeParaValores, ['chaveNormalizada']);
 

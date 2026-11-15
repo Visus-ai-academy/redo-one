@@ -207,25 +207,41 @@ export const exames = pgTable(
   ],
 );
 
-/** Exame que, laudado, se divide em outro (ex.: TC de tórax e abdome → duas cobranças). */
-export const regrasQuebraExame = pgTable(
-  'regras_quebra_exame',
+/**
+ * Estudo que, laudado, se divide em vários exames na cobrança (ex.: "TC TORAX E ABDOME" → TC
+ * TORAX + TC ABDOME, cada um valendo 1). Fica ligado ao nome do estudo como chega da MobileMed,
+ * que em geral nem é um exame do cadastro (é o combinado que se quebra), como no dashboards-one.
+ */
+export const quebrasEstudo = pgTable('quebras_estudo', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** Como o estudo chega no laudo. */
+  estudoOrigem: text('estudo_origem').notNull(),
+  /** `normalizarNome` do estudo: é o que a importação compara. */
+  chaveNormalizada: text('chave_normalizada').notNull().unique(),
+  criadoEm: criadoEm(),
+  atualizadoEm: atualizadoEm(),
+});
+
+/** Cada exame em que o estudo se quebra; cada um vira uma linha de valor 1. */
+export const quebrasEstudoPecas = pgTable(
+  'quebras_estudo_pecas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    exameOrigemId: uuid('exame_origem_id')
+    quebraId: uuid('quebra_id')
       .notNull()
-      .references(() => exames.id, { onDelete: 'cascade' }),
-    exameDestinoId: uuid('exame_destino_id')
+      .references(() => quebrasEstudo.id, { onDelete: 'cascade' }),
+    exameId: uuid('exame_id')
       .notNull()
       .references(() => exames.id),
+    /** Usada só quando o exame não tem categoria (como a `categoriaQuebrada` do dashboards-one). */
     categoriaId: uuid('categoria_id').references(() => categoriasExame.id),
     ativo: boolean('ativo').notNull().default(true),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [
-    unique('regras_quebra_exame_origem_destino_key').on(t.exameOrigemId, t.exameDestinoId),
-    index('regras_quebra_exame_destino_idx').on(t.exameDestinoId),
+    unique('quebras_estudo_pecas_quebra_exame_key').on(t.quebraId, t.exameId),
+    index('quebras_estudo_pecas_exame_idx').on(t.exameId),
   ],
 );
 

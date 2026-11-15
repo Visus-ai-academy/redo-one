@@ -1,0 +1,1 @@
+DROP TABLE "regras_quebra_exame" CASCADE;

@@ -12,7 +12,8 @@ import type {
   modalidadesDePara,
   prioridades,
   prioridadesDePara,
-  regrasQuebraExame,
+  quebrasEstudo,
+  quebrasEstudoPecas,
   subespecialidades,
   subespecialidadesEspecialidades,
   sufixosNomeCliente,
@@ -32,7 +33,8 @@ export interface CatalogoMigrado {
     prioridadesDePara: (typeof prioridadesDePara.$inferInsert)[];
     especialidadesDePara: (typeof especialidadesDePara.$inferInsert)[];
     exames: (typeof exames.$inferInsert)[];
-    regrasQuebraExame: (typeof regrasQuebraExame.$inferInsert)[];
+    quebrasEstudo: (typeof quebrasEstudo.$inferInsert)[];
+    quebrasEstudoPecas: (typeof quebrasEstudoPecas.$inferInsert)[];
     examesDeParaValores: (typeof examesDeParaValores.$inferInsert)[];
     contratados: (typeof contratados.$inferInsert)[];
     clientes: (typeof clientes.$inferInsert & { id: string })[];
@@ -317,58 +319,71 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
     };
   });
 
-  // Regras de quebra: no dashboards-one ligam exames pelo nome (que não é único).
-  const examesPorNome = new Map<string, typeof tabExames>();
+  // Quebras: no dashboards-one cada regra liga o estudo (texto, como chega no laudo) ao exame em
+  // que ele se quebra (texto também). O estudo em geral nem é exame do cadastro: é o combinado que
+  // se quebra. Viram uma quebra por estudo (grafia normalizada) com uma peça por exame de destino.
+  const examesPorChave = new Map<string, typeof tabExames>();
   for (const e of tabExames) {
-    const k = chaveTexto(e.nome);
-    examesPorNome.set(k, [...(examesPorNome.get(k) ?? []), e]);
+    const k = e.chaveNormalizada ?? '';
+    examesPorChave.set(k, [...(examesPorChave.get(k) ?? []), e]);
   }
-  const tabRegras: CatalogoMigrado['tabelas']['regrasQuebraExame'] = [];
-  const paresRegra = new Set<string>();
+  const tabQuebras: CatalogoMigrado['tabelas']['quebrasEstudo'] = [];
+  const tabPecas: CatalogoMigrado['tabelas']['quebrasEstudoPecas'] = [];
+  const quebraPorChave = new Map<string, string>();
+  const pecasVistas = new Set<string>();
   for (const r of legado.regrasQuebra) {
-    const origens = examesPorNome.get(chaveTexto(r.exameOriginal)) ?? [];
-    const destinos = examesPorNome.get(chaveTexto(r.exameQuebrado)) ?? [];
-    if (origens.length === 0 || destinos.length === 0) {
+    const item = `${r.exameOriginal} → ${r.exameQuebrado}`;
+    const chave = normalizarNome(r.exameOriginal);
+    if (!chave) continue;
+    const origem = examesPorChave.get(chave)?.[0];
+    const destinos = (examesPorChave.get(normalizarNome(r.exameQuebrado)) ?? []).filter(
+      (d) => d.chaveNormalizada !== chave,
+    );
+    if (destinos.length === 0) {
       avisar(
-        'regras_quebra_exame',
-        `${r.exameOriginal} → ${r.exameQuebrado}`,
-        `Exame "${origens.length === 0 ? r.exameOriginal : r.exameQuebrado}" não existe: ficou de fora.`,
+        'quebras_estudo',
+        item,
+        `Exame "${r.exameQuebrado}" não existe no cadastro: a peça ficou de fora. Cadastre o exame e rode a carga de novo.`,
       );
       continue;
+    }
+    // Homônimos: vale o da mesma modalidade do estudo, se ele estiver no cadastro.
+    const destino =
+      destinos.find((d) => origem && d.modalidadeId === origem.modalidadeId) ?? destinos[0];
+    if (!destino) continue;
+    if (destinos.length > 1) {
+      avisar(
+        'quebras_estudo',
+        item,
+        `Há ${destinos.length} exames chamados "${r.exameQuebrado}": usado ${destino.nome}${origem ? ' (o da mesma modalidade)' : ''}.`,
+      );
     }
     const categoria = texto(r.categoriaQuebrada)
       ? categoriaPorNome.get(chaveCadastro(r.categoriaQuebrada))
       : undefined;
     if (texto(r.categoriaQuebrada) && !categoria) {
-      avisar(
-        'regras_quebra_exame',
-        `${r.exameOriginal} → ${r.exameQuebrado}`,
-        `Categoria "${r.categoriaQuebrada}" não existe: ficou vazia.`,
-      );
+      avisar('quebras_estudo', item, `Categoria "${r.categoriaQuebrada}" não existe: ficou vazia.`);
     }
-    // Homônimos: a regra vale para cada exame com o nome de origem, quebrando no da mesma modalidade.
-    origens.forEach((origem, i) => {
-      const destino =
-        destinos.find((d) => d.modalidadeId === origem.modalidadeId && d.id !== origem.id) ??
-        destinos.find((d) => d.id !== origem.id);
-      if (!destino) return;
-      if (destinos.length > 1 && i === 0) {
-        avisar(
-          'regras_quebra_exame',
-          `${r.exameOriginal} → ${r.exameQuebrado}`,
-          `Há ${destinos.length} exames chamados "${r.exameQuebrado}": usado o da mesma modalidade.`,
-        );
-      }
-      const par = `${origem.id}:${destino.id}`;
-      if (paresRegra.has(par)) return;
-      paresRegra.add(par);
-      tabRegras.push({
-        id: idDoLegado('regras_quebra_exames', i === 0 ? r.id : `${r.id}:${origem.id}`),
-        exameOrigemId: origem.id,
-        exameDestinoId: destino.id,
-        categoriaId: categoria?.id ?? null,
-        ativo: r.ativo,
+
+    let quebraId = quebraPorChave.get(chave);
+    if (!quebraId) {
+      quebraId = idDoLegado('quebras_estudo', chave);
+      quebraPorChave.set(chave, quebraId);
+      tabQuebras.push({
+        id: quebraId,
+        estudoOrigem: r.exameOriginal.trim().replace(/\s+/g, ' '),
+        chaveNormalizada: chave,
       });
+    }
+    const par = `${quebraId}:${destino.id}`;
+    if (pecasVistas.has(par)) continue;
+    pecasVistas.add(par);
+    tabPecas.push({
+      id: idDoLegado('regras_quebra_exames', r.id),
+      quebraId,
+      exameId: destino.id ?? '',
+      categoriaId: categoria?.id ?? null,
+      ativo: r.ativo,
     });
   }
 
@@ -643,7 +658,8 @@ export function mapearCatalogo(legado: LegadoCatalogo): CatalogoMigrado {
       prioridadesDePara: tabPrioridadesDePara,
       especialidadesDePara: tabEspDePara,
       exames: tabExames,
-      regrasQuebraExame: tabRegras,
+      quebrasEstudo: tabQuebras,
+      quebrasEstudoPecas: tabPecas,
       examesDeParaValores: tabValores,
       contratados: tabContratados,
       clientes: tabClientes,

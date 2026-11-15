@@ -44,7 +44,9 @@ describe.skipIf(!url)('DrizzleExamesRepository', () => {
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table exames, modalidades, especialidades cascade`);
+    await db.execute(
+      sql`truncate table quebras_estudo, exames, modalidades, especialidades cascade`,
+    );
     const [m] = await db.insert(schema.modalidades).values({ codigo: 'CT' }).returning();
     const [e] = await db.insert(schema.especialidades).values({ nome: 'NEURO' }).returning();
     ct = m?.id ?? '';
@@ -76,26 +78,21 @@ describe.skipIf(!url)('DrizzleExamesRepository', () => {
     expect((await repo.listar({ busca: '123', pagina: 1, porPagina: 10 })).total).toBe(1);
   });
 
-  it('detalhe traz as regras de quebra; o destino de uma regra não se exclui', async () => {
-    const origem = await repo.criar(dados('TC TORAX E ABDOME'));
-    const destino = await repo.criar(dados('TC ABDOME'));
-    const regra = await repo.criarRegraQuebra(origem, {
-      exameDestinoId: destino,
-      categoriaId: null,
-      ativo: true,
-    });
+  it('detalhe aponta a quebra do estudo com o mesmo nome; o exame que é peça não se exclui', async () => {
+    const torax = await repo.criar(dados('TC TORAX E ABDOME'));
+    const abdome = await repo.criar(dados('TC ABDOME'));
+    const [quebra] = await db
+      .insert(schema.quebrasEstudo)
+      .values({ estudoOrigem: 'TC TÓRAX E ABDOME', chaveNormalizada: 'tc torax e abdome' })
+      .returning();
+    await db
+      .insert(schema.quebrasEstudoPecas)
+      .values({ quebraId: quebra?.id ?? '', exameId: abdome });
 
-    expect((await repo.buscar(origem))?.regrasQuebra).toEqual([
-      { id: regra, exameDestino: { id: destino, nome: 'TC ABDOME' }, categoria: null, ativo: true },
-    ]);
-    expect(await repo.excluir(destino)).toBe(false);
-    await repo.atualizarRegraQuebra(regra, {
-      exameDestinoId: destino,
-      categoriaId: null,
-      ativo: false,
-    });
-    expect((await repo.buscar(origem))?.regrasQuebra[0]?.ativo).toBe(false);
-    expect(await repo.excluir(origem)).toBe(true);
+    expect((await repo.buscar(torax))?.quebra).toEqual({ id: quebra?.id, totalPecas: 1 });
+    expect((await repo.buscar(abdome))?.quebra).toBeNull();
+    expect(await repo.excluir(abdome)).toBe(false);
+    expect(await repo.excluir(torax)).toBe(true);
   });
 
   it('cadastro ligado inexistente vira erro de domínio', async () => {

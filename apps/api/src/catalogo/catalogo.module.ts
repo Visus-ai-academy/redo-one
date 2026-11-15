@@ -70,6 +70,10 @@ import { ListaService } from './listas/listas.service';
 import { CATEGORIAS_EXAME, ESPECIALIDADES, MODALIDADES, PRIORIDADES } from './listas/tokens';
 import { OpcoesController } from './opcoes/opcoes.controller';
 import { OpcoesService } from './opcoes/opcoes.service';
+import { DrizzleQuebrasRepository } from './quebras/drizzle-quebras.repository';
+import { QuebrasController } from './quebras/quebras.controller';
+import { QUEBRAS_REPOSITORY } from './quebras/quebras.repository';
+import { QuebrasService } from './quebras/quebras.service';
 import { DrizzleSubespecialidadesRepository } from './subespecialidades/drizzle-subespecialidades.repository';
 import { SubespecialidadesController } from './subespecialidades/subespecialidades.controller';
 import { SubespecialidadesService } from './subespecialidades/subespecialidades.service';
@@ -98,7 +102,7 @@ function dePara<D extends object>(
   };
 }
 
-/** Contexto `catalogo`: listas do domínio, exames, de-paras, contratados e clientes. */
+/** Contexto `catalogo`: listas do domínio, exames e quebras, de-paras, contratados e clientes. */
 @Module({
   controllers: [
     ModalidadesController,
@@ -109,6 +113,7 @@ function dePara<D extends object>(
     ContratadosController,
     ClientesController,
     ExamesController,
+    QuebrasController,
     DeParaModalidadesController,
     DeParaPrioridadesController,
     DeParaEspecialidadesController,
@@ -121,6 +126,8 @@ function dePara<D extends object>(
     ContratadosService,
     ExamesService,
     { provide: EXAMES_REPOSITORY, useClass: DrizzleExamesRepository },
+    QuebrasService,
+    { provide: QUEBRAS_REPOSITORY, useClass: DrizzleQuebrasRepository },
     ClientesService,
     AliasesClienteService,
     UnidadesClienteService,

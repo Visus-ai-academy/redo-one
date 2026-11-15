@@ -9,6 +9,7 @@ import type {
   TipoAlias,
 } from '../clientes/clientes.repository';
 import type { UnidadesClienteRepository } from '../clientes/unidades-cliente.repository';
+import { normalizarNome } from '../comum/nomes';
 import type { Pagina } from '../comum/paginacao';
 import type {
   Contratado,
@@ -16,18 +17,19 @@ import type {
   DadosContratado,
 } from '../contratados/contratados.repository';
 import type { DeParaRepository, FiltroDePara, ItemDePara } from '../de-para/de-para.repository';
-import type {
-  DadosExame,
-  DadosRegraQuebra,
-  ExamesRepository,
-  FiltroExames,
-} from '../exames/exames.repository';
+import type { DadosExame, ExamesRepository, FiltroExames } from '../exames/exames.repository';
 import type {
   DadosLista,
   FiltroLista,
   ItemLista,
   ListaRepository,
 } from '../listas/lista.repository';
+import type {
+  DadosPeca,
+  FiltroQuebras,
+  QuebraDetalhe,
+  QuebrasRepository,
+} from '../quebras/quebras.repository';
 
 /** Fatia a página como o banco faria. */
 export function paginar<T>(itens: T[], filtro: { pagina: number; porPagina: number }): Pagina<T> {
@@ -278,11 +280,9 @@ export class InMemoryClientesRepository
 }
 
 type ExameGuardado = DadosExame & { id: string; chaveNormalizada: string };
-type RegraGuardada = DadosRegraQuebra & { id: string; exameOrigemId: string };
 
 export class InMemoryExamesRepository implements ExamesRepository {
   readonly itens = new Map<string, ExameGuardado>();
-  readonly regras: RegraGuardada[] = [];
   readonly emUso = new Set<string>();
 
   async listar(filtro: FiltroExames) {
@@ -313,17 +313,7 @@ export class InMemoryExamesRepository implements ExamesRepository {
     const { chaveNormalizada: _, ...resto } = e;
     return {
       ...resto,
-      regrasQuebra: this.regras
-        .filter((r) => r.exameOrigemId === id)
-        .map((r) => ({
-          id: r.id,
-          exameDestino: {
-            id: r.exameDestinoId,
-            nome: this.itens.get(r.exameDestinoId)?.nome ?? '',
-          },
-          categoria: r.categoriaId ? { id: r.categoriaId, nome: r.categoriaId } : null,
-          ativo: r.ativo,
-        })),
+      quebra: null,
     };
   }
 
@@ -341,22 +331,6 @@ export class InMemoryExamesRepository implements ExamesRepository {
     if (this.emUso.has(id)) return false;
     this.itens.delete(id);
     return true;
-  }
-
-  async criarRegraQuebra(exameOrigemId: string, dados: DadosRegraQuebra) {
-    const id = randomUUID();
-    this.regras.push({ ...dados, id, exameOrigemId });
-    return id;
-  }
-
-  async atualizarRegraQuebra(regraId: string, dados: DadosRegraQuebra) {
-    const r = this.regras.find((i) => i.id === regraId);
-    if (r) Object.assign(r, dados);
-  }
-
-  async excluirRegraQuebra(regraId: string) {
-    const i = this.regras.findIndex((r) => r.id === regraId);
-    if (i >= 0) this.regras.splice(i, 1);
   }
 }
 
@@ -400,5 +374,101 @@ export class InMemoryDeParaRepository<D extends object> implements DeParaReposit
 
   async excluir(id: string) {
     this.itens.delete(id);
+  }
+}
+
+type QuebraGuardada = { id: string; estudoOrigem: string; chaveNormalizada: string };
+type PecaGuardada = DadosPeca & { id: string; quebraId: string };
+
+export class InMemoryQuebrasRepository implements QuebrasRepository {
+  readonly quebras = new Map<string, QuebraGuardada>();
+  readonly pecas: PecaGuardada[] = [];
+  readonly exames = new Map<string, { nome: string; chaveNormalizada: string }>();
+
+  /** Cadastra um exame para servir de peça; devolve o id. */
+  exame(nome: string) {
+    const id = randomUUID();
+    this.exames.set(id, { nome, chaveNormalizada: normalizarNome(nome) });
+    return id;
+  }
+
+  async listar(filtro: FiltroQuebras) {
+    const itens = [...this.quebras.values()]
+      .map((q) => this.detalhe(q))
+      .filter((q) => !filtro.busca || contem(q.estudoOrigem, filtro.busca))
+      .sort((a, b) => a.estudoOrigem.localeCompare(b.estudoOrigem))
+      .map((q) => ({
+        id: q.id,
+        estudoOrigem: q.estudoOrigem,
+        exame: q.exame,
+        pecas: q.pecas.map((p) => ({ nome: p.exame.nome, ativo: p.ativo })),
+      }));
+    return paginar(itens, filtro);
+  }
+
+  async buscar(id: string) {
+    const q = this.quebras.get(id);
+    return q ? this.detalhe(q) : null;
+  }
+
+  async buscarPorChave(chave: string) {
+    const q = [...this.quebras.values()].find((i) => i.chaveNormalizada === chave);
+    return q ? { id: q.id, estudoOrigem: q.estudoOrigem } : null;
+  }
+
+  async buscarExame(id: string) {
+    return this.exames.get(id) ?? null;
+  }
+
+  async criar(dados: { estudoOrigem: string; chaveNormalizada: string }) {
+    const id = randomUUID();
+    this.quebras.set(id, { ...dados, id });
+    return id;
+  }
+
+  async atualizar(id: string, dados: { estudoOrigem: string; chaveNormalizada: string }) {
+    this.quebras.set(id, { ...dados, id });
+  }
+
+  async excluir(id: string) {
+    this.quebras.delete(id);
+    for (let i = this.pecas.length - 1; i >= 0; i--) {
+      if (this.pecas[i]?.quebraId === id) this.pecas.splice(i, 1);
+    }
+  }
+
+  async criarPeca(quebraId: string, dados: DadosPeca) {
+    const id = randomUUID();
+    this.pecas.push({ ...dados, id, quebraId });
+    return id;
+  }
+
+  async atualizarPeca(pecaId: string, dados: DadosPeca) {
+    const p = this.pecas.find((i) => i.id === pecaId);
+    if (p) Object.assign(p, dados);
+  }
+
+  async excluirPeca(pecaId: string) {
+    const i = this.pecas.findIndex((p) => p.id === pecaId);
+    if (i >= 0) this.pecas.splice(i, 1);
+  }
+
+  private detalhe(q: QuebraGuardada): QuebraDetalhe {
+    const exame = [...this.exames.entries()].find(
+      ([, e]) => e.chaveNormalizada === q.chaveNormalizada,
+    );
+    return {
+      ...q,
+      exame: exame ? { id: exame[0], nome: exame[1].nome } : null,
+      pecas: this.pecas
+        .filter((p) => p.quebraId === q.id)
+        .map((p) => ({
+          id: p.id,
+          exame: { id: p.exameId, nome: this.exames.get(p.exameId)?.nome ?? '' },
+          categoria: p.categoriaId ? { id: p.categoriaId, nome: p.categoriaId } : null,
+          ativo: p.ativo,
+        }))
+        .sort((a, b) => a.exame.nome.localeCompare(b.exame.nome)),
+    };
   }
 }

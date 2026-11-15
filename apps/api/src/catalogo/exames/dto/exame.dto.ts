@@ -54,16 +54,6 @@ export class ExameDto {
   @ApiProperty() @IsBoolean() ativo!: boolean;
 }
 
-export class RegraQuebraDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  exameDestinoId!: string;
-
-  @idOpcional() @IsOptional() @IsUUID() categoriaId: string | null = null;
-
-  @ApiProperty() @IsBoolean() ativo!: boolean;
-}
-
 export class ReferenciaDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;
@@ -84,11 +74,9 @@ export class ExameResumoDto {
   @ApiProperty() ativo!: boolean;
 }
 
-export class RegraQuebraItemDto {
+export class QuebraDoExameDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ type: ReferenciaDto }) exameDestino!: ReferenciaDto;
-  @ref() categoria!: ReferenciaDto | null;
-  @ApiProperty() ativo!: boolean;
+  @ApiProperty() totalPecas!: number;
 }
 
 const idNulo = () => ApiProperty({ type: String, format: 'uuid', nullable: true });
@@ -106,7 +94,12 @@ export class ExameDetalheDto {
   @ApiProperty() permiteQuebra!: boolean;
   @ApiProperty() exigeRevisaoManual!: boolean;
   @ApiProperty() ativo!: boolean;
-  @ApiProperty({ type: [RegraQuebraItemDto] }) regrasQuebra!: RegraQuebraItemDto[];
+  @ApiProperty({
+    type: QuebraDoExameDto,
+    nullable: true,
+    description: 'Quebra do estudo com o mesmo nome deste exame.',
+  })
+  quebra!: QuebraDoExameDto | null;
 }
 
 export class PaginaExamesDto {

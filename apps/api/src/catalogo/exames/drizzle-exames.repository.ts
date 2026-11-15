@@ -10,19 +10,18 @@ import {
   exames,
   modalidades,
   prioridades,
-  regrasQuebraExame,
+  quebrasEstudo,
+  quebrasEstudoPecas,
   subespecialidades,
 } from '../../database/schema';
 import { ReferenciaInexistenteError } from '../comum/catalogo.errors';
 import { violouChaveEstrangeira } from '../comum/erros-do-banco';
 import type {
   DadosExame,
-  DadosRegraQuebra,
   ExameDetalhe,
   ExamesRepository,
   FiltroExames,
   Referencia,
-  RegraQuebra,
 } from './exames.repository';
 
 /** `{ id, nome }` do cadastro ligado, por subconsulta; nulo quando o exame não tem. */
@@ -110,6 +109,7 @@ export class DrizzleExamesRepository implements ExamesRepository {
         subespecialidadeId: exames.subespecialidadeId,
         categoriaId: exames.categoriaId,
         prioridadeId: exames.prioridadeId,
+        chaveNormalizada: exames.chaveNormalizada,
         permiteQuebra: exames.permiteQuebra,
         exigeRevisaoManual: exames.exigeRevisaoManual,
         ativo: exames.ativo,
@@ -119,28 +119,14 @@ export class DrizzleExamesRepository implements ExamesRepository {
       .limit(1);
     if (!exame) return null;
 
-    const regras = await this.db
-      .select({
-        id: regrasQuebraExame.id,
-        exameDestinoId: exames.id,
-        exameDestinoNome: exames.nome,
-        categoriaId: categoriasExame.id,
-        categoriaNome: categoriasExame.nome,
-        ativo: regrasQuebraExame.ativo,
-      })
-      .from(regrasQuebraExame)
-      .innerJoin(exames, eq(exames.id, regrasQuebraExame.exameDestinoId))
-      .leftJoin(categoriasExame, eq(categoriasExame.id, regrasQuebraExame.categoriaId))
-      .where(eq(regrasQuebraExame.exameOrigemId, id))
-      .orderBy(asc(exames.nome));
-    const regrasQuebra: RegraQuebra[] = regras.map((r) => ({
-      id: r.id,
-      exameDestino: { id: r.exameDestinoId, nome: r.exameDestinoNome },
-      categoria:
-        r.categoriaId && r.categoriaNome ? { id: r.categoriaId, nome: r.categoriaNome } : null,
-      ativo: r.ativo,
-    }));
-    return { ...exame, regrasQuebra };
+    const [quebra] = await this.db
+      .select({ id: quebrasEstudo.id, totalPecas: count(quebrasEstudoPecas.id) })
+      .from(quebrasEstudo)
+      .leftJoin(quebrasEstudoPecas, eq(quebrasEstudoPecas.quebraId, quebrasEstudo.id))
+      .where(eq(quebrasEstudo.chaveNormalizada, exame.chaveNormalizada))
+      .groupBy(quebrasEstudo.id);
+    const { chaveNormalizada: _, ...resto } = exame;
+    return { ...resto, quebra: quebra ?? null };
   }
 
   criar(dados: DadosExame & { chaveNormalizada: string }) {
@@ -163,26 +149,5 @@ export class DrizzleExamesRepository implements ExamesRepository {
       if (violouChaveEstrangeira(erro)) return false;
       throw erro;
     }
-  }
-
-  criarRegraQuebra(exameOrigemId: string, dados: DadosRegraQuebra) {
-    return gravando(async () => {
-      const [criada] = await this.db
-        .insert(regrasQuebraExame)
-        .values({ ...dados, exameOrigemId })
-        .returning({ id: regrasQuebraExame.id });
-      if (!criada) throw new Error('insert de regra de quebra não devolveu o id');
-      return criada.id;
-    });
-  }
-
-  async atualizarRegraQuebra(regraId: string, dados: DadosRegraQuebra) {
-    await gravando(() =>
-      this.db.update(regrasQuebraExame).set(dados).where(eq(regrasQuebraExame.id, regraId)),
-    );
-  }
-
-  async excluirRegraQuebra(regraId: string) {
-    await this.db.delete(regrasQuebraExame).where(eq(regrasQuebraExame.id, regraId));
   }
 }

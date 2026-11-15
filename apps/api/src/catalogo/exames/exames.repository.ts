@@ -23,20 +23,6 @@ export interface Referencia {
   nome: string;
 }
 
-export interface DadosRegraQuebra {
-  exameDestinoId: string;
-  /** Categoria da linha quebrada; vazio usa a do exame de destino. */
-  categoriaId: string | null;
-  ativo: boolean;
-}
-
-export interface RegraQuebra {
-  id: string;
-  exameDestino: Referencia;
-  categoria: Referencia | null;
-  ativo: boolean;
-}
-
 export interface ExameResumo {
   id: string;
   nome: string;
@@ -52,7 +38,8 @@ export interface ExameResumo {
 
 export interface ExameDetalhe extends DadosExame {
   id: string;
-  regrasQuebra: RegraQuebra[];
+  /** A quebra do estudo com o mesmo nome (chave normalizada), se houver. */
+  quebra: { id: string; totalPecas: number } | null;
 }
 
 export interface FiltroExames extends Paginacao {
@@ -69,9 +56,6 @@ export interface ExamesRepository {
   /** Lança `ReferenciaInexistenteError` se algum cadastro ligado não existe. */
   criar(dados: DadosExame & { chaveNormalizada: string }): Promise<string>;
   atualizar(id: string, dados: DadosExame & { chaveNormalizada: string }): Promise<void>;
-  /** `false` quando o exame é destino de uma regra de quebra ou outro cadastro o usa. */
+  /** `false` quando o exame é peça de uma quebra ou outro cadastro o usa. */
   excluir(id: string): Promise<boolean>;
-  criarRegraQuebra(exameOrigemId: string, dados: DadosRegraQuebra): Promise<string>;
-  atualizarRegraQuebra(regraId: string, dados: DadosRegraQuebra): Promise<void>;
-  excluirRegraQuebra(regraId: string): Promise<void>;
 }

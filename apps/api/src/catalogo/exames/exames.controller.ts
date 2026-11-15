@@ -24,13 +24,7 @@ import {
 import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
 import { IdCriadoDto } from '../comum/dto';
-import {
-  ExameDetalheDto,
-  ExameDto,
-  ListarExamesDto,
-  PaginaExamesDto,
-  RegraQuebraDto,
-} from './dto/exame.dto';
+import { ExameDetalheDto, ExameDto, ListarExamesDto, PaginaExamesDto } from './dto/exame.dto';
 import { ExamesService } from './exames.service';
 
 @ApiTags('catalogo')
@@ -89,52 +83,11 @@ export class ExamesController {
   @Permissao('exames.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  @ApiConflictResponse({ description: 'Destino de regra de quebra: desative em vez de excluir.' })
+  @ApiConflictResponse({ description: 'Peça de uma quebra: desative em vez de excluir.' })
   excluir(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
     return this.service.excluir({ usuarioId: ator.usuarioId }, id);
-  }
-
-  @Post(':id/regras-quebra')
-  @Permissao('exames.editar')
-  @ApiCreatedResponse({ type: IdCriadoDto })
-  @ApiBadRequestResponse({ description: 'Destino inexistente ou o próprio exame.' })
-  @ApiConflictResponse({ description: 'O exame já se quebra nesse destino.' })
-  async criarRegraQuebra(
-    @PrincipalAtual() ator: PrincipalUsuario,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() corpo: RegraQuebraDto,
-  ): Promise<IdCriadoDto> {
-    return { id: await this.service.criarRegraQuebra({ usuarioId: ator.usuarioId }, id, corpo) };
-  }
-
-  @Put(':id/regras-quebra/:regraId')
-  @Permissao('exames.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
-  @ApiBadRequestResponse({ description: 'Destino inexistente ou o próprio exame.' })
-  @ApiConflictResponse({ description: 'O exame já se quebra nesse destino.' })
-  atualizarRegraQuebra(
-    @PrincipalAtual() ator: PrincipalUsuario,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('regraId', ParseUUIDPipe) regraId: string,
-    @Body() corpo: RegraQuebraDto,
-  ): Promise<void> {
-    return this.service.atualizarRegraQuebra({ usuarioId: ator.usuarioId }, id, regraId, corpo);
-  }
-
-  @Delete(':id/regras-quebra/:regraId')
-  @Permissao('exames.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
-  @ApiNotFoundResponse()
-  excluirRegraQuebra(
-    @PrincipalAtual() ator: PrincipalUsuario,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('regraId', ParseUUIDPipe) regraId: string,
-  ): Promise<void> {
-    return this.service.excluirRegraQuebra({ usuarioId: ator.usuarioId }, id, regraId);
   }
 }

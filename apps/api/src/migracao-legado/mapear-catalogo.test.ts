@@ -172,7 +172,7 @@ describe('mapearCatalogo', () => {
     });
   });
 
-  it('de-paras: região anatômica sem acento e em maiúsculas; regra de quebra por id do exame', () => {
+  it('de-paras: região anatômica sem acento e em maiúsculas', () => {
     const { tabelas } = mapearCatalogo(legado());
 
     expect(tabelas.especialidadesDePara).toEqual([
@@ -189,13 +189,57 @@ describe('mapearCatalogo', () => {
         prioridadeId: idDoLegado('prioridades', 'pr-rot'),
       }),
     ]);
-    expect(tabelas.regrasQuebraExame).toEqual([
-      expect.objectContaining({
-        exameOrigemId: idDoLegado('exames', 'ex-cranio'),
-        exameDestinoId: idDoLegado('exames', 'ex-face'),
-        categoriaId: idDoLegado('categorias_exame', 'ca-sc'),
+  });
+
+  it('quebra: uma por estudo (mesmo fora do cadastro), com uma peça por exame de destino', () => {
+    const regra = (id: string, exameOriginal: string, exameQuebrado: string) => ({
+      id,
+      exameOriginal,
+      exameQuebrado,
+      categoriaQuebrada: null,
+      ativo: true,
+    });
+    const { tabelas, avisos } = mapearCatalogo(
+      legado({
+        regrasQuebra: [
+          { ...regra('rq-1', 'TC DE CRÂNIO E FACE X2', 'TC DE FACE'), categoriaQuebrada: 'SC' },
+          regra('rq-2', 'TC de cranio e face x2', 'tc de crânio'),
+          regra('rq-3', 'TC DE CRÂNIO E FACE X2', 'TC DE FACE'),
+          regra('rq-4', 'TC DE CRÂNIO E FACE X2', 'RM ESPECTROSCOPIA'),
+        ],
       }),
+    );
+
+    const quebraId = idDoLegado('quebras_estudo', 'tc de cranio e face x2');
+    expect(tabelas.quebrasEstudo).toEqual([
+      {
+        id: quebraId,
+        estudoOrigem: 'TC DE CRÂNIO E FACE X2',
+        chaveNormalizada: 'tc de cranio e face x2',
+      },
     ]);
+    expect(tabelas.quebrasEstudoPecas).toEqual([
+      {
+        id: idDoLegado('regras_quebra_exames', 'rq-1'),
+        quebraId,
+        exameId: idDoLegado('exames', 'ex-face'),
+        categoriaId: idDoLegado('categorias_exame', 'ca-sc'),
+        ativo: true,
+      },
+      {
+        id: idDoLegado('regras_quebra_exames', 'rq-2'),
+        quebraId,
+        exameId: idDoLegado('exames', 'ex-cranio'),
+        categoriaId: null,
+        ativo: true,
+      },
+    ]);
+    expect(avisos).toContainEqual({
+      tabela: 'quebras_estudo',
+      item: 'TC DE CRÂNIO E FACE X2 → RM ESPECTROSCOPIA',
+      motivo:
+        'Exame "RM ESPECTROSCOPIA" não existe no cadastro: a peça ficou de fora. Cadastre o exame e rode a carga de novo.',
+    });
   });
 
   it('contratado com documento só em dígitos e UF em maiúsculas', () => {
