@@ -35,28 +35,19 @@ const exame: ExameDetalheDto = {
   permiteQuebra: true,
   exigeRevisaoManual: false,
   ativo: true,
-  regrasQuebra: [
-    { id: 'r-1', exameDestino: { id: 'x-2', nome: 'TC ABDOME' }, categoria: null, ativo: true },
-  ],
+  quebra: { id: 'q-1', totalPecas: 2 },
 };
 
 function montar(props: Partial<PainelExameProps> = {}) {
   const handlers = {
     onSalvar: vi.fn(async () => undefined),
-    onCriarRegra: vi.fn(async () => undefined),
-    onAtualizarRegra: vi.fn(async () => undefined),
-    onExcluirRegra: vi.fn(async () => undefined),
+    onAbrirQuebra: vi.fn(),
+    onCriarQuebra: vi.fn(async () => undefined),
     onFechar: vi.fn(),
   };
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <PainelExame
-        opcoes={opcoes}
-        buscarExames={async () => [{ valor: 'x-3', rotulo: 'TC TORAX' }]}
-        podeEditar
-        {...handlers}
-        {...props}
-      />
+      <PainelExame opcoes={opcoes} podeEditar {...handlers} {...props} />
     </QueryClientProvider>,
   );
   return handlers;
@@ -89,40 +80,30 @@ describe('PainelExame', () => {
       exigeRevisaoManual: true,
       ativo: true,
     });
-    expect(screen.queryByRole('region', { name: 'Regras de quebra' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Quebra' })).not.toBeInTheDocument();
   });
 
-  it('editando, lista as regras de quebra, adiciona, desativa e remove', async () => {
-    const { onCriarRegra, onAtualizarRegra, onExcluirRegra } = montar({ exame });
+  it('editando, aponta a quebra do estudo com o mesmo nome', async () => {
+    const { onAbrirQuebra } = montar({ exame });
 
-    const regras = screen.getByRole('region', { name: 'Regras de quebra' });
-    expect(within(regras).getByText('TC ABDOME')).toBeInTheDocument();
+    const quebra = screen.getByRole('region', { name: 'Quebra' });
+    expect(quebra).toHaveTextContent('Laudado, este estudo vira 2 exames na cobrança.');
+    await userEvent.click(within(quebra).getByRole('button', { name: 'Abrir a quebra' }));
+    expect(onAbrirQuebra).toHaveBeenCalledWith('q-1');
+  });
 
-    await userEvent.type(
-      within(regras).getByRole('combobox', { name: 'Exame em que se quebra' }),
-      'tc',
-    );
-    await userEvent.click(await screen.findByRole('option', { name: 'TC TORAX' }));
-    await escolherOpcao('Categoria da linha quebrada', 'ANGIO');
-    await userEvent.click(within(regras).getByRole('button', { name: 'Adicionar regra' }));
-    expect(onCriarRegra).toHaveBeenCalledWith({
-      exameDestinoId: 'x-3',
-      categoriaId: 'c-angio',
-      ativo: true,
-    });
+  it('sem quebra, oferece criar uma para o estudo', async () => {
+    const { onCriarQuebra } = montar({ exame: { ...exame, quebra: null } });
 
-    await userEvent.click(
-      within(regras).getByRole('checkbox', { name: 'Regra para TC ABDOME ativa' }),
-    );
-    expect(onAtualizarRegra).toHaveBeenCalledWith('r-1', {
-      exameDestinoId: 'x-2',
-      categoriaId: null,
-      ativo: false,
-    });
+    const quebra = screen.getByRole('region', { name: 'Quebra' });
+    expect(quebra).toHaveTextContent('Este estudo não se quebra.');
+    await userEvent.click(within(quebra).getByRole('button', { name: 'Criar quebra' }));
+    expect(onCriarQuebra).toHaveBeenCalled();
+  });
 
-    await userEvent.click(
-      within(regras).getByRole('button', { name: 'Remover regra para TC ABDOME' }),
-    );
-    expect(onExcluirRegra).toHaveBeenCalledWith('r-1');
+  it('sem permissão de editar, não oferece criar a quebra', () => {
+    montar({ exame: { ...exame, quebra: null }, podeEditar: false });
+
+    expect(screen.queryByRole('button', { name: 'Criar quebra' })).not.toBeInTheDocument();
   });
 });

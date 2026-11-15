@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { RegraQuebraItemDto } from './RegraQuebraItemDto'
+import type { QuebraDoExameDto } from './QuebraDoExameDto'
 
 export type ExameDetalheDto = {
   /**
@@ -48,5 +48,9 @@ export type ExameDetalheDto = {
   permiteQuebra: boolean;
   exigeRevisaoManual: boolean;
   ativo: boolean;
-  regrasQuebra: RegraQuebraItemDto[];
+  /**
+   * @description Quebra do estudo com o mesmo nome deste exame.
+   * @type object
+   */
+  quebra: QuebraDoExameDto | null;
 };

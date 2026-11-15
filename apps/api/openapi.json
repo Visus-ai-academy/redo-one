@@ -2719,7 +2719,7 @@
             "description": ""
           },
           "409": {
-            "description": "Destino de regra de quebra: desative em vez de excluir."
+            "description": "Peça de uma quebra: desative em vez de excluir."
           }
         },
         "tags": [
@@ -2727,9 +2727,124 @@
         ]
       }
     },
-    "/catalogo/exames/{id}/regras-quebra": {
+    "/catalogo/quebras": {
+      "get": {
+        "operationId": "QuebrasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome do estudo ou de um exame em que ele se quebra.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaQuebrasDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
       "post": {
-        "operationId": "ExamesController_criarRegraQuebra",
+        "operationId": "QuebrasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuebraDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Já existe quebra para esse estudo."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/quebras/{id}": {
+      "get": {
+        "operationId": "QuebrasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuebraDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "put": {
+        "operationId": "QuebrasController_atualizar",
         "parameters": [
           {
             "name": "id",
@@ -2745,7 +2860,67 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegraQuebraDto"
+                "$ref": "#/components/schemas/QuebraDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já existe quebra para esse estudo."
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      },
+      "delete": {
+        "operationId": "QuebrasController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
+    "/catalogo/quebras/{id}/pecas": {
+      "post": {
+        "operationId": "QuebrasController_adicionarPeca",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PecaDto"
               }
             }
           }
@@ -2762,10 +2937,10 @@
             }
           },
           "400": {
-            "description": "Destino inexistente ou o próprio exame."
+            "description": "Exame inexistente ou o próprio estudo."
           },
           "409": {
-            "description": "O exame já se quebra nesse destino."
+            "description": "O estudo já se quebra nesse exame."
           }
         },
         "tags": [
@@ -2773,9 +2948,9 @@
         ]
       }
     },
-    "/catalogo/exames/{id}/regras-quebra/{regraId}": {
+    "/catalogo/quebras/{id}/pecas/{pecaId}": {
       "put": {
-        "operationId": "ExamesController_atualizarRegraQuebra",
+        "operationId": "QuebrasController_atualizarPeca",
         "parameters": [
           {
             "name": "id",
@@ -2786,7 +2961,7 @@
             }
           },
           {
-            "name": "regraId",
+            "name": "pecaId",
             "required": true,
             "in": "path",
             "schema": {
@@ -2799,7 +2974,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegraQuebraDto"
+                "$ref": "#/components/schemas/PecaDto"
               }
             }
           }
@@ -2809,10 +2984,10 @@
             "description": ""
           },
           "400": {
-            "description": "Destino inexistente ou o próprio exame."
+            "description": "Exame inexistente ou o próprio estudo."
           },
           "409": {
-            "description": "O exame já se quebra nesse destino."
+            "description": "O estudo já se quebra nesse exame."
           }
         },
         "tags": [
@@ -2820,7 +2995,7 @@
         ]
       },
       "delete": {
-        "operationId": "ExamesController_excluirRegraQuebra",
+        "operationId": "QuebrasController_removerPeca",
         "parameters": [
           {
             "name": "id",
@@ -2831,7 +3006,7 @@
             }
           },
           {
-            "name": "regraId",
+            "name": "pecaId",
             "required": true,
             "in": "path",
             "schema": {
@@ -6503,34 +6678,20 @@
           "porPagina"
         ]
       },
-      "RegraQuebraItemDto": {
+      "QuebraDoExameDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "exameDestino": {
-            "$ref": "#/components/schemas/ReferenciaDto"
-          },
-          "categoria": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ReferenciaDto"
-              }
-            ]
-          },
-          "ativo": {
-            "type": "boolean"
+          "totalPecas": {
+            "type": "number"
           }
         },
         "required": [
           "id",
-          "exameDestino",
-          "categoria",
-          "ativo"
+          "totalPecas"
         ]
       },
       "ExameDetalheDto": {
@@ -6585,11 +6746,15 @@
           "ativo": {
             "type": "boolean"
           },
-          "regrasQuebra": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RegraQuebraItemDto"
-            }
+          "quebra": {
+            "nullable": true,
+            "description": "Quebra do estudo com o mesmo nome deste exame.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuebraDoExameDto"
+              }
+            ]
           }
         },
         "required": [
@@ -6605,7 +6770,7 @@
           "permiteQuebra",
           "exigeRevisaoManual",
           "ativo",
-          "regrasQuebra"
+          "quebra"
         ]
       },
       "ExameDto": {
@@ -6669,24 +6834,192 @@
           "ativo"
         ]
       },
-      "RegraQuebraDto": {
+      "PecaResumoDto": {
         "type": "object",
         "properties": {
-          "exameDestinoId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "categoriaId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
+          "nome": {
+            "type": "string"
           },
           "ativo": {
             "type": "boolean"
           }
         },
         "required": [
-          "exameDestinoId",
+          "nome",
+          "ativo"
+        ]
+      },
+      "ReferenciaQuebraDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "QuebraResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estudoOrigem": {
+            "type": "string"
+          },
+          "pecas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PecaResumoDto"
+            }
+          },
+          "exame": {
+            "nullable": true,
+            "description": "O exame do cadastro com o mesmo nome do estudo.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaQuebraDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "estudoOrigem",
+          "pecas",
+          "exame"
+        ]
+      },
+      "PaginaQuebrasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuebraResumoDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "PecaItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "exame": {
+            "$ref": "#/components/schemas/ReferenciaQuebraDto"
+          },
+          "categoria": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaQuebraDto"
+              }
+            ]
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "exame",
+          "categoria",
+          "ativo"
+        ]
+      },
+      "QuebraDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estudoOrigem": {
+            "type": "string"
+          },
+          "exame": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaQuebraDto"
+              }
+            ]
+          },
+          "pecas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PecaItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "estudoOrigem",
+          "exame",
+          "pecas"
+        ]
+      },
+      "QuebraDto": {
+        "type": "object",
+        "properties": {
+          "estudoOrigem": {
+            "type": "string",
+            "example": "TC TORAX E ABDOME",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "estudoOrigem"
+        ]
+      },
+      "PecaDto": {
+        "type": "object",
+        "properties": {
+          "exameId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usada só quando o exame não tem categoria."
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "exameId",
           "ativo"
         ]
       },

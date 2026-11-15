@@ -3,16 +3,16 @@
 * Do not edit manually.
 */
 
-import type { ReferenciaDto } from './ReferenciaDto'
+import type { ReferenciaQuebraDto } from './ReferenciaQuebraDto'
 
-export type RegraQuebraItemDto = {
+export type PecaItemDto = {
   /**
    * @description
    * Format: `uuid`
    * @type string
    */
   id: string;
-  exameDestino: ReferenciaDto;
-  categoria: ReferenciaDto | null;
+  exame: ReferenciaQuebraDto;
+  categoria: ReferenciaQuebraDto | null;
   ativo: boolean;
 };

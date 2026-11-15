@@ -3,15 +3,16 @@
 * Do not edit manually.
 */
 
-export type RegraQuebraDto = {
+export type PecaDto = {
   /**
    * @description
    * Format: `uuid`
    * @type string
    */
-  exameDestinoId: string;
+  exameId: string;
   /**
-   * @description
+   * @description Usada só quando o exame não tem categoria.
+   *
    * Format: `uuid`
    * @type string | undefined
    */

@@ -7,6 +7,7 @@ import { Abas } from '../../components/abas/Abas';
 import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelExame } from '../../components/catalogo/PainelExame';
 import { PainelExameForaPadrao } from '../../components/catalogo/PainelExameForaPadrao';
+import { PainelQuebra } from '../../components/catalogo/PainelQuebra';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
@@ -16,33 +17,43 @@ import { deParaValoresExameControllerAtualizar } from '../../gen/clients/deParaV
 import { deParaValoresExameControllerCriar } from '../../gen/clients/deParaValoresExameControllerCriar';
 import { deParaValoresExameControllerExcluir } from '../../gen/clients/deParaValoresExameControllerExcluir';
 import { examesControllerAtualizar } from '../../gen/clients/examesControllerAtualizar';
-import { examesControllerAtualizarRegraQuebra } from '../../gen/clients/examesControllerAtualizarRegraQuebra';
 import { examesControllerCriar } from '../../gen/clients/examesControllerCriar';
-import { examesControllerCriarRegraQuebra } from '../../gen/clients/examesControllerCriarRegraQuebra';
 import { examesControllerExcluir } from '../../gen/clients/examesControllerExcluir';
-import { examesControllerExcluirRegraQuebra } from '../../gen/clients/examesControllerExcluirRegraQuebra';
 import { opcoesControllerExames } from '../../gen/clients/opcoesControllerExames';
+import { quebrasControllerAdicionarPeca } from '../../gen/clients/quebrasControllerAdicionarPeca';
+import { quebrasControllerAtualizar } from '../../gen/clients/quebrasControllerAtualizar';
+import { quebrasControllerAtualizarPeca } from '../../gen/clients/quebrasControllerAtualizarPeca';
+import { quebrasControllerCriar } from '../../gen/clients/quebrasControllerCriar';
+import { quebrasControllerExcluir } from '../../gen/clients/quebrasControllerExcluir';
+import { quebrasControllerRemoverPeca } from '../../gen/clients/quebrasControllerRemoverPeca';
 import { deParaValoresExameControllerListarQueryOptions } from '../../gen/hooks/useDeParaValoresExameControllerListar';
 import { deParaValoresExameControllerObterQueryOptions } from '../../gen/hooks/useDeParaValoresExameControllerObter';
 import { examesControllerListarQueryOptions } from '../../gen/hooks/useExamesControllerListar';
 import { examesControllerObterQueryOptions } from '../../gen/hooks/useExamesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
+import { quebrasControllerListarQueryOptions } from '../../gen/hooks/useQuebrasControllerListar';
+import { quebrasControllerObterQueryOptions } from '../../gen/hooks/useQuebrasControllerObter';
 import type { DeParaValorItemDto } from '../../gen/types/DeParaValorItemDto';
 import type { ExameResumoDto } from '../../gen/types/ExameResumoDto';
+import type { QuebraResumoDto } from '../../gen/types/QuebraResumoDto';
 import { invalidarCatalogo } from '../../lib/catalogo';
 import { pode } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
-/** Padronizados (o cadastro) e fora do padrão (grafias da MobileMed): listas separadas, nunca juntas. */
+/**
+ * Padronizados (o cadastro), fora do padrão (grafias da MobileMed) e quebras (estudo que vira vários
+ * exames): listas separadas, nunca juntas.
+ */
 const ABAS = [
   { valor: 'padronizados', rotulo: 'Padronizados' },
   { valor: 'fora-do-padrao', rotulo: 'Fora do padrão' },
+  { valor: 'quebras', rotulo: 'Quebras' },
 ] as const;
 type Aba = (typeof ABAS)[number]['valor'];
 
 const buscaSchema = z.object({
-  aba: z.enum(['padronizados', 'fora-do-padrao']).optional().catch(undefined),
+  aba: z.enum(['padronizados', 'fora-do-padrao', 'quebras']).optional().catch(undefined),
   busca: z.string().trim().min(1).optional().catch(undefined),
   modalidadeId: z.uuid().optional().catch(undefined),
   especialidadeId: z.uuid().optional().catch(undefined),
@@ -74,6 +85,11 @@ const consultaForaPadrao = (b: Busca) =>
     },
   });
 
+const consultaQuebras = (b: Busca) =>
+  quebrasControllerListarQueryOptions({
+    query: { busca: b.busca, pagina: b.pagina ?? 1, porPagina: POR_PAGINA },
+  });
+
 export const Route = createFileRoute('/_app/exames')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
@@ -81,6 +97,17 @@ export const Route = createFileRoute('/_app/exames')({
     if (!pode(context.sessao, 'exames.ver')) return;
     if (deps.aba === 'fora-do-padrao') {
       await context.queryClient.ensureQueryData(consultaForaPadrao(deps));
+      return;
+    }
+    if (deps.aba === 'quebras') {
+      if (deps.id)
+        void context.queryClient.prefetchQuery(
+          quebrasControllerObterQueryOptions({ path: { id: deps.id } }),
+        );
+      await Promise.all([
+        context.queryClient.ensureQueryData(consultaQuebras(deps)),
+        context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
+      ]);
       return;
     }
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
@@ -102,11 +129,9 @@ function PaginaExames() {
   const { aba } = Route.useSearch();
   if (!pode(sessao, 'exames.ver')) return <SemPermissao tela="Exames" />;
   const podeEditar = pode(sessao, 'exames.editar');
-  return aba === 'fora-do-padrao' ? (
-    <ForaDoPadrao podeEditar={podeEditar} />
-  ) : (
-    <Exames podeEditar={podeEditar} />
-  );
+  if (aba === 'fora-do-padrao') return <ForaDoPadrao podeEditar={podeEditar} />;
+  if (aba === 'quebras') return <Quebras podeEditar={podeEditar} />;
+  return <Exames podeEditar={podeEditar} />;
 }
 
 /** Abas da tela; trocar de aba recomeça busca, filtros e página. */
@@ -300,8 +325,6 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
     <PainelExame
       exame={exame}
       opcoes={opcoes}
-      // O próprio exame não aparece como destino da quebra dele.
-      buscarExames={async (termo) => (await buscarExames(termo)).filter((e) => e.valor !== id)}
       podeEditar={podeEditar}
       onFechar={fechar}
       onSalvar={async (body) => {
@@ -320,20 +343,14 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
             }
           : undefined
       }
-      onCriarRegra={async (body) => {
-        if (!id) return;
-        await examesControllerCriarRegraQuebra({ path: { id }, body }).unwrap();
+      onAbrirQuebra={(quebraId) => void navigate({ search: { aba: 'quebras', id: quebraId } })}
+      onCriarQuebra={async () => {
+        if (!exame) return;
+        const { id: quebraId } = await quebrasControllerCriar({
+          body: { estudoOrigem: exame.nome },
+        }).unwrap();
         await invalidarCatalogo(queryClient);
-      }}
-      onAtualizarRegra={async (regraId, body) => {
-        if (!id) return;
-        await examesControllerAtualizarRegraQuebra({ path: { id, regraId }, body }).unwrap();
-        await invalidarCatalogo(queryClient);
-      }}
-      onExcluirRegra={async (regraId) => {
-        if (!id) return;
-        await examesControllerExcluirRegraQuebra({ path: { id, regraId } }).unwrap();
-        await invalidarCatalogo(queryClient);
+        void navigate({ search: { aba: 'quebras', id: quebraId } });
       }}
     />
   );
@@ -507,6 +524,169 @@ function PainelForaPadrao({
             }
           : undefined
       }
+    />
+  );
+}
+
+const cQuebra = createDataTableColumnHelper<QuebraResumoDto>();
+
+/** Estudos que, laudados, viram vários exames na cobrança (cada exame vale 1). */
+function Quebras({ podeEditar }: { podeEditar: boolean }) {
+  const busca = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data: pagina } = useSuspenseQuery(consultaQuebras(busca));
+
+  const ir = useCallback(
+    (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
+    [navigate],
+  );
+  const filtrar = useCallback(
+    (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
+    [ir],
+  );
+  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
+
+  const colunas = useMemo(
+    () => [
+      cQuebra.accessor('estudoOrigem', {
+        header: 'Estudo que chega',
+        cell: (i) => (
+          <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>
+            <span className="flex flex-col leading-snug">
+              <span>{i.getValue()}</span>
+              {i.row.original.exame && (
+                <span className="text-muted-foreground text-[13px] font-normal">
+                  Também é exame do cadastro
+                </span>
+              )}
+            </span>
+          </BotaoAbrir>
+        ),
+      }),
+      cQuebra.accessor((q) => q.pecas.filter((p) => p.ativo).map((p) => p.nome), {
+        id: 'pecas',
+        header: 'Vira na cobrança',
+        cell: (i) =>
+          i.getValue().length === 0 ? (
+            <span className="text-muted-foreground">Nenhum exame</span>
+          ) : (
+            <span className="flex flex-col leading-snug">
+              {i.getValue().map((nomePeca) => (
+                <span key={nomePeca}>{nomePeca}</span>
+              ))}
+            </span>
+          ),
+      }),
+      cQuebra.accessor((q) => q.pecas.filter((p) => p.ativo).length, {
+        id: 'total',
+        header: () => <span className="block text-right">Exames</span>,
+        cell: (i) => <span className="block text-right tabular-nums">{i.getValue()}</span>,
+      }),
+    ],
+    [abrir],
+  );
+
+  return (
+    <ListaCadastro
+      titulo="Exames"
+      totalNoTitulo={false}
+      abas={<AbasExames aba="quebras" />}
+      novo={
+        podeEditar
+          ? { rotulo: 'Nova quebra', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
+          : undefined
+      }
+      busca={{
+        valor: busca.busca,
+        rotulo: 'Buscar quebras',
+        placeholder: 'Estudo ou exame em que se quebra',
+      }}
+      temFiltro={false}
+      colunas={colunas}
+      ocultarComPainel={['total']}
+      itens={pagina.itens}
+      getRowId={(q) => q.id}
+      selecionadoId={busca.id}
+      onAbrir={abrir}
+      pagina={pagina.pagina}
+      porPagina={pagina.porPagina}
+      total={pagina.total}
+      vazio={{
+        titulo: 'Nenhuma quebra.',
+        texto: podeEditar
+          ? 'Cadastre o estudo combinado como chega da MobileMed e os exames em que ele se quebra.'
+          : 'Quem cuida do catálogo de exames as inclui aqui.',
+      }}
+      onFiltrar={filtrar}
+      onLimparFiltros={() => filtrar({ busca: undefined })}
+      onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
+      painel={
+        busca.id || (busca.novo && podeEditar) ? (
+          <PainelDaQuebra key={busca.id ?? 'novo'} id={busca.id} podeEditar={podeEditar} />
+        ) : undefined
+      }
+    />
+  );
+}
+
+function PainelDaQuebra({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
+  const consulta = useQuery({
+    ...quebrasControllerObterQueryOptions({ path: { id: id ?? '' } }),
+    enabled: Boolean(id),
+  });
+  const quebra = consulta.data;
+  const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  if (id && !quebra)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError}
+        onTentarDeNovo={() => void consulta.refetch()}
+      />
+    );
+
+  const depois = () => invalidarCatalogo(queryClient);
+  return (
+    <PainelQuebra
+      quebra={quebra}
+      categorias={opcoes.categoriasExame}
+      buscarExames={buscarExames}
+      podeEditar={podeEditar}
+      onFechar={fechar}
+      onSalvar={async (body) => {
+        let alvo = id;
+        if (id) await quebrasControllerAtualizar({ path: { id }, body }).unwrap();
+        else alvo = (await quebrasControllerCriar({ body }).unwrap()).id;
+        await depois();
+        void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
+      }}
+      onExcluir={
+        id
+          ? async () => {
+              await quebrasControllerExcluir({ path: { id } }).unwrap();
+              fechar();
+              await depois();
+            }
+          : undefined
+      }
+      onAdicionarPeca={async (body) => {
+        if (!id) return;
+        await quebrasControllerAdicionarPeca({ path: { id }, body }).unwrap();
+        await depois();
+      }}
+      onAtualizarPeca={async (pecaId, body) => {
+        if (!id) return;
+        await quebrasControllerAtualizarPeca({ path: { id, pecaId }, body }).unwrap();
+        await depois();
+      }}
+      onRemoverPeca={async (pecaId) => {
+        if (!id) return;
+        await quebrasControllerRemoverPeca({ path: { id, pecaId } }).unwrap();
+        await depois();
+      }}
     />
   );
 }

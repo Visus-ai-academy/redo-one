@@ -4,7 +4,7 @@
 */
 
 import * as z from 'zod'
-import { regraQuebraItemDtoSchema } from './regraQuebraItemDtoSchema'
+import { quebraDoExameDtoSchema } from './quebraDoExameDtoSchema'
 
 export const exameDetalheDtoSchema = z.object({
   id: z.uuid(),
@@ -19,7 +19,7 @@ export const exameDetalheDtoSchema = z.object({
   permiteQuebra: z.boolean(),
   exigeRevisaoManual: z.boolean(),
   ativo: z.boolean(),
-  regrasQuebra: z.array(regraQuebraItemDtoSchema),
+  quebra: quebraDoExameDtoSchema.nullable().describe('Quebra do estudo com o mesmo nome deste exame.'),
 })
 
 export type ExameDetalheDtoSchemaType = z.infer<typeof exameDetalheDtoSchema>
