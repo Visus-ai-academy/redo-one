@@ -93,12 +93,13 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 - Rodapé do menu: Avisos (com contador), Configurações e a conta do usuário (com Sair).
 - Menu recolhível (só ícones).
 - Subtelas do legado viram abas dentro da tela (ex.: Volumetria › Periódico, Mensal, Cliente, Comparativo).
+- **Forma certa no centro, variações penduradas nela**: prioridade e especialidade mostram, no próprio painel, as variações que chegam da MobileMed (com e sem acento, pela volumetria e pela fila, ou com outro nome), com a contagem na lista. Nunca uma lista solta de variações separada da forma certa.
 - **Exames padronizados e fora do padrão nunca na mesma lista**: a tela Exames tem as abas Padronizados (o cadastro) e Fora do padrão (grafias que chegam da MobileMed, com quanto valem e o exame padronizado ligado), como no dashboards-one. A busca de exame (quebra, vínculo) só oferece padronizados.
 - Detalhe e edição de um item da lista abrem no `PainelLateral`: o Drawer do Base UI, não modal (a lista continua à vista e clicável; Esc, X ou arrastar fecham), 400px à direita no computador e tela cheia abaixo de `lg`. Componente que o Base UI já tem nunca é imitado com HTML.
 - **Configurações** é uma central com submenu por assunto:
   - Sua conta: Meu perfil (dados, senha, sessões e acessos numa tela só; um item por destino, nunca dois itens para a mesma tela).
   - Acesso: Usuários, Papéis, Chaves dos robôs.
-  - Catálogo: Classificação dos exames (modalidades, especialidades, subespecialidades, categorias e prioridades, em abas), Contratados, De-paras (prioridade, especialidade e sufixos de cliente), Equipes médicas, Níveis dos médicos.
+  - Catálogo: Classificação dos exames (modalidades, especialidades, subespecialidades, categorias e prioridades, em abas), Contratados, De-paras (só o que não tem forma certa: valores que não são especialidade e sufixos de cliente), Equipes médicas, Níveis dos médicos.
   - Operação: Robô de distribuição, Escala médica.
   - Financeiro: Tipificação, Impostos, Parâmetros de contrato.
   - Avisos e metas: Notificações, Metas mensais.
