@@ -91,7 +91,11 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     tela: 'exames',
     rotulo: 'Exames',
     area: 'Cadastros',
-    acoes: [ver('exames'), { chave: 'exames.editar', rotulo: 'Editar' }],
+    acoes: [
+      ver('exames'),
+      // Regras de quebra e valores fora do padrão decidem a quantidade faturada.
+      { chave: 'exames.editar', rotulo: 'Editar', sensivel: true },
+    ],
   },
   {
     tela: 'faturamento',

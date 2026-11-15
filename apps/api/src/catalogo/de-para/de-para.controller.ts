@@ -208,7 +208,7 @@ export class DeParaValoresExameController {
   constructor(@Inject(DE_PARA_VALOR) private readonly service: DeParaService<DadosDeParaValor>) {}
 
   @Get()
-  @Permissao('de-para.ver')
+  @Permissao('exames.ver')
   @ApiOkResponse({ type: PaginaDeParaValorDto })
   async listar(@Query() query: ListarDto): Promise<PaginaDeParaValorDto> {
     const { itens, total } = await this.service.listar({
@@ -226,7 +226,7 @@ export class DeParaValoresExameController {
   }
 
   @Get(':id')
-  @Permissao('de-para.ver')
+  @Permissao('exames.ver')
   @ApiOkResponse({ type: DeParaValorItemDto })
   @ApiNotFoundResponse()
   obter(@Param('id', ParseUUIDPipe) id: string): Promise<DeParaValorItemDto> {
@@ -234,7 +234,7 @@ export class DeParaValoresExameController {
   }
 
   @Post()
-  @Permissao('de-para.editar')
+  @Permissao('exames.editar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
   @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
@@ -246,7 +246,7 @@ export class DeParaValoresExameController {
   }
 
   @Put(':id')
-  @Permissao('de-para.editar')
+  @Permissao('exames.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
@@ -260,7 +260,7 @@ export class DeParaValoresExameController {
   }
 
   @Delete(':id')
-  @Permissao('de-para.editar')
+  @Permissao('exames.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   excluir(

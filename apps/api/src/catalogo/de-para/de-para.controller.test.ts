@@ -13,20 +13,21 @@ import {
 describe('controllers dos de-paras', () => {
   const reflector = new Reflector();
 
+  // Os exames fora do padrão ficam na tela Exames (aba própria), com a permissão dela.
   it.each([
-    [DeParaPrioridadesController, 'catalogo/de-para/prioridades'],
-    [DeParaEspecialidadesController, 'catalogo/de-para/especialidades'],
-    [DeParaValoresExameController, 'catalogo/de-para/valores-exame'],
-    [SufixosClienteController, 'catalogo/de-para/sufixos-cliente'],
-  ])('%o fica em %s; ler exige de-para.ver e mudar de-para.editar', (Controller, rota) => {
+    [DeParaPrioridadesController, 'catalogo/de-para/prioridades', 'de-para'],
+    [DeParaEspecialidadesController, 'catalogo/de-para/especialidades', 'de-para'],
+    [DeParaValoresExameController, 'catalogo/de-para/valores-exame', 'exames'],
+    [SufixosClienteController, 'catalogo/de-para/sufixos-cliente', 'de-para'],
+  ])('%o fica em %s; ler exige %s.ver e mudar %s.editar', (Controller, rota, tela) => {
     expect(reflector.get(PATH_METADATA, Controller)).toBe(rota);
     const exigidas = (m: string) =>
       reflector.get(PERMISSOES_EXIGIDAS, (Controller.prototype as never)[m]);
-    expect([exigidas('listar'), exigidas('obter')]).toEqual([['de-para.ver'], ['de-para.ver']]);
+    expect([exigidas('listar'), exigidas('obter')]).toEqual([[`${tela}.ver`], [`${tela}.ver`]]);
     expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
-      ['de-para.editar'],
-      ['de-para.editar'],
-      ['de-para.editar'],
+      [`${tela}.editar`],
+      [`${tela}.editar`],
+      [`${tela}.editar`],
     ]);
   });
 });
