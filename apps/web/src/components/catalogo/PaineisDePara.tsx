@@ -3,8 +3,6 @@ import { z } from 'zod';
 
 import type { DeParaEspecialidadeDto } from '../../gen/types/DeParaEspecialidadeDto';
 import type { DeParaEspecialidadeItemDto } from '../../gen/types/DeParaEspecialidadeItemDto';
-import type { DeParaPrioridadeDto } from '../../gen/types/DeParaPrioridadeDto';
-import type { DeParaPrioridadeItemDto } from '../../gen/types/DeParaPrioridadeItemDto';
 import type { SufixoDto } from '../../gen/types/SufixoDto';
 import type { SufixoItemDto } from '../../gen/types/SufixoItemDto';
 import { Alerta } from '../alerta/Alerta';
@@ -42,146 +40,38 @@ function excluirDePara(
     : undefined;
 }
 
-export function PainelDeParaPrioridade({
+/**
+ * Valor que chega no campo especialidade mas não é especialidade (ex.: "CT", "ONCOLÓGICO"): não tem
+ * forma certa para apontar, então fica fora do painel das especialidades. A especialidade vem do
+ * exame do laudo.
+ */
+export function PainelNaoEspecialidade({
   item,
-  prioridades,
   podeEditar,
   onSalvar,
   onExcluir,
   onFechar,
-}: Base<DeParaPrioridadeItemDto, DeParaPrioridadeDto> & {
-  prioridades: { id: string; nome: string }[];
-}) {
+}: Base<DeParaEspecialidadeItemDto, DeParaEspecialidadeDto>) {
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
     defaultValues: {
       origem: item?.origem ?? '',
-      prioridadeId: item?.prioridadeId ?? '',
-      ativo: item?.ativo ?? true,
-    },
-    validators: {
-      onSubmit: z.object({
-        origem: textoObrigatorio('Informe o valor como chega da MobileMed.'),
-        prioridadeId: z.string().min(1, 'Escolha a prioridade.'),
-        ativo: z.boolean(),
-      }),
-    },
-    onSubmit: ({ value }) => tentar(() => onSalvar({ ...value, origem: value.origem.trim() })),
-  });
-
-  return (
-    <PainelLateral titulo={item ? item.origem : 'Novo de-para de prioridade'} onFechar={onFechar}>
-      <form
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        className="flex flex-col gap-4 p-4"
-      >
-        {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
-          <form.AppField name="origem">
-            {(field) => (
-              <field.TextField
-                label="Valor que chega"
-                placeholder="Ex.: ELETIVO"
-                description="Exatamente como vem no arquivo da MobileMed."
-                autoComplete="off"
-                required
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="prioridadeId">
-            {(field) => (
-              <field.SelectField
-                label="Prioridade"
-                placeholder="Escolha a prioridade"
-                required
-                opcoes={prioridades.map((p) => ({ valor: p.id, rotulo: p.nome }))}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="ativo">
-            {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
-          </form.AppField>
-        </Fieldset.Root>
-        {podeEditar && (
-          <form.AppForm>
-            <RodapePainel
-              rotuloCriar="Criar de-para"
-              editando={Boolean(item)}
-              excluir={item ? excluirDePara(item.origem, onExcluir, tentar) : undefined}
-              onCancelar={onFechar}
-            />
-          </form.AppForm>
-        )}
-      </form>
-    </PainelLateral>
-  );
-}
-
-const TIPOS = [
-  {
-    valor: 'normalizacao',
-    rotulo: 'Grafia de especialidade',
-    ajuda: 'O valor é outra forma de escrever uma especialidade (MAMO → MAMA).',
-  },
-  {
-    valor: 'regiao_anatomica',
-    rotulo: 'Região anatômica',
-    ajuda:
-      'O valor é uma região do corpo que decide a especialidade de preço (JOELHO → MUSCULO ESQUELETICO).',
-  },
-  {
-    valor: 'invalida',
-    rotulo: 'Não é especialidade',
-    ajuda:
-      'O valor chega no campo especialidade mas não é uma (RX, CT): a especialidade vem do cadastro do exame.',
-  },
-] as const;
-
-type Tipo = (typeof TIPOS)[number]['valor'];
-
-export function PainelDeParaEspecialidade({
-  item,
-  especialidades,
-  podeEditar,
-  onSalvar,
-  onExcluir,
-  onFechar,
-}: Base<DeParaEspecialidadeItemDto, DeParaEspecialidadeDto> & {
-  especialidades: { id: string; nome: string }[];
-}) {
-  const { erro, tentar } = useErroDoPainel();
-  const form = useAppForm({
-    defaultValues: {
-      tipo: (item?.tipo ?? 'normalizacao') as Tipo,
-      origem: item?.origem ?? '',
-      especialidadeId: item?.especialidadeId ?? '',
       ativo: item?.ativo ?? true,
       observacoes: item?.observacoes ?? '',
     },
     validators: {
-      onSubmit: z
-        .object({
-          tipo: z.enum(['normalizacao', 'regiao_anatomica', 'invalida']),
-          origem: textoObrigatorio('Informe o valor como chega da MobileMed.'),
-          especialidadeId: z.string(),
-          ativo: z.boolean(),
-          observacoes: z.string(),
-        })
-        .refine((v) => v.tipo === 'invalida' || v.especialidadeId !== '', {
-          path: ['especialidadeId'],
-          message: 'Escolha a especialidade de destino.',
-        }),
+      onSubmit: z.object({
+        origem: textoObrigatorio('Informe o valor como chega da MobileMed.'),
+        ativo: z.boolean(),
+        observacoes: z.string(),
+      }),
     },
     onSubmit: ({ value }) =>
       tentar(() =>
         onSalvar({
-          tipo: value.tipo,
+          tipo: 'invalida',
           origem: value.origem.trim(),
-          especialidadeId: value.tipo === 'invalida' ? null : value.especialidadeId,
+          especialidadeId: null,
           ativo: value.ativo,
           observacoes: opcional(value.observacoes),
         }),
@@ -190,7 +80,7 @@ export function PainelDeParaEspecialidade({
 
   return (
     <PainelLateral
-      titulo={item ? item.origem : 'Novo de-para de especialidade'}
+      titulo={item ? item.origem : 'Novo valor que não é especialidade'}
       onFechar={onFechar}
     >
       <form
@@ -201,48 +91,23 @@ export function PainelDeParaEspecialidade({
         }}
         className="flex flex-col gap-4 p-4"
       >
+        <p className="text-muted-foreground">
+          Chega no campo especialidade mas não é especialidade: a importação ignora e usa a
+          especialidade do exame.
+        </p>
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
-          <form.Subscribe selector={(estado) => estado.values.tipo}>
-            {(tipo) => (
-              <>
-                <form.AppField name="tipo">
-                  {(field) => (
-                    <field.SelectField
-                      label="Tipo"
-                      placeholder="Escolha o tipo"
-                      required
-                      description={TIPOS.find((t) => t.valor === tipo)?.ajuda}
-                      opcoes={TIPOS.map((t) => ({ valor: t.valor, rotulo: t.rotulo }))}
-                    />
-                  )}
-                </form.AppField>
-                <form.AppField name="origem">
-                  {(field) => (
-                    <field.TextField
-                      label="Valor que chega"
-                      placeholder={tipo === 'regiao_anatomica' ? 'Ex.: JOELHO' : 'Ex.: MAMO'}
-                      description="Comparado em maiúsculas; na região anatômica, também sem acento."
-                      autoComplete="off"
-                      required
-                    />
-                  )}
-                </form.AppField>
-                {tipo !== 'invalida' && (
-                  <form.AppField name="especialidadeId">
-                    {(field) => (
-                      <field.SelectField
-                        label="Especialidade"
-                        placeholder="Escolha a especialidade"
-                        required
-                        opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome }))}
-                      />
-                    )}
-                  </form.AppField>
-                )}
-              </>
+          <form.AppField name="origem">
+            {(field) => (
+              <field.TextField
+                label="Valor que chega"
+                placeholder="Ex.: CT"
+                description="Comparado em maiúsculas."
+                autoComplete="off"
+                required
+              />
             )}
-          </form.Subscribe>
+          </form.AppField>
           <form.AppField name="observacoes">
             {(field) => (
               <field.TextAreaField
@@ -258,7 +123,7 @@ export function PainelDeParaEspecialidade({
         {podeEditar && (
           <form.AppForm>
             <RodapePainel
-              rotuloCriar="Criar de-para"
+              rotuloCriar="Criar"
               editando={Boolean(item)}
               excluir={item ? excluirDePara(item.origem, onExcluir, tentar) : undefined}
               onCancelar={onFechar}

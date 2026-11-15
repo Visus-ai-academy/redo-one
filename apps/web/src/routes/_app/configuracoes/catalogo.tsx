@@ -14,12 +14,20 @@ import {
   type PaginaDaLista,
 } from '../../../components/catalogo/listas';
 import { PainelItemLista } from '../../../components/catalogo/PainelItemLista';
+import { type Variacao, VariacoesForma } from '../../../components/catalogo/VariacoesForma';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
+import { CamposCarregando } from '../../../components/skeleton/CamposCarregando';
+import { deParaEspecialidadesControllerCriar } from '../../../gen/clients/deParaEspecialidadesControllerCriar';
+import { deParaEspecialidadesControllerExcluir } from '../../../gen/clients/deParaEspecialidadesControllerExcluir';
+import { deParaPrioridadesControllerCriar } from '../../../gen/clients/deParaPrioridadesControllerCriar';
+import { deParaPrioridadesControllerExcluir } from '../../../gen/clients/deParaPrioridadesControllerExcluir';
+import { deParaEspecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaEspecialidadesControllerListar';
+import { deParaPrioridadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerListar';
 import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { invalidarCatalogo } from '../../../lib/catalogo';
 import { pode } from '../../../lib/permissoes';
@@ -125,6 +133,15 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
         header: () => <span className="block text-right">Ordem</span>,
         cell: (info) => <span className="block text-right">{info.getValue()}</span>,
       }),
+      ...(aba === 'prioridades' || aba === 'especialidades'
+        ? [
+            coluna.accessor((i) => (i as { totalVariacoes?: number }).totalVariacoes ?? 0, {
+              id: 'variacoes',
+              header: () => <span className="block text-right">Variações</span>,
+              cell: (info) => <span className="block text-right">{info.getValue()}</span>,
+            }),
+          ]
+        : []),
       coluna.accessor('ativo', {
         header: 'Situação',
         cell: (info) =>
@@ -135,7 +152,7 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
           ),
       }),
     ],
-    [lista, abrir],
+    [lista, abrir, aba],
   );
 
   return (
@@ -307,6 +324,86 @@ function ConteudoDoPainel({
             }
           : undefined
       }
+    >
+      {/* Prioridade e especialidade são a forma certa; as variações chegam da MobileMed. */}
+      {item && (aba === 'prioridades' || aba === 'especialidades') && (
+        <VariacoesDoItem aba={aba} id={item.id} forma={item.nome} />
+      )}
+    </PainelItemLista>
+  );
+}
+
+const TIPOS_VARIACAO_ESPECIALIDADE = [
+  {
+    valor: 'normalizacao',
+    rotulo: 'Grafia da especialidade',
+    ajuda: 'Outra forma de escrever a especialidade (ex.: MAMO).',
+  },
+  {
+    valor: 'regiao_anatomica',
+    rotulo: 'Região anatômica',
+    ajuda: 'Parte do corpo que chega no campo especialidade (ex.: JOELHO); comparada sem acento.',
+  },
+];
+
+/** Variações da prioridade ou da especialidade (os de-paras que apontam para ela). */
+function VariacoesDoItem({
+  aba,
+  id,
+  forma,
+}: {
+  aba: 'prioridades' | 'especialidades';
+  id: string;
+  forma: string;
+}) {
+  const { sessao } = Route.useRouteContext();
+  const queryClient = useQueryClient();
+  const prioridade = aba === 'prioridades';
+  const consulta = useQuery({
+    ...((prioridade
+      ? deParaPrioridadesControllerListarQueryOptions({
+          query: { prioridadeId: id, porPagina: 100 },
+        })
+      : deParaEspecialidadesControllerListarQueryOptions({
+          query: { especialidadeId: id, porPagina: 100 },
+        })) as ReturnType<typeof deParaPrioridadesControllerListarQueryOptions>),
+    enabled: pode(sessao, 'de-para.ver'),
+  });
+  if (!pode(sessao, 'de-para.ver')) return null;
+  if (!consulta.data) return <CamposCarregando quantidade={2} />;
+
+  return (
+    <VariacoesForma
+      forma={forma}
+      variacoes={consulta.data.itens as unknown as Variacao[]}
+      tipos={prioridade ? undefined : TIPOS_VARIACAO_ESPECIALIDADE}
+      podeEditar={pode(sessao, 'de-para.editar')}
+      onAdicionar={async ({ origem, tipo }) => {
+        if (prioridade) {
+          await deParaPrioridadesControllerCriar({
+            body: { origem, prioridadeId: id, ativo: true },
+          }).unwrap();
+        } else {
+          await deParaEspecialidadesControllerCriar({
+            body: {
+              tipo: (tipo ?? 'normalizacao') as 'normalizacao' | 'regiao_anatomica',
+              origem,
+              especialidadeId: id,
+              ativo: true,
+              observacoes: null,
+            },
+          }).unwrap();
+        }
+        await invalidarCatalogo(queryClient);
+      }}
+      onRemover={async (variacaoId) => {
+        if (prioridade) {
+          await deParaPrioridadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
+        } else {
+          await deParaEspecialidadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
+        }
+        await invalidarCatalogo(queryClient);
+      }}
     />
   );
 }

@@ -4,52 +4,24 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { escolherOpcao } from '../../test/select';
-import { PainelDeParaEspecialidade, PainelDeParaPrioridade, PainelSufixo } from './PaineisDePara';
+import { PainelNaoEspecialidade, PainelSufixo } from './PaineisDePara';
 
 const comConsultas = (ui: ReactNode) =>
   render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
 const base = { podeEditar: true, onFechar: vi.fn() };
 
 describe('painéis dos de-paras', () => {
-  it('prioridade: origem e prioridade de destino', async () => {
+  it('não é especialidade: só o valor que chega, sem destino', async () => {
     const onSalvar = vi.fn(async () => undefined);
-    comConsultas(
-      <PainelDeParaPrioridade
-        {...base}
-        prioridades={[{ id: 'p-1', nome: 'ROTINA' }]}
-        onSalvar={onSalvar}
-      />,
-    );
+    comConsultas(<PainelNaoEspecialidade {...base} onSalvar={onSalvar} />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: 'Valor que chega' }), 'ELETIVO');
-    await escolherOpcao('Prioridade', 'ROTINA');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar de-para' }));
-
-    expect(onSalvar).toHaveBeenCalledWith({ origem: 'ELETIVO', prioridadeId: 'p-1', ativo: true });
-  });
-
-  it('especialidade: inválida não tem destino; as outras exigem', async () => {
-    const onSalvar = vi.fn(async () => undefined);
-    comConsultas(
-      <PainelDeParaEspecialidade
-        {...base}
-        especialidades={[{ id: 'e-1', nome: 'MAMA' }]}
-        onSalvar={onSalvar}
-      />,
-    );
-
-    await userEvent.type(screen.getByRole('textbox', { name: 'Valor que chega' }), 'MAMO');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar de-para' }));
-    expect(await screen.findByText('Escolha a especialidade de destino.')).toBeInTheDocument();
-
-    await escolherOpcao('Tipo', 'Não é especialidade');
     expect(screen.queryByRole('combobox', { name: 'Especialidade' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar de-para' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Valor que chega' }), 'ONCOLÓGICO');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
 
     expect(onSalvar).toHaveBeenCalledWith({
       tipo: 'invalida',
-      origem: 'MAMO',
+      origem: 'ONCOLÓGICO',
       especialidadeId: null,
       ativo: true,
       observacoes: null,
@@ -68,19 +40,19 @@ describe('painéis dos de-paras', () => {
 
   it('sem permissão de editar, os campos ficam desabilitados', () => {
     comConsultas(
-      <PainelDeParaPrioridade
+      <PainelNaoEspecialidade
         podeEditar={false}
         onFechar={vi.fn()}
         item={
           {
             id: 'd-1',
-            origem: 'ELETIVO',
-            prioridadeId: 'p-1',
-            prioridade: 'ROTINA',
+            tipo: 'invalida',
+            origem: 'CT',
+            especialidadeId: null,
             ativo: true,
+            observacoes: null,
           } as never
         }
-        prioridades={[{ id: 'p-1', nome: 'ROTINA' }]}
         onSalvar={vi.fn()}
       />,
     );

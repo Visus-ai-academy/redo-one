@@ -5,11 +5,7 @@ import { z } from 'zod';
 
 import { Abas } from '../../../components/abas/Abas';
 import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
-import {
-  PainelDeParaEspecialidade,
-  PainelDeParaPrioridade,
-  PainelSufixo,
-} from '../../../components/catalogo/PaineisDePara';
+import { PainelNaoEspecialidade, PainelSufixo } from '../../../components/catalogo/PaineisDePara';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import { SemPermissao } from '../../../components/estado/estados';
@@ -19,44 +15,33 @@ import { Select } from '../../../components/select/Select';
 import { deParaEspecialidadesControllerAtualizar } from '../../../gen/clients/deParaEspecialidadesControllerAtualizar';
 import { deParaEspecialidadesControllerCriar } from '../../../gen/clients/deParaEspecialidadesControllerCriar';
 import { deParaEspecialidadesControllerExcluir } from '../../../gen/clients/deParaEspecialidadesControllerExcluir';
-import { deParaPrioridadesControllerAtualizar } from '../../../gen/clients/deParaPrioridadesControllerAtualizar';
-import { deParaPrioridadesControllerCriar } from '../../../gen/clients/deParaPrioridadesControllerCriar';
-import { deParaPrioridadesControllerExcluir } from '../../../gen/clients/deParaPrioridadesControllerExcluir';
 import { sufixosClienteControllerAtualizar } from '../../../gen/clients/sufixosClienteControllerAtualizar';
 import { sufixosClienteControllerCriar } from '../../../gen/clients/sufixosClienteControllerCriar';
 import { sufixosClienteControllerExcluir } from '../../../gen/clients/sufixosClienteControllerExcluir';
 import { deParaEspecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaEspecialidadesControllerListar';
 import { deParaEspecialidadesControllerObterQueryOptions } from '../../../gen/hooks/useDeParaEspecialidadesControllerObter';
-import { deParaPrioridadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerListar';
-import { deParaPrioridadesControllerObterQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerObter';
-import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { sufixosClienteControllerListarQueryOptions } from '../../../gen/hooks/useSufixosClienteControllerListar';
 import { sufixosClienteControllerObterQueryOptions } from '../../../gen/hooks/useSufixosClienteControllerObter';
 import type { DeParaEspecialidadeItemDto } from '../../../gen/types/DeParaEspecialidadeItemDto';
-import type { DeParaPrioridadeItemDto } from '../../../gen/types/DeParaPrioridadeItemDto';
 import type { SufixoItemDto } from '../../../gen/types/SufixoItemDto';
 import { invalidarCatalogo } from '../../../lib/catalogo';
 import { pode } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
+/**
+ * Só o que não tem forma certa para apontar. As variações de prioridade e de especialidade ficam
+ * no painel de cada uma, em Classificação dos exames.
+ */
 const ABAS = [
-  { valor: 'prioridades', rotulo: 'Prioridade' },
-  { valor: 'especialidades', rotulo: 'Especialidade' },
+  { valor: 'nao-especialidade', rotulo: 'Não é especialidade' },
   { valor: 'sufixos', rotulo: 'Sufixos de cliente' },
 ] as const;
 type Aba = (typeof ABAS)[number]['valor'];
 
-const TIPOS_ESPECIALIDADE = {
-  normalizacao: 'Grafia de especialidade',
-  regiao_anatomica: 'Região anatômica',
-  invalida: 'Não é especialidade',
-} as const;
-
 const buscaSchema = z.object({
-  aba: z.enum(['prioridades', 'especialidades', 'sufixos']).optional().catch(undefined),
+  aba: z.enum(['nao-especialidade', 'sufixos']).optional().catch(undefined),
   busca: z.string().trim().min(1).optional().catch(undefined),
   situacao: z.enum(['ativos', 'inativos']).optional().catch(undefined),
-  tipo: z.enum(['normalizacao', 'regiao_anatomica', 'invalida']).optional().catch(undefined),
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   id: z.uuid().optional().catch(undefined),
   novo: z.literal(1).optional().catch(undefined),
@@ -71,15 +56,16 @@ const filtro = (b: Busca) => ({
 });
 
 const obterPorAba = {
-  prioridades: (id: string) => deParaPrioridadesControllerObterQueryOptions({ path: { id } }),
-  especialidades: (id: string) => deParaEspecialidadesControllerObterQueryOptions({ path: { id } }),
+  'nao-especialidade': (id: string) =>
+    deParaEspecialidadesControllerObterQueryOptions({ path: { id } }),
   sufixos: (id: string) => sufixosClienteControllerObterQueryOptions({ path: { id } }),
 };
 
 const consultas = {
-  prioridades: (b: Busca) => deParaPrioridadesControllerListarQueryOptions({ query: filtro(b) }),
-  especialidades: (b: Busca) =>
-    deParaEspecialidadesControllerListarQueryOptions({ query: { ...filtro(b), tipo: b.tipo } }),
+  'nao-especialidade': (b: Busca) =>
+    deParaEspecialidadesControllerListarQueryOptions({
+      query: { ...filtro(b), tipo: 'invalida' },
+    }),
   sufixos: (b: Busca) => sufixosClienteControllerListarQueryOptions({ query: filtro(b) }),
 };
 
@@ -88,10 +74,9 @@ export const Route = createFileRoute('/_app/configuracoes/de-paras')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     if (!pode(context.sessao, 'de-para.ver')) return;
-    await Promise.all([
-      context.queryClient.ensureQueryData(consultas[deps.aba ?? 'prioridades'](deps) as never),
-      context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
-    ]);
+    await context.queryClient.ensureQueryData(
+      consultas[deps.aba ?? 'nao-especialidade'](deps) as never,
+    );
   },
   head: () => ({ meta: [{ title: 'De-paras | One' }] }),
   component: PaginaDeParas,
@@ -116,7 +101,6 @@ const destino = (nome: string | null | undefined, vazio = '—') => (
   <span className={nome ? undefined : 'text-muted-foreground'}>{nome ?? vazio}</span>
 );
 
-const cPri = createDataTableColumnHelper<DeParaPrioridadeItemDto>();
 const cEsp = createDataTableColumnHelper<DeParaEspecialidadeItemDto>();
 const cSuf = createDataTableColumnHelper<SufixoItemDto>();
 
@@ -125,9 +109,9 @@ type Item = { id: string };
 function DeParas({ podeEditar }: { podeEditar: boolean }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const aba: Aba = busca.aba ?? 'prioridades';
+  const aba: Aba = busca.aba ?? 'nao-especialidade';
   const { data } = useSuspenseQuery(
-    consultas[aba](busca) as ReturnType<typeof consultas.prioridades>,
+    consultas[aba](busca) as ReturnType<(typeof consultas)['nao-especialidade']>,
   );
   const pagina = data as unknown as {
     itens: Item[];
@@ -148,21 +132,7 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
 
   const colunas = useMemo(() => {
     switch (aba) {
-      case 'prioridades':
-        return [
-          cPri.accessor('origem', {
-            header: 'Valor que chega',
-            cell: (i) => (
-              <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
-            ),
-          }),
-          cPri.accessor('destinoNome', {
-            header: 'Prioridade',
-            cell: (i) => destino(i.getValue()),
-          }),
-          cPri.accessor('ativo', { header: 'Situação', cell: (i) => situacao(i.getValue()) }),
-        ];
-      case 'especialidades':
+      case 'nao-especialidade':
         return [
           cEsp.accessor('origem', {
             header: 'Valor que chega',
@@ -170,10 +140,9 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
               <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
             ),
           }),
-          cEsp.accessor('tipo', { header: 'Tipo', cell: (i) => TIPOS_ESPECIALIDADE[i.getValue()] }),
-          cEsp.accessor('destinoNome', {
-            header: 'Especialidade',
-            cell: (i) => destino(i.getValue(), 'Vem do exame'),
+          cEsp.accessor('observacoes', {
+            header: 'Observações',
+            cell: (i) => destino(i.getValue()),
           }),
           cEsp.accessor('ativo', { header: 'Situação', cell: (i) => situacao(i.getValue()) }),
         ];
@@ -210,7 +179,7 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
       novo={
         podeEditar
           ? {
-              rotulo: sufixos ? 'Novo sufixo' : 'Novo de-para',
+              rotulo: sufixos ? 'Novo sufixo' : 'Novo valor',
               onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
             }
           : undefined
@@ -220,40 +189,23 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
         rotulo: 'Buscar de-paras',
         placeholder: sufixos ? 'Sufixo' : 'Valor que chega',
       }}
-      temFiltro={busca.situacao !== undefined || busca.tipo !== undefined}
+      temFiltro={busca.situacao !== undefined}
       filtros={
-        <>
-          {aba === 'especialidades' && (
-            <Select
-              aria-label="Filtrar por tipo"
-              value={busca.tipo ?? ''}
-              onValueChange={(v) => filtrar({ tipo: (v || undefined) as Busca['tipo'] })}
-              opcoes={[
-                { valor: '', rotulo: 'Todos os tipos' },
-                ...Object.entries(TIPOS_ESPECIALIDADE).map(([valor, rotulo]) => ({
-                  valor,
-                  rotulo,
-                })),
-              ]}
-              className="flex-[1_1_180px] md:flex-[0_1_220px]"
-            />
-          )}
-          <Select
-            aria-label="Filtrar por situação"
-            value={busca.situacao ?? ''}
-            onValueChange={(v) => filtrar({ situacao: (v || undefined) as Busca['situacao'] })}
-            opcoes={[
-              { valor: '', rotulo: 'Todas as situações' },
-              { valor: 'ativos', rotulo: 'Ativos' },
-              { valor: 'inativos', rotulo: 'Inativos' },
-            ]}
-            className="flex-[1_1_180px] md:flex-[0_1_200px]"
-          />
-        </>
+        <Select
+          aria-label="Filtrar por situação"
+          value={busca.situacao ?? ''}
+          onValueChange={(v) => filtrar({ situacao: (v || undefined) as Busca['situacao'] })}
+          opcoes={[
+            { valor: '', rotulo: 'Todas as situações' },
+            { valor: 'ativos', rotulo: 'Ativos' },
+            { valor: 'inativos', rotulo: 'Inativos' },
+          ]}
+          className="flex-[1_1_180px] md:flex-[0_1_200px]"
+        />
       }
       // biome-ignore lint/suspicious/noExplicitAny: cada aba tem o tipo de linha dela.
       colunas={colunas as any}
-      ocultarComPainel={['tipo', 'observacoes']}
+      ocultarComPainel={['observacoes']}
       itens={pagina.itens}
       getRowId={(i) => i.id}
       selecionadoId={busca.id}
@@ -262,11 +214,11 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
       porPagina={pagina.porPagina}
       total={pagina.total}
       vazio={{
-        titulo: sufixos ? 'Nenhum sufixo cadastrado.' : 'Nenhum de-para cadastrado.',
+        titulo: sufixos ? 'Nenhum sufixo cadastrado.' : 'Nenhum valor cadastrado.',
         texto: 'A importação usa estes cadastros para traduzir o que chega da MobileMed.',
       }}
       onFiltrar={filtrar}
-      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined, tipo: undefined })}
+      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
       painel={
         busca.id || (busca.novo && podeEditar) ? (
@@ -318,11 +270,10 @@ function Painel({
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
-  const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
   const daPagina = id ? itens.find((i) => i.id === id) : undefined;
   // Fora da página aberta (recém-criado, link direto): busca pelo id.
   const consulta = useQuery({
-    ...(obterPorAba[aba](id ?? '') as ReturnType<typeof obterPorAba.prioridades>),
+    ...(obterPorAba[aba](id ?? '') as ReturnType<(typeof obterPorAba)['nao-especialidade']>),
     enabled: Boolean(id) && !daPagina,
   });
   const item = (daPagina ?? consulta.data) as Item | undefined;
@@ -347,33 +298,11 @@ function Painel({
   const comum = { podeEditar, onFechar: fechar };
 
   switch (aba) {
-    case 'prioridades':
+    case 'nao-especialidade':
       return (
-        <PainelDeParaPrioridade
-          {...comum}
-          item={item as DeParaPrioridadeItemDto | undefined}
-          prioridades={opcoes.prioridades}
-          onSalvar={async (body) =>
-            salvo(
-              await gravar(
-                id,
-                body,
-                deParaPrioridadesControllerCriar,
-                deParaPrioridadesControllerAtualizar,
-              ),
-            )
-          }
-          onExcluir={
-            id ? () => excluir(deParaPrioridadesControllerExcluir, id, excluido) : undefined
-          }
-        />
-      );
-    case 'especialidades':
-      return (
-        <PainelDeParaEspecialidade
+        <PainelNaoEspecialidade
           {...comum}
           item={item as DeParaEspecialidadeItemDto | undefined}
-          especialidades={opcoes.especialidades}
           onSalvar={async (body) =>
             salvo(
               await gravar(

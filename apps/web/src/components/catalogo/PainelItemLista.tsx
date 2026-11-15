@@ -1,5 +1,5 @@
 import { Button } from '@base-ui/react/button';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { z } from 'zod';
 
 import { Alerta } from '../alerta/Alerta';
@@ -44,6 +44,8 @@ export type PainelItemListaProps = {
   onSalvar: (dados: DadosItemLista) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onFechar: () => void;
+  /** Seções abaixo do cadastro (ex.: variações da prioridade). */
+  children?: ReactNode;
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -78,6 +80,7 @@ export function PainelItemLista({
   onSalvar,
   onExcluir,
   onFechar,
+  children,
 }: PainelItemListaProps) {
   const [erro, setErro] = useState<string>();
   const novo = rotulos.genero === 'f' ? 'Nova' : 'Novo';
@@ -134,6 +137,7 @@ export function PainelItemLista({
           )}
           <CampoSomenteLeitura label="Situação" value={item.ativo ? 'Ativo' : 'Inativo'} />
         </div>
+        {children}
       </PainelLateral>
     );
   }
@@ -258,6 +262,7 @@ export function PainelItemLista({
           </div>
         </form.AppForm>
       </form>
+      {children}
     </PainelLateral>
   );
 }
