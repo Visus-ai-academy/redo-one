@@ -68,7 +68,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 **Tabelas**
 - Cabeçalho 12–13px, peso 500, cor secundária, sentence case. Texto à esquerda, números à direita, datas em formato curto (`12/11 22:31`, `Hoje, 09:12`).
 - Sem zebra; divisória de 1px entre linhas; hover sutil; linha selecionada com fundo do acento bem claro.
-- Ações da linha: a linha inteira abre o detalhe; ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
+- Ações da linha: a linha inteira abre o detalhe (clique em qualquer coluna, com cursor de mãozinha; o nome continua sendo o botão para o teclado); ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
 - Filtros acima da tabela, na mesma faixa da busca; contagem e paginação no rodapé.
 - Lista que é o trabalho principal da tela cabe na altura da janela no computador: a tabela rola por dentro, com o cabeçalho fixo, e o rodapé com contagem e paginação fica sempre à vista; a página em si não rola. No celular, a página rola normalmente.
 
@@ -106,6 +106,7 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 
 **Estados**
 - Todo controle: padrão, hover, foco visível (anel de 2px na cor do acento), ativo, desabilitado.
+- **Cursor diz o que dá para fazer:** tudo que se clica (botão, link, aba, opção, linha que abre, caixa de marcar) mostra a mãozinha; campo de texto mostra o cursor de texto; desabilitado mostra o proibido. Nunca seta em algo clicável.
 - Todo bloco de dados: carregando (skeleton com o formato do conteúdo, não spinner no meio), vazio (diz o que fazer e oferece a ação), erro (o que houve + como tentar de novo), sem permissão.
 - **Nunca deixar a pessoa sem resposta.** Todo clique e toda espera mostram algo em até ~100ms; nada de tela, painel ou área em branco (`return null` enquanto carrega) nem de clique que parece não ter feito nada.
   - Carregando dados (página, painel, aba, lista, gráfico): **skeleton** com o formato do conteúdo que vem (linhas da tabela, campos do formulário, título do painel), na mesma posição e tamanho, para nada pular quando os dados chegam. O que já se sabe aparece na hora (título, abas, botão de fechar); só o que falta vira skeleton.
