@@ -193,6 +193,7 @@ function Clientes({ podeEditar }: { podeEditar: boolean }) {
       itens={pagina.itens}
       getRowId={(c) => c.id}
       selecionadoId={busca.id}
+      onAbrir={abrir}
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}

@@ -243,6 +243,7 @@ function Exames({ podeEditar }: { podeEditar: boolean }) {
       itens={pagina.itens}
       getRowId={(e) => e.id}
       selecionadoId={busca.id}
+      onAbrir={abrir}
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -429,6 +430,7 @@ function ForaDoPadrao({ podeEditar }: { podeEditar: boolean }) {
       itens={pagina.itens}
       getRowId={(i) => i.id}
       selecionadoId={busca.id}
+      onAbrir={abrir}
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}

@@ -13,9 +13,17 @@ type DataTableProps<TData extends RowData> = {
   getRowId?: (row: TData) => string;
   /** Linha aberta no painel de detalhe: fundo do acento suave e `aria-selected`. */
   selectedRowId?: string;
+  /**
+   * Abre o registro ao clicar em qualquer ponto da linha (com cursor de clique). O teclado continua
+   * pelo controle da própria linha (ex.: o nome é um botão), que não dispara a linha de novo.
+   */
+  onRowClick?: (row: TData) => void;
   /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
   className?: string;
 };
+
+/** Clique que já é de um controle dentro da linha (botão, link, campo, caixa de marcar). */
+const CONTROLES = 'a, button, input, select, textarea, label, [role="button"], [role="checkbox"]';
 
 export function DataTable<TData extends RowData>({
   columns,
@@ -24,6 +32,7 @@ export function DataTable<TData extends RowData>({
   emptyMessage = 'Nenhum registro encontrado.',
   getRowId,
   selectedRowId,
+  onRowClick,
   className,
 }: DataTableProps<TData>) {
   const table = useTable({
@@ -72,7 +81,21 @@ export function DataTable<TData extends RowData>({
               <tr
                 key={row.id}
                 aria-selected={row.id === selectedRowId || undefined}
-                className="hover:bg-muted aria-selected:bg-accent border-t"
+                onClick={
+                  onRowClick
+                    ? (e) => {
+                        const alvo = e.target as HTMLElement;
+                        if (alvo.closest(CONTROLES) !== null) return;
+                        // Quem está selecionando texto da linha não quer abrir o registro.
+                        if (window.getSelection()?.toString()) return;
+                        onRowClick(row.original);
+                      }
+                    : undefined
+                }
+                className={cn(
+                  'hover:bg-muted aria-selected:bg-accent border-t',
+                  onRowClick && 'cursor-pointer',
+                )}
               >
                 {row.getAllCells().map((cell) => (
                   <td key={cell.id} className="h-11 px-4 py-2 align-middle">

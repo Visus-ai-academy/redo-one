@@ -257,6 +257,7 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
       itens={pagina.itens}
       getRowId={(i) => i.id}
       selecionadoId={busca.id}
+      onAbrir={abrir}
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}

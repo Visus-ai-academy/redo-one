@@ -34,6 +34,8 @@ type ListaCadastroProps<T extends RowData> = {
   getRowId: (item: T) => string;
   /** Item aberto no painel. */
   selecionadoId?: string;
+  /** Abre o item ao clicar em qualquer ponto da linha. */
+  onAbrir?: (id: string) => void;
   pagina: number;
   porPagina: number;
   total: number;
@@ -63,6 +65,7 @@ export function ListaCadastro<T extends RowData>({
   itens,
   getRowId,
   selecionadoId,
+  onAbrir,
   pagina,
   porPagina,
   total,
@@ -173,6 +176,7 @@ export function ListaCadastro<T extends RowData>({
               data={itens}
               getRowId={getRowId}
               selectedRowId={selecionadoId}
+              onRowClick={onAbrir && ((item: T) => onAbrir(getRowId(item)))}
               className="md:min-h-0 md:flex-1 md:overflow-y-auto"
             />
           )}

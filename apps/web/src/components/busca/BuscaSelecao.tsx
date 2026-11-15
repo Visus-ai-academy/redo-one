@@ -105,7 +105,7 @@ export function BuscaSelecao({
                 <Combobox.Item
                   key={opcao.valor}
                   value={opcao}
-                  className="data-[highlighted]:bg-muted flex h-9 cursor-default items-center justify-between gap-3 rounded-md px-2 outline-none"
+                  className="data-[highlighted]:bg-muted flex h-9 items-center justify-between gap-3 rounded-md px-2 outline-none"
                 >
                   <span className="truncate">{opcao.rotulo}</span>
                   {opcao.detalhe && (

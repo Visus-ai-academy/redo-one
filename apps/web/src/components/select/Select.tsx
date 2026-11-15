@@ -84,7 +84,7 @@ export function Select({
                   key={opcao.valor}
                   value={opcao.valor}
                   disabled={opcao.desabilitada}
-                  className="data-[highlighted]:bg-muted data-[disabled]:text-subtle-foreground grid h-9 cursor-default grid-cols-[16px_1fr] items-center gap-2 rounded-md pr-3 pl-2 outline-none data-[disabled]:cursor-not-allowed"
+                  className="data-[highlighted]:bg-muted data-[disabled]:text-subtle-foreground grid h-9 grid-cols-[16px_1fr] items-center gap-2 rounded-md pr-3 pl-2 outline-none data-[disabled]:cursor-not-allowed"
                 >
                   <BaseSelect.ItemIndicator className="text-primary col-start-1 flex">
                     <Check size={16} aria-hidden />

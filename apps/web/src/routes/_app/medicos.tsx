@@ -196,6 +196,7 @@ function Medicos() {
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
+      onAbrir={abrir}
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}

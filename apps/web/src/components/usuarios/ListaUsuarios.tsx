@@ -221,6 +221,7 @@ export function ListaUsuarios({
               data={pagina.itens}
               getRowId={(usuario) => usuario.id}
               selectedRowId={selecionadoId}
+              onRowClick={onAbrir && ((usuario) => onAbrir(usuario.id))}
               className="md:min-h-0 md:flex-1 md:overflow-y-auto"
             />
           )}

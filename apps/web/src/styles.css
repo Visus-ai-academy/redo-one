@@ -161,6 +161,36 @@
     position: relative;
   }
 
+  /*
+   * Cursor diz o que dá para fazer. O Tailwind 4 deixa botão com a seta: tudo que se clica (botão,
+   * aba, opção, caixa de marcar, rótulo de caixa) mostra a mãozinha; desabilitado mostra o proibido.
+   */
+  button,
+  summary,
+  select,
+  [role="button"],
+  [role="tab"],
+  [role="option"],
+  [role="menuitem"],
+  [role="checkbox"],
+  [role="switch"],
+  [role="radio"],
+  label:has(button, input[type="checkbox"], input[type="radio"]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled,
+  [role="button"][aria-disabled="true"],
+  [role="option"][data-disabled],
+  [role="tab"][data-disabled],
+  [role="checkbox"][data-disabled],
+  [role="switch"][data-disabled],
+  [role="radio"][data-disabled] {
+    cursor: not-allowed;
+  }
+
   /* Números que mudam (tabelas, valores, datas, contadores) não "dançam". */
   table,
   time,

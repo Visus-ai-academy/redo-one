@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createDataTableColumnHelper } from './columns';
 import { DataTable } from './DataTable';
@@ -52,5 +53,44 @@ describe('DataTable', () => {
     const [, ada, alan] = screen.getAllByRole('row');
     expect(alan).toHaveAttribute('aria-selected', 'true');
     expect(ada).not.toHaveAttribute('aria-selected');
+  });
+
+  it('com onRowClick, clicar em qualquer ponto da linha abre o registro, com cursor de clique', async () => {
+    const abrir = vi.fn();
+    const comBotao = helper.columns([
+      helper.accessor('name', {
+        header: 'Nome',
+        cell: (i) => (
+          <button type="button" onClick={() => abrir(`botão:${i.getValue()}`)}>
+            {i.getValue()}
+          </button>
+        ),
+      }),
+      helper.accessor('email', { header: 'E-mail' }),
+    ]);
+    render(
+      <DataTable
+        columns={comBotao}
+        data={[{ name: 'Ada', email: 'ada@example.com' }]}
+        getRowId={(u) => u.email}
+        onRowClick={(u) => abrir(`linha:${u.name}`)}
+      />,
+    );
+
+    const linha = screen.getByRole('row', { name: /Ada/ });
+    expect(linha).toHaveClass('cursor-pointer');
+    await userEvent.click(screen.getByRole('cell', { name: 'ada@example.com' }));
+    expect(abrir).toHaveBeenLastCalledWith('linha:Ada');
+
+    // O botão dentro da linha faz só o dele: não dispara a linha de novo.
+    abrir.mockClear();
+    await userEvent.click(screen.getByRole('button', { name: 'Ada' }));
+    expect(abrir.mock.calls).toEqual([['botão:Ada']]);
+  });
+
+  it('sem onRowClick, a linha não parece clicável', () => {
+    render(<DataTable columns={columns} data={[{ name: 'Ada', email: 'ada@example.com' }]} />);
+
+    expect(screen.getByRole('row', { name: /Ada/ })).not.toHaveClass('cursor-pointer');
   });
 });
