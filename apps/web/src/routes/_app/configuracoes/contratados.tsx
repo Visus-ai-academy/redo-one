@@ -75,7 +75,7 @@ function PaginaContratados() {
 }
 
 const coluna = createDataTableColumnHelper<ContratadoItemDto>();
-const OCULTAR_COM_PAINEL = ['cidade', 'contratadoRepasseNome'];
+const OCULTAR_COM_PAINEL = ['cidade', 'contratadoRepasseNome', 'cnpj'];
 
 function Contratados({ podeEditar }: { podeEditar: boolean }) {
   const busca = Route.useSearch();

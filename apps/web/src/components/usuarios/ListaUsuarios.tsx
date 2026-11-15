@@ -120,12 +120,6 @@ export function ListaUsuarios({
     [euId, referencia, onAbrir],
   );
 
-  // Com o painel aberto a lista estreita; o último acesso já aparece no painel.
-  const colunasVisiveis = useMemo(
-    () => (painel ? colunas.filter((c) => c.id !== 'ultimoAcessoEm') : colunas),
-    [colunas, painel],
-  );
-
   const temFiltro = Boolean(filtros.busca || filtros.papelId || filtros.situacao);
 
   return (
@@ -217,7 +211,9 @@ export function ListaUsuarios({
             </div>
           ) : (
             <DataTable
-              columns={colunasVisiveis}
+              columns={colunas}
+              // Com o painel aberto, saem se não couberem (o painel já mostra os três).
+              ocultaveis={painel ? ['ultimoAcessoEm', 'situacao', 'papel'] : undefined}
               data={pagina.itens}
               getRowId={(usuario) => usuario.id}
               selectedRowId={selecionadoId}

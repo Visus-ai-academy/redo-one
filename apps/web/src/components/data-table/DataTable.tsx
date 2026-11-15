@@ -1,4 +1,5 @@
 import { type ColumnDef, type RowData, useTable } from '@tanstack/react-table';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 import { cn } from '../../lib/cn';
 import { type DataTableFeatures, dataTableFeatures } from './columns';
@@ -18,6 +19,11 @@ type DataTableProps<TData extends RowData> = {
    * pelo controle da própria linha (ex.: o nome é um botão), que não dispara a linha de novo.
    */
   onRowClick?: (row: TData) => void;
+  /**
+   * Ids das colunas que podem sair quando a tabela não cabe (ex.: com o painel aberto), na ordem
+   * em que saem. Só saem as que precisam: com espaço, todas ficam.
+   */
+  ocultaveis?: string[];
   /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
   className?: string;
 };
@@ -33,8 +39,42 @@ export function DataTable<TData extends RowData>({
   getRowId,
   selectedRowId,
   onRowClick,
+  ocultaveis,
   className,
 }: DataTableProps<TData>) {
+  const caixa = useRef<HTMLDivElement>(null);
+  const ajusta = Boolean(ocultaveis?.length);
+  const chaveOcultaveis = ocultaveis?.join('|') ?? '';
+
+  // Medição direta, antes de pintar: mostra todas, depois esconde na ordem enquanto o conteúdo
+  // estoura a caixa. Sem colunas ocultáveis (painel fechado), todas voltam.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a lista entra pela chave.
+  const ajustar = useCallback(() => {
+    const el = caixa.current;
+    if (!el) return;
+    delete el.dataset.apertado;
+    for (const celula of el.querySelectorAll<HTMLElement>('[data-coluna][hidden]')) {
+      celula.hidden = false;
+    }
+    for (const id of ocultaveis ?? []) {
+      if (el.scrollWidth <= el.clientWidth) break;
+      for (const celula of el.querySelectorAll<HTMLElement>(`[data-coluna="${CSS.escape(id)}"]`)) {
+        celula.hidden = true;
+      }
+    }
+    // Sem mais coluna para tirar e ainda sem caber: o texto volta a quebrar linha.
+    if (el.scrollWidth > el.clientWidth) el.dataset.apertado = '';
+  }, [chaveOcultaveis]);
+  // A cada renderização (dados e colunas novos) e quando a caixa muda de largura (painel, janela).
+  useLayoutEffect(ajustar);
+  useEffect(() => {
+    const el = caixa.current;
+    if (!el || !ajusta || typeof ResizeObserver === 'undefined') return;
+    const observador = new ResizeObserver(() => ajustar());
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [ajusta, ajustar]);
+
   const table = useTable({
     features: dataTableFeatures,
     columns,
@@ -46,19 +86,26 @@ export function DataTable<TData extends RowData>({
   return (
     // Sem borda própria: a tabela fica dentro de um Painel (ou seção com borda), nunca cartão no cartão.
     // Rola na horizontal dentro da caixa no celular.
-    <div className={cn('w-full overflow-x-auto', className)}>
+    <div ref={caixa} className={cn('group/tabela w-full overflow-x-auto', className)}>
       <table className="w-full caption-bottom tabular-nums">
         {caption && <caption className="text-muted-foreground mt-4 text-[13px]">{caption}</caption>}
         <thead>
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
-              {group.headers.map((header) => (
+              {group.headers.map((header, i) => (
                 <th
                   key={header.id}
+                  data-coluna={header.column.id}
                   colSpan={header.colSpan}
                   scope="col"
                   // Fixo no topo quando a tabela rola por dentro do contêiner.
-                  className="bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]"
+                  className={cn(
+                    'bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]',
+                    ajusta &&
+                      (i === 0
+                        ? 'min-w-48'
+                        : 'whitespace-nowrap group-data-[apertado]/tabela:whitespace-normal'),
+                  )}
                 >
                   {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </th>
@@ -97,8 +144,19 @@ export function DataTable<TData extends RowData>({
                   onRowClick && 'cursor-pointer',
                 )}
               >
-                {row.getAllCells().map((cell) => (
-                  <td key={cell.id} className="h-11 px-4 py-2 align-middle">
+                {row.getAllCells().map((cell, i) => (
+                  <td
+                    key={cell.id}
+                    data-coluna={cell.column.id}
+                    // Medindo o que cabe: o nome quebra linha (com largura mínima); o resto não.
+                    className={cn(
+                      'h-11 px-4 py-2 align-middle',
+                      ajusta &&
+                        (i === 0
+                          ? 'min-w-48'
+                          : 'whitespace-nowrap group-data-[apertado]/tabela:whitespace-normal'),
+                    )}
+                  >
                     <table.FlexRender cell={cell} />
                   </td>
                 ))}

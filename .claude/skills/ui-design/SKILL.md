@@ -70,6 +70,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - Sem zebra; divisória de 1px entre linhas; hover sutil; linha selecionada com fundo do acento bem claro.
 - Ações da linha: a linha inteira abre o detalhe (clique em qualquer coluna, com cursor de mãozinha; o nome continua sendo o botão para o teclado); ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
 - Filtros acima da tabela, na mesma faixa da busca; contagem e paginação no rodapé.
+- Com o painel lateral aberto, a lista só perde coluna que não cabe: mede a largura e tira, na ordem, primeiro as secundárias escolhidas pela tela e depois as outras da direita para a esquerda; o nome nunca sai. Com espaço sobrando, todas ficam.
 - Lista que é o trabalho principal da tela cabe na altura da janela no computador: a tabela rola por dentro, com o cabeçalho fixo, e o rodapé com contagem e paginação fica sempre à vista; a página em si não rola. No celular, a página rola normalmente.
 
 **Formulários**

@@ -141,7 +141,7 @@ describe('ListaUsuarios', () => {
     expect(screen.getByRole('complementary', { name: 'Painel de teste' })).toBeInTheDocument();
   });
 
-  it('com o painel aberto, esconde o último acesso (o painel já mostra) para a lista caber', async () => {
+  it('com o painel aberto e espaço sobrando, o último acesso continua na lista', async () => {
     montar({ selecionadoId: 'u-maria', painel: <aside aria-label="Painel de teste" /> });
 
     const [cabecalho] = await screen.findAllByRole('row');
@@ -149,7 +149,7 @@ describe('ListaUsuarios', () => {
       within(cabecalho as HTMLElement)
         .getAllByRole('columnheader')
         .map((c) => c.textContent),
-    ).toEqual(['Nome', 'Papel', 'Situação']);
+    ).toEqual(['Nome', 'Papel', 'Situação', 'Último acesso']);
   });
 
   it('quem pode convidar tem o botão no cabeçalho', async () => {

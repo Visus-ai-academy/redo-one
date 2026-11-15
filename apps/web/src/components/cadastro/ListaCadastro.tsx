@@ -1,7 +1,7 @@
 import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
@@ -28,7 +28,10 @@ type ListaCadastroProps<T extends RowData> = {
   temFiltro?: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: o TValue de cada coluna varia; o helper garante a tipagem por coluna.
   colunas: ColumnDef<DataTableFeatures, T, any>[];
-  /** Ids das colunas que saem com o painel aberto (a lista estreita; o detalhe está no painel). */
+  /**
+   * Com o painel aberto a lista estreita: colunas que saem primeiro se não couberem (depois saem
+   * as outras, da direita para a esquerda). Com espaço, ficam todas.
+   */
   ocultarComPainel?: string[];
   itens: T[];
   getRowId: (item: T) => string;
@@ -91,10 +94,6 @@ export function ListaCadastro<T extends RowData>({
   useEffect(() => setTermo(busca.valor ?? ''), [busca.valor]);
 
   const filtrando = Boolean(busca.valor) || temFiltro;
-  const colunasVisiveis = useMemo(
-    () => (painel ? colunas.filter((c) => !ocultarComPainel.includes(idDaColuna(c))) : colunas),
-    [colunas, painel, ocultarComPainel],
-  );
 
   return (
     <div
@@ -172,7 +171,8 @@ export function ListaCadastro<T extends RowData>({
             </div>
           ) : (
             <DataTable
-              columns={colunasVisiveis}
+              columns={colunas}
+              ocultaveis={painel ? ordemDeSaida(colunas, ocultarComPainel) : undefined}
               data={itens}
               getRowId={getRowId}
               selectedRowId={selecionadoId}
@@ -192,9 +192,6 @@ export function ListaCadastro<T extends RowData>({
 }
 
 /** Coluna criada por chave (`accessor('cnpj')`) não tem `id` próprio: vale a chave. */
-function idDaColuna(coluna: { id?: string }) {
-  return coluna.id ?? (coluna as { accessorKey?: string }).accessorKey ?? '';
-}
 
 function BotaoNovo({ rotulo, onClick }: { rotulo: string; onClick: () => void }) {
   return (
@@ -216,4 +213,18 @@ export function BotaoAbrir({ onAbrir, children }: { onAbrir: () => void; childre
       {children}
     </Button>
   );
+}
+
+/**
+ * Com o painel aberto, a ordem em que as colunas saem se não couberem: primeiro as que a tela
+ * escolheu, depois as outras da direita para a esquerda. A primeira (o nome) nunca sai: é o que
+ * identifica a linha, e o resto está no painel.
+ */
+function ordemDeSaida(colunas: { id?: string }[], primeiro: string[]) {
+  const ids = colunas.map((c) => c.id ?? (c as { accessorKey?: string }).accessorKey ?? '');
+  const resto = ids
+    .slice(1)
+    .filter((id) => id && !primeiro.includes(id))
+    .reverse();
+  return [...primeiro, ...resto];
 }

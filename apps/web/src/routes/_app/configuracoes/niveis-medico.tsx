@@ -163,7 +163,7 @@ function Niveis({ podeEditar }: { podeEditar: boolean }) {
         />
       }
       colunas={colunas}
-      ocultarComPainel={['descricao']}
+      ocultarComPainel={['descricao', 'ordem', 'variacoes']}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

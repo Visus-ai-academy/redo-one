@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createDataTableColumnHelper } from './columns';
 import { DataTable } from './DataTable';
@@ -92,5 +92,39 @@ describe('DataTable', () => {
     render(<DataTable columns={columns} data={[{ name: 'Ada', email: 'ada@example.com' }]} />);
 
     expect(screen.getByRole('row', { name: /Ada/ })).not.toHaveClass('cursor-pointer');
+  });
+
+  describe('colunas que saem quando não cabem', () => {
+    type Pessoa = { name: string; email: string; papel: string };
+    const h = createDataTableColumnHelper<Pessoa>();
+    const tres = h.columns([
+      h.accessor('name', { header: 'Nome' }),
+      h.accessor('email', { header: 'E-mail' }),
+      h.accessor('papel', { header: 'Papel' }),
+    ]);
+    const dados = [{ name: 'Ada', email: 'ada@example.com', papel: 'Financeiro' }];
+    const cabecalhos = () => screen.getAllByRole('columnheader').map((th) => th.textContent);
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('com espaço, mostra todas', () => {
+      render(<DataTable columns={tres} data={dados} ocultaveis={['papel', 'email']} />);
+
+      expect(cabecalhos()).toEqual(['Nome', 'E-mail', 'Papel']);
+    });
+
+    it('sem espaço, tira na ordem só as que precisam sair', () => {
+      // Cada coluna "ocupa" 100px; a caixa tem 250px: cabem duas.
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.querySelectorAll('th:not([hidden])').length * 100;
+      });
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(250);
+
+      render(<DataTable columns={tres} data={dados} ocultaveis={['papel', 'email']} />);
+
+      expect(cabecalhos()).toEqual(['Nome', 'E-mail']);
+    });
   });
 });
