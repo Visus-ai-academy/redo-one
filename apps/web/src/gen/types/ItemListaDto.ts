@@ -15,4 +15,9 @@ export type ItemListaDto = {
   cor: string | null;
   ordem: number;
   ativo: boolean;
+  /**
+   * @description Variações que chegam da MobileMed (só prioridades e especialidades).
+   * @type number | undefined
+   */
+  totalVariacoes?: number;
 };

@@ -23,6 +23,18 @@ export class ListarDeParaEspecialidadeDto extends ListarDto {
   @IsOptional()
   @IsIn(TIPOS)
   tipo?: TipoDeParaEspecialidade;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Só as variações desta especialidade.' })
+  @IsOptional()
+  @IsUUID()
+  especialidadeId?: string;
+}
+
+export class ListarDeParaPrioridadeDto extends ListarDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Só as variações desta prioridade.' })
+  @IsOptional()
+  @IsUUID()
+  prioridadeId?: string;
 }
 
 const origem = (exemplo: string) =>

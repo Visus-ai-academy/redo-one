@@ -25,6 +25,13 @@ export type DeParaPrioridadesControllerListarQuery = {
    */
   busca?: string;
   ativo?: boolean;
+  /**
+   * @description Só as variações desta prioridade.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  prioridadeId?: string;
 };
 
 export type DeParaPrioridadesControllerListarStatus200 = PaginaDeParaPrioridadeDto;

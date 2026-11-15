@@ -32,6 +32,8 @@ export interface TabelaDePara<D> {
   origem: AnyPgColumn;
   ativo: AnyPgColumn;
   tipo?: AnyPgColumn;
+  /** Coluna do destino (a forma certa), para listar as variações de um destino. */
+  destino?: AnyPgColumn;
   /** Colunas lidas (inclui `destinoNome` por subconsulta, quando há destino). */
   selecao: Record<string, AnyPgColumn | SQL>;
   /** Condição que acha o de-para com a mesma chave única. */
@@ -51,6 +53,7 @@ export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
     if (filtro.busca) condicoes.push(ilike(this.t.origem, `%${filtro.busca}%`));
     if (filtro.ativo !== undefined) condicoes.push(eq(this.t.ativo, filtro.ativo));
     if (filtro.tipo && this.t.tipo) condicoes.push(eq(this.t.tipo, filtro.tipo));
+    if (filtro.destinoId && this.t.destino) condicoes.push(eq(this.t.destino, filtro.destinoId));
     const onde = and(...condicoes);
 
     const [itens, [totalLinha]] = await Promise.all([
@@ -126,6 +129,7 @@ export const TABELA_DE_PARA_PRIORIDADE: TabelaDePara<DadosDeParaPrioridade> = {
   id: prioridadesDePara.id,
   origem: prioridadesDePara.origem,
   ativo: prioridadesDePara.ativo,
+  destino: prioridadesDePara.prioridadeId,
   selecao: {
     id: prioridadesDePara.id,
     origem: prioridadesDePara.origem,
@@ -148,6 +152,7 @@ export const TABELA_DE_PARA_ESPECIALIDADE: TabelaDePara<DadosDeParaEspecialidade
   origem: especialidadesDePara.origem,
   ativo: especialidadesDePara.ativo,
   tipo: especialidadesDePara.tipo,
+  destino: especialidadesDePara.especialidadeId,
   selecao: {
     id: especialidadesDePara.id,
     tipo: especialidadesDePara.tipo,

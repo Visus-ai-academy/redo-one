@@ -44,6 +44,8 @@ export interface FiltroDePara extends Paginacao {
   ativo?: boolean;
   /** Só no de-para de especialidade. */
   tipo?: TipoDeParaEspecialidade;
+  /** As variações de uma forma certa (prioridade, especialidade ou exame de destino). */
+  destinoId?: string;
 }
 
 export interface DeParaRepository<D> {

@@ -74,6 +74,10 @@ export class ItemListaDto {
   @ApiProperty({ type: String, nullable: true }) cor!: string | null;
   @ApiProperty() ordem!: number;
   @ApiProperty() ativo!: boolean;
+  @ApiPropertyOptional({
+    description: 'Variações que chegam da MobileMed (só prioridades e especialidades).',
+  })
+  totalVariacoes?: number;
 }
 
 export class PrioridadeItemDto extends ItemListaDto {

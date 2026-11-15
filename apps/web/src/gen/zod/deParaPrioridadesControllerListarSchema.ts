@@ -22,6 +22,10 @@ export const deParaPrioridadesControllerListarQueryAtivoSchema = z.boolean().opt
 
 export type DeParaPrioridadesControllerListarQueryAtivoSchemaType = z.infer<typeof deParaPrioridadesControllerListarQueryAtivoSchema>
 
+export const deParaPrioridadesControllerListarQueryPrioridadeIdSchema = z.uuid().optional().describe('Só as variações desta prioridade.')
+
+export type DeParaPrioridadesControllerListarQueryPrioridadeIdSchemaType = z.infer<typeof deParaPrioridadesControllerListarQueryPrioridadeIdSchema>
+
 export const deParaPrioridadesControllerListarStatus200Schema = paginaDeParaPrioridadeDtoSchema
 
 export type DeParaPrioridadesControllerListarStatus200SchemaType = z.infer<typeof deParaPrioridadesControllerListarStatus200Schema>
@@ -35,6 +39,7 @@ export const deParaPrioridadesControllerListarQuerySchema = z.object({
   porPagina: z.int().min(1).max(100).optional().default(25),
   busca: z.string().optional().describe('Parte do nome ou da descrição.'),
   ativo: z.boolean().optional(),
+  prioridadeId: z.uuid().optional().describe('Só as variações desta prioridade.'),
 })
 
 export type DeParaPrioridadesControllerListarQuerySchemaType = z.infer<typeof deParaPrioridadesControllerListarQuerySchema>

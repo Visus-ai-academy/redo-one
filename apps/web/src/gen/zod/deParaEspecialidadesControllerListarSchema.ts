@@ -26,6 +26,10 @@ export const deParaEspecialidadesControllerListarQueryTipoSchema = z.enum(['norm
 
 export type DeParaEspecialidadesControllerListarQueryTipoSchemaType = z.infer<typeof deParaEspecialidadesControllerListarQueryTipoSchema>
 
+export const deParaEspecialidadesControllerListarQueryEspecialidadeIdSchema = z.uuid().optional().describe('Só as variações desta especialidade.')
+
+export type DeParaEspecialidadesControllerListarQueryEspecialidadeIdSchemaType = z.infer<typeof deParaEspecialidadesControllerListarQueryEspecialidadeIdSchema>
+
 export const deParaEspecialidadesControllerListarStatus200Schema = paginaDeParaEspecialidadeDtoSchema
 
 export type DeParaEspecialidadesControllerListarStatus200SchemaType = z.infer<typeof deParaEspecialidadesControllerListarStatus200Schema>
@@ -40,6 +44,7 @@ export const deParaEspecialidadesControllerListarQuerySchema = z.object({
   busca: z.string().optional().describe('Parte do nome ou da descrição.'),
   ativo: z.boolean().optional(),
   tipo: z.enum(['normalizacao', 'invalida', 'regiao_anatomica']).optional(),
+  especialidadeId: z.uuid().optional().describe('Só as variações desta especialidade.'),
 })
 
 export type DeParaEspecialidadesControllerListarQuerySchemaType = z.infer<typeof deParaEspecialidadesControllerListarQuerySchema>

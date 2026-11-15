@@ -2893,6 +2893,16 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "prioridadeId",
+            "required": false,
+            "in": "query",
+            "description": "Só as variações desta prioridade.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3091,6 +3101,16 @@
                 "invalida",
                 "regiao_anatomica"
               ]
+            }
+          },
+          {
+            "name": "especialidadeId",
+            "required": false,
+            "in": "query",
+            "description": "Só as variações desta especialidade.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5381,6 +5401,10 @@
           },
           "ativo": {
             "type": "boolean"
+          },
+          "totalVariacoes": {
+            "type": "number",
+            "description": "Variações que chegam da MobileMed (só prioridades e especialidades)."
           }
         },
         "required": [
@@ -5488,6 +5512,10 @@
           "ativo": {
             "type": "boolean"
           },
+          "totalVariacoes": {
+            "type": "number",
+            "description": "Variações que chegam da MobileMed (só prioridades e especialidades)."
+          },
           "urgente": {
             "type": "boolean"
           }
@@ -5590,6 +5618,10 @@
           },
           "ativo": {
             "type": "boolean"
+          },
+          "totalVariacoes": {
+            "type": "number",
+            "description": "Variações que chegam da MobileMed (só prioridades e especialidades)."
           },
           "especialidadeIds": {
             "type": "array",
@@ -7341,6 +7373,10 @@
           },
           "ativo": {
             "type": "boolean"
+          },
+          "totalVariacoes": {
+            "type": "number",
+            "description": "Variações que chegam da MobileMed (só prioridades e especialidades)."
           },
           "plantao": {
             "type": "boolean"

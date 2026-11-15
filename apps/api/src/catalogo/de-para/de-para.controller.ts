@@ -40,6 +40,7 @@ import {
   DeParaValorDto,
   DeParaValorItemDto,
   ListarDeParaEspecialidadeDto,
+  ListarDeParaPrioridadeDto,
   PaginaDeParaEspecialidadeDto,
   PaginaDeParaPrioridadeDto,
   PaginaDeParaValorDto,
@@ -66,10 +67,11 @@ export class DeParaPrioridadesController {
   @Get()
   @Permissao('de-para.ver')
   @ApiOkResponse({ type: PaginaDeParaPrioridadeDto })
-  async listar(@Query() query: ListarDto): Promise<PaginaDeParaPrioridadeDto> {
+  async listar(@Query() query: ListarDeParaPrioridadeDto): Promise<PaginaDeParaPrioridadeDto> {
     const { itens, total } = await this.service.listar({
       busca: query.busca,
       ativo: query.ativo,
+      destinoId: query.prioridadeId,
       pagina: query.pagina,
       porPagina: query.porPagina,
     });
@@ -145,6 +147,7 @@ export class DeParaEspecialidadesController {
       busca: query.busca,
       ativo: query.ativo,
       tipo: query.tipo,
+      destinoId: query.especialidadeId,
       pagina: query.pagina,
       porPagina: query.porPagina,
     });

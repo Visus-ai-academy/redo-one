@@ -12,6 +12,7 @@ export const prioridadeItemDtoSchema = z.object({
   cor: z.string().nullable(),
   ordem: z.number(),
   ativo: z.boolean(),
+  totalVariacoes: z.number().optional().describe('Variações que chegam da MobileMed (só prioridades e especialidades).'),
   urgente: z.boolean(),
 })
 

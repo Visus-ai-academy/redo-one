@@ -1,8 +1,15 @@
-import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, eq, getTableName, ilike, or, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../../database/database';
-import { categoriasExame, especialidades, modalidades, prioridades } from '../../database/schema';
+import {
+  categoriasExame,
+  especialidades,
+  especialidadesDePara,
+  modalidades,
+  prioridades,
+  prioridadesDePara,
+} from '../../database/schema';
 import { violouChaveEstrangeira } from '../comum/erros-do-banco';
 import type { DadosLista, FiltroLista, ItemLista, ListaRepository } from './lista.repository';
 
@@ -20,13 +27,25 @@ export interface TabelaDeLista {
     ativo: AnyPgColumn;
   };
   extras: Record<string, AnyPgColumn>;
+  /** Só leitura: contagens por subconsulta (ex.: variações que chegam da MobileMed). */
+  contagens?: Record<string, SQL>;
 }
+
+/**
+ * Quantas variações (de-paras) apontam para o item. Nomes por extenso: numa consulta de uma tabela
+ * só o Drizzle escreve as colunas sem a tabela, e dentro da subconsulta o `id` seria o da variação.
+ */
+const variacoes = (tabela: PgTable, fk: AnyPgColumn, alvo: PgTable) =>
+  sql<number>`(select count(*) from ${tabela} as v where v.${sql.identifier(fk.name)} = ${sql.identifier(getTableName(alvo))}.id)`.mapWith(
+    Number,
+  );
 
 const lista = (
   tabela: typeof especialidades | typeof categoriasExame | typeof prioridades | typeof modalidades,
   nome: AnyPgColumn,
   chaveNome: string,
   extras: Record<string, AnyPgColumn> = {},
+  contagens: Record<string, SQL> = {},
 ): TabelaDeLista => ({
   tabela,
   id: tabela.id,
@@ -39,13 +58,34 @@ const lista = (
     ativo: tabela.ativo,
   },
   extras,
+  contagens,
 });
 
 export const LISTAS = {
   modalidades: lista(modalidades, modalidades.codigo, 'codigo'),
-  especialidades: lista(especialidades, especialidades.nome, 'nome'),
+  especialidades: lista(
+    especialidades,
+    especialidades.nome,
+    'nome',
+    {},
+    {
+      totalVariacoes: variacoes(
+        especialidadesDePara,
+        especialidadesDePara.especialidadeId,
+        especialidades,
+      ),
+    },
+  ),
   categoriasExame: lista(categoriasExame, categoriasExame.nome, 'nome'),
-  prioridades: lista(prioridades, prioridades.nome, 'nome', { urgente: prioridades.urgente }),
+  prioridades: lista(
+    prioridades,
+    prioridades.nome,
+    'nome',
+    { urgente: prioridades.urgente },
+    {
+      totalVariacoes: variacoes(prioridadesDePara, prioridadesDePara.prioridadeId, prioridades),
+    },
+  ),
 } satisfies Record<string, TabelaDeLista>;
 
 /** Repositório de uma lista do catálogo; uma instância por tabela (ver `catalogo.module.ts`). */
@@ -58,7 +98,7 @@ export class DrizzleListaRepository<T extends DadosLista = DadosLista>
   ) {}
 
   protected get selecao(): Record<string, AnyPgColumn | SQL.Aliased | SQL> {
-    return { id: this.t.id, ...this.t.colunas, ...this.t.extras };
+    return { id: this.t.id, ...this.t.colunas, ...this.t.extras, ...(this.t.contagens ?? {}) };
   }
 
   /** Converte os dados do domínio para os nomes de propriedade da tabela. */

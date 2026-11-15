@@ -1,6 +1,6 @@
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PERMISSOES_EXIGIDAS } from '../../identidade/acesso/decorators';
 import {
@@ -29,5 +29,17 @@ describe('controllers dos de-paras', () => {
       [`${tela}.editar`],
       [`${tela}.editar`],
     ]);
+  });
+
+  it('lista as variações de uma prioridade ou especialidade pelo destino', async () => {
+    const listar = vi.fn(async () => ({ itens: [], total: 0 }));
+    const prioridades = new DeParaPrioridadesController({ listar } as never);
+    const especialidades = new DeParaEspecialidadesController({ listar } as never);
+
+    await prioridades.listar({ pagina: 1, porPagina: 50, prioridadeId: 'p-1' });
+    await especialidades.listar({ pagina: 1, porPagina: 50, especialidadeId: 'e-1' });
+
+    expect(listar).toHaveBeenNthCalledWith(1, expect.objectContaining({ destinoId: 'p-1' }));
+    expect(listar).toHaveBeenNthCalledWith(2, expect.objectContaining({ destinoId: 'e-1' }));
   });
 });

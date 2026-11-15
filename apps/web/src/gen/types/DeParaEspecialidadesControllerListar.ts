@@ -34,6 +34,13 @@ export type DeParaEspecialidadesControllerListarQuery = {
   busca?: string;
   ativo?: boolean;
   tipo?: DeParaEspecialidadesControllerListarTipoKey;
+  /**
+   * @description Só as variações desta especialidade.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  especialidadeId?: string;
 };
 
 export type DeParaEspecialidadesControllerListarStatus200 = PaginaDeParaEspecialidadeDto;

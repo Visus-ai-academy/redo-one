@@ -56,6 +56,20 @@ describe.skipIf(!url)('DrizzleListaRepository', () => {
     expect(await repo.buscar(id)).toMatchObject({ nome: 'URGENTE', urgente: false });
   });
 
+  it('prioridade e especialidade contam as variações que chegam da MobileMed', async () => {
+    const repo = new DrizzleListaRepository<DadosPrioridade>(db, LISTAS.prioridades);
+    const id = await repo.criar({ ...base, nome: 'URGÊNCIA', urgente: true });
+    await db.insert(schema.prioridadesDePara).values([
+      { origem: 'Urgência', prioridadeId: id },
+      { origem: 'URGENCIA', prioridadeId: id },
+    ]);
+
+    expect(await repo.buscar(id)).toMatchObject({ totalVariacoes: 2 });
+    expect((await repo.listar({ pagina: 1, porPagina: 10 })).itens[0]).toMatchObject({
+      totalVariacoes: 2,
+    });
+  });
+
   it('não exclui item referenciado por outro cadastro', async () => {
     const repo = new DrizzleListaRepository(db, LISTAS.modalidades);
     const id = await repo.criar({ ...base, nome: 'MR' });

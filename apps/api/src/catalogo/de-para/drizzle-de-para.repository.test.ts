@@ -77,6 +77,29 @@ describe.skipIf(!url)('DrizzleDeParaRepository', () => {
     ).toBeNull();
   });
 
+  it('variações de uma forma certa: filtra pelo destino', async () => {
+    const [rotina, urgencia] = await db
+      .insert(schema.prioridades)
+      .values([{ nome: 'ROTINA' }, { nome: 'URGÊNCIA' }])
+      .returning();
+    const repo = new DrizzleDeParaRepository(db, TABELA_DE_PARA_PRIORIDADE);
+    for (const [origem, p] of [
+      ['Urgência', urgencia],
+      ['URGENCIA', urgencia],
+      ['Rotina', rotina],
+    ] as const) {
+      await repo.criar({ origem, prioridadeId: p?.id ?? '', ativo: true });
+    }
+
+    const { itens, total } = await repo.listar({
+      destinoId: urgencia?.id,
+      pagina: 1,
+      porPagina: 10,
+    });
+    expect(total).toBe(2);
+    expect(itens.map((i) => i.origem)).toEqual(['URGENCIA', 'Urgência']);
+  });
+
   it('valores: grava a chave normalizada e acha grafias equivalentes', async () => {
     const repo = new DrizzleDeParaRepository(db, TABELA_DE_PARA_VALOR);
     const id = await repo.criar({
