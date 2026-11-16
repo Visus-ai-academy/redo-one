@@ -12,6 +12,7 @@ describe('ExpurgarLinhasBrutas', () => {
           travaRemocaoFator: 2,
           retencaoLinhasBrutasDias: 90,
         }),
+        salvar: async () => undefined,
       },
       {
         expurgarAntesDe: async (instante) => {

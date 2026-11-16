@@ -24,3 +24,11 @@ export class AvisoNaoEncontradoError extends ErroDeDominio {
     super('Aviso não encontrado.');
   }
 }
+
+export class TriagemInvalidaError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+}
+
+export class ParametrosInvalidosError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+}

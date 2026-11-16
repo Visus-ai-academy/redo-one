@@ -42,11 +42,14 @@ export class ImportacoesController {
   }
 
   @Get('importacoes/:id/arquivo')
-  @Permissao('importacao.ver')
+  @Permissao('importacao.arquivo.baixar')
   @ApiOkResponse({ type: UrlDto, description: 'URL assinada (5 min) da planilha enviada.' })
   @ApiNotFoundResponse()
-  async baixarArquivo(@Param('id', ParseUUIDPipe) id: string): Promise<UrlDto> {
-    return { url: await this.consultar.urlDoArquivo(id) };
+  async baixarArquivo(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<UrlDto> {
+    return { url: await this.consultar.urlDoArquivo(ator.usuarioId, id) };
   }
 
   @Post('envios')

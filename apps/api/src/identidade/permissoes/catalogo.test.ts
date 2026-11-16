@@ -34,6 +34,7 @@ describe('catálogo de permissões', () => {
     expect(tela('importacao')?.acoes.map((a) => [a.chave, a.sensivel ?? false])).toEqual([
       ['importacao.ver', false],
       ['importacao.enviar', false],
+      ['importacao.arquivo.baixar', true],
       ['importacao.parametros.editar', true],
     ]);
     expect(tela('avisos')?.area).toBe('Cadastros');

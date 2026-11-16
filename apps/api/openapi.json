@@ -4784,6 +4784,366 @@
           "medicos"
         ]
       }
+    },
+    "/ingestao/importacoes": {
+      "get": {
+        "operationId": "ImportacoesController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaImportacoesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      },
+      "post": {
+        "operationId": "ImportacoesController_confirmarEnvio",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarEnvioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A planilha não chegou ao storage ou já foi enviada."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/importacoes/{id}": {
+      "get": {
+        "operationId": "ImportacoesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportacaoDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/importacoes/{id}/arquivo": {
+      "get": {
+        "operationId": "ImportacoesController_baixarArquivo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL assinada (5 min) da planilha enviada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/envios": {
+      "post": {
+        "operationId": "ImportacoesController_prepararEnvio",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoEnvioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Arquivo que não é .xlsx, vazio ou acima de 50 MB."
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/avisos": {
+      "get": {
+        "operationId": "AvisosController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/StatusAviso"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TipoAviso"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome como chegou da MobileMed.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaAvisosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/avisos/{id}/ignorar": {
+      "post": {
+        "operationId": "AvisosController_ignorar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IgnorarAvisoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "O aviso não está pendente."
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/avisos/{id}/reabrir": {
+      "post": {
+        "operationId": "AvisosController_reabrir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "O aviso não está ignorado."
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/parametros": {
+      "get": {
+        "operationId": "ParametrosIngestaoController_obter",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParametrosIngestaoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      },
+      "put": {
+        "operationId": "ParametrosIngestaoController_atualizar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParametrosIngestaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
     }
   },
   "info": {
@@ -8080,6 +8440,550 @@
           "ativo",
           "plantao",
           "medicoIds"
+        ]
+      },
+      "StatusImportacao": {
+        "type": "string",
+        "enum": [
+          "na_fila",
+          "processando",
+          "concluida",
+          "recusada",
+          "erro"
+        ]
+      },
+      "OrigemImportacao": {
+        "type": "string",
+        "enum": [
+          "upload_manual",
+          "mobilemed"
+        ]
+      },
+      "FormatoImportacao": {
+        "type": "string",
+        "enum": [
+          "laudos",
+          "compartilhamento"
+        ],
+        "description": "Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura."
+      },
+      "ImportacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusImportacao"
+              }
+            ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemImportacao"
+              }
+            ]
+          },
+          "formato": {
+            "nullable": true,
+            "description": "Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FormatoImportacao"
+              }
+            ]
+          },
+          "nomeArquivo": {
+            "type": "string"
+          },
+          "enviadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UsuarioResumoDto"
+              }
+            ]
+          },
+          "criadaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "iniciadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "concluidaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "janelaInicio": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Primeiro dia do laudo no arquivo (Brasília)."
+          },
+          "janelaFim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "linhasArquivo": {
+            "type": "integer",
+            "nullable": true
+          },
+          "inseridos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "atualizados": {
+            "type": "integer",
+            "nullable": true
+          },
+          "inalterados": {
+            "type": "integer",
+            "nullable": true
+          },
+          "removidos": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Laudos da janela que não vieram no arquivo."
+          },
+          "invalidas": {
+            "type": "integer",
+            "nullable": true
+          },
+          "ignoradasCompetenciaFechada": {
+            "type": "integer",
+            "nullable": true
+          },
+          "mensagem": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo da recusa ou do erro."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "origem",
+          "formato",
+          "nomeArquivo",
+          "enviadaPor",
+          "criadaEm",
+          "iniciadaEm",
+          "concluidaEm",
+          "janelaInicio",
+          "janelaFim",
+          "linhasArquivo",
+          "inseridos",
+          "atualizados",
+          "inalterados",
+          "removidos",
+          "invalidas",
+          "ignoradasCompetenciaFechada",
+          "mensagem"
+        ]
+      },
+      "PaginaImportacoesDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportacaoDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "ErroLinhaDto": {
+        "type": "object",
+        "properties": {
+          "linha": {
+            "type": "integer",
+            "description": "Linha na planilha (o cabeçalho é a 1)."
+          },
+          "mensagem": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "linha",
+          "mensagem"
+        ]
+      },
+      "ImportacaoDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusImportacao"
+              }
+            ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemImportacao"
+              }
+            ]
+          },
+          "formato": {
+            "nullable": true,
+            "description": "Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FormatoImportacao"
+              }
+            ]
+          },
+          "nomeArquivo": {
+            "type": "string"
+          },
+          "enviadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UsuarioResumoDto"
+              }
+            ]
+          },
+          "criadaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "iniciadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "concluidaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "janelaInicio": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Primeiro dia do laudo no arquivo (Brasília)."
+          },
+          "janelaFim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "linhasArquivo": {
+            "type": "integer",
+            "nullable": true
+          },
+          "inseridos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "atualizados": {
+            "type": "integer",
+            "nullable": true
+          },
+          "inalterados": {
+            "type": "integer",
+            "nullable": true
+          },
+          "removidos": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Laudos da janela que não vieram no arquivo."
+          },
+          "invalidas": {
+            "type": "integer",
+            "nullable": true
+          },
+          "ignoradasCompetenciaFechada": {
+            "type": "integer",
+            "nullable": true
+          },
+          "mensagem": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo da recusa ou do erro."
+          },
+          "errosLinhas": {
+            "description": "Até 20 linhas que não puderam ser lidas.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErroLinhaDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "origem",
+          "formato",
+          "nomeArquivo",
+          "enviadaPor",
+          "criadaEm",
+          "iniciadaEm",
+          "concluidaEm",
+          "janelaInicio",
+          "janelaFim",
+          "linhasArquivo",
+          "inseridos",
+          "atualizados",
+          "inalterados",
+          "removidos",
+          "invalidas",
+          "ignoradasCompetenciaFechada",
+          "mensagem",
+          "errosLinhas"
+        ]
+      },
+      "UrlDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL assinada e temporária."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "PedidoEnvioDto": {
+        "type": "object",
+        "properties": {
+          "nomeArquivo": {
+            "type": "string",
+            "example": "laudos_outubro.xlsx",
+            "maxLength": 200
+          },
+          "tamanhoBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Tamanho exato do arquivo em bytes."
+          },
+          "tipoConteudo": {
+            "type": "string",
+            "example": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "nomeArquivo",
+          "tamanhoBytes",
+          "tipoConteudo"
+        ]
+      },
+      "EnvioDto": {
+        "type": "object",
+        "properties": {
+          "arquivoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL assinada: PUT do arquivo com o mesmo Content-Type e tamanho."
+          },
+          "expiraEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "arquivoId",
+          "url",
+          "expiraEm"
+        ]
+      },
+      "ConfirmarEnvioDto": {
+        "type": "object",
+        "properties": {
+          "arquivoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "arquivoId"
+        ]
+      },
+      "StatusAviso": {
+        "type": "string",
+        "enum": [
+          "pendente",
+          "resolvido",
+          "ignorado"
+        ]
+      },
+      "TipoAviso": {
+        "type": "string",
+        "enum": [
+          "cliente",
+          "medico",
+          "estudo",
+          "modalidade",
+          "especialidade",
+          "prioridade"
+        ]
+      },
+      "AvisoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAviso"
+              }
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "description": "Como chegou da MobileMed na última importação."
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusAviso"
+              }
+            ]
+          },
+          "ocorrencias": {
+            "type": "integer",
+            "description": "Laudos da última importação em que apareceu."
+          },
+          "primeiraVezEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimaVezEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decididoPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UsuarioResumoDto"
+              }
+            ]
+          },
+          "decididoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "motivo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "valor",
+          "status",
+          "ocorrencias",
+          "primeiraVezEm",
+          "ultimaVezEm",
+          "decididoPor",
+          "decididoEm",
+          "motivo"
+        ]
+      },
+      "PaginaAvisosDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "IgnorarAvisoDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 300,
+            "example": "Cliente de teste da MobileMed."
+          }
+        }
+      },
+      "ParametrosIngestaoDto": {
+        "type": "object",
+        "properties": {
+          "travaRemocaoMinimo": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Trava contra arquivo truncado: recusa se sumiriam mais laudos que isto..."
+          },
+          "travaRemocaoFator": {
+            "type": "number",
+            "minimum": 0,
+            "description": "...e mais que este múltiplo das linhas do arquivo."
+          },
+          "retencaoLinhasBrutasDias": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "Dias que a linha crua fica guardada."
+          }
+        },
+        "required": [
+          "travaRemocaoMinimo",
+          "travaRemocaoFator",
+          "retencaoLinhasBrutasDias"
         ]
       }
     }

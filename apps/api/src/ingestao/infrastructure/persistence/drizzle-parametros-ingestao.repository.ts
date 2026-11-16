@@ -24,4 +24,11 @@ export class DrizzleParametrosIngestaoRepository implements ParametrosIngestaoRe
       retencaoLinhasBrutasDias: linha?.retencaoLinhasBrutasDias ?? 90,
     };
   }
+
+  async salvar(p: ParametrosIngestao) {
+    await this.db
+      .insert(parametrosIngestao)
+      .values({ id: 1, ...p })
+      .onConflictDoUpdate({ target: parametrosIngestao.id, set: p });
+  }
 }

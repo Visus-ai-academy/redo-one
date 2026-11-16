@@ -8,4 +8,5 @@ export interface ParametrosIngestao {
 
 export interface ParametrosIngestaoRepository {
   obter(): Promise<ParametrosIngestao>;
+  salvar(parametros: ParametrosIngestao): Promise<void>;
 }

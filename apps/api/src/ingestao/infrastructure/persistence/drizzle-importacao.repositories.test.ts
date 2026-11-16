@@ -11,6 +11,7 @@ import * as schema from '../../../database/schema';
 
 import { DrizzleArquivosRepository } from './drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './drizzle-avisos-cadastro.repository';
+import { DrizzleConsultaAvisos } from './drizzle-consulta-avisos';
 import { DrizzleConsultaImportacoes } from './drizzle-consulta-importacoes';
 import { DrizzleImportacoesRepository } from './drizzle-importacoes.repository';
 import { DrizzleParametrosIngestaoRepository } from './drizzle-parametros-ingestao.repository';
@@ -310,7 +311,94 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
     });
   });
 
+  describe('DrizzleConsultaAvisos', () => {
+    const inserir = (valores: Partial<typeof schema.avisosCadastro.$inferInsert>[]) =>
+      db
+        .insert(schema.avisosCadastro)
+        .values(
+          valores.map((v, i) => ({
+            tipo: 'cliente' as const,
+            chave: `k${i}`,
+            valor: `V${i}`,
+            ultimaVezEm: new Date(Date.UTC(2026, 9, 1 + i)),
+            ...v,
+          })),
+        )
+        .returning();
+
+    it('lista o visto por último primeiro, com filtro de status e tipo', async () => {
+      await inserir([
+        { valor: 'A' },
+        { valor: 'B', status: 'ignorado' },
+        { valor: 'C', tipo: 'medico' },
+      ]);
+      const consulta = new DrizzleConsultaAvisos(db);
+
+      const todos = await consulta.listar({ pagina: 1, porPagina: 10 });
+      expect(todos.total).toBe(3);
+      expect(todos.itens.map((a) => a.valor)).toEqual(['C', 'B', 'A']);
+      const pendentesDeCliente = await consulta.listar({
+        pagina: 1,
+        porPagina: 10,
+        status: 'pendente',
+        tipo: 'cliente',
+      });
+      expect(pendentesDeCliente.itens.map((a) => a.valor)).toEqual(['A']);
+    });
+
+    it('a busca acha pela grafia, a mais parecida na frente', async () => {
+      await inserir([{ valor: 'CLINICA NOVA SUL' }, { valor: 'NOVA' }, { valor: 'OUTRA' }]);
+
+      const r = await new DrizzleConsultaAvisos(db).listar({
+        pagina: 1,
+        porPagina: 10,
+        busca: 'nova',
+      });
+
+      expect(r.itens.map((a) => a.valor)).toEqual(['NOVA', 'CLINICA NOVA SUL']);
+    });
+
+    it('decide e devolve quem decidiu', async () => {
+      const usuarioId = await criarUsuario();
+      const [aviso] = await inserir([{ valor: 'A' }]);
+      const consulta = new DrizzleConsultaAvisos(db);
+
+      await consulta.decidir(aviso?.id ?? '', {
+        status: 'ignorado',
+        decididoPorId: usuarioId,
+        motivo: 'teste',
+        em: agora,
+      });
+
+      expect(await consulta.obter(aviso?.id ?? '')).toMatchObject({
+        status: 'ignorado',
+        motivo: 'teste',
+        decididoEm: agora,
+        decididoPor: { id: usuarioId, nome: 'Maria' },
+      });
+    });
+  });
+
   describe('DrizzleParametrosIngestaoRepository', () => {
+    it('salva e lê de volta', async () => {
+      const repo = new DrizzleParametrosIngestaoRepository(db);
+      await repo.salvar({
+        travaRemocaoMinimo: 7,
+        travaRemocaoFator: 1.5,
+        retencaoLinhasBrutasDias: 30,
+      });
+      await repo.salvar({
+        travaRemocaoMinimo: 8,
+        travaRemocaoFator: 1.5,
+        retencaoLinhasBrutasDias: 30,
+      });
+      expect(await repo.obter()).toEqual({
+        travaRemocaoMinimo: 8,
+        travaRemocaoFator: 1.5,
+        retencaoLinhasBrutasDias: 30,
+      });
+    });
+
     it('sem linha gravada, devolve os valores padrão', async () => {
       expect(await new DrizzleParametrosIngestaoRepository(db).obter()).toEqual({
         travaRemocaoMinimo: 500,

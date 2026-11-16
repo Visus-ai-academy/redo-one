@@ -87,7 +87,10 @@ describe('ImportarLaudos', () => {
       { listar: async () => bloqueadas },
       laudos,
       avisos,
-      { obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }) },
+      {
+        obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }),
+        salvar: async () => undefined,
+      },
       { pseudonimo: (t) => `hmac(${t})` },
       () => new Date('2026-10-07T12:00:00Z'),
     );
@@ -181,7 +184,10 @@ describe('ImportarLaudos', () => {
       { listar: async () => [] },
       laudos,
       avisos,
-      { obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }) },
+      {
+        obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }),
+        salvar: async () => undefined,
+      },
       { pseudonimo: (t) => t },
       () => new Date(),
     );
@@ -228,7 +234,10 @@ describe('ImportarLaudos', () => {
       { listar: async () => [] },
       laudos,
       avisos,
-      { obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }) },
+      {
+        obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }),
+        salvar: async () => undefined,
+      },
       { pseudonimo: (t) => t },
       () => new Date(),
     ).executar('i1');

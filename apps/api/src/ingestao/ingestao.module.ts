@@ -1,6 +1,7 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import {
   ARMAZENAMENTO_ARQUIVOS,
   type ArmazenamentoArquivos,
@@ -10,6 +11,7 @@ import {
   ARQUIVOS_REPOSITORY,
   type ArquivosRepository,
 } from './application/ports/arquivos.repository';
+import { CONSULTA_AVISOS, type ConsultaAvisos } from './application/ports/avisos.consulta';
 import {
   AVISOS_CADASTRO_REPOSITORY,
   type AvisosCadastroRepository,
@@ -42,14 +44,22 @@ import {
 } from './application/ports/parametros-ingestao.repository';
 import { PSEUDONIMIZADOR, type Pseudonimizador } from './application/ports/pseudonimizador';
 import { TAREFA_EXPURGAR_LINHAS_BRUTAS, TAREFA_IMPORTAR_LAUDOS } from './application/tarefas';
+import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
+import { ListarAvisos, ObterParametros } from './application/use-cases/consultas-simples';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
+import { TriarAviso } from './application/use-cases/triar-aviso';
+import {
+  AvisosController,
+  ParametrosIngestaoController,
+} from './infrastructure/http/avisos.controller';
 import { ImportacoesController } from './infrastructure/http/importacoes.controller';
 import { DrizzleArquivosRepository } from './infrastructure/persistence/drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './infrastructure/persistence/drizzle-avisos-cadastro.repository';
 import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-cadastros-ingestao';
+import { DrizzleConsultaAvisos } from './infrastructure/persistence/drizzle-consulta-avisos';
 import { DrizzleConsultaImportacoes } from './infrastructure/persistence/drizzle-consulta-importacoes';
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
 import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-laudos.repository';
@@ -61,15 +71,41 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
 /** Contexto `ingestao` (hexagonal): importação dos laudos da MobileMed. */
 @Module({
-  controllers: [ImportacoesController],
+  controllers: [ImportacoesController, AvisosController, ParametrosIngestaoController],
   providers: [
+    { provide: CONSULTA_AVISOS, useClass: DrizzleConsultaAvisos },
+    {
+      provide: ListarAvisos,
+      inject: [CONSULTA_AVISOS],
+      useFactory: (avisos: ConsultaAvisos) => new ListarAvisos(avisos),
+    },
+    {
+      provide: TriarAviso,
+      inject: [CONSULTA_AVISOS, AUDITORIA],
+      useFactory: (avisos: ConsultaAvisos, auditoria: Auditoria) =>
+        new TriarAviso(avisos, auditoria, () => new Date()),
+    },
+    {
+      provide: ObterParametros,
+      inject: [PARAMETROS_INGESTAO_REPOSITORY],
+      useFactory: (parametros: ParametrosIngestaoRepository) => new ObterParametros(parametros),
+    },
+    {
+      provide: AtualizarParametros,
+      inject: [PARAMETROS_INGESTAO_REPOSITORY, AUDITORIA],
+      useFactory: (parametros: ParametrosIngestaoRepository, auditoria: Auditoria) =>
+        new AtualizarParametros(parametros, auditoria, () => new Date()),
+    },
     { provide: ARQUIVOS_REPOSITORY, useClass: DrizzleArquivosRepository },
     { provide: CONSULTA_IMPORTACOES, useClass: DrizzleConsultaImportacoes },
     {
       provide: ConsultarImportacoes,
-      inject: [CONSULTA_IMPORTACOES, ARMAZENAMENTO_ARQUIVOS],
-      useFactory: (consulta: ConsultaImportacoes, armazenamento: ArmazenamentoArquivos) =>
-        new ConsultarImportacoes(consulta, armazenamento),
+      inject: [CONSULTA_IMPORTACOES, ARMAZENAMENTO_ARQUIVOS, AUDITORIA],
+      useFactory: (
+        consulta: ConsultaImportacoes,
+        armazenamento: ArmazenamentoArquivos,
+        auditoria: Auditoria,
+      ) => new ConsultarImportacoes(consulta, armazenamento, auditoria, () => new Date()),
     },
     {
       provide: PrepararEnvio,

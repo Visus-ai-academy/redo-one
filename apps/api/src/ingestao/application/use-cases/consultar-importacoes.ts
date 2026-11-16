@@ -1,3 +1,4 @@
+import type { Auditoria } from '../../../auditoria/auditoria';
 import type { Paginacao } from '../../../catalogo/comum/paginacao';
 import type { ArmazenamentoArquivos } from '../../../comum/armazenamento/armazenamento-arquivos';
 import { ImportacaoNaoEncontradaError } from '../erros';
@@ -10,6 +11,8 @@ export class ConsultarImportacoes {
   constructor(
     private readonly consulta: ConsultaImportacoes,
     private readonly armazenamento: ArmazenamentoArquivos,
+    private readonly auditoria: Auditoria,
+    private readonly agora: () => Date,
   ) {}
 
   listar(paginacao: Paginacao) {
@@ -21,8 +24,16 @@ export class ConsultarImportacoes {
     return detalhe;
   }
 
-  async urlDoArquivo(id: string): Promise<string> {
+  /** A planilha traz o nome do paciente: todo download é auditado. */
+  async urlDoArquivo(usuarioId: string, id: string): Promise<string> {
     const d = await this.detalhe(id);
+    await this.auditoria.registrar({
+      ator: { tipo: 'usuario', id: usuarioId },
+      entidade: 'importacao',
+      entidadeId: id,
+      acao: 'arquivo_baixado',
+      em: this.agora(),
+    });
     return this.armazenamento.urlDeDownload(
       d.arquivoChave,
       VALIDADE_DOWNLOAD_SEGUNDOS,

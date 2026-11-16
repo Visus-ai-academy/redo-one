@@ -67,6 +67,8 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     acoes: [
       ver('importacao'),
       { chave: 'importacao.enviar', rotulo: 'Enviar planilha' },
+      // A planilha traz o nome do paciente; cada download é auditado.
+      { chave: 'importacao.arquivo.baixar', rotulo: 'Baixar a planilha enviada', sensivel: true },
       // A trava contra arquivo truncado e a retenção da linha crua (dado de saúde).
       { chave: 'importacao.parametros.editar', rotulo: 'Editar parâmetros', sensivel: true },
     ],
