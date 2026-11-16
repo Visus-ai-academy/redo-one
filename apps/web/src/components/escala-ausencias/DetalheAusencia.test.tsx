@@ -56,6 +56,11 @@ describe('DetalheAusencia', () => {
     expect(screen.getByText('Todas as escalas do médico')).toBeInTheDocument();
   });
 
+  it('os 7 dias marcados aparecem como todos os dias do período', () => {
+    montar({ ausencia: { ...PEDIDO, diasSemana: [0, 1, 2, 3, 4, 5, 6] } });
+    expect(screen.getByText('Todos os dias do período')).toBeInTheDocument();
+  });
+
   it('aprova o pedido pendente', async () => {
     const { onAprovar } = montar();
 

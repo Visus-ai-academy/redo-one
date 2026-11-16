@@ -133,6 +133,13 @@ describe('FormAusencia', () => {
     expect(screen.getByLabelText('Fim')).toHaveValue('2026-12-05');
   });
 
+  it('avisa quando o médico pedido não existe e deixa o formulário vazio', () => {
+    montar({ inicial: { de: '2026-12-05' }, aviso: 'Médico não encontrado; escolha outro.' });
+
+    expect(screen.getByText('Médico não encontrado; escolha outro.')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Médicos' })).not.toBeInTheDocument();
+  });
+
   it('exige médico, tipo e período coerente', async () => {
     const { onSalvar } = montar();
 

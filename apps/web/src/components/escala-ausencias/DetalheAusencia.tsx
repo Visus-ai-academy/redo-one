@@ -10,7 +10,7 @@ import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
-import { diasDaSemana, periodoCompleto, situacaoDaAusencia } from './ausencias';
+import { diasDaSemana, diasRecortados, periodoCompleto, situacaoDaAusencia } from './ausencias';
 
 function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
@@ -51,6 +51,7 @@ export function DetalheAusencia({
   const [recusando, setRecusando] = useState(false);
   const pendente = ausencia.situacao === 'pendente';
   const periodo = periodoCompleto(ausencia);
+  const dias = diasRecortados(ausencia.diasSemana);
   const nomes = (lista: { nome: string }[]) => lista.map((item) => item.nome).join(', ');
 
   const form = useAppForm({
@@ -84,9 +85,7 @@ export function DetalheAusencia({
         </Campo>
         <Campo rotulo="Período">{periodo}</Campo>
         <Campo rotulo="Dias da semana">
-          {ausencia.diasSemana.length > 0
-            ? diasDaSemana(ausencia.diasSemana)
-            : 'Todos os dias do período'}
+          {dias.length > 0 ? diasDaSemana(dias) : 'Todos os dias do período'}
         </Campo>
         <Campo rotulo="Turnos">
           {ausencia.turnos.length > 0 ? nomes(ausencia.turnos) : 'Dia inteiro'}

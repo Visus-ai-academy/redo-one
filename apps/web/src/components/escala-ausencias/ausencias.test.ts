@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AusenciaItemDto } from '../../gen/types/AusenciaItemDto';
 import {
   atalhoDoPeriodo,
+  buscaAoFecharPainel,
   diaCurto,
   diasDaSemana,
   hojeEmBrasilia,
@@ -88,6 +89,41 @@ describe('recorteDaAusencia', () => {
         ],
       }),
     ).toEqual(['só seg, qua', 'só Tarde', 'só NEURO, TC']);
+  });
+  it('os 7 dias marcados valem todos os dias: sem recorte de dia', () => {
+    expect(recorteDaAusencia({ ...base, diasSemana: [0, 1, 2, 3, 4, 5, 6] })).toEqual([]);
+  });
+});
+
+describe('buscaAoFecharPainel', () => {
+  it('fecha o painel e mantém os filtros da lista', () => {
+    expect(
+      buscaAoFecharPainel({
+        busca: 'ana',
+        de: '2026-12-01',
+        frenteId: 'f-1',
+        id: 'a-1',
+        editar: 1,
+      }),
+    ).toEqual({ busca: 'ana', de: '2026-12-01', frenteId: 'f-1' });
+  });
+  it('vindo do pré-preenchimento (novo com médico), solta também o dia e a escala que vieram junto', () => {
+    expect(
+      buscaAoFecharPainel({
+        situacao: 'aprovada',
+        novo: 1,
+        medicoId: 'm-1',
+        turnoId: 'tu-1',
+        de: '2026-12-07',
+        frenteId: 'f-1',
+      }),
+    ).toEqual({ situacao: 'aprovada' });
+  });
+  it('"Nova ausência" comum (sem médico) mantém o período e a escala filtrados', () => {
+    expect(buscaAoFecharPainel({ novo: 1, de: '2026-12-07', frenteId: 'f-1' })).toEqual({
+      de: '2026-12-07',
+      frenteId: 'f-1',
+    });
   });
 });
 

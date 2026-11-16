@@ -8,6 +8,7 @@ import { useBuscaComEspera } from '../../../components/busca/use-busca-com-esper
 import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import {
+  buscaAoFecharPainel,
   hojeEmBrasilia,
   periodoCompleto,
   periodoDaAusencia,
@@ -186,15 +187,7 @@ function Ausencias() {
       })),
     [ir],
   );
-  const fechar = () =>
-    ir((a) => ({
-      ...a,
-      id: undefined,
-      novo: undefined,
-      editar: undefined,
-      medicoId: undefined,
-      turnoId: undefined,
-    }));
+  const fechar = () => ir(buscaAoFecharPainel);
 
   const colunas = useMemo(
     () => [
@@ -301,7 +294,7 @@ function Ausencias() {
               { valor: 'aprovada', rotulo: 'Aprovadas' },
               { valor: 'recusada', rotulo: 'Recusadas' },
             ]}
-            className="flex-[1_1_160px] xl:flex-[0_0_160px]"
+            className="flex-[1_1_184px] xl:flex-[0_0_184px]"
           />
           <Select
             aria-label="Filtrar por tipo"
@@ -311,7 +304,7 @@ function Ausencias() {
               { valor: '', rotulo: 'Todos os tipos' },
               ...tipos.itens.map((t) => ({ valor: t.id, rotulo: t.nome })),
             ]}
-            className="flex-[1_1_160px] xl:flex-[0_0_160px]"
+            className="w-auto min-w-[160px] flex-[1_1_auto] xl:flex-[0_0_auto]"
           />
           <Select
             aria-label="Filtrar por escala"
@@ -321,7 +314,7 @@ function Ausencias() {
               { valor: '', rotulo: 'Todas as escalas' },
               ...frentes.itens.map((f) => ({ valor: f.id, rotulo: f.rotulo })),
             ]}
-            className="flex-[1_1_160px] xl:flex-[0_0_160px]"
+            className="w-auto min-w-[160px] flex-[1_1_auto] xl:flex-[0_0_auto]"
           />
           <FiltroPeriodo
             de={busca.de}
@@ -427,6 +420,7 @@ function PainelNova({
   const medico = useQuery({
     ...medicosEscalaControllerObterQueryOptions({ path: { id: busca.medicoId ?? '' } }),
     enabled: Boolean(busca.medicoId),
+    retry: false,
   });
   if (medico.isLoading) return <PainelCarregando onFechar={onFechar} />;
 
@@ -441,6 +435,7 @@ function PainelNova({
     <FormAusencia
       {...opcoes}
       inicial={inicial}
+      aviso={medico.isError ? 'Médico não encontrado; escolha outro.' : undefined}
       buscarMedicos={buscarMedicos}
       onFechar={onFechar}
       onSalvar={async (dados) => {

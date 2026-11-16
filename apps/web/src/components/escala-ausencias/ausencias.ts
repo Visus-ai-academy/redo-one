@@ -67,13 +67,19 @@ export function diasDaSemana(dias: readonly number[]): string {
     .join(', ');
 }
 
+/** Os dias que recortam a ausência: os 7 marcados valem como nenhum (todos os dias). */
+export function diasRecortados(dias: readonly number[]): readonly number[] {
+  return new Set(dias).size >= DIAS_DA_SEMANA.length ? [] : dias;
+}
+
 /** Onde a ausência vale além do período: "só seg, qua", "só Tarde", "só NEURO". */
 export function recorteDaAusencia(
   a: Pick<AusenciaItemDto, 'diasSemana' | 'turnos' | 'frentes'>,
 ): string[] {
   const nomes = (lista: { nome: string }[]) => lista.map((item) => item.nome).join(', ');
+  const dias = diasRecortados(a.diasSemana);
   return [
-    a.diasSemana.length > 0 && `só ${diasDaSemana(a.diasSemana)}`,
+    dias.length > 0 && `só ${diasDaSemana(dias)}`,
     a.turnos.length > 0 && `só ${nomes(a.turnos)}`,
     a.frentes.length > 0 && `só ${nomes(a.frentes)}`,
   ].filter((texto): texto is string => Boolean(texto));
@@ -129,4 +135,26 @@ export function rotuloDoIntervalo(
   if (de && ate) return `${diaCurto(de, hoje)} a ${diaCurto(ate, hoje)}`;
   if (de) return `A partir de ${diaCurto(de, hoje)}`;
   return ate ? `Até ${diaCurto(ate, hoje)}` : '';
+}
+
+type BuscaDoPainel = {
+  id?: string;
+  novo?: 1;
+  editar?: 1;
+  medicoId?: string;
+  turnoId?: string;
+  de?: string;
+  frenteId?: string;
+};
+
+/**
+ * A busca da lista ao fechar o painel. O "Nova ausência" vindo da Escala (`novo` com `medicoId`)
+ * traz `de` e `frenteId` só para pré-preencher: ao fechar, eles saem junto e a lista volta ao filtro
+ * de antes. Sem médico, `de` e `frenteId` são filtros da lista e ficam.
+ */
+export function buscaAoFecharPainel<B extends BuscaDoPainel>(busca: B): B {
+  const { id: _id, novo, editar: _editar, medicoId, turnoId: _turno, ...resto } = busca;
+  if (!(novo && medicoId)) return resto as B;
+  const { de: _de, frenteId: _frente, ...semPreenchimento } = resto;
+  return semPreenchimento as B;
 }

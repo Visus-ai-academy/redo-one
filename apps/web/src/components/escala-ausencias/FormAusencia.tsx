@@ -48,6 +48,8 @@ export type FormAusenciaProps = {
   /** Sem ausência, o painel lança uma nova (para um ou vários médicos). */
   ausencia?: AusenciaItemDto;
   inicial?: InicialAusencia;
+  /** Aviso no topo do formulário (ex.: o médico pedido pela Escala não existe mais). */
+  aviso?: string;
   /** Tipos ativos. */
   tipos: Opcao[];
   frentes: Opcao[];
@@ -62,6 +64,7 @@ export type FormAusenciaProps = {
 export function FormAusencia({
   ausencia,
   inicial = {},
+  aviso,
   tipos,
   frentes,
   turnos,
@@ -125,6 +128,7 @@ export function FormAusencia({
         }}
         className="flex flex-col gap-5 p-4"
       >
+        {aviso && <Alerta tom="atencao">{aviso}</Alerta>}
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         {ausencia ? (
           <CampoSomenteLeitura
