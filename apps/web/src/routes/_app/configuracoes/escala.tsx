@@ -393,12 +393,17 @@ function PainelDoItem({
         onFechar={fechar}
         onSalvar={async (dados) => {
           if (id) {
-            await turnosControllerAtualizar({ path: { id }, body: dados }).unwrap();
+            const { avisos } = await turnosControllerAtualizar({
+              path: { id },
+              body: dados,
+            }).unwrap();
             await salvo(id);
-          } else {
-            const criado = await turnosControllerCriar({ body: dados }).unwrap();
-            await salvo(criado.id);
+            // Ex.: inativado com alocações vigentes; aparece no painel, depois do toast.
+            return avisos.map((aviso) => aviso.mensagem);
           }
+          const criado = await turnosControllerCriar({ body: dados }).unwrap();
+          await salvo(criado.id);
+          return undefined;
         }}
         onExcluir={
           id

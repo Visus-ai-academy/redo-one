@@ -42,7 +42,8 @@ export type PainelTurnoProps = {
   especialidades: Opcao[];
   modalidades: Opcao[];
   podeEditar: boolean;
-  onSalvar: (dados: TurnoDto) => Promise<void>;
+  /** Pode devolver avisos da API (ex.: inativado com alocações vigentes), mostrados sem bloquear. */
+  onSalvar: (dados: TurnoDto) => Promise<string[] | undefined>;
   onExcluir?: () => Promise<void>;
   onFechar: () => void;
 };
@@ -58,6 +59,7 @@ export function PainelTurno({
   onFechar,
 }: PainelTurnoProps) {
   const [erro, setErro] = useState<string>();
+  const [avisos, setAvisos] = useState<string[]>([]);
   const titulo = turno?.nome ?? 'Novo turno';
 
   // Item inativo no catálogo que o turno já tem continua marcável, para não sumir ao salvar.
@@ -89,8 +91,9 @@ export function PainelTurno({
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       setErro(undefined);
+      setAvisos([]);
       try {
-        await onSalvar({
+        const novos = await onSalvar({
           nome: value.nome.trim(),
           tipo: value.tipo as TurnoDto['tipo'],
           horarioInicio: normalizarHorario(value.horarioInicio),
@@ -99,6 +102,7 @@ export function PainelTurno({
           modalidadeIds: value.modalidadeIds,
           ...comunsParaApi(value),
         });
+        setAvisos(novos ?? []);
       } catch (falha) {
         setErro(mensagemDaApi(falha, FALHA_AO_SALVAR));
       }
@@ -144,6 +148,11 @@ export function PainelTurno({
         className="flex flex-col gap-4 p-4"
       >
         {erro && <Alerta tom="erro">{erro}</Alerta>}
+        {avisos.map((aviso) => (
+          <Alerta key={aviso} tom="atencao">
+            {aviso}
+          </Alerta>
+        ))}
         <form.AppField name="nome">
           {(field) => (
             <field.TextField label="Nome" placeholder="Ex.: Manhã" autoComplete="off" required />

@@ -147,6 +147,22 @@ describe('PainelTurno', () => {
     );
   });
 
+  it('depois de salvar, mostra o aviso da API sem bloquear', async () => {
+    montar({
+      turno: MANHA,
+      onSalvar: vi.fn(async () => [
+        'O turno foi inativado, mas tem 4 alocações vigentes: elas continuam na escala.',
+      ]),
+    });
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'O turno foi inativado, mas tem 4 alocações vigentes: elas continuam na escala.',
+    );
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+  });
+
   it('exclui com confirmação', async () => {
     const onExcluir = vi.fn(async () => undefined);
     montar({ turno: MANHA, onExcluir });
