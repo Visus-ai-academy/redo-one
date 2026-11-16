@@ -23,7 +23,7 @@ import {
 } from '@nestjs/swagger';
 
 import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
-import type { PrincipalUsuario } from '../../identidade/principal';
+import { type PrincipalUsuario, temPermissao } from '../../identidade/principal';
 import { AusenciasService, type Gestor } from './ausencias.service';
 import {
   AusenciaDto,
@@ -39,12 +39,15 @@ import {
 const gestor = (p: PrincipalUsuario): Gestor => ({
   usuarioId: p.usuarioId,
   acessoTotal: p.acessoTotal,
+  veObservacoes: temPermissao(p, 'ausencias.observacoes.ver'),
 });
 
 /**
  * Tela de ausências do gestor. A gestora com recorte só vê as ausências de médicos com alocação
  * vigente no recorte (as demais respondem 404) e só edita, exclui, aprova ou recusa as que valem
- * inteiras dentro do recorte (as demais respondem 403).
+ * inteiras dentro do recorte (as demais respondem 403). As observações e o motivo da recusa (dado
+ * de saúde) só saem para quem tem `ausencias.observacoes.ver`; os demais recebem `null` e
+ * `temObservacoes`.
  */
 @ApiTags('escala')
 @Controller('escala/ausencias')
@@ -52,7 +55,7 @@ export class AusenciasController {
   constructor(@Inject(AusenciasService) private readonly service: AusenciasService) {}
 
   @Get()
-  @Permissao('escala.ver')
+  @Permissao('ausencias.ver')
   @ApiOkResponse({ type: PaginaAusenciasDto, description: 'Pendentes primeiro.' })
   @ApiBadRequestResponse({ description: 'Período inválido.' })
   async listar(
@@ -69,7 +72,7 @@ export class AusenciasController {
   }
 
   @Get('pendentes/contagem')
-  @Permissao('escala.ausencia.aprovar')
+  @Permissao('ausencias.aprovar')
   @ApiOkResponse({ type: ContagemPendentesDto, description: 'Pedidos pendentes no recorte.' })
   async contarPendentes(
     @PrincipalAtual() principal: PrincipalUsuario,
@@ -78,7 +81,7 @@ export class AusenciasController {
   }
 
   @Get(':id')
-  @Permissao('escala.ver')
+  @Permissao('ausencias.ver')
   @ApiOkResponse({ type: AusenciaItemDto })
   @ApiNotFoundResponse()
   obter(
@@ -89,7 +92,7 @@ export class AusenciasController {
   }
 
   @Post()
-  @Permissao('escala.ausencia.editar')
+  @Permissao('ausencias.criar')
   @ApiCreatedResponse({ type: AusenciasCriadasDto, description: 'Uma ausência por médico.' })
   @ApiBadRequestResponse({ description: 'Período, dias, tipo inativo ou cadastro inexistente.' })
   @ApiForbiddenResponse({ description: 'Médico, turno ou frente fora do recorte da gestora.' })
@@ -101,7 +104,7 @@ export class AusenciasController {
   }
 
   @Put(':id')
-  @Permissao('escala.ausencia.editar')
+  @Permissao('ausencias.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
@@ -119,7 +122,7 @@ export class AusenciasController {
   }
 
   @Delete(':id')
-  @Permissao('escala.ausencia.editar')
+  @Permissao('ausencias.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
@@ -132,7 +135,7 @@ export class AusenciasController {
   }
 
   @Post(':id/aprovar')
-  @Permissao('escala.ausencia.aprovar')
+  @Permissao('ausencias.aprovar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
@@ -146,7 +149,7 @@ export class AusenciasController {
   }
 
   @Post(':id/recusar')
-  @Permissao('escala.ausencia.aprovar')
+  @Permissao('ausencias.aprovar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()

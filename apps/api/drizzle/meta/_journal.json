@@ -99,6 +99,13 @@
       "when": 1794849721979,
       "tag": "0013_frentes_do_catalogo",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794858305272,
+      "tag": "0014_permissoes_crud",
+      "breakpoints": true
     }
   ]
 }

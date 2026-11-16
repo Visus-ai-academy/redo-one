@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { Permissao } from '../acesso/decorators';
-import { CATALOGO_PERMISSOES } from '../permissoes/catalogo';
+import { CATALOGO_PERMISSOES, ROTULO_ACAO_PADRAO } from '../permissoes/catalogo';
 import { TelaCatalogoDto } from './dto/papel.dto';
 
 @ApiTags('identidade')
@@ -16,7 +16,19 @@ export class PermissoesController {
       tela: tela.tela,
       rotulo: tela.rotulo,
       area: tela.area,
-      acoes: tela.acoes.map((a) => ({ chave: a.chave, rotulo: a.rotulo, sensivel: !!a.sensivel })),
+      padrao: tela.padrao.map((a) => ({
+        acao: a.acao,
+        chave: `${tela.tela}.${a.acao}`,
+        rotulo: a.rotulo ?? ROTULO_ACAO_PADRAO[a.acao],
+        sensivel: !!a.sensivel,
+      })),
+      especiais: tela.especiais.map((e) => ({
+        chave: e.chave,
+        rotulo: e.rotulo,
+        descricao: e.descricao,
+        sensivel: !!e.sensivel,
+      })),
+      exige: [...(tela.exige ?? [])],
     }));
   }
 }

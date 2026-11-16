@@ -56,7 +56,7 @@ export class TurnosController {
   }
 
   @Post()
-  @Permissao('escala-config.editar')
+  @Permissao('escala-config.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({
     description: 'Horário inválido, ou especialidade ou modalidade inexistente no catálogo.',
@@ -92,7 +92,7 @@ export class TurnosController {
   }
 
   @Delete(':id')
-  @Permissao('escala-config.editar')
+  @Permissao('escala-config.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()

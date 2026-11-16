@@ -9,6 +9,8 @@ import {
   MaxLength,
 } from 'class-validator';
 
+import { ACOES_PADRAO, type AcaoPadrao, AREAS, type Area } from '../../permissoes/catalogo';
+
 const aparar = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
@@ -65,16 +67,38 @@ export class PapelAtualizadoDto {
   sessoesEncerradas!: number;
 }
 
-export class AcaoCatalogoDto {
+export class AcaoPadraoCatalogoDto {
+  @ApiProperty({ enum: ACOES_PADRAO, enumName: 'AcaoPadraoPermissao' }) acao!: AcaoPadrao;
+  @ApiProperty({ example: 'usuarios.criar' }) chave!: string;
+  @ApiProperty({
+    example: 'Convidar',
+    description: 'Ver, Criar, Editar ou Excluir, salvo rótulo próprio.',
+  })
+  rotulo!: string;
+  @ApiProperty() sensivel!: boolean;
+}
+
+export class EspecialCatalogoDto {
   @ApiProperty({ example: 'usuarios.desbloquear' }) chave!: string;
   @ApiProperty({ example: 'Desbloquear' }) rotulo!: string;
+  @ApiProperty({ example: 'Liberar a conta bloqueada por senha errada.' }) descricao!: string;
   @ApiProperty() sensivel!: boolean;
 }
 
 export class TelaCatalogoDto {
   @ApiProperty({ example: 'usuarios' }) tela!: string;
   @ApiProperty({ example: 'Usuários' }) rotulo!: string;
-  @ApiProperty({ enum: ['Painéis', 'Operação', 'Cadastros', 'Financeiro', 'Configurações'] })
-  area!: string;
-  @ApiProperty({ type: [AcaoCatalogoDto] }) acoes!: AcaoCatalogoDto[];
+  @ApiProperty({ enum: AREAS, enumName: 'AreaPermissao' }) area!: Area;
+  @ApiProperty({
+    type: [AcaoPadraoCatalogoDto],
+    description: 'Só as ações padrão que a tela tem, na ordem ver, criar, editar, excluir.',
+  })
+  padrao!: AcaoPadraoCatalogoDto[];
+  @ApiProperty({ type: [EspecialCatalogoDto] }) especiais!: EspecialCatalogoDto[];
+  @ApiProperty({
+    type: [String],
+    example: ['escala'],
+    description: 'Telas cujo `ver` vem junto com qualquer ação desta.',
+  })
+  exige!: string[];
 }

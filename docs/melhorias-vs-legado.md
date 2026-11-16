@@ -144,7 +144,7 @@
 | --- | --- | --- | --- |
 | Ausência só por dia inteiro e sem recorrência | Ausência por escala, por turno ou dia inteiro e recorrente por dia da semana, num formulário único (vários médicos de uma vez) nas Ausências e no "Definir ausência" da escala; o portal pede com turno e dias | Feito (API do portal feita; tela do portal com o portal) | 11/11 · 976a7d32, 6088a72d; 16/11 · 6b9cff3f |
 | Não dava para escalar médico sem arranjo | Escalar sem arranjo prévio | Feito | 09/11 · e5f67abe; 16/11 · 6b9cff3f |
-| Log das alocações só para o ADMIN | Histórico da escala com permissão própria (`escala.historico.ver`), filtrado pelo recorte, com nomes no lugar dos ids e as cascatas (coberturas e ajustes) registradas | Feito | 05/11 · 78bfa637; 16/11 · 6b9cff3f |
+| Log das alocações só para o ADMIN | Histórico da escala com permissão própria (`escala-historico.ver`), filtrado pelo recorte, com nomes no lugar dos ids e as cascatas (coberturas e ajustes) registradas | Feito | 05/11 · 78bfa637; 16/11 · 6b9cff3f |
 | "Escala › Configurações" sem efeito | Removida; Configurações › Escala tem só Turnos e Tipos de ausência | Feito | 13/11 · 54a72938; 16/11 · 6b9cff3f |
 | Recorte da gestora em arrays sem FK, sem tela, aplicado só nas Visões (Ausências, contador e histórico mostravam tudo) | `usuarios_escopos_escala` com FK, editável no painel do usuário (não o próprio), aplicado na API em ocorrências, alocações, ausências, contador e histórico | Feito | 13/11 · 54a72938; 16/11 · 6b9cff3f |
 | Especialidade fazendo papel de modalidade na escala (TC, RX, DO, D.O, MG) | Frente = especialidade ou modalidade do catálogo, sem cadastro próprio; criada sozinha quando um turno a usa; D.O e DO viram DO, MAMO vira MAMA | Feito | 15/11 · 78757306; 16/11 · 6b9cff3f |

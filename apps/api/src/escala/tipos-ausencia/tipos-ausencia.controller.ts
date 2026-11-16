@@ -61,7 +61,7 @@ export class TiposAusenciaController {
   }
 
   @Post()
-  @Permissao('escala-config.editar')
+  @Permissao('escala-config.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Gravidade inválida.' })
   @ApiConflictResponse({ description: 'Nome já usado.' })
@@ -88,7 +88,7 @@ export class TiposAusenciaController {
   }
 
   @Delete(':id')
-  @Permissao('escala-config.editar')
+  @Permissao('escala-config.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()

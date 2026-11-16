@@ -69,7 +69,7 @@ export class MedicosController {
   }
 
   @Post()
-  @Permissao('medicos.editar')
+  @Permissao('medicos.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Nome sem letras ou nível inexistente.' })
   @ApiConflictResponse({ description: 'Nome ou id da MobileMed já usado.' })
@@ -95,7 +95,7 @@ export class MedicosController {
   }
 
   @Delete(':id')
-  @Permissao('medicos.editar')
+  @Permissao('medicos.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por outro cadastro: desative em vez de excluir.' })
@@ -107,7 +107,7 @@ export class MedicosController {
   }
 
   @Post(':id/aliases')
-  @Permissao('medicos.editar')
+  @Permissao('medicos.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Grafia sem letras ou igual à do próprio médico.' })
   @ApiConflictResponse({ description: 'Grafia ligada a outro médico ou nome de outro médico.' })
@@ -120,7 +120,7 @@ export class MedicosController {
   }
 
   @Delete(':id/aliases/:aliasId')
-  @Permissao('medicos.editar')
+  @Permissao('medicos.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()

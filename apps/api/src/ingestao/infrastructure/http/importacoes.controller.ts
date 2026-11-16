@@ -53,7 +53,7 @@ export class ImportacoesController {
   }
 
   @Post('envios')
-  @Permissao('importacao.enviar')
+  @Permissao('importacao.criar')
   @ApiCreatedResponse({ type: EnvioDto })
   @ApiBadRequestResponse({ description: 'Arquivo que não é .xlsx, vazio ou acima de 50 MB.' })
   prepararEnvio(
@@ -64,7 +64,7 @@ export class ImportacoesController {
   }
 
   @Post('importacoes')
-  @Permissao('importacao.enviar')
+  @Permissao('importacao.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'A planilha não chegou ao storage ou já foi enviada.' })
   @ApiNotFoundResponse()

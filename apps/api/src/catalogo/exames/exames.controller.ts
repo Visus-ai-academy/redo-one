@@ -56,7 +56,7 @@ export class ExamesController {
   }
 
   @Post()
-  @Permissao('exames.editar')
+  @Permissao('exames.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Cadastro ligado inexistente.' })
   async criar(
@@ -80,7 +80,7 @@ export class ExamesController {
   }
 
   @Delete(':id')
-  @Permissao('exames.editar')
+  @Permissao('exames.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Peça de uma quebra: desative em vez de excluir.' })

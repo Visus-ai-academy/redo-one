@@ -65,7 +65,7 @@ abstract class ListaControllerBase {
   }
 
   @Post()
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiConflictResponse({ description: 'Nome já usado.' })
   async criar(
@@ -89,7 +89,7 @@ abstract class ListaControllerBase {
   }
 
   @Delete(':id')
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por outro cadastro: desative em vez de excluir.' })
@@ -148,7 +148,7 @@ export class PrioridadesController extends ListaControllerBase {
   }
 
   @Post()
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiConflictResponse({ description: 'Nome já usado.' })
   override async criar(

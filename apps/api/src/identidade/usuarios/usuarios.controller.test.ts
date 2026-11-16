@@ -19,8 +19,8 @@ describe('UsuariosController', () => {
     expect(exigidas('listar')).toEqual(['usuarios.ver']);
     expect(exigidas('papeis')).toEqual(['usuarios.ver']);
     expect(exigidas('obter')).toEqual(['usuarios.ver']);
-    expect(exigidas('convidar')).toEqual(['usuarios.convidar']);
-    expect(exigidas('reenviarConvite')).toEqual(['usuarios.convidar']);
+    expect(exigidas('convidar')).toEqual(['usuarios.criar']);
+    expect(exigidas('reenviarConvite')).toEqual(['usuarios.criar']);
     expect(exigidas('trocarPapel')).toEqual(['usuarios.editar']);
     expect(exigidas('encerrarSessoes')).toEqual(['usuarios.editar']);
     expect(exigidas('encerrarSessao')).toEqual(['usuarios.editar']);

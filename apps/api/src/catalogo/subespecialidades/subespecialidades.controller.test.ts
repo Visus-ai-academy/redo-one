@@ -10,7 +10,7 @@ import type { SubespecialidadesService } from './subespecialidades.service';
 describe('SubespecialidadesController', () => {
   const reflector = new Reflector();
 
-  it('fica em /catalogo/subespecialidades; ler exige catalogo.ver e mudar catalogo.editar', () => {
+  it('fica em /catalogo/subespecialidades; ler exige catalogo.ver; criar, editar e excluir pelo verbo', () => {
     expect(reflector.get(PATH_METADATA, SubespecialidadesController)).toBe(
       'catalogo/subespecialidades',
     );
@@ -18,9 +18,9 @@ describe('SubespecialidadesController', () => {
       reflector.get(PERMISSOES_EXIGIDAS, SubespecialidadesController.prototype[m]);
     expect([exigidas('listar'), exigidas('obter')]).toEqual([['catalogo.ver'], ['catalogo.ver']]);
     expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
+      ['catalogo.criar'],
       ['catalogo.editar'],
-      ['catalogo.editar'],
-      ['catalogo.editar'],
+      ['catalogo.excluir'],
     ]);
   });
 

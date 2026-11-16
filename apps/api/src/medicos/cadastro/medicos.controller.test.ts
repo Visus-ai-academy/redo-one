@@ -14,11 +14,18 @@ describe('MedicosController', () => {
   const exigidas = (m: keyof MedicosController) =>
     reflector.get(PERMISSOES_EXIGIDAS, MedicosController.prototype[m]);
 
-  it('fica em /medicos; ler exige medicos.ver e mudar (inclusive apelidos) medicos.editar', () => {
+  it('fica em /medicos; ler exige medicos.ver; mudar (inclusive apelidos) segue o verbo', () => {
     expect(reflector.get(PATH_METADATA, MedicosController)).toBe('medicos');
     expect([exigidas('listar'), exigidas('obter')]).toEqual([['medicos.ver'], ['medicos.ver']]);
-    for (const m of ['criar', 'atualizar', 'excluir', 'criarAlias', 'excluirAlias'] as const) {
-      expect(exigidas(m)).toEqual(['medicos.editar']);
+    const esperado = {
+      criar: 'medicos.criar',
+      atualizar: 'medicos.editar',
+      excluir: 'medicos.excluir',
+      criarAlias: 'medicos.criar',
+      excluirAlias: 'medicos.excluir',
+    } as const;
+    for (const [m, chave] of Object.entries(esperado)) {
+      expect(exigidas(m as keyof typeof esperado)).toEqual([chave]);
     }
   });
 

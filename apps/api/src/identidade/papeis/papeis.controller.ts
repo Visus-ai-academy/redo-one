@@ -52,7 +52,7 @@ export class PapeisController {
   }
 
   @Post()
-  @Permissao('papeis.editar')
+  @Permissao('papeis.criar')
   @ApiCreatedResponse({ type: PapelCriadoDto })
   @ApiConflictResponse({ description: 'Nome já usado.' })
   @ApiForbiddenResponse({ description: 'Concede permissão que quem pede não tem.' })
@@ -78,7 +78,7 @@ export class PapeisController {
   }
 
   @Delete(':id')
-  @Permissao('papeis.editar')
+  @Permissao('papeis.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Papel com usuários ou papel do sistema.' })

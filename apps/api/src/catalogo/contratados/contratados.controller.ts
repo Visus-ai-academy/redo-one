@@ -54,7 +54,7 @@ export class ContratadosController {
   }
 
   @Post()
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Documento inválido ou consolidação de repasse inválida.' })
   @ApiConflictResponse({ description: 'Razão social ou CNPJ já usados.' })
@@ -80,7 +80,7 @@ export class ContratadosController {
   }
 
   @Delete(':id')
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por clientes ou contratados: desative.' })

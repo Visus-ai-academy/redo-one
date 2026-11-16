@@ -18,13 +18,13 @@ describe('EscalaFixaController', () => {
   const reflector = new Reflector();
   const permissao = (metodo: object) => reflector.get(PERMISSOES_EXIGIDAS, metodo as never);
 
-  it('fica em /escala/medicos/:medicoId/escala-fixa; ler com escala.ver, salvar com editar', () => {
+  it('fica em /escala/medicos/:medicoId/escala-fixa; ler com escala.ver, montar a escala com escala.editar', () => {
     const p = EscalaFixaController.prototype;
     expect(reflector.get(PATH_METADATA, EscalaFixaController)).toBe('escala/medicos');
     expect(reflector.get(PATH_METADATA, p.obter)).toBe(':medicoId/escala-fixa');
     expect(reflector.get(PATH_METADATA, p.definir)).toBe(':medicoId/escala-fixa');
     expect(permissao(p.obter)).toEqual(['escala.ver']);
-    expect(permissao(p.definir)).toEqual(['escala.alocacao.editar']);
+    expect(permissao(p.definir)).toEqual(['escala.editar']);
   });
 
   it('repassa quem pede, o médico, a frente e o corpo', async () => {

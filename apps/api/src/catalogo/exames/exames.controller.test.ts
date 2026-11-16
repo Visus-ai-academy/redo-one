@@ -8,13 +8,15 @@ import { ExamesController } from './exames.controller';
 describe('ExamesController', () => {
   const reflector = new Reflector();
 
-  it('fica em /catalogo/exames; ler exige exames.ver e mudar exames.editar', () => {
+  it('fica em /catalogo/exames; ler exige exames.ver; criar, editar e excluir pelo verbo', () => {
     expect(reflector.get(PATH_METADATA, ExamesController)).toBe('catalogo/exames');
     const exigidas = (m: keyof ExamesController) =>
       reflector.get(PERMISSOES_EXIGIDAS, ExamesController.prototype[m]);
     expect([exigidas('listar'), exigidas('obter')]).toEqual([['exames.ver'], ['exames.ver']]);
-    for (const m of ['criar', 'atualizar', 'excluir'] as const) {
-      expect(exigidas(m)).toEqual(['exames.editar']);
-    }
+    expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
+      ['exames.criar'],
+      ['exames.editar'],
+      ['exames.excluir'],
+    ]);
   });
 });

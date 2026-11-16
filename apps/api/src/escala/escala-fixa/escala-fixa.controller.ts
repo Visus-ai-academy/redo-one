@@ -40,7 +40,7 @@ export class EscalaFixaController {
   }
 
   @Put(':medicoId/escala-fixa')
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.editar')
   @ApiOkResponse({ type: ResultadoEscalaFixaDto })
   @ApiBadRequestResponse({
     description: 'Célula repetida, turno sem a frente, médico inativo ou data inválida.',

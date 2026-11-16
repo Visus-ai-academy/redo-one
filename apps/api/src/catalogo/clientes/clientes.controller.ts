@@ -68,7 +68,7 @@ export class ClientesController {
   }
 
   @Post()
-  @Permissao('clientes.editar')
+  @Permissao('clientes.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Sem empresa que fatura ou documento inválido.' })
   @ApiConflictResponse({ description: 'Nome já usado.' })
@@ -94,7 +94,7 @@ export class ClientesController {
   }
 
   @Delete(':id')
-  @Permissao('clientes.editar')
+  @Permissao('clientes.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por outro cadastro: desative em vez de excluir.' })
@@ -106,7 +106,7 @@ export class ClientesController {
   }
 
   @Post(':id/aliases')
-  @Permissao('clientes.editar')
+  @Permissao('clientes.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Grafia vazia ou igual à do próprio cliente.' })
   @ApiConflictResponse({ description: 'Apelido ligado a outro cliente ou nome de outro cliente.' })
@@ -119,7 +119,7 @@ export class ClientesController {
   }
 
   @Delete(':id/aliases/:aliasId')
-  @Permissao('clientes.editar')
+  @Permissao('clientes.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
@@ -132,7 +132,7 @@ export class ClientesController {
   }
 
   @Post(':id/unidades')
-  @Permissao('clientes.editar')
+  @Permissao('clientes.criar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'O cliente do corpo passa a ser unidade deste.' })
   @ApiBadRequestResponse({ description: 'Unificação de mais de um nível ou no próprio cliente.' })
@@ -147,7 +147,7 @@ export class ClientesController {
   }
 
   @Delete(':id/unidades/:unidadeId')
-  @Permissao('clientes.editar')
+  @Permissao('clientes.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'A unidade volta a ser cliente independente.' })
   @ApiNotFoundResponse()

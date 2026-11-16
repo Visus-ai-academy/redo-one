@@ -6,8 +6,10 @@ import { AusenciasService, type EntradaAusencias } from './ausencias.service';
 import { FakeAusenciasRepository } from './testing';
 
 const AGORA = new Date('2026-11-16T15:00:00Z');
-const admin = { usuarioId: 'u-admin', acessoTotal: true };
-const gestora = { usuarioId: 'u-gestora', acessoTotal: false };
+const admin = { usuarioId: 'u-admin', acessoTotal: true, veObservacoes: true };
+const gestora = { usuarioId: 'u-gestora', acessoTotal: false, veObservacoes: true };
+/** Sem `ausencias.observacoes.ver`: o texto (dado de saúde) não sai. */
+const semObservacoes = { usuarioId: 'u-gestora', acessoTotal: false, veObservacoes: false };
 
 function montar() {
   const repo = new FakeAusenciasRepository();
@@ -459,6 +461,71 @@ describe('AusenciasService', () => {
       });
       expect(JSON.stringify(repo.eventos)).not.toContain('atestado');
       await expect(service.excluir(admin, id)).rejects.toThrow(/não encontrada/);
+    });
+  });
+
+  describe('observações (dado de saúde)', () => {
+    async function recusada() {
+      const { service, repo } = ctx;
+      const [id = ''] = await service.criar(
+        admin,
+        entrada({ observacoes: 'atestado de cirurgia' }),
+      );
+      repo.copiar(id, 'p-1', { situacao: 'pendente', origem: 'medico' });
+      await service.recusar(admin, 'p-1', 'escala cheia');
+      const [vazia = ''] = await service.criar(admin, entrada({ medicoIds: ['m-caio'] }));
+      return { id, vazia };
+    }
+
+    it('sem a permissão, a lista e o detalhe trazem só se há observação, sem o texto nem o motivo da recusa', async () => {
+      const { service } = ctx;
+      const { vazia } = await recusada();
+
+      const { itens } = await service.listar(semObservacoes, { pagina: 1, porPagina: 10 });
+      const recusa = itens.find((a) => a.id === 'p-1');
+
+      expect(recusa).toMatchObject({
+        situacao: 'recusada',
+        observacoes: null,
+        motivoRecusa: null,
+        temObservacoes: true,
+      });
+      expect(itens.find((a) => a.id === vazia)).toMatchObject({
+        observacoes: null,
+        temObservacoes: false,
+      });
+      expect(JSON.stringify(itens)).not.toMatch(/atestado|cheia/);
+      await expect(service.obter(semObservacoes, 'p-1')).resolves.toMatchObject({
+        observacoes: null,
+        motivoRecusa: null,
+        temObservacoes: true,
+      });
+    });
+
+    it('com a permissão, trazem o texto', async () => {
+      const { service } = ctx;
+      const { vazia } = await recusada();
+
+      await expect(service.obter(gestora, 'p-1')).resolves.toMatchObject({
+        observacoes: 'atestado de cirurgia',
+        motivoRecusa: 'escala cheia',
+        temObservacoes: true,
+      });
+      const { itens } = await service.listar(admin, { pagina: 1, porPagina: 10 });
+      expect(itens.find((a) => a.id === vazia)).toMatchObject({
+        observacoes: null,
+        temObservacoes: false,
+      });
+    });
+
+    it('sem a permissão, editar mantém a observação gravada (a tela não a recebeu)', async () => {
+      const { service, repo } = ctx;
+      const [id = ''] = await service.criar(admin, entrada({ observacoes: 'atestado' }));
+
+      await service.atualizar(semObservacoes, id, { ...entrada(), observacoes: null });
+      await service.atualizar(semObservacoes, id, { ...entrada(), observacoes: 'trocada' });
+
+      expect(repo.ausencias.get(id)?.observacoes).toBe('atestado');
     });
   });
 

@@ -40,15 +40,17 @@ describe('AlocacoesController', () => {
   const reflector = new Reflector();
   const permissao = (metodo: object) => reflector.get(PERMISSOES_EXIGIDAS, metodo as never);
 
-  it('fica em /escala/alocacoes; leitura com escala.ver, escrita com escala.alocacao.editar', () => {
+  it('fica em /escala/alocacoes; leitura com escala.ver; criar, editar e remover pelo verbo', () => {
     const p = AlocacoesController.prototype;
     expect(reflector.get(PATH_METADATA, AlocacoesController)).toBe('escala/alocacoes');
     expect(reflector.get(PATH_METADATA, CoberturasController)).toBe('escala/coberturas');
     expect(permissao(p.obter)).toEqual(['escala.ver']);
-    for (const m of [p.criar, p.atualizar, p.remover, p.criarCobertura, p.definirAjuste]) {
-      expect(permissao(m)).toEqual(['escala.alocacao.editar']);
-    }
-    expect(permissao(CoberturasController.prototype.atualizar)).toEqual(['escala.alocacao.editar']);
+    expect(permissao(p.criar)).toEqual(['escala.criar']);
+    expect(permissao(p.criarCobertura)).toEqual(['escala.criar']);
+    expect(permissao(p.atualizar)).toEqual(['escala.editar']);
+    expect(permissao(p.definirAjuste)).toEqual(['escala.editar']);
+    expect(permissao(CoberturasController.prototype.atualizar)).toEqual(['escala.editar']);
+    expect(permissao(p.remover)).toEqual(['escala.excluir']);
   });
 
   it('repassa quem pede e o corpo a cada ação', async () => {

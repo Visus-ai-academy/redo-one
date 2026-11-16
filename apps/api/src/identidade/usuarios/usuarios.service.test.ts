@@ -47,7 +47,7 @@ const coordenadora = ator({
   nome: 'Ana',
   papelId: 'p-coord',
   acessoTotal: false,
-  permissoes: new Set(['usuarios.ver', 'usuarios.convidar', 'escala.ver']),
+  permissoes: new Set(['usuarios.ver', 'usuarios.criar', 'escala.ver']),
 });
 
 describe('UsuariosService', () => {

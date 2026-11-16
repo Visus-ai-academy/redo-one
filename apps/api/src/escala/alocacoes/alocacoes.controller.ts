@@ -61,7 +61,7 @@ export class AlocacoesController {
   }
 
   @Post()
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.criar')
   @ApiCreatedResponse({ type: CriadoComAvisosDto })
   @ApiBadRequestResponse({
     description: 'Regra da escala, médico inativo ou frente fora do turno.',
@@ -75,7 +75,7 @@ export class AlocacoesController {
   }
 
   @Put(':id')
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.editar')
   @ApiOkResponse({ type: AvisosEscalaDto })
   @ApiNotFoundResponse()
   @ApiBadRequestResponse({ description: 'Regra da escala, ou é cobertura (use a rota dela).' })
@@ -89,7 +89,7 @@ export class AlocacoesController {
   }
 
   @Delete(':id')
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Remove também as coberturas e os ajustes do vínculo.' })
   @ApiNotFoundResponse()
@@ -101,7 +101,7 @@ export class AlocacoesController {
   }
 
   @Post(':id/coberturas')
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.criar')
   @ApiCreatedResponse({ type: CriadoComAvisosDto })
   @ApiNotFoundResponse({ description: 'Vínculo titular não encontrado.' })
   @ApiBadRequestResponse({ description: 'Fora da vigência, sem plantão no período, etc.' })
@@ -115,7 +115,7 @@ export class AlocacoesController {
   }
 
   @Put(':id/ajustes/:data')
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
@@ -136,7 +136,7 @@ export class CoberturasController {
   constructor(@Inject(AlocacoesService) private readonly alocacoes: AlocacoesService) {}
 
   @Put(':id')
-  @Permissao('escala.alocacao.editar')
+  @Permissao('escala.editar')
   @ApiOkResponse({ type: AvisosEscalaDto })
   @ApiNotFoundResponse()
   @ApiBadRequestResponse({ description: 'Não é cobertura, ou fora da regra.' })

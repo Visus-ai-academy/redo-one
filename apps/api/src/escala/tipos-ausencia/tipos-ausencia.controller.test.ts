@@ -38,12 +38,14 @@ describe('TiposAusenciaController', () => {
   const exigidas = (metodo: string) =>
     reflector.get(PERMISSOES_EXIGIDAS, (TiposAusenciaController.prototype as never)[metodo]);
 
-  it('fica em /escala/tipos-ausencia; ler exige escala.ver e mudar escala-config.editar', () => {
+  it('fica em /escala/tipos-ausencia; ler exige escala.ver; mudar, escala-config pelo verbo', () => {
     expect(reflector.get(PATH_METADATA, TiposAusenciaController)).toBe('escala/tipos-ausencia');
     expect([exigidas('listar'), exigidas('obter')]).toEqual([['escala.ver'], ['escala.ver']]);
-    for (const m of ['criar', 'atualizar', 'excluir']) {
-      expect(exigidas(m)).toEqual(['escala-config.editar']);
-    }
+    expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
+      ['escala-config.criar'],
+      ['escala-config.editar'],
+      ['escala-config.excluir'],
+    ]);
   });
 
   it('lista devolvendo a página pedida', async () => {

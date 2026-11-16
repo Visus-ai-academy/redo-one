@@ -58,7 +58,7 @@ export class SubespecialidadesController {
   }
 
   @Post()
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Sem especialidade ou especialidade inexistente.' })
   @ApiConflictResponse({ description: 'Nome já usado.' })
@@ -84,7 +84,7 @@ export class SubespecialidadesController {
   }
 
   @Delete(':id')
-  @Permissao('catalogo.editar')
+  @Permissao('catalogo.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por exames: desative em vez de excluir.' })

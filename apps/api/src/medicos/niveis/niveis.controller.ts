@@ -55,7 +55,7 @@ export class NiveisMedicoController {
   }
 
   @Post()
-  @Permissao('medicos.editar')
+  @Permissao('medicos.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiConflictResponse({ description: 'Nome já usado.' })
   async criar(
@@ -79,7 +79,7 @@ export class NiveisMedicoController {
   }
 
   @Delete(':id')
-  @Permissao('medicos.editar')
+  @Permissao('medicos.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por outro cadastro: desative em vez de excluir.' })

@@ -207,6 +207,11 @@ export class AusenciaPortalDto {
 
 /** A ausência na tela do gestor: com quem pediu e quem revisou. */
 export class AusenciaItemDto extends AusenciaPortalDto {
+  @ApiProperty({
+    description:
+      'Há observação gravada. Sem `ausencias.observacoes.ver`, `observacoes` e `motivoRecusa` vêm `null` (dado de saúde).',
+  })
+  temObservacoes!: boolean;
   @ApiProperty({ type: ReferenciaAusenciaDto, nullable: true })
   solicitadaPor!: ReferenciaAusenciaDto | null;
   @ApiProperty({ type: ReferenciaAusenciaDto, nullable: true })

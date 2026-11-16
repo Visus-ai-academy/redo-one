@@ -15,10 +15,10 @@ describe('ImportacoesController', () => {
   const exigidas = (m: keyof ImportacoesController) =>
     reflector.get(PERMISSOES_EXIGIDAS, ImportacoesController.prototype[m]);
 
-  it('fica em /ingestao; enviar exige importacao.enviar', () => {
+  it('fica em /ingestao; enviar exige importacao.criar', () => {
     expect(reflector.get(PATH_METADATA, ImportacoesController)).toBe('ingestao');
-    expect(exigidas('prepararEnvio')).toEqual(['importacao.enviar']);
-    expect(exigidas('confirmarEnvio')).toEqual(['importacao.enviar']);
+    expect(exigidas('prepararEnvio')).toEqual(['importacao.criar']);
+    expect(exigidas('confirmarEnvio')).toEqual(['importacao.criar']);
     for (const m of ['listar', 'obter'] as const) {
       expect(exigidas(m)).toEqual(['importacao.ver']);
     }

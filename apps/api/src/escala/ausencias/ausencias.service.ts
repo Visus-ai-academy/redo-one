@@ -49,6 +49,21 @@ import {
 export interface Gestor {
   usuarioId: string;
   acessoTotal: boolean;
+  /** Tem `ausencias.observacoes.ver` (ou acesso total): lê as observações e o motivo da recusa. */
+  veObservacoes: boolean;
+}
+
+/** A ausência como sai para o gestor: sem o texto (dado de saúde) para quem não pode vê-lo. */
+export type AusenciaVisivel = AusenciaDetalhada & {
+  /** Há observação gravada, mesmo quando o texto não vem. */
+  temObservacoes: boolean;
+};
+
+function paraQuemVe(gestor: Gestor, ausencia: AusenciaDetalhada): AusenciaVisivel {
+  const temObservacoes = ausencia.observacoes !== null;
+  return gestor.veObservacoes
+    ? { ...ausencia, temObservacoes }
+    : { ...ausencia, observacoes: null, motivoRecusa: null, temObservacoes };
 }
 
 /** Os dados de uma ausência no formulário do gestor. */
@@ -183,7 +198,7 @@ export class AusenciasService {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async listar(gestor: Gestor, consulta: ConsultaAusencias): Promise<Pagina<AusenciaDetalhada>> {
+  async listar(gestor: Gestor, consulta: ConsultaAusencias): Promise<Pagina<AusenciaVisivel>> {
     const de = validarData(
       consulta.de ?? adicionarDias(hojeEmBrasilia(this.clock.now()), -DIAS_PARA_TRAS),
     );
@@ -191,7 +206,7 @@ export class AusenciasService {
     if (ate && ate < de) {
       throw new EscalaInvalidaError('A data inicial do período é depois da final.');
     }
-    return this.repo.listar({
+    const pagina = await this.repo.listar({
       ...(consulta.situacao ? { situacao: consulta.situacao } : {}),
       ...(consulta.tipoId ? { tipoId: consulta.tipoId } : {}),
       ...(consulta.frenteId ? { frenteId: consulta.frenteId } : {}),
@@ -203,10 +218,11 @@ export class AusenciasService {
       pagina: consulta.pagina,
       porPagina: consulta.porPagina,
     });
+    return { ...pagina, itens: pagina.itens.map((a) => paraQuemVe(gestor, a)) };
   }
 
-  async obter(gestor: Gestor, id: string): Promise<AusenciaDetalhada> {
-    return this.visivel(gestor, id);
+  async obter(gestor: Gestor, id: string): Promise<AusenciaVisivel> {
+    return paraQuemVe(gestor, await this.visivel(gestor, id));
   }
 
   async contarPendentes(gestor: Gestor): Promise<number> {
@@ -278,7 +294,8 @@ export class AusenciasService {
       dataFim: validada.dataFim,
       diasSemana: validada.diasSemana,
       ...ordenado(alcances.get(atual.medico.id) ?? validada),
-      observacoes: texto(entrada.observacoes),
+      // Quem não vê as observações recebeu `null` na tela: mantém a gravada.
+      observacoes: gestor.veObservacoes ? texto(entrada.observacoes) : atual.observacoes,
     };
     const mudanca = diferenca(antes, { ...antes, ...dados });
     if (!mudanca) return;

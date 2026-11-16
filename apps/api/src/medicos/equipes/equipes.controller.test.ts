@@ -12,7 +12,7 @@ describe('EquipesController e NiveisMedicoController', () => {
   it.each([
     [EquipesController, 'equipes'],
     [NiveisMedicoController, 'niveis-medico'],
-  ])('%o: ler exige medicos.ver e mudar medicos.editar', (controller, caminho) => {
+  ])('%o: ler exige medicos.ver; criar, editar e excluir pelo verbo', (controller, caminho) => {
     expect(reflector.get(PATH_METADATA, controller)).toBe(caminho);
     const exigidas = (m: string) =>
       reflector.get(
@@ -20,8 +20,10 @@ describe('EquipesController e NiveisMedicoController', () => {
         (controller.prototype as unknown as Record<string, () => void>)[m] as () => void,
       );
     expect([exigidas('listar'), exigidas('obter')]).toEqual([['medicos.ver'], ['medicos.ver']]);
-    for (const m of ['criar', 'atualizar', 'excluir']) {
-      expect(exigidas(m)).toEqual(['medicos.editar']);
-    }
+    expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
+      ['medicos.criar'],
+      ['medicos.editar'],
+      ['medicos.excluir'],
+    ]);
   });
 });

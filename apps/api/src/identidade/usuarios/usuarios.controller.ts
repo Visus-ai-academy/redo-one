@@ -78,7 +78,7 @@ export class UsuariosController {
   }
 
   @Post()
-  @Permissao('usuarios.convidar')
+  @Permissao('usuarios.criar')
   @ApiCreatedResponse({ type: UsuarioCriadoDto, description: 'Conta criada e convite enviado.' })
   @ApiConflictResponse({ description: 'E-mail ou CPF já cadastrados, ou médico já com acesso.' })
   @ApiForbiddenResponse({ description: 'Papel com permissões que quem convida não tem.' })
@@ -91,7 +91,7 @@ export class UsuariosController {
   }
 
   @Post(':id/convite')
-  @Permissao('usuarios.convidar')
+  @Permissao('usuarios.criar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Convite reenviado; o link anterior deixa de valer.' })
   reenviarConvite(@PrincipalAtual() ator: PrincipalUsuario, @Id() id: string): Promise<void> {

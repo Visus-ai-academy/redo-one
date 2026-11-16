@@ -1,64 +1,169 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { CATALOGO_PERMISSOES, existePermissao, normalizarPermissoes } from './catalogo';
+import {
+  ACOES_PADRAO,
+  CATALOGO_PERMISSOES,
+  chavesDaTela,
+  existePermissao,
+  normalizarPermissoes,
+  TODAS_AS_PERMISSOES,
+} from './catalogo';
+
+const tela = (nome: string) => {
+  const encontrada = CATALOGO_PERMISSOES.find((t) => t.tela === nome);
+  if (!encontrada) throw new Error(`tela ${nome} fora do catálogo`);
+  return encontrada;
+};
+const padroes = (nome: string) => tela(nome).padrao.map((a) => a.acao);
+const especiais = (nome: string) => tela(nome).especiais.map((e) => e.chave);
+const sensiveis = (nome: string) => [
+  ...tela(nome)
+    .padrao.filter((a) => a.sensivel)
+    .map((a) => `${nome}.${a.acao}`),
+  ...tela(nome)
+    .especiais.filter((e) => e.sensivel)
+    .map((e) => e.chave),
+];
 
 describe('catálogo de permissões', () => {
-  it('toda tela começa pela ação ver, e as chaves são únicas', () => {
-    const chaves = CATALOGO_PERMISSOES.flatMap((t) => t.acoes.map((a) => a.chave));
-
-    for (const tela of CATALOGO_PERMISSOES) {
-      expect(tela.acoes[0]?.chave).toBe(`${tela.tela}.ver`);
-      for (const acao of tela.acoes) expect(acao.chave.startsWith(`${tela.tela}.`)).toBe(true);
+  it('toda tela tem ver como primeira ação padrão, e as padrão seguem a ordem ver, criar, editar, excluir', () => {
+    for (const t of CATALOGO_PERMISSOES) {
+      const acoes = t.padrao.map((a) => a.acao);
+      expect(acoes[0]).toBe('ver');
+      expect(acoes).toEqual(ACOES_PADRAO.filter((a) => acoes.includes(a)));
     }
-    expect(new Set(chaves).size).toBe(chaves.length);
   });
 
-  it('reconhece só as chaves do catálogo', () => {
-    expect(existePermissao('usuarios.desbloquear')).toBe(true);
-    expect(existePermissao('usuarios.apagar-tudo')).toBe(false);
+  it('as especiais são da própria tela, não repetem uma padrão e todas as chaves são únicas', () => {
+    for (const t of CATALOGO_PERMISSOES) {
+      for (const e of t.especiais) {
+        expect(e.chave.startsWith(`${t.tela}.`)).toBe(true);
+        expect(ACOES_PADRAO.map((a) => `${t.tela}.${a}`)).not.toContain(e.chave);
+        expect(e.rotulo.length).toBeGreaterThan(0);
+        expect(e.descricao.length).toBeGreaterThan(0);
+      }
+    }
+    const telas = CATALOGO_PERMISSOES.map((t) => t.tela);
+    expect(new Set(telas).size).toBe(telas.length);
+    expect(new Set(TODAS_AS_PERMISSOES).size).toBe(TODAS_AS_PERMISSOES.length);
   });
 
-  it('tem as telas do catálogo e dos de-paras na área Configurações', () => {
-    for (const chave of ['catalogo.ver', 'catalogo.editar', 'de-para.ver', 'de-para.editar']) {
+  it('as telas e as ações padrão de cada uma seguem o contrato', () => {
+    const resumo = Object.fromEntries(
+      CATALOGO_PERMISSOES.map((t) => [t.tela, [t.area, padroes(t.tela)]]),
+    );
+    const crud = ['ver', 'criar', 'editar', 'excluir'];
+    expect(resumo).toEqual({
+      'painel-executivo': ['Painéis', ['ver']],
+      volumetria: ['Painéis', ['ver']],
+      sla: ['Painéis', ['ver']],
+      qualidade: ['Painéis', ['ver']],
+      distribuicao: ['Operação', ['ver']],
+      importacao: ['Operação', ['ver', 'criar']],
+      escala: ['Operação', crud],
+      ausencias: ['Operação', crud],
+      'escala-historico': ['Operação', ['ver']],
+      clientes: ['Cadastros', crud],
+      medicos: ['Cadastros', crud],
+      exames: ['Cadastros', crud],
+      avisos: ['Cadastros', ['ver']],
+      faturamento: ['Financeiro', ['ver']],
+      repasse: ['Financeiro', ['ver']],
+      'pre-pago': ['Financeiro', ['ver']],
+      contratos: ['Financeiro', crud],
+      usuarios: ['Configurações', ['ver', 'criar', 'editar']],
+      papeis: ['Configurações', crud],
+      catalogo: ['Configurações', crud],
+      'de-para': ['Configurações', crud],
+      'escala-config': ['Configurações', crud],
+      'chaves-robo': ['Configurações', ['ver']],
+    });
+  });
+
+  it('as especiais e as sensíveis seguem o contrato', () => {
+    expect(especiais('volumetria')).toEqual(['volumetria.exportar']);
+    expect(especiais('sla')).toEqual(['sla.exportar']);
+    expect(especiais('distribuicao')).toEqual([
+      'distribuicao.rodada.iniciar',
+      'distribuicao.rodada.aprovar',
+    ]);
+    expect(especiais('importacao')).toEqual([
+      'importacao.arquivo.baixar',
+      'importacao.parametros.editar',
+    ]);
+    expect(especiais('escala')).toEqual([]);
+    expect(especiais('ausencias')).toEqual(['ausencias.aprovar', 'ausencias.observacoes.ver']);
+    expect(especiais('medicos')).toEqual(['medicos.pagamento.ver', 'medicos.pagamento.editar']);
+    expect(especiais('avisos')).toEqual(['avisos.triar']);
+    expect(especiais('faturamento')).toEqual([
+      'faturamento.demonstrativo.gerar',
+      'faturamento.competencia.fechar',
+      'faturamento.competencia.reabrir',
+    ]);
+    expect(especiais('repasse')).toEqual(['repasse.adicional.lancar', 'repasse.fechar']);
+    expect(especiais('pre-pago')).toEqual(['pre-pago.recarga.solicitar']);
+    expect(especiais('contratos')).toEqual(['contratos.assinatura.enviar']);
+    expect(especiais('usuarios')).toEqual([
+      'usuarios.desbloquear',
+      'usuarios.desativar',
+      'usuarios.escopo-escala.editar',
+    ]);
+    expect(especiais('chaves-robo')).toEqual(['chaves-robo.gerenciar']);
+
+    expect(sensiveis('qualidade')).toEqual(['qualidade.radshield.ver']);
+    expect(sensiveis('distribuicao')).toEqual(['distribuicao.rodada.aprovar']);
+    expect(sensiveis('ausencias')).toEqual(['ausencias.observacoes.ver']);
+    expect(sensiveis('exames')).toEqual(['exames.editar', 'exames.excluir']);
+    expect(sensiveis('papeis')).toEqual(['papeis.criar', 'papeis.editar', 'papeis.excluir']);
+    expect(sensiveis('de-para')).toEqual(['de-para.criar', 'de-para.editar', 'de-para.excluir']);
+    expect(sensiveis('clientes')).toEqual([]);
+    expect(sensiveis('usuarios')).toEqual([
+      'usuarios.desbloquear',
+      'usuarios.desativar',
+      'usuarios.escopo-escala.editar',
+    ]);
+  });
+
+  it('usuários: criar se chama Convidar e editar diz o que faz', () => {
+    expect(tela('usuarios').padrao).toEqual([
+      { acao: 'ver' },
+      { acao: 'criar', rotulo: 'Convidar' },
+      { acao: 'editar', rotulo: 'Trocar papel e encerrar sessões' },
+    ]);
+  });
+
+  it('reconhece só as chaves do catálogo (as antigas deixaram de existir)', () => {
+    for (const chave of ['usuarios.criar', 'ausencias.observacoes.ver', 'escala-historico.ver']) {
       expect(existePermissao(chave)).toBe(true);
     }
-    const areas = CATALOGO_PERMISSOES.filter((t) => ['catalogo', 'de-para'].includes(t.tela)).map(
-      (t) => t.area,
-    );
-    expect(areas).toEqual(['Configurações', 'Configurações']);
-  });
-
-  it('tem a importação (Operação), com os parâmetros como ação sensível, e os avisos (Cadastros)', () => {
-    const tela = (nome: string) => CATALOGO_PERMISSOES.find((t) => t.tela === nome);
-    expect(tela('importacao')?.area).toBe('Operação');
-    expect(tela('importacao')?.acoes.map((a) => [a.chave, a.sensivel ?? false])).toEqual([
-      ['importacao.ver', false],
-      ['importacao.enviar', false],
-      ['importacao.arquivo.baixar', true],
-      ['importacao.parametros.editar', true],
-    ]);
-    expect(tela('avisos')?.area).toBe('Cadastros');
-    expect(tela('avisos')?.acoes.map((a) => a.chave)).toEqual(['avisos.ver', 'avisos.triar']);
-  });
-
-  it('tem a escala (Operação), a configuração da escala e o recorte da escala em Usuários', () => {
-    const tela = (nome: string) => CATALOGO_PERMISSOES.find((t) => t.tela === nome);
-    expect(tela('escala')?.area).toBe('Operação');
-    expect(tela('escala')?.acoes.map((a) => a.chave)).toEqual([
-      'escala.ver',
+    for (const chave of [
+      'usuarios.convidar',
+      'importacao.enviar',
       'escala.alocacao.editar',
       'escala.ausencia.editar',
       'escala.ausencia.aprovar',
       'escala.historico.ver',
+      'volumetria.criar',
+      'usuarios.excluir',
+      'usuarios.apagar-tudo',
+    ]) {
+      expect(existePermissao(chave)).toBe(false);
+    }
+  });
+
+  it('lista as chaves de uma tela: padrão e especiais', () => {
+    expect(chavesDaTela('ausencias')).toEqual([
+      'ausencias.ver',
+      'ausencias.criar',
+      'ausencias.editar',
+      'ausencias.excluir',
+      'ausencias.aprovar',
+      'ausencias.observacoes.ver',
     ]);
-    expect(tela('escala-config')?.area).toBe('Configurações');
-    expect(tela('escala-config')?.acoes.map((a) => a.chave)).toEqual([
-      'escala-config.ver',
-      'escala-config.editar',
-    ]);
-    expect(
-      tela('usuarios')?.acoes.find((a) => a.chave === 'usuarios.escopo-escala.editar')?.sensivel,
-    ).toBe(true);
+    expect(chavesDaTela('inexistente')).toEqual([]);
   });
 
   it('normaliza: acrescenta o ver da tela, tira repetição e ordena', () => {
@@ -67,15 +172,48 @@ describe('catálogo de permissões', () => {
         'repasse.fechar',
         'faturamento.ver',
         'repasse.fechar',
+        'clientes.excluir',
         'inexistente.x',
       ]),
-    ).toEqual(['faturamento.ver', 'repasse.fechar', 'repasse.ver']);
+    ).toEqual([
+      'clientes.excluir',
+      'clientes.ver',
+      'faturamento.ver',
+      'repasse.fechar',
+      'repasse.ver',
+    ]);
   });
 
-  it('a configuração da escala leva junto o ver da escala, que as listas de turnos e frentes exigem', () => {
-    expect(normalizarPermissoes(['escala-config.ver'])).toEqual([
+  it('qualquer ação da configuração da escala leva junto o ver da escala', () => {
+    expect(normalizarPermissoes(['escala-config.excluir'])).toEqual([
+      'escala-config.excluir',
       'escala-config.ver',
       'escala.ver',
     ]);
+  });
+
+  it('qualquer ação das ausências leva junto o ver da escala (o formulário lê turnos, frentes e médicos dela)', () => {
+    expect(normalizarPermissoes(['ausencias.criar'])).toEqual([
+      'ausencias.criar',
+      'ausencias.ver',
+      'escala.ver',
+    ]);
+  });
+
+  it('toda chave exigida por @Permissao() na API existe no catálogo', () => {
+    const raiz = join(__dirname, '../..');
+    const arquivos = readdirSync(raiz, { recursive: true, encoding: 'utf8' }).filter(
+      (f) => f.endsWith('.ts') && !f.endsWith('.test.ts'),
+    );
+    const usadas = new Set(
+      arquivos.flatMap((f) =>
+        [...readFileSync(join(raiz, f), 'utf8').matchAll(/@Permissao\(([^)]*)\)/g)].flatMap((m) =>
+          [...(m[1] ?? '').matchAll(/'([^']+)'/g)].map((c) => c[1] ?? ''),
+        ),
+      ),
+    );
+
+    expect(usadas.size).toBeGreaterThan(20);
+    expect([...usadas].filter((chave) => !existePermissao(chave))).toEqual([]);
   });
 });

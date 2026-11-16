@@ -40,7 +40,14 @@ const coordenadora: PrincipalUsuario = {
   usuarioId: 'u-ana',
   papelId: 'p-coord',
   acessoTotal: false,
-  permissoes: new Set(['papeis.ver', 'papeis.editar', 'escala.ver', 'escala.ausencia.aprovar']),
+  permissoes: new Set([
+    'papeis.ver',
+    'papeis.criar',
+    'papeis.editar',
+    'escala.ver',
+    'ausencias.ver',
+    'ausencias.aprovar',
+  ]),
 };
 
 describe('PapeisService', () => {
@@ -167,7 +174,7 @@ describe('PapeisService', () => {
         service.criar(coordenadora, {
           nome: 'Escala',
           descricao: null,
-          permissoes: ['escala.ausencia.aprovar', 'faturamento.competencia.fechar'],
+          permissoes: ['ausencias.aprovar', 'faturamento.competencia.fechar'],
         }),
       ).rejects.toThrow(PermissaoNaoConcedivelError);
 
@@ -175,7 +182,7 @@ describe('PapeisService', () => {
         service.criar(coordenadora, {
           nome: 'Escala',
           descricao: null,
-          permissoes: ['escala.ausencia.aprovar'],
+          permissoes: ['ausencias.aprovar'],
         }),
       ).resolves.toBeDefined();
     });

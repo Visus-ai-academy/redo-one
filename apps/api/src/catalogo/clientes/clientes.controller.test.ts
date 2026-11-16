@@ -12,21 +12,22 @@ import type { UnidadesClienteService } from './unidades-cliente.service';
 describe('ClientesController', () => {
   const reflector = new Reflector();
 
-  it('fica em /catalogo/clientes; ler exige clientes.ver e mudar (inclusive apelidos) clientes.editar', () => {
+  it('fica em /catalogo/clientes; ler exige clientes.ver; mudar (inclusive apelidos e unidades) segue o verbo', () => {
     expect(reflector.get(PATH_METADATA, ClientesController)).toBe('catalogo/clientes');
     const exigidas = (m: keyof ClientesController) =>
       reflector.get(PERMISSOES_EXIGIDAS, ClientesController.prototype[m]);
     expect([exigidas('listar'), exigidas('obter')]).toEqual([['clientes.ver'], ['clientes.ver']]);
-    for (const m of [
-      'criar',
-      'atualizar',
-      'excluir',
-      'criarAlias',
-      'excluirAlias',
-      'adicionarUnidade',
-      'removerUnidade',
-    ] as const) {
-      expect(exigidas(m)).toEqual(['clientes.editar']);
+    const esperado = {
+      criar: 'clientes.criar',
+      atualizar: 'clientes.editar',
+      excluir: 'clientes.excluir',
+      criarAlias: 'clientes.criar',
+      excluirAlias: 'clientes.excluir',
+      adicionarUnidade: 'clientes.criar',
+      removerUnidade: 'clientes.excluir',
+    } as const;
+    for (const [m, chave] of Object.entries(esperado)) {
+      expect(exigidas(m as keyof typeof esperado)).toEqual([chave]);
     }
   });
 

@@ -1,14 +1,32 @@
 /**
- * Catálogo de permissões que um papel pode conceder, no formato `tela.acao` (ou `tela.grupo.acao`).
+ * Catálogo de permissões que um papel pode conceder.
  *
- * É a fonte única: o guard `@Permissao()` usa estas chaves, a tela de Papéis monta o editor a
+ * Cada tela declara as ações padrão que tem (`ver`, `criar`, `editar`, `excluir`, chave
+ * `tela.acao`) e as especiais (chave `tela.<especial>`, ex.: `faturamento.competencia.fechar`).
+ * É a fonte única: o guard `@Permissao()` usa estas chaves, a tela de Papéis monta a matriz a
  * partir daqui e a API recusa papel com chave fora do catálogo. Um contexto novo acrescenta as
- * telas dele aqui. A primeira ação de cada tela é sempre `ver`: sem ela, nenhuma outra vale.
+ * telas dele aqui. Toda tela tem `ver`, e qualquer outra ação dela implica o `ver`.
  */
 
-export interface AcaoCatalogo {
+export const ACOES_PADRAO = ['ver', 'criar', 'editar', 'excluir'] as const;
+export type AcaoPadrao = (typeof ACOES_PADRAO)[number];
+
+export const AREAS = ['Painéis', 'Operação', 'Cadastros', 'Financeiro', 'Configurações'] as const;
+export type Area = (typeof AREAS)[number];
+
+export interface AcaoPadraoCatalogo {
+  acao: AcaoPadrao;
+  /** Quando o nome genérico (Ver, Criar, Editar, Excluir) não diz o que a ação faz na tela. */
+  rotulo?: string;
+  /** Ação de alto impacto (ex.: editar de-paras muda o que se fatura). */
+  sensivel?: boolean;
+}
+
+export interface EspecialCatalogo {
+  /** Chave completa, ex.: `faturamento.competencia.fechar`. */
   chave: string;
   rotulo: string;
+  descricao: string;
   /** Ação de alto impacto (fechar competência, ver dado de pagamento, revogar chave). */
   sensivel?: boolean;
 }
@@ -16,163 +34,282 @@ export interface AcaoCatalogo {
 export interface TelaCatalogo {
   tela: string;
   rotulo: string;
-  area: 'Painéis' | 'Operação' | 'Cadastros' | 'Financeiro' | 'Configurações';
-  acoes: AcaoCatalogo[];
+  area: Area;
+  /** Em ordem: ver, criar, editar, excluir (só as que a tela tem; `ver` sempre). */
+  padrao: AcaoPadraoCatalogo[];
+  especiais: EspecialCatalogo[];
   /** Telas cujo `ver` vem junto (a configuração lê as listas da tela de trabalho). */
   exige?: string[];
 }
 
-const ver = (tela: string): AcaoCatalogo => ({ chave: `${tela}.ver`, rotulo: 'Ver' });
+export const ROTULO_ACAO_PADRAO: Readonly<Record<AcaoPadrao, string>> = {
+  ver: 'Ver',
+  criar: 'Criar',
+  editar: 'Editar',
+  excluir: 'Excluir',
+};
+
+const so = (...acoes: AcaoPadrao[]): AcaoPadraoCatalogo[] => acoes.map((acao) => ({ acao }));
+/** As quatro ações padrão; as passadas saem marcadas como sensíveis. */
+const crud = (...sensiveis: AcaoPadrao[]): AcaoPadraoCatalogo[] =>
+  ACOES_PADRAO.map((acao) => (sensiveis.includes(acao) ? { acao, sensivel: true } : { acao }));
 
 export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
   {
     tela: 'painel-executivo',
     rotulo: 'Painel executivo',
     area: 'Painéis',
-    acoes: [ver('painel-executivo')],
+    padrao: so('ver'),
+    especiais: [],
   },
   {
     tela: 'volumetria',
     rotulo: 'Volumetria',
     area: 'Painéis',
-    acoes: [ver('volumetria'), { chave: 'volumetria.exportar', rotulo: 'Exportar' }],
+    padrao: so('ver'),
+    especiais: [
+      { chave: 'volumetria.exportar', rotulo: 'Exportar', descricao: 'Baixar os dados do painel.' },
+    ],
   },
   {
     tela: 'sla',
     rotulo: 'SLA e prazos',
     area: 'Painéis',
-    acoes: [ver('sla'), { chave: 'sla.exportar', rotulo: 'Exportar' }],
+    padrao: so('ver'),
+    especiais: [
+      { chave: 'sla.exportar', rotulo: 'Exportar', descricao: 'Baixar os dados do painel.' },
+    ],
   },
   {
     tela: 'qualidade',
     rotulo: 'Qualidade',
     area: 'Painéis',
-    acoes: [
-      ver('qualidade'),
-      { chave: 'qualidade.radshield.ver', rotulo: 'Ver painel RadShield', sensivel: true },
+    padrao: so('ver'),
+    especiais: [
+      {
+        chave: 'qualidade.radshield.ver',
+        rotulo: 'Ver RadShield',
+        descricao: 'Abrir o painel RadShield, com dados dos exames.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'distribuicao',
     rotulo: 'Distribuição',
     area: 'Operação',
-    acoes: [
-      ver('distribuicao'),
-      { chave: 'distribuicao.rodada.iniciar', rotulo: 'Iniciar rodada' },
-      { chave: 'distribuicao.rodada.aprovar', rotulo: 'Aprovar rodada', sensivel: true },
+    padrao: so('ver'),
+    especiais: [
+      {
+        chave: 'distribuicao.rodada.iniciar',
+        rotulo: 'Iniciar rodada',
+        descricao: 'Pedir ao robô uma nova proposta de distribuição.',
+      },
+      {
+        chave: 'distribuicao.rodada.aprovar',
+        rotulo: 'Aprovar rodada',
+        descricao: 'Liberar a proposta para o robô atribuir os exames.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'importacao',
     rotulo: 'Importação de laudos',
     area: 'Operação',
-    acoes: [
-      ver('importacao'),
-      { chave: 'importacao.enviar', rotulo: 'Enviar planilha' },
+    padrao: [{ acao: 'ver' }, { acao: 'criar', rotulo: 'Enviar planilha' }],
+    especiais: [
       // A planilha traz o nome do paciente; cada download é auditado.
-      { chave: 'importacao.arquivo.baixar', rotulo: 'Baixar a planilha enviada', sensivel: true },
+      {
+        chave: 'importacao.arquivo.baixar',
+        rotulo: 'Baixar planilha',
+        descricao: 'Baixar a planilha enviada, com o nome dos pacientes.',
+        sensivel: true,
+      },
       // A trava contra arquivo truncado e a retenção da linha crua (dado de saúde).
-      { chave: 'importacao.parametros.editar', rotulo: 'Editar parâmetros', sensivel: true },
+      {
+        chave: 'importacao.parametros.editar',
+        rotulo: 'Editar parâmetros',
+        descricao: 'Mudar a trava contra planilha truncada e a retenção das linhas cruas.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'escala',
-    rotulo: 'Escala médica',
+    rotulo: 'Escala',
     area: 'Operação',
-    acoes: [
-      ver('escala'),
+    padrao: crud(),
+    especiais: [],
+  },
+  {
+    tela: 'ausencias',
+    rotulo: 'Ausências',
+    area: 'Operação',
+    padrao: crud(),
+    especiais: [
       {
-        chave: 'escala.alocacao.editar',
-        rotulo: 'Alocar médicos, coberturas e produtividade do dia',
+        chave: 'ausencias.aprovar',
+        rotulo: 'Aprovar',
+        descricao: 'Aprovar e recusar os pedidos dos médicos.',
       },
-      { chave: 'escala.ausencia.editar', rotulo: 'Lançar ausências' },
-      { chave: 'escala.ausencia.aprovar', rotulo: 'Aprovar e recusar ausências' },
-      { chave: 'escala.historico.ver', rotulo: 'Ver histórico da escala' },
+      // Dado de saúde (atestado, motivo do afastamento).
+      {
+        chave: 'ausencias.observacoes.ver',
+        rotulo: 'Ver observações',
+        descricao: 'Ler as observações e o motivo da recusa (podem ter dado de saúde).',
+        sensivel: true,
+      },
     ],
+    // O formulário lê turnos, frentes, tipos de ausência e médicos da escala.
+    exige: ['escala'],
+  },
+  {
+    tela: 'escala-historico',
+    rotulo: 'Histórico da escala',
+    area: 'Operação',
+    padrao: so('ver'),
+    especiais: [],
   },
   {
     tela: 'clientes',
     rotulo: 'Clientes',
     area: 'Cadastros',
-    acoes: [ver('clientes'), { chave: 'clientes.editar', rotulo: 'Editar' }],
+    padrao: crud(),
+    especiais: [],
   },
   {
     tela: 'medicos',
     rotulo: 'Médicos',
     area: 'Cadastros',
-    acoes: [
-      ver('medicos'),
-      { chave: 'medicos.editar', rotulo: 'Editar' },
-      { chave: 'medicos.pagamento.ver', rotulo: 'Ver dados de pagamento', sensivel: true },
-      { chave: 'medicos.pagamento.editar', rotulo: 'Editar dados de pagamento', sensivel: true },
+    padrao: crud(),
+    especiais: [
+      {
+        chave: 'medicos.pagamento.ver',
+        rotulo: 'Ver pagamento',
+        descricao: 'Ver CPF, CNPJ, Pix e demais dados de pagamento (cada leitura é auditada).',
+        sensivel: true,
+      },
+      {
+        chave: 'medicos.pagamento.editar',
+        rotulo: 'Editar pagamento',
+        descricao: 'Mudar os dados de pagamento do médico.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'exames',
     rotulo: 'Exames',
     area: 'Cadastros',
-    acoes: [
-      ver('exames'),
-      // Regras de quebra e valores fora do padrão decidem a quantidade faturada.
-      { chave: 'exames.editar', rotulo: 'Editar', sensivel: true },
-    ],
+    // Regras de quebra e valores fora do padrão decidem a quantidade faturada.
+    padrao: crud('editar', 'excluir'),
+    especiais: [],
   },
   {
     tela: 'avisos',
     rotulo: 'Avisos de cadastro',
     area: 'Cadastros',
-    acoes: [ver('avisos'), { chave: 'avisos.triar', rotulo: 'Ignorar e reabrir' }],
+    padrao: so('ver'),
+    especiais: [{ chave: 'avisos.triar', rotulo: 'Triar', descricao: 'Ignorar e reabrir avisos.' }],
   },
   {
     tela: 'faturamento',
     rotulo: 'Faturamento',
     area: 'Financeiro',
-    acoes: [
-      ver('faturamento'),
-      { chave: 'faturamento.demonstrativo.gerar', rotulo: 'Gerar demonstrativo' },
-      { chave: 'faturamento.competencia.fechar', rotulo: 'Fechar competência', sensivel: true },
-      { chave: 'faturamento.competencia.reabrir', rotulo: 'Reabrir competência', sensivel: true },
+    padrao: so('ver'),
+    especiais: [
+      {
+        chave: 'faturamento.demonstrativo.gerar',
+        rotulo: 'Gerar demonstrativo',
+        descricao: 'Gerar o demonstrativo de faturamento do cliente.',
+      },
+      {
+        chave: 'faturamento.competencia.fechar',
+        rotulo: 'Fechar competência',
+        descricao: 'Fechar a competência para faturar.',
+        sensivel: true,
+      },
+      {
+        chave: 'faturamento.competencia.reabrir',
+        rotulo: 'Reabrir competência',
+        descricao: 'Reabrir uma competência já fechada.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'repasse',
     rotulo: 'Repasse',
     area: 'Financeiro',
-    acoes: [
-      ver('repasse'),
-      { chave: 'repasse.adicional.lancar', rotulo: 'Lançar adicional' },
-      { chave: 'repasse.fechar', rotulo: 'Fechar repasse', sensivel: true },
+    padrao: so('ver'),
+    especiais: [
+      {
+        chave: 'repasse.adicional.lancar',
+        rotulo: 'Lançar adicional',
+        descricao: 'Lançar crédito ou débito avulso no repasse.',
+      },
+      {
+        chave: 'repasse.fechar',
+        rotulo: 'Fechar repasse',
+        descricao: 'Fechar o repasse dos médicos na competência.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'pre-pago',
     rotulo: 'Pré-pagos',
     area: 'Financeiro',
-    acoes: [ver('pre-pago'), { chave: 'pre-pago.recarga.solicitar', rotulo: 'Solicitar recarga' }],
+    padrao: so('ver'),
+    especiais: [
+      {
+        chave: 'pre-pago.recarga.solicitar',
+        rotulo: 'Solicitar recarga',
+        descricao: 'Pedir o boleto de recarga do cliente.',
+      },
+    ],
   },
   {
     tela: 'contratos',
     rotulo: 'Contratos',
     area: 'Financeiro',
-    acoes: [
-      ver('contratos'),
-      { chave: 'contratos.editar', rotulo: 'Editar' },
-      { chave: 'contratos.assinatura.enviar', rotulo: 'Enviar para assinatura', sensivel: true },
+    padrao: crud(),
+    especiais: [
+      {
+        chave: 'contratos.assinatura.enviar',
+        rotulo: 'Enviar para assinatura',
+        descricao: 'Mandar o contrato para assinatura eletrônica.',
+        sensivel: true,
+      },
     ],
   },
   {
     tela: 'usuarios',
     rotulo: 'Usuários',
     area: 'Configurações',
-    acoes: [
-      ver('usuarios'),
-      { chave: 'usuarios.convidar', rotulo: 'Convidar' },
-      { chave: 'usuarios.editar', rotulo: 'Trocar papel e encerrar sessões' },
-      { chave: 'usuarios.desbloquear', rotulo: 'Desbloquear', sensivel: true },
-      { chave: 'usuarios.desativar', rotulo: 'Desativar e reativar', sensivel: true },
+    padrao: [
+      { acao: 'ver' },
+      { acao: 'criar', rotulo: 'Convidar' },
+      { acao: 'editar', rotulo: 'Trocar papel e encerrar sessões' },
+    ],
+    especiais: [
+      {
+        chave: 'usuarios.desbloquear',
+        rotulo: 'Desbloquear',
+        descricao: 'Liberar a conta bloqueada por senha errada.',
+        sensivel: true,
+      },
+      {
+        chave: 'usuarios.desativar',
+        rotulo: 'Desativar',
+        descricao: 'Desativar e reativar contas.',
+        sensivel: true,
+      },
       {
         chave: 'usuarios.escopo-escala.editar',
-        rotulo: 'Editar o recorte da escala',
+        rotulo: 'Editar recorte da escala',
+        descricao: 'Definir os turnos e as frentes que a gestora de escala enxerga.',
         sensivel: true,
       },
     ],
@@ -181,44 +318,70 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     tela: 'papeis',
     rotulo: 'Papéis',
     area: 'Configurações',
-    acoes: [ver('papeis'), { chave: 'papeis.editar', rotulo: 'Criar e editar', sensivel: true }],
+    padrao: crud('criar', 'editar', 'excluir'),
+    especiais: [],
   },
   {
     tela: 'catalogo',
-    rotulo: 'Catálogo (modalidades, especialidades, categorias, prioridades, contratados)',
+    rotulo: 'Catálogo',
     area: 'Configurações',
-    acoes: [ver('catalogo'), { chave: 'catalogo.editar', rotulo: 'Criar e editar' }],
-  },
-  {
-    tela: 'escala-config',
-    rotulo: 'Escala (turnos, frentes e tipos de ausência)',
-    area: 'Configurações',
-    acoes: [ver('escala-config'), { chave: 'escala-config.editar', rotulo: 'Criar e editar' }],
-    exige: ['escala'],
+    padrao: crud(),
+    especiais: [],
   },
   {
     tela: 'de-para',
     rotulo: 'De-paras da importação',
     area: 'Configurações',
-    acoes: [ver('de-para'), { chave: 'de-para.editar', rotulo: 'Criar e editar', sensivel: true }],
+    // Os de-paras decidem especialidade e quantidade faturadas.
+    padrao: crud('criar', 'editar', 'excluir'),
+    especiais: [],
+  },
+  {
+    tela: 'escala-config',
+    rotulo: 'Escala (turnos e tipos de ausência)',
+    area: 'Configurações',
+    padrao: crud(),
+    especiais: [],
+    exige: ['escala'],
   },
   {
     tela: 'chaves-robo',
     rotulo: 'Chaves dos robôs',
     area: 'Configurações',
-    acoes: [
-      ver('chaves-robo'),
-      { chave: 'chaves-robo.gerenciar', rotulo: 'Criar, trocar e revogar', sensivel: true },
+    padrao: so('ver'),
+    especiais: [
+      {
+        chave: 'chaves-robo.gerenciar',
+        rotulo: 'Gerenciar',
+        descricao: 'Criar, trocar e revogar as chaves dos robôs.',
+        sensivel: true,
+      },
     ],
   },
 ];
 
+/** Todas as chaves de uma tela: as padrão (na ordem) e depois as especiais. */
+function chavesDe(tela: TelaCatalogo): string[] {
+  return [
+    ...tela.padrao.map((a) => `${tela.tela}.${a.acao}`),
+    ...tela.especiais.map((e) => e.chave),
+  ];
+}
+
 const TELA_DA_CHAVE = new Map(
-  CATALOGO_PERMISSOES.flatMap((t) => t.acoes.map((a) => [a.chave, t] as const)),
+  CATALOGO_PERMISSOES.flatMap((t) => chavesDe(t).map((chave) => [chave, t] as const)),
 );
+
+/** Todas as chaves do catálogo, na ordem das telas. */
+export const TODAS_AS_PERMISSOES: readonly string[] = CATALOGO_PERMISSOES.flatMap(chavesDe);
 
 export function existePermissao(chave: string): boolean {
   return TELA_DA_CHAVE.has(chave);
+}
+
+export function chavesDaTela(tela: string): string[] {
+  const encontrada = CATALOGO_PERMISSOES.find((t) => t.tela === tela);
+  return encontrada ? chavesDe(encontrada) : [];
 }
 
 /**

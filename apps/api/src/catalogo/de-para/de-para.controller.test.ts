@@ -21,17 +21,20 @@ describe('controllers dos de-paras', () => {
     [DeParaEspecialidadesController, 'catalogo/de-para/especialidades', 'de-para'],
     [DeParaValoresExameController, 'catalogo/de-para/valores-exame', 'exames'],
     [SufixosClienteController, 'catalogo/de-para/sufixos-cliente', 'de-para'],
-  ])('%o fica em %s; ler exige %s.ver e mudar %s.editar', (Controller, rota, tela) => {
-    expect(reflector.get(PATH_METADATA, Controller)).toBe(rota);
-    const exigidas = (m: string) =>
-      reflector.get(PERMISSOES_EXIGIDAS, (Controller.prototype as never)[m]);
-    expect([exigidas('listar'), exigidas('obter')]).toEqual([[`${tela}.ver`], [`${tela}.ver`]]);
-    expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
-      [`${tela}.editar`],
-      [`${tela}.editar`],
-      [`${tela}.editar`],
-    ]);
-  });
+  ])(
+    '%o fica em %s; ler exige %s.ver; criar, editar e excluir pelo verbo',
+    (Controller, rota, tela) => {
+      expect(reflector.get(PATH_METADATA, Controller)).toBe(rota);
+      const exigidas = (m: string) =>
+        reflector.get(PERMISSOES_EXIGIDAS, (Controller.prototype as never)[m]);
+      expect([exigidas('listar'), exigidas('obter')]).toEqual([[`${tela}.ver`], [`${tela}.ver`]]);
+      expect([exigidas('criar'), exigidas('atualizar'), exigidas('excluir')]).toEqual([
+        [`${tela}.criar`],
+        [`${tela}.editar`],
+        [`${tela}.excluir`],
+      ]);
+    },
+  );
 
   it('lista as variações de uma prioridade ou especialidade pelo destino', async () => {
     const listar = vi.fn(async () => ({ itens: [], total: 0 }));

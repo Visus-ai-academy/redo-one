@@ -61,7 +61,7 @@ export class QuebrasController {
   }
 
   @Post()
-  @Permissao('exames.editar')
+  @Permissao('exames.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiConflictResponse({ description: 'Já existe quebra para esse estudo.' })
   async criar(
@@ -85,7 +85,7 @@ export class QuebrasController {
   }
 
   @Delete(':id')
-  @Permissao('exames.editar')
+  @Permissao('exames.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
@@ -97,7 +97,7 @@ export class QuebrasController {
   }
 
   @Post(':id/pecas')
-  @Permissao('exames.editar')
+  @Permissao('exames.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Exame inexistente ou o próprio estudo.' })
   @ApiConflictResponse({ description: 'O estudo já se quebra nesse exame.' })
@@ -125,7 +125,7 @@ export class QuebrasController {
   }
 
   @Delete(':id/pecas/:pecaId')
-  @Permissao('exames.editar')
+  @Permissao('exames.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()

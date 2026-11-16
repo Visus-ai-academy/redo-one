@@ -12,7 +12,7 @@ export class HistoricoEscalaController {
   constructor(private readonly historico: HistoricoEscalaService) {}
 
   @Get()
-  @Permissao('escala.historico.ver')
+  @Permissao('escala-historico.ver')
   @ApiOkResponse({
     type: PaginaHistoricoDto,
     description: 'Do mais novo, no recorte de quem consulta.',

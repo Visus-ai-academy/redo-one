@@ -55,7 +55,7 @@ export class EquipesController {
   }
 
   @Post()
-  @Permissao('medicos.editar')
+  @Permissao('medicos.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Médico inexistente.' })
   @ApiConflictResponse({ description: 'Nome já usado.' })
@@ -81,7 +81,7 @@ export class EquipesController {
   }
 
   @Delete(':id')
-  @Permissao('medicos.editar')
+  @Permissao('medicos.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiConflictResponse({ description: 'Em uso por outro cadastro: desative em vez de excluir.' })

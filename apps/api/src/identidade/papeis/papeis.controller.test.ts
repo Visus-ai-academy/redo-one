@@ -27,12 +27,12 @@ describe('PapeisController', () => {
   const exigidas = (metodo: keyof PapeisController) =>
     reflector.get(PERMISSOES_EXIGIDAS, PapeisController.prototype[metodo]);
 
-  it('ler exige papeis.ver; mudar exige papeis.editar', () => {
+  it('ler exige papeis.ver; criar, editar e excluir, a ação de mesmo nome', () => {
     expect(exigidas('listar')).toEqual(['papeis.ver']);
     expect(exigidas('obter')).toEqual(['papeis.ver']);
-    expect(exigidas('criar')).toEqual(['papeis.editar']);
+    expect(exigidas('criar')).toEqual(['papeis.criar']);
     expect(exigidas('atualizar')).toEqual(['papeis.editar']);
-    expect(exigidas('excluir')).toEqual(['papeis.editar']);
+    expect(exigidas('excluir')).toEqual(['papeis.excluir']);
     expect(reflector.get(PERMISSOES_EXIGIDAS, PermissoesController.prototype.catalogo)).toEqual([
       'papeis.ver',
     ]);
@@ -56,21 +56,42 @@ describe('PapeisController', () => {
 });
 
 describe('PermissoesController', () => {
-  it('devolve o catálogo agrupado por tela, com as ações e a marca de sensível', () => {
-    const catalogo = new PermissoesController().catalogo();
-    const usuarios = catalogo.find((t) => t.tela === 'usuarios');
+  const catalogo = new PermissoesController().catalogo();
+  const tela = (nome: string) => catalogo.find((t) => t.tela === nome);
 
-    expect(usuarios).toMatchObject({ rotulo: 'Usuários', area: 'Configurações' });
-    expect(usuarios?.acoes).toContainEqual({
+  it('devolve cada tela com área, rótulo, as ações padrão que ela tem e as especiais', () => {
+    expect(tela('usuarios')).toMatchObject({
+      rotulo: 'Usuários',
+      area: 'Configurações',
+      exige: [],
+    });
+    expect(tela('usuarios')?.padrao).toEqual([
+      { acao: 'ver', chave: 'usuarios.ver', rotulo: 'Ver', sensivel: false },
+      { acao: 'criar', chave: 'usuarios.criar', rotulo: 'Convidar', sensivel: false },
+      {
+        acao: 'editar',
+        chave: 'usuarios.editar',
+        rotulo: 'Trocar papel e encerrar sessões',
+        sensivel: false,
+      },
+    ]);
+    expect(tela('usuarios')?.especiais).toContainEqual({
       chave: 'usuarios.desbloquear',
       rotulo: 'Desbloquear',
+      descricao: 'Liberar a conta bloqueada por senha errada.',
       sensivel: true,
     });
-    expect(usuarios?.acoes).toContainEqual({
-      chave: 'usuarios.ver',
-      rotulo: 'Ver',
-      sensivel: false,
-    });
+  });
+
+  it('marca as padrão sensíveis e diz quais telas vêm junto', () => {
+    expect(tela('papeis')?.padrao.map((a) => [a.acao, a.rotulo, a.sensivel])).toEqual([
+      ['ver', 'Ver', false],
+      ['criar', 'Criar', true],
+      ['editar', 'Editar', true],
+      ['excluir', 'Excluir', true],
+    ]);
+    expect(tela('escala-config')?.exige).toEqual(['escala']);
+    expect(tela('volumetria')?.especiais.map((e) => e.chave)).toEqual(['volumetria.exportar']);
   });
 });
 

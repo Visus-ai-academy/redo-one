@@ -38,15 +38,15 @@ describe('controllers das listas do catálogo', () => {
   });
 
   it.each([ModalidadesController, PrioridadesController])(
-    'ler exige catalogo.ver; mudar exige catalogo.editar (%o)',
+    'ler exige catalogo.ver; criar, editar e excluir pelo verbo (%o)',
     (Controller) => {
       const exigidas = (metodo: string) =>
         reflector.get(PERMISSOES_EXIGIDAS, (Controller.prototype as never)[metodo]);
       expect(exigidas('listar')).toEqual(['catalogo.ver']);
       expect(exigidas('obter')).toEqual(['catalogo.ver']);
-      expect(exigidas('criar')).toEqual(['catalogo.editar']);
+      expect(exigidas('criar')).toEqual(['catalogo.criar']);
       expect(exigidas('atualizar')).toEqual(['catalogo.editar']);
-      expect(exigidas('excluir')).toEqual(['catalogo.editar']);
+      expect(exigidas('excluir')).toEqual(['catalogo.excluir']);
     },
   );
 

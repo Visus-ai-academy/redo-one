@@ -98,7 +98,7 @@ export class DeParaPrioridadesController {
   }
 
   @Post()
-  @Permissao('de-para.editar')
+  @Permissao('de-para.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
   @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
@@ -124,7 +124,7 @@ export class DeParaPrioridadesController {
   }
 
   @Delete(':id')
-  @Permissao('de-para.editar')
+  @Permissao('de-para.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   excluir(
@@ -170,7 +170,7 @@ export class DeParaModalidadesController {
   }
 
   @Post()
-  @Permissao('de-para.editar')
+  @Permissao('de-para.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
   @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
@@ -196,7 +196,7 @@ export class DeParaModalidadesController {
   }
 
   @Delete(':id')
-  @Permissao('de-para.editar')
+  @Permissao('de-para.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   excluir(
@@ -246,7 +246,7 @@ export class DeParaEspecialidadesController {
   }
 
   @Post()
-  @Permissao('de-para.editar')
+  @Permissao('de-para.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
   @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
@@ -272,7 +272,7 @@ export class DeParaEspecialidadesController {
   }
 
   @Delete(':id')
-  @Permissao('de-para.editar')
+  @Permissao('de-para.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   excluir(
@@ -315,7 +315,7 @@ export class DeParaValoresExameController {
   }
 
   @Post()
-  @Permissao('exames.editar')
+  @Permissao('exames.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
   @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
@@ -341,7 +341,7 @@ export class DeParaValoresExameController {
   }
 
   @Delete(':id')
-  @Permissao('exames.editar')
+  @Permissao('exames.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   excluir(
@@ -379,7 +379,7 @@ export class SufixosClienteController {
   }
 
   @Post()
-  @Permissao('de-para.editar')
+  @Permissao('de-para.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou destino inexistente.' })
   @ApiConflictResponse({ description: 'Já existe um de-para para essa origem.' })
@@ -405,7 +405,7 @@ export class SufixosClienteController {
   }
 
   @Delete(':id')
-  @Permissao('de-para.editar')
+  @Permissao('de-para.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   excluir(

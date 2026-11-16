@@ -13,10 +13,10 @@ import type { HistoricoEscalaService } from './historico.service';
 describe('HistoricoEscalaController', () => {
   const reflector = new Reflector();
 
-  it('fica em /escala/historico e exige escala.historico.ver', () => {
+  it('fica em /escala/historico e exige escala-historico.ver', () => {
     expect(reflector.get(PATH_METADATA, HistoricoEscalaController)).toBe('escala/historico');
     expect(reflector.get(PERMISSOES_EXIGIDAS, HistoricoEscalaController.prototype.listar)).toEqual([
-      'escala.historico.ver',
+      'escala-historico.ver',
     ]);
   });
 

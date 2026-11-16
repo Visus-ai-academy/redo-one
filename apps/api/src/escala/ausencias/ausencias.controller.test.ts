@@ -13,8 +13,12 @@ import type { AusenciasService } from './ausencias.service';
 import { PortalAusenciasController } from './portal-ausencias.controller';
 import type { PortalAusenciasService } from './portal-ausencias.service';
 
-const gestora = { usuarioId: 'u-g', acessoTotal: false } as PrincipalUsuario;
-const quem = { usuarioId: 'u-g', acessoTotal: false };
+const gestora = {
+  usuarioId: 'u-g',
+  acessoTotal: false,
+  permissoes: new Set(['ausencias.ver']) as ReadonlySet<string>,
+} as PrincipalUsuario;
+const quem = { usuarioId: 'u-g', acessoTotal: false, veObservacoes: false };
 const corpo = { tipoId: 't-1', dataInicio: '2026-12-01', dataFim: '2026-12-02' };
 const item = {
   id: 'a-1',
@@ -58,19 +62,38 @@ describe('AusenciasController', () => {
     const p = AusenciasController.prototype;
     expect(reflector.get(PATH_METADATA, AusenciasController)).toBe('escala/ausencias');
     const esperado: Record<string, string> = {
-      listar: 'escala.ver',
-      obter: 'escala.ver',
-      contarPendentes: 'escala.ausencia.aprovar',
-      criar: 'escala.ausencia.editar',
-      atualizar: 'escala.ausencia.editar',
-      excluir: 'escala.ausencia.editar',
-      aprovar: 'escala.ausencia.aprovar',
-      recusar: 'escala.ausencia.aprovar',
+      listar: 'ausencias.ver',
+      obter: 'ausencias.ver',
+      contarPendentes: 'ausencias.aprovar',
+      criar: 'ausencias.criar',
+      atualizar: 'ausencias.editar',
+      excluir: 'ausencias.excluir',
+      aprovar: 'ausencias.aprovar',
+      recusar: 'ausencias.aprovar',
     };
     for (const [metodo, chave] of Object.entries(esperado)) {
       expect(meta(PERMISSOES_EXIGIDAS, p, metodo)).toEqual([chave]);
     }
     expect(meta(PATH_METADATA, p, 'contarPendentes')).toBe('pendentes/contagem');
+  });
+
+  it('só vê as observações quem tem ausencias.observacoes.ver (ou acesso total)', async () => {
+    const { controller, service } = montar();
+    const comPermissao = {
+      ...gestora,
+      permissoes: new Set(['ausencias.ver', 'ausencias.observacoes.ver']),
+    } as PrincipalUsuario;
+    const admin = { ...gestora, acessoTotal: true } as PrincipalUsuario;
+
+    await controller.obter(comPermissao, 'a-1');
+    await controller.obter(admin, 'a-1');
+
+    expect(service.obter).toHaveBeenNthCalledWith(1, { ...quem, veObservacoes: true }, 'a-1');
+    expect(service.obter).toHaveBeenNthCalledWith(
+      2,
+      { ...quem, acessoTotal: true, veObservacoes: true },
+      'a-1',
+    );
   });
 
   it('lista com os filtros e devolve a página pedida', async () => {
