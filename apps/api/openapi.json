@@ -6143,6 +6143,89 @@
         ]
       }
     },
+    "/escala/medicos/{medicoId}/escala-fixa": {
+      "get": {
+        "operationId": "EscalaFixaController_obter",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "frenteId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalaFixaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "put": {
+        "operationId": "EscalaFixaController_definir",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefinirEscalaFixaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoEscalaFixaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Célula repetida, turno sem a frente, médico inativo ou data inválida."
+          },
+          "403": {
+            "description": "Alguma célula fora do recorte da gestora."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
     "/escala/escopos/meu": {
       "get": {
         "operationId": "EscopoApiController_meu",
@@ -11820,6 +11903,119 @@
           "gravidade",
           "soGestor",
           "contaComoFalta"
+        ]
+      },
+      "CelulaEscalaFixaDto": {
+        "type": "object",
+        "properties": {
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "diaSemana": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6,
+            "description": "0 = domingo … 6 = sábado."
+          },
+          "produtividade": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Registros por turno; nulo = não informada."
+          }
+        },
+        "required": [
+          "turnoId",
+          "diaSemana",
+          "produtividade"
+        ]
+      },
+      "EscalaFixaDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "celulas": {
+            "description": "Das alocações fixas (sem fim) que não são cobertura nem gratificadas, repetem toda semana, usam o horário do turno e não têm recorte. Fora do recorte da gestora não aparecem.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelulaEscalaFixaDto"
+            }
+          },
+          "foraDaGrade": {
+            "type": "integer",
+            "description": "Outras alocações fixas do médico na frente (com regra especial): continuam valendo e se editam pelo formulário."
+          }
+        },
+        "required": [
+          "medicoId",
+          "frenteId",
+          "celulas",
+          "foraDaGrade"
+        ]
+      },
+      "DefinirEscalaFixaDto": {
+        "type": "object",
+        "properties": {
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "aPartirDe": {
+            "type": "string",
+            "format": "date",
+            "description": "Quem mudou e começou antes termina na véspera; quem começa nesse dia ou depois sai."
+          },
+          "celulas": {
+            "description": "Cada turno + dia uma vez só. Vazio = encerra ou remove todas as da grade.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelulaEscalaFixaDto"
+            }
+          }
+        },
+        "required": [
+          "frenteId",
+          "aPartirDe",
+          "celulas"
+        ]
+      },
+      "ResultadoEscalaFixaDto": {
+        "type": "object",
+        "properties": {
+          "criadas": {
+            "type": "integer"
+          },
+          "encerradas": {
+            "type": "integer"
+          },
+          "removidas": {
+            "type": "integer"
+          },
+          "mantidas": {
+            "type": "integer"
+          },
+          "avisos": {
+            "description": "Sobreposições de horário das alocações criadas nas próximas 8 semanas (não bloqueiam). A ponta fora do recorte vem só com `foraDoRecorte` e `data`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoConflitoDto"
+            }
+          }
+        },
+        "required": [
+          "criadas",
+          "encerradas",
+          "removidas",
+          "mantidas",
+          "avisos"
         ]
       },
       "ReferenciaEscopoDto": {
