@@ -50,7 +50,7 @@ describe.skipIf(!url)('repositório do recorte da escala', () => {
       .returning();
     const [frente] = await db
       .insert(schema.frentesEscala)
-      .values({ tipo: 'especialidade', especialidadeId: especialidade?.id ?? '', rotulo: 'NEURO' })
+      .values({ tipo: 'especialidade', especialidadeId: especialidade?.id ?? '' })
       .returning();
     neuro = frente?.id ?? '';
   });

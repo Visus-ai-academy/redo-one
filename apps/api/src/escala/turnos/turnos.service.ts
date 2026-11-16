@@ -27,7 +27,10 @@ const OFFSET_BRASILIA_MS = 3 * 60 * 60 * 1000;
 const diaEmBrasilia = (instante: Date) =>
   new Date(instante.getTime() - OFFSET_BRASILIA_MS).toISOString().slice(0, 10);
 
-/** Turnos da escala (a caixa de horário) e as frentes de cada um. */
+/**
+ * Turnos da escala (a caixa de horário) e as frentes de cada um, escolhidas entre as
+ * especialidades e modalidades do catálogo.
+ */
 @Injectable()
 export class TurnosService {
   private readonly registro: RegistroAuditoria;
@@ -51,8 +54,8 @@ export class TurnosService {
 
   async criar(ator: AtorCatalogo, entrada: DadosTurno): Promise<string> {
     const dados = await this.validar(entrada, null);
-    const id = await this.repo.criar(dados);
-    await this.registro.criado(ator, id, dados);
+    const { id, frenteIds } = await this.repo.criar(dados);
+    await this.registro.criado(ator, id, { ...dados, frenteIds });
     return id;
   }
 
@@ -61,10 +64,9 @@ export class TurnosService {
     const antes = gravados(atual);
     const dados = await this.validar(entrada, id);
     const vigentes = await this.repo.alocacoesVigentes(id, diaEmBrasilia(this.clock.now()));
-    const rotulos = new Map(atual.frentes.map((f) => [f.id, f.rotulo]));
-    verificarMudancaDoTurno(antes, dados, vigentes, rotulos);
-    await this.repo.atualizar(id, dados);
-    await this.registro.alterado(ator, id, antes, dados);
+    verificarMudancaDoTurno(atual, dados, vigentes, atual.frentes);
+    const { frenteIds } = await this.repo.atualizar(id, dados);
+    await this.registro.alterado(ator, id, antes, { ...dados, frenteIds });
   }
 
   async excluir(ator: AtorCatalogo, id: string): Promise<void> {
@@ -83,8 +85,13 @@ export class TurnosService {
     const dados = normalizarTurno(entrada);
     const mesmoNome = await this.repo.buscarPorNome(dados.nome);
     if (mesmoNome && mesmoNome.id !== idAtual) throw new NomeEmUsoError(ROTULO_TURNO, dados.nome);
-    const existentes = await this.repo.frentes(dados.frenteIds);
-    if (existentes.length !== dados.frenteIds.length) throw new ReferenciaInexistenteError();
+    const existentes = await this.repo.noCatalogo(dados);
+    if (
+      existentes.especialidadeIds.length !== dados.especialidadeIds.length ||
+      existentes.modalidadeIds.length !== dados.modalidadeIds.length
+    ) {
+      throw new ReferenciaInexistenteError();
+    }
     return dados;
   }
 }
@@ -93,7 +100,11 @@ function comDuracao(turno: TurnoGravado): Turno {
   return { ...turno, duracaoMin: duracaoMinutos(turno.horarioInicio, turno.horarioFim) };
 }
 
-/** O que se grava (e se audita): as frentes viram a lista de ids, ordenada. */
-function gravados({ id: _, frentes, ...turno }: TurnoGravado): DadosTurno {
+/** O que se audita: os dados do turno e os ids das frentes, ordenados. */
+function gravados({
+  id: _,
+  frentes,
+  ...turno
+}: TurnoGravado): DadosTurno & { frenteIds: string[] } {
   return { ...turno, frenteIds: frentes.map((f) => f.id).sort() };
 }

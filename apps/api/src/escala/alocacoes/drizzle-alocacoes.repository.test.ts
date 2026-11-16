@@ -47,7 +47,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     const [esp] = await db.insert(schema.especialidades).values({ nome: 'NEURO' }).returning();
     const [neuro] = await db
       .insert(schema.frentesEscala)
-      .values({ tipo: 'especialidade', especialidadeId: esp?.id ?? '', rotulo: 'NEURO' })
+      .values({ tipo: 'especialidade', especialidadeId: esp?.id ?? '' })
       .returning();
     await db
       .insert(schema.turnosFrentes)

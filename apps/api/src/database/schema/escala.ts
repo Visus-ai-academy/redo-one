@@ -49,9 +49,11 @@ const ehHorario = (coluna: AnyPgColumn) => sql`${coluna} ~ '^([01][0-9]|2[0-3]):
 export const tipoFrenteEscala = pgEnum('tipo_frente_escala', ['especialidade', 'modalidade']);
 
 /**
- * Frente da escala: a coluna em que se escala um médico. Aponta para uma especialidade (NEURO)
- * ou para uma modalidade (RX, TC, MG, DO), nunca as duas; o catálogo fica sem "especialidade
- * que é modalidade". A subespecialidade não é frente: é recorte da alocação.
+ * Frente da escala: a coluna em que se escala um médico. É uma especialidade (NEURO) ou uma
+ * modalidade (RX, TC, MG, DO) do catálogo, nunca as duas; nome, cor, ordem e ativo vêm de lá.
+ * Não é cadastro: a linha é só a chave interna para turnos, alocações, ausências e recortes
+ * apontarem para um lugar só, criada pelo sistema quando um turno passa a usar o item. A
+ * subespecialidade não é frente: é recorte da alocação.
  */
 export const frentesEscala = pgTable(
   'frentes_escala',
@@ -64,12 +66,9 @@ export const frentesEscala = pgTable(
     modalidadeId: uuid('modalidade_id')
       .unique()
       .references(() => modalidades.id),
-    /** Nome na escala ("TC", "MSK"); por padrão o do catálogo. */
-    rotulo: text('rotulo').notNull().unique(),
-    ...colunasDeLista(),
+    criadoEm: criadoEm(),
   },
   (t) => [
-    index('frentes_escala_ativo_ordem_idx').on(t.ativo, t.ordem),
     check(
       'frentes_escala_destino_check',
       sql`(${t.tipo} = 'especialidade' and ${t.especialidadeId} is not null and ${t.modalidadeId} is null)

@@ -7,12 +7,26 @@ export type TipoTurno = 'fixo' | 'lista';
 export interface DadosTurno extends FaixaHorario {
   nome: string;
   tipo: TipoTurno;
-  /** As frentes (colunas da escala) do turno, ordenadas e sem repetição. */
-  frenteIds: string[];
+  /**
+   * As frentes (colunas da escala) do turno: especialidades e modalidades do catálogo, ordenadas
+   * e sem repetição. A linha de `frentes_escala` de cada uma o sistema garante ao gravar.
+   */
+  especialidadeIds: string[];
+  modalidadeIds: string[];
   descricao: string | null;
   cor: string | null;
   ordem: number;
   ativo: boolean;
+}
+
+/** Frente do turno: a chave interna e o item do catálogo para onde aponta. */
+export interface FrenteDoTurno {
+  id: string;
+  /** Nome da especialidade ou código da modalidade. */
+  rotulo: string;
+  tipo: 'especialidade' | 'modalidade';
+  especialidadeId: string | null;
+  modalidadeId: string | null;
 }
 
 /** Alocação que ainda vale (sem fim ou com fim de hoje em diante) num turno. */
@@ -31,7 +45,8 @@ export function normalizarTurno(dados: DadosTurno): DadosTurno {
     nome,
     horarioInicio: normalizarHorario(dados.horarioInicio),
     horarioFim: normalizarHorario(dados.horarioFim),
-    frenteIds: [...new Set(dados.frenteIds)].sort(),
+    especialidadeIds: [...new Set(dados.especialidadeIds)].sort(),
+    modalidadeIds: [...new Set(dados.modalidadeIds)].sort(),
     descricao: dados.descricao?.trim() || null,
     cor: dados.cor?.trim() || null,
   };
@@ -48,7 +63,7 @@ export function verificarMudancaDoTurno(
   atual: DadosTurno,
   novo: DadosTurno,
   vigentes: readonly AlocacaoVigente[],
-  rotulosFrentes: ReadonlyMap<string, string>,
+  frentesAtuais: readonly FrenteDoTurno[],
 ): void {
   if (atual.tipo === 'lista' && novo.tipo !== 'lista') {
     const n = vigentes.filter((a) => a.gratificado).length;
@@ -60,12 +75,17 @@ export function verificarMudancaDoTurno(
     }
   }
 
-  const ficam = new Set(novo.frenteIds);
-  for (const frenteId of atual.frenteIds.filter((id) => !ficam.has(id))) {
-    const n = vigentes.filter((a) => a.frenteId === frenteId).length;
+  const especialidades = new Set(novo.especialidadeIds);
+  const modalidades = new Set(novo.modalidadeIds);
+  const fica = (f: FrenteDoTurno) =>
+    f.tipo === 'especialidade'
+      ? especialidades.has(f.especialidadeId ?? '')
+      : modalidades.has(f.modalidadeId ?? '');
+  for (const frente of frentesAtuais.filter((f) => !fica(f))) {
+    const n = vigentes.filter((a) => a.frenteId === frente.id).length;
     if (n > 0) {
       throw new ConflitoEscalaError(
-        `A frente ${rotulosFrentes.get(frenteId) ?? ''} tem ${n} ${plural(n, 'alocação vigente', 'alocações vigentes')} neste turno. Encerre ou mova essas alocações antes de tirá-la do turno.`,
+        `A frente ${frente.rotulo} tem ${n} ${plural(n, 'alocação vigente', 'alocações vigentes')} neste turno. Encerre ou mova essas alocações antes de tirá-la do turno.`,
         { totalAlocacoes: n },
       );
     }

@@ -58,7 +58,9 @@ export class TurnosController {
   @Post()
   @Permissao('escala-config.editar')
   @ApiCreatedResponse({ type: IdCriadoDto })
-  @ApiBadRequestResponse({ description: 'Horário inválido ou frente inexistente.' })
+  @ApiBadRequestResponse({
+    description: 'Horário inválido, ou especialidade ou modalidade inexistente no catálogo.',
+  })
   @ApiConflictResponse({ description: 'Nome já usado.' })
   async criar(
     @PrincipalAtual() ator: PrincipalUsuario,
@@ -72,7 +74,9 @@ export class TurnosController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
-  @ApiBadRequestResponse({ description: 'Horário inválido ou frente inexistente.' })
+  @ApiBadRequestResponse({
+    description: 'Horário inválido, ou especialidade ou modalidade inexistente no catálogo.',
+  })
   @ApiConflictResponse({
     description:
       'Nome já usado, ou a mudança deixaria alocações vigentes fora do horário ou de uma frente que saiu.',

@@ -22,7 +22,8 @@ const dados = (extra: Partial<DadosTurno> = {}): DadosTurno => ({
   tipo: 'fixo',
   horarioInicio: '07:00',
   horarioFim: '13:00',
-  frenteIds: ['f-neuro', 'f-tc'],
+  especialidadeIds: ['e-neuro'],
+  modalidadeIds: ['m-ct'],
   descricao: null,
   cor: null,
   ordem: 0,
@@ -37,16 +38,17 @@ describe('TurnosService', () => {
 
   beforeEach(() => {
     repo = new InMemoryTurnosRepository();
-    repo.frentesExistentes.set('f-neuro', 'NEURO');
-    repo.frentesExistentes.set('f-tc', 'TC');
+    repo.especialidades.set('e-neuro', 'NEURO');
+    repo.especialidades.set('e-abd', 'ABDOME');
+    repo.modalidades.set('m-ct', 'CT');
     auditoria = new InMemoryAuditoria();
     service = new TurnosService(repo, auditoria, new FixedClock(AGORA));
   });
 
-  it('cria normalizando os horários e devolve as frentes e a duração', async () => {
+  it('cria normalizando os horários e devolve as frentes do catálogo e a duração', async () => {
     const id = await service.criar(
       ator,
-      dados({ horarioInicio: '7:00', frenteIds: ['f-tc', 'f-neuro'] }),
+      dados({ horarioInicio: '7:00', especialidadeIds: ['e-neuro', 'e-neuro'] }),
     );
 
     expect(await service.obter(id)).toMatchObject({
@@ -54,9 +56,23 @@ describe('TurnosService', () => {
       horarioInicio: '07:00',
       horarioFim: '13:00',
       duracaoMin: 360,
+      especialidadeIds: ['e-neuro'],
+      modalidadeIds: ['m-ct'],
       frentes: [
-        { id: 'f-neuro', rotulo: 'NEURO' },
-        { id: 'f-tc', rotulo: 'TC' },
+        {
+          id: 'f-neuro',
+          rotulo: 'NEURO',
+          tipo: 'especialidade',
+          especialidadeId: 'e-neuro',
+          modalidadeId: null,
+        },
+        {
+          id: 'f-ct',
+          rotulo: 'CT',
+          tipo: 'modalidade',
+          especialidadeId: null,
+          modalidadeId: 'm-ct',
+        },
       ],
     });
   });
@@ -84,7 +100,12 @@ describe('TurnosService', () => {
         entidade: 'turno',
         entidadeId: id,
         acao: 'criado',
-        depois: expect.objectContaining({ nome: 'Manhã', frenteIds: ['f-neuro', 'f-tc'] }),
+        depois: expect.objectContaining({
+          nome: 'Manhã',
+          especialidadeIds: ['e-neuro'],
+          modalidadeIds: ['m-ct'],
+          frenteIds: ['f-ct', 'f-neuro'],
+        }),
         em: AGORA,
       }),
     ]);
@@ -99,25 +120,43 @@ describe('TurnosService', () => {
     );
   });
 
-  it('recusa horário inválido e frente que não existe', async () => {
+  it('recusa horário inválido e especialidade ou modalidade que não existe no catálogo', async () => {
     await expect(service.criar(ator, dados({ horarioFim: '25:00' }))).rejects.toThrow(
       EscalaInvalidaError,
     );
-    await expect(service.criar(ator, dados({ frenteIds: ['f-sumiu'] }))).rejects.toThrow(
+    await expect(
+      service.criar(ator, dados({ especialidadeIds: ['e-neuro', 'e-sumiu'] })),
+    ).rejects.toThrow(ReferenciaInexistenteError);
+    await expect(service.criar(ator, dados({ modalidadeIds: ['m-sumiu'] }))).rejects.toThrow(
       ReferenciaInexistenteError,
     );
+    expect(repo.itens.size).toBe(0);
   });
 
   it('edita trocando o conjunto de frentes e audita só o que mudou', async () => {
     const id = await service.criar(ator, dados());
 
-    await service.atualizar(ator, id, dados({ frenteIds: ['f-neuro'], ordem: 2 }));
+    await service.atualizar(
+      ator,
+      id,
+      dados({ especialidadeIds: ['e-neuro', 'e-abd'], modalidadeIds: [], ordem: 2 }),
+    );
 
-    expect((await service.obter(id)).frentes).toEqual([{ id: 'f-neuro', rotulo: 'NEURO' }]);
+    expect((await service.obter(id)).frentes.map((f) => f.id)).toEqual(['f-abdome', 'f-neuro']);
     expect(auditoria.eventos.at(-1)).toMatchObject({
       acao: 'alterado',
-      antes: { frenteIds: ['f-neuro', 'f-tc'], ordem: 0 },
-      depois: { frenteIds: ['f-neuro'], ordem: 2 },
+      antes: {
+        especialidadeIds: ['e-neuro'],
+        modalidadeIds: ['m-ct'],
+        frenteIds: ['f-ct', 'f-neuro'],
+        ordem: 0,
+      },
+      depois: {
+        especialidadeIds: ['e-abd', 'e-neuro'],
+        modalidadeIds: [],
+        frenteIds: ['f-abdome', 'f-neuro'],
+        ordem: 2,
+      },
     });
   });
 
@@ -132,7 +171,7 @@ describe('TurnosService', () => {
     repo.alocacoes.push(
       {
         turnoId: id,
-        frenteId: 'f-tc',
+        frenteId: 'f-ct',
         horarioInicio: '07:00',
         horarioFim: '13:00',
         dataFim: null,
@@ -140,7 +179,7 @@ describe('TurnosService', () => {
       },
       {
         turnoId: id,
-        frenteId: 'f-tc',
+        frenteId: 'f-ct',
         horarioInicio: '07:00',
         horarioFim: '13:00',
         dataFim: '2026-11-15',
@@ -149,7 +188,7 @@ describe('TurnosService', () => {
       // Acabou ontem em Brasília: não conta.
       {
         turnoId: id,
-        frenteId: 'f-tc',
+        frenteId: 'f-ct',
         horarioInicio: '07:00',
         horarioFim: '13:00',
         dataFim: '2026-11-14',
@@ -169,7 +208,7 @@ describe('TurnosService', () => {
     const id = await service.criar(ator, dados());
     repo.alocacoes.push({
       turnoId: id,
-      frenteId: 'f-tc',
+      frenteId: 'f-ct',
       horarioInicio: '07:00',
       horarioFim: '13:00',
       dataFim: null,
@@ -185,16 +224,17 @@ describe('TurnosService', () => {
     const id = await service.criar(ator, dados());
     repo.alocacoes.push({
       turnoId: id,
-      frenteId: 'f-tc',
+      frenteId: 'f-ct',
       horarioInicio: '07:00',
       horarioFim: '13:00',
       dataFim: null,
       gratificado: false,
     });
 
-    await expect(service.atualizar(ator, id, dados({ frenteIds: ['f-neuro'] }))).rejects.toThrow(
-      'A frente TC tem 1 alocação vigente neste turno.',
+    await expect(service.atualizar(ator, id, dados({ modalidadeIds: [] }))).rejects.toThrow(
+      'A frente CT tem 1 alocação vigente neste turno.',
     );
+    expect((await service.obter(id)).modalidadeIds).toEqual(['m-ct']);
   });
 
   it('avisa quando o turno não existe', async () => {
@@ -233,7 +273,7 @@ describe('TurnosService', () => {
     const id = await service.criar(ator, dados({ nome: 'Lista', tipo: 'lista' }));
     repo.alocacoes.push({
       turnoId: id,
-      frenteId: 'f-tc',
+      frenteId: 'f-ct',
       horarioInicio: '07:00',
       horarioFim: '13:00',
       dataFim: null,

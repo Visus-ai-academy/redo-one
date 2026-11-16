@@ -6,8 +6,10 @@ import {
   alocacoes,
   chavesRobo,
   eventosAuditoria as e,
+  especialidades,
   frentesEscala,
   medicos,
+  modalidades,
   prioridades,
   subespecialidades,
   tiposAusencia,
@@ -16,6 +18,11 @@ import {
 } from '../../database/schema';
 import { ENTIDADES_ESCALA } from '../auditoria-escala';
 import type { EscopoEscala } from '../escopo/escopo';
+import {
+  CATALOGO_DA_FRENTE_F,
+  frenteDoCatalogo,
+  ROTULO_DA_FRENTE_F,
+} from '../frentes/frente-do-catalogo';
 import { coletarUuids } from './coletar-uuids';
 import type {
   FiltroHistoricoEscala,
@@ -153,7 +160,7 @@ export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaReposito
   private async nomes(ids: string[]): Promise<Record<string, string>> {
     if (ids.length === 0) return {};
     const turnoDaAlocacao = sql`(select ${turnos.nome} from ${turnos} where ${turnos.id} = ${alocacoes.turnoId})`;
-    const frenteDaAlocacao = sql`(select ${frentesEscala.rotulo} from ${frentesEscala} where ${frentesEscala.id} = ${alocacoes.frenteId})`;
+    const frenteDaAlocacao = sql`(select ${ROTULO_DA_FRENTE_F} from frentes_escala f ${CATALOGO_DA_FRENTE_F} where f.id = ${alocacoes.frenteId})`;
     const medicoDaAlocacao = sql`(select ${medicos.nome} from ${medicos} where ${medicos.id} = ${alocacoes.medicoId})`;
     const grupos = await Promise.all([
       this.db
@@ -161,8 +168,10 @@ export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaReposito
         .from(turnos)
         .where(inArray(turnos.id, ids)),
       this.db
-        .select({ id: frentesEscala.id, nome: frentesEscala.rotulo })
+        .select({ id: frentesEscala.id, nome: frenteDoCatalogo.rotulo })
         .from(frentesEscala)
+        .leftJoin(especialidades, eq(especialidades.id, frentesEscala.especialidadeId))
+        .leftJoin(modalidades, eq(modalidades.id, frentesEscala.modalidadeId))
         .where(inArray(frentesEscala.id, ids)),
       this.db
         .select({ id: tiposAusencia.id, nome: tiposAusencia.nome })

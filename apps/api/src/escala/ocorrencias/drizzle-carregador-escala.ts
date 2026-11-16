@@ -6,12 +6,15 @@ import {
   ajustesProdutividade,
   alocacoes,
   ausencias,
+  especialidades,
   frentesEscala,
   medicos,
+  modalidades,
   tiposAusencia,
   turnos,
 } from '../../database/schema';
 import type { AlocacaoEscala } from '../domain';
+import { frenteDoCatalogo } from '../frentes/frente-do-catalogo';
 import type { CarregadorEscala, DadosEscala } from './carregador-escala';
 
 /**
@@ -100,14 +103,17 @@ export class DrizzleCarregadorEscala implements CarregadorEscala {
           })
           .from(turnos),
         this.db
+          // Nome, ativo, cor e ordem do catálogo: especialidade ou modalidade inativa = frente inativa.
           .select({
             id: frentesEscala.id,
-            rotulo: frentesEscala.rotulo,
-            ativo: frentesEscala.ativo,
-            cor: frentesEscala.cor,
-            ordem: frentesEscala.ordem,
+            rotulo: frenteDoCatalogo.rotulo,
+            ativo: frenteDoCatalogo.ativo,
+            cor: frenteDoCatalogo.cor,
+            ordem: frenteDoCatalogo.ordem,
           })
-          .from(frentesEscala),
+          .from(frentesEscala)
+          .leftJoin(especialidades, eq(especialidades.id, frentesEscala.especialidadeId))
+          .leftJoin(modalidades, eq(modalidades.id, frentesEscala.modalidadeId)),
         medicoIds.length
           ? this.db
               .select({ id: medicos.id, nome: medicos.nome, ativo: medicos.ativo })

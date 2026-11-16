@@ -32,6 +32,11 @@ import {
   usuarios,
 } from '../../database/schema';
 import type { EscopoEscala } from '../escopo/escopo';
+import {
+  CATALOGO_DA_FRENTE_F,
+  ORDEM_DA_FRENTE_F,
+  ROTULO_DA_FRENTE_F,
+} from '../frentes/frente-do-catalogo';
 import type {
   AusenciaDetalhada,
   AusenciasRepository,
@@ -47,10 +52,13 @@ type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 const solicitante = alias(usuarios, 'solicitante');
 const revisor = alias(usuarios, 'revisor');
 
-/** Frentes e turnos da ausência pela ordem do cadastro. Nomes por extenso: subconsulta correlata. */
+/**
+ * Frentes (com o nome do catálogo) e turnos da ausência pela ordem do cadastro. Nomes por extenso:
+ * subconsulta correlata.
+ */
 const frentesDaAusencia = sql<Referencia[]>`(
-  select coalesce(json_agg(json_build_object('id', f.id, 'nome', f.rotulo) order by f.ordem, f.rotulo), '[]'::json)
-  from ausencias_frentes af join frentes_escala f on f.id = af.frente_id
+  select coalesce(json_agg(json_build_object('id', f.id, 'nome', ${ROTULO_DA_FRENTE_F}) order by ${ORDEM_DA_FRENTE_F}), '[]'::json)
+  from ausencias_frentes af join frentes_escala f on f.id = af.frente_id ${CATALOGO_DA_FRENTE_F}
   where af.ausencia_id = "ausencias"."id"
 )`;
 const turnosDaAusencia = sql<Referencia[]>`(

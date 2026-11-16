@@ -47,11 +47,11 @@ describe.skipIf(!url)('cadastros consultados pelo recorte da escala', () => {
     tarde = t?.id ?? '';
     const [especialidade] = await db
       .insert(schema.especialidades)
-      .values({ nome: 'NEUROLOGIA' })
+      .values({ nome: 'NEURO' })
       .returning();
     const [frente] = await db
       .insert(schema.frentesEscala)
-      .values({ tipo: 'especialidade', especialidadeId: especialidade?.id ?? '', rotulo: 'NEURO' })
+      .values({ tipo: 'especialidade', especialidadeId: especialidade?.id ?? '' })
       .returning();
     neuro = frente?.id ?? '';
   });

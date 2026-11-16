@@ -33,7 +33,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     await db.execute(
       sql`truncate table ajustes_produtividade, alocacoes_prioridades, alocacoes_subespecialidades,
         alocacoes, ausencias_frentes, ausencias_turnos, ausencias, tipos_ausencia, turnos_frentes,
-        turnos, frentes_escala, especialidades, prioridades, subespecialidades, usuarios, papeis,
+        turnos, frentes_escala, especialidades, modalidades, prioridades, subespecialidades, usuarios, papeis,
         medicos cascade`,
     );
     const [manha] = await db
@@ -43,7 +43,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     const [esp] = await db.insert(schema.especialidades).values({ nome: 'NEURO' }).returning();
     const [neuro] = await db
       .insert(schema.frentesEscala)
-      .values({ tipo: 'especialidade', especialidadeId: esp?.id ?? '', rotulo: 'NEURO' })
+      .values({ tipo: 'especialidade', especialidadeId: esp?.id ?? '' })
       .returning();
     const [ana, bruno, inativo] = await db
       .insert(schema.medicos)
@@ -213,6 +213,26 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     const dados = await new DrizzleCarregadorEscala(db).carregar('2026-11-16', '2026-11-22');
 
     expect(dados.alocacoes.map((a) => a.id)).toContain(titular?.id);
+  });
+
+  it('frentes com nome, cor, ordem e ativo do catálogo: item inativo lá é frente inativa', async () => {
+    const [ct] = await db
+      .insert(schema.modalidades)
+      .values({ codigo: 'CT', cor: '#222222', ordem: 4, ativo: false })
+      .returning();
+    const [frenteCt] = await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'modalidade', modalidadeId: ct?.id ?? '' })
+      .returning();
+
+    const { frentes } = await new DrizzleCarregadorEscala(db).carregar('2026-11-16', '2026-11-22');
+
+    expect(frentes).toEqual(
+      expect.arrayContaining([
+        { id: ids.neuro, rotulo: 'NEURO', ativo: true, cor: null, ordem: 0 },
+        { id: frenteCt?.id, rotulo: 'CT', ativo: false, cor: '#222222', ordem: 4 },
+      ]),
+    );
   });
 
   it('acha o médico vinculado à conta', async () => {

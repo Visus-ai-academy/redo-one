@@ -53,12 +53,24 @@ export class TurnoDto {
   @ApiProperty({
     type: [String],
     format: 'uuid',
-    description: 'As frentes do turno (troca o conjunto inteiro; pode ser vazio).',
+    description:
+      'Especialidades do catálogo que são frentes do turno (troca o conjunto inteiro; pode ser vazio).',
   })
   @IsArray()
   @ArrayMaxSize(100)
   @IsUUID('all', { each: true })
-  frenteIds!: string[];
+  especialidadeIds!: string[];
+
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description:
+      'Modalidades do catálogo que são frentes do turno (troca o conjunto inteiro; pode ser vazio).',
+  })
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('all', { each: true })
+  modalidadeIds!: string[];
 
   @ApiPropertyOptional({ type: String, nullable: true, maxLength: 200 })
   @Transform(aparar)
@@ -83,9 +95,19 @@ export class TurnoDto {
   ativo!: boolean;
 }
 
+const TIPOS_FRENTE = ['especialidade', 'modalidade'] as const;
+
 export class FrenteDoTurnoDto {
-  @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty() rotulo!: string;
+  @ApiProperty({ format: 'uuid', description: 'Id da frente (o que alocações e ausências usam).' })
+  id!: string;
+  @ApiProperty({ description: 'Nome da especialidade ou código da modalidade no catálogo.' })
+  rotulo!: string;
+  @ApiProperty({ enum: TIPOS_FRENTE, enumName: 'TipoFrenteEscala' })
+  tipo!: (typeof TIPOS_FRENTE)[number];
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Id no catálogo.' })
+  especialidadeId!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Id no catálogo.' })
+  modalidadeId!: string | null;
 }
 
 export class TurnoItemDto {
@@ -95,8 +117,15 @@ export class TurnoItemDto {
   @ApiProperty({ example: '07:00' }) horarioInicio!: string;
   @ApiProperty({ example: '13:00' }) horarioFim!: string;
   @ApiProperty({ description: 'Duração em minutos (1 a 1440).' }) duracaoMin!: number;
-  @ApiProperty({ type: [FrenteDoTurnoDto], description: 'Pela ordem das frentes.' })
+  @ApiProperty({
+    type: [FrenteDoTurnoDto],
+    description: 'Especialidades e depois modalidades, pela ordem do catálogo.',
+  })
   frentes!: FrenteDoTurnoDto[];
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Ordenados.' })
+  especialidadeIds!: string[];
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Ordenados.' })
+  modalidadeIds!: string[];
   @ApiProperty({ type: String, nullable: true }) descricao!: string | null;
   @ApiProperty({ type: String, nullable: true }) cor!: string | null;
   @ApiProperty() ordem!: number;

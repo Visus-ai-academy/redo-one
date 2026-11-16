@@ -1,9 +1,12 @@
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PERMISSOES_EXIGIDAS } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
+import { TurnoDto } from './dto/turno.dto';
 import { TurnosController } from './turnos.controller';
 import type { TurnosService } from './turnos.service';
 
@@ -13,7 +16,8 @@ const corpo = {
   tipo: 'fixo' as const,
   horarioInicio: '07:00',
   horarioFim: '13:00',
-  frenteIds: [],
+  especialidadeIds: [],
+  modalidadeIds: [],
   descricao: null,
   cor: null,
   ordem: 0,
@@ -67,5 +71,19 @@ describe('TurnosController', () => {
     expect(service.atualizar).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, 't-1', corpo);
     await controller.excluir(ana, 't-1');
     expect(service.excluir).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, 't-1');
+  });
+
+  it('o corpo leva especialidadeIds e modalidadeIds (uuids), não frenteIds', async () => {
+    const erros = async (extra: Record<string, unknown>) =>
+      (await validate(plainToInstance(TurnoDto, { ...corpo, ...extra })))
+        .map((e) => e.property)
+        .sort();
+    const uuid = '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a5b';
+
+    expect(await erros({ especialidadeIds: [uuid], modalidadeIds: [uuid] })).toEqual([]);
+    expect(await erros({ especialidadeIds: ['x'], modalidadeIds: undefined })).toEqual([
+      'especialidadeIds',
+      'modalidadeIds',
+    ]);
   });
 });

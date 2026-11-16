@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
@@ -17,6 +17,9 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
   let pool: Pool;
   let db: Database;
   let repo: DrizzleTurnosRepository;
+  let eNeuro: string;
+  let eAbd: string;
+  let mCt: string;
   let neuro: string;
   let tc: string;
   let medico: string;
@@ -26,7 +29,8 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     tipo: 'fixo',
     horarioInicio: '07:00',
     horarioFim: '13:00',
-    frenteIds: [],
+    especialidadeIds: [],
+    modalidadeIds: [],
     descricao: null,
     cor: null,
     ordem: 0,
@@ -61,17 +65,24 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     await db.execute(
       sql`truncate table turnos, frentes_escala, especialidades, modalidades, medicos, usuarios, papeis, tipos_ausencia cascade`,
     );
-    const [e] = await db.insert(schema.especialidades).values({ nome: 'NEURO' }).returning();
-    const [m] = await db.insert(schema.modalidades).values({ codigo: 'CT' }).returning();
-    const frentes = await db
-      .insert(schema.frentesEscala)
+    const [e, a] = await db
+      .insert(schema.especialidades)
       .values([
-        { tipo: 'especialidade', especialidadeId: e?.id, rotulo: 'NEURO', ordem: 2 },
-        { tipo: 'modalidade', modalidadeId: m?.id, rotulo: 'TC', ordem: 1 },
+        { nome: 'NEURO', ordem: 2 },
+        { nome: 'ABDOME', ordem: 1 },
       ])
       .returning();
-    neuro = frentes[0]?.id ?? '';
-    tc = frentes[1]?.id ?? '';
+    const [m] = await db.insert(schema.modalidades).values({ codigo: 'CT', ordem: 0 }).returning();
+    eNeuro = e?.id ?? '';
+    eAbd = a?.id ?? '';
+    mCt = m?.id ?? '';
+    // A frente de NEURO já existe; a de CT nasce quando um turno a usa.
+    const [frente] = await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'especialidade', especialidadeId: eNeuro })
+      .returning();
+    neuro = frente?.id ?? '';
+    tc = '';
     const [med] = await db
       .insert(schema.medicos)
       .values({ nome: 'Ana Reis', chaveNormalizada: 'ana reis' })
@@ -83,18 +94,41 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     await pool.end();
   });
 
-  it('grava o turno com as frentes e lê com elas pela ordem da frente', async () => {
-    const id = await repo.criar(turno({ frenteIds: [neuro, tc], cor: '#123456' }));
+  /** Cria o turno e devolve o id; guarda em `tc` o id da frente de CT, se ela entrou. */
+  const criar = async (dados: DadosTurno) => {
+    const { id, frenteIds } = await repo.criar(dados);
+    const [frenteCt] = await db
+      .select({ id: schema.frentesEscala.id })
+      .from(schema.frentesEscala)
+      .where(eq(schema.frentesEscala.modalidadeId, mCt));
+    tc = frenteCt?.id ?? '';
+    return { id, frenteIds };
+  };
 
+  it('grava o turno criando a frente que falta e reaproveitando a que existe', async () => {
+    const { id, frenteIds } = await criar(
+      turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt], cor: '#123456' }),
+    );
+
+    expect(frenteIds).toEqual([neuro, tc].sort());
+    expect(await db.select().from(schema.frentesEscala)).toHaveLength(2);
     expect(await repo.buscar(id)).toEqual({
       id,
       nome: 'Manhã',
       tipo: 'fixo',
       horarioInicio: '07:00',
       horarioFim: '13:00',
+      especialidadeIds: [eNeuro],
+      modalidadeIds: [mCt],
       frentes: [
-        { id: tc, rotulo: 'TC' },
-        { id: neuro, rotulo: 'NEURO' },
+        {
+          id: neuro,
+          rotulo: 'NEURO',
+          tipo: 'especialidade',
+          especialidadeId: eNeuro,
+          modalidadeId: null,
+        },
+        { id: tc, rotulo: 'CT', tipo: 'modalidade', especialidadeId: null, modalidadeId: mCt },
       ],
       descricao: null,
       cor: '#123456',
@@ -103,18 +137,51 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     });
   });
 
-  it('editar troca o conjunto de frentes', async () => {
-    const id = await repo.criar(turno({ frenteIds: [neuro, tc] }));
+  it('frentes do turno: especialidades e depois modalidades, pela ordem do catálogo', async () => {
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro, eAbd], modalidadeIds: [mCt] }));
 
-    await repo.atualizar(id, turno({ nome: 'Matutino', frenteIds: [neuro] }));
+    expect((await repo.buscar(id))?.frentes.map((f) => f.rotulo)).toEqual([
+      'ABDOME',
+      'NEURO',
+      'CT',
+    ]);
+  });
 
-    expect(await repo.buscar(id)).toMatchObject({ nome: 'Matutino', frentes: [{ id: neuro }] });
+  it('editar troca o conjunto de frentes e devolve os ids delas', async () => {
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
+
+    const { frenteIds } = await repo.atualizar(
+      id,
+      turno({ nome: 'Matutino', especialidadeIds: [eNeuro], modalidadeIds: [] }),
+    );
+
+    expect(frenteIds).toEqual([neuro]);
+    expect(await repo.buscar(id)).toMatchObject({
+      nome: 'Matutino',
+      modalidadeIds: [],
+      frentes: [{ id: neuro }],
+    });
+  });
+
+  it('diz quais especialidades e modalidades existem no catálogo', async () => {
+    const sumiu = '00000000-0000-4000-8000-000000000000';
+
+    expect(await repo.noCatalogo({ especialidadeIds: [], modalidadeIds: [] })).toEqual({
+      especialidadeIds: [],
+      modalidadeIds: [],
+    });
+    expect(
+      await repo.noCatalogo({
+        especialidadeIds: [eNeuro, sumiu, mCt],
+        modalidadeIds: [mCt, sumiu],
+      }),
+    ).toEqual({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] });
   });
 
   it('lista por ordem e nome, com busca, ativo, paginação e turno sem frente', async () => {
-    await repo.criar(turno({ nome: 'Tarde', ordem: 1, frenteIds: [tc] }));
-    await repo.criar(turno({ nome: 'Manhã', ordem: 1, descricao: 'Matutino' }));
-    await repo.criar(turno({ nome: 'Lista', tipo: 'lista', ordem: 0, ativo: false }));
+    await criar(turno({ nome: 'Tarde', ordem: 1, modalidadeIds: [mCt] }));
+    await criar(turno({ nome: 'Manhã', ordem: 1, descricao: 'Matutino' }));
+    await criar(turno({ nome: 'Lista', tipo: 'lista', ordem: 0, ativo: false }));
 
     const pagina = await repo.listar({ pagina: 1, porPagina: 2 });
     expect(pagina.total).toBe(3);
@@ -124,7 +191,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     ]);
     expect((await repo.listar({ pagina: 2, porPagina: 2 })).itens[0]).toMatchObject({
       nome: 'Tarde',
-      frentes: [{ id: tc, rotulo: 'TC' }],
+      frentes: [{ id: tc, rotulo: 'CT' }],
     });
     expect((await repo.listar({ ativo: true, pagina: 1, porPagina: 10 })).total).toBe(2);
     expect(
@@ -132,19 +199,15 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     ).toEqual(['Manhã']);
   });
 
-  it('acha por nome sem diferenciar maiúsculas e diz quais frentes existem', async () => {
-    const id = await repo.criar(turno());
+  it('acha por nome sem diferenciar maiúsculas', async () => {
+    const { id } = await criar(turno());
 
     expect(await repo.buscarPorNome('MANHÃ')).toEqual({ id });
-    expect(await repo.frentes([])).toEqual([]);
-    expect(
-      (await repo.frentes([neuro, '00000000-0000-0000-0000-000000000000'])).map((f) => f.id),
-    ).toEqual([neuro]);
   });
 
   it('alocações vigentes: sem fim ou com fim a partir de hoje, só do turno', async () => {
-    const id = await repo.criar(turno({ frenteIds: [neuro, tc] }));
-    const outro = await repo.criar(turno({ nome: 'Tarde', frenteIds: [tc] }));
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
+    const { id: outro } = await criar(turno({ nome: 'Tarde', modalidadeIds: [mCt] }));
     await alocar(id, neuro);
     await alocar(id, tc, {
       horarioInicio: '08:00',
@@ -166,7 +229,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
   });
 
   it('exclui o turno livre, levando as frentes dele', async () => {
-    const id = await repo.criar(turno({ frenteIds: [neuro] }));
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro] }));
 
     expect(await repo.excluir(id)).toBe(true);
     expect(await repo.buscar(id)).toBeNull();
@@ -174,7 +237,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
   });
 
   it('não exclui turno com alocação (nem que já acabou)', async () => {
-    const id = await repo.criar(turno({ frenteIds: [neuro] }));
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro] }));
     await alocar(id, neuro, { dataFim: '2026-02-01' });
 
     expect(await repo.excluir(id)).toBe(false);
@@ -182,7 +245,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
   });
 
   it('não exclui turno do recorte de uma gestora', async () => {
-    const id = await repo.criar(turno());
+    const { id } = await criar(turno());
     const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [usuario] = await db
       .insert(schema.usuarios)

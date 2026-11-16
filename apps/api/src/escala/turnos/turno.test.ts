@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import { ConflitoEscalaError, EscalaInvalidaError } from '../domain/errors';
-import { type DadosTurno, normalizarTurno, verificarMudancaDoTurno } from './turno';
+import {
+  type DadosTurno,
+  type FrenteDoTurno,
+  normalizarTurno,
+  verificarMudancaDoTurno,
+} from './turno';
 
 const turno = (extra: Partial<DadosTurno> = {}): DadosTurno => ({
   nome: 'Manhã',
   tipo: 'fixo',
   horarioInicio: '07:00',
   horarioFim: '13:00',
-  frenteIds: ['f-neuro', 'f-tc'],
+  especialidadeIds: ['e-neuro'],
+  modalidadeIds: ['m-ct'],
   descricao: null,
   cor: null,
   ordem: 0,
@@ -16,25 +22,39 @@ const turno = (extra: Partial<DadosTurno> = {}): DadosTurno => ({
   ...extra,
 });
 
-const rotulos = new Map([
-  ['f-neuro', 'NEURO'],
-  ['f-tc', 'TC'],
-]);
+/** As frentes que o turno tem hoje: NEURO (especialidade) e CT (modalidade). */
+const frentes: FrenteDoTurno[] = [
+  {
+    id: 'f-neuro',
+    rotulo: 'NEURO',
+    tipo: 'especialidade',
+    especialidadeId: 'e-neuro',
+    modalidadeId: null,
+  },
+  { id: 'f-tc', rotulo: 'CT', tipo: 'modalidade', especialidadeId: null, modalidadeId: 'm-ct' },
+];
 
 describe('normalizarTurno', () => {
-  it('apara textos, normaliza horários e ordena as frentes sem repetir', () => {
+  it('apara textos, normaliza horários e ordena especialidades e modalidades sem repetir', () => {
     expect(
       normalizarTurno(
         turno({
           nome: '  Manhã ',
           horarioInicio: '7:00',
           horarioFim: ' 13:00',
-          frenteIds: ['f-tc', 'f-neuro', 'f-tc'],
+          especialidadeIds: ['e-neuro', 'e-abd', 'e-neuro'],
+          modalidadeIds: ['m-rx', 'm-ct', 'm-rx'],
           descricao: '  ',
           cor: ' #1F7A4D ',
         }),
       ),
-    ).toEqual(turno({ frenteIds: ['f-neuro', 'f-tc'], cor: '#1F7A4D' }));
+    ).toEqual(
+      turno({
+        especialidadeIds: ['e-abd', 'e-neuro'],
+        modalidadeIds: ['m-ct', 'm-rx'],
+        cor: '#1F7A4D',
+      }),
+    );
   });
 
   it('recusa horário fora do formato', () => {
@@ -60,7 +80,7 @@ describe('verificarMudancaDoTurno', () => {
         turno(),
         turno({ nome: 'Matutino' }),
         [vigente('f-tc', '00:00', '23:00')],
-        rotulos,
+        frentes,
       ),
     ).not.toThrow();
   });
@@ -71,7 +91,7 @@ describe('verificarMudancaDoTurno', () => {
         turno(),
         turno({ horarioInicio: '06:00', horarioFim: '14:00' }),
         [vigente('f-tc', '07:00', '13:00'), vigente('f-neuro', '08:00', '12:00')],
-        rotulos,
+        frentes,
       ),
     ).not.toThrow();
   });
@@ -86,7 +106,7 @@ describe('verificarMudancaDoTurno', () => {
           vigente('f-neuro', '08:00', '12:00'),
           vigente('f-neuro', '07:00', '10:00'),
         ],
-        rotulos,
+        frentes,
       );
     expect(mudar).toThrow(ConflitoEscalaError);
     expect(mudar).toThrow(
@@ -105,7 +125,7 @@ describe('verificarMudancaDoTurno', () => {
         turno(),
         turno({ horarioFim: '12:00' }),
         [vigente('f-tc', '07:00', '13:00')],
-        rotulos,
+        frentes,
       ),
     ).toThrow('1 alocação vigente ficaria fora do novo horário do turno (07:00 às 12:00).');
   });
@@ -117,7 +137,7 @@ describe('verificarMudancaDoTurno', () => {
         plantao,
         turno({ horarioInicio: '19:00', horarioFim: '01:00' }),
         [vigente('f-tc', '22:00', '02:00')],
-        rotulos,
+        frentes,
       ),
     ).toThrow(ConflitoEscalaError);
     expect(() =>
@@ -125,7 +145,7 @@ describe('verificarMudancaDoTurno', () => {
         plantao,
         turno({ horarioInicio: '18:00', horarioFim: '08:00' }),
         [vigente('f-tc', '22:00', '02:00')],
-        rotulos,
+        frentes,
       ),
     ).not.toThrow();
   });
@@ -134,13 +154,13 @@ describe('verificarMudancaDoTurno', () => {
     const tirar = () =>
       verificarMudancaDoTurno(
         turno(),
-        turno({ frenteIds: ['f-neuro'] }),
+        turno({ modalidadeIds: [] }),
         [vigente('f-tc', '07:00', '13:00'), vigente('f-tc', '08:00', '10:00')],
-        rotulos,
+        frentes,
       );
     expect(tirar).toThrow(ConflitoEscalaError);
     expect(tirar).toThrow(
-      'A frente TC tem 2 alocações vigentes neste turno. Encerre ou mova essas alocações antes de tirá-la do turno.',
+      'A frente CT tem 2 alocações vigentes neste turno. Encerre ou mova essas alocações antes de tirá-la do turno.',
     );
   });
 
@@ -148,9 +168,9 @@ describe('verificarMudancaDoTurno', () => {
     expect(() =>
       verificarMudancaDoTurno(
         turno(),
-        turno({ frenteIds: ['f-neuro'] }),
+        turno({ modalidadeIds: [] }),
         [vigente('f-neuro', '07:00', '13:00')],
-        rotulos,
+        frentes,
       ),
     ).not.toThrow();
   });
@@ -166,7 +186,7 @@ describe('verificarMudancaDoTurno', () => {
           vigente('f-tc', '13:00', '19:00', true),
           vigente('f-neuro', '07:00', '13:00'),
         ],
-        rotulos,
+        frentes,
       );
     expect(mudar).toThrow(ConflitoEscalaError);
     expect(mudar).toThrow(
@@ -181,7 +201,7 @@ describe('verificarMudancaDoTurno', () => {
         lista,
         { ...lista, tipo: 'fixo' },
         [vigente('f-tc', '07:00', '13:00')],
-        rotulos,
+        frentes,
       ),
     ).not.toThrow();
   });

@@ -68,13 +68,13 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
     tarde = tt?.id ?? '';
     const [en, ec] = await db
       .insert(schema.especialidades)
-      .values([{ nome: 'NEUROLOGIA' }, { nome: 'CORPO' }])
+      .values([{ nome: 'NEURO' }, { nome: 'TC' }])
       .returning();
     const [fn, fc] = await db
       .insert(schema.frentesEscala)
       .values([
-        { tipo: 'especialidade', especialidadeId: en?.id ?? '', rotulo: 'NEURO' },
-        { tipo: 'especialidade', especialidadeId: ec?.id ?? '', rotulo: 'TC' },
+        { tipo: 'especialidade', especialidadeId: en?.id ?? '' },
+        { tipo: 'especialidade', especialidadeId: ec?.id ?? '' },
       ])
       .returning();
     neuro = fn?.id ?? '';

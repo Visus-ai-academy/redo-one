@@ -146,18 +146,25 @@ const idEspecialidade = (legadoId: string) => idDoLegado('especialidades', legad
 const idModalidade = (legadoId: string) => idDoLegado('modalidades', legadoId);
 
 describe('mapearEscala: frentes', () => {
-  it('frente de modalidade aponta a modalidade do redo-one; D.O (OT) e DO viram uma só, TC fica com o rótulo da escala', () => {
+  it('frente de modalidade aponta a modalidade do redo-one (TC → CT); D.O (OT) e DO viram uma só; sem rótulo, cor, ordem nem ativo (vêm do catálogo)', () => {
     const { tabelas } = mapearEscala(escala(), contexto);
 
-    const porRotulo = Object.fromEntries(tabelas.frentesEscala.map((f) => [f.rotulo, f]));
-    expect(Object.keys(porRotulo).sort()).toEqual(['DO', 'MG', 'RX', 'TC']);
-    expect(porRotulo.TC).toMatchObject({
+    const modalidades = tabelas.frentesEscala.map((f) => f.modalidadeId).sort();
+    expect(modalidades).toEqual(
+      [
+        idModalidade('mo-CT'),
+        idModalidade('mo-DO'),
+        idModalidade('mo-MG'),
+        idModalidade('mo-RX'),
+      ].sort(),
+    );
+    const ct = tabelas.frentesEscala.find((f) => f.modalidadeId === idModalidade('mo-CT'));
+    expect(ct).toEqual({
+      id: idDoLegado('frentes_escala', `modalidade:${idModalidade('mo-CT')}`),
       tipo: 'modalidade',
       modalidadeId: idModalidade('mo-CT'),
       especialidadeId: null,
     });
-    expect(porRotulo.DO?.modalidadeId).toBe(idModalidade('mo-DO'));
-    expect(porRotulo.MG?.modalidadeId).toBe(idModalidade('mo-MG'));
   });
 
   it('frente de especialidade só para as que a escala usa; MAMO vai para MAMA e GERAL sai', () => {
@@ -171,10 +178,9 @@ describe('mapearEscala: frentes', () => {
     );
 
     const especialidades = tabelas.frentesEscala.filter((f) => f.tipo === 'especialidade');
-    expect(especialidades.map((f) => [f.rotulo, f.especialidadeId]).sort()).toEqual([
-      ['MAMA', idEspecialidade('es-mama')],
-      ['NEURO', idEspecialidade('es-neuro')],
-    ]);
+    expect(especialidades.map((f) => f.especialidadeId).sort()).toEqual(
+      [idEspecialidade('es-mama'), idEspecialidade('es-neuro')].sort(),
+    );
     // Uma linha por turno × frente: MAMO e MAMA, D.O e DO caem na mesma.
     expect(tabelas.turnosFrentes).toHaveLength(3);
     expect(avisos).toContainEqual(
@@ -186,7 +192,7 @@ describe('mapearEscala: frentes', () => {
     const a = mapearEscala(escala(), contexto).tabelas.frentesEscala;
     const b = mapearEscala(escala(), contexto).tabelas.frentesEscala;
     expect(a).toEqual(b);
-    expect(a.find((f) => f.rotulo === 'TC')?.id).toBe(
+    expect(a.find((f) => f.modalidadeId === idModalidade('mo-CT'))?.id).toBe(
       idDoLegado('frentes_escala', `modalidade:${idModalidade('mo-CT')}`),
     );
   });

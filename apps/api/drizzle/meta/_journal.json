@@ -92,6 +92,13 @@
       "when": 1794847147767,
       "tag": "0012_escala",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794849721979,
+      "tag": "0013_frentes_do_catalogo",
+      "breakpoints": true
     }
   ]
 }

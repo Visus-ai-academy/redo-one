@@ -184,7 +184,6 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   type Grupo = {
     tipo: 'especialidade' | 'modalidade';
     destinoId: string;
-    rotuloCatalogo: string;
     legado: LegadoCatalogo['especialidades'];
   };
   const grupos = new Map<string, Grupo>();
@@ -194,9 +193,8 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
     if (codigo) {
       const k = chaveCadastro(codigo);
       const id = modalidadePorCodigo.get(k) ?? modalidadeDaVariacao.get(k);
-      const codigoFinal = ctx.catalogo.modalidades.find((m) => m.id === id)?.codigo;
-      if (id && codigoFinal)
-        grupo = { tipo: 'modalidade', destinoId: id, rotuloCatalogo: codigoFinal };
+      const noCatalogo = ctx.catalogo.modalidades.some((m) => m.id === id);
+      if (id && noCatalogo) grupo = { tipo: 'modalidade', destinoId: id };
       else
         avisar(
           'frentes_escala',
@@ -205,8 +203,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
         );
     } else if (especialidadesUsadas.has(e.id)) {
       const destino = resolverEspecialidade(e.nome);
-      if (destino?.id)
-        grupo = { tipo: 'especialidade', destinoId: destino.id, rotuloCatalogo: destino.nome };
+      if (destino?.id) grupo = { tipo: 'especialidade', destinoId: destino.id };
       else
         avisar(
           'frentes_escala',
@@ -226,33 +223,14 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   for (const [chave, g] of grupos) {
     const id = idDoLegado('frentes_escala', chave);
     for (const e of g.legado) frenteDoLegado.set(e.id, id);
-    // Rótulo: o nome da escala que é o código do catálogo (DO entre D.O e DO); senão o da escala
-    // (TC para CT). Especialidade: o nome do catálogo.
-    const rotulo =
-      g.tipo === 'especialidade'
-        ? g.rotuloCatalogo
-        : (
-            g.legado.find((e) => chaveCadastro(e.nome) === chaveCadastro(g.rotuloCatalogo))?.nome ??
-            g.legado[0]?.nome ??
-            g.rotuloCatalogo
-          ).trim();
+    // Nome, cor, ordem e ativo da frente vêm do catálogo; aqui só a chave.
     tabFrentes.push({
       id,
       tipo: g.tipo,
       especialidadeId: g.tipo === 'especialidade' ? g.destinoId : null,
       modalidadeId: g.tipo === 'modalidade' ? g.destinoId : null,
-      rotulo,
-      descricao: null,
-      cor: g.legado.map((e) => texto(e.cor)).find(Boolean) ?? null,
-      ordem: Math.min(...g.legado.map((e) => e.ordem)),
-      ativo: g.legado.some((e) => e.ativo),
     });
   }
-  const rotulos = new Map<string, number>();
-  for (const f of tabFrentes) rotulos.set(f.rotulo, (rotulos.get(f.rotulo) ?? 0) + 1);
-  for (const [rotulo, n] of rotulos)
-    if (n > 1)
-      avisar('frentes_escala', rotulo, `${n} frentes com o mesmo rótulo: renomeie no redo-one.`);
 
   // ── Turnos ─────────────────────────────────────────────────────────────────────────────────
   const tabTurnos: EscalaMigrada['tabelas']['turnos'] = [];

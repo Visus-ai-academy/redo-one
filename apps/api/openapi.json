@@ -5683,41 +5683,6 @@
         "tags": [
           "escala"
         ]
-      },
-      "post": {
-        "operationId": "FrentesController_criar",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FrenteDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IdCriadoDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Destino fora do tipo ou inexistente no catálogo."
-          },
-          "409": {
-            "description": "Rótulo já usado ou já há frente para esse destino."
-          }
-        },
-        "tags": [
-          "escala"
-        ]
       }
     },
     "/escala/frentes/{id}": {
@@ -5746,73 +5711,6 @@
           },
           "404": {
             "description": ""
-          }
-        },
-        "tags": [
-          "escala"
-        ]
-      },
-      "put": {
-        "operationId": "FrentesController_atualizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FrenteDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "400": {
-            "description": "Destino fora do tipo ou inexistente no catálogo."
-          },
-          "404": {
-            "description": ""
-          },
-          "409": {
-            "description": "Rótulo já usado ou já há frente para esse destino."
-          }
-        },
-        "tags": [
-          "escala"
-        ]
-      },
-      "delete": {
-        "operationId": "FrentesController_excluir",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "404": {
-            "description": ""
-          },
-          "409": {
-            "description": "Em uso por turno, alocação, ausência ou recorte de gestora: desative."
           }
         },
         "tags": [
@@ -5904,7 +5802,7 @@
             }
           },
           "400": {
-            "description": "Horário inválido ou frente inexistente."
+            "description": "Horário inválido, ou especialidade ou modalidade inexistente no catálogo."
           },
           "409": {
             "description": "Nome já usado."
@@ -5974,7 +5872,7 @@
             "description": ""
           },
           "400": {
-            "description": "Horário inválido ou frente inexistente."
+            "description": "Horário inválido, ou especialidade ou modalidade inexistente no catálogo."
           },
           "404": {
             "description": ""
@@ -11331,21 +11229,26 @@
             "description": "Nome da especialidade ou código da modalidade no catálogo."
           },
           "rotulo": {
-            "type": "string"
+            "type": "string",
+            "description": "Nome da especialidade ou código da modalidade no catálogo."
           },
           "descricao": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Do catálogo."
           },
           "cor": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Do catálogo."
           },
           "ordem": {
-            "type": "number"
+            "type": "number",
+            "description": "Do catálogo."
           },
           "ativo": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Do catálogo: inativa lá, inativa na escala."
           }
         },
         "required": [
@@ -11387,9 +11290,18 @@
           "porPagina"
         ]
       },
-      "FrenteDto": {
+      "FrenteDoTurnoDto": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id da frente (o que alocações e ausências usam)."
+          },
+          "rotulo": {
+            "type": "string",
+            "description": "Nome da especialidade ou código da modalidade no catálogo."
+          },
           "tipo": {
             "allOf": [
               {
@@ -11401,60 +11313,21 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Obrigatório (e o único) na frente de especialidade."
+            "description": "Id no catálogo."
           },
           "modalidadeId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Obrigatório (e o único) na frente de modalidade."
-          },
-          "rotulo": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 60,
-            "example": "MSK",
-            "description": "Nome na escala. Vazio: o nome da especialidade ou o código da modalidade."
-          },
-          "descricao": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 200
-          },
-          "cor": {
-            "type": "string",
-            "nullable": true,
-            "example": "#1F7A4D"
-          },
-          "ordem": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9999
-          },
-          "ativo": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "tipo",
-          "ordem",
-          "ativo"
-        ]
-      },
-      "FrenteDoTurnoDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "rotulo": {
-            "type": "string"
+            "description": "Id no catálogo."
           }
         },
         "required": [
           "id",
-          "rotulo"
+          "rotulo",
+          "tipo",
+          "especialidadeId",
+          "modalidadeId"
         ]
       },
       "TurnoItemDto": {
@@ -11487,10 +11360,26 @@
             "description": "Duração em minutos (1 a 1440)."
           },
           "frentes": {
-            "description": "Pela ordem das frentes.",
+            "description": "Especialidades e depois modalidades, pela ordem do catálogo.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FrenteDoTurnoDto"
+            }
+          },
+          "especialidadeIds": {
+            "description": "Ordenados.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "modalidadeIds": {
+            "description": "Ordenados.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           "descricao": {
@@ -11516,6 +11405,8 @@
           "horarioFim",
           "duracaoMin",
           "frentes",
+          "especialidadeIds",
+          "modalidadeIds",
           "descricao",
           "cor",
           "ordem",
@@ -11574,8 +11465,16 @@
             "example": "13:00",
             "description": "Antes do início: o turno vira a meia-noite. Igual ao início: 24 h."
           },
-          "frenteIds": {
-            "description": "As frentes do turno (troca o conjunto inteiro; pode ser vazio).",
+          "especialidadeIds": {
+            "description": "Especialidades do catálogo que são frentes do turno (troca o conjunto inteiro; pode ser vazio).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "modalidadeIds": {
+            "description": "Modalidades do catálogo que são frentes do turno (troca o conjunto inteiro; pode ser vazio).",
             "type": "array",
             "items": {
               "type": "string",
@@ -11606,7 +11505,8 @@
           "tipo",
           "horarioInicio",
           "horarioFim",
-          "frenteIds",
+          "especialidadeIds",
+          "modalidadeIds",
           "ordem",
           "ativo"
         ]

@@ -2,7 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../database/database';
-import { frentesEscala, turnos, usuarios } from '../../database/schema';
+import {
+  especialidades,
+  frentesEscala,
+  modalidades,
+  turnos,
+  usuarios,
+} from '../../database/schema';
+import { frenteDoCatalogo, ordemDasFrentes } from '../frentes/frente-do-catalogo';
 import type { CadastrosEscopoRepository, Referencia } from './cadastros-escopo.repository';
 
 @Injectable()
@@ -30,9 +37,11 @@ export class DrizzleCadastrosEscopoRepository implements CadastrosEscopoReposito
   async frentes(ids: string[]): Promise<Referencia[]> {
     if (ids.length === 0) return [];
     return this.db
-      .select({ id: frentesEscala.id, nome: frentesEscala.rotulo })
+      .select({ id: frentesEscala.id, nome: frenteDoCatalogo.rotulo })
       .from(frentesEscala)
+      .leftJoin(especialidades, eq(especialidades.id, frentesEscala.especialidadeId))
+      .leftJoin(modalidades, eq(modalidades.id, frentesEscala.modalidadeId))
       .where(inArray(frentesEscala.id, ids))
-      .orderBy(asc(frentesEscala.ordem), asc(frentesEscala.rotulo));
+      .orderBy(...ordemDasFrentes);
   }
 }

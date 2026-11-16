@@ -90,13 +90,16 @@ describe.skipIf(!url)('DrizzleAusenciasRepository', () => {
       .returning();
     const [eNeuro, eTc] = await db
       .insert(schema.especialidades)
-      .values([{ nome: 'NEURO' }, { nome: 'TORAX' }])
+      .values([
+        { nome: 'NEURO', ordem: 1 },
+        { nome: 'TC', ordem: 0 },
+      ])
       .returning();
     const [neuro, tc] = await db
       .insert(schema.frentesEscala)
       .values([
-        { tipo: 'especialidade', especialidadeId: eNeuro?.id ?? '', rotulo: 'NEURO', ordem: 1 },
-        { tipo: 'especialidade', especialidadeId: eTc?.id ?? '', rotulo: 'TC', ordem: 0 },
+        { tipo: 'especialidade', especialidadeId: eNeuro?.id ?? '' },
+        { tipo: 'especialidade', especialidadeId: eTc?.id ?? '' },
       ])
       .returning();
     const [manha, tarde] = await db

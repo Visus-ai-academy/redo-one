@@ -1,34 +1,15 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Inject,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Put,
-  Query,
-} from '@nestjs/common';
-import {
-  ApiBadRequestResponse,
-  ApiConflictResponse,
-  ApiCreatedResponse,
-  ApiNoContentResponse,
-  ApiNotFoundResponse,
-  ApiOkResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controller, Get, Inject, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import { ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
-import { IdCriadoDto, ListarDto } from '../../catalogo/comum/dto';
-import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
-import type { PrincipalUsuario } from '../../identidade/principal';
-import { FrenteDto, FrenteItemDto, PaginaFrentesDto } from './dto/frente.dto';
+import { ListarDto } from '../../catalogo/comum/dto';
+import { Permissao } from '../../identidade/acesso/decorators';
+import { FrenteItemDto, PaginaFrentesDto } from './dto/frente.dto';
 import { FrentesService } from './frentes.service';
 
-/** Leitura com `escala.ver`: as frentes alimentam as telas da escala, não só a de configuração. */
+/**
+ * Só leitura, com `escala.ver`: a frente é uma especialidade ou modalidade do catálogo (editada
+ * lá) e nasce sozinha quando um turno passa a usá-la.
+ */
 @ApiTags('escala')
 @Controller('escala/frentes')
 export class FrentesController {
@@ -53,47 +34,5 @@ export class FrentesController {
   @ApiNotFoundResponse()
   obter(@Param('id', ParseUUIDPipe) id: string): Promise<FrenteItemDto> {
     return this.service.obter(id);
-  }
-
-  @Post()
-  @Permissao('escala-config.editar')
-  @ApiCreatedResponse({ type: IdCriadoDto })
-  @ApiBadRequestResponse({ description: 'Destino fora do tipo ou inexistente no catálogo.' })
-  @ApiConflictResponse({ description: 'Rótulo já usado ou já há frente para esse destino.' })
-  async criar(
-    @PrincipalAtual() ator: PrincipalUsuario,
-    @Body() corpo: FrenteDto,
-  ): Promise<IdCriadoDto> {
-    return { id: await this.service.criar({ usuarioId: ator.usuarioId }, corpo) };
-  }
-
-  @Put(':id')
-  @Permissao('escala-config.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
-  @ApiNotFoundResponse()
-  @ApiBadRequestResponse({ description: 'Destino fora do tipo ou inexistente no catálogo.' })
-  @ApiConflictResponse({ description: 'Rótulo já usado ou já há frente para esse destino.' })
-  atualizar(
-    @PrincipalAtual() ator: PrincipalUsuario,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() corpo: FrenteDto,
-  ): Promise<void> {
-    return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
-  }
-
-  @Delete(':id')
-  @Permissao('escala-config.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
-  @ApiNotFoundResponse()
-  @ApiConflictResponse({
-    description: 'Em uso por turno, alocação, ausência ou recorte de gestora: desative.',
-  })
-  excluir(
-    @PrincipalAtual() ator: PrincipalUsuario,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
-    return this.service.excluir({ usuarioId: ator.usuarioId }, id);
   }
 }

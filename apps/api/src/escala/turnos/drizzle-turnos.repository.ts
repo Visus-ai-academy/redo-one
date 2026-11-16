@@ -7,24 +7,42 @@ import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import {
   alocacoes,
-  frentesEscala,
+  especialidades,
+  modalidades,
   turnos,
   turnosFrentes,
   usuariosEscoposEscala,
 } from '../../database/schema';
+import {
+  CATALOGO_DA_FRENTE_F,
+  ORDEM_DA_FRENTE_F,
+  ROTULO_DA_FRENTE_F,
+} from '../frentes/frente-do-catalogo';
+import { type DestinosFrentes, garantirFrentes } from '../frentes/garantir-frentes';
 import type { DadosTurno } from './turno';
 import type { FrenteDoTurno, TurnoGravado, TurnosRepository } from './turnos.repository';
 
 type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /**
- * Frentes do turno pela ordem da frente. Nomes por extenso: numa consulta de uma tabela só o
- * Drizzle escreve as colunas sem a tabela, e dentro da subconsulta o `id` seria o da frente.
+ * Frentes do turno com o nome do catálogo, especialidades e depois modalidades. Nomes por extenso:
+ * numa consulta de uma tabela só o Drizzle escreve as colunas sem a tabela, e dentro da
+ * subconsulta o `id` seria o da frente.
  */
 const frentesDoTurno = sql<FrenteDoTurno[]>`(
-  select coalesce(json_agg(json_build_object('id', f.id, 'rotulo', f.rotulo) order by f.ordem, f.rotulo), '[]'::json)
-  from turnos_frentes tf join frentes_escala f on f.id = tf.frente_id
+  select coalesce(json_agg(json_build_object(
+    'id', f.id, 'rotulo', ${ROTULO_DA_FRENTE_F}, 'tipo', f.tipo,
+    'especialidadeId', f.especialidade_id, 'modalidadeId', f.modalidade_id
+  ) order by ${ORDEM_DA_FRENTE_F}), '[]'::json)
+  from turnos_frentes tf join frentes_escala f on f.id = tf.frente_id ${CATALOGO_DA_FRENTE_F}
   where tf.turno_id = "turnos"."id"
+)`;
+
+/** Ids no catálogo das frentes do turno de um tipo, ordenados. */
+const idsDoCatalogo = (coluna: 'especialidade_id' | 'modalidade_id') => sql<string[]>`array(
+  select f.${sql.raw(coluna)}::text from turnos_frentes tf join frentes_escala f on f.id = tf.frente_id
+  where tf.turno_id = "turnos"."id" and f.${sql.raw(coluna)} is not null
+  order by 1
 )`;
 
 const selecao = {
@@ -34,6 +52,8 @@ const selecao = {
   horarioInicio: turnos.horarioInicio,
   horarioFim: turnos.horarioFim,
   frentes: frentesDoTurno,
+  especialidadeIds: idsDoCatalogo('especialidade_id'),
+  modalidadeIds: idsDoCatalogo('modalidade_id'),
   descricao: turnos.descricao,
   cor: turnos.cor,
   ordem: turnos.ordem,
@@ -84,12 +104,29 @@ export class DrizzleTurnosRepository implements TurnosRepository {
     return turno ?? null;
   }
 
-  async frentes(ids: string[]) {
-    if (!ids.length) return [];
-    return this.db
-      .select({ id: frentesEscala.id, rotulo: frentesEscala.rotulo })
-      .from(frentesEscala)
-      .where(inArray(frentesEscala.id, ids));
+  async noCatalogo({ especialidadeIds, modalidadeIds }: DestinosFrentes) {
+    const [esp, mod] = await Promise.all([
+      especialidadeIds.length
+        ? this.db
+            .select({ id: especialidades.id })
+            .from(especialidades)
+            .where(inArray(especialidades.id, [...especialidadeIds]))
+        : [],
+      modalidadeIds.length
+        ? this.db
+            .select({ id: modalidades.id })
+            .from(modalidades)
+            .where(inArray(modalidades.id, [...modalidadeIds]))
+        : [],
+    ]);
+    const existe = (ids: readonly string[], linhas: { id: string }[]) => {
+      const achados = new Set(linhas.map((l) => l.id));
+      return ids.filter((id) => achados.has(id));
+    };
+    return {
+      especialidadeIds: existe(especialidadeIds, esp),
+      modalidadeIds: existe(modalidadeIds, mod),
+    };
   }
 
   alocacoesVigentes(turnoId: string, hoje: string) {
@@ -111,20 +148,21 @@ export class DrizzleTurnosRepository implements TurnosRepository {
 
   criar(dados: DadosTurno) {
     return this.db.transaction(async (tx) => {
-      const { frenteIds, ...turno } = dados;
+      const { especialidadeIds, modalidadeIds, ...turno } = dados;
       const [criado] = await tx.insert(turnos).values(turno).returning({ id: turnos.id });
       if (!criado) throw new Error('insert não devolveu o id');
-      await gravarFrentes(tx, criado.id, frenteIds);
-      return criado.id;
+      const frenteIds = await gravarFrentes(tx, criado.id, { especialidadeIds, modalidadeIds });
+      return { id: criado.id, frenteIds };
     });
   }
 
-  async atualizar(id: string, dados: DadosTurno) {
-    const { frenteIds, ...turno } = dados;
-    await this.db.transaction(async (tx) => {
+  atualizar(id: string, dados: DadosTurno) {
+    const { especialidadeIds, modalidadeIds, ...turno } = dados;
+    return this.db.transaction(async (tx) => {
       await tx.update(turnos).set(turno).where(eq(turnos.id, id));
       await tx.delete(turnosFrentes).where(eq(turnosFrentes.turnoId, id));
-      await gravarFrentes(tx, id, frenteIds);
+      const frenteIds = await gravarFrentes(tx, id, { especialidadeIds, modalidadeIds });
+      return { frenteIds };
     });
   }
 
@@ -152,7 +190,11 @@ export class DrizzleTurnosRepository implements TurnosRepository {
   }
 }
 
-async function gravarFrentes(tx: Transacao, turnoId: string, frenteIds: string[]) {
-  if (!frenteIds.length) return;
-  await tx.insert(turnosFrentes).values(frenteIds.map((frenteId) => ({ turnoId, frenteId })));
+/** Garante a frente de cada item do catálogo e liga ao turno; devolve os ids das frentes. */
+async function gravarFrentes(tx: Transacao, turnoId: string, destinos: DestinosFrentes) {
+  const frenteIds = await garantirFrentes(tx, destinos);
+  if (frenteIds.length) {
+    await tx.insert(turnosFrentes).values(frenteIds.map((frenteId) => ({ turnoId, frenteId })));
+  }
+  return frenteIds;
 }
