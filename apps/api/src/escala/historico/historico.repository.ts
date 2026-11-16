@@ -30,7 +30,13 @@ export interface ItemHistoricoEscala {
   depois: Record<string, unknown> | null;
 }
 
+/** Página do histórico com o nome de cada id citado em `antes`/`depois` dos itens dela. */
+export interface PaginaHistoricoEscala extends Pagina<ItemHistoricoEscala> {
+  /** Id → nome legível. Id sem par (registro apagado ou de outra tabela) fica de fora. */
+  nomes: Record<string, string>;
+}
+
 export interface HistoricoEscalaRepository {
   /** Do mais novo para o mais antigo. */
-  listar(filtro: FiltroHistoricoEscala): Promise<Pagina<ItemHistoricoEscala>>;
+  listar(filtro: FiltroHistoricoEscala): Promise<PaginaHistoricoEscala>;
 }

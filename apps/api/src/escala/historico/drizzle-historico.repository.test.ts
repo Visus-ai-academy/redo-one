@@ -24,6 +24,7 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
   /** Evento por apelido → id. */
   const ev: Record<string, string> = {};
   let recorte: EscopoEscala;
+  let alocacaoCaio: string;
 
   const pagina = { pagina: 1, porPagina: 50 };
   const apelidos = (itens: { id: string }[]) =>
@@ -37,7 +38,7 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table eventos_auditoria, alocacoes, medicos, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
+      sql`truncate table eventos_auditoria, alocacoes, tipos_ausencia, prioridades, subespecialidades, medicos, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
     );
     const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [u] = await db
@@ -79,15 +80,19 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
     neuro = fn?.id ?? '';
     tc = fc?.id ?? '';
     // Caio trabalha na Manhã/TC: entra no recorte pelo turno.
-    await db.insert(schema.alocacoes).values({
-      medicoId: m.caio,
-      turnoId: manha,
-      frenteId: tc,
-      diasSemana: [1, 2, 3],
-      horarioInicio: '07:00',
-      horarioFim: '13:00',
-      dataInicio: '2026-01-01',
-    });
+    const [alocCaio] = await db
+      .insert(schema.alocacoes)
+      .values({
+        medicoId: m.caio,
+        turnoId: manha,
+        frenteId: tc,
+        diasSemana: [1, 2, 3],
+        horarioInicio: '07:00',
+        horarioFim: '13:00',
+        dataInicio: '2026-01-01',
+      })
+      .returning();
+    alocacaoCaio = alocCaio?.id ?? '';
     recorte = { turnoIds: new Set([manha]), frenteIds: new Set([neuro]) };
 
     const eventos: Array<[string, Partial<typeof schema.eventosAuditoria.$inferInsert>]> = [
@@ -256,7 +261,11 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
   it('recorte vazio não vê nada', async () => {
     const repo = new DrizzleHistoricoEscalaRepository(db);
     const vazio = { turnoIds: new Set<string>(), frenteIds: new Set<string>() };
-    expect(await repo.listar({ ...pagina, escopo: vazio })).toEqual({ itens: [], total: 0 });
+    expect(await repo.listar({ ...pagina, escopo: vazio })).toEqual({
+      itens: [],
+      total: 0,
+      nomes: {},
+    });
   });
 
   it('filtra por médico, entidade e período', async () => {
@@ -280,6 +289,57 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
       ateExclusivo: new Date('2026-11-04T15:00:00Z'),
     });
     expect(apelidos(periodo.itens)).toEqual(['ajusteBrunoManha', 'alocBrunoTardeTcRemovida']);
+  });
+
+  it('dá nome a todo id que aparece em antes/depois da página, em lote; id sem par fica de fora', async () => {
+    const [tipo] = await db.insert(schema.tiposAusencia).values({ nome: 'Férias' }).returning();
+    const [prioridade] = await db
+      .insert(schema.prioridades)
+      .values({ nome: 'URGENTE' })
+      .returning();
+    const [sub] = await db
+      .insert(schema.subespecialidades)
+      .values({ nome: 'Neuro pediátrica' })
+      .returning();
+    const semPar = crypto.randomUUID();
+    await db.insert(schema.eventosAuditoria).values({
+      ocorridoEm: new Date('2026-12-31T15:00:00Z'),
+      atorTipo: 'usuario',
+      atorId: carla,
+      entidade: 'alocacao',
+      entidadeId: crypto.randomUUID(),
+      acao: 'atualizado',
+      antes: { medicoId: m.bruno, turnoId: tarde, frenteId: tc, prioridadeIds: [] },
+      depois: {
+        medicoId: m.bruno,
+        turnoId: manha,
+        frenteId: tc,
+        prioridadeIds: [prioridade?.id],
+        subespecialidadeIds: [sub?.id, semPar],
+        coberturaDeId: alocacaoCaio,
+        tipoId: tipo?.id,
+      },
+    });
+    const repo = new DrizzleHistoricoEscalaRepository(db);
+
+    const { nomes } = await repo.listar({ pagina: 1, porPagina: 1, escopo: null });
+
+    expect(nomes).toEqual({
+      [m.bruno]: 'Bruno Alves',
+      [tarde]: 'Tarde',
+      [manha]: 'Manhã',
+      [tc]: 'TC',
+      [prioridade?.id ?? '']: 'URGENTE',
+      [sub?.id ?? '']: 'Neuro pediátrica',
+      [tipo?.id ?? '']: 'Férias',
+      [alocacaoCaio]: 'Caio Prado · Manhã · TC',
+    });
+  });
+
+  it('página sem ids não consulta nomes', async () => {
+    const repo = new DrizzleHistoricoEscalaRepository(db);
+    const vazio = { turnoIds: new Set<string>(), frenteIds: new Set<string>() };
+    expect((await repo.listar({ ...pagina, escopo: vazio })).nomes).toEqual({});
   });
 
   it('pagina mantendo o total', async () => {

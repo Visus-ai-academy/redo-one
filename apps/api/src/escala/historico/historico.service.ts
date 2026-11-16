@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { Pagina, Paginacao } from '../../catalogo/comum/paginacao';
+import type { Paginacao } from '../../catalogo/comum/paginacao';
 import type { EntidadeEscala } from '../auditoria-escala';
 import { ESCOPO_ESCALA_REPOSITORY, type EscopoEscalaRepository } from '../escopo/escopo';
 import { PeriodoHistoricoInvalidoError } from './historico.errors';
 import {
   HISTORICO_ESCALA_REPOSITORY,
   type HistoricoEscalaRepository,
-  type ItemHistoricoEscala,
+  type PaginaHistoricoEscala,
 } from './historico.repository';
 
 export interface ConsultaHistorico extends Paginacao {
@@ -33,7 +33,7 @@ export class HistoricoEscalaService {
   async listar(
     principal: { usuarioId: string; acessoTotal: boolean },
     consulta: ConsultaHistorico,
-  ): Promise<Pagina<ItemHistoricoEscala>> {
+  ): Promise<PaginaHistoricoEscala> {
     const de = consulta.de ? inicioDoDia(consulta.de) : undefined;
     const ateExclusivo = consulta.ate
       ? new Date(inicioDoDia(consulta.ate).getTime() + UM_DIA_MS)

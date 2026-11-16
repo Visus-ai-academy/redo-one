@@ -21,7 +21,9 @@ describe('HistoricoEscalaController', () => {
   });
 
   it('lista no recorte de quem está logado e devolve a página', async () => {
-    const service = { listar: vi.fn(async () => ({ itens: [], total: 7 })) };
+    const service = {
+      listar: vi.fn(async () => ({ itens: [], total: 7, nomes: { 't-1': 'Manhã' } })),
+    };
     const controller = new HistoricoEscalaController(service as unknown as HistoricoEscalaService);
     const query = plainToInstance(ListarHistoricoDto, {
       entidade: 'ausencia',
@@ -38,7 +40,13 @@ describe('HistoricoEscalaController', () => {
       { usuarioId: 'u-carla', acessoTotal: false },
       { entidade: 'ausencia', de: '2026-11-01', pagina: 2, porPagina: 25 },
     );
-    expect(resposta).toEqual({ itens: [], total: 7, pagina: 2, porPagina: 25 });
+    expect(resposta).toEqual({
+      itens: [],
+      total: 7,
+      nomes: { 't-1': 'Manhã' },
+      pagina: 2,
+      porPagina: 25,
+    });
   });
 
   it('recusa entidade fora da escala e data fora do formato', async () => {

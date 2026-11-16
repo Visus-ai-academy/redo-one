@@ -13,7 +13,7 @@ class FakeHistorico implements HistoricoEscalaRepository {
   filtros: FiltroHistoricoEscala[] = [];
   async listar(filtro: FiltroHistoricoEscala) {
     this.filtros.push(filtro);
-    return { itens: [] as ItemHistoricoEscala[], total: 0 };
+    return { itens: [] as ItemHistoricoEscala[], total: 0, nomes: {} };
   }
 }
 

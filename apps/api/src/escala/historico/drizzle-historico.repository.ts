@@ -1,21 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, gte, inArray, lt, type SQL, sql } from 'drizzle-orm';
 
-import type { Pagina } from '../../catalogo/comum/paginacao';
 import { DATABASE, type Database } from '../../database/database';
 import {
   alocacoes,
   chavesRobo,
   eventosAuditoria as e,
+  frentesEscala,
   medicos,
+  prioridades,
+  subespecialidades,
+  tiposAusencia,
+  turnos,
   usuarios,
 } from '../../database/schema';
 import { ENTIDADES_ESCALA } from '../auditoria-escala';
 import type { EscopoEscala } from '../escopo/escopo';
+import { coletarUuids } from './coletar-uuids';
 import type {
   FiltroHistoricoEscala,
   HistoricoEscalaRepository,
   ItemHistoricoEscala,
+  PaginaHistoricoEscala,
 } from './historico.repository';
 
 /** O JSON com as chaves de contexto: `depois`, ou `antes` quando o registro foi removido. */
@@ -91,7 +97,7 @@ function semUsuarioLegado(json: Json): Json {
 export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaRepository {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async listar(filtro: FiltroHistoricoEscala): Promise<Pagina<ItemHistoricoEscala>> {
+  async listar(filtro: FiltroHistoricoEscala): Promise<PaginaHistoricoEscala> {
     const condicoes: SQL[] = [inArray(e.entidade, [...ENTIDADES_ESCALA])];
     if (filtro.entidade) condicoes.push(eq(e.entidade, filtro.entidade));
     if (filtro.medicoId) condicoes.push(sql`${ctx}->>'medicoId' = ${filtro.medicoId}`);
@@ -128,19 +134,60 @@ export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaReposito
       this.db.select({ total: sql<number>`count(*)::int` }).from(e).where(onde),
     ]);
 
-    return {
-      total: contagem?.total ?? 0,
-      itens: linhas.map((l) => ({
-        id: l.id,
-        ocorridoEm: l.ocorridoEm,
-        ator: { tipo: l.atorTipo as ItemHistoricoEscala['ator']['tipo'], nome: l.atorNome },
-        entidade: l.entidade,
-        entidadeId: l.entidadeId,
-        acao: l.acao,
-        medico: l.medicoId && l.medicoNome ? { id: l.medicoId, nome: l.medicoNome } : null,
-        antes: semUsuarioLegado(l.antes as Json),
-        depois: semUsuarioLegado(l.depois as Json),
-      })),
-    };
+    const itens: ItemHistoricoEscala[] = linhas.map((l) => ({
+      id: l.id,
+      ocorridoEm: l.ocorridoEm,
+      ator: { tipo: l.atorTipo as ItemHistoricoEscala['ator']['tipo'], nome: l.atorNome },
+      entidade: l.entidade,
+      entidadeId: l.entidadeId,
+      acao: l.acao,
+      medico: l.medicoId && l.medicoNome ? { id: l.medicoId, nome: l.medicoNome } : null,
+      antes: semUsuarioLegado(l.antes as Json),
+      depois: semUsuarioLegado(l.depois as Json),
+    }));
+    const nomes = await this.nomes(coletarUuids(itens.flatMap((i) => [i.antes, i.depois])));
+    return { itens, total: contagem?.total ?? 0, nomes };
+  }
+
+  /** Um lote por página: cada tabela consultada uma vez só, com os ids da página. */
+  private async nomes(ids: string[]): Promise<Record<string, string>> {
+    if (ids.length === 0) return {};
+    const turnoDaAlocacao = sql`(select ${turnos.nome} from ${turnos} where ${turnos.id} = ${alocacoes.turnoId})`;
+    const frenteDaAlocacao = sql`(select ${frentesEscala.rotulo} from ${frentesEscala} where ${frentesEscala.id} = ${alocacoes.frenteId})`;
+    const medicoDaAlocacao = sql`(select ${medicos.nome} from ${medicos} where ${medicos.id} = ${alocacoes.medicoId})`;
+    const grupos = await Promise.all([
+      this.db
+        .select({ id: turnos.id, nome: turnos.nome })
+        .from(turnos)
+        .where(inArray(turnos.id, ids)),
+      this.db
+        .select({ id: frentesEscala.id, nome: frentesEscala.rotulo })
+        .from(frentesEscala)
+        .where(inArray(frentesEscala.id, ids)),
+      this.db
+        .select({ id: tiposAusencia.id, nome: tiposAusencia.nome })
+        .from(tiposAusencia)
+        .where(inArray(tiposAusencia.id, ids)),
+      this.db
+        .select({ id: prioridades.id, nome: prioridades.nome })
+        .from(prioridades)
+        .where(inArray(prioridades.id, ids)),
+      this.db
+        .select({ id: subespecialidades.id, nome: subespecialidades.nome })
+        .from(subespecialidades)
+        .where(inArray(subespecialidades.id, ids)),
+      this.db
+        .select({ id: medicos.id, nome: medicos.nome })
+        .from(medicos)
+        .where(inArray(medicos.id, ids)),
+      this.db
+        .select({
+          id: alocacoes.id,
+          nome: sql<string>`concat_ws(' · ', ${medicoDaAlocacao}, ${turnoDaAlocacao}, ${frenteDaAlocacao})`,
+        })
+        .from(alocacoes)
+        .where(inArray(alocacoes.id, ids)),
+    ]);
+    return Object.fromEntries(grupos.flat().map((g) => [g.id, g.nome]));
   }
 }

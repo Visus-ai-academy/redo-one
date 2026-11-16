@@ -74,6 +74,16 @@ export class ItemHistoricoDto {
 export class PaginaHistoricoDto {
   @ApiProperty({ type: [ItemHistoricoDto] }) itens!: ItemHistoricoDto[];
   @ApiProperty() total!: number;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string' },
+    description:
+      'Nome legível de cada id citado em `antes`/`depois` dos itens da página (turno, frente, tipo de ausência, prioridade, subespecialidade, médico, alocação). Id sem par fica de fora.',
+    example: { '3f1c…': 'Manhã' },
+  })
+  nomes!: Record<string, string>;
+
   @ApiProperty() pagina!: number;
   @ApiProperty() porPagina!: number;
 }

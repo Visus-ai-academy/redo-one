@@ -22,7 +22,7 @@ export class HistoricoEscalaController {
     @PrincipalAtual() principal: PrincipalUsuario,
     @Query() query: ListarHistoricoDto,
   ): Promise<PaginaHistoricoDto> {
-    const { itens, total } = await this.historico.listar(
+    const { itens, total, nomes } = await this.historico.listar(
       { usuarioId: principal.usuarioId, acessoTotal: principal.acessoTotal },
       {
         ...(query.medicoId ? { medicoId: query.medicoId } : {}),
@@ -33,6 +33,6 @@ export class HistoricoEscalaController {
         porPagina: query.porPagina,
       },
     );
-    return { itens, total, pagina: query.pagina, porPagina: query.porPagina };
+    return { itens, total, nomes, pagina: query.pagina, porPagina: query.porPagina };
   }
 }
