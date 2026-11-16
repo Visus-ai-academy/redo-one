@@ -53,8 +53,22 @@ export function rotuloDoAtor(ator: AtorHistoricoDto): string {
   return 'Usuário removido';
 }
 
-/** Chaves que só dizem a que médico, turno e frente o evento se refere (`auditoria-escala.ts`). */
-const CONTEXTO = new Set(['medicoId', 'turnoId', 'frenteId', 'turnoIds', 'frenteIds']);
+/**
+ * Chaves que só dizem a que médico, turno e frente o evento se refere (`auditoria-escala.ts`), por
+ * entidade. No turno, `frenteIds` é dado de verdade (as frentes do turno); no recorte, os nomes já
+ * vêm em `turnos` e `frentes`.
+ */
+const CONTEXTO_DA_ENTIDADE: Record<string, Set<string>> = {
+  alocacao: new Set(['medicoId', 'turnoId', 'frenteId']),
+  ajuste_produtividade: new Set(['medicoId', 'turnoId', 'frenteId']),
+  ausencia: new Set(['medicoId', 'turnoIds', 'frenteIds']),
+  escopo_escala: new Set(['turnoIds', 'frenteIds']),
+};
+const SEM_CONTEXTO = new Set<string>();
+
+/** Nome de cada id citado nos eventos da página (`PaginaHistoricoDto.nomes`). */
+export type NomesHistorico = Record<string, string>;
+const SEM_NOME = '—';
 
 /** Marcas que a API grava no lugar de texto sensível (LGPD): só dizem que mudou. */
 const MARCAS: Record<string, { rotulo: string; texto: string }> = {
@@ -67,6 +81,8 @@ const CAMPOS: Record<string, string> = {
   turno: 'Turno',
   turnos: 'Turnos',
   frentes: 'Frentes',
+  frenteIds: 'Frentes',
+  turnoIds: 'Turnos',
   especialidade: 'Especialidade',
   especialidades: 'Especialidades',
   especialidadeId: 'Especialidade',
@@ -160,12 +176,10 @@ function rotuloDoCampo(campo: string) {
   return palavras.charAt(0).toUpperCase() + palavras.slice(1);
 }
 
-function formatarValor(campo: string, v: unknown): string {
+function formatarValor(campo: string, v: unknown, nomes: NomesHistorico): string {
   if (vazio(v)) return VAZIO;
-  if (ehListaDeIds(v)) {
-    const n = (v as unknown[]).length;
-    return n === 1 ? '1 escolhido' : `${n} escolhidos`;
-  }
+  if (ehId(v)) return nomes[v as string] ?? SEM_NOME;
+  if (ehListaDeIds(v)) return (v as string[]).map((id) => nomes[id] ?? SEM_NOME).join(', ');
   if (campo === 'diasSemana' && Array.isArray(v)) {
     // Seg→Dom, a ordem das telas da escala.
     return [...v]
@@ -192,16 +206,21 @@ function formatarValor(campo: string, v: unknown): string {
 
 /**
  * Linhas "Campo: antes → depois" de um evento, só com o que mudou. Na criação só há o depois (com
- * os campos preenchidos); na exclusão, só o antes. Ids não são legíveis: viram contagem ou
- * "alterado".
+ * os campos preenchidos); na exclusão, só o antes. Ids viram o nome que a página traz em `nomes`
+ * ("—" quando não há).
  */
-export function alteracoesDoEvento(evento: {
-  antes: Record<string, unknown> | null;
-  depois: Record<string, unknown> | null;
-}): LinhaAlteracao[] {
+export function alteracoesDoEvento(
+  evento: {
+    entidade: string;
+    antes: Record<string, unknown> | null;
+    depois: Record<string, unknown> | null;
+  },
+  nomes: NomesHistorico = {},
+): LinhaAlteracao[] {
   const { antes, depois } = evento;
+  const contexto = CONTEXTO_DA_ENTIDADE[evento.entidade] ?? SEM_CONTEXTO;
   const campos = [...new Set([...Object.keys(depois ?? {}), ...Object.keys(antes ?? {})])].filter(
-    (c) => !CONTEXTO.has(c),
+    (c) => !contexto.has(c),
   );
   const linhas: LinhaAlteracao[] = [];
 
@@ -217,17 +236,17 @@ export function alteracoesDoEvento(evento: {
 
     if (antes && depois) {
       if (comparavel(de) === comparavel(para)) continue;
-      if (ehId(de) || ehId(para)) {
-        linhas.push({ rotulo, antes: null, depois: 'alterado' });
-        continue;
-      }
-      linhas.push({ rotulo, antes: formatarValor(campo, de), depois: formatarValor(campo, para) });
+      linhas.push({
+        rotulo,
+        antes: formatarValor(campo, de, nomes),
+        depois: formatarValor(campo, para, nomes),
+      });
       continue;
     }
 
     const valor = depois ? para : de;
-    if (vazio(valor) || ehId(valor)) continue;
-    const texto = formatarValor(campo, valor);
+    if (vazio(valor)) continue;
+    const texto = formatarValor(campo, valor, nomes);
     linhas.push(
       depois ? { rotulo, antes: null, depois: texto } : { rotulo, antes: texto, depois: null },
     );

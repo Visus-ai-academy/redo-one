@@ -45,6 +45,7 @@ describe('rotuloDoAtor', () => {
 describe('alteracoesDoEvento', () => {
   it('na alteração, mostra só os campos que mudaram e ignora as chaves de contexto', () => {
     const linhas = alteracoesDoEvento({
+      entidade: 'alocacao',
       antes: { medicoId: 'm1', turnoId: 't1', frenteId: 'f1', dataFim: null, produtividade: 10 },
       depois: {
         medicoId: 'm1',
@@ -60,6 +61,7 @@ describe('alteracoesDoEvento', () => {
 
   it('na criação, mostra os campos preenchidos só com o depois', () => {
     const linhas = alteracoesDoEvento({
+      entidade: 'ausencia',
       antes: null,
       depois: {
         medicoId: 'm1',
@@ -80,7 +82,11 @@ describe('alteracoesDoEvento', () => {
   });
 
   it('na exclusão, mostra os campos que havia só com o antes', () => {
-    const linhas = alteracoesDoEvento({ antes: { nome: 'Manhã', ativo: false }, depois: null });
+    const linhas = alteracoesDoEvento({
+      entidade: 'turno',
+      antes: { nome: 'Manhã', ativo: false },
+      depois: null,
+    });
 
     expect(linhas).toEqual([
       { rotulo: 'Nome', antes: 'Manhã', depois: null },
@@ -90,6 +96,7 @@ describe('alteracoesDoEvento', () => {
 
   it('traduz os valores codificados só nos campos de código', () => {
     const linhas = alteracoesDoEvento({
+      entidade: 'ausencia',
       antes: { situacao: 'pendente', nome: 'lista' },
       depois: { situacao: 'aprovada', nome: 'fixo' },
     });
@@ -100,26 +107,51 @@ describe('alteracoesDoEvento', () => {
     ]);
   });
 
-  it('não mostra ids: diz quantos foram escolhidos ou só que mudou', () => {
-    const linhas = alteracoesDoEvento({
-      antes: { tipoId: '7f1c2b8e-1a2b-4c3d-8e9f-0a1b2c3d4e5f', prioridadeIds: [] },
-      depois: {
-        tipoId: '9a8b7c6d-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
-        prioridadeIds: [
-          '11111111-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
-          '22222222-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
-        ],
+  const T1 = '11111111-1a2b-4c3d-8e9f-0a1b2c3d4e5f';
+  const T2 = '22222222-1a2b-4c3d-8e9f-0a1b2c3d4e5f';
+  const T3 = '33333333-1a2b-4c3d-8e9f-0a1b2c3d4e5f';
+  const NOMES = { [T1]: 'Férias', [T2]: 'Urgência', [T3]: 'Licença' };
+
+  it('troca os ids pelos nomes que a página traz', () => {
+    const linhas = alteracoesDoEvento(
+      {
+        entidade: 'ausencia',
+        antes: { tipoId: T1, prioridadeIds: [] },
+        depois: { tipoId: T3, prioridadeIds: [T2, T1] },
       },
-    });
+      NOMES,
+    );
 
     expect(linhas).toEqual([
-      { rotulo: 'Tipo', antes: null, depois: 'alterado' },
-      { rotulo: 'Prioridades', antes: '(vazio)', depois: '2 escolhidos' },
+      { rotulo: 'Tipo', antes: 'Férias', depois: 'Licença' },
+      { rotulo: 'Prioridades', antes: '(vazio)', depois: 'Urgência, Férias' },
     ]);
+  });
+
+  it('id sem nome vira "—"', () => {
+    const linhas = alteracoesDoEvento(
+      { entidade: 'alocacao', antes: null, depois: { coberturaDeId: T2, prioridadeIds: [T1, T3] } },
+      { [T1]: 'Rotina' },
+    );
+
+    expect(linhas).toEqual([
+      { rotulo: 'Cobertura de', antes: null, depois: '—' },
+      { rotulo: 'Prioridades', antes: null, depois: 'Rotina, —' },
+    ]);
+  });
+
+  it('no turno, as frentes não são contexto: mostra a troca pelos nomes', () => {
+    const linhas = alteracoesDoEvento(
+      { entidade: 'turno', antes: { frenteIds: [T1] }, depois: { frenteIds: [T1, T2] } },
+      { [T1]: 'Neuro', [T2]: 'Mama' },
+    );
+
+    expect(linhas).toEqual([{ rotulo: 'Frentes', antes: 'Neuro', depois: 'Neuro, Mama' }]);
   });
 
   it('mostra as marcas de observação e motivo sem o texto (LGPD)', () => {
     const linhas = alteracoesDoEvento({
+      entidade: 'ausencia',
       antes: { medicoId: 'm1', situacao: 'pendente' },
       depois: { medicoId: 'm1', situacao: 'recusada', motivoRecusaAlterado: true },
     });
@@ -132,10 +164,15 @@ describe('alteracoesDoEvento', () => {
 
   it('compara listas como conjunto e mostra os nomes do recorte', () => {
     expect(
-      alteracoesDoEvento({ antes: { diasSemana: [3, 1] }, depois: { diasSemana: [1, 3] } }),
+      alteracoesDoEvento({
+        entidade: 'alocacao',
+        antes: { diasSemana: [3, 1] },
+        depois: { diasSemana: [1, 3] },
+      }),
     ).toEqual([]);
     expect(
       alteracoesDoEvento({
+        entidade: 'escopo_escala',
         antes: { turnoIds: ['t1'], turnos: ['Manhã'], frentes: [] },
         depois: { turnoIds: [], turnos: [], frentes: ['Neuro'] },
       }),
@@ -147,7 +184,11 @@ describe('alteracoesDoEvento', () => {
 
   it('dá nome legível a campo desconhecido e às semanas do mês', () => {
     expect(
-      alteracoesDoEvento({ antes: null, depois: { semanasDoMes: [1, -1], campoNovoX: 3 } }),
+      alteracoesDoEvento({
+        entidade: 'alocacao',
+        antes: null,
+        depois: { semanasDoMes: [1, -1], campoNovoX: 3 },
+      }),
     ).toEqual([
       { rotulo: 'Semanas do mês', antes: null, depois: '1ª, Última' },
       { rotulo: 'Campo novo x', antes: null, depois: '3' },

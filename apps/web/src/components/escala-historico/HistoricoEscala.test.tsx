@@ -29,7 +29,7 @@ function montar(props: Partial<HistoricoEscalaProps> = {}) {
   };
   renderComRotas(
     <HistoricoEscala
-      pagina={{ itens: [item({})], total: 1, pagina: 1, porPagina: 25 }}
+      pagina={{ itens: [item({})], total: 1, pagina: 1, porPagina: 25, nomes: {} }}
       filtros={{}}
       medico={null}
       buscarMedicos={async () => [{ valor: 'm-bruno', rotulo: 'Bruno Alves' }]}
@@ -54,9 +54,40 @@ describe('HistoricoEscala', () => {
     expect(linha).not.toHaveTextContent('medicoId');
   });
 
+  it('mostra os nomes dos ids que a página traz', async () => {
+    montar({
+      pagina: {
+        itens: [
+          item({
+            entidade: 'turno',
+            medico: null,
+            antes: { frenteIds: ['aaaaaaaa-1a2b-4c3d-8e9f-0a1b2c3d4e5f'] },
+            depois: {
+              frenteIds: [
+                'aaaaaaaa-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
+                'bbbbbbbb-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
+              ],
+            },
+          }),
+        ],
+        total: 1,
+        pagina: 1,
+        porPagina: 25,
+        nomes: {
+          'aaaaaaaa-1a2b-4c3d-8e9f-0a1b2c3d4e5f': 'Neuro',
+          'bbbbbbbb-1a2b-4c3d-8e9f-0a1b2c3d4e5f': 'Mama',
+        },
+      },
+    });
+
+    const linha = (await screen.findAllByRole('row'))[1];
+    expect(linha).toHaveTextContent('Turno alterado');
+    expect(linha).toHaveTextContent('Frentes: Neuro → Neuro, Mama');
+  });
+
   it('diz que não há alterações quando a lista vem vazia, e oferece limpar os filtros', async () => {
     const { onLimparFiltros } = montar({
-      pagina: { itens: [], total: 0, pagina: 1, porPagina: 25 },
+      pagina: { itens: [], total: 0, pagina: 1, porPagina: 25, nomes: {} },
       filtros: { entidade: 'turno' },
     });
 
@@ -103,7 +134,7 @@ describe('HistoricoEscala', () => {
 
   it('pagina pela API', async () => {
     const { onIrPara } = montar({
-      pagina: { itens: [item({})], total: 60, pagina: 1, porPagina: 25 },
+      pagina: { itens: [item({})], total: 60, pagina: 1, porPagina: 25, nomes: {} },
     });
 
     expect(await screen.findByText('1–25 de 60')).toBeVisible();

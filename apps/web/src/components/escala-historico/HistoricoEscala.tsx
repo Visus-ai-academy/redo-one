@@ -88,10 +88,10 @@ export function HistoricoEscala({
       coluna.display({
         id: 'alteracoes',
         header: 'Alterações',
-        cell: (info) => <Alteracoes linhas={alteracoesDoEvento(info.row.original)} />,
+        cell: (info) => <Alteracoes linhas={alteracoesDoEvento(info.row.original, pagina.nomes)} />,
       }),
     ],
-    [referencia],
+    [referencia, pagina.nomes],
   );
 
   const temFiltro = Boolean(filtros.medicoId || filtros.entidade || filtros.de || filtros.ate);
