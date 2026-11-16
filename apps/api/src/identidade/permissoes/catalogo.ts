@@ -18,6 +18,8 @@ export interface TelaCatalogo {
   rotulo: string;
   area: 'Painéis' | 'Operação' | 'Cadastros' | 'Financeiro' | 'Configurações';
   acoes: AcaoCatalogo[];
+  /** Telas cujo `ver` vem junto (a configuração lê as listas da tela de trabalho). */
+  exige?: string[];
 }
 
 const ver = (tela: string): AcaoCatalogo => ({ chave: `${tela}.ver`, rotulo: 'Ver' });
@@ -192,6 +194,7 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     rotulo: 'Escala (turnos, frentes e tipos de ausência)',
     area: 'Configurações',
     acoes: [ver('escala-config'), { chave: 'escala-config.editar', rotulo: 'Criar e editar' }],
+    exige: ['escala'],
   },
   {
     tela: 'de-para',
@@ -220,7 +223,7 @@ export function existePermissao(chave: string): boolean {
 
 /**
  * Deixa a lista consistente: sem repetição, em ordem, e com o `ver` de cada tela que tem alguma
- * ação marcada (uma ação sem poder abrir a tela não faz sentido).
+ * ação marcada (uma ação sem poder abrir a tela não faz sentido), mais o das telas que ela exige.
  */
 export function normalizarPermissoes(chaves: Iterable<string>): string[] {
   const resultado = new Set<string>();
@@ -229,6 +232,7 @@ export function normalizarPermissoes(chaves: Iterable<string>): string[] {
     if (!tela) continue;
     resultado.add(chave);
     resultado.add(`${tela.tela}.ver`);
+    for (const outra of tela.exige ?? []) resultado.add(`${outra}.ver`);
   }
   return [...resultado].sort();
 }

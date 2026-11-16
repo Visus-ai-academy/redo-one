@@ -71,4 +71,11 @@ describe('catálogo de permissões', () => {
       ]),
     ).toEqual(['faturamento.ver', 'repasse.fechar', 'repasse.ver']);
   });
+
+  it('a configuração da escala leva junto o ver da escala, que as listas de turnos e frentes exigem', () => {
+    expect(normalizarPermissoes(['escala-config.ver'])).toEqual([
+      'escala-config.ver',
+      'escala.ver',
+    ]);
+  });
 });

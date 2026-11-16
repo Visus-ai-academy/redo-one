@@ -1,10 +1,123 @@
+import {
+  type QueryClient,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
+import { type ReactNode, useCallback, useMemo } from 'react';
+import { z } from 'zod';
 
+import { Abas } from '../../../components/abas/Abas';
+import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
+import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { rotuloDe, TIPOS_FRENTE, TIPOS_TURNO } from '../../../components/escala-config/comum';
+import { formatarDuracao, formatarHorario } from '../../../components/escala-config/horario';
+import { PainelFrente } from '../../../components/escala-config/PainelFrente';
+import { PainelTipoAusencia } from '../../../components/escala-config/PainelTipoAusencia';
+import { PainelTurno } from '../../../components/escala-config/PainelTurno';
 import { SemPermissao } from '../../../components/estado/estados';
+import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
+import { Select } from '../../../components/select/Select';
+import { useAvisos } from '../../../components/toast/use-avisos';
+import { frentesControllerAtualizar } from '../../../gen/clients/frentesControllerAtualizar';
+import { frentesControllerCriar } from '../../../gen/clients/frentesControllerCriar';
+import { frentesControllerExcluir } from '../../../gen/clients/frentesControllerExcluir';
+import { tiposAusenciaControllerAtualizar } from '../../../gen/clients/tiposAusenciaControllerAtualizar';
+import { tiposAusenciaControllerCriar } from '../../../gen/clients/tiposAusenciaControllerCriar';
+import { tiposAusenciaControllerExcluir } from '../../../gen/clients/tiposAusenciaControllerExcluir';
+import { turnosControllerAtualizar } from '../../../gen/clients/turnosControllerAtualizar';
+import { turnosControllerCriar } from '../../../gen/clients/turnosControllerCriar';
+import { turnosControllerExcluir } from '../../../gen/clients/turnosControllerExcluir';
+import { frentesControllerListarQueryOptions } from '../../../gen/hooks/useFrentesControllerListar';
+import { frentesControllerObterQueryOptions } from '../../../gen/hooks/useFrentesControllerObter';
+import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
+import { tiposAusenciaControllerListarQueryOptions } from '../../../gen/hooks/useTiposAusenciaControllerListar';
+import { tiposAusenciaControllerObterQueryOptions } from '../../../gen/hooks/useTiposAusenciaControllerObter';
+import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
+import { turnosControllerObterQueryOptions } from '../../../gen/hooks/useTurnosControllerObter';
+import type { FrenteItemDto } from '../../../gen/types/FrenteItemDto';
+import type { TipoAusenciaItemDto } from '../../../gen/types/TipoAusenciaItemDto';
+import type { TurnoItemDto } from '../../../gen/types/TurnoItemDto';
 import { pode } from '../../../lib/permissoes';
 
+const POR_PAGINA = 25;
+const ABAS = ['turnos', 'frentes', 'tipos-ausencia'] as const;
+type AbaEscala = (typeof ABAS)[number];
+const ROTULOS_ABA: Record<AbaEscala, string> = {
+  turnos: 'Turnos',
+  frentes: 'Frentes',
+  'tipos-ausencia': 'Tipos de ausência',
+};
+
+const buscaSchema = z.object({
+  aba: z.enum(ABAS).optional().catch(undefined),
+  busca: z.string().trim().min(1).optional().catch(undefined),
+  situacao: z.enum(['ativos', 'inativos']).optional().catch(undefined),
+  pagina: z.coerce.number().int().min(1).optional().catch(undefined),
+  /** Item aberto no painel. */
+  id: z.uuid().optional().catch(undefined),
+  /** Painel de criação aberto. */
+  novo: z.literal(1).optional().catch(undefined),
+});
+type Busca = z.infer<typeof buscaSchema>;
+
+const consulta = (b: Busca) => ({
+  query: {
+    busca: b.busca,
+    ativo: b.situacao === undefined ? undefined : b.situacao === 'ativos',
+    pagina: b.pagina ?? 1,
+    porPagina: POR_PAGINA,
+  },
+});
+
+/** Frentes ativas para marcar no turno (são poucas; a API devolve até 100). */
+const frentesAtivas = () =>
+  frentesControllerListarQueryOptions({ query: { ativo: true, porPagina: 100 } });
+
+const listar = {
+  turnos: (b: Busca) => turnosControllerListarQueryOptions(consulta(b)),
+  frentes: (b: Busca) => frentesControllerListarQueryOptions(consulta(b)),
+  'tipos-ausencia': (b: Busca) => tiposAusenciaControllerListarQueryOptions(consulta(b)),
+} as const;
+
+const obter = {
+  turnos: (id: string) => turnosControllerObterQueryOptions({ path: { id } }),
+  frentes: (id: string) => frentesControllerObterQueryOptions({ path: { id } }),
+  'tipos-ausencia': (id: string) => tiposAusenciaControllerObterQueryOptions({ path: { id } }),
+} as const;
+
+/** Depois de qualquer escrita, refaz as consultas da escala (listas, item e frentes do turno). */
+function invalidarEscala(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({
+    predicate: (q) => {
+      const chave = q.queryKey[0] as { url?: unknown } | undefined;
+      return typeof chave?.url === 'string' && chave.url.startsWith('/escala/');
+    },
+  });
+}
+
 export const Route = createFileRoute('/_app/configuracoes/escala')({
+  validateSearch: buscaSchema,
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    if (!pode(context.sessao, 'escala-config.ver')) return;
+    const aba = deps.aba ?? 'turnos';
+    // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
+    if (deps.id) void context.queryClient.prefetchQuery(obter[aba](deps.id) as never);
+    const editando = pode(context.sessao, 'escala-config.editar') && (deps.id || deps.novo);
+    await Promise.all([
+      context.queryClient.ensureQueryData(listar[aba](deps) as never),
+      ...(editando && aba === 'turnos'
+        ? [context.queryClient.ensureQueryData(frentesAtivas())]
+        : []),
+      ...(editando && aba === 'frentes'
+        ? [context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions())]
+        : []),
+    ]);
+  },
   head: () => ({ meta: [{ title: 'Escala | Configurações | One' }] }),
   component: Pagina,
 });
@@ -13,7 +126,385 @@ function Pagina() {
   const { sessao } = Route.useRouteContext();
   return (
     <ConfiguracoesLayout acesso={sessao}>
-      {pode(sessao, 'escala-config.ver') ? <h1>Escala</h1> : <SemPermissao tela="Escala" />}
+      {pode(sessao, 'escala-config.ver') ? (
+        <Escala podeEditar={pode(sessao, 'escala-config.editar')} />
+      ) : (
+        <SemPermissao tela="Escala" />
+      )}
     </ConfiguracoesLayout>
+  );
+}
+
+const situacao = (ativo: boolean, feminino = false) =>
+  ativo ? (
+    <Etiqueta tom="sucesso">{feminino ? 'Ativa' : 'Ativo'}</Etiqueta>
+  ) : (
+    <Etiqueta tom="inativo">{feminino ? 'Inativa' : 'Inativo'}</Etiqueta>
+  );
+
+/** Bolinha com a cor cadastrada (é dado, não token do tema) antes do nome. */
+function ComCor({ cor, children }: { cor: string | null; children: ReactNode }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        aria-hidden="true"
+        className="border-border size-3 flex-none rounded-full border"
+        style={cor ? { backgroundColor: cor } : undefined}
+      />
+      {children}
+    </span>
+  );
+}
+
+const colTurno = createDataTableColumnHelper<TurnoItemDto>();
+const colFrente = createDataTableColumnHelper<FrenteItemDto>();
+const colTipo = createDataTableColumnHelper<TipoAusenciaItemDto>();
+
+/** Rótulos do que muda de uma aba para outra. */
+const TEXTOS: Record<
+  AbaEscala,
+  { novo: string; buscar: string; placeholder: string; vazio: string; textoVazio: string }
+> = {
+  turnos: {
+    novo: 'Novo turno',
+    buscar: 'Buscar turnos',
+    placeholder: 'Nome ou descrição',
+    vazio: 'Nenhum turno cadastrado.',
+    textoVazio: 'Cadastre os turnos (Manhã, Tarde, Lista…) para montar a escala.',
+  },
+  frentes: {
+    novo: 'Nova frente',
+    buscar: 'Buscar frentes',
+    placeholder: 'Rótulo ou descrição',
+    vazio: 'Nenhuma frente cadastrada.',
+    textoVazio: 'Cadastre as frentes (especialidades ou modalidades) para ligar aos turnos.',
+  },
+  'tipos-ausencia': {
+    novo: 'Novo tipo de ausência',
+    buscar: 'Buscar tipos de ausência',
+    placeholder: 'Nome ou descrição',
+    vazio: 'Nenhum tipo de ausência cadastrado.',
+    textoVazio: 'Cadastre os tipos (Férias, Congresso, Falta…) para lançar as ausências.',
+  },
+};
+
+type Pagina<T> = { itens: T[]; pagina: number; porPagina: number; total: number };
+
+function Escala({ podeEditar }: { podeEditar: boolean }) {
+  const busca = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const aba = busca.aba ?? 'turnos';
+  const { data } = useSuspenseQuery(listar[aba](busca) as ReturnType<typeof listar.turnos>);
+  const pagina = data as unknown as Pagina<{ id: string }>;
+  const textos = TEXTOS[aba];
+
+  const ir = useCallback(
+    (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
+    [navigate],
+  );
+  const filtrar = useCallback(
+    (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
+    [ir],
+  );
+  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
+
+  const colunas = useMemo(() => {
+    const ativo = (feminino = false) => ({
+      header: 'Situação',
+      cell: (info: { getValue: () => boolean }) => situacao(info.getValue(), feminino),
+    });
+    const abrirNome = (id: string, texto: string, cor: string | null) => (
+      <ComCor cor={cor}>
+        <BotaoAbrir onAbrir={() => abrir(id)}>{texto}</BotaoAbrir>
+      </ComCor>
+    );
+    if (aba === 'turnos')
+      return [
+        colTurno.accessor('nome', {
+          header: 'Nome',
+          cell: (info) => abrirNome(info.row.original.id, info.getValue(), info.row.original.cor),
+        }),
+        colTurno.accessor('tipo', {
+          header: 'Tipo',
+          cell: (info) => rotuloDe(TIPOS_TURNO, info.getValue()),
+        }),
+        colTurno.accessor((t) => formatarHorario(t.horarioInicio, t.horarioFim), {
+          id: 'horario',
+          header: 'Horário',
+          cell: (info) => (
+            <span className="tabular-nums">
+              {info.getValue()}{' '}
+              <span className="text-muted-foreground">
+                ({formatarDuracao(info.row.original.duracaoMin)})
+              </span>
+            </span>
+          ),
+        }),
+        colTurno.accessor('frentes', {
+          header: 'Frentes',
+          cell: (info) =>
+            info.getValue().length === 0 ? (
+              <span className="text-muted-foreground">—</span>
+            ) : (
+              <span className="flex flex-wrap gap-1">
+                {info.getValue().map((f) => (
+                  <span
+                    key={f.id}
+                    className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+                  >
+                    {f.rotulo}
+                  </span>
+                ))}
+              </span>
+            ),
+        }),
+        colTurno.accessor('ativo', ativo()),
+      ];
+    if (aba === 'frentes')
+      return [
+        colFrente.accessor('rotulo', {
+          header: 'Rótulo',
+          cell: (info) => abrirNome(info.row.original.id, info.getValue(), info.row.original.cor),
+        }),
+        colFrente.accessor('tipo', {
+          header: 'Tipo',
+          cell: (info) => rotuloDe(TIPOS_FRENTE, info.getValue()),
+        }),
+        colFrente.accessor('destinoNome', {
+          header: 'No catálogo',
+          cell: (info) => <span className="text-muted-foreground">{info.getValue()}</span>,
+        }),
+        colFrente.accessor('ativo', ativo(true)),
+      ];
+    return [
+      colTipo.accessor('nome', {
+        header: 'Nome',
+        cell: (info) => abrirNome(info.row.original.id, info.getValue(), info.row.original.cor),
+      }),
+      colTipo.accessor('gravidade', {
+        header: () => <span className="block text-right">Gravidade</span>,
+        cell: (info) => <span className="block text-right tabular-nums">{info.getValue()}</span>,
+      }),
+      colTipo.accessor('soGestor', {
+        header: 'Só o gestor lança',
+        cell: (info) => (info.getValue() ? 'Sim' : 'Não'),
+      }),
+      colTipo.accessor('contaComoFalta', {
+        header: 'Conta como falta',
+        cell: (info) => (info.getValue() ? 'Sim' : 'Não'),
+      }),
+      colTipo.accessor('ativo', ativo()),
+    ];
+  }, [aba, abrir]);
+
+  return (
+    <ListaCadastro
+      titulo="Escala"
+      totalNoTitulo={false}
+      abas={
+        <Abas
+          aria-label="Cadastros da escala"
+          valor={aba}
+          onMudar={(valor) => ir(() => ({ aba: valor as AbaEscala }))}
+          abas={ABAS.map((valor) => ({ valor, rotulo: ROTULOS_ABA[valor] }))}
+        />
+      }
+      novo={
+        podeEditar
+          ? {
+              rotulo: textos.novo,
+              onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
+            }
+          : undefined
+      }
+      busca={{ valor: busca.busca, rotulo: textos.buscar, placeholder: textos.placeholder }}
+      temFiltro={busca.situacao !== undefined}
+      filtros={
+        <Select
+          aria-label="Filtrar por situação"
+          value={busca.situacao ?? ''}
+          onValueChange={(valor) =>
+            filtrar({ situacao: (valor || undefined) as Busca['situacao'] })
+          }
+          opcoes={[
+            { valor: '', rotulo: 'Todas as situações' },
+            { valor: 'ativos', rotulo: aba === 'frentes' ? 'Ativas' : 'Ativos' },
+            { valor: 'inativos', rotulo: aba === 'frentes' ? 'Inativas' : 'Inativos' },
+          ]}
+          className="flex-[1_1_180px] md:flex-[0_1_200px]"
+        />
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: as colunas mudam de tipo conforme a aba.
+      colunas={colunas as any}
+      ocultarComPainel={['frentes', 'destinoNome', 'soGestor', 'contaComoFalta', 'tipo']}
+      itens={pagina.itens}
+      getRowId={(item) => item.id}
+      selecionadoId={busca.id}
+      onAbrir={abrir}
+      pagina={pagina.pagina}
+      porPagina={pagina.porPagina}
+      total={pagina.total}
+      vazio={{
+        titulo: textos.vazio,
+        texto: podeEditar ? textos.textoVazio : 'Quem administra a escala cadastra os itens.',
+      }}
+      onFiltrar={filtrar}
+      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
+      onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
+      painel={
+        // Só com um painel aberto: no celular, a lista some quando há painel.
+        busca.id || (busca.novo && podeEditar) ? (
+          <PainelDoItem
+            key={`${aba}:${busca.id ?? 'novo'}`}
+            aba={aba}
+            id={busca.id}
+            podeEditar={podeEditar}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+/** Rótulo de cada aba nos avisos de sucesso. */
+const AVISOS: Record<AbaEscala, { criado: string; salvo: string; excluido: string }> = {
+  turnos: { criado: 'Turno criado.', salvo: 'Turno salvo.', excluido: 'Turno excluído.' },
+  frentes: { criado: 'Frente criada.', salvo: 'Frente salva.', excluido: 'Frente excluída.' },
+  'tipos-ausencia': {
+    criado: 'Tipo de ausência criado.',
+    salvo: 'Tipo de ausência salvo.',
+    excluido: 'Tipo de ausência excluído.',
+  },
+};
+
+function PainelDoItem({
+  aba,
+  id,
+  podeEditar,
+}: {
+  aba: AbaEscala;
+  id?: string;
+  podeEditar: boolean;
+}) {
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const { sucesso } = useAvisos();
+  const consulta = useQuery({
+    ...(obter[aba](id ?? '') as ReturnType<typeof obter.turnos>),
+    enabled: Boolean(id),
+  });
+  const editar = podeEditar;
+  const frentes = useQuery({ ...frentesAtivas(), enabled: editar && aba === 'turnos' });
+  const opcoes = useQuery({
+    ...opcoesControllerListasQueryOptions(),
+    enabled: editar && aba === 'frentes',
+  });
+
+  const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  const salvo = async (novoId: string) => {
+    sucesso(id ? AVISOS[aba].salvo : AVISOS[aba].criado);
+    await invalidarEscala(queryClient);
+    void navigate({ search: (a) => ({ ...a, novo: undefined, id: novoId }), replace: true });
+  };
+  const excluido = async () => {
+    sucesso(AVISOS[aba].excluido);
+    fechar();
+    await invalidarEscala(queryClient);
+  };
+
+  const item = id ? consulta.data : undefined;
+  const faltaOpcoes =
+    editar && ((aba === 'turnos' && !frentes.data) || (aba === 'frentes' && !opcoes.data));
+  if ((id && !item) || faltaOpcoes)
+    return (
+      <PainelCarregando
+        onFechar={fechar}
+        erro={consulta.isError || frentes.isError || opcoes.isError}
+        onTentarDeNovo={() => {
+          void consulta.refetch();
+          if (frentes.isError) void frentes.refetch();
+          if (opcoes.isError) void opcoes.refetch();
+        }}
+      />
+    );
+
+  if (aba === 'turnos')
+    return (
+      <PainelTurno
+        turno={item as TurnoItemDto | undefined}
+        frentes={(frentes.data?.itens ?? []).map((f) => ({ id: f.id, rotulo: f.rotulo }))}
+        podeEditar={podeEditar}
+        onFechar={fechar}
+        onSalvar={async (dados) => {
+          if (id) {
+            await turnosControllerAtualizar({ path: { id }, body: dados }).unwrap();
+            await salvo(id);
+          } else {
+            const criado = await turnosControllerCriar({ body: dados }).unwrap();
+            await salvo(criado.id);
+          }
+        }}
+        onExcluir={
+          id
+            ? async () => {
+                await turnosControllerExcluir({ path: { id } }).unwrap();
+                await excluido();
+              }
+            : undefined
+        }
+      />
+    );
+
+  if (aba === 'frentes')
+    return (
+      <PainelFrente
+        frente={item as FrenteItemDto | undefined}
+        especialidades={opcoes.data?.especialidades ?? []}
+        modalidades={opcoes.data?.modalidades ?? []}
+        podeEditar={podeEditar}
+        onFechar={fechar}
+        onSalvar={async (dados) => {
+          if (id) {
+            await frentesControllerAtualizar({ path: { id }, body: dados }).unwrap();
+            await salvo(id);
+          } else {
+            const criado = await frentesControllerCriar({ body: dados }).unwrap();
+            await salvo(criado.id);
+          }
+        }}
+        onExcluir={
+          id
+            ? async () => {
+                await frentesControllerExcluir({ path: { id } }).unwrap();
+                await excluido();
+              }
+            : undefined
+        }
+      />
+    );
+
+  return (
+    <PainelTipoAusencia
+      tipo={item as TipoAusenciaItemDto | undefined}
+      podeEditar={podeEditar}
+      onFechar={fechar}
+      onSalvar={async (dados) => {
+        if (id) {
+          await tiposAusenciaControllerAtualizar({ path: { id }, body: dados }).unwrap();
+          await salvo(id);
+        } else {
+          const criado = await tiposAusenciaControllerCriar({ body: dados }).unwrap();
+          await salvo(criado.id);
+        }
+      }}
+      onExcluir={
+        id
+          ? async () => {
+              await tiposAusenciaControllerExcluir({ path: { id } }).unwrap();
+              await excluido();
+            }
+          : undefined
+      }
+    />
   );
 }
