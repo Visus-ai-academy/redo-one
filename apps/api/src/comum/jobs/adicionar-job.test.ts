@@ -64,4 +64,15 @@ describe.skipIf(!url)('adicionarJob', () => {
 
     expect(await jobs()).toEqual([{ task_identifier: 'email.enviar', payload: { versao: 2 } }]);
   });
+
+  it('jobs da mesma fila entram nela, para rodar um de cada vez', async () => {
+    await adicionarJob(db, 'ingestao.importar', { importacaoId: 'i-1' }, { fila: 'ingestao' });
+
+    const resultado = await db.execute<{ task_identifier: string; queue_name: string | null }>(
+      sql`select task_identifier, queue_name from graphile_worker.jobs`,
+    );
+    expect(resultado.rows).toEqual([
+      { task_identifier: 'ingestao.importar', queue_name: 'ingestao' },
+    ]);
+  });
 });

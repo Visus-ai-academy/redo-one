@@ -15,6 +15,8 @@ export interface OpcoesJob {
   executarEm?: Date;
   /** Padrão do graphile-worker: 25 tentativas com espera crescente. */
   maxTentativas?: number;
+  /** Jobs da mesma fila rodam um de cada vez, na ordem (ex.: uma importação por vez). */
+  fila?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ export async function adicionarJob(
     select graphile_worker.add_job(
       ${tarefa},
       ${JSON.stringify(payload)}::json,
+      queue_name => ${opcoes.fila ?? null}::text,
       run_at => ${opcoes.executarEm?.toISOString() ?? null}::timestamptz,
       max_attempts => ${opcoes.maxTentativas ?? null}::int,
       job_key => ${opcoes.chave ?? null}::text
