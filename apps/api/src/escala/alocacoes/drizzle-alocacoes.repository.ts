@@ -33,7 +33,7 @@ const recorte = (tabela: string, coluna: string) =>
     where r.alocacao_id = "alocacoes"."id" order by 1
   )`;
 
-const selecao = {
+export const selecao = {
   id: alocacoes.id,
   medicoId: alocacoes.medicoId,
   turnoId: alocacoes.turnoId,
@@ -53,7 +53,7 @@ const selecao = {
   observacoes: alocacoes.observacoes,
 };
 
-const selecaoAjuste = {
+export const selecaoAjuste = {
   id: ajustesProdutividade.id,
   alocacaoId: ajustesProdutividade.alocacaoId,
   data: ajustesProdutividade.data,

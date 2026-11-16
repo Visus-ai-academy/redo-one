@@ -50,6 +50,17 @@ export class EventosEscala {
     });
   }
 
+  /** A vigência terminou (ex.: a escala do médico mudou a partir de uma data). */
+  alocacaoEncerrada(antes: AlocacaoGravada, depois: AlocacaoGravada): EventoAuditoria {
+    return this.evento(
+      'alocacao',
+      depois.id,
+      'encerrado',
+      { dataFim: antes.dataFim },
+      { dataFim: depois.dataFim, ...contexto(depois) },
+    );
+  }
+
   alocacaoRemovida(a: AlocacaoGravada): EventoAuditoria {
     return this.evento('alocacao', a.id, 'excluido', fotoAlocacao(a));
   }
