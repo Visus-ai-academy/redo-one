@@ -62,6 +62,8 @@ export interface EstudoClassificado {
   volume: number;
   pecas: { exameId: string; categoriaId: string | null }[];
   pendencias: Pendencia[];
+  /** O que chegou e foi achado no catálogo (resolve avisos de importações anteriores). */
+  conferidos: Pendencia[];
 }
 
 /**
@@ -76,6 +78,7 @@ export interface EstudoClassificado {
  */
 export function classificarEstudo(l: EstudoDoLaudo, catalogo: RetratoCatalogo): EstudoClassificado {
   const pendencias: Pendencia[] = [];
+  const conferidos: Pendencia[] = [];
   const chave = chaveEstudo(l.estudo);
   const exame = catalogo.exames.get(chave) ?? null;
   const foraDoPadrao = catalogo.valoresForaDoPadrao.get(chave);
@@ -85,12 +88,13 @@ export function classificarEstudo(l: EstudoDoLaudo, catalogo: RetratoCatalogo): 
     categoriaId: p.categoriaExameId ?? p.categoriaPecaId,
   }));
 
-  if (!referencia && pecas.length === 0) pendencias.push({ tipo: 'estudo', valor: l.estudo });
+  const estudo: Pendencia = { tipo: 'estudo', valor: l.estudo };
+  (referencia || pecas.length > 0 ? conferidos : pendencias).push(estudo);
 
   let modalidadeId = exame?.modalidadeId ?? null;
   if (!modalidadeId) {
     modalidadeId = catalogo.modalidades.get(normalizarNome(l.modalidade)) ?? null;
-    if (!modalidadeId) pendencias.push({ tipo: 'modalidade', valor: l.modalidade });
+    (modalidadeId ? conferidos : pendencias).push({ tipo: 'modalidade', valor: l.modalidade });
   }
 
   let especialidadeId = referencia?.especialidadeId ?? null;
@@ -100,9 +104,10 @@ export function classificarEstudo(l: EstudoDoLaudo, catalogo: RetratoCatalogo): 
       chaveEspecialidade === '' ||
       catalogo.modalidades.has(chaveEspecialidade) ||
       catalogo.especialidadesInvalidas.has(chaveEspecialidade);
-    if (!ignorada) {
-      especialidadeId = catalogo.especialidades.get(chaveEspecialidade) ?? null;
-      if (!especialidadeId) pendencias.push({ tipo: 'especialidade', valor: l.especialidade });
+    if (!ignorada) especialidadeId = catalogo.especialidades.get(chaveEspecialidade) ?? null;
+    if (chaveEspecialidade !== '') {
+      const p: Pendencia = { tipo: 'especialidade', valor: l.especialidade };
+      (ignorada || especialidadeId ? conferidos : pendencias).push(p);
     }
   }
 
@@ -114,5 +119,6 @@ export function classificarEstudo(l: EstudoDoLaudo, catalogo: RetratoCatalogo): 
     volume: volumeDoLaudo(l.valores, foraDoPadrao?.valores),
     pecas,
     pendencias,
+    conferidos,
   };
 }

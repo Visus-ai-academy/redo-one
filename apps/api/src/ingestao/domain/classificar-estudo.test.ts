@@ -165,6 +165,24 @@ describe('classificarEstudo', () => {
     });
   });
 
+  describe('conferidos', () => {
+    it('lista o que chegou e foi achado no catálogo, para resolver avisos antigos', () => {
+      const r = classificarEstudo(
+        linha({ estudo: 'RM X', modalidade: 'dx', especialidade: 'Neuro' }),
+        catalogo,
+      );
+      expect(r.conferidos).toEqual([
+        { tipo: 'modalidade', valor: 'dx' },
+        { tipo: 'especialidade', valor: 'Neuro' },
+      ]);
+    });
+
+    it('com o exame no cadastro, a modalidade e a especialidade que chegam nem são consultadas', () => {
+      const r = classificarEstudo(linha({ modalidade: 'XX', especialidade: 'YY' }), catalogo);
+      expect(r.conferidos).toEqual([{ tipo: 'estudo', valor: 'TC TORAX' }]);
+    });
+  });
+
   describe('volume', () => {
     it('VALORES zerado usa o valor fora do padrão do estudo', () => {
       expect(
