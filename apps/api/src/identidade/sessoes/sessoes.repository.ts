@@ -1,3 +1,5 @@
+import type { AcessoDoPapel } from '../papeis/papeis.repository';
+
 export const SESSOES_REPOSITORY = Symbol('SESSOES_REPOSITORY');
 
 export interface NovaSessao {
@@ -20,6 +22,22 @@ export interface SessaoComUsuario {
   ultimoUsoEm: Date;
   encerradaEm: Date | null;
   usuario: { nome: string; email: string; papelId: string; ativo: boolean };
+}
+
+/** Sessão com o acesso do papel do dono: tudo o que o guard precisa, numa ida só ao banco. */
+export interface SessaoAutenticavel extends SessaoComUsuario {
+  /** O que o papel do dono concede (Administrador: `acessoTotal` e lista vazia). */
+  acesso: AcessoDoPapel;
+}
+
+/**
+ * O que o autenticador usa em toda requisição. Implementada pelo mesmo repositório de
+ * `SESSOES_REPOSITORY`.
+ */
+export interface SessoesAutenticacaoRepository {
+  /** Sessão + usuário + papel + permissões numa consulta só. */
+  buscarParaAutenticar(tokenHash: string): Promise<SessaoAutenticavel | null>;
+  renovar(id: string, expiraEm: Date, ultimoUsoEm: Date): Promise<void>;
 }
 
 export interface SessoesRepository {

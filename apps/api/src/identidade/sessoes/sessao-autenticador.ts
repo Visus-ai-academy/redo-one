@@ -1,24 +1,24 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CLOCK, type Clock } from '../clock';
-import { PAPEIS_REPOSITORY, type PapeisRepository } from '../papeis/papeis.repository';
 import type { PrincipalUsuario } from '../principal';
 import { hashDoToken } from './abrir-sessao';
 import { SESSAO_INATIVIDADE_MS, SESSAO_RENOVACAO_MINIMA_MS } from './politica-sessao';
-import { SESSOES_REPOSITORY, type SessoesRepository } from './sessoes.repository';
+import { SESSOES_REPOSITORY, type SessoesAutenticacaoRepository } from './sessoes.repository';
 
 /** Transforma o token do cookie em quem está logado, renovando a sessão a cada uso. */
 @Injectable()
 export class SessaoAutenticador {
+  private readonly logger = new Logger(SessaoAutenticador.name);
+
   constructor(
-    @Inject(SESSOES_REPOSITORY) private readonly sessoes: SessoesRepository,
-    @Inject(PAPEIS_REPOSITORY) private readonly papeis: PapeisRepository,
+    @Inject(SESSOES_REPOSITORY) private readonly sessoes: SessoesAutenticacaoRepository,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   /** `null` quando o token não abre uma sessão válida (desconhecido, expirado, encerrado, conta inativa). */
   async autenticar(token: string): Promise<PrincipalUsuario | null> {
     const agora = this.clock.now();
-    const sessao = await this.sessoes.buscarPorTokenHash(hashDoToken(token));
+    const sessao = await this.sessoes.buscarParaAutenticar(hashDoToken(token));
     if (
       !sessao ||
       sessao.encerradaEm ||
@@ -33,10 +33,16 @@ export class SessaoAutenticador {
       const expiraEm = new Date(
         Math.min(agora.getTime() + SESSAO_INATIVIDADE_MS, sessao.expiraAbsolutoEm.getTime()),
       );
-      await this.sessoes.renovar(sessao.id, expiraEm, agora);
+      // Sem esperar: a sessão já foi validada, e a renovação só empurra a expiração de 7 dias.
+      // Se falhar, a próxima requisição (≥ 1 min depois) tenta de novo.
+      this.sessoes.renovar(sessao.id, expiraEm, agora).catch((erro: unknown) => {
+        this.logger.warn(
+          `Falha ao renovar a sessão ${sessao.id}: ${erro instanceof Error ? erro.message : erro}`,
+        );
+      });
     }
 
-    const acesso = await this.papeis.acessoDoPapel(sessao.usuario.papelId);
+    const { acesso } = sessao;
     return {
       tipo: 'usuario',
       usuarioId: sessao.usuarioId,

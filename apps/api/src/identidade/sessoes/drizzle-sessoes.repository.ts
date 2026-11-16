@@ -1,12 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../database/database';
-import { sessoes, usuarios } from '../../database/schema';
-import type { NovaSessao, SessaoComUsuario, SessoesRepository } from './sessoes.repository';
+import { papeis, papeisPermissoes, sessoes, usuarios } from '../../database/schema';
+import type {
+  NovaSessao,
+  SessaoAutenticavel,
+  SessaoComUsuario,
+  SessoesAutenticacaoRepository,
+  SessoesRepository,
+} from './sessoes.repository';
 
 @Injectable()
-export class DrizzleSessoesRepository implements SessoesRepository {
+export class DrizzleSessoesRepository implements SessoesRepository, SessoesAutenticacaoRepository {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async criar(sessao: NovaSessao) {
@@ -44,6 +50,40 @@ export class DrizzleSessoesRepository implements SessoesRepository {
       .where(eq(sessoes.tokenHash, tokenHash))
       .limit(1);
     return linha ?? null;
+  }
+
+  // Roda em toda requisição: uma ida só ao banco (índice único de token_hash + chaves primárias).
+  // As permissões vêm agregadas num array; papel de acesso total não precisa delas.
+  async buscarParaAutenticar(tokenHash: string): Promise<SessaoAutenticavel | null> {
+    const [linha] = await this.db
+      .select({
+        id: sessoes.id,
+        usuarioId: sessoes.usuarioId,
+        expiraEm: sessoes.expiraEm,
+        expiraAbsolutoEm: sessoes.expiraAbsolutoEm,
+        ultimoUsoEm: sessoes.ultimoUsoEm,
+        encerradaEm: sessoes.encerradaEm,
+        usuario: {
+          nome: usuarios.nome,
+          email: usuarios.email,
+          papelId: usuarios.papelId,
+          ativo: usuarios.ativo,
+        },
+        papel: sql<string>`coalesce(${papeis.nome}, '')`,
+        acessoTotal: sql<boolean>`coalesce(${papeis.acessoTotal}, false)`,
+        permissoes: sql<string[]>`case when ${papeis.acessoTotal} then '{}'::text[] else array(
+          select ${papeisPermissoes.permissao} from ${papeisPermissoes}
+          where ${papeisPermissoes.papelId} = ${usuarios.papelId}
+        ) end`,
+      })
+      .from(sessoes)
+      .innerJoin(usuarios, eq(usuarios.id, sessoes.usuarioId))
+      .leftJoin(papeis, eq(papeis.id, usuarios.papelId))
+      .where(eq(sessoes.tokenHash, tokenHash))
+      .limit(1);
+    if (!linha) return null;
+    const { papel, acessoTotal, permissoes, ...sessao } = linha;
+    return { ...sessao, acesso: { papel, acessoTotal, permissoes: permissoes ?? [] } };
   }
 
   async renovar(id: string, expiraEm: Date, ultimoUsoEm: Date) {

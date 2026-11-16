@@ -7,6 +7,25 @@ import {
 } from '../testing/fakes';
 import { hashDoToken } from './abrir-sessao';
 import { SessaoAutenticador } from './sessao-autenticador';
+import type { SessaoAutenticavel, SessoesAutenticacaoRepository } from './sessoes.repository';
+
+/** Junta a sessão em memória com o acesso do papel, como a consulta única do repositório real. */
+class SessoesAutenticacaoEmMemoria implements SessoesAutenticacaoRepository {
+  constructor(
+    private readonly sessoes: InMemorySessoesRepository,
+    private readonly papeis: InMemoryPapeisRepository,
+  ) {}
+
+  async buscarParaAutenticar(tokenHash: string): Promise<SessaoAutenticavel | null> {
+    const sessao = await this.sessoes.buscarPorTokenHash(tokenHash);
+    if (!sessao) return null;
+    return { ...sessao, acesso: await this.papeis.acessoDoPapel(sessao.usuario.papelId) };
+  }
+
+  renovar(id: string, expiraEm: Date, ultimoUsoEm: Date): Promise<void> {
+    return this.sessoes.renovar(id, expiraEm, ultimoUsoEm);
+  }
+}
 
 const MIN = 60 * 1000;
 const DIA = 24 * 60 * MIN;
@@ -16,6 +35,7 @@ describe('SessaoAutenticador.autenticar', () => {
   let usuarios: InMemoryUsuariosRepository;
   let sessoes: InMemorySessoesRepository;
   let papeis: InMemoryPapeisRepository;
+  let repositorio: SessoesAutenticacaoEmMemoria;
   let relogio: FixedClock;
   let autenticador: SessaoAutenticador;
 
@@ -32,7 +52,6 @@ describe('SessaoAutenticador.autenticar', () => {
         bloqueadoAte: null,
       },
     ]);
-    sessoes = new InMemorySessoesRepository(usuarios);
     papeis = new InMemoryPapeisRepository({
       'p-financeiro': {
         papel: 'Financeiro',
@@ -40,8 +59,10 @@ describe('SessaoAutenticador.autenticar', () => {
         permissoes: ['faturamento.ver', 'repasse.ver'],
       },
     });
+    sessoes = new InMemorySessoesRepository(usuarios);
+    repositorio = new SessoesAutenticacaoEmMemoria(sessoes, papeis);
     relogio = new FixedClock(LOGIN);
-    autenticador = new SessaoAutenticador(sessoes, papeis, relogio);
+    autenticador = new SessaoAutenticador(repositorio, relogio);
     await sessoes.criar({
       usuarioId: 'u-maria',
       tokenHash: hashDoToken('token-da-maria'),
@@ -135,5 +156,25 @@ describe('SessaoAutenticador.autenticar', () => {
     await autenticador.autenticar('token-da-maria');
 
     expect(sessoes.renovacoes).toBe(1);
+  });
+
+  it('não espera a renovação gravar para responder', async () => {
+    repositorio.renovar = () => new Promise<void>(() => {});
+    relogio.avancar(2 * MIN);
+
+    await expect(autenticador.autenticar('token-da-maria')).resolves.toMatchObject({
+      usuarioId: 'u-maria',
+    });
+  });
+
+  it('falha ao gravar a renovação não derruba a requisição', async () => {
+    repositorio.renovar = async () => {
+      throw new Error('conexão caiu');
+    };
+    relogio.avancar(2 * MIN);
+
+    await expect(autenticador.autenticar('token-da-maria')).resolves.toMatchObject({
+      usuarioId: 'u-maria',
+    });
   });
 });
