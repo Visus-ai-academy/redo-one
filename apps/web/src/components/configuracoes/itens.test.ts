@@ -49,10 +49,11 @@ describe('buscarConfiguracoes', () => {
 });
 
 describe('grupo Operação', () => {
-  it('tem os parâmetros da importação de laudos, com o ver da importação', () => {
+  it('tem a importação de laudos e a escala, cada uma com o ver da sua configuração', () => {
     const operacao = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Operação');
     expect(operacao?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Importação de laudos', '/configuracoes/importacao', 'importacao.ver'],
+      ['Escala', '/configuracoes/escala', 'escala-config.ver'],
     ]);
   });
 });

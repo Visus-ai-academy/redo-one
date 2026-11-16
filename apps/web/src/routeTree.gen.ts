@@ -25,11 +25,15 @@ import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/conf
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
 import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
 import { Route as AppConfiguracoesEquipesRouteImport } from './routes/_app/configuracoes/equipes'
+import { Route as AppConfiguracoesEscalaRouteImport } from './routes/_app/configuracoes/escala'
 import { Route as AppConfiguracoesImportacaoRouteImport } from './routes/_app/configuracoes/importacao'
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 import { Route as AppConfiguracoesNiveisMedicoRouteImport } from './routes/_app/configuracoes/niveis-medico'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
 import { Route as AppConfiguracoesUsuariosRouteImport } from './routes/_app/configuracoes/usuarios'
+import { Route as AppEscalaIndexRouteImport } from './routes/_app/escala/index'
+import { Route as AppEscalaAusenciasRouteImport } from './routes/_app/escala/ausencias'
+import { Route as AppEscalaHistoricoRouteImport } from './routes/_app/escala/historico'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -112,6 +116,11 @@ const AppConfiguracoesEquipesRoute = AppConfiguracoesEquipesRouteImport.update({
   path: '/configuracoes/equipes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesEscalaRoute = AppConfiguracoesEscalaRouteImport.update({
+  id: '/configuracoes/escala',
+  path: '/configuracoes/escala',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesImportacaoRoute =
   AppConfiguracoesImportacaoRouteImport.update({
     id: '/configuracoes/importacao',
@@ -141,6 +150,21 @@ const AppConfiguracoesUsuariosRoute =
     path: '/configuracoes/usuarios',
     getParentRoute: () => AppRoute,
   } as any)
+const AppEscalaIndexRoute = AppEscalaIndexRouteImport.update({
+  id: '/escala/',
+  path: '/escala/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEscalaAusenciasRoute = AppEscalaAusenciasRouteImport.update({
+  id: '/escala/ausencias',
+  path: '/escala/ausencias',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEscalaHistoricoRoute = AppEscalaHistoricoRouteImport.update({
+  id: '/escala/historico',
+  path: '/escala/historico',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -157,12 +181,16 @@ export interface FileRoutesByFullPath {
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
+  '/configuracoes/escala': typeof AppConfiguracoesEscalaRoute
   '/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
+  '/escala/ausencias': typeof AppEscalaAusenciasRoute
+  '/escala/historico': typeof AppEscalaHistoricoRoute
   '/configuracoes/': typeof AppConfiguracoesIndexRoute
+  '/escala/': typeof AppEscalaIndexRoute
 }
 export interface FileRoutesByTo {
   '/definir-senha': typeof DefinirSenhaRoute
@@ -179,12 +207,16 @@ export interface FileRoutesByTo {
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
+  '/configuracoes/escala': typeof AppConfiguracoesEscalaRoute
   '/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
+  '/escala/ausencias': typeof AppEscalaAusenciasRoute
+  '/escala/historico': typeof AppEscalaHistoricoRoute
   '/configuracoes': typeof AppConfiguracoesIndexRoute
+  '/escala': typeof AppEscalaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -203,12 +235,16 @@ export interface FileRoutesById {
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/_app/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
+  '/_app/configuracoes/escala': typeof AppConfiguracoesEscalaRoute
   '/_app/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
   '/_app/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
+  '/_app/escala/ausencias': typeof AppEscalaAusenciasRoute
+  '/_app/escala/historico': typeof AppEscalaHistoricoRoute
   '/_app/configuracoes/': typeof AppConfiguracoesIndexRoute
+  '/_app/escala/': typeof AppEscalaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -227,12 +263,16 @@ export interface FileRouteTypes {
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/equipes'
+    | '/configuracoes/escala'
     | '/configuracoes/importacao'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
+    | '/escala/ausencias'
+    | '/escala/historico'
     | '/configuracoes/'
+    | '/escala/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/definir-senha'
@@ -249,12 +289,16 @@ export interface FileRouteTypes {
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/equipes'
+    | '/configuracoes/escala'
     | '/configuracoes/importacao'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
     | '/configuracoes/usuarios'
+    | '/escala/ausencias'
+    | '/escala/historico'
     | '/configuracoes'
+    | '/escala'
   id:
     | '__root__'
     | '/_app'
@@ -272,12 +316,16 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/contratados'
     | '/_app/configuracoes/de-paras'
     | '/_app/configuracoes/equipes'
+    | '/_app/configuracoes/escala'
     | '/_app/configuracoes/importacao'
     | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/niveis-medico'
     | '/_app/configuracoes/papeis'
     | '/_app/configuracoes/usuarios'
+    | '/_app/escala/ausencias'
+    | '/_app/escala/historico'
     | '/_app/configuracoes/'
+    | '/_app/escala/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -401,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesEquipesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/escala': {
+      id: '/_app/configuracoes/escala'
+      path: '/configuracoes/escala'
+      fullPath: '/configuracoes/escala'
+      preLoaderRoute: typeof AppConfiguracoesEscalaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/importacao': {
       id: '/_app/configuracoes/importacao'
       path: '/configuracoes/importacao'
@@ -436,6 +491,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesUsuariosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/escala/': {
+      id: '/_app/escala/'
+      path: '/escala'
+      fullPath: '/escala/'
+      preLoaderRoute: typeof AppEscalaIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/escala/ausencias': {
+      id: '/_app/escala/ausencias'
+      path: '/escala/ausencias'
+      fullPath: '/escala/ausencias'
+      preLoaderRoute: typeof AppEscalaAusenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/escala/historico': {
+      id: '/_app/escala/historico'
+      path: '/escala/historico'
+      fullPath: '/escala/historico'
+      preLoaderRoute: typeof AppEscalaHistoricoRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -451,12 +527,16 @@ interface AppRouteChildren {
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
   AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
   AppConfiguracoesEquipesRoute: typeof AppConfiguracoesEquipesRoute
+  AppConfiguracoesEscalaRoute: typeof AppConfiguracoesEscalaRoute
   AppConfiguracoesImportacaoRoute: typeof AppConfiguracoesImportacaoRoute
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesNiveisMedicoRoute: typeof AppConfiguracoesNiveisMedicoRoute
   AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
   AppConfiguracoesUsuariosRoute: typeof AppConfiguracoesUsuariosRoute
+  AppEscalaAusenciasRoute: typeof AppEscalaAusenciasRoute
+  AppEscalaHistoricoRoute: typeof AppEscalaHistoricoRoute
   AppConfiguracoesIndexRoute: typeof AppConfiguracoesIndexRoute
+  AppEscalaIndexRoute: typeof AppEscalaIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -471,12 +551,16 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
   AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,
   AppConfiguracoesEquipesRoute: AppConfiguracoesEquipesRoute,
+  AppConfiguracoesEscalaRoute: AppConfiguracoesEscalaRoute,
   AppConfiguracoesImportacaoRoute: AppConfiguracoesImportacaoRoute,
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesNiveisMedicoRoute: AppConfiguracoesNiveisMedicoRoute,
   AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,
   AppConfiguracoesUsuariosRoute: AppConfiguracoesUsuariosRoute,
+  AppEscalaAusenciasRoute: AppEscalaAusenciasRoute,
+  AppEscalaHistoricoRoute: AppEscalaHistoricoRoute,
   AppConfiguracoesIndexRoute: AppConfiguracoesIndexRoute,
+  AppEscalaIndexRoute: AppEscalaIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

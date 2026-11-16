@@ -1,6 +1,8 @@
 import {
   Bell,
   Buildings,
+  CalendarDots,
+  CalendarX,
   FileArrowUp,
   Flask,
   Gear,
@@ -35,6 +37,8 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         icone: FileArrowUp,
         permissao: 'importacao.ver',
       },
+      { nome: 'Escala', to: '/escala', icone: CalendarDots, permissao: 'escala.ver' },
+      { nome: 'Ausências', to: '/escala/ausencias', icone: CalendarX, permissao: 'escala.ver' },
     ],
   },
   {

@@ -1,6 +1,7 @@
 import {
   ArrowsLeftRight,
   BookOpen,
+  CalendarDots,
   Certificate,
   FileArrowUp,
   type Icon,
@@ -110,6 +111,13 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: FileArrowUp,
         to: '/configuracoes/importacao',
         permissao: 'importacao.ver',
+      },
+      {
+        nome: 'Escala',
+        descricao: 'Turnos, frentes e tipos de ausência',
+        icone: CalendarDots,
+        to: '/configuracoes/escala',
+        permissao: 'escala-config.ver',
       },
     ],
   },
