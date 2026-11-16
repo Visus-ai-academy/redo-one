@@ -6387,6 +6387,99 @@
         ]
       }
     },
+    "/escala/medicos": {
+      "get": {
+        "operationId": "MedicosEscalaController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome; sem acento nem maiúscula importando.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Por nome; só id, nome e situação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaMedicosEscalaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/medicos/{id}": {
+      "get": {
+        "operationId": "MedicosEscalaController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicoEscalaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -11885,6 +11978,52 @@
           "itens",
           "total",
           "nomes",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "MedicoEscalaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "ativo"
+        ]
+      },
+      "PaginaMedicosEscalaDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MedicoEscalaDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
           "pagina",
           "porPagina"
         ]
