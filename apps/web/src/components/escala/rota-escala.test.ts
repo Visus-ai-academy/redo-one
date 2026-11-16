@@ -52,3 +52,20 @@ describe('loader da tela Escala', () => {
     expect(await terminaSemEsperar('stay')).toBe(true);
   });
 });
+
+describe('busca da escala na URL', () => {
+  const ID = '6e0f3f74-3155-50fc-98fb-2c094d705f5e';
+  const validar = (busca: Record<string, unknown>) =>
+    (Route.options.validateSearch as { parse: (v: unknown) => Record<string, unknown> }).parse(
+      busca,
+    );
+
+  it('frentes e turnos: aceita a lista e o valor único (uuid simples na URL)', () => {
+    expect(validar({ frenteIds: [ID], turnoIds: ID })).toMatchObject({
+      frenteIds: [ID],
+      turnoIds: [ID],
+    });
+    expect(validar({ frenteIds: 'nao-e-uuid' }).frenteIds).toBeUndefined();
+    expect(validar({ frenteIds: [] }).frenteIds).toBeUndefined();
+  });
+});

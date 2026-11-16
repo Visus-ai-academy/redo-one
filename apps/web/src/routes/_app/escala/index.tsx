@@ -29,7 +29,11 @@ import type { AvisoConflitoDto } from '../../../gen/types/AvisoConflitoDto';
 import { pode } from '../../../lib/permissoes';
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
-const ids = z.array(z.uuid()).min(1).optional().catch(undefined);
+// Lista (`["…"]`) ou um id só: um uuid simples na URL chega como texto, não como lista.
+const ids = z
+  .preprocess((v) => (typeof v === 'string' ? [v] : v), z.array(z.uuid()).min(1))
+  .optional()
+  .catch(undefined);
 
 const buscaSchema = z.object({
   modo: z.enum(['semana', 'mes', 'medico', 'ausencias']).optional().catch(undefined),

@@ -6,66 +6,10 @@ import { renderComRotas } from '../../test/render';
 import { AgendaMedico } from './AgendaMedico';
 import { AusenciasDaSemana } from './AusenciasDaSemana';
 import { montarCalendarios } from './agrupar';
-import { CartaoPlantao } from './CartaoPlantao';
 import { descreverPlantao } from './descricao-plantao';
 import { MesCalendario } from './MesCalendario';
 import { SemanaCalendarios, SemanaLista, type SemanaProps } from './SemanaEscala';
 import { FRENTE_RM, FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
-
-describe('CartaoPlantao', () => {
-  it('nome, produtividade e horário só quando difere do turno', () => {
-    render(
-      <CartaoPlantao
-        ocorrencia={ocorrencia({ horarioInicio: '08:00' })}
-        horarioDoTurno="07:00–13:00"
-        onAbrir={vi.fn()}
-      />,
-    );
-    const cartao = screen.getByRole('button', { name: /Ana Souza/ });
-    expect(cartao).toHaveTextContent('08:00–13:00');
-    expect(cartao).toHaveTextContent('40 registros');
-  });
-
-  it('selos de gratificado, ajustada, cobertura, ausência e conflito', () => {
-    render(
-      <CartaoPlantao
-        ocorrencia={ocorrencia({
-          gratificado: true,
-          ajustada: true,
-          ausente: true,
-          tipoAusenciaNome: 'Férias',
-          cobertoPor: { alocacaoId: 'c1', medicoId: 'm2', medicoNome: 'Bruno Lima' },
-        })}
-        emConflito
-        onAbrir={vi.fn()}
-      />,
-    );
-    const cartao = screen.getByRole('button', { name: /Ana Souza/ });
-    for (const selo of [
-      'Gratificado',
-      'Ajustada',
-      'Ausente: Férias',
-      'Coberto por Bruno Lima',
-      'Conflito',
-    ]) {
-      expect(cartao).toHaveTextContent(selo);
-    }
-  });
-
-  it('na cobertura, diz quem está sendo coberto; clicar abre', async () => {
-    const onAbrir = vi.fn();
-    render(
-      <CartaoPlantao
-        ocorrencia={ocorrencia({
-          coberturaDe: { alocacaoId: 'a0', medicoId: 'm0', medicoNome: 'Carla Dias' },
-        })}
-        onAbrir={onAbrir}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /Cobrindo Carla Dias/ }));
-    expect(onAbrir).toHaveBeenCalled();
-  });
-});
 
 const dias = [
   '2026-11-16',

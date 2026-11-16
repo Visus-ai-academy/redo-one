@@ -117,10 +117,14 @@ describe('PainelLateral', () => {
     );
     const largo = await screen.findByRole('dialog', { name: 'Grade' });
     expect(largo).toHaveClass('w-full', 'lg:w-[720px]');
+    // A página reserva a faixa pela largura do painel aberto (`RESERVA_DO_PAINEL`).
+    expect(largo).toHaveAttribute('data-painel-lateral', 'larga');
     expect(largo).not.toHaveClass('lg:w-[400px]');
     unmount();
 
     montar();
-    expect(await screen.findByRole('dialog', { name: 'Ana Reis' })).toHaveClass('lg:w-[400px]');
+    const padrao = await screen.findByRole('dialog', { name: 'Ana Reis' });
+    expect(padrao).toHaveClass('lg:w-[400px]');
+    expect(padrao).toHaveAttribute('data-painel-lateral', 'padrao');
   });
 });

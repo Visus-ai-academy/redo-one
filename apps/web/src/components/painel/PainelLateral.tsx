@@ -69,7 +69,7 @@ export function PainelLateral({
       <Drawer.Portal>
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
           <Drawer.Popup
-            data-painel-lateral
+            data-painel-lateral={largura}
             aria-busy={ocupado || undefined}
             className={cn(
               'bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none',
