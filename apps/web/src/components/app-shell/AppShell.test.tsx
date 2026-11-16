@@ -108,6 +108,36 @@ describe('AppShell', () => {
     );
   });
 
+  it('com um item mais específico ativo, o item pai não fica marcado', async () => {
+    const comFilho: GrupoMenu[] = [
+      {
+        titulo: 'Operação',
+        itens: [
+          { nome: 'Escala', to: '/configuracoes', icone: Users, permissao: 'usuarios.ver' },
+          {
+            nome: 'Ausências',
+            to: '/configuracoes/usuarios',
+            icone: Users,
+            permissao: 'usuarios.ver',
+          },
+        ],
+      },
+    ];
+    renderComRotas(
+      <AppShell sessao={maria} grupos={comFilho} rodape={[]}>
+        <p>Conteúdo da tela</p>
+      </AppShell>,
+      { caminho: '/configuracoes/usuarios' },
+    );
+
+    const menu = await screen.findByRole('navigation', { name: 'Menu principal' });
+    expect(within(menu).getByRole('link', { name: 'Ausências' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(menu).getByRole('link', { name: 'Escala' })).not.toHaveAttribute('aria-current');
+  });
+
   it('mostra quem está logado e o papel', async () => {
     montar();
 

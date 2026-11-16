@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { SidebarSimple, SignOut } from '@phosphor-icons/react';
-import { Link } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 
 import type { SessaoAtualDto } from '../../gen/types/SessaoAtualDto';
 import { cn } from '../../lib/cn';
@@ -34,6 +34,7 @@ export function MenuLateral({
 }: MenuLateralProps) {
   const permitidos = filtrarPorPermissao(grupos, sessao);
   const rodapePermitido = rodape.filter((item) => pode(sessao, item.permissao));
+  const destinos = [...permitidos.flatMap((g) => g.itens), ...rodapePermitido].map((i) => i.to);
 
   return (
     <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col gap-1 p-3">
@@ -72,7 +73,7 @@ export function MenuLateral({
               </span>
             )}
             {grupo.itens.map((item) => (
-              <ItemDoMenu key={item.nome} item={item} recolhido={recolhido} />
+              <ItemDoMenu key={item.nome} item={item} recolhido={recolhido} destinos={destinos} />
             ))}
           </div>
         ))}
@@ -80,7 +81,7 @@ export function MenuLateral({
 
       <div className="border-sidebar-border flex flex-col gap-0.5 border-t pt-2">
         {rodapePermitido.map((item) => (
-          <ItemDoMenu key={item.nome} item={item} recolhido={recolhido} />
+          <ItemDoMenu key={item.nome} item={item} recolhido={recolhido} destinos={destinos} />
         ))}
         <div
           className={cn(
@@ -122,7 +123,26 @@ export function MenuLateral({
   );
 }
 
-function ItemDoMenu({ item, recolhido }: { item: ItemMenu; recolhido: boolean }) {
+/** Na tela de um destino abaixo do item (Ausências em /escala/ausencias), o item (Escala) sai de ativo. */
+function temFilhoAtivo(to: string, destinos: string[], caminho: string) {
+  return destinos.some(
+    (outro) =>
+      outro !== to &&
+      outro.startsWith(`${to}/`) &&
+      (caminho === outro || caminho.startsWith(`${outro}/`)),
+  );
+}
+
+function ItemDoMenu({
+  item,
+  recolhido,
+  destinos,
+}: {
+  item: ItemMenu;
+  recolhido: boolean;
+  destinos: string[];
+}) {
+  const caminho = useRouterState({ select: (s) => s.location.pathname });
   const Icone = item.icone;
   const contador = item.contador ?? 0;
   const nomeAcessivel =
@@ -134,6 +154,7 @@ function ItemDoMenu({ item, recolhido }: { item: ItemMenu; recolhido: boolean })
     <Dica rotulo={item.nome} desativada={!recolhido}>
       <Link
         to={item.to}
+        activeOptions={{ exact: temFilhoAtivo(item.to, destinos, caminho) }}
         aria-label={nomeAcessivel ?? (recolhido ? item.nome : undefined)}
         className={cn(
           'group text-sidebar-foreground flex h-9 items-center gap-2.5 rounded-md px-2.5 font-medium',
