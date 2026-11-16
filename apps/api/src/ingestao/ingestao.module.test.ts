@@ -1,5 +1,6 @@
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { parseCrontab } from 'graphile-worker';
 import { describe, expect, it } from 'vitest';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
@@ -39,6 +40,8 @@ describe('IngestaoModule', () => {
     expect(modulo.get(RegistroTarefas).agenda()).toContain(
       `0 4 * * * ${TAREFA_EXPURGAR_LINHAS_BRUTAS}`,
     );
+    // O trabalhador recusa subir com crontab inválido (ex.: ponto no nome da tarefa).
+    expect(() => parseCrontab(modulo.get(RegistroTarefas).agenda())).not.toThrow();
 
     await modulo.close();
   });

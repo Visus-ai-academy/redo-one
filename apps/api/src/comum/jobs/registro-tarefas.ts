@@ -27,6 +27,10 @@ export class RegistroTarefas {
    */
   agendar(nome: string, cron: string) {
     if (!this.tarefas.has(nome)) throw new Error(`Tarefa "${nome}" não registrada.`);
+    // Mesmo formato que o crontab do graphile-worker aceita: sem isso, o trabalhador não sobe.
+    if (!/^[_a-zA-Z][_a-zA-Z0-9:_-]*$/.test(nome)) {
+      throw new Error(`Tarefa agendada "${nome}": use só letras, números, ":", "_" e "-".`);
+    }
     this.agendamentos.push(`${cron} ${nome}`);
   }
 

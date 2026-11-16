@@ -26,16 +26,25 @@ describe('RegistroTarefas', () => {
 
   it('agenda tarefas registradas e entrega a agenda no formato crontab do graphile-worker', () => {
     const registro = new RegistroTarefas();
+    registro.registrar('teste:limpar', async () => undefined);
+
+    registro.agendar('teste:limpar', '0 4 * * *');
+
+    expect(registro.agenda()).toBe('0 4 * * * teste:limpar');
+  });
+
+  it('recusa agendar nome que o crontab do graphile-worker não aceita (ex.: com ponto)', () => {
+    const registro = new RegistroTarefas();
     registro.registrar('teste.limpar', async () => undefined);
 
-    registro.agendar('teste.limpar', '0 4 * * *');
-
-    expect(registro.agenda()).toBe('0 4 * * * teste.limpar');
+    expect(() => registro.agendar('teste.limpar', '0 4 * * *')).toThrow(
+      'Tarefa agendada "teste.limpar": use só letras, números, ":", "_" e "-".',
+    );
   });
 
   it('recusa agendar tarefa que não foi registrada', () => {
-    expect(() => new RegistroTarefas().agendar('teste.nada', '0 4 * * *')).toThrow(
-      'Tarefa "teste.nada" não registrada.',
+    expect(() => new RegistroTarefas().agendar('teste:nada', '0 4 * * *')).toThrow(
+      'Tarefa "teste:nada" não registrada.',
     );
   });
 });
