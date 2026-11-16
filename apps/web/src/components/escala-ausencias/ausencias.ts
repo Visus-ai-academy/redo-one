@@ -119,3 +119,14 @@ export function atalhoDoPeriodo(
   });
   return atalho?.valor ?? 'personalizado';
 }
+
+/** Rótulo de um período escolhido à mão: "05/12 a 12/12", "A partir de 05/12", "Até 12/12". */
+export function rotuloDoIntervalo(
+  de: string | undefined,
+  ate: string | undefined,
+  hoje = hojeEmBrasilia(),
+): string {
+  if (de && ate) return `${diaCurto(de, hoje)} a ${diaCurto(ate, hoje)}`;
+  if (de) return `A partir de ${diaCurto(de, hoje)}`;
+  return ate ? `Até ${diaCurto(ate, hoje)}` : '';
+}

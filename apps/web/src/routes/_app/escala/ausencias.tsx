@@ -3,6 +3,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { type ReactNode, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
+import { CampoBusca } from '../../../components/busca/CampoBusca';
+import { useBuscaComEspera } from '../../../components/busca/use-busca-com-espera';
 import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import {
@@ -30,7 +32,7 @@ import { ausenciasControllerAtualizar } from '../../../gen/clients/ausenciasCont
 import { ausenciasControllerCriar } from '../../../gen/clients/ausenciasControllerCriar';
 import { ausenciasControllerExcluir } from '../../../gen/clients/ausenciasControllerExcluir';
 import { ausenciasControllerRecusar } from '../../../gen/clients/ausenciasControllerRecusar';
-import { medicosControllerListar } from '../../../gen/clients/medicosControllerListar';
+import { medicosEscalaControllerListar } from '../../../gen/clients/medicosEscalaControllerListar';
 import { ausenciasControllerContarPendentesQueryKey } from '../../../gen/hooks/useAusenciasControllerContarPendentes';
 import {
   ausenciasControllerListarQueryKey,
@@ -41,7 +43,7 @@ import {
   ausenciasControllerObterQueryOptions,
 } from '../../../gen/hooks/useAusenciasControllerObter';
 import { frentesControllerListarQueryOptions } from '../../../gen/hooks/useFrentesControllerListar';
-import { medicosControllerObterQueryOptions } from '../../../gen/hooks/useMedicosControllerObter';
+import { medicosEscalaControllerObterQueryOptions } from '../../../gen/hooks/useMedicosEscalaControllerObter';
 import { tiposAusenciaControllerListarQueryOptions } from '../../../gen/hooks/useTiposAusenciaControllerListar';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
 import type { AusenciaItemDto } from '../../../gen/types/AusenciaItemDto';
@@ -95,9 +97,9 @@ export const Route = createFileRoute('/_app/escala/ausencias')({
       void queryClient.prefetchQuery(
         ausenciasControllerObterQueryOptions({ path: { id: deps.id } }),
       );
-    if (deps.novo && deps.medicoId && pode(context.sessao, 'medicos.ver'))
+    if (deps.novo && deps.medicoId)
       void queryClient.prefetchQuery(
-        medicosControllerObterQueryOptions({ path: { id: deps.medicoId } }),
+        medicosEscalaControllerObterQueryOptions({ path: { id: deps.medicoId } }),
       );
     await Promise.all([
       queryClient.ensureQueryData(ausenciasControllerListarQueryOptions(consulta(deps))),
@@ -117,7 +119,7 @@ function Pagina() {
 
 /** Médicos ativos que casam com o termo, para lançar ausência. */
 async function buscarMedicos(termo: string) {
-  const { itens } = await medicosControllerListar({
+  const { itens } = await medicosEscalaControllerListar({
     query: { busca: termo, ativo: true, porPagina: 20 },
   }).unwrap();
   return itens.map((m) => ({ valor: m.id, rotulo: m.nome }));
@@ -249,9 +251,19 @@ function Ausencias() {
     [abrir, hoje],
   );
 
-  const temFiltro = [busca.situacao, busca.tipoId, busca.frenteId, busca.de, busca.ate].some(
-    (valor) => valor !== undefined,
+  // A busca mora entre os filtros (e não no `busca` da lista) para encolher e caber numa linha.
+  const [termo, setTermo] = useBuscaComEspera(
+    busca.busca,
+    useCallback((texto: string | undefined) => filtrar({ busca: texto }), [filtrar]),
   );
+  const temFiltro = [
+    busca.busca,
+    busca.situacao,
+    busca.tipoId,
+    busca.frenteId,
+    busca.de,
+    busca.ate,
+  ].some((valor) => valor !== undefined);
 
   return (
     <ListaCadastro
@@ -264,10 +276,16 @@ function Ausencias() {
             }
           : undefined
       }
-      busca={{ valor: busca.busca, rotulo: 'Buscar médico', placeholder: 'Nome do médico' }}
       temFiltro={temFiltro}
       filtros={
         <>
+          <CampoBusca
+            rotulo="Buscar médico"
+            placeholder="Nome do médico"
+            valor={termo}
+            onMudar={setTermo}
+            className="min-w-0 flex-[1_1_220px] xl:flex-[1_1_140px]"
+          />
           <Select
             aria-label="Filtrar por situação"
             value={busca.situacao ?? ''}
@@ -283,7 +301,7 @@ function Ausencias() {
               { valor: 'aprovada', rotulo: 'Aprovadas' },
               { valor: 'recusada', rotulo: 'Recusadas' },
             ]}
-            className="flex-[1_1_180px] md:flex-[0_1_190px]"
+            className="flex-[1_1_160px] xl:flex-[0_0_160px]"
           />
           <Select
             aria-label="Filtrar por tipo"
@@ -293,7 +311,7 @@ function Ausencias() {
               { valor: '', rotulo: 'Todos os tipos' },
               ...tipos.itens.map((t) => ({ valor: t.id, rotulo: t.nome })),
             ]}
-            className="flex-[1_1_180px] md:flex-[0_1_190px]"
+            className="flex-[1_1_160px] xl:flex-[0_0_160px]"
           />
           <Select
             aria-label="Filtrar por escala"
@@ -303,9 +321,15 @@ function Ausencias() {
               { valor: '', rotulo: 'Todas as escalas' },
               ...frentes.itens.map((f) => ({ valor: f.id, rotulo: f.rotulo })),
             ]}
-            className="flex-[1_1_180px] md:flex-[0_1_190px]"
+            className="flex-[1_1_160px] xl:flex-[0_0_160px]"
           />
-          <FiltroPeriodo de={busca.de} ate={busca.ate} hoje={hoje} onMudar={filtrar} />
+          <FiltroPeriodo
+            de={busca.de}
+            ate={busca.ate}
+            hoje={hoje}
+            onMudar={filtrar}
+            className="flex-[1_1_180px] xl:flex-[0_0_180px]"
+          />
         </>
       }
       colunas={colunas}
@@ -396,14 +420,13 @@ function PainelNova({
   onFechar: () => void;
   onCriadas: (ids: string[]) => void;
 }) {
-  const { sessao } = Route.useRouteContext();
   const { sucesso } = useAvisos();
   const atualizar = useAtualizarAusencias();
   const opcoes = useOpcoesDoFormulario();
-  // Vindo da Escala ("Definir ausência"): o nome do médico vem do cadastro.
+  // Vindo da Escala ("Definir ausência"): o nome do médico vem de /escala/medicos.
   const medico = useQuery({
-    ...medicosControllerObterQueryOptions({ path: { id: busca.medicoId ?? '' } }),
-    enabled: Boolean(busca.medicoId) && pode(sessao, 'medicos.ver'),
+    ...medicosEscalaControllerObterQueryOptions({ path: { id: busca.medicoId ?? '' } }),
+    enabled: Boolean(busca.medicoId),
   });
   if (medico.isLoading) return <PainelCarregando onFechar={onFechar} />;
 

@@ -21,6 +21,7 @@ export default defineConfig({
       '@base-ui/react/fieldset',
       '@base-ui/react/input',
       '@base-ui/react/number-field',
+      '@base-ui/react/popover',
       '@base-ui/react/select',
       '@base-ui/react/switch',
       '@base-ui/react/tabs',

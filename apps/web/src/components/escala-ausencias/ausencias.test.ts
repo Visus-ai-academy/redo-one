@@ -9,6 +9,7 @@ import {
   periodoDaAusencia,
   periodoDoAtalho,
   recorteDaAusencia,
+  rotuloDoIntervalo,
   situacaoDaAusencia,
   somarDias,
 } from './ausencias';
@@ -109,5 +110,14 @@ describe('atalhos de período', () => {
     expect(atalhoDoPeriodo(undefined, undefined, hoje)).toBe('');
     expect(atalhoDoPeriodo(hoje, '2026-12-16', hoje)).toBe('30');
     expect(atalhoDoPeriodo('2026-11-01', '2026-11-30', hoje)).toBe('personalizado');
+  });
+});
+
+describe('rotuloDoIntervalo', () => {
+  it('diz o intervalo, ou só uma ponta', () => {
+    const hoje = '2026-11-16';
+    expect(rotuloDoIntervalo('2026-12-05', '2026-12-12', hoje)).toBe('05/12 a 12/12');
+    expect(rotuloDoIntervalo('2026-12-05', undefined, hoje)).toBe('A partir de 05/12');
+    expect(rotuloDoIntervalo(undefined, '2027-01-02', hoje)).toBe('Até 02/01/2027');
   });
 });
