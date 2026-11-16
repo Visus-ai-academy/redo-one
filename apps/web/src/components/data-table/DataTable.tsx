@@ -24,9 +24,18 @@ type DataTableProps<TData extends RowData> = {
    * em que saem. Só saem as que precisam: com espaço, todas ficam.
    */
   ocultaveis?: string[];
+  /**
+   * Mantém o layout ajustável (o mesmo de quando há colunas ocultáveis) mas sem tirar nenhuma:
+   * a lista com o painel fechado. Assim fechar o painel não muda as larguras num salto no fim.
+   */
+  semOcultar?: boolean;
   /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
   className?: string;
 };
+
+/** Esmaecido de entrada da coluna que volta a caber (ver `ajustar`). */
+const REVELAR =
+  'data-[revelada]:animate-in data-[revelada]:fade-in data-[revelada]:duration-200 data-[revelada]:ease-out motion-reduce:data-[revelada]:animate-none';
 
 /** Clique que já é de um controle dentro da linha (botão, link, campo, caixa de marcar). */
 const CONTROLES = 'a, button, input, select, textarea, label, [role="button"], [role="checkbox"]';
@@ -40,6 +49,7 @@ export function DataTable<TData extends RowData>({
   selectedRowId,
   onRowClick,
   ocultaveis,
+  semOcultar = false,
   className,
 }: DataTableProps<TData>) {
   const caixa = useRef<HTMLDivElement>(null);
@@ -52,11 +62,16 @@ export function DataTable<TData extends RowData>({
   const ajustar = useCallback(() => {
     const el = caixa.current;
     if (!el) return;
+    const escondidasAntes = new Set(
+      [...el.querySelectorAll<HTMLElement>('th[data-coluna][hidden]')].map(
+        (th) => th.dataset.coluna,
+      ),
+    );
     delete el.dataset.apertado;
     for (const celula of el.querySelectorAll<HTMLElement>('[data-coluna][hidden]')) {
       celula.hidden = false;
     }
-    for (const id of ocultaveis ?? []) {
+    for (const id of semOcultar ? [] : (ocultaveis ?? [])) {
       if (el.scrollWidth <= el.clientWidth) break;
       for (const celula of el.querySelectorAll<HTMLElement>(`[data-coluna="${CSS.escape(id)}"]`)) {
         celula.hidden = true;
@@ -64,7 +79,19 @@ export function DataTable<TData extends RowData>({
     }
     // Sem mais coluna para tirar e ainda sem caber: o texto volta a quebrar linha.
     if (el.scrollWidth > el.clientWidth) el.dataset.apertado = '';
-  }, [chaveOcultaveis]);
+    // A coluna que voltou (a lista cresceu, ex.: o painel fechando) entra esmaecendo, em vez de
+    // surgir de uma vez; as que já estavam na tela não animam.
+    for (const id of escondidasAntes) {
+      if (!id) continue;
+      for (const celula of el.querySelectorAll<HTMLElement>(`[data-coluna="${CSS.escape(id)}"]`)) {
+        if (celula.hidden) continue;
+        celula.dataset.revelada = '';
+        celula.addEventListener('animationend', () => delete celula.dataset.revelada, {
+          once: true,
+        });
+      }
+    }
+  }, [chaveOcultaveis, semOcultar]);
   // A cada renderização (dados e colunas novos) e quando a caixa muda de largura (painel, janela).
   useLayoutEffect(ajustar);
   useEffect(() => {
@@ -101,6 +128,7 @@ export function DataTable<TData extends RowData>({
                   // Fixo no topo quando a tabela rola por dentro do contêiner.
                   className={cn(
                     'bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]',
+                    REVELAR,
                     ajusta &&
                       (i === 0
                         ? 'min-w-48'
@@ -151,6 +179,7 @@ export function DataTable<TData extends RowData>({
                     // Medindo o que cabe: o nome quebra linha (com largura mínima); o resto não.
                     className={cn(
                       'h-11 px-4 py-2 align-middle',
+                      REVELAR,
                       ajusta &&
                         (i === 0
                           ? 'min-w-48'

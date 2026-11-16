@@ -126,5 +126,46 @@ describe('DataTable', () => {
 
       expect(cabecalhos()).toEqual(['Nome', 'E-mail']);
     });
+
+    // Cada coluna "ocupa" 100px; a caixa tem a largura de `caixa.largura`.
+    const caixa = { largura: 250 };
+    const simularLargura = () => {
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.querySelectorAll('th:not([hidden])').length * 100;
+      });
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => caixa.largura);
+    };
+
+    it('com semOcultar (painel fechado), não tira coluna: o layout fica o mesmo, sem salto', () => {
+      simularLargura();
+      caixa.largura = 250;
+
+      render(<DataTable columns={tres} data={dados} ocultaveis={['papel', 'email']} semOcultar />);
+
+      expect(cabecalhos()).toEqual(['Nome', 'E-mail', 'Papel']);
+      // Mesmas classes de layout que com o painel aberto (a 1ª coluna com largura mínima).
+      expect(screen.getByRole('columnheader', { name: 'Nome' })).toHaveClass('min-w-48');
+    });
+
+    it('a coluna que volta (a lista cresceu) entra com o esmaecido; as que ficaram, não', () => {
+      simularLargura();
+      caixa.largura = 250;
+      const { rerender } = render(
+        <DataTable columns={tres} data={dados} ocultaveis={['papel', 'email']} />,
+      );
+      expect(cabecalhos()).toEqual(['Nome', 'E-mail']);
+
+      caixa.largura = 400;
+      rerender(<DataTable columns={tres} data={dados} ocultaveis={['papel', 'email']} />);
+
+      expect(cabecalhos()).toEqual(['Nome', 'E-mail', 'Papel']);
+      expect(screen.getByRole('columnheader', { name: 'Papel' })).toHaveAttribute('data-revelada');
+      expect(screen.getByText('Financeiro')).toHaveAttribute('data-revelada');
+      expect(screen.getByRole('columnheader', { name: 'E-mail' })).not.toHaveAttribute(
+        'data-revelada',
+      );
+    });
   });
 });

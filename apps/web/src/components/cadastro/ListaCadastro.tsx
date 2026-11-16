@@ -167,7 +167,10 @@ export function ListaCadastro<T extends RowData>({
           ) : (
             <DataTable
               columns={colunas}
-              ocultaveis={painel ? ordemDeSaida(colunas, ocultarComPainel) : undefined}
+              // Mesmo layout com o painel aberto ou fechado: só tirar coluna depende dele. Assim,
+              // ao fechar, as colunas voltam durante o deslize e nada muda de largura no fim.
+              ocultaveis={ordemDeSaida(colunas, ocultarComPainel)}
+              semOcultar={!painel}
               data={itens}
               getRowId={getRowId}
               selectedRowId={selecionadoId}

@@ -74,6 +74,19 @@ describe('ListaCadastro', () => {
     }
   });
 
+  it('sem painel, a tabela tem o mesmo layout de quando ele está aberto (fechar não dá salto)', () => {
+    const duas = [...colunas, coluna.accessor('cnpj', { header: 'CNPJ' })];
+    const item = [{ id: 'c-1', nome: 'A', cnpj: '1' }];
+    const { rerender } = render(
+      <ListaCadastro {...props} colunas={duas} itens={item} total={1} painel={<aside />} />,
+    );
+    const comPainel = screen.getByRole('columnheader', { name: 'Nome' }).className;
+
+    rerender(<ListaCadastro {...props} colunas={duas} itens={item} total={1} />);
+
+    expect(screen.getByRole('columnheader', { name: 'Nome' }).className).toBe(comPainel);
+  });
+
   it('sem busca (lista por data), não mostra campo de busca nem a faixa vazia', () => {
     const { busca: _, ...semBusca } = props;
     render(<ListaCadastro {...semBusca} itens={[{ id: 'c-1', nome: 'laudos.xlsx' }]} total={1} />);
