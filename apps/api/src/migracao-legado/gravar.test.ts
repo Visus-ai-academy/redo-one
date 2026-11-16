@@ -379,6 +379,16 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(linhas.rows).toEqual([{ descricao: 'Tomografia Computadorizada' }]);
   });
 
+  it('cor vazia no dashboards-one não apaga a escolhida no redo-one', async () => {
+    await gravarMigracao(db, catalogo, medicos);
+    await db.execute(sql`update modalidades set cor = '#F58231'`);
+
+    await gravarMigracao(db, catalogo, medicos);
+
+    const linhas = await db.execute<{ cor: string }>(sql`select cor from modalidades`);
+    expect(linhas.rows).toEqual([{ cor: '#F58231' }]);
+  });
+
   it('ajuste que a tela já criou para a mesma alocação e dia é sobrescrito pelo do dashboards-one', async () => {
     await gravarMigracao(db, catalogo, medicos, escala);
     const [ajuste] = escala.tabelas.ajustesProdutividade;
