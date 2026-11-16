@@ -4,10 +4,10 @@
 */
 
 import * as z from 'zod'
-import { conflitoEscalaDtoSchema } from './conflitoEscalaDtoSchema'
+import { avisoConflitoDtoSchema } from './avisoConflitoDtoSchema'
 
 export const avisosEscalaDtoSchema = z.object({
-  avisos: z.array(conflitoEscalaDtoSchema).describe('Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).'),
+  avisos: z.array(avisoConflitoDtoSchema).describe('Sobreposições de horário do médico nas próximas 8 semanas, contando o plantão do dia anterior que vira a meia-noite (não bloqueiam). A ponta fora do recorte de quem grava vem só com `foraDoRecorte` e `data`.'),
 })
 
 export type AvisosEscalaDtoSchemaType = z.infer<typeof avisosEscalaDtoSchema>

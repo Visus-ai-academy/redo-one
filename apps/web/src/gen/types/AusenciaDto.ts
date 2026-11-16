@@ -35,7 +35,7 @@ export type AusenciaDto = {
    */
   diasSemana?: number[];
   /**
-   * @description Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).
+   * @description Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: "todas" ou "o dia inteiro" podem virar as frentes ou os turnos do recorte.
    * @type array | undefined
    */
   frenteIds?: string[];

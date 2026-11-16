@@ -4,7 +4,7 @@
 */
 
 import type { RequestConfig, ResponseErrorConfig } from '../.kubb/client'
-import type { TurnosControllerAtualizarOptions, TurnosControllerAtualizarStatus204, TurnosControllerAtualizarStatus400, TurnosControllerAtualizarStatus404, TurnosControllerAtualizarStatus409 } from '../types/TurnosControllerAtualizar'
+import type { TurnosControllerAtualizarOptions, TurnosControllerAtualizarStatus200, TurnosControllerAtualizarStatus400, TurnosControllerAtualizarStatus404, TurnosControllerAtualizarStatus409 } from '../types/TurnosControllerAtualizar'
 import type { UseMutationOptions, UseMutationResult, QueryClient } from '@tanstack/react-query'
 import { turnosControllerAtualizar } from '../clients/turnosControllerAtualizar'
 import { mutationOptions, useMutation } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ export const turnosControllerAtualizarMutationKey = () => [{ url: '/escala/turno
 
 export function turnosControllerAtualizarMutationOptions<TContext = unknown>(config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
   const mutationKey = turnosControllerAtualizarMutationKey()
-  return mutationOptions<TurnosControllerAtualizarStatus204, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>({
+  return mutationOptions<TurnosControllerAtualizarStatus200, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>({
     mutationKey,
     mutationFn: async({ path, body }) => {
       return turnosControllerAtualizar({ ...config, path, body, throwOnError: true }).unwrap()
@@ -25,18 +25,18 @@ export function turnosControllerAtualizarMutationOptions<TContext = unknown>(con
  * {@link /escala/turnos/:id}
  */
 export function useTurnosControllerAtualizar<TContext>(options: {
-  mutation?: UseMutationOptions<TurnosControllerAtualizarStatus204, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext> & { client?: QueryClient },
+  mutation?: UseMutationOptions<TurnosControllerAtualizarStatus200, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext> & { client?: QueryClient },
   client?: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>>,
 } = {}) {
   const { mutation = {}, client: config = {} } = options ?? {}
   const { client: queryClient, ...mutationOptions } = mutation;
   const mutationKey = mutationOptions.mutationKey ?? turnosControllerAtualizarMutationKey()
 
-  const baseOptions = turnosControllerAtualizarMutationOptions(config) as UseMutationOptions<TurnosControllerAtualizarStatus204, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>
+  const baseOptions = turnosControllerAtualizarMutationOptions(config) as UseMutationOptions<TurnosControllerAtualizarStatus200, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>
 
-  return useMutation<TurnosControllerAtualizarStatus204, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>({
+  return useMutation<TurnosControllerAtualizarStatus200, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>({
     ...baseOptions,
     mutationKey,
     ...mutationOptions,
-  }, queryClient) as UseMutationResult<TurnosControllerAtualizarStatus204, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>
+  }, queryClient) as UseMutationResult<TurnosControllerAtualizarStatus200, ResponseErrorConfig<TurnosControllerAtualizarStatus400 | TurnosControllerAtualizarStatus404 | TurnosControllerAtualizarStatus409>, TurnosControllerAtualizarOptions, TContext>
 }

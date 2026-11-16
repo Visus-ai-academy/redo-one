@@ -4,21 +4,21 @@
 */
 
 import type { RequestConfig, ResponseErrorConfig } from '../.kubb/client'
-import type { PortalAusenciasControllerListarStatus200, PortalAusenciasControllerListarStatus403 } from '../types/PortalAusenciasControllerListar'
+import type { PortalAusenciasControllerListarOptions, PortalAusenciasControllerListarStatus200, PortalAusenciasControllerListarStatus403 } from '../types/PortalAusenciasControllerListar'
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from '@tanstack/react-query'
 import { portalAusenciasControllerListar } from '../clients/portalAusenciasControllerListar'
 import { queryOptions, useQuery } from '@tanstack/react-query'
 
-export const portalAusenciasControllerListarQueryKey = () => [{ url: '/escala/portal/ausencias' }] as const
+export const portalAusenciasControllerListarQueryKey = ({ query }: Omit<PortalAusenciasControllerListarOptions, 'headers'> = {}) => [{ url: '/escala/portal/ausencias' }, ...(query ? [query] : [])] as const
 
 type PortalAusenciasControllerListarQueryKey = ReturnType<typeof portalAusenciasControllerListarQueryKey>
 
-export function portalAusenciasControllerListarQueryOptions(config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
-  const queryKey = portalAusenciasControllerListarQueryKey()
+export function portalAusenciasControllerListarQueryOptions({ query }: PortalAusenciasControllerListarOptions = {}, config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
+  const queryKey = portalAusenciasControllerListarQueryKey({ query })
   return queryOptions<PortalAusenciasControllerListarStatus200, ResponseErrorConfig<PortalAusenciasControllerListarStatus403>, PortalAusenciasControllerListarStatus200, typeof queryKey>({
    queryKey,
    queryFn: async ({ signal }) => {
-      return portalAusenciasControllerListar({ ...config, signal: config.signal ?? signal, throwOnError: true }).unwrap()
+      return portalAusenciasControllerListar({ ...config, query, signal: config.signal ?? signal, throwOnError: true }).unwrap()
    },
   })
 }
@@ -26,16 +26,17 @@ export function portalAusenciasControllerListarQueryOptions(config: Partial<Omit
 /**
  * {@link /escala/portal/ausencias}
  */
-export function usePortalAusenciasControllerListar<TData = PortalAusenciasControllerListarStatus200, TQueryData = PortalAusenciasControllerListarStatus200, TQueryKey extends QueryKey = PortalAusenciasControllerListarQueryKey>(options: {
+export function usePortalAusenciasControllerListar<TData = PortalAusenciasControllerListarStatus200, TQueryData = PortalAusenciasControllerListarStatus200, TQueryKey extends QueryKey = PortalAusenciasControllerListarQueryKey>({ query }: { query?: PortalAusenciasControllerListarOptions['query'] | (() => PortalAusenciasControllerListarOptions['query']) } = {}, options: {
   query?: Partial<QueryObserverOptions<PortalAusenciasControllerListarStatus200, ResponseErrorConfig<PortalAusenciasControllerListarStatus403>, TData, TQueryData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>>
 } = {}) {
   const { query: queryConfig = {}, client: config = {} } = options ?? {}
   const { client: queryClient, ...resolvedOptions } = queryConfig
-  const queryKey = resolvedOptions?.queryKey ?? portalAusenciasControllerListarQueryKey()
+  const resolvedParams = { query: typeof query === 'function' ? query() : query }
+  const queryKey = resolvedOptions?.queryKey ?? portalAusenciasControllerListarQueryKey(resolvedParams)
 
   const queryResult = useQuery({
-   ...portalAusenciasControllerListarQueryOptions(config),
+   ...portalAusenciasControllerListarQueryOptions(resolvedParams, config),
    ...resolvedOptions,
    queryKey,
   } as unknown as QueryObserverOptions, queryClient) as UseQueryResult<TData, ResponseErrorConfig<PortalAusenciasControllerListarStatus403>> & { queryKey: TQueryKey }

@@ -9,6 +9,8 @@ export type AusenciasControllerExcluirPath = {
 
 export type AusenciasControllerExcluirStatus204 = unknown;
 
+export type AusenciasControllerExcluirStatus403 = unknown;
+
 export type AusenciasControllerExcluirStatus404 = unknown;
 
 export type AusenciasControllerExcluirOptions = {
@@ -20,6 +22,7 @@ export type AusenciasControllerExcluirOptions = {
 
 export type AusenciasControllerExcluirResponses = {
   '204': AusenciasControllerExcluirStatus204;
+  '403': AusenciasControllerExcluirStatus403;
   '404': AusenciasControllerExcluirStatus404;
 };
 

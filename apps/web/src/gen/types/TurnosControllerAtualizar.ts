@@ -3,13 +3,14 @@
 * Do not edit manually.
 */
 
+import type { AvisosTurnoDto } from './AvisosTurnoDto'
 import type { TurnoDto } from './TurnoDto'
 
 export type TurnosControllerAtualizarPath = {
   id: string;
 };
 
-export type TurnosControllerAtualizarStatus204 = unknown;
+export type TurnosControllerAtualizarStatus200 = AvisosTurnoDto;
 
 export type TurnosControllerAtualizarStatus400 = unknown;
 
@@ -27,7 +28,7 @@ export type TurnosControllerAtualizarOptions = {
 };
 
 export type TurnosControllerAtualizarResponses = {
-  '204': TurnosControllerAtualizarStatus204;
+  '200': TurnosControllerAtualizarStatus200;
   '400': TurnosControllerAtualizarStatus400;
   '404': TurnosControllerAtualizarStatus404;
   '409': TurnosControllerAtualizarStatus409;
@@ -36,4 +37,4 @@ export type TurnosControllerAtualizarResponses = {
 /**
  * @description Union of all possible responses
  */
-export type TurnosControllerAtualizarResponse = TurnosControllerAtualizarStatus204;
+export type TurnosControllerAtualizarResponse = TurnosControllerAtualizarStatus200;

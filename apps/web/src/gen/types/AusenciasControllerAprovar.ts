@@ -11,6 +11,8 @@ export type AusenciasControllerAprovarStatus204 = unknown;
 
 export type AusenciasControllerAprovarStatus400 = unknown;
 
+export type AusenciasControllerAprovarStatus403 = unknown;
+
 export type AusenciasControllerAprovarStatus404 = unknown;
 
 export type AusenciasControllerAprovarOptions = {
@@ -23,6 +25,7 @@ export type AusenciasControllerAprovarOptions = {
 export type AusenciasControllerAprovarResponses = {
   '204': AusenciasControllerAprovarStatus204;
   '400': AusenciasControllerAprovarStatus400;
+  '403': AusenciasControllerAprovarStatus403;
   '404': AusenciasControllerAprovarStatus404;
 };
 

@@ -4,7 +4,7 @@
 */
 
 import type { RequestConfig, ResponseErrorConfig } from '../.kubb/client'
-import type { AusenciasControllerAprovarOptions, AusenciasControllerAprovarStatus204, AusenciasControllerAprovarStatus400, AusenciasControllerAprovarStatus404 } from '../types/AusenciasControllerAprovar'
+import type { AusenciasControllerAprovarOptions, AusenciasControllerAprovarStatus204, AusenciasControllerAprovarStatus400, AusenciasControllerAprovarStatus403, AusenciasControllerAprovarStatus404 } from '../types/AusenciasControllerAprovar'
 import type { UseMutationOptions, UseMutationResult, QueryClient } from '@tanstack/react-query'
 import { ausenciasControllerAprovar } from '../clients/ausenciasControllerAprovar'
 import { mutationOptions, useMutation } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ export const ausenciasControllerAprovarMutationKey = () => [{ url: '/escala/ause
 
 export function ausenciasControllerAprovarMutationOptions<TContext = unknown>(config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
   const mutationKey = ausenciasControllerAprovarMutationKey()
-  return mutationOptions<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>({
+  return mutationOptions<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus403 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>({
     mutationKey,
     mutationFn: async({ path }) => {
       return ausenciasControllerAprovar({ ...config, path, throwOnError: true }).unwrap()
@@ -25,18 +25,18 @@ export function ausenciasControllerAprovarMutationOptions<TContext = unknown>(co
  * {@link /escala/ausencias/:id/aprovar}
  */
 export function useAusenciasControllerAprovar<TContext>(options: {
-  mutation?: UseMutationOptions<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext> & { client?: QueryClient },
+  mutation?: UseMutationOptions<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus403 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext> & { client?: QueryClient },
   client?: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>>,
 } = {}) {
   const { mutation = {}, client: config = {} } = options ?? {}
   const { client: queryClient, ...mutationOptions } = mutation;
   const mutationKey = mutationOptions.mutationKey ?? ausenciasControllerAprovarMutationKey()
 
-  const baseOptions = ausenciasControllerAprovarMutationOptions(config) as UseMutationOptions<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>
+  const baseOptions = ausenciasControllerAprovarMutationOptions(config) as UseMutationOptions<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus403 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>
 
-  return useMutation<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>({
+  return useMutation<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus403 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>({
     ...baseOptions,
     mutationKey,
     ...mutationOptions,
-  }, queryClient) as UseMutationResult<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>
+  }, queryClient) as UseMutationResult<AusenciasControllerAprovarStatus204, ResponseErrorConfig<AusenciasControllerAprovarStatus400 | AusenciasControllerAprovarStatus403 | AusenciasControllerAprovarStatus404>, AusenciasControllerAprovarOptions, TContext>
 }

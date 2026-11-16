@@ -17,6 +17,10 @@ export const ausenciasControllerAprovarStatus400Schema = z.unknown()
 
 export type AusenciasControllerAprovarStatus400SchemaType = z.infer<typeof ausenciasControllerAprovarStatus400Schema>
 
+export const ausenciasControllerAprovarStatus403Schema = z.unknown()
+
+export type AusenciasControllerAprovarStatus403SchemaType = z.infer<typeof ausenciasControllerAprovarStatus403Schema>
+
 export const ausenciasControllerAprovarStatus404Schema = z.unknown()
 
 export type AusenciasControllerAprovarStatus404SchemaType = z.infer<typeof ausenciasControllerAprovarStatus404Schema>
@@ -25,7 +29,7 @@ export const ausenciasControllerAprovarResponseSchema = ausenciasControllerAprov
 
 export type AusenciasControllerAprovarResponseSchemaType = z.infer<typeof ausenciasControllerAprovarResponseSchema>
 
-export const ausenciasControllerAprovarErrorSchema = z.union([ausenciasControllerAprovarStatus400Schema, ausenciasControllerAprovarStatus404Schema])
+export const ausenciasControllerAprovarErrorSchema = z.union([ausenciasControllerAprovarStatus400Schema, ausenciasControllerAprovarStatus403Schema, ausenciasControllerAprovarStatus404Schema])
 
 export type AusenciasControllerAprovarErrorSchemaType = z.infer<typeof ausenciasControllerAprovarErrorSchema>
 
@@ -47,6 +51,7 @@ export type AusenciasControllerAprovarOptionsSchemaType = z.infer<typeof ausenci
 export const ausenciasControllerAprovarResponsesSchema = z.object({
   '204': ausenciasControllerAprovarStatus204Schema,
   '400': ausenciasControllerAprovarStatus400Schema,
+  '403': ausenciasControllerAprovarStatus403Schema,
   '404': ausenciasControllerAprovarStatus404Schema,
 })
 

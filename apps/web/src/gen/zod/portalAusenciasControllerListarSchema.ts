@@ -4,9 +4,17 @@
 */
 
 import * as z from 'zod'
-import { ausenciaPortalDtoSchema } from './ausenciaPortalDtoSchema'
+import { paginaAusenciasPortalDtoSchema } from './paginaAusenciasPortalDtoSchema'
 
-export const portalAusenciasControllerListarStatus200Schema = z.array(ausenciaPortalDtoSchema)
+export const portalAusenciasControllerListarQueryPaginaSchema = z.int().min(1).optional().default(1)
+
+export type PortalAusenciasControllerListarQueryPaginaSchemaType = z.infer<typeof portalAusenciasControllerListarQueryPaginaSchema>
+
+export const portalAusenciasControllerListarQueryPorPaginaSchema = z.int().min(1).max(100).optional().default(25)
+
+export type PortalAusenciasControllerListarQueryPorPaginaSchemaType = z.infer<typeof portalAusenciasControllerListarQueryPorPaginaSchema>
+
+export const portalAusenciasControllerListarStatus200Schema = paginaAusenciasPortalDtoSchema
 
 export type PortalAusenciasControllerListarStatus200SchemaType = z.infer<typeof portalAusenciasControllerListarStatus200Schema>
 
@@ -22,10 +30,17 @@ export const portalAusenciasControllerListarErrorSchema = portalAusenciasControl
 
 export type PortalAusenciasControllerListarErrorSchemaType = z.infer<typeof portalAusenciasControllerListarErrorSchema>
 
+export const portalAusenciasControllerListarQuerySchema = z.object({
+  pagina: z.int().min(1).optional().default(1),
+  porPagina: z.int().min(1).max(100).optional().default(25),
+})
+
+export type PortalAusenciasControllerListarQuerySchemaType = z.infer<typeof portalAusenciasControllerListarQuerySchema>
+
 export const portalAusenciasControllerListarOptionsSchema = z.object({
   body: z.never().optional(),
   path: z.never().optional(),
-  query: z.never().optional(),
+  query: portalAusenciasControllerListarQuerySchema.optional(),
   headers: z.never().optional(),
 })
 

@@ -4,7 +4,7 @@
 */
 
 import type { RequestConfig, ResponseErrorConfig } from '../.kubb/client'
-import type { AusenciasControllerExcluirOptions, AusenciasControllerExcluirStatus204, AusenciasControllerExcluirStatus404 } from '../types/AusenciasControllerExcluir'
+import type { AusenciasControllerExcluirOptions, AusenciasControllerExcluirStatus204, AusenciasControllerExcluirStatus403, AusenciasControllerExcluirStatus404 } from '../types/AusenciasControllerExcluir'
 import type { UseMutationOptions, UseMutationResult, QueryClient } from '@tanstack/react-query'
 import { ausenciasControllerExcluir } from '../clients/ausenciasControllerExcluir'
 import { mutationOptions, useMutation } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ export const ausenciasControllerExcluirMutationKey = () => [{ url: '/escala/ause
 
 export function ausenciasControllerExcluirMutationOptions<TContext = unknown>(config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
   const mutationKey = ausenciasControllerExcluirMutationKey()
-  return mutationOptions<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>({
+  return mutationOptions<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus403 | AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>({
     mutationKey,
     mutationFn: async({ path }) => {
       return ausenciasControllerExcluir({ ...config, path, throwOnError: true }).unwrap()
@@ -25,18 +25,18 @@ export function ausenciasControllerExcluirMutationOptions<TContext = unknown>(co
  * {@link /escala/ausencias/:id}
  */
 export function useAusenciasControllerExcluir<TContext>(options: {
-  mutation?: UseMutationOptions<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext> & { client?: QueryClient },
+  mutation?: UseMutationOptions<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus403 | AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext> & { client?: QueryClient },
   client?: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>>,
 } = {}) {
   const { mutation = {}, client: config = {} } = options ?? {}
   const { client: queryClient, ...mutationOptions } = mutation;
   const mutationKey = mutationOptions.mutationKey ?? ausenciasControllerExcluirMutationKey()
 
-  const baseOptions = ausenciasControllerExcluirMutationOptions(config) as UseMutationOptions<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>
+  const baseOptions = ausenciasControllerExcluirMutationOptions(config) as UseMutationOptions<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus403 | AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>
 
-  return useMutation<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>({
+  return useMutation<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus403 | AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>({
     ...baseOptions,
     mutationKey,
     ...mutationOptions,
-  }, queryClient) as UseMutationResult<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>
+  }, queryClient) as UseMutationResult<AusenciasControllerExcluirStatus204, ResponseErrorConfig<AusenciasControllerExcluirStatus403 | AusenciasControllerExcluirStatus404>, AusenciasControllerExcluirOptions, TContext>
 }

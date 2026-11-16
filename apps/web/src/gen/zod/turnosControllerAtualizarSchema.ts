@@ -4,15 +4,16 @@
 */
 
 import * as z from 'zod'
+import { avisosTurnoDtoSchema } from './avisosTurnoDtoSchema'
 import { turnoDtoSchema } from './turnoDtoSchema'
 
 export const turnosControllerAtualizarPathIdSchema = z.string()
 
 export type TurnosControllerAtualizarPathIdSchemaType = z.infer<typeof turnosControllerAtualizarPathIdSchema>
 
-export const turnosControllerAtualizarStatus204Schema = z.unknown()
+export const turnosControllerAtualizarStatus200Schema = avisosTurnoDtoSchema
 
-export type TurnosControllerAtualizarStatus204SchemaType = z.infer<typeof turnosControllerAtualizarStatus204Schema>
+export type TurnosControllerAtualizarStatus200SchemaType = z.infer<typeof turnosControllerAtualizarStatus200Schema>
 
 export const turnosControllerAtualizarStatus400Schema = z.unknown()
 
@@ -26,7 +27,7 @@ export const turnosControllerAtualizarStatus409Schema = z.unknown()
 
 export type TurnosControllerAtualizarStatus409SchemaType = z.infer<typeof turnosControllerAtualizarStatus409Schema>
 
-export const turnosControllerAtualizarResponseSchema = turnosControllerAtualizarStatus204Schema
+export const turnosControllerAtualizarResponseSchema = turnosControllerAtualizarStatus200Schema
 
 export type TurnosControllerAtualizarResponseSchemaType = z.infer<typeof turnosControllerAtualizarResponseSchema>
 
@@ -54,7 +55,7 @@ export const turnosControllerAtualizarOptionsSchema = z.object({
 export type TurnosControllerAtualizarOptionsSchemaType = z.infer<typeof turnosControllerAtualizarOptionsSchema>
 
 export const turnosControllerAtualizarResponsesSchema = z.object({
-  '204': turnosControllerAtualizarStatus204Schema,
+  '200': turnosControllerAtualizarStatus200Schema,
   '400': turnosControllerAtualizarStatus400Schema,
   '404': turnosControllerAtualizarStatus404Schema,
   '409': turnosControllerAtualizarStatus409Schema,

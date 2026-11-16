@@ -11,7 +11,7 @@ export const ausenciaDtoSchema = z.object({
   dataFim: z.iso.date().meta({ examples: ['2026-12-10'] }),
   turnoIds: z.array(z.uuid()).optional().describe('Turnos em que vale. Vazio = o dia inteiro.'),
   diasSemana: z.array(z.number()).optional().describe('Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.'),
-  frenteIds: z.array(z.uuid()).optional().describe('Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).'),
+  frenteIds: z.array(z.uuid()).optional().describe('Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: "todas" ou "o dia inteiro" podem virar as frentes ou os turnos do recorte.'),
   observacoes: z.string().max(2000).nullish().describe('Dado de saúde (LGPD): não vai para o histórico.'),
 })
 

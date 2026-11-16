@@ -4,7 +4,7 @@
 */
 
 import type { RequestConfig, ResponseErrorConfig } from '../.kubb/client'
-import type { AusenciasControllerRecusarOptions, AusenciasControllerRecusarStatus204, AusenciasControllerRecusarStatus400, AusenciasControllerRecusarStatus404 } from '../types/AusenciasControllerRecusar'
+import type { AusenciasControllerRecusarOptions, AusenciasControllerRecusarStatus204, AusenciasControllerRecusarStatus400, AusenciasControllerRecusarStatus403, AusenciasControllerRecusarStatus404 } from '../types/AusenciasControllerRecusar'
 import type { UseMutationOptions, UseMutationResult, QueryClient } from '@tanstack/react-query'
 import { ausenciasControllerRecusar } from '../clients/ausenciasControllerRecusar'
 import { mutationOptions, useMutation } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ export const ausenciasControllerRecusarMutationKey = () => [{ url: '/escala/ause
 
 export function ausenciasControllerRecusarMutationOptions<TContext = unknown>(config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
   const mutationKey = ausenciasControllerRecusarMutationKey()
-  return mutationOptions<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>({
+  return mutationOptions<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus403 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>({
     mutationKey,
     mutationFn: async({ path, body }) => {
       return ausenciasControllerRecusar({ ...config, path, body, throwOnError: true }).unwrap()
@@ -25,18 +25,18 @@ export function ausenciasControllerRecusarMutationOptions<TContext = unknown>(co
  * {@link /escala/ausencias/:id/recusar}
  */
 export function useAusenciasControllerRecusar<TContext>(options: {
-  mutation?: UseMutationOptions<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext> & { client?: QueryClient },
+  mutation?: UseMutationOptions<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus403 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext> & { client?: QueryClient },
   client?: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>>,
 } = {}) {
   const { mutation = {}, client: config = {} } = options ?? {}
   const { client: queryClient, ...mutationOptions } = mutation;
   const mutationKey = mutationOptions.mutationKey ?? ausenciasControllerRecusarMutationKey()
 
-  const baseOptions = ausenciasControllerRecusarMutationOptions(config) as UseMutationOptions<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>
+  const baseOptions = ausenciasControllerRecusarMutationOptions(config) as UseMutationOptions<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus403 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>
 
-  return useMutation<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>({
+  return useMutation<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus403 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>({
     ...baseOptions,
     mutationKey,
     ...mutationOptions,
-  }, queryClient) as UseMutationResult<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>
+  }, queryClient) as UseMutationResult<AusenciasControllerRecusarStatus204, ResponseErrorConfig<AusenciasControllerRecusarStatus400 | AusenciasControllerRecusarStatus403 | AusenciasControllerRecusarStatus404>, AusenciasControllerRecusarOptions, TContext>
 }

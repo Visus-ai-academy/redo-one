@@ -43,6 +43,7 @@ export const ocorrenciaDtoSchema = z.object({
   tipoAusenciaCor: z.string().nullable(),
   coberturaDe: vinculoDaCoberturaDtoSchema.nullable().describe('Nesta cobertura: o titular.'),
   cobertoPor: vinculoDaCoberturaDtoSchema.nullable().describe('No titular coberto neste dia: quem cobre.'),
+  doDiaAnterior: z.boolean().describe('Plantão do dia anterior a `de` (`data` = `de` − 1) que ainda está em curso à meia-noite de `de` (vira a meia-noite). A grade da janela não tem coluna para esse dia: use `inicio`/`fim`.'),
 })
 
 export type OcorrenciaDtoSchemaType = z.infer<typeof ocorrenciaDtoSchema>

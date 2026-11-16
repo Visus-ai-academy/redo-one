@@ -127,4 +127,9 @@ export type OcorrenciaDto = {
    * @type object
    */
   cobertoPor: VinculoDaCoberturaDto | null;
+  /**
+   * @description Plantão do dia anterior a `de` (`data` = `de` − 1) que ainda está em curso à meia-noite de `de` (vira a meia-noite). A grade da janela não tem coluna para esse dia: use `inicio`/`fim`.
+   * @type boolean
+   */
+  doDiaAnterior: boolean;
 };

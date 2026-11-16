@@ -13,6 +13,8 @@ export type AusenciasControllerRecusarStatus204 = unknown;
 
 export type AusenciasControllerRecusarStatus400 = unknown;
 
+export type AusenciasControllerRecusarStatus403 = unknown;
+
 export type AusenciasControllerRecusarStatus404 = unknown;
 
 export type AusenciasControllerRecusarBody = RecusarAusenciaDto;
@@ -27,6 +29,7 @@ export type AusenciasControllerRecusarOptions = {
 export type AusenciasControllerRecusarResponses = {
   '204': AusenciasControllerRecusarStatus204;
   '400': AusenciasControllerRecusarStatus400;
+  '403': AusenciasControllerRecusarStatus403;
   '404': AusenciasControllerRecusarStatus404;
 };
 

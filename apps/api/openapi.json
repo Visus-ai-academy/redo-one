@@ -5337,7 +5337,7 @@
             "description": "Período, dias, tipo inativo ou cadastro inexistente."
           },
           "403": {
-            "description": "Médico ou frente fora do recorte da gestora."
+            "description": "Médico, turno ou frente fora do recorte da gestora."
           }
         },
         "tags": [
@@ -5428,7 +5428,7 @@
             "description": "Período, dias, tipo inativo ou cadastro inexistente."
           },
           "403": {
-            "description": "Frente fora do recorte da gestora."
+            "description": "A ausência vale fora do recorte da gestora, ou o novo turno ou frente fica fora dele."
           },
           "404": {
             "description": ""
@@ -5453,6 +5453,9 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "403": {
+            "description": "A ausência vale fora do recorte da gestora."
           },
           "404": {
             "description": ""
@@ -5482,6 +5485,9 @@
           },
           "400": {
             "description": "A solicitação já foi revisada."
+          },
+          "403": {
+            "description": "A ausência vale fora do recorte da gestora."
           },
           "404": {
             "description": ""
@@ -5522,6 +5528,9 @@
           "400": {
             "description": "Sem motivo ou a solicitação já foi revisada."
           },
+          "403": {
+            "description": "A ausência vale fora do recorte da gestora."
+          },
           "404": {
             "description": ""
           }
@@ -5534,17 +5543,36 @@
     "/escala/portal/ausencias": {
       "get": {
         "operationId": "PortalAusenciasController_listar",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "As 60 mais recentes do médico.",
+            "description": "As do médico, mais recentes primeiro.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AusenciaPortalDto"
-                  }
+                  "$ref": "#/components/schemas/PaginaAusenciasPortalDto"
                 }
               }
             }
@@ -5868,8 +5896,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": ""
+          "200": {
+            "description": "Salvo. `avisos` não bloqueiam (ex.: inativado com alocações vigentes).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvisosTurnoDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Horário inválido, ou especialidade ou modalidade inexistente no catálogo."
@@ -10283,16 +10318,20 @@
           "dataInicio"
         ]
       },
-      "PlantaoEmConflitoDto": {
+      "PlantaoDoAvisoDto": {
         "type": "object",
         "properties": {
-          "alocacaoId": {
-            "type": "string",
-            "format": "uuid"
+          "foraDoRecorte": {
+            "type": "boolean",
+            "description": "Plantão fora do recorte da gestora: só a data vem."
           },
           "data": {
             "type": "string",
             "format": "date"
+          },
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
           },
           "turnoId": {
             "type": "string",
@@ -10316,17 +10355,11 @@
           }
         },
         "required": [
-          "alocacaoId",
-          "data",
-          "turnoId",
-          "turnoNome",
-          "frenteId",
-          "frenteRotulo",
-          "inicio",
-          "fim"
+          "foraDoRecorte",
+          "data"
         ]
       },
-      "ConflitoEscalaDto": {
+      "AvisoConflitoDto": {
         "type": "object",
         "properties": {
           "medicoId": {
@@ -10338,13 +10371,14 @@
           },
           "data": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Dia do plantão que começa primeiro."
           },
           "a": {
-            "$ref": "#/components/schemas/PlantaoEmConflitoDto"
+            "$ref": "#/components/schemas/PlantaoDoAvisoDto"
           },
           "b": {
-            "$ref": "#/components/schemas/PlantaoEmConflitoDto"
+            "$ref": "#/components/schemas/PlantaoDoAvisoDto"
           }
         },
         "required": [
@@ -10359,10 +10393,10 @@
         "type": "object",
         "properties": {
           "avisos": {
-            "description": "Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).",
+            "description": "Sobreposições de horário do médico nas próximas 8 semanas, contando o plantão do dia anterior que vira a meia-noite (não bloqueiam). A ponta fora do recorte de quem grava vem só com `foraDoRecorte` e `data`.",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ConflitoEscalaDto"
+              "$ref": "#/components/schemas/AvisoConflitoDto"
             }
           },
           "id": {
@@ -10379,10 +10413,10 @@
         "type": "object",
         "properties": {
           "avisos": {
-            "description": "Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).",
+            "description": "Sobreposições de horário do médico nas próximas 8 semanas, contando o plantão do dia anterior que vira a meia-noite (não bloqueiam). A ponta fora do recorte de quem grava vem só com `foraDoRecorte` e `data`.",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ConflitoEscalaDto"
+              "$ref": "#/components/schemas/AvisoConflitoDto"
             }
           }
         },
@@ -10649,6 +10683,10 @@
                 "$ref": "#/components/schemas/VinculoDaCoberturaDto"
               }
             ]
+          },
+          "doDiaAnterior": {
+            "type": "boolean",
+            "description": "Plantão do dia anterior a `de` (`data` = `de` − 1) que ainda está em curso à meia-noite de `de` (vira a meia-noite). A grade da janela não tem coluna para esse dia: use `inicio`/`fim`."
           }
         },
         "required": [
@@ -10686,7 +10724,80 @@
           "tipoAusenciaNome",
           "tipoAusenciaCor",
           "coberturaDe",
-          "cobertoPor"
+          "cobertoPor",
+          "doDiaAnterior"
+        ]
+      },
+      "PlantaoEmConflitoDto": {
+        "type": "object",
+        "properties": {
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoNome": {
+            "type": "string"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteRotulo": {
+            "type": "string"
+          },
+          "inicio": {
+            "type": "string"
+          },
+          "fim": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "alocacaoId",
+          "data",
+          "turnoId",
+          "turnoNome",
+          "frenteId",
+          "frenteRotulo",
+          "inicio",
+          "fim"
+        ]
+      },
+      "ConflitoEscalaDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoNome": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "a": {
+            "$ref": "#/components/schemas/PlantaoEmConflitoDto"
+          },
+          "b": {
+            "$ref": "#/components/schemas/PlantaoEmConflitoDto"
+          }
+        },
+        "required": [
+          "medicoId",
+          "medicoNome",
+          "data",
+          "a",
+          "b"
         ]
       },
       "OcorrenciasDto": {
@@ -10944,7 +11055,7 @@
             }
           },
           "frenteIds": {
-            "description": "Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).",
+            "description": "Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: \"todas\" ou \"o dia inteiro\" podem virar as frentes ou os turnos do recorte.",
             "type": "array",
             "items": {
               "type": "string",
@@ -11023,7 +11134,7 @@
             }
           },
           "frenteIds": {
-            "description": "Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).",
+            "description": "Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: \"todas\" ou \"o dia inteiro\" podem virar as frentes ou os turnos do recorte.",
             "type": "array",
             "items": {
               "type": "string",
@@ -11145,6 +11256,32 @@
           "motivoRecusa",
           "revisadaEm",
           "criadoEm"
+        ]
+      },
+      "PaginaAusenciasPortalDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AusenciaPortalDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
         ]
       },
       "PedidoAusenciaDto": {
@@ -11509,6 +11646,53 @@
           "modalidadeIds",
           "ordem",
           "ativo"
+        ]
+      },
+      "CodigoAvisoTurno": {
+        "type": "string",
+        "enum": [
+          "turno_inativo_com_alocacoes"
+        ],
+        "description": "`turno_inativo_com_alocacoes`: o turno passou de ativo a inativo com alocações vigentes (sem fim ou com fim de hoje em diante); de hoje em diante elas não geram plantão."
+      },
+      "AvisoTurnoDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "description": "`turno_inativo_com_alocacoes`: o turno passou de ativo a inativo com alocações vigentes (sem fim ou com fim de hoje em diante); de hoje em diante elas não geram plantão.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodigoAvisoTurno"
+              }
+            ]
+          },
+          "mensagem": {
+            "type": "string"
+          },
+          "totalAlocacoes": {
+            "type": "number",
+            "description": "Quantas alocações vigentes o turno tem."
+          }
+        },
+        "required": [
+          "codigo",
+          "mensagem",
+          "totalAlocacoes"
+        ]
+      },
+      "AvisosTurnoDto": {
+        "type": "object",
+        "properties": {
+          "avisos": {
+            "description": "Não bloqueiam; vazio = nada a avisar.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoTurnoDto"
+            }
+          }
+        },
+        "required": [
+          "avisos"
         ]
       },
       "TipoAusenciaItemDto": {

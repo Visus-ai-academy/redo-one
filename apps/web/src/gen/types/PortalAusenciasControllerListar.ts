@@ -3,16 +3,32 @@
 * Do not edit manually.
 */
 
-import type { AusenciaPortalDto } from './AusenciaPortalDto'
+import type { PaginaAusenciasPortalDto } from './PaginaAusenciasPortalDto'
 
-export type PortalAusenciasControllerListarStatus200 = AusenciaPortalDto[];
+export type PortalAusenciasControllerListarQuery = {
+  /**
+   * @minimum 1
+   * @default 1
+   * @type integer | undefined
+   */
+  pagina?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   * @default 25
+   * @type integer | undefined
+   */
+  porPagina?: number;
+};
+
+export type PortalAusenciasControllerListarStatus200 = PaginaAusenciasPortalDto;
 
 export type PortalAusenciasControllerListarStatus403 = unknown;
 
 export type PortalAusenciasControllerListarOptions = {
   body?: never;
   path?: never;
-  query?: never;
+  query?: PortalAusenciasControllerListarQuery;
   headers?: never;
 };
 

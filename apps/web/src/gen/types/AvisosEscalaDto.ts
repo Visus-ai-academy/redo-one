@@ -3,12 +3,12 @@
 * Do not edit manually.
 */
 
-import type { ConflitoEscalaDto } from './ConflitoEscalaDto'
+import type { AvisoConflitoDto } from './AvisoConflitoDto'
 
 export type AvisosEscalaDto = {
   /**
-   * @description Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).
+   * @description Sobreposições de horário do médico nas próximas 8 semanas, contando o plantão do dia anterior que vira a meia-noite (não bloqueiam). A ponta fora do recorte de quem grava vem só com `foraDoRecorte` e `data`.
    * @type array
    */
-  avisos: ConflitoEscalaDto[];
+  avisos: AvisoConflitoDto[];
 };
