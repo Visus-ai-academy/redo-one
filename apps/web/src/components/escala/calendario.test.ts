@@ -51,14 +51,25 @@ describe('janelaDoModo', () => {
     expect(janelaDoModo('semana', '2026-11-18')).toEqual({ de: '2026-11-16', ate: '2026-11-22' });
   });
 
-  it('mês e por médico: o mês inteiro', () => {
-    expect(janelaDoModo('mes', '2026-02-10')).toEqual({ de: '2026-02-01', ate: '2026-02-28' });
+  it('mês: a grade inteira do calendário, com os dias dos meses vizinhos', () => {
+    expect(janelaDoModo('mes', '2026-11-10')).toEqual({ de: '2026-10-26', ate: '2026-12-06' });
+  });
+
+  it('por médico: o mês inteiro', () => {
     expect(janelaDoModo('medico', '2026-12-31')).toEqual({ de: '2026-12-01', ate: '2026-12-31' });
+  });
+
+  it('ausências da semana: como a semana', () => {
+    expect(janelaDoModo('ausencias', '2026-11-18')).toEqual({
+      de: '2026-11-16',
+      ate: '2026-11-22',
+    });
   });
 });
 
 describe('navegar', () => {
-  it('semana anda 7 dias', () => {
+  it('semana (e ausências da semana) anda 7 dias', () => {
+    expect(navegar('ausencias', '2026-11-18', 1)).toBe('2026-11-25');
     expect(navegar('semana', '2026-11-18', 1)).toBe('2026-11-25');
     expect(navegar('semana', '2026-11-18', -1)).toBe('2026-11-11');
   });
@@ -73,6 +84,7 @@ describe('rótulos', () => {
   it('período da semana e do mês', () => {
     expect(rotuloPeriodo('semana', '2026-11-18')).toBe('16/11 a 22/11/2026');
     expect(rotuloPeriodo('mes', '2026-11-18')).toBe('Novembro de 2026');
+    expect(rotuloPeriodo('ausencias', '2026-11-18')).toBe('16/11 a 22/11/2026');
   });
 
   it('dia com a semana abreviada', () => {

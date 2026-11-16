@@ -11,12 +11,19 @@ import {
   type ModoEscala,
 } from '../../../components/escala/calendario';
 import { PaineisEscala, type PainelAberto } from '../../../components/escala/PaineisEscala';
-import { type FiltrosEscala, TelaEscala } from '../../../components/escala/TelaEscala';
+import {
+  type FiltrosEscala,
+  type NomesDoCatalogo,
+  TelaEscala,
+} from '../../../components/escala/TelaEscala';
 import { SemPermissao } from '../../../components/estado/estados';
+import { ausenciasControllerListarQueryOptions } from '../../../gen/hooks/useAusenciasControllerListar';
 import { escopoApiControllerMeuQueryOptions } from '../../../gen/hooks/useEscopoApiControllerMeu';
 import { frentesControllerListarQueryOptions } from '../../../gen/hooks/useFrentesControllerListar';
 import { medicosEscalaControllerObterQueryOptions } from '../../../gen/hooks/useMedicosEscalaControllerObter';
 import { ocorrenciasControllerListarQueryOptions } from '../../../gen/hooks/useOcorrenciasControllerListar';
+import { prioridadesControllerListarQueryOptions } from '../../../gen/hooks/usePrioridadesControllerListar';
+import { subespecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useSubespecialidadesControllerListar';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
 import type { AvisoConflitoDto } from '../../../gen/types/AvisoConflitoDto';
 import { pode } from '../../../lib/permissoes';
@@ -25,21 +32,26 @@ const DIA = /^\d{4}-\d{2}-\d{2}$/;
 const ids = z.array(z.uuid()).min(1).optional().catch(undefined);
 
 const buscaSchema = z.object({
-  modo: z.enum(['semana', 'mes', 'medico']).optional().catch(undefined),
+  modo: z.enum(['semana', 'mes', 'medico', 'ausencias']).optional().catch(undefined),
   agrupar: z.enum(['frente', 'turno']).optional().catch(undefined),
   data: z.string().regex(DIA).optional().catch(undefined),
   medicoId: z.uuid().optional().catch(undefined),
   frenteIds: ids,
   turnoIds: ids,
   busca: z.string().trim().min(1).optional().catch(undefined),
+  pagina: z.coerce.number().int().min(1).optional().catch(undefined),
 });
 type Busca = z.infer<typeof buscaSchema>;
 
 const ATIVOS = { query: { ativo: true, porPagina: 100 } };
 
+/** Ausências por página no modo Ausências da semana. */
+const AUSENCIAS_POR_PAGINA = 20;
+
 /** A consulta das ocorrências do modo; sem médico no Por médico, nada a buscar. */
 function consulta(busca: Busca, hoje: string) {
   const modo: ModoEscala = busca.modo ?? 'semana';
+  if (modo === 'ausencias') return null;
   if (modo === 'medico' && !busca.medicoId) return null;
   return {
     query: {
@@ -49,6 +61,27 @@ function consulta(busca: Busca, hoje: string) {
       ...(busca.turnoIds && { turnoIds: busca.turnoIds }),
     },
   };
+}
+
+/**
+ * As ausências aprovadas da semana: a página da lista no modo Ausências; na semana, até 100 delas,
+ * para o cartão do plantão dizer o período da ausência. Nos outros modos, nada.
+ */
+function consultaAusencias(busca: Busca, hoje: string) {
+  const modo: ModoEscala = busca.modo ?? 'semana';
+  const semana = { ...janelaDoModo(modo, busca.data ?? hoje), situacao: 'aprovada' as const };
+  if (modo === 'ausencias') {
+    return {
+      query: {
+        ...semana,
+        busca: busca.busca,
+        pagina: busca.pagina ?? 1,
+        porPagina: AUSENCIAS_POR_PAGINA,
+      },
+    };
+  }
+  if (modo === 'semana') return { query: { ...semana, porPagina: 100 } };
+  return null;
 }
 
 export const Route = createFileRoute('/_app/escala/')({
@@ -63,6 +96,7 @@ export const Route = createFileRoute('/_app/escala/')({
     // enquanto isso. Esperar aqui seguraria a tela no estado velho até a API responder, e um segundo
     // clique (outra frente no filtro, ▶ de novo) partiria dele e desfaria o primeiro.
     const esperarOcorrencias = Boolean(ocorrencias) && cause !== 'stay';
+    const ausencias = deps.modo === 'ausencias' && consultaAusencias(deps, hojeEmBrasilia());
     await Promise.all([
       queryClient.ensureQueryData(turnosControllerListarQueryOptions(ATIVOS)),
       queryClient.ensureQueryData(frentesControllerListarQueryOptions(ATIVOS)),
@@ -70,6 +104,9 @@ export const Route = createFileRoute('/_app/escala/')({
       esperarOcorrencias &&
         ocorrencias &&
         queryClient.ensureQueryData(ocorrenciasControllerListarQueryOptions(ocorrencias)),
+      ausencias &&
+        cause !== 'stay' &&
+        queryClient.ensureQueryData(ausenciasControllerListarQueryOptions(ausencias)),
     ]);
   },
   head: () => ({ meta: [{ title: 'Escala | One' }] }),
@@ -115,6 +152,32 @@ function Escala() {
   });
   const nomeMedico = nomeNosPlantoes ?? cadastro.data?.nome;
 
+  const opcoesAusencias = consultaAusencias(busca, hoje);
+  const ausencias = useQuery({
+    ...ausenciasControllerListarQueryOptions(opcoesAusencias ?? undefined),
+    enabled: Boolean(opcoesAusencias),
+    placeholderData: keepPreviousData,
+  });
+
+  // Os nomes de prioridades e subespecialidades (para o cartão do plantão) vêm do catálogo.
+  const podeVerCatalogo = pode(sessao, 'catalogo.ver');
+  const prioridades = useQuery({
+    ...prioridadesControllerListarQueryOptions(ATIVOS),
+    enabled: podeVerCatalogo,
+  });
+  const subespecialidades = useQuery({
+    ...subespecialidadesControllerListarQueryOptions(ATIVOS),
+    enabled: podeVerCatalogo,
+  });
+  const catalogo: NomesDoCatalogo = useMemo(
+    () => ({
+      prioridades: new Map((prioridades.data?.itens ?? []).map((p) => [p.id, p.nome])),
+      subespecialidades: new Map((subespecialidades.data?.itens ?? []).map((s) => [s.id, s.nome])),
+    }),
+    [prioridades.data, subespecialidades.data],
+  );
+  const modoAusencias = busca.modo === 'ausencias';
+
   const filtros: FiltrosEscala = {
     ...busca,
     modo: busca.modo ?? 'semana',
@@ -126,7 +189,8 @@ function Escala() {
     (novos: Partial<FiltrosEscala>) =>
       void navigate({
         search: (atual) => {
-          const proxima = { ...atual, ...novos };
+          // Outra semana, modo ou busca volta à primeira página das ausências.
+          const proxima = { ...atual, pagina: undefined, ...novos };
           // O padrão não vai para a URL.
           if (proxima.modo === 'semana') proxima.modo = undefined;
           if (proxima.agrupar === 'frente') proxima.agrupar = undefined;
@@ -156,9 +220,12 @@ function Escala() {
         filtros={filtros}
         hoje={hoje}
         dados={opcoes ? ocorrencias.data : undefined}
-        atualizando={ocorrencias.isPlaceholderData}
+        atualizando={modoAusencias ? ausencias.isPlaceholderData : ocorrencias.isPlaceholderData}
         erro={ocorrencias.isError}
-        onTentarDeNovo={() => void ocorrencias.refetch()}
+        ausencias={opcoesAusencias ? ausencias.data : undefined}
+        erroAusencias={ausencias.isError}
+        catalogo={catalogo}
+        onTentarDeNovo={() => void (modoAusencias ? ausencias.refetch() : ocorrencias.refetch())}
         turnos={turnos}
         frentes={frentes}
         medico={busca.medicoId && nomeMedico ? { valor: busca.medicoId, rotulo: nomeMedico } : null}
@@ -179,7 +246,7 @@ function Escala() {
           frentes={frentes}
           conflitos={ocorrencias.data?.conflitos ?? []}
           podeEditar={podeEditar}
-          podeVerCatalogo={pode(sessao, 'catalogo.ver')}
+          podeVerCatalogo={podeVerCatalogo}
           onAbrir={setPainel}
           onAvisos={setAvisos}
         />

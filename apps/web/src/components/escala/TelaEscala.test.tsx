@@ -93,6 +93,15 @@ describe('TelaEscala', () => {
     expect(screen.queryByRole('link', { name: /Histórico/ })).not.toBeInTheDocument();
   });
 
+  it('a busca aceita espaço ao digitar e manda o texto aparado depois de uma pausa', async () => {
+    const acoes = await montar();
+    const campo = screen.getByRole('searchbox', { name: 'Buscar médico na escala' });
+    await userEvent.type(campo, 'Murilo Si ');
+    expect(campo).toHaveValue('Murilo Si ');
+    await vi.waitFor(() => expect(acoes.onMudar).toHaveBeenLastCalledWith({ busca: 'Murilo Si' }));
+    expect(acoes.onMudar).not.toHaveBeenCalledWith({ busca: 'Murilo' });
+  });
+
   it('a busca de médico filtra os cartões', async () => {
     await montar({
       filtros: { modo: 'semana', agrupar: 'frente', data: '2026-11-18', busca: 'bru' },

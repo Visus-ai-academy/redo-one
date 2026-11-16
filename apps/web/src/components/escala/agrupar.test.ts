@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type AusenciaDaSemana,
   aplicarRecorte,
+  barrasDeAusencia,
   chavesEmConflito,
   contarPorDia,
   descreverPonta,
+  emBlocos,
   filtrarPorMedico,
+  montarCalendarios,
   montarGrade,
   opcoesComInativos,
   resumoDoMedico,
@@ -237,6 +241,158 @@ describe('opcoesComInativos', () => {
     expect(r.frentes).toEqual([
       { valor: 'f-tc', rotulo: 'TC Neuro' },
       { valor: 'f-velha', rotulo: 'Velha (inativa)' },
+    ]);
+  });
+});
+
+describe('montarCalendarios por frente', () => {
+  const { calendarios, legenda } = montarCalendarios({
+    ocorrencias: [
+      ocorrencia({ alocacaoId: 't1', turnoId: 't-tarde', turnoNome: 'Tarde', turnoOrdem: 2 }),
+      ocorrencia({ alocacaoId: 'b', medicoNome: 'Bruno Lima', medicoId: 'm2' }),
+      ocorrencia(),
+      ocorrencia({ data: '2026-11-17' }),
+    ],
+    turnos,
+    frentes,
+    por: 'frente',
+  });
+
+  it('um calendário por frente, com a frente para o "+" e a contagem da semana', () => {
+    expect(calendarios.map((c) => c.rotulo)).toEqual(['TC Neuro', 'RM Geral']);
+    expect(calendarios[0]).toMatchObject({ frenteId: 'f-tc', plantoes: 4, medicos: 2 });
+    expect(calendarios[0]?.turnoId).toBeUndefined();
+    expect(calendarios[1]).toMatchObject({ plantoes: 0, medicos: 0 });
+  });
+
+  it('no dia, uma lista só, pela ordem do turno e depois do nome, com a cor do turno', () => {
+    const dia = calendarios[0]?.porDia['2026-11-16'] ?? [];
+    expect(dia.map((l) => `${l.ocorrencia.turnoNome} ${l.ocorrencia.medicoNome}`)).toEqual([
+      'Manhã Ana Souza',
+      'Manhã Bruno Lima',
+      'Tarde Ana Souza',
+    ]);
+    expect(dia[0]?.cor).toBe('#214037');
+  });
+
+  it('a legenda são os turnos da semana, em ordem', () => {
+    expect(legenda.map((l) => l.rotulo)).toEqual(['Manhã', 'Tarde']);
+    expect(legenda[0]).toMatchObject({ id: 't-manha', cor: '#214037' });
+  });
+});
+
+describe('montarCalendarios por turno', () => {
+  it('um calendário por turno, a cor da frente na linha e a legenda das frentes', () => {
+    const { calendarios, legenda } = montarCalendarios({
+      ocorrencias: [
+        ocorrencia(),
+        ocorrencia({ alocacaoId: 'r', frenteId: 'f-rm', medicoNome: 'Ana' }),
+      ],
+      turnos,
+      frentes,
+      por: 'turno',
+    });
+    expect(calendarios.map((c) => c.rotulo)).toEqual(['Manhã', 'Tarde']);
+    expect(calendarios[0]).toMatchObject({ turnoId: 't-manha', plantoes: 2 });
+    expect(
+      calendarios[0]?.porDia['2026-11-16']?.map((l) => [l.ocorrencia.alocacaoId, l.cor]),
+    ).toEqual([
+      ['a1', '#1F7A4D'],
+      ['r', null],
+    ]);
+    expect(legenda.map((l) => l.rotulo)).toEqual(['TC Neuro', 'RM Geral']);
+  });
+});
+
+describe('barrasDeAusencia', () => {
+  const semana = [
+    '2026-11-16',
+    '2026-11-17',
+    '2026-11-18',
+    '2026-11-19',
+    '2026-11-20',
+    '2026-11-21',
+    '2026-11-22',
+  ];
+  const ausencia = (dados: Partial<AusenciaDaSemana>): AusenciaDaSemana => ({
+    id: 'x1',
+    medico: { id: 'm1', nome: 'Ana Souza' },
+    tipo: { id: 'tp', nome: 'Férias', cor: '#2F6FB2' },
+    dataInicio: '2026-11-10',
+    dataFim: '2026-11-18',
+    diasSemana: [],
+    ...dados,
+  });
+
+  it('uma linha por médico, em ordem de nome; a barra corta no começo da semana', () => {
+    const linhas = barrasDeAusencia(
+      [
+        ausencia({
+          id: 'b',
+          medico: { id: 'm2', nome: 'Bruno' },
+          dataInicio: '2026-11-20',
+          dataFim: '2026-11-30',
+        }),
+        ausencia({}),
+      ],
+      semana,
+    );
+    expect(linhas.map((l) => l.medicoNome)).toEqual(['Ana Souza', 'Bruno']);
+    expect(linhas[0]?.barras).toEqual([
+      {
+        ausenciaId: 'x1',
+        tipoNome: 'Férias',
+        cor: '#2F6FB2',
+        de: 0,
+        ate: 2,
+        dataInicio: '2026-11-10',
+        dataFim: '2026-11-18',
+      },
+    ]);
+    expect(linhas[1]?.barras.map((b) => [b.de, b.ate])).toEqual([[4, 6]]);
+  });
+
+  it('com dias da semana marcados, uma barra por trecho seguido', () => {
+    const linhas = barrasDeAusencia(
+      [ausencia({ dataInicio: '2026-11-01', dataFim: '2026-11-30', diasSemana: [1, 2, 5] })],
+      semana,
+    );
+    expect(linhas[0]?.barras.map((b) => [b.de, b.ate])).toEqual([
+      [0, 1],
+      [4, 4],
+    ]);
+  });
+
+  it('as ausências do mesmo médico ficam na mesma linha; sem dia na semana, não entra', () => {
+    const linhas = barrasDeAusencia(
+      [
+        ausencia({ id: 'a', dataInicio: '2026-11-16', dataFim: '2026-11-16' }),
+        ausencia({ id: 'b', dataInicio: '2026-11-21', dataFim: '2026-11-22' }),
+        ausencia({ id: 'c', medico: { id: 'm3', nome: 'Caio' }, diasSemana: [6] }),
+      ],
+      semana,
+    );
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.barras.map((b) => b.ausenciaId)).toEqual(['a', 'b']);
+  });
+});
+
+describe('emBlocos', () => {
+  it('junta os médicos seguidos do mesmo turno (ou frente) num bloco com a cor dele', () => {
+    const { calendarios } = montarCalendarios({
+      ocorrencias: [
+        ocorrencia({ alocacaoId: 't1', turnoId: 't-tarde', turnoNome: 'Tarde', turnoOrdem: 2 }),
+        ocorrencia({ alocacaoId: 'b', medicoNome: 'Bruno Lima', medicoId: 'm2' }),
+        ocorrencia(),
+      ],
+      turnos,
+      frentes,
+      por: 'frente',
+    });
+    const blocos = emBlocos(calendarios[0]?.porDia['2026-11-16'] ?? []);
+    expect(blocos.map((b) => [b.id, b.cor, b.linhas.map((l) => l.ocorrencia.medicoNome)])).toEqual([
+      ['t-manha', '#214037', ['Ana Souza', 'Bruno Lima']],
+      ['t-tarde', '#214037', ['Ana Souza']],
     ]);
   });
 });

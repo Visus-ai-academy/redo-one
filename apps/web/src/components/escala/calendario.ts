@@ -1,7 +1,10 @@
 // Datas da escala: "AAAA-MM-DD" puras no calendário de Brasília (sem hora nem fuso). A conta é
 // feita em UTC só como aritmética de calendário, como na API.
 
-export type ModoEscala = 'semana' | 'mes' | 'medico';
+export type ModoEscala = 'semana' | 'mes' | 'medico' | 'ausencias';
+
+/** Semana e ausências da semana andam e mostram a semana; mês e por médico, o mês. */
+const ehSemanal = (modo: ModoEscala) => modo === 'semana' || modo === 'ausencias';
 
 const DIA_MS = 86_400_000;
 const paraUtc = (data: string) => Date.parse(`${data}T00:00:00Z`);
@@ -54,16 +57,21 @@ function mudarMes(data: string, passo: number) {
 
 /** Os dias que a tela consulta em cada modo (a API aceita até 62). */
 export function janelaDoModo(modo: ModoEscala, data: string) {
-  if (modo === 'semana') {
+  if (ehSemanal(modo)) {
     const inicio = inicioDaSemana(data);
     return { de: inicio, ate: somarDias(inicio, 6) };
+  }
+  if (modo === 'mes') {
+    // A grade do mês mostra os dias dos meses vizinhos que completam as semanas: vêm junto.
+    const semanas = semanasDoMes(data);
+    return { de: semanas[0]?.[0] as string, ate: semanas.at(-1)?.[6] as string };
   }
   return { de: inicioDoMes(data), ate: fimDoMes(data) };
 }
 
 /** ◀ ▶: uma semana na semana; um mês (no dia 1) no mês e na agenda do médico. */
 export function navegar(modo: ModoEscala, data: string, passo: 1 | -1) {
-  return modo === 'semana' ? somarDias(data, 7 * passo) : mudarMes(data, passo);
+  return ehSemanal(modo) ? somarDias(data, 7 * passo) : mudarMes(data, passo);
 }
 
 const MESES = [
@@ -86,7 +94,7 @@ const diaMes = (data: string) => `${data.slice(8, 10)}/${data.slice(5, 7)}`;
 /** "16/11 a 22/11/2026" na semana; "Novembro de 2026" no mês. */
 export function rotuloPeriodo(modo: ModoEscala, data: string) {
   const { de, ate } = janelaDoModo(modo, data);
-  if (modo === 'semana') return `${diaMes(de)} a ${diaMes(ate)}/${ate.slice(0, 4)}`;
+  if (ehSemanal(modo)) return `${diaMes(de)} a ${diaMes(ate)}/${ate.slice(0, 4)}`;
   return `${MESES[Number(data.slice(5, 7)) - 1]} de ${data.slice(0, 4)}`;
 }
 

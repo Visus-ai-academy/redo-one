@@ -1,7 +1,7 @@
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { PlantaoDoAvisoDto } from '../../gen/types/PlantaoDoAvisoDto';
-import { NOMES_DIAS } from './calendario';
+import { diaDaSemana, NOMES_DIAS } from './calendario';
 
 export type Agrupamento = 'frente' | 'turno';
 
@@ -120,6 +120,156 @@ export function montarGrade({
       };
     })
     .filter((secao) => secao.linhas.length > 0);
+}
+
+/** Um médico no dia do calendário, com a cor da faixa (do turno, por frente; da frente, por turno). */
+export type LinhaDoDia = {
+  ocorrencia: OcorrenciaDto;
+  /** O turno (por frente) ou a frente (por turno) da linha: o que junta os médicos num bloco. */
+  grupo: string;
+  cor: string | null;
+};
+
+export type BlocoDoDia = { id: string; cor: string | null; linhas: LinhaDoDia[] };
+
+/** Os médicos seguidos do mesmo turno (ou frente) num bloco só, com a cor dele. */
+export function emBlocos(linhas: readonly LinhaDoDia[]): BlocoDoDia[] {
+  const blocos: BlocoDoDia[] = [];
+  for (const linha of linhas) {
+    const ultimo = blocos.at(-1);
+    if (ultimo?.id === linha.grupo) ultimo.linhas.push(linha);
+    else blocos.push({ id: linha.grupo, cor: linha.cor, linhas: [linha] });
+  }
+  return blocos;
+}
+
+export type CalendarioDaSemana = {
+  id: string;
+  rotulo: string;
+  cor: string | null;
+  /** O que o "+" do dia já traz: a frente (por frente) ou o turno (por turno). */
+  frenteId?: string;
+  turnoId?: string;
+  /** Médicos-dia na semana e quantos médicos diferentes. */
+  plantoes: number;
+  medicos: number;
+  /** Por dia (`AAAA-MM-DD`): uma lista só, pela ordem das linhas da grade e depois do nome. */
+  porDia: Record<string, LinhaDoDia[]>;
+};
+
+export type ItemDaLegenda = { id: string; rotulo: string; cor: string | null };
+
+/**
+ * A semana em calendários: um por frente (ou por turno), cada dia com uma lista só de médicos.
+ * Sai da mesma grade de pares turno × frente, para não perder plantão nem o "+" em dia vazio.
+ * A legenda é o que pinta as faixas: os turnos (por frente) ou as frentes (por turno).
+ */
+export function montarCalendarios(entrada: {
+  ocorrencias: readonly OcorrenciaDto[];
+  turnos: readonly TurnoDaGrade[];
+  frentes: readonly FrenteDaGrade[];
+  por: Agrupamento;
+}): { calendarios: CalendarioDaSemana[]; legenda: ItemDaLegenda[] } {
+  const legenda = new Map<string, ItemDaLegenda>();
+  const calendarios = montarGrade(entrada).map((secao) => {
+    const porDia: Record<string, LinhaDoDia[]> = {};
+    const medicos = new Set<string>();
+    let plantoes = 0;
+    for (const linha of secao.linhas) {
+      if (!legenda.has(linha.id)) {
+        legenda.set(linha.id, { id: linha.id, rotulo: linha.rotulo, cor: linha.cor });
+      }
+      for (const [dia, lista] of Object.entries(linha.porDia)) {
+        for (const o of lista) {
+          porDia[dia] = [
+            ...(porDia[dia] ?? []),
+            { ocorrencia: o, grupo: linha.id, cor: linha.cor },
+          ];
+          medicos.add(o.medicoId);
+          plantoes += 1;
+        }
+      }
+    }
+    return {
+      id: secao.id,
+      rotulo: secao.rotulo,
+      cor: secao.cor,
+      ...(entrada.por === 'frente' ? { frenteId: secao.id } : { turnoId: secao.id }),
+      plantoes,
+      medicos: medicos.size,
+      porDia,
+    };
+  });
+  return { calendarios, legenda: [...legenda.values()] };
+}
+
+/** O que o modo "Ausências da semana" precisa de uma ausência aprovada. */
+export type AusenciaDaSemana = {
+  id: string;
+  medico: { id: string; nome: string };
+  tipo: { id: string; nome: string; cor: string | null };
+  dataInicio: string;
+  dataFim: string;
+  /** Vazio: todos os dias do período. */
+  diasSemana: number[];
+};
+
+export type BarraDeAusencia = {
+  ausenciaId: string;
+  tipoNome: string;
+  cor: string | null;
+  /** Colunas da semana (0 = segunda) onde a barra começa e termina. */
+  de: number;
+  ate: number;
+  dataInicio: string;
+  dataFim: string;
+};
+
+export type LinhaDeAusencia = { medicoId: string; medicoNome: string; barras: BarraDeAusencia[] };
+
+/**
+ * "Ausências da semana": uma linha por médico, com uma barra por trecho seguido de dias em que ele
+ * está ausente na semana (dentro do período e nos dias da semana marcados).
+ */
+export function barrasDeAusencia(
+  ausencias: readonly AusenciaDaSemana[],
+  dias: readonly string[],
+): LinhaDeAusencia[] {
+  const linhas = new Map<string, LinhaDeAusencia>();
+  for (const a of ausencias) {
+    const ausenteEm = dias.map(
+      (dia) =>
+        dia >= a.dataInicio &&
+        dia <= a.dataFim &&
+        (a.diasSemana.length === 0 || a.diasSemana.includes(diaDaSemana(dia))),
+    );
+    const barras: BarraDeAusencia[] = [];
+    ausenteEm.forEach((ausente, i) => {
+      if (!ausente) return;
+      const ultima = barras.at(-1);
+      if (ultima && ultima.ate === i - 1) ultima.ate = i;
+      else
+        barras.push({
+          ausenciaId: a.id,
+          tipoNome: a.tipo.nome,
+          cor: a.tipo.cor,
+          de: i,
+          ate: i,
+          dataInicio: a.dataInicio,
+          dataFim: a.dataFim,
+        });
+    });
+    if (barras.length === 0) continue;
+    const linha = linhas.get(a.medico.id) ?? {
+      medicoId: a.medico.id,
+      medicoNome: a.medico.nome,
+      barras: [],
+    };
+    linha.barras.push(...barras);
+    linhas.set(a.medico.id, linha);
+  }
+  for (const linha of linhas.values()) linha.barras.sort((x, y) => x.de - y.de);
+  return [...linhas.values()].sort((x, y) => x.medicoNome.localeCompare(y.medicoNome));
 }
 
 const semAcento = (texto: string) =>

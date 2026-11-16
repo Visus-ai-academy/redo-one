@@ -13,7 +13,10 @@ const tons: Record<TomEtiqueta, string> = {
   inativo: 'bg-inactive-soft text-inactive',
 };
 
-/** Status pequeno em pílula: fundo claro + texto escuro da mesma matiz, sempre com texto (e ícone). */
+/**
+ * Status pequeno em pílula: fundo claro + texto escuro da mesma matiz, sempre com texto (e ícone).
+ * Em espaço apertado, encolhe e corta o texto com reticências; o texto inteiro fica no `title`.
+ */
 export function Etiqueta({
   tom,
   icone: Icone,
@@ -25,13 +28,14 @@ export function Etiqueta({
 }) {
   return (
     <span
+      title={typeof children === 'string' ? children : undefined}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap',
+        'inline-flex max-w-full min-w-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap',
         tons[tom],
       )}
     >
-      {Icone && <Icone size={14} aria-hidden />}
-      {children}
+      {Icone && <Icone size={14} aria-hidden className="flex-none" />}
+      <span className="truncate">{children}</span>
     </span>
   );
 }
