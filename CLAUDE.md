@@ -115,6 +115,7 @@ pnpm add --save-exact <pacote> --filter @repo/web
 
 Enquanto o One estiver em reconstrução:
 
+- **Consulte `docs/melhorias-vs-legado.md`** antes de implementar qualquer coisa que venha do dashboards-one: ele lista os problemas do legado, o que muda no redo-one, as regras já corrigidas lá e as pendências de cada contexto.
 - **Valide toda regra de negócio no sistema antigo** antes de implementar: `../dashboards-one` (app) e `../rpa-dashboards-one` (robôs). Confira o cálculo, os casos de borda e os números com dados reais; os testes devem cobrir os casos encontrados lá. Se o legado divergir do que foi pedido ou parecer errado, aponte a divergência e pergunte antes de seguir, sem copiar o erro nem "corrigir" por conta própria.
 - **Nada de regra de negócio fixa no código.** No legado, regras como as do robô de distribuição ficavam hardcoded, e qualquer ajuste exigia editar código e fazer deploy. No One, parâmetros e regras que o negócio muda (prioridades, limites, pesos, prazos, exceções por cliente, médico, exame ou especialidade, horários etc.) ficam no banco, editáveis por tela com permissão e auditoria. O código implementa o mecanismo; os valores e as combinações vêm da configuração. Constante no código só para o que é invariante do domínio (ex.: a fórmula da competência). Na dúvida se algo é configurável, pergunte.
 
