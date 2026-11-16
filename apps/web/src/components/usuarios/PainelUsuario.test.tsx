@@ -2,6 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { escopoApiControllerObter } from '../../gen/clients/escopoApiControllerObter';
+import { sessaoControllerAtual } from '../../gen/clients/sessaoControllerAtual';
 import { usuariosControllerDesativar } from '../../gen/clients/usuariosControllerDesativar';
 import { usuariosControllerDesbloquear } from '../../gen/clients/usuariosControllerDesbloquear';
 import { usuariosControllerEncerrarSessao } from '../../gen/clients/usuariosControllerEncerrarSessao';
@@ -18,6 +20,8 @@ import { renderComRotas } from '../../test/render';
 import { PainelUsuario, type PainelUsuarioProps } from './PainelUsuario';
 
 vi.mock('../../gen/clients/usuariosControllerTrocarPapel');
+vi.mock('../../gen/clients/sessaoControllerAtual');
+vi.mock('../../gen/clients/escopoApiControllerObter');
 vi.mock('../../gen/clients/usuariosControllerDesbloquear');
 vi.mock('../../gen/clients/usuariosControllerEnviarLinkSenha');
 vi.mock('../../gen/clients/usuariosControllerReenviarConvite');
@@ -34,6 +38,19 @@ const encerrarSessao = vi.mocked(usuariosControllerEncerrarSessao);
 const encerrarSessoes = vi.mocked(usuariosControllerEncerrarSessoes);
 const desativar = vi.mocked(usuariosControllerDesativar);
 const reativar = vi.mocked(usuariosControllerReativar);
+const sessaoAtual = vi.mocked(sessaoControllerAtual);
+const obterEscopo = vi.mocked(escopoApiControllerObter);
+
+/** Quem está logado, com estas permissões. */
+const logado = (permissoes: string[]) =>
+  sessaoAtual.mockReturnValue({
+    unwrap: async () => ({
+      usuario: { id: 'u-carlos', nome: 'Carlos', email: 'carlos@empresa.com.br', papelId: 'p' },
+      expiraEm: '2026-11-15T00:00:00.000Z',
+      acessoTotal: false,
+      permissoes,
+    }),
+  } as never);
 
 const TODAS = { editar: true, desbloquear: true, desativar: true, convidar: true };
 
@@ -102,6 +119,35 @@ describe('PainelUsuario', () => {
       mock.mockReset();
       mock.mockReturnValue({ unwrap: async () => undefined } as never);
     }
+    logado(['usuarios.ver']);
+    obterEscopo.mockReset();
+    obterEscopo.mockReturnValue({
+      unwrap: async () => ({
+        turnoIds: ['t-manha'],
+        frenteIds: [],
+        turnos: [{ id: 't-manha', nome: 'Manhã' }],
+        frentes: [],
+      }),
+    } as never);
+  });
+
+  it('mostra o recorte da escala da pessoa', async () => {
+    montar();
+
+    const recorte = await screen.findByRole('region', { name: 'Recorte da escala' });
+    expect(await within(recorte).findByRole('list', { name: 'Turnos' })).toHaveTextContent('Manhã');
+    expect(obterEscopo).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { usuarioId: 'u-maria' } }),
+    );
+  });
+
+  it('com a permissão do recorte mas sem ver a escala, o recorte fica só para leitura', async () => {
+    logado(['usuarios.ver', 'usuarios.escopo-escala.editar']);
+    montar();
+
+    const recorte = await screen.findByRole('region', { name: 'Recorte da escala' });
+    expect(await within(recorte).findByText('Manhã')).toBeVisible();
+    expect(within(recorte).queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('mostra quem é, a situação, o último acesso, o CPF mascarado e quando foi convidada', async () => {

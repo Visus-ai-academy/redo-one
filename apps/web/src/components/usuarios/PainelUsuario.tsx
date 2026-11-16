@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { DeviceMobile, Monitor } from '@phosphor-icons/react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type ReactNode, useId, useState } from 'react';
 import { useUsuariosControllerDesativar } from '../../gen/hooks/useUsuariosControllerDesativar';
@@ -19,6 +19,8 @@ import { descreverAparelho, ipParcial } from '../../lib/aparelho';
 import { cn } from '../../lib/cn';
 import { cpfMascarado } from '../../lib/cpf';
 import { dataDeBrasilia, dataHoraCurta } from '../../lib/datas';
+import { pode } from '../../lib/permissoes';
+import { sessaoQueryOptions } from '../../lib/sessao';
 import { Alerta } from '../alerta/Alerta';
 import { Avatar } from '../avatar/Avatar';
 import { buttonClassName } from '../button/button-class';
@@ -30,6 +32,7 @@ import { PainelLateral } from '../painel/PainelLateral';
 import { Select } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
+import { RecorteEscala } from './RecorteEscala';
 
 export type PermissoesUsuarios = {
   /** usuarios.editar: trocar papel, link de nova senha, encerrar sessões. */
@@ -138,6 +141,8 @@ export function PainelUsuario({
           proprio={proprio}
         />
 
+        <RecorteDaPessoa usuarioId={usuario.id} proprio={proprio} />
+
         {(podeConviteOuLink || podeDesativar) && (
           <div className="flex flex-wrap gap-2 border-t pt-4">
             {podeConviteOuLink &&
@@ -200,6 +205,25 @@ export function PainelUsuario({
         )}
       </div>
     </PainelLateral>
+  );
+}
+
+/**
+ * O recorte da escala da pessoa. As permissões da escala vêm da sessão (já em cache pelo layout),
+ * não de `permissoes`: são de outro contexto e só esta seção as usa.
+ */
+function RecorteDaPessoa({ usuarioId, proprio }: { usuarioId: string; proprio: boolean }) {
+  const { data: sessao } = useQuery(sessaoQueryOptions());
+  if (!sessao) return null;
+  return (
+    <div className="border-t pt-4">
+      <RecorteEscala
+        usuarioId={usuarioId}
+        proprio={proprio}
+        podeEditar={pode(sessao, 'usuarios.escopo-escala.editar')}
+        podeVerCadastros={pode(sessao, 'escala.ver')}
+      />
+    </div>
   );
 }
 
