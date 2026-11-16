@@ -61,6 +61,17 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     ],
   },
   {
+    tela: 'importacao',
+    rotulo: 'Importação de laudos',
+    area: 'Operação',
+    acoes: [
+      ver('importacao'),
+      { chave: 'importacao.enviar', rotulo: 'Enviar planilha' },
+      // A trava contra arquivo truncado e a retenção da linha crua (dado de saúde).
+      { chave: 'importacao.parametros.editar', rotulo: 'Editar parâmetros', sensivel: true },
+    ],
+  },
+  {
     tela: 'escala',
     rotulo: 'Escala médica',
     area: 'Operação',
@@ -96,6 +107,12 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
       // Regras de quebra e valores fora do padrão decidem a quantidade faturada.
       { chave: 'exames.editar', rotulo: 'Editar', sensivel: true },
     ],
+  },
+  {
+    tela: 'avisos',
+    rotulo: 'Avisos de cadastro',
+    area: 'Cadastros',
+    acoes: [ver('avisos'), { chave: 'avisos.triar', rotulo: 'Ignorar e reabrir' }],
   },
   {
     tela: 'faturamento',

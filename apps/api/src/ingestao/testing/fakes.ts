@@ -1,3 +1,4 @@
+import type { ArquivoIngestao, ArquivosRepository } from '../application/ports/arquivos.repository';
 import type { AvisosCadastroRepository } from '../application/ports/avisos-cadastro.repository';
 import type {
   ImportacoesRepository,
@@ -20,8 +21,18 @@ export class ImportacoesEmMemoria implements ImportacoesRepository {
     { arquivoChave: string; status: Status; resultado?: ResultadoImportacao }
   >();
 
+  constructor(private readonly arquivos?: ArquivosEmMemoria) {}
+
   criar(id: string, arquivoChave = `ingestao/${id}.xlsx`) {
     this.itens.set(id, { arquivoChave, status: 'na_fila' });
+  }
+
+  async criarNaFila(dados: { arquivoId: string; enviadaPorId: string; agora: Date }) {
+    const arquivo = this.arquivos?.itens.get(dados.arquivoId);
+    if (arquivo) arquivo.enviadoEm = dados.agora;
+    const id = crypto.randomUUID();
+    this.criar(id, arquivo?.chave);
+    return id;
   }
 
   async iniciar(id: string) {
@@ -96,5 +107,24 @@ export class AvisosEmMemoria implements AvisosCadastroRepository {
     conferidos: { tipo: string; chave: string }[],
   ) {
     this.chamadas.push({ pendencias, conferidos });
+  }
+}
+
+export class ArquivosEmMemoria implements ArquivosRepository {
+  readonly itens = new Map<string, ArquivoIngestao>();
+
+  async criar(dados: {
+    chave: string;
+    nomeOriginal: string;
+    tamanhoBytes: number;
+    criadoPorId: string;
+  }) {
+    const id = crypto.randomUUID();
+    this.itens.set(id, { id, ...dados, enviadoEm: null });
+    return id;
+  }
+
+  async obter(id: string) {
+    return this.itens.get(id) ?? null;
   }
 }

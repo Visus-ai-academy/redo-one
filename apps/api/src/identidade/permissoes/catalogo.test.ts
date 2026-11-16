@@ -28,6 +28,18 @@ describe('catálogo de permissões', () => {
     expect(areas).toEqual(['Configurações', 'Configurações']);
   });
 
+  it('tem a importação (Operação), com os parâmetros como ação sensível, e os avisos (Cadastros)', () => {
+    const tela = (nome: string) => CATALOGO_PERMISSOES.find((t) => t.tela === nome);
+    expect(tela('importacao')?.area).toBe('Operação');
+    expect(tela('importacao')?.acoes.map((a) => [a.chave, a.sensivel ?? false])).toEqual([
+      ['importacao.ver', false],
+      ['importacao.enviar', false],
+      ['importacao.parametros.editar', true],
+    ]);
+    expect(tela('avisos')?.area).toBe('Cadastros');
+    expect(tela('avisos')?.acoes.map((a) => a.chave)).toEqual(['avisos.ver', 'avisos.triar']);
+  });
+
   it('normaliza: acrescenta o ver da tela, tira repetição e ordena', () => {
     expect(
       normalizarPermissoes([

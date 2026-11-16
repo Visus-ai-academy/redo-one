@@ -26,6 +26,11 @@ export interface ResultadoImportacao {
 
 export interface ImportacoesRepository {
   /**
+   * Marca o arquivo como enviado, cria a importação na fila e enfileira o job, tudo na mesma
+   * transação. Devolve o id da importação.
+   */
+  criarNaFila(dados: { arquivoId: string; enviadaPorId: string; agora: Date }): Promise<string>;
+  /**
    * Marca como "processando" a importação na fila (ou que ficou em processamento, numa
    * retentativa). `null` se ela já terminou: o job não faz nada (idempotente).
    */

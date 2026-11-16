@@ -7,6 +7,10 @@ import {
 } from '../comum/armazenamento/armazenamento-arquivos';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import {
+  ARQUIVOS_REPOSITORY,
+  type ArquivosRepository,
+} from './application/ports/arquivos.repository';
+import {
   AVISOS_CADASTRO_REPOSITORY,
   type AvisosCadastroRepository,
 } from './application/ports/avisos-cadastro.repository';
@@ -33,8 +37,12 @@ import {
   type ParametrosIngestaoRepository,
 } from './application/ports/parametros-ingestao.repository';
 import { PSEUDONIMIZADOR, type Pseudonimizador } from './application/ports/pseudonimizador';
+import { TAREFA_EXPURGAR_LINHAS_BRUTAS, TAREFA_IMPORTAR_LAUDOS } from './application/tarefas';
+import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
+import { ImportacoesController } from './infrastructure/http/importacoes.controller';
+import { DrizzleArquivosRepository } from './infrastructure/persistence/drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './infrastructure/persistence/drizzle-avisos-cadastro.repository';
 import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-cadastros-ingestao';
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
@@ -45,18 +53,26 @@ import { SemCompetenciasBloqueadas } from './infrastructure/persistence/sem-comp
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
 import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
-/** Tarefa da fila que processa uma importação; payload `{ importacaoId }`. */
-export const TAREFA_IMPORTAR_LAUDOS = 'ingestao.importar';
-
-/** Tarefa diária que apaga as linhas cruas da planilha vencidas pela retenção. */
-export const TAREFA_EXPURGAR_LINHAS_BRUTAS = 'ingestao.expurgar-linhas-brutas';
-
-/** Fila própria: uma importação por vez, na ordem em que chegaram. */
-export const FILA_INGESTAO = 'ingestao';
-
 /** Contexto `ingestao` (hexagonal): importação dos laudos da MobileMed. */
 @Module({
+  controllers: [ImportacoesController],
   providers: [
+    { provide: ARQUIVOS_REPOSITORY, useClass: DrizzleArquivosRepository },
+    {
+      provide: PrepararEnvio,
+      inject: [ARQUIVOS_REPOSITORY, ARMAZENAMENTO_ARQUIVOS],
+      useFactory: (arquivos: ArquivosRepository, armazenamento: ArmazenamentoArquivos) =>
+        new PrepararEnvio(arquivos, armazenamento, () => new Date()),
+    },
+    {
+      provide: ConfirmarEnvio,
+      inject: [ARQUIVOS_REPOSITORY, IMPORTACOES_REPOSITORY, ARMAZENAMENTO_ARQUIVOS],
+      useFactory: (
+        arquivos: ArquivosRepository,
+        importacoes: ImportacoesRepository,
+        armazenamento: ArmazenamentoArquivos,
+      ) => new ConfirmarEnvio(arquivos, importacoes, armazenamento, () => new Date()),
+    },
     { provide: IMPORTACOES_REPOSITORY, useClass: DrizzleImportacoesRepository },
     { provide: LAUDOS_REPOSITORY, useClass: DrizzleLaudosRepository },
     { provide: AVISOS_CADASTRO_REPOSITORY, useClass: DrizzleAvisosCadastroRepository },

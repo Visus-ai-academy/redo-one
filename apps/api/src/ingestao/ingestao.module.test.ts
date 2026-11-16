@@ -5,12 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { ComumModule } from '../comum/comum.module';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { DatabaseModule } from '../database/database.module';
+import { TAREFA_EXPURGAR_LINHAS_BRUTAS, TAREFA_IMPORTAR_LAUDOS } from './application/tarefas';
+import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
-import {
-  IngestaoModule,
-  TAREFA_EXPURGAR_LINHAS_BRUTAS,
-  TAREFA_IMPORTAR_LAUDOS,
-} from './ingestao.module';
+import { ImportacoesController } from './infrastructure/http/importacoes.controller';
+import { IngestaoModule } from './ingestao.module';
 
 describe('IngestaoModule', () => {
   it('monta o caso de uso e registra a tarefa ingestao.importar na fila', async () => {
@@ -25,6 +24,9 @@ describe('IngestaoModule', () => {
     await modulo.init();
 
     expect(modulo.get(ImportarLaudos)).toBeInstanceOf(ImportarLaudos);
+    expect(modulo.get(PrepararEnvio)).toBeInstanceOf(PrepararEnvio);
+    expect(modulo.get(ConfirmarEnvio)).toBeInstanceOf(ConfirmarEnvio);
+    expect(modulo.get(ImportacoesController)).toBeInstanceOf(ImportacoesController);
     expect(Object.keys(modulo.get(RegistroTarefas).listar())).toContain(TAREFA_IMPORTAR_LAUDOS);
     expect(modulo.get(RegistroTarefas).agenda()).toContain(
       `0 4 * * * ${TAREFA_EXPURGAR_LINHAS_BRUTAS}`,

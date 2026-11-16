@@ -3,11 +3,13 @@ import { resolve } from 'node:path';
 import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
+
+import { DrizzleArquivosRepository } from './drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './drizzle-avisos-cadastro.repository';
 import { DrizzleImportacoesRepository } from './drizzle-importacoes.repository';
 import { DrizzleParametrosIngestaoRepository } from './drizzle-parametros-ingestao.repository';
@@ -24,12 +26,26 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../../drizzle') });
+    await runMigrations({ pgPool: pool });
   });
+
+  const criarUsuario = async () => {
+    const [papel] = await db
+      .insert(schema.papeis)
+      .values({ nome: `Teste ${Math.random()}` })
+      .returning();
+    const [usuario] = await db
+      .insert(schema.usuarios)
+      .values({ nome: 'Maria', email: `maria${Math.random()}@teste.com`, papelId: papel?.id ?? '' })
+      .returning();
+    return usuario?.id ?? '';
+  };
 
   beforeEach(async () => {
     await db.execute(
       sql`truncate table avisos_cadastro, importacoes, arquivos, parametros_ingestao cascade`,
     );
+    await db.execute(sql`delete from graphile_worker._private_jobs`);
     const [arquivo] = await db
       .insert(schema.arquivos)
       .values({
@@ -50,7 +66,80 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
     await pool.end();
   });
 
+  describe('DrizzleArquivosRepository', () => {
+    it('cria e lê o arquivo da ingestão, sem achar o de outro contexto', async () => {
+      const repo = new DrizzleArquivosRepository(db);
+      const usuarioId = await criarUsuario();
+
+      const id = await repo.criar({
+        chave: 'ingestao/b.xlsx',
+        nomeOriginal: 'laudos.xlsx',
+        tipoConteudo: 'x',
+        tamanhoBytes: 10,
+        criadoPorId: usuarioId,
+      });
+
+      expect(await repo.obter(id)).toEqual({
+        id,
+        chave: 'ingestao/b.xlsx',
+        nomeOriginal: 'laudos.xlsx',
+        tamanhoBytes: 10,
+        criadoPorId: usuarioId,
+        enviadoEm: null,
+      });
+      const [outro] = await db
+        .insert(schema.arquivos)
+        .values({
+          chave: 'contratos/c.pdf',
+          nomeOriginal: 'c.pdf',
+          tipoConteudo: 'x',
+          contexto: 'contratos',
+        })
+        .returning();
+      expect(await repo.obter(outro?.id ?? '')).toBeNull();
+    });
+  });
+
   describe('DrizzleImportacoesRepository', () => {
+    it('criarNaFila marca o arquivo, cria a importação e enfileira o job na fila da ingestão', async () => {
+      const repo = new DrizzleImportacoesRepository(db);
+      const usuarioId = await criarUsuario();
+      const [arquivo] = await db
+        .insert(schema.arquivos)
+        .values({
+          chave: 'ingestao/n.xlsx',
+          nomeOriginal: 'n.xlsx',
+          tipoConteudo: 'x',
+          contexto: 'ingestao',
+        })
+        .returning();
+
+      const id = await repo.criarNaFila({
+        arquivoId: arquivo?.id ?? '',
+        enviadaPorId: usuarioId,
+        agora,
+      });
+
+      const [importacao] = await db
+        .select()
+        .from(schema.importacoes)
+        .where(eq(schema.importacoes.id, id));
+      expect(importacao).toMatchObject({
+        status: 'na_fila',
+        origem: 'upload_manual',
+        enviadaPorId: usuarioId,
+      });
+      const [enviado] = await db
+        .select()
+        .from(schema.arquivos)
+        .where(eq(schema.arquivos.id, arquivo?.id ?? ''));
+      expect(enviado?.enviadoEm).toEqual(agora);
+      const jobs = await db.execute<{ task_identifier: string; queue_name: string }>(
+        sql`select task_identifier, queue_name from graphile_worker.jobs where task_identifier = 'ingestao.importar'`,
+      );
+      expect(jobs.rows).toEqual([{ task_identifier: 'ingestao.importar', queue_name: 'ingestao' }]);
+    });
+
     it('inicia a importação na fila com a chave do arquivo, e de novo numa retentativa', async () => {
       const repo = new DrizzleImportacoesRepository(db);
 
