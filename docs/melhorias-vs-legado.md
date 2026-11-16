@@ -54,7 +54,7 @@
 | Médico criado com senha padrão (`Mudar@123`) | Primeiro acesso por convite (7 dias), feito no painel do médico | Feito / Decidido | 13/11 · b42fd822; 14/11 · 78757306 |
 | Permissões concedidas por script em produção, uma a uma, conforme o usuário esbarrava | Papéis editáveis por tela, permissões `tela.ação` de um catálogo único | Feito | 09–10/11 · 5693887a, 70f6e884; 14/11 · 39b43759 |
 | Papéis feitos por pessoa, sem equivalência entre eles | Papéis por função | Ideia | 12/11 · 82c4002f |
-| Recorte da gestora de escala aplicado em só 2 rotas | RBAC com recortes por atributo aplicados de forma consistente | Pendente (módulos `medicos` e `escala`) | 13/11 · 54a72938 |
+| Recorte da gestora de escala aplicado em só 2 rotas | RBAC com recortes por atributo aplicados de forma consistente | Feito (escala) / Pendente (`medicos`) | 13/11 · 54a72938 |
 | Só a escala era auditada; catálogo sem auditoria apesar de decidir preço | Auditoria única nas entidades críticas, incluindo todo o catálogo e a leitura dos dados de pagamento do médico | Feito (catálogo e médicos) | 13/11 · 54a72938; 14/11 · 78757306 |
 | Dados de paciente espalhados | LGPD: paciente como HMAC, nada pessoal em logs nem enviado à OpenAI | Decidido | 13/11 · 54a72938 |
 | Credenciais de integração em tela | Credenciais de saída só no `.env`; sem tela de chaves dos robôs | Decidido | 14/11 · 39b43759, 78757306 |
@@ -142,10 +142,20 @@
 
 | Problema no dashboards-one | No redo-one | Status | Fonte |
 | --- | --- | --- | --- |
-| Ausência só por dia inteiro e sem recorrência | Ausência de um turno e recorrente por dia da semana, também no modal de Ausências e no portal do médico | Regra do legado / Pendente | 11/11 · 976a7d32, 6088a72d |
-| Não dava para escalar médico sem arranjo | Escalar sem arranjo prévio | Regra do legado | 09/11 · e5f67abe |
-| Log das alocações só para o ADMIN | Histórico da escala visível para quem gere a escala | Ideia | 05/11 · 78bfa637 |
-| "Escala › Configurações" sem efeito | Remover | Ideia | 13/11 · 54a72938 |
+| Ausência só por dia inteiro e sem recorrência | Ausência por escala, por turno ou dia inteiro e recorrente por dia da semana, num formulário único (vários médicos de uma vez) nas Ausências e no "Definir ausência" da escala; o portal pede com turno e dias | Feito (API do portal feita; tela do portal com o portal) | 11/11 · 976a7d32, 6088a72d; 16/11 · 6b9cff3f |
+| Não dava para escalar médico sem arranjo | Escalar sem arranjo prévio | Feito | 09/11 · e5f67abe; 16/11 · 6b9cff3f |
+| Log das alocações só para o ADMIN | Histórico da escala com permissão própria (`escala.historico.ver`), filtrado pelo recorte, com nomes no lugar dos ids e as cascatas (coberturas e ajustes) registradas | Feito | 05/11 · 78bfa637; 16/11 · 6b9cff3f |
+| "Escala › Configurações" sem efeito | Removida; Configurações › Escala tem só Turnos e Tipos de ausência | Feito | 13/11 · 54a72938; 16/11 · 6b9cff3f |
+| Recorte da gestora em arrays sem FK, sem tela, aplicado só nas Visões (Ausências, contador e histórico mostravam tudo) | `usuarios_escopos_escala` com FK, editável no painel do usuário (não o próprio), aplicado na API em ocorrências, alocações, ausências, contador e histórico | Feito | 13/11 · 54a72938; 16/11 · 6b9cff3f |
+| Especialidade fazendo papel de modalidade na escala (TC, RX, DO, D.O, MG) | Frente = especialidade ou modalidade do catálogo, sem cadastro próprio; criada sozinha quando um turno a usa; D.O e DO viram DO, MAMO vira MAMA | Feito | 15/11 · 78757306; 16/11 · 6b9cff3f |
+| Duas telas editando a mesma alocação (Visões e o passo Escalas do médico) | Só a tela Escala edita; o painel do médico mostra um resumo com link | Feito | 16/11 · 6b9cff3f |
+| Semanal e Por escala eram a mesma consulta | Semana agrupada por frente ou por turno, mais Mês e Por médico | Feito | 16/11 · 6b9cff3f |
+| Tipos de ausência e gravidade fixos no código | Cadastro editável (gravidade, só o gestor lança, conta como falta) | Feito | 16/11 · 6b9cff3f |
+| Médico, turno e frente inativos continuavam gerando plantão; encerrar o titular não encerrava a cobertura; cobertura com recorte copiado e defasado | Inativo não gera ocorrência; a cobertura segue o titular (dias, recortes, vigência) na hora da expansão; vigentes de médico inativo encerrados na carga | Feito | 16/11 · 6b9cff3f |
+| Aprovar/recusar sem conferir a situação; mudar horário do turno sem revalidar; ajuste do dia em dia sem plantão | Aprovar e recusar só pendente; turno recusa horário, tipo ou frente que invalidaria alocações vigentes; ajuste só em dia de plantão | Feito | 16/11 · 6b9cff3f |
+| Ocorrência sem hora absoluta: às 02:00 o robô usava o plantão de hoje no lugar do de ontem | Ocorrência com início e fim em instantes de Brasília; o consumo pela distribuição fica para ela | Feito (escala) / Pendente (distribuição) | 16/11 · 6b9cff3f |
+| Gestora precisava de acesso ao cadastro de médicos para escalar | Lista de médicos da escala (só id, nome e ativo) com `escala.ver` | Feito | 16/11 · 6b9cff3f |
+| Arranjo do médico pré-preenchia o vínculo lendo a distribuição de dentro da escala | O formulário recebe valores iniciais; o pré-preenchimento vem da `distribuicao` pelo front | Pendente (com a `distribuicao`) | 16/11 · 6b9cff3f |
 
 ## 10. Faturamento
 
