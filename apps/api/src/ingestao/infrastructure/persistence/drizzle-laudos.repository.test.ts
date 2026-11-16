@@ -11,6 +11,7 @@ import * as schema from '../../../database/schema';
 import type { JanelaLaudos } from '../../application/ports/laudos.repository';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
 import { DrizzleLaudosRepository } from './drizzle-laudos.repository';
+import { DrizzleLinhasBrutasRepository } from './drizzle-linhas-brutas.repository';
 
 const url = process.env.TEST_DATABASE_URL;
 const agora = new Date('2026-10-07T12:00:00Z');
@@ -200,5 +201,20 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
       }),
       expect.objectContaining({ status: 'Reassinado', quantidade: 1, comPrazo: 0, atrasados: 0 }),
     ]);
+  });
+
+  it('o expurgo apaga só as linhas cruas gravadas antes do instante', async () => {
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, inserir: [laudo('a')], linhasBrutas: new Map([['a', { EMPRESA: 'X' }]]) },
+      agora,
+    );
+    const linhas = new DrizzleLinhasBrutasRepository(db);
+
+    expect(await linhas.expurgarAntesDe(new Date('2000-01-01'))).toBe(0);
+    expect(await linhas.expurgarAntesDe(new Date(Date.now() + 60_000))).toBe(1);
+    expect(await db.select().from(schema.laudosLinhasBrutas)).toEqual([]);
+    expect(await db.select().from(schema.laudos)).toHaveLength(1);
   });
 });

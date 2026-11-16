@@ -23,6 +23,21 @@ describe('RegistroTarefas', () => {
       'Tarefa "teste.fazer" registrada duas vezes.',
     );
   });
+
+  it('agenda tarefas registradas e entrega a agenda no formato crontab do graphile-worker', () => {
+    const registro = new RegistroTarefas();
+    registro.registrar('teste.limpar', async () => undefined);
+
+    registro.agendar('teste.limpar', '0 4 * * *');
+
+    expect(registro.agenda()).toBe('0 4 * * * teste.limpar');
+  });
+
+  it('recusa agendar tarefa que não foi registrada', () => {
+    expect(() => new RegistroTarefas().agendar('teste.nada', '0 4 * * *')).toThrow(
+      'Tarefa "teste.nada" não registrada.',
+    );
+  });
 });
 
 describe('tarefa email.enviar', () => {

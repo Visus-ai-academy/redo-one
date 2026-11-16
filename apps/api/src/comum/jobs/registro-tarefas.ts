@@ -10,6 +10,7 @@ export type ExecutarTarefa = (payload: unknown) => Promise<void>;
 @Injectable()
 export class RegistroTarefas {
   private readonly tarefas = new Map<string, ExecutarTarefa>();
+  private readonly agendamentos: string[] = [];
 
   registrar(nome: string, executar: ExecutarTarefa) {
     if (this.tarefas.has(nome)) throw new Error(`Tarefa "${nome}" registrada duas vezes.`);
@@ -18,5 +19,19 @@ export class RegistroTarefas {
 
   listar(): Record<string, ExecutarTarefa> {
     return Object.fromEntries(this.tarefas);
+  }
+
+  /**
+   * Roda a tarefa periodicamente. `cron` no formato do crontab (minuto hora dia mês dia-da-semana),
+   * no fuso do servidor. Com a API fora do ar na hora marcada, aquela execução não acontece.
+   */
+  agendar(nome: string, cron: string) {
+    if (!this.tarefas.has(nome)) throw new Error(`Tarefa "${nome}" não registrada.`);
+    this.agendamentos.push(`${cron} ${nome}`);
+  }
+
+  /** Agenda no formato `crontab` do graphile-worker. */
+  agenda(): string {
+    return this.agendamentos.join('\n');
   }
 }

@@ -37,6 +37,7 @@ export class TrabalhadorJobs implements OnApplicationBootstrap, OnApplicationShu
     this.runner = await run({
       pgPool: this.pool,
       taskList: this.registro.listar(),
+      crontab: this.registro.agenda(),
       concurrency: 2,
       noHandleSignals: true,
     });

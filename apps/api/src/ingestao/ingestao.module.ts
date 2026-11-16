@@ -25,15 +25,21 @@ import {
 import { LAUDOS_REPOSITORY, type LaudosRepository } from './application/ports/laudos.repository';
 import { LEITOR_PLANILHA, type LeitorPlanilha } from './application/ports/leitor-planilha';
 import {
+  LINHAS_BRUTAS_REPOSITORY,
+  type LinhasBrutasRepository,
+} from './application/ports/linhas-brutas.repository';
+import {
   PARAMETROS_INGESTAO_REPOSITORY,
   type ParametrosIngestaoRepository,
 } from './application/ports/parametros-ingestao.repository';
 import { PSEUDONIMIZADOR, type Pseudonimizador } from './application/ports/pseudonimizador';
+import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
 import { DrizzleAvisosCadastroRepository } from './infrastructure/persistence/drizzle-avisos-cadastro.repository';
 import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-cadastros-ingestao';
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
 import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-laudos.repository';
+import { DrizzleLinhasBrutasRepository } from './infrastructure/persistence/drizzle-linhas-brutas.repository';
 import { DrizzleParametrosIngestaoRepository } from './infrastructure/persistence/drizzle-parametros-ingestao.repository';
 import { SemCompetenciasBloqueadas } from './infrastructure/persistence/sem-competencias-bloqueadas';
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
@@ -41,6 +47,9 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
 /** Tarefa da fila que processa uma importação; payload `{ importacaoId }`. */
 export const TAREFA_IMPORTAR_LAUDOS = 'ingestao.importar';
+
+/** Tarefa diária que apaga as linhas cruas da planilha vencidas pela retenção. */
+export const TAREFA_EXPURGAR_LINHAS_BRUTAS = 'ingestao.expurgar-linhas-brutas';
 
 /** Fila própria: uma importação por vez, na ordem em que chegaram. */
 export const FILA_INGESTAO = 'ingestao';
@@ -55,6 +64,13 @@ export const FILA_INGESTAO = 'ingestao';
     { provide: CADASTROS_INGESTAO, useClass: DrizzleCadastrosIngestao },
     { provide: COMPETENCIAS_BLOQUEADAS, useClass: SemCompetenciasBloqueadas },
     { provide: LEITOR_PLANILHA, useClass: XlsxLeitorPlanilha },
+    { provide: LINHAS_BRUTAS_REPOSITORY, useClass: DrizzleLinhasBrutasRepository },
+    {
+      provide: ExpurgarLinhasBrutas,
+      inject: [PARAMETROS_INGESTAO_REPOSITORY, LINHAS_BRUTAS_REPOSITORY],
+      useFactory: (parametros: ParametrosIngestaoRepository, linhas: LinhasBrutasRepository) =>
+        new ExpurgarLinhasBrutas(parametros, linhas, () => new Date()),
+    },
     {
       provide: PSEUDONIMIZADOR,
       inject: [ConfigService],
@@ -104,6 +120,7 @@ export class IngestaoModule implements OnModuleInit {
   constructor(
     private readonly registro: RegistroTarefas,
     private readonly importarLaudos: ImportarLaudos,
+    private readonly expurgarLinhasBrutas: ExpurgarLinhasBrutas,
   ) {}
 
   onModuleInit() {
@@ -112,5 +129,10 @@ export class IngestaoModule implements OnModuleInit {
       if (typeof id !== 'string') throw new Error(`${TAREFA_IMPORTAR_LAUDOS}: payload inválido`);
       await this.importarLaudos.executar(id);
     });
+    this.registro.registrar(TAREFA_EXPURGAR_LINHAS_BRUTAS, async () => {
+      await this.expurgarLinhasBrutas.executar();
+    });
+    // Todo dia às 04:00 no fuso do servidor (em UTC, 01:00 em Brasília), fora do horário de uso.
+    this.registro.agendar(TAREFA_EXPURGAR_LINHAS_BRUTAS, '0 4 * * *');
   }
 }
