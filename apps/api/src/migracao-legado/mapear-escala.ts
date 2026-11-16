@@ -362,6 +362,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   // ── Alocações ──────────────────────────────────────────────────────────────────────────────
   const medicoPorId = new Map(ctx.medicos.medicos.map((m) => [m.id as string, m]));
   const nomeTurnoLegado = new Map(legado.turnos.map((t) => [t.id, t.nome.trim()]));
+  const turnoLegadoPorId = new Map(legado.turnos.map((t) => [t.id, t]));
   const nomeEspLegado = new Map(
     ctx.legadoCatalogo.especialidades.map((e) => [e.id, e.nome.trim()]),
   );
@@ -438,7 +439,20 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
     }
     if (a.status.trim().toLowerCase() !== 'ativo')
       avisar('alocacoes', item, `Status "${a.status}" não existe no redo-one: migrou como ativa.`);
-    if (a.horarioFim === '00:00' && a.horarioInicio !== '00:00') contar('alocacoesAteMeiaNoite');
+    // Na Lista (24 h, 07:00 às 07:00 do dia seguinte) o dashboards-one gravava o fim como 00:00:
+    // confirmado pelo usuário (16/11/2026) que é o turno inteiro, então vale o fim do turno.
+    let horarioFim = a.horarioFim;
+    const turnoLegado = turnoLegadoPorId.get(a.turnoId);
+    if (
+      turnoLegado &&
+      turnoLegado.tipo.trim().toLowerCase() === 'lista' &&
+      turnoLegado.horarioInicio === turnoLegado.horarioFim &&
+      a.horarioInicio === turnoLegado.horarioInicio &&
+      a.horarioFim === '00:00'
+    ) {
+      horarioFim = turnoLegado.horarioFim;
+      contar('alocacoesListaAte24h');
+    }
 
     const chave = JSON.stringify([
       a.medicoId,
@@ -489,7 +503,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       diasSemana,
       semanasDoMes: semanasValidas(a.semanasDoMes),
       horarioInicio: a.horarioInicio,
-      horarioFim: a.horarioFim,
+      horarioFim,
       dataInicio,
       dataFim,
       produtividade: a.produtividade,

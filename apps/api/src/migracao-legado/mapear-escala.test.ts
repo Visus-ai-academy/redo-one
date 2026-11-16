@@ -203,6 +203,28 @@ const frenteNeuro = () =>
   idDoLegado('frentes_escala', `especialidade:${idEspecialidade('es-neuro')}`);
 
 describe('mapearEscala: alocações', () => {
+  it('na Lista de 24 h, o fim às 00:00 vira o fim do turno (07:00 do dia seguinte); fora dela, fica', () => {
+    const { tabelas, resumo } = mapearEscala(
+      escala({
+        turnos: [
+          turno('t-manha', 'Manhã'),
+          turno('t-lista', 'Lista', { tipo: 'lista', horarioInicio: '07:00', horarioFim: '07:00' }),
+        ],
+        alocacoes: [
+          alocacao('lista', { turnoId: 't-lista', horarioInicio: '07:00', horarioFim: '00:00' }),
+          alocacao('manha', { horarioInicio: '07:00', horarioFim: '00:00' }),
+        ],
+      }),
+      contexto,
+    );
+
+    const fim = (id: string) =>
+      tabelas.alocacoes.find((a) => a.id === idDoLegado('alocacoes_medico', id))?.horarioFim;
+    expect(fim('lista')).toBe('07:00');
+    expect(fim('manha')).toBe('00:00');
+    expect(resumo.alocacoesListaAte24h).toBe(1);
+  });
+
   it('troca os nomes dos recortes pelos ids: prioridade pelo de-para, sem subespecialidade vira o geral', () => {
     const { tabelas, avisos, resumo } = mapearEscala(
       escala({
