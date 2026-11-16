@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Database } from '../../database/database';
 import * as schema from '../../database/schema';
@@ -189,6 +189,56 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
       turnoCor: '#111111',
       frenteRotulo: 'NEURO',
     });
+  });
+
+  it('carrega a janela numa ida só ao banco (o banco remoto cobra a latência por consulta)', async () => {
+    const [titular] = await db
+      .insert(schema.alocacoes)
+      .values({
+        ...base(),
+        medicoId: ids.ana ?? '',
+        dataInicio: '2026-01-01',
+        dataFim: '2026-10-31',
+      })
+      .returning();
+    await db.insert(schema.alocacoes).values({
+      ...base(),
+      medicoId: ids.bruno ?? '',
+      dataInicio: '2026-11-16',
+      coberturaDeId: titular?.id ?? '',
+    });
+    const consultas = vi.spyOn(pool, 'query');
+
+    const dados = await new DrizzleCarregadorEscala(db).carregar('2026-11-16', '2026-11-22');
+
+    expect(consultas).toHaveBeenCalledTimes(1);
+    consultas.mockRestore();
+    expect(dados.alocacoes).toHaveLength(2);
+    expect(dados.alocacoes.find((a) => a.id !== titular?.id)).toMatchObject({
+      produtividade: null,
+      dataFim: null,
+      semanasDoMes: [],
+      prioridadeIds: [],
+      gratificado: false,
+    });
+    expect(dados.medicos.map((m) => m.nome).sort()).toEqual(['Ana Souza', 'Bruno Lima']);
+    expect(dados.turnos).toEqual([
+      expect.objectContaining({ nome: 'Manhã', cor: '#111111', ordem: 0, ativo: true }),
+    ]);
+    expect(dados.tiposAusencia).toEqual([
+      { id: ids.ferias, nome: 'Férias', gravidade: 3, cor: '#333333' },
+    ]);
+    expect(dados.ausencias).toEqual([]);
+    expect(dados.ajustes).toEqual([]);
+  });
+
+  it('janela vazia: listas vazias, não nulas', async () => {
+    const dados = await new DrizzleCarregadorEscala(db).carregar('2026-11-16', '2026-11-22');
+
+    expect(dados.alocacoes).toEqual([]);
+    expect(dados.medicos).toEqual([]);
+    expect(dados.ausencias).toEqual([]);
+    expect(dados.ajustes).toEqual([]);
   });
 
   it('traz o titular de uma cobertura mesmo quando ele não toca a janela', async () => {
