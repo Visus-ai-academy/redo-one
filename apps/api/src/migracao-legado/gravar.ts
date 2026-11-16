@@ -1,9 +1,10 @@
 import { eq, getTableColumns, getTableName, inArray, type SQL, sql } from 'drizzle-orm';
-import type { PgTable } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
 import type { CatalogoMigrado } from './mapear-catalogo';
+import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
 
 /** Linhas por insert: fica longe do limite de parâmetros do Postgres. */
@@ -47,14 +48,15 @@ async function upsert<T extends PgTable>(
 }
 
 /**
- * Grava o catálogo e os médicos migrados no banco do redo-one, numa transação só: ou entra tudo,
- * ou nada. A ordem respeita as chaves estrangeiras; as autorreferências (repasse do contratado,
- * principal do cliente) entram num segundo passo.
+ * Grava o catálogo, os médicos e a escala migrados no banco do redo-one, numa transação só: ou
+ * entra tudo, ou nada. A ordem respeita as chaves estrangeiras; as autorreferências (repasse do
+ * contratado, principal do cliente, titular da cobertura) entram num segundo passo.
  */
 export async function gravarMigracao(
   db: Database,
   { tabelas: c, removidos }: CatalogoMigrado,
   { tabelas: m }: MedicosMigrados,
+  escala?: EscalaMigrada,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -132,5 +134,108 @@ export async function gravarMigracao(
     await upsert(tx, schema.medicosAliases, m.medicosAliases);
     await upsert(tx, schema.equipes, m.equipes);
     await upsert(tx, schema.equipesMembros, m.equipesMembros, ['equipeId', 'medicoId']);
+
+    if (escala) await gravarEscala(tx, escala);
   });
+}
+
+/**
+ * Escala. Os recortes (frentes do turno, prioridades e subespecialidades da alocação, frentes e
+ * turnos da ausência, escopo da gestora) são trocados inteiros para os registros que a carga
+ * traz: o dashboards-one é a fonte da verdade, e assim rodar de novo dá o mesmo resultado.
+ */
+async function gravarEscala(tx: Transacao, { tabelas: e }: EscalaMigrada) {
+  const trocar = async <T extends PgTable>(
+    tabela: T,
+    coluna: AnyPgColumn,
+    donos: string[],
+    linhas: T['$inferInsert'][],
+    chave: string[],
+  ) => {
+    if (donos.length > 0) await tx.delete(tabela).where(inArray(coluna, donos));
+    await upsert(tx, tabela, linhas, chave);
+  };
+
+  await upsert(tx, schema.frentesEscala, e.frentesEscala);
+  await upsert(tx, schema.turnos, e.turnos);
+  await trocar(
+    schema.turnosFrentes,
+    schema.turnosFrentes.turnoId,
+    e.turnos.map((t) => t.id),
+    e.turnosFrentes,
+    ['turnoId', 'frenteId'],
+  );
+
+  await upsert(
+    tx,
+    schema.alocacoes,
+    e.alocacoes.map((a) => ({ ...a, coberturaDeId: null })),
+  );
+  for (const a of e.alocacoes.filter((x) => x.coberturaDeId)) {
+    await tx
+      .update(schema.alocacoes)
+      .set({ coberturaDeId: a.coberturaDeId })
+      .where(eq(schema.alocacoes.id, a.id));
+  }
+  const alocacaoIds = e.alocacoes.map((a) => a.id);
+  await trocar(
+    schema.alocacoesPrioridades,
+    schema.alocacoesPrioridades.alocacaoId,
+    alocacaoIds,
+    e.alocacoesPrioridades,
+    ['alocacaoId', 'prioridadeId'],
+  );
+  await trocar(
+    schema.alocacoesSubespecialidades,
+    schema.alocacoesSubespecialidades.alocacaoId,
+    alocacaoIds,
+    e.alocacoesSubespecialidades,
+    ['alocacaoId', 'subespecialidadeId'],
+  );
+  await upsert(tx, schema.ajustesProdutividade, e.ajustesProdutividade);
+
+  // Tipos de ausência são cadastro editável: a carga só cria o que falta e nunca sobrescreve.
+  // Se já houver um tipo com o mesmo nome (semeado por outro caminho), a ausência usa esse.
+  if (e.tiposAusencia.length > 0)
+    await tx.insert(schema.tiposAusencia).values(e.tiposAusencia).onConflictDoNothing();
+  const existentes = await tx
+    .select({ id: schema.tiposAusencia.id, nome: schema.tiposAusencia.nome })
+    .from(schema.tiposAusencia);
+  const idsExistentes = new Set(existentes.map((t) => t.id));
+  const porNome = new Map(existentes.map((t) => [t.nome, t.id]));
+  const tipoFinal = new Map(
+    e.tiposAusencia.map((t) => [
+      t.id,
+      idsExistentes.has(t.id) ? t.id : (porNome.get(t.nome) ?? t.id),
+    ]),
+  );
+  await upsert(
+    tx,
+    schema.ausencias,
+    e.ausencias.map((a) => ({ ...a, tipoId: tipoFinal.get(a.tipoId) ?? a.tipoId })),
+  );
+  const ausenciaIds = e.ausencias.map((a) => a.id);
+  await trocar(
+    schema.ausenciasFrentes,
+    schema.ausenciasFrentes.ausenciaId,
+    ausenciaIds,
+    e.ausenciasFrentes,
+    ['ausenciaId', 'frenteId'],
+  );
+  await trocar(
+    schema.ausenciasTurnos,
+    schema.ausenciasTurnos.ausenciaId,
+    ausenciaIds,
+    e.ausenciasTurnos,
+    ['ausenciaId', 'turnoId'],
+  );
+
+  await trocar(
+    schema.usuariosEscoposEscala,
+    schema.usuariosEscoposEscala.usuarioId,
+    [...new Set(e.usuariosEscoposEscala.map((u) => u.usuarioId))],
+    e.usuariosEscoposEscala,
+    ['id'],
+  );
+  await upsert(tx, schema.eventosAuditoria, e.eventosAuditoria);
 }

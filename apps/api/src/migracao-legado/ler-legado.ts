@@ -1,6 +1,6 @@
 import { Client } from 'pg';
 
-import type { LegadoCatalogo, LegadoMedicos } from './legado';
+import type { LegadoCatalogo, LegadoEscala, LegadoMedicos } from './legado';
 
 /**
  * Lê o banco do dashboards-one (em produção) SÓ PARA LEITURA: uma conexão, uma transação
@@ -10,7 +10,7 @@ import type { LegadoCatalogo, LegadoMedicos } from './legado';
  */
 export async function lerLegado(
   url: string,
-): Promise<{ catalogo: LegadoCatalogo; medicos: LegadoMedicos }> {
+): Promise<{ catalogo: LegadoCatalogo; medicos: LegadoMedicos; escala: LegadoEscala }> {
   const cliente = new Client({
     connectionString: url,
     application_name: 'redo-one-migracao-leitura',
@@ -88,8 +88,50 @@ export async function lerLegado(
       ),
       equipesMembros: await ler('select "equipeId", "medicoId" from equipes_membros'),
     };
+    // Datas puras como texto e instantes como ISO em UTC: o `timestamp` sem fuso do Prisma é UTC,
+    // e o `pg` o leria no fuso da máquina.
+    const instante = (coluna: string) =>
+      `to_char("${coluna}" at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "${coluna}"`;
+    const dia = (coluna: string) => `to_char("${coluna}", 'YYYY-MM-DD') as "${coluna}"`;
+    const escala: LegadoEscala = {
+      turnos: await ler(
+        'select id, nome, tipo, "horarioInicio", "horarioFim", cor, ordem, ativo from turnos order by ctid',
+      ),
+      turnosEspecialidades: await ler(
+        'select "turnoId", "especialidadeId", ativo from turno_especialidades order by "turnoId", ordem',
+      ),
+      alocacoes: await ler(
+        `select id, "turnoId", "especialidadeId", "medicoId", "diasSemana", "semanasDoMes",
+          "horarioInicio", "horarioFim", ${dia('dataInicio')}, ${dia('dataFim')}, status,
+          produtividade, prioridades, subespecialidades, gratificado, observacoes, "coberturaDeId",
+          ${instante('criadoEm')} from alocacoes_medico order by ctid`,
+      ),
+      ajustes: await ler(
+        `select id, "alocacaoId", ${dia('data')}, produtividade, observacoes
+          from ajustes_produtividade order by ctid`,
+      ),
+      ausencias: await ler(
+        `select id, "medicoId", tipo, ${dia('dataInicio')}, ${dia('dataFim')}, observacoes,
+          "especialidadeIds", "diasSemana", "turnoIds", situacao, origem, "solicitadaPorUserId",
+          "revisadaPorUserId", ${instante('revisadaEm')}, "motivoRecusa", ${instante('criadoEm')}
+          from ausencias_medico order by ctid`,
+      ),
+      logs: await ler(
+        `select id, entidade, "registroId", acao, "usuarioId", "usuarioNome", "medicoId", antes,
+          depois, ${instante('criadoEm')} from logs_alteracao_escala order by "criadoEm", id`,
+      ),
+      // Só quem a escala cita, e só o que a carga usa (LGPD: sem senha, papel, foto...).
+      usuarios: await ler(
+        `select id, name as nome, email, "escopoTurnoIds", "escopoEspecialidadeIds" from users
+          where cardinality("escopoTurnoIds") > 0 or cardinality("escopoEspecialidadeIds") > 0
+            or id in (select "usuarioId" from logs_alteracao_escala where "usuarioId" is not null)
+            or id in (select "solicitadaPorUserId" from ausencias_medico where "solicitadaPorUserId" is not null)
+            or id in (select "revisadaPorUserId" from ausencias_medico where "revisadaPorUserId" is not null)
+          order by ctid`,
+      ),
+    };
     await cliente.query('COMMIT');
-    return { catalogo, medicos };
+    return { catalogo, medicos, escala };
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;

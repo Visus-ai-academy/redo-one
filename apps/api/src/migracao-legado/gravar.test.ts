@@ -8,7 +8,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
 import { gravarMigracao } from './gravar';
+import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
+import { mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -27,7 +29,7 @@ const cliente = (id: string, nome: string) => ({
   observacoes: null,
 });
 
-const catalogo = mapearCatalogo({
+const legadoCatalogo: LegadoCatalogo = {
   modalidades: [{ id: 'mo-ct', nome: 'CT', ...lista }],
   especialidades: [{ id: 'es-neuro', nome: 'NEURO', ...lista }],
   subespecialidades: [],
@@ -81,7 +83,8 @@ const catalogo = mapearCatalogo({
       observacoes: null,
     },
   ],
-});
+};
+const catalogo = mapearCatalogo(legadoCatalogo);
 const medicos = mapearMedicos({
   medicos: [
     {
@@ -113,6 +116,89 @@ const medicos = mapearMedicos({
   equipesMembros: [{ equipeId: 'e1', medicoId: 'm1' }],
 });
 
+const escala = mapearEscala(
+  {
+    turnos: [
+      {
+        id: 't1',
+        nome: 'Manhã',
+        tipo: 'fixo',
+        horarioInicio: '07:00',
+        horarioFim: '13:00',
+        cor: null,
+        ordem: 0,
+        ativo: true,
+      },
+    ],
+    turnosEspecialidades: [{ turnoId: 't1', especialidadeId: 'es-neuro', ativo: true }],
+    alocacoes: ['a1', 'c1'].map((id) => ({
+      id,
+      turnoId: 't1',
+      especialidadeId: 'es-neuro',
+      medicoId: 'm1',
+      diasSemana: [1],
+      semanasDoMes: [],
+      horarioInicio: '07:00',
+      horarioFim: '13:00',
+      dataInicio: '2026-01-01',
+      dataFim: id === 'c1' ? '2026-01-31' : null,
+      status: 'ativo',
+      produtividade: 10,
+      prioridades: [],
+      subespecialidades: [],
+      gratificado: false,
+      observacoes: null,
+      coberturaDeId: id === 'c1' ? 'a1' : null,
+      criadoEm: '2026-01-01T00:00:00.000Z',
+    })),
+    ajustes: [
+      { id: 'aj', alocacaoId: 'a1', data: '2026-01-05', produtividade: 3, observacoes: null },
+    ],
+    ausencias: [
+      {
+        id: 'au1',
+        medicoId: 'm1',
+        tipo: 'ferias',
+        dataInicio: '2026-07-01',
+        dataFim: '2026-07-10',
+        observacoes: null,
+        especialidadeIds: ['es-neuro'],
+        diasSemana: [],
+        turnoIds: ['t1'],
+        situacao: 'aprovada',
+        origem: 'gestor',
+        solicitadaPorUserId: null,
+        revisadaPorUserId: null,
+        revisadaEm: null,
+        motivoRecusa: null,
+        criadoEm: '2026-06-01T00:00:00.000Z',
+      },
+    ],
+    logs: [
+      {
+        id: 'l1',
+        entidade: 'alocacao_medico',
+        registroId: 'a1',
+        acao: 'criar',
+        usuarioId: null,
+        usuarioNome: 'Fulana',
+        medicoId: 'm1',
+        antes: null,
+        depois: { turno: 'Manhã' },
+        criadoEm: '2026-01-01T00:00:00.000Z',
+      },
+    ],
+    usuarios: [],
+  },
+  {
+    legadoCatalogo,
+    catalogo: catalogo.tabelas,
+    medicos: medicos.tabelas,
+    usuarios: [],
+    hoje: '2026-11-16',
+  },
+);
+
 describe.skipIf(!url)('gravarMigracao', () => {
   let pool: Pool;
   let db: Database;
@@ -125,7 +211,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table clientes, contratados, exames, modalidades, especialidades, medicos, equipes cascade`,
+      sql`truncate table clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
     );
   });
 
@@ -165,6 +251,46 @@ describe.skipIf(!url)('gravarMigracao', () => {
       { nome: 'PRN TELE_ARARAQUARA', principal: 'PRN' },
       { nome: 'PRN TELE_MARABA', principal: 'PRN' },
     ]);
+  });
+
+  it('grava a escala com cobertura e recortes; rodar de novo não duplica nem sobrescreve o tipo editado', async () => {
+    const contarEscala = async () => {
+      const r = await db.execute<{ t: string; n: number }>(sql`
+        select 'frentes' t, count(*)::int n from frentes_escala union all
+        select 'turnos_frentes', count(*)::int from turnos_frentes union all
+        select 'alocacoes', count(*)::int from alocacoes union all
+        select 'coberturas', count(*)::int from alocacoes where cobertura_de_id is not null union all
+        select 'ajustes', count(*)::int from ajustes_produtividade union all
+        select 'tipos', count(*)::int from tipos_ausencia union all
+        select 'ausencias', count(*)::int from ausencias union all
+        select 'ausencias_frentes', count(*)::int from ausencias_frentes union all
+        select 'ausencias_turnos', count(*)::int from ausencias_turnos union all
+        select 'eventos', count(*)::int from eventos_auditoria`);
+      return Object.fromEntries(r.rows.map((l) => [l.t, l.n]));
+    };
+
+    await gravarMigracao(db, catalogo, medicos, escala);
+    const primeira = await contarEscala();
+    await db.execute(sql`update tipos_ausencia set gravidade = 9 where nome = 'Férias'`);
+    await gravarMigracao(db, catalogo, medicos, escala);
+
+    expect(await contarEscala()).toEqual(primeira);
+    expect(primeira).toEqual({
+      frentes: 1,
+      turnos_frentes: 1,
+      alocacoes: 2,
+      coberturas: 1,
+      ajustes: 1,
+      tipos: 6,
+      ausencias: 1,
+      ausencias_frentes: 1,
+      ausencias_turnos: 1,
+      eventos: 1,
+    });
+    const ferias = await db.execute<{ gravidade: number }>(
+      sql`select gravidade from tipos_ausencia where nome = 'Férias'`,
+    );
+    expect(ferias.rows).toEqual([{ gravidade: 9 }]);
   });
 
   it('valor fora do padrão casa pela grafia: regravar com outro id não quebra a chave única', async () => {

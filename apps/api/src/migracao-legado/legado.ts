@@ -139,3 +139,88 @@ export interface LegadoMedicos {
   equipes: (ItemDeLista & { plantao: boolean })[];
   equipesMembros: { equipeId: string; medicoId: string }[];
 }
+
+/**
+ * Escala do dashboards-one. Datas puras chegam como "AAAA-MM-DD" (`to_char`, sem fuso) e
+ * instantes como ISO em UTC, para o `pg` não reinterpretar o `timestamp` sem fuso do Prisma.
+ */
+export interface LegadoEscala {
+  turnos: {
+    id: string;
+    nome: string;
+    tipo: string;
+    horarioInicio: string;
+    horarioFim: string;
+    cor: string | null;
+    ordem: number;
+    ativo: boolean;
+  }[];
+  turnosEspecialidades: { turnoId: string; especialidadeId: string; ativo: boolean }[];
+  alocacoes: {
+    id: string;
+    turnoId: string;
+    especialidadeId: string;
+    medicoId: string;
+    diasSemana: number[];
+    semanasDoMes: number[];
+    horarioInicio: string;
+    horarioFim: string;
+    dataInicio: string;
+    dataFim: string | null;
+    status: string;
+    produtividade: number | null;
+    /** Nomes das prioridades, como no exame ("Rotina", "Ambulatório"). */
+    prioridades: string[];
+    /** Nomes das subespecialidades; "(SEM SUBESPECIALIDADE)" = o exame sem subespecialidade. */
+    subespecialidades: string[];
+    gratificado: boolean;
+    observacoes: string | null;
+    coberturaDeId: string | null;
+    criadoEm: string;
+  }[];
+  ajustes: {
+    id: string;
+    alocacaoId: string;
+    data: string;
+    produtividade: number;
+    observacoes: string | null;
+  }[];
+  ausencias: {
+    id: string;
+    medicoId: string;
+    tipo: string;
+    dataInicio: string;
+    dataFim: string;
+    observacoes: string | null;
+    especialidadeIds: string[];
+    diasSemana: number[];
+    turnoIds: string[];
+    situacao: string;
+    origem: string;
+    solicitadaPorUserId: string | null;
+    revisadaPorUserId: string | null;
+    revisadaEm: string | null;
+    motivoRecusa: string | null;
+    criadoEm: string;
+  }[];
+  logs: {
+    id: string;
+    entidade: string;
+    registroId: string | null;
+    acao: string;
+    usuarioId: string | null;
+    usuarioNome: string | null;
+    medicoId: string | null;
+    antes: Record<string, unknown> | null;
+    depois: Record<string, unknown> | null;
+    criadoEm: string;
+  }[];
+  /** Só os usuários que a escala cita (escopo, autor de log, quem pediu ou revisou ausência). */
+  usuarios: {
+    id: string;
+    nome: string | null;
+    email: string;
+    escopoTurnoIds: string[];
+    escopoEspecialidadeIds: string[];
+  }[];
+}

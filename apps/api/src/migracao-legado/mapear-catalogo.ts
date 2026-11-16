@@ -71,7 +71,7 @@ const VARIACOES_MODALIDADE: [origem: string, destino: string][] = [
 
 const semAcento = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '');
 /** Casa texto livre com um cadastro sem diferenciar maiúsculas, espaços nem acentos. */
-const chaveCadastro = (v: string | null | undefined) => semAcento(chaveTexto(v));
+export const chaveCadastro = (v: string | null | undefined) => semAcento(chaveTexto(v));
 
 const TIPO_DE_PARA = {
   NORMALIZACAO: 'normalizacao',
