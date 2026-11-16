@@ -80,12 +80,9 @@ export function SelecaoMultiplaField({
   const marcados = field.state.value;
   // Inativa só entra na lista se já estiver marcada.
   const visiveis = opcoes.filter((o) => !o.inativa || marcados.includes(o.valor));
-  const porValor = new Map(visiveis.map((o) => [o.valor, o]));
+  // Na ordem da lista, não na dos ids salvos (a API devolve em ordem própria).
   const resumo = resumir(
-    marcados.flatMap((v) => {
-      const opcao = porValor.get(v);
-      return opcao ? [nomeDa(opcao)] : [];
-    }),
+    visiveis.filter((o) => marcados.includes(o.valor)).map(nomeDa),
     placeholder,
   );
   const mudar = (valores: string[]) => {

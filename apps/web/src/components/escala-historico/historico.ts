@@ -55,16 +55,18 @@ export function rotuloDoAtor(ator: AtorHistoricoDto): string {
 
 /**
  * Chaves que só dizem a que médico, turno e frente o evento se refere (`auditoria-escala.ts`), por
- * entidade. No turno, `frenteIds` é dado de verdade (as frentes do turno); no recorte, os nomes já
- * vêm em `turnos` e `frentes`.
+ * entidade. No turno, `frenteIds` é dado de verdade (as frentes do turno), e os ids de
+ * especialidade e modalidade repetem as mesmas frentes sem nome na página; no recorte, os nomes já
+ * vêm em `turnos` e `frentes`. O `id` do próprio registro nunca é alteração.
  */
 const CONTEXTO_DA_ENTIDADE: Record<string, Set<string>> = {
-  alocacao: new Set(['medicoId', 'turnoId', 'frenteId']),
-  ajuste_produtividade: new Set(['medicoId', 'turnoId', 'frenteId']),
-  ausencia: new Set(['medicoId', 'turnoIds', 'frenteIds']),
-  escopo_escala: new Set(['turnoIds', 'frenteIds']),
+  alocacao: new Set(['id', 'medicoId', 'turnoId', 'frenteId']),
+  ajuste_produtividade: new Set(['id', 'medicoId', 'turnoId', 'frenteId']),
+  ausencia: new Set(['id', 'medicoId', 'turnoIds', 'frenteIds']),
+  escopo_escala: new Set(['id', 'turnoIds', 'frenteIds']),
+  turno: new Set(['id', 'especialidadeIds', 'modalidadeIds']),
 };
-const SEM_CONTEXTO = new Set<string>();
+const SEM_CONTEXTO = new Set(['id']);
 
 /** Nome de cada id citado nos eventos da página (`PaginaHistoricoDto.nomes`). */
 export type NomesHistorico = Record<string, string>;

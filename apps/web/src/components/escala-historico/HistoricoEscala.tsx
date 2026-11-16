@@ -100,6 +100,8 @@ export function HistoricoEscala({
     <div className="flex flex-col gap-3">
       <Link
         to="/escala"
+        // Sem `exact`, o /escala casa com /escala/historico e o link de volta vira "página atual".
+        activeOptions={{ exact: true }}
         className="text-muted-foreground hover:text-foreground focus-visible:outline-ring inline-flex w-fit items-center gap-1 rounded-md text-[13px] font-medium focus-visible:outline-2"
       >
         <ArrowLeft size={16} aria-hidden />
@@ -151,7 +153,7 @@ export function HistoricoEscala({
               opcoes={OPCOES_ENTIDADE}
               className="flex-[1_1_180px] md:flex-[0_1_220px]"
             />
-            <span className="flex flex-[1_1_300px] items-center gap-2 md:flex-none">
+            <span className="flex min-w-0 flex-[1_1_300px] items-center gap-2 md:flex-none">
               <label htmlFor={deId} className="text-muted-foreground text-[13px]">
                 De
               </label>

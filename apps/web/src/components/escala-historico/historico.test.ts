@@ -149,6 +149,32 @@ describe('alteracoesDoEvento', () => {
     expect(linhas).toEqual([{ rotulo: 'Frentes', antes: 'Neuro', depois: 'Neuro, Mama' }]);
   });
 
+  it('no turno, especialidades e modalidades não repetem as frentes (ids sem nome na página)', () => {
+    const linhas = alteracoesDoEvento(
+      {
+        entidade: 'turno',
+        antes: null,
+        depois: { nome: 'Noite', frenteIds: [T1], especialidadeIds: [T2], modalidadeIds: [T3] },
+      },
+      { [T1]: 'Neuro' },
+    );
+
+    expect(linhas).toEqual([
+      { rotulo: 'Nome', antes: null, depois: 'Noite' },
+      { rotulo: 'Frentes', antes: null, depois: 'Neuro' },
+    ]);
+  });
+
+  it('não mostra o id do próprio registro', () => {
+    const linhas = alteracoesDoEvento({
+      entidade: 'ausencia',
+      antes: null,
+      depois: { id: T1, situacao: 'aprovada' },
+    });
+
+    expect(linhas).toEqual([{ rotulo: 'Situação', antes: null, depois: 'Aprovada' }]);
+  });
+
   it('mostra as marcas de observação e motivo sem o texto (LGPD)', () => {
     const linhas = alteracoesDoEvento({
       entidade: 'ausencia',

@@ -42,6 +42,25 @@ function montar(props: Partial<HistoricoEscalaProps> = {}) {
 }
 
 describe('HistoricoEscala', () => {
+  it('o link de volta não se marca como página atual dentro da escala', async () => {
+    renderComRotas(
+      <HistoricoEscala
+        pagina={{ itens: [], total: 0, pagina: 1, porPagina: 25, nomes: {} }}
+        filtros={{}}
+        medico={null}
+        agora={AGORA}
+        onFiltrar={vi.fn()}
+        onLimparFiltros={vi.fn()}
+        onIrPara={vi.fn()}
+      />,
+      { caminho: '/escala/historico' },
+    );
+
+    expect(await screen.findByRole('link', { name: 'Voltar à escala' })).not.toHaveAttribute(
+      'aria-current',
+    );
+  });
+
   it('mostra quando, quem, o quê, o médico e só o que mudou', async () => {
     montar();
 

@@ -90,6 +90,13 @@ describe('SelecaoMultiplaField', () => {
     expect(onSubmit).toHaveBeenCalledWith({ ids: ['neuro', 'mama', 'msk', 'torax'] });
   });
 
+  it('resumo segue a ordem da lista, não a dos ids salvos', () => {
+    // A API devolve os ids em ordem própria (ex.: de uuid); o resumo não pode mudar por isso.
+    render(<Formulario inicial={['torax', 'msk', 'neuro']} onSubmit={vi.fn()} />);
+
+    expect(campo()).toHaveTextContent('NEURO, MSK +1');
+  });
+
   it('desmarca ao clicar de novo', async () => {
     const onSubmit = vi.fn();
     render(<Formulario inicial={['neuro', 'mama']} onSubmit={onSubmit} />);
