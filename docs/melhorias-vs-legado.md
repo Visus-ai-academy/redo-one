@@ -109,6 +109,8 @@
 | Problema no dashboards-one | No redo-one | Status | Fonte |
 | --- | --- | --- | --- |
 | Horários e composição das rodadas fixos no código (`URGENCIA_TARDE`, `HORARIOS_LISTA`, 24 h da redistribuição da Lista), com cortes inconsistentes entre urgência e frentes | Horários, cortes e composição das rodadas configuráveis por tela | Decidido (princípio) | 10–11/11 · 253494db, 6a543840, 869cd8d0; 14/11 · 4bca0e36 |
+| Regras específicas por frente fixas no código (RX, MAMA, MEDICINA INTERNA etc.) | Configuração do robô por tela. Antes de modelar, analisar com cuidado cada regra no dashboards-one e no rpa-dashboards-one: o que faz, por que existe, casos de borda e como vira configuração sem perder comportamento | Decidido / Pendente (análise) | 16/11 · 861a9c45 |
+| A distribuição não leva em conta a qualidade | Priorizar clientes e médicos com melhor classificação. Depende das classificações de médico e de cliente (seção 13). O peso da qualidade deve ser configurável | Decidido / Pendente (como pesar) | 16/11 · 861a9c45 |
 | Lista seguia o SLA | Lista não segue o SLA, exceto com exceção configurada; prioridade vem do arranjo | Regra do legado | 05/11 · 98e6f8f9 |
 | Urgências de RX ficavam sem médico | Só no RX, urgência entra pelo SLA quando o arranjo do médico inclui urgência | Regra do legado | 13/11 · 3ab3e455 |
 | Médico recebia acima da capacidade do período (espaço livre medido pela pilha, não pelo recebido) | Capacidade descontando o que já recebeu; Lista a cada 30 min só para quem não completou a carga | Regra do legado | 12/11 · b36831d3 |
@@ -186,11 +188,13 @@
 | --- | --- | --- | --- |
 | Classificação dos médicos contava laudos de clínicas não consolidadas | Só clínicas consolidadas; definir NC1 e os chamados sem clínica | Regra do legado / Pendente | 13/11 · 132dc1bf |
 | Tiers de clientes com números fixos no código, copiados de planilha | Calcular por período, como a classificação dos médicos | Ideia | 12/11 · 944daf2c |
+| Classificações de médico e de cliente servem só para exibição | As duas classificações alimentam a distribuição (seção 7) | Decidido | 16/11 · 861a9c45 |
 
 ## 14. Painéis
 
 | Problema no dashboards-one | No redo-one | Status | Fonte |
 | --- | --- | --- | --- |
+| Excesso de indicadores, com várias versões do mesmo KPI | Cada setor (financeiro, operacional, suporte e comercial) com no máximo 5 KPIs, cada um com fórmula única em `analytics`. Quais KPIs: a definir | Decidido / Pendente (escolha dos KPIs) | 16/11 · 861a9c45 |
 | Painéis redundantes (Coordenador ≈ Executivo, Gestão Estratégica repete a Mensal etc.) | Juntar conforme `refactore/revisao-telas.md`, sem perder acesso de ninguém | Ideia (sem confirmação item a item) | 13/11 · 54a72938 |
 | Painel TV: cabe na tela, tela cheia, recarga a cada 10 min; dia em UTC vira depois das 21 h de Brasília; sem permissão própria | Datas em horário de Brasília; permissão própria | Regra do legado / Pendente | 11/11 · bfa621a0, f7d8cf23 |
 | RX fora do Direcionamento e da pilha do robô | Incluir RX | Regra do legado | 16/11 · b3da9e13 |
