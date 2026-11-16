@@ -389,6 +389,25 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(linhas.rows).toEqual([{ cor: '#F58231' }]);
   });
 
+  it('cor escolhida no redo-one vale mais que a do dashboards-one; vazia, vem a de lá', async () => {
+    const comCor = {
+      ...catalogo,
+      tabelas: {
+        ...catalogo.tabelas,
+        modalidades: catalogo.tabelas.modalidades.map((m) => ({ ...m, cor: '#111111' })),
+      },
+    };
+    await gravarMigracao(db, comCor, medicos);
+    const primeira = await db.execute<{ cor: string }>(sql`select cor from modalidades`);
+    expect(primeira.rows).toEqual([{ cor: '#111111' }]);
+
+    await db.execute(sql`update modalidades set cor = '#C9804A'`);
+    await gravarMigracao(db, comCor, medicos);
+
+    const linhas = await db.execute<{ cor: string }>(sql`select cor from modalidades`);
+    expect(linhas.rows).toEqual([{ cor: '#C9804A' }]);
+  });
+
   it('ajuste que a tela já criou para a mesma alocação e dia é sobrescrito pelo do dashboards-one', async () => {
     await gravarMigracao(db, catalogo, medicos, escala);
     const [ajuste] = escala.tabelas.ajustesProdutividade;

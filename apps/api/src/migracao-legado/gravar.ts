@@ -23,17 +23,21 @@ const LOTE = 300;
 type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /**
- * `coluna = excluded.coluna` para todas as colunas menos as da chave. Descrição e cor são
- * complemento: vazias no dashboards-one, fica a que alguém preencheu no redo-one.
+ * `coluna = excluded.coluna` para todas as colunas menos as da chave. A descrição é complemento:
+ * vazia no dashboards-one, fica a que alguém preencheu no redo-one. A cor escolhida no redo-one
+ * vale mais que a de lá (as cores foram refeitas aqui); a de lá só preenche a vazia.
  */
 function atualizarTudo(tabela: PgTable, chave: string[]): Record<string, SQL> {
   const set: Record<string, SQL> = {};
   for (const [prop, coluna] of Object.entries(getTableColumns(tabela))) {
     if (chave.includes(prop) || prop === 'criadoEm') continue;
+    const atual = `"${getTableName(tabela)}"."${coluna.name}"`;
     set[prop] =
-      prop === 'descricao' || prop === 'cor'
-        ? sql.raw(`coalesce(excluded."${coluna.name}", "${getTableName(tabela)}"."${coluna.name}")`)
-        : sql.raw(`excluded."${coluna.name}"`);
+      prop === 'cor'
+        ? sql.raw(`coalesce(${atual}, excluded."${coluna.name}")`)
+        : prop === 'descricao'
+          ? sql.raw(`coalesce(excluded."${coluna.name}", ${atual})`)
+          : sql.raw(`excluded."${coluna.name}"`);
   }
   return set;
 }
