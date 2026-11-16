@@ -8,6 +8,14 @@ import type { ItemHistoricoDto } from './ItemHistoricoDto'
 export type PaginaHistoricoDto = {
   itens: ItemHistoricoDto[];
   total: number;
+  /**
+   * @description Nome legível de cada id citado em `antes`/`depois` dos itens da página (turno, frente, tipo de ausência, prioridade, subespecialidade, médico, alocação). Id sem par fica de fora.
+   * @example {"3f1c…":"Manhã"}
+   * @type object
+   */
+  nomes: {
+    [key: string]: string;
+  };
   pagina: number;
   porPagina: number;
 };

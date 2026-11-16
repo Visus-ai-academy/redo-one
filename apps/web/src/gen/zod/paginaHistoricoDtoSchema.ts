@@ -9,6 +9,7 @@ import { itemHistoricoDtoSchema } from './itemHistoricoDtoSchema'
 export const paginaHistoricoDtoSchema = z.object({
   itens: z.array(itemHistoricoDtoSchema),
   total: z.number(),
+  nomes: z.record(z.string(), z.string()).describe('Nome legível de cada id citado em `antes`/`depois` dos itens da página (turno, frente, tipo de ausência, prioridade, subespecialidade, médico, alocação). Id sem par fica de fora.').meta({ examples: [{"3f1c…":"Manhã"}] }),
   pagina: z.number(),
   porPagina: z.number(),
 })

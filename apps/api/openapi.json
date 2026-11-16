@@ -11864,6 +11864,16 @@
           "total": {
             "type": "number"
           },
+          "nomes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Nome legível de cada id citado em `antes`/`depois` dos itens da página (turno, frente, tipo de ausência, prioridade, subespecialidade, médico, alocação). Id sem par fica de fora.",
+            "example": {
+              "3f1c…": "Manhã"
+            }
+          },
           "pagina": {
             "type": "number"
           },
@@ -11874,6 +11884,7 @@
         "required": [
           "itens",
           "total",
+          "nomes",
           "pagina",
           "porPagina"
         ]
