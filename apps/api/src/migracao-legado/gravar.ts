@@ -192,7 +192,9 @@ async function gravarEscala(tx: Transacao, { tabelas: migradas }: EscalaMigrada)
     e.alocacoesSubespecialidades,
     ['alocacaoId', 'subespecialidadeId'],
   );
-  await upsert(tx, schema.ajustesProdutividade, e.ajustesProdutividade);
+  // Casa pela alocação e o dia: a tela pode já ter criado o ajuste com outro id. Vale o do
+  // dashboards-one, inclusive o id (é o que o histórico migrado cita).
+  await upsert(tx, schema.ajustesProdutividade, e.ajustesProdutividade, ['alocacaoId', 'data']);
 
   // Tipos de ausência são cadastro editável: a carga só cria o que falta e nunca sobrescreve.
   // Se já houver um tipo com o mesmo nome (semeado por outro caminho), a ausência usa esse.

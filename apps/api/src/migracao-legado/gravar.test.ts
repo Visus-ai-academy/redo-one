@@ -10,7 +10,7 @@ import * as schema from '../database/schema';
 import { gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
-import { mapearEscala } from './mapear-escala';
+import { type EscalaMigrada, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -367,5 +367,65 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
     const linhas = await db.execute<{ descricao: string }>(sql`select descricao from modalidades`);
     expect(linhas.rows).toEqual([{ descricao: 'Tomografia Computadorizada' }]);
+  });
+
+  it('ajuste que a tela já criou para a mesma alocação e dia é sobrescrito pelo do dashboards-one', async () => {
+    await gravarMigracao(db, catalogo, medicos, escala);
+    const [ajuste] = escala.tabelas.ajustesProdutividade;
+    if (!ajuste) throw new Error('a escala de teste precisa de um ajuste');
+    await db.delete(schema.ajustesProdutividade);
+    await db.insert(schema.ajustesProdutividade).values({
+      ...ajuste,
+      id: '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a5c',
+      produtividade: 99,
+    });
+
+    await gravarMigracao(db, catalogo, medicos, escala);
+
+    const linhas = await db.execute<{ id: string; produtividade: number }>(
+      sql`select id::text, produtividade from ajustes_produtividade`,
+    );
+    expect(linhas.rows).toEqual([{ id: ajuste.id, produtividade: ajuste.produtividade }]);
+  });
+
+  it('recorte da gestora é trocado inteiro: a linha antiga que a carga não traz mais sai', async () => {
+    await db.execute(sql`truncate table usuarios, papeis cascade`);
+    const [papel] = await db
+      .insert(schema.papeis)
+      .values({ nome: 'Gestão de escala' })
+      .returning({ id: schema.papeis.id });
+    const [usuaria] = await db
+      .insert(schema.usuarios)
+      .values({ nome: 'Gestora', email: 'gestora@tele.com', papelId: papel?.id as string })
+      .returning({ id: schema.usuarios.id });
+    const usuarioId = usuaria?.id as string;
+    const turnoId = escala.tabelas.turnos[0]?.id as string;
+    const frenteId = escala.tabelas.frentesEscala[0]?.id as string;
+    const comEscopo = (escopos: EscalaMigrada['tabelas']['usuariosEscoposEscala']) => ({
+      ...escala,
+      tabelas: { ...escala.tabelas, usuariosEscoposEscala: escopos },
+    });
+
+    await gravarMigracao(
+      db,
+      catalogo,
+      medicos,
+      comEscopo([
+        { id: '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a51', usuarioId, frenteId, turnoId: null },
+      ]),
+    );
+    await gravarMigracao(
+      db,
+      catalogo,
+      medicos,
+      comEscopo([
+        { id: '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a52', usuarioId, turnoId, frenteId: null },
+      ]),
+    );
+
+    const linhas = await db.execute<{ turno: string | null; frente: string | null }>(
+      sql`select turno_id::text turno, frente_id::text frente from usuarios_escopos_escala`,
+    );
+    expect(linhas.rows).toEqual([{ turno: turnoId, frente: null }]);
   });
 });

@@ -468,6 +468,84 @@ describe('mapearEscala: ausências e escopo', () => {
       expect.objectContaining({ tabela: 'usuarios_escopos_escala', item: 'Outra' }),
     );
   });
+
+  it('recorte da usuária que existe com todos os ids órfãos falha a carga (sem linhas ela veria tudo)', () => {
+    const usuarios = [
+      {
+        id: 'u-gestora',
+        nome: 'Gestora',
+        email: 'gestora@tele.com',
+        escopoTurnoIds: ['sumiu'],
+        escopoEspecialidadeIds: ['es-geral'],
+      },
+    ];
+
+    expect(() => mapearEscala(escala({ usuarios }), contexto)).toThrow(/Gestora/);
+    expect(() => mapearEscala(escala({ usuarios }), contexto)).not.toThrow(/gestora@tele\.com/);
+  });
+
+  it('recorte todo órfão de usuária que não existe no redo-one só é contado', () => {
+    const { tabelas, resumo } = mapearEscala(
+      escala({
+        usuarios: [
+          {
+            id: 'u-outra',
+            nome: 'Outra',
+            email: 'outra@tele.com',
+            escopoTurnoIds: ['sumiu'],
+            escopoEspecialidadeIds: [],
+          },
+        ],
+      }),
+      contexto,
+    );
+
+    expect(tabelas.usuariosEscoposEscala).toEqual([]);
+    expect(resumo.escoposSemUsuario).toBe(1);
+  });
+
+  it('recorte parcialmente órfão fica com o que casa', () => {
+    const { tabelas, resumo } = mapearEscala(
+      escala({
+        usuarios: [
+          {
+            id: 'u-gestora',
+            nome: 'Gestora',
+            email: 'gestora@tele.com',
+            escopoTurnoIds: ['t-manha', 'sumiu'],
+            escopoEspecialidadeIds: [],
+          },
+        ],
+      }),
+      contexto,
+    );
+
+    expect(tabelas.usuariosEscoposEscala.map((e) => e.turnoId)).toEqual([
+      idDoLegado('turnos', 't-manha'),
+    ]);
+    expect(resumo.escoposOrfaos).toBe(1);
+  });
+
+  it.each([
+    ['frentes', { especialidadeIds: ['sumiu', 'es-geral'] }],
+    ['turnos', { turnoIds: ['sumiu'] }],
+  ])('ausência com o recorte de %s inteiro órfão é descartada, não ampliada', (_, recorte) => {
+    const { tabelas, avisos, resumo } = mapearEscala(
+      escala({
+        turnosEspecialidades: neuroNaManha,
+        ausencias: [
+          ausencia('au1', { especialidadeIds: ['es-neuro'], turnoIds: ['t-manha'], ...recorte }),
+        ],
+      }),
+      contexto,
+    );
+
+    expect(tabelas.ausencias).toEqual([]);
+    expect(tabelas.ausenciasFrentes).toEqual([]);
+    expect(tabelas.ausenciasTurnos).toEqual([]);
+    expect(resumo.ausenciasDescartadasRecorteOrfao).toBe(1);
+    expect(avisos).toContainEqual(expect.objectContaining({ tabela: 'ausencias' }));
+  });
 });
 
 type Log = LegadoEscala['logs'][number];
@@ -606,5 +684,63 @@ describe('mapearEscala: histórico', () => {
         frenteIds: [frenteNeuro()],
       },
     });
+  });
+
+  it('LGPD: observações e motivo da recusa da ausência não vão para o evento, só a marca de que mudaram', () => {
+    const foto = (extra: Record<string, unknown>) => ({
+      medico: 'Dra. Ana',
+      tipo: 'ferias',
+      turnoIds: [],
+      especialidadeIds: [],
+      situacao: 'pendente',
+      observacoes: null,
+      motivoRecusa: null,
+      ...extra,
+    });
+    const doAusencia = { entidade: 'ausencia_medico', registroId: 'au1' };
+    const { tabelas } = mapearEscala(
+      escala({
+        logs: [
+          log('criada', { ...doAusencia, depois: foto({ observacoes: 'cirurgia cardíaca' }) }),
+          log('recusada', {
+            ...doAusencia,
+            acao: 'recusar',
+            antes: foto({ observacoes: 'cirurgia cardíaca' }),
+            depois: foto({
+              observacoes: 'cirurgia cardíaca',
+              situacao: 'recusada',
+              motivoRecusa: 'sem atestado do oncologista',
+            }),
+          }),
+          log('alterada', {
+            ...doAusencia,
+            acao: 'atualizar',
+            antes: foto({ observacoes: 'cirurgia cardíaca', motivoRecusa: 'sem atestado' }),
+            depois: foto({ observacoes: 'quimioterapia', motivoRecusa: 'sem atestado' }),
+          }),
+          log('removida', {
+            ...doAusencia,
+            acao: 'remover',
+            antes: foto({ observacoes: 'cirurgia cardíaca', motivoRecusa: 'sem atestado' }),
+            depois: null,
+          }),
+          log('sem-texto', { ...doAusencia, depois: foto({}) }),
+        ],
+      }),
+      contexto,
+    );
+
+    const tudo = JSON.stringify(tabelas.eventosAuditoria);
+    for (const vazado of ['cirurgia', 'quimioterapia', 'atestado', 'observacoes"', 'motivoRecusa"'])
+      expect(tudo).not.toContain(vazado);
+    const [criada, recusada, alterada, removida, semTexto] = tabelas.eventosAuditoria;
+    expect(criada?.depois).toMatchObject({ observacoesAlteradas: true });
+    expect(recusada?.depois).toMatchObject({ situacao: 'recusada', motivoRecusaAlterado: true });
+    expect(recusada?.depois).not.toHaveProperty('observacoesAlteradas');
+    expect(alterada?.depois).toMatchObject({ observacoesAlteradas: true });
+    expect(alterada?.depois).not.toHaveProperty('motivoRecusaAlterado');
+    expect(removida?.antes).toMatchObject({ medico: 'Dra. Ana', tipo: 'ferias' });
+    expect(semTexto?.depois).not.toHaveProperty('observacoesAlteradas');
+    expect(semTexto?.depois).not.toHaveProperty('motivoRecusaAlterado');
   });
 });

@@ -132,6 +132,38 @@ const semanasValidas = (semanas: number[]) =>
     (a, b) => a - b,
   );
 
+/** Textos livres da ausência que o log do dashboards-one levava (`fotoAusencia`). */
+const TEXTOS_AUSENCIA = [
+  ['observacoes', 'observacoesAlteradas'],
+  ['motivoRecusa', 'motivoRecusaAlterado'],
+] as const;
+
+type Foto = Record<string, unknown> | null;
+
+/**
+ * LGPD: observações (saúde) e motivo da recusa não vão para o histórico, como em
+ * `escala/ausencias/evento-ausencia.ts`. Fica só a marca no `depois` quando o texto existia e
+ * mudou (na criação, quando foi informado).
+ */
+function semTextosDaAusencia(antes: Foto, depois: Foto): { antes: Foto; depois: Foto } {
+  const limpar = (foto: Foto) => {
+    if (!foto) return foto;
+    const resto = { ...foto };
+    for (const [campo] of TEXTOS_AUSENCIA) delete resto[campo];
+    return resto;
+  };
+  const marcas: Record<string, true> = {};
+  if (depois)
+    for (const [campo, marca] of TEXTOS_AUSENCIA) {
+      if (!(campo in depois) && !(antes && campo in antes)) continue;
+      const de = antes?.[campo] ?? null;
+      const para = depois[campo] ?? null;
+      if (JSON.stringify(de) !== JSON.stringify(para)) marcas[marca] = true;
+    }
+  const limpoDepois = limpar(depois);
+  return { antes: limpar(antes), depois: limpoDepois && { ...limpoDepois, ...marcas } };
+}
+
 export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaMigrada {
   const avisos: Aviso[] = [];
   const avisar = (tabela: string, item: string, motivo: string) =>
@@ -594,13 +626,14 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       avisar('ausencias', item, `Origem "${a.origem}" desconhecida: ficou como gestor.`);
     const id = idDoLegado('ausencias_medico', a.id);
 
-    // Recortes sem FK no dashboards-one: id que não casa sai do recorte, a ausência fica.
+    // Recortes sem FK no dashboards-one: id que não casa sai do recorte, a ausência fica. Se
+    // nenhum casa, a ausência sai: recorte vazio quer dizer "todos", e ampliá-la seria errado.
     const recorte = (
       ids: string[],
       mapa: Map<string, string>,
       nome: string,
       resumoChave: string,
-    ) => {
+    ): string[] | null => {
       const achados = new Set<string>();
       let orfaos = 0;
       for (const idLegado of ids) {
@@ -608,27 +641,36 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
         if (destino) achados.add(destino);
         else orfaos++;
       }
-      if (orfaos > 0) {
-        contar(resumoChave, orfaos);
+      if (orfaos === 0) return [...achados];
+      contar(resumoChave, orfaos);
+      if (achados.size === 0) {
         avisar(
           'ausencias',
           item,
-          achados.size > 0
-            ? `${orfaos} ${nome} do recorte não existe(m) no redo-one: saiu do recorte.`
-            : `Nenhum(a) ${nome} do recorte existe no redo-one: a ausência passou a valer para todos.`,
+          `Nenhum(a) ${nome} do recorte existe no redo-one: a ausência ficou de fora (sem recorte, valeria para todos).`,
         );
+        return null;
       }
+      avisar(
+        'ausencias',
+        item,
+        `${orfaos} ${nome} do recorte não existe(m) no redo-one: saiu do recorte.`,
+      );
       return [...achados];
     };
-    for (const frenteId of recorte(
+    const frentesDaAusencia = recorte(
       a.especialidadeIds,
       frenteDoLegado,
       'frente',
       'ausenciasFrentesOrfas',
-    ))
-      tabAusFrentes.push({ ausenciaId: id, frenteId });
-    for (const turnoId of recorte(a.turnoIds, turnoDoLegado, 'turno', 'ausenciasTurnosOrfaos'))
-      tabAusTurnos.push({ ausenciaId: id, turnoId });
+    );
+    const turnosDaAusencia = recorte(a.turnoIds, turnoDoLegado, 'turno', 'ausenciasTurnosOrfaos');
+    if (!frentesDaAusencia || !turnosDaAusencia) {
+      contar('ausenciasDescartadasRecorteOrfao');
+      continue;
+    }
+    for (const frenteId of frentesDaAusencia) tabAusFrentes.push({ ausenciaId: id, frenteId });
+    for (const turnoId of turnosDaAusencia) tabAusTurnos.push({ ausenciaId: id, turnoId });
 
     const solicitadaPorId = usuarioDoLegado(a.solicitadaPorUserId);
     const revisadaPorId = usuarioDoLegado(a.revisadaPorUserId);
@@ -653,7 +695,10 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   }
 
   // ── Recorte da gestora ─────────────────────────────────────────────────────────────────────
+  // Recorte que fica sem linha nenhuma quer dizer "vê tudo": se nenhum id do recorte de uma
+  // usuária que existe casa, a carga para em vez de ampliar o acesso dela.
   const tabEscopos: EscalaMigrada['tabelas']['usuariosEscoposEscala'] = [];
+  const recorteTodoOrfao: string[] = [];
   for (const u of legado.usuarios) {
     if (u.escopoTurnoIds.length === 0 && u.escopoEspecialidadeIds.length === 0) continue;
     const usuarioId = usuarioDoLegado(u.id);
@@ -667,12 +712,13 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       contar('escoposSemUsuario');
       continue;
     }
+    const linhas: typeof tabEscopos = [];
     for (const turnoId of new Set(u.escopoTurnoIds.map((t) => turnoDoLegado.get(t)))) {
       if (!turnoId) {
         contar('escoposOrfaos');
         continue;
       }
-      tabEscopos.push({
+      linhas.push({
         id: idDoLegado('usuarios_escopos_escala', `${usuarioId}:turno:${turnoId}`),
         usuarioId,
         turnoId,
@@ -684,14 +730,20 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
         contar('escoposOrfaos');
         continue;
       }
-      tabEscopos.push({
+      linhas.push({
         id: idDoLegado('usuarios_escopos_escala', `${usuarioId}:frente:${frenteId}`),
         usuarioId,
         turnoId: null,
         frenteId,
       });
     }
+    if (linhas.length === 0) recorteTodoOrfao.push(nome);
+    tabEscopos.push(...linhas);
   }
+  if (recorteTodoOrfao.length > 0)
+    throw new Error(
+      `Recorte da escala sem nenhum turno ou frente que exista no redo-one (sem recorte, veria a escala toda): ${recorteTodoOrfao.join(', ')}. Corrija o recorte dela no dashboards-one e rode a carga de novo.`,
+    );
 
   // ── Histórico (logs_alteracao_escala → eventos_auditoria) ────────────────────────────────────
   const alocacaoLegadoPorId = new Map(legado.alocacoes.map((a) => [a.id, a]));
@@ -726,7 +778,11 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       );
       acao = log.acao.trim().toLowerCase();
     }
-    const foto = log.depois ?? log.antes ?? {};
+    const { antes: logAntes, depois: logDepois } =
+      entidadeLegado === 'ausencia_medico'
+        ? semTextosDaAusencia(log.antes, log.depois)
+        : { antes: log.antes, depois: log.depois };
+    const foto = logDepois ?? logAntes ?? {};
     const registro = log.registroId;
     const contexto: Record<string, unknown> = {};
     let entidadeId = registro ?? idDoLegado('logs_alteracao_escala', log.id);
@@ -777,7 +833,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
     // registro foi removido (convenção de `escala/auditoria-escala.ts`).
     const extra = { ...contexto, ...quem };
     const temExtra = Object.keys(extra).length > 0;
-    const noAntes = log.depois === null && log.antes !== null;
+    const noAntes = logDepois === null && logAntes !== null;
     tabEventos.push({
       id: idDoLegado('eventos_escala', log.id),
       ocorridoEm: new Date(log.criadoEm),
@@ -786,8 +842,8 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       entidade,
       entidadeId,
       acao,
-      antes: noAntes && temExtra ? { ...log.antes, ...extra } : log.antes,
-      depois: !noAntes && temExtra ? { ...(log.depois ?? {}), ...extra } : log.depois,
+      antes: noAntes && temExtra ? { ...logAntes, ...extra } : logAntes,
+      depois: !noAntes && temExtra ? { ...(logDepois ?? {}), ...extra } : logDepois,
     });
   }
 
