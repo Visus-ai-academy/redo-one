@@ -155,6 +155,9 @@
 | Aprovar/recusar sem conferir a situação; mudar horário do turno sem revalidar; ajuste do dia em dia sem plantão | Aprovar e recusar só pendente; turno recusa horário, tipo ou frente que invalidaria alocações vigentes; ajuste só em dia de plantão | Feito | 16/11 · 6b9cff3f |
 | Ocorrência sem hora absoluta: às 02:00 o robô usava o plantão de hoje no lugar do de ontem | Ocorrência com início e fim em instantes de Brasília; o consumo pela distribuição fica para ela | Feito (escala) / Pendente (distribuição) | 16/11 · 6b9cff3f |
 | Gestora precisava de acesso ao cadastro de médicos para escalar | Lista de médicos da escala (só id, nome e ativo) com `escala.ver` | Feito | 16/11 · 6b9cff3f |
+| Escalar um médico com produtividade diferente por dia exigia um vínculo por combinação (ou a grade do cadastro, que era um segundo editor) | "Montar escala" no modo Por médico: grade turnos × dias com produtividade por célula; vira as alocações sozinha e aplica só a diferença | Feito | 16/11 · 6b9cff3f |
+| Semana com uma linha por turno espalhava os médicos do dia | Semana no formato que a operação prefere: um calendário por frente, médicos do mesmo turno em bloco com a faixa lateral na cor do turno, cartão com a descrição ao passar o mouse e modo Ausências da semana | Feito | 16/11 · 6b9cff3f |
+| Frentes, turnos e tipos de ausência sem cor ou com cores parecidas | Cores de matizes bem separados e pouco saturados, editáveis na tela; a carga não sobrescreve a cor escolhida no redo-one | Feito | 16/11 · 6b9cff3f |
 | Arranjo do médico pré-preenchia o vínculo lendo a distribuição de dentro da escala | O formulário recebe valores iniciais; o pré-preenchimento vem da `distribuicao` pelo front | Pendente (com a `distribuicao`) | 16/11 · 6b9cff3f |
 
 ## 10. Faturamento
