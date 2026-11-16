@@ -78,6 +78,13 @@
       "when": 1794774093132,
       "tag": "0010_quebra_por_estudo",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794834501095,
+      "tag": "0011_ingestao",
+      "breakpoints": true
     }
   ]
 }
