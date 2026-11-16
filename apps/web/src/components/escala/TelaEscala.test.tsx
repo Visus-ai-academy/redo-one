@@ -162,6 +162,20 @@ describe('TelaEscala', () => {
     expect(screen.getByRole('combobox', { name: 'Médico' })).toBeInTheDocument();
   });
 
+  it('por médico com médico escolhido: montar escala, só para quem edita', async () => {
+    const onMontarEscala = vi.fn();
+    const filtros = { modo: 'medico' as const, agrupar: 'frente' as const, data: '2026-11-18' };
+    await montar({ filtros, medico: { valor: 'm1', rotulo: 'Ana Souza' }, onMontarEscala });
+    await userEvent.click(screen.getByRole('button', { name: 'Montar escala' }));
+    expect(onMontarEscala).toHaveBeenCalled();
+  });
+
+  it('montar escala some sem médico ou sem permissão', async () => {
+    const filtros = { modo: 'medico' as const, agrupar: 'frente' as const, data: '2026-11-18' };
+    await montar({ filtros, medico: null, dados: undefined, onMontarEscala: vi.fn() });
+    expect(screen.queryByRole('button', { name: 'Montar escala' })).not.toBeInTheDocument();
+  });
+
   it('erro ao carregar oferece tentar de novo', async () => {
     const acoes = await montar({ dados: undefined, erro: true });
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));

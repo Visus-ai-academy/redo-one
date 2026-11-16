@@ -6,6 +6,8 @@ import { alocacoesControllerCriarCobertura } from '../../gen/clients/alocacoesCo
 import { alocacoesControllerDefinirAjuste } from '../../gen/clients/alocacoesControllerDefinirAjuste';
 import { alocacoesControllerRemover } from '../../gen/clients/alocacoesControllerRemover';
 import { coberturasControllerAtualizar } from '../../gen/clients/coberturasControllerAtualizar';
+import { escalaFixaControllerDefinir } from '../../gen/clients/escalaFixaControllerDefinir';
+import { escalaFixaControllerObter } from '../../gen/clients/escalaFixaControllerObter';
 import { alocacoesControllerObterQueryOptions } from '../../gen/hooks/useAlocacoesControllerObter';
 import { prioridadesControllerListarQueryOptions } from '../../gen/hooks/usePrioridadesControllerListar';
 import { subespecialidadesControllerListarQueryOptions } from '../../gen/hooks/useSubespecialidadesControllerListar';
@@ -14,12 +16,15 @@ import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { FrenteItemDto } from '../../gen/types/FrenteItemDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
+import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { PainelCarregando } from '../painel/PainelCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import type { InicialAlocacao } from './alocacao-form';
-import { buscarMedicosAtivos } from './buscar-medicos';
+import { buscarMedicosAtivos, buscarMedicosDaEscala } from './buscar-medicos';
+import { resumoDoResultado } from './escala-fixa';
 import { PainelAlocacao } from './PainelAlocacao';
 import { PainelCobertura } from './PainelCobertura';
+import { PainelEscalaFixa } from './PainelEscalaFixa';
 import { PainelPlantao } from './PainelPlantao';
 
 /** O que está aberto ao lado da escala. */
@@ -27,7 +32,8 @@ export type PainelAberto =
   | { tipo: 'plantao'; ocorrencia: OcorrenciaDto }
   | { tipo: 'alocar'; inicial: InicialAlocacao }
   | { tipo: 'editar'; ocorrencia: OcorrenciaDto }
-  | { tipo: 'cobertura'; ocorrencia: OcorrenciaDto };
+  | { tipo: 'cobertura'; ocorrencia: OcorrenciaDto }
+  | { tipo: 'escala-fixa'; medico: OpcaoBusca };
 
 type PaineisEscalaProps = {
   painel: PainelAberto;
@@ -104,6 +110,32 @@ export function PaineisEscala({
           );
         }}
         onFechar={fechar}
+      />
+    );
+  }
+
+  if (painel.tipo === 'escala-fixa') {
+    const { medico } = painel;
+    return (
+      <PainelEscalaFixa
+        key={`escala-fixa-${medico.valor}`}
+        medico={medico}
+        hoje={hoje}
+        turnos={turnos}
+        frentes={frentes}
+        buscarGrade={(medicoId, frenteId) =>
+          escalaFixaControllerObter({ path: { medicoId }, query: { frenteId } }).unwrap()
+        }
+        buscarMedicos={buscarMedicosDaEscala}
+        onFechar={fechar}
+        onSalvar={async (dados) => {
+          const resultado = await escalaFixaControllerDefinir({
+            path: { medicoId: medico.valor },
+            body: dados,
+          }).unwrap();
+          await depois(resumoDoResultado(resultado), resultado.avisos);
+          fechar();
+        }}
       />
     );
   }

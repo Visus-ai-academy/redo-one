@@ -42,6 +42,11 @@ type LinhaMedicoProps = {
   /** "07:00–13:00": o horário do plantão só aparece quando é outro. */
   horarioDoTurno?: string;
   emConflito?: boolean;
+  /**
+   * Na agenda de um médico: no lugar do nome, onde é ("FRENTE · Turno", com a cor da frente), e o
+   * horário sempre.
+   */
+  local?: boolean;
   cartao: CartaoDoPlantao;
   onAbrir: (ocorrencia: OcorrenciaDto) => void;
 };
@@ -54,11 +59,12 @@ export function LinhaMedico({
   ocorrencia: o,
   horarioDoTurno,
   emConflito = false,
+  local = false,
   cartao,
   onAbrir,
 }: LinhaMedicoProps) {
   const horario = `${o.horarioInicio}–${o.horarioFim}`;
-  const mostrarHorario = horario !== horarioDoTurno;
+  const mostrarHorario = local || horario !== horarioDoTurno;
   const selos = [
     emConflito && (
       <Etiqueta key="conflito" tom="erro" icone={Warning}>
@@ -107,14 +113,33 @@ export function LinhaMedico({
         emConflito && 'bg-destructive-soft/50',
       )}
     >
-      <span
-        className={cn(
-          'w-full truncate font-medium',
-          o.ausente && 'text-muted-foreground line-through',
-        )}
-      >
-        {o.medicoNome}
-      </span>
+      {local ? (
+        <span
+          className={cn(
+            'flex w-full min-w-0 items-center gap-1.5 font-medium',
+            o.ausente && 'text-muted-foreground line-through',
+          )}
+        >
+          <span
+            aria-hidden
+            data-cor-frente
+            className="border-border size-2 flex-none rounded-full border"
+            style={
+              o.frenteCor ? { backgroundColor: o.frenteCor, borderColor: o.frenteCor } : undefined
+            }
+          />
+          <span className="truncate">{`${o.frenteRotulo} · ${o.turnoNome}`}</span>
+        </span>
+      ) : (
+        <span
+          className={cn(
+            'w-full truncate font-medium',
+            o.ausente && 'text-muted-foreground line-through',
+          )}
+        >
+          {o.medicoNome}
+        </span>
+      )}
       {(mostrarHorario || o.produtividade !== null) && (
         <span className="text-muted-foreground flex max-w-full flex-wrap gap-x-2 text-xs tabular-nums">
           {mostrarHorario && <span>{horario}</span>}

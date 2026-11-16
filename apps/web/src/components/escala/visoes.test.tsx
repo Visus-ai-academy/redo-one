@@ -408,23 +408,93 @@ describe('MesCalendario', () => {
 });
 
 describe('AgendaMedico', () => {
-  it('lista só os dias com plantão, com frente e turno', async () => {
+  const descrever = (o: Parameters<typeof descreverPlantao>[0]) =>
+    descreverPlantao(o, { prioridades: new Map(), subespecialidades: new Map(), conflitos: [] });
+  const tarde = {
+    turnoId: 't-tarde',
+    turnoNome: 'Tarde',
+    turnoCor: '#2F6FB2',
+    turnoOrdem: 2,
+    horarioInicio: '13:00',
+    horarioFim: '19:00',
+    inicio: '2026-11-16T13:00:00-03:00',
+  };
+
+  it('dias com plantão; no dia, os plantões por turno, com a cor do turno e da frente', () => {
+    render(
+      <AgendaMedico
+        ocorrencias={[
+          ocorrencia({ alocacaoId: 't', ...tarde, frenteId: 'f-rm', frenteRotulo: 'RM Geral' }),
+          ocorrencia(),
+          ocorrencia({ data: '2026-11-18', diaSemana: 3 }),
+        ]}
+        conflitos={new Set()}
+        horarios={{ 't-manha': '07:00–13:00' }}
+        descrever={descrever}
+        onAbrir={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Seg 16/11')).toBeInTheDocument();
+    expect(screen.getByText('Qua 18/11')).toBeInTheDocument();
+    const dia = screen.getByText('Seg 16/11').closest('li') as HTMLElement;
+    const plantoes = within(dia).getAllByRole('button');
+    // Sem o nome do médico (a agenda é dele): frente · turno, horário e produtividade.
+    expect(plantoes.map((b) => b.textContent)).toEqual([
+      expect.stringMatching(/^TC Neuro · Manhã07:00–13:0040 reg\.$/),
+      expect.stringMatching(/^RM Geral · Tarde13:00–19:0040 reg\.$/),
+    ]);
+    expect(plantoes[0]).not.toHaveTextContent('Ana Souza');
+    // Faixa na cor do turno e bolinha na cor da frente.
+    expect(plantoes[0]?.closest('[data-plantao]')).toHaveStyle({ borderLeftColor: '#214037' });
+    expect(plantoes[0]?.querySelector('[data-cor-frente]')).toHaveStyle({
+      backgroundColor: '#1F7A4D',
+    });
+  });
+
+  it('selos como na semana, clique abre e o mouse mostra o cartão', async () => {
     const onAbrir = vi.fn();
     render(
       <AgendaMedico
-        ocorrencias={[ocorrencia(), ocorrencia({ data: '2026-11-18', diaSemana: 3 })]}
-        conflitos={new Set()}
+        ocorrencias={[
+          ocorrencia({
+            ausente: true,
+            tipoAusenciaNome: 'Férias',
+            tipoAusenciaCor: '#2F6FB2',
+            cobertoPor: { alocacaoId: 'c', medicoId: 'm3', medicoNome: 'Carla Dias' },
+          }),
+          ocorrencia({ alocacaoId: 'g', ...tarde, gratificado: true }),
+        ]}
+        conflitos={new Set(['g|2026-11-16'])}
         horarios={{}}
+        descrever={descrever}
         onAbrir={onAbrir}
       />,
     );
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByText('Qua 18/11')).toBeInTheDocument();
-    expect(screen.getAllByText('TC Neuro, Manhã')).toHaveLength(2);
+    const manha = screen.getByRole('button', { name: /Manhã/ });
+    expect(manha).toHaveTextContent('Férias');
+    expect(manha).toHaveTextContent('Coberto por Carla Dias');
+    const outro = screen.getByRole('button', { name: /Tarde/ });
+    expect(outro).toHaveTextContent('Gratificado');
+    expect(outro).toHaveTextContent('Conflito');
+    expect(outro).toHaveTextContent('cota 40');
+
+    await userEvent.hover(outro);
+    expect(await screen.findByText('Onde', {}, { timeout: 2000 })).toBeInTheDocument();
+    await userEvent.unhover(outro);
+    await userEvent.click(manha);
+    expect(onAbrir).toHaveBeenCalledWith(expect.objectContaining({ alocacaoId: 'a1' }));
   });
 
   it('vazio diz que não há plantões', () => {
-    render(<AgendaMedico ocorrencias={[]} conflitos={new Set()} horarios={{}} onAbrir={vi.fn()} />);
+    render(
+      <AgendaMedico
+        ocorrencias={[]}
+        conflitos={new Set()}
+        horarios={{}}
+        descrever={descrever}
+        onAbrir={vi.fn()}
+      />,
+    );
     expect(screen.getByText('Nenhum plantão deste médico no mês.')).toBeInTheDocument();
   });
 });

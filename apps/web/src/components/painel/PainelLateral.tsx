@@ -2,6 +2,7 @@ import { Drawer } from '@base-ui/react/drawer';
 import { X } from '@phosphor-icons/react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
+import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
 
 type PainelLateralProps = {
@@ -13,6 +14,8 @@ type PainelLateralProps = {
   onFechar: () => void;
   /** O conteúdo ainda está carregando (avisa o leitor de tela). */
   ocupado?: boolean;
+  /** `larga` (720px no computador) para conteúdo em grade; no celular, sempre a tela inteira. */
+  largura?: 'padrao' | 'larga';
   children: ReactNode;
 };
 
@@ -33,6 +36,7 @@ export function PainelLateral({
   inicio,
   onFechar,
   ocupado,
+  largura = 'padrao',
   children,
 }: PainelLateralProps) {
   // Monta fechado e abre em seguida: o Base UI só anima a entrada quando `open` muda.
@@ -67,7 +71,10 @@ export function PainelLateral({
           <Drawer.Popup
             data-painel-lateral
             aria-busy={ocupado || undefined}
-            className="bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none lg:w-[400px]"
+            className={cn(
+              'bg-card pointer-events-auto flex h-dvh w-full [transform:translateX(var(--drawer-swipe-movement-x))] flex-col overflow-y-auto overscroll-contain shadow-xl transition-transform duration-200 ease-out outline-none data-[ending-style]:[transform:translateX(100%)] data-[starting-style]:[transform:translateX(100%)] data-[swiping]:select-none motion-reduce:transition-none',
+              largura === 'larga' ? 'lg:w-[720px]' : 'lg:w-[400px]',
+            )}
           >
             <div className="flex flex-none items-center gap-3 border-b p-4">
               {inicio}

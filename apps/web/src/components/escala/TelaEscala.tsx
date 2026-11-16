@@ -1,5 +1,11 @@
 import { Button } from '@base-ui/react/button';
-import { CaretLeft, CaretRight, ClockCounterClockwise, Plus } from '@phosphor-icons/react';
+import {
+  CalendarDots,
+  CaretLeft,
+  CaretRight,
+  ClockCounterClockwise,
+  Plus,
+} from '@phosphor-icons/react';
 import { Link } from '@tanstack/react-router';
 import { useCallback, useId, useMemo } from 'react';
 
@@ -95,6 +101,8 @@ export type TelaEscalaProps = {
   onMudar: (novos: Partial<FiltrosEscala>) => void;
   onAbrirPlantao: (ocorrencia: OcorrenciaDto) => void;
   onAlocar: (lugar: Partial<LugarDoAlocar>) => void;
+  /** Abre a grade da escala fixa do médico do modo Por médico. */
+  onMontarEscala?: () => void;
 };
 
 const MODOS = [
@@ -133,6 +141,7 @@ export function TelaEscala({
   onMudar,
   onAbrirPlantao,
   onAlocar,
+  onMontarEscala,
 }: TelaEscalaProps) {
   const { modo, data } = filtros;
   const medicoCampoId = useId();
@@ -222,20 +231,32 @@ export function TelaEscala({
 
       <div className="flex flex-wrap gap-2">
         {modo === 'medico' ? (
-          <div className="flex flex-[1_1_260px] flex-col gap-1 md:max-w-[320px]">
-            <label htmlFor={medicoCampoId} className="sr-only">
-              Médico
-            </label>
-            <BuscaSelecao
-              id={medicoCampoId}
-              key={medico?.valor ?? 'nenhum'}
-              chave="medicos-escala"
-              buscar={buscarMedicos}
-              valor={medico}
-              onMudar={(opcao) => onMudar({ medicoId: opcao?.valor })}
-              placeholder="Buscar médico pelo nome"
-            />
-          </div>
+          <>
+            <div className="flex flex-[1_1_260px] flex-col gap-1 md:max-w-[320px]">
+              <label htmlFor={medicoCampoId} className="sr-only">
+                Médico
+              </label>
+              <BuscaSelecao
+                id={medicoCampoId}
+                key={medico?.valor ?? 'nenhum'}
+                chave="medicos-escala"
+                buscar={buscarMedicos}
+                valor={medico}
+                onMudar={(opcao) => onMudar({ medicoId: opcao?.valor })}
+                placeholder="Buscar médico pelo nome"
+              />
+            </div>
+            {podeEditar && medico && onMontarEscala && (
+              <Button
+                type="button"
+                onClick={onMontarEscala}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                <CalendarDots size={16} aria-hidden />
+                Montar escala
+              </Button>
+            )}
+          </>
         ) : (
           <CampoBusca
             rotulo="Buscar médico na escala"
@@ -497,6 +518,7 @@ function Conteudo({
           ocorrencias={ocorrencias}
           conflitos={conflitos}
           horarios={horarios}
+          descrever={descrever}
           onAbrir={onAbrirPlantao}
         />
       )}

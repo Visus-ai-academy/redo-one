@@ -108,4 +108,19 @@ describe('PainelLateral', () => {
     expect(onFechar).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: 'Ana Reis' })).toBeInTheDocument();
   });
+
+  it('largo para grades: 720px no computador; o padrão continua 400px', async () => {
+    const { unmount } = render(
+      <PainelLateral titulo="Grade" largura="larga" onFechar={vi.fn()}>
+        conteúdo
+      </PainelLateral>,
+    );
+    const largo = await screen.findByRole('dialog', { name: 'Grade' });
+    expect(largo).toHaveClass('w-full', 'lg:w-[720px]');
+    expect(largo).not.toHaveClass('lg:w-[400px]');
+    unmount();
+
+    montar();
+    expect(await screen.findByRole('dialog', { name: 'Ana Reis' })).toHaveClass('lg:w-[400px]');
+  });
 });

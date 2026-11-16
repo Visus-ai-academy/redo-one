@@ -237,6 +237,11 @@ function Escala() {
         onMudar={mudar}
         onAbrirPlantao={(ocorrencia) => setPainel({ tipo: 'plantao', ocorrencia })}
         onAlocar={(lugar) => setPainel({ tipo: 'alocar', inicial: lugar })}
+        onMontarEscala={() =>
+          busca.medicoId &&
+          nomeMedico &&
+          setPainel({ tipo: 'escala-fixa', medico: { valor: busca.medicoId, rotulo: nomeMedico } })
+        }
       />
       {painelAtual && (
         <PaineisEscala
