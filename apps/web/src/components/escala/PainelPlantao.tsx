@@ -1,0 +1,237 @@
+import { Button } from '@base-ui/react/button';
+import { Link } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
+import { z } from 'zod';
+
+import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
+import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
+import { Alerta } from '../alerta/Alerta';
+import { buttonClassName } from '../button/button-class';
+import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
+import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
+import { useAppForm } from '../form/form';
+import { PainelLateral } from '../painel/PainelLateral';
+import { dataCurta, diaDaSemana, NOMES_DIAS_LONGOS } from './calendario';
+
+export type PainelPlantaoProps = {
+  ocorrencia: OcorrenciaDto;
+  /** Conflitos do médico na janela; o painel mostra os deste plantão. */
+  conflitos: readonly ConflitoEscalaDto[];
+  podeEditar: boolean;
+  onEditar: () => void;
+  /** Nova cobertura do titular, ou editar esta cobertura. */
+  onCobertura: () => void;
+  onRemover: () => Promise<void>;
+  /** Produtividade do dia; `null` volta à da escala. */
+  onAjustar: (produtividade: number | null, observacoes: string | null) => Promise<void>;
+  onFechar: () => void;
+};
+
+const hora = (iso: string) => iso.slice(11, 16);
+const registros = (n: number) => `${n} ${n === 1 ? 'registro' : 'registros'}`;
+
+function vigencia(o: OcorrenciaDto) {
+  if (o.coberturaDe) return `Cobrindo ${o.coberturaDe.medicoNome}`;
+  const periodo = o.dataFim
+    ? `de ${dataCurta(o.dataInicio)} a ${dataCurta(o.dataFim)}`
+    : `desde ${dataCurta(o.dataInicio)}`;
+  if (o.gratificado) return `Gratificado, ${periodo}`;
+  return o.dataFim ? `Período único, ${periodo}` : `Escala fixa ${periodo}`;
+}
+
+function produtividade(o: OcorrenciaDto) {
+  if (o.produtividade === null) return 'Não informada';
+  const doDia = registros(o.produtividade);
+  if (!o.ajustada) return doDia;
+  return `${doDia} (na escala: ${o.produtividadeEscala === null ? 'não informada' : o.produtividadeEscala})`;
+}
+
+function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-subtle-foreground text-[13px]">{rotulo}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+/** Um plantão (médico num dia): os dados e o que dá para fazer com ele, ao lado da escala. */
+export function PainelPlantao({
+  ocorrencia: o,
+  conflitos,
+  podeEditar,
+  onEditar,
+  onCobertura,
+  onRemover,
+  onAjustar,
+  onFechar,
+}: PainelPlantaoProps) {
+  const { erro, tentar } = useErroDoPainel();
+  const ehCobertura = Boolean(o.coberturaDe);
+  const doPlantao = conflitos
+    .filter(
+      (c) =>
+        c.data === o.data && (c.a.alocacaoId === o.alocacaoId || c.b.alocacaoId === o.alocacaoId),
+    )
+    .map((c) => (c.a.alocacaoId === o.alocacaoId ? c.b : c.a));
+  const dia = `${NOMES_DIAS_LONGOS[diaDaSemana(o.data)]}, ${dataCurta(o.data)}`;
+  const local = `${o.frenteRotulo}, ${o.turnoNome}`;
+
+  return (
+    <PainelLateral titulo={o.medicoNome} subtitulo={dia} onFechar={onFechar}>
+      <div className="flex flex-col gap-4 p-4">
+        {erro && <Alerta tom="erro">{erro}</Alerta>}
+        {doPlantao.length > 0 && (
+          <Alerta tom="atencao">
+            Este plantão se sobrepõe a outro do médico no dia:{' '}
+            {doPlantao
+              .map((p) => `${p.frenteRotulo}, ${p.turnoNome} (${hora(p.inicio)}–${hora(p.fim)})`)
+              .join('; ')}
+            .
+          </Alerta>
+        )}
+        <dl className="flex flex-col gap-3">
+          <Linha rotulo="Onde">{local}</Linha>
+          <Linha rotulo="Horário">
+            <span className="tabular-nums">
+              {o.horarioInicio}–{o.horarioFim}
+            </span>
+          </Linha>
+          <Linha rotulo="Produtividade">
+            <span className="tabular-nums">{produtividade(o)}</span>
+          </Linha>
+          <Linha rotulo="Vigência">{vigencia(o)}</Linha>
+          {o.cobertoPor && <Linha rotulo="Cobertura">Coberto por {o.cobertoPor.medicoNome}</Linha>}
+          {o.ausente && (
+            <Linha rotulo="Ausência">
+              {o.tipoAusenciaNome ? `Ausente: ${o.tipoAusenciaNome}` : 'Ausente'}
+            </Linha>
+          )}
+        </dl>
+
+        {podeEditar && (
+          <div className="flex flex-wrap gap-2 border-t pt-4">
+            {!ehCobertura && (
+              <Button
+                type="button"
+                onClick={onEditar}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Editar alocação
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={onCobertura}
+              className={buttonClassName({ variant: 'secondary' })}
+            >
+              {ehCobertura ? 'Editar cobertura' : 'Cobertura'}
+            </Button>
+            <Link
+              to="/escala/ausencias"
+              search={{
+                novo: 1,
+                medicoId: o.medicoId,
+                frenteId: o.frenteId,
+                turnoId: o.turnoId,
+                de: o.data,
+              }}
+              className={buttonClassName({ variant: 'secondary' })}
+            >
+              Definir ausência
+            </Link>
+            <ConfirmarAcao
+              acao={ehCobertura ? 'Remover cobertura' : 'Remover alocação'}
+              titulo={
+                ehCobertura
+                  ? `Remover a cobertura de ${o.medicoNome}?`
+                  : `Remover a alocação de ${o.medicoNome}?`
+              }
+              consequencia={
+                ehCobertura
+                  ? `${o.medicoNome} deixa de cobrir ${o.coberturaDe?.medicoNome} em todos os dias da cobertura, e o titular volta a esses plantões.`
+                  : `${o.medicoNome} sai de ${local} em todos os dias, e as coberturas desta alocação saem junto. Para tirar só um dia, use Definir ausência.`
+              }
+              onConfirmar={() =>
+                tentar(onRemover, 'Não foi possível remover agora. Tente de novo.')
+              }
+            />
+          </div>
+        )}
+
+        {podeEditar && !o.gratificado && (
+          <AjusteDoDia ocorrencia={o} onAjustar={(p, obs) => tentar(() => onAjustar(p, obs))} />
+        )}
+      </div>
+    </PainelLateral>
+  );
+}
+
+const esquemaAjuste = z.object({
+  produtividade: z.string().regex(/^\d+$/, 'Informe um número inteiro igual ou maior que zero.'),
+  observacoes: z.string().max(500, 'Use até 500 caracteres.'),
+});
+
+function AjusteDoDia({
+  ocorrencia: o,
+  onAjustar,
+}: {
+  ocorrencia: OcorrenciaDto;
+  onAjustar: (produtividade: number | null, observacoes: string | null) => Promise<void>;
+}) {
+  const form = useAppForm({
+    defaultValues: {
+      produtividade: o.produtividade === null ? '' : String(o.produtividade),
+      observacoes: '',
+    },
+    validators: { onSubmit: esquemaAjuste },
+    onSubmit: ({ value }) =>
+      onAjustar(Number(value.produtividade), value.observacoes.trim() || null),
+  });
+
+  return (
+    <section aria-labelledby="ajuste-do-dia" className="flex flex-col gap-3 border-t pt-4">
+      <div className="flex flex-col gap-1">
+        <h3 id="ajuste-do-dia" className="font-semibold">
+          Produtividade do dia
+        </h3>
+        <p className="text-muted-foreground text-[13px]">
+          Só neste dia; os outros seguem a da escala.
+        </p>
+      </div>
+      <form
+        noValidate
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          void form.handleSubmit();
+        }}
+        className="flex flex-col gap-3"
+      >
+        <form.AppField name="produtividade">
+          {(field) => (
+            <field.NumberField label="Registros neste dia" placeholder="Ex.: 30" min={0} required />
+          )}
+        </form.AppField>
+        <form.AppField name="observacoes">
+          {(field) => (
+            <field.TextField label="Motivo" placeholder="Ex.: saiu mais cedo" autoComplete="off" />
+          )}
+        </form.AppField>
+        <div className="flex flex-wrap justify-end gap-2">
+          {o.ajustada && (
+            <Button
+              type="button"
+              onClick={() => void onAjustar(null, null)}
+              className={buttonClassName({ variant: 'secondary' })}
+            >
+              Voltar à da escala
+            </Button>
+          )}
+          <form.AppForm>
+            <form.SubmitButton pendingLabel="Salvando…">Salvar produtividade</form.SubmitButton>
+          </form.AppForm>
+        </div>
+      </form>
+    </section>
+  );
+}

@@ -7,6 +7,7 @@ import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadast
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { AbaEscalaMedico } from '../../components/medicos/AbaEscalaMedico';
 import { FormPagamento } from '../../components/medicos/FormPagamento';
 import { PainelMedico } from '../../components/medicos/PainelMedico';
 import { SecaoAcesso } from '../../components/medicos/SecaoAcesso';
@@ -308,6 +309,7 @@ function PainelDoMedico({
           />
         ) : undefined
       }
+      escala={id && pode(sessao, 'escala.ver') ? <AbaEscalaMedico medicoId={id} /> : undefined}
     />
   );
 }

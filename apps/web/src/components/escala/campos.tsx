@@ -1,0 +1,149 @@
+// Campos do formulário da escala que o kit ainda não tem. Usam o `useFieldContext` do kit: vão
+// dentro de `<form.AppField name="…">{() => <CaixasField … />}</form.AppField>`.
+import { CheckboxGroup } from '@base-ui/react/checkbox-group';
+import { Field } from '@base-ui/react/field';
+import { Fieldset } from '@base-ui/react/fieldset';
+import { Radio } from '@base-ui/react/radio';
+import { RadioGroup } from '@base-ui/react/radio-group';
+import type { ReactNode } from 'react';
+
+import { cn } from '../../lib/cn';
+import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
+import { useFieldContext } from '../form/context';
+import { FieldError } from '../form/field-parts';
+
+type Opcao = { valor: string; rotulo: string };
+
+function useErros() {
+  const field = useFieldContext<unknown>();
+  const erros = field.state.meta.errors.map((erro) =>
+    typeof erro === 'string' ? erro : (erro as { message?: string } | undefined)?.message,
+  );
+  return { field, erros, invalido: erros.length > 0 };
+}
+
+function Legenda({ required, children }: { required: boolean; children: ReactNode }) {
+  return (
+    <Fieldset.Legend className="flex items-baseline gap-1 font-medium">
+      {children}
+      {required && (
+        <span aria-hidden="true" className="text-destructive">
+          *
+        </span>
+      )}
+    </Fieldset.Legend>
+  );
+}
+
+/**
+ * Várias caixas de marcar lado a lado, quebrando linha (dias da semana, prioridades), sobre o
+ * CheckboxGroup do Base UI. O valor é a lista dos marcados.
+ */
+export function CaixasField({
+  label,
+  opcoes,
+  required = false,
+  description,
+  className,
+}: {
+  label: string;
+  opcoes: Opcao[];
+  required?: boolean;
+  description?: ReactNode;
+  className?: string;
+}) {
+  const { field, erros, invalido } = useErros();
+  const valor = field.state.value as string[];
+  return (
+    <Field.Root
+      name={field.name}
+      invalid={invalido}
+      touched={field.state.meta.isTouched}
+      className={cn('flex flex-col gap-2', className)}
+    >
+      <Fieldset.Root
+        render={
+          <CheckboxGroup
+            value={valor}
+            onValueChange={(novos) => {
+              field.handleChange(novos);
+              field.handleBlur();
+            }}
+          />
+        }
+        className="flex flex-col gap-2"
+      >
+        <Legenda required={required}>{label}</Legenda>
+        {description && (
+          <Field.Description className="text-muted-foreground -mt-1 text-[13px]">
+            {description}
+          </Field.Description>
+        )}
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {opcoes.map((opcao) => (
+            <Field.Item key={opcao.valor}>
+              <Field.Label className="flex items-center gap-2">
+                <CaixaDeSelecao value={opcao.valor} />
+                {opcao.rotulo}
+              </Field.Label>
+            </Field.Item>
+          ))}
+        </div>
+      </Fieldset.Root>
+      <FieldError invalid={invalido}>{erros.join(', ')}</FieldError>
+    </Field.Root>
+  );
+}
+
+/** Uma escolha entre poucas opções, todas à vista, sobre o RadioGroup do Base UI. */
+export function OpcoesField({
+  label,
+  opcoes,
+  description,
+  className,
+}: {
+  label: string;
+  opcoes: Opcao[];
+  description?: ReactNode;
+  className?: string;
+}) {
+  const { field } = useErros();
+  return (
+    <Field.Root name={field.name} className={cn('flex flex-col gap-2', className)}>
+      <Fieldset.Root
+        render={
+          <RadioGroup
+            value={field.state.value as string}
+            onValueChange={(novo) => {
+              field.handleChange(novo);
+              field.handleBlur();
+            }}
+          />
+        }
+        className="flex flex-col gap-2"
+      >
+        <Legenda required={false}>{label}</Legenda>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {opcoes.map((opcao) => (
+            <Field.Item key={opcao.valor}>
+              <Field.Label className="flex items-center gap-2">
+                <Radio.Root
+                  value={opcao.valor}
+                  className="border-input bg-card focus-visible:outline-ring data-[checked]:border-primary flex size-4 flex-none items-center justify-center rounded-full border focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  <Radio.Indicator className="bg-primary size-2 rounded-full data-[unchecked]:hidden" />
+                </Radio.Root>
+                {opcao.rotulo}
+              </Field.Label>
+            </Field.Item>
+          ))}
+        </div>
+        {description && (
+          <Field.Description className="text-muted-foreground text-[13px]">
+            {description}
+          </Field.Description>
+        )}
+      </Fieldset.Root>
+    </Field.Root>
+  );
+}
