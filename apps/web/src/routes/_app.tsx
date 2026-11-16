@@ -2,6 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 
 import { AppShell } from '../components/app-shell/AppShell';
+import { useAusenciasPendentes } from '../components/escala-ausencias/use-ausencias-pendentes';
 import { useTotalAvisosPendentes } from '../lib/avisos';
 import { exigirSessao } from '../lib/guarda';
 import { pode } from '../lib/permissoes';
@@ -20,10 +21,16 @@ function LayoutApp() {
   // Lê do cache, que a guarda acabou de preencher; atualiza sozinho se a sessão mudar.
   const { data: sessao } = useSuspenseQuery(sessaoQueryOptions());
   const avisosPendentes = useTotalAvisosPendentes(Boolean(sessao && pode(sessao, 'avisos.ver')));
+  const ausenciasPendentes = useAusenciasPendentes(
+    Boolean(sessao && pode(sessao, 'escala.ausencia.aprovar')),
+  );
   if (!sessao) return null;
 
   return (
-    <AppShell sessao={sessao} contadores={{ '/avisos': avisosPendentes }}>
+    <AppShell
+      sessao={sessao}
+      contadores={{ '/avisos': avisosPendentes, '/escala/ausencias': ausenciasPendentes }}
+    >
       <Outlet />
     </AppShell>
   );

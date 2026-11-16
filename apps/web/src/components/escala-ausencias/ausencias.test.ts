@@ -1,0 +1,113 @@
+import { describe, expect, it } from 'vitest';
+
+import type { AusenciaItemDto } from '../../gen/types/AusenciaItemDto';
+import {
+  atalhoDoPeriodo,
+  diaCurto,
+  diasDaSemana,
+  hojeEmBrasilia,
+  periodoDaAusencia,
+  periodoDoAtalho,
+  recorteDaAusencia,
+  situacaoDaAusencia,
+  somarDias,
+} from './ausencias';
+
+const base: AusenciaItemDto = {
+  id: 'a-1',
+  medico: { id: 'm-1', nome: 'Ana Lima' },
+  tipo: { id: 't-1', nome: 'Férias', cor: '#1F7A4D' },
+  dataInicio: '2026-12-01',
+  dataFim: '2026-12-10',
+  diasSemana: [],
+  frentes: [],
+  turnos: [],
+  situacao: 'aprovada',
+  origem: 'gestor',
+  observacoes: null,
+  motivoRecusa: null,
+  revisadaEm: null,
+  criadoEm: '2026-11-10T12:00:00.000Z',
+  solicitadaPor: null,
+  revisadaPor: null,
+};
+
+describe('hojeEmBrasilia', () => {
+  it('usa o dia de Brasília, não o de UTC', () => {
+    // 02:00 UTC do dia 17 ainda é dia 16 em Brasília (UTC−3).
+    expect(hojeEmBrasilia(new Date('2026-11-17T02:00:00Z'))).toBe('2026-11-16');
+    expect(hojeEmBrasilia(new Date('2026-11-17T03:00:00Z'))).toBe('2026-11-17');
+  });
+});
+
+describe('somarDias', () => {
+  it('atravessa mês e ano', () => {
+    expect(somarDias('2026-12-25', 7)).toBe('2027-01-01');
+    expect(somarDias('2026-03-01', -1)).toBe('2026-02-28');
+  });
+});
+
+describe('diaCurto', () => {
+  it('omite o ano corrente e mostra os outros', () => {
+    expect(diaCurto('2026-12-01', '2026-11-16')).toBe('01/12');
+    expect(diaCurto('2027-01-05', '2026-11-16')).toBe('05/01/2027');
+  });
+});
+
+describe('periodoDaAusencia', () => {
+  it('um dia só aparece uma vez', () => {
+    expect(
+      periodoDaAusencia({ dataInicio: '2026-12-01', dataFim: '2026-12-01' }, '2026-11-16'),
+    ).toBe('01/12');
+  });
+  it('início e fim com travessão', () => {
+    expect(periodoDaAusencia(base, '2026-11-16')).toBe('01/12 – 10/12');
+  });
+});
+
+describe('diasDaSemana', () => {
+  it('ordena de segunda a domingo, abreviado', () => {
+    expect(diasDaSemana([0, 3, 1])).toBe('seg, qua, dom');
+  });
+});
+
+describe('recorteDaAusencia', () => {
+  it('sem recorte, nada', () => {
+    expect(recorteDaAusencia(base)).toEqual([]);
+  });
+  it('dias, turnos e escalas, cada um na sua frase', () => {
+    expect(
+      recorteDaAusencia({
+        ...base,
+        diasSemana: [3, 1],
+        turnos: [{ id: 'tu-1', nome: 'Tarde' }],
+        frentes: [
+          { id: 'f-1', nome: 'NEURO' },
+          { id: 'f-2', nome: 'TC' },
+        ],
+      }),
+    ).toEqual(['só seg, qua', 'só Tarde', 'só NEURO, TC']);
+  });
+});
+
+describe('situacaoDaAusencia', () => {
+  it('nomes e tons fixos', () => {
+    expect(situacaoDaAusencia('pendente')).toEqual({ texto: 'Pendente', tom: 'atencao' });
+    expect(situacaoDaAusencia('aprovada')).toEqual({ texto: 'Aprovada', tom: 'sucesso' });
+    expect(situacaoDaAusencia('recusada')).toEqual({ texto: 'Recusada', tom: 'inativo' });
+  });
+});
+
+describe('atalhos de período', () => {
+  const hoje = '2026-11-16';
+  it('cada atalho começa hoje', () => {
+    expect(periodoDoAtalho('hoje', hoje)).toEqual({ de: hoje, ate: hoje });
+    expect(periodoDoAtalho('7', hoje)).toEqual({ de: hoje, ate: '2026-11-23' });
+    expect(periodoDoAtalho('90', hoje)).toEqual({ de: hoje, ate: '2027-02-14' });
+  });
+  it('reconhece o atalho pelo período; sem período é o padrão da API', () => {
+    expect(atalhoDoPeriodo(undefined, undefined, hoje)).toBe('');
+    expect(atalhoDoPeriodo(hoje, '2026-12-16', hoje)).toBe('30');
+    expect(atalhoDoPeriodo('2026-11-01', '2026-11-30', hoje)).toBe('personalizado');
+  });
+});
