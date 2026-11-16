@@ -1,4 +1,4 @@
-import { Buildings, Flask, Gear, type Icon, Stethoscope } from '@phosphor-icons/react';
+import { Buildings, FileArrowUp, Flask, Gear, type Icon, Stethoscope } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemMenu = {
@@ -18,6 +18,17 @@ export type GrupoMenu = { titulo: string; itens: ItemMenu[] };
  * skill ui-design). Cada tela entra aqui quando for construída, com o ícone e a permissão `ver`.
  */
 export const GRUPOS_MENU: GrupoMenu[] = [
+  {
+    titulo: 'Operação',
+    itens: [
+      {
+        nome: 'Importação',
+        to: '/importacao',
+        icone: FileArrowUp,
+        permissao: 'importacao.ver',
+      },
+    ],
+  },
   {
     titulo: 'Cadastros',
     itens: [

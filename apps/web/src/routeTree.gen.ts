@@ -17,6 +17,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as AppExamesRouteImport } from './routes/_app/exames'
+import { Route as AppImportacaoRouteImport } from './routes/_app/importacao'
 import { Route as AppMedicosRouteImport } from './routes/_app/medicos'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
@@ -65,6 +66,11 @@ const AppClientesRoute = AppClientesRouteImport.update({
 const AppExamesRoute = AppExamesRouteImport.update({
   id: '/exames',
   path: '/exames',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportacaoRoute = AppImportacaoRouteImport.update({
+  id: '/importacao',
+  path: '/importacao',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMedicosRoute = AppMedicosRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof AppSplatRoute
   '/clientes': typeof AppClientesRoute
   '/exames': typeof AppExamesRoute
+  '/importacao': typeof AppImportacaoRoute
   '/medicos': typeof AppMedicosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/$': typeof AppSplatRoute
   '/clientes': typeof AppClientesRoute
   '/exames': typeof AppExamesRoute
+  '/importacao': typeof AppImportacaoRoute
   '/medicos': typeof AppMedicosRoute
   '/': typeof AppIndexRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/_app/$': typeof AppSplatRoute
   '/_app/clientes': typeof AppClientesRoute
   '/_app/exames': typeof AppExamesRoute
+  '/_app/importacao': typeof AppImportacaoRoute
   '/_app/medicos': typeof AppMedicosRoute
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/clientes'
     | '/exames'
+    | '/importacao'
     | '/medicos'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/clientes'
     | '/exames'
+    | '/importacao'
     | '/medicos'
     | '/'
     | '/configuracoes/catalogo'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/_app/$'
     | '/_app/clientes'
     | '/_app/exames'
+    | '/_app/importacao'
     | '/_app/medicos'
     | '/_app/'
     | '/_app/configuracoes/catalogo'
@@ -306,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/exames'
       fullPath: '/exames'
       preLoaderRoute: typeof AppExamesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/importacao': {
+      id: '/_app/importacao'
+      path: '/importacao'
+      fullPath: '/importacao'
+      preLoaderRoute: typeof AppImportacaoRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/medicos': {
@@ -385,6 +404,7 @@ interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
   AppClientesRoute: typeof AppClientesRoute
   AppExamesRoute: typeof AppExamesRoute
+  AppImportacaoRoute: typeof AppImportacaoRoute
   AppMedicosRoute: typeof AppMedicosRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
@@ -402,6 +422,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
   AppClientesRoute: AppClientesRoute,
   AppExamesRoute: AppExamesRoute,
+  AppImportacaoRoute: AppImportacaoRoute,
   AppMedicosRoute: AppMedicosRoute,
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,

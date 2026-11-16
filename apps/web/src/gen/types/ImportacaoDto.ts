@@ -5,8 +5,8 @@
 
 import type { FormatoImportacaoKey } from './FormatoImportacao'
 import type { OrigemImportacaoKey } from './OrigemImportacao'
+import type { PessoaResumoDto } from './PessoaResumoDto'
 import type { StatusImportacaoKey } from './StatusImportacao'
-import type { UsuarioResumoDto } from './UsuarioResumoDto'
 
 export type ImportacaoDto = {
   /**
@@ -22,7 +22,7 @@ export type ImportacaoDto = {
    */
   formato: FormatoImportacaoKey | null;
   nomeArquivo: string;
-  enviadaPor: UsuarioResumoDto | null;
+  enviadaPor: PessoaResumoDto | null;
   /**
    * @description
    * Format: `date-time`

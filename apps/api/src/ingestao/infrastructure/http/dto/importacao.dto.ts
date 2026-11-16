@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 const STATUS = ['na_fila', 'processando', 'concluida', 'recusada', 'erro'] as const;
 
-export class UsuarioResumoDto {
+export class PessoaResumoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;
 }
@@ -20,7 +20,7 @@ export class ImportacaoDto {
   })
   formato!: 'laudos' | 'compartilhamento' | null;
   @ApiProperty() nomeArquivo!: string;
-  @ApiProperty({ type: UsuarioResumoDto, nullable: true }) enviadaPor!: UsuarioResumoDto | null;
+  @ApiProperty({ type: PessoaResumoDto, nullable: true }) enviadaPor!: PessoaResumoDto | null;
   @ApiProperty({ type: String, format: 'date-time' }) criadaEm!: Date;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) iniciadaEm!: Date | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) concluidaEm!: Date | null;

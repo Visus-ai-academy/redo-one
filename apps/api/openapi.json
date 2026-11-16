@@ -8467,6 +8467,22 @@
         ],
         "description": "Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura."
       },
+      "PessoaResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
       "ImportacaoDto": {
         "type": "object",
         "properties": {
@@ -8505,7 +8521,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/UsuarioResumoDto"
+                "$ref": "#/components/schemas/PessoaResumoDto"
               }
             ]
           },
@@ -8671,7 +8687,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/UsuarioResumoDto"
+                "$ref": "#/components/schemas/PessoaResumoDto"
               }
             ]
           },
@@ -8897,7 +8913,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/UsuarioResumoDto"
+                "$ref": "#/components/schemas/PessoaResumoDto"
               }
             ]
           },

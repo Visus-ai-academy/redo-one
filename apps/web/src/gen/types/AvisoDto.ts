@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
+import type { PessoaResumoDto } from './PessoaResumoDto'
 import type { StatusAvisoKey } from './StatusAviso'
 import type { TipoAvisoKey } from './TipoAviso'
-import type { UsuarioResumoDto } from './UsuarioResumoDto'
 
 export type AvisoDto = {
   /**
@@ -38,7 +38,7 @@ export type AvisoDto = {
    * @type string
    */
   ultimaVezEm: string;
-  decididoPor: UsuarioResumoDto | null;
+  decididoPor: PessoaResumoDto | null;
   /**
    * @description
    * Format: `date-time`

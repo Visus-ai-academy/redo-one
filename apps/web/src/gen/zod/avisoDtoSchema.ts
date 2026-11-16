@@ -4,9 +4,9 @@
 */
 
 import * as z from 'zod'
+import { pessoaResumoDtoSchema } from './pessoaResumoDtoSchema'
 import { statusAvisoSchema } from './statusAvisoSchema'
 import { tipoAvisoSchema } from './tipoAvisoSchema'
-import { usuarioResumoDtoSchema } from './usuarioResumoDtoSchema'
 
 export const avisoDtoSchema = z.object({
   id: z.uuid(),
@@ -16,7 +16,7 @@ export const avisoDtoSchema = z.object({
   ocorrencias: z.int().describe('Laudos da última importação em que apareceu.'),
   primeiraVezEm: z.iso.datetime(),
   ultimaVezEm: z.iso.datetime(),
-  decididoPor: usuarioResumoDtoSchema.nullable(),
+  decididoPor: pessoaResumoDtoSchema.nullable(),
   decididoEm: z.iso.datetime().nullable(),
   motivo: z.string().nullable(),
 })

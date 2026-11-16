@@ -6,8 +6,8 @@
 import * as z from 'zod'
 import { formatoImportacaoSchema } from './formatoImportacaoSchema'
 import { origemImportacaoSchema } from './origemImportacaoSchema'
+import { pessoaResumoDtoSchema } from './pessoaResumoDtoSchema'
 import { statusImportacaoSchema } from './statusImportacaoSchema'
-import { usuarioResumoDtoSchema } from './usuarioResumoDtoSchema'
 
 export const importacaoDtoSchema = z.object({
   id: z.uuid(),
@@ -15,7 +15,7 @@ export const importacaoDtoSchema = z.object({
   origem: origemImportacaoSchema,
   formato: z.union([formatoImportacaoSchema, z.null()]).describe('Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.'),
   nomeArquivo: z.string(),
-  enviadaPor: usuarioResumoDtoSchema.nullable(),
+  enviadaPor: pessoaResumoDtoSchema.nullable(),
   criadaEm: z.iso.datetime(),
   iniciadaEm: z.iso.datetime().nullable(),
   concluidaEm: z.iso.datetime().nullable(),

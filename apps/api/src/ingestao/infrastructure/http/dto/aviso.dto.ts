@@ -3,7 +3,7 @@ import { Transform } from 'class-transformer';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
-import { UsuarioResumoDto } from './importacao.dto';
+import { PessoaResumoDto } from './importacao.dto';
 
 const TIPOS = ['cliente', 'medico', 'estudo', 'modalidade', 'especialidade', 'prioridade'] as const;
 const STATUS = ['pendente', 'resolvido', 'ignorado'] as const;
@@ -36,7 +36,7 @@ export class AvisoDto {
   ocorrencias!: number;
   @ApiProperty({ type: String, format: 'date-time' }) primeiraVezEm!: Date;
   @ApiProperty({ type: String, format: 'date-time' }) ultimaVezEm!: Date;
-  @ApiProperty({ type: UsuarioResumoDto, nullable: true }) decididoPor!: UsuarioResumoDto | null;
+  @ApiProperty({ type: PessoaResumoDto, nullable: true }) decididoPor!: PessoaResumoDto | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) decididoEm!: Date | null;
   @ApiProperty({ type: String, nullable: true }) motivo!: string | null;
 }
