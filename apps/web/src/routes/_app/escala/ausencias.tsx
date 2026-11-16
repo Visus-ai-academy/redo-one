@@ -5,16 +5,15 @@ import { z } from 'zod';
 
 import { CampoBusca } from '../../../components/busca/CampoBusca';
 import { useBuscaComEspera } from '../../../components/busca/use-busca-com-espera';
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
 import {
   buscaAoFecharPainel,
   hojeEmBrasilia,
   periodoCompleto,
-  periodoDaAusencia,
-  recorteDaAusencia,
   situacaoDaAusencia,
 } from '../../../components/escala-ausencias/ausencias';
+import { CelulaMedico, CelulaPeriodo } from '../../../components/escala-ausencias/celulas';
 import { DetalheAusencia } from '../../../components/escala-ausencias/DetalheAusencia';
 import { FiltroPeriodo } from '../../../components/escala-ausencias/FiltroPeriodo';
 import {
@@ -195,7 +194,7 @@ function Ausencias() {
         id: 'medico',
         header: 'Médico',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>{info.getValue()}</BotaoAbrir>
+          <CelulaMedico ausencia={info.row.original} onAbrir={() => abrir(info.row.original.id)} />
         ),
       }),
       coluna.accessor((a) => a.tipo.nome, {
@@ -206,23 +205,7 @@ function Ausencias() {
       coluna.accessor('dataInicio', {
         id: 'periodo',
         header: 'Período',
-        cell: (info) => {
-          const recorte = recorteDaAusencia(info.row.original);
-          return (
-            <span className="flex flex-col py-1">
-              <span className="whitespace-nowrap tabular-nums">
-                {periodoDaAusencia(info.row.original, hoje)}
-              </span>
-              {recorte.length > 0 && (
-                <span className="text-muted-foreground flex flex-wrap gap-x-2 text-[13px]">
-                  {recorte.map((texto) => (
-                    <span key={texto}>{texto}</span>
-                  ))}
-                </span>
-              )}
-            </span>
-          );
-        },
+        cell: (info) => <CelulaPeriodo ausencia={info.row.original} hoje={hoje} />,
       }),
       coluna.accessor('situacao', {
         header: 'Situação',
