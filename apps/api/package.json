@@ -17,6 +17,7 @@
     "openapi": "nest build && node dist/openapi/export.js",
     "admin:criar": "nest build && node dist/scripts/criar-admin.js",
     "migrar:legado": "nest build && node dist/scripts/migrar-legado.js",
+    "storage:preparar": "nest build && node dist/scripts/preparar-storage.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -26,6 +27,8 @@
     "clean": "rm -rf dist coverage .turbo"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1164.0",
+    "@aws-sdk/s3-request-presigner": "3.1164.0",
     "@nestjs/common": "12.4.0",
     "@nestjs/config": "12.1.1",
     "@nestjs/core": "12.4.0",

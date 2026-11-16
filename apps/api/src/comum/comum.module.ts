@@ -2,6 +2,8 @@ import { Global, Inject, Module, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport } from 'nodemailer';
 
+import { ARMAZENAMENTO_ARQUIVOS } from './armazenamento/armazenamento-arquivos';
+import { criarArmazenamento } from './armazenamento/criar-armazenamento';
 import { ENVIO_EMAIL, type EnvioEmail } from './email/envio-email';
 import { SmtpEnvioEmail } from './email/smtp-envio-email';
 import { FilaJobs } from './jobs/fila-jobs';
@@ -9,7 +11,7 @@ import { RegistroTarefas } from './jobs/registro-tarefas';
 import { TAREFA_ENVIAR_EMAIL, tarefaEnviarEmail } from './jobs/tarefa-enviar-email';
 import { TrabalhadorJobs } from './jobs/trabalhador-jobs';
 
-/** Infraestrutura compartilhada pelos contextos: fila de jobs e envio de e-mail. */
+/** Infraestrutura compartilhada pelos contextos: fila de jobs, envio de e-mail e storage. */
 @Global()
 @Module({
   providers: [
@@ -26,8 +28,14 @@ import { TrabalhadorJobs } from './jobs/trabalhador-jobs';
           config.get<string>('EMAIL_REMETENTE') ?? 'One <nao-responda@localhost>',
         ),
     },
+    {
+      provide: ARMAZENAMENTO_ARQUIVOS,
+      inject: [ConfigService],
+      // O cliente S3 não conecta na criação: a API sobe mesmo com o storage fora do ar.
+      useFactory: (config: ConfigService) => criarArmazenamento(config),
+    },
   ],
-  exports: [RegistroTarefas, FilaJobs],
+  exports: [RegistroTarefas, FilaJobs, ARMAZENAMENTO_ARQUIVOS],
 })
 export class ComumModule implements OnModuleInit {
   constructor(

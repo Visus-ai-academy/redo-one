@@ -1,4 +1,4 @@
-# Postgres local. Rode nesta pasta: `docker compose up -d`. Os valores vêm do .env desta pasta.
+# Postgres, e-mail e storage locais. Rode nesta pasta: `docker compose up -d`. Os valores vêm do .env desta pasta.
 
 # Nome do projeto no Docker (prefixo de containers e volumes). Troque ao criar um projeto a partir do
 # template; sem isso, projetos diferentes na mesma máquina compartilhariam o volume do banco.
@@ -31,5 +31,19 @@ services:
       - '1025:1025'
       - '8025:8025'
 
+  # Storage compatível com S3 para o dev (RustFS; a MinIO parou de publicar imagens). Confere a
+  # assinatura das URLs como o S3. Bucket e CORS: `pnpm --filter @repo/api storage:preparar`.
+  storage:
+    image: rustfs/rustfs:1.0.4
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?defina S3_ACCESS_KEY_ID no apps/api/.env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?defina S3_SECRET_ACCESS_KEY no apps/api/.env}
+    ports:
+      - '9000:9000'
+    volumes:
+      - storage-data:/data
+
 volumes:
   postgres-data:
+  storage-data:

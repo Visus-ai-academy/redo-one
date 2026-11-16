@@ -3,6 +3,8 @@ import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 
 import { DatabaseModule } from '../database/database.module';
+import { ARMAZENAMENTO_ARQUIVOS } from './armazenamento/armazenamento-arquivos';
+import { S3ArmazenamentoArquivos } from './armazenamento/s3-armazenamento-arquivos';
 import { ComumModule } from './comum.module';
 import { ENVIO_EMAIL } from './email/envio-email';
 import { SmtpEnvioEmail } from './email/smtp-envio-email';
@@ -29,6 +31,18 @@ describe('ComumModule', () => {
     expect(modulo.get(FilaJobs)).toBeInstanceOf(FilaJobs);
     expect(modulo.get(ENVIO_EMAIL)).toBeInstanceOf(SmtpEnvioEmail);
     expect(Object.keys(modulo.get(RegistroTarefas).listar())).toContain('email.enviar');
+
+    await modulo.close();
+  });
+
+  it('disponibiliza o storage S3 configurado pelas variáveis S3_*', async () => {
+    const modulo = await montar({
+      S3_BUCKET: 'one',
+      S3_ACCESS_KEY_ID: 'a',
+      S3_SECRET_ACCESS_KEY: 'b',
+    });
+
+    expect(modulo.get(ARMAZENAMENTO_ARQUIVOS)).toBeInstanceOf(S3ArmazenamentoArquivos);
 
     await modulo.close();
   });

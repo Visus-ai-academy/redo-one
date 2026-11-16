@@ -18,6 +18,9 @@ describe('validarAmbiente', () => {
     ['JOBS_WORKER', 'sim'],
     ['APP_URL', 'localhost:5173'],
     ['DATABASE_URL', 'mysql://x'],
+    ['S3_ENDPOINT', 'localhost:9000'],
+    ['S3_FORCAR_PATH_STYLE', 'sim'],
+    ['PACIENTE_HMAC_SEGREDO', 'curto'],
   ])('recusa %s=%s, dizendo qual variável está errada', (nome, valor) => {
     expect(() => validarAmbiente({ ...minimo, [nome]: valor })).toThrow(nome);
   });

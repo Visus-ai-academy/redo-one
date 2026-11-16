@@ -18,6 +18,9 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('JOBS_WORKER', (v) => v === 'true' || v === 'false', 'use true ou false');
   opcional('APP_URL', (v) => /^https?:\/\//.test(v), 'precisa começar com http:// ou https://');
   opcional('SMTP_URL', (v) => /^smtps?:\/\//.test(v), 'precisa começar com smtp:// ou smtps://');
+  opcional('S3_ENDPOINT', (v) => /^https?:\/\//.test(v), 'precisa começar com http:// ou https://');
+  opcional('S3_FORCAR_PATH_STYLE', (v) => v === 'true' || v === 'false', 'use true ou false');
+  opcional('PACIENTE_HMAC_SEGREDO', (v) => v.length >= 32, 'precisa ter pelo menos 32 caracteres');
 
   if (erros.length) throw new Error(`Variáveis de ambiente inválidas:\n- ${erros.join('\n- ')}`);
   return env;

@@ -104,7 +104,7 @@ src/analytics/
   - Nada pessoal em logs, mensagens de erro ou serviços externos sem necessidade; nenhum dado de paciente vai para provedores de IA.
   - Cada tabela com dado pessoal tem retenção definida, e o dado de uma pessoa pode ser exportado e excluído ou anonimizado.
 - **Auditoria:** tabela de eventos (quem, quando, o quê, valor anterior e novo) nas entidades críticas: abrir/fechar competência e ajustes de faturamento, repasse e adicionais, preços e regras de apuração, crédito pré-pago, escala, usuários/papéis/permissões, todo o `catalogo` (de-paras e regras de quebra decidem especialidade e quantidade faturadas), todo o `medicos` (inclusive a leitura dos dados de pagamento) e acesso a dados de paciente.
-- **Arquivos:** storage compatível com S3, atrás de interface. Tudo privado: upload e download por URL assinada e temporária, com validação de tipo e tamanho. Nunca no banco nem no disco da API.
+- **Arquivos:** storage compatível com S3, atrás de interface. Tudo privado: upload e download por URL assinada e temporária, com validação de tipo e tamanho. Nunca no banco nem no disco da API. A porta é `ARMAZENAMENTO_ARQUIVOS` (`src/comum/armazenamento/`, SDK v3 da AWS, qualquer serviço compatível com S3); a URL de envio assina o tamanho exato. No dev, o RustFS do `docker-compose.yml` (`pnpm --filter @repo/api storage:preparar` cria o bucket e o CORS); os metadados de cada arquivo ficam na tabela `arquivos`.
 - **Observabilidade:** logs estruturados em JSON, endpoint de health check e monitoramento de erros.
 
 Skills deste app: `nest-module` (criar módulo/controller/service), `api-security-checklist` (revisar segurança de endpoints e bootstrap) e `hexagonal-architecture` (só quando o projeto declarar essa arquitetura acima).
