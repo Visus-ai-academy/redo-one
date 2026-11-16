@@ -190,6 +190,10 @@ export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaReposito
         .from(medicos)
         .where(inArray(medicos.id, ids)),
       this.db
+        .select({ id: usuarios.id, nome: usuarios.nome })
+        .from(usuarios)
+        .where(inArray(usuarios.id, ids)),
+      this.db
         .select({
           id: alocacoes.id,
           nome: sql<string>`concat_ws(' · ', ${medicoDaAlocacao}, ${turnoDaAlocacao}, ${frenteDaAlocacao})`,

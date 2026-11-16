@@ -15,6 +15,7 @@ import type {
   AliasesMedicoRepository,
   NovoAliasMedico,
 } from '../aliases/aliases-medico.repository';
+import { normalizarNomeMedico } from '../comum/nome-medico';
 import type {
   DadosMedico,
   FiltroMedicos,
@@ -44,11 +45,13 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
 
   async listar(filtro: FiltroMedicos) {
     const condicoes: (SQL | undefined)[] = [];
+    // O nome se compara pela chave (sem acento, maiúscula nem "Dr."); CRM e id como digitados.
+    const nome = filtro.busca ? normalizarNomeMedico(filtro.busca) : '';
     if (filtro.busca) {
       const digitos = /^\d+$/.test(filtro.busca) ? Number(filtro.busca) : null;
       condicoes.push(
         or(
-          ilike(medicos.nome, contem(filtro.busca)),
+          nome ? ilike(medicos.chaveNormalizada, contem(nome)) : undefined,
           eq(medicos.crm, filtro.busca),
           digitos !== null && digitos <= 2_147_483_647
             ? eq(medicos.idMobilemed, digitos)
@@ -85,7 +88,7 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
         .where(onde)
         // Pela chave: "Dra. Rafaela" não vem antes de "Dr. Augusto" (como no legado).
         .orderBy(
-          ...(filtro.busca ? relevancia(medicos.nome, filtro.busca) : []),
+          ...(nome ? relevancia(medicos.chaveNormalizada, nome) : []),
           asc(medicos.chaveNormalizada),
         )
         .limit(filtro.porPagina)

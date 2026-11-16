@@ -1,7 +1,13 @@
-import { inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, notExists, or } from 'drizzle-orm';
 
 import type { Database } from '../../database/database';
-import { frentesEscala } from '../../database/schema';
+import {
+  alocacoes,
+  ausenciasFrentes,
+  frentesEscala,
+  turnosFrentes,
+  usuariosEscoposEscala,
+} from '../../database/schema';
 
 type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -45,4 +51,37 @@ export async function garantirFrentes(
       ),
     );
   return linhas.map((l) => l.id).sort();
+}
+
+/**
+ * Apaga, entre essas frentes, as que ficaram sem referência (nenhum turno, alocação, ausência ou
+ * recorte de gestora). A frente é só uma chave interna; órfã, apareceria no recorte e nas listas.
+ * Roda na transação de quem chama, depois de desligar as frentes do turno.
+ */
+export async function apagarFrentesOrfas(
+  tx: Database | Transacao,
+  frenteIds: readonly string[],
+): Promise<void> {
+  const ids = [...new Set(frenteIds)];
+  if (!ids.length) return;
+  await tx
+    .delete(frentesEscala)
+    .where(
+      and(
+        inArray(frentesEscala.id, ids),
+        notExists(
+          tx.select().from(turnosFrentes).where(eq(turnosFrentes.frenteId, frentesEscala.id)),
+        ),
+        notExists(tx.select().from(alocacoes).where(eq(alocacoes.frenteId, frentesEscala.id))),
+        notExists(
+          tx.select().from(ausenciasFrentes).where(eq(ausenciasFrentes.frenteId, frentesEscala.id)),
+        ),
+        notExists(
+          tx
+            .select()
+            .from(usuariosEscoposEscala)
+            .where(eq(usuariosEscoposEscala.frenteId, frentesEscala.id)),
+        ),
+      ),
+    );
 }

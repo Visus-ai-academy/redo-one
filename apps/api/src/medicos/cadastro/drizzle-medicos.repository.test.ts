@@ -127,6 +127,22 @@ describe.skipIf(!url)('DrizzleMedicosRepository', () => {
     expect((await repo.listar({ ativo: false, pagina: 1, porPagina: 10 })).total).toBe(1);
   });
 
+  it('busca pelo nome sem acento, maiúscula nem "Dr.", pela chave do médico', async () => {
+    const joao = await repo.criar({
+      ...dados('Dr. João Paulo Ávila'),
+      chaveNormalizada: 'joao paulo avila',
+    });
+    await repo.criar(dados('bruno alves'));
+
+    for (const busca of ['joao', 'JOÃO', 'Dr. João Paulo', 'avila']) {
+      const pagina = await repo.listar({ busca, pagina: 1, porPagina: 10 });
+      expect(
+        pagina.itens.map((m) => m.id),
+        busca,
+      ).toEqual([joao]);
+    }
+  });
+
   it('acha pela chave e pelo id da MobileMed', async () => {
     const id = await repo.criar(dados('ana reis', { idMobilemed: 5 }));
 

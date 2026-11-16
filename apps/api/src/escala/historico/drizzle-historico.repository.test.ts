@@ -336,6 +336,24 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
     });
   });
 
+  it('dá nome aos usuários que aparecem em antes/depois (quem pediu e quem revisou a ausência)', async () => {
+    await db.insert(schema.eventosAuditoria).values({
+      ocorridoEm: new Date('2026-12-31T15:00:00Z'),
+      atorTipo: 'usuario',
+      atorId: carla,
+      entidade: 'ausencia',
+      entidadeId: crypto.randomUUID(),
+      acao: 'atualizado',
+      antes: { medicoId: m.bruno, solicitadaPorId: carla, revisadaPorId: null },
+      depois: { medicoId: m.bruno, solicitadaPorId: carla, revisadaPorId: carla },
+    });
+    const repo = new DrizzleHistoricoEscalaRepository(db);
+
+    const { nomes } = await repo.listar({ pagina: 1, porPagina: 1, escopo: null });
+
+    expect(nomes).toEqual({ [m.bruno]: 'Bruno Alves', [carla]: 'Carla Lima' });
+  });
+
   it('página sem ids não consulta nomes', async () => {
     const repo = new DrizzleHistoricoEscalaRepository(db);
     const vazio = { turnoIds: new Set<string>(), frenteIds: new Set<string>() };

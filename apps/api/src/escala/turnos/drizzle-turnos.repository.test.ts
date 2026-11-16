@@ -238,6 +238,65 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     expect(await db.select().from(schema.turnosFrentes)).toEqual([]);
   });
 
+  it('excluir apaga a frente que ficou sem nenhuma referência e mantém a usada por outro turno', async () => {
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
+    await criar(turno({ nome: 'Tarde', especialidadeIds: [eNeuro] }));
+
+    expect(await repo.excluir(id, [])).toBe(true);
+
+    const restantes = await db.select({ id: schema.frentesEscala.id }).from(schema.frentesEscala);
+    expect(restantes.map((f) => f.id)).toEqual([neuro]);
+  });
+
+  it('editar apaga a frente tirada do turno quando ninguém mais a usa', async () => {
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
+
+    await repo.atualizar(id, turno({ especialidadeIds: [eNeuro] }), () => []);
+
+    const restantes = await db.select({ id: schema.frentesEscala.id }).from(schema.frentesEscala);
+    expect(restantes.map((f) => f.id)).toEqual([neuro]);
+  });
+
+  it('editar mantém a frente tirada do turno que ainda tem alocação antiga', async () => {
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
+    await alocar(id, tc, { dataFim: '2026-02-01' });
+
+    await repo.atualizar(id, turno({ especialidadeIds: [eNeuro] }), () => []);
+
+    const restantes = await db.select({ id: schema.frentesEscala.id }).from(schema.frentesEscala);
+    expect(restantes.map((f) => f.id).sort()).toEqual([neuro, tc].sort());
+  });
+
+  it('editar mantém a frente tirada do turno que está numa ausência ou no recorte de uma gestora', async () => {
+    const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
+    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
+    const [usuario] = await db
+      .insert(schema.usuarios)
+      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br', papelId: papel?.id ?? '' })
+      .returning();
+    await db
+      .insert(schema.usuariosEscoposEscala)
+      .values({ usuarioId: usuario?.id ?? '', frenteId: neuro });
+    const [tipo] = await db.insert(schema.tiposAusencia).values({ nome: 'Férias' }).returning();
+    const [ausencia] = await db
+      .insert(schema.ausencias)
+      .values({
+        medicoId: medico,
+        tipoId: tipo?.id ?? '',
+        dataInicio: '2026-03-01',
+        dataFim: '2026-03-05',
+      })
+      .returning();
+    await db
+      .insert(schema.ausenciasFrentes)
+      .values({ ausenciaId: ausencia?.id ?? '', frenteId: tc });
+
+    await repo.atualizar(id, turno(), () => []);
+
+    const restantes = await db.select({ id: schema.frentesEscala.id }).from(schema.frentesEscala);
+    expect(restantes.map((f) => f.id).sort()).toEqual([neuro, tc].sort());
+  });
+
   it('não exclui turno com alocação (nem que já acabou)', async () => {
     const { id } = await criar(turno({ especialidadeIds: [eNeuro] }));
     await alocar(id, neuro, { dataFim: '2026-02-01' });

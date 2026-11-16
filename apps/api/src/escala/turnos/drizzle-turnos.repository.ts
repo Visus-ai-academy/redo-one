@@ -20,7 +20,11 @@ import {
   ORDEM_DA_FRENTE_F,
   ROTULO_DA_FRENTE_F,
 } from '../frentes/frente-do-catalogo';
-import { type DestinosFrentes, garantirFrentes } from '../frentes/garantir-frentes';
+import {
+  apagarFrentesOrfas,
+  type DestinosFrentes,
+  garantirFrentes,
+} from '../frentes/garantir-frentes';
 import type { DadosTurno } from './turno';
 import type { FrenteDoTurno, TurnoGravado, TurnosRepository } from './turnos.repository';
 
@@ -171,8 +175,15 @@ export class DrizzleTurnosRepository implements TurnosRepository {
     const { especialidadeIds, modalidadeIds, ...turno } = dados;
     return this.db.transaction(async (tx) => {
       await tx.update(turnos).set(turno).where(eq(turnos.id, id));
-      await tx.delete(turnosFrentes).where(eq(turnosFrentes.turnoId, id));
+      const antigas = await tx
+        .delete(turnosFrentes)
+        .where(eq(turnosFrentes.turnoId, id))
+        .returning({ frenteId: turnosFrentes.frenteId });
       const frenteIds = await gravarFrentes(tx, id, { especialidadeIds, modalidadeIds });
+      await apagarFrentesOrfas(
+        tx,
+        antigas.map((f) => f.frenteId),
+      );
       await gravarEventos(tx, eventosDe({ frenteIds }));
       return { frenteIds };
     });
@@ -180,7 +191,8 @@ export class DrizzleTurnosRepository implements TurnosRepository {
 
   /**
    * Alocação e ausência barram pela chave estrangeira. O recorte da gestora apagaria em cascata
-   * (e sem linha ela passaria a ver tudo), então é conferido antes, com o turno travado.
+   * (e sem linha ela passaria a ver tudo), então é conferido antes, com o turno travado. As
+   * frentes do turno que ficarem sem referência saem junto.
    */
   async excluir(id: string, eventos: EventoAuditoria[]) {
     try {
@@ -192,7 +204,15 @@ export class DrizzleTurnosRepository implements TurnosRepository {
           .where(eq(usuariosEscoposEscala.turnoId, id))
           .limit(1);
         if (recorte) return false;
+        const frentes = await tx
+          .select({ frenteId: turnosFrentes.frenteId })
+          .from(turnosFrentes)
+          .where(eq(turnosFrentes.turnoId, id));
         await tx.delete(turnos).where(eq(turnos.id, id));
+        await apagarFrentesOrfas(
+          tx,
+          frentes.map((f) => f.frenteId),
+        );
         await gravarEventos(tx, eventos);
         return true;
       });
