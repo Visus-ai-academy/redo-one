@@ -9,11 +9,24 @@ type PainelProps = {
   acao?: ReactNode;
   id?: string;
   children: ReactNode;
+  /** Tabela ou lista com divisórias: o conteúdo encosta nas bordas, sem o espaço de 16px. */
+  conteudoNaBorda?: boolean;
   className?: string;
 };
 
-/** Bloco de conteúdo com título: superfície branca, borda de 1px, raio de 8px, sem sombra. */
-export function Painel({ titulo, descricao, acao, id, children, className }: PainelProps) {
+/**
+ * Bloco de conteúdo com título: superfície branca, borda de 1px, raio de 8px, sem sombra. O
+ * conteúdo ganha 16px de espaço interno (formulário, texto); tabela passa `conteudoNaBorda`.
+ */
+export function Painel({
+  titulo,
+  descricao,
+  acao,
+  id,
+  children,
+  conteudoNaBorda,
+  className,
+}: PainelProps) {
   const tituloId = useId();
 
   return (
@@ -31,7 +44,7 @@ export function Painel({ titulo, descricao, acao, id, children, className }: Pai
         </div>
         {acao}
       </div>
-      {children}
+      {conteudoNaBorda ? children : <div className="p-4">{children}</div>}
     </section>
   );
 }

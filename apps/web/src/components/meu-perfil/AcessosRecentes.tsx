@@ -55,6 +55,7 @@ export function AcessosRecentes({ acessos, agora }: AcessosRecentesProps) {
 
   return (
     <Painel
+      conteudoNaBorda
       titulo="Acessos recentes"
       descricao="Entradas na sua conta nos últimos 30 dias (as 50 mais recentes)."
     >

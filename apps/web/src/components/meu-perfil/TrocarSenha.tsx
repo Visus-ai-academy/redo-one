@@ -64,7 +64,7 @@ export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | nul
           event.preventDefault();
           void form.handleSubmit();
         }}
-        className="flex flex-col gap-4 p-4"
+        className="flex flex-col gap-4"
       >
         {trocar.error && <ErroAoTrocar erro={trocar.error} />}
         <form.AppField name="senhaAtual">

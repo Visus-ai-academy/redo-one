@@ -45,7 +45,7 @@ export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
           event.preventDefault();
           void form.handleSubmit();
         }}
-        className="flex flex-col gap-4 p-4"
+        className="flex flex-col gap-4"
       >
         {atualizar.error && (
           <Alerta tom="erro">

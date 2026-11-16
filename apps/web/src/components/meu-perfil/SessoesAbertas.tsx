@@ -48,6 +48,7 @@ export function SessoesAbertas({ sessoes, agora = new Date() }: SessoesAbertasPr
 
   return (
     <Painel
+      conteudoNaBorda
       titulo={
         <>
           Sessões abertas{' '}
