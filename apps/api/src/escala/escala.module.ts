@@ -7,6 +7,7 @@ import { DrizzleEscopoEscalaRepository } from './escopo/drizzle-escopo.repositor
 import { ESCOPO_ESCALA_REPOSITORY } from './escopo/escopo';
 import { EscopoApiModule } from './escopo-api/escopo-api.module';
 import { HistoricoModule } from './historico/historico.module';
+import { MedicosEscalaModule } from './medicos-escala/medicos-escala.module';
 import { OcorrenciasModule } from './ocorrencias/ocorrencias.module';
 
 /** Contexto `escala`: frentes, turnos, alocações, ausências e o recorte da gestora de escala. */
@@ -17,6 +18,7 @@ import { OcorrenciasModule } from './ocorrencias/ocorrencias.module';
     CadastrosEscalaModule,
     EscopoApiModule,
     HistoricoModule,
+    MedicosEscalaModule,
     OcorrenciasModule,
   ],
   providers: [{ provide: ESCOPO_ESCALA_REPOSITORY, useClass: DrizzleEscopoEscalaRepository }],
