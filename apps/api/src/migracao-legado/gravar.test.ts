@@ -272,6 +272,9 @@ describe.skipIf(!url)('gravarMigracao', () => {
     await gravarMigracao(db, catalogo, medicos, escala);
     const primeira = await contarEscala();
     await db.execute(sql`update tipos_ausencia set gravidade = 9 where nome = 'Férias'`);
+    // Como os tipos da primeira carga, sem cor; e uma cor escolhida na tela.
+    await db.execute(sql`update tipos_ausencia set cor = null where nome = 'Folga'`);
+    await db.execute(sql`update tipos_ausencia set cor = '#000000' where nome = 'Licença'`);
     await gravarMigracao(db, catalogo, medicos, escala);
 
     expect(await contarEscala()).toEqual(primeira);
@@ -291,6 +294,13 @@ describe.skipIf(!url)('gravarMigracao', () => {
       sql`select gravidade from tipos_ausencia where nome = 'Férias'`,
     );
     expect(ferias.rows).toEqual([{ gravidade: 9 }]);
+    const cores = await db.execute<{ nome: string; cor: string | null }>(
+      sql`select nome, cor from tipos_ausencia where nome in ('Folga', 'Licença') order by nome`,
+    );
+    expect(cores.rows).toEqual([
+      { nome: 'Folga', cor: '#0E7490' },
+      { nome: 'Licença', cor: '#000000' },
+    ]);
   });
 
   it('frente já criada pela tela (id aleatório) é reaproveitada, e rodar duas vezes não duplica', async () => {

@@ -65,19 +65,49 @@ const SEM_SUBESPECIALIDADE = '(SEM SUBESPECIALIDADE)';
 
 /**
  * Tipos de ausência que o dashboards-one tinha cravados no código. No redo-one são cadastro
- * (`tipos_ausencia`); a carga só semeia, com os valores decididos pelo usuário (16/11/2026).
+ * (`tipos_ausencia`); a carga só semeia, com os valores decididos pelo usuário (16/11/2026). O
+ * dashboards-one não tinha cor; as cores são um ponto de partida, editáveis na tela.
  */
 export const TIPOS_AUSENCIA_LEGADO = [
-  { codigo: 'dispensado', nome: 'Dispensado', gravidade: 1, soGestor: true, contaComoFalta: false },
-  { codigo: 'folga', nome: 'Folga', gravidade: 2, soGestor: false, contaComoFalta: false },
-  { codigo: 'ferias', nome: 'Férias', gravidade: 3, soGestor: false, contaComoFalta: false },
-  { codigo: 'licenca', nome: 'Licença', gravidade: 4, soGestor: false, contaComoFalta: false },
+  {
+    codigo: 'dispensado',
+    nome: 'Dispensado',
+    gravidade: 1,
+    soGestor: true,
+    contaComoFalta: false,
+    cor: '#6B7280',
+  },
+  {
+    codigo: 'folga',
+    nome: 'Folga',
+    gravidade: 2,
+    soGestor: false,
+    contaComoFalta: false,
+    cor: '#0E7490',
+  },
+  {
+    codigo: 'ferias',
+    nome: 'Férias',
+    gravidade: 3,
+    soGestor: false,
+    contaComoFalta: false,
+    cor: '#2563EB',
+  },
+  {
+    codigo: 'licenca',
+    nome: 'Licença',
+    gravidade: 4,
+    soGestor: false,
+    contaComoFalta: false,
+    cor: '#7C3AED',
+  },
   {
     codigo: 'falta_justificada',
     nome: 'Falta justificada',
     gravidade: 5,
     soGestor: false,
     contaComoFalta: false,
+    cor: '#D97706',
   },
   {
     codigo: 'falta_nao_justificada',
@@ -85,6 +115,7 @@ export const TIPOS_AUSENCIA_LEGADO = [
     gravidade: 6,
     soGestor: false,
     contaComoFalta: true,
+    cor: '#DC2626',
   },
 ] as const;
 
@@ -587,7 +618,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       soGestor: t.soGestor,
       contaComoFalta: t.contaComoFalta,
       descricao: null,
-      cor: null,
+      cor: t.cor,
       ordem,
       ativo: true,
     }),

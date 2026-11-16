@@ -374,7 +374,7 @@ const ausencia = (id: string, extra: Partial<Ausencia> = {}): Ausencia => ({
 });
 
 describe('mapearEscala: ausências e escopo', () => {
-  it('semeia os tipos de ausência com a gravidade decidida', () => {
+  it('semeia os tipos de ausência com a gravidade decidida e uma cor para cada', () => {
     const { tabelas } = mapearEscala(escala(), contexto);
 
     expect(tabelas.tiposAusencia.map((t) => [t.nome, t.gravidade])).toEqual([
@@ -384,6 +384,14 @@ describe('mapearEscala: ausências e escopo', () => {
       ['Licença', 4],
       ['Falta justificada', 5],
       ['Falta não justificada', 6],
+    ]);
+    expect(tabelas.tiposAusencia.map((t) => [t.nome, t.cor])).toEqual([
+      ['Dispensado', '#6B7280'],
+      ['Folga', '#0E7490'],
+      ['Férias', '#2563EB'],
+      ['Licença', '#7C3AED'],
+      ['Falta justificada', '#D97706'],
+      ['Falta não justificada', '#DC2626'],
     ]);
     expect(tabelas.tiposAusencia.find((t) => t.nome === 'Dispensado')?.soGestor).toBe(true);
     expect(

@@ -1,4 +1,14 @@
-import { eq, getTableColumns, getTableName, inArray, or, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  getTableColumns,
+  getTableName,
+  inArray,
+  isNull,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
@@ -196,10 +206,17 @@ async function gravarEscala(tx: Transacao, { tabelas: migradas }: EscalaMigrada)
   // dashboards-one, inclusive o id (é o que o histórico migrado cita).
   await upsert(tx, schema.ajustesProdutividade, e.ajustesProdutividade, ['alocacaoId', 'data']);
 
-  // Tipos de ausência são cadastro editável: a carga só cria o que falta e nunca sobrescreve.
+  // Tipos de ausência são cadastro editável: a carga só cria o que falta e não sobrescreve.
   // Se já houver um tipo com o mesmo nome (semeado por outro caminho), a ausência usa esse.
   if (e.tiposAusencia.length > 0)
     await tx.insert(schema.tiposAusencia).values(e.tiposAusencia).onConflictDoNothing();
+  // A cor é a única coisa que a carga completa num tipo existente, e só se ele não tiver nenhuma.
+  for (const tipo of e.tiposAusencia)
+    if (tipo.cor)
+      await tx
+        .update(schema.tiposAusencia)
+        .set({ cor: tipo.cor })
+        .where(and(eq(schema.tiposAusencia.nome, tipo.nome), isNull(schema.tiposAusencia.cor)));
   const existentes = await tx
     .select({ id: schema.tiposAusencia.id, nome: schema.tiposAusencia.nome })
     .from(schema.tiposAusencia);
