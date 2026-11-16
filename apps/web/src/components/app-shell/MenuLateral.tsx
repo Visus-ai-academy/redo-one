@@ -124,12 +124,14 @@ export function MenuLateral({
 
 function ItemDoMenu({ item, recolhido }: { item: ItemMenu; recolhido: boolean }) {
   const Icone = item.icone;
+  const contador = item.contador ?? 0;
+  const nomeAcessivel = contador > 0 ? `${item.nome}, ${contador} pendentes` : undefined;
 
   return (
     <Dica rotulo={item.nome} desativada={!recolhido}>
       <Link
         to={item.to}
-        aria-label={recolhido ? item.nome : undefined}
+        aria-label={nomeAcessivel ?? (recolhido ? item.nome : undefined)}
         className={cn(
           'group text-sidebar-foreground flex h-9 items-center gap-2.5 rounded-md px-2.5 font-medium',
           'hover:bg-sidebar-hover hover:text-sidebar-accent-foreground',
@@ -138,12 +140,28 @@ function ItemDoMenu({ item, recolhido }: { item: ItemMenu; recolhido: boolean })
           recolhido && 'justify-center px-0',
         )}
       >
-        <Icone
-          size={20}
-          aria-hidden
-          className="text-sidebar-icon group-hover:text-sidebar-accent-foreground group-data-[status=active]:text-sidebar-accent-foreground flex-none"
-        />
+        <span className="relative flex-none">
+          <Icone
+            size={20}
+            aria-hidden
+            className="text-sidebar-icon group-hover:text-sidebar-accent-foreground group-data-[status=active]:text-sidebar-accent-foreground"
+          />
+          {recolhido && contador > 0 && (
+            <span
+              aria-hidden
+              className="bg-sidebar-avatar ring-sidebar absolute -top-1 -right-1.5 size-2.5 rounded-full ring-2"
+            />
+          )}
+        </span>
         {!recolhido && <span className="flex-1 truncate">{item.nome}</span>}
+        {!recolhido && contador > 0 && (
+          <span
+            aria-hidden
+            className="bg-sidebar-accent text-sidebar-accent-foreground group-data-[status=active]:bg-sidebar-avatar min-w-6 rounded-full px-1.5 text-center text-xs leading-5 font-semibold tabular-nums"
+          >
+            {contador > 999 ? '999+' : contador}
+          </span>
+        )}
       </Link>
     </Dica>
   );

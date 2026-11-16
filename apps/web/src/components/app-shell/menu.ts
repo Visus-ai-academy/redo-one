@@ -7,6 +7,8 @@ export type ItemMenu = {
   icone: Icon;
   /** Permissão `tela.ver` exigida; sem ela, o item não aparece. Sem permissão, todo usuário vê. */
   permissao?: string;
+  /** Pendências (ex.: avisos de cadastro); acima de zero, aparece ao lado do nome. */
+  contador?: number;
 };
 
 export type GrupoMenu = { titulo: string; itens: ItemMenu[] };

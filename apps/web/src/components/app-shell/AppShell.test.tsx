@@ -57,6 +57,34 @@ describe('AppShell', () => {
     expect(screen.getByText('Conteúdo da tela')).toBeInTheDocument();
   });
 
+  it('mostra o contador do item (ex.: avisos pendentes) e o diz ao leitor de tela', async () => {
+    renderComRotas(
+      <AppShell
+        sessao={maria}
+        grupos={grupos}
+        rodape={rodape}
+        contadores={{ '/configuracoes': 12 }}
+      >
+        <p>Conteúdo</p>
+      </AppShell>,
+      { caminho: '/configuracoes' },
+    );
+
+    const item = await screen.findByRole('link', { name: 'Configurações, 12 pendentes' });
+    expect(item).toHaveTextContent('12');
+  });
+
+  it('sem pendência, o item não mostra contador', async () => {
+    renderComRotas(
+      <AppShell sessao={maria} grupos={grupos} rodape={rodape} contadores={{ '/configuracoes': 0 }}>
+        <p>Conteúdo</p>
+      </AppShell>,
+      { caminho: '/configuracoes' },
+    );
+
+    expect(await screen.findByRole('link', { name: 'Configurações' })).not.toHaveTextContent('0');
+  });
+
   it('marca o item da tela atual', async () => {
     montar('/configuracoes');
 

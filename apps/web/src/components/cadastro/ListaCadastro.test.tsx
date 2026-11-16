@@ -74,6 +74,15 @@ describe('ListaCadastro', () => {
     }
   });
 
+  it('sem busca (lista por data), não mostra campo de busca nem a faixa vazia', () => {
+    const { busca: _, ...semBusca } = props;
+    render(<ListaCadastro {...semBusca} itens={[{ id: 'c-1', nome: 'laudos.xlsx' }]} total={1} />);
+
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'laudos.xlsx' })).toBeInTheDocument();
+  });
+
   it('sem nenhum item, diz o que fazer', () => {
     render(<ListaCadastro {...props} itens={[]} total={0} />);
 

@@ -19,6 +19,8 @@ type AppShellProps = {
   children: ReactNode;
   grupos?: GrupoMenu[];
   rodape?: ItemMenu[];
+  /** Contador de pendências por destino do item (`to`), ex.: `{ '/avisos': 12 }`. */
+  contadores?: Partial<Record<string, number>>;
 };
 
 /** Layout das telas autenticadas: menu verde à esquerda (gaveta no celular) e o conteúdo. */
@@ -27,7 +29,9 @@ export function AppShell({
   children,
   grupos = GRUPOS_MENU,
   rodape = RODAPE_MENU,
+  contadores = {},
 }: AppShellProps) {
+  const comContador = (item: ItemMenu): ItemMenu => ({ ...item, contador: contadores[item.to] });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const sair = useSessaoControllerSair();
@@ -69,8 +73,8 @@ export function AppShell({
   const menu = (props: { recolhido: boolean; onAlternar?: () => void }) => (
     <MenuLateral
       sessao={sessao}
-      grupos={grupos}
-      rodape={rodape}
+      grupos={grupos.map((g) => ({ ...g, itens: g.itens.map(comContador) }))}
+      rodape={rodape.map(comContador)}
       onSair={() => void sairDoOne()}
       saindo={sair.isPending}
       {...props}

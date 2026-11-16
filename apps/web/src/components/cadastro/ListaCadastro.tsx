@@ -1,5 +1,5 @@
 import { Button } from '@base-ui/react/button';
-import { Plus } from '@phosphor-icons/react';
+import { type Icon, Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
 import { type ReactNode, useCallback } from 'react';
 import { cn } from '../../lib/cn';
@@ -18,9 +18,10 @@ type ListaCadastroProps<T extends RowData> = {
   totalNoTitulo?: boolean;
   /** Abas logo abaixo do título (as listas de um mesmo assunto). */
   abas?: ReactNode;
-  /** Ação de criar; presente só para quem pode editar. */
-  novo?: { rotulo: string; onClick: () => void };
-  busca: { valor: string | undefined; rotulo: string; placeholder: string };
+  /** Ação de criar; presente só para quem pode editar. `icone` troca o "+" (ex.: enviar arquivo). */
+  novo?: { rotulo: string; onClick: () => void; icone?: Icon };
+  /** Sem busca (ex.: histórico por data), a faixa acima da tabela só aparece com filtros. */
+  busca?: { valor: string | undefined; rotulo: string; placeholder: string };
   /** Selects de filtro, na mesma faixa da busca. */
   filtros?: ReactNode;
   /** Algum filtro além da busca está ativo (muda a mensagem de lista vazia). */
@@ -78,11 +79,12 @@ export function ListaCadastro<T extends RowData>({
   painel,
 }: ListaCadastroProps<T>) {
   const [termo, setTermo] = useBuscaComEspera(
-    busca.valor,
+    busca?.valor,
     useCallback((texto: string | undefined) => onFiltrar({ busca: texto }), [onFiltrar]),
   );
 
-  const filtrando = Boolean(busca.valor) || temFiltro;
+  const filtrando = Boolean(busca?.valor) || temFiltro;
+  const temFaixa = Boolean(busca || filtros || (novo && abas));
 
   return (
     <div
@@ -120,17 +122,21 @@ export function ListaCadastro<T extends RowData>({
             painel && 'max-lg:hidden!',
           )}
         >
-          <div className="flex flex-none flex-wrap gap-2 border-b p-3">
-            <CampoBusca
-              rotulo={busca.rotulo}
-              placeholder={busca.placeholder}
-              valor={termo}
-              onMudar={setTermo}
-              className="flex-[1_1_220px]"
-            />
-            {filtros}
-            {novo && abas && <BotaoNovo {...novo} />}
-          </div>
+          {temFaixa && (
+            <div className="flex flex-none flex-wrap gap-2 border-b p-3">
+              {busca && (
+                <CampoBusca
+                  rotulo={busca.rotulo}
+                  placeholder={busca.placeholder}
+                  valor={termo}
+                  onMudar={setTermo}
+                  className="flex-[1_1_220px]"
+                />
+              )}
+              {filtros}
+              {novo && abas && <BotaoNovo {...novo} />}
+            </div>
+          )}
 
           {itens.length === 0 ? (
             <div className="flex flex-col items-start gap-3 p-6">
@@ -138,7 +144,7 @@ export function ListaCadastro<T extends RowData>({
                 <p className="font-medium">
                   {!filtrando
                     ? vazio.titulo
-                    : busca.valor
+                    : busca?.valor
                       ? `Nada encontrado para “${busca.valor}”.`
                       : 'Nada encontrado com esses filtros.'}
                 </p>
@@ -182,10 +188,18 @@ export function ListaCadastro<T extends RowData>({
 
 /** Coluna criada por chave (`accessor('cnpj')`) não tem `id` próprio: vale a chave. */
 
-function BotaoNovo({ rotulo, onClick }: { rotulo: string; onClick: () => void }) {
+function BotaoNovo({
+  rotulo,
+  onClick,
+  icone: Icone = Plus,
+}: {
+  rotulo: string;
+  onClick: () => void;
+  icone?: Icon;
+}) {
   return (
     <Button type="button" onClick={onClick} className={buttonClassName()}>
-      <Plus size={16} aria-hidden />
+      <Icone size={16} aria-hidden />
       {rotulo}
     </Button>
   );
