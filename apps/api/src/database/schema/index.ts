@@ -2,6 +2,7 @@
 export * from './arquivos';
 export * from './auditoria';
 export * from './catalogo';
+export * from './escala';
 export * from './identidade';
 export * from './ingestao';
 export * from './medicos';

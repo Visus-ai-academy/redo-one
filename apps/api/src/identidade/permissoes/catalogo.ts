@@ -79,8 +79,13 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     area: 'Operação',
     acoes: [
       ver('escala'),
-      { chave: 'escala.alocacao.editar', rotulo: 'Alocar médicos' },
-      { chave: 'escala.ausencia.aprovar', rotulo: 'Aprovar ausências' },
+      {
+        chave: 'escala.alocacao.editar',
+        rotulo: 'Alocar médicos, coberturas e produtividade do dia',
+      },
+      { chave: 'escala.ausencia.editar', rotulo: 'Lançar ausências' },
+      { chave: 'escala.ausencia.aprovar', rotulo: 'Aprovar e recusar ausências' },
+      { chave: 'escala.historico.ver', rotulo: 'Ver histórico da escala' },
     ],
   },
   {
@@ -163,6 +168,11 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
       { chave: 'usuarios.editar', rotulo: 'Trocar papel e encerrar sessões' },
       { chave: 'usuarios.desbloquear', rotulo: 'Desbloquear', sensivel: true },
       { chave: 'usuarios.desativar', rotulo: 'Desativar e reativar', sensivel: true },
+      {
+        chave: 'usuarios.escopo-escala.editar',
+        rotulo: 'Editar o recorte da escala',
+        sensivel: true,
+      },
     ],
   },
   {
@@ -176,6 +186,12 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     rotulo: 'Catálogo (modalidades, especialidades, categorias, prioridades, contratados)',
     area: 'Configurações',
     acoes: [ver('catalogo'), { chave: 'catalogo.editar', rotulo: 'Criar e editar' }],
+  },
+  {
+    tela: 'escala-config',
+    rotulo: 'Escala (turnos, frentes e tipos de ausência)',
+    area: 'Configurações',
+    acoes: [ver('escala-config'), { chave: 'escala-config.editar', rotulo: 'Criar e editar' }],
   },
   {
     tela: 'de-para',

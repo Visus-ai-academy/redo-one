@@ -41,6 +41,26 @@ describe('catálogo de permissões', () => {
     expect(tela('avisos')?.acoes.map((a) => a.chave)).toEqual(['avisos.ver', 'avisos.triar']);
   });
 
+  it('tem a escala (Operação), a configuração da escala e o recorte da escala em Usuários', () => {
+    const tela = (nome: string) => CATALOGO_PERMISSOES.find((t) => t.tela === nome);
+    expect(tela('escala')?.area).toBe('Operação');
+    expect(tela('escala')?.acoes.map((a) => a.chave)).toEqual([
+      'escala.ver',
+      'escala.alocacao.editar',
+      'escala.ausencia.editar',
+      'escala.ausencia.aprovar',
+      'escala.historico.ver',
+    ]);
+    expect(tela('escala-config')?.area).toBe('Configurações');
+    expect(tela('escala-config')?.acoes.map((a) => a.chave)).toEqual([
+      'escala-config.ver',
+      'escala-config.editar',
+    ]);
+    expect(
+      tela('usuarios')?.acoes.find((a) => a.chave === 'usuarios.escopo-escala.editar')?.sensivel,
+    ).toBe(true);
+  });
+
   it('normaliza: acrescenta o ver da tela, tira repetição e ordena', () => {
     expect(
       normalizarPermissoes([
