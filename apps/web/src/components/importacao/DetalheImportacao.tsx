@@ -50,7 +50,7 @@ export function DetalheImportacao({
   const periodo = periodoDosLaudos(i.janelaInicio, i.janelaFim);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-4">
       <div className="flex flex-col gap-3">
         <span>
           <Etiqueta tom={situacao.tom}>{situacao.texto}</Etiqueta>

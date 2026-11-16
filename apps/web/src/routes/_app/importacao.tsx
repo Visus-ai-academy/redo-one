@@ -91,7 +91,7 @@ function Importacao() {
         header: 'Enviada em',
         cell: (info) => (
           <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
-            <span className="tabular-nums">{dataHoraCurta(info.getValue())}</span>
+            <span className="whitespace-nowrap tabular-nums">{dataHoraCurta(info.getValue())}</span>
           </BotaoAbrir>
         ),
       }),
@@ -190,23 +190,25 @@ function PainelEnvio({
   const { sucesso } = useAvisos();
   return (
     <PainelLateral titulo="Enviar planilha" onFechar={onFechar}>
-      <EnvioDeArquivo
-        extensao=".xlsx"
-        tamanhoMaximoMb={50}
-        rotuloEnviar="Enviar planilha"
-        ajuda={
-          <>
-            O relatório "Descritivo Especialidades" ou o "Compartilhamento de exames" exportado da
-            MobileMed. Os laudos dos dias que a planilha cobre são atualizados; os que não vierem
-            nela saem desses dias.
-          </>
-        }
-        onEnviar={async (arquivo, onProgresso) => {
-          const id = await enviarPlanilha(arquivo, onProgresso);
-          sucesso('Planilha enviada. A importação está na fila.');
-          await onEnviada(id);
-        }}
-      />
+      <div className="p-4">
+        <EnvioDeArquivo
+          extensao=".xlsx"
+          tamanhoMaximoMb={50}
+          rotuloEnviar="Enviar planilha"
+          ajuda={
+            <>
+              O relatório "Descritivo Especialidades" ou o "Compartilhamento de exames" exportado da
+              MobileMed. Os laudos dos dias que a planilha cobre são atualizados; os que não vierem
+              nela saem desses dias.
+            </>
+          }
+          onEnviar={async (arquivo, onProgresso) => {
+            const id = await enviarPlanilha(arquivo, onProgresso);
+            sucesso('Planilha enviada. A importação está na fila.');
+            await onEnviada(id);
+          }}
+        />
+      </div>
     </PainelLateral>
   );
 }

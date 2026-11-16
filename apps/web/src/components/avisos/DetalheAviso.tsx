@@ -52,7 +52,7 @@ export function DetalheAviso({
   const decisao = aviso.status === 'ignorado' ? 'Ignorado' : 'Resolvido';
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-4">
       <div className="flex flex-col gap-3">
         <span>
           <Etiqueta tom={situacao.tom}>{situacao.texto}</Etiqueta>

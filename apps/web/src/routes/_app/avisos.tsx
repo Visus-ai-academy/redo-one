@@ -106,7 +106,9 @@ function Avisos() {
       }),
       coluna.accessor('ultimaVezEm', {
         header: 'Visto por último',
-        cell: (info) => <span className="tabular-nums">{dataHoraCurta(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="whitespace-nowrap tabular-nums">{dataHoraCurta(info.getValue())}</span>
+        ),
       }),
       coluna.accessor('status', {
         header: 'Situação',

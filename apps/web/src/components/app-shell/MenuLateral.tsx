@@ -125,7 +125,10 @@ export function MenuLateral({
 function ItemDoMenu({ item, recolhido }: { item: ItemMenu; recolhido: boolean }) {
   const Icone = item.icone;
   const contador = item.contador ?? 0;
-  const nomeAcessivel = contador > 0 ? `${item.nome}, ${contador} pendentes` : undefined;
+  const nomeAcessivel =
+    contador > 0
+      ? `${item.nome}, ${contador} ${contador === 1 ? 'pendente' : 'pendentes'}`
+      : undefined;
 
   return (
     <Dica rotulo={item.nome} desativada={!recolhido}>

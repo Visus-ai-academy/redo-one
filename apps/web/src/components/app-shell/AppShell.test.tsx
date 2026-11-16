@@ -74,6 +74,19 @@ describe('AppShell', () => {
     expect(item).toHaveTextContent('12');
   });
 
+  it('no singular com uma pendência', async () => {
+    renderComRotas(
+      <AppShell sessao={maria} grupos={grupos} rodape={rodape} contadores={{ '/configuracoes': 1 }}>
+        <p>Conteúdo</p>
+      </AppShell>,
+      { caminho: '/configuracoes' },
+    );
+
+    expect(
+      await screen.findByRole('link', { name: 'Configurações, 1 pendente' }),
+    ).toBeInTheDocument();
+  });
+
   it('sem pendência, o item não mostra contador', async () => {
     renderComRotas(
       <AppShell sessao={maria} grupos={grupos} rodape={rodape} contadores={{ '/configuracoes': 0 }}>
