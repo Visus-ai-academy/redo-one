@@ -23,6 +23,10 @@ import {
   type CompetenciasBloqueadas,
 } from './application/ports/competencias-bloqueadas';
 import {
+  CONSULTA_IMPORTACOES,
+  type ConsultaImportacoes,
+} from './application/ports/consulta-importacoes';
+import {
   IMPORTACOES_REPOSITORY,
   type ImportacoesRepository,
 } from './application/ports/importacoes.repository';
@@ -38,6 +42,7 @@ import {
 } from './application/ports/parametros-ingestao.repository';
 import { PSEUDONIMIZADOR, type Pseudonimizador } from './application/ports/pseudonimizador';
 import { TAREFA_EXPURGAR_LINHAS_BRUTAS, TAREFA_IMPORTAR_LAUDOS } from './application/tarefas';
+import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
@@ -45,6 +50,7 @@ import { ImportacoesController } from './infrastructure/http/importacoes.control
 import { DrizzleArquivosRepository } from './infrastructure/persistence/drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './infrastructure/persistence/drizzle-avisos-cadastro.repository';
 import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-cadastros-ingestao';
+import { DrizzleConsultaImportacoes } from './infrastructure/persistence/drizzle-consulta-importacoes';
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
 import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-laudos.repository';
 import { DrizzleLinhasBrutasRepository } from './infrastructure/persistence/drizzle-linhas-brutas.repository';
@@ -58,6 +64,13 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
   controllers: [ImportacoesController],
   providers: [
     { provide: ARQUIVOS_REPOSITORY, useClass: DrizzleArquivosRepository },
+    { provide: CONSULTA_IMPORTACOES, useClass: DrizzleConsultaImportacoes },
+    {
+      provide: ConsultarImportacoes,
+      inject: [CONSULTA_IMPORTACOES, ARMAZENAMENTO_ARQUIVOS],
+      useFactory: (consulta: ConsultaImportacoes, armazenamento: ArmazenamentoArquivos) =>
+        new ConsultarImportacoes(consulta, armazenamento),
+    },
     {
       provide: PrepararEnvio,
       inject: [ARQUIVOS_REPOSITORY, ARMAZENAMENTO_ARQUIVOS],

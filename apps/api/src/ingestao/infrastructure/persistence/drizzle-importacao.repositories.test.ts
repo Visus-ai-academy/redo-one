@@ -11,6 +11,7 @@ import * as schema from '../../../database/schema';
 
 import { DrizzleArquivosRepository } from './drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './drizzle-avisos-cadastro.repository';
+import { DrizzleConsultaImportacoes } from './drizzle-consulta-importacoes';
 import { DrizzleImportacoesRepository } from './drizzle-importacoes.repository';
 import { DrizzleParametrosIngestaoRepository } from './drizzle-parametros-ingestao.repository';
 
@@ -178,6 +179,59 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         inseridos: 3,
       });
       expect(await repo.iniciar(importacaoId, agora)).toBeNull();
+    });
+  });
+
+  describe('DrizzleConsultaImportacoes', () => {
+    it('lista a mais nova primeiro, paginada, com o nome do arquivo e de quem enviou', async () => {
+      const usuarioId = await criarUsuario();
+      const repo = new DrizzleImportacoesRepository(db);
+      const ids: string[] = [];
+      for (const n of [1, 2, 3]) {
+        const [arquivo] = await db
+          .insert(schema.arquivos)
+          .values({
+            chave: `ingestao/${n}.xlsx`,
+            nomeOriginal: `laudos${n}.xlsx`,
+            tipoConteudo: 'x',
+            contexto: 'ingestao',
+          })
+          .returning();
+        ids.push(
+          await repo.criarNaFila({ arquivoId: arquivo?.id ?? '', enviadaPorId: usuarioId, agora }),
+        );
+      }
+      const consulta = new DrizzleConsultaImportacoes(db);
+
+      const pagina = await consulta.listar({ pagina: 1, porPagina: 2 });
+
+      expect(pagina.total).toBe(4);
+      expect(pagina.itens.map((i) => i.nomeArquivo)).toEqual(['laudos3.xlsx', 'laudos2.xlsx']);
+      expect(pagina.itens[0]).toMatchObject({
+        id: ids[2],
+        status: 'na_fila',
+        origem: 'upload_manual',
+        enviadaPor: { id: usuarioId, nome: 'Maria' },
+      });
+    });
+
+    it('o detalhe traz os erros de linha e a chave do arquivo; id inexistente dá nulo', async () => {
+      await new DrizzleImportacoesRepository(db).finalizar(
+        importacaoId,
+        'concluida',
+        { errosLinhas: [{ linha: 3, mensagem: 'STATUS: obrigatório' }] },
+        agora,
+      );
+      const consulta = new DrizzleConsultaImportacoes(db);
+
+      expect(await consulta.obter(importacaoId)).toMatchObject({
+        id: importacaoId,
+        nomeArquivo: 'a.xlsx',
+        arquivoChave: 'ingestao/a.xlsx',
+        enviadaPor: null,
+        errosLinhas: [{ linha: 3, mensagem: 'STATUS: obrigatório' }],
+      });
+      expect(await consulta.obter('00000000-0000-0000-0000-000000000000')).toBeNull();
     });
   });
 

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PERMISSOES_EXIGIDAS } from '../../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../../identidade/principal';
+import type { ConsultarImportacoes } from '../../application/use-cases/consultar-importacoes';
 import type { ConfirmarEnvio, PrepararEnvio } from '../../application/use-cases/envio-planilha';
 import { ImportacoesController } from './importacoes.controller';
 
@@ -18,6 +19,30 @@ describe('ImportacoesController', () => {
     expect(reflector.get(PATH_METADATA, ImportacoesController)).toBe('ingestao');
     expect(exigidas('prepararEnvio')).toEqual(['importacao.enviar']);
     expect(exigidas('confirmarEnvio')).toEqual(['importacao.enviar']);
+    for (const m of ['listar', 'obter', 'baixarArquivo'] as const) {
+      expect(exigidas(m)).toEqual(['importacao.ver']);
+    }
+  });
+
+  it('lista paginada e devolve a URL do arquivo', async () => {
+    const consultar = {
+      listar: vi.fn(async () => ({ itens: [], total: 0 })),
+      urlDoArquivo: vi.fn(async () => 'https://baixar'),
+    };
+    const controller = new ImportacoesController(
+      {} as PrepararEnvio,
+      {} as ConfirmarEnvio,
+      consultar as unknown as ConsultarImportacoes,
+    );
+
+    expect(await controller.listar({ pagina: 2, porPagina: 10 })).toEqual({
+      itens: [],
+      total: 0,
+      pagina: 2,
+      porPagina: 10,
+    });
+    expect(consultar.listar).toHaveBeenCalledWith({ pagina: 2, porPagina: 10 });
+    expect(await controller.baixarArquivo('i1')).toEqual({ url: 'https://baixar' });
   });
 
   it('prepara o envio em nome de quem está logado', async () => {
@@ -27,6 +52,7 @@ describe('ImportacoesController', () => {
     const controller = new ImportacoesController(
       preparar as unknown as PrepararEnvio,
       {} as ConfirmarEnvio,
+      {} as ConsultarImportacoes,
     );
 
     const r = await controller.prepararEnvio(ator, {
@@ -49,6 +75,7 @@ describe('ImportacoesController', () => {
     const controller = new ImportacoesController(
       {} as PrepararEnvio,
       confirmar as unknown as ConfirmarEnvio,
+      {} as ConsultarImportacoes,
     );
 
     expect(await controller.confirmarEnvio(ator, { arquivoId: 'a1' })).toEqual({ id: 'i1' });
