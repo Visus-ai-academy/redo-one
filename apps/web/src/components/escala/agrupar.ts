@@ -1,5 +1,6 @@
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
+import type { PlantaoDoAvisoDto } from '../../gen/types/PlantaoDoAvisoDto';
 import { NOMES_DIAS } from './calendario';
 
 export type Agrupamento = 'frente' | 'turno';
@@ -254,4 +255,39 @@ export function aplicarRecorte<
     .filter((t) => t.frentes.length > 0);
   const usadas = new Set(liberados.flatMap((t) => t.frentes.map((f) => f.id)));
   return { turnos: liberados, frentes: frentes.filter((f) => usadas.has(f.id)) };
+}
+
+/** Uma ponta de um aviso de conflito: sem detalhe quando está fora do recorte de quem salvou. */
+export function descreverPonta(p: PlantaoDoAvisoDto) {
+  if (p.foraDoRecorte) return 'um plantão fora do seu recorte nesse dia';
+  const horario = p.inicio && p.fim ? ` (${p.inicio.slice(11, 16)}–${p.fim.slice(11, 16)})` : '';
+  return `${p.frenteRotulo}, ${p.turnoNome}${horario}`;
+}
+
+/**
+ * A API devolve também os plantões de `de − 1` que ainda correm à meia-noite (servem aos
+ * conflitos). Na grade e no calendário eles não têm coluna.
+ */
+export function semDiaAnterior<T extends { doDiaAnterior: boolean }>(ocorrencias: readonly T[]) {
+  return ocorrencias.filter((o) => !o.doDiaAnterior);
+}
+
+/**
+ * Opções dos filtros: os turnos e frentes ativos e, no fim, os inativos que ainda têm plantão no
+ * período (datas passadas), marcados como inativos.
+ */
+export function opcoesComInativos(
+  turnos: readonly { id: string; nome: string }[],
+  frentes: readonly { id: string; rotulo: string }[],
+  ocorrencias: readonly OcorrenciaDto[],
+) {
+  const turnosOp = turnos.map((t) => ({ valor: t.id, rotulo: t.nome }));
+  const frentesOp = frentes.map((f) => ({ valor: f.id, rotulo: f.rotulo }));
+  for (const o of ocorrencias) {
+    if (!turnosOp.some((t) => t.valor === o.turnoId))
+      turnosOp.push({ valor: o.turnoId, rotulo: `${o.turnoNome} (inativo)` });
+    if (!frentesOp.some((f) => f.valor === o.frenteId))
+      frentesOp.push({ valor: o.frenteId, rotulo: `${o.frenteRotulo} (inativa)` });
+  }
+  return { turnos: turnosOp, frentes: frentesOp };
 }

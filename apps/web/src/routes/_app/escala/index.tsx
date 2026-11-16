@@ -18,7 +18,7 @@ import { frentesControllerListarQueryOptions } from '../../../gen/hooks/useFrent
 import { medicosEscalaControllerObterQueryOptions } from '../../../gen/hooks/useMedicosEscalaControllerObter';
 import { ocorrenciasControllerListarQueryOptions } from '../../../gen/hooks/useOcorrenciasControllerListar';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
-import type { ConflitoEscalaDto } from '../../../gen/types/ConflitoEscalaDto';
+import type { AvisoConflitoDto } from '../../../gen/types/AvisoConflitoDto';
 import { pode } from '../../../lib/permissoes';
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -82,7 +82,7 @@ function Escala() {
   const navigate = Route.useNavigate();
   const [hoje] = useState(() => hojeEmBrasilia());
   const [painel, setPainel] = useState<PainelAberto | null>(null);
-  const [avisos, setAvisos] = useState<ConflitoEscalaDto[]>([]);
+  const [avisos, setAvisos] = useState<AvisoConflitoDto[]>([]);
   const podeEditar = pode(sessao, 'escala.alocacao.editar');
 
   const { data: paginaTurnos } = useSuspenseQuery(turnosControllerListarQueryOptions(ATIVOS));

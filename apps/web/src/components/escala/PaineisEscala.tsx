@@ -9,6 +9,7 @@ import { coberturasControllerAtualizar } from '../../gen/clients/coberturasContr
 import { alocacoesControllerObterQueryOptions } from '../../gen/hooks/useAlocacoesControllerObter';
 import { prioridadesControllerListarQueryOptions } from '../../gen/hooks/usePrioridadesControllerListar';
 import { subespecialidadesControllerListarQueryOptions } from '../../gen/hooks/useSubespecialidadesControllerListar';
+import type { AvisoConflitoDto } from '../../gen/types/AvisoConflitoDto';
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { FrenteItemDto } from '../../gen/types/FrenteItemDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
@@ -40,7 +41,7 @@ type PaineisEscalaProps = {
   podeVerCatalogo: boolean;
   onAbrir: (painel: PainelAberto | null) => void;
   /** Conflitos que a escrita criou (aviso que não bloqueia). */
-  onAvisos: (avisos: ConflitoEscalaDto[]) => void;
+  onAvisos: (avisos: AvisoConflitoDto[]) => void;
 };
 
 const ATIVOS = { query: { ativo: true, porPagina: 100 } };
@@ -70,7 +71,7 @@ export function PaineisEscala({
   const queryClient = useQueryClient();
   const avisos = useAvisos();
   const fechar = () => onAbrir(null);
-  const depois = async (texto: string, novos: ConflitoEscalaDto[] = []) => {
+  const depois = async (texto: string, novos: AvisoConflitoDto[] = []) => {
     await invalidarEscala(queryClient);
     avisos.sucesso(texto);
     onAvisos(novos);
@@ -151,7 +152,7 @@ function PainelDeAlocacao({
   frentes: FrenteItemDto[];
   podeVerCatalogo: boolean;
   onFechar: () => void;
-  onSalvo: (texto: string, avisos: ConflitoEscalaDto[]) => Promise<void>;
+  onSalvo: (texto: string, avisos: AvisoConflitoDto[]) => Promise<void>;
 }) {
   const id = painel.tipo === 'editar' ? painel.ocorrencia.alocacaoId : '';
   const alocacao = useQuery({
@@ -220,7 +221,7 @@ function PainelDeCobertura({
 }: {
   ocorrencia: OcorrenciaDto;
   onFechar: () => void;
-  onSalvo: (texto: string, avisos: ConflitoEscalaDto[]) => Promise<void>;
+  onSalvo: (texto: string, avisos: AvisoConflitoDto[]) => Promise<void>;
 }) {
   // No plantão de uma cobertura, edita a cobertura; no do titular, cria outra.
   const coberturaId = o.coberturaDe ? o.alocacaoId : '';

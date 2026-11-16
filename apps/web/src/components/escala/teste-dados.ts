@@ -70,6 +70,7 @@ export function ocorrencia(dados: Partial<OcorrenciaDto> = {}): OcorrenciaDto {
     tipoAusenciaCor: null,
     coberturaDe: null,
     cobertoPor: null,
+    doDiaAnterior: false,
     ...dados,
   };
 }

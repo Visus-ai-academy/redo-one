@@ -11,6 +11,7 @@ const conflito = {
   medicoNome: 'Ana Souza',
   data: '2026-11-16',
   a: {
+    foraDoRecorte: false,
     alocacaoId: 'a1',
     data: '2026-11-16',
     turnoId: 't-manha',
@@ -21,6 +22,7 @@ const conflito = {
     fim: '2026-11-16T13:00:00-03:00',
   },
   b: {
+    foraDoRecorte: false,
     alocacaoId: 'a9',
     data: '2026-11-16',
     turnoId: 't-tarde',
@@ -108,6 +110,29 @@ describe('TelaEscala', () => {
     );
     await userEvent.click(within(aviso).getByRole('button', { name: 'Entendi' }));
     expect(acoes.onDispensarAvisos).toHaveBeenCalled();
+  });
+
+  it('aviso com uma ponta fora do recorte não mostra o detalhe dela', async () => {
+    await montar({
+      avisos: [{ ...conflito, b: { foraDoRecorte: true, data: '2026-11-16' } }],
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '16/11: TC Neuro, Manhã (07:00–13:00) e um plantão fora do seu recorte nesse dia',
+    );
+  });
+
+  it('plantão do dia anterior não vira cartão na semana', async () => {
+    await montar({
+      dados: {
+        ocorrencias: [
+          ocorrencia({ medicoNome: 'Noturno Antigo', data: '2026-11-15', doDiaAnterior: true }),
+          ocorrencia(),
+        ],
+        conflitos: [],
+      },
+    });
+    expect(screen.queryByRole('button', { name: /Noturno Antigo/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Ana Souza/ }).length).toBeGreaterThan(0);
   });
 
   it('mês: clicar no dia vai para a semana dele', async () => {

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { ocorrenciasControllerListarQueryOptions } from '../../gen/hooks/useOcorrenciasControllerListar';
 import { buttonClassName } from '../button/button-class';
-import { resumoDoMedico } from '../escala/agrupar';
+import { resumoDoMedico, semDiaAnterior } from '../escala/agrupar';
 import { hojeEmBrasilia, rotuloDia, somarDias } from '../escala/calendario';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -26,7 +26,10 @@ export function AbaEscalaMedico({ medicoId, hoje: hojeFixo }: { medicoId: string
       query: { de: hoje, ate: somarDias(hoje, DIAS_DA_JANELA - 1), medicoId },
     }),
   );
-  const resumo = useMemo(() => resumoDoMedico(consulta.data?.ocorrencias ?? []), [consulta.data]);
+  const resumo = useMemo(
+    () => resumoDoMedico(semDiaAnterior(consulta.data?.ocorrencias ?? [])),
+    [consulta.data],
+  );
   const pagina = usePaginaLocal(resumo, POR_PAGINA);
 
   return (

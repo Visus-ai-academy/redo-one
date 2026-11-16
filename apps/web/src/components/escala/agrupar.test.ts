@@ -4,9 +4,12 @@ import {
   aplicarRecorte,
   chavesEmConflito,
   contarPorDia,
+  descreverPonta,
   filtrarPorMedico,
   montarGrade,
+  opcoesComInativos,
   resumoDoMedico,
+  semDiaAnterior,
 } from './agrupar';
 import { FRENTE_RM, FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
 
@@ -180,5 +183,60 @@ describe('aplicarRecorte', () => {
     const r = aplicarRecorte([manha, tarde], frentes, { turnoIds: [], frenteIds: ['f-tc'] });
     expect(r.turnos.map((t) => t.id)).toEqual(['t-manha']);
     expect(r.frentes.map((f) => f.id)).toEqual(['f-tc']);
+  });
+});
+
+describe('descreverPonta', () => {
+  it('com os dados, frente, turno e horário', () => {
+    expect(
+      descreverPonta({
+        foraDoRecorte: false,
+        data: '2026-11-16',
+        alocacaoId: 'a1',
+        turnoNome: 'Manhã',
+        frenteRotulo: 'TC Neuro',
+        inicio: '2026-11-16T07:00:00-03:00',
+        fim: '2026-11-16T13:00:00-03:00',
+      }),
+    ).toBe('TC Neuro, Manhã (07:00–13:00)');
+  });
+
+  it('fora do recorte, sem detalhe', () => {
+    expect(descreverPonta({ foraDoRecorte: true, data: '2026-11-16' })).toBe(
+      'um plantão fora do seu recorte nesse dia',
+    );
+  });
+});
+
+describe('semDiaAnterior', () => {
+  it('tira o plantão do dia anterior que ainda corre à meia-noite', () => {
+    const lista = [ocorrencia(), ocorrencia({ data: '2026-11-15', doDiaAnterior: true })];
+    expect(semDiaAnterior(lista).map((o) => o.data)).toEqual(['2026-11-16']);
+  });
+});
+
+describe('opcoesComInativos', () => {
+  it('acrescenta aos filtros turnos e frentes que só aparecem nos plantões (inativos)', () => {
+    const r = opcoesComInativos(
+      [turno()],
+      [FRENTE_TC],
+      [
+        ocorrencia({
+          turnoId: 't-velho',
+          turnoNome: 'Velho',
+          frenteId: 'f-velha',
+          frenteRotulo: 'Velha',
+        }),
+        ocorrencia(),
+      ],
+    );
+    expect(r.turnos).toEqual([
+      { valor: 't-manha', rotulo: 'Manhã' },
+      { valor: 't-velho', rotulo: 'Velho (inativo)' },
+    ]);
+    expect(r.frentes).toEqual([
+      { valor: 'f-tc', rotulo: 'TC Neuro' },
+      { valor: 'f-velha', rotulo: 'Velha (inativa)' },
+    ]);
   });
 });

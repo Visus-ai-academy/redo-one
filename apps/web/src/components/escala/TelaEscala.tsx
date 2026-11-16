@@ -3,7 +3,7 @@ import { CaretLeft, CaretRight, ClockCounterClockwise, Plus } from '@phosphor-ic
 import { Link } from '@tanstack/react-router';
 import { useId, useMemo } from 'react';
 
-import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
+import type { AvisoConflitoDto } from '../../gen/types/AvisoConflitoDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { OcorrenciasDto } from '../../gen/types/OcorrenciasDto';
 import { cn } from '../../lib/cn';
@@ -18,9 +18,12 @@ import { AgendaMedico } from './AgendaMedico';
 import {
   type Agrupamento,
   chavesEmConflito,
+  descreverPonta,
   type FrenteDaGrade,
   filtrarPorMedico,
   montarGrade,
+  opcoesComInativos,
+  semDiaAnterior,
   type TurnoDaGrade,
 } from './agrupar';
 import { diasDaSemana, type ModoEscala, navegar, rotuloDia, rotuloPeriodo } from './calendario';
@@ -59,7 +62,7 @@ export type TelaEscalaProps = {
   podeEditar: boolean;
   podeVerHistorico: boolean;
   /** Conflitos que a última alocação ou cobertura salva criou. */
-  avisos: ConflitoEscalaDto[];
+  avisos: AvisoConflitoDto[];
   onDispensarAvisos: () => void;
   onMudar: (novos: Partial<FiltrosEscala>) => void;
   onAbrirPlantao: (ocorrencia: OcorrenciaDto) => void;
@@ -76,8 +79,6 @@ const AGRUPAMENTOS = [
   { valor: 'frente', rotulo: 'Por frente' },
   { valor: 'turno', rotulo: 'Por turno' },
 ] as const;
-
-const hora = (iso: string) => iso.slice(11, 16);
 
 /** Escala médica: semana (por frente ou turno), mês e agenda de um médico. */
 export function TelaEscala({
@@ -101,6 +102,10 @@ export function TelaEscala({
 }: TelaEscalaProps) {
   const { modo, data } = filtros;
   const medicoCampoId = useId();
+  const opcoesFiltro = useMemo(
+    () => opcoesComInativos(turnos, frentes, dados?.ocorrencias ?? []),
+    [turnos, frentes, dados],
+  );
   const unidade = modo === 'semana' ? 'Semana' : 'Mês';
   const temFiltro = Boolean(filtros.frenteIds?.length || filtros.turnoIds?.length || filtros.busca);
 
@@ -203,7 +208,7 @@ export function TelaEscala({
         <FiltroMultiplo
           rotulo="Frentes"
           todos="Todas"
-          opcoes={frentes.map((f) => ({ valor: f.id, rotulo: f.rotulo }))}
+          opcoes={opcoesFiltro.frentes}
           valor={filtros.frenteIds ?? []}
           onMudar={(ids) => onMudar({ frenteIds: ids.length ? ids : undefined })}
           className="flex-[1_1_180px] md:max-w-[260px]"
@@ -211,7 +216,7 @@ export function TelaEscala({
         <FiltroMultiplo
           rotulo="Turnos"
           todos="Todos"
-          opcoes={turnos.map((t) => ({ valor: t.id, rotulo: t.nome }))}
+          opcoes={opcoesFiltro.turnos}
           valor={filtros.turnoIds ?? []}
           onMudar={(ids) => onMudar({ turnoIds: ids.length ? ids : undefined })}
           className="flex-[1_1_180px] md:max-w-[260px]"
@@ -251,7 +256,7 @@ function AvisosConflito({
   avisos,
   onDispensar,
 }: {
-  avisos: ConflitoEscalaDto[];
+  avisos: AvisoConflitoDto[];
   onDispensar: () => void;
 }) {
   const visiveis = avisos.slice(0, 5);
@@ -262,9 +267,7 @@ function AvisosConflito({
         <ul className="list-disc pl-5">
           {visiveis.map((c) => (
             <li key={`${c.data}|${c.a.alocacaoId}|${c.b.alocacaoId}`} className="tabular-nums">
-              {c.medicoNome}, {rotuloDia(c.data).dia}: {c.a.frenteRotulo}, {c.a.turnoNome} (
-              {hora(c.a.inicio)}–{hora(c.a.fim)}) e {c.b.frenteRotulo}, {c.b.turnoNome} (
-              {hora(c.b.inicio)}–{hora(c.b.fim)})
+              {c.medicoNome}, {rotuloDia(c.data).dia}: {descreverPonta(c.a)} e {descreverPonta(c.b)}
             </li>
           ))}
         </ul>
@@ -314,7 +317,10 @@ function Conteudo({
   const { modo, data } = filtros;
   const ocorrencias = useMemo(
     () =>
-      filtrarPorMedico(dados?.ocorrencias ?? [], modo === 'medico' ? '' : (filtros.busca ?? '')),
+      filtrarPorMedico(
+        semDiaAnterior(dados?.ocorrencias ?? []),
+        modo === 'medico' ? '' : (filtros.busca ?? ''),
+      ),
     [dados, filtros.busca, modo],
   );
   const conflitos = useMemo(() => chavesEmConflito(dados?.conflitos ?? []), [dados]);
