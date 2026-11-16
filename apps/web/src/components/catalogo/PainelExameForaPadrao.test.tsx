@@ -38,6 +38,22 @@ describe('PainelExameForaPadrao', () => {
     });
   });
 
+  it('o botão de excluir diz só "Excluir", para caber na linha do Cancelar e do Salvar', () => {
+    montar({
+      item: {
+        id: 'a',
+        estudoDescricao: 'TC OMBRO DIREITO',
+        valores: 1,
+        exameId: null,
+        ativo: true,
+        destinoNome: null,
+      },
+      onExcluir: vi.fn(async () => undefined),
+    });
+
+    expect(screen.getByRole('button', { name: 'Excluir' })).toBeInTheDocument();
+  });
+
   it('explica que valor zero não conta: o laudo vale 1', () => {
     montar();
 

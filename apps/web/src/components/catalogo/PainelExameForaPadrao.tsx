@@ -31,7 +31,7 @@ function excluirForaPadrao(
 ) {
   return onExcluir
     ? {
-        acao: 'Excluir exame fora do padrão',
+        acao: 'Excluir',
         titulo: `Excluir “${nome}”?`,
         consequencia:
           'A partir da próxima importação, o laudo desse estudo com VALORES zerado passa a valer 1. Para só pausar, desative.',
