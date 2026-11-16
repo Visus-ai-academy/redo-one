@@ -398,6 +398,7 @@ function Conteudo({
             <div className="hidden md:block">
               <SemanaGrade
                 secoes={secoes}
+                agrupar={filtros.agrupar}
                 dias={diasDaSemana(data)}
                 hoje={hoje}
                 conflitos={conflitos}

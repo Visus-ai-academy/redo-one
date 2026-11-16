@@ -55,15 +55,20 @@ export const Route = createFileRoute('/_app/escala/')({
   validateSearch: buscaSchema,
   // A busca por nome e o agrupamento só mudam a tela, não a consulta.
   loaderDeps: ({ search: { busca: _busca, agrupar: _agrupar, ...resto } }) => resto,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'escala.ver')) return;
     const { queryClient } = context;
     const ocorrencias = consulta(deps, hojeEmBrasilia());
+    // Na própria tela (outra semana, outro filtro), a tela busca sozinha e mostra os dados de antes
+    // enquanto isso. Esperar aqui seguraria a tela no estado velho até a API responder, e um segundo
+    // clique (outra frente no filtro, ▶ de novo) partiria dele e desfaria o primeiro.
+    const esperarOcorrencias = Boolean(ocorrencias) && cause !== 'stay';
     await Promise.all([
       queryClient.ensureQueryData(turnosControllerListarQueryOptions(ATIVOS)),
       queryClient.ensureQueryData(frentesControllerListarQueryOptions(ATIVOS)),
       queryClient.ensureQueryData(escopoApiControllerMeuQueryOptions()),
-      ocorrencias &&
+      esperarOcorrencias &&
+        ocorrencias &&
         queryClient.ensureQueryData(ocorrenciasControllerListarQueryOptions(ocorrencias)),
     ]);
   },

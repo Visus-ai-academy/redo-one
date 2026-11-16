@@ -5,7 +5,7 @@ import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
 import { Dica } from '../dica/Dica';
-import { chavePlantao, type SecaoGrade } from './agrupar';
+import { type Agrupamento, chavePlantao, type SecaoGrade } from './agrupar';
 import { CartaoPlantao } from './CartaoPlantao';
 import { diaDaSemana, NOMES_DIAS_LONGOS, rotuloDia } from './calendario';
 
@@ -17,6 +17,11 @@ export type SemanaProps = {
   /** Os 7 dias, de segunda a domingo. */
   dias: string[];
   hoje: string;
+  /**
+   * Por turno, o horário vai uma vez no título do turno; por frente, em cada linha de turno.
+   * Sem ele, por frente.
+   */
+  agrupar?: Agrupamento;
   /** `chavePlantao` dos plantões em conflito. */
   conflitos: Set<string>;
   /** Horário padrão de cada turno ("07:00–13:00"), por id. */
@@ -46,11 +51,13 @@ export function SemanaGrade({
   secoes,
   dias,
   hoje,
+  agrupar = 'frente',
   conflitos,
   horarios,
   onAbrir,
   onAlocar,
 }: SemanaProps) {
+  const porTurno = agrupar === 'turno';
   return (
     <div className="flex flex-col gap-4">
       {secoes.map((secao) => (
@@ -60,6 +67,14 @@ export function SemanaGrade({
               <span className="flex items-center gap-2 text-base font-semibold">
                 <Bolinha cor={secao.cor} />
                 {secao.rotulo}
+                {porTurno && horarios[secao.id] && (
+                  <>
+                    {' '}
+                    <span className="text-muted-foreground font-normal tabular-nums">
+                      {`· ${horarios[secao.id]}`}
+                    </span>
+                  </>
+                )}
               </span>
             </caption>
             <thead>
@@ -90,7 +105,7 @@ export function SemanaGrade({
                       <Bolinha cor={linha.cor} />
                       <span className="truncate">{linha.rotulo}</span>
                     </span>
-                    {horarios[linha.turnoId] && (
+                    {!porTurno && horarios[linha.turnoId] && (
                       <span className="text-muted-foreground block pl-4.5 text-[13px] tabular-nums">
                         {horarios[linha.turnoId]}
                       </span>

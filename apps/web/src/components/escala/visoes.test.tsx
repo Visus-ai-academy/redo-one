@@ -6,7 +6,7 @@ import { montarGrade } from './agrupar';
 import { CartaoPlantao } from './CartaoPlantao';
 import { MesCalendario } from './MesCalendario';
 import { SemanaGrade, SemanaLista } from './SemanaEscala';
-import { FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
+import { FRENTE_RM, FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
 
 describe('CartaoPlantao', () => {
   it('nome, produtividade e horário só quando difere do turno', () => {
@@ -124,6 +124,56 @@ describe('SemanaGrade', () => {
       />,
     );
     expect(screen.queryByRole('button', { name: /Alocar em/ })).not.toBeInTheDocument();
+  });
+
+  it('por frente, o horário fica junto do turno, uma vez por linha', () => {
+    render(
+      <SemanaGrade
+        secoes={grade}
+        agrupar="frente"
+        dias={dias}
+        hoje="2026-11-17"
+        conflitos={new Set()}
+        horarios={{ 't-manha': '07:00–13:00' }}
+        onAbrir={vi.fn()}
+      />,
+    );
+    const tabela = screen.getByRole('table', { name: 'TC Neuro' });
+    expect(within(tabela).getByRole('rowheader', { name: /Manhã/ })).toHaveTextContent(
+      '07:00–13:00',
+    );
+    expect(within(tabela).getAllByText('07:00–13:00')).toHaveLength(1);
+  });
+
+  it('por turno, o horário vai uma vez no título do turno e sai das linhas de frente', () => {
+    const porTurno = montarGrade({
+      ocorrencias: [ocorrencia(), ocorrencia({ alocacaoId: 'a2', frenteId: FRENTE_RM.id })],
+      turnos: [
+        turno({
+          frentes: [
+            frenteDoTurno(FRENTE_TC.id, FRENTE_TC.rotulo),
+            frenteDoTurno(FRENTE_RM.id, FRENTE_RM.rotulo),
+          ],
+        }),
+      ],
+      frentes: [FRENTE_TC, FRENTE_RM],
+      por: 'turno',
+    });
+    render(
+      <SemanaGrade
+        secoes={porTurno}
+        agrupar="turno"
+        dias={dias}
+        hoje="2026-11-17"
+        conflitos={new Set()}
+        horarios={{ 't-manha': '07:00–13:00' }}
+        onAbrir={vi.fn()}
+      />,
+    );
+    const tabela = screen.getByRole('table', { name: 'Manhã · 07:00–13:00' });
+    expect(within(tabela).getAllByText(/07:00–13:00/)).toHaveLength(1);
+    expect(within(tabela).getByRole('rowheader', { name: 'TC Neuro' })).toBeInTheDocument();
+    expect(within(tabela).getByRole('rowheader', { name: 'RM Geral' })).toBeInTheDocument();
   });
 });
 
