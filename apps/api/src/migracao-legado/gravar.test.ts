@@ -293,6 +293,40 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(ferias.rows).toEqual([{ gravidade: 9 }]);
   });
 
+  it('frente já criada pela tela (id aleatório) é reaproveitada, e rodar duas vezes não duplica', async () => {
+    const [daCarga] = escala.tabelas.frentesEscala;
+    if (!daCarga?.especialidadeId) throw new Error('a escala de teste precisa de uma frente');
+    await gravarMigracao(db, catalogo, medicos);
+    const daTela = '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a5b';
+    await db.insert(schema.frentesEscala).values({
+      id: daTela,
+      tipo: 'especialidade',
+      especialidadeId: daCarga.especialidadeId,
+    });
+
+    await gravarMigracao(db, catalogo, medicos, escala);
+    await gravarMigracao(db, catalogo, medicos, escala);
+
+    const usos = await db.execute<{ t: string; frente: string }>(sql`
+      select 'frentes' t, id::text frente from frentes_escala union all
+      select 'turnos_frentes', frente_id::text from turnos_frentes union all
+      select 'alocacoes', frente_id::text from alocacoes union all
+      select 'ausencias_frentes', frente_id::text from ausencias_frentes
+      order by 1, 2`);
+    expect(usos.rows).toEqual([
+      { t: 'alocacoes', frente: daTela },
+      { t: 'alocacoes', frente: daTela },
+      { t: 'ausencias_frentes', frente: daTela },
+      { t: 'frentes', frente: daTela },
+      { t: 'turnos_frentes', frente: daTela },
+    ]);
+    const eventos = await db.execute<{ json: string }>(
+      sql`select concat(entidade_id, antes::text, depois::text) json from eventos_auditoria`,
+    );
+    expect(eventos.rows.some((l) => l.json.includes(daCarga.id))).toBe(false);
+    expect(eventos.rows.some((l) => l.json.includes(daTela))).toBe(true);
+  });
+
   it('valor fora do padrão casa pela grafia: regravar com outro id não quebra a chave única', async () => {
     const valor = {
       id: '00000000-0000-5000-8000-000000000001',

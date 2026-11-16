@@ -1,4 +1,4 @@
-import { eq, getTableColumns, getTableName, inArray, type SQL, sql } from 'drizzle-orm';
+import { eq, getTableColumns, getTableName, inArray, or, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
@@ -144,7 +144,8 @@ export async function gravarMigracao(
  * turnos da ausência, escopo da gestora) são trocados inteiros para os registros que a carga
  * traz: o dashboards-one é a fonte da verdade, e assim rodar de novo dá o mesmo resultado.
  */
-async function gravarEscala(tx: Transacao, { tabelas: e }: EscalaMigrada) {
+async function gravarEscala(tx: Transacao, { tabelas: migradas }: EscalaMigrada) {
+  const e = remapearFrentes(migradas, await gravarFrentes(tx, migradas.frentesEscala));
   const trocar = async <T extends PgTable>(
     tabela: T,
     coluna: AnyPgColumn,
@@ -156,7 +157,6 @@ async function gravarEscala(tx: Transacao, { tabelas: e }: EscalaMigrada) {
     await upsert(tx, tabela, linhas, chave);
   };
 
-  await upsert(tx, schema.frentesEscala, e.frentesEscala);
   await upsert(tx, schema.turnos, e.turnos);
   await trocar(
     schema.turnosFrentes,
@@ -238,4 +238,62 @@ async function gravarEscala(tx: Transacao, { tabelas: e }: EscalaMigrada) {
     ['id'],
   );
   await upsert(tx, schema.eventosAuditoria, e.eventosAuditoria);
+}
+
+type Frentes = EscalaMigrada['tabelas']['frentesEscala'];
+
+/**
+ * Grava as frentes e devolve id da carga → id que vale no banco. A frente pode já existir com
+ * outro id (a tela cria a da especialidade ou modalidade ao gravar um turno): aí fica a que já
+ * existe, e a carga passa a apontar para ela.
+ */
+async function gravarFrentes(tx: Transacao, frentes: Frentes): Promise<Map<string, string>> {
+  if (frentes.length === 0) return new Map();
+  await tx.insert(schema.frentesEscala).values(frentes).onConflictDoNothing();
+  const f = schema.frentesEscala;
+  const especialidadeIds = frentes.flatMap((x) => (x.especialidadeId ? [x.especialidadeId] : []));
+  const modalidadeIds = frentes.flatMap((x) => (x.modalidadeId ? [x.modalidadeId] : []));
+  const gravadas = await tx
+    .select({ id: f.id, especialidadeId: f.especialidadeId, modalidadeId: f.modalidadeId })
+    .from(f)
+    .where(
+      or(
+        especialidadeIds.length ? inArray(f.especialidadeId, especialidadeIds) : undefined,
+        modalidadeIds.length ? inArray(f.modalidadeId, modalidadeIds) : undefined,
+      ),
+    );
+  const destino = (x: { especialidadeId?: string | null; modalidadeId?: string | null }) =>
+    x.especialidadeId ? `e:${x.especialidadeId}` : `m:${x.modalidadeId}`;
+  const real = new Map(gravadas.map((g) => [destino(g), g.id]));
+  return new Map(frentes.map((x) => [x.id, real.get(destino(x)) ?? x.id]));
+}
+
+/** Troca, em tudo que a carga grava, o id da frente pelo que vale no banco. */
+function remapearFrentes(
+  e: EscalaMigrada['tabelas'],
+  ids: Map<string, string>,
+): EscalaMigrada['tabelas'] {
+  if ([...ids].every(([de, para]) => de === para)) return e;
+  const id = <T extends string | null | undefined>(v: T): T =>
+    (typeof v === 'string' ? (ids.get(v) ?? v) : v) as T;
+  const json = <T>(v: T): T =>
+    v === null || v === undefined
+      ? v
+      : (JSON.parse(JSON.stringify(v), (_, x) => (typeof x === 'string' ? id(x) : x)) as T);
+  return {
+    ...e,
+    turnosFrentes: e.turnosFrentes.map((x) => ({ ...x, frenteId: id(x.frenteId) })),
+    alocacoes: e.alocacoes.map((x) => ({ ...x, frenteId: id(x.frenteId) })),
+    ausenciasFrentes: e.ausenciasFrentes.map((x) => ({ ...x, frenteId: id(x.frenteId) })),
+    usuariosEscoposEscala: e.usuariosEscoposEscala.map((x) => ({
+      ...x,
+      frenteId: id(x.frenteId),
+    })),
+    eventosAuditoria: e.eventosAuditoria.map((x) => ({
+      ...x,
+      entidadeId: id(x.entidadeId),
+      antes: json(x.antes),
+      depois: json(x.depois),
+    })),
+  };
 }
