@@ -30,9 +30,29 @@ export type FrenteItemDto = {
    * @type string
    */
   destinoNome: string;
+  /**
+   * @description Nome da especialidade ou código da modalidade no catálogo.
+   * @type string
+   */
   rotulo: string;
+  /**
+   * @description Do catálogo.
+   * @type string
+   */
   descricao: string | null;
+  /**
+   * @description Do catálogo.
+   * @type string
+   */
   cor: string | null;
+  /**
+   * @description Do catálogo.
+   * @type number
+   */
   ordem: number;
+  /**
+   * @description Do catálogo: inativa lá, inativa na escala.
+   * @type boolean
+   */
   ativo: boolean;
 };

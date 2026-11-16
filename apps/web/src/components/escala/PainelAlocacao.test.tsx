@@ -8,7 +8,7 @@ import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
 import type { FrenteItemDto } from '../../gen/types/FrenteItemDto';
 import { escolherOpcao } from '../../test/select';
 import { PainelAlocacao, type PainelAlocacaoProps } from './PainelAlocacao';
-import { turno } from './teste-dados';
+import { frenteDoTurno, turno } from './teste-dados';
 
 const frente = (
   id: string,
@@ -36,9 +36,9 @@ const TURNOS = [
     tipo: 'lista',
     horarioInicio: '00:00',
     horarioFim: '00:00',
-    frentes: [{ id: 'f-tc', rotulo: 'TC Neuro' }],
+    frentes: [frenteDoTurno('f-tc', 'TC Neuro')],
   }),
-  turno({ id: 't-noite', nome: 'Noite', frentes: [{ id: 'f-rm', rotulo: 'RM Geral' }] }),
+  turno({ id: 't-noite', nome: 'Noite', frentes: [frenteDoTurno('f-rm', 'RM Geral')] }),
 ];
 
 function montar(props: Partial<PainelAlocacaoProps> = {}) {

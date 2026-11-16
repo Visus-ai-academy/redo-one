@@ -1,3 +1,4 @@
+import { Fieldset } from '@base-ui/react/fieldset';
 import { useState } from 'react';
 import { z } from 'zod';
 
@@ -28,14 +29,18 @@ const schema = z.object({
   tipo: z.enum(['fixo', 'lista'], 'Escolha o tipo.'),
   horarioInicio: horario,
   horarioFim: horario,
-  frenteIds: z.array(z.string()),
+  especialidadeIds: z.array(z.string()),
+  modalidadeIds: z.array(z.string()),
 });
+
+type Opcao = { id: string; nome: string };
 
 export type PainelTurnoProps = {
   /** Sem turno, o painel cria um novo. */
   turno?: TurnoItemDto;
-  /** Frentes ativas para marcar no turno. */
-  frentes: { id: string; rotulo: string }[];
+  /** Especialidades e modalidades ativas do catálogo, para marcar no turno. */
+  especialidades: Opcao[];
+  modalidades: Opcao[];
   podeEditar: boolean;
   onSalvar: (dados: TurnoDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
@@ -45,7 +50,8 @@ export type PainelTurnoProps = {
 /** Bloco de horário da escala: criar, ver e editar, no painel ao lado da lista. */
 export function PainelTurno({
   turno,
-  frentes,
+  especialidades,
+  modalidades,
   podeEditar,
   onSalvar,
   onExcluir,
@@ -54,11 +60,21 @@ export function PainelTurno({
   const [erro, setErro] = useState<string>();
   const titulo = turno?.nome ?? 'Novo turno';
 
-  // Frente inativa que o turno já tem continua marcável, para não sumir ao salvar.
-  const opcoesFrentes = [
-    ...frentes,
-    ...(turno?.frentes ?? []).filter((f) => !frentes.some((ativa) => ativa.id === f.id)),
-  ].map((f) => ({ valor: f.id, rotulo: f.rotulo }));
+  // Item inativo no catálogo que o turno já tem continua marcável, para não sumir ao salvar.
+  const opcoesCom = (ativas: Opcao[], marcados: string[] = []) => [
+    ...ativas.map((o) => ({ valor: o.id, rotulo: o.nome })),
+    ...marcados
+      .filter((id) => !ativas.some((o) => o.id === id))
+      .map((id) => ({
+        valor: id,
+        rotulo:
+          turno?.frentes.find((f) => f.especialidadeId === id || f.modalidadeId === id)?.rotulo ??
+          'Sem nome',
+        inativa: true,
+      })),
+  ];
+  const opcoesEspecialidades = opcoesCom(especialidades, turno?.especialidadeIds);
+  const opcoesModalidades = opcoesCom(modalidades, turno?.modalidadeIds);
 
   const form = useAppForm({
     defaultValues: {
@@ -67,7 +83,8 @@ export function PainelTurno({
       tipo: (turno?.tipo ?? 'fixo') as string,
       horarioInicio: turno?.horarioInicio ?? '',
       horarioFim: turno?.horarioFim ?? '',
-      frenteIds: turno?.frentes.map((f) => f.id) ?? [],
+      especialidadeIds: turno?.especialidadeIds ?? [],
+      modalidadeIds: turno?.modalidadeIds ?? [],
     },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
@@ -78,7 +95,8 @@ export function PainelTurno({
           tipo: value.tipo as TurnoDto['tipo'],
           horarioInicio: normalizarHorario(value.horarioInicio),
           horarioFim: normalizarHorario(value.horarioFim),
-          frenteIds: value.frenteIds,
+          especialidadeIds: value.especialidadeIds,
+          modalidadeIds: value.modalidadeIds,
           ...comunsParaApi(value),
         });
       } catch (falha) {
@@ -97,7 +115,7 @@ export function PainelTurno({
             value={`${formatarHorario(turno.horarioInicio, turno.horarioFim)} (${formatarDuracao(turno.duracaoMin)})`}
           />
           <CampoSomenteLeitura
-            label="Frentes"
+            label="Especialidades e modalidades"
             value={turno.frentes.map((f) => f.rotulo).join(', ') || '—'}
           />
           <CampoSomenteLeitura label="Descrição" value={turno.descricao ?? '—'} />
@@ -169,21 +187,34 @@ export function PainelTurno({
         <p className="text-muted-foreground -mt-2 text-[13px]">
           Fim antes do início: o turno passa da meia-noite; igual ao início: 24 h.
         </p>
-        {opcoesFrentes.length > 0 ? (
-          <form.AppField name="frenteIds">
-            {(field) => (
-              <field.CheckboxListField
-                label="Frentes"
-                description="Onde os médicos do turno laudam."
-                opcoes={opcoesFrentes}
-              />
-            )}
-          </form.AppField>
-        ) : (
-          <Alerta tom="info" role="note">
-            Nenhuma frente ativa. Cadastre as frentes na aba Frentes para ligá-las ao turno.
-          </Alerta>
-        )}
+        <Fieldset.Root className="flex flex-col gap-3">
+          <Fieldset.Legend className="text-foreground font-medium">
+            Especialidades e modalidades deste turno
+          </Fieldset.Legend>
+          <p className="text-muted-foreground -mt-1 text-[13px]">
+            Onde os médicos do turno laudam. Vêm do catálogo de classificação dos exames.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <form.AppField name="especialidadeIds">
+              {(field) => (
+                <field.SelecaoMultiplaField
+                  label="Especialidades"
+                  opcoes={opcoesEspecialidades}
+                  className="flex-[1_1_180px]"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="modalidadeIds">
+              {(field) => (
+                <field.SelecaoMultiplaField
+                  label="Modalidades"
+                  opcoes={opcoesModalidades}
+                  className="flex-[1_1_180px]"
+                />
+              )}
+            </form.AppField>
+          </div>
+        </Fieldset.Root>
         <form.AppField name="descricao">
           {(field) => (
             <field.TextField

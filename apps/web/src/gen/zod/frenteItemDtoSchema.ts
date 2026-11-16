@@ -12,11 +12,11 @@ export const frenteItemDtoSchema = z.object({
   especialidadeId: z.uuid().nullable(),
   modalidadeId: z.uuid().nullable(),
   destinoNome: z.string().describe('Nome da especialidade ou código da modalidade no catálogo.'),
-  rotulo: z.string(),
-  descricao: z.string().nullable(),
-  cor: z.string().nullable(),
-  ordem: z.number(),
-  ativo: z.boolean(),
+  rotulo: z.string().describe('Nome da especialidade ou código da modalidade no catálogo.'),
+  descricao: z.string().nullable().describe('Do catálogo.'),
+  cor: z.string().nullable().describe('Do catálogo.'),
+  ordem: z.number().describe('Do catálogo.'),
+  ativo: z.boolean().describe('Do catálogo: inativa lá, inativa na escala.'),
 })
 
 export type FrenteItemDtoSchemaType = z.infer<typeof frenteItemDtoSchema>

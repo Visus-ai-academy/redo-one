@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-/** Campos que turnos, frentes e tipos de ausência têm em comum, no formato do formulário. */
+/** Campos que turnos e tipos de ausência têm em comum, no formato do formulário. */
 export const esquemaComuns = {
   descricao: z.string(),
   cor: z
@@ -44,11 +44,6 @@ export function comunsParaApi(valor: {
 export const TIPOS_TURNO = [
   { valor: 'fixo', rotulo: 'Fixo' },
   { valor: 'lista', rotulo: 'Lista' },
-];
-
-export const TIPOS_FRENTE = [
-  { valor: 'especialidade', rotulo: 'Especialidade' },
-  { valor: 'modalidade', rotulo: 'Modalidade' },
 ];
 
 export const rotuloDe = (opcoes: { valor: string; rotulo: string }[], valor: string) =>

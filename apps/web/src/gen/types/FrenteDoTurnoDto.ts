@@ -3,12 +3,34 @@
 * Do not edit manually.
 */
 
+import type { TipoFrenteEscalaKey } from './TipoFrenteEscala'
+
 export type FrenteDoTurnoDto = {
   /**
-   * @description
+   * @description Id da frente (o que alocações e ausências usam).
+   *
    * Format: `uuid`
    * @type string
    */
   id: string;
+  /**
+   * @description Nome da especialidade ou código da modalidade no catálogo.
+   * @type string
+   */
   rotulo: string;
+  tipo: TipoFrenteEscalaKey;
+  /**
+   * @description Id no catálogo.
+   *
+   * Format: `uuid`
+   * @type string
+   */
+  especialidadeId: string | null;
+  /**
+   * @description Id no catálogo.
+   *
+   * Format: `uuid`
+   * @type string
+   */
+  modalidadeId: string | null;
 };

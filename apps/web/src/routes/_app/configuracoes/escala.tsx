@@ -12,9 +12,8 @@ import { Abas } from '../../../components/abas/Abas';
 import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
-import { rotuloDe, TIPOS_FRENTE, TIPOS_TURNO } from '../../../components/escala-config/comum';
+import { rotuloDe, TIPOS_TURNO } from '../../../components/escala-config/comum';
 import { formatarDuracao, formatarHorario } from '../../../components/escala-config/horario';
-import { PainelFrente } from '../../../components/escala-config/PainelFrente';
 import { PainelTipoAusencia } from '../../../components/escala-config/PainelTipoAusencia';
 import { PainelTurno } from '../../../components/escala-config/PainelTurno';
 import { SemPermissao } from '../../../components/estado/estados';
@@ -22,33 +21,26 @@ import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { useAvisos } from '../../../components/toast/use-avisos';
-import { frentesControllerAtualizar } from '../../../gen/clients/frentesControllerAtualizar';
-import { frentesControllerCriar } from '../../../gen/clients/frentesControllerCriar';
-import { frentesControllerExcluir } from '../../../gen/clients/frentesControllerExcluir';
 import { tiposAusenciaControllerAtualizar } from '../../../gen/clients/tiposAusenciaControllerAtualizar';
 import { tiposAusenciaControllerCriar } from '../../../gen/clients/tiposAusenciaControllerCriar';
 import { tiposAusenciaControllerExcluir } from '../../../gen/clients/tiposAusenciaControllerExcluir';
 import { turnosControllerAtualizar } from '../../../gen/clients/turnosControllerAtualizar';
 import { turnosControllerCriar } from '../../../gen/clients/turnosControllerCriar';
 import { turnosControllerExcluir } from '../../../gen/clients/turnosControllerExcluir';
-import { frentesControllerListarQueryOptions } from '../../../gen/hooks/useFrentesControllerListar';
-import { frentesControllerObterQueryOptions } from '../../../gen/hooks/useFrentesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { tiposAusenciaControllerListarQueryOptions } from '../../../gen/hooks/useTiposAusenciaControllerListar';
 import { tiposAusenciaControllerObterQueryOptions } from '../../../gen/hooks/useTiposAusenciaControllerObter';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
 import { turnosControllerObterQueryOptions } from '../../../gen/hooks/useTurnosControllerObter';
-import type { FrenteItemDto } from '../../../gen/types/FrenteItemDto';
 import type { TipoAusenciaItemDto } from '../../../gen/types/TipoAusenciaItemDto';
 import type { TurnoItemDto } from '../../../gen/types/TurnoItemDto';
 import { pode } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
-const ABAS = ['turnos', 'frentes', 'tipos-ausencia'] as const;
+const ABAS = ['turnos', 'tipos-ausencia'] as const;
 type AbaEscala = (typeof ABAS)[number];
 const ROTULOS_ABA: Record<AbaEscala, string> = {
   turnos: 'Turnos',
-  frentes: 'Frentes',
   'tipos-ausencia': 'Tipos de ausência',
 };
 
@@ -73,23 +65,17 @@ const consulta = (b: Busca) => ({
   },
 });
 
-/** Frentes ativas para marcar no turno (são poucas; a API devolve até 100). */
-const frentesAtivas = () =>
-  frentesControllerListarQueryOptions({ query: { ativo: true, porPagina: 100 } });
-
 const listar = {
   turnos: (b: Busca) => turnosControllerListarQueryOptions(consulta(b)),
-  frentes: (b: Busca) => frentesControllerListarQueryOptions(consulta(b)),
   'tipos-ausencia': (b: Busca) => tiposAusenciaControllerListarQueryOptions(consulta(b)),
 } as const;
 
 const obter = {
   turnos: (id: string) => turnosControllerObterQueryOptions({ path: { id } }),
-  frentes: (id: string) => frentesControllerObterQueryOptions({ path: { id } }),
   'tipos-ausencia': (id: string) => tiposAusenciaControllerObterQueryOptions({ path: { id } }),
 } as const;
 
-/** Depois de qualquer escrita, refaz as consultas da escala (listas, item e frentes do turno). */
+/** Depois de qualquer escrita, refaz as consultas da escala (listas e item). */
 function invalidarEscala(queryClient: QueryClient) {
   return queryClient.invalidateQueries({
     predicate: (q) => {
@@ -111,9 +97,6 @@ export const Route = createFileRoute('/_app/configuracoes/escala')({
     await Promise.all([
       context.queryClient.ensureQueryData(listar[aba](deps) as never),
       ...(editando && aba === 'turnos'
-        ? [context.queryClient.ensureQueryData(frentesAtivas())]
-        : []),
-      ...(editando && aba === 'frentes'
         ? [context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions())]
         : []),
     ]);
@@ -157,7 +140,6 @@ function ComCor({ cor, children }: { cor: string | null; children: ReactNode }) 
 }
 
 const colTurno = createDataTableColumnHelper<TurnoItemDto>();
-const colFrente = createDataTableColumnHelper<FrenteItemDto>();
 const colTipo = createDataTableColumnHelper<TipoAusenciaItemDto>();
 
 /** Rótulos do que muda de uma aba para outra. */
@@ -171,13 +153,6 @@ const TEXTOS: Record<
     placeholder: 'Nome ou descrição',
     vazio: 'Nenhum turno cadastrado.',
     textoVazio: 'Cadastre os turnos (Manhã, Tarde, Lista…) para montar a escala.',
-  },
-  frentes: {
-    novo: 'Nova frente',
-    buscar: 'Buscar frentes',
-    placeholder: 'Rótulo ou descrição',
-    vazio: 'Nenhuma frente cadastrada.',
-    textoVazio: 'Cadastre as frentes (especialidades ou modalidades) para ligar aos turnos.',
   },
   'tipos-ausencia': {
     novo: 'Novo tipo de ausência',
@@ -241,7 +216,7 @@ function Escala({ podeEditar }: { podeEditar: boolean }) {
           ),
         }),
         colTurno.accessor('frentes', {
-          header: 'Frentes',
+          header: 'Especialidades e modalidades',
           cell: (info) =>
             info.getValue().length === 0 ? (
               <span className="text-muted-foreground">—</span>
@@ -259,22 +234,6 @@ function Escala({ podeEditar }: { podeEditar: boolean }) {
             ),
         }),
         colTurno.accessor('ativo', ativo()),
-      ];
-    if (aba === 'frentes')
-      return [
-        colFrente.accessor('rotulo', {
-          header: 'Rótulo',
-          cell: (info) => abrirNome(info.row.original.id, info.getValue(), info.row.original.cor),
-        }),
-        colFrente.accessor('tipo', {
-          header: 'Tipo',
-          cell: (info) => rotuloDe(TIPOS_FRENTE, info.getValue()),
-        }),
-        colFrente.accessor('destinoNome', {
-          header: 'No catálogo',
-          cell: (info) => <span className="text-muted-foreground">{info.getValue()}</span>,
-        }),
-        colFrente.accessor('ativo', ativo(true)),
       ];
     return [
       colTipo.accessor('nome', {
@@ -328,15 +287,15 @@ function Escala({ podeEditar }: { podeEditar: boolean }) {
           }
           opcoes={[
             { valor: '', rotulo: 'Todas as situações' },
-            { valor: 'ativos', rotulo: aba === 'frentes' ? 'Ativas' : 'Ativos' },
-            { valor: 'inativos', rotulo: aba === 'frentes' ? 'Inativas' : 'Inativos' },
+            { valor: 'ativos', rotulo: 'Ativos' },
+            { valor: 'inativos', rotulo: 'Inativos' },
           ]}
           className="flex-[1_1_180px] md:flex-[0_1_200px]"
         />
       }
       // biome-ignore lint/suspicious/noExplicitAny: as colunas mudam de tipo conforme a aba.
       colunas={colunas as any}
-      ocultarComPainel={['frentes', 'destinoNome', 'soGestor', 'contaComoFalta', 'tipo']}
+      ocultarComPainel={['frentes', 'soGestor', 'contaComoFalta', 'tipo']}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
@@ -369,7 +328,6 @@ function Escala({ podeEditar }: { podeEditar: boolean }) {
 /** Rótulo de cada aba nos avisos de sucesso. */
 const AVISOS: Record<AbaEscala, { criado: string; salvo: string; excluido: string }> = {
   turnos: { criado: 'Turno criado.', salvo: 'Turno salvo.', excluido: 'Turno excluído.' },
-  frentes: { criado: 'Frente criada.', salvo: 'Frente salva.', excluido: 'Frente excluída.' },
   'tipos-ausencia': {
     criado: 'Tipo de ausência criado.',
     salvo: 'Tipo de ausência salvo.',
@@ -394,10 +352,9 @@ function PainelDoItem({
     enabled: Boolean(id),
   });
   const editar = podeEditar;
-  const frentes = useQuery({ ...frentesAtivas(), enabled: editar && aba === 'turnos' });
   const opcoes = useQuery({
     ...opcoesControllerListasQueryOptions(),
-    enabled: editar && aba === 'frentes',
+    enabled: editar && aba === 'turnos',
   });
 
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
@@ -413,16 +370,14 @@ function PainelDoItem({
   };
 
   const item = id ? consulta.data : undefined;
-  const faltaOpcoes =
-    editar && ((aba === 'turnos' && !frentes.data) || (aba === 'frentes' && !opcoes.data));
+  const faltaOpcoes = editar && aba === 'turnos' && !opcoes.data;
   if ((id && !item) || faltaOpcoes)
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError || frentes.isError || opcoes.isError}
+        erro={consulta.isError || opcoes.isError}
         onTentarDeNovo={() => {
           void consulta.refetch();
-          if (frentes.isError) void frentes.refetch();
           if (opcoes.isError) void opcoes.refetch();
         }}
       />
@@ -432,7 +387,8 @@ function PainelDoItem({
     return (
       <PainelTurno
         turno={item as TurnoItemDto | undefined}
-        frentes={(frentes.data?.itens ?? []).map((f) => ({ id: f.id, rotulo: f.rotulo }))}
+        especialidades={opcoes.data?.especialidades ?? []}
+        modalidades={opcoes.data?.modalidades ?? []}
         podeEditar={podeEditar}
         onFechar={fechar}
         onSalvar={async (dados) => {
@@ -448,34 +404,6 @@ function PainelDoItem({
           id
             ? async () => {
                 await turnosControllerExcluir({ path: { id } }).unwrap();
-                await excluido();
-              }
-            : undefined
-        }
-      />
-    );
-
-  if (aba === 'frentes')
-    return (
-      <PainelFrente
-        frente={item as FrenteItemDto | undefined}
-        especialidades={opcoes.data?.especialidades ?? []}
-        modalidades={opcoes.data?.modalidades ?? []}
-        podeEditar={podeEditar}
-        onFechar={fechar}
-        onSalvar={async (dados) => {
-          if (id) {
-            await frentesControllerAtualizar({ path: { id }, body: dados }).unwrap();
-            await salvo(id);
-          } else {
-            const criado = await frentesControllerCriar({ body: dados }).unwrap();
-            await salvo(criado.id);
-          }
-        }}
-        onExcluir={
-          id
-            ? async () => {
-                await frentesControllerExcluir({ path: { id } }).unwrap();
                 await excluido();
               }
             : undefined

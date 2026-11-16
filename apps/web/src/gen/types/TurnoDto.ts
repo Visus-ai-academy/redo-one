@@ -30,10 +30,15 @@ export type TurnoDto = {
    */
   horarioFim: string;
   /**
-   * @description As frentes do turno (troca o conjunto inteiro; pode ser vazio).
+   * @description Especialidades do catálogo que são frentes do turno (troca o conjunto inteiro; pode ser vazio).
    * @type array
    */
-  frenteIds: string[];
+  especialidadeIds: string[];
+  /**
+   * @description Modalidades do catálogo que são frentes do turno (troca o conjunto inteiro; pode ser vazio).
+   * @type array
+   */
+  modalidadeIds: string[];
   /**
    * @maxLength 200
    * @type string | undefined

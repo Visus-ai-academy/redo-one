@@ -4,10 +4,14 @@
 */
 
 import * as z from 'zod'
+import { tipoFrenteEscalaSchema } from './tipoFrenteEscalaSchema'
 
 export const frenteDoTurnoDtoSchema = z.object({
-  id: z.uuid(),
-  rotulo: z.string(),
+  id: z.uuid().describe('Id da frente (o que alocações e ausências usam).'),
+  rotulo: z.string().describe('Nome da especialidade ou código da modalidade no catálogo.'),
+  tipo: tipoFrenteEscalaSchema,
+  especialidadeId: z.uuid().nullable().describe('Id no catálogo.'),
+  modalidadeId: z.uuid().nullable().describe('Id no catálogo.'),
 })
 
 export type FrenteDoTurnoDtoSchemaType = z.infer<typeof frenteDoTurnoDtoSchema>

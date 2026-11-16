@@ -1,9 +1,15 @@
 // Dados de exemplo dos testes da escala.
+import type { FrenteDoTurnoDto } from '../../gen/types/FrenteDoTurnoDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
 
 export const FRENTE_TC = { id: 'f-tc', rotulo: 'TC Neuro', cor: '#1F7A4D', ordem: 1 };
 export const FRENTE_RM = { id: 'f-rm', rotulo: 'RM Geral', cor: null, ordem: 2 };
+
+/** Frente de um turno; nos testes, sempre uma especialidade com o mesmo id da frente. */
+export function frenteDoTurno(id: string, rotulo: string): FrenteDoTurnoDto {
+  return { id, rotulo, tipo: 'especialidade', especialidadeId: id, modalidadeId: null };
+}
 
 export function turno(dados: Partial<TurnoItemDto> = {}): TurnoItemDto {
   return {
@@ -14,9 +20,11 @@ export function turno(dados: Partial<TurnoItemDto> = {}): TurnoItemDto {
     horarioFim: '13:00',
     duracaoMin: 360,
     frentes: [
-      { id: FRENTE_TC.id, rotulo: FRENTE_TC.rotulo },
-      { id: FRENTE_RM.id, rotulo: FRENTE_RM.rotulo },
+      frenteDoTurno(FRENTE_TC.id, FRENTE_TC.rotulo),
+      frenteDoTurno(FRENTE_RM.id, FRENTE_RM.rotulo),
     ],
+    especialidadeIds: [FRENTE_TC.id, FRENTE_RM.id],
+    modalidadeIds: [],
     descricao: null,
     cor: '#214037',
     ordem: 1,

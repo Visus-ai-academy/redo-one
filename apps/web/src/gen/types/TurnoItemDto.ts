@@ -31,10 +31,20 @@ export type TurnoItemDto = {
    */
   duracaoMin: number;
   /**
-   * @description Pela ordem das frentes.
+   * @description Especialidades e depois modalidades, pela ordem do catálogo.
    * @type array
    */
   frentes: FrenteDoTurnoDto[];
+  /**
+   * @description Ordenados.
+   * @type array
+   */
+  especialidadeIds: string[];
+  /**
+   * @description Ordenados.
+   * @type array
+   */
+  modalidadeIds: string[];
   descricao: string | null;
   cor: string | null;
   ordem: number;

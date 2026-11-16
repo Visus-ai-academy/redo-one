@@ -7,9 +7,13 @@ import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
 import { escolherOpcao } from '../../test/select';
 import { PainelTurno, type PainelTurnoProps } from './PainelTurno';
 
-const FRENTES = [
-  { id: 'f-msk', rotulo: 'MSK' },
-  { id: 'f-neuro', rotulo: 'NEURO' },
+const ESPECIALIDADES = [
+  { id: 'e-msk', nome: 'MSK' },
+  { id: 'e-neuro', nome: 'NEURO' },
+];
+const MODALIDADES = [
+  { id: 'm-mr', nome: 'MR' },
+  { id: 'm-ct', nome: 'CT' },
 ];
 
 const MANHA: TurnoItemDto = {
@@ -19,7 +23,18 @@ const MANHA: TurnoItemDto = {
   horarioInicio: '07:00',
   horarioFim: '13:00',
   duracaoMin: 360,
-  frentes: [{ id: 'f-msk', rotulo: 'MSK' }],
+  especialidadeIds: ['e-msk'],
+  modalidadeIds: ['m-velha'],
+  frentes: [
+    {
+      id: 'f-1',
+      rotulo: 'MSK',
+      tipo: 'especialidade',
+      especialidadeId: 'e-msk',
+      modalidadeId: null,
+    },
+    { id: 'f-2', rotulo: 'RX', tipo: 'modalidade', especialidadeId: null, modalidadeId: 'm-velha' },
+  ],
   descricao: null,
   cor: null,
   ordem: 1,
@@ -40,13 +55,20 @@ function montar(props: Partial<PainelTurnoProps> = {}) {
   const onSalvar = vi.fn(async () => undefined);
   const onFechar = vi.fn();
   render(
-    <PainelTurno frentes={FRENTES} podeEditar onSalvar={onSalvar} onFechar={onFechar} {...props} />,
+    <PainelTurno
+      especialidades={ESPECIALIDADES}
+      modalidades={MODALIDADES}
+      podeEditar
+      onSalvar={onSalvar}
+      onFechar={onFechar}
+      {...props}
+    />,
   );
   return { onSalvar, onFechar };
 }
 
 describe('PainelTurno', () => {
-  it('cria o turno com horário normalizado e as frentes marcadas', async () => {
+  it('cria o turno com horário normalizado e as especialidades e modalidades marcadas', async () => {
     const { onSalvar } = montar();
 
     expect(screen.getByRole('dialog', { name: 'Novo turno' })).toBeInTheDocument();
@@ -54,7 +76,14 @@ describe('PainelTurno', () => {
     await escolherOpcao('Tipo', 'Lista');
     await userEvent.type(screen.getByRole('textbox', { name: 'Início' }), '19:00');
     await userEvent.type(screen.getByRole('textbox', { name: 'Fim' }), '7:00');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'NEURO' }));
+    expect(
+      screen.getByRole('group', { name: 'Especialidades e modalidades deste turno' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Especialidades' })).toHaveTextContent('Nenhuma');
+    await escolherOpcao('Especialidades', 'NEURO');
+    await userEvent.keyboard('{Escape}');
+    await escolherOpcao('Modalidades', 'CT');
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Criar turno' }));
 
     expect(onSalvar).toHaveBeenCalledWith({
@@ -62,7 +91,8 @@ describe('PainelTurno', () => {
       tipo: 'lista',
       horarioInicio: '19:00',
       horarioFim: '07:00',
-      frenteIds: ['f-neuro'],
+      especialidadeIds: ['e-neuro'],
+      modalidadeIds: ['m-ct'],
       descricao: null,
       cor: null,
       ordem: 0,
@@ -84,15 +114,22 @@ describe('PainelTurno', () => {
     expect(onSalvar).not.toHaveBeenCalled();
   });
 
-  it('edita mantendo as frentes que o turno já tem', async () => {
+  it('edita mantendo o que o turno já tem, inclusive item inativo no catálogo', async () => {
     const { onSalvar } = montar({ turno: MANHA });
 
     expect(screen.getByRole('dialog', { name: 'Manhã' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'MSK' })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'Especialidades' })).toHaveTextContent('MSK');
+    expect(screen.getByRole('combobox', { name: 'Modalidades' })).toHaveTextContent('RX (inativo)');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(onSalvar).toHaveBeenCalledWith(
-      expect.objectContaining({ nome: 'Manhã', tipo: 'fixo', frenteIds: ['f-msk'], ordem: 1 }),
+      expect.objectContaining({
+        nome: 'Manhã',
+        tipo: 'fixo',
+        especialidadeIds: ['e-msk'],
+        modalidadeIds: ['m-velha'],
+        ordem: 1,
+      }),
     );
   });
 

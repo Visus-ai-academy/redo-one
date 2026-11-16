@@ -6,7 +6,7 @@ import { montarGrade } from './agrupar';
 import { CartaoPlantao } from './CartaoPlantao';
 import { MesCalendario } from './MesCalendario';
 import { SemanaGrade, SemanaLista } from './SemanaEscala';
-import { FRENTE_TC, ocorrencia, turno } from './teste-dados';
+import { FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
 
 describe('CartaoPlantao', () => {
   it('nome, produtividade e horário só quando difere do turno', () => {
@@ -74,7 +74,7 @@ const dias = [
 ];
 const grade = montarGrade({
   ocorrencias: [ocorrencia()],
-  turnos: [turno({ frentes: [{ id: FRENTE_TC.id, rotulo: FRENTE_TC.rotulo }] })],
+  turnos: [turno({ frentes: [frenteDoTurno(FRENTE_TC.id, FRENTE_TC.rotulo)] })],
   frentes: [FRENTE_TC],
   por: 'frente',
 });

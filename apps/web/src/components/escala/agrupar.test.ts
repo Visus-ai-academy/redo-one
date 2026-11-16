@@ -8,12 +8,12 @@ import {
   montarGrade,
   resumoDoMedico,
 } from './agrupar';
-import { FRENTE_RM, FRENTE_TC, ocorrencia, turno } from './teste-dados';
+import { FRENTE_RM, FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
 
 const DIAS = ['2026-11-16', '2026-11-17'];
 const frentes = [FRENTE_RM, FRENTE_TC].map((f) => ({ ...f, ativo: true }));
 const turnos = [
-  turno({ id: 't-tarde', nome: 'Tarde', ordem: 2, frentes: [{ id: 'f-tc', rotulo: 'TC Neuro' }] }),
+  turno({ id: 't-tarde', nome: 'Tarde', ordem: 2, frentes: [frenteDoTurno('f-tc', 'TC Neuro')] }),
   turno(),
 ];
 
@@ -67,7 +67,7 @@ describe('montarGrade por turno', () => {
   it('seção sem nenhuma linha não aparece', () => {
     const grade = montarGrade({
       ocorrencias: [],
-      turnos: [turno({ frentes: [{ id: 'f-tc', rotulo: 'TC Neuro' }] })],
+      turnos: [turno({ frentes: [frenteDoTurno('f-tc', 'TC Neuro')] })],
       frentes,
       por: 'frente',
     });
@@ -155,7 +155,7 @@ describe('aplicarRecorte', () => {
   const tarde = turno({
     id: 't-tarde',
     nome: 'Tarde',
-    frentes: [{ id: 'f-rm', rotulo: 'RM Geral' }],
+    frentes: [frenteDoTurno('f-rm', 'RM Geral')],
   });
 
   it('sem recorte, tudo', () => {
