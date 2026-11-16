@@ -2,6 +2,7 @@ import {
   ArrowsLeftRight,
   BookOpen,
   Certificate,
+  FileArrowUp,
   type Icon,
   IdentificationBadge,
   Ranking,
@@ -97,6 +98,18 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: Ranking,
         to: '/configuracoes/niveis-medico',
         permissao: 'medicos.ver',
+      },
+    ],
+  },
+  {
+    titulo: 'Operação',
+    itens: [
+      {
+        nome: 'Importação de laudos',
+        descricao: 'Trava contra arquivo incompleto e retenção da linha da planilha',
+        icone: FileArrowUp,
+        to: '/configuracoes/importacao',
+        permissao: 'importacao.ver',
       },
     ],
   },

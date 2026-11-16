@@ -87,20 +87,22 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 
 - Menu lateral com só telas de trabalho, em 4 áreas:
   - Painéis: Painel executivo, Volumetria, SLA e prazos, Qualidade.
-  - Operação: Distribuição, Fila pendente, Escala médica.
+  - Operação: Importação, Distribuição, Fila pendente, Escala médica.
   - Cadastros: Clientes, Médicos, Exames.
   - Financeiro: Faturamento, Repasse, Pré-pagos, Contratos.
-- Rodapé do menu: Avisos (com contador), Configurações e a conta do usuário (com Sair).
+- Rodapé do menu: Avisos (com o contador de pendentes, que atualiza a cada 2 min), Configurações e a conta do usuário (com Sair).
 - Menu recolhível (só ícones).
 - Subtelas do legado viram abas dentro da tela (ex.: Volumetria › Periódico, Mensal, Cliente, Comparativo).
 - **Forma certa no centro, variações penduradas nela**: prioridade e especialidade mostram, no próprio painel, as variações que chegam da MobileMed (com e sem acento, pela volumetria e pela fila, ou com outro nome), com a contagem na lista. Nunca uma lista solta de variações separada da forma certa.
 - **Exames padronizados e fora do padrão nunca na mesma lista**: a tela Exames tem as abas Padronizados (o cadastro) e Fora do padrão (grafias que chegam da MobileMed, com quanto valem e o exame padronizado ligado), como no dashboards-one. A busca de exame (quebra, vínculo) só oferece padronizados.
 - Detalhe e edição de um item da lista abrem no `PainelLateral`: o Drawer do Base UI, não modal (a lista continua à vista e clicável; Esc, X ou arrastar fecham), 400px à direita no computador e tela cheia abaixo de `lg`. Componente que o Base UI já tem nunca é imitado com HTML.
+- **Envio de arquivo** (planilha da MobileMed e, depois, contratos e documentos): no `PainelLateral`, com o `EnvioDeArquivo` do kit (arrastar ou escolher, extensão e tamanho conferidos, barra de progresso do Base UI); o arquivo vai direto ao storage pela URL assinada. Terminou o envio, o painel passa a mostrar o item criado (ex.: a importação na fila), que se atualiza sozinho enquanto roda.
+- **Avisos de cadastro**: lista dos pendentes por padrão; o painel do aviso tria (ignorar com motivo, reabrir) e leva ao cadastro certo já com a busca preenchida, porque muitas vezes basta um apelido num cadastro que já existe.
 - **Configurações** é uma central com submenu por assunto:
   - Sua conta: Meu perfil (dados, senha, sessões e acessos numa tela só; um item por destino, nunca dois itens para a mesma tela).
   - Acesso: Usuários, Papéis, Chaves dos robôs.
   - Catálogo: Classificação dos exames (modalidades, especialidades, subespecialidades, categorias e prioridades, em abas), Contratados, De-paras (só o que não tem forma certa: valores que não são especialidade e sufixos de cliente), Equipes médicas, Níveis dos médicos.
-  - Operação: Robô de distribuição, Escala médica.
+  - Operação: Importação de laudos (trava contra arquivo incompleto e retenção da linha da planilha), Robô de distribuição, Escala médica.
   - Financeiro: Tipificação, Impostos, Parâmetros de contrato.
   - Avisos e metas: Notificações, Metas mensais.
   - Cada item exige a sua permissão; sem nenhuma, a entrada Configurações some.
@@ -123,6 +125,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 | Repasse | `HandCoins` |
 | Pré-pagos | `Wallet` |
 | Contratos | `Signature` |
+| Importação (de laudos) | `FileArrowUp` |
 | Avisos / Notificações | `Bell` |
 | Configurações | `Gear` |
 | Recolher menu | `SidebarSimple` |

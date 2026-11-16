@@ -25,6 +25,7 @@ import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/conf
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
 import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
 import { Route as AppConfiguracoesEquipesRouteImport } from './routes/_app/configuracoes/equipes'
+import { Route as AppConfiguracoesImportacaoRouteImport } from './routes/_app/configuracoes/importacao'
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 import { Route as AppConfiguracoesNiveisMedicoRouteImport } from './routes/_app/configuracoes/niveis-medico'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
@@ -111,6 +112,12 @@ const AppConfiguracoesEquipesRoute = AppConfiguracoesEquipesRouteImport.update({
   path: '/configuracoes/equipes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesImportacaoRoute =
+  AppConfiguracoesImportacaoRouteImport.update({
+    id: '/configuracoes/importacao',
+    path: '/configuracoes/importacao',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppConfiguracoesMeuPerfilRoute =
   AppConfiguracoesMeuPerfilRouteImport.update({
     id: '/configuracoes/meu-perfil',
@@ -150,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
+  '/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
@@ -171,6 +179,7 @@ export interface FileRoutesByTo {
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
+  '/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
@@ -194,6 +203,7 @@ export interface FileRoutesById {
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/_app/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
+  '/_app/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/equipes'
+    | '/configuracoes/importacao'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/equipes'
+    | '/configuracoes/importacao'
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/contratados'
     | '/_app/configuracoes/de-paras'
     | '/_app/configuracoes/equipes'
+    | '/_app/configuracoes/importacao'
     | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/niveis-medico'
     | '/_app/configuracoes/papeis'
@@ -388,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesEquipesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/importacao': {
+      id: '/_app/configuracoes/importacao'
+      path: '/configuracoes/importacao'
+      fullPath: '/configuracoes/importacao'
+      preLoaderRoute: typeof AppConfiguracoesImportacaoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/meu-perfil': {
       id: '/_app/configuracoes/meu-perfil'
       path: '/configuracoes/meu-perfil'
@@ -431,6 +451,7 @@ interface AppRouteChildren {
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
   AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
   AppConfiguracoesEquipesRoute: typeof AppConfiguracoesEquipesRoute
+  AppConfiguracoesImportacaoRoute: typeof AppConfiguracoesImportacaoRoute
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesNiveisMedicoRoute: typeof AppConfiguracoesNiveisMedicoRoute
   AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
@@ -450,6 +471,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
   AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,
   AppConfiguracoesEquipesRoute: AppConfiguracoesEquipesRoute,
+  AppConfiguracoesImportacaoRoute: AppConfiguracoesImportacaoRoute,
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesNiveisMedicoRoute: AppConfiguracoesNiveisMedicoRoute,
   AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,

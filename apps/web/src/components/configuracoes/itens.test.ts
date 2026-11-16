@@ -47,3 +47,12 @@ describe('buscarConfiguracoes', () => {
     expect(achados.flatMap((g) => g.itens.map((i) => i.nome))).toEqual(['Meu perfil']);
   });
 });
+
+describe('grupo Operação', () => {
+  it('tem os parâmetros da importação de laudos, com o ver da importação', () => {
+    const operacao = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Operação');
+    expect(operacao?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
+      ['Importação de laudos', '/configuracoes/importacao', 'importacao.ver'],
+    ]);
+  });
+});
