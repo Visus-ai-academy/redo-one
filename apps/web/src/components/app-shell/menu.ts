@@ -1,4 +1,12 @@
-import { Buildings, FileArrowUp, Flask, Gear, type Icon, Stethoscope } from '@phosphor-icons/react';
+import {
+  Bell,
+  Buildings,
+  FileArrowUp,
+  Flask,
+  Gear,
+  type Icon,
+  Stethoscope,
+} from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
 export type ItemMenu = {
@@ -39,7 +47,8 @@ export const GRUPOS_MENU: GrupoMenu[] = [
   },
 ];
 
-/** Rodapé do menu. Configurações sempre aparece: Meu perfil vale para qualquer usuário. */
+/** Rodapé do menu: Avisos (com o contador de pendentes) e Configurações, que sempre aparece. */
 export const RODAPE_MENU: ItemMenu[] = [
+  { nome: 'Avisos', to: '/avisos', icone: Bell, permissao: 'avisos.ver' },
   { nome: 'Configurações', to: '/configuracoes', icone: Gear },
 ];

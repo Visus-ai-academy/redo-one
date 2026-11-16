@@ -2,7 +2,9 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 
 import { AppShell } from '../components/app-shell/AppShell';
+import { useTotalAvisosPendentes } from '../lib/avisos';
 import { exigirSessao } from '../lib/guarda';
+import { pode } from '../lib/permissoes';
 import { sessaoQueryOptions } from '../lib/sessao';
 
 // Layout das telas autenticadas: sem sessão, vai para o login. A guarda é navegação; quem barra
@@ -17,10 +19,11 @@ export const Route = createFileRoute('/_app')({
 function LayoutApp() {
   // Lê do cache, que a guarda acabou de preencher; atualiza sozinho se a sessão mudar.
   const { data: sessao } = useSuspenseQuery(sessaoQueryOptions());
+  const avisosPendentes = useTotalAvisosPendentes(Boolean(sessao && pode(sessao, 'avisos.ver')));
   if (!sessao) return null;
 
   return (
-    <AppShell sessao={sessao}>
+    <AppShell sessao={sessao} contadores={{ '/avisos': avisosPendentes }}>
       <Outlet />
     </AppShell>
   );

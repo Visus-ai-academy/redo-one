@@ -19,12 +19,16 @@ describe('AvisosController', () => {
   it('fica em /ingestao/avisos; ver exige avisos.ver e triar avisos.triar', () => {
     expect(reflector.get(PATH_METADATA, AvisosController)).toBe('ingestao/avisos');
     expect(exigidas('listar')).toEqual(['avisos.ver']);
+    expect(exigidas('obter')).toEqual(['avisos.ver']);
     expect(exigidas('ignorar')).toEqual(['avisos.triar']);
     expect(exigidas('reabrir')).toEqual(['avisos.triar']);
   });
 
   it('lista com os filtros e tria em nome de quem está logado', async () => {
-    const listar = { executar: vi.fn(async () => ({ itens: [], total: 0 })) };
+    const listar = {
+      executar: vi.fn(async () => ({ itens: [], total: 0 })),
+      obter: vi.fn(async () => ({ id: 'a1' })),
+    };
     const triar = { ignorar: vi.fn(async () => undefined), reabrir: vi.fn(async () => undefined) };
     const controller = new AvisosController(
       listar as unknown as ListarAvisos,
@@ -47,6 +51,7 @@ describe('AvisosController', () => {
       tipo: 'cliente',
       busca: 'x',
     });
+    expect(await controller.obter('a1')).toEqual({ id: 'a1' });
     await controller.ignorar(ator, 'a1', { motivo: 'teste' });
     expect(triar.ignorar).toHaveBeenCalledWith('u1', 'a1', 'teste');
     await controller.ignorar(ator, 'a1', {});

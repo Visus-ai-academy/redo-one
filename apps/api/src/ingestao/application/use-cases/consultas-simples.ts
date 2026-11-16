@@ -1,3 +1,4 @@
+import { AvisoNaoEncontradoError } from '../erros';
 import type { ConsultaAvisos, FiltroAvisos } from '../ports/avisos.consulta';
 import type { ParametrosIngestaoRepository } from '../ports/parametros-ingestao.repository';
 
@@ -7,6 +8,12 @@ export class ListarAvisos {
 
   executar(filtro: FiltroAvisos) {
     return this.avisos.listar(filtro);
+  }
+
+  async obter(id: string) {
+    const aviso = await this.avisos.obter(id);
+    if (!aviso) throw new AvisoNaoEncontradoError();
+    return aviso;
   }
 }
 

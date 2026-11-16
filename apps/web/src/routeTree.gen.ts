@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
+import { Route as AppAvisosRouteImport } from './routes/_app/avisos'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as AppExamesRouteImport } from './routes/_app/exames'
 import { Route as AppImportacaoRouteImport } from './routes/_app/importacao'
@@ -56,6 +57,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppSplatRoute = AppSplatRouteImport.update({
   id: '/$',
   path: '/$',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAvisosRoute = AppAvisosRouteImport.update({
+  id: '/avisos',
+  path: '/avisos',
   getParentRoute: () => AppRoute,
 } as any)
 const AppClientesRoute = AppClientesRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
+  '/avisos': typeof AppAvisosRoute
   '/clientes': typeof AppClientesRoute
   '/exames': typeof AppExamesRoute
   '/importacao': typeof AppImportacaoRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/$': typeof AppSplatRoute
+  '/avisos': typeof AppAvisosRoute
   '/clientes': typeof AppClientesRoute
   '/exames': typeof AppExamesRoute
   '/importacao': typeof AppImportacaoRoute
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/_app/$': typeof AppSplatRoute
+  '/_app/avisos': typeof AppAvisosRoute
   '/_app/clientes': typeof AppClientesRoute
   '/_app/exames': typeof AppExamesRoute
   '/_app/importacao': typeof AppImportacaoRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/$'
+    | '/avisos'
     | '/clientes'
     | '/exames'
     | '/importacao'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/$'
+    | '/avisos'
     | '/clientes'
     | '/exames'
     | '/importacao'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/_app/$'
+    | '/_app/avisos'
     | '/_app/clientes'
     | '/_app/exames'
     | '/_app/importacao'
@@ -304,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/$'
       fullPath: '/$'
       preLoaderRoute: typeof AppSplatRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/avisos': {
+      id: '/_app/avisos'
+      path: '/avisos'
+      fullPath: '/avisos'
+      preLoaderRoute: typeof AppAvisosRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/clientes': {
@@ -402,6 +421,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
+  AppAvisosRoute: typeof AppAvisosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppExamesRoute: typeof AppExamesRoute
   AppImportacaoRoute: typeof AppImportacaoRoute
@@ -420,6 +440,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
+  AppAvisosRoute: AppAvisosRoute,
   AppClientesRoute: AppClientesRoute,
   AppExamesRoute: AppExamesRoute,
   AppImportacaoRoute: AppImportacaoRoute,

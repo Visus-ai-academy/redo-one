@@ -1,0 +1,73 @@
+import { useQuery } from '@tanstack/react-query';
+
+import type { TomEtiqueta } from '../components/etiqueta/Etiqueta';
+import { avisosControllerListarQueryOptions } from '../gen/hooks/useAvisosControllerListar';
+import type { StatusAvisoKey } from '../gen/types/StatusAviso';
+import type { TipoAvisoKey } from '../gen/types/TipoAviso';
+
+const TIPOS: Record<TipoAvisoKey, string> = {
+  cliente: 'Cliente',
+  medico: 'Médico',
+  estudo: 'Estudo',
+  modalidade: 'Modalidade',
+  especialidade: 'Especialidade',
+  prioridade: 'Prioridade',
+};
+
+export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
+
+const SITUACOES: Record<StatusAvisoKey, { texto: string; tom: TomEtiqueta }> = {
+  pendente: { texto: 'Pendente', tom: 'atencao' },
+  ignorado: { texto: 'Ignorado', tom: 'inativo' },
+  resolvido: { texto: 'Resolvido', tom: 'sucesso' },
+};
+
+export const situacaoDoAviso = (status: StatusAvisoKey) => SITUACOES[status];
+
+/**
+ * Onde conferir o cadastro do aviso: muitas vezes basta um apelido num cadastro que já existe.
+ * A busca vai limpa (sem "Dr." no médico, sem o " X2" do fim no estudo).
+ */
+export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: string }) {
+  switch (tipo) {
+    case 'cliente':
+      return {
+        rotulo: 'Procurar em Clientes',
+        to: '/clientes' as const,
+        search: { busca: valor },
+        permissao: 'clientes.ver',
+      };
+    case 'medico':
+      return {
+        rotulo: 'Procurar em Médicos',
+        to: '/medicos' as const,
+        search: { busca: valor.replace(/^dra?\.?\s+/i, '') },
+        permissao: 'medicos.ver',
+      };
+    case 'estudo':
+      return {
+        rotulo: 'Procurar em Exames',
+        to: '/exames' as const,
+        search: { busca: valor.replace(/(?:\s+X\d+)+\s*$/i, '') },
+        permissao: 'exames.ver',
+      };
+    default:
+      return {
+        rotulo: 'Procurar na classificação dos exames',
+        to: '/configuracoes/catalogo' as const,
+        search: { aba: `${tipo}s` as const, busca: valor },
+        permissao: 'catalogo.ver',
+      };
+  }
+}
+
+/** Avisos pendentes para o contador do menu: atualiza a cada 2 min, nunca com a aba oculta. */
+export function useTotalAvisosPendentes(ativo: boolean): number | undefined {
+  return useQuery({
+    ...avisosControllerListarQueryOptions({ query: { status: 'pendente', porPagina: 1 } }),
+    enabled: ativo,
+    refetchInterval: 2 * 60_000,
+    refetchIntervalInBackground: false,
+    select: (pagina) => pagina.total,
+  }).data;
+}

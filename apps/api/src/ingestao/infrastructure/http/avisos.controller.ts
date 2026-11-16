@@ -25,6 +25,7 @@ import { AtualizarParametros } from '../../application/use-cases/atualizar-param
 import { ListarAvisos, ObterParametros } from '../../application/use-cases/consultas-simples';
 import { TriarAviso } from '../../application/use-cases/triar-aviso';
 import {
+  AvisoDto,
   IgnorarAvisoDto,
   ListarAvisosDto,
   PaginaAvisosDto,
@@ -56,6 +57,14 @@ export class AvisosController {
       pagina: q.pagina,
       porPagina: q.porPagina,
     };
+  }
+
+  @Get(':id')
+  @Permissao('avisos.ver')
+  @ApiOkResponse({ type: AvisoDto })
+  @ApiNotFoundResponse()
+  obter(@Param('id', ParseUUIDPipe) id: string): Promise<AvisoDto> {
+    return this.listarAvisos.obter(id);
   }
 
   @Post(':id/ignorar')
