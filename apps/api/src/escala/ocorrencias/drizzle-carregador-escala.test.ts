@@ -160,10 +160,9 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
       'Caio Inativo',
     ]);
 
-    const { ocorrencias } = await new ConsultaOcorrenciasEscala(carregador).listar(
-      '2026-11-16',
-      '2026-11-22',
-    );
+    const { ocorrencias } = await new ConsultaOcorrenciasEscala(carregador, {
+      now: () => new Date('2026-11-16T12:00:00Z'),
+    }).listar('2026-11-16', '2026-11-22');
     // No mesmo dia e horário, a ordem desempata por id (aleatório aqui): compara ordenado.
     const resumo = ocorrencias
       .map((o) => [

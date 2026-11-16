@@ -6,7 +6,12 @@ import {
   EscalaInvalidaError,
   RegistroEscalaNaoEncontradoError,
 } from '../domain';
-import type { ConflitoEscala, ConsultaOcorrencias } from '../ocorrencias/consulta-ocorrencias';
+import {
+  type ConflitoEscala,
+  type ConsultaOcorrencias,
+  ConsultaOcorrenciasEscala,
+} from '../ocorrencias/consulta-ocorrencias';
+import { alocacaoEscala, dadosEscala, FakeCarregadorEscala } from '../ocorrencias/testing';
 import { FakeEscopoEscalaRepository } from '../testing/fakes';
 import type { AlocacaoGravada } from './alocacoes.repository';
 import { AlocacoesService, type EntradaAlocacao } from './alocacoes.service';
@@ -193,7 +198,97 @@ describe('AlocacoesService', () => {
       expect(consulta.listar).toHaveBeenCalledWith('2026-11-16', '2027-01-10', {
         medicoId: 'm-ana',
       });
-      expect(avisos).toEqual([conflito('outra', id)]);
+      expect(avisos).toEqual([
+        {
+          ...conflito('outra', id),
+          a: { ...conflito('outra', id).a, foraDoRecorte: false },
+          b: { ...conflito('outra', id).b, foraDoRecorte: false },
+        },
+      ]);
+    });
+
+    it('com recorte, o plantão de fora do recorte vem só com a data, sem detalhes', async () => {
+      const { consulta, escopos, service, repo } = montar();
+      await escopos.definir('u-gestora', { turnoIds: ['t-manha'], frenteIds: [] });
+      consulta.listar.mockImplementation(async () => {
+        const [id] = [...repo.alocacoes.keys()];
+        const dentro = { ...conflito('x', id ?? '').b, turnoId: 't-manha' };
+        const fora = { ...conflito('outra', 'x').a, turnoId: 't-noite', frenteId: 'f-cardio' };
+        return {
+          ocorrencias: [],
+          conflitos: [
+            { medicoId: 'm-ana', medicoNome: 'Ana', data: '2026-11-16', a: fora, b: dentro },
+          ],
+        };
+      });
+
+      const { id, avisos } = await service.criar(gestora, entrada());
+
+      expect(avisos).toEqual([
+        {
+          medicoId: 'm-ana',
+          medicoNome: 'Ana',
+          data: '2026-11-16',
+          a: { foraDoRecorte: true, data: '2026-11-16' },
+          b: { ...conflito('x', id).b, turnoId: 't-manha', foraDoRecorte: false },
+        },
+      ]);
+    });
+
+    it('avisa a sobreposição com o plantão de ontem que vira a meia-noite', async () => {
+      const repo = new FakeAlocacoesRepository();
+      repo.turnos.set('t-manha', {
+        id: 't-manha',
+        nome: 'Manhã',
+        tipo: 'fixo',
+        horarioInicio: '07:00',
+        horarioFim: '13:00',
+        frenteIds: ['f-neuro'],
+      });
+      repo.medicos.set('m-ana', { ativo: true });
+      // Ana já tem a Noite (19:00 → 09:00) todo dia; a nova Manhã começa hoje, segunda 16/11.
+      const carregador = new FakeCarregadorEscala(
+        dadosEscala({
+          alocacoes: [
+            alocacaoEscala({
+              id: 'noite',
+              turnoId: 't-tarde',
+              horarioInicio: '19:00',
+              horarioFim: '09:00',
+              diasSemana: [0, 1, 2, 3, 4, 5, 6],
+            }),
+          ],
+        }),
+      );
+      const relogio = { now: () => agora };
+      const service = new AlocacoesService(
+        repo,
+        new FakeEscopoEscalaRepository(),
+        {
+          listar: async (de, ate, filtros) => {
+            const resultado = await new ConsultaOcorrenciasEscala(carregador, relogio).listar(
+              de,
+              ate,
+              filtros,
+            );
+            return resultado;
+          },
+        },
+        relogio,
+      );
+      // A nova alocação entra na carga do carregador falso, como no banco depois do insert.
+      const criar = repo.criar.bind(repo);
+      repo.criar = async (a, eventos) => {
+        await criar(a, eventos);
+        carregador.dados.alocacoes.push({ ...a });
+      };
+
+      const { avisos } = await service.criar(
+        admin,
+        entrada({ diasSemana: [1], dataInicio: '2026-11-16', dataFim: '2026-11-16' }),
+      );
+
+      expect(avisos.map((c) => [c.a.data, c.b.data])).toEqual([['2026-11-15', '2026-11-16']]);
     });
 
     it('janela dos avisos começa no início futuro e para no fim da alocação', async () => {

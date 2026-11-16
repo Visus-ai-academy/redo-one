@@ -1,3 +1,4 @@
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { Pagina } from '../../catalogo/comum/paginacao';
 import type { FiltroLista } from '../../catalogo/listas/lista.repository';
 import type { DestinosFrentes } from '../frentes/garantir-frentes';
@@ -25,10 +26,21 @@ export interface TurnosRepository {
   alocacoesVigentes(turnoId: string, hoje: string): Promise<AlocacaoVigente[]>;
   /**
    * Grava o turno e as frentes dele, garantindo (na mesma transação) a frente de cada
-   * especialidade e modalidade. Devolve os ids das frentes, ordenados.
+   * especialidade e modalidade. Devolve os ids das frentes, ordenados. Os eventos de auditoria,
+   * montados por `eventosDe` com o id e as frentes gravadas, entram na mesma transação.
    */
-  criar(dados: DadosTurno): Promise<{ id: string; frenteIds: string[] }>;
-  atualizar(id: string, dados: DadosTurno): Promise<{ frenteIds: string[] }>;
-  /** `false` quando uma alocação, ausência ou recorte de gestora usa o turno. */
-  excluir(id: string): Promise<boolean>;
+  criar(
+    dados: DadosTurno,
+    eventosDe: (gravado: { id: string; frenteIds: string[] }) => EventoAuditoria[],
+  ): Promise<{ id: string; frenteIds: string[] }>;
+  atualizar(
+    id: string,
+    dados: DadosTurno,
+    eventosDe: (gravado: { frenteIds: string[] }) => EventoAuditoria[],
+  ): Promise<{ frenteIds: string[] }>;
+  /**
+   * `false` quando uma alocação, ausência ou recorte de gestora usa o turno (e nada é gravado).
+   * Os eventos entram na transação do delete.
+   */
+  excluir(id: string, eventos: EventoAuditoria[]): Promise<boolean>;
 }

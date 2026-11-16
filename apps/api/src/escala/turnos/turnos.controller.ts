@@ -25,7 +25,7 @@ import {
 import { IdCriadoDto, ListarDto } from '../../catalogo/comum/dto';
 import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
-import { PaginaTurnosDto, TurnoDto, TurnoItemDto } from './dto/turno.dto';
+import { AvisosTurnoDto, PaginaTurnosDto, TurnoDto, TurnoItemDto } from './dto/turno.dto';
 import { TurnosService } from './turnos.service';
 
 /** Leitura com `escala.ver`: os turnos alimentam as telas da escala, não só a de configuração. */
@@ -71,8 +71,10 @@ export class TurnosController {
 
   @Put(':id')
   @Permissao('escala-config.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
+  @ApiOkResponse({
+    type: AvisosTurnoDto,
+    description: 'Salvo. `avisos` não bloqueiam (ex.: inativado com alocações vigentes).',
+  })
   @ApiNotFoundResponse()
   @ApiBadRequestResponse({
     description: 'Horário inválido, ou especialidade ou modalidade inexistente no catálogo.',
@@ -85,7 +87,7 @@ export class TurnosController {
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corpo: TurnoDto,
-  ): Promise<void> {
+  ): Promise<AvisosTurnoDto> {
     return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
   }
 

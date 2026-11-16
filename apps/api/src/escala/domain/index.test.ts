@@ -21,6 +21,7 @@ describe('domínio da escala', () => {
     const ocorrencias = expandirOcorrencias({
       de: '2026-11-02',
       ate: '2026-11-02',
+      hoje: '2026-11-02',
       alocacoes: [
         { ...base, id: 'manha', turnoId: 'manha', horarioInicio: '07:00', horarioFim: '13:00' },
         { ...base, id: 'lista', turnoId: 'lista', horarioInicio: '07:00', horarioFim: '07:00' },

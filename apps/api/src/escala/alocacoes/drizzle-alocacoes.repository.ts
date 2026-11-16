@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import type { EventoAuditoria } from '../../auditoria/auditoria';
 import { DATABASE, type Database } from '../../database/database';
@@ -14,14 +14,17 @@ import {
   subespecialidades,
   turnos,
 } from '../../database/schema';
+import { EscalaInvalidaError } from '../domain';
 import type {
   AjusteGravado,
   AlocacaoGravada,
   AlocacoesRepository,
+  ConferirCoberturas,
+  EventosDaRemocao,
   TurnoParaAlocar,
 } from './alocacoes.repository';
 
-type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
+export type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /** Ids do recorte como `text[]`. Nomes por extenso: numa tabela só o Drizzle omite a tabela. */
 const recorte = (tabela: string, coluna: string) =>
@@ -147,22 +150,64 @@ export class DrizzleAlocacoesRepository implements AlocacoesRepository {
   }
 
   async atualizar(alocacao: AlocacaoGravada, eventos: EventoAuditoria[]) {
-    const { id, prioridadeIds, subespecialidadeIds, ...campos } = alocacao;
     await this.db.transaction(async (tx) => {
-      await tx.update(alocacoes).set(campos).where(eq(alocacoes.id, id));
-      await tx.delete(alocacoesPrioridades).where(eq(alocacoesPrioridades.alocacaoId, id));
-      await tx
-        .delete(alocacoesSubespecialidades)
-        .where(eq(alocacoesSubespecialidades.alocacaoId, id));
-      await gravarRecortes(tx, alocacao);
+      await trocar(tx, alocacao);
       await gravarEventos(tx, eventos);
     });
   }
 
-  async remover(id: string, eventos: EventoAuditoria[]) {
+  async criarCobertura(
+    cobertura: AlocacaoGravada,
+    eventos: EventoAuditoria[],
+    conferir: ConferirCoberturas,
+  ) {
+    const { prioridadeIds, subespecialidadeIds, ...campos } = cobertura;
     await this.db.transaction(async (tx) => {
-      await tx.delete(alocacoes).where(eq(alocacoes.id, id));
+      conferir(await coberturasComTitularTravado(tx, cobertura));
+      await tx.insert(alocacoes).values(campos);
+      await gravarRecortes(tx, cobertura);
       await gravarEventos(tx, eventos);
+    });
+  }
+
+  async atualizarCobertura(
+    cobertura: AlocacaoGravada,
+    eventos: EventoAuditoria[],
+    conferir: ConferirCoberturas,
+  ) {
+    await this.db.transaction(async (tx) => {
+      conferir(await coberturasComTitularTravado(tx, cobertura));
+      await trocar(tx, cobertura);
+      await gravarEventos(tx, eventos);
+    });
+  }
+
+  /**
+   * Trava a alocação e as coberturas dela (`for update`): cobertura ou ajuste novo nelas espera
+   * pela chave estrangeira, e o que cai em cascata é lido aqui, na transação do delete.
+   */
+  async remover(id: string, eventosDe: EventosDaRemocao) {
+    await this.db.transaction(async (tx) => {
+      const removidas = await tx
+        .select(selecao)
+        .from(alocacoes)
+        .where(or(eq(alocacoes.id, id), eq(alocacoes.coberturaDeId, id)))
+        .orderBy(sql`${alocacoes.coberturaDeId} is not null`, alocacoes.dataInicio)
+        .for('update');
+      if (!removidas.length) return;
+      const ajustes = await tx
+        .select(selecaoAjuste)
+        .from(ajustesProdutividade)
+        .where(
+          inArray(
+            ajustesProdutividade.alocacaoId,
+            removidas.map((a) => a.id),
+          ),
+        )
+        .orderBy(ajustesProdutividade.data)
+        .for('update');
+      await tx.delete(alocacoes).where(eq(alocacoes.id, id));
+      await gravarEventos(tx, eventosDe(removidas, ajustes));
     });
   }
 
@@ -187,6 +232,35 @@ export class DrizzleAlocacoesRepository implements AlocacoesRepository {
   }
 }
 
+/** Troca os campos e os recortes inteiros. */
+async function trocar(tx: Transacao, alocacao: AlocacaoGravada) {
+  const { id, prioridadeIds, subespecialidadeIds, ...campos } = alocacao;
+  await tx.update(alocacoes).set(campos).where(eq(alocacoes.id, id));
+  await tx.delete(alocacoesPrioridades).where(eq(alocacoesPrioridades.alocacaoId, id));
+  await tx.delete(alocacoesSubespecialidades).where(eq(alocacoesSubespecialidades.alocacaoId, id));
+  await gravarRecortes(tx, alocacao);
+}
+
+/**
+ * Trava o titular da cobertura (`for update`: a outra cobertura simultânea espera aqui) e lê as
+ * coberturas dele já na transação.
+ */
+async function coberturasComTitularTravado(tx: Transacao, cobertura: AlocacaoGravada) {
+  const titularId = cobertura.coberturaDeId;
+  if (titularId === null) throw new Error('Cobertura sem titular.');
+  const [titular] = await tx
+    .select({ id: alocacoes.id })
+    .from(alocacoes)
+    .where(eq(alocacoes.id, titularId))
+    .for('update');
+  if (!titular) throw new EscalaInvalidaError('O vínculo coberto não existe mais.');
+  return tx
+    .select(selecao)
+    .from(alocacoes)
+    .where(eq(alocacoes.coberturaDeId, titularId))
+    .orderBy(alocacoes.dataInicio);
+}
+
 async function gravarRecortes(tx: Transacao, alocacao: AlocacaoGravada) {
   if (alocacao.prioridadeIds.length) {
     await tx
@@ -206,7 +280,7 @@ async function gravarRecortes(tx: Transacao, alocacao: AlocacaoGravada) {
 }
 
 /** Os eventos de auditoria na mesma transação do dado (o `DrizzleAuditoria` grava fora dela). */
-async function gravarEventos(tx: Transacao, eventos: EventoAuditoria[]) {
+export async function gravarEventos(tx: Transacao, eventos: EventoAuditoria[]) {
   if (!eventos.length) return;
   await tx.insert(eventosAuditoria).values(
     eventos.map((e) => ({

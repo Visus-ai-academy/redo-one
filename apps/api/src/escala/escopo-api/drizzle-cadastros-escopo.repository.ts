@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import { DATABASE, type Database } from '../../database/database';
 import {
   especialidades,
@@ -8,13 +9,31 @@ import {
   modalidades,
   turnos,
   usuarios,
+  usuariosEscoposEscala,
 } from '../../database/schema';
+import { gravarEventos } from '../alocacoes/drizzle-alocacoes.repository';
 import { frenteDoCatalogo, ordemDasFrentes } from '../frentes/frente-do-catalogo';
 import type { CadastrosEscopoRepository, Referencia } from './cadastros-escopo.repository';
 
 @Injectable()
 export class DrizzleCadastrosEscopoRepository implements CadastrosEscopoRepository {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+  async gravarRecorte(
+    usuarioId: string,
+    escopo: { turnoIds: string[]; frenteIds: string[] },
+    eventos: EventoAuditoria[],
+  ): Promise<void> {
+    const linhas = [
+      ...[...new Set(escopo.turnoIds)].map((turnoId) => ({ usuarioId, turnoId })),
+      ...[...new Set(escopo.frenteIds)].map((frenteId) => ({ usuarioId, frenteId })),
+    ];
+    await this.db.transaction(async (tx) => {
+      await tx.delete(usuariosEscoposEscala).where(eq(usuariosEscoposEscala.usuarioId, usuarioId));
+      if (linhas.length > 0) await tx.insert(usuariosEscoposEscala).values(linhas);
+      await gravarEventos(tx, eventos);
+    });
+  }
 
   async usuarioExiste(id: string): Promise<boolean> {
     const [linha] = await this.db

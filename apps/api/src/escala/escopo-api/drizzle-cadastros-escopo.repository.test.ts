@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { Database } from '../../database/database';
 import * as schema from '../../database/schema';
 import { DrizzleCadastrosEscopoRepository } from './drizzle-cadastros-escopo.repository';
@@ -28,7 +29,7 @@ describe.skipIf(!url)('cadastros consultados pelo recorte da escala', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table usuarios_escopos_escala, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
+      sql`truncate table eventos_auditoria, usuarios_escopos_escala, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
     );
     const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [usuario] = await db
@@ -74,5 +75,50 @@ describe.skipIf(!url)('cadastros consultados pelo recorte da escala', () => {
     ]);
     expect(await repo.frentes([neuro, NAO_EXISTE])).toEqual([{ id: neuro, nome: 'NEURO' }]);
     expect(await repo.turnos([])).toEqual([]);
+  });
+
+  describe('gravarRecorte', () => {
+    const evento = (atorId: string): EventoAuditoria => ({
+      ator: { tipo: 'usuario', id: atorId },
+      entidade: 'escopo_escala',
+      entidadeId: usuarioId,
+      acao: 'definido',
+      depois: { turnoIds: [manha] },
+      em: new Date('2026-11-16T12:00:00Z'),
+    });
+    const recorte = () =>
+      db
+        .select({
+          turnoId: schema.usuariosEscoposEscala.turnoId,
+          frenteId: schema.usuariosEscoposEscala.frenteId,
+        })
+        .from(schema.usuariosEscoposEscala);
+
+    it('troca o recorte inteiro e grava o evento junto', async () => {
+      const repo = new DrizzleCadastrosEscopoRepository(db);
+      await repo.gravarRecorte(usuarioId, { turnoIds: [tarde], frenteIds: [neuro] }, [
+        evento(usuarioId),
+      ]);
+      await repo.gravarRecorte(usuarioId, { turnoIds: [manha], frenteIds: [] }, [
+        evento(usuarioId),
+      ]);
+
+      expect(await recorte()).toEqual([{ turnoId: manha, frenteId: null }]);
+      const eventos = await db.select().from(schema.eventosAuditoria);
+      expect(eventos).toHaveLength(2);
+      expect(eventos[0]).toMatchObject({ entidade: 'escopo_escala', entidadeId: usuarioId });
+    });
+
+    it('se o evento falha, o recorte fica como estava', async () => {
+      const repo = new DrizzleCadastrosEscopoRepository(db);
+      await repo.gravarRecorte(usuarioId, { turnoIds: [tarde], frenteIds: [] }, []);
+
+      await expect(
+        repo.gravarRecorte(usuarioId, { turnoIds: [manha], frenteIds: [] }, [evento('nao-e-uuid')]),
+      ).rejects.toThrow();
+
+      expect(await recorte()).toEqual([{ turnoId: tarde, frenteId: null }]);
+      expect(await db.select().from(schema.eventosAuditoria)).toEqual([]);
+    });
   });
 });

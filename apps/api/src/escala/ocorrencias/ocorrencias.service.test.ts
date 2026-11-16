@@ -23,7 +23,7 @@ function montar() {
   const escopos = new FakeEscopoEscalaRepository();
   const medicos = new FakeMedicoDoUsuarioRepository();
   const service = new OcorrenciasService(
-    new ConsultaOcorrenciasEscala(carregador),
+    new ConsultaOcorrenciasEscala(carregador, { now: () => new Date('2026-11-16T12:00:00Z') }),
     escopos,
     medicos,
   );

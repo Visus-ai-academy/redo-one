@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { FiltroLista } from '../../catalogo/listas/lista.repository';
 import type { DestinosFrentes } from '../frentes/garantir-frentes';
 import type { AlocacaoVigente, DadosTurno, FrenteDoTurno } from './turno';
@@ -19,6 +20,8 @@ export class InMemoryTurnosRepository implements TurnosRepository {
   /** Alocações por turno, com a data de fim (null = sem fim). */
   readonly alocacoes: (AlocacaoVigente & { turnoId: string; dataFim: string | null })[] = [];
   readonly emUso = new Set<string>();
+  /** Eventos de auditoria gravados com o dado. */
+  readonly eventos: EventoAuditoria[] = [];
 
   private frentesDe(dados: DadosTurno): FrenteDoTurno[] {
     const frente = (
@@ -89,29 +92,39 @@ export class InMemoryTurnosRepository implements TurnosRepository {
       }));
   }
 
-  async criar(dados: DadosTurno) {
-    const id = randomUUID();
-    this.itens.set(id, { ...dados, id });
-    return {
-      id,
-      frenteIds: this.frentesDe(dados)
-        .map((f) => f.id)
-        .sort(),
-    };
+  async criar(
+    dados: DadosTurno,
+    eventosDe: (gravado: { id: string; frenteIds: string[] }) => EventoAuditoria[],
+  ) {
+    const gravado = { id: randomUUID(), frenteIds: this.idsDasFrentes(dados) };
+    const eventos = eventosDe(gravado);
+    this.itens.set(gravado.id, { ...dados, id: gravado.id });
+    this.eventos.push(...eventos);
+    return gravado;
   }
 
-  async atualizar(id: string, dados: DadosTurno) {
+  async atualizar(
+    id: string,
+    dados: DadosTurno,
+    eventosDe: (gravado: { frenteIds: string[] }) => EventoAuditoria[],
+  ) {
+    const gravado = { frenteIds: this.idsDasFrentes(dados) };
+    const eventos = eventosDe(gravado);
     this.itens.set(id, { ...dados, id });
-    return {
-      frenteIds: this.frentesDe(dados)
-        .map((f) => f.id)
-        .sort(),
-    };
+    this.eventos.push(...eventos);
+    return gravado;
   }
 
-  async excluir(id: string) {
+  async excluir(id: string, eventos: EventoAuditoria[]) {
     if (this.emUso.has(id)) return false;
     this.itens.delete(id);
+    this.eventos.push(...eventos);
     return true;
+  }
+
+  private idsDasFrentes(dados: DadosTurno) {
+    return this.frentesDe(dados)
+      .map((f) => f.id)
+      .sort();
   }
 }

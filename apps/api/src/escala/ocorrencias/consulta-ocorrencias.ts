@@ -1,8 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { CLOCK, type Clock } from '../../identidade/clock';
 import {
   AUSENCIA_COBERTURA,
+  adicionarDias,
   conflitosDoMedico,
+  diaEmBrasilia,
   expandirOcorrencias,
   type Ocorrencia,
 } from '../domain';
@@ -80,23 +83,32 @@ export interface ResultadoOcorrencias {
 }
 
 export interface ConsultaOcorrencias {
-  /** Janela [de, ate] em dias de Brasília ("YYYY-MM-DD"), até o limite da expansão. */
+  /**
+   * Janela [de, ate] em dias de Brasília ("YYYY-MM-DD"), até o limite da expansão. Traz também os
+   * plantões de `de` − 1 ainda em curso à meia-noite de `de` (`doDiaAnterior: true`). Inativos
+   * (médico, turno, frente) não geram ocorrência de hoje em diante; antes de hoje, sim.
+   */
   listar(de: string, ate: string, filtros?: FiltrosOcorrencias): Promise<ResultadoOcorrencias>;
 }
 
 @Injectable()
 export class ConsultaOcorrenciasEscala implements ConsultaOcorrencias {
-  constructor(@Inject(CARREGADOR_ESCALA) private readonly carregador: CarregadorEscala) {}
+  constructor(
+    @Inject(CARREGADOR_ESCALA) private readonly carregador: CarregadorEscala,
+    @Inject(CLOCK) private readonly clock: Clock,
+  ) {}
 
   async listar(
     de: string,
     ate: string,
     filtros: FiltrosOcorrencias = {},
   ): Promise<ResultadoOcorrencias> {
-    const dados = await this.carregador.carregar(de, ate);
+    // Desde o dia anterior: o plantão que vira a meia-noite ainda está em curso no começo de `de`.
+    const dados = await this.carregador.carregar(adicionarDias(de, -1), ate);
     const ocorrencias = expandirOcorrencias({
       de,
       ate,
+      hoje: diaEmBrasilia(this.clock.now()),
       alocacoes: dados.alocacoes,
       turnos: dados.turnos,
       frentes: dados.frentes,

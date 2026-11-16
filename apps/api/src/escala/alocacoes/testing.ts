@@ -1,8 +1,11 @@
 import type { EventoAuditoria } from '../../auditoria/auditoria';
+import { EscalaInvalidaError } from '../domain';
 import type {
   AjusteGravado,
   AlocacaoGravada,
   AlocacoesRepository,
+  ConferirCoberturas,
+  EventosDaRemocao,
   TurnoParaAlocar,
 } from './alocacoes.repository';
 
@@ -61,13 +64,42 @@ export class FakeAlocacoesRepository implements AlocacoesRepository {
     this.eventos.push(...eventos);
   }
 
-  async remover(id: string, eventos: EventoAuditoria[]) {
-    const removidas = new Set([id, ...(await this.coberturasDe(id)).map((c) => c.id)]);
-    for (const r of removidas) this.alocacoes.delete(r);
-    for (const [chave, ajuste] of this.ajustes) {
-      if (removidas.has(ajuste.alocacaoId)) this.ajustes.delete(chave);
-    }
+  async criarCobertura(
+    cobertura: AlocacaoGravada,
+    eventos: EventoAuditoria[],
+    conferir: ConferirCoberturas,
+  ) {
+    conferir(await this.coberturasDoTitular(cobertura));
+    await this.criar(cobertura, eventos);
+  }
+
+  async atualizarCobertura(
+    cobertura: AlocacaoGravada,
+    eventos: EventoAuditoria[],
+    conferir: ConferirCoberturas,
+  ) {
+    conferir(await this.coberturasDoTitular(cobertura));
+    await this.atualizar(cobertura, eventos);
+  }
+
+  async remover(id: string, eventosDe: EventosDaRemocao) {
+    const atual = this.alocacoes.get(id);
+    if (!atual) return;
+    const removidas = [structuredClone(atual), ...(await this.coberturasDe(id))];
+    const ids = new Set(removidas.map((a) => a.id));
+    const ajustes = [...this.ajustes.values()].filter((a) => ids.has(a.alocacaoId));
+    const eventos = eventosDe(removidas, ajustes);
+    for (const r of ids) this.alocacoes.delete(r);
+    for (const aj of ajustes) this.ajustes.delete(aj.id);
     this.eventos.push(...eventos);
+  }
+
+  private async coberturasDoTitular(cobertura: AlocacaoGravada) {
+    const titularId = cobertura.coberturaDeId ?? '';
+    if (!this.alocacoes.has(titularId)) {
+      throw new EscalaInvalidaError('O vínculo coberto não existe mais.');
+    }
+    return this.coberturasDe(titularId);
   }
 
   async salvarAjuste(ajuste: AjusteGravado, eventos: EventoAuditoria[]) {

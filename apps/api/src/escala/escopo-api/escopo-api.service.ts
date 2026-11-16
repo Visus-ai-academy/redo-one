@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { AUDITORIA, type Auditoria } from '../../auditoria/auditoria';
 import { CLOCK, type Clock } from '../../identidade/clock';
 import {
   ESCOPO_ESCALA_REPOSITORY,
@@ -35,7 +34,6 @@ export class EscopoApiService {
   constructor(
     @Inject(ESCOPO_ESCALA_REPOSITORY) private readonly escopos: EscopoEscalaRepository,
     @Inject(CADASTROS_ESCOPO_REPOSITORY) private readonly cadastros: CadastrosEscopoRepository,
-    @Inject(AUDITORIA) private readonly auditoria: Auditoria,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -83,16 +81,18 @@ export class EscopoApiService {
       return;
     }
 
-    await this.escopos.definir(usuarioId, { turnoIds, frenteIds });
-    await this.auditoria.registrar({
-      ator: { tipo: 'usuario', id: ator.usuarioId },
-      entidade: 'escopo_escala',
-      entidadeId: usuarioId,
-      acao: 'definido',
-      antes: paraEvento(antes),
-      depois: paraEvento(depois),
-      em: this.clock.now(),
-    });
+    // O recorte e o evento na mesma transação.
+    await this.cadastros.gravarRecorte(usuarioId, { turnoIds, frenteIds }, [
+      {
+        ator: { tipo: 'usuario', id: ator.usuarioId },
+        entidade: 'escopo_escala',
+        entidadeId: usuarioId,
+        acao: 'definido',
+        antes: paraEvento(antes),
+        depois: paraEvento(depois),
+        em: this.clock.now(),
+      },
+    ]);
   }
 
   private async detalhar(escopo: EscopoEscala | null): Promise<EscopoDetalhado> {

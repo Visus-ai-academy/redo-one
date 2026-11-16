@@ -4,6 +4,7 @@ import type { AusenciaEscala } from './ausencia';
 import { EscalaInvalidaError } from './errors';
 import {
   type AlocacaoEscala,
+  diaEmBrasilia,
   type EntradaExpansao,
   expandirOcorrencias,
   instanteBrasilia,
@@ -47,6 +48,7 @@ function entrada(over: Partial<EntradaExpansao>): EntradaExpansao {
   return {
     de: '2026-11-02',
     ate: '2026-11-08',
+    hoje: '2026-11-02',
     alocacoes: [],
     turnos,
     frentes,
@@ -59,6 +61,13 @@ function entrada(over: Partial<EntradaExpansao>): EntradaExpansao {
 }
 
 const datas = (lista: { data: string }[]) => lista.map((o) => o.data);
+
+describe('diaEmBrasilia', () => {
+  it('é o dia do calendário de Brasília (UTC−3)', () => {
+    expect(diaEmBrasilia(new Date('2026-11-17T02:59:00Z'))).toBe('2026-11-16');
+    expect(diaEmBrasilia(new Date('2026-11-17T03:00:00Z'))).toBe('2026-11-17');
+  });
+});
 
 describe('instanteBrasilia', () => {
   it('monta o instante ISO com o offset fixo de Brasília', () => {
@@ -122,6 +131,7 @@ describe('expandirOcorrencias', () => {
       cobertoPorAlocacaoId: null,
       ausente: false,
       tipoAusenciaId: null,
+      doDiaAnterior: false,
     });
   });
 
@@ -137,6 +147,113 @@ describe('expandirOcorrencias', () => {
       entrada({ de: '2026-10-24', ate: '2026-11-08', alocacoes: [a] }),
     );
     expect(datas(ocorrencias)).toEqual(['2026-10-31', '2026-11-01']);
+  });
+
+  describe('inativo some de hoje em diante e mantém o passado', () => {
+    // Janela de 26/10 a 08/11, hoje = quarta 04/11: segundas e quartas 26/10, 28/10, 02/11, 04/11.
+    const janela = { de: '2026-10-26', ate: '2026-11-08', hoje: '2026-11-04' };
+
+    it('médico inativo', () => {
+      const a = alocacao({ id: 'a1', medicoId: 'dan' });
+      const ocorrencias = expandirOcorrencias(entrada({ ...janela, alocacoes: [a] }));
+      expect(datas(ocorrencias)).toEqual(['2026-10-26', '2026-10-28', '2026-11-02']);
+    });
+
+    it('turno inativo', () => {
+      const a = alocacao({ id: 'a1' });
+      const inativos = turnos.map((t) => (t.id === 'manha' ? { ...t, ativo: false } : t));
+      const ocorrencias = expandirOcorrencias(
+        entrada({ ...janela, alocacoes: [a], turnos: inativos }),
+      );
+      expect(datas(ocorrencias)).toEqual(['2026-10-26', '2026-10-28', '2026-11-02']);
+    });
+
+    it('frente inativa', () => {
+      const a = alocacao({ id: 'a1' });
+      const inativas = frentes.map((f) => (f.id === 'tc' ? { ...f, ativo: false } : f));
+      const ocorrencias = expandirOcorrencias(
+        entrada({ ...janela, alocacoes: [a], frentes: inativas }),
+      );
+      expect(datas(ocorrencias)).toEqual(['2026-10-26', '2026-10-28', '2026-11-02']);
+    });
+
+    it('cobertura de médico inativo fica no passado; de hoje em diante o titular volta', () => {
+      const titular = alocacao({ id: 'tit' });
+      const cobertura = alocacao({
+        id: 'cob',
+        medicoId: 'dan',
+        coberturaDeId: 'tit',
+        dataInicio: '2026-11-02',
+        dataFim: '2026-11-04',
+      });
+      const ocorrencias = expandirOcorrencias(
+        entrada({ ...janela, alocacoes: [titular, cobertura] }),
+      );
+      expect(datas(ocorrencias.filter((o) => o.alocacaoId === 'cob'))).toEqual(['2026-11-02']);
+      expect(
+        ocorrencias.find((o) => o.alocacaoId === 'tit' && o.data === '2026-11-04'),
+      ).toMatchObject({ ausente: false, cobertoPorAlocacaoId: null });
+    });
+  });
+
+  describe('plantão do dia anterior em curso no início da janela', () => {
+    const noite = alocacao({
+      id: 'noite',
+      turnoId: 'noite',
+      horarioInicio: '19:00',
+      horarioFim: '07:00',
+      diasSemana: [0, 1, 2, 3, 4, 5, 6],
+    });
+
+    it('entra marcado como do dia anterior quando o fim passa da meia-noite de `de`', () => {
+      const ocorrencias = expandirOcorrencias(
+        entrada({ de: '2026-11-03', ate: '2026-11-03', alocacoes: [noite] }),
+      );
+      expect(ocorrencias.map((o) => [o.data, o.doDiaAnterior])).toEqual([
+        ['2026-11-02', true],
+        ['2026-11-03', false],
+      ]);
+      expect(ocorrencias[0]).toMatchObject({
+        inicio: '2026-11-02T19:00:00-03:00',
+        fim: '2026-11-03T07:00:00-03:00',
+      });
+    });
+
+    it('o do dia anterior que termina até a meia-noite fica de fora', () => {
+      const ateMeiaNoite = alocacao({
+        id: 'tarde',
+        turnoId: 'noite',
+        horarioInicio: '19:00',
+        horarioFim: '00:00',
+        diasSemana: [0, 1, 2, 3, 4, 5, 6],
+      });
+      const ocorrencias = expandirOcorrencias(
+        entrada({ de: '2026-11-03', ate: '2026-11-03', alocacoes: [ateMeiaNoite] }),
+      );
+      expect(datas(ocorrencias)).toEqual(['2026-11-03']);
+    });
+
+    it('a cobertura do plantão do dia anterior também entra', () => {
+      const cobertura = alocacao({
+        id: 'cob',
+        medicoId: 'bia',
+        coberturaDeId: 'noite',
+        horarioInicio: '19:00',
+        horarioFim: '07:00',
+        diasSemana: [1],
+        dataInicio: '2026-11-02',
+        dataFim: '2026-11-02',
+      });
+      const ocorrencias = expandirOcorrencias(
+        entrada({ de: '2026-11-03', ate: '2026-11-03', alocacoes: [noite, cobertura] }),
+      );
+      expect(
+        ocorrencias.filter((o) => o.doDiaAnterior).map((o) => [o.alocacaoId, o.ausente]),
+      ).toEqual([
+        ['noite', true],
+        ['cob', false],
+      ]);
+    });
   });
 
   describe('inativos não geram ocorrência', () => {

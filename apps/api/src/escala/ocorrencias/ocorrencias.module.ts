@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { CLOCK, systemClock } from '../../identidade/clock';
 import { DrizzleEscopoEscalaRepository } from '../escopo/drizzle-escopo.repository';
 import { ESCOPO_ESCALA_REPOSITORY } from '../escopo/escopo';
 import { CARREGADOR_ESCALA } from './carregador-escala';
@@ -19,6 +20,7 @@ import { OcorrenciasService } from './ocorrencias.service';
   controllers: [OcorrenciasController, MinhaEscalaController],
   providers: [
     OcorrenciasService,
+    { provide: CLOCK, useValue: systemClock },
     { provide: CARREGADOR_ESCALA, useClass: DrizzleCarregadorEscala },
     { provide: OCORRENCIAS_ESCALA, useClass: ConsultaOcorrenciasEscala },
     { provide: MEDICO_DO_USUARIO_REPOSITORY, useClass: DrizzleMedicoDoUsuarioRepository },

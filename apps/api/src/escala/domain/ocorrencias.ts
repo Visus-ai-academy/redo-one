@@ -17,6 +17,12 @@ import {
  */
 export const OFFSET_BRASILIA = '-03:00';
 
+const OFFSET_BRASILIA_MS = Number(OFFSET_BRASILIA.slice(0, 3)) * 60 * 60 * 1000;
+
+/** O dia do calendário de Brasília em que cai o instante. */
+export const diaEmBrasilia = (instante: Date): Data =>
+  new Date(instante.getTime() + OFFSET_BRASILIA_MS).toISOString().slice(0, 10);
+
 /** Maior janela que a expansão aceita, em dias com as duas pontas. */
 export const JANELA_MAXIMA_DIAS = 400;
 
@@ -58,6 +64,15 @@ export interface AjusteProdutividade {
 export interface EntradaExpansao {
   de: string;
   ate: string;
+  /**
+   * Hoje em Brasília. Médico, turno e frente inativos não geram ocorrência de hoje em diante;
+   * antes de hoje geram normalmente (inativar não apaga o histórico).
+   */
+  hoje: Data;
+  /**
+   * As que tocam a janela desde o dia anterior a `de` (o plantão que vira a meia-noite) e, para
+   * cada cobertura, o titular dela. Ausências e ajustes também desde o dia anterior.
+   */
   /** As que tocam a janela e, para cada cobertura, o titular dela. */
   alocacoes: readonly AlocacaoEscala[];
   turnos: readonly TurnoEscala[];
@@ -101,6 +116,11 @@ export interface Ocorrencia {
   ausente: boolean;
   /** Tipo da ausência que vale no dia, `cobertura` quando outro médico cobre, ou nulo. */
   tipoAusenciaId: string | null;
+  /**
+   * Plantão que começou no dia anterior a `de` e ainda está em curso à meia-noite de `de`
+   * (`data` = `de` − 1).
+   */
+  doDiaAnterior: boolean;
 }
 
 /** "YYYY-MM-DDTHH:MM:00-03:00", somando `minutosExtras` (pode virar o dia). */
@@ -125,10 +145,12 @@ interface Plantao {
 const chaveDia = (id: string, data: Data) => `${id}|${data}`;
 
 /**
- * Expande as alocações em ocorrências-dia na janela [de, ate].
+ * Expande as alocações em ocorrências-dia na janela [de, ate], mais os plantões do dia anterior a
+ * `de` que ainda estão em curso à meia-noite de `de` (marcados com `doDiaAnterior`).
  * Fonte: dashboards-one `escala-hierarquica.ts` `listarOcorrencias` (:1350-1581) e
- * `src/lib/utils/periodoUnico.ts`. Diferenças de propósito: inativos não geram ocorrência; a
- * cobertura depende do titular (só existe onde ele tem plantão e usa os recortes dele, lidos aqui).
+ * `src/lib/utils/periodoUnico.ts`. Diferenças de propósito: inativos não geram ocorrência de hoje
+ * em diante (o passado fica); a cobertura depende do titular (só existe onde ele tem plantão e usa
+ * os recortes dele, lidos aqui).
  */
 export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
   const de = validarData(entrada.de);
@@ -140,9 +162,17 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
     );
   }
 
-  const turnos = new Map(entrada.turnos.filter((t) => t.ativo).map((t) => [t.id, t]));
-  const frentesAtivas = new Set(entrada.frentes.filter((f) => f.ativo).map((f) => f.id));
+  const hoje = validarData(entrada.hoje);
+  // Antes de hoje, inativo vale como ativo: o histórico não some ao inativar.
+  const valeNoDia = (ativo: boolean, data: Data) => ativo || data < hoje;
+  const turnos = new Map(entrada.turnos.map((t) => [t.id, t]));
+  const frentes = new Map(entrada.frentes.map((f) => [f.id, f.ativo]));
   const medicosAtivos = new Set(entrada.medicosAtivos);
+  const medicoNoDia = (medicoId: string, data: Data) =>
+    valeNoDia(medicosAtivos.has(medicoId), data);
+  // O plantão do dia anterior que vira a meia-noite ainda está em curso no começo de `de`.
+  const deExpansao = adicionarDias(de, -1);
+  const meiaNoiteDe = instanteBrasilia(de, '00:00');
 
   // 1. Plantões dos vínculos que não são cobertura (o médico ativo é filtrado no fim: a
   // cobertura depende do plantão do titular, não de ele estar ativo).
@@ -150,8 +180,10 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
   let plantoes: Plantao[] = [];
   for (const alocacao of titulares) {
     const turno = turnos.get(alocacao.turnoId);
-    if (!turno || !frentesAtivas.has(alocacao.frenteId)) continue;
-    for (const data of datasDaJanela(alocacao, de, ate)) {
+    const frenteAtiva = frentes.get(alocacao.frenteId);
+    if (!turno || frenteAtiva === undefined) continue;
+    for (const data of datasDaJanela(alocacao, deExpansao, ate)) {
+      if (!valeNoDia(turno.ativo, data) || !valeNoDia(frenteAtiva, data)) continue;
       if (caiNoDia(alocacao, data)) plantoes.push({ alocacao, vinculo: alocacao, turno, data });
     }
   }
@@ -166,9 +198,10 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
   }
   const cobertoPor = new Map<string, string>();
   for (const cobertura of entrada.alocacoes) {
-    if (cobertura.coberturaDeId === null || !medicosAtivos.has(cobertura.medicoId)) continue;
+    if (cobertura.coberturaDeId === null) continue;
     for (const p of plantoesPorTitular.get(cobertura.coberturaDeId) ?? []) {
       const naCobertura =
+        medicoNoDia(cobertura.medicoId, p.data) &&
         p.data >= cobertura.dataInicio &&
         (cobertura.dataFim === null || p.data <= cobertura.dataFim) &&
         cobertura.diasSemana.includes(diaDaSemana(p.data));
@@ -192,7 +225,7 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
   );
 
   return plantoes
-    .filter((p) => medicosAtivos.has(p.alocacao.medicoId))
+    .filter((p) => medicoNoDia(p.alocacao.medicoId, p.data))
     .map((p) => {
       const { alocacao, vinculo, turno, data } = p;
       const base = {
@@ -238,8 +271,10 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
         cobertoPorAlocacaoId: coberturaDoDia,
         ausente: tipoAusenciaId !== null,
         tipoAusenciaId,
+        doDiaAnterior: data < de,
       } satisfies Ocorrencia;
     })
+    .filter((o) => !o.doDiaAnterior || o.fim > meiaNoiteDe)
     .sort(
       (a, b) =>
         a.data.localeCompare(b.data) ||

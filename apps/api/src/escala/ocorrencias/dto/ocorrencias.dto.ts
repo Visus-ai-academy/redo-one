@@ -14,7 +14,10 @@ const listaDaQuery = ({ value }: { value: unknown }) => {
     .filter(Boolean);
 };
 
-/** Janela da consulta (dias de Brasília, inclusivos; até 62 dias). */
+/**
+ * Janela da consulta (dias de Brasília, inclusivos; até 62 dias). A resposta traz também os
+ * plantões do dia anterior a `de` ainda em curso à meia-noite (`doDiaAnterior`).
+ */
 export class JanelaOcorrenciasDto {
   @ApiProperty({ format: 'date', description: 'Dia de Brasília, inclusivo.' })
   @Matches(DIA, { message: 'Data no formato AAAA-MM-DD.' })
@@ -122,6 +125,11 @@ export class OcorrenciaDto {
     description: 'No titular coberto neste dia: quem cobre.',
   })
   cobertoPor!: VinculoDaCoberturaDto | null;
+  @ApiProperty({
+    description:
+      'Plantão do dia anterior a `de` (`data` = `de` − 1) que ainda está em curso à meia-noite de `de` (vira a meia-noite). A grade da janela não tem coluna para esse dia: use `inicio`/`fim`.',
+  })
+  doDiaAnterior!: boolean;
 }
 
 export class PlantaoEmConflitoDto {

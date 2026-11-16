@@ -10,19 +10,26 @@ import {
   validarAlocacao,
   validarCobertura,
 } from '../domain';
-import { ESCOPO_ESCALA_REPOSITORY, type EscopoEscalaRepository } from '../escopo/escopo';
 import {
-  type ConflitoEscala,
-  type ConsultaOcorrencias,
-  OCORRENCIAS_ESCALA,
-} from '../ocorrencias/consulta-ocorrencias';
+  ESCOPO_ESCALA_REPOSITORY,
+  type EscopoEscala,
+  type EscopoEscalaRepository,
+} from '../escopo/escopo';
+import { type ConsultaOcorrencias, OCORRENCIAS_ESCALA } from '../ocorrencias/consulta-ocorrencias';
 import {
   ALOCACOES_REPOSITORY,
   type AlocacaoGravada,
   type AlocacoesRepository,
+  type ConferirCoberturas,
   type TurnoParaAlocar,
 } from './alocacoes.repository';
-import { alocacaoNoEscopo, avisosDaAlocacao, escopoDo, exigirNoEscopo } from './apoio';
+import {
+  type AvisoConflito,
+  alocacaoNoEscopo,
+  avisosDaAlocacao,
+  escopoDo,
+  exigirNoEscopo,
+} from './apoio';
 import { type AtorEscala, EventosEscala } from './eventos';
 
 /** Corpo de criar e editar uma alocação (que não é cobertura). */
@@ -56,8 +63,8 @@ export interface AlocacaoDetalhada extends AlocacaoGravada {
 }
 
 export interface ResultadoEscrita {
-  /** Sobreposições de horário do médico (não bloqueiam). */
-  avisos: ConflitoEscala[];
+  /** Sobreposições de horário do médico (não bloqueiam); fora do recorte, sem detalhes. */
+  avisos: AvisoConflito[];
 }
 
 const texto = (valor: string | null | undefined) => valor?.trim() || null;
@@ -92,7 +99,7 @@ export class AlocacoesService {
     await this.exigirMedicoAtivo(entrada.medicoId);
     const alocacao = await this.montar(randomUUID(), entrada, entrada.gratificado === true);
     await this.repo.criar(alocacao, [this.eventos(ator).alocacaoCriada(alocacao)]);
-    return { id: alocacao.id, avisos: await avisosDaAlocacao(this.consulta, this.clock, alocacao) };
+    return { id: alocacao.id, avisos: await this.avisos(alocacao, escopo) };
   }
 
   async atualizar(
@@ -113,22 +120,23 @@ export class AlocacoesService {
 
     const evento = this.eventos(ator).alocacaoAlterada(atual, alocacao);
     await this.repo.atualizar(alocacao, evento ? [evento] : []);
-    return { avisos: await avisosDaAlocacao(this.consulta, this.clock, alocacao) };
+    return { avisos: await this.avisos(alocacao, escopo) };
   }
 
-  /** Remove a alocação; as coberturas e os ajustes dela caem junto, cada um com seu evento. */
+  /**
+   * Remove a alocação; as coberturas e os ajustes dela caem junto, cada um com seu evento. O que cai
+   * é lido pelo repositório na transação do delete, com a alocação travada.
+   */
   async remover(ator: AtorEscala, id: string): Promise<void> {
     const atual = await alocacaoNoEscopo(this.repo, await escopoDo(this.escopos, ator), id);
-    const coberturas = atual.coberturaDeId === null ? await this.repo.coberturasDe(id) : [];
-    const removidas = [atual, ...coberturas];
-    const porId = new Map(removidas.map((a) => [a.id, a]));
-    const ajustes = await this.repo.ajustesDe(removidas.map((a) => a.id));
-
     const eventos = this.eventos(ator);
-    await this.repo.remover(id, [
-      ...removidas.map((a) => eventos.alocacaoRemovida(a)),
-      ...ajustes.map((aj) => eventos.ajusteRemovido(aj, porId.get(aj.alocacaoId) ?? atual)),
-    ]);
+    await this.repo.remover(id, (removidas, ajustes) => {
+      const porId = new Map(removidas.map((a) => [a.id, a]));
+      return [
+        ...removidas.map((a) => eventos.alocacaoRemovida(a)),
+        ...ajustes.map((aj) => eventos.ajusteRemovido(aj, porId.get(aj.alocacaoId) ?? atual)),
+      ];
+    });
   }
 
   /** Outro médico assume o vínculo `titularId` num período. */
@@ -137,18 +145,16 @@ export class AlocacoesService {
     titularId: string,
     entrada: EntradaCobertura,
   ): Promise<ResultadoEscrita & { id: string }> {
-    const titular = await alocacaoNoEscopo(
-      this.repo,
-      await escopoDo(this.escopos, ator),
-      titularId,
-    );
+    const escopo = await escopoDo(this.escopos, ator);
+    const titular = await alocacaoNoEscopo(this.repo, escopo, titularId);
     await this.exigirMedicoAtivo(entrada.medicoId);
-    const cobertura = await this.montarCobertura(randomUUID(), entrada, titular);
-    await this.repo.criar(cobertura, [this.eventos(ator).alocacaoCriada(cobertura)]);
-    return {
-      id: cobertura.id,
-      avisos: await avisosDaAlocacao(this.consulta, this.clock, cobertura),
-    };
+    const { cobertura, conferir } = await this.montarCobertura(randomUUID(), entrada, titular);
+    await this.repo.criarCobertura(
+      cobertura,
+      [this.eventos(ator).alocacaoCriada(cobertura)],
+      conferir,
+    );
+    return { id: cobertura.id, avisos: await this.avisos(cobertura, escopo) };
   }
 
   async atualizarCobertura(
@@ -156,18 +162,23 @@ export class AlocacoesService {
     id: string,
     entrada: EntradaCobertura,
   ): Promise<ResultadoEscrita> {
-    const atual = await alocacaoNoEscopo(this.repo, await escopoDo(this.escopos, ator), id);
+    const escopo = await escopoDo(this.escopos, ator);
+    const atual = await alocacaoNoEscopo(this.repo, escopo, id);
     if (atual.coberturaDeId === null) {
       throw new EscalaInvalidaError('Este vínculo não é uma cobertura.');
     }
     if (entrada.medicoId !== atual.medicoId) await this.exigirMedicoAtivo(entrada.medicoId);
     const titular = await this.repo.buscar(atual.coberturaDeId);
     if (!titular) throw new EscalaInvalidaError('O vínculo coberto não existe mais.');
-    const cobertura = await this.montarCobertura(id, entrada, titular);
+    const { cobertura, conferir } = await this.montarCobertura(id, entrada, titular);
 
     const evento = this.eventos(ator).alocacaoAlterada(atual, cobertura);
-    await this.repo.atualizar(cobertura, evento ? [evento] : []);
-    return { avisos: await avisosDaAlocacao(this.consulta, this.clock, cobertura) };
+    await this.repo.atualizarCobertura(cobertura, evento ? [evento] : [], conferir);
+    return { avisos: await this.avisos(cobertura, escopo) };
+  }
+
+  private avisos(alocacao: AlocacaoGravada, escopo: EscopoEscala | null) {
+    return avisosDaAlocacao(this.consulta, this.clock, alocacao, escopo);
   }
 
   private eventos(ator: AtorEscala) {
@@ -208,23 +219,28 @@ export class AlocacoesService {
     };
   }
 
-  /** Cobertura: turno, frente e recortes são os do titular, lidos na expansão. */
+  /**
+   * Cobertura: turno, frente e recortes são os do titular, lidos na expansão. Valida contra as
+   * coberturas de agora (para recusar cedo) e devolve `conferir`, que o repositório roda de novo
+   * com as coberturas lidas na transação, com o titular travado.
+   */
   private async montarCobertura(
     id: string,
     entrada: EntradaCobertura,
     titular: AlocacaoGravada,
-  ): Promise<AlocacaoGravada> {
+  ): Promise<{ cobertura: AlocacaoGravada; conferir: ConferirCoberturas }> {
     const turno = await this.repo.turno(titular.turnoId);
     if (!turno) throw new EscalaInvalidaError('Turno não encontrado.');
-    const outras = await this.repo.coberturasDe(titular.id);
-    const validada = validarCobertura(
-      entrada,
-      titular,
-      turno,
-      outras.map((o) => ({ ...o, dataFim: o.dataFim ?? o.dataInicio })),
-      { ignorarId: id },
-    );
-    return {
+    const validar = (outras: AlocacaoGravada[]) =>
+      validarCobertura(
+        entrada,
+        titular,
+        turno,
+        outras.map((o) => ({ ...o, dataFim: o.dataFim ?? o.dataInicio })),
+        { ignorarId: id },
+      );
+    const validada = validar(await this.repo.coberturasDe(titular.id));
+    const cobertura: AlocacaoGravada = {
       id,
       turnoId: titular.turnoId,
       frenteId: titular.frenteId,
@@ -234,6 +250,7 @@ export class AlocacoesService {
       subespecialidadeIds: [],
       observacoes: texto(entrada.observacoes),
     };
+    return { cobertura, conferir: (outras) => void validar(outras) };
   }
 
   private async turnoComFrente(turnoId: string, frenteId: string): Promise<TurnoParaAlocar> {

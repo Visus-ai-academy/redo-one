@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { InMemoryAuditoria } from '../../auditoria/testing';
 import {
   ItemEmUsoError,
   ItemNaoEncontradoError,
@@ -33,7 +32,6 @@ const dados = (extra: Partial<DadosTurno> = {}): DadosTurno => ({
 
 describe('TurnosService', () => {
   let repo: InMemoryTurnosRepository;
-  let auditoria: InMemoryAuditoria;
   let service: TurnosService;
 
   beforeEach(() => {
@@ -41,8 +39,7 @@ describe('TurnosService', () => {
     repo.especialidades.set('e-neuro', 'NEURO');
     repo.especialidades.set('e-abd', 'ABDOME');
     repo.modalidades.set('m-ct', 'CT');
-    auditoria = new InMemoryAuditoria();
-    service = new TurnosService(repo, auditoria, new FixedClock(AGORA));
+    service = new TurnosService(repo, new FixedClock(AGORA));
   });
 
   it('cria normalizando os horários e devolve as frentes do catálogo e a duração', async () => {
@@ -94,7 +91,7 @@ describe('TurnosService', () => {
   it('audita a criação como turno, com as frentes', async () => {
     const id = await service.criar(ator, dados());
 
-    expect(auditoria.eventos).toEqual([
+    expect(repo.eventos).toEqual([
       expect.objectContaining({
         ator: { tipo: 'usuario', id: 'u-ana' },
         entidade: 'turno',
@@ -143,7 +140,7 @@ describe('TurnosService', () => {
     );
 
     expect((await service.obter(id)).frentes.map((f) => f.id)).toEqual(['f-abdome', 'f-neuro']);
-    expect(auditoria.eventos.at(-1)).toMatchObject({
+    expect(repo.eventos.at(-1)).toMatchObject({
       acao: 'alterado',
       antes: {
         especialidadeIds: ['e-neuro'],
@@ -163,7 +160,47 @@ describe('TurnosService', () => {
   it('edita o próprio turno sem acusar nome repetido', async () => {
     const id = await service.criar(ator, dados());
 
-    await expect(service.atualizar(ator, id, dados({ ordem: 1 }))).resolves.toBeUndefined();
+    await expect(service.atualizar(ator, id, dados({ ordem: 1 }))).resolves.toEqual({
+      avisos: [],
+    });
+  });
+
+  it('inativar com alocações vigentes avisa a contagem, sem bloquear', async () => {
+    const id = await service.criar(ator, dados());
+    const vigente = {
+      turnoId: id,
+      frenteId: 'f-ct',
+      horarioInicio: '07:00',
+      horarioFim: '13:00',
+      gratificado: false,
+    };
+    repo.alocacoes.push(
+      { ...vigente, dataFim: null },
+      { ...vigente, dataFim: '2026-11-15' },
+      // Acabou ontem em Brasília: não conta.
+      { ...vigente, dataFim: '2026-11-14' },
+    );
+
+    const { avisos } = await service.atualizar(ator, id, dados({ ativo: false }));
+
+    expect(avisos).toEqual([
+      {
+        codigo: 'turno_inativo_com_alocacoes',
+        totalAlocacoes: 2,
+        mensagem:
+          'O turno tem 2 alocações vigentes: a partir de hoje elas deixam de gerar plantão. Encerre ou mova essas alocações.',
+      },
+    ]);
+    expect((await service.obter(id)).ativo).toBe(false);
+    // Já inativo: editar de novo não repete o aviso.
+    expect(await service.atualizar(ator, id, dados({ ativo: false, ordem: 3 }))).toEqual({
+      avisos: [],
+    });
+  });
+
+  it('inativar sem alocação vigente não avisa', async () => {
+    const id = await service.criar(ator, dados());
+    expect(await service.atualizar(ator, id, dados({ ativo: false }))).toEqual({ avisos: [] });
   });
 
   it('recusa mudar o horário se alocações vigentes (hoje em Brasília) ficariam fora', async () => {
@@ -249,7 +286,7 @@ describe('TurnosService', () => {
 
     await service.excluir(ator, livre);
     await expect(service.obter(livre)).rejects.toThrow(ItemNaoEncontradoError);
-    expect(auditoria.eventos.at(-1)).toMatchObject({ acao: 'excluido', antes: { nome: 'Manhã' } });
+    expect(repo.eventos.at(-1)).toMatchObject({ acao: 'excluido', antes: { nome: 'Manhã' } });
 
     await expect(service.excluir(ator, usado)).rejects.toThrow(ItemEmUsoError);
     await expect(service.excluir(ator, usado)).rejects.toThrow(

@@ -101,7 +101,8 @@ export class EventosEscala {
   }
 }
 
-function diferenca(antes: Record<string, unknown>, depois: Record<string, unknown>) {
+/** Só os campos de `depois` que mudaram em relação a `antes`; `null` se nada mudou. */
+export function diferenca(antes: Record<string, unknown>, depois: Record<string, unknown>) {
   const mudou = Object.keys(depois).filter(
     (campo) => JSON.stringify(antes[campo]) !== JSON.stringify(depois[campo]),
   );

@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { Database } from '../../database/database';
 import * as schema from '../../database/schema';
 import { DrizzleTurnosRepository } from './drizzle-turnos.repository';
@@ -63,7 +64,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table turnos, frentes_escala, especialidades, modalidades, medicos, usuarios, papeis, tipos_ausencia cascade`,
+      sql`truncate table eventos_auditoria, turnos, frentes_escala, especialidades, modalidades, medicos, usuarios, papeis, tipos_ausencia cascade`,
     );
     const [e, a] = await db
       .insert(schema.especialidades)
@@ -96,7 +97,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
 
   /** Cria o turno e devolve o id; guarda em `tc` o id da frente de CT, se ela entrou. */
   const criar = async (dados: DadosTurno) => {
-    const { id, frenteIds } = await repo.criar(dados);
+    const { id, frenteIds } = await repo.criar(dados, () => []);
     const [frenteCt] = await db
       .select({ id: schema.frentesEscala.id })
       .from(schema.frentesEscala)
@@ -153,6 +154,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     const { frenteIds } = await repo.atualizar(
       id,
       turno({ nome: 'Matutino', especialidadeIds: [eNeuro], modalidadeIds: [] }),
+      () => [],
     );
 
     expect(frenteIds).toEqual([neuro]);
@@ -231,7 +233,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
   it('exclui o turno livre, levando as frentes dele', async () => {
     const { id } = await criar(turno({ especialidadeIds: [eNeuro] }));
 
-    expect(await repo.excluir(id)).toBe(true);
+    expect(await repo.excluir(id, [])).toBe(true);
     expect(await repo.buscar(id)).toBeNull();
     expect(await db.select().from(schema.turnosFrentes)).toEqual([]);
   });
@@ -240,7 +242,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     const { id } = await criar(turno({ especialidadeIds: [eNeuro] }));
     await alocar(id, neuro, { dataFim: '2026-02-01' });
 
-    expect(await repo.excluir(id)).toBe(false);
+    expect(await repo.excluir(id, [])).toBe(false);
     expect(await repo.buscar(id)).not.toBeNull();
   });
 
@@ -255,7 +257,65 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
       .insert(schema.usuariosEscoposEscala)
       .values({ usuarioId: usuario?.id ?? '', turnoId: id });
 
-    expect(await repo.excluir(id)).toBe(false);
+    expect(await repo.excluir(id, [])).toBe(false);
     expect(await repo.buscar(id)).not.toBeNull();
+  });
+
+  describe('auditoria na mesma transação', () => {
+    const evento = (entidadeId: string, acao: string): EventoAuditoria => ({
+      ator: { tipo: 'sistema' },
+      entidade: 'turno',
+      entidadeId,
+      acao,
+      em: new Date('2026-11-16T12:00:00Z'),
+    });
+    const eventos = () =>
+      db
+        .select({
+          entidadeId: schema.eventosAuditoria.entidadeId,
+          acao: schema.eventosAuditoria.acao,
+        })
+        .from(schema.eventosAuditoria);
+
+    it('cria, edita e exclui gravando o evento com o dado', async () => {
+      const { id } = await repo.criar(
+        turno({ especialidadeIds: [eNeuro] }),
+        ({ id, frenteIds }) => {
+          expect(frenteIds).toEqual([neuro]);
+          return [evento(id, 'criado')];
+        },
+      );
+      await repo.atualizar(id, turno({ nome: 'Matutino' }), ({ frenteIds }) => {
+        expect(frenteIds).toEqual([]);
+        return [evento(id, 'alterado')];
+      });
+      expect(await repo.excluir(id, [evento(id, 'excluido')])).toBe(true);
+
+      expect((await eventos()).map((e) => [e.entidadeId, e.acao])).toEqual([
+        [id, 'criado'],
+        [id, 'alterado'],
+        [id, 'excluido'],
+      ]);
+    });
+
+    it('se o evento falha, o turno não é gravado', async () => {
+      const falha = () => {
+        throw new Error('falhou o evento');
+      };
+      await expect(repo.criar(turno(), falha)).rejects.toThrow('falhou o evento');
+      expect(await db.select().from(schema.turnos)).toEqual([]);
+
+      const { id } = await repo.criar(turno(), () => []);
+      await expect(repo.atualizar(id, turno({ nome: 'Outro' }), falha)).rejects.toThrow();
+      expect((await repo.buscar(id))?.nome).toBe('Manhã');
+    });
+
+    it('exclusão recusada não grava evento', async () => {
+      const { id } = await repo.criar(turno({ especialidadeIds: [eNeuro] }), () => []);
+      await alocar(id, neuro);
+
+      expect(await repo.excluir(id, [evento(id, 'excluido')])).toBe(false);
+      expect(await eventos()).toEqual([]);
+    });
   });
 });

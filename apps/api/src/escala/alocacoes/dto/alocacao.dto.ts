@@ -17,7 +17,6 @@ import {
 } from 'class-validator';
 
 import { aparar } from '../../../catalogo/comum/dto';
-import { ConflitoEscalaDto } from '../../ocorrencias/dto/ocorrencias.dto';
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
 const HORARIO = /^\d{1,2}:\d{2}$/;
@@ -233,12 +232,40 @@ export class AlocacaoItemDto {
   classificacao!: (typeof CLASSIFICACOES)[number];
 }
 
+/**
+ * Uma ponta do aviso de sobreposição. Dentro do recorte de quem grava: todos os campos e
+ * `foraDoRecorte: false`. Fora dele: só `foraDoRecorte: true` e `data` (os outros não vêm).
+ */
+export class PlantaoDoAvisoDto {
+  @ApiProperty({ description: 'Plantão fora do recorte da gestora: só a data vem.' })
+  foraDoRecorte!: boolean;
+  @ApiProperty({ format: 'date' }) data!: string;
+  @ApiPropertyOptional({ format: 'uuid' }) alocacaoId?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) turnoId?: string;
+  @ApiPropertyOptional() turnoNome?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) frenteId?: string;
+  @ApiPropertyOptional() frenteRotulo?: string;
+  @ApiPropertyOptional() inicio?: string;
+  @ApiPropertyOptional() fim?: string;
+}
+
+/** Dois plantões do mesmo médico com horários sobrepostos (aviso; não bloqueia). */
+export class AvisoConflitoDto {
+  @ApiProperty({ format: 'uuid' }) medicoId!: string;
+  @ApiProperty() medicoNome!: string;
+  @ApiProperty({ format: 'date', description: 'Dia do plantão que começa primeiro.' })
+  data!: string;
+  @ApiProperty({ type: PlantaoDoAvisoDto }) a!: PlantaoDoAvisoDto;
+  @ApiProperty({ type: PlantaoDoAvisoDto }) b!: PlantaoDoAvisoDto;
+}
+
 export class AvisosEscalaDto {
   @ApiProperty({
-    type: [ConflitoEscalaDto],
-    description: 'Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).',
+    type: [AvisoConflitoDto],
+    description:
+      'Sobreposições de horário do médico nas próximas 8 semanas, contando o plantão do dia anterior que vira a meia-noite (não bloqueiam). A ponta fora do recorte de quem grava vem só com `foraDoRecorte` e `data`.',
   })
-  avisos!: ConflitoEscalaDto[];
+  avisos!: AvisoConflitoDto[];
 }
 
 export class CriadoComAvisosDto extends AvisosEscalaDto {

@@ -29,7 +29,7 @@ function montar() {
     listar: vi.fn(async () => ({ itens: [], total: 0 })),
     obter: vi.fn(async () => ({ id: 't-1', ...corpo, frentes: [], duracaoMin: 360 })),
     criar: vi.fn(async () => 't-novo'),
-    atualizar: vi.fn(async () => undefined),
+    atualizar: vi.fn(async () => ({ avisos: [] })),
     excluir: vi.fn(async () => undefined),
   };
   return { service, controller: new TurnosController(service as unknown as TurnosService) };
@@ -67,7 +67,7 @@ describe('TurnosController', () => {
 
     await expect(controller.criar(ana, corpo)).resolves.toEqual({ id: 't-novo' });
     expect(service.criar).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, corpo);
-    await controller.atualizar(ana, 't-1', corpo);
+    await expect(controller.atualizar(ana, 't-1', corpo)).resolves.toEqual({ avisos: [] });
     expect(service.atualizar).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, 't-1', corpo);
     await controller.excluir(ana, 't-1');
     expect(service.excluir).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, 't-1');

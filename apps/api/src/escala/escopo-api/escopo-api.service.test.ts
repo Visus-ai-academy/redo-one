@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { InMemoryAuditoria } from '../../auditoria/testing';
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import { FakeEscopoEscalaRepository } from '../testing/fakes';
 import type { CadastrosEscopoRepository, Referencia } from './cadastros-escopo.repository';
 import {
@@ -12,6 +12,18 @@ import {
 import { EscopoApiService } from './escopo-api.service';
 
 class FakeCadastros implements CadastrosEscopoRepository {
+  readonly eventos: EventoAuditoria[] = [];
+  constructor(private readonly escopos: FakeEscopoEscalaRepository) {}
+
+  async gravarRecorte(
+    usuarioId: string,
+    escopo: { turnoIds: string[]; frenteIds: string[] },
+    eventos: EventoAuditoria[],
+  ) {
+    await this.escopos.definir(usuarioId, escopo);
+    this.eventos.push(...eventos);
+  }
+
   usuarios = new Set(['u-carla', 'u-admin']);
   turnosCadastrados: Referencia[] = [
     { id: 't-manha', nome: 'Manhã' },
@@ -34,13 +46,14 @@ const em = new Date('2026-11-16T12:00:00Z');
 
 describe('EscopoApiService', () => {
   let escopos: FakeEscopoEscalaRepository;
-  let auditoria: InMemoryAuditoria;
+  let auditoria: FakeCadastros;
   let service: EscopoApiService;
 
   beforeEach(() => {
     escopos = new FakeEscopoEscalaRepository();
-    auditoria = new InMemoryAuditoria();
-    service = new EscopoApiService(escopos, new FakeCadastros(), auditoria, { now: () => em });
+    // O recorte e o evento são gravados juntos, na mesma transação, pelo repositório.
+    auditoria = new FakeCadastros(escopos);
+    service = new EscopoApiService(escopos, auditoria, { now: () => em });
   });
 
   describe('obter', () => {

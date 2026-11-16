@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, gte, ilike, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import { violouChaveEstrangeira } from '../../catalogo/comum/erros-do-banco';
 import type { FiltroLista } from '../../catalogo/listas/lista.repository';
 import { contem, relevancia } from '../../database/busca';
@@ -13,6 +14,7 @@ import {
   turnosFrentes,
   usuariosEscoposEscala,
 } from '../../database/schema';
+import { gravarEventos } from '../alocacoes/drizzle-alocacoes.repository';
 import {
   CATALOGO_DA_FRENTE_F,
   ORDEM_DA_FRENTE_F,
@@ -146,22 +148,32 @@ export class DrizzleTurnosRepository implements TurnosRepository {
       );
   }
 
-  criar(dados: DadosTurno) {
+  criar(
+    dados: DadosTurno,
+    eventosDe: (gravado: { id: string; frenteIds: string[] }) => EventoAuditoria[],
+  ) {
     return this.db.transaction(async (tx) => {
       const { especialidadeIds, modalidadeIds, ...turno } = dados;
       const [criado] = await tx.insert(turnos).values(turno).returning({ id: turnos.id });
       if (!criado) throw new Error('insert não devolveu o id');
       const frenteIds = await gravarFrentes(tx, criado.id, { especialidadeIds, modalidadeIds });
-      return { id: criado.id, frenteIds };
+      const gravado = { id: criado.id, frenteIds };
+      await gravarEventos(tx, eventosDe(gravado));
+      return gravado;
     });
   }
 
-  atualizar(id: string, dados: DadosTurno) {
+  atualizar(
+    id: string,
+    dados: DadosTurno,
+    eventosDe: (gravado: { frenteIds: string[] }) => EventoAuditoria[],
+  ) {
     const { especialidadeIds, modalidadeIds, ...turno } = dados;
     return this.db.transaction(async (tx) => {
       await tx.update(turnos).set(turno).where(eq(turnos.id, id));
       await tx.delete(turnosFrentes).where(eq(turnosFrentes.turnoId, id));
       const frenteIds = await gravarFrentes(tx, id, { especialidadeIds, modalidadeIds });
+      await gravarEventos(tx, eventosDe({ frenteIds }));
       return { frenteIds };
     });
   }
@@ -170,7 +182,7 @@ export class DrizzleTurnosRepository implements TurnosRepository {
    * Alocação e ausência barram pela chave estrangeira. O recorte da gestora apagaria em cascata
    * (e sem linha ela passaria a ver tudo), então é conferido antes, com o turno travado.
    */
-  async excluir(id: string) {
+  async excluir(id: string, eventos: EventoAuditoria[]) {
     try {
       return await this.db.transaction(async (tx) => {
         await tx.select({ id: turnos.id }).from(turnos).where(eq(turnos.id, id)).for('update');
@@ -181,6 +193,7 @@ export class DrizzleTurnosRepository implements TurnosRepository {
           .limit(1);
         if (recorte) return false;
         await tx.delete(turnos).where(eq(turnos.id, id));
+        await gravarEventos(tx, eventos);
         return true;
       });
     } catch (erro) {

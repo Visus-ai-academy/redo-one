@@ -39,6 +39,18 @@ export interface AjusteGravado {
 }
 
 /**
+ * Confere a cobertura contra as outras do titular, lidas na transação com o titular travado.
+ * Lança para recusar (ex.: sobreposição).
+ */
+export type ConferirCoberturas = (outras: AlocacaoGravada[]) => void;
+
+/** Monta os eventos do que a remoção apaga: a alocação, as coberturas e os ajustes delas. */
+export type EventosDaRemocao = (
+  removidas: AlocacaoGravada[],
+  ajustes: AjusteGravado[],
+) => EventoAuditoria[];
+
+/**
  * Escritas gravam o registro e os eventos de auditoria na mesma transação.
  */
 export interface AlocacoesRepository {
@@ -56,8 +68,26 @@ export interface AlocacoesRepository {
   criar(alocacao: AlocacaoGravada, eventos: EventoAuditoria[]): Promise<void>;
   /** Troca os campos e os recortes inteiros. */
   atualizar(alocacao: AlocacaoGravada, eventos: EventoAuditoria[]): Promise<void>;
-  /** Remove; coberturas, recortes e ajustes caem em cascata (os eventos deles vêm prontos). */
-  remover(id: string, eventos: EventoAuditoria[]): Promise<void>;
+  /**
+   * Cobertura nova ou editada: trava o titular, lê as outras coberturas dele e chama `conferir`
+   * antes de gravar, tudo na mesma transação (duas coberturas ao mesmo tempo não se sobrepõem).
+   * Titular que sumiu: `EscalaInvalidaError`.
+   */
+  criarCobertura(
+    cobertura: AlocacaoGravada,
+    eventos: EventoAuditoria[],
+    conferir: ConferirCoberturas,
+  ): Promise<void>;
+  atualizarCobertura(
+    cobertura: AlocacaoGravada,
+    eventos: EventoAuditoria[],
+    conferir: ConferirCoberturas,
+  ): Promise<void>;
+  /**
+   * Remove; coberturas, recortes e ajustes caem em cascata. Trava a alocação e lê o que vai cair na
+   * mesma transação do delete, para cada registro apagado ter o seu evento.
+   */
+  remover(id: string, eventosDe: EventosDaRemocao): Promise<void>;
   /** Cria ou troca o ajuste do dia (único por alocação e data). */
   salvarAjuste(ajuste: AjusteGravado, eventos: EventoAuditoria[]): Promise<void>;
   removerAjuste(id: string, eventos: EventoAuditoria[]): Promise<void>;

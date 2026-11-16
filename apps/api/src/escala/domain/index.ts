@@ -55,6 +55,7 @@ export {
   type AjusteProdutividade,
   type AlocacaoEscala,
   AUSENCIA_COBERTURA,
+  diaEmBrasilia,
   type EntradaExpansao,
   expandirOcorrencias,
   type FrenteEscala,

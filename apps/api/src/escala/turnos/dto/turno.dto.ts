@@ -132,6 +132,26 @@ export class TurnoItemDto {
   @ApiProperty() ativo!: boolean;
 }
 
+const CODIGOS_AVISO_TURNO = ['turno_inativo_com_alocacoes'] as const;
+
+export class AvisoTurnoDto {
+  @ApiProperty({
+    enum: CODIGOS_AVISO_TURNO,
+    enumName: 'CodigoAvisoTurno',
+    description:
+      '`turno_inativo_com_alocacoes`: o turno passou de ativo a inativo com alocações vigentes (sem fim ou com fim de hoje em diante); de hoje em diante elas não geram plantão.',
+  })
+  codigo!: (typeof CODIGOS_AVISO_TURNO)[number];
+  @ApiProperty() mensagem!: string;
+  @ApiProperty({ description: 'Quantas alocações vigentes o turno tem.' })
+  totalAlocacoes!: number;
+}
+
+export class AvisosTurnoDto {
+  @ApiProperty({ type: [AvisoTurnoDto], description: 'Não bloqueiam; vazio = nada a avisar.' })
+  avisos!: AvisoTurnoDto[];
+}
+
 export class PaginaTurnosDto {
   @ApiProperty({ type: [TurnoItemDto] }) itens!: TurnoItemDto[];
   @ApiProperty() total!: number;

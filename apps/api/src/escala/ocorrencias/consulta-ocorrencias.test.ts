@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { ConsultaOcorrenciasEscala } from './consulta-ocorrencias';
 import { alocacaoEscala, dadosEscala, FakeCarregadorEscala } from './testing';
 
-// 16/11/2026 é segunda-feira.
+// 16/11/2026 é segunda-feira; hoje em Brasília é segunda 16/11.
+const relogio = { now: () => new Date('2026-11-16T12:00:00Z') };
+
 describe('ConsultaOcorrenciasEscala', () => {
   it('expande a janela e põe os nomes de médico, turno, frente e ausência', async () => {
     const carregador = new FakeCarregadorEscala(
@@ -24,11 +26,12 @@ describe('ConsultaOcorrenciasEscala', () => {
         ],
       }),
     );
-    const consulta = new ConsultaOcorrenciasEscala(carregador);
+    const consulta = new ConsultaOcorrenciasEscala(carregador, relogio);
 
     const { ocorrencias, conflitos } = await consulta.listar('2026-11-16', '2026-11-17');
 
-    expect(carregador.janelas).toEqual([{ de: '2026-11-16', ate: '2026-11-17' }]);
+    // Carrega desde o dia anterior: o plantão que vira a meia-noite ainda está em curso.
+    expect(carregador.janelas).toEqual([{ de: '2026-11-15', ate: '2026-11-17' }]);
     expect(conflitos).toEqual([]);
     expect(ocorrencias).toHaveLength(2);
     expect(ocorrencias[0]).toMatchObject({
@@ -71,6 +74,7 @@ describe('ConsultaOcorrenciasEscala', () => {
           ],
         }),
       ),
+      relogio,
     );
 
     const { ocorrencias } = await consulta.listar('2026-11-16', '2026-11-16');
@@ -104,6 +108,7 @@ describe('ConsultaOcorrenciasEscala', () => {
           ],
         }),
       ),
+      relogio,
     );
     const ids = async (filtros: Parameters<typeof consulta.listar>[2]) =>
       (await consulta.listar('2026-11-16', '2026-11-16', filtros)).ocorrencias.map(
@@ -139,6 +144,7 @@ describe('ConsultaOcorrenciasEscala', () => {
           ],
         }),
       ),
+      relogio,
     );
 
     const { conflitos } = await consulta.listar('2026-11-16', '2026-11-16');
@@ -169,6 +175,48 @@ describe('ConsultaOcorrenciasEscala', () => {
           fim: '2026-11-16T19:00:00-03:00',
         },
       },
+    ]);
+  });
+
+  it('médico inativo some de hoje em diante e fica no passado', async () => {
+    const consulta = new ConsultaOcorrenciasEscala(
+      new FakeCarregadorEscala(
+        dadosEscala({
+          alocacoes: [alocacaoEscala({ id: 'a1' })],
+          medicos: [{ id: 'm-ana', nome: 'Ana Souza', ativo: false }],
+        }),
+      ),
+      relogio,
+    );
+
+    const { ocorrencias } = await consulta.listar('2026-11-12', '2026-11-17');
+
+    expect(ocorrencias.map((o) => o.data)).toEqual(['2026-11-12', '2026-11-13']);
+  });
+
+  it('traz o plantão de ontem que ainda está em curso, marcado como do dia anterior', async () => {
+    const consulta = new ConsultaOcorrenciasEscala(
+      new FakeCarregadorEscala(
+        dadosEscala({
+          alocacoes: [
+            alocacaoEscala({
+              id: 'noite',
+              turnoId: 't-tarde',
+              horarioInicio: '19:00',
+              horarioFim: '07:00',
+              diasSemana: [0, 1, 2, 3, 4, 5, 6],
+            }),
+          ],
+        }),
+      ),
+      relogio,
+    );
+
+    const { ocorrencias } = await consulta.listar('2026-11-16', '2026-11-16');
+
+    expect(ocorrencias.map((o) => [o.data, o.doDiaAnterior])).toEqual([
+      ['2026-11-15', true],
+      ['2026-11-16', false],
     ]);
   });
 });
