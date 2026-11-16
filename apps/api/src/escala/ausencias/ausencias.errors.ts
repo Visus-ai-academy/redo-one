@@ -50,11 +50,23 @@ export class MedicoForaDoRecorteError extends ErroDeDominio {
   }
 }
 
-export class FrenteForaDoRecorteError extends ErroDeDominio {
+/** Ao lançar ou editar: os turnos e as frentes pedidos não cabem no recorte da gestora. */
+export class TurnoOuFrenteForaDoRecorteError extends ErroDeDominio {
   readonly tipo = 'proibido';
 
   constructor() {
-    super('Há frente fora do seu recorte da escala. Escolha só as frentes que você coordena.');
+    super(
+      'Há turno ou frente fora do seu recorte da escala. Escolha só os turnos ou as frentes que você coordena.',
+    );
+  }
+}
+
+/** A ausência já gravada vale em turno × frente fora do recorte da gestora. */
+export class AusenciaForaDoRecorteError extends ErroDeDominio {
+  readonly tipo = 'proibido';
+
+  constructor() {
+    super('Esta ausência vale fora do seu recorte; peça a quem gere a escala inteira.');
   }
 }
 

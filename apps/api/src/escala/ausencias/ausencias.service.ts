@@ -19,14 +19,16 @@ import {
   estaNoEscopo,
 } from '../escopo/escopo';
 import {
+  AusenciaForaDoRecorteError,
   AusenciaNaoEncontradaError,
   CadastroInexistenteError,
-  FrenteForaDoRecorteError,
   MedicoForaDoRecorteError,
   SemMedicoError,
   TipoAusenciaInativoError,
+  TurnoOuFrenteForaDoRecorteError,
 } from './ausencias.errors';
 import {
+  type AlocacaoDoMedico,
   AUSENCIAS_REPOSITORY,
   type AusenciaDetalhada,
   type AusenciasRepository,
@@ -54,9 +56,12 @@ export interface EntradaAusencia {
   tipoId: string;
   dataInicio: string;
   dataFim: string;
-  /** Vazio = todas as frentes (para a gestora com recorte, as do recorte). */
+  /**
+   * Vazio = todas as frentes. Na edição, ausente (ou igual ao gravado) mantém o que está gravado.
+   * Para a gestora com recorte, ver `recortar`.
+   */
   frenteIds?: string[];
-  /** Vazio = o dia inteiro. */
+  /** Vazio = o dia inteiro. Na edição, ausente (ou igual ao gravado) mantém o que está gravado. */
   turnoIds?: string[];
   /** 0 = domingo … 6 = sábado. Vazio = todos. */
   diasSemana?: number[];
@@ -88,6 +93,65 @@ const hojeEmBrasilia = (agora: Date) =>
 
 const texto = (valor: string | null | undefined) => valor?.trim() || null;
 const ordenados = (ids: readonly string[]) => [...ids].sort();
+const mesmos = (a: readonly string[], b: readonly string[]) =>
+  new Set(a).size === new Set(b).size && a.every((id) => b.includes(id));
+
+/** Turnos e frentes de uma ausência. Lista vazia = todos / todas. */
+interface Alcance {
+  turnoIds: string[];
+  frenteIds: string[];
+}
+
+/**
+ * A ausência cobre os pares turno × frente das duas listas (vazia = todos), e o par está no
+ * recorte se o turno OU a frente estiver (`estaNoEscopo`). Todos os pares estão no recorte se, e só
+ * se, todos os turnos estão no recorte ou todas as frentes estão. "Todos" / "todas" nunca está
+ * contido num recorte (vale também para turno ou frente que a gestora não coordena).
+ */
+export function inteiraNoRecorte(escopo: EscopoEscala, alcance: Alcance): boolean {
+  const contida = (ids: string[], recorte: ReadonlySet<string>) =>
+    ids.length > 0 && ids.every((id) => recorte.has(id));
+  return contida(alcance.turnoIds, escopo.turnoIds) || contida(alcance.frenteIds, escopo.frenteIds);
+}
+
+/**
+ * Ajusta o pedido da gestora com recorte para a ausência ficar inteira no recorte, sem nunca
+ * ampliar o pedido: só uma lista vazia ("todos" / "todas") é estreitada, e o que foi escolhido à
+ * mão nunca muda (se não couber, recusa).
+ *
+ * - Já inteira no recorte: fica como pedida.
+ * - Turnos vazios e o recorte tem turnos: os turnos viram todos os turnos do recorte (sem cruzar
+ *   com as alocações do médico, como já se fazia com as frentes: turno sem alocação não tira o
+ *   médico de nada, e a ausência continua valendo se ele for escalado ali no período).
+ * - Frentes vazias e o recorte tem frentes: as frentes viram as do recorte.
+ * - Se as duas servem (as duas listas vazias e o recorte tem turnos e frentes), a união dos dois
+ *   alcances não cabe em duas listas; fica o dos turnos se o médico tem alocação vigente num turno
+ *   do recorte, senão o das frentes (o caminho por onde ele está no recorte).
+ */
+export function recortar(
+  escopo: EscopoEscala,
+  pedido: Alcance,
+  alocacoesNoRecorte: readonly AlocacaoDoMedico[],
+): Alcance {
+  if (inteiraNoRecorte(escopo, pedido)) return pedido;
+  const pelosTurnos =
+    !pedido.turnoIds.length && escopo.turnoIds.size
+      ? { turnoIds: ordenados([...escopo.turnoIds]), frenteIds: pedido.frenteIds }
+      : null;
+  const pelasFrentes =
+    !pedido.frenteIds.length && escopo.frenteIds.size
+      ? { turnoIds: pedido.turnoIds, frenteIds: ordenados([...escopo.frenteIds]) }
+      : null;
+  const nosTurnos = alocacoesNoRecorte.some((a) => escopo.turnoIds.has(a.turnoId));
+  const ajustado = nosTurnos ? (pelosTurnos ?? pelasFrentes) : (pelasFrentes ?? pelosTurnos);
+  if (!ajustado) throw new TurnoOuFrenteForaDoRecorteError();
+  return ajustado;
+}
+
+const ordenado = ({ turnoIds, frenteIds }: Alcance): Alcance => ({
+  turnoIds: ordenados(turnoIds),
+  frenteIds: ordenados(frenteIds),
+});
 
 /** Foto da ausência gravada, para a auditoria e a comparação na edição. */
 export function fotoDe(a: AusenciaDetalhada): FotoAusencia {
@@ -106,9 +170,10 @@ export function fotoDe(a: AusenciaDetalhada): FotoAusencia {
 }
 
 /**
- * Ausências pela tela do gestor. A gestora com recorte só vê e mexe nas ausências de médicos com
- * alguma alocação vigente no período da ausência dentro do recorte (o dashboards-one só conferia
- * isso na escrita, e sem olhar a vigência).
+ * Ausências pela tela do gestor. A gestora com recorte só vê as ausências de médicos com alguma
+ * alocação vigente no período da ausência dentro do recorte (o dashboards-one só conferia isso na
+ * escrita, e sem olhar a vigência); para editar, excluir, aprovar ou recusar, a ausência ainda tem
+ * de valer só dentro do recorte (`inteiraNoRecorte`), e o que ela lança fica inteiro nele.
  */
 @Injectable()
 export class AusenciasService {
@@ -158,11 +223,7 @@ export class AusenciasService {
     const tipo = await this.tipoAtivo(entrada.tipoId);
     const validada = validarAusencia({ ...entrada, origem: 'gestor', tipo });
     await this.conferirCadastros(validada.frenteIds, validada.turnoIds);
-    const frentesPorMedico = await this.frentesNoRecorte(
-      await this.escopoDe(gestor),
-      medicoIds,
-      validada,
-    );
+    const alcances = await this.alcanceNoRecorte(await this.escopoDe(gestor), medicoIds, validada);
 
     const em = this.clock.now();
     const novas: NovaAusencia[] = medicoIds.map((medicoId) => ({
@@ -172,8 +233,7 @@ export class AusenciasService {
       dataInicio: validada.dataInicio,
       dataFim: validada.dataFim,
       diasSemana: validada.diasSemana,
-      frenteIds: frentesPorMedico.get(medicoId) ?? ordenados(validada.frenteIds),
-      turnoIds: ordenados(validada.turnoIds),
+      ...ordenado(alcances.get(medicoId) ?? validada),
       observacoes: texto(entrada.observacoes),
       situacao: validada.situacao,
       origem: 'gestor',
@@ -190,27 +250,34 @@ export class AusenciasService {
     return novas.map((n) => n.id);
   }
 
-  /** Edita uma ausência; o médico, a situação e a origem não mudam. */
+  /**
+   * Edita uma ausência; o médico, a situação e a origem não mudam. Frentes e turnos que não vieram
+   * (ou vieram iguais) ficam como estão. A gestora com recorte só edita a ausência inteira no
+   * recorte, e o resultado também tem de ficar inteiro nele.
+   */
   async atualizar(gestor: Gestor, id: string, entrada: EntradaAusencia): Promise<void> {
-    const atual = await this.visivel(gestor, id);
-    const tipo = await this.tipoParaEdicao(entrada.tipoId, atual.tipo.id);
-    const validada = validarAusencia({ ...entrada, origem: 'gestor', tipo });
-    await this.conferirCadastros(validada.frenteIds, validada.turnoIds);
-    const frentes = await this.frentesNoRecorte(
-      await this.escopoDe(gestor),
-      [atual.medico.id],
-      validada,
-    );
-
+    const { ausencia: atual, escopo } = await this.inteiraVisivel(gestor, id);
     const antes = fotoDe(atual);
+    const tipo = await this.tipoParaEdicao(entrada.tipoId, atual.tipo.id);
+    const manter = (pedido: string[] | undefined, gravado: string[]) =>
+      pedido === undefined || mesmos(pedido, gravado) ? gravado : pedido;
+    const validada = validarAusencia({
+      ...entrada,
+      frenteIds: manter(entrada.frenteIds, antes.frenteIds),
+      turnoIds: manter(entrada.turnoIds, antes.turnoIds),
+      origem: 'gestor',
+      tipo,
+    });
+    await this.conferirCadastros(validada.frenteIds, validada.turnoIds);
+    const alcances = await this.alcanceNoRecorte(escopo, [atual.medico.id], validada);
+
     const dados: DadosAusenciaGravada = {
       medicoId: atual.medico.id,
       tipoId: tipo.id,
       dataInicio: validada.dataInicio,
       dataFim: validada.dataFim,
       diasSemana: validada.diasSemana,
-      frenteIds: frentes.get(atual.medico.id) ?? ordenados(validada.frenteIds),
-      turnoIds: ordenados(validada.turnoIds),
+      ...ordenado(alcances.get(atual.medico.id) ?? validada),
       observacoes: texto(entrada.observacoes),
     };
     const mudanca = diferenca(antes, { ...antes, ...dados });
@@ -223,7 +290,7 @@ export class AusenciasService {
   }
 
   async excluir(gestor: Gestor, id: string): Promise<void> {
-    const atual = await this.visivel(gestor, id);
+    const { ausencia: atual } = await this.inteiraVisivel(gestor, id);
     const evento = eventoAusencia(gestor.usuarioId, id, 'excluida', this.clock.now(), {
       antes: camposDoEvento(fotoDe(atual)),
     });
@@ -231,14 +298,14 @@ export class AusenciasService {
   }
 
   async aprovar(gestor: Gestor, id: string): Promise<void> {
-    const atual = await this.visivel(gestor, id);
+    const { ausencia: atual } = await this.inteiraVisivel(gestor, id);
     const em = this.clock.now();
     const revisao = aprovarAusencia(atual, { usuarioId: gestor.usuarioId, em });
     await this.gravarRevisao(gestor, atual, revisao, em);
   }
 
   async recusar(gestor: Gestor, id: string, motivo: string): Promise<void> {
-    const atual = await this.visivel(gestor, id);
+    const { ausencia: atual } = await this.inteiraVisivel(gestor, id);
     const em = this.clock.now();
     const revisao = recusarAusencia(atual, motivo, { usuarioId: gestor.usuarioId, em });
     await this.gravarRevisao(gestor, atual, revisao, em);
@@ -269,6 +336,32 @@ export class AusenciasService {
 
   /** A ausência, se existe e está no recorte de quem pede; senão, "não encontrada". */
   private async visivel(gestor: Gestor, id: string): Promise<AusenciaDetalhada> {
+    return (await this.visivelComEscopo(gestor, id)).ausencia;
+  }
+
+  /**
+   * Para mexer (editar, excluir, aprovar, recusar): além de visível, a ausência tem de valer só
+   * dentro do recorte; senão 403 (ver `inteiraNoRecorte`).
+   */
+  private async inteiraVisivel(gestor: Gestor, id: string) {
+    const resultado = await this.visivelComEscopo(gestor, id);
+    const { ausencia, escopo } = resultado;
+    if (
+      escopo &&
+      !inteiraNoRecorte(escopo, {
+        turnoIds: ausencia.turnos.map((t) => t.id),
+        frenteIds: ausencia.frentes.map((f) => f.id),
+      })
+    ) {
+      throw new AusenciaForaDoRecorteError();
+    }
+    return resultado;
+  }
+
+  private async visivelComEscopo(
+    gestor: Gestor,
+    id: string,
+  ): Promise<{ ausencia: AusenciaDetalhada; escopo: EscopoEscala | null }> {
     const ausencia = await this.repo.buscar(id);
     if (!ausencia) throw new AusenciaNaoEncontradaError();
     const escopo = await this.escopoDe(gestor);
@@ -280,7 +373,7 @@ export class AusenciasService {
       );
       if (!alocacoes.some((a) => estaNoEscopo(escopo, a))) throw new AusenciaNaoEncontradaError();
     }
-    return ausencia;
+    return { ausencia, escopo };
   }
 
   private async tipoAtivo(id: string): Promise<TipoAusenciaCadastro> {
@@ -308,35 +401,26 @@ export class AusenciasService {
   }
 
   /**
-   * Recorte da gestora ao lançar: cada médico precisa de alocação vigente no período dentro do
-   * recorte. As frentes liberadas para um médico são as do recorte mais as das alocações dele nos
-   * turnos do recorte; "todas as frentes" vira essa lista (a ausência não pode tirar o médico de
-   * frente que a gestora não coordena). Sem recorte, devolve um mapa vazio (vale o pedido).
+   * Recorte da gestora ao lançar ou editar: cada médico precisa de alocação vigente no período
+   * dentro do recorte, e a ausência fica inteira no recorte (`recortar`). Sem recorte, devolve um
+   * mapa vazio (vale o pedido).
    */
-  private async frentesNoRecorte(
+  private async alcanceNoRecorte(
     escopo: EscopoEscala | null,
     medicoIds: string[],
-    periodo: { dataInicio: string; dataFim: string; frenteIds: string[] },
-  ): Promise<Map<string, string[]>> {
-    const resultado = new Map<string, string[]>();
+    pedido: Alcance & { dataInicio: string; dataFim: string },
+  ): Promise<Map<string, Alcance>> {
+    const resultado = new Map<string, Alcance>();
     if (!escopo) return resultado;
     const alocacoes = await this.repo.alocacoesVigentes(
       medicoIds,
-      periodo.dataInicio,
-      periodo.dataFim,
+      pedido.dataInicio,
+      pedido.dataFim,
     );
     for (const medicoId of medicoIds) {
       const doMedico = alocacoes.filter((a) => a.medicoId === medicoId && estaNoEscopo(escopo, a));
       if (!doMedico.length) throw new MedicoForaDoRecorteError();
-      const liberadas = new Set([
-        ...escopo.frenteIds,
-        ...doMedico.filter((a) => escopo.turnoIds.has(a.turnoId)).map((a) => a.frenteId),
-      ]);
-      if (periodo.frenteIds.some((f) => !liberadas.has(f))) throw new FrenteForaDoRecorteError();
-      resultado.set(
-        medicoId,
-        ordenados(periodo.frenteIds.length ? periodo.frenteIds : [...liberadas]),
-      );
+      resultado.set(medicoId, recortar(escopo, pedido, doMedico));
     }
     return resultado;
   }

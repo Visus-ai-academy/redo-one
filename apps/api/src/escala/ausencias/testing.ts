@@ -1,5 +1,5 @@
 import type { EventoAuditoria } from '../../auditoria/auditoria';
-import type { Pagina } from '../../catalogo/comum/paginacao';
+import type { Pagina, Paginacao } from '../../catalogo/comum/paginacao';
 import { type EscopoEscala, estaNoEscopo } from '../escopo/escopo';
 import type {
   AlocacaoDoMedico,
@@ -73,12 +73,15 @@ export class FakeAusenciasRepository implements AusenciasRepository {
     ).length;
   }
 
-  async doMedico(medicoId: string, limite: number) {
-    return [...this.ausencias.values()]
+  async doMedico(medicoId: string, { pagina, porPagina }: Paginacao) {
+    const todas = [...this.ausencias.values()]
       .filter((a) => a.medicoId === medicoId)
-      .sort((x, y) => y.dataInicio.localeCompare(x.dataInicio))
-      .slice(0, limite)
-      .map((a) => this.detalhar(a));
+      .sort((x, y) => y.dataInicio.localeCompare(x.dataInicio));
+    const inicio = (pagina - 1) * porPagina;
+    return {
+      itens: todas.slice(inicio, inicio + porPagina).map((a) => this.detalhar(a)),
+      total: todas.length,
+    };
   }
 
   async tipo(id: string) {

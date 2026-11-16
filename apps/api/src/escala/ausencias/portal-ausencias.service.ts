@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 
+import type { Pagina, Paginacao } from '../../catalogo/comum/paginacao';
 import { CLOCK, type Clock } from '../../identidade/clock';
 import {
   cancelarSolicitacao,
@@ -22,9 +23,6 @@ import {
 import { fotoDe } from './ausencias.service';
 import { camposDeCriacao, camposDoEvento, eventoAusencia } from './evento-ausencia';
 
-/** Quantas ausências o portal mostra (dashboards-one `minhasAusencias`). */
-export const LIMITE_PORTAL = 60;
-
 /** Pedido do médico: sem recorte de frente (vale para todas); turno e dias da semana, sim. */
 export interface PedidoAusencia {
   tipoId: string;
@@ -44,8 +42,12 @@ export class PortalAusenciasService {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async listar(conta: { usuarioId: string }): Promise<AusenciaDetalhada[]> {
-    return this.repo.doMedico(await this.medicoDa(conta), LIMITE_PORTAL);
+  /** As do médico, mais recentes primeiro, paginadas (o dashboards-one cortava nas 60 primeiras). */
+  async listar(
+    conta: { usuarioId: string },
+    paginacao: Paginacao,
+  ): Promise<Pagina<AusenciaDetalhada>> {
+    return this.repo.doMedico(await this.medicoDa(conta), paginacao);
   }
 
   async solicitar(conta: { usuarioId: string }, pedido: PedidoAusencia): Promise<string> {

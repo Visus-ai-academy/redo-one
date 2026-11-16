@@ -187,16 +187,62 @@ describe('AusenciasService', () => {
       expect(criada?.frentes.map((f) => f.id).sort()).toEqual(['f-neuro', 'f-tc']);
     });
 
-    it('gestora com recorte de turno: "todas as frentes" vira as frentes do médico nesses turnos', async () => {
+    it('gestora com recorte de turno: "o dia inteiro" vira os turnos do recorte, em todas as frentes', async () => {
       const { service, escopos, repo } = ctx;
       await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: [] });
 
       const ids = await service.criar(gestora, entrada({ medicoIds: ['m-ana', 'm-caio'] }));
 
-      const frentes = await Promise.all(
-        ids.map(async (id) => (await repo.buscar(id))?.frentes.map((f) => f.id)),
+      for (const id of ids) {
+        expect(await repo.buscar(id)).toMatchObject({ turnos: [{ id: 'tu-manha' }], frentes: [] });
+      }
+    });
+
+    it('gestora com recorte de turno: frente escolhida fica só nos turnos do recorte', async () => {
+      const { service, escopos, repo } = ctx;
+      await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: [] });
+
+      const [id = ''] = await service.criar(gestora, entrada({ frenteIds: ['f-neuro'] }));
+
+      expect(await repo.buscar(id)).toMatchObject({
+        turnos: [{ id: 'tu-manha' }],
+        frentes: [{ id: 'f-neuro' }],
+      });
+    });
+
+    it('gestora com recorte de turno não escolhe turno fora do recorte', async () => {
+      const { service, escopos } = ctx;
+      await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: [] });
+
+      await expect(
+        service.criar(gestora, entrada({ turnoIds: ['tu-manha', 'tu-tarde'] })),
+      ).rejects.toThrow(/recorte/);
+    });
+
+    it('turno fora do recorte vale se todas as frentes escolhidas estão no recorte', async () => {
+      const { service, escopos, repo } = ctx;
+      await escopos.definir('u-gestora', { turnoIds: [], frenteIds: ['f-neuro'] });
+
+      const [id = ''] = await service.criar(gestora, entrada({ turnoIds: ['tu-tarde'] }));
+
+      expect(await repo.buscar(id)).toMatchObject({
+        turnos: [{ id: 'tu-tarde' }],
+        frentes: [{ id: 'f-neuro' }],
+      });
+    });
+
+    it('recorte misto: restringe pelos turnos se o médico tem alocação neles, senão pelas frentes', async () => {
+      const { service, escopos, repo } = ctx;
+      await escopos.definir('u-gestora', { turnoIds: ['tu-tarde'], frenteIds: ['f-neuro'] });
+
+      // Ana só está no recorte pela frente (NEURO de manhã); Bia pelo turno (TC à tarde).
+      const [ana = '', bia = ''] = await service.criar(
+        gestora,
+        entrada({ medicoIds: ['m-ana', 'm-bia'], dataInicio: '2026-10-20', dataFim: '2026-11-05' }),
       );
-      expect(frentes.sort()).toEqual([['f-neuro'], ['f-rx']]);
+
+      expect(await repo.buscar(ana)).toMatchObject({ turnos: [], frentes: [{ id: 'f-neuro' }] });
+      expect(await repo.buscar(bia)).toMatchObject({ turnos: [{ id: 'tu-tarde' }], frentes: [] });
     });
 
     it('gestora não escolhe frente fora do recorte', async () => {
@@ -327,6 +373,70 @@ describe('AusenciasService', () => {
       ).resolves.toBeUndefined();
     });
 
+    it('sem frentes e turnos no corpo, mantém os que a ausência já tem', async () => {
+      const { service, repo } = ctx;
+      const [id = ''] = await service.criar(
+        admin,
+        entrada({ frenteIds: ['f-neuro'], turnoIds: ['tu-manha'] }),
+      );
+
+      await service.atualizar(admin, id, {
+        tipoId: 't-ferias',
+        dataInicio: '2026-12-01',
+        dataFim: '2026-12-10',
+        observacoes: 'nova',
+      });
+
+      expect(await repo.buscar(id)).toMatchObject({
+        frentes: [{ id: 'f-neuro' }],
+        turnos: [{ id: 'tu-manha' }],
+        observacoes: 'nova',
+      });
+    });
+
+    it('gestora edita a ausência inteira no recorte sem mexer nas frentes e turnos', async () => {
+      const { service, escopos, repo } = ctx;
+      await escopos.definir('u-gestora', { turnoIds: [], frenteIds: ['f-neuro', 'f-tc'] });
+      const [id = ''] = await service.criar(admin, entrada({ frenteIds: ['f-neuro'] }));
+
+      await service.atualizar(gestora, id, { ...entrada(), observacoes: 'só a observação' });
+
+      expect(await repo.buscar(id)).toMatchObject({ frentes: [{ id: 'f-neuro' }], turnos: [] });
+      expect(repo.eventos.at(-1)).toMatchObject({
+        antes: { frenteIds: ['f-neuro'], turnoIds: [] },
+        depois: { frenteIds: ['f-neuro'], turnoIds: [], observacoesAlteradas: true },
+      });
+    });
+
+    it('gestora não edita, exclui, aprova nem recusa ausência que vale fora do recorte', async () => {
+      const { service, escopos, repo } = ctx;
+      // "Todas as frentes" e "o dia inteiro": também tira a Ana da Tarde, de outra gestora.
+      const [id = ''] = await service.criar(admin, entrada());
+      repo.copiar(id, 'p-ana', { situacao: 'pendente', origem: 'medico' });
+      await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: ['f-neuro'] });
+
+      const fora = /fora do seu recorte/;
+      await expect(
+        service.atualizar(gestora, id, { ...entrada(), observacoes: 'x' }),
+      ).rejects.toThrow(fora);
+      await expect(service.excluir(gestora, id)).rejects.toThrow(fora);
+      await expect(service.aprovar(gestora, 'p-ana')).rejects.toThrow(fora);
+      await expect(service.recusar(gestora, 'p-ana', 'não')).rejects.toThrow(fora);
+      await expect(service.obter(gestora, id)).resolves.toMatchObject({ id });
+      expect(repo.ausencias.get(id)?.observacoes).toBeNull();
+      expect(repo.ausencias.get('p-ana')?.situacao).toBe('pendente');
+    });
+
+    it('gestora não amplia a ausência para fora do recorte na edição', async () => {
+      const { service, escopos } = ctx;
+      await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: [] });
+      const [id = ''] = await service.criar(gestora, entrada());
+
+      await expect(
+        service.atualizar(gestora, id, { ...entrada(), turnoIds: ['tu-manha', 'tu-tarde'] }),
+      ).rejects.toThrow(/recorte/);
+    });
+
     it('gestora não edita nem exclui ausência de médico fora do recorte', async () => {
       const { service, escopos } = ctx;
       const [id = ''] = await service.criar(admin, entrada({ medicoIds: ['m-caio'] }));
@@ -419,6 +529,8 @@ describe('AusenciasService', () => {
       await expect(service.aprovar(gestora, 'p-1')).rejects.toThrow(/não encontrada/);
       await expect(service.recusar(gestora, 'p-1', 'não')).rejects.toThrow(/não encontrada/);
       await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: [] });
+      const p1 = ctx.repo.ausencias.get('p-1');
+      if (p1) p1.turnoIds = ['tu-manha'];
       await expect(service.aprovar(gestora, 'p-1')).resolves.toBeUndefined();
     });
   });

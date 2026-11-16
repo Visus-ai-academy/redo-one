@@ -118,7 +118,9 @@ export class AusenciaDto extends PeriodoAusenciaDto {
     type: [String],
     format: 'uuid',
     description:
-      'Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).',
+      'Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) ' +
+      'mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: "todas" ou "o dia inteiro" ' +
+      'podem virar as frentes ou os turnos do recorte.',
   })
   @IsOptional()
   @IsArray()
@@ -209,6 +211,13 @@ export class AusenciaItemDto extends AusenciaPortalDto {
   solicitadaPor!: ReferenciaAusenciaDto | null;
   @ApiProperty({ type: ReferenciaAusenciaDto, nullable: true })
   revisadaPor!: ReferenciaAusenciaDto | null;
+}
+
+export class PaginaAusenciasPortalDto {
+  @ApiProperty({ type: [AusenciaPortalDto] }) itens!: AusenciaPortalDto[];
+  @ApiProperty() total!: number;
+  @ApiProperty() pagina!: number;
+  @ApiProperty() porPagina!: number;
 }
 
 export class PaginaAusenciasDto {

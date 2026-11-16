@@ -112,7 +112,7 @@ describe('AusenciasController', () => {
 describe('PortalAusenciasController', () => {
   function montar() {
     const service = {
-      listar: vi.fn(async () => [item]),
+      listar: vi.fn(async () => ({ itens: [item], total: 1 })),
       solicitar: vi.fn(async () => 'a-9'),
       cancelar: vi.fn(async () => undefined),
     };
@@ -132,12 +132,14 @@ describe('PortalAusenciasController', () => {
     }
   });
 
-  it('lista sem quem pediu nem quem revisou', async () => {
+  it('lista paginada, sem quem pediu nem quem revisou', async () => {
     const { controller, service } = montar();
 
-    const [primeira] = await controller.listar(gestora);
+    const pagina = await controller.listar(gestora, { pagina: 2, porPagina: 25 });
+    const [primeira] = pagina.itens;
 
-    expect(service.listar).toHaveBeenCalledWith({ usuarioId: 'u-g' });
+    expect(service.listar).toHaveBeenCalledWith({ usuarioId: 'u-g' }, { pagina: 2, porPagina: 25 });
+    expect(pagina).toMatchObject({ total: 1, pagina: 2, porPagina: 25 });
     expect(primeira).not.toHaveProperty('solicitadaPor');
     expect(primeira).not.toHaveProperty('revisadaPor');
     expect(primeira).toMatchObject({ id: 'a-1', observacoes: 'x' });

@@ -93,8 +93,8 @@ export interface AusenciasRepository {
   buscar(id: string): Promise<AusenciaDetalhada | null>;
   /** Pendentes no recorte (`null` = todas). */
   contarPendentes(escopo: EscopoEscala | null): Promise<number>;
-  /** As mais recentes do médico (por início), em todas as situações. */
-  doMedico(medicoId: string, limite: number): Promise<AusenciaDetalhada[]>;
+  /** As do médico, mais recentes (por início) primeiro, em todas as situações, paginadas. */
+  doMedico(medicoId: string, paginacao: Paginacao): Promise<Pagina<AusenciaDetalhada>>;
 
   tipo(id: string): Promise<TipoAusenciaCadastro | null>;
   /** Os ids que existem entre os pedidos. */

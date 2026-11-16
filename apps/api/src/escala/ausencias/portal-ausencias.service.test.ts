@@ -55,7 +55,9 @@ describe('PortalAusenciasService', () => {
 
   it('conta sem médico não usa o portal', async () => {
     const gestor = { usuarioId: 'u-gestor' };
-    await expect(ctx.service.listar(gestor)).rejects.toThrow(ContaSemMedicoError);
+    await expect(ctx.service.listar(gestor, { pagina: 1, porPagina: 25 })).rejects.toThrow(
+      ContaSemMedicoError,
+    );
     await expect(ctx.service.solicitar(gestor, pedido())).rejects.toThrow(ContaSemMedicoError);
     await expect(ctx.service.cancelar(gestor, 'x')).rejects.toThrow(ContaSemMedicoError);
   });
@@ -103,7 +105,7 @@ describe('PortalAusenciasService', () => {
     await expect(service.solicitar(ana, pedido({ turnoIds: ['tu-x'] }))).rejects.toThrow(/Turno/);
   });
 
-  it('lista as 60 mais recentes do próprio médico, em todas as situações', async () => {
+  it('lista paginadas as do próprio médico, mais recentes primeiro, em todas as situações', async () => {
     const { service, repo } = ctx;
     for (let i = 0; i < 62; i++) {
       const dia = String((i % 28) + 1).padStart(2, '0');
@@ -119,11 +121,15 @@ describe('PortalAusenciasService', () => {
       dataFim: '2027-01-01',
     });
 
-    const minhas = await service.listar(ana);
+    const primeira = await service.listar(ana, { pagina: 1, porPagina: 25 });
+    const ultima = await service.listar(ana, { pagina: 3, porPagina: 25 });
 
-    expect(minhas).toHaveLength(60);
-    expect(minhas.every((a) => a.medico.id === 'm-ana')).toBe(true);
-    expect(minhas[0]?.dataInicio).toBe('2026-03-06');
+    expect(primeira.total).toBe(62);
+    expect(primeira.itens).toHaveLength(25);
+    expect(primeira.itens.every((a) => a.medico.id === 'm-ana')).toBe(true);
+    expect(primeira.itens[0]?.dataInicio).toBe('2026-03-06');
+    expect(ultima.itens).toHaveLength(12);
+    expect(ultima.itens.at(-1)?.dataInicio).toBe('2026-01-01');
   });
 
   it('cancela só o próprio pedido pendente, apagando com auditoria', async () => {

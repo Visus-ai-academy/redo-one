@@ -236,13 +236,18 @@ describe.skipIf(!url)('DrizzleAusenciasRepository', () => {
     expect(await repo.contarPendentes(escopoTc)).toBe(0);
   });
 
-  it('as mais recentes do médico', async () => {
+  it('as do médico, mais recentes primeiro, paginadas', async () => {
     const a = nova({ dataInicio: '2026-01-01', dataFim: '2026-01-01' });
     const b = nova({ dataInicio: '2026-03-01', dataFim: '2026-03-01' });
     const c = nova({ dataInicio: '2026-02-01', dataFim: '2026-02-01' });
     await repo.criar([a, b, c, nova({ medicoId: ids.bia })], []);
 
-    expect((await repo.doMedico(ids.ana, 2)).map((x) => x.id)).toEqual([b.id, c.id]);
+    const primeira = await repo.doMedico(ids.ana, { pagina: 1, porPagina: 2 });
+    const segunda = await repo.doMedico(ids.ana, { pagina: 2, porPagina: 2 });
+
+    expect(primeira.itens.map((x) => x.id)).toEqual([b.id, c.id]);
+    expect(primeira.total).toBe(3);
+    expect(segunda.itens.map((x) => x.id)).toEqual([a.id]);
   });
 
   it('atualiza trocando frentes e turnos, revisa só a pendente e exclui', async () => {

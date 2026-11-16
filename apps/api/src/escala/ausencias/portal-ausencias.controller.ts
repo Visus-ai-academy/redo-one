@@ -9,6 +9,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -20,10 +21,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { IdCriadoDto } from '../../catalogo/comum/dto';
+import { IdCriadoDto, PaginacaoDto } from '../../catalogo/comum/dto';
 import { PrincipalAtual } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
-import { AusenciaPortalDto, PedidoAusenciaDto } from './dto/ausencia.dto';
+import { PaginaAusenciasPortalDto, PedidoAusenciaDto } from './dto/ausencia.dto';
 import { PortalAusenciasService } from './portal-ausencias.service';
 
 /**
@@ -37,11 +38,25 @@ export class PortalAusenciasController {
   constructor(@Inject(PortalAusenciasService) private readonly service: PortalAusenciasService) {}
 
   @Get()
-  @ApiOkResponse({ type: [AusenciaPortalDto], description: 'As 60 mais recentes do médico.' })
+  @ApiOkResponse({
+    type: PaginaAusenciasPortalDto,
+    description: 'As do médico, mais recentes primeiro.',
+  })
   @ApiForbiddenResponse({ description: 'Conta sem médico ligado.' })
-  async listar(@PrincipalAtual() principal: PrincipalUsuario): Promise<AusenciaPortalDto[]> {
-    const ausencias = await this.service.listar({ usuarioId: principal.usuarioId });
-    return ausencias.map(({ solicitadaPor: _s, revisadaPor: _r, ...ausencia }) => ausencia);
+  async listar(
+    @PrincipalAtual() principal: PrincipalUsuario,
+    @Query() { pagina, porPagina }: PaginacaoDto,
+  ): Promise<PaginaAusenciasPortalDto> {
+    const { itens, total } = await this.service.listar(
+      { usuarioId: principal.usuarioId },
+      { pagina, porPagina },
+    );
+    return {
+      itens: itens.map(({ solicitadaPor: _s, revisadaPor: _r, ...ausencia }) => ausencia),
+      total,
+      pagina,
+      porPagina,
+    };
   }
 
   @Post()

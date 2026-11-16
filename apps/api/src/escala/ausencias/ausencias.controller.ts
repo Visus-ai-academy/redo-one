@@ -42,8 +42,9 @@ const gestor = (p: PrincipalUsuario): Gestor => ({
 });
 
 /**
- * Tela de ausências do gestor. A gestora com recorte só vê e mexe nas ausências de médicos com
- * alocação vigente no recorte; as demais respondem 404.
+ * Tela de ausências do gestor. A gestora com recorte só vê as ausências de médicos com alocação
+ * vigente no recorte (as demais respondem 404) e só edita, exclui, aprova ou recusa as que valem
+ * inteiras dentro do recorte (as demais respondem 403).
  */
 @ApiTags('escala')
 @Controller('escala/ausencias')
@@ -91,7 +92,7 @@ export class AusenciasController {
   @Permissao('escala.ausencia.editar')
   @ApiCreatedResponse({ type: AusenciasCriadasDto, description: 'Uma ausência por médico.' })
   @ApiBadRequestResponse({ description: 'Período, dias, tipo inativo ou cadastro inexistente.' })
-  @ApiForbiddenResponse({ description: 'Médico ou frente fora do recorte da gestora.' })
+  @ApiForbiddenResponse({ description: 'Médico, turno ou frente fora do recorte da gestora.' })
   async criar(
     @PrincipalAtual() principal: PrincipalUsuario,
     @Body() corpo: CriarAusenciasDto,
@@ -105,7 +106,10 @@ export class AusenciasController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
   @ApiBadRequestResponse({ description: 'Período, dias, tipo inativo ou cadastro inexistente.' })
-  @ApiForbiddenResponse({ description: 'Frente fora do recorte da gestora.' })
+  @ApiForbiddenResponse({
+    description:
+      'A ausência vale fora do recorte da gestora, ou o novo turno ou frente fica fora dele.',
+  })
   atualizar(
     @PrincipalAtual() principal: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
@@ -119,6 +123,7 @@ export class AusenciasController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
+  @ApiForbiddenResponse({ description: 'A ausência vale fora do recorte da gestora.' })
   excluir(
     @PrincipalAtual() principal: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
@@ -132,6 +137,7 @@ export class AusenciasController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
   @ApiBadRequestResponse({ description: 'A solicitação já foi revisada.' })
+  @ApiForbiddenResponse({ description: 'A ausência vale fora do recorte da gestora.' })
   aprovar(
     @PrincipalAtual() principal: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
@@ -145,6 +151,7 @@ export class AusenciasController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
   @ApiBadRequestResponse({ description: 'Sem motivo ou a solicitação já foi revisada.' })
+  @ApiForbiddenResponse({ description: 'A ausência vale fora do recorte da gestora.' })
   recusar(
     @PrincipalAtual() principal: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,

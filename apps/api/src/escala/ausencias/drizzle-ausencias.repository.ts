@@ -17,6 +17,7 @@ import {
 import { alias } from 'drizzle-orm/pg-core';
 
 import type { EventoAuditoria } from '../../auditoria/auditoria';
+import type { Paginacao } from '../../catalogo/comum/paginacao';
 import { contem } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import {
@@ -208,12 +209,17 @@ export class DrizzleAusenciasRepository implements AusenciasRepository {
     return linha?.total ?? 0;
   }
 
-  async doMedico(medicoId: string, limite: number) {
-    const linhas = await this.consulta()
-      .where(eq(ausencias.medicoId, medicoId))
-      .orderBy(desc(ausencias.dataInicio), desc(ausencias.criadoEm))
-      .limit(limite);
-    return linhas.map(detalhar);
+  async doMedico(medicoId: string, { pagina, porPagina }: Paginacao) {
+    const onde = eq(ausencias.medicoId, medicoId);
+    const [linhas, [total]] = await Promise.all([
+      this.consulta()
+        .where(onde)
+        .orderBy(desc(ausencias.dataInicio), desc(ausencias.criadoEm), asc(ausencias.id))
+        .limit(porPagina)
+        .offset((pagina - 1) * porPagina),
+      this.db.select({ total: count() }).from(ausencias).where(onde),
+    ]);
+    return { itens: linhas.map(detalhar), total: total?.total ?? 0 };
   }
 
   async tipo(id: string) {
