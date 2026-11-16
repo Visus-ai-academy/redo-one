@@ -7153,7 +7153,56 @@
           "sessoesEncerradas"
         ]
       },
-      "AcaoCatalogoDto": {
+      "AreaPermissao": {
+        "type": "string",
+        "enum": [
+          "Painéis",
+          "Operação",
+          "Cadastros",
+          "Financeiro",
+          "Configurações"
+        ]
+      },
+      "AcaoPadraoPermissao": {
+        "type": "string",
+        "enum": [
+          "ver",
+          "criar",
+          "editar",
+          "excluir"
+        ]
+      },
+      "AcaoPadraoCatalogoDto": {
+        "type": "object",
+        "properties": {
+          "acao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AcaoPadraoPermissao"
+              }
+            ]
+          },
+          "chave": {
+            "type": "string",
+            "example": "usuarios.criar"
+          },
+          "rotulo": {
+            "type": "string",
+            "example": "Convidar",
+            "description": "Ver, Criar, Editar ou Excluir, salvo rótulo próprio."
+          },
+          "sensivel": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "acao",
+          "chave",
+          "rotulo",
+          "sensivel"
+        ]
+      },
+      "EspecialCatalogoDto": {
         "type": "object",
         "properties": {
           "chave": {
@@ -7164,6 +7213,10 @@
             "type": "string",
             "example": "Desbloquear"
           },
+          "descricao": {
+            "type": "string",
+            "example": "Liberar a conta bloqueada por senha errada."
+          },
           "sensivel": {
             "type": "boolean"
           }
@@ -7171,6 +7224,7 @@
         "required": [
           "chave",
           "rotulo",
+          "descricao",
           "sensivel"
         ]
       },
@@ -7186,19 +7240,33 @@
             "example": "Usuários"
           },
           "area": {
-            "type": "string",
-            "enum": [
-              "Painéis",
-              "Operação",
-              "Cadastros",
-              "Financeiro",
-              "Configurações"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AreaPermissao"
+              }
             ]
           },
-          "acoes": {
+          "padrao": {
+            "description": "Só as ações padrão que a tela tem, na ordem ver, criar, editar, excluir.",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AcaoCatalogoDto"
+              "$ref": "#/components/schemas/AcaoPadraoCatalogoDto"
+            }
+          },
+          "especiais": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EspecialCatalogoDto"
+            }
+          },
+          "exige": {
+            "example": [
+              "escala"
+            ],
+            "description": "Telas cujo `ver` vem junto com qualquer ação desta.",
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
@@ -7206,7 +7274,9 @@
           "tela",
           "rotulo",
           "area",
-          "acoes"
+          "padrao",
+          "especiais",
+          "exige"
         ]
       },
       "RecuperacaoSenhaDto": {
@@ -11030,6 +11100,10 @@
             "format": "date-time",
             "type": "string"
           },
+          "temObservacoes": {
+            "type": "boolean",
+            "description": "Há observação gravada. Sem `ausencias.observacoes.ver`, `observacoes` e `motivoRecusa` vêm `null` (dado de saúde)."
+          },
           "solicitadaPor": {
             "nullable": true,
             "type": "object",
@@ -11064,6 +11138,7 @@
           "motivoRecusa",
           "revisadaEm",
           "criadoEm",
+          "temObservacoes",
           "solicitadaPor",
           "revisadaPor"
         ]
