@@ -4785,6 +4785,846 @@
         ]
       }
     },
+    "/escala/alocacoes/{id}": {
+      "get": {
+        "operationId": "AlocacoesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlocacaoItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não existe ou está fora do recorte de quem consulta."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "put": {
+        "operationId": "AlocacoesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlocacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvisosEscalaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Regra da escala, ou é cobertura (use a rota dela)."
+          },
+          "403": {
+            "description": "O novo turno e frente saem do recorte da gestora."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "delete": {
+        "operationId": "AlocacoesController_remover",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Remove também as coberturas e os ajustes do vínculo."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/alocacoes": {
+      "post": {
+        "operationId": "AlocacoesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlocacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoComAvisosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Regra da escala, médico inativo ou frente fora do turno."
+          },
+          "403": {
+            "description": "Turno e frente fora do recorte da gestora."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/alocacoes/{id}/coberturas": {
+      "post": {
+        "operationId": "AlocacoesController_criarCobertura",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoberturaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoComAvisosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fora da vigência, sem plantão no período, etc."
+          },
+          "404": {
+            "description": "Vínculo titular não encontrado."
+          },
+          "409": {
+            "description": "Outro médico já cobre o vínculo num desses plantões."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/alocacoes/{id}/ajustes/{data}": {
+      "put": {
+        "operationId": "AlocacoesController_definirAjuste",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "data",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjusteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Gratificada, data inválida ou dia sem plantão."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/coberturas/{id}": {
+      "put": {
+        "operationId": "CoberturasController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoberturaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvisosEscalaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Não é cobertura, ou fora da regra."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Outro médico já cobre o vínculo num desses plantões."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/ocorrencias": {
+      "get": {
+        "operationId": "OcorrenciasController_listar",
+        "parameters": [
+          {
+            "name": "de",
+            "required": true,
+            "in": "query",
+            "description": "Dia de Brasília, inclusivo.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": true,
+            "in": "query",
+            "description": "Dia de Brasília, inclusivo; até 62 dias após `de`.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "medicoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "turnoIds",
+            "required": false,
+            "in": "query",
+            "description": "Separados por vírgula ou repetidos. Vazio = todos.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "frenteIds",
+            "required": false,
+            "in": "query",
+            "description": "Separados por vírgula ou repetidos. Vazio = todas.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantões da janela (até 62 dias) no recorte de quem consulta, e os conflitos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcorrenciasDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período inválido ou maior que 62 dias."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/portal/minha-escala": {
+      "get": {
+        "operationId": "MinhaEscalaController_listar",
+        "parameters": [
+          {
+            "name": "de",
+            "required": true,
+            "in": "query",
+            "description": "Dia de Brasília, inclusivo.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": true,
+            "in": "query",
+            "description": "Dia de Brasília, inclusivo; até 62 dias após `de`.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantões do médico da conta na janela.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcorrenciasDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período inválido ou maior que 62 dias."
+          },
+          "403": {
+            "description": "Conta sem médico vinculado."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/ausencias": {
+      "get": {
+        "operationId": "AusenciasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoAusencia"
+            }
+          },
+          {
+            "name": "tipoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "frenteId",
+            "required": false,
+            "in": "query",
+            "description": "Ausências dessa frente, incluindo as que valem para todas as frentes.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "medicoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome do médico.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "de",
+            "required": false,
+            "in": "query",
+            "description": "Ausências que terminam neste dia ou depois. Padrão: hoje − 30 dias.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": false,
+            "in": "query",
+            "description": "Ausências que começam até este dia.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pendentes primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaAusenciasDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período inválido."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "post": {
+        "operationId": "AusenciasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarAusenciasDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Uma ausência por médico.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AusenciasCriadasDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período, dias, tipo inativo ou cadastro inexistente."
+          },
+          "403": {
+            "description": "Médico ou frente fora do recorte da gestora."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/ausencias/pendentes/contagem": {
+      "get": {
+        "operationId": "AusenciasController_contarPendentes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Pedidos pendentes no recorte.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContagemPendentesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/ausencias/{id}": {
+      "get": {
+        "operationId": "AusenciasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AusenciaItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "put": {
+        "operationId": "AusenciasController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AusenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Período, dias, tipo inativo ou cadastro inexistente."
+          },
+          "403": {
+            "description": "Frente fora do recorte da gestora."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "delete": {
+        "operationId": "AusenciasController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/ausencias/{id}/aprovar": {
+      "post": {
+        "operationId": "AusenciasController_aprovar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "A solicitação já foi revisada."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/ausencias/{id}/recusar": {
+      "post": {
+        "operationId": "AusenciasController_recusar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecusarAusenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Sem motivo ou a solicitação já foi revisada."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/portal/ausencias": {
+      "get": {
+        "operationId": "PortalAusenciasController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "As 60 mais recentes do médico.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AusenciaPortalDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Conta sem médico ligado."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      },
+      "post": {
+        "operationId": "PortalAusenciasController_solicitar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoAusenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "O pedido nasce pendente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período, dias, motivo, tipo inativo ou inexistente."
+          },
+          "403": {
+            "description": "Conta sem médico ou tipo que só o gestor lança."
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
+    "/escala/portal/ausencias/{id}": {
+      "delete": {
+        "operationId": "PortalAusenciasController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Pedido cancelado (apagado)."
+          },
+          "400": {
+            "description": "O pedido já foi revisado."
+          },
+          "403": {
+            "description": "Conta sem médico ou ausência lançada pelo gestor."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
     "/escala/frentes": {
       "get": {
         "operationId": "FrentesController_listar",
@@ -9237,6 +10077,1131 @@
           "medicoIds"
         ]
       },
+      "ClassificacaoAlocacao": {
+        "type": "string",
+        "enum": [
+          "fixa",
+          "periodo_unico",
+          "gratificada",
+          "cobertura"
+        ]
+      },
+      "AlocacaoItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "diasSemana": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "semanasDoMes": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "horarioInicio": {
+            "type": "string",
+            "example": "07:00"
+          },
+          "horarioFim": {
+            "type": "string",
+            "example": "13:00"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "produtividade": {
+            "type": "number",
+            "nullable": true
+          },
+          "gratificado": {
+            "type": "boolean"
+          },
+          "subespecialidadeGeral": {
+            "type": "boolean"
+          },
+          "prioridadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "coberturaDeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "classificacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClassificacaoAlocacao"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "medicoId",
+          "turnoId",
+          "frenteId",
+          "diasSemana",
+          "semanasDoMes",
+          "horarioInicio",
+          "horarioFim",
+          "dataInicio",
+          "dataFim",
+          "produtividade",
+          "gratificado",
+          "subespecialidadeGeral",
+          "prioridadeIds",
+          "subespecialidadeIds",
+          "coberturaDeId",
+          "observacoes",
+          "classificacao"
+        ]
+      },
+      "AlocacaoDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Precisa estar cadastrada no turno."
+          },
+          "diasSemana": {
+            "description": "0 = domingo … 6 = sábado. Ao menos um.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "semanasDoMes": {
+            "description": "1–5 e -1 (última). Vazio ou ausente = toda semana.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "horarioInicio": {
+            "type": "string",
+            "nullable": true,
+            "example": "07:00",
+            "description": "Ausente = o do turno."
+          },
+          "horarioFim": {
+            "type": "string",
+            "nullable": true,
+            "example": "13:00",
+            "description": "Ausente = o do turno."
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Ausente ou nulo = escala fixa, sem fim."
+          },
+          "produtividade": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Registros por turno; nulo = não informado. No gratificado, a cota do período."
+          },
+          "gratificado": {
+            "type": "boolean",
+            "description": "Só em turno lista. Ausente: falso ao criar; na edição, mantém o atual."
+          },
+          "prioridadeIds": {
+            "description": "Vazio = sem recorte.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeIds": {
+            "description": "Vazio = sem recorte.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeGeral": {
+            "type": "boolean",
+            "description": "O recorte de subespecialidade inclui o geral."
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "medicoId",
+          "turnoId",
+          "frenteId",
+          "diasSemana",
+          "dataInicio"
+        ]
+      },
+      "PlantaoEmConflitoDto": {
+        "type": "object",
+        "properties": {
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoNome": {
+            "type": "string"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteRotulo": {
+            "type": "string"
+          },
+          "inicio": {
+            "type": "string"
+          },
+          "fim": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "alocacaoId",
+          "data",
+          "turnoId",
+          "turnoNome",
+          "frenteId",
+          "frenteRotulo",
+          "inicio",
+          "fim"
+        ]
+      },
+      "ConflitoEscalaDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoNome": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "a": {
+            "$ref": "#/components/schemas/PlantaoEmConflitoDto"
+          },
+          "b": {
+            "$ref": "#/components/schemas/PlantaoEmConflitoDto"
+          }
+        },
+        "required": [
+          "medicoId",
+          "medicoNome",
+          "data",
+          "a",
+          "b"
+        ]
+      },
+      "CriadoComAvisosDto": {
+        "type": "object",
+        "properties": {
+          "avisos": {
+            "description": "Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConflitoEscalaDto"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "avisos",
+          "id"
+        ]
+      },
+      "AvisosEscalaDto": {
+        "type": "object",
+        "properties": {
+          "avisos": {
+            "description": "Sobreposições de horário do médico nas próximas 8 semanas (não bloqueiam).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConflitoEscalaDto"
+            }
+          }
+        },
+        "required": [
+          "avisos"
+        ]
+      },
+      "CoberturaDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Quem cobre."
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "description": "Dentro da vigência do titular."
+          },
+          "diasSemana": {
+            "description": "Dias do titular que a cobertura assume. Vazio ou ausente = todos os dele.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "horarioInicio": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ausente = o do titular."
+          },
+          "horarioFim": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ausente = o do titular."
+          },
+          "produtividade": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Ausente = a do titular (nula se ele é gratificado); nulo = não informada."
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "medicoId",
+          "dataInicio",
+          "dataFim"
+        ]
+      },
+      "AjusteDto": {
+        "type": "object",
+        "properties": {
+          "produtividade": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Nulo remove o ajuste (o dia volta à produtividade da escala)."
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "produtividade"
+        ]
+      },
+      "TipoTurno": {
+        "type": "string",
+        "enum": [
+          "fixo",
+          "lista"
+        ]
+      },
+      "VinculoDaCoberturaDto": {
+        "type": "object",
+        "properties": {
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoNome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "alocacaoId",
+          "medicoId",
+          "medicoNome"
+        ]
+      },
+      "OcorrenciaDto": {
+        "type": "object",
+        "properties": {
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "diaSemana": {
+            "type": "number",
+            "description": "0 = domingo … 6 = sábado."
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoNome": {
+            "type": "string"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoNome": {
+            "type": "string"
+          },
+          "turnoTipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoTurno"
+              }
+            ]
+          },
+          "turnoCor": {
+            "type": "string",
+            "nullable": true
+          },
+          "turnoOrdem": {
+            "type": "number"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteRotulo": {
+            "type": "string"
+          },
+          "frenteCor": {
+            "type": "string",
+            "nullable": true
+          },
+          "frenteOrdem": {
+            "type": "number"
+          },
+          "horarioInicio": {
+            "type": "string",
+            "example": "07:00"
+          },
+          "horarioFim": {
+            "type": "string",
+            "example": "13:00"
+          },
+          "inicio": {
+            "type": "string",
+            "example": "2026-11-16T07:00:00-03:00"
+          },
+          "fim": {
+            "type": "string",
+            "example": "2026-11-16T13:00:00-03:00"
+          },
+          "produtividade": {
+            "type": "number",
+            "nullable": true,
+            "description": "A do dia (com o ajuste)."
+          },
+          "produtividadeEscala": {
+            "type": "number",
+            "nullable": true,
+            "description": "A da escala, sem o ajuste."
+          },
+          "ajustada": {
+            "type": "boolean"
+          },
+          "gratificado": {
+            "type": "boolean"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "prioridadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeGeral": {
+            "type": "boolean"
+          },
+          "coberturaDeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "cobertoPorAlocacaoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ausente": {
+            "type": "boolean"
+          },
+          "tipoAusenciaId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tipo da ausência que vale no dia, `cobertura` quando outro médico cobre, ou nulo."
+          },
+          "tipoAusenciaNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipoAusenciaCor": {
+            "type": "string",
+            "nullable": true
+          },
+          "coberturaDe": {
+            "nullable": true,
+            "description": "Nesta cobertura: o titular.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VinculoDaCoberturaDto"
+              }
+            ]
+          },
+          "cobertoPor": {
+            "nullable": true,
+            "description": "No titular coberto neste dia: quem cobre.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VinculoDaCoberturaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "alocacaoId",
+          "data",
+          "diaSemana",
+          "medicoId",
+          "medicoNome",
+          "turnoId",
+          "turnoNome",
+          "turnoTipo",
+          "turnoCor",
+          "turnoOrdem",
+          "frenteId",
+          "frenteRotulo",
+          "frenteCor",
+          "frenteOrdem",
+          "horarioInicio",
+          "horarioFim",
+          "inicio",
+          "fim",
+          "produtividade",
+          "produtividadeEscala",
+          "ajustada",
+          "gratificado",
+          "dataInicio",
+          "dataFim",
+          "prioridadeIds",
+          "subespecialidadeIds",
+          "subespecialidadeGeral",
+          "coberturaDeId",
+          "cobertoPorAlocacaoId",
+          "ausente",
+          "tipoAusenciaId",
+          "tipoAusenciaNome",
+          "tipoAusenciaCor",
+          "coberturaDe",
+          "cobertoPor"
+        ]
+      },
+      "OcorrenciasDto": {
+        "type": "object",
+        "properties": {
+          "ocorrencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OcorrenciaDto"
+            }
+          },
+          "conflitos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConflitoEscalaDto"
+            }
+          }
+        },
+        "required": [
+          "ocorrencias",
+          "conflitos"
+        ]
+      },
+      "SituacaoAusencia": {
+        "type": "string",
+        "enum": [
+          "pendente",
+          "aprovada",
+          "recusada"
+        ]
+      },
+      "ReferenciaAusenciaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "TipoDaAusenciaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#00AA00"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor"
+        ]
+      },
+      "OrigemAusencia": {
+        "type": "string",
+        "enum": [
+          "gestor",
+          "medico"
+        ]
+      },
+      "AusenciaItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medico": {
+            "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDaAusenciaDto"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date"
+          },
+          "diasSemana": {
+            "description": "Vazio = todos os dias.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "frentes": {
+            "description": "Vazio = todas. `nome` é o rótulo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+            }
+          },
+          "turnos": {
+            "description": "Vazio = o dia inteiro.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+            }
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoAusencia"
+              }
+            ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemAusencia"
+              }
+            ]
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "motivoRecusa": {
+            "type": "string",
+            "nullable": true
+          },
+          "revisadaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "solicitadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+              }
+            ]
+          },
+          "revisadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "medico",
+          "tipo",
+          "dataInicio",
+          "dataFim",
+          "diasSemana",
+          "frentes",
+          "turnos",
+          "situacao",
+          "origem",
+          "observacoes",
+          "motivoRecusa",
+          "revisadaEm",
+          "criadoEm",
+          "solicitadaPor",
+          "revisadaPor"
+        ]
+      },
+      "PaginaAusenciasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AusenciaItemDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "ContagemPendentesDto": {
+        "type": "object",
+        "properties": {
+          "pendentes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pendentes"
+        ]
+      },
+      "CriarAusenciasDto": {
+        "type": "object",
+        "properties": {
+          "tipoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-01"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-10"
+          },
+          "turnoIds": {
+            "description": "Turnos em que vale. Vazio = o dia inteiro.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "diasSemana": {
+            "description": "Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "frenteIds": {
+            "description": "Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Dado de saúde (LGPD): não vai para o histórico."
+          },
+          "medicoIds": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "tipoId",
+          "dataInicio",
+          "dataFim",
+          "medicoIds"
+        ]
+      },
+      "AusenciasCriadasDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "Na ordem dos médicos pedidos.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "AusenciaDto": {
+        "type": "object",
+        "properties": {
+          "tipoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-01"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-10"
+          },
+          "turnoIds": {
+            "description": "Turnos em que vale. Vazio = o dia inteiro.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "diasSemana": {
+            "description": "Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "frenteIds": {
+            "description": "Frentes em que vale. Vazio = todas (para a gestora com recorte, as frentes do recorte).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Dado de saúde (LGPD): não vai para o histórico."
+          }
+        },
+        "required": [
+          "tipoId",
+          "dataInicio",
+          "dataFim"
+        ]
+      },
+      "RecusarAusenciaDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "O médico vê o motivo no portal."
+          }
+        },
+        "required": [
+          "motivo"
+        ]
+      },
+      "AusenciaPortalDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medico": {
+            "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDaAusenciaDto"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date"
+          },
+          "diasSemana": {
+            "description": "Vazio = todos os dias.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "frentes": {
+            "description": "Vazio = todas. `nome` é o rótulo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+            }
+          },
+          "turnos": {
+            "description": "Vazio = o dia inteiro.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenciaAusenciaDto"
+            }
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoAusencia"
+              }
+            ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemAusencia"
+              }
+            ]
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "motivoRecusa": {
+            "type": "string",
+            "nullable": true
+          },
+          "revisadaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "medico",
+          "tipo",
+          "dataInicio",
+          "dataFim",
+          "diasSemana",
+          "frentes",
+          "turnos",
+          "situacao",
+          "origem",
+          "observacoes",
+          "motivoRecusa",
+          "revisadaEm",
+          "criadoEm"
+        ]
+      },
+      "PedidoAusenciaDto": {
+        "type": "object",
+        "properties": {
+          "tipoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-01"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-10"
+          },
+          "turnoIds": {
+            "description": "Turnos em que vale. Vazio = o dia inteiro.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "diasSemana": {
+            "description": "Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "observacoes": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 2000,
+            "description": "Motivo do pedido. Dado de saúde (LGPD)."
+          }
+        },
+        "required": [
+          "tipoId",
+          "dataInicio",
+          "dataFim",
+          "observacoes"
+        ]
+      },
       "TipoFrenteEscala": {
         "type": "string",
         "enum": [
@@ -9381,13 +11346,6 @@
           "tipo",
           "ordem",
           "ativo"
-        ]
-      },
-      "TipoTurno": {
-        "type": "string",
-        "enum": [
-          "fixo",
-          "lista"
         ]
       },
       "FrenteDoTurnoDto": {
