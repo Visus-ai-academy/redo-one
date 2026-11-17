@@ -184,6 +184,21 @@ describe('TelaEscala', () => {
     const grade = screen.getByRole('table', { name: 'TC Neuro' });
     expect(within(grade).getByRole('button', { name: /Bruno Lima/ })).toBeInTheDocument();
     expect(within(grade).queryByRole('button', { name: /Ana Souza/ })).not.toBeInTheDocument();
+    // Com a busca, frente em que o médico não aparece some (sem a busca, fica para alocar).
+    expect(screen.queryByRole('table', { name: 'RM Geral' })).not.toBeInTheDocument();
+  });
+
+  it('busca sem ninguém na semana avisa no lugar dos calendários', async () => {
+    await montar({
+      filtros: { modo: 'semana', agrupar: 'frente', data: '2026-11-18', busca: 'zeca' },
+    });
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText('Ninguém com “zeca” nesta semana.')).toBeInTheDocument();
+  });
+
+  it('sem busca, frente vazia continua aparecendo (é nela que se aloca)', async () => {
+    await montar();
+    expect(screen.getByRole('table', { name: 'RM Geral' })).toBeInTheDocument();
   });
 
   it('avisos de conflito depois de salvar, sem bloquear', async () => {

@@ -435,13 +435,26 @@ function Conteudo({
     const frentesVistas = filtros.frenteIds?.length
       ? frentes.filter((f) => filtros.frenteIds?.includes(f.id))
       : frentes;
-    return montarCalendarios({
+    const montada = montarCalendarios({
       ocorrencias,
       turnos: turnosVistos,
       frentes: frentesVistas,
       por: filtros.agrupar,
     });
-  }, [ocorrencias, turnos, frentes, filtros.turnoIds, filtros.frenteIds, filtros.agrupar]);
+    // Buscando um médico, só as frentes (ou turnos) em que ele aparece; sem busca, a vazia fica
+    // para alocar.
+    return filtros.busca
+      ? { ...montada, calendarios: montada.calendarios.filter((c) => c.plantoes > 0) }
+      : montada;
+  }, [
+    ocorrencias,
+    turnos,
+    frentes,
+    filtros.turnoIds,
+    filtros.frenteIds,
+    filtros.agrupar,
+    filtros.busca,
+  ]);
   const descrever = useCallback(
     (o: OcorrenciaDto) =>
       descreverPlantao(o, {
@@ -533,8 +546,9 @@ function Conteudo({
       {modo === 'semana' &&
         (semana.calendarios.length === 0 ? (
           <p className="bg-card text-muted-foreground rounded-lg border p-4">
-            Nenhum turno com frente para mostrar. Confira os filtros ou ligue frentes aos turnos em
-            Configurações › Escala médica.
+            {filtros.busca
+              ? `Ninguém com “${filtros.busca}” nesta semana.`
+              : 'Nenhum turno com frente para mostrar. Confira os filtros ou ligue frentes aos turnos em Configurações › Escala médica.'}
           </p>
         ) : (
           <>
