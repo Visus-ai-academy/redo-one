@@ -14,7 +14,8 @@
       "!apps/web/src/gen",
       "!apps/api/openapi.json",
       "!apps/api/drizzle",
-      "!**/*.md"
+      "!**/*.md",
+      "!!.claude/worktrees"
     ]
   },
   "overrides": [
