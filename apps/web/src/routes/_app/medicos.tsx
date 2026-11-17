@@ -32,7 +32,7 @@ import { usuariosControllerListarQueryOptions } from '../../gen/hooks/useUsuario
 import { usuariosControllerPapeisQueryOptions } from '../../gen/hooks/useUsuariosControllerPapeis';
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import type { MedicoResumoDto } from '../../gen/types/MedicoResumoDto';
-import { invalidarMedicos } from '../../lib/medicos';
+import { abasDoMedico, invalidarMedicos } from '../../lib/medicos';
 import { pode } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
@@ -262,6 +262,7 @@ function PainelDoMedico({
       />
     );
   const atualizar = () => invalidarMedicos(queryClient);
+  const abas = abasDoMedico(sessao);
 
   return (
     <PainelMedico
@@ -314,11 +315,8 @@ function PainelDoMedico({
       }
       escala={id && pode(sessao, 'escala.ver') ? <AbaEscalaMedico medicoId={id} /> : undefined}
       distribuicao={
-        id ? (
-          <AbaDistribuicaoMedico
-            medicoId={id}
-            podeEditar={pode(sessao, 'medicos.distribuicao.editar')}
-          />
+        id && abas.distribuicao.ver ? (
+          <AbaDistribuicaoMedico medicoId={id} podeEditar={abas.distribuicao.editar} />
         ) : undefined
       }
     />

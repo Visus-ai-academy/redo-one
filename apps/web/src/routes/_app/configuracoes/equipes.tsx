@@ -238,7 +238,7 @@ function PainelDaEquipe({
       buscarMedicos={buscarMedicos}
       podeEditar={id ? permissoes.editar : permissoes.criar}
       distribuicao={
-        id && equipe ? (
+        id && equipe && pode(sessao, 'medicos.distribuicao.ver') ? (
           <AbaDistribuicaoEquipe
             equipeId={id}
             plantao={equipe.plantao}

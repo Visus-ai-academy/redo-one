@@ -45,7 +45,7 @@ export class DistribuicaoMedicoController {
   ) {}
 
   @Get()
-  @Permissao('medicos.ver')
+  @Permissao('medicos.distribuicao.ver')
   @ApiOkResponse({ type: DistribuicaoMedicoDto })
   @ApiNotFoundResponse()
   async obter(@Param('medicoId', ParseUUIDPipe) medicoId: string): Promise<DistribuicaoMedicoDto> {
@@ -97,7 +97,7 @@ export class DistribuicaoEquipeController {
   ) {}
 
   @Get()
-  @Permissao('medicos.ver')
+  @Permissao('medicos.distribuicao.ver')
   @ApiOkResponse({ type: ArranjosDoDonoDto })
   @ApiNotFoundResponse()
   obter(@Param('equipeId', ParseUUIDPipe) equipeId: string): Promise<ArranjosDoDonoDto> {

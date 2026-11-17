@@ -19,16 +19,16 @@ const reflector = new Reflector();
 const exigidas = (alvo: object) => reflector.get(PERMISSOES_EXIGIDAS, alvo as never);
 
 describe('controllers dos arranjos', () => {
-  it('ler pede medicos.ver, gravar pede medicos.distribuicao.editar, sugerir pede escala.ver', () => {
+  it('ler pede medicos.distribuicao.ver, gravar pede medicos.distribuicao.editar, sugerir pede escala.ver', () => {
     const m = DistribuicaoMedicoController.prototype;
     const e = DistribuicaoEquipeController.prototype;
     expect(reflector.get(PATH_METADATA, DistribuicaoMedicoController)).toBe(
       'distribuicao/medicos/:medicoId',
     );
-    expect(exigidas(m.obter)).toEqual(['medicos.ver']);
+    expect(exigidas(m.obter)).toEqual(['medicos.distribuicao.ver']);
     expect(exigidas(m.salvarArranjos)).toEqual(['medicos.distribuicao.editar']);
     expect(exigidas(m.salvarRobo)).toEqual(['medicos.distribuicao.editar']);
-    expect(exigidas(e.obter)).toEqual(['medicos.ver']);
+    expect(exigidas(e.obter)).toEqual(['medicos.distribuicao.ver']);
     expect(exigidas(e.salvarArranjos)).toEqual(['medicos.distribuicao.editar']);
     expect(exigidas(SugestaoAlocacaoController.prototype.obter)).toEqual(['escala.ver']);
   });
