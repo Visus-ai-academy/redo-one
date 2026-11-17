@@ -12,6 +12,8 @@ type SelectFieldProps = {
   /** Texto com o campo vazio ("Escolha um papel"). */
   placeholder: string;
   required?: boolean;
+  /** Ex.: depende de outro campo ainda vazio; o placeholder diz o porquê. */
+  disabled?: boolean;
   description?: string;
   className?: string;
 };
@@ -22,6 +24,7 @@ export function SelectField({
   opcoes,
   placeholder,
   required = false,
+  disabled = false,
   description,
   className,
 }: SelectFieldProps) {
@@ -35,6 +38,7 @@ export function SelectField({
     <Field.Root
       name={field.name}
       invalid={invalid}
+      disabled={disabled}
       touched={field.state.meta.isTouched}
       className={cn('flex flex-col gap-2', className)}
     >
@@ -48,6 +52,7 @@ export function SelectField({
         opcoes={opcoes}
         placeholder={placeholder}
         required={required}
+        disabled={disabled}
       />
       {description && (
         <Field.Description className="text-muted-foreground text-[13px]">

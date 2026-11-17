@@ -156,6 +156,20 @@ describe('PainelAlocacao', () => {
     expect(screen.getByRole('checkbox', { name: 'Cabeça' })).not.toBeChecked();
   });
 
+  it('turno fica desativado até escolher uma frente que algum turno tenha', () => {
+    montar();
+    const turno = screen.getByRole('combobox', { name: 'Turno' });
+    expect(turno).toBeDisabled();
+    expect(turno).toHaveTextContent('Escolha a frente primeiro');
+  });
+
+  it('frente sem turno: turno desativado, dizendo isso', () => {
+    montar({ frentes: [...FRENTES, frente('f-mg', 'MG')], inicial: { frenteId: 'f-mg' } });
+    const turno = screen.getByRole('combobox', { name: 'Turno' });
+    expect(turno).toBeDisabled();
+    expect(turno).toHaveTextContent('Nenhum turno tem essa frente');
+  });
+
   it('oferece só prioridades e subespecialidades ativas', () => {
     montar({ inicial: { frenteId: 'f-tc' } });
     expect(screen.getByRole('checkbox', { name: 'Urgente' })).toBeInTheDocument();

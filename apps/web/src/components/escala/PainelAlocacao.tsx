@@ -177,20 +177,28 @@ export function PainelAlocacao({
                 },
               }}
             >
-              {(field) => (
-                <field.SelectField
-                  label="Turno"
-                  placeholder={frenteId ? 'Escolha o turno' : 'Escolha a frente primeiro'}
-                  opcoes={turnos
-                    .filter((t) => t.frentes.some((f) => f.id === frenteId))
-                    .map((t) => ({
-                      valor: t.id,
-                      rotulo: t.nome,
-                    }))}
-                  required
-                  description="Só os turnos que têm a frente escolhida."
-                />
-              )}
+              {(field) => {
+                const opcoes = turnos
+                  .filter((t) => t.frentes.some((f) => f.id === frenteId))
+                  .map((t) => ({ valor: t.id, rotulo: t.nome }));
+                return (
+                  <field.SelectField
+                    label="Turno"
+                    placeholder={
+                      !frenteId
+                        ? 'Escolha a frente primeiro'
+                        : opcoes.length === 0
+                          ? 'Nenhum turno tem essa frente'
+                          : 'Escolha o turno'
+                    }
+                    opcoes={opcoes}
+                    // Sem opção, a lista abriria vazia.
+                    disabled={opcoes.length === 0}
+                    required
+                    description="Só os turnos que têm a frente escolhida."
+                  />
+                );
+              }}
             </form.AppField>
           )}
         </form.Subscribe>
