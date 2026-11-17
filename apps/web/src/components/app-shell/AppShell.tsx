@@ -85,7 +85,7 @@ export function AppShell({
     <Avisos>
       <div className="bg-background flex min-h-dvh flex-col md:flex-row">
         <BarraDeCarregamento ativa={carregando} />
-        <header className="bg-sidebar sticky top-0 z-10 flex h-14 items-center gap-2 px-2 md:hidden">
+        <header className="bg-sidebar sticky top-0 z-20 flex h-14 items-center gap-2 px-2 md:hidden">
           <Drawer.Root open={gavetaAberta} onOpenChange={setGavetaAberta} swipeDirection="left">
             <Drawer.Trigger
               aria-label="Abrir menu"
