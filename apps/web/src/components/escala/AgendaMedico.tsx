@@ -51,7 +51,7 @@ export function AgendaMedico({
           return (
             <li key={dia} className="flex flex-col gap-2 p-3 sm:flex-row sm:gap-4">
               <span className="w-24 flex-none pt-1 font-medium tabular-nums">{`${semana} ${data}`}</span>
-              <ul className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+              <ul className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border">
                 {plantoes.map((o) => (
                   <PlantaoDoMedico
                     key={`${o.alocacaoId}|${o.data}`}

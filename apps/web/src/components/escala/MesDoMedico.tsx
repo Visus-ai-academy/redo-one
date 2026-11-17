@@ -79,11 +79,11 @@ export function MesDoMedico({
               data-fora-do-mes={doMes ? undefined : ''}
               aria-current={dia === hoje ? 'date' : undefined}
               className={cn(
-                'flex min-h-24 min-w-0 flex-col gap-1.5 border-l p-1.5 first:border-l-0',
+                'flex min-h-24 min-w-0 flex-col border-l first:border-l-0',
                 !doMes && 'bg-background text-subtle-foreground',
               )}
             >
-              <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center justify-between gap-1 px-2 py-1">
                 <span
                   className={cn(
                     'text-[13px] tabular-nums',
@@ -102,7 +102,7 @@ export function MesDoMedico({
                 )}
               </div>
               {plantoes.length > 0 && (
-                <ul aria-label={textoDia(dia)} className="flex flex-col gap-1">
+                <ul aria-label={textoDia(dia)} className="flex flex-col border-t">
                   {plantoes.map((o) => (
                     <PlantaoDoMedico
                       key={`${o.alocacaoId}|${o.data}`}

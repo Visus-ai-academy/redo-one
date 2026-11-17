@@ -153,14 +153,14 @@ export function LinhaMedico({
 }
 
 /**
- * Um plantão na agenda de um médico (lista do celular e calendário do mês): a faixa lateral na
- * cor do turno, como os blocos da semana, e a linha com onde é e o horário.
+ * Um plantão na agenda de um médico (lista do celular e calendário do mês): colado na célula,
+ * com a faixa lateral na cor do turno e a divisória fina, como os blocos da semana.
  */
 export function PlantaoDoMedico({ ocorrencia: o, ...props }: Omit<LinhaMedicoProps, 'local'>) {
   return (
     <li
       data-plantao
-      className="border-l-border bg-card overflow-hidden rounded-md border border-l-[3px]"
+      className="border-l-border border-b border-l-[3px] last:border-b-0"
       style={o.turnoCor ? { borderLeftColor: o.turnoCor } : undefined}
     >
       <LinhaMedico ocorrencia={o} local {...props} />
