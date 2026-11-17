@@ -181,11 +181,27 @@ export interface ContextoPeriodo {
   listaSegueSla?: boolean;
   /** Ver `arranjoMarcaPrioridade`. */
   arranjoMarcaPrioridade?: boolean;
+  /** Prioridades do catálogo que contam como urgentes (`ConfiguracaoDistribuicao`). */
+  prioridadeIdsUrgentes: readonly string[];
   /** Frente (id da especialidade ou modalidade) → minutos até o fim dos turnos posteriores. */
   cortePosteriores?: ReadonlyMap<string, number>;
 }
 
 const horas = (min: number) => Math.round(min / 60);
+
+/**
+ * "Se na escala do médico tem Lista e urgência, ele precisa receber as urgências" (17/11/2026): a
+ * alocação da Lista que marca uma prioridade urgente recebe os exames dela pelo SLA, sem a regra
+ * da Lista (prioridades aceitas e prazo mínimo). Alocação sem recorte não marca nada. No
+ * dashboards-one era só URGÊNCIA de RX com o arranjo marcando, fixo no código.
+ */
+function urgenciaPelaAlocacao(p: PeriodoEscala, a: AlvoExame, ctx: ContextoPeriodo): boolean {
+  return (
+    a.prioridadeId !== null &&
+    p.prioridadeIds.includes(a.prioridadeId) &&
+    ctx.prioridadeIdsUrgentes.includes(a.prioridadeId)
+  );
+}
 
 /** O período aceita o exame? Null = aceita; senão, o porquê legível. */
 export function porQuePeriodoRecusa(
@@ -205,7 +221,7 @@ export function porQuePeriodoRecusa(
   if (p.lista && !liberada) {
     if (!ctx.listaSegueSla) {
       const regras = ctx.regras.daFrente(p.frente);
-      if (regras) {
+      if (regras && !urgenciaPelaAlocacao(p, a, ctx)) {
         const aceitas = regras.listaPrioridadeIds;
         if (
           !ctx.arranjoMarcaPrioridade &&
@@ -214,12 +230,8 @@ export function porQuePeriodoRecusa(
         ) {
           return 'Lista: a prioridade do exame não entra na Lista desta frente.';
         }
-        const peloSla =
-          !!ctx.arranjoMarcaPrioridade &&
-          a.prioridadeId !== null &&
-          regras.listaUrgenciaPeloSlaPrioridadeIds.includes(a.prioridadeId);
         const minimo = regras.listaPrazoMinimoHoras;
-        if (!peloSla && minimo !== null && (a.restanteMin ?? -1) <= minimo * 60) {
+        if (minimo !== null && (a.restanteMin ?? -1) <= minimo * 60) {
           return `Lista: o prazo ${a.restanteMin === null ? 'ilegível' : `(${horas(a.restanteMin)}h)`} não passa do mínimo de ${minimo}h.`;
         }
       }

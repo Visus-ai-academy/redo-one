@@ -233,6 +233,28 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
     expect(r.etapaElegibilidade.get('curto')).toBe('escala');
   });
 
+  it('a Lista com urgência marcada na alocação recebe a urgência curta pelo SLA', () => {
+    const regras = new RegrasPorFrente([
+      {
+        ...REGRAS_NEUTRAS,
+        frente: FRENTE_MI,
+        listaPrioridadeIds: [ROTINA],
+        listaPrazoMinimoHoras: 24,
+      },
+    ]);
+    const urgencia = exame('urg', { prioridadeId: URGENCIA, restanteMin: 60 });
+    const lista = (prioridadeIds: string[]) =>
+      oc('A', { turnoTipo: 'lista', fim: br('2026-11-18T07:00'), prioridadeIds });
+    const marcada = montar({
+      regras,
+      exames: [urgencia],
+      ocorrencias: [lista([ROTINA, URGENCIA])],
+    });
+    expect(doMedico(marcada, 'A')?.elegivelPara('urg')).toBe(true);
+    const soRotina = montar({ regras, exames: [urgencia], ocorrencias: [lista([ROTINA])] });
+    expect(doMedico(soRotina, 'A')?.elegivelPara('urg')).toBe(false);
+  });
+
   it('o arranjo decide depois da escala', () => {
     const r = montar({ medicos: [medico('A', [arranjo({ especialidadeId: MSK })])] });
     expect(doMedico(r, 'A')?.elegivelPara('e1')).toBe(false);

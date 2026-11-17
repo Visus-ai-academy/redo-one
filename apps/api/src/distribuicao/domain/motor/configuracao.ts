@@ -103,11 +103,6 @@ export interface RegrasFrente {
   listaPrioridadeIds: string[];
   /** Prazo restante mínimo para entrar pela Lista; null = segue o SLA (sem mínimo). */
   listaPrazoMinimoHoras: number | null;
-  /**
-   * Prioridades que entram pela Lista seguindo o SLA (sem o prazo mínimo) quando o arranjo do
-   * médico as marca. No dashboards-one: só URGÊNCIA e só em RX, fixo no código.
-   */
-  listaUrgenciaPeloSlaPrioridadeIds: string[];
   /** Ao fim do turno, o exame não aberto volta para a fila (usado pelo recolhimento, não aqui). */
   recolheAoFimDoTurno: boolean;
   /** Falso = a frente é toda manual. */
@@ -128,7 +123,6 @@ export interface RegrasFrente {
 export const REGRAS_NEUTRAS: Omit<RegrasFrente, 'frente'> = {
   listaPrioridadeIds: [],
   listaPrazoMinimoHoras: null,
-  listaUrgenciaPeloSlaPrioridadeIds: [],
   recolheAoFimDoTurno: true,
   distribuiPeloRobo: true,
   horariosSemRobo: [],

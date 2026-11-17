@@ -275,11 +275,11 @@ describe('porQuePeriodoRecusa', () => {
     frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: RX },
     listaPrioridadeIds: [ROTINA],
     listaPrazoMinimoHoras: 24,
-    listaUrgenciaPeloSlaPrioridadeIds: [URGENCIA],
   };
   const ctx = (p: Partial<ContextoPeriodo> = {}): ContextoPeriodo => ({
     escalaRestringeEspecialidade: true,
     regras: new RegrasPorFrente([regrasMi, regrasRx]),
+    prioridadeIdsUrgentes: [URGENCIA],
     ...p,
   });
   const periodo = (p: Partial<PeriodoEscala> = {}): PeriodoEscala => ({
@@ -412,29 +412,37 @@ describe('porQuePeriodoRecusa', () => {
     ).not.toBeNull();
   });
 
-  it('urgência pelo SLA na Lista da frente que marca (RX, 13/11): sem prazo mínimo, nem vencida', () => {
+  it('Lista com urgência marcada na alocação recebe as urgências pelo SLA (HPRIMAVERA, RX)', () => {
     const listaRx = periodo({
       lista: true,
       frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: RX },
+      prioridadeIds: [ROTINA, URGENCIA],
     });
     const urgRx = exame({ modalidadeId: RX, prioridadeId: URGENCIA, restanteMin: 60 });
-    expect(porQuePeriodoRecusa(listaRx, urgRx, ctx({ arranjoMarcaPrioridade: true }))).toBeNull();
+    expect(porQuePeriodoRecusa(listaRx, urgRx, ctx())).toBeNull();
+    expect(porQuePeriodoRecusa(listaRx, { ...urgRx, restanteMin: -30 }, ctx())).toBeNull();
+    // Sem a urgência marcada na alocação (ou sem recorte), a Lista segue a regra dela.
     expect(
-      porQuePeriodoRecusa(
-        listaRx,
-        { ...urgRx, restanteMin: -30 },
-        ctx({ arranjoMarcaPrioridade: true }),
-      ),
+      porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [ROTINA] }, urgRx, ctx()),
+    ).not.toBeNull();
+    expect(porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [] }, urgRx, ctx())).not.toBeNull();
+    // Só a prioridade urgente: a rotina curta continua barrada.
+    expect(porQuePeriodoRecusa(listaRx, { ...urgRx, prioridadeId: ROTINA }, ctx())).not.toBeNull();
+  });
+
+  it('a urgência pela alocação vale em qualquer frente e só para as prioridades urgentes da configuração', () => {
+    const listaMi = periodo({ lista: true, prioridadeIds: [URGENCIA, PLANTAO] });
+    expect(
+      porQuePeriodoRecusa(listaMi, exame({ prioridadeId: URGENCIA, restanteMin: 60 }), ctx()),
     ).toBeNull();
     expect(
-      porQuePeriodoRecusa(listaRx, urgRx, ctx({ arranjoMarcaPrioridade: false })),
+      porQuePeriodoRecusa(listaMi, exame({ prioridadeId: PLANTAO, restanteMin: 60 }), ctx()),
     ).not.toBeNull();
-    // Só as prioridades marcadas na regra: rotina curta continua barrada.
     expect(
       porQuePeriodoRecusa(
-        listaRx,
-        { ...urgRx, prioridadeId: ROTINA },
-        ctx({ arranjoMarcaPrioridade: true }),
+        listaMi,
+        exame({ prioridadeId: URGENCIA, restanteMin: 60 }),
+        ctx({ prioridadeIdsUrgentes: [] }),
       ),
     ).not.toBeNull();
   });

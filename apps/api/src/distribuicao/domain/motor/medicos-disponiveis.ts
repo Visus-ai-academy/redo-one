@@ -367,6 +367,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         prioridadesLiberadas,
         listaSegueSla,
         arranjoMarcaPrioridade: marca,
+        prioridadeIdsUrgentes: config.prioridadeIdsUrgentes,
       };
       const aceitos = escalado.periodos.filter(
         (p) =>
