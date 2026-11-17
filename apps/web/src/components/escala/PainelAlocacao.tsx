@@ -80,6 +80,13 @@ export function PainelAlocacao({
   const subespecialidadesOferecidas = subespecialidades.filter(
     oferecida(iniciais.subespecialidadeIds),
   );
+  /** As subespecialidades da frente: só frente de especialidade tem. */
+  const subsDaFrente = (frente: { especialidadeId?: string | null } | undefined) => {
+    const especialidadeId = frente?.especialidadeId;
+    return especialidadeId
+      ? subespecialidadesOferecidas.filter((s) => s.especialidadeIds.includes(especialidadeId))
+      : [];
+  };
 
   const form = useAppForm({
     defaultValues: iniciais,
@@ -135,6 +142,15 @@ export function PainelAlocacao({
               if (turno && !turno.frentes.some((f) => f.id === value)) {
                 form.setFieldValue('turnoId', '');
               }
+              // Subespecialidade é da especialidade: as que não são da nova frente (e o "geral",
+              // se ela não tem nenhuma) saem.
+              const daFrente = subsDaFrente(frentes.find((f) => f.id === value));
+              const marcadas = form.getFieldValue('subespecialidadeIds');
+              const ficam = marcadas.filter((id) =>
+                id === GERAL ? daFrente.length > 0 : daFrente.some((s) => s.id === id),
+              );
+              if (ficam.length !== marcadas.length)
+                form.setFieldValue('subespecialidadeIds', ficam);
             },
           }}
         >
@@ -191,11 +207,7 @@ export function PainelAlocacao({
             const turno = turnos.find((t) => t.id === turnoId);
             const lista = turno?.tipo === 'lista';
             const comFim = gratificado || vigencia === 'periodo';
-            const frente = frentes.find((f) => f.id === frenteId);
-            const subs = subespecialidadesOferecidas.filter(
-              (s) =>
-                !frente?.especialidadeId || s.especialidadeIds.includes(frente.especialidadeId),
-            );
+            const subs = subsDaFrente(frentes.find((f) => f.id === frenteId));
             return (
               <>
                 {lista &&
@@ -337,16 +349,19 @@ export function PainelAlocacao({
                   )}
                 </form.AppField>
                 <form.AppField name="subespecialidadeIds">
-                  {() => (
-                    <CaixasField
-                      label="Subespecialidades"
-                      opcoes={[
-                        ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
-                        { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
-                      ]}
-                      description={AJUDA_RESTRICAO}
-                    />
-                  )}
+                  {(field) =>
+                    // Só com frente de especialidade que tem subespecialidades (ou algo já marcado).
+                    (subs.length > 0 || field.state.value.length > 0) && (
+                      <CaixasField
+                        label="Subespecialidades"
+                        opcoes={[
+                          ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
+                          { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
+                        ]}
+                        description={AJUDA_RESTRICAO}
+                      />
+                    )
+                  }
                 </form.AppField>
               </>
             );

@@ -135,6 +135,27 @@ describe('PainelAlocacao', () => {
     ).toBeInTheDocument();
   });
 
+  it('sem frente, ou com frente sem subespecialidades, não mostra a lista de subespecialidades', async () => {
+    montar();
+    expect(screen.queryByRole('group', { name: 'Subespecialidades' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Cabeça' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'RM Geral' }));
+    expect(
+      screen.queryByRole('checkbox', { name: 'Geral (sem subespecialidade)' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('trocar a frente desmarca as subespecialidades que não são dela', async () => {
+    montar({ inicial: { frenteId: 'f-tc' } });
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Cabeça' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'RM Geral' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'TC Neuro' }));
+    expect(screen.getByRole('checkbox', { name: 'Cabeça' })).not.toBeChecked();
+  });
+
   it('oferece só prioridades e subespecialidades ativas', () => {
     montar({ inicial: { frenteId: 'f-tc' } });
     expect(screen.getByRole('checkbox', { name: 'Urgente' })).toBeInTheDocument();
