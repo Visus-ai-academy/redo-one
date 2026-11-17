@@ -1,7 +1,9 @@
+import { type ReactNode, useState } from 'react';
 import { z } from 'zod';
 
 import type { EquipeDto } from '../../gen/types/EquipeDto';
 import type { EquipeItemDto } from '../../gen/types/EquipeItemDto';
+import { Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
@@ -20,6 +22,8 @@ export type PainelEquipeProps = {
   onSalvar: (dados: EquipeDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onFechar: () => void;
+  /** Conteúdo da aba Distribuição (arranjos); sem ele, ou criando, a aba não aparece. */
+  distribuicao?: ReactNode;
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -48,7 +52,9 @@ export function PainelEquipe({
   onSalvar,
   onExcluir,
   onFechar,
+  distribuicao,
 }: PainelEquipeProps) {
+  const [aba, setAba] = useState('cadastro');
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
     defaultValues: {
@@ -102,26 +108,20 @@ export function PainelEquipe({
         }
       : undefined;
 
-  if (!podeEditar && equipe) {
-    return (
-      <PainelLateral titulo={equipe.nome} onFechar={onFechar}>
-        <div className="flex flex-col gap-4 p-4">
-          {erro && <Alerta tom="erro">{erro}</Alerta>}
-          <CampoSomenteLeitura label="Descrição" value={equipe.descricao ?? '—'} />
-          <CampoSomenteLeitura
-            label="Plantão"
-            value={equipe.plantao ? 'Sim: o robô não entrega o recorte da equipe' : 'Não'}
-          />
-          <CampoSomenteLeitura label="Situação" value={equipe.ativo ? 'Ativa' : 'Inativa'} />
-          {campoMembros(true)}
-          <RodapeSomenteLeitura excluir={excluir} />
-        </div>
-      </PainelLateral>
-    );
-  }
-
-  return (
-    <PainelLateral titulo={equipe?.nome ?? 'Nova equipe'} onFechar={onFechar}>
+  const cadastro =
+    !podeEditar && equipe ? (
+      <div className="flex flex-col gap-4 p-4">
+        {erro && <Alerta tom="erro">{erro}</Alerta>}
+        <CampoSomenteLeitura label="Descrição" value={equipe.descricao ?? '—'} />
+        <CampoSomenteLeitura
+          label="Plantão"
+          value={equipe.plantao ? 'Sim: o robô não entrega o recorte da equipe' : 'Não'}
+        />
+        <CampoSomenteLeitura label="Situação" value={equipe.ativo ? 'Ativa' : 'Inativa'} />
+        {campoMembros(true)}
+        <RodapeSomenteLeitura excluir={excluir} />
+      </div>
+    ) : (
       <form
         noValidate
         onSubmit={(e) => {
@@ -196,6 +196,26 @@ export function PainelEquipe({
           />
         </form.AppForm>
       </form>
+    );
+
+  return (
+    <PainelLateral titulo={equipe?.nome ?? 'Nova equipe'} onFechar={onFechar}>
+      {equipe && distribuicao ? (
+        <Abas
+          aria-label="Partes da equipe"
+          valor={aba}
+          onMudar={setAba}
+          abas={[
+            { valor: 'cadastro', rotulo: 'Cadastro' },
+            { valor: 'distribuicao', rotulo: 'Distribuição' },
+          ]}
+          className="gap-0 pt-2"
+        >
+          {aba === 'distribuicao' ? distribuicao : cadastro}
+        </Abas>
+      ) : (
+        cadastro
+      )}
     </PainelLateral>
   );
 }

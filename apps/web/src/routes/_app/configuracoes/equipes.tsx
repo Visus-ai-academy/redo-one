@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { AbaDistribuicaoEquipe } from '../../../components/distribuicao/AbaDistribuicaoEquipe';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelEquipe } from '../../../components/medicos/PainelEquipe';
@@ -211,6 +212,7 @@ function PainelDaEquipe({
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
 }) {
+  const { sessao } = Route.useRouteContext();
   const consultaEquipe = useQuery({
     ...equipesControllerObterQueryOptions({ path: { id: id ?? '' } }),
     enabled: Boolean(id),
@@ -235,6 +237,15 @@ function PainelDaEquipe({
       membros={(membros?.itens ?? []).map((m) => ({ valor: m.id, rotulo: m.nome }))}
       buscarMedicos={buscarMedicos}
       podeEditar={id ? permissoes.editar : permissoes.criar}
+      distribuicao={
+        id && equipe ? (
+          <AbaDistribuicaoEquipe
+            equipeId={id}
+            plantao={equipe.plantao}
+            podeEditar={pode(sessao, 'medicos.distribuicao.editar')}
+          />
+        ) : undefined
+      }
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {

@@ -102,4 +102,15 @@ describe('PainelEquipe', () => {
 
     expect(onExcluir).toHaveBeenCalled();
   });
+
+  it('editando, a aba Distribuição aparece quando há conteúdo para ela', async () => {
+    montar({ equipe, distribuicao: <p>Arranjos da equipe</p> });
+    await userEvent.click(screen.getByRole('tab', { name: 'Distribuição' }));
+    expect(screen.getByText('Arranjos da equipe')).toBeInTheDocument();
+  });
+
+  it('criando, não tem aba Distribuição', () => {
+    montar({ distribuicao: <p>Arranjos da equipe</p> });
+    expect(screen.queryByRole('tab', { name: 'Distribuição' })).not.toBeInTheDocument();
+  });
 });
