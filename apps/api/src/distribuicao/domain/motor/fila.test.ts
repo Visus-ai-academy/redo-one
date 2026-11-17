@@ -26,8 +26,7 @@ const CONFIG: ConfiguracaoDistribuicao = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadesUrgentes: ['URGENCIA', 'EMERGENCIA', 'INTERNADO'],
-  urgenciaPor: 'grafia',
+  prioridadeIdsUrgentes: ['pri-urg'],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -90,19 +89,11 @@ const grupos = (exames: ExameMotor[], prioridades?: PrioridadeCliente[], regras 
 };
 
 describe('ehUrgente', () => {
-  it('pela grafia, sem acento e sem caixa ("Urgência" da tela = URGENCIA)', () => {
-    expect(ehUrgente({ grafia: 'Urgência', prioridadeId: null }, CONFIG)).toBe(true);
-    expect(ehUrgente({ grafia: 'Rotina', prioridadeId: null }, CONFIG)).toBe(false);
-  });
-
-  it('pelo catálogo, compara o id traduzido', () => {
-    const porCatalogo = {
-      ...CONFIG,
-      urgenciaPor: 'catalogo' as const,
-      prioridadesUrgentes: ['pri-urg'],
-    };
-    expect(ehUrgente({ grafia: 'Emergência', prioridadeId: 'pri-urg' }, porCatalogo)).toBe(true);
-    expect(ehUrgente({ grafia: 'INTERNADO', prioridadeId: 'pri-rotina' }, porCatalogo)).toBe(false);
+  it('compara a prioridade do catálogo já traduzida com as urgentes da configuração', () => {
+    expect(ehUrgente('pri-urg', CONFIG)).toBe(true);
+    // Internado é variação de ROTINA: não é urgente (decisão de 17/11/2026).
+    expect(ehUrgente('pri-rotina', CONFIG)).toBe(false);
+    expect(ehUrgente(null, CONFIG)).toBe(false);
   });
 });
 

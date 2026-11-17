@@ -33,16 +33,15 @@ export interface ExameMotor {
 export const normalizar = (s: string): string =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase();
 
-/** A prioridade do exame é urgente pela configuração (grafia da MobileMed ou id do catálogo). */
+/**
+ * A prioridade do exame (do catálogo, já traduzida pelas variações) é urgente pela configuração.
+ * Nunca pela grafia crua da MobileMed.
+ */
 export function ehUrgente(
-  p: { grafia: string | null; prioridadeId: string | null },
-  config: Pick<ConfiguracaoDistribuicao, 'prioridadesUrgentes' | 'urgenciaPor'>,
+  prioridadeId: string | null,
+  config: Pick<ConfiguracaoDistribuicao, 'prioridadeIdsUrgentes'>,
 ): boolean {
-  if (config.urgenciaPor === 'catalogo') {
-    return p.prioridadeId !== null && config.prioridadesUrgentes.includes(p.prioridadeId);
-  }
-  const g = normalizar(p.grafia ?? '');
-  return g !== '' && config.prioridadesUrgentes.some((u) => normalizar(u) === g);
+  return prioridadeId !== null && config.prioridadeIdsUrgentes.includes(prioridadeId);
 }
 
 /** Prioridade do cliente no pico, num recorte (frente de especialidade ou de modalidade). */

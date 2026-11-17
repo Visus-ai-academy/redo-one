@@ -17,13 +17,6 @@ export interface ItemOrdemFila {
   direcao: 'asc' | 'desc';
 }
 
-/**
- * Como se decide que um exame é urgente. EM ABERTO com o usuário: pela grafia que chega da
- * MobileMed (o dashboards-one usava URGENCIA, EMERGENCIA e INTERNADO) ou pela prioridade do
- * catálogo já traduzida pelas variações (Internado vira ROTINA). O motor aceita os dois.
- */
-export type UrgenciaPor = 'grafia' | 'catalogo';
-
 /** Papel dos turnos na regra da Lista (no dashboards-one, o turno de nome "TARDE" e as 10:50). */
 export interface TurnosPosteriores {
   /** Turnos que só recebem numa rodada posterior do dia; a Lista guarda o que eles vão pegar. */
@@ -35,9 +28,13 @@ export interface TurnosPosteriores {
 export interface ConfiguracaoDistribuicao {
   /** Critérios da fila, na ordem em que desempatam. */
   ordemFila: ItemOrdemFila[];
-  /** Grafias (com `urgenciaPor: 'grafia'`) ou ids do catálogo (com `'catalogo'`) urgentes. */
-  prioridadesUrgentes: string[];
-  urgenciaPor: UrgenciaPor;
+  /**
+   * Prioridades do CATÁLOGO que contam como urgentes (hoje só URGÊNCIA), comparadas com a
+   * prioridade do exame já traduzida pelas variações (Internado → ROTINA, Emergência → URGÊNCIA).
+   * Vale para a urgência na fila, a margem de urgência e o rodízio. Decisão de 17/11/2026: o
+   * dashboards-one tratava INTERNADO como urgente; aqui o internado passa na frente pelo prazo.
+   */
+  prioridadeIdsUrgentes: string[];
   /** Exames do mesmo paciente e da mesma especialidade andam juntos (pacote indivisível). */
   agruparPorPaciente: boolean;
   /** Distância máxima entre as entradas para juntar no pacote; 0 = sem limite. */
