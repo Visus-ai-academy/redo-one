@@ -364,6 +364,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
       const ctx = {
         escalaRestringeEspecialidade: config.escalaRestringeEspecialidade,
         regras,
+        listaPadrao: config.lista,
         prioridadesLiberadas,
         listaSegueSla,
         arranjoMarcaPrioridade: marca,

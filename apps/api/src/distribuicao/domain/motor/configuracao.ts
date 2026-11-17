@@ -25,6 +25,14 @@ export interface TurnosPosteriores {
   cheiaEm: Horario;
 }
 
+/** Regra da Lista de produção: o que entra nela, além do recorte da escala. */
+export interface RegraLista {
+  /** Prioridades do catálogo que a Lista aceita; vazio = todas. */
+  prioridadeIds: string[];
+  /** O prazo restante tem de passar disto para entrar; null = segue o SLA (sem mínimo). */
+  prazoMinimoHoras: number | null;
+}
+
 export interface ConfiguracaoDistribuicao {
   /** Critérios da fila, na ordem em que desempatam. */
   ordemFila: ItemOrdemFila[];
@@ -59,6 +67,11 @@ export interface ConfiguracaoDistribuicao {
   diasJaEntregue: number;
   /** Null = nenhum turno com papel de "posterior": a Lista não guarda nada. */
   turnosPosteriores: TurnosPosteriores | null;
+  /**
+   * Regra padrão da Lista, para toda frente que não tem a sua (no dashboards-one, ROTINA e
+   * "SLA > 24 h" globais). Os valores são dado da configuração, não constante do código.
+   */
+  lista: RegraLista;
 }
 
 /** Faixa em que a frente não é distribuída pelo robô; pode cruzar a meia-noite. */
@@ -99,10 +112,16 @@ export interface FatiaMistura {
 /** Comportamento de uma frente (especialidade ou modalidade do catálogo) na distribuição. */
 export interface RegrasFrente {
   frente: FrenteEscala;
-  /** Prioridades que a Lista desta frente aceita; vazio = todas. */
-  listaPrioridadeIds: string[];
-  /** Prazo restante mínimo para entrar pela Lista; null = segue o SLA (sem mínimo). */
-  listaPrazoMinimoHoras: number | null;
+  /**
+   * Prioridades que a Lista desta frente aceita; vazio = todas. Ausente = as da regra padrão
+   * (`ConfiguracaoDistribuicao.lista`).
+   */
+  listaPrioridadeIds?: string[];
+  /**
+   * Prazo restante mínimo para entrar pela Lista desta frente; null = segue o SLA (MAMA, CARDIO).
+   * Ausente = o da regra padrão.
+   */
+  listaPrazoMinimoHoras?: number | null;
   /** Ao fim do turno, o exame não aberto volta para a fila (usado pelo recolhimento, não aqui). */
   recolheAoFimDoTurno: boolean;
   /** Falso = a frente é toda manual. */
@@ -121,8 +140,6 @@ export interface RegrasFrente {
 
 /** Regras sem nada ligado: o que vale para a frente que não tem cadastro. */
 export const REGRAS_NEUTRAS: Omit<RegrasFrente, 'frente'> = {
-  listaPrioridadeIds: [],
-  listaPrazoMinimoHoras: null,
   recolheAoFimDoTurno: true,
   distribuiPeloRobo: true,
   horariosSemRobo: [],
@@ -132,6 +149,17 @@ export const REGRAS_NEUTRAS: Omit<RegrasFrente, 'frente'> = {
   mistura: [],
   listaDepoisDosFixos: false,
 };
+
+/** A regra da Lista que vale na frente: a dela, campo a campo, sobre a padrão. */
+export function regraListaDa(padrao: RegraLista, regras: RegrasFrente | null): RegraLista {
+  return {
+    prioridadeIds: regras?.listaPrioridadeIds ?? padrao.prioridadeIds,
+    prazoMinimoHoras:
+      regras?.listaPrazoMinimoHoras === undefined
+        ? padrao.prazoMinimoHoras
+        : regras.listaPrazoMinimoHoras,
+  };
+}
 
 const chaveFrente = (f: FrenteEscala) =>
   f.tipo === 'especialidade' ? `E|${f.especialidadeId}` : `M|${f.modalidadeId}`;

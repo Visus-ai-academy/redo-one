@@ -1,12 +1,12 @@
 import type { Arranjo, FrenteEscala, ModoVinculo } from '../arranjo';
-import type { RegrasPorFrente } from './configuracao';
+import { type RegraLista, type RegrasPorFrente, regraListaDa } from './configuracao';
 
 /**
  * Elegibilidade de um médico para um exame: o casamento do arranjo, o direcionamento das equipes,
  * a clínica exclusiva e o recorte de cada período da escala. Fonte: dashboards-one
  * `src/lib/services/distribuicao/arranjo.ts`. Diferenças de propósito: tudo por id do catálogo (o
- * legado comparava nomes normalizados) e as regras da Lista vêm da frente do período, não de uma
- * configuração global com RX fixo no código.
+ * legado comparava nomes normalizados), a regra da Lista é a padrão da configuração global com a
+ * exceção da frente do período (não RX fixo no código) e a urgência na Lista vem da alocação.
  */
 
 /** O exame como a elegibilidade o vê, já resolvido contra o catálogo. */
@@ -175,6 +175,8 @@ export interface PeriodoEscala {
 export interface ContextoPeriodo {
   escalaRestringeEspecialidade: boolean;
   regras: RegrasPorFrente;
+  /** Regra padrão da Lista (`ConfiguracaoDistribuicao.lista`); a da frente a sobrescreve. */
+  listaPadrao: RegraLista;
   /** Prioridades liberadas pelo ajuste do dia do médico. */
   prioridadesLiberadas?: ReadonlySet<string>;
   /** Ajuste do dia "a Lista segue o SLA". */
@@ -220,9 +222,9 @@ export function porQuePeriodoRecusa(
   const liberada = a.prioridadeId !== null && !!ctx.prioridadesLiberadas?.has(a.prioridadeId);
   if (p.lista && !liberada) {
     if (!ctx.listaSegueSla) {
-      const regras = ctx.regras.daFrente(p.frente);
-      if (regras && !urgenciaPelaAlocacao(p, a, ctx)) {
-        const aceitas = regras.listaPrioridadeIds;
+      if (!urgenciaPelaAlocacao(p, a, ctx)) {
+        const regra = regraListaDa(ctx.listaPadrao, ctx.regras.daFrente(p.frente));
+        const aceitas = regra.prioridadeIds;
         if (
           !ctx.arranjoMarcaPrioridade &&
           aceitas.length &&
@@ -230,7 +232,7 @@ export function porQuePeriodoRecusa(
         ) {
           return 'Lista: a prioridade do exame não entra na Lista desta frente.';
         }
-        const minimo = regras.listaPrazoMinimoHoras;
+        const minimo = regra.prazoMinimoHoras;
         if (minimo !== null && (a.restanteMin ?? -1) <= minimo * 60) {
           return `Lista: o prazo ${a.restanteMin === null ? 'ilegível' : `(${horas(a.restanteMin)}h)`} não passa do mínimo de ${minimo}h.`;
         }

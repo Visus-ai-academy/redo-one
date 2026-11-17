@@ -17,6 +17,7 @@ import {
 
 // Ids do catálogo (fictícios, com nomes legíveis).
 const NEURO = 'esp-neuro';
+const MAMA = 'esp-mama';
 const MSK = 'esp-msk';
 const MI = 'esp-mi';
 const RX = 'mod-rx';
@@ -264,21 +265,24 @@ describe('direcionadoPara (arranjo de equipe)', () => {
 });
 
 describe('porQuePeriodoRecusa', () => {
+  // MI e RX sem regra de Lista própria: valem o padrão global (ROTINA, prazo > 24 h).
   const regrasMi: RegrasFrente = {
     ...REGRAS_NEUTRAS,
     frente: { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null },
-    listaPrioridadeIds: [ROTINA],
-    listaPrazoMinimoHoras: 24,
   };
   const regrasRx: RegrasFrente = {
     ...REGRAS_NEUTRAS,
     frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: RX },
-    listaPrioridadeIds: [ROTINA],
-    listaPrazoMinimoHoras: 24,
+  };
+  const regrasMama: RegrasFrente = {
+    ...REGRAS_NEUTRAS,
+    frente: { tipo: 'especialidade', especialidadeId: MAMA, modalidadeId: null },
+    listaPrazoMinimoHoras: null,
   };
   const ctx = (p: Partial<ContextoPeriodo> = {}): ContextoPeriodo => ({
     escalaRestringeEspecialidade: true,
-    regras: new RegrasPorFrente([regrasMi, regrasRx]),
+    regras: new RegrasPorFrente([regrasMi, regrasRx, regrasMama]),
+    listaPadrao: { prioridadeIds: [ROTINA], prazoMinimoHoras: 24 },
     prioridadeIdsUrgentes: [URGENCIA],
     ...p,
   });
@@ -348,18 +352,34 @@ describe('porQuePeriodoRecusa', () => {
     ).toBe(false);
   });
 
-  it('Lista de frente sem regra (ou com prazo nulo) segue o SLA', () => {
+  it('frente sem regra própria (nem cadastro) usa a regra padrão da Lista', () => {
+    const neuro = periodo({
+      lista: true,
+      frente: { tipo: 'especialidade', especialidadeId: NEURO, modalidadeId: null },
+    });
+    const doNeuro = (p: Partial<AlvoExame>) => exame({ especialidadeId: NEURO, ...p });
+    expect(aceita([neuro], doNeuro({ restanteMin: 25 * 60 }))).toBe(true);
+    expect(aceita([neuro], doNeuro({ restanteMin: 60 }))).toBe(false);
+    expect(aceita([neuro], doNeuro({ prioridadeId: PLANTAO, restanteMin: 25 * 60 }))).toBe(false);
+    // O padrão vem da configuração: sem prazo mínimo nem prioridades, segue o SLA.
+    const semRegra = ctx({ listaPadrao: { prioridadeIds: [], prazoMinimoHoras: null } });
+    expect(aceita([neuro], doNeuro({ prioridadeId: PLANTAO, restanteMin: 60 }), semRegra)).toBe(
+      true,
+    );
+  });
+
+  it('frente com "segue o SLA" (MAMA) recebe na Lista o exame com prazo abaixo de 24 h', () => {
     const mama = periodo({
       lista: true,
-      frente: { tipo: 'especialidade', especialidadeId: 'esp-mama', modalidadeId: null },
+      frente: { tipo: 'especialidade', especialidadeId: MAMA, modalidadeId: null },
     });
-    expect(
-      aceita(
-        [mama],
-        exame({ especialidadeId: 'esp-mama', prioridadeId: URGENCIA, restanteMin: -10 }),
-        ctx(),
-      ),
-    ).toBe(true);
+    const daMama = (p: Partial<AlvoExame>) => exame({ especialidadeId: MAMA, ...p });
+    expect(aceita([mama], daMama({ restanteMin: 60 }))).toBe(true);
+    expect(aceita([mama], daMama({ restanteMin: -10 }))).toBe(true);
+    // Só o prazo é da frente; as prioridades seguem o padrão.
+    expect(aceita([mama], daMama({ prioridadeId: PLANTAO, restanteMin: 60 }))).toBe(false);
+    const todas = new RegrasPorFrente([{ ...regrasMama, listaPrioridadeIds: [] }]);
+    expect(aceita([mama], daMama({ prioridadeId: PLANTAO }), ctx({ regras: todas }))).toBe(true);
   });
 
   it('frente de modalidade restringe sempre, qualquer especialidade', () => {
@@ -447,7 +467,7 @@ describe('porQuePeriodoRecusa', () => {
     ).not.toBeNull();
   });
 
-  it('"a Lista segue o SLA" (ajuste do dia) dispensa a regra da Lista', () => {
+  it('"a Lista segue o SLA" (ajuste do dia) dispensa a regra da Lista, a da frente e a padrão', () => {
     expect(
       porQuePeriodoRecusa(
         lista,
@@ -455,6 +475,13 @@ describe('porQuePeriodoRecusa', () => {
         ctx({ listaSegueSla: true }),
       ),
     ).toBeNull();
+    const neuro = periodo({
+      lista: true,
+      frente: { tipo: 'especialidade', especialidadeId: NEURO, modalidadeId: null },
+    });
+    const curto = exame({ especialidadeId: NEURO, restanteMin: 60 });
+    expect(porQuePeriodoRecusa(neuro, curto, ctx())).not.toBeNull();
+    expect(porQuePeriodoRecusa(neuro, curto, ctx({ listaSegueSla: true }))).toBeNull();
   });
 
   it('com o corte dos turnos posteriores, a Lista que segue o SLA não leva o que eles vão pegar', () => {

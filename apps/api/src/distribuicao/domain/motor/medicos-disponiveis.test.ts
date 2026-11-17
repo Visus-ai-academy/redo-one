@@ -44,6 +44,7 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: true,
   diasJaEntregue: 7,
   turnosPosteriores: null,
+  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
@@ -415,6 +416,22 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
       ajustes: [ajuste({ laudosExtra: 0, prioridadeIdsLiberadas: [URGENCIA] })],
     });
     expect(doMedico(r, 'A')?.elegivelPara('u')).toBe(true);
+  });
+
+  it('sem regra da frente vale a padrão da Lista, e "a Lista segue o SLA" fura só para o médico do ajuste', () => {
+    const config = { ...CONFIG, lista: { prioridadeIds: [ROTINA], prazoMinimoHoras: 24 } };
+    const lista = (medicoId: string) =>
+      oc(medicoId, { turnoTipo: 'lista', fim: br('2026-11-18T07:00') });
+    const r = montar({
+      config,
+      exames: [exame('curto', { restanteMin: 60 }), exame('longo', { restanteMin: 2000 })],
+      medicos: [medico('A'), medico('B')],
+      ocorrencias: [lista('A'), lista('B')],
+      ajustes: [ajuste({ medicoId: 'A', laudosExtra: 0, listaSegueSla: true })],
+    });
+    expect(doMedico(r, 'A')?.elegivelPara('curto')).toBe(true);
+    expect(doMedico(r, 'B')?.elegivelPara('curto')).toBe(false);
+    expect(doMedico(r, 'B')?.elegivelPara('longo')).toBe(true);
   });
 
   it('"a Lista segue o SLA" tira a regra da Lista e, antes da cheia, guarda o curto para o turno posterior', () => {

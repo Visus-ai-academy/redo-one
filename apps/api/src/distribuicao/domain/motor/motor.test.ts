@@ -38,6 +38,7 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: false,
   diasJaEntregue: 7,
   turnosPosteriores: null,
+  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 
 const agora = new Date('2026-10-16T13:00:00Z');

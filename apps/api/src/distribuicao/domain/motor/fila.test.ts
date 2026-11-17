@@ -39,6 +39,7 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: false,
   diasJaEntregue: 7,
   turnosPosteriores: null,
+  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 const SEM_REGRAS = new RegrasPorFrente([]);
 const MSK_COLUNAS_A_PARTE = new RegrasPorFrente([
