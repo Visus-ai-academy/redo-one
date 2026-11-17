@@ -111,6 +111,25 @@ describe.skipIf(!url)('DrizzleExamesRepository', () => {
     expect(await repo.excluir(torax)).toBe(true);
   });
 
+  it('grava só a subespecialidade, sem tocar nos outros campos', async () => {
+    const [sub] = await db.insert(schema.subespecialidades).values({ nome: 'CABECA' }).returning();
+    const id = await repo.criar(dados('RM CRANIO', { modalidadeId: ct, especialidadeId: neuro }));
+
+    await repo.definirSubespecialidade(id, sub?.id ?? '');
+
+    expect(await repo.buscar(id)).toMatchObject({
+      nome: 'RM CRANIO',
+      modalidadeId: ct,
+      especialidadeId: neuro,
+      subespecialidadeId: sub?.id,
+    });
+    await repo.definirSubespecialidade(id, null);
+    expect((await repo.buscar(id))?.subespecialidadeId).toBeNull();
+    await expect(
+      repo.definirSubespecialidade(id, '00000000-0000-4000-8000-000000000000'),
+    ).rejects.toThrow(ReferenciaInexistenteError);
+  });
+
   it('cadastro ligado inexistente vira erro de domínio', async () => {
     await expect(
       repo.criar(dados('X', { modalidadeId: '00000000-0000-4000-8000-000000000000' })),

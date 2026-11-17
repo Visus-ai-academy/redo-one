@@ -57,6 +57,26 @@ export class ExamesService {
     await this.registro.alterado(ator, id, atual, validos);
   }
 
+  /**
+   * Muda só a subespecialidade (permissão `exames.subespecialidade.editar`), sem tocar nos outros
+   * campos. A validação é a mesma da edição completa: o cadastro precisa existir.
+   */
+  async definirSubespecialidade(
+    ator: AtorCatalogo,
+    id: string,
+    subespecialidadeId: string | null,
+  ): Promise<void> {
+    const atual = await this.obter(id);
+    if (atual.subespecialidadeId === subespecialidadeId) return;
+    await this.repo.definirSubespecialidade(id, subespecialidadeId);
+    await this.registro.alterado(
+      ator,
+      id,
+      { subespecialidadeId: atual.subespecialidadeId },
+      { subespecialidadeId },
+    );
+  }
+
   async excluir(ator: AtorCatalogo, id: string): Promise<void> {
     const { id: _, quebra: __, ...atual } = await this.obter(id);
     if (!(await this.repo.excluir(id))) throw new ItemEmUsoError(ROTULO);

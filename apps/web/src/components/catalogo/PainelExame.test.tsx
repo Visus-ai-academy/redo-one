@@ -119,4 +119,81 @@ describe('PainelExame', () => {
 
     expect(onExcluir).toHaveBeenCalled();
   });
+
+  describe('só a subespecialidade (exames.subespecialidade.editar)', () => {
+    const restrito = (props: Partial<PainelExameProps> = {}) => {
+      const onSalvarSubespecialidade = vi.fn(async () => undefined);
+      const handlers = montar({
+        exame,
+        podeEditar: false,
+        podeCriar: false,
+        onSalvarSubespecialidade,
+        ...props,
+      });
+      return { ...handlers, onSalvarSubespecialidade };
+    };
+
+    it('mostra os outros campos só para leitura e só a subespecialidade editável', () => {
+      restrito();
+
+      expect(screen.getByRole('combobox', { name: 'Subespecialidade' })).toBeInTheDocument();
+      for (const campo of ['Nome', 'Código', 'Descrição']) {
+        expect(screen.queryByRole('textbox', { name: campo })).not.toBeInTheDocument();
+      }
+      for (const campo of ['Modalidade', 'Especialidade', 'Categoria', 'Prioridade']) {
+        expect(screen.queryByRole('combobox', { name: campo })).not.toBeInTheDocument();
+      }
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+      const especialidade = screen.getByRole('textbox', { name: 'Especialidade' });
+      expect(especialidade).toHaveValue('MEDICINA INTERNA');
+      expect(especialidade).toHaveAttribute('readonly');
+    });
+
+    it('sem botões de criar, excluir ou mexer na quebra; só o salvar', () => {
+      restrito({ exame: { ...exame, quebra: null } });
+
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+      for (const botao of ['Criar exame', 'Excluir exame', 'Criar quebra']) {
+        expect(screen.queryByRole('button', { name: botao })).not.toBeInTheDocument();
+      }
+    });
+
+    it('oferece só as subespecialidades da especialidade do exame e salva só ela', async () => {
+      const { onSalvar, onSalvarSubespecialidade } = restrito();
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Subespecialidade' }));
+      const abdome = await screen.findByRole('option', { name: 'ABDOME' });
+      expect(screen.queryByRole('option', { name: 'AVC' })).not.toBeInTheDocument();
+      await userEvent.click(abdome);
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(onSalvarSubespecialidade).toHaveBeenCalledWith('s-abd');
+      expect(onSalvar).not.toHaveBeenCalled();
+    });
+
+    it('voltar para "Sem subespecialidade" salva nulo', async () => {
+      const { onSalvarSubespecialidade } = restrito({
+        exame: { ...exame, subespecialidadeId: 's-abd' },
+      });
+
+      await escolherOpcao('Subespecialidade', 'Sem subespecialidade');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(onSalvarSubespecialidade).toHaveBeenCalledWith(null);
+    });
+
+    it('sem a permissão, o painel só leitura não tem campo nem salvar', () => {
+      montar({ exame, podeEditar: false, podeCriar: false });
+
+      expect(screen.queryByRole('combobox', { name: 'Subespecialidade' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    });
+
+    it('quem edita o exame inteiro continua com o formulário completo', () => {
+      restrito({ podeEditar: true });
+
+      expect(screen.getByRole('textbox', { name: 'Nome' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Especialidade' })).toBeInTheDocument();
+    });
+  });
 });

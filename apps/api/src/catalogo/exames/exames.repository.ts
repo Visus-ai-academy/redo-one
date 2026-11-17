@@ -57,6 +57,8 @@ export interface ExamesRepository {
   /** Lança `ReferenciaInexistenteError` se algum cadastro ligado não existe. */
   criar(dados: DadosExame & { chaveNormalizada: string }): Promise<string>;
   atualizar(id: string, dados: DadosExame & { chaveNormalizada: string }): Promise<void>;
+  /** Grava só a subespecialidade. Lança `ReferenciaInexistenteError` se ela não existe. */
+  definirSubespecialidade(id: string, subespecialidadeId: string | null): Promise<void>;
   /** `false` quando o exame é peça de uma quebra ou outro cadastro o usa. */
   excluir(id: string): Promise<boolean>;
 }

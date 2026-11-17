@@ -23,6 +23,11 @@ export type PainelExameProps = {
   /** Criar a quebra do estudo (POST). */
   podeCriar: boolean;
   onSalvar: (dados: ExameDto) => Promise<void>;
+  /**
+   * Sem `podeEditar`, mudar só a subespecialidade (`exames.subespecialidade.editar`): o painel
+   * fica só leitura, com a subespecialidade editável e o Salvar.
+   */
+  onSalvarSubespecialidade?: (subespecialidadeId: string | null) => Promise<void>;
   onExcluir?: () => Promise<void>;
   /** Abre a quebra do estudo com o mesmo nome do exame. */
   onAbrirQuebra: (id: string) => void;
@@ -45,6 +50,7 @@ export function PainelExame({
   podeEditar,
   podeCriar,
   onSalvar,
+  onSalvarSubespecialidade,
   onExcluir,
   onAbrirQuebra,
   onCriarQuebra,
@@ -268,10 +274,21 @@ export function PainelExame({
               label="Especialidade"
               value={nomeDe(opcoes.especialidades, exame.especialidadeId)}
             />
-            <CampoSomenteLeitura
-              label="Subespecialidade"
-              value={nomeDe(opcoes.subespecialidades, exame.subespecialidadeId)}
-            />
+            {onSalvarSubespecialidade ? (
+              <FormSubespecialidade
+                exame={exame}
+                opcoes={opcoes}
+                onSalvar={(subespecialidadeId) =>
+                  tentar(() => onSalvarSubespecialidade(subespecialidadeId))
+                }
+                onCancelar={onFechar}
+              />
+            ) : (
+              <CampoSomenteLeitura
+                label="Subespecialidade"
+                value={nomeDe(opcoes.subespecialidades, exame.subespecialidadeId)}
+              />
+            )}
             <CampoSomenteLeitura
               label="Categoria"
               value={nomeDe(opcoes.categoriasExame, exame.categoriaId)}
@@ -290,6 +307,68 @@ export function PainelExame({
         />
       )}
     </PainelLateral>
+  );
+}
+
+/**
+ * Só a subespecialidade, para quem não edita o exame inteiro. As opções são as da especialidade do
+ * exame (mais a atual), como no formulário completo.
+ */
+function FormSubespecialidade({
+  exame,
+  opcoes,
+  onSalvar,
+  onCancelar,
+}: {
+  exame: ExameDetalheDto;
+  opcoes: OpcoesCatalogoDto;
+  onSalvar: (subespecialidadeId: string | null) => Promise<void>;
+  onCancelar: () => void;
+}) {
+  const form = useAppForm({
+    defaultValues: { subespecialidadeId: exame.subespecialidadeId ?? '' },
+    validators: { onSubmit: z.object({ subespecialidadeId: z.string() }) },
+    onSubmit: ({ value }) => onSalvar(value.subespecialidadeId || null),
+  });
+  const daEspecialidade = opcoes.subespecialidades.filter(
+    (s) =>
+      !exame.especialidadeId ||
+      s.especialidadeIds.includes(exame.especialidadeId) ||
+      s.id === exame.subespecialidadeId,
+  );
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.handleSubmit();
+      }}
+      className="flex flex-col gap-4"
+    >
+      <form.AppField name="subespecialidadeId">
+        {(field) => (
+          <field.SelectField
+            label="Subespecialidade"
+            placeholder="Sem subespecialidade"
+            description="Sem subespecialidade, o exame não vai para médico restrito a uma."
+            opcoes={[nenhum('Sem subespecialidade'), ...comoOpcoes(daEspecialidade)]}
+          />
+        )}
+      </form.AppField>
+      <span className="flex justify-end gap-2">
+        <Button
+          type="button"
+          onClick={onCancelar}
+          className={buttonClassName({ variant: 'secondary' })}
+        >
+          Cancelar
+        </Button>
+        <form.AppForm>
+          <form.SubmitButton pendingLabel="Salvando…">Salvar</form.SubmitButton>
+        </form.AppForm>
+      </span>
+    </form>
   );
 }
 

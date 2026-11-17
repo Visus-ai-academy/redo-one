@@ -144,6 +144,12 @@ export class DrizzleExamesRepository implements ExamesRepository {
     await gravando(() => this.db.update(exames).set(dados).where(eq(exames.id, id)));
   }
 
+  async definirSubespecialidade(id: string, subespecialidadeId: string | null) {
+    await gravando(() =>
+      this.db.update(exames).set({ subespecialidadeId }).where(eq(exames.id, id)),
+    );
+  }
+
   async excluir(id: string) {
     try {
       await this.db.delete(exames).where(eq(exames.id, id));

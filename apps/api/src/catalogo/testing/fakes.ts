@@ -327,6 +327,11 @@ export class InMemoryExamesRepository implements ExamesRepository {
     this.itens.set(id, { ...dados, id });
   }
 
+  async definirSubespecialidade(id: string, subespecialidadeId: string | null) {
+    const exame = this.itens.get(id);
+    if (exame) this.itens.set(id, { ...exame, subespecialidadeId });
+  }
+
   async excluir(id: string) {
     if (this.emUso.has(id)) return false;
     this.itens.delete(id);

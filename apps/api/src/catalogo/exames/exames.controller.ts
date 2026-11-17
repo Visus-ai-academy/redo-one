@@ -24,7 +24,13 @@ import {
 import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
 import { IdCriadoDto } from '../comum/dto';
-import { ExameDetalheDto, ExameDto, ListarExamesDto, PaginaExamesDto } from './dto/exame.dto';
+import {
+  ExameDetalheDto,
+  ExameDto,
+  ListarExamesDto,
+  PaginaExamesDto,
+  SubespecialidadeExameDto,
+} from './dto/exame.dto';
 import { ExamesService } from './exames.service';
 
 @ApiTags('catalogo')
@@ -78,6 +84,24 @@ export class ExamesController {
     @Body() corpo: ExameDto,
   ): Promise<void> {
     return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
+  }
+
+  @Put(':id/subespecialidade')
+  @Permissao('exames.subespecialidade.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Só a subespecialidade muda; os outros campos ficam.' })
+  @ApiBadRequestResponse({ description: 'Subespecialidade inexistente.' })
+  @ApiNotFoundResponse()
+  definirSubespecialidade(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corpo: SubespecialidadeExameDto,
+  ): Promise<void> {
+    return this.service.definirSubespecialidade(
+      { usuarioId: ator.usuarioId },
+      id,
+      corpo.subespecialidadeId,
+    );
   }
 
   @Delete(':id')

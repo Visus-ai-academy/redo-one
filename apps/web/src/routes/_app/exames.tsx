@@ -13,11 +13,13 @@ import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
+import { useAvisos } from '../../components/toast/use-avisos';
 import { deParaValoresExameControllerAtualizar } from '../../gen/clients/deParaValoresExameControllerAtualizar';
 import { deParaValoresExameControllerCriar } from '../../gen/clients/deParaValoresExameControllerCriar';
 import { deParaValoresExameControllerExcluir } from '../../gen/clients/deParaValoresExameControllerExcluir';
 import { examesControllerAtualizar } from '../../gen/clients/examesControllerAtualizar';
 import { examesControllerCriar } from '../../gen/clients/examesControllerCriar';
+import { examesControllerDefinirSubespecialidade } from '../../gen/clients/examesControllerDefinirSubespecialidade';
 import { examesControllerExcluir } from '../../gen/clients/examesControllerExcluir';
 import { opcoesControllerExames } from '../../gen/clients/opcoesControllerExames';
 import { quebrasControllerAdicionarPeca } from '../../gen/clients/quebrasControllerAdicionarPeca';
@@ -335,6 +337,10 @@ const buscarExames = async (termo: string) => {
 
 function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
   const navigate = Route.useNavigate();
+  const { sessao } = Route.useRouteContext();
+  const { sucesso } = useAvisos();
+  // Quem não edita o exame inteiro pode ter a permissão de mudar só a subespecialidade.
+  const soSubespecialidade = !permissoes.editar && pode(sessao, 'exames.subespecialidade.editar');
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
   const consulta = useQuery({
@@ -366,6 +372,18 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
         await invalidarCatalogo(queryClient);
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
+      onSalvarSubespecialidade={
+        id && soSubespecialidade
+          ? async (subespecialidadeId) => {
+              await examesControllerDefinirSubespecialidade({
+                path: { id },
+                body: { subespecialidadeId },
+              }).unwrap();
+              await invalidarCatalogo(queryClient);
+              sucesso('Subespecialidade salva.');
+            }
+          : undefined
+      }
       onExcluir={
         id && permissoes.excluir
           ? async () => {

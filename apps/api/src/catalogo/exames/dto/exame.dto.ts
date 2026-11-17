@@ -86,6 +86,19 @@ export class QuebraDoExameDto {
 
 const idNulo = () => ApiProperty({ type: String, format: 'uuid', nullable: true });
 
+/** Corpo de mudar só a subespecialidade (`exames.subespecialidade.editar`). */
+export class SubespecialidadeExameDto {
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Nula: o exame não vai para médico restrito a uma subespecialidade.',
+  })
+  @IsOptional()
+  @IsUUID()
+  subespecialidadeId: string | null = null;
+}
+
 export class ExameDetalheDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;

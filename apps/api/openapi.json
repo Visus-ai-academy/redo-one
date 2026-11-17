@@ -2951,6 +2951,45 @@
         ]
       }
     },
+    "/catalogo/exames/{id}/subespecialidade": {
+      "put": {
+        "operationId": "ExamesController_definirSubespecialidade",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubespecialidadeExameDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Só a subespecialidade muda; os outros campos ficam."
+          },
+          "400": {
+            "description": "Subespecialidade inexistente."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
     "/catalogo/quebras": {
       "get": {
         "operationId": "QuebrasController_listar",
@@ -9593,6 +9632,20 @@
           "permiteQuebra",
           "exigeRevisaoManual",
           "ativo"
+        ]
+      },
+      "SubespecialidadeExameDto": {
+        "type": "object",
+        "properties": {
+          "subespecialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Nula: o exame não vai para médico restrito a uma subespecialidade."
+          }
+        },
+        "required": [
+          "subespecialidadeId"
         ]
       },
       "PecaResumoDto": {
