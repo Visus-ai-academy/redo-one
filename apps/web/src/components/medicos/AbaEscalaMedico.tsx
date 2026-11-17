@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
 import { ocorrenciasControllerListarQueryOptions } from '../../gen/hooks/useOcorrenciasControllerListar';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { buttonClassName } from '../button/button-class';
 import { resumoDoMedico, semDiaAnterior } from '../escala/agrupar';
 import { hojeEmBrasilia, rotuloDia, somarDias } from '../escala/calendario';
@@ -55,8 +56,15 @@ export function AbaEscalaMedico({ medicoId, hoje: hojeFixo }: { medicoId: string
           <ul className="flex flex-col divide-y rounded-md border">
             {pagina.itensDaPagina.map((r) => (
               <li key={r.chave} className="flex flex-col gap-0.5 px-3 py-2">
-                <span className="font-medium">
-                  {r.frente}, {r.turno}
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    <BolinhaCor cor={r.frenteCor} />
+                    <span>{r.frente}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <BolinhaCor cor={r.turnoCor} />
+                    <span>{r.turno}</span>
+                  </span>
                 </span>
                 <span className="tabular-nums">
                   {r.dias}, {r.horario}

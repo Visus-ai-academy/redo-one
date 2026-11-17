@@ -125,7 +125,7 @@ describe('contarPorDia', () => {
 });
 
 describe('resumoDoMedico', () => {
-  it('agrupa por frente, turno e horário, com os dias da semana', () => {
+  it('agrupa por frente, turno e horário, com os dias da semana e as cores', () => {
     const resumo = resumoDoMedico([
       ocorrencia({ data: '2026-11-16', diaSemana: 1 }),
       ocorrencia({ data: '2026-11-18', diaSemana: 3 }),
@@ -136,7 +136,9 @@ describe('resumoDoMedico', () => {
       {
         chave: 'f-tc|t-manha|07:00|13:00',
         frente: 'TC Neuro',
+        frenteCor: '#1F7A4D',
         turno: 'Manhã',
+        turnoCor: '#214037',
         horario: '07:00–13:00',
         dias: 'Seg e Qua',
         plantoes: 3,
@@ -146,7 +148,9 @@ describe('resumoDoMedico', () => {
       {
         chave: 'f-tc|t-manha|08:00|13:00',
         frente: 'TC Neuro',
+        frenteCor: '#1F7A4D',
         turno: 'Manhã',
+        turnoCor: '#214037',
         horario: '08:00–13:00',
         dias: 'Sáb',
         plantoes: 1,

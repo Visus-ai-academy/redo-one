@@ -350,7 +350,9 @@ export function rotuloDias(dias: Iterable<number>) {
 export type ResumoAlocacao = {
   chave: string;
   frente: string;
+  frenteCor: string | null;
   turno: string;
+  turnoCor: string | null;
   horario: string;
   dias: string;
   plantoes: number;
@@ -380,7 +382,9 @@ export function resumoDoMedico(ocorrencias: readonly OcorrenciaDto[]): ResumoAlo
       return {
         chave,
         frente: o.frenteRotulo,
+        frenteCor: o.frenteCor,
         turno: o.turnoNome,
+        turnoCor: o.turnoCor,
         horario: `${o.horarioInicio}–${o.horarioFim}`,
         dias: rotuloDias(dias),
         plantoes: datas.length,

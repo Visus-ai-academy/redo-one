@@ -16,14 +16,21 @@ function responder(ocorrencias: ReturnType<typeof ocorrencia>[]) {
 }
 
 describe('AbaEscalaMedico', () => {
-  it('resume as próximas 4 semanas por frente, turno e dias, com o link para a escala', async () => {
+  it('resume as próximas 4 semanas por frente e turno (com as cores) e dias, com o link para a escala', async () => {
     responder([
       ocorrencia({ data: '2026-11-16', diaSemana: 1 }),
       ocorrencia({ data: '2026-11-18', diaSemana: 3 }),
     ]);
     renderComRotas(<AbaEscalaMedico medicoId="m1" hoje="2026-11-16" />);
 
-    expect(await screen.findByText('TC Neuro, Manhã')).toBeInTheDocument();
+    const frente = await screen.findByText('TC Neuro');
+    expect(frente.parentElement?.querySelector('[data-cor]')).toHaveStyle({
+      backgroundColor: '#1F7A4D',
+    });
+    const turno = screen.getByText('Manhã');
+    expect(turno.parentElement?.querySelector('[data-cor]')).toHaveStyle({
+      backgroundColor: '#214037',
+    });
     expect(screen.getByText('Seg e Qua, 07:00–13:00')).toBeInTheDocument();
     expect(screen.getByText('2 plantões, de 16/11 a 18/11')).toBeInTheDocument();
     expect(listar).toHaveBeenCalledWith(
