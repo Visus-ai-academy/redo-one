@@ -1,7 +1,9 @@
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { PlantaoDoAvisoDto } from '../../gen/types/PlantaoDoAvisoDto';
+import type { TipoFrenteEscalaKey } from '../../gen/types/TipoFrenteEscala';
 import { diaDaSemana, NOMES_DIAS } from './calendario';
+import { type FrenteParaOpcao, opcoesDeFrentes } from './opcoes-frentes';
 
 export type Agrupamento = 'frente' | 'turno';
 
@@ -15,7 +17,14 @@ export type TurnoDaGrade = {
   horarioFim: string;
   frentes: { id: string; rotulo: string }[];
 };
-export type FrenteDaGrade = { id: string; rotulo: string; cor: string | null; ordem: number };
+export type FrenteDaGrade = {
+  id: string;
+  rotulo: string;
+  cor: string | null;
+  ordem: number;
+  /** Separa as opções do filtro em especialidades e modalidades. */
+  tipo?: TipoFrenteEscalaKey;
+};
 
 export type LinhaGrade = {
   id: string;
@@ -427,17 +436,22 @@ export function semDiaAnterior<T extends { doDiaAnterior: boolean }>(ocorrencias
  * período (datas passadas), marcados como inativos.
  */
 export function opcoesComInativos(
-  turnos: readonly { id: string; nome: string }[],
-  frentes: readonly { id: string; rotulo: string }[],
+  turnos: readonly { id: string; nome: string; cor: string | null }[],
+  frentes: readonly FrenteParaOpcao[],
   ocorrencias: readonly OcorrenciaDto[],
 ) {
-  const turnosOp = turnos.map((t) => ({ valor: t.id, rotulo: t.nome }));
-  const frentesOp = frentes.map((f) => ({ valor: f.id, rotulo: f.rotulo }));
+  const turnosOp = turnos.map((t) => ({ valor: t.id, rotulo: t.nome, cor: t.cor }));
+  const frentesOp = opcoesDeFrentes(frentes);
   for (const o of ocorrencias) {
     if (!turnosOp.some((t) => t.valor === o.turnoId))
-      turnosOp.push({ valor: o.turnoId, rotulo: `${o.turnoNome} (inativo)` });
+      turnosOp.push({ valor: o.turnoId, rotulo: `${o.turnoNome} (inativo)`, cor: o.turnoCor });
+    // Sem o tipo no plantão: vai para o fim da lista, sem subtítulo.
     if (!frentesOp.some((f) => f.valor === o.frenteId))
-      frentesOp.push({ valor: o.frenteId, rotulo: `${o.frenteRotulo} (inativa)` });
+      frentesOp.push({
+        valor: o.frenteId,
+        rotulo: `${o.frenteRotulo} (inativa)`,
+        cor: o.frenteCor,
+      });
   }
   return { turnos: turnosOp, frentes: frentesOp };
 }

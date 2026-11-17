@@ -23,6 +23,7 @@ import {
   valoresIniciais,
 } from './alocacao-form';
 import { CaixasField, OpcoesField } from './campos';
+import { opcoesDeFrentes } from './opcoes-frentes';
 
 export type PainelAlocacaoProps = {
   /** Com alocação, o painel edita; sem, cria. */
@@ -86,7 +87,7 @@ export function PainelAlocacao({
     },
   });
 
-  const opcoesFrentes = frentes.map((f) => ({ valor: f.id, rotulo: f.rotulo }));
+  const opcoesFrentes = opcoesDeFrentes(frentes);
 
   return (
     <PainelLateral titulo={editando ? 'Editar alocação' : 'Alocar médico'} onFechar={onFechar}>

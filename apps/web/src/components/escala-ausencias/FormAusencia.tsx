@@ -8,6 +8,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import type { OpcaoMarcar } from '../form/CheckboxListField';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
 import { CampoDiasSemana, CampoMedicos } from './campos';
@@ -52,7 +53,8 @@ export type FormAusenciaProps = {
   aviso?: string;
   /** Tipos ativos. */
   tipos: Opcao[];
-  frentes: Opcao[];
+  /** Com `grupo` (especialidades e modalidades) e `cor`: `opcoesDeFrentes`. */
+  frentes: OpcaoMarcar[];
   turnos: Opcao[];
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
   /** Na edição, `medicoIds` traz só o médico da ausência. */

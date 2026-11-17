@@ -2,9 +2,17 @@ import { Combobox } from '@base-ui/react/combobox';
 import { Field } from '@base-ui/react/field';
 import { Select } from '@base-ui/react/select';
 import { CaretDown, Check, MagnifyingGlass } from '@phosphor-icons/react';
-import { useId, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 
 import { cn } from '../../lib/cn';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
+import {
+  agruparOpcoes,
+  classeGrupo,
+  classeSubtitulo,
+  type GrupoDeOpcoes,
+  temGrupos,
+} from '../select/grupos';
 import { CampoSomenteLeitura } from './CampoSomenteLeitura';
 import { useFieldContext } from './context';
 import { FieldError, FieldLabel } from './field-parts';
@@ -34,6 +42,10 @@ export type OpcaoMultipla = {
   rotulo: string;
   /** Inativa no cadastro: só aparece quando já está marcada, com "(inativo)" no nome. */
   inativa?: boolean;
+  /** Subtítulo da lista (ex.: "Especialidades"); sem ele, a opção fica num grupo sem subtítulo. */
+  grupo?: string;
+  /** Com a chave, mostra a bolinha da cor antes do nome (sem cor, só o contorno). */
+  cor?: string | null;
 };
 
 type SelecaoMultiplaFieldProps = {
@@ -61,7 +73,8 @@ function resumir(nomes: string[], vazio: string) {
 /**
  * Várias escolhas numa lista que abre do campo (checklist no popup), sobre o Select múltiplo do
  * Base UI; com mais de 7 opções, o Combobox múltiplo com busca no topo. O gatilho resume o que
- * está marcado. O valor do campo é a lista de `valor` marcados.
+ * está marcado. O valor do campo é a lista de `valor` marcados. Opções com `grupo` ficam sob
+ * subtítulos (os de grupo vazio somem na busca); com `cor`, ganham a bolinha.
  */
 export function SelecaoMultiplaField({
   label,
@@ -190,18 +203,16 @@ function Simples({
             )}
           >
             <Select.List>
-              {opcoes.map((opcao) => (
-                <Select.Item key={opcao.valor} value={opcao.valor} className={classeItem}>
-                  <Select.ItemIndicator className="text-primary col-start-1 flex">
-                    <Check size={16} aria-hidden />
-                  </Select.ItemIndicator>
-                  <Select.ItemText
-                    className={cn('col-start-2 truncate', opcao.inativa && 'text-muted-foreground')}
-                  >
-                    {nomeDa(opcao)}
-                  </Select.ItemText>
-                </Select.Item>
-              ))}
+              {temGrupos(opcoes)
+                ? agruparOpcoes(opcoes).map(({ grupo, items }) => (
+                    <Select.Group key={grupo ?? ''} className={classeGrupo}>
+                      {grupo && (
+                        <Select.GroupLabel className={classeSubtitulo}>{grupo}</Select.GroupLabel>
+                      )}
+                      {items.map(itemSimples)}
+                    </Select.Group>
+                  ))
+                : opcoes.map(itemSimples)}
             </Select.List>
           </Select.Popup>
         </Select.Positioner>
@@ -223,11 +234,12 @@ function ComBusca({
   const [busca, setBusca] = useState('');
   const idBusca = useId();
   const escolhidas = marcados.flatMap((v) => opcoes.filter((o) => o.valor === v));
+  const agrupada = temGrupos(opcoes);
 
   return (
     <Combobox.Root
       multiple
-      items={opcoes}
+      items={agrupada ? agruparOpcoes(opcoes) : opcoes}
       value={escolhidas}
       onValueChange={(novas) => onMudar((novas as OpcaoMultipla[]).map((o) => o.valor))}
       itemToStringLabel={(opcao: OpcaoMultipla) => nomeDa(opcao)}
@@ -275,22 +287,66 @@ function ComBusca({
               {busca && `Nada encontrado para “${busca}”.`}
             </Combobox.Empty>
             <Combobox.List className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1 empty:p-0">
-              {(opcao: OpcaoMultipla) => (
-                <Combobox.Item key={opcao.valor} value={opcao} className={classeItem}>
-                  <Combobox.ItemIndicator className="text-primary col-start-1 flex">
-                    <Check size={16} aria-hidden />
-                  </Combobox.ItemIndicator>
-                  <span
-                    className={cn('col-start-2 truncate', opcao.inativa && 'text-muted-foreground')}
-                  >
-                    {nomeDa(opcao)}
-                  </span>
-                </Combobox.Item>
-              )}
+              {agrupada
+                ? (grupo: GrupoDeOpcoes<OpcaoMultipla>) => (
+                    <Combobox.Group
+                      key={grupo.grupo ?? ''}
+                      items={grupo.items}
+                      className={classeGrupo}
+                    >
+                      {grupo.grupo && (
+                        <Combobox.GroupLabel className={classeSubtitulo}>
+                          {grupo.grupo}
+                        </Combobox.GroupLabel>
+                      )}
+                      <Combobox.Collection>{itemComBusca}</Combobox.Collection>
+                    </Combobox.Group>
+                  )
+                : itemComBusca}
             </Combobox.List>
           </Combobox.Popup>
         </Combobox.Positioner>
       </Combobox.Portal>
     </Combobox.Root>
+  );
+}
+
+/** Bolinha da cor (se a opção tem a chave) e o nome, na segunda coluna do item. */
+function NomeDaOpcao({ opcao, children }: { opcao: OpcaoMultipla; children: ReactNode }) {
+  return (
+    <span className="col-start-2 flex min-w-0 items-center gap-2">
+      {'cor' in opcao && <BolinhaCor cor={opcao.cor ?? null} />}
+      {children}
+    </span>
+  );
+}
+
+function itemSimples(opcao: OpcaoMultipla) {
+  return (
+    <Select.Item key={opcao.valor} value={opcao.valor} className={classeItem}>
+      <Select.ItemIndicator className="text-primary col-start-1 flex">
+        <Check size={16} aria-hidden />
+      </Select.ItemIndicator>
+      <NomeDaOpcao opcao={opcao}>
+        <Select.ItemText className={cn('truncate', opcao.inativa && 'text-muted-foreground')}>
+          {nomeDa(opcao)}
+        </Select.ItemText>
+      </NomeDaOpcao>
+    </Select.Item>
+  );
+}
+
+function itemComBusca(opcao: OpcaoMultipla) {
+  return (
+    <Combobox.Item key={opcao.valor} value={opcao} className={classeItem}>
+      <Combobox.ItemIndicator className="text-primary col-start-1 flex">
+        <Check size={16} aria-hidden />
+      </Combobox.ItemIndicator>
+      <NomeDaOpcao opcao={opcao}>
+        <span className={cn('truncate', opcao.inativa && 'text-muted-foreground')}>
+          {nomeDa(opcao)}
+        </span>
+      </NomeDaOpcao>
+    </Combobox.Item>
   );
 }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -164,5 +164,35 @@ describe('SelecaoMultiplaField', () => {
     expect(caixa).toHaveValue('MSK');
     expect(caixa).toHaveAttribute('readonly');
     expect(screen.queryByRole('combobox', { name: 'Especialidades' })).not.toBeInTheDocument();
+  });
+
+  it('agrupa por subtítulo e mostra a cor; com busca, esconde o grupo vazio', async () => {
+    const poucas: OpcaoMultipla[] = [
+      { valor: 'neuro', rotulo: 'NEURO', grupo: 'Especialidades', cor: '#4E8C88' },
+      { valor: 'tc', rotulo: 'TC', grupo: 'Modalidades', cor: null },
+    ];
+    const { unmount } = render(<Formulario opcoes={poucas} onSubmit={vi.fn()} />);
+    await userEvent.click(campo());
+    const esp = await screen.findByRole('group', { name: 'Especialidades' });
+    expect(within(esp).getByRole('option', { name: 'NEURO' })).toBeInTheDocument();
+    expect(
+      within(esp).getByRole('option', { name: 'NEURO' }).querySelector('[data-cor]'),
+    ).toHaveStyle({ backgroundColor: '#4E8C88' });
+    expect(
+      screen.getByRole('option', { name: 'TC' }).querySelector('[data-cor]'),
+    ).not.toHaveAttribute('style');
+    unmount();
+
+    const muitas: OpcaoMultipla[] = MUITAS.map((o, i) => ({
+      ...o,
+      grupo: i < 4 ? 'Especialidades' : 'Modalidades',
+    }));
+    render(<Formulario opcoes={muitas} onSubmit={vi.fn()} />);
+    await userEvent.click(campo());
+    expect(await screen.findByRole('group', { name: 'Especialidades' })).toBeInTheDocument();
+    await userEvent.type(screen.getByRole('combobox', { name: 'Buscar na lista' }), 'torax');
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['TÓRAX']);
+    expect(screen.queryByRole('group', { name: 'Especialidades' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Modalidades' })).toBeInTheDocument();
   });
 });

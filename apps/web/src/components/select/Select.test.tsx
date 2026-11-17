@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -148,5 +148,57 @@ describe('Select', () => {
     await userEvent.click(screen.getByRole('combobox', { name: 'Filtrar por papel' }));
     await screen.findByRole('option', { name: 'Financeiro' });
     expect(screen.queryByRole('combobox', { name: 'Buscar na lista' })).not.toBeInTheDocument();
+  });
+
+  describe('com grupos e cor', () => {
+    const frentes = [
+      { valor: 'neuro', rotulo: 'NEURO', grupo: 'Especialidades', cor: '#4E8C88' },
+      { valor: 'mama', rotulo: 'MAMA', grupo: 'Especialidades', cor: null },
+      { valor: 'tc', rotulo: 'TC', grupo: 'Modalidades', cor: '#8A4A4A' },
+    ];
+
+    it('lista curta: subtítulo por grupo e bolinha de cor', async () => {
+      render(<Select aria-label="Frente" value="" onValueChange={vi.fn()} opcoes={frentes} />);
+      await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
+      const esp = await screen.findByRole('group', { name: 'Especialidades' });
+      expect(
+        within(esp)
+          .getAllByRole('option')
+          .map((o) => o.textContent),
+      ).toEqual(['NEURO', 'MAMA']);
+      const mod = screen.getByRole('group', { name: 'Modalidades' });
+      expect(within(mod).getByRole('option', { name: 'TC' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'NEURO' }).querySelector('[data-cor]')).toHaveStyle(
+        { backgroundColor: '#4E8C88' },
+      );
+    });
+
+    it('com busca: filtra dentro dos grupos e some o subtítulo de grupo vazio', async () => {
+      const muitas = [
+        ...['A1', 'A2', 'A3', 'A4', 'A5'].map((n) => ({
+          valor: n,
+          rotulo: n,
+          grupo: 'Especialidades',
+          cor: null,
+        })),
+        ...['TC', 'RM', 'US'].map((n) => ({
+          valor: n,
+          rotulo: n,
+          grupo: 'Modalidades',
+          cor: null,
+        })),
+      ];
+      const onValueChange = vi.fn();
+      render(<Select aria-label="Frente" value="" onValueChange={onValueChange} opcoes={muitas} />);
+      await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
+      expect(await screen.findByRole('group', { name: 'Especialidades' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Modalidades' })).toBeInTheDocument();
+      await userEvent.type(screen.getByRole('combobox', { name: 'Buscar na lista' }), 'rm');
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['RM']);
+      expect(screen.queryByText('Especialidades')).not.toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Modalidades' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('option', { name: 'RM' }));
+      expect(onValueChange).toHaveBeenCalledWith('RM');
+    });
   });
 });

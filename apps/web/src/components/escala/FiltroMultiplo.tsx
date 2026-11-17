@@ -2,21 +2,50 @@ import { Select } from '@base-ui/react/select';
 import { CaretDown, Check } from '@phosphor-icons/react';
 
 import { cn } from '../../lib/cn';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
+import { agruparOpcoes, classeGrupo, classeSubtitulo, temGrupos } from '../select/grupos';
+
+type OpcaoFiltro = {
+  valor: string;
+  rotulo: string;
+  /** Subtítulo da lista (ex.: "Especialidades"); sem ele, a opção fica num grupo sem subtítulo. */
+  grupo?: string;
+  /** Com a chave, mostra a bolinha da cor antes do nome (sem cor, só o contorno). */
+  cor?: string | null;
+};
 
 type FiltroMultiploProps = {
   /** Nome do filtro ("Frentes"), lido pelo leitor de tela e mostrado antes do resumo. */
   rotulo: string;
   /** O que vale sem nada marcado ("Todas"). */
   todos: string;
-  opcoes: readonly { valor: string; rotulo: string }[];
+  opcoes: readonly OpcaoFiltro[];
   valor: string[];
   onMudar: (valor: string[]) => void;
   className?: string;
 };
 
+function item(opcao: OpcaoFiltro) {
+  return (
+    <Select.Item
+      key={opcao.valor}
+      value={opcao.valor}
+      className="data-[highlighted]:bg-muted grid h-9 grid-cols-[16px_1fr] items-center gap-2 rounded-md pr-3 pl-2 outline-none"
+    >
+      <Select.ItemIndicator className="text-primary col-start-1 flex">
+        <Check size={16} aria-hidden />
+      </Select.ItemIndicator>
+      <span className="col-start-2 flex min-w-0 items-center gap-2">
+        {'cor' in opcao && <BolinhaCor cor={opcao.cor ?? null} />}
+        <Select.ItemText className="truncate">{opcao.rotulo}</Select.ItemText>
+      </span>
+    </Select.Item>
+  );
+}
+
 /**
  * Filtro de várias escolhas numa faixa de filtros (ex.: as frentes da escala), sobre o Select
- * múltiplo do Base UI. Nada marcado = sem filtro.
+ * múltiplo do Base UI. Nada marcado = sem filtro. Opções com `grupo` ficam sob subtítulos; com `cor`, ganham a bolinha.
  */
 export function FiltroMultiplo({
   rotulo,
@@ -61,20 +90,18 @@ export function FiltroMultiplo({
           alignItemWithTrigger={false}
           className="z-50 outline-none"
         >
-          <Select.Popup className="bg-popover text-popover-foreground max-h-[min(var(--available-height),384px)] min-w-[max(var(--anchor-width),200px)] origin-(--transform-origin) overflow-y-auto rounded-lg border p-1 shadow-lg transition-[opacity,scale] duration-150 ease-out data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
+          <Select.Popup className="bg-popover text-popover-foreground max-h-[var(--available-height)] min-w-[max(var(--anchor-width),200px)] origin-(--transform-origin) overflow-y-auto rounded-lg border p-1 shadow-lg transition-[opacity,scale] duration-150 ease-out data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
             <Select.List>
-              {opcoes.map((opcao) => (
-                <Select.Item
-                  key={opcao.valor}
-                  value={opcao.valor}
-                  className="data-[highlighted]:bg-muted grid h-9 grid-cols-[16px_1fr] items-center gap-2 rounded-md pr-3 pl-2 outline-none"
-                >
-                  <Select.ItemIndicator className="text-primary col-start-1 flex">
-                    <Check size={16} aria-hidden />
-                  </Select.ItemIndicator>
-                  <Select.ItemText className="col-start-2 truncate">{opcao.rotulo}</Select.ItemText>
-                </Select.Item>
-              ))}
+              {temGrupos(opcoes)
+                ? agruparOpcoes(opcoes).map(({ grupo, items }) => (
+                    <Select.Group key={grupo ?? ''} className={classeGrupo}>
+                      {grupo && (
+                        <Select.GroupLabel className={classeSubtitulo}>{grupo}</Select.GroupLabel>
+                      )}
+                      {items.map(item)}
+                    </Select.Group>
+                  ))
+                : opcoes.map(item)}
             </Select.List>
           </Select.Popup>
         </Select.Positioner>

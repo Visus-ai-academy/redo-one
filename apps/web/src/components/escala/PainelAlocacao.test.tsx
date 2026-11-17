@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -164,5 +164,21 @@ describe('PainelAlocacao', () => {
     expect(screen.getByRole('textbox', { name: 'Médico' })).toHaveAttribute('readonly');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByText('O horário não cabe no turno.')).toBeInTheDocument();
+  });
+
+  it('a frente separa especialidades e modalidades, com a cor', async () => {
+    montar({
+      frentes: [
+        { ...frente('f-tc', 'TC'), tipo: 'modalidade', cor: '#8A4A4A' },
+        frente('f-neuro', 'NEURO'),
+      ],
+    });
+    await userEvent.click(screen.getByRole('combobox', { name: /Frente/ }));
+    const esp = await screen.findByRole('group', { name: 'Especialidades' });
+    expect(within(esp).getByRole('option', { name: 'NEURO' })).toBeInTheDocument();
+    const tc = within(screen.getByRole('group', { name: 'Modalidades' })).getByRole('option', {
+      name: 'TC',
+    });
+    expect(tc.querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#8A4A4A' });
   });
 });

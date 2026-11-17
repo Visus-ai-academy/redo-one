@@ -35,6 +35,7 @@ import {
   previa,
   turnosDaFrente,
 } from './escala-fixa';
+import { type FrenteParaOpcao, opcoesDeFrentes } from './opcoes-frentes';
 
 type TurnoDaEscalaFixa = {
   id: string;
@@ -51,7 +52,7 @@ export type PainelEscalaFixaProps = {
   hoje: string;
   /** Turnos e frentes que quem edita pode usar (o recorte, se houver). */
   turnos: TurnoDaEscalaFixa[];
-  frentes: { id: string; rotulo: string }[];
+  frentes: FrenteParaOpcao[];
   /** A grade atual de um médico numa frente. */
   buscarGrade: (medicoId: string, frenteId: string) => Promise<EscalaFixaDto>;
   /** Médicos para copiar a grade. */
@@ -132,10 +133,7 @@ export function PainelEscalaFixa({
     },
   });
 
-  const opcoesFrentes = frentesComTurno(frentes, turnos).map((f) => ({
-    valor: f.id,
-    rotulo: f.rotulo,
-  }));
+  const opcoesFrentes = opcoesDeFrentes(frentesComTurno(frentes, turnos));
   const linhas = frenteId ? turnosDaFrente(turnos, frenteId) : [];
 
   const copiar = async (outro: OpcaoBusca | null) => {

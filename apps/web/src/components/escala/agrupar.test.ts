@@ -220,7 +220,7 @@ describe('semDiaAnterior', () => {
 });
 
 describe('opcoesComInativos', () => {
-  it('acrescenta aos filtros turnos e frentes que só aparecem nos plantões (inativos)', () => {
+  it('acrescenta aos filtros turnos e frentes que só aparecem nos plantões (inativos), com a cor', () => {
     const r = opcoesComInativos(
       [turno()],
       [FRENTE_TC],
@@ -230,17 +230,19 @@ describe('opcoesComInativos', () => {
           turnoNome: 'Velho',
           frenteId: 'f-velha',
           frenteRotulo: 'Velha',
+          turnoCor: '#8A4A4A',
+          frenteCor: null,
         }),
         ocorrencia(),
       ],
     );
     expect(r.turnos).toEqual([
-      { valor: 't-manha', rotulo: 'Manhã' },
-      { valor: 't-velho', rotulo: 'Velho (inativo)' },
+      { valor: 't-manha', rotulo: 'Manhã', cor: '#214037' },
+      { valor: 't-velho', rotulo: 'Velho (inativo)', cor: '#8A4A4A' },
     ]);
     expect(r.frentes).toEqual([
-      { valor: 'f-tc', rotulo: 'TC Neuro' },
-      { valor: 'f-velha', rotulo: 'Velha (inativa)' },
+      { valor: 'f-tc', rotulo: 'TC Neuro', cor: '#1F7A4D' },
+      { valor: 'f-velha', rotulo: 'Velha (inativa)', cor: null },
     ]);
   });
 });

@@ -211,4 +211,13 @@ describe('PainelEscalaFixa', () => {
     expect(await screen.findByText('Escolha a frente.')).toBeInTheDocument();
     expect(acoes.onSalvar).not.toHaveBeenCalled();
   });
+
+  it('a frente mostra a cor e, com tipo, o subtítulo', async () => {
+    montar({ frentes: [{ ...FRENTE_TC, tipo: 'especialidade' as const }] });
+    await userEvent.click(screen.getByRole('combobox', { name: /Frente/ }));
+    const esp = await screen.findByRole('group', { name: 'Especialidades' });
+    expect(
+      within(esp).getByRole('option', { name: 'TC Neuro' }).querySelector('[data-cor]'),
+    ).toHaveStyle({ backgroundColor: FRENTE_TC.cor });
+  });
 });

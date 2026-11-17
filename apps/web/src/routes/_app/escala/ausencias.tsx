@@ -7,6 +7,7 @@ import { CampoBusca } from '../../../components/busca/CampoBusca';
 import { useBuscaComEspera } from '../../../components/busca/use-busca-com-espera';
 import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { opcoesDeFrentes } from '../../../components/escala/opcoes-frentes';
 import {
   buscaAoFecharPainel,
   hojeEmBrasilia,
@@ -294,10 +295,7 @@ function Ausencias() {
             aria-label="Filtrar por escala"
             value={busca.frenteId ?? ''}
             onValueChange={(valor) => filtrar({ frenteId: valor || undefined })}
-            opcoes={[
-              { valor: '', rotulo: 'Todas as escalas' },
-              ...frentes.itens.map((f) => ({ valor: f.id, rotulo: f.rotulo })),
-            ]}
+            opcoes={[{ valor: '', rotulo: 'Todas as escalas' }, ...opcoesDeFrentes(frentes.itens)]}
             className="w-auto min-w-[160px] flex-[1_1_auto] xl:flex-[0_0_auto]"
           />
           <FiltroPeriodo
@@ -383,7 +381,7 @@ function useOpcoesDoFormulario() {
   const { data: turnos } = useSuspenseQuery(turnosControllerListarQueryOptions(TODOS));
   return {
     tipos: tipos.itens.filter((t) => t.ativo).map((t) => ({ valor: t.id, rotulo: t.nome })),
-    frentes: frentes.itens.filter((f) => f.ativo).map((f) => ({ valor: f.id, rotulo: f.rotulo })),
+    frentes: opcoesDeFrentes(frentes.itens.filter((f) => f.ativo)),
     turnos: turnos.itens.filter((t) => t.ativo).map((t) => ({ valor: t.id, rotulo: t.nome })),
   };
 }

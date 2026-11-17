@@ -5,6 +5,14 @@ import { CaretDown, Check, MagnifyingGlass } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 import { cn } from '../../lib/cn';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
+import {
+  agruparOpcoes,
+  classeGrupo,
+  classeSubtitulo,
+  type GrupoDeOpcoes,
+  temGrupos,
+} from './grupos';
 
 /** Acima disso a lista ganha um campo de busca no topo: rolar para achar deixa de ser rápido. */
 const LIMITE_SEM_BUSCA = 7;
@@ -26,7 +34,15 @@ const semAcento = (texto: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
 
-export type OpcaoSelect = { valor: string; rotulo: string; desabilitada?: boolean };
+export type OpcaoSelect = {
+  valor: string;
+  rotulo: string;
+  desabilitada?: boolean;
+  /** Subtítulo da lista (ex.: "Especialidades"); sem ele, a opção fica num grupo sem subtítulo. */
+  grupo?: string;
+  /** Com a chave, mostra a bolinha da cor antes do nome (sem cor, só o contorno). */
+  cor?: string | null;
+};
 
 export type SelectProps = {
   value: string;
@@ -47,7 +63,8 @@ export type SelectProps = {
 /**
  * Seleção do One sobre o Select do Base UI: gatilho de 36px com a seta recuada como nos outros
  * controles e a lista flutuando (sombra só no que flutua). Use no lugar do <select> nativo. Com
- * mais de 7 opções, a lista abre com um campo de busca no topo (Combobox do Base UI).
+ * mais de 7 opções, a lista abre com um campo de busca no topo (Combobox do Base UI). Opções com
+ * `grupo` ficam sob subtítulos (os de grupo vazio somem na busca); com `cor`, ganham a bolinha.
  */
 export function Select(props: SelectProps) {
   return props.opcoes.length > LIMITE_SEM_BUSCA ? (
@@ -111,21 +128,18 @@ function SelectSimples({
             )}
           >
             <BaseSelect.List>
-              {opcoes.map((opcao) => (
-                <BaseSelect.Item
-                  key={opcao.valor}
-                  value={opcao.valor}
-                  disabled={opcao.desabilitada}
-                  className={classeItem}
-                >
-                  <BaseSelect.ItemIndicator className="text-primary col-start-1 flex">
-                    <Check size={16} aria-hidden />
-                  </BaseSelect.ItemIndicator>
-                  <BaseSelect.ItemText className="col-start-2 truncate">
-                    {opcao.rotulo}
-                  </BaseSelect.ItemText>
-                </BaseSelect.Item>
-              ))}
+              {temGrupos(opcoes)
+                ? agruparOpcoes(opcoes).map(({ grupo, items }) => (
+                    <BaseSelect.Group key={grupo ?? ''} className={classeGrupo}>
+                      {grupo && (
+                        <BaseSelect.GroupLabel className={classeSubtitulo}>
+                          {grupo}
+                        </BaseSelect.GroupLabel>
+                      )}
+                      {items.map(itemSimples)}
+                    </BaseSelect.Group>
+                  ))
+                : opcoes.map(itemSimples)}
             </BaseSelect.List>
           </BaseSelect.Popup>
         </BaseSelect.Positioner>
@@ -149,10 +163,11 @@ function SelectComBusca({
 }: SelectProps) {
   const escolhida = opcoes.find((opcao) => opcao.valor === value) ?? null;
   const [busca, setBusca] = useState('');
+  const agrupada = temGrupos(opcoes);
 
   return (
     <Combobox.Root
-      items={opcoes}
+      items={agrupada ? agruparOpcoes(opcoes) : opcoes}
       value={escolhida}
       onValueChange={(opcao) => onValueChange((opcao as OpcaoSelect | null)?.valor ?? '')}
       itemToStringLabel={(opcao: OpcaoSelect) => opcao.rotulo}
@@ -208,23 +223,64 @@ function SelectComBusca({
               {busca && `Nada encontrado para “${busca}”.`}
             </Combobox.Empty>
             <Combobox.List className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1 empty:p-0">
-              {(opcao: OpcaoSelect) => (
-                <Combobox.Item
-                  key={opcao.valor}
-                  value={opcao}
-                  disabled={opcao.desabilitada}
-                  className={classeItem}
-                >
-                  <Combobox.ItemIndicator className="text-primary col-start-1 flex">
-                    <Check size={16} aria-hidden />
-                  </Combobox.ItemIndicator>
-                  <span className="col-start-2 truncate">{opcao.rotulo}</span>
-                </Combobox.Item>
-              )}
+              {agrupada
+                ? (grupo: GrupoDeOpcoes<OpcaoSelect>) => (
+                    <Combobox.Group
+                      key={grupo.grupo ?? ''}
+                      items={grupo.items}
+                      className={classeGrupo}
+                    >
+                      {grupo.grupo && (
+                        <Combobox.GroupLabel className={classeSubtitulo}>
+                          {grupo.grupo}
+                        </Combobox.GroupLabel>
+                      )}
+                      <Combobox.Collection>{itemComBusca}</Combobox.Collection>
+                    </Combobox.Group>
+                  )
+                : itemComBusca}
             </Combobox.List>
           </Combobox.Popup>
         </Combobox.Positioner>
       </Combobox.Portal>
     </Combobox.Root>
+  );
+}
+
+function itemSimples(opcao: OpcaoSelect) {
+  return (
+    <BaseSelect.Item
+      key={opcao.valor}
+      value={opcao.valor}
+      disabled={opcao.desabilitada}
+      className={classeItem}
+    >
+      <BaseSelect.ItemIndicator className="text-primary col-start-1 flex">
+        <Check size={16} aria-hidden />
+      </BaseSelect.ItemIndicator>
+      <span className="col-start-2 flex min-w-0 items-center gap-2">
+        {'cor' in opcao && <BolinhaCor cor={opcao.cor ?? null} />}
+        <BaseSelect.ItemText className="truncate">{opcao.rotulo}</BaseSelect.ItemText>
+      </span>
+    </BaseSelect.Item>
+  );
+}
+
+function itemComBusca(opcao: OpcaoSelect) {
+  return (
+    <Combobox.Item
+      key={opcao.valor}
+      value={opcao}
+      disabled={opcao.desabilitada}
+      className={classeItem}
+    >
+      <Combobox.ItemIndicator className="text-primary col-start-1 flex">
+        <Check size={16} aria-hidden />
+      </Combobox.ItemIndicator>
+      <span className="col-start-2 flex min-w-0 items-center gap-2">
+        {'cor' in opcao && <BolinhaCor cor={opcao.cor ?? null} />}
+        <span className="truncate">{opcao.rotulo}</span>
+      </span>
+    </Combobox.Item>
   );
 }

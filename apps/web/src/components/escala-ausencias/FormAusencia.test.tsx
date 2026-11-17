@@ -199,4 +199,20 @@ describe('FormAusencia', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar agora');
   });
+
+  it('separa as escalas em especialidades e modalidades, com a cor', () => {
+    montar({
+      frentes: [
+        { valor: 'f-neuro', rotulo: 'NEURO', grupo: 'Especialidades', cor: '#4E8C88' },
+        { valor: 'f-tc', rotulo: 'TC', grupo: 'Modalidades', cor: null },
+      ],
+    });
+    const esp = screen.getByRole('group', { name: 'Especialidades' });
+    const neuro = within(esp).getByRole('checkbox', { name: 'NEURO' });
+    expect(neuro.closest('label')?.querySelector('[data-cor]')).toHaveStyle({
+      backgroundColor: '#4E8C88',
+    });
+    const mod = screen.getByRole('group', { name: 'Modalidades' });
+    expect(within(mod).getByRole('checkbox', { name: 'TC' })).toBeInTheDocument();
+  });
 });
