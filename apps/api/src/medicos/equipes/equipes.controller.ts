@@ -28,6 +28,9 @@ import type { PrincipalUsuario } from '../../identidade/principal';
 import { EquipeDto, EquipeItemDto, PaginaEquipesDto } from './dto/equipe.dto';
 import { EquipesService } from './equipes.service';
 
+/** O cadastro não edita o plantão: o service cria fora dele e mantém o gravado. */
+const comPlantao = (corpo: EquipeDto) => ({ ...corpo, plantao: false });
+
 @ApiTags('medicos')
 @Controller('equipes')
 export class EquipesController {
@@ -63,7 +66,7 @@ export class EquipesController {
     @PrincipalAtual() ator: PrincipalUsuario,
     @Body() corpo: EquipeDto,
   ): Promise<IdCriadoDto> {
-    return { id: await this.service.criar({ usuarioId: ator.usuarioId }, corpo) };
+    return { id: await this.service.criar({ usuarioId: ator.usuarioId }, comPlantao(corpo)) };
   }
 
   @Put(':id')
@@ -77,7 +80,7 @@ export class EquipesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corpo: EquipeDto,
   ): Promise<void> {
-    return this.service.atualizar({ usuarioId: ator.usuarioId }, id, corpo);
+    return this.service.atualizar({ usuarioId: ator.usuarioId }, id, comPlantao(corpo));
   }
 
   @Delete(':id')

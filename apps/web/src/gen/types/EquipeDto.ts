@@ -29,11 +29,6 @@ export type EquipeDto = {
   ordem: number;
   ativo: boolean;
   /**
-   * @description Plantão: o recorte da equipe é laudado à mão; o robô não o entrega.
-   * @type boolean
-   */
-  plantao: boolean;
-  /**
    * @description Médicos membros (pode ser vazio).
    * @type array
    */

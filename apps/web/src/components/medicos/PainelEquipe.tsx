@@ -38,7 +38,6 @@ const schema = z.object({
       'Use o formato #RRGGBB, como #1F7A4D.',
     ),
   ordem: z.string().regex(/^\d{1,4}$/, 'Informe um número inteiro de 0 a 9999.'),
-  plantao: z.boolean(),
   ativo: z.boolean(),
   membros: z.array(z.object({ valor: z.string(), rotulo: z.string() })),
 });
@@ -62,7 +61,6 @@ export function PainelEquipe({
       descricao: equipe?.descricao ?? '',
       cor: equipe?.cor ?? '',
       ordem: String(equipe?.ordem ?? 0),
-      plantao: equipe?.plantao ?? false,
       ativo: equipe?.ativo ?? true,
       membros,
     },
@@ -75,7 +73,6 @@ export function PainelEquipe({
           cor: value.cor.trim() || null,
           ordem: Number(value.ordem),
           ativo: value.ativo,
-          plantao: value.plantao,
           medicoIds: value.membros.map((m) => m.valor),
         }),
       ),
@@ -113,10 +110,6 @@ export function PainelEquipe({
       <div className="flex flex-col gap-4 p-4">
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         <CampoSomenteLeitura label="Descrição" value={equipe.descricao ?? '—'} />
-        <CampoSomenteLeitura
-          label="Plantão"
-          value={equipe.plantao ? 'Sim: o robô não entrega o recorte da equipe' : 'Não'}
-        />
         <CampoSomenteLeitura label="Situação" value={equipe.ativo ? 'Ativa' : 'Inativa'} />
         {campoMembros(true)}
         <RodapeSomenteLeitura excluir={excluir} />
@@ -170,14 +163,6 @@ export function PainelEquipe({
             )}
           </form.AppField>
         </div>
-        <form.AppField name="plantao">
-          {(field) => (
-            <field.CheckboxField
-              label="Plantão"
-              description="O recorte da equipe é laudado à mão: o robô não o entrega a ninguém."
-            />
-          )}
-        </form.AppField>
         <form.AppField name="ativo">
           {(field) => (
             <field.CheckboxField

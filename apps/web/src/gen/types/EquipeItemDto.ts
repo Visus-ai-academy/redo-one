@@ -20,6 +20,10 @@ export type EquipeItemDto = {
    * @type number | undefined
    */
   totalVariacoes?: number;
+  /**
+   * @description Equipe de plantão (editado na distribuição).
+   * @type boolean
+   */
   plantao: boolean;
   medicoIds: string[];
 };

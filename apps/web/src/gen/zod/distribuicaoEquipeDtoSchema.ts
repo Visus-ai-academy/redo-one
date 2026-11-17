@@ -7,10 +7,11 @@ import * as z from 'zod'
 import { arranjoDtoSchema } from './arranjoDtoSchema'
 import { rotuloDtoSchema } from './rotuloDtoSchema'
 
-export const arranjosDoDonoDtoSchema = z.object({
+export const distribuicaoEquipeDtoSchema = z.object({
   arranjos: z.array(arranjoDtoSchema),
   clientes: z.array(rotuloDtoSchema).describe('Nomes dos clientes marcados.'),
   exames: z.array(rotuloDtoSchema).describe('Nomes dos exames marcados.'),
+  plantao: z.boolean().describe('Equipe de plantão: o robô não entrega o recorte dela.'),
 })
 
-export type ArranjosDoDonoDtoSchemaType = z.infer<typeof arranjosDoDonoDtoSchema>
+export type DistribuicaoEquipeDtoSchemaType = z.infer<typeof distribuicaoEquipeDtoSchema>

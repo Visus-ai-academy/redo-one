@@ -11,7 +11,6 @@ export const equipeDtoSchema = z.object({
   cor: z.string().nullish().meta({ examples: ['#1F7A4D'] }),
   ordem: z.int().min(0).max(9999),
   ativo: z.boolean(),
-  plantao: z.boolean().describe('Plantão: o recorte da equipe é laudado à mão; o robô não o entrega.'),
   medicoIds: z.array(z.uuid()).describe('Médicos membros (pode ser vazio).'),
 })
 

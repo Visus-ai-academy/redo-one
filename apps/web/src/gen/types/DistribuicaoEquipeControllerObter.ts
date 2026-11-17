@@ -3,13 +3,13 @@
 * Do not edit manually.
 */
 
-import type { ArranjosDoDonoDto } from './ArranjosDoDonoDto'
+import type { DistribuicaoEquipeDto } from './DistribuicaoEquipeDto'
 
 export type DistribuicaoEquipeControllerObterPath = {
   equipeId: string;
 };
 
-export type DistribuicaoEquipeControllerObterStatus200 = ArranjosDoDonoDto;
+export type DistribuicaoEquipeControllerObterStatus200 = DistribuicaoEquipeDto;
 
 export type DistribuicaoEquipeControllerObterStatus404 = unknown;
 

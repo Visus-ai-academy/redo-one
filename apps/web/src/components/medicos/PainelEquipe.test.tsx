@@ -34,11 +34,11 @@ function montar(props: Partial<PainelEquipeProps> = {}) {
 }
 
 describe('PainelEquipe', () => {
-  it('cria com plantão e membros escolhidos pela busca', async () => {
+  it('cria com membros escolhidos pela busca; o plantão não é do cadastro', async () => {
     const { onSalvar } = montar();
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), ' Equipe 2 ');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Plantão' }));
+    expect(screen.queryByRole('checkbox', { name: 'Plantão' })).not.toBeInTheDocument();
     await userEvent.type(screen.getByRole('combobox', { name: 'Adicionar médico' }), 'bru');
     await userEvent.click(await screen.findByRole('option', { name: 'Bruno Alves' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar equipe' }));
@@ -49,7 +49,6 @@ describe('PainelEquipe', () => {
       cor: null,
       ordem: 0,
       ativo: true,
-      plantao: true,
       medicoIds: ['m-bruno'],
     });
   });
@@ -85,9 +84,7 @@ describe('PainelEquipe', () => {
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.getByText('Ana Reis')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Plantão' })).toHaveValue(
-      'Sim: o robô não entrega o recorte da equipe',
-    );
+    expect(screen.queryByRole('textbox', { name: 'Plantão' })).not.toBeInTheDocument();
   });
 
   it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {

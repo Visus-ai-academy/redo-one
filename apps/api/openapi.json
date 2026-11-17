@@ -7334,7 +7334,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ArranjosDoDonoDto"
+                  "$ref": "#/components/schemas/DistribuicaoEquipeDto"
                 }
               }
             }
@@ -7367,6 +7367,45 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SalvarArranjosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/equipes/{equipeId}/uso": {
+      "put": {
+        "operationId": "DistribuicaoEquipeController_salvarUso",
+        "parameters": [
+          {
+            "name": "equipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsoEquipeDto"
               }
             }
           }
@@ -10975,7 +11014,8 @@
             "description": "Variações que chegam da MobileMed (só prioridades e especialidades)."
           },
           "plantao": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Equipe de plantão (editado na distribuição)."
           },
           "medicoIds": {
             "type": "array",
@@ -11049,10 +11089,6 @@
           "ativo": {
             "type": "boolean"
           },
-          "plantao": {
-            "type": "boolean",
-            "description": "Plantão: o recorte da equipe é laudado à mão; o robô não o entrega."
-          },
           "medicoIds": {
             "description": "Médicos membros (pode ser vazio).",
             "type": "array",
@@ -11066,7 +11102,6 @@
           "nome",
           "ordem",
           "ativo",
-          "plantao",
           "medicoIds"
         ]
       },
@@ -13999,7 +14034,7 @@
           "habilitadoRobo"
         ]
       },
-      "ArranjosDoDonoDto": {
+      "DistribuicaoEquipeDto": {
         "type": "object",
         "properties": {
           "arranjos": {
@@ -14021,12 +14056,29 @@
             "items": {
               "$ref": "#/components/schemas/RotuloDto"
             }
+          },
+          "plantao": {
+            "type": "boolean",
+            "description": "Equipe de plantão: o robô não entrega o recorte dela."
           }
         },
         "required": [
           "arranjos",
           "clientes",
-          "exames"
+          "exames",
+          "plantao"
+        ]
+      },
+      "UsoEquipeDto": {
+        "type": "object",
+        "properties": {
+          "plantao": {
+            "type": "boolean",
+            "description": "Falso: o recorte dos arranjos da equipe vai só para os membros. Verdadeiro (plantão): o robô não o entrega a ninguém; fica para laudar à mão."
+          }
+        },
+        "required": [
+          "plantao"
         ]
       },
       "SugestaoAlocacaoDto": {

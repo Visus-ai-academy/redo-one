@@ -10,6 +10,7 @@ import * as schema from '../../../database/schema';
 import { arranjoVazio } from '../../testing/fakes';
 import { DrizzleArranjosRepository } from './drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './drizzle-cadastros-distribuicao';
+import { DrizzleParametrosEquipeRepository } from './drizzle-parametros-equipe.repository';
 import { DrizzleParametrosMedicoRepository } from './drizzle-parametros-medico.repository';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -114,6 +115,14 @@ describe.skipIf(!url)('repositórios da distribuição (banco)', () => {
     expect(await repo.obter(id('medico'))).toEqual({ habilitadoRobo: true });
     await repo.salvar(id('medico'), { habilitadoRobo: false });
     expect(await repo.obter(id('medico'))).toEqual({ habilitadoRobo: false });
+  });
+
+  it('uso da equipe: lê e grava o plantão da equipe; equipe inexistente dá null', async () => {
+    const repo = new DrizzleParametrosEquipeRepository(db);
+    expect(await repo.obter(id('equipe'))).toEqual({ plantao: false });
+    await repo.salvar(id('equipe'), { plantao: true });
+    expect(await repo.obter(id('equipe'))).toEqual({ plantao: true });
+    expect(await repo.obter('00000000-0000-0000-0000-000000000000')).toBeNull();
   });
 
   it('cadastros: médico, equipe e frente', async () => {

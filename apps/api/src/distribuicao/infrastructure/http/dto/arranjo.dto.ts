@@ -105,6 +105,20 @@ export class DistribuicaoMedicoDto extends ArranjosDoDonoDto {
   @ApiProperty() habilitadoRobo!: boolean;
 }
 
+export class UsoEquipeDto {
+  @ApiProperty({
+    description:
+      'Falso: o recorte dos arranjos da equipe vai só para os membros. Verdadeiro (plantão): o robô não o entrega a ninguém; fica para laudar à mão.',
+  })
+  @IsBoolean()
+  plantao!: boolean;
+}
+
+export class DistribuicaoEquipeDto extends ArranjosDoDonoDto {
+  @ApiProperty({ description: 'Equipe de plantão: o robô não entrega o recorte dela.' })
+  plantao!: boolean;
+}
+
 export class SugestaoAlocacaoQueryDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()

@@ -7,6 +7,7 @@ import type { PrincipalUsuario } from '../../../identidade/principal';
 import type { ConsultarArranjos, SalvarArranjos } from '../../application/use-cases/arranjos';
 import type { DefinirRoboMedico, ObterRoboMedico } from '../../application/use-cases/robo-medico';
 import type { SugerirAlocacao } from '../../application/use-cases/sugerir-alocacao';
+import type { DefinirUsoEquipe, ObterUsoEquipe } from '../../application/use-cases/uso-equipe';
 import { arranjoVazio } from '../../testing/fakes';
 import {
   DistribuicaoEquipeController,
@@ -30,6 +31,7 @@ describe('controllers dos arranjos', () => {
     expect(exigidas(m.salvarRobo)).toEqual(['medicos.distribuicao.editar']);
     expect(exigidas(e.obter)).toEqual(['medicos.distribuicao.ver']);
     expect(exigidas(e.salvarArranjos)).toEqual(['medicos.distribuicao.editar']);
+    expect(exigidas(e.salvarUso)).toEqual(['medicos.distribuicao.editar']);
     expect(exigidas(SugestaoAlocacaoController.prototype.obter)).toEqual(['escala.ver']);
   });
 
@@ -63,6 +65,28 @@ describe('controllers dos arranjos', () => {
     await c.salvarRobo(ator, 'm1', { habilitadoRobo: false });
     expect(definirRobo.executar).toHaveBeenCalledWith({ tipo: 'usuario', id: 'u1' }, 'm1', {
       habilitadoRobo: false,
+    });
+  });
+
+  it('equipe: junta arranjos e uso (plantão); grava o uso em nome de quem está logado', async () => {
+    const consultar = {
+      executar: vi.fn(async () => ({ arranjos: [], clientes: [], exames: [] })),
+    };
+    const salvar = { executar: vi.fn(async () => undefined) };
+    const obterUso = { executar: vi.fn(async () => ({ plantao: true })) };
+    const definirUso = { executar: vi.fn(async () => undefined) };
+    const c = new DistribuicaoEquipeController(
+      consultar as unknown as ConsultarArranjos,
+      salvar as unknown as SalvarArranjos,
+      obterUso as unknown as ObterUsoEquipe,
+      definirUso as unknown as DefinirUsoEquipe,
+    );
+
+    expect(await c.obter('eq1')).toEqual({ arranjos: [], clientes: [], exames: [], plantao: true });
+    expect(consultar.executar).toHaveBeenCalledWith({ tipo: 'equipe', id: 'eq1' });
+    await c.salvarUso(ator, 'eq1', { plantao: false });
+    expect(definirUso.executar).toHaveBeenCalledWith({ tipo: 'usuario', id: 'u1' }, 'eq1', {
+      plantao: false,
     });
   });
 

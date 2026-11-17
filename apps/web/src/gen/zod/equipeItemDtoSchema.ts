@@ -13,7 +13,7 @@ export const equipeItemDtoSchema = z.object({
   ordem: z.number(),
   ativo: z.boolean(),
   totalVariacoes: z.number().optional().describe('Variações que chegam da MobileMed (só prioridades e especialidades).'),
-  plantao: z.boolean(),
+  plantao: z.boolean().describe('Equipe de plantão (editado na distribuição).'),
   medicoIds: z.array(z.uuid()),
 })
 

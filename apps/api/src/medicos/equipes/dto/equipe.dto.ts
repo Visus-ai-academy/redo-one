@@ -1,15 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsBoolean, IsUUID } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsUUID } from 'class-validator';
 
 import { ItemListaDto, ListaDto, PaginaListaDto } from '../../../catalogo/listas/dto/lista.dto';
 
+/** O plantão não entra aqui: é editado na aba Distribuição da equipe (`distribuicao`). */
 export class EquipeDto extends ListaDto {
-  @ApiProperty({
-    description: 'Plantão: o recorte da equipe é laudado à mão; o robô não o entrega.',
-  })
-  @IsBoolean()
-  plantao!: boolean;
-
   @ApiProperty({ type: [String], format: 'uuid', description: 'Médicos membros (pode ser vazio).' })
   @IsArray()
   @ArrayMaxSize(500)
@@ -18,7 +13,7 @@ export class EquipeDto extends ListaDto {
 }
 
 export class EquipeItemDto extends ItemListaDto {
-  @ApiProperty() plantao!: boolean;
+  @ApiProperty({ description: 'Equipe de plantão (editado na distribuição).' }) plantao!: boolean;
   @ApiProperty({ type: [String], format: 'uuid' }) medicoIds!: string[];
 }
 

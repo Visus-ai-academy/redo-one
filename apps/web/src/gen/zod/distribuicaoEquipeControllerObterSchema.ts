@@ -4,13 +4,13 @@
 */
 
 import * as z from 'zod'
-import { arranjosDoDonoDtoSchema } from './arranjosDoDonoDtoSchema'
+import { distribuicaoEquipeDtoSchema } from './distribuicaoEquipeDtoSchema'
 
 export const distribuicaoEquipeControllerObterPathEquipeIdSchema = z.string()
 
 export type DistribuicaoEquipeControllerObterPathEquipeIdSchemaType = z.infer<typeof distribuicaoEquipeControllerObterPathEquipeIdSchema>
 
-export const distribuicaoEquipeControllerObterStatus200Schema = arranjosDoDonoDtoSchema
+export const distribuicaoEquipeControllerObterStatus200Schema = distribuicaoEquipeDtoSchema
 
 export type DistribuicaoEquipeControllerObterStatus200SchemaType = z.infer<typeof distribuicaoEquipeControllerObterStatus200Schema>
 

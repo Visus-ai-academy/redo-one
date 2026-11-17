@@ -213,6 +213,7 @@ function PainelDaEquipe({
   onExcluido: () => Promise<void>;
 }) {
   const { sessao } = Route.useRouteContext();
+  const queryClient = useQueryClient();
   const consultaEquipe = useQuery({
     ...equipesControllerObterQueryOptions({ path: { id: id ?? '' } }),
     enabled: Boolean(id),
@@ -241,8 +242,8 @@ function PainelDaEquipe({
         id && equipe && pode(sessao, 'medicos.distribuicao.ver') ? (
           <AbaDistribuicaoEquipe
             equipeId={id}
-            plantao={equipe.plantao}
             podeEditar={pode(sessao, 'medicos.distribuicao.editar')}
+            onUsoAlterado={() => invalidarMedicos(queryClient)}
           />
         ) : undefined
       }

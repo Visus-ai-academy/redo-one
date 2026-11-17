@@ -6,7 +6,7 @@
 import type { ArranjoDto } from './ArranjoDto'
 import type { RotuloDto } from './RotuloDto'
 
-export type ArranjosDoDonoDto = {
+export type DistribuicaoEquipeDto = {
   arranjos: ArranjoDto[];
   /**
    * @description Nomes dos clientes marcados.
@@ -18,4 +18,9 @@ export type ArranjosDoDonoDto = {
    * @type array
    */
   exames: RotuloDto[];
+  /**
+   * @description Equipe de plantão: o robô não entrega o recorte dela.
+   * @type boolean
+   */
+  plantao: boolean;
 };

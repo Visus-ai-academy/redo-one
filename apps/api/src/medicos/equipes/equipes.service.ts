@@ -8,7 +8,10 @@ import type { DadosEquipe } from './equipes.repository';
 
 export const ROTULO_EQUIPE = { entidade: 'equipe', singular: 'Equipe', genero: 'f' } as const;
 
-/** Equipes médicas: lista com plantão e membros. O arranjo da equipe vem com a `distribuicao`. */
+/**
+ * Equipes médicas: lista com membros. Os arranjos e o uso pelo robô (direcionar ou plantão) são
+ * da `distribuicao` (aba Distribuição da equipe): o cadastro cria fora do plantão e mantém o gravado.
+ */
 export class EquipesService extends ListaService<DadosEquipe> {
   constructor(
     repo: ListaRepository<DadosEquipe>,
@@ -25,6 +28,7 @@ export class EquipesService extends ListaService<DadosEquipe> {
     for (const id of medicoIds) {
       if (!(await this.medicos.buscar(id))) throw new MedicoInexistenteError();
     }
-    return { ...validos, medicoIds };
+    const plantao = idAtual ? (await this.obter(idAtual)).plantao : false;
+    return { ...validos, medicoIds, plantao };
   }
 }

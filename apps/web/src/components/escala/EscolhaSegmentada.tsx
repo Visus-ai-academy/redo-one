@@ -8,6 +8,8 @@ type EscolhaSegmentadaProps<V extends string> = {
   valor: V;
   onMudar: (valor: V) => void;
   'aria-label': string;
+  /** Desabilita a escolha inteira (ex.: enquanto salva). */
+  disabled?: boolean;
   className?: string;
 };
 
@@ -20,11 +22,13 @@ export function EscolhaSegmentada<V extends string>({
   valor,
   onMudar,
   'aria-label': ariaLabel,
+  disabled,
   className,
 }: EscolhaSegmentadaProps<V>) {
   return (
     <ToggleGroup
       aria-label={ariaLabel}
+      disabled={disabled}
       value={[valor]}
       onValueChange={(valores) => {
         const novo = valores[0] as V | undefined;
@@ -40,6 +44,7 @@ export function EscolhaSegmentada<V extends string>({
             'text-muted-foreground hover:text-foreground rounded-[4px] px-3 whitespace-nowrap',
             'focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-1',
             'data-[pressed]:bg-accent data-[pressed]:text-foreground data-[pressed]:font-medium',
+            'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
           )}
         >
           {opcao.rotulo}

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { distribuicaoEquipeControllerObter } from '../../gen/clients/distribuicaoEquipeControllerObter';
 import { distribuicaoEquipeControllerSalvarArranjos } from '../../gen/clients/distribuicaoEquipeControllerSalvarArranjos';
+import { distribuicaoEquipeControllerSalvarUso } from '../../gen/clients/distribuicaoEquipeControllerSalvarUso';
 import { opcoesControllerListas } from '../../gen/clients/opcoesControllerListas';
 import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
@@ -15,11 +16,20 @@ vi.mock('../../gen/clients/distribuicaoEquipeControllerObter', () => ({
 vi.mock('../../gen/clients/distribuicaoEquipeControllerSalvarArranjos', () => ({
   distribuicaoEquipeControllerSalvarArranjos: vi.fn(),
 }));
+vi.mock('../../gen/clients/distribuicaoEquipeControllerSalvarUso', () => ({
+  distribuicaoEquipeControllerSalvarUso: vi.fn(),
+}));
 vi.mock('../../gen/clients/opcoesControllerListas', () => ({
   opcoesControllerListas: vi.fn(),
 }));
 
 const salvar = vi.mocked(distribuicaoEquipeControllerSalvarArranjos);
+const salvarUso = vi.mocked(distribuicaoEquipeControllerSalvarUso);
+const obter = vi.mocked(distribuicaoEquipeControllerObter);
+const comPlantao = (plantao: boolean) =>
+  obter.mockReturnValue({
+    unwrap: async () => ({ arranjos: [], clientes: [], exames: [], plantao }),
+  } as never);
 
 beforeEach(() => {
   vi.mocked(opcoesControllerListas).mockReturnValue({
@@ -32,21 +42,53 @@ beforeEach(() => {
       contratados: [],
     }),
   } as never);
-  vi.mocked(distribuicaoEquipeControllerObter).mockReturnValue({
-    unwrap: async () => ({ arranjos: [], clientes: [], exames: [] }),
-  } as never);
+  comPlantao(false);
   salvar.mockReset();
   salvar.mockReturnValue({ unwrap: async () => undefined } as never);
+  salvarUso.mockReset();
+  salvarUso.mockReturnValue({ unwrap: async () => undefined } as never);
 });
 
 describe('AbaDistribuicaoEquipe', () => {
-  it('diz que a equipe é de plantão', async () => {
-    renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" plantao podeEditar />);
-    expect(await screen.findByText(/Equipe de plantão/)).toBeInTheDocument();
+  it('mostra o uso pelo robô marcado e explica a opção', async () => {
+    comPlantao(true);
+    renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" podeEditar />);
+    const grupo = await screen.findByRole('group', { name: 'Uso pelo robô' });
+    expect(grupo).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Só tirar do robô (plantão)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText(/fica para o plantão laudar à mão/)).toBeInTheDocument();
+  });
+
+  it('troca para direcionar aos membros e confirma', async () => {
+    comPlantao(true);
+    renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" podeEditar />);
+    const direcionar = await screen.findByRole('button', { name: 'Direcionar aos membros' });
+    comPlantao(false);
+    await userEvent.click(direcionar);
+    expect(salvarUso).toHaveBeenCalledWith({
+      path: { equipeId: 'eq-1' },
+      body: { plantao: false },
+    });
+    expect(await acharAviso()).toHaveTextContent('A equipe passa a direcionar aos membros.');
+    expect(await screen.findByText(/vai só para os membros/)).toBeInTheDocument();
+  });
+
+  it('sem editar, só mostra o uso', async () => {
+    comPlantao(true);
+    renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" podeEditar={false} />);
+    expect(await screen.findByRole('textbox', { name: 'Uso pelo robô' })).toHaveValue(
+      'Só tirar do robô (plantão)',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Direcionar aos membros' }),
+    ).not.toBeInTheDocument();
   });
 
   it('cria um arranjo da equipe, sem clínica exclusiva', async () => {
-    renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" plantao={false} podeEditar />);
+    renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" podeEditar />);
     await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
     expect(screen.queryByText('Clínicas exclusivas')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'PLANTÃO' }));
@@ -58,6 +100,5 @@ describe('AbaDistribuicaoEquipe', () => {
       }),
     );
     expect(await acharAviso()).toHaveTextContent('Arranjo criado.');
-    expect(screen.queryByText(/Equipe de plantão/)).not.toBeInTheDocument();
   });
 });

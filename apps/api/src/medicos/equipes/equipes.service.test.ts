@@ -55,15 +55,21 @@ describe('EquipesService', () => {
   });
 
   it('cria com os membros sem repetição e audita como equipe', async () => {
-    const id = await service.criar(ator, equipe({ plantao: true, medicoIds: [bruno, ana, bruno] }));
+    const id = await service.criar(ator, equipe({ medicoIds: [bruno, ana, bruno] }));
 
-    expect(await service.obter(id)).toMatchObject({
-      plantao: true,
-      medicoIds: [ana, bruno].sort(),
-    });
+    expect(await service.obter(id)).toMatchObject({ medicoIds: [ana, bruno].sort() });
     expect(auditoria.eventos).toEqual([
       expect.objectContaining({ entidade: 'equipe', entidadeId: id, acao: 'criado' }),
     ]);
+  });
+
+  it('o cadastro não mexe no plantão (é da aba Distribuição): cria fora e mantém o gravado', async () => {
+    const id = await service.criar(ator, equipe({ plantao: true }));
+    expect((await service.obter(id)).plantao).toBe(false);
+
+    await repo.atualizar(id, { ...(await service.obter(id)), plantao: true });
+    await service.atualizar(ator, id, equipe({ nome: 'Equipe 2', plantao: false }));
+    expect(await service.obter(id)).toMatchObject({ nome: 'Equipe 2', plantao: true });
   });
 
   it('aceita equipe sem membros', async () => {

@@ -1,6 +1,10 @@
 import type { ArranjosRepository, Dono } from '../application/ports/arranjos.repository';
 import type { CadastrosDistribuicao } from '../application/ports/cadastros-distribuicao';
 import type {
+  ParametrosEquipe,
+  ParametrosEquipeRepository,
+} from '../application/ports/parametros-equipe.repository';
+import type {
   ParametrosMedico,
   ParametrosMedicoRepository,
 } from '../application/ports/parametros-medico.repository';
@@ -29,6 +33,19 @@ export class ParametrosMedicoEmMemoria implements ParametrosMedicoRepository {
 
   async salvar(medicoId: string, parametros: ParametrosMedico) {
     this.itens.set(medicoId, { ...parametros });
+  }
+}
+
+export class ParametrosEquipeEmMemoria implements ParametrosEquipeRepository {
+  readonly itens = new Map<string, ParametrosEquipe>();
+
+  async obter(equipeId: string) {
+    const p = this.itens.get(equipeId);
+    return p ? { ...p } : null;
+  }
+
+  async salvar(equipeId: string, parametros: ParametrosEquipe) {
+    this.itens.set(equipeId, { ...parametros });
   }
 }
 
