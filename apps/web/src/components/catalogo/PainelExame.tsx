@@ -298,7 +298,8 @@ export function PainelExame({
           </div>
         )
       )}
-      {exame && (
+      {/* Quem só muda a subespecialidade não mexe em quebras: nem abre, nem cria. */}
+      {exame && !(onSalvarSubespecialidade && !podeEditar) && (
         <QuebraDoExame
           quebra={exame.quebra}
           podeCriar={podeCriar}

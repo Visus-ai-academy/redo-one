@@ -158,6 +158,14 @@ describe('PainelExame', () => {
       }
     });
 
+    it('não mostra nada de quebras, nem o botão de abrir a quebra', () => {
+      restrito();
+
+      expect(screen.queryByRole('heading', { name: 'Quebra' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Abrir a quebra' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/vira 2 exames/)).not.toBeInTheDocument();
+    });
+
     it('oferece só as subespecialidades da especialidade do exame e salva só ela', async () => {
       const { onSalvar, onSalvarSubespecialidade } = restrito();
 
