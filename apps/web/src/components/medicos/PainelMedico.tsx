@@ -39,6 +39,8 @@ export type PainelMedicoProps = {
   acesso?: ReactNode;
   /** Conteúdo da aba Escala (só leitura); sem ele (sem permissão), a aba não aparece. */
   escala?: ReactNode;
+  /** Conteúdo da aba Distribuição (robô e arranjos); sem ele (sem permissão), a aba não aparece. */
+  distribuicao?: ReactNode;
 };
 
 const FUNCOES = {
@@ -91,6 +93,7 @@ export function PainelMedico({
   pagamento,
   acesso,
   escala,
+  distribuicao,
 }: PainelMedicoProps) {
   const [aba, setAba] = useState('cadastro');
   const abas = medico
@@ -99,6 +102,7 @@ export function PainelMedico({
         ...(pagamento ? [{ valor: 'pagamento', rotulo: 'Pagamento' }] : []),
         ...(acesso ? [{ valor: 'acesso', rotulo: 'Acesso' }] : []),
         ...(escala ? [{ valor: 'escala', rotulo: 'Escala' }] : []),
+        ...(distribuicao ? [{ valor: 'distribuicao', rotulo: 'Distribuição' }] : []),
       ]
     : [];
 
@@ -147,7 +151,9 @@ export function PainelMedico({
               ? acesso
               : aba === 'escala'
                 ? escala
-                : cadastro}
+                : aba === 'distribuicao'
+                  ? distribuicao
+                  : cadastro}
         </Abas>
       ) : (
         cadastro

@@ -26,6 +26,7 @@ type EscolhaMultiplaFieldProps = {
   vazio: string;
   description?: string;
   somenteLeitura?: boolean;
+  required?: boolean;
   className?: string;
 };
 
@@ -42,9 +43,13 @@ export function EscolhaMultiplaField({
   vazio,
   description,
   somenteLeitura = false,
+  required = false,
   className,
 }: EscolhaMultiplaFieldProps) {
   const field = useFieldContext<OpcaoBusca[]>();
+  const erros = field.state.meta.errors.map((erro) =>
+    typeof erro === 'string' ? erro : (erro as { message?: string } | undefined)?.message,
+  );
   const tituloId = useId();
   // Remonta a busca depois de cada escolha: o campo volta vazio para a próxima.
   const [rodada, setRodada] = useState(0);
@@ -58,6 +63,11 @@ export function EscolhaMultiplaField({
     <Fieldset.Root className={cn('flex flex-col gap-2', className)}>
       <Fieldset.Legend id={tituloId} className="text-foreground font-medium">
         {label}
+        {required && (
+          <span aria-hidden="true" className="text-destructive ml-1">
+            *
+          </span>
+        )}
       </Fieldset.Legend>
       {description && <p className="text-muted-foreground -mt-1 text-[13px]">{description}</p>}
       {escolhidos.length === 0 ? (
@@ -110,6 +120,11 @@ export function EscolhaMultiplaField({
             placeholder={placeholder}
           />
         </Field.Root>
+      )}
+      {erros.length > 0 && (
+        <p role="alert" className="text-destructive text-[13px]">
+          {erros.join(', ')}
+        </p>
       )}
     </Fieldset.Root>
   );

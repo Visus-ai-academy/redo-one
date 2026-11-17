@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { AbaDistribuicaoMedico } from '../../components/distribuicao/AbaDistribuicaoMedico';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { AbaEscalaMedico } from '../../components/medicos/AbaEscalaMedico';
@@ -312,6 +313,14 @@ function PainelDoMedico({
         ) : undefined
       }
       escala={id && pode(sessao, 'escala.ver') ? <AbaEscalaMedico medicoId={id} /> : undefined}
+      distribuicao={
+        id ? (
+          <AbaDistribuicaoMedico
+            medicoId={id}
+            podeEditar={pode(sessao, 'medicos.distribuicao.editar')}
+          />
+        ) : undefined
+      }
     />
   );
 }

@@ -13,13 +13,21 @@ function Formulario({
   iniciais,
   onEnviar,
   somenteLeitura = false,
+  exigir = false,
 }: {
   iniciais: OpcaoBusca[];
   onEnviar: (ids: string[]) => void;
   somenteLeitura?: boolean;
+  exigir?: boolean;
 }) {
   const form = useAppForm({
     defaultValues: { membros: iniciais },
+    validators: {
+      onSubmit: ({ value }) =>
+        exigir && value.membros.length === 0
+          ? { fields: { membros: 'Escolha ao menos um médico.' } }
+          : undefined,
+    },
     onSubmit: ({ value }) => onEnviar(value.membros.map((m) => m.valor)),
   });
   return (
@@ -39,6 +47,7 @@ function Formulario({
             buscar={async () => [ana, bruno]}
             vazio="Nenhum médico na equipe."
             somenteLeitura={somenteLeitura}
+            required={exigir}
           />
         )}
       </form.AppField>
@@ -98,5 +107,14 @@ describe('EscolhaMultiplaField', () => {
 
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remover Ana Reis' })).not.toBeInTheDocument();
+  });
+
+  it('obrigatório: mostra o * e o erro de validação', async () => {
+    const onEnviar = vi.fn();
+    montar({ iniciais: [], onEnviar, exigir: true });
+    expect(screen.getByText('*')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Escolha ao menos um médico.')).toBeInTheDocument();
+    expect(onEnviar).not.toHaveBeenCalled();
   });
 });
