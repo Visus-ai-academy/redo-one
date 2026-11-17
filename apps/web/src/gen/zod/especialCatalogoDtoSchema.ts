@@ -10,6 +10,7 @@ export const especialCatalogoDtoSchema = z.object({
   rotulo: z.string().meta({ examples: ['Desbloquear'] }),
   descricao: z.string().meta({ examples: ['Liberar a conta bloqueada por senha errada.'] }),
   sensivel: z.boolean(),
+  implica: z.array(z.string()).describe('Chaves da mesma tela que vêm junto com esta.').meta({ examples: [["medicos.acesso.ver"]] }),
 })
 
 export type EspecialCatalogoDtoSchemaType = z.infer<typeof especialCatalogoDtoSchema>

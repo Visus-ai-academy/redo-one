@@ -20,4 +20,10 @@ export type EspecialCatalogoDto = {
    */
   descricao: string;
   sensivel: boolean;
+  /**
+   * @description Chaves da mesma tela que vêm junto com esta.
+   * @example ["medicos.acesso.ver"]
+   * @type array
+   */
+  implica: string[];
 };

@@ -42,9 +42,17 @@ export function agruparPorArea(catalogo: CatalogoMatriz) {
   );
 }
 
-/** Marca a chave e os `ver` que ela implica (o da tela e o das telas que ela exige). */
+/** Chaves que a especial leva junto (ex.: editar a distribuição implica ver a distribuição). */
+const implicadas = (tela: TelaMatriz, chave: string) =>
+  tela.especiais.find((e) => e.chave === chave)?.implica ?? [];
+
+/**
+ * Marca a chave, as que ela implica e os `ver` que vêm junto (o da tela e o das telas que ela
+ * exige).
+ */
 function marcar(marcadas: Set<string>, tela: TelaMatriz, chave: string) {
   marcadas.add(chave);
+  for (const outra of implicadas(tela, chave)) marcadas.add(outra);
   marcadas.add(chaveVer(tela.tela));
   for (const outra of tela.exige) marcadas.add(chaveVer(outra));
 }
@@ -65,8 +73,17 @@ function desmarcar(
   tela: TelaMatriz,
   chave: string,
 ) {
-  if (chave === chaveVer(tela.tela)) limparLinha(marcadas, catalogo, tela);
-  else marcadas.delete(chave);
+  if (chave === chaveVer(tela.tela)) {
+    limparLinha(marcadas, catalogo, tela);
+    return;
+  }
+  marcadas.delete(chave);
+  // Sem a chave implicada, quem a implica também sai.
+  for (const especial of tela.especiais) {
+    if (especial.implica.includes(chave) && marcadas.has(especial.chave)) {
+      desmarcar(marcadas, catalogo, tela, especial.chave);
+    }
+  }
 }
 
 /** Uma caixa: marcar garante o `ver`; desmarcar o `ver` limpa a linha. */

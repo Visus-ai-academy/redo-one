@@ -28,7 +28,15 @@ const volumetria: TelaMatriz = {
   rotulo: 'Volumetria',
   area: 'Painéis',
   padrao: [acao('volumetria', 'ver')],
-  especiais: [{ chave: 'volumetria.exportar', rotulo: 'Exportar', descricao: '', sensivel: false }],
+  especiais: [
+    {
+      chave: 'volumetria.exportar',
+      rotulo: 'Exportar',
+      descricao: '',
+      sensivel: false,
+      implica: [],
+    },
+  ],
   exige: [],
 };
 const clientes: TelaMatriz = {
@@ -84,18 +92,52 @@ const repasse: TelaMatriz = {
       rotulo: 'Lançar adicional',
       descricao: '',
       sensivel: false,
+      implica: [],
     },
     {
       chave: 'repasse.fechar',
       rotulo: 'Fechar repasse',
       descricao: 'Fecha a competência',
       sensivel: true,
+      implica: [],
     },
   ],
   exige: [],
 };
 
-const catalogo: CatalogoMatriz = [volumetria, clientes, exames, escala, escalaConfig, repasse];
+const medicos: TelaMatriz = {
+  tela: 'medicos',
+  rotulo: 'Médicos',
+  area: 'Cadastros',
+  padrao: [acao('medicos', 'ver'), acao('medicos', 'editar')],
+  especiais: [
+    {
+      chave: 'medicos.distribuicao.ver',
+      rotulo: 'Ver distribuição',
+      descricao: '',
+      sensivel: false,
+      implica: [],
+    },
+    {
+      chave: 'medicos.distribuicao.editar',
+      rotulo: 'Editar distribuição',
+      descricao: '',
+      sensivel: true,
+      implica: ['medicos.distribuicao.ver'],
+    },
+  ],
+  exige: [],
+};
+
+const catalogo: CatalogoMatriz = [
+  volumetria,
+  clientes,
+  exames,
+  medicos,
+  escala,
+  escalaConfig,
+  repasse,
+];
 const ordenado = (s: ReadonlySet<string>) => [...s].sort();
 
 describe('agruparPorArea', () => {
@@ -103,7 +145,7 @@ describe('agruparPorArea', () => {
     expect(agruparPorArea(catalogo).map((g) => [g.area, g.telas.map((t) => t.tela)])).toEqual([
       ['Painéis', ['volumetria']],
       ['Operação', ['escala']],
-      ['Cadastros', ['clientes', 'exames']],
+      ['Cadastros', ['clientes', 'exames', 'medicos']],
       ['Financeiro', ['repasse']],
       ['Configurações', ['escala-config']],
     ]);
@@ -147,6 +189,23 @@ describe('alternarAcao', () => {
     expect(
       ordenado(alternarAcao(new Set(), catalogo, escalaConfig, 'escala-config.editar')),
     ).toEqual(['escala-config.editar', 'escala-config.ver', 'escala.ver']);
+  });
+
+  it('marcar uma especial marca também as que ela implica', () => {
+    expect(
+      ordenado(alternarAcao(new Set(), catalogo, medicos, 'medicos.distribuicao.editar')),
+    ).toEqual(['medicos.distribuicao.editar', 'medicos.distribuicao.ver', 'medicos.ver']);
+  });
+
+  it('desmarcar uma chave implicada desmarca quem a implica', () => {
+    const marcadas = new Set([
+      'medicos.ver',
+      'medicos.distribuicao.ver',
+      'medicos.distribuicao.editar',
+    ]);
+    expect(ordenado(alternarAcao(marcadas, catalogo, medicos, 'medicos.distribuicao.ver'))).toEqual(
+      ['medicos.ver'],
+    );
   });
 
   it('desmarcar o ver da escala limpa também as telas que a exigem', () => {
@@ -217,6 +276,7 @@ describe('soLeitura', () => {
       'escala-config.ver',
       'escala.ver',
       'exames.ver',
+      'medicos.ver',
       'repasse.fechar',
       'repasse.ver',
       'volumetria.ver',
@@ -263,6 +323,15 @@ describe('copiarDePapel', () => {
   it('copia as permissões que existem no catálogo, com o ver que elas implicam', () => {
     const outro = { acessoTotal: false, permissoes: ['clientes.editar', 'tela-velha.ver'] };
     expect(ordenado(copiarDePapel(outro, catalogo))).toEqual(['clientes.editar', 'clientes.ver']);
+  });
+
+  it('copia também as chaves que uma especial implica', () => {
+    const outro = { acessoTotal: false, permissoes: ['medicos.distribuicao.editar'] };
+    expect(ordenado(copiarDePapel(outro, catalogo))).toEqual([
+      'medicos.distribuicao.editar',
+      'medicos.distribuicao.ver',
+      'medicos.ver',
+    ]);
   });
 
   it('de um papel de acesso total, copia o catálogo inteiro', () => {

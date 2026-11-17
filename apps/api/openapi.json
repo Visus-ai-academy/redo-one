@@ -7506,13 +7506,24 @@
           },
           "sensivel": {
             "type": "boolean"
+          },
+          "implica": {
+            "example": [
+              "medicos.acesso.ver"
+            ],
+            "description": "Chaves da mesma tela que vêm junto com esta.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
           "chave",
           "rotulo",
           "descricao",
-          "sensivel"
+          "sensivel",
+          "implica"
         ]
       },
       "TelaCatalogoDto": {

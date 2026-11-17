@@ -26,7 +26,13 @@ const catalogo: CatalogoMatriz = [
     area: 'Painéis',
     padrao: [{ acao: 'ver', chave: 'volumetria.ver', rotulo: 'Ver', sensivel: false }],
     especiais: [
-      { chave: 'volumetria.exportar', rotulo: 'Exportar', descricao: '', sensivel: false },
+      {
+        chave: 'volumetria.exportar',
+        rotulo: 'Exportar',
+        descricao: '',
+        sensivel: false,
+        implica: [],
+      },
     ],
     exige: [],
   },

@@ -83,6 +83,12 @@ export class EspecialCatalogoDto {
   @ApiProperty({ example: 'Desbloquear' }) rotulo!: string;
   @ApiProperty({ example: 'Liberar a conta bloqueada por senha errada.' }) descricao!: string;
   @ApiProperty() sensivel!: boolean;
+  @ApiProperty({
+    type: [String],
+    example: ['medicos.acesso.ver'],
+    description: 'Chaves da mesma tela que vêm junto com esta.',
+  })
+  implica!: string[];
 }
 
 export class TelaCatalogoDto {

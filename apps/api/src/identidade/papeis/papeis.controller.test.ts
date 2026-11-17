@@ -80,6 +80,17 @@ describe('PermissoesController', () => {
       rotulo: 'Desbloquear',
       descricao: 'Liberar a conta bloqueada por senha errada.',
       sensivel: true,
+      implica: [],
+    });
+  });
+
+  it('diz quais chaves cada especial leva junto', () => {
+    expect(tela('medicos')?.especiais.find((e) => e.chave === 'medicos.acesso.editar')).toEqual({
+      chave: 'medicos.acesso.editar',
+      rotulo: 'Editar acesso',
+      descricao: 'Convidar o médico para o portal e ligar ou desligar a conta dele.',
+      sensivel: true,
+      implica: ['medicos.acesso.ver'],
     });
   });
 

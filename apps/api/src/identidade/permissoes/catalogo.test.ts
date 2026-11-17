@@ -99,8 +99,12 @@ describe('catálogo de permissões', () => {
     expect(especiais('medicos')).toEqual([
       'medicos.pagamento.ver',
       'medicos.pagamento.editar',
+      'medicos.distribuicao.ver',
       'medicos.distribuicao.editar',
+      'medicos.acesso.ver',
+      'medicos.acesso.editar',
     ]);
+    expect(especiais('exames')).toEqual(['exames.subespecialidade.editar']);
     expect(especiais('avisos')).toEqual(['avisos.triar']);
     expect(especiais('faturamento')).toEqual([
       'faturamento.demonstrativo.gerar',
@@ -121,6 +125,12 @@ describe('catálogo de permissões', () => {
     expect(sensiveis('distribuicao')).toEqual(['distribuicao.rodada.aprovar']);
     expect(sensiveis('ausencias')).toEqual(['ausencias.observacoes.ver']);
     expect(sensiveis('exames')).toEqual(['exames.editar', 'exames.excluir']);
+    expect(sensiveis('medicos')).toEqual([
+      'medicos.pagamento.ver',
+      'medicos.pagamento.editar',
+      'medicos.distribuicao.editar',
+      'medicos.acesso.editar',
+    ]);
     expect(sensiveis('papeis')).toEqual(['papeis.criar', 'papeis.editar', 'papeis.excluir']);
     expect(sensiveis('de-para')).toEqual(['de-para.criar', 'de-para.editar', 'de-para.excluir']);
     expect(sensiveis('clientes')).toEqual([]);
@@ -202,6 +212,31 @@ describe('catálogo de permissões', () => {
       'ausencias.ver',
       'escala.ver',
     ]);
+  });
+
+  it('editar a distribuição ou o acesso do médico leva junto o ver da mesma aba', () => {
+    expect(normalizarPermissoes(['medicos.distribuicao.editar'])).toEqual([
+      'medicos.distribuicao.editar',
+      'medicos.distribuicao.ver',
+      'medicos.ver',
+    ]);
+    expect(normalizarPermissoes(['medicos.acesso.editar'])).toEqual([
+      'medicos.acesso.editar',
+      'medicos.acesso.ver',
+      'medicos.ver',
+    ]);
+  });
+
+  it('só implica chaves da própria tela que existem no catálogo', () => {
+    for (const t of CATALOGO_PERMISSOES) {
+      for (const e of t.especiais) {
+        for (const chave of e.implica ?? []) {
+          expect(chave.startsWith(`${t.tela}.`)).toBe(true);
+          expect(existePermissao(chave)).toBe(true);
+          expect(chave).not.toBe(e.chave);
+        }
+      }
+    }
   });
 
   it('toda chave exigida por @Permissao() na API existe no catálogo', () => {

@@ -29,6 +29,8 @@ export interface EspecialCatalogo {
   descricao: string;
   /** Ação de alto impacto (fechar competência, ver dado de pagamento, revogar chave). */
   sensivel?: boolean;
+  /** Outras chaves da mesma tela que vêm junto (ex.: editar a aba implica ver a aba). */
+  implica?: string[];
 }
 
 export interface TelaCatalogo {
@@ -196,6 +198,12 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Mudar os dados de pagamento do médico.',
         sensivel: true,
       },
+      {
+        chave: 'medicos.distribuicao.ver',
+        rotulo: 'Ver distribuição',
+        descricao:
+          'Abrir a aba Distribuição do médico e da equipe: arranjos, clínicas exclusivas e parâmetros do robô.',
+      },
       // O arranjo decide o que o robô entrega a cada médico e equipe.
       {
         chave: 'medicos.distribuicao.editar',
@@ -203,6 +211,21 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao:
           'Mudar os arranjos (o que o médico ou a equipe lauda), as clínicas exclusivas e quem o robô pode usar.',
         sensivel: true,
+        implica: ['medicos.distribuicao.ver'],
+      },
+      {
+        chave: 'medicos.acesso.ver',
+        rotulo: 'Ver acesso',
+        descricao:
+          'Abrir a aba Acesso do médico: a conta do portal ligada a ele e a situação dela.',
+      },
+      // O convite cria uma conta que entra no sistema.
+      {
+        chave: 'medicos.acesso.editar',
+        rotulo: 'Editar acesso',
+        descricao: 'Convidar o médico para o portal e ligar ou desligar a conta dele.',
+        sensivel: true,
+        implica: ['medicos.acesso.ver'],
       },
     ],
   },
@@ -212,7 +235,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     area: 'Cadastros',
     // Regras de quebra e valores fora do padrão decidem a quantidade faturada.
     padrao: crud('editar', 'excluir'),
-    especiais: [],
+    especiais: [
+      // A subespecialidade só decide para qual médico o robô entrega o exame, não o que se fatura.
+      {
+        chave: 'exames.subespecialidade.editar',
+        rotulo: 'Editar subespecialidade',
+        descricao: 'Mudar só a subespecialidade do exame, sem editar os demais campos.',
+      },
+    ],
   },
   {
     tela: 'avisos',
@@ -376,6 +406,10 @@ function chavesDe(tela: TelaCatalogo): string[] {
   ];
 }
 
+const IMPLICADAS = new Map(
+  CATALOGO_PERMISSOES.flatMap((t) => t.especiais.map((e) => [e.chave, e.implica ?? []] as const)),
+);
+
 const TELA_DA_CHAVE = new Map(
   CATALOGO_PERMISSOES.flatMap((t) => chavesDe(t).map((chave) => [chave, t] as const)),
 );
@@ -394,7 +428,8 @@ export function chavesDaTela(tela: string): string[] {
 
 /**
  * Deixa a lista consistente: sem repetição, em ordem, e com o `ver` de cada tela que tem alguma
- * ação marcada (uma ação sem poder abrir a tela não faz sentido), mais o das telas que ela exige.
+ * ação marcada (uma ação sem poder abrir a tela não faz sentido), mais o das telas que ela exige
+ * e as chaves que a especial implica.
  */
 export function normalizarPermissoes(chaves: Iterable<string>): string[] {
   const resultado = new Set<string>();
@@ -402,6 +437,7 @@ export function normalizarPermissoes(chaves: Iterable<string>): string[] {
     const tela = TELA_DA_CHAVE.get(chave);
     if (!tela) continue;
     resultado.add(chave);
+    for (const implicada of IMPLICADAS.get(chave) ?? []) resultado.add(implicada);
     resultado.add(`${tela.tela}.ver`);
     for (const outra of tela.exige ?? []) resultado.add(`${outra}.ver`);
   }

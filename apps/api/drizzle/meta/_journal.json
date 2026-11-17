@@ -113,6 +113,13 @@
       "when": 1794940112976,
       "tag": "0015_distribuicao_arranjos",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794943534633,
+      "tag": "0016_permissoes_abas_medico",
+      "breakpoints": true
     }
   ]
 }

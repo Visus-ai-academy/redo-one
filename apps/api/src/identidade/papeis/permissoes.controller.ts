@@ -27,6 +27,7 @@ export class PermissoesController {
         rotulo: e.rotulo,
         descricao: e.descricao,
         sensivel: !!e.sensivel,
+        implica: [...(e.implica ?? [])],
       })),
       exige: [...(tela.exige ?? [])],
     }));
