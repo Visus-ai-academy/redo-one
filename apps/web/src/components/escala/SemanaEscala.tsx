@@ -163,11 +163,26 @@ function Calendario({
                 scope="col"
                 aria-current={dia === hoje ? 'date' : undefined}
                 className={cn(
-                  'text-subtle-foreground border-l px-2 py-2 text-left text-xs font-medium tabular-nums first:border-l-0',
+                  'text-subtle-foreground border-l px-2 py-1 text-left text-xs font-medium tabular-nums first:border-l-0',
                   dia === hoje && 'text-primary bg-accent/40 font-semibold',
                 )}
               >
-                {textoDia(dia)}
+                <span className="flex min-h-6 items-center justify-between gap-1">
+                  {textoDia(dia)}
+                  {onAlocar && (
+                    <BotaoMais
+                      rotulo={`Alocar em ${calendario.rotulo}, ${textoDia(dia)}`}
+                      onClick={() =>
+                        onAlocar({
+                          data: dia,
+                          ...(calendario.frenteId && { frenteId: calendario.frenteId }),
+                          ...(calendario.turnoId && { turnoId: calendario.turnoId }),
+                        })
+                      }
+                      className="size-6 w-6"
+                    />
+                  )}
+                </span>
               </th>
             ))}
           </tr>
@@ -182,27 +197,13 @@ function Calendario({
                   dia === hoje && 'bg-accent/40',
                 )}
               >
-                <div className="flex flex-col">
-                  <BlocosDoDia
-                    linhas={calendario.porDia[dia] ?? []}
-                    conflitos={conflitos}
-                    horarios={horarios}
-                    cartao={cartao}
-                    onAbrir={onAbrir}
-                  />
-                  {onAlocar && (
-                    <BotaoMais
-                      rotulo={`Alocar em ${calendario.rotulo}, ${textoDia(dia)}`}
-                      onClick={() =>
-                        onAlocar({
-                          data: dia,
-                          ...(calendario.frenteId && { frenteId: calendario.frenteId }),
-                          ...(calendario.turnoId && { turnoId: calendario.turnoId }),
-                        })
-                      }
-                    />
-                  )}
-                </div>
+                <BlocosDoDia
+                  linhas={calendario.porDia[dia] ?? []}
+                  conflitos={conflitos}
+                  horarios={horarios}
+                  cartao={cartao}
+                  onAbrir={onAbrir}
+                />
               </td>
             ))}
           </tr>
