@@ -22,7 +22,7 @@ function LayoutApp() {
   const { data: sessao } = useSuspenseQuery(sessaoQueryOptions());
   const avisosPendentes = useTotalAvisosPendentes(Boolean(sessao && pode(sessao, 'avisos.ver')));
   const ausenciasPendentes = useAusenciasPendentes(
-    Boolean(sessao && pode(sessao, 'escala.ausencia.aprovar')),
+    Boolean(sessao && pode(sessao, 'ausencias.aprovar')),
   );
   if (!sessao) return null;
 

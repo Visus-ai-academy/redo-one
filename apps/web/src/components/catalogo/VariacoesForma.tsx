@@ -23,7 +23,8 @@ export type VariacoesFormaProps = {
   variacoes: Variacao[];
   /** Tipos da variação (na especialidade: grafia ou região anatômica); sem tipos, não pergunta. */
   tipos?: TipoVariacao[];
-  podeEditar: boolean;
+  podeCriar: boolean;
+  podeExcluir: boolean;
   onAdicionar: (dados: { origem: string; tipo?: string }) => Promise<void>;
   onRemover: (id: string) => Promise<void>;
 };
@@ -36,7 +37,8 @@ export function VariacoesForma({
   forma,
   variacoes,
   tipos,
-  podeEditar,
+  podeCriar,
+  podeExcluir,
   onAdicionar,
   onRemover,
 }: VariacoesFormaProps) {
@@ -96,7 +98,7 @@ export function VariacoesForma({
                 )}
               </span>
               {!v.ativo && <Etiqueta tom="inativo">Inativa</Etiqueta>}
-              {podeEditar && (
+              {podeExcluir && (
                 <Button
                   type="button"
                   aria-label={`Remover variação ${v.origem}`}
@@ -132,7 +134,7 @@ export function VariacoesForma({
           />
         </div>
       )}
-      {podeEditar && (
+      {podeCriar && (
         <form
           noValidate
           onSubmit={(e) => {

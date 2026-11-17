@@ -4,7 +4,7 @@ import type { EquipeDto } from '../../gen/types/EquipeDto';
 import type { EquipeItemDto } from '../../gen/types/EquipeItemDto';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
-import { RodapePainel } from '../catalogo/rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
@@ -91,10 +91,22 @@ export function PainelEquipe({
     </form.AppField>
   );
 
+  const excluir =
+    equipe && onExcluir
+      ? {
+          acao: 'Excluir equipe',
+          titulo: `Excluir ${equipe.nome}?`,
+          consequencia:
+            'A equipe sai do cadastro e os médicos deixam de ser membros dela. Os médicos continuam cadastrados.',
+          onConfirmar: () => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+        }
+      : undefined;
+
   if (!podeEditar && equipe) {
     return (
       <PainelLateral titulo={equipe.nome} onFechar={onFechar}>
         <div className="flex flex-col gap-4 p-4">
+          {erro && <Alerta tom="erro">{erro}</Alerta>}
           <CampoSomenteLeitura label="Descrição" value={equipe.descricao ?? '—'} />
           <CampoSomenteLeitura
             label="Plantão"
@@ -102,6 +114,7 @@ export function PainelEquipe({
           />
           <CampoSomenteLeitura label="Situação" value={equipe.ativo ? 'Ativa' : 'Inativa'} />
           {campoMembros(true)}
+          <RodapeSomenteLeitura excluir={excluir} />
         </div>
       </PainelLateral>
     );
@@ -178,18 +191,7 @@ export function PainelEquipe({
           <RodapePainel
             rotuloCriar="Criar equipe"
             editando={Boolean(equipe)}
-            excluir={
-              equipe && onExcluir
-                ? {
-                    acao: 'Excluir equipe',
-                    titulo: `Excluir ${equipe.nome}?`,
-                    consequencia:
-                      'A equipe sai do cadastro e os médicos deixam de ser membros dela. Os médicos continuam cadastrados.',
-                    onConfirmar: () =>
-                      tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
-                  }
-                : undefined
-            }
+            excluir={excluir}
             onCancelar={onFechar}
           />
         </form.AppForm>

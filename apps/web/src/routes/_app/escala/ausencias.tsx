@@ -91,7 +91,7 @@ export const Route = createFileRoute('/_app/escala/ausencias')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    if (!pode(context.sessao, 'escala.ver')) return;
+    if (!pode(context.sessao, 'ausencias.ver')) return;
     const { queryClient } = context;
     if (deps.id)
       void queryClient.prefetchQuery(
@@ -114,7 +114,7 @@ export const Route = createFileRoute('/_app/escala/ausencias')({
 
 function Pagina() {
   const { sessao } = Route.useRouteContext();
-  return pode(sessao, 'escala.ver') ? <Ausencias /> : <SemPermissao tela="Ausências" />;
+  return pode(sessao, 'ausencias.ver') ? <Ausencias /> : <SemPermissao tela="Ausências" />;
 }
 
 /** Médicos ativos que casam com o termo, para lançar ausência. */
@@ -157,13 +157,14 @@ function useAtualizarAusencias() {
 
 function Ausencias() {
   const { sessao } = Route.useRouteContext();
-  const podeEditar = pode(sessao, 'escala.ausencia.editar');
+  const podeCriar = pode(sessao, 'ausencias.criar');
+  const podeEditar = pode(sessao, 'ausencias.editar');
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(ausenciasControllerListarQueryOptions(consulta(busca)));
   const { data: tipos } = useSuspenseQuery(tiposAusenciaControllerListarQueryOptions(TODOS));
   const { data: frentes } = useSuspenseQuery(frentesControllerListarQueryOptions(TODOS));
-  const pendentes = useAusenciasPendentes(pode(sessao, 'escala.ausencia.aprovar'));
+  const pendentes = useAusenciasPendentes(pode(sessao, 'ausencias.aprovar'));
   const hoje = hojeEmBrasilia();
 
   const ir = useCallback(
@@ -245,7 +246,7 @@ function Ausencias() {
     <ListaCadastro
       titulo="Ausências"
       novo={
-        podeEditar
+        podeCriar
           ? {
               rotulo: 'Nova ausência',
               onClick: () => ir((a) => ({ ...a, id: undefined, editar: undefined, novo: 1 })),
@@ -319,7 +320,7 @@ function Ausencias() {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhuma ausência neste período.',
-        texto: podeEditar
+        texto: podeCriar
           ? 'Lance férias, congressos e folgas para a escala saber quem não está disponível.'
           : 'Quem gere a escala lança as ausências; os pedidos do portal também aparecem aqui.',
       }}
@@ -336,7 +337,7 @@ function Ausencias() {
       }
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
-        busca.novo && podeEditar ? (
+        busca.novo && podeCriar ? (
           <PainelNova
             key="novo"
             busca={busca}
@@ -491,8 +492,9 @@ function PainelDaAusencia({
     >
       <DetalheAusencia
         ausencia={ausencia}
-        podeEditar={pode(sessao, 'escala.ausencia.editar')}
-        podeAprovar={pode(sessao, 'escala.ausencia.aprovar')}
+        podeEditar={pode(sessao, 'ausencias.editar')}
+        podeExcluir={pode(sessao, 'ausencias.excluir')}
+        podeAprovar={pode(sessao, 'ausencias.aprovar')}
         onEditar={onEditar}
         onAprovar={async () => {
           await ausenciasControllerAprovar({ path: { id } }).unwrap();

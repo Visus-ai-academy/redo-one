@@ -17,7 +17,7 @@ import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapePainel } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
 
 export type PainelQuebraProps = {
@@ -25,7 +25,12 @@ export type PainelQuebraProps = {
   quebra?: QuebraDetalheDto;
   categorias: { id: string; nome: string }[];
   buscarExames: (termo: string) => Promise<OpcaoBusca[]>;
+  /** Salvar a quebra: editar (aberta) ou criar (nova). */
   podeEditar: boolean;
+  /** Peças: adicionar (POST), ativar (PUT) e remover (DELETE). */
+  podeCriar: boolean;
+  podeEditarPecas: boolean;
+  podeExcluir: boolean;
   onSalvar: (dados: QuebraDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onAdicionarPeca: (dados: PecaDto) => Promise<void>;
@@ -43,6 +48,9 @@ export function PainelQuebra({
   categorias,
   buscarExames,
   podeEditar,
+  podeCriar,
+  podeEditarPecas,
+  podeExcluir,
   onSalvar,
   onExcluir,
   onAdicionarPeca,
@@ -60,6 +68,17 @@ export function PainelQuebra({
     },
     onSubmit: ({ value }) => tentar(() => onSalvar({ estudoOrigem: value.estudoOrigem.trim() })),
   });
+
+  const excluir =
+    quebra && onExcluir
+      ? {
+          acao: 'Excluir quebra',
+          titulo: `Excluir a quebra de ${quebra.estudoOrigem}?`,
+          consequencia:
+            'A partir da próxima importação, o laudo desse estudo deixa de se quebrar e vale como um exame só.',
+          onConfirmar: () => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+        }
+      : undefined;
 
   return (
     <PainelLateral titulo={quebra ? quebra.estudoOrigem : 'Nova quebra'} onFechar={onFechar}>
@@ -90,26 +109,17 @@ export function PainelQuebra({
             Também é o exame {quebra.exame.nome} do cadastro.
           </p>
         )}
-        {podeEditar && (
+        {podeEditar ? (
           <form.AppForm>
             <RodapePainel
               rotuloCriar="Criar quebra"
               editando={Boolean(quebra)}
-              excluir={
-                quebra && onExcluir
-                  ? {
-                      acao: 'Excluir quebra',
-                      titulo: `Excluir a quebra de ${quebra.estudoOrigem}?`,
-                      consequencia:
-                        'A partir da próxima importação, o laudo desse estudo deixa de se quebrar e vale como um exame só.',
-                      onConfirmar: () =>
-                        tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
-                    }
-                  : undefined
-              }
+              excluir={excluir}
               onCancelar={onFechar}
             />
           </form.AppForm>
+        ) : (
+          <RodapeSomenteLeitura excluir={excluir} />
         )}
       </form>
       {quebra && (
@@ -117,7 +127,9 @@ export function PainelQuebra({
           pecas={quebra.pecas}
           categorias={categorias}
           buscarExames={buscarExames}
-          podeEditar={podeEditar}
+          podeCriar={podeCriar}
+          podeEditar={podeEditarPecas}
+          podeExcluir={podeExcluir}
           onCriar={onAdicionarPeca}
           onAtualizar={onAtualizarPeca}
           onExcluir={onRemoverPeca}
@@ -131,7 +143,9 @@ function PecasQuebra({
   pecas,
   categorias,
   buscarExames,
+  podeCriar,
   podeEditar,
+  podeExcluir,
   onCriar,
   onAtualizar,
   onExcluir,
@@ -139,7 +153,9 @@ function PecasQuebra({
   pecas: QuebraDetalheDto['pecas'];
   categorias: { id: string; nome: string }[];
   buscarExames: (termo: string) => Promise<OpcaoBusca[]>;
+  podeCriar: boolean;
   podeEditar: boolean;
+  podeExcluir: boolean;
   onCriar: (dados: PecaDto) => Promise<void>;
   onAtualizar: (id: string, dados: PecaDto) => Promise<void>;
   onExcluir: (id: string) => Promise<void>;
@@ -220,7 +236,7 @@ function PecasQuebra({
                     {!peca.ativo && <Etiqueta tom="inativo">Inativo</Etiqueta>}
                   </span>
                 </span>
-                {podeEditar && (
+                {podeExcluir && (
                   <Button
                     type="button"
                     aria-label={`Remover ${peca.exame.nome} da quebra`}
@@ -248,7 +264,7 @@ function PecasQuebra({
           />
         </div>
       )}
-      {podeEditar && (
+      {podeCriar && (
         <form
           noValidate
           onSubmit={(e) => {

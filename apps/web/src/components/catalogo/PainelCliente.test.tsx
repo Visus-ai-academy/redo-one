@@ -31,7 +31,16 @@ function montar(props: Partial<PainelClienteProps> = {}) {
     onExcluirApelido: vi.fn(async () => undefined),
     onFechar: vi.fn(),
   };
-  render(<PainelCliente contratados={contratados} podeEditar {...handlers} {...props} />);
+  render(
+    <PainelCliente
+      contratados={contratados}
+      podeEditar
+      podeCriar
+      podeExcluir
+      {...handlers}
+      {...props}
+    />,
+  );
   return handlers;
 }
 
@@ -101,5 +110,18 @@ describe('PainelCliente', () => {
       within(apelidos).getByRole('button', { name: 'Remover apelido PRN TELE_' }),
     );
     expect(onExcluirApelido).toHaveBeenCalledWith('a-1');
+  });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({ cliente, podeEditar: false, podeCriar: false, podeExcluir: false, onExcluir });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir cliente' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir cliente' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
   });
 });

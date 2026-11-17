@@ -13,7 +13,9 @@ import type { AvisoConflitoDto } from '../../gen/types/AvisoConflitoDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { OcorrenciasDto } from '../../gen/types/OcorrenciasDto';
 import { cn } from '../../lib/cn';
+import type { PodeNaTela } from '../../lib/permissoes';
 import { Alerta } from '../alerta/Alerta';
+import { Alternador } from '../alternador/Alternador';
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { CampoBusca } from '../busca/CampoBusca';
 import { useBuscaComEspera } from '../busca/use-busca-com-espera';
@@ -36,7 +38,14 @@ import {
   semDiaAnterior,
   type TurnoDaGrade,
 } from './agrupar';
-import { diasDaSemana, type ModoEscala, navegar, rotuloDia, rotuloPeriodo } from './calendario';
+import {
+  diasDaSemana,
+  diasVisiveis,
+  type ModoEscala,
+  navegar,
+  rotuloDia,
+  rotuloPeriodo,
+} from './calendario';
 import { descreverPlantao } from './descricao-plantao';
 import { EscolhaSegmentada } from './EscolhaSegmentada';
 import { FiltroMultiplo } from './FiltroMultiplo';
@@ -55,6 +64,8 @@ export type FiltrosEscala = {
   busca?: string;
   /** Página das ausências da semana. */
   pagina?: number;
+  /** Mostra sáb e dom mesmo vazios (para alocar neles); sem ele, só aparecem com plantão. */
+  fimDeSemana?: 1;
 };
 
 /** Ausências aprovadas da semana (uma página delas). */
@@ -93,7 +104,8 @@ export type TelaEscalaProps = {
   /** O médico do modo Por médico, com o nome. */
   medico: OpcaoBusca | null;
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
-  podeEditar: boolean;
+  /** `escala.criar` (alocar), `escala.editar` (montar escala). */
+  permissoes: PodeNaTela;
   podeVerHistorico: boolean;
   /** Conflitos que a última alocação ou cobertura salva criou. */
   avisos: AvisoConflitoDto[];
@@ -131,7 +143,7 @@ export function TelaEscala({
   frentes,
   medico,
   buscarMedicos,
-  podeEditar,
+  permissoes,
   podeVerHistorico,
   avisos,
   ausencias,
@@ -169,7 +181,7 @@ export function TelaEscala({
               Histórico
             </Link>
           )}
-          {podeEditar && (
+          {permissoes.criar && (
             <Button type="button" onClick={() => onAlocar({})} className={buttonClassName()}>
               <Plus size={16} aria-hidden />
               Alocar médico
@@ -226,6 +238,14 @@ export function TelaEscala({
               onMudar={(novo) => onMudar({ agrupar: novo })}
             />
           )}
+          {modo !== 'medico' && (
+            <Alternador
+              ligado={Boolean(filtros.fimDeSemana)}
+              onMudar={(ligado) => onMudar({ fimDeSemana: ligado ? 1 : undefined })}
+            >
+              Fim de semana
+            </Alternador>
+          )}
         </div>
       </div>
 
@@ -246,7 +266,7 @@ export function TelaEscala({
                 placeholder="Buscar médico pelo nome"
               />
             </div>
-            {podeEditar && medico && onMontarEscala && (
+            {permissoes.editar && medico && onMontarEscala && (
               <Button
                 type="button"
                 onClick={onMontarEscala}
@@ -309,7 +329,7 @@ export function TelaEscala({
         onTentarDeNovo={onTentarDeNovo}
         turnos={turnos}
         frentes={frentes}
-        podeEditar={podeEditar}
+        permissoes={permissoes}
         ausencias={ausencias}
         erroAusencias={erroAusencias}
         catalogo={catalogo}
@@ -364,7 +384,7 @@ function Conteudo({
   onTentarDeNovo,
   turnos,
   frentes,
-  podeEditar,
+  permissoes,
   ausencias,
   erroAusencias,
   catalogo,
@@ -381,7 +401,7 @@ function Conteudo({
   | 'onTentarDeNovo'
   | 'turnos'
   | 'frentes'
-  | 'podeEditar'
+  | 'permissoes'
   | 'ausencias'
   | 'onMudar'
   | 'onAbrirPlantao'
@@ -438,6 +458,14 @@ function Conteudo({
     if (!ausencias) {
       return erroAusencias ? <ErroAoCarregar onTentarDeNovo={onTentarDeNovo} /> : <Carregando />;
     }
+    // Sáb e dom só aparecem se alguém está ausente neles.
+    const semanaInteira = diasDaSemana(data);
+    const barrasDaSemana = barrasDeAusencia(ausencias.itens, semanaInteira);
+    const diasDasAusencias = diasVisiveis(semanaInteira, (dia) => {
+      if (filtros.fimDeSemana) return true;
+      const indice = semanaInteira.indexOf(dia);
+      return barrasDaSemana.some((l) => l.barras.some((b) => b.de <= indice && indice <= b.ate));
+    });
     return (
       <div
         aria-busy={atualizando || undefined}
@@ -447,9 +475,9 @@ function Conteudo({
         )}
       >
         <AusenciasDaSemana
-          dias={diasDaSemana(data)}
+          dias={diasDasAusencias}
           hoje={hoje}
-          linhas={barrasDeAusencia(ausencias.itens, diasDaSemana(data))}
+          linhas={barrasDeAusencia(ausencias.itens, diasDasAusencias)}
           pagina={ausencias.pagina}
           porPagina={ausencias.porPagina}
           total={ausencias.total}
@@ -469,11 +497,17 @@ function Conteudo({
     return erro ? <ErroAoCarregar onTentarDeNovo={onTentarDeNovo} /> : <Carregando />;
   }
 
-  const aoAlocar = podeEditar ? onAlocar : undefined;
+  const aoAlocar = permissoes.criar ? onAlocar : undefined;
   const propsSemana = {
     ...semana,
     agrupar: filtros.agrupar,
-    dias: diasDaSemana(data),
+    // Sáb e dom só aparecem quando há plantão (ou ausência) neles nesta semana.
+    dias: diasVisiveis(
+      diasDaSemana(data),
+      (dia) =>
+        Boolean(filtros.fimDeSemana) ||
+        semana.calendarios.some((c) => (c.porDia[dia] ?? []).length > 0),
+    ),
     hoje,
     conflitos,
     horarios,
@@ -510,6 +544,7 @@ function Conteudo({
           data={data}
           hoje={hoje}
           ocorrencias={ocorrencias}
+          mostrarFimDeSemana={Boolean(filtros.fimDeSemana)}
           onAbrirDia={(dia) => onMudar({ modo: 'semana', data: dia })}
         />
       )}

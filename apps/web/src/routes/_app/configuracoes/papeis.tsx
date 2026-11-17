@@ -64,10 +64,12 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
   const queryClient = useQueryClient();
   const { data: papeis } = useSuspenseQuery(papeisControllerListarQueryOptions());
   const { data: catalogo } = useSuspenseQuery(permissoesControllerCatalogoQueryOptions());
+  const podeCriar = pode(sessao, 'papeis.criar');
   const podeEditar = pode(sessao, 'papeis.editar');
+  const podeExcluir = pode(sessao, 'papeis.excluir');
   const avisos = useAvisos();
 
-  const novo = Boolean(busca.novo && podeEditar);
+  const novo = Boolean(busca.novo && podeCriar);
   const selecionadoId = novo ? undefined : (busca.id ?? papeis[0]?.id);
 
   const abrir = (id?: string) => void navigate({ search: id ? { id } : {} });
@@ -97,7 +99,7 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">Papéis</h1>
-        {podeEditar && !novo && (
+        {podeCriar && !novo && (
           <Button
             type="button"
             onClick={() => void navigate({ search: { novo: 1 } })}
@@ -126,6 +128,7 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
               deId={busca.de}
               sessao={sessao}
               catalogo={catalogo}
+              papeis={papeis}
               onSalvo={salvo}
               onCancelar={() => abrir(busca.de)}
             />
@@ -136,7 +139,10 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
                 id={selecionadoId}
                 sessao={sessao}
                 catalogo={catalogo}
+                papeis={papeis}
+                podeCriar={podeCriar}
                 podeEditar={podeEditar}
+                podeExcluir={podeExcluir}
                 onSalvo={salvo}
                 onDuplicar={() => void navigate({ search: { novo: 1, de: selecionadoId } })}
                 onExcluido={() => {
@@ -155,24 +161,36 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
 type Comum = {
   sessao: SessaoAtualDto;
   catalogo: Parameters<typeof EditarPapel>[0]['catalogo'];
+  papeis: Parameters<typeof EditarPapel>[0]['papeis'];
   onSalvo: (salvo: PapelSalvo) => void;
 };
 
 function PapelAberto({
   id,
   sessao,
+  podeCriar,
   podeEditar,
+  podeExcluir,
   onDuplicar,
   onExcluido,
   ...props
-}: Comum & { id: string; podeEditar: boolean; onDuplicar: () => void; onExcluido: () => void }) {
+}: Comum & {
+  id: string;
+  podeCriar: boolean;
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  onDuplicar: () => void;
+  onExcluido: () => void;
+}) {
   const { data: papel } = useSuspenseQuery(papeisControllerObterQueryOptions({ path: { id } }));
   return (
     <EditarPapel
       papel={papel}
       acesso={sessao}
       meuPapelId={sessao.usuario.papelId}
+      podeCriar={podeCriar}
       podeEditar={podeEditar}
+      podeExcluir={podeExcluir}
       onDuplicar={onDuplicar}
       onExcluido={onExcluido}
       onCancelar={() => {}}
@@ -193,7 +211,9 @@ function PapelNovo({
     <EditarPapel
       acesso={sessao}
       meuPapelId={sessao.usuario.papelId}
-      podeEditar
+      podeCriar
+      podeEditar={false}
+      podeExcluir={false}
       onDuplicar={() => {}}
       onExcluido={() => {}}
       onCancelar={onCancelar}
@@ -221,7 +241,9 @@ function Copia({
       }}
       acesso={sessao}
       meuPapelId={sessao.usuario.papelId}
-      podeEditar
+      podeCriar
+      podeEditar={false}
+      podeExcluir={false}
       onDuplicar={() => {}}
       onExcluido={() => {}}
       onCancelar={onCancelar}

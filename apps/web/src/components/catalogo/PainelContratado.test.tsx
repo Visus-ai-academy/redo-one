@@ -68,4 +68,37 @@ describe('PainelContratado', () => {
     expect(await screen.findByText('O CNPJ tem 14 dígitos.')).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    render(
+      <PainelContratado
+        contratado={{
+          id: 'c-tele',
+          razaoSocial: '001 TELEIMAGEM',
+          cnpj: '12345678000190',
+          endereco: null,
+          cidade: null,
+          uf: null,
+          cep: null,
+          contratadoRepasseId: null,
+          contratadoRepasseNome: null,
+          ativo: true,
+        }}
+        contratados={outros}
+        podeEditar={false}
+        onSalvar={vi.fn()}
+        onExcluir={onExcluir}
+        onFechar={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir contratado' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir contratado' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

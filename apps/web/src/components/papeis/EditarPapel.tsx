@@ -7,14 +7,15 @@ import { ResponseError } from '../../gen/.kubb/client';
 import { usePapeisControllerAtualizar } from '../../gen/hooks/usePapeisControllerAtualizar';
 import { usePapeisControllerCriar } from '../../gen/hooks/usePapeisControllerCriar';
 import { usePapeisControllerExcluir } from '../../gen/hooks/usePapeisControllerExcluir';
+import { papeisControllerObterQueryOptions } from '../../gen/hooks/usePapeisControllerObter';
 import type { PapelDetalheDto } from '../../gen/types/PapelDetalheDto';
-import type { TelaCatalogoDto } from '../../gen/types/TelaCatalogoDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { EditorPermissoes } from './EditorPermissoes';
+import type { CatalogoMatriz } from './matriz-permissoes';
 import { avisoAoSalvar, mesmasPermissoes, resumoDasPermissoes } from './permissoes-papel';
 
 const schema = z.object({
@@ -35,12 +36,18 @@ export type EditarPapelProps = {
   papel?: PapelDetalheDto;
   /** Valores iniciais do papel novo (ao duplicar). */
   base?: { nome: string; descricao: string | null; permissoes: string[] };
-  catalogo: TelaCatalogoDto[];
+  catalogo: CatalogoMatriz;
+  /** Papéis de onde copiar as permissões (o aberto sai da lista). */
+  papeis?: { id: string; nome: string }[];
   /** Quem edita: só concede o que tem. */
   acesso: { acessoTotal: boolean; permissoes: readonly string[] };
   meuPapelId: string;
-  /** Tem `papeis.editar` (criar, salvar, duplicar e excluir). */
+  /** `papeis.criar`: papel novo e duplicar. */
+  podeCriar: boolean;
+  /** `papeis.editar`: salvar um papel existente. */
   podeEditar: boolean;
+  /** `papeis.excluir`. */
+  podeExcluir: boolean;
   onSalvo: (salvo: PapelSalvo) => void;
   onDuplicar: () => void;
   onExcluido: () => void;
@@ -52,9 +59,12 @@ export function EditarPapel({
   papel,
   base,
   catalogo,
+  papeis = [],
   acesso,
   meuPapelId,
+  podeCriar,
   podeEditar,
+  podeExcluir,
   onSalvo,
   onDuplicar,
   onExcluido,
@@ -74,7 +84,7 @@ export function EditarPapel({
 
   const novo = !papel;
   // O de acesso total não tem lista para editar; os outros do sistema só não mudam de nome.
-  const somenteLeitura = !podeEditar || Boolean(papel?.acessoTotal);
+  const somenteLeitura = novo ? !podeCriar : !podeEditar || Boolean(papel?.acessoTotal);
   const nomeFixo = Boolean(papel?.sistema);
   const mudouPermissoes = papel ? !mesmasPermissoes(papel.permissoes, marcadas) : false;
   const meuPapel = papel?.id === meuPapelId;
@@ -220,6 +230,10 @@ export function EditarPapel({
                 onChange={alterarMarcadas}
                 acesso={acesso}
                 somenteLeitura={somenteLeitura}
+                papeisParaCopiar={papeis.filter((outro) => outro.id !== papel?.id)}
+                obterPapel={(id) =>
+                  queryClient.fetchQuery(papeisControllerObterQueryOptions({ path: { id } }))
+                }
               />
             </>
           )}
@@ -231,12 +245,12 @@ export function EditarPapel({
             resumo={resumoDasPermissoes(marcadas)}
             aviso={aviso}
             bloqueioDeExclusao={
-              papel && !somenteLeitura && !papel.sistema && papel.totalUsuarios > 0
+              papel && podeExcluir && !papel.sistema && papel.totalUsuarios > 0
                 ? `Para excluir, troque antes o papel ${papel.totalUsuarios === 1 ? 'do único usuário' : `dos ${papel.totalUsuarios} usuários`}.`
                 : undefined
             }
           >
-            {podeEditar && papel && !papel.sistema && papel.totalUsuarios === 0 && (
+            {podeExcluir && papel && !papel.sistema && papel.totalUsuarios === 0 && (
               <ConfirmarAcao
                 acao="Excluir papel"
                 titulo={`Excluir o papel “${papel.nome}”?`}
@@ -244,7 +258,7 @@ export function EditarPapel({
                 onConfirmar={excluirPapel}
               />
             )}
-            {podeEditar && papel && !papel.acessoTotal && (
+            {podeCriar && papel && !papel.acessoTotal && (
               <Button
                 type="button"
                 onClick={onDuplicar}

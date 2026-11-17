@@ -64,6 +64,19 @@ export function celulasDaGrade(grade: Grade): CelulaEscalaFixaDto[] {
     );
 }
 
+/**
+ * Colunas mostradas: seg a sex; sáb e dom quando pedidos ("Mostrar fim de semana") ou quando
+ * alguma das grades (a salva e a em edição) tem célula marcada neles, para não esconder dado.
+ */
+export function diasDaGradeVisiveis(grades: readonly Grade[], mostrarFimDeSemana: boolean) {
+  return DIAS_DA_GRADE.filter(
+    (dia) =>
+      DIAS_UTEIS.includes(dia as (typeof DIAS_UTEIS)[number]) ||
+      mostrarFimDeSemana ||
+      grades.some((g) => Object.entries(g).some(([k, c]) => c.marcada && k.endsWith(`|${dia}`))),
+  );
+}
+
 export function marcar(grade: Grade, turnoId: string, dia: number, marcada: boolean): Grade {
   return { ...grade, [chave(turnoId, dia)]: { ...celula(grade, turnoId, dia), marcada } };
 }

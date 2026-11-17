@@ -40,7 +40,7 @@ export type PermissoesUsuarios = {
   desbloquear: boolean;
   /** usuarios.desativar: desativar e reativar. */
   desativar: boolean;
-  /** usuarios.convidar: reenviar convite. */
+  /** usuarios.criar: reenviar convite. */
   convidar: boolean;
 };
 

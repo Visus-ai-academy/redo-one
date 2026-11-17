@@ -63,4 +63,55 @@ describe('painéis dos de-paras', () => {
       'true',
     );
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    comConsultas(
+      <PainelNaoEspecialidade
+        podeEditar={false}
+        onFechar={vi.fn()}
+        item={
+          {
+            id: 'd-1',
+            tipo: 'invalida',
+            origem: 'CT',
+            especialidadeId: null,
+            ativo: true,
+            observacoes: null,
+          } as never
+        }
+        onSalvar={vi.fn()}
+        onExcluir={onExcluir}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir de-para' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir de-para' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
+
+  it('sufixo: sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    comConsultas(
+      <PainelSufixo
+        podeEditar={false}
+        onFechar={vi.fn()}
+        item={{ id: 's-1', sufixo: '_RMX', ativo: true, observacoes: null } as never}
+        onSalvar={vi.fn()}
+        onExcluir={onExcluir}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir sufixo' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir sufixo' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

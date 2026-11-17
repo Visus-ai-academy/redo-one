@@ -29,4 +29,13 @@ describe('CaixaDeSelecao', () => {
 
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
+
+  it('em parte marcada, diz "misto" ao leitor de tela', () => {
+    render(<CaixaDeSelecao checked={false} indeterminate aria-label="Ver em Cadastros" />);
+
+    expect(screen.getByRole('checkbox', { name: 'Ver em Cadastros' })).toHaveAttribute(
+      'aria-checked',
+      'mixed',
+    );
+  });
 });

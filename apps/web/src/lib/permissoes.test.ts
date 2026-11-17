@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filtrarPorPermissao, pode } from './permissoes';
+import { filtrarPorPermissao, pode, podeNaTela } from './permissoes';
 
 const financeiro = { acessoTotal: false, permissoes: ['faturamento.ver', 'usuarios.ver'] };
 const administrador = { acessoTotal: true, permissoes: [] };
@@ -40,5 +40,21 @@ describe('filtrarPorPermissao', () => {
 
   it('mantém tudo para o Administrador', () => {
     expect(filtrarPorPermissao(grupos, administrador)).toEqual(grupos);
+  });
+});
+
+describe('podeNaTela', () => {
+  it('diz o criar, o editar e o excluir da tela separados', () => {
+    const cadastro = { acessoTotal: false, permissoes: ['clientes.ver', 'clientes.criar'] };
+    expect(podeNaTela(cadastro, 'clientes')).toEqual({
+      criar: true,
+      editar: false,
+      excluir: false,
+    });
+    expect(podeNaTela(administrador, 'clientes')).toEqual({
+      criar: true,
+      editar: true,
+      excluir: true,
+    });
   });
 });

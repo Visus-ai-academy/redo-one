@@ -60,4 +60,26 @@ describe('PainelExameForaPadrao', () => {
     expect(screen.getByText(/Valor 0 não conta/)).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Exame padronizado' })).toBeInTheDocument();
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({
+      podeEditar: false,
+      item: {
+        id: 'a',
+        estudoDescricao: 'TC OMBRO DIREITO',
+        valores: 1,
+        exameId: null,
+        ativo: true,
+        destinoNome: null,
+      },
+      onExcluir,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    await userEvent.click(screen.getAllByRole('button', { name: 'Excluir' }).at(-1) as HTMLElement);
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

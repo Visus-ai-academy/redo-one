@@ -38,7 +38,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         permissao: 'importacao.ver',
       },
       { nome: 'Escala', to: '/escala', icone: CalendarDots, permissao: 'escala.ver' },
-      { nome: 'Ausências', to: '/escala/ausencias', icone: CalendarX, permissao: 'escala.ver' },
+      { nome: 'Ausências', to: '/escala/ausencias', icone: CalendarX, permissao: 'ausencias.ver' },
     ],
   },
   {

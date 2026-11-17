@@ -27,7 +27,11 @@ const schemaRecusa = z.object({
 
 export type DetalheAusenciaProps = {
   ausencia: AusenciaItemDto;
+  /** `ausencias.editar`. */
   podeEditar: boolean;
+  /** `ausencias.excluir`. */
+  podeExcluir: boolean;
+  /** `ausencias.aprovar`: aprovar e recusar pedidos. */
   podeAprovar: boolean;
   onAprovar: () => Promise<void>;
   onRecusar: (motivo: string) => Promise<void>;
@@ -35,10 +39,17 @@ export type DetalheAusenciaProps = {
   onExcluir: () => Promise<void>;
 };
 
+/** Sem `ausencias.observacoes.ver`, a API não manda o texto (dado de saúde), só se ele existe. */
+function textoDasObservacoes(ausencia: AusenciaItemDto) {
+  if (ausencia.observacoes) return ausencia.observacoes;
+  return ausencia.temObservacoes ? 'Há observação (sem permissão para ver)' : 'Sem observações.';
+}
+
 /** Conteúdo do painel de uma ausência: dados, decisão (aprovar/recusar), editar e excluir. */
 export function DetalheAusencia({
   ausencia,
   podeEditar,
+  podeExcluir,
   podeAprovar,
   onAprovar,
   onRecusar,
@@ -125,7 +136,7 @@ export function DetalheAusencia({
       <section className="flex flex-col gap-1">
         <h3 className="font-medium">Observações</h3>
         <p className="text-muted-foreground break-words whitespace-pre-line">
-          {ausencia.observacoes || 'Sem observações.'}
+          {textoDasObservacoes(ausencia)}
         </p>
       </section>
 
@@ -192,21 +203,27 @@ export function DetalheAusencia({
         </form>
       )}
 
-      {podeEditar && (
+      {(podeEditar || podeExcluir) && (
         <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-          <ConfirmarAcao
-            acao="Excluir ausência"
-            titulo="Excluir esta ausência?"
-            consequencia={`A ausência de ${ausencia.medico.nome} (${periodo}) sai da escala e o médico volta a contar como disponível nesses dias.`}
-            onConfirmar={() => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.')}
-          />
-          <Button
-            type="button"
-            onClick={onEditar}
-            className={buttonClassName({ variant: 'secondary', className: 'ml-auto' })}
-          >
-            Editar
-          </Button>
+          {podeExcluir && (
+            <ConfirmarAcao
+              acao="Excluir ausência"
+              titulo="Excluir esta ausência?"
+              consequencia={`A ausência de ${ausencia.medico.nome} (${periodo}) sai da escala e o médico volta a contar como disponível nesses dias.`}
+              onConfirmar={() =>
+                tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.')
+              }
+            />
+          )}
+          {podeEditar && (
+            <Button
+              type="button"
+              onClick={onEditar}
+              className={buttonClassName({ variant: 'secondary', className: 'ml-auto' })}
+            >
+              Editar
+            </Button>
+          )}
         </div>
       )}
     </div>

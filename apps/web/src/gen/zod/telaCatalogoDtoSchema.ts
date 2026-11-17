@@ -4,13 +4,17 @@
 */
 
 import * as z from 'zod'
-import { acaoCatalogoDtoSchema } from './acaoCatalogoDtoSchema'
+import { acaoPadraoCatalogoDtoSchema } from './acaoPadraoCatalogoDtoSchema'
+import { areaPermissaoSchema } from './areaPermissaoSchema'
+import { especialCatalogoDtoSchema } from './especialCatalogoDtoSchema'
 
 export const telaCatalogoDtoSchema = z.object({
   tela: z.string().meta({ examples: ['usuarios'] }),
   rotulo: z.string().meta({ examples: ['Usuários'] }),
-  area: z.enum(['Painéis', 'Operação', 'Cadastros', 'Financeiro', 'Configurações']),
-  acoes: z.array(acaoCatalogoDtoSchema),
+  area: areaPermissaoSchema,
+  padrao: z.array(acaoPadraoCatalogoDtoSchema).describe('Só as ações padrão que a tela tem, na ordem ver, criar, editar, excluir.'),
+  especiais: z.array(especialCatalogoDtoSchema),
+  exige: z.array(z.string()).describe('Telas cujo `ver` vem junto com qualquer ação desta.').meta({ examples: [["escala"]] }),
 })
 
 export type TelaCatalogoDtoSchemaType = z.infer<typeof telaCatalogoDtoSchema>

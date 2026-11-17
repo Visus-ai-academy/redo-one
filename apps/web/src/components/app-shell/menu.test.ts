@@ -17,7 +17,7 @@ describe('GRUPOS_MENU', () => {
     expect(operacao?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Importação', '/importacao', 'importacao.ver'],
       ['Escala', '/escala', 'escala.ver'],
-      ['Ausências', '/escala/ausencias', 'escala.ver'],
+      ['Ausências', '/escala/ausencias', 'ausencias.ver'],
     ]);
   });
 });

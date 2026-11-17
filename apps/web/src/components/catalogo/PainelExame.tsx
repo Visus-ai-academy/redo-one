@@ -11,14 +11,17 @@ import { buttonClassName } from '../button/button-class';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapePainel } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
 
 export type PainelExameProps = {
   /** Sem exame, o painel cria um novo (a quebra aparece depois de criado). */
   exame?: ExameDetalheDto;
   opcoes: OpcoesCatalogoDto;
+  /** Salvar o formulário: editar (exame aberto) ou criar (novo). */
   podeEditar: boolean;
+  /** Criar a quebra do estudo (POST). */
+  podeCriar: boolean;
   onSalvar: (dados: ExameDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   /** Abre a quebra do estudo com o mesmo nome do exame. */
@@ -40,6 +43,7 @@ export function PainelExame({
   exame,
   opcoes,
   podeEditar,
+  podeCriar,
   onSalvar,
   onExcluir,
   onAbrirQuebra,
@@ -93,6 +97,17 @@ export function PainelExame({
         }),
       ),
   });
+
+  const excluir =
+    exame && onExcluir
+      ? {
+          acao: 'Excluir exame',
+          titulo: `Excluir ${exame.nome}?`,
+          consequencia:
+            'O exame sai do catálogo. Se ele é um dos exames de uma quebra, a exclusão é recusada: desative em vez de excluir.',
+          onConfirmar: () => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+        }
+      : undefined;
 
   return (
     <PainelLateral
@@ -236,18 +251,7 @@ export function PainelExame({
             <RodapePainel
               rotuloCriar="Criar exame"
               editando={Boolean(exame)}
-              excluir={
-                exame && onExcluir
-                  ? {
-                      acao: 'Excluir exame',
-                      titulo: `Excluir ${exame.nome}?`,
-                      consequencia:
-                        'O exame sai do catálogo. Se ele é um dos exames de uma quebra, a exclusão é recusada: desative em vez de excluir.',
-                      onConfirmar: () =>
-                        tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
-                    }
-                  : undefined
-              }
+              excluir={excluir}
               onCancelar={onFechar}
             />
           </form.AppForm>
@@ -255,6 +259,7 @@ export function PainelExame({
       ) : (
         exame && (
           <div className="flex flex-col gap-4 p-4">
+            {erro && <Alerta tom="erro">{erro}</Alerta>}
             <CampoSomenteLeitura
               label="Modalidade"
               value={nomeDe(opcoes.modalidades, exame.modalidadeId)}
@@ -272,13 +277,14 @@ export function PainelExame({
               value={nomeDe(opcoes.categoriasExame, exame.categoriaId)}
             />
             <CampoSomenteLeitura label="Situação" value={exame.ativo ? 'Ativo' : 'Inativo'} />
+            <RodapeSomenteLeitura excluir={excluir} />
           </div>
         )
       )}
       {exame && (
         <QuebraDoExame
           quebra={exame.quebra}
-          podeEditar={podeEditar}
+          podeCriar={podeCriar}
           onAbrir={onAbrirQuebra}
           onCriar={onCriarQuebra}
         />
@@ -290,12 +296,12 @@ export function PainelExame({
 /** A quebra do estudo de mesmo nome: quantos exames ele vira, com o caminho até ela. */
 function QuebraDoExame({
   quebra,
-  podeEditar,
+  podeCriar,
   onAbrir,
   onCriar,
 }: {
   quebra: ExameDetalheDto['quebra'];
-  podeEditar: boolean;
+  podeCriar: boolean;
   onAbrir: (id: string) => void;
   onCriar: () => Promise<void>;
 }) {
@@ -325,7 +331,7 @@ function QuebraDoExame({
       ) : (
         <>
           <p className="text-muted-foreground">Este estudo não se quebra.</p>
-          {podeEditar && (
+          {podeCriar && (
             <Button
               type="button"
               disabled={criando}

@@ -25,7 +25,7 @@ import { sufixosClienteControllerObterQueryOptions } from '../../../gen/hooks/us
 import type { DeParaEspecialidadeItemDto } from '../../../gen/types/DeParaEspecialidadeItemDto';
 import type { SufixoItemDto } from '../../../gen/types/SufixoItemDto';
 import { invalidarCatalogo } from '../../../lib/catalogo';
-import { pode } from '../../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
 /**
@@ -87,7 +87,7 @@ function PaginaDeParas() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'de-para.ver') ? (
-        <DeParas podeEditar={pode(sessao, 'de-para.editar')} />
+        <DeParas permissoes={podeNaTela(sessao, 'de-para')} />
       ) : (
         <SemPermissao tela="De-paras" />
       )}
@@ -106,7 +106,7 @@ const cSuf = createDataTableColumnHelper<SufixoItemDto>();
 
 type Item = { id: string };
 
-function DeParas({ podeEditar }: { podeEditar: boolean }) {
+function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const aba: Aba = busca.aba ?? 'nao-especialidade';
@@ -177,7 +177,7 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
         />
       }
       novo={
-        podeEditar
+        permissoes.criar
           ? {
               rotulo: sufixos ? 'Novo sufixo' : 'Novo valor',
               onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
@@ -221,13 +221,13 @@ function DeParas({ podeEditar }: { podeEditar: boolean }) {
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <Painel
             key={`${aba}:${busca.id ?? 'novo'}`}
             aba={aba}
             id={busca.id}
             itens={pagina.itens}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
           />
         ) : undefined
       }
@@ -261,12 +261,12 @@ function Painel({
   aba,
   id,
   itens,
-  podeEditar,
+  permissoes,
 }: {
   aba: Aba;
   id?: string;
   itens: Item[];
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -295,7 +295,10 @@ function Painel({
     fechar();
     await invalidarCatalogo(queryClient);
   };
-  const comum = { podeEditar, onFechar: fechar };
+  const comum = {
+    podeEditar: id ? permissoes.editar : permissoes.criar,
+    onFechar: fechar,
+  };
 
   switch (aba) {
     case 'nao-especialidade':
@@ -314,7 +317,9 @@ function Painel({
             )
           }
           onExcluir={
-            id ? () => excluir(deParaEspecialidadesControllerExcluir, id, excluido) : undefined
+            id && permissoes.excluir
+              ? () => excluir(deParaEspecialidadesControllerExcluir, id, excluido)
+              : undefined
           }
         />
       );
@@ -333,7 +338,11 @@ function Painel({
               ),
             )
           }
-          onExcluir={id ? () => excluir(sufixosClienteControllerExcluir, id, excluido) : undefined}
+          onExcluir={
+            id && permissoes.excluir
+              ? () => excluir(sufixosClienteControllerExcluir, id, excluido)
+              : undefined
+          }
         />
       );
   }

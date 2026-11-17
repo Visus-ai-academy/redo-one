@@ -15,7 +15,7 @@ import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapePainel } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { UnidadesCliente, type UnidadesClienteProps } from './UnidadesCliente';
 import { useErroDoPainel } from './use-erro-do-painel';
 
@@ -24,13 +24,17 @@ export type PainelClienteProps = {
   cliente?: ClienteDetalheDto;
   /** Contratados ativos (empresa que fatura). */
   contratados: { id: string; nome: string }[];
+  /** Salvar o formulário: editar (cliente aberto) ou criar (novo). */
   podeEditar: boolean;
+  /** Apelidos e unidades: adicionar (POST) e remover (DELETE). */
+  podeCriar: boolean;
+  podeExcluir: boolean;
   onSalvar: (dados: ClienteDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onCriarApelido: (dados: AliasDto) => Promise<void>;
   onExcluirApelido: (id: string) => Promise<void>;
   /** Unificação (unidades que respondem por um principal); sem ela, a seção não aparece. */
-  unificacao?: Omit<UnidadesClienteProps, 'unificadoEm' | 'unidades' | 'podeEditar'>;
+  unificacao?: Omit<UnidadesClienteProps, 'unificadoEm' | 'unidades' | 'podeCriar' | 'podeExcluir'>;
   onFechar: () => void;
 };
 
@@ -72,6 +76,8 @@ export function PainelCliente({
   cliente,
   contratados,
   podeEditar,
+  podeCriar,
+  podeExcluir,
   onSalvar,
   onExcluir,
   onCriarApelido,
@@ -120,6 +126,17 @@ export function PainelCliente({
       ? [{ id: cliente.contratado.id, nome: cliente.contratado.razaoSocial }]
       : []),
   ];
+
+  const excluir =
+    cliente && onExcluir
+      ? {
+          acao: 'Excluir cliente',
+          titulo: `Excluir ${cliente.nome}?`,
+          consequencia:
+            'O cliente e os apelidos saem do cadastro. Se algum outro cadastro usa o cliente, a exclusão é recusada: desative em vez de excluir.',
+          onConfirmar: () => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+        }
+      : undefined;
 
   return (
     <PainelLateral
@@ -246,18 +263,7 @@ export function PainelCliente({
             <RodapePainel
               rotuloCriar="Criar cliente"
               editando={Boolean(cliente)}
-              excluir={
-                cliente && onExcluir
-                  ? {
-                      acao: 'Excluir cliente',
-                      titulo: `Excluir ${cliente.nome}?`,
-                      consequencia:
-                        'O cliente e os apelidos saem do cadastro. Se algum outro cadastro usa o cliente, a exclusão é recusada: desative em vez de excluir.',
-                      onConfirmar: () =>
-                        tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
-                    }
-                  : undefined
-              }
+              excluir={excluir}
               onCancelar={onFechar}
             />
           </form.AppForm>
@@ -265,6 +271,7 @@ export function PainelCliente({
       ) : (
         cliente && (
           <div className="flex flex-col gap-4 p-4">
+            {erro && <Alerta tom="erro">{erro}</Alerta>}
             <CampoSomenteLeitura label="Razão social" value={cliente.razaoSocial ?? '—'} />
             <CampoSomenteLeitura
               label={cliente.tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}
@@ -277,13 +284,15 @@ export function PainelCliente({
               value={cliente.contratado?.razaoSocial ?? '—'}
             />
             <CampoSomenteLeitura label="Situação" value={cliente.ativo ? 'Ativo' : 'Inativo'} />
+            <RodapeSomenteLeitura excluir={excluir} />
           </div>
         )
       )}
       {cliente && (
         <Apelidos
           apelidos={cliente.aliases}
-          podeEditar={podeEditar}
+          podeCriar={podeCriar}
+          podeExcluir={podeExcluir}
           onCriar={onCriarApelido}
           onExcluir={onExcluirApelido}
         />
@@ -292,7 +301,8 @@ export function PainelCliente({
         <UnidadesCliente
           unificadoEm={cliente.unificadoEm}
           unidades={cliente.unidades}
-          podeEditar={podeEditar}
+          podeCriar={podeCriar}
+          podeExcluir={podeExcluir}
           {...unificacao}
         />
       )}
@@ -304,12 +314,14 @@ const POR_PAGINA_APELIDOS = 5;
 
 function Apelidos({
   apelidos,
-  podeEditar,
+  podeCriar,
+  podeExcluir,
   onCriar,
   onExcluir,
 }: {
   apelidos: ClienteDetalheDto['aliases'];
-  podeEditar: boolean;
+  podeCriar: boolean;
+  podeExcluir: boolean;
   onCriar: (dados: AliasDto) => Promise<void>;
   onExcluir: (id: string) => Promise<void>;
 }) {
@@ -360,7 +372,7 @@ function Apelidos({
                   {TIPOS_APELIDO[apelido.tipo].rotulo}
                 </span>
               </span>
-              {podeEditar && (
+              {podeExcluir && (
                 <Button
                   type="button"
                   aria-label={`Remover apelido ${apelido.padrao}`}
@@ -396,7 +408,7 @@ function Apelidos({
           />
         </div>
       )}
-      {podeEditar && (
+      {podeCriar && (
         <form
           noValidate
           onSubmit={(e) => {

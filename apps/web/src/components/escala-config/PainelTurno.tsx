@@ -6,7 +6,7 @@ import type { TurnoDto } from '../../gen/types/TurnoDto';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
-import { RodapePainel } from '../catalogo/rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -109,10 +109,28 @@ export function PainelTurno({
     },
   });
 
+  const excluir =
+    turno && onExcluir
+      ? {
+          acao: 'Excluir turno',
+          titulo: `Excluir ${turno.nome}?`,
+          consequencia: `${turno.nome} sai da escala. Se há alocações nele, a exclusão é recusada: desative em vez de excluir.`,
+          onConfirmar: async () => {
+            setErro(undefined);
+            try {
+              await onExcluir();
+            } catch (falha) {
+              setErro(mensagemDaApi(falha, FALHA_AO_EXCLUIR));
+            }
+          },
+        }
+      : undefined;
+
   if (!podeEditar && turno) {
     return (
       <PainelLateral titulo={titulo} onFechar={onFechar}>
         <div className="flex flex-col gap-4 p-4">
+          {erro && <Alerta tom="erro">{erro}</Alerta>}
           <CampoSomenteLeitura label="Tipo" value={rotuloDe(TIPOS_TURNO, turno.tipo)} />
           <CampoSomenteLeitura
             label="Horário"
@@ -124,6 +142,7 @@ export function PainelTurno({
           />
           <CampoSomenteLeitura label="Descrição" value={turno.descricao ?? '—'} />
           <CampoSomenteLeitura label="Situação" value={turno.ativo ? 'Ativo' : 'Inativo'} />
+          <RodapeSomenteLeitura excluir={excluir} />
         </div>
       </PainelLateral>
     );
@@ -272,23 +291,7 @@ export function PainelTurno({
             rotuloCriar="Criar turno"
             editando={Boolean(turno)}
             onCancelar={onFechar}
-            excluir={
-              turno && onExcluir
-                ? {
-                    acao: 'Excluir turno',
-                    titulo: `Excluir ${turno.nome}?`,
-                    consequencia: `${turno.nome} sai da escala. Se há alocações nele, a exclusão é recusada: desative em vez de excluir.`,
-                    onConfirmar: async () => {
-                      setErro(undefined);
-                      try {
-                        await onExcluir();
-                      } catch (falha) {
-                        setErro(mensagemDaApi(falha, FALHA_AO_EXCLUIR));
-                      }
-                    },
-                  }
-                : undefined
-            }
+            excluir={excluir}
           />
         </form.AppForm>
       </form>

@@ -8,7 +8,7 @@ import type { SufixoItemDto } from '../../gen/types/SufixoItemDto';
 import { Alerta } from '../alerta/Alerta';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapePainel } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
 
 type Base<Item, Dados> = {
@@ -78,6 +78,8 @@ export function PainelNaoEspecialidade({
       ),
   });
 
+  const excluir = item ? excluirDePara(item.origem, onExcluir, tentar) : undefined;
+
   return (
     <PainelLateral
       titulo={item ? item.origem : 'Novo valor que não é especialidade'}
@@ -120,15 +122,17 @@ export function PainelNaoEspecialidade({
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
         </Fieldset.Root>
-        {podeEditar && (
+        {podeEditar ? (
           <form.AppForm>
             <RodapePainel
               rotuloCriar="Criar"
               editando={Boolean(item)}
-              excluir={item ? excluirDePara(item.origem, onExcluir, tentar) : undefined}
+              excluir={excluir}
               onCancelar={onFechar}
             />
           </form.AppForm>
+        ) : (
+          <RodapeSomenteLeitura excluir={excluir} />
         )}
       </form>
     </PainelLateral>
@@ -166,6 +170,17 @@ export function PainelSufixo({
       ),
   });
 
+  const excluir =
+    item && onExcluir
+      ? {
+          acao: 'Excluir sufixo',
+          titulo: `Excluir o sufixo “${item.sufixo}”?`,
+          consequencia:
+            'A importação deixa de cortar esse sufixo a partir da próxima vez. Para só pausar, desative.',
+          onConfirmar: () => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+        }
+      : undefined;
+
   return (
     <PainelLateral titulo={item ? item.sufixo : 'Novo sufixo'} onFechar={onFechar}>
       <form
@@ -201,26 +216,17 @@ export function PainelSufixo({
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
         </Fieldset.Root>
-        {podeEditar && (
+        {podeEditar ? (
           <form.AppForm>
             <RodapePainel
               rotuloCriar="Criar sufixo"
               editando={Boolean(item)}
-              excluir={
-                item && onExcluir
-                  ? {
-                      acao: 'Excluir sufixo',
-                      titulo: `Excluir o sufixo “${item.sufixo}”?`,
-                      consequencia:
-                        'A importação deixa de cortar esse sufixo a partir da próxima vez. Para só pausar, desative.',
-                      onConfirmar: () =>
-                        tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
-                    }
-                  : undefined
-              }
+              excluir={excluir}
               onCancelar={onFechar}
             />
           </form.AppForm>
+        ) : (
+          <RodapeSomenteLeitura excluir={excluir} />
         )}
       </form>
     </PainelLateral>

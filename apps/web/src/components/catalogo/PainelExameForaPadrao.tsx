@@ -7,7 +7,7 @@ import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapePainel } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
 
 export type PainelExameForaPadraoProps = {
@@ -87,6 +87,8 @@ export function PainelExameForaPadrao({
       ),
   });
 
+  const excluir = item ? excluirForaPadrao(item.estudoDescricao, onExcluir, tentar) : undefined;
+
   return (
     <PainelLateral
       titulo={item ? item.estudoDescricao : 'Novo exame fora do padrão'}
@@ -144,17 +146,17 @@ export function PainelExameForaPadrao({
             {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
           </form.AppField>
         </Fieldset.Root>
-        {podeEditar && (
+        {podeEditar ? (
           <form.AppForm>
             <RodapePainel
               rotuloCriar="Criar exame fora do padrão"
               editando={Boolean(item)}
-              excluir={
-                item ? excluirForaPadrao(item.estudoDescricao, onExcluir, tentar) : undefined
-              }
+              excluir={excluir}
               onCancelar={onFechar}
             />
           </form.AppForm>
+        ) : (
+          <RodapeSomenteLeitura excluir={excluir} />
         )}
       </form>
     </PainelLateral>

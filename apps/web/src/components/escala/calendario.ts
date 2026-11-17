@@ -41,6 +41,26 @@ export function diasDaSemana(data: string) {
   return Array.from({ length: 7 }, (_, i) => somarDias(inicio, i));
 }
 
+/** Sábado ou domingo: a escala esconde esses dias quando estão vazios. */
+export function ehFimDeSemana(data: string) {
+  const dia = diaDaSemana(data);
+  return dia === 0 || dia === 6;
+}
+
+/**
+ * Os dias que a semana mostra: seg a sex sempre; sábado e domingo só quando têm algo (plantão ou
+ * ausência), para não esconder dado. A navegação continua de segunda a domingo.
+ */
+export function diasVisiveis(dias: readonly string[], temAlgo: (dia: string) => boolean) {
+  return dias.filter((dia) => !ehFimDeSemana(dia) || temAlgo(dia));
+}
+
+/** No mês, as colunas (dia da semana, seg primeiro): sáb e dom só se algum dia delas tem algo. */
+export function diasDaSemanaVisiveis(datas: readonly string[], temAlgo: (dia: string) => boolean) {
+  const comAlgo = new Set(datas.filter((d) => ehFimDeSemana(d) && temAlgo(d)).map(diaDaSemana));
+  return [1, 2, 3, 4, 5, 6, 0].filter((dia) => (dia >= 1 && dia <= 5) || comAlgo.has(dia));
+}
+
 function inicioDoMes(data: string) {
   return `${data.slice(0, 7)}-01`;
 }

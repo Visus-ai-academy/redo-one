@@ -79,6 +79,12 @@ export function FormAusencia({
       ? [...tipos, { valor: ausencia.tipo.id, rotulo: ausencia.tipo.nome }]
       : tipos;
 
+  // Sem `ausencias.observacoes.ver` a API manda o texto nulo: o campo some, o nulo volta como veio
+  // e a API preserva o texto gravado.
+  const observacoesOcultas = Boolean(
+    ausencia && ausencia.observacoes == null && ausencia.temObservacoes,
+  );
+
   const form = useAppForm({
     defaultValues: {
       medicos: ausencia
@@ -106,7 +112,7 @@ export function FormAusencia({
           frenteIds: value.frenteIds,
           turnoIds: value.turnoIds,
           diasSemana: value.diasSemana.map(Number).sort((a, b) => a - b),
-          observacoes: value.observacoes.trim() || null,
+          observacoes: observacoesOcultas ? null : value.observacoes.trim() || null,
         });
       } catch (falha) {
         setErro(mensagemDaApi(falha, FALHA_AO_SALVAR));
@@ -198,15 +204,22 @@ export function FormAusencia({
           </form.AppField>
         )}
         <form.AppField name="diasSemana">{() => <CampoDiasSemana />}</form.AppField>
-        <form.AppField name="observacoes">
-          {(field) => (
-            <field.TextAreaField
-              label="Observações"
-              placeholder="Ex.: Congresso em São Paulo"
-              description="Visível para quem gere a escala; não escreva diagnóstico."
-            />
-          )}
-        </form.AppField>
+        {observacoesOcultas ? (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">Observações</span>
+            <p className="text-muted-foreground">Há observação (sem permissão para ver)</p>
+          </div>
+        ) : (
+          <form.AppField name="observacoes">
+            {(field) => (
+              <field.TextAreaField
+                label="Observações"
+                placeholder="Ex.: Congresso em São Paulo"
+                description="Visível para quem gere a escala; não escreva diagnóstico."
+              />
+            )}
+          </form.AppField>
+        )}
         <form.AppForm>
           <RodapePainel
             rotuloCriar="Lançar ausência"

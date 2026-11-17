@@ -60,6 +60,11 @@ export type AusenciaItemDto = {
    * @type string
    */
   criadoEm: string;
+  /**
+   * @description Há observação gravada. Sem `ausencias.observacoes.ver`, `observacoes` e `motivoRecusa` vêm `null` (dado de saúde).
+   * @type boolean
+   */
+  temObservacoes: boolean;
   solicitadaPor: ReferenciaAusenciaDto | null;
   revisadaPor: ReferenciaAusenciaDto | null;
 };

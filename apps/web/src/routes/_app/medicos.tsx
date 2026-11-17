@@ -88,7 +88,7 @@ const OCULTAR_COM_PAINEL = ['idMobilemed', 'totalAliases'];
 
 function Medicos() {
   const { sessao } = Route.useRouteContext();
-  const podeEditar = pode(sessao, 'medicos.editar');
+  const podeCriar = pode(sessao, 'medicos.criar');
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -155,7 +155,7 @@ function Medicos() {
     <ListaCadastro
       titulo="Médicos"
       novo={
-        podeEditar
+        podeCriar
           ? { rotulo: 'Novo médico', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
           : undefined
       }
@@ -203,7 +203,7 @@ function Medicos() {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhum médico cadastrado.',
-        texto: podeEditar
+        texto: podeCriar
           ? 'Cadastre o médico com o nome de exibição; as grafias da MobileMed entram como apelidos.'
           : 'Quem administra os médicos faz o cadastro.',
       }}
@@ -211,7 +211,7 @@ function Medicos() {
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined, nivelId: undefined })}
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && podeCriar) ? (
           <PainelDoMedico
             key={busca.id ?? 'novo'}
             id={busca.id}
@@ -266,7 +266,9 @@ function PainelDoMedico({
     <PainelMedico
       medico={id ? medico : undefined}
       niveis={niveis}
-      podeEditar={pode(sessao, 'medicos.editar')}
+      podeEditar={pode(sessao, id ? 'medicos.editar' : 'medicos.criar')}
+      podeCriar={pode(sessao, 'medicos.criar')}
+      podeExcluir={pode(sessao, 'medicos.excluir')}
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {
@@ -278,7 +280,7 @@ function PainelDoMedico({
         }
       }}
       onExcluir={
-        id
+        id && pode(sessao, 'medicos.excluir')
           ? async () => {
               await medicosControllerExcluir({ path: { id } }).unwrap();
               await onExcluido();
@@ -304,7 +306,7 @@ function PainelDoMedico({
         medico && pode(sessao, 'usuarios.ver') ? (
           <AbaAcesso
             medico={medico}
-            podeConvidar={pode(sessao, 'usuarios.convidar')}
+            podeConvidar={pode(sessao, 'usuarios.criar')}
             podeLigar={pode(sessao, 'usuarios.editar')}
           />
         ) : undefined

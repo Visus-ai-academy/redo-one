@@ -6,7 +6,7 @@ import type { LinhaDeAusencia } from './agrupar';
 import { rotuloDia } from './calendario';
 
 type AusenciasDaSemanaProps = {
-  /** Os 7 dias, de segunda a domingo. */
+  /** Os dias mostrados: seg a sex, mais sáb e dom quando há alguém ausente neles. */
   dias: string[];
   hoje: string;
   linhas: LinhaDeAusencia[];
@@ -17,7 +17,10 @@ type AusenciasDaSemanaProps = {
 };
 
 const diaMes = (data: string) => `${data.slice(8, 10)}/${data.slice(5, 7)}`;
-const GRADE = 'grid grid-cols-[200px_repeat(7,minmax(0,1fr))]';
+// As colunas acompanham os dias mostrados (5 a 7).
+const grade = (dias: number) => ({
+  gridTemplateColumns: `200px repeat(${dias}, minmax(0, 1fr))`,
+});
 
 /**
  * Ausências da semana: uma linha por médico ausente, com uma barra na cor do tipo atravessando os
@@ -36,7 +39,7 @@ export function AusenciasDaSemana({
     <section aria-label="Ausências da semana" className="bg-card rounded-lg border">
       <div className="overflow-x-auto">
         <div className="min-w-[760px]">
-          <div className={cn(GRADE, 'border-b')}>
+          <div className="grid border-b" style={grade(dias.length)}>
             <span className="text-subtle-foreground px-3 py-2 text-xs font-medium">Médico</span>
             {dias.map((dia) => {
               const { semana, dia: data } = rotuloDia(dia);
@@ -59,7 +62,11 @@ export function AusenciasDaSemana({
           ) : (
             <ul className="divide-y">
               {linhas.map((linha) => (
-                <li key={linha.medicoId} className={cn(GRADE, 'min-h-11 items-center')}>
+                <li
+                  key={linha.medicoId}
+                  className="grid min-h-11 items-center"
+                  style={grade(dias.length)}
+                >
                   <span className="truncate px-3 py-2 font-medium" title={linha.medicoNome}>
                     {linha.medicoNome}
                   </span>

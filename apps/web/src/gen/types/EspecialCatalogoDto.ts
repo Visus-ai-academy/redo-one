@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-export type AcaoCatalogoDto = {
+export type EspecialCatalogoDto = {
   /**
    * @example usuarios.desbloquear
    * @type string
@@ -14,5 +14,10 @@ export type AcaoCatalogoDto = {
    * @type string
    */
   rotulo: string;
+  /**
+   * @example Liberar a conta bloqueada por senha errada.
+   * @type string
+   */
+  descricao: string;
   sensivel: boolean;
 };

@@ -5,6 +5,7 @@ import {
   CELULA_VAZIA,
   celula,
   celulasDaGrade,
+  diasDaGradeVisiveis,
   frentesComTurno,
   gradeDasCelulas,
   marcar,
@@ -133,5 +134,23 @@ describe('resumoDoResultado', () => {
     expect(
       resumoDoResultado({ criadas: 0, encerradas: 0, removidas: 0, mantidas: 4, avisos: [] }),
     ).toBe('Nada mudou na escala.');
+  });
+});
+
+describe('diasDaGradeVisiveis', () => {
+  it('seg a sex por padrão', () => {
+    expect(diasDaGradeVisiveis([{}], false)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('sáb ou dom aparecem quando alguma grade tem célula marcada neles', () => {
+    const comSabado = marcar({}, 't-manha', 6, true);
+    expect(diasDaGradeVisiveis([{}, comSabado], false)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(diasDaGradeVisiveis([marcar(comSabado, 't-manha', 6, false)], false)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+  });
+
+  it('"Mostrar fim de semana" traz os dois', () => {
+    expect(diasDaGradeVisiveis([{}], true)).toEqual([1, 2, 3, 4, 5, 6, 0]);
   });
 });

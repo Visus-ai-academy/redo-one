@@ -17,6 +17,7 @@ const PEDIDO: AusenciaItemDto = {
   situacao: 'pendente',
   origem: 'medico',
   observacoes: 'Congresso de radiologia',
+  temObservacoes: true,
   motivoRecusa: null,
   revisadaEm: null,
   criadoEm: '2026-11-10T12:00:00.000Z',
@@ -31,7 +32,9 @@ function montar(props: Partial<DetalheAusenciaProps> = {}) {
     onEditar: vi.fn(),
     onExcluir: vi.fn(async () => undefined),
   };
-  render(<DetalheAusencia ausencia={PEDIDO} podeEditar podeAprovar {...acoes} {...props} />);
+  render(
+    <DetalheAusencia ausencia={PEDIDO} podeEditar podeExcluir podeAprovar {...acoes} {...props} />,
+  );
   return acoes;
 }
 
@@ -112,10 +115,29 @@ describe('DetalheAusencia', () => {
   });
 
   it('sem permissão de editar, só leitura', () => {
-    montar({ podeEditar: false, podeAprovar: false });
+    montar({ podeEditar: false, podeExcluir: false, podeAprovar: false });
 
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Excluir ausência' })).not.toBeInTheDocument();
+  });
+
+  it('editar e excluir são permissões separadas', () => {
+    montar({ podeEditar: false });
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excluir ausência' })).toBeInTheDocument();
+  });
+
+  it('sem permissão de ver as observações, só diz que há uma', () => {
+    montar({ ausencia: { ...PEDIDO, observacoes: null, temObservacoes: true } });
+
+    expect(screen.getByText('Há observação (sem permissão para ver)')).toBeInTheDocument();
+    expect(screen.queryByText('Sem observações.')).not.toBeInTheDocument();
+  });
+
+  it('sem observação, diz que não há', () => {
+    montar({ ausencia: { ...PEDIDO, observacoes: null, temObservacoes: false } });
+
+    expect(screen.getByText('Sem observações.')).toBeInTheDocument();
   });
 
   it('exclui depois de confirmar a consequência', async () => {

@@ -18,3 +18,14 @@ export function filtrarPorPermissao<G extends { itens: readonly { permissao?: st
     }))
     .filter((grupo) => grupo.itens.length > 0);
 }
+
+export type PodeNaTela = { criar: boolean; editar: boolean; excluir: boolean };
+
+/** Criar (botão "Novo", POST), editar (salvar, PUT/PATCH) e excluir (DELETE) de uma tela. */
+export function podeNaTela(acesso: Acesso, tela: string): PodeNaTela {
+  return {
+    criar: pode(acesso, `${tela}.criar`),
+    editar: pode(acesso, `${tela}.editar`),
+    excluir: pode(acesso, `${tela}.excluir`),
+  };
+}

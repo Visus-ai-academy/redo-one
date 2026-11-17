@@ -19,7 +19,8 @@ function montar(props: Partial<UnidadesClienteProps> = {}) {
         unificadoEm={null}
         unidades={[]}
         buscarClientes={async () => [{ valor: 'cl-cedi', rotulo: 'CEDI_RJ' }]}
-        podeEditar
+        podeCriar
+        podeExcluir
         {...handlers}
         {...props}
       />
@@ -88,7 +89,11 @@ describe('UnidadesCliente', () => {
   });
 
   it('sem permissão de editar, só mostra', () => {
-    montar({ podeEditar: false, unidades: [{ id: 'u-1', nome: 'PRN TELE_ARARAQUARA' }] });
+    montar({
+      podeCriar: false,
+      podeExcluir: false,
+      unidades: [{ id: 'u-1', nome: 'PRN TELE_ARARAQUARA' }],
+    });
 
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Desfazer/ })).not.toBeInTheDocument();

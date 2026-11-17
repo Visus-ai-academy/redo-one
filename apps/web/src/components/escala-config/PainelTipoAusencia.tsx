@@ -5,7 +5,7 @@ import type { TipoAusenciaDto } from '../../gen/types/TipoAusenciaDto';
 import type { TipoAusenciaItemDto } from '../../gen/types/TipoAusenciaItemDto';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
-import { RodapePainel } from '../catalogo/rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -74,10 +74,28 @@ export function PainelTipoAusencia({
     },
   });
 
+  const excluir =
+    tipo && onExcluir
+      ? {
+          acao: 'Excluir tipo de ausência',
+          titulo: `Excluir ${tipo.nome}?`,
+          consequencia: `${tipo.nome} sai das opções de ausência. Se alguma ausência usa este tipo, a exclusão é recusada: desative em vez de excluir.`,
+          onConfirmar: async () => {
+            setErro(undefined);
+            try {
+              await onExcluir();
+            } catch (falha) {
+              setErro(mensagemDaApi(falha, FALHA_AO_EXCLUIR));
+            }
+          },
+        }
+      : undefined;
+
   if (!podeEditar && tipo) {
     return (
       <PainelLateral titulo={titulo} onFechar={onFechar}>
         <div className="flex flex-col gap-4 p-4">
+          {erro && <Alerta tom="erro">{erro}</Alerta>}
           <CampoSomenteLeitura
             label="Gravidade"
             value={String(tipo.gravidade)}
@@ -87,6 +105,7 @@ export function PainelTipoAusencia({
           <CampoSomenteLeitura label="Conta como falta" value={simNao(tipo.contaComoFalta)} />
           <CampoSomenteLeitura label="Descrição" value={tipo.descricao ?? '—'} />
           <CampoSomenteLeitura label="Situação" value={tipo.ativo ? 'Ativo' : 'Inativo'} />
+          <RodapeSomenteLeitura excluir={excluir} />
         </div>
       </PainelLateral>
     );
@@ -184,23 +203,7 @@ export function PainelTipoAusencia({
             rotuloCriar="Criar tipo de ausência"
             editando={Boolean(tipo)}
             onCancelar={onFechar}
-            excluir={
-              tipo && onExcluir
-                ? {
-                    acao: 'Excluir tipo de ausência',
-                    titulo: `Excluir ${tipo.nome}?`,
-                    consequencia: `${tipo.nome} sai das opções de ausência. Se alguma ausência usa este tipo, a exclusão é recusada: desative em vez de excluir.`,
-                    onConfirmar: async () => {
-                      setErro(undefined);
-                      try {
-                        await onExcluir();
-                      } catch (falha) {
-                        setErro(mensagemDaApi(falha, FALHA_AO_EXCLUIR));
-                      }
-                    },
-                  }
-                : undefined
-            }
+            excluir={excluir}
           />
         </form.AppForm>
       </form>

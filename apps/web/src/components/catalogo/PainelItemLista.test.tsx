@@ -154,4 +154,21 @@ describe('PainelItemLista', () => {
     expect(screen.getByRole('textbox', { name: 'Código' })).toHaveAttribute('readonly');
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({
+      podeEditar: false,
+      item: { id: 'm-1', nome: 'MR', descricao: null, cor: null, ordem: 0, ativo: true },
+      onExcluir,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir modalidade' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir modalidade' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

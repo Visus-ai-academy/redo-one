@@ -12,6 +12,7 @@ import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
+import { RodapeSomenteLeitura } from './rodape-painel';
 
 const tamanho = (n: number, mensagem: string) =>
   z.string().refine((v) => v.trim() === '' || soDigitos(v).length === n, mensagem);
@@ -90,10 +91,29 @@ export function PainelContratado({
     },
   });
 
+  const excluir =
+    contratado && onExcluir
+      ? {
+          acao: 'Excluir contratado',
+          titulo: `Excluir ${contratado.razaoSocial}?`,
+          consequencia:
+            'O contratado sai do cadastro. Se algum cliente fatura por ele ou outro contratado consolida nele, a exclusão é recusada: desative em vez de excluir.',
+          onConfirmar: async () => {
+            setErro(undefined);
+            try {
+              await onExcluir();
+            } catch (falha) {
+              setErro(mensagemDaApi(falha, 'Não foi possível excluir agora. Tente de novo.'));
+            }
+          },
+        }
+      : undefined;
+
   if (!podeEditar && contratado) {
     return (
       <PainelLateral titulo={titulo} onFechar={onFechar}>
         <div className="flex flex-col gap-4 p-4">
+          {erro && <Alerta tom="erro">{erro}</Alerta>}
           <CampoSomenteLeitura label="CNPJ" value={formatarCnpj(contratado.cnpj)} />
           <CampoSomenteLeitura
             label="Endereço"
@@ -113,6 +133,7 @@ export function PainelContratado({
             value={contratado.contratadoRepasseNome ?? 'Nele mesmo'}
           />
           <CampoSomenteLeitura label="Situação" value={contratado.ativo ? 'Ativo' : 'Inativo'} />
+          <RodapeSomenteLeitura excluir={excluir} />
         </div>
       </PainelLateral>
     );
@@ -221,21 +242,7 @@ export function PainelContratado({
         <form.AppForm>
           <form.RequiredLegend />
           <div className="flex flex-wrap items-center gap-2">
-            {contratado && onExcluir && (
-              <ConfirmarAcao
-                acao="Excluir contratado"
-                titulo={`Excluir ${contratado.razaoSocial}?`}
-                consequencia="O contratado sai do cadastro. Se algum cliente fatura por ele ou outro contratado consolida nele, a exclusão é recusada: desative em vez de excluir."
-                onConfirmar={async () => {
-                  setErro(undefined);
-                  try {
-                    await onExcluir();
-                  } catch (falha) {
-                    setErro(mensagemDaApi(falha, 'Não foi possível excluir agora. Tente de novo.'));
-                  }
-                }}
-              />
-            )}
+            {excluir && <ConfirmarAcao {...excluir} />}
             <span className="ml-auto flex gap-2">
               <Button
                 type="button"

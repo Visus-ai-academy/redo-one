@@ -27,7 +27,7 @@ export type SemanaProps = {
   /** As cores das faixas: os turnos (por frente) ou as frentes (por turno). */
   legenda: ItemDaLegenda[];
   agrupar: Agrupamento;
-  /** Os 7 dias, de segunda a domingo. */
+  /** Os dias mostrados: seg a sex, mais sáb e dom quando têm plantão. */
   dias: string[];
   hoje: string;
   /** `chavePlantao` dos plantões em conflito. */
@@ -101,7 +101,7 @@ function Contagem({ calendario }: { calendario: CalendarioDaSemana }) {
 }
 
 /**
- * Semana no computador: um calendário por frente (ou por turno), com os 7 dias nas colunas e, em
+ * Semana no computador: um calendário por frente (ou por turno), com os dias nas colunas e, em
  * cada dia, uma lista só de médicos com a faixa lateral na cor do turno (ou da frente).
  */
 export function SemanaCalendarios(props: SemanaProps) {
@@ -135,7 +135,7 @@ function Calendario({
     <section className="bg-card overflow-x-auto rounded-lg border">
       <table
         aria-labelledby={tituloId}
-        className="w-full min-w-[960px] table-fixed border-collapse"
+        className="w-full min-w-[720px] table-fixed border-collapse"
       >
         <caption className="border-b px-4 py-3 text-left">
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1">

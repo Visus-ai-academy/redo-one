@@ -45,7 +45,9 @@ function montar(props: Partial<PainelMedicoProps> = {}) {
     onExcluirApelido: vi.fn(async () => undefined),
     onFechar: vi.fn(),
   };
-  render(<PainelMedico niveis={niveis} podeEditar {...handlers} {...props} />);
+  render(
+    <PainelMedico niveis={niveis} podeEditar podeCriar podeExcluir {...handlers} {...props} />,
+  );
   return handlers;
 }
 
@@ -137,10 +139,23 @@ describe('PainelMedico', () => {
   });
 
   it('sem permissão de editar, só mostra', () => {
-    montar({ medico, podeEditar: false });
+    montar({ medico, podeEditar: false, podeCriar: false, podeExcluir: false });
 
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Nível' })).toHaveValue('Nível 2');
     expect(screen.queryByRole('button', { name: 'Adicionar apelido' })).not.toBeInTheDocument();
+  });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({ medico, podeEditar: false, podeCriar: false, podeExcluir: false, onExcluir });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir médico' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir médico' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
   });
 });

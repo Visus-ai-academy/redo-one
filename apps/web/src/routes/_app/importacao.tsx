@@ -68,7 +68,7 @@ const aDireita = (texto: string) => () => <span className="block text-right">{te
 
 function Importacao() {
   const { sessao } = Route.useRouteContext();
-  const podeEnviar = pode(sessao, 'importacao.enviar');
+  const podeEnviar = pode(sessao, 'importacao.criar');
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();

@@ -20,7 +20,10 @@ export type UnidadesClienteProps = {
   unidades: ClienteRefDto[];
   /** Busca clientes para unificar (sem o próprio). */
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
-  podeEditar: boolean;
+  /** Unificar (POST). */
+  podeCriar: boolean;
+  /** Desfazer a unificação (DELETE). */
+  podeExcluir: boolean;
   onAdicionar: (clienteId: string) => Promise<void>;
   /** Desfaz a unificação de uma unidade deste principal. */
   onRemover: (unidadeId: string) => Promise<void>;
@@ -41,7 +44,8 @@ export function UnidadesCliente({
   unificadoEm,
   unidades,
   buscarClientes,
-  podeEditar,
+  podeCriar,
+  podeExcluir,
   onAdicionar,
   onRemover,
   onDesfazer,
@@ -83,7 +87,7 @@ export function UnidadesCliente({
             </Button>
             , que fatura por ele.
           </Alerta>
-          {podeEditar && (
+          {podeExcluir && (
             <Button
               type="button"
               onClick={() => tentar(onDesfazer, 'Não foi possível desfazer agora. Tente de novo.')}
@@ -110,7 +114,7 @@ export function UnidadesCliente({
                       {unidade.nome}
                     </Button>
                   </span>
-                  {podeEditar && (
+                  {podeExcluir && (
                     <Button
                       type="button"
                       aria-label={`Desfazer a unificação de ${unidade.nome}`}
@@ -142,7 +146,7 @@ export function UnidadesCliente({
               />
             </div>
           )}
-          {podeEditar && (
+          {podeCriar && (
             <Field.Root className="flex flex-col gap-2">
               <Field.Label className="text-foreground font-medium">Unificar cliente</Field.Label>
               <BuscaSelecao

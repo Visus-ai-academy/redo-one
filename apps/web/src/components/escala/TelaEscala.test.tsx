@@ -56,7 +56,7 @@ async function montar(props: Partial<TelaEscalaProps> = {}) {
       frentes={[FRENTE_TC, FRENTE_RM]}
       medico={null}
       buscarMedicos={async () => []}
-      podeEditar
+      permissoes={{ criar: true, editar: true, excluir: true }}
       podeVerHistorico
       avisos={[]}
       {...acoes}
@@ -87,8 +87,83 @@ describe('TelaEscala', () => {
     expect(acoes.onAlocar).toHaveBeenCalledWith({});
   });
 
+  it('a semana mostra seg a sex; sáb e dom só com plantão neles', async () => {
+    await montar();
+    const cabecalhos = () => screen.getAllByRole('columnheader').map((c) => c.textContent);
+    expect(cabecalhos().some((t) => t?.startsWith('Sex'))).toBe(true);
+    expect(cabecalhos().some((t) => t?.startsWith('Sáb') || t?.startsWith('Dom'))).toBe(false);
+  });
+
+  it('o alternador "Fim de semana" mostra sáb e dom vazios, com o "+" para alocar', async () => {
+    const acoes = await montar();
+    await userEvent.click(screen.getByRole('button', { name: 'Fim de semana' }));
+    expect(acoes.onMudar).toHaveBeenLastCalledWith({ fimDeSemana: 1 });
+  });
+
+  it('com o alternador ligado, sáb e dom aparecem vazios e o "+" deles aloca', async () => {
+    const acoes = await montar({
+      filtros: { modo: 'semana', agrupar: 'frente', data: '2026-11-18', fimDeSemana: 1 },
+    });
+    expect(screen.getByRole('button', { name: 'Fim de semana' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    const cabecalhos = screen.getAllByRole('columnheader').map((c) => c.textContent);
+    expect(cabecalhos.some((t) => t?.startsWith('Sáb'))).toBe(true);
+    expect(cabecalhos.some((t) => t?.startsWith('Dom'))).toBe(true);
+    const [mais] = screen.getAllByRole('button', { name: /^Alocar em .*, Dom 22/ });
+    await userEvent.click(mais as HTMLElement);
+    expect(acoes.onAlocar).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: '2026-11-22' }),
+    );
+  });
+
+  it('com plantão no sábado, a coluna do sábado aparece (e o domingo vazio não)', async () => {
+    await montar({
+      dados: { ocorrencias: [ocorrencia({ data: '2026-11-21', diaSemana: 6 })], conflitos: [] },
+    });
+    const cabecalhos = screen.getAllByRole('columnheader').map((c) => c.textContent);
+    expect(cabecalhos.some((t) => t?.startsWith('Sáb'))).toBe(true);
+    expect(cabecalhos.some((t) => t?.startsWith('Dom'))).toBe(false);
+  });
+
+  it('ausências da semana: sáb e dom só aparecem com alguém ausente neles', async () => {
+    const ausencia = {
+      id: 'x1',
+      medico: { id: 'm1', nome: 'Ana Souza' },
+      tipo: { id: 't1', nome: 'Férias', cor: null },
+      dataInicio: '2026-11-19',
+      dataFim: '2026-11-21',
+      diasSemana: [],
+      frentes: [],
+      turnos: [],
+      situacao: 'aprovada' as const,
+      origem: 'gestor' as const,
+      observacoes: null,
+      temObservacoes: false,
+      motivoRecusa: null,
+      revisadaEm: null,
+      criadoEm: '2026-11-10T12:00:00.000Z',
+      solicitadaPor: null,
+      revisadaPor: null,
+    };
+    await montar({
+      filtros: { modo: 'ausencias', agrupar: 'frente', data: '2026-11-18' },
+      ausencias: { itens: [ausencia], pagina: 1, porPagina: 20, total: 1 },
+    });
+    const secao = screen.getByRole('region', { name: 'Ausências da semana' });
+    expect(within(secao).getByText('Sáb 21/11')).toBeInTheDocument();
+    expect(within(secao).queryByText(/^Dom/)).not.toBeInTheDocument();
+    expect(
+      within(secao).getByRole('link', { name: 'Ana Souza: Férias, de 19/11 a 21/11' }),
+    ).toHaveStyle({ gridColumn: '5 / 8' });
+  });
+
   it('sem permissão, sem alocar nem histórico', async () => {
-    await montar({ podeEditar: false, podeVerHistorico: false });
+    await montar({
+      permissoes: { criar: false, editar: false, excluir: false },
+      podeVerHistorico: false,
+    });
     expect(screen.queryByRole('button', { name: 'Alocar médico' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Histórico/ })).not.toBeInTheDocument();
   });

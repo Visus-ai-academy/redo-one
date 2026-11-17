@@ -18,7 +18,7 @@ import { niveisMedicoControllerListarQueryOptions } from '../../../gen/hooks/use
 import { niveisMedicoControllerObterQueryOptions } from '../../../gen/hooks/useNiveisMedicoControllerObter';
 import type { ItemListaDto } from '../../../gen/types/ItemListaDto';
 import { invalidarMedicos } from '../../../lib/medicos';
-import { pode } from '../../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
@@ -71,7 +71,7 @@ function PaginaNiveis() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'medicos.ver') ? (
-        <Niveis podeEditar={pode(sessao, 'medicos.editar')} />
+        <Niveis permissoes={podeNaTela(sessao, 'medicos')} />
       ) : (
         <SemPermissao tela="Níveis dos médicos" />
       )}
@@ -81,7 +81,7 @@ function PaginaNiveis() {
 
 const coluna = createDataTableColumnHelper<ItemListaDto>();
 
-function Niveis({ podeEditar }: { podeEditar: boolean }) {
+function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -141,7 +141,7 @@ function Niveis({ podeEditar }: { podeEditar: boolean }) {
     <ListaCadastro
       titulo="Níveis dos médicos"
       novo={
-        podeEditar
+        permissoes.criar
           ? { rotulo: 'Novo nível', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
           : undefined
       }
@@ -173,7 +173,7 @@ function Niveis({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhum nível cadastrado.',
-        texto: podeEditar
+        texto: permissoes.criar
           ? 'Cadastre os níveis (Nível 0 a 6, 1.1…) para escolher no cadastro do médico.'
           : 'Quem administra os médicos cadastra os níveis.',
       }}
@@ -181,11 +181,11 @@ function Niveis({ podeEditar }: { podeEditar: boolean }) {
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <PainelNivel
             key={busca.id ?? 'novo'}
             id={busca.id}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
             onFechar={fechar}
             onSalvo={async (id) => {
               await invalidarMedicos(queryClient);
@@ -204,13 +204,13 @@ function Niveis({ podeEditar }: { podeEditar: boolean }) {
 
 function PainelNivel({
   id,
-  podeEditar,
+  permissoes,
   onFechar,
   onSalvo,
   onExcluido,
 }: {
   id?: string;
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
   onFechar: () => void;
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
@@ -233,7 +233,7 @@ function PainelNivel({
       rotulos={ROTULOS}
       variante="simples"
       item={id ? item : undefined}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {
@@ -245,7 +245,7 @@ function PainelNivel({
         }
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await niveisMedicoControllerExcluir({ path: { id } }).unwrap();
               await onExcluido();

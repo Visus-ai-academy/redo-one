@@ -10,7 +10,7 @@ import { Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { buttonClassName } from '../button/button-class';
-import { RodapePainel } from '../catalogo/rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
@@ -23,7 +23,11 @@ export type PainelMedicoProps = {
   medico?: MedicoDetalheDto;
   /** Níveis ativos. */
   niveis: { id: string; nome: string }[];
+  /** Salvar o formulário: editar (médico aberto) ou criar (novo). */
   podeEditar: boolean;
+  /** Apelidos: adicionar (POST) e remover (DELETE). */
+  podeCriar: boolean;
+  podeExcluir: boolean;
   onSalvar: (dados: MedicoDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onCriarApelido: (dados: AliasMedicoDto) => Promise<void>;
@@ -77,6 +81,8 @@ export function PainelMedico({
   medico,
   niveis,
   podeEditar,
+  podeCriar,
+  podeExcluir,
   onSalvar,
   onExcluir,
   onCriarApelido,
@@ -107,12 +113,13 @@ export function PainelMedico({
           onFechar={onFechar}
         />
       ) : (
-        medico && <CadastroSomenteLeitura medico={medico} />
+        medico && <CadastroSomenteLeitura medico={medico} onExcluir={onExcluir} />
       )}
       {medico && (
         <Apelidos
           apelidos={medico.aliases}
-          podeEditar={podeEditar}
+          podeCriar={podeCriar}
+          podeExcluir={podeExcluir}
           onCriar={onCriarApelido}
           onExcluir={onExcluirApelido}
         />
@@ -147,6 +154,22 @@ export function PainelMedico({
       )}
     </PainelLateral>
   );
+}
+
+function excluirMedico(
+  medico: MedicoDetalheDto | undefined,
+  onExcluir: (() => Promise<void>) | undefined,
+  tentar: ReturnType<typeof useErroDoPainel>['tentar'],
+) {
+  return medico && onExcluir
+    ? {
+        acao: 'Excluir médico',
+        titulo: `Excluir ${medico.nome}?`,
+        consequencia:
+          'O médico, os apelidos e os dados de pagamento saem do cadastro, e a conta do portal (se houver) deixa de estar ligada a ele. Se algum outro cadastro usa o médico, a exclusão é recusada: desative em vez de excluir.',
+        onConfirmar: () => tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
+      }
+    : undefined;
 }
 
 function FormCadastro({
@@ -357,18 +380,7 @@ function FormCadastro({
         <RodapePainel
           rotuloCriar="Criar médico"
           editando={Boolean(medico)}
-          excluir={
-            medico && onExcluir
-              ? {
-                  acao: 'Excluir médico',
-                  titulo: `Excluir ${medico.nome}?`,
-                  consequencia:
-                    'O médico, os apelidos e os dados de pagamento saem do cadastro, e a conta do portal (se houver) deixa de estar ligada a ele. Se algum outro cadastro usa o médico, a exclusão é recusada: desative em vez de excluir.',
-                  onConfirmar: () =>
-                    tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.'),
-                }
-              : undefined
-          }
+          excluir={excluirMedico(medico, onExcluir, tentar)}
           onCancelar={onFechar}
         />
       </form.AppForm>
@@ -376,9 +388,17 @@ function FormCadastro({
   );
 }
 
-function CadastroSomenteLeitura({ medico }: { medico: MedicoDetalheDto }) {
+function CadastroSomenteLeitura({
+  medico,
+  onExcluir,
+}: {
+  medico: MedicoDetalheDto;
+  onExcluir?: () => Promise<void>;
+}) {
+  const { erro, tentar } = useErroDoPainel();
   return (
     <div className="flex flex-col gap-4 p-4">
+      {erro && <Alerta tom="erro">{erro}</Alerta>}
       <CampoSomenteLeitura label="CRM" value={medico.crm ?? '—'} />
       <CampoSomenteLeitura
         label="ID na MobileMed"
@@ -396,6 +416,7 @@ function CadastroSomenteLeitura({ medico }: { medico: MedicoDetalheDto }) {
         value={medico.equipes.map((e) => e.nome).join(', ') || 'Nenhuma'}
       />
       <CampoSomenteLeitura label="Situação" value={medico.ativo ? 'Ativo' : 'Inativo'} />
+      <RodapeSomenteLeitura excluir={excluirMedico(medico, onExcluir, tentar)} />
     </div>
   );
 }
@@ -404,12 +425,14 @@ const POR_PAGINA_APELIDOS = 5;
 
 function Apelidos({
   apelidos,
-  podeEditar,
+  podeCriar,
+  podeExcluir,
   onCriar,
   onExcluir,
 }: {
   apelidos: MedicoDetalheDto['aliases'];
-  podeEditar: boolean;
+  podeCriar: boolean;
+  podeExcluir: boolean;
   onCriar: (dados: AliasMedicoDto) => Promise<void>;
   onExcluir: (id: string) => Promise<void>;
 }) {
@@ -455,7 +478,7 @@ function Apelidos({
           {pagina.itensDaPagina.map((apelido) => (
             <li key={apelido.id} className="flex items-center gap-3 px-3 py-2">
               <span className="min-w-0 flex-1 truncate font-medium">{apelido.nomeOrigem}</span>
-              {podeEditar && (
+              {podeExcluir && (
                 <Button
                   type="button"
                   aria-label={`Remover apelido ${apelido.nomeOrigem}`}
@@ -491,7 +514,7 @@ function Apelidos({
           />
         </div>
       )}
-      {podeEditar && (
+      {podeCriar && (
         <form
           noValidate
           onSubmit={(e) => {

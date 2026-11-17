@@ -26,7 +26,7 @@ import { prioridadesControllerListarQueryOptions } from '../../../gen/hooks/useP
 import { subespecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useSubespecialidadesControllerListar';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
 import type { AvisoConflitoDto } from '../../../gen/types/AvisoConflitoDto';
-import { pode } from '../../../lib/permissoes';
+import { pode, podeNaTela } from '../../../lib/permissoes';
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
 // Lista (`["…"]`) ou um id só: um uuid simples na URL chega como texto, não como lista.
@@ -44,6 +44,8 @@ const buscaSchema = z.object({
   turnoIds: ids,
   busca: z.string().trim().min(1).optional().catch(undefined),
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
+  /** Sáb e dom à mostra mesmo vazios. */
+  fimDeSemana: z.literal(1).optional().catch(undefined),
 });
 type Busca = z.infer<typeof buscaSchema>;
 
@@ -129,7 +131,7 @@ function Escala() {
   const [hoje] = useState(() => hojeEmBrasilia());
   const [painel, setPainel] = useState<PainelAberto | null>(null);
   const [avisos, setAvisos] = useState<AvisoConflitoDto[]>([]);
-  const podeEditar = pode(sessao, 'escala.alocacao.editar');
+  const permissoes = podeNaTela(sessao, 'escala');
 
   const { data: paginaTurnos } = useSuspenseQuery(turnosControllerListarQueryOptions(ATIVOS));
   const { data: paginaFrentes } = useSuspenseQuery(frentesControllerListarQueryOptions(ATIVOS));
@@ -234,8 +236,8 @@ function Escala() {
         frentes={frentes}
         medico={busca.medicoId && nomeMedico ? { valor: busca.medicoId, rotulo: nomeMedico } : null}
         buscarMedicos={buscarMedicosDaEscala}
-        podeEditar={podeEditar}
-        podeVerHistorico={pode(sessao, 'escala.historico.ver')}
+        permissoes={permissoes}
+        podeVerHistorico={pode(sessao, 'escala-historico.ver')}
         avisos={avisos}
         onDispensarAvisos={() => setAvisos([])}
         onMudar={mudar}
@@ -254,7 +256,8 @@ function Escala() {
           turnos={turnos}
           frentes={frentes}
           conflitos={ocorrencias.data?.conflitos ?? []}
-          podeEditar={podeEditar}
+          permissoes={permissoes}
+          podeDefinirAusencia={pode(sessao, 'ausencias.criar')}
           podeVerCatalogo={podeVerCatalogo}
           onAbrir={setPainel}
           onAvisos={setAvisos}

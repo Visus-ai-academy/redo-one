@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
+import type { PodeNaTela } from '../../lib/permissoes';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
@@ -17,7 +18,10 @@ export type PainelPlantaoProps = {
   ocorrencia: OcorrenciaDto;
   /** Conflitos do médico na janela; o painel mostra os deste plantão. */
   conflitos: readonly ConflitoEscalaDto[];
-  podeEditar: boolean;
+  /** Editar e ajustar (`escala.editar`), nova cobertura (`escala.criar`), remover (`escala.excluir`). */
+  permissoes: PodeNaTela;
+  /** `ausencias.criar`. */
+  podeDefinirAusencia: boolean;
   onEditar: () => void;
   /** Nova cobertura do titular, ou editar esta cobertura. */
   onCobertura: () => void;
@@ -59,7 +63,8 @@ function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 export function PainelPlantao({
   ocorrencia: o,
   conflitos,
-  podeEditar,
+  permissoes,
+  podeDefinirAusencia,
   onEditar,
   onCobertura,
   onRemover,
@@ -68,6 +73,8 @@ export function PainelPlantao({
 }: PainelPlantaoProps) {
   const { erro, tentar } = useErroDoPainel();
   const ehCobertura = Boolean(o.coberturaDe);
+  // Nova cobertura cria (POST); a cobertura aberta se edita.
+  const podeCobertura = ehCobertura ? permissoes.editar : permissoes.criar;
   const doPlantao = conflitos
     .filter(
       (c) =>
@@ -109,9 +116,9 @@ export function PainelPlantao({
           )}
         </dl>
 
-        {podeEditar && (
+        {(permissoes.editar || podeCobertura || podeDefinirAusencia || permissoes.excluir) && (
           <div className="flex flex-wrap gap-2 border-t pt-4">
-            {!ehCobertura && (
+            {permissoes.editar && !ehCobertura && (
               <Button
                 type="button"
                 onClick={onEditar}
@@ -120,46 +127,52 @@ export function PainelPlantao({
                 Editar alocação
               </Button>
             )}
-            <Button
-              type="button"
-              onClick={onCobertura}
-              className={buttonClassName({ variant: 'secondary' })}
-            >
-              {ehCobertura ? 'Editar cobertura' : 'Cobertura'}
-            </Button>
-            <Link
-              to="/escala/ausencias"
-              search={{
-                novo: 1,
-                medicoId: o.medicoId,
-                frenteId: o.frenteId,
-                turnoId: o.turnoId,
-                de: o.data,
-              }}
-              className={buttonClassName({ variant: 'secondary' })}
-            >
-              Definir ausência
-            </Link>
-            <ConfirmarAcao
-              acao={ehCobertura ? 'Remover cobertura' : 'Remover alocação'}
-              titulo={
-                ehCobertura
-                  ? `Remover a cobertura de ${o.medicoNome}?`
-                  : `Remover a alocação de ${o.medicoNome}?`
-              }
-              consequencia={
-                ehCobertura
-                  ? `${o.medicoNome} deixa de cobrir ${o.coberturaDe?.medicoNome} em todos os dias da cobertura, e o titular volta a esses plantões.`
-                  : `${o.medicoNome} sai de ${local} em todos os dias, e as coberturas desta alocação saem junto. Para tirar só um dia, use Definir ausência.`
-              }
-              onConfirmar={() =>
-                tentar(onRemover, 'Não foi possível remover agora. Tente de novo.')
-              }
-            />
+            {podeCobertura && (
+              <Button
+                type="button"
+                onClick={onCobertura}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                {ehCobertura ? 'Editar cobertura' : 'Cobertura'}
+              </Button>
+            )}
+            {podeDefinirAusencia && (
+              <Link
+                to="/escala/ausencias"
+                search={{
+                  novo: 1,
+                  medicoId: o.medicoId,
+                  frenteId: o.frenteId,
+                  turnoId: o.turnoId,
+                  de: o.data,
+                }}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Definir ausência
+              </Link>
+            )}
+            {permissoes.excluir && (
+              <ConfirmarAcao
+                acao={ehCobertura ? 'Remover cobertura' : 'Remover alocação'}
+                titulo={
+                  ehCobertura
+                    ? `Remover a cobertura de ${o.medicoNome}?`
+                    : `Remover a alocação de ${o.medicoNome}?`
+                }
+                consequencia={
+                  ehCobertura
+                    ? `${o.medicoNome} deixa de cobrir ${o.coberturaDe?.medicoNome} em todos os dias da cobertura, e o titular volta a esses plantões.`
+                    : `${o.medicoNome} sai de ${local} em todos os dias, e as coberturas desta alocação saem junto. Para tirar só um dia, use Definir ausência.`
+                }
+                onConfirmar={() =>
+                  tentar(onRemover, 'Não foi possível remover agora. Tente de novo.')
+                }
+              />
+            )}
           </div>
         )}
 
-        {podeEditar && !o.gratificado && (
+        {permissoes.editar && !o.gratificado && (
           <AjusteDoDia ocorrencia={o} onAjustar={(p, obs) => tentar(() => onAjustar(p, obs))} />
         )}
       </div>

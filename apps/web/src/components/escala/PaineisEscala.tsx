@@ -16,6 +16,7 @@ import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { FrenteItemDto } from '../../gen/types/FrenteItemDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
+import type { PodeNaTela } from '../../lib/permissoes';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { PainelCarregando } from '../painel/PainelCarregando';
 import { useAvisos } from '../toast/use-avisos';
@@ -42,7 +43,9 @@ type PaineisEscalaProps = {
   turnos: TurnoItemDto[];
   frentes: FrenteItemDto[];
   conflitos: readonly ConflitoEscalaDto[];
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
+  /** `ausencias.criar`: o atalho "Definir ausência" do plantão. */
+  podeDefinirAusencia: boolean;
   /** Prioridades e subespecialidades vêm do catálogo; sem acesso, ficam sem restrição. */
   podeVerCatalogo: boolean;
   onAbrir: (painel: PainelAberto | null) => void;
@@ -69,7 +72,8 @@ export function PaineisEscala({
   turnos,
   frentes,
   conflitos,
-  podeEditar,
+  permissoes,
+  podeDefinirAusencia,
   podeVerCatalogo,
   onAbrir,
   onAvisos,
@@ -90,7 +94,8 @@ export function PaineisEscala({
         key={`plantao-${o.alocacaoId}-${o.data}`}
         ocorrencia={o}
         conflitos={conflitos}
-        podeEditar={podeEditar}
+        permissoes={permissoes}
+        podeDefinirAusencia={podeDefinirAusencia}
         onEditar={() => onAbrir({ tipo: 'editar', ocorrencia: o })}
         onCobertura={() => onAbrir({ tipo: 'cobertura', ocorrencia: o })}
         onRemover={async () => {

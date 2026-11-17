@@ -19,7 +19,7 @@ export type SecaoAcessoProps = {
   conta: UsuarioResumoDto | null;
   /** Papéis para o convite (só os atribuíveis aparecem). */
   papeis: PapelAtribuivelDto[];
-  /** `usuarios.convidar`. */
+  /** `usuarios.criar`. */
   podeConvidar: boolean;
   /** `usuarios.editar`: ligar e desligar uma conta. */
   podeLigar: boolean;

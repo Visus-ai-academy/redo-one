@@ -349,6 +349,44 @@ describe('MesCalendario', () => {
     expect(onAbrirDia).toHaveBeenCalledWith('2026-11-16');
     expect(screen.getByRole('button', { name: /^17\/11, ninguém escalado/ })).toBeInTheDocument();
   });
+
+  it('sáb e dom vazios no mês não viram coluna; com plantão, a coluna aparece', () => {
+    const { rerender } = render(
+      <MesCalendario
+        data="2026-11-10"
+        hoje="2026-11-16"
+        ocorrencias={[ocorrencia()]}
+        onAbrirDia={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText('Sáb')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dom')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^21\/11/ })).not.toBeInTheDocument();
+
+    rerender(
+      <MesCalendario
+        data="2026-11-10"
+        hoje="2026-11-16"
+        ocorrencias={[ocorrencia({ data: '2026-11-08', diaSemana: 0 })]}
+        onAbrirDia={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Dom')).toBeInTheDocument();
+    expect(screen.queryByText('Sáb')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^22\/11/ })).toBeInTheDocument();
+
+    rerender(
+      <MesCalendario
+        data="2026-11-10"
+        hoje="2026-11-16"
+        ocorrencias={[]}
+        mostrarFimDeSemana
+        onAbrirDia={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Sáb')).toBeInTheDocument();
+    expect(screen.getByText('Dom')).toBeInTheDocument();
+  });
 });
 
 describe('AgendaMedico', () => {

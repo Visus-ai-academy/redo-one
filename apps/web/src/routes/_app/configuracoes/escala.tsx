@@ -34,7 +34,7 @@ import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnos
 import { turnosControllerObterQueryOptions } from '../../../gen/hooks/useTurnosControllerObter';
 import type { TipoAusenciaItemDto } from '../../../gen/types/TipoAusenciaItemDto';
 import type { TurnoItemDto } from '../../../gen/types/TurnoItemDto';
-import { pode } from '../../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
 const ABAS = ['turnos', 'tipos-ausencia'] as const;
@@ -93,7 +93,9 @@ export const Route = createFileRoute('/_app/configuracoes/escala')({
     const aba = deps.aba ?? 'turnos';
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id) void context.queryClient.prefetchQuery(obter[aba](deps.id) as never);
-    const editando = pode(context.sessao, 'escala-config.editar') && (deps.id || deps.novo);
+    const editando =
+      (deps.id && pode(context.sessao, 'escala-config.editar')) ||
+      (deps.novo && pode(context.sessao, 'escala-config.criar'));
     await Promise.all([
       context.queryClient.ensureQueryData(listar[aba](deps) as never),
       ...(editando && aba === 'turnos'
@@ -110,7 +112,7 @@ function Pagina() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'escala-config.ver') ? (
-        <Escala podeEditar={pode(sessao, 'escala-config.editar')} />
+        <Escala permissoes={podeNaTela(sessao, 'escala-config')} />
       ) : (
         <SemPermissao tela="Escala" />
       )}
@@ -165,7 +167,7 @@ const TEXTOS: Record<
 
 type Pagina<T> = { itens: T[]; pagina: number; porPagina: number; total: number };
 
-function Escala({ podeEditar }: { podeEditar: boolean }) {
+function Escala({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const aba = busca.aba ?? 'turnos';
@@ -269,7 +271,7 @@ function Escala({ podeEditar }: { podeEditar: boolean }) {
         />
       }
       novo={
-        podeEditar
+        permissoes.criar
           ? {
               rotulo: textos.novo,
               onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
@@ -305,19 +307,19 @@ function Escala({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: textos.vazio,
-        texto: podeEditar ? textos.textoVazio : 'Quem administra a escala cadastra os itens.',
+        texto: permissoes.criar ? textos.textoVazio : 'Quem administra a escala cadastra os itens.',
       }}
       onFiltrar={filtrar}
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
         // Só com um painel aberto: no celular, a lista some quando há painel.
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <PainelDoItem
             key={`${aba}:${busca.id ?? 'novo'}`}
             aba={aba}
             id={busca.id}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
           />
         ) : undefined
       }
@@ -338,11 +340,11 @@ const AVISOS: Record<AbaEscala, { criado: string; salvo: string; excluido: strin
 function PainelDoItem({
   aba,
   id,
-  podeEditar,
+  permissoes,
 }: {
   aba: AbaEscala;
   id?: string;
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -351,7 +353,7 @@ function PainelDoItem({
     ...(obter[aba](id ?? '') as ReturnType<typeof obter.turnos>),
     enabled: Boolean(id),
   });
-  const editar = podeEditar;
+  const editar = id ? permissoes.editar : permissoes.criar;
   const opcoes = useQuery({
     ...opcoesControllerListasQueryOptions(),
     enabled: editar && aba === 'turnos',
@@ -389,7 +391,7 @@ function PainelDoItem({
         turno={item as TurnoItemDto | undefined}
         especialidades={opcoes.data?.especialidades ?? []}
         modalidades={opcoes.data?.modalidades ?? []}
-        podeEditar={podeEditar}
+        podeEditar={id ? permissoes.editar : permissoes.criar}
         onFechar={fechar}
         onSalvar={async (dados) => {
           if (id) {
@@ -406,7 +408,7 @@ function PainelDoItem({
           return undefined;
         }}
         onExcluir={
-          id
+          id && permissoes.excluir
             ? async () => {
                 await turnosControllerExcluir({ path: { id } }).unwrap();
                 await excluido();
@@ -419,7 +421,7 @@ function PainelDoItem({
   return (
     <PainelTipoAusencia
       tipo={item as TipoAusenciaItemDto | undefined}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={fechar}
       onSalvar={async (dados) => {
         if (id) {
@@ -431,7 +433,7 @@ function PainelDoItem({
         }
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await tiposAusenciaControllerExcluir({ path: { id } }).unwrap();
               await excluido();

@@ -9,6 +9,7 @@ import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
+import { RodapeSomenteLeitura } from './rodape-painel';
 
 /** Campos comuns às listas do catálogo; a prioridade tem `urgente` e a subespecialidade as especialidades. */
 export type DadosItemLista = {
@@ -120,10 +121,29 @@ export function PainelItemLista({
     },
   });
 
+  const artigo = rotulos.genero === 'f' ? 'a' : 'o';
+  const excluir =
+    item && onExcluir
+      ? {
+          acao: `Excluir ${rotulos.singular}`,
+          titulo: `Excluir ${item.nome}?`,
+          consequencia: `${item.nome} sai do catálogo. Se algum cadastro usa est${artigo} ${rotulos.singular}, a exclusão é recusada: desative em vez de excluir.`,
+          onConfirmar: async () => {
+            setErro(undefined);
+            try {
+              await onExcluir();
+            } catch (falha) {
+              setErro(mensagemDaApi(falha, 'Não foi possível excluir agora. Tente de novo.'));
+            }
+          },
+        }
+      : undefined;
+
   if (!podeEditar && item) {
     return (
       <PainelLateral titulo={titulo} onFechar={onFechar}>
         <div className="flex flex-col gap-4 p-4">
+          {erro && <Alerta tom="erro">{erro}</Alerta>}
           <CampoSomenteLeitura label={rotulos.campoNome} value={item.nome} />
           <CampoSomenteLeitura label="Descrição" value={item.descricao ?? '—'} />
           {variante === 'subespecialidade' && (
@@ -136,13 +156,13 @@ export function PainelItemLista({
             />
           )}
           <CampoSomenteLeitura label="Situação" value={item.ativo ? 'Ativo' : 'Inativo'} />
+          <RodapeSomenteLeitura excluir={excluir} />
         </div>
         {children}
       </PainelLateral>
     );
   }
 
-  const artigo = rotulos.genero === 'f' ? 'a' : 'o';
   return (
     <PainelLateral titulo={titulo} onFechar={onFechar}>
       <form
@@ -232,21 +252,7 @@ export function PainelItemLista({
         <form.AppForm>
           <form.RequiredLegend />
           <div className="flex flex-wrap items-center gap-2">
-            {item && onExcluir && (
-              <ConfirmarAcao
-                acao={`Excluir ${rotulos.singular}`}
-                titulo={`Excluir ${item.nome}?`}
-                consequencia={`${item.nome} sai do catálogo. Se algum cadastro usa est${artigo} ${rotulos.singular}, a exclusão é recusada: desative em vez de excluir.`}
-                onConfirmar={async () => {
-                  setErro(undefined);
-                  try {
-                    await onExcluir();
-                  } catch (falha) {
-                    setErro(mensagemDaApi(falha, 'Não foi possível excluir agora. Tente de novo.'));
-                  }
-                }}
-              />
-            )}
+            {excluir && <ConfirmarAcao {...excluir} />}
             <span className="ml-auto flex gap-2">
               <Button
                 type="button"

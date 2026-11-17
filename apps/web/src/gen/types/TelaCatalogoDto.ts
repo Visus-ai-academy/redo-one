@@ -3,17 +3,9 @@
 * Do not edit manually.
 */
 
-import type { AcaoCatalogoDto } from './AcaoCatalogoDto'
-
-export const telaCatalogoDtoAreaEnum = {
-  Painéis: 'Painéis',
-  Operação: 'Operação',
-  Cadastros: 'Cadastros',
-  Financeiro: 'Financeiro',
-  Configurações: 'Configurações',
-} as const;
-
-export type TelaCatalogoDtoAreaEnumKey = (typeof telaCatalogoDtoAreaEnum)[keyof typeof telaCatalogoDtoAreaEnum];
+import type { AcaoPadraoCatalogoDto } from './AcaoPadraoCatalogoDto'
+import type { AreaPermissaoKey } from './AreaPermissao'
+import type { EspecialCatalogoDto } from './EspecialCatalogoDto'
 
 export type TelaCatalogoDto = {
   /**
@@ -26,6 +18,17 @@ export type TelaCatalogoDto = {
    * @type string
    */
   rotulo: string;
-  area: TelaCatalogoDtoAreaEnumKey;
-  acoes: AcaoCatalogoDto[];
+  area: AreaPermissaoKey;
+  /**
+   * @description Só as ações padrão que a tela tem, na ordem ver, criar, editar, excluir.
+   * @type array
+   */
+  padrao: AcaoPadraoCatalogoDto[];
+  especiais: EspecialCatalogoDto[];
+  /**
+   * @description Telas cujo `ver` vem junto com qualquer ação desta.
+   * @example ["escala"]
+   * @type array
+   */
+  exige: string[];
 };

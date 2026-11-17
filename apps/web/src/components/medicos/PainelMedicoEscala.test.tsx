@@ -30,6 +30,8 @@ function montar(escala?: React.ReactNode) {
       medico={medico}
       niveis={[]}
       podeEditar={false}
+      podeCriar={false}
+      podeExcluir={false}
       onSalvar={vi.fn()}
       onCriarApelido={vi.fn()}
       onExcluirApelido={vi.fn()}

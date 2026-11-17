@@ -114,7 +114,16 @@ describe('PainelEscalaFixa', () => {
     montar();
     await escolherOpcao('Frente', 'TC Neuro');
     await screen.findByRole('checkbox', { name: 'Manhã, segunda' });
-    // Tabela: linhas = turnos, colunas = dias de segunda a domingo.
+    // Tabela: linhas = turnos, colunas = seg a sex (o fim de semana vazio fica escondido).
+    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual([
+      'Turno',
+      'Seg',
+      'Ter',
+      'Qua',
+      'Qui',
+      'Sex',
+    ]);
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar fim de semana' }));
     expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual([
       'Turno',
       'Seg',
@@ -160,13 +169,16 @@ describe('PainelEscalaFixa', () => {
     );
     const acoes = montar({ buscarGrade });
     await escolherOpcao('Frente', 'TC Neuro');
-    await screen.findByRole('checkbox', { name: 'Manhã, sábado' });
+    await screen.findByRole('checkbox', { name: 'Manhã, sexta' });
+    expect(screen.queryByRole('checkbox', { name: 'Manhã, sábado' })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Copiar de outro médico' }));
     await userEvent.type(screen.getByRole('combobox', { name: 'Copiar de' }), 'Bru');
     await userEvent.click(await screen.findByRole('option', { name: 'Bruno Lima' }));
 
+    // A grade copiada tem sábado: a coluna aparece sozinha.
     expect(await screen.findByRole('checkbox', { name: 'Manhã, sábado' })).toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'Manhã, domingo' })).not.toBeInTheDocument();
     expect(buscarGrade).toHaveBeenLastCalledWith('m2', 'f-tc');
     expect(screen.getByText(/Copiado de Bruno Lima/)).toBeInTheDocument();
     expect(acoes.onSalvar).not.toHaveBeenCalled();

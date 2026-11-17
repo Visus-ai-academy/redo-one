@@ -33,7 +33,7 @@ import { deParaModalidadesControllerListarQueryOptions } from '../../../gen/hook
 import { deParaPrioridadesControllerListarQueryOptions } from '../../../gen/hooks/useDeParaPrioridadesControllerListar';
 import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoesControllerListas';
 import { invalidarCatalogo } from '../../../lib/catalogo';
-import { pode } from '../../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
@@ -81,7 +81,7 @@ function PaginaCatalogo() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'catalogo.ver') ? (
-        <Listas podeEditar={pode(sessao, 'catalogo.editar')} />
+        <Listas permissoes={podeNaTela(sessao, 'catalogo')} />
       ) : (
         <SemPermissao tela="Classificação dos exames" />
       )}
@@ -91,7 +91,7 @@ function PaginaCatalogo() {
 
 const coluna = createDataTableColumnHelper<ItemDaLista>();
 
-function Listas({ podeEditar }: { podeEditar: boolean }) {
+function Listas({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const aba = busca.aba ?? 'modalidades';
@@ -171,7 +171,7 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
         />
       }
       novo={
-        podeEditar
+        permissoes.criar
           ? {
               rotulo: `${lista.rotulos.genero === 'f' ? 'Nova' : 'Novo'} ${lista.rotulos.singular}`,
               onClick: () => ir((atual) => ({ ...atual, id: undefined, novo: 1 })),
@@ -210,7 +210,7 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: `Nenhum${lista.rotulos.genero === 'f' ? 'a' : ''} ${lista.rotulos.singular} cadastrad${lista.rotulos.genero === 'f' ? 'a' : 'o'}.`,
-        texto: podeEditar
+        texto: permissoes.criar
           ? `Cadastre ${lista.rotulos.genero === 'f' ? 'a primeira' : 'o primeiro'} para usar nos exames e na importação.`
           : 'Quem administra o catálogo cadastra os itens.',
       }}
@@ -219,12 +219,12 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
       onIrPara={(numero) => ir((atual) => ({ ...atual, pagina: numero }))}
       painel={
         // Só com um painel aberto: no celular, a lista some quando há painel.
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <PainelDoItem
             key={`${aba}:${busca.id ?? 'novo'}`}
             aba={aba}
             id={busca.id}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
           />
         ) : undefined
       }
@@ -235,11 +235,11 @@ function Listas({ podeEditar }: { podeEditar: boolean }) {
 function PainelDoItem({
   aba,
   id,
-  podeEditar,
+  permissoes,
 }: {
   aba: AbaLista;
   id?: string;
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -252,7 +252,7 @@ function PainelDoItem({
     <ConteudoDoPainel
       aba={aba}
       id={id}
-      podeEditar={podeEditar}
+      permissoes={permissoes}
       especialidades={opcoes.especialidades}
       onFechar={fechar}
       onSalvo={async (novoId) => {
@@ -275,7 +275,7 @@ function ConteudoDoPainel({
   aba,
   id,
   lista,
-  podeEditar,
+  permissoes,
   especialidades,
   onFechar,
   onSalvo,
@@ -284,7 +284,7 @@ function ConteudoDoPainel({
   aba: AbaLista;
   id?: string;
   lista: (typeof LISTAS)[AbaLista];
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
   especialidades: { id: string; nome: string }[];
   onFechar: () => void;
   onSalvo: (id: string) => Promise<void>;
@@ -308,7 +308,7 @@ function ConteudoDoPainel({
       variante={lista.variante}
       item={item}
       especialidades={aba === 'subespecialidades' ? especialidades : []}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {
@@ -320,7 +320,7 @@ function ConteudoDoPainel({
         }
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await lista.excluir(id);
               await onExcluido();
@@ -385,7 +385,8 @@ function VariacoesDoItem({
       forma={forma}
       variacoes={consulta.data.itens as unknown as Variacao[]}
       tipos={aba === 'especialidades' ? TIPOS_VARIACAO_ESPECIALIDADE : undefined}
-      podeEditar={pode(sessao, 'de-para.editar')}
+      podeCriar={pode(sessao, 'de-para.criar')}
+      podeExcluir={pode(sessao, 'de-para.excluir')}
       onAdicionar={async ({ origem, tipo }) => {
         if (prioridade) {
           await deParaPrioridadesControllerCriar({

@@ -182,4 +182,18 @@ describe('PainelTurno', () => {
     expect(screen.getByRole('textbox', { name: 'Horário' })).toHaveValue('07:00–13:00 (6 h)');
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({ turno: MANHA, podeEditar: false, onExcluir });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir turno' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Manhã sai da escala.');
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir turno' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

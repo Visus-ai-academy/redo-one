@@ -34,7 +34,7 @@ export type ListaUsuariosProps = {
   selecionadoId?: string;
   /** Painel de detalhe, ao lado da lista (no celular, no lugar dela). */
   painel?: ReactNode;
-  /** Abre o convite; presente só para quem tem usuarios.convidar. */
+  /** Abre o convite; presente só para quem tem usuarios.criar. */
   onConvidar?: () => void;
 };
 

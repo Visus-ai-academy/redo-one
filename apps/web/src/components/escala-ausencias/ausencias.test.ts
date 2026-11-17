@@ -27,6 +27,7 @@ const base: AusenciaItemDto = {
   situacao: 'aprovada',
   origem: 'gestor',
   observacoes: null,
+  temObservacoes: false,
   motivoRecusa: null,
   revisadaEm: null,
   criadoEm: '2026-11-10T12:00:00.000Z',

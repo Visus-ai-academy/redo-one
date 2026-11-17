@@ -89,4 +89,17 @@ describe('PainelEquipe', () => {
       'Sim: o robô não entrega o recorte da equipe',
     );
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({ equipe, podeEditar: false, onExcluir });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir equipe' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir equipe' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

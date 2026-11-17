@@ -80,7 +80,7 @@ function PaginaUsuarios() {
             editar: pode(sessao, 'usuarios.editar'),
             desbloquear: pode(sessao, 'usuarios.desbloquear'),
             desativar: pode(sessao, 'usuarios.desativar'),
-            convidar: pode(sessao, 'usuarios.convidar'),
+            convidar: pode(sessao, 'usuarios.criar'),
           }}
         />
       ) : (

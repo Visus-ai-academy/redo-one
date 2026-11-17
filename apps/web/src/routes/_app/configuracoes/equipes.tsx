@@ -19,7 +19,7 @@ import { equipesControllerObterQueryOptions } from '../../../gen/hooks/useEquipe
 import { medicosControllerListarQueryOptions } from '../../../gen/hooks/useMedicosControllerListar';
 import type { EquipeItemDto } from '../../../gen/types/EquipeItemDto';
 import { buscarMedicos, invalidarMedicos } from '../../../lib/medicos';
-import { pode } from '../../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
 /** Membros de uma equipe, de uma vez (equipes têm poucos médicos; o máximo da API é 100). */
@@ -68,7 +68,7 @@ function PaginaEquipes() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'medicos.ver') ? (
-        <Equipes podeEditar={pode(sessao, 'medicos.editar')} />
+        <Equipes permissoes={podeNaTela(sessao, 'medicos')} />
       ) : (
         <SemPermissao tela="Equipes médicas" />
       )}
@@ -78,7 +78,7 @@ function PaginaEquipes() {
 
 const coluna = createDataTableColumnHelper<EquipeItemDto>();
 
-function Equipes({ podeEditar }: { podeEditar: boolean }) {
+function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -137,7 +137,7 @@ function Equipes({ podeEditar }: { podeEditar: boolean }) {
     <ListaCadastro
       titulo="Equipes médicas"
       novo={
-        podeEditar
+        permissoes.criar
           ? { rotulo: 'Nova equipe', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
           : undefined
       }
@@ -169,7 +169,7 @@ function Equipes({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhuma equipe cadastrada.',
-        texto: podeEditar
+        texto: permissoes.criar
           ? 'Crie a primeira equipe e escolha os médicos que fazem parte dela.'
           : 'Quem administra os médicos cadastra as equipes.',
       }}
@@ -177,11 +177,11 @@ function Equipes({ podeEditar }: { podeEditar: boolean }) {
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <PainelDaEquipe
             key={busca.id ?? 'novo'}
             id={busca.id}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
             onFechar={fechar}
             onSalvo={async (id) => {
               await invalidarMedicos(queryClient);
@@ -200,13 +200,13 @@ function Equipes({ podeEditar }: { podeEditar: boolean }) {
 
 function PainelDaEquipe({
   id,
-  podeEditar,
+  permissoes,
   onFechar,
   onSalvo,
   onExcluido,
 }: {
   id?: string;
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
   onFechar: () => void;
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
@@ -234,7 +234,7 @@ function PainelDaEquipe({
       equipe={id ? equipe : undefined}
       membros={(membros?.itens ?? []).map((m) => ({ valor: m.id, rotulo: m.nome }))}
       buscarMedicos={buscarMedicos}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {
@@ -246,7 +246,7 @@ function PainelDaEquipe({
         }
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await equipesControllerExcluir({ path: { id } }).unwrap();
               await onExcluido();

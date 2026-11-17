@@ -7,6 +7,9 @@ import { renderComRotas } from '../../test/render';
 import { PainelPlantao, type PainelPlantaoProps } from './PainelPlantao';
 import { ocorrencia } from './teste-dados';
 
+const TODAS = { criar: true, editar: true, excluir: true };
+const NENHUMA = { criar: false, editar: false, excluir: false };
+
 async function montar(o: OcorrenciaDto, props: Partial<PainelPlantaoProps> = {}) {
   const acoes = {
     onEditar: vi.fn(),
@@ -15,7 +18,16 @@ async function montar(o: OcorrenciaDto, props: Partial<PainelPlantaoProps> = {})
     onAjustar: vi.fn(async () => undefined),
     onFechar: vi.fn(),
   };
-  renderComRotas(<PainelPlantao ocorrencia={o} conflitos={[]} podeEditar {...acoes} {...props} />);
+  renderComRotas(
+    <PainelPlantao
+      ocorrencia={o}
+      conflitos={[]}
+      permissoes={TODAS}
+      podeDefinirAusencia
+      {...acoes}
+      {...props}
+    />,
+  );
   await screen.findByRole('dialog');
   return acoes;
 }
@@ -69,8 +81,34 @@ describe('PainelPlantao', () => {
     expect(acoes.onAjustar).toHaveBeenLastCalledWith(null, null);
   });
 
+  it('cada ação segue a sua permissão', async () => {
+    await montar(ocorrencia(), {
+      permissoes: { criar: false, editar: true, excluir: false },
+      podeDefinirAusencia: false,
+    });
+    expect(screen.getByRole('button', { name: 'Editar alocação' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cobertura' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remover alocação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Definir ausência' })).not.toBeInTheDocument();
+  });
+
+  it('só com criar e excluir, oferece cobertura e remover', async () => {
+    await montar(ocorrencia(), {
+      permissoes: { criar: true, editar: false, excluir: true },
+      podeDefinirAusencia: true,
+    });
+    expect(screen.queryByRole('button', { name: 'Editar alocação' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cobertura' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remover alocação' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Definir ausência' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Registros neste dia' })).not.toBeInTheDocument();
+  });
+
   it('gratificado não tem produtividade do dia; sem permissão, nenhuma ação', async () => {
-    await montar(ocorrencia({ gratificado: true }), { podeEditar: false });
+    await montar(ocorrencia({ gratificado: true }), {
+      permissoes: NENHUMA,
+      podeDefinirAusencia: false,
+    });
     expect(screen.queryByRole('textbox', { name: 'Registros neste dia' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Editar alocação' })).not.toBeInTheDocument();
   });

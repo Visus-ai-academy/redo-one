@@ -20,7 +20,7 @@ import { opcoesControllerListasQueryOptions } from '../../../gen/hooks/useOpcoes
 import type { ContratadoItemDto } from '../../../gen/types/ContratadoItemDto';
 import { invalidarCatalogo } from '../../../lib/catalogo';
 import { formatarCnpj } from '../../../lib/documentos';
-import { pode } from '../../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
@@ -66,7 +66,7 @@ function PaginaContratados() {
   return (
     <ConfiguracoesLayout acesso={sessao}>
       {pode(sessao, 'catalogo.ver') ? (
-        <Contratados podeEditar={pode(sessao, 'catalogo.editar')} />
+        <Contratados permissoes={podeNaTela(sessao, 'catalogo')} />
       ) : (
         <SemPermissao tela="Contratados" />
       )}
@@ -77,7 +77,7 @@ function PaginaContratados() {
 const coluna = createDataTableColumnHelper<ContratadoItemDto>();
 const OCULTAR_COM_PAINEL = ['cidade', 'contratadoRepasseNome', 'cnpj'];
 
-function Contratados({ podeEditar }: { podeEditar: boolean }) {
+function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(
@@ -136,7 +136,7 @@ function Contratados({ podeEditar }: { podeEditar: boolean }) {
     <ListaCadastro
       titulo="Contratados"
       novo={
-        podeEditar
+        permissoes.criar
           ? {
               rotulo: 'Novo contratado',
               onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
@@ -175,7 +175,7 @@ function Contratados({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhum contratado cadastrado.',
-        texto: podeEditar
+        texto: permissoes.criar
           ? 'Cadastre as empresas que emitem a nota (ex.: 001 Teleimagem) antes dos clientes.'
           : 'Quem administra o catálogo cadastra os contratados.',
       }}
@@ -183,15 +183,15 @@ function Contratados({ podeEditar }: { podeEditar: boolean }) {
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
-          <Painel key={busca.id ?? 'novo'} id={busca.id} podeEditar={podeEditar} />
+        busca.id || (busca.novo && permissoes.criar) ? (
+          <Painel key={busca.id ?? 'novo'} id={busca.id} permissoes={permissoes} />
         ) : undefined
       }
     />
   );
 }
 
-function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
+function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
@@ -214,7 +214,7 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
     <PainelContratado
       contratado={contratado}
       contratados={opcoes.contratados}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={fechar}
       onSalvar={async (dados) => {
         let alvo = id;
@@ -224,7 +224,7 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await contratadosControllerExcluir({ path: { id } }).unwrap();
               fechar();

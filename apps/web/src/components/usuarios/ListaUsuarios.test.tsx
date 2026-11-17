@@ -161,7 +161,7 @@ describe('ListaUsuarios', () => {
     expect(onConvidar).toHaveBeenCalled();
   });
 
-  it('sem usuarios.convidar, não há o botão', async () => {
+  it('sem usuarios.criar, não há o botão', async () => {
     montar();
 
     await screen.findByRole('heading', { name: 'Usuários 47' });

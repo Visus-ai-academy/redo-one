@@ -4,16 +4,19 @@ import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { RequiredLegend } from '../form/RequiredLegend';
 import { SubmitButton } from '../form/SubmitButton';
 
+/** Botão Excluir do painel, com a confirmação que diz a consequência. */
+export type ExcluirPainel = {
+  acao: string;
+  titulo: string;
+  consequencia: string;
+  onConfirmar: () => Promise<void>;
+};
+
 type RodapePainelProps = {
   /** Texto do botão de criar ("Criar de-para"); editando, o botão é "Salvar". */
   rotuloCriar: string;
   editando: boolean;
-  excluir?: {
-    acao: string;
-    titulo: string;
-    consequencia: string;
-    onConfirmar: () => Promise<void>;
-  };
+  excluir?: ExcluirPainel;
   onCancelar: () => void;
 };
 
@@ -36,5 +39,15 @@ export function RodapePainel({ rotuloCriar, editando, excluir, onCancelar }: Rod
         </span>
       </div>
     </>
+  );
+}
+
+/** Painel só leitura (pode excluir, mas não editar): só o excluir, à esquerda. */
+export function RodapeSomenteLeitura({ excluir }: { excluir?: ExcluirPainel }) {
+  if (!excluir) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ConfirmarAcao {...excluir} />
+    </div>
   );
 }

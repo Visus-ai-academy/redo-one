@@ -84,4 +84,17 @@ describe('PainelTipoAusencia', () => {
     expect(screen.getByRole('textbox', { name: 'Gravidade' })).toHaveValue('1');
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({ tipo: FERIAS, podeEditar: false, onExcluir });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir tipo de ausência' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir tipo de ausência' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
+  });
 });

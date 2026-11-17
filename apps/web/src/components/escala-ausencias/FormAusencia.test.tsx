@@ -36,6 +36,7 @@ const EXISTENTE: AusenciaItemDto = {
   situacao: 'aprovada',
   origem: 'gestor',
   observacoes: 'Combinado com a coordenação',
+  temObservacoes: true,
   motivoRecusa: null,
   revisadaEm: null,
   criadoEm: '2026-11-10T12:00:00.000Z',
@@ -174,6 +175,18 @@ describe('FormAusencia', () => {
       diasSemana: [1],
       observacoes: 'Combinado com a coordenação',
     });
+  });
+
+  it('sem permissão de ver as observações, a edição não mostra o campo e devolve o nulo que recebeu', async () => {
+    const { onSalvar } = montar({
+      ausencia: { ...EXISTENTE, observacoes: null, temObservacoes: true },
+    });
+
+    expect(screen.queryByRole('textbox', { name: 'Observações' })).not.toBeInTheDocument();
+    expect(screen.getByText('Há observação (sem permissão para ver)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ observacoes: null }));
   });
 
   it('mostra o erro da API no fluxo', async () => {

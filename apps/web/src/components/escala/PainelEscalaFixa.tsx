@@ -25,6 +25,7 @@ import {
   celula,
   celulasDaGrade,
   DIAS_DA_GRADE,
+  diasDaGradeVisiveis,
   frentesComTurno,
   type Grade,
   gradeDasCelulas,
@@ -84,6 +85,7 @@ export function PainelEscalaFixa({
   const [erro, setErro] = useState<string>();
   const [copiando, setCopiando] = useState(false);
   const [copiadoDe, setCopiadoDe] = useState<string>();
+  const [mostrarFimDeSemana, setMostrarFimDeSemana] = useState(false);
   const copiarId = useId();
 
   const atual = useQuery({
@@ -102,6 +104,8 @@ export function PainelEscalaFixa({
       : atual.data
         ? gradeDasCelulas(atual.data.celulas)
         : undefined;
+  const gradeSalva = atual.data ? gradeDasCelulas(atual.data.celulas) : {};
+  const dias = diasDaGradeVisiveis(grade ? [gradeSalva, grade] : [gradeSalva], mostrarFimDeSemana);
   const gradeRef = useRef(grade);
   gradeRef.current = grade;
 
@@ -303,7 +307,7 @@ export function PainelEscalaFixa({
                       >
                         Turno
                       </th>
-                      {DIAS_DA_GRADE.map((dia) => (
+                      {dias.map((dia) => (
                         <th
                           key={dia}
                           scope="col"
@@ -318,11 +322,21 @@ export function PainelEscalaFixa({
                   </thead>
                   <tbody className="divide-y">
                     {linhas.map((t) => (
-                      <LinhaTurno key={t.id} turno={t} grade={grade} onMudar={mudar} />
+                      <LinhaTurno key={t.id} turno={t} grade={grade} dias={dias} onMudar={mudar} />
                     ))}
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {linhas.length > 0 && (dias.length < 7 || mostrarFimDeSemana) && (
+              <Button
+                type="button"
+                onClick={() => setMostrarFimDeSemana((v) => !v)}
+                className={buttonClassName({ variant: 'ghost', className: 'self-start' })}
+              >
+                {mostrarFimDeSemana ? 'Esconder fim de semana' : 'Mostrar fim de semana'}
+              </Button>
             )}
 
             <Previa grade={grade} turnos={turnos} aPartirDe={form.state.values.aPartirDe} />
@@ -340,10 +354,13 @@ export function PainelEscalaFixa({
 function LinhaTurno({
   turno: t,
   grade,
+  dias,
   onMudar,
 }: {
   turno: TurnoDaEscalaFixa;
   grade: Grade;
+  /** Colunas mostradas (seg a sex, mais o fim de semana quando aparece). */
+  dias: readonly number[];
   onMudar: (fn: (g: Grade) => Grade) => void;
 }) {
   const marcadas = DIAS_DA_GRADE.filter((d) => celula(grade, t.id, d).marcada).length;
@@ -386,7 +403,7 @@ function LinhaTurno({
           </Button>
         </span>
       </th>
-      {DIAS_DA_GRADE.map((dia) => {
+      {dias.map((dia) => {
         const c = celula(grade, t.id, dia);
         const nome = `${t.nome}, ${NOMES_DIAS_LONGOS[dia]?.toLowerCase()}`;
         return (

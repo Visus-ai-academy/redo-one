@@ -47,7 +47,7 @@ function montar(props: Partial<PainelExameProps> = {}) {
   };
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <PainelExame opcoes={opcoes} podeEditar {...handlers} {...props} />
+      <PainelExame opcoes={opcoes} podeEditar podeCriar {...handlers} {...props} />
     </QueryClientProvider>,
   );
   return handlers;
@@ -101,9 +101,22 @@ describe('PainelExame', () => {
     expect(onCriarQuebra).toHaveBeenCalled();
   });
 
-  it('sem permissão de editar, não oferece criar a quebra', () => {
-    montar({ exame: { ...exame, quebra: null }, podeEditar: false });
+  it('sem permissão de criar, não oferece criar a quebra', () => {
+    montar({ exame: { ...exame, quebra: null }, podeCriar: false });
 
     expect(screen.queryByRole('button', { name: 'Criar quebra' })).not.toBeInTheDocument();
+  });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({ exame, podeEditar: false, onExcluir });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir exame' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir exame' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
   });
 });

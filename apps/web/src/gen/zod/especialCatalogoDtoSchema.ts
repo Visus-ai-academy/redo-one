@@ -5,10 +5,11 @@
 
 import * as z from 'zod'
 
-export const acaoCatalogoDtoSchema = z.object({
+export const especialCatalogoDtoSchema = z.object({
   chave: z.string().meta({ examples: ['usuarios.desbloquear'] }),
   rotulo: z.string().meta({ examples: ['Desbloquear'] }),
+  descricao: z.string().meta({ examples: ['Liberar a conta bloqueada por senha errada.'] }),
   sensivel: z.boolean(),
 })
 
-export type AcaoCatalogoDtoSchemaType = z.infer<typeof acaoCatalogoDtoSchema>
+export type EspecialCatalogoDtoSchemaType = z.infer<typeof especialCatalogoDtoSchema>

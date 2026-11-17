@@ -7,9 +7,9 @@ import { papeisControllerAtualizar } from '../../gen/clients/papeisControllerAtu
 import { papeisControllerCriar } from '../../gen/clients/papeisControllerCriar';
 import { papeisControllerExcluir } from '../../gen/clients/papeisControllerExcluir';
 import type { PapelDetalheDto } from '../../gen/types/PapelDetalheDto';
-import type { TelaCatalogoDto } from '../../gen/types/TelaCatalogoDto';
 import { renderComRotas } from '../../test/render';
 import { EditarPapel, type EditarPapelProps } from './EditarPapel';
+import type { CatalogoMatriz } from './matriz-permissoes';
 
 vi.mock('../../gen/clients/papeisControllerAtualizar');
 vi.mock('../../gen/clients/papeisControllerCriar');
@@ -19,21 +19,24 @@ const atualizar = vi.mocked(papeisControllerAtualizar);
 const criar = vi.mocked(papeisControllerCriar);
 const excluir = vi.mocked(papeisControllerExcluir);
 
-const catalogo: TelaCatalogoDto[] = [
+const catalogo: CatalogoMatriz = [
   {
     tela: 'volumetria',
     rotulo: 'Volumetria',
     area: 'Painéis',
-    acoes: [
-      { chave: 'volumetria.ver', rotulo: 'Ver', sensivel: false },
-      { chave: 'volumetria.exportar', rotulo: 'Exportar', sensivel: false },
+    padrao: [{ acao: 'ver', chave: 'volumetria.ver', rotulo: 'Ver', sensivel: false }],
+    especiais: [
+      { chave: 'volumetria.exportar', rotulo: 'Exportar', descricao: '', sensivel: false },
     ],
+    exige: [],
   },
   {
     tela: 'repasse',
     rotulo: 'Repasse',
     area: 'Financeiro',
-    acoes: [{ chave: 'repasse.ver', rotulo: 'Ver', sensivel: false }],
+    padrao: [{ acao: 'ver', chave: 'repasse.ver', rotulo: 'Ver', sensivel: false }],
+    especiais: [],
+    exige: [],
   },
 ];
 
@@ -62,7 +65,9 @@ function montar(props: Partial<EditarPapelProps> = {}) {
       catalogo={catalogo}
       acesso={ADMIN}
       meuPapelId="p-admin"
+      podeCriar
       podeEditar
+      podeExcluir
       {...callbacks}
       {...props}
     />,
@@ -89,7 +94,7 @@ describe('EditarPapel', () => {
     expect(within(secao).getByRole('textbox', { name: 'Descrição' })).toHaveValue(
       'Fecha o repasse',
     );
-    expect(within(secao).getByRole('switch', { name: 'Repasse' })).toBeChecked();
+    expect(within(secao).getByRole('checkbox', { name: 'Repasse: Ver' })).toBeChecked();
     expect(within(secao).getByText('1 permissão em 1 tela')).toBeInTheDocument();
   });
 
@@ -97,7 +102,7 @@ describe('EditarPapel', () => {
     const { onSalvo } = montar();
     expect(screen.queryByText(/sessões dos 3 usuários/)).not.toBeInTheDocument();
 
-    await userEvent.click(await screen.findByRole('switch', { name: 'Volumetria' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Volumetria: Ver' }));
     expect(
       screen.getByText('Ao salvar, as sessões dos 3 usuários com este papel são encerradas.'),
     ).toBeInTheDocument();
@@ -145,7 +150,7 @@ describe('EditarPapel', () => {
 
     await userEvent.clear(screen.getByRole('textbox', { name: 'Descrição' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Portal');
-    await userEvent.click(screen.getByRole('switch', { name: 'Volumetria' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Volumetria: Ver' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
 
     await waitFor(() =>
@@ -176,7 +181,7 @@ describe('EditarPapel', () => {
     });
 
     expect(await screen.findByText(/tem acesso a todas as telas e ações/)).toBeInTheDocument();
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     // A cópia sairia vazia: o acesso total não é uma lista de permissões.
     expect(screen.queryByRole('button', { name: 'Duplicar' })).not.toBeInTheDocument();
     expect(screen.getByRole('note')).toHaveTextContent(
@@ -185,10 +190,10 @@ describe('EditarPapel', () => {
   });
 
   it('sem permissão de editar, nada muda e não há ações', async () => {
-    montar({ podeEditar: false });
+    montar({ podeCriar: false, podeEditar: false, podeExcluir: false });
 
     await screen.findByRole('region', { name: 'Financeiro' });
-    expect(screen.getByRole('switch', { name: 'Repasse' })).toHaveAttribute(
+    expect(screen.getByRole('checkbox', { name: 'Repasse: Ver' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
@@ -211,7 +216,7 @@ describe('EditarPapel', () => {
     );
     expect(criar).not.toHaveBeenCalled();
 
-    await userEvent.click(within(secao).getByRole('switch', { name: 'Volumetria' }));
+    await userEvent.click(within(secao).getByRole('checkbox', { name: 'Volumetria: Ver' }));
     await userEvent.click(within(secao).getByRole('button', { name: 'Criar papel' }));
 
     await waitFor(() =>
@@ -235,7 +240,7 @@ describe('EditarPapel', () => {
     });
 
     expect(await screen.findByRole('textbox', { name: /Nome/ })).toHaveValue('Financeiro (cópia)');
-    expect(screen.getByRole('switch', { name: 'Repasse' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Repasse: Ver' })).toBeChecked();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(onCancelar).toHaveBeenCalled();
   });
@@ -258,6 +263,47 @@ describe('EditarPapel', () => {
     expect(invalidar).not.toHaveBeenCalledWith({ queryKey: [{ url: '/papeis/:id' }] });
   });
 
+  it('editar, criar e excluir são permissões separadas', async () => {
+    montar({ papel: { ...financeiro, totalUsuarios: 0 }, podeCriar: false, podeExcluir: false });
+
+    await screen.findByRole('region', { name: 'Financeiro' });
+    expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Duplicar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir papel' })).not.toBeInTheDocument();
+  });
+
+  it('só com excluir, exclui mas não salva', async () => {
+    montar({ papel: { ...financeiro, totalUsuarios: 0 }, podeEditar: false });
+
+    await screen.findByRole('region', { name: 'Financeiro' });
+    expect(screen.queryByRole('button', { name: 'Salvar alterações' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excluir papel' })).toBeInTheDocument();
+  });
+
+  it('copia as permissões de outro papel da lista', async () => {
+    const { queryClient } = montar({
+      papeis: [
+        { id: 'p-fin', nome: 'Financeiro' },
+        { id: 'p-op', nome: 'Operação' },
+      ],
+    });
+    const buscar = vi.spyOn(queryClient, 'fetchQuery').mockResolvedValue({
+      ...financeiro,
+      id: 'p-op',
+      permissoes: ['volumetria.ver'],
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: /Copiar de outro papel/ }));
+    expect(screen.queryByRole('menuitem', { name: 'Financeiro' })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Operação' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Volumetria: Ver' })).toBeChecked(),
+    );
+    expect(screen.getByRole('checkbox', { name: 'Repasse: Ver' })).not.toBeChecked();
+    expect(buscar).toHaveBeenCalled();
+  });
+
   it('papel com usuários não oferece excluir e explica o porquê', async () => {
     montar();
 
@@ -271,7 +317,7 @@ describe('EditarPapel', () => {
   it('avisa quando o papel é o de quem edita', async () => {
     const { onSalvo } = montar({ meuPapelId: 'p-fin' });
 
-    await userEvent.click(await screen.findByRole('switch', { name: 'Volumetria' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Volumetria: Ver' }));
     expect(screen.getByText(/inclusive a sua/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
 

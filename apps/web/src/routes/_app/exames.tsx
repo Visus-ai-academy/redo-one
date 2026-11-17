@@ -37,7 +37,7 @@ import type { DeParaValorItemDto } from '../../gen/types/DeParaValorItemDto';
 import type { ExameResumoDto } from '../../gen/types/ExameResumoDto';
 import type { QuebraResumoDto } from '../../gen/types/QuebraResumoDto';
 import { invalidarCatalogo } from '../../lib/catalogo';
-import { pode } from '../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
@@ -128,10 +128,10 @@ function PaginaExames() {
   const { sessao } = Route.useRouteContext();
   const { aba } = Route.useSearch();
   if (!pode(sessao, 'exames.ver')) return <SemPermissao tela="Exames" />;
-  const podeEditar = pode(sessao, 'exames.editar');
-  if (aba === 'fora-do-padrao') return <ForaDoPadrao podeEditar={podeEditar} />;
-  if (aba === 'quebras') return <Quebras podeEditar={podeEditar} />;
-  return <Exames podeEditar={podeEditar} />;
+  const permissoes = podeNaTela(sessao, 'exames');
+  if (aba === 'fora-do-padrao') return <ForaDoPadrao permissoes={permissoes} />;
+  if (aba === 'quebras') return <Quebras permissoes={permissoes} />;
+  return <Exames permissoes={permissoes} />;
 }
 
 /** Abas da tela; trocar de aba recomeça busca, filtros e página. */
@@ -153,7 +153,7 @@ const coluna = createDataTableColumnHelper<ExameResumoDto>();
 const OCULTAR_COM_PAINEL = ['subespecialidade', 'categoria'];
 const nome = (ref: { nome: string } | null) => ref?.nome ?? '—';
 
-function Exames({ podeEditar }: { podeEditar: boolean }) {
+function Exames({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(examesControllerListarQueryOptions(consulta(busca)));
@@ -222,7 +222,7 @@ function Exames({ podeEditar }: { podeEditar: boolean }) {
       totalNoTitulo={false}
       abas={<AbasExames aba="padronizados" />}
       novo={
-        podeEditar
+        permissoes.criar
           ? { rotulo: 'Novo exame', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
           : undefined
       }
@@ -274,7 +274,7 @@ function Exames({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhum exame cadastrado.',
-        texto: podeEditar
+        texto: permissoes.criar
           ? 'Cadastre o exame com o nome igual ao estudo da MobileMed e a classificação dele.'
           : 'Quem cuida do catálogo de exames os inclui aqui.',
       }}
@@ -289,8 +289,8 @@ function Exames({ podeEditar }: { podeEditar: boolean }) {
       }
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
-          <Painel key={busca.id ?? 'novo'} id={busca.id} podeEditar={podeEditar} />
+        busca.id || (busca.novo && permissoes.criar) ? (
+          <Painel key={busca.id ?? 'novo'} id={busca.id} permissoes={permissoes} />
         ) : undefined
       }
     />
@@ -302,7 +302,7 @@ const buscarExames = async (termo: string) => {
   return exames.map((e) => ({ valor: e.id, rotulo: e.nome, detalhe: e.modalidade }));
 };
 
-function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
+function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
@@ -325,7 +325,8 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
     <PainelExame
       exame={exame}
       opcoes={opcoes}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
+      podeCriar={permissoes.criar}
       onFechar={fechar}
       onSalvar={async (body) => {
         let alvo = id;
@@ -335,7 +336,7 @@ function Painel({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await examesControllerExcluir({ path: { id } }).unwrap();
               fechar();
@@ -360,7 +361,7 @@ const cFora = createDataTableColumnHelper<DeParaValorItemDto>();
 const numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
 
 /** Estudos que chegam fora do padrão do cadastro, com quanto valem e o exame padronizado ligado. */
-function ForaDoPadrao({ podeEditar }: { podeEditar: boolean }) {
+function ForaDoPadrao({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(consultaForaPadrao(busca));
@@ -416,7 +417,7 @@ function ForaDoPadrao({ podeEditar }: { podeEditar: boolean }) {
       totalNoTitulo={false}
       abas={<AbasExames aba="fora-do-padrao" />}
       novo={
-        podeEditar
+        permissoes.criar
           ? {
               rotulo: 'Novo exame fora do padrão',
               onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
@@ -460,12 +461,12 @@ function ForaDoPadrao({ podeEditar }: { podeEditar: boolean }) {
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <PainelForaPadrao
             key={busca.id ?? 'novo'}
             id={busca.id}
             itens={pagina.itens}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
           />
         ) : undefined
       }
@@ -477,11 +478,11 @@ function ForaDoPadrao({ podeEditar }: { podeEditar: boolean }) {
 function PainelForaPadrao({
   id,
   itens,
-  podeEditar,
+  permissoes,
 }: {
   id?: string;
   itens: DeParaValorItemDto[];
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -506,7 +507,7 @@ function PainelForaPadrao({
     <PainelExameForaPadrao
       item={item}
       buscarExames={buscarExames}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={fechar}
       onSalvar={async (body) => {
         let alvo = id;
@@ -516,7 +517,7 @@ function PainelForaPadrao({
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await deParaValoresExameControllerExcluir({ path: { id } }).unwrap();
               fechar();
@@ -531,7 +532,7 @@ function PainelForaPadrao({
 const cQuebra = createDataTableColumnHelper<QuebraResumoDto>();
 
 /** Estudos que, laudados, viram vários exames na cobrança (cada exame vale 1). */
-function Quebras({ podeEditar }: { podeEditar: boolean }) {
+function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(consultaQuebras(busca));
@@ -592,7 +593,7 @@ function Quebras({ podeEditar }: { podeEditar: boolean }) {
       totalNoTitulo={false}
       abas={<AbasExames aba="quebras" />}
       novo={
-        podeEditar
+        permissoes.criar
           ? { rotulo: 'Nova quebra', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
           : undefined
       }
@@ -613,7 +614,7 @@ function Quebras({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhuma quebra.',
-        texto: podeEditar
+        texto: permissoes.criar
           ? 'Cadastre o estudo combinado como chega da MobileMed e os exames em que ele se quebra.'
           : 'Quem cuida do catálogo de exames as inclui aqui.',
       }}
@@ -621,15 +622,15 @@ function Quebras({ podeEditar }: { podeEditar: boolean }) {
       onLimparFiltros={() => filtrar({ busca: undefined })}
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
-          <PainelDaQuebra key={busca.id ?? 'novo'} id={busca.id} podeEditar={podeEditar} />
+        busca.id || (busca.novo && permissoes.criar) ? (
+          <PainelDaQuebra key={busca.id ?? 'novo'} id={busca.id} permissoes={permissoes} />
         ) : undefined
       }
     />
   );
 }
 
-function PainelDaQuebra({ id, podeEditar }: { id?: string; podeEditar: boolean }) {
+function PainelDaQuebra({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
@@ -654,7 +655,10 @@ function PainelDaQuebra({ id, podeEditar }: { id?: string; podeEditar: boolean }
       quebra={quebra}
       categorias={opcoes.categoriasExame}
       buscarExames={buscarExames}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
+      podeCriar={permissoes.criar}
+      podeEditarPecas={permissoes.editar}
+      podeExcluir={permissoes.excluir}
       onFechar={fechar}
       onSalvar={async (body) => {
         let alvo = id;
@@ -664,7 +668,7 @@ function PainelDaQuebra({ id, podeEditar }: { id?: string; podeEditar: boolean }
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await quebrasControllerExcluir({ path: { id } }).unwrap();
               fechar();

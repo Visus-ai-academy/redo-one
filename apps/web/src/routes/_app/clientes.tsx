@@ -24,7 +24,7 @@ import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesCon
 import type { ClienteResumoDto } from '../../gen/types/ClienteResumoDto';
 import { invalidarCatalogo } from '../../lib/catalogo';
 import { formatarCnpj } from '../../lib/documentos';
-import { pode } from '../../lib/permissoes';
+import { type PodeNaTela, pode, podeNaTela } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
 
@@ -70,7 +70,7 @@ export const Route = createFileRoute('/_app/clientes')({
 function PaginaClientes() {
   const { sessao } = Route.useRouteContext();
   return pode(sessao, 'clientes.ver') ? (
-    <Clientes podeEditar={pode(sessao, 'clientes.editar')} />
+    <Clientes permissoes={podeNaTela(sessao, 'clientes')} />
   ) : (
     <SemPermissao tela="Clientes" />
   );
@@ -79,7 +79,7 @@ function PaginaClientes() {
 const coluna = createDataTableColumnHelper<ClienteResumoDto>();
 const OCULTAR_COM_PAINEL = ['cnpj', 'totalAliases'];
 
-function Clientes({ podeEditar }: { podeEditar: boolean }) {
+function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: pagina } = useSuspenseQuery(clientesControllerListarQueryOptions(consulta(busca)));
@@ -153,7 +153,7 @@ function Clientes({ podeEditar }: { podeEditar: boolean }) {
     <ListaCadastro
       titulo="Clientes"
       novo={
-        podeEditar
+        permissoes.criar
           ? { rotulo: 'Novo cliente', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
           : undefined
       }
@@ -199,7 +199,7 @@ function Clientes({ podeEditar }: { podeEditar: boolean }) {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhum cliente cadastrado.',
-        texto: podeEditar
+        texto: permissoes.criar
           ? 'Cadastre o cliente com o nome igual ao da MobileMed para os laudos dele serem reconhecidos.'
           : 'Quem cuida do cadastro de clientes os inclui aqui.',
       }}
@@ -209,12 +209,12 @@ function Clientes({ podeEditar }: { podeEditar: boolean }) {
       }
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
       painel={
-        busca.id || (busca.novo && podeEditar) ? (
+        busca.id || (busca.novo && permissoes.criar) ? (
           <Painel
             key={busca.id ?? 'novo'}
             id={busca.id}
             contratados={opcoes.contratados}
-            podeEditar={podeEditar}
+            permissoes={permissoes}
           />
         ) : undefined
       }
@@ -225,11 +225,11 @@ function Clientes({ podeEditar }: { podeEditar: boolean }) {
 function Painel({
   id,
   contratados,
-  podeEditar,
+  permissoes,
 }: {
   id?: string;
   contratados: { id: string; nome: string }[];
-  podeEditar: boolean;
+  permissoes: PodeNaTela;
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -252,7 +252,9 @@ function Painel({
     <PainelCliente
       cliente={cliente}
       contratados={contratados}
-      podeEditar={podeEditar}
+      podeEditar={id ? permissoes.editar : permissoes.criar}
+      podeCriar={permissoes.criar}
+      podeExcluir={permissoes.excluir}
       onFechar={fechar}
       onSalvar={async (body) => {
         let alvo = id;
@@ -262,7 +264,7 @@ function Painel({
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
-        id
+        id && permissoes.excluir
           ? async () => {
               await clientesControllerExcluir({ path: { id } }).unwrap();
               fechar();

@@ -36,7 +36,7 @@ export const Route = createFileRoute('/_app/escala/historico')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    if (!pode(context.sessao, 'escala.historico.ver')) return;
+    if (!pode(context.sessao, 'escala-historico.ver')) return;
     await context.queryClient.ensureQueryData(
       historicoEscalaControllerListarQueryOptions(consulta(deps)),
     );
@@ -47,7 +47,7 @@ export const Route = createFileRoute('/_app/escala/historico')({
 
 function Pagina() {
   const { sessao } = Route.useRouteContext();
-  return pode(sessao, 'escala.historico.ver') ? (
+  return pode(sessao, 'escala-historico.ver') ? (
     <Historico podeBuscarMedicos={pode(sessao, 'medicos.ver')} />
   ) : (
     <SemPermissao tela="Histórico da escala" />

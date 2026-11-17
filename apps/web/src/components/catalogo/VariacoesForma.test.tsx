@@ -17,7 +17,8 @@ function montar(props: Partial<VariacoesFormaProps> = {}) {
         { id: 'v-1', origem: 'Urgência', ativo: true },
         { id: 'v-2', origem: 'URGENCIA', ativo: false },
       ]}
-      podeEditar
+      podeCriar
+      podeExcluir
       {...handlers}
       {...props}
     />,
@@ -76,9 +77,16 @@ describe('VariacoesForma', () => {
   });
 
   it('sem permissão, só mostra', () => {
-    montar({ podeEditar: false });
+    montar({ podeCriar: false, podeExcluir: false });
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument();
+  });
+
+  it('adicionar e remover são permissões separadas', () => {
+    montar({ podeExcluir: false });
+
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument();
   });
 });

@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   diaDaSemana,
   diasDaSemana,
+  diasDaSemanaVisiveis,
+  diasVisiveis,
+  ehFimDeSemana,
   hojeEmBrasilia,
   inicioDaSemana,
   janelaDoModo,
@@ -98,5 +101,40 @@ describe('semanasDoMes', () => {
     expect(semanas[0]?.[0]).toBe('2026-10-26');
     expect(semanas.at(-1)?.at(-1)).toBe('2026-12-06');
     expect(semanas.every((s) => s.length === 7)).toBe(true);
+  });
+});
+
+describe('fim de semana escondido', () => {
+  // Semana de 16/11/2026 (segunda) a 22/11/2026 (domingo).
+  const semana = diasDaSemana('2026-11-18');
+
+  it('sábado e domingo são fim de semana', () => {
+    expect(ehFimDeSemana('2026-11-21')).toBe(true);
+    expect(ehFimDeSemana('2026-11-22')).toBe(true);
+    expect(ehFimDeSemana('2026-11-20')).toBe(false);
+  });
+
+  it('a semana mostra só seg a sex quando o fim de semana está vazio', () => {
+    expect(diasVisiveis(semana, () => false)).toEqual([
+      '2026-11-16',
+      '2026-11-17',
+      '2026-11-18',
+      '2026-11-19',
+      '2026-11-20',
+    ]);
+  });
+
+  it('o sábado ou o domingo aparecem quando têm algo', () => {
+    expect(diasVisiveis(semana, (dia) => dia === '2026-11-22').slice(-2)).toEqual([
+      '2026-11-20',
+      '2026-11-22',
+    ]);
+  });
+
+  it('no mês, a coluna do sábado ou do domingo aparece se algum dia dela tem algo', () => {
+    const datas = semanasDoMes('2026-11-18').flat();
+    expect(diasDaSemanaVisiveis(datas, () => false)).toEqual([1, 2, 3, 4, 5]);
+    expect(diasDaSemanaVisiveis(datas, (dia) => dia === '2026-11-07')).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(diasDaSemanaVisiveis(datas, (dia) => dia === '2026-11-29')).toEqual([1, 2, 3, 4, 5, 0]);
   });
 });

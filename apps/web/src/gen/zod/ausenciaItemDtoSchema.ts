@@ -24,6 +24,7 @@ export const ausenciaItemDtoSchema = z.object({
   motivoRecusa: z.string().nullable(),
   revisadaEm: z.iso.datetime().nullable(),
   criadoEm: z.iso.datetime(),
+  temObservacoes: z.boolean().describe('Há observação gravada. Sem `ausencias.observacoes.ver`, `observacoes` e `motivoRecusa` vêm `null` (dado de saúde).'),
   solicitadaPor: referenciaAusenciaDtoSchema.nullable(),
   revisadaPor: referenciaAusenciaDtoSchema.nullable(),
 })

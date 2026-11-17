@@ -28,6 +28,9 @@ function montar(props: Partial<PainelQuebraProps> = {}) {
         categorias={[{ id: 'c-angio', nome: 'ANGIO' }]}
         buscarExames={async () => [{ valor: 'x-3', rotulo: 'TC TORAX' }]}
         podeEditar
+        podeCriar
+        podeEditarPecas
+        podeExcluir
         {...handlers}
         {...props}
       />
@@ -92,9 +95,35 @@ describe('PainelQuebra', () => {
   });
 
   it('sem permissão, só mostra', () => {
-    montar({ quebra, podeEditar: false });
+    montar({
+      quebra,
+      podeEditar: false,
+      podeCriar: false,
+      podeEditarPecas: false,
+      podeExcluir: false,
+    });
 
     expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Adicionar exame' })).not.toBeInTheDocument();
+  });
+
+  it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
+    const onExcluir = vi.fn(async () => undefined);
+    montar({
+      quebra,
+      podeEditar: false,
+      podeCriar: false,
+      podeEditarPecas: false,
+      podeExcluir: false,
+      onExcluir,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir quebra' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Excluir quebra' }).at(-1) as HTMLElement,
+    );
+
+    expect(onExcluir).toHaveBeenCalled();
   });
 });
