@@ -1,6 +1,6 @@
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PERMISSOES_EXIGIDAS } from '../../identidade/acesso/decorators';
 import { ExamesController } from './exames.controller';
@@ -18,5 +18,14 @@ describe('ExamesController', () => {
       ['exames.editar'],
       ['exames.excluir'],
     ]);
+  });
+
+  it('repassa o filtro de subespecialidade ao service', async () => {
+    const listar = vi.fn(async () => ({ itens: [], total: 0 }));
+    const controller = new ExamesController({ listar } as never);
+
+    await controller.listar({ pagina: 1, porPagina: 50, subespecialidadeId: 's-1' });
+
+    expect(listar).toHaveBeenCalledWith(expect.objectContaining({ subespecialidadeId: 's-1' }));
   });
 });

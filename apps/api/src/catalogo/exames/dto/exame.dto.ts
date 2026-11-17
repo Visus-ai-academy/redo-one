@@ -14,6 +14,11 @@ export class ListarExamesDto extends ListarDto {
   @IsOptional()
   @IsUUID()
   especialidadeId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  subespecialidadeId?: string;
 }
 
 const idOpcional = () => ApiPropertyOptional({ type: String, format: 'uuid', nullable: true });

@@ -47,6 +47,7 @@ export interface FiltroExames extends Paginacao {
   busca?: string;
   modalidadeId?: string;
   especialidadeId?: string;
+  subespecialidadeId?: string;
   ativo?: boolean;
 }
 

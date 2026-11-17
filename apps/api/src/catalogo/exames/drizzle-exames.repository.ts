@@ -74,6 +74,9 @@ export class DrizzleExamesRepository implements ExamesRepository {
     }
     if (filtro.modalidadeId) condicoes.push(eq(exames.modalidadeId, filtro.modalidadeId));
     if (filtro.especialidadeId) condicoes.push(eq(exames.especialidadeId, filtro.especialidadeId));
+    if (filtro.subespecialidadeId) {
+      condicoes.push(eq(exames.subespecialidadeId, filtro.subespecialidadeId));
+    }
     if (filtro.ativo !== undefined) condicoes.push(eq(exames.ativo, filtro.ativo));
     const onde = and(...condicoes);
 

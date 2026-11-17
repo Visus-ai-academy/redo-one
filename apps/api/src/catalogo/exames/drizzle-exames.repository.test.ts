@@ -45,7 +45,7 @@ describe.skipIf(!url)('DrizzleExamesRepository', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table quebras_estudo, exames, modalidades, especialidades cascade`,
+      sql`truncate table quebras_estudo, exames, modalidades, especialidades, subespecialidades cascade`,
     );
     const [m] = await db.insert(schema.modalidades).values({ codigo: 'CT' }).returning();
     const [e] = await db.insert(schema.especialidades).values({ nome: 'NEURO' }).returning();
@@ -76,6 +76,22 @@ describe.skipIf(!url)('DrizzleExamesRepository', () => {
     });
     expect((await repo.listar({ busca: 'torax', pagina: 1, porPagina: 10 })).total).toBe(1);
     expect((await repo.listar({ busca: '123', pagina: 1, porPagina: 10 })).total).toBe(1);
+  });
+
+  it('filtra por subespecialidade; exame sem subespecialidade fica de fora', async () => {
+    const [avc, epilepsia] = await db
+      .insert(schema.subespecialidades)
+      .values([{ nome: 'AVC' }, { nome: 'EPILEPSIA' }])
+      .returning();
+    await repo.criar(dados('TC CRANIO AVC', { subespecialidadeId: avc?.id ?? null }));
+    await repo.criar(dados('RM EPILEPSIA', { subespecialidadeId: epilepsia?.id ?? null }));
+    await repo.criar(dados('RX TORAX'));
+
+    const pagina = await repo.listar({ subespecialidadeId: avc?.id, pagina: 1, porPagina: 10 });
+    expect(pagina).toMatchObject({
+      total: 1,
+      itens: [{ nome: 'TC CRANIO AVC', subespecialidade: { id: avc?.id, nome: 'AVC' } }],
+    });
   });
 
   it('detalhe aponta a quebra do estudo com o mesmo nome; o exame que é peça não se exclui', async () => {

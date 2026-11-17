@@ -2585,6 +2585,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "subespecialidadeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {

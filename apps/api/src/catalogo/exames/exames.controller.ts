@@ -40,6 +40,7 @@ export class ExamesController {
       busca: query.busca,
       modalidadeId: query.modalidadeId,
       especialidadeId: query.especialidadeId,
+      subespecialidadeId: query.subespecialidadeId,
       ativo: query.ativo,
       pagina: query.pagina,
       porPagina: query.porPagina,
