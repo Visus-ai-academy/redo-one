@@ -36,9 +36,7 @@ export function ConfiguracoesLayout({
         {permitidos.map((grupo) => (
           // No celular fica só o "‹ Configurações": a central já lista tudo.
           <div key={grupo.titulo} className="hidden flex-col gap-0.5 md:flex">
-            <span className="text-subtle-foreground px-2 pb-1 text-xs font-medium">
-              {grupo.titulo}
-            </span>
+            <span className="text-foreground px-2 pb-1 text-xs font-semibold">{grupo.titulo}</span>
             {grupo.itens.map((item) => (
               <Link
                 key={item.nome}
