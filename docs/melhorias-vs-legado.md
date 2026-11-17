@@ -110,10 +110,10 @@
 | Problema no dashboards-one | No redo-one | Status | Fonte |
 | --- | --- | --- | --- |
 | Horários e composição das rodadas fixos no código (`URGENCIA_TARDE`, `HORARIOS_LISTA`, 24 h da redistribuição da Lista), com cortes inconsistentes entre urgência e frentes | Horários, cortes e composição das rodadas configuráveis por tela | Decidido (princípio) | 10–11/11 · 253494db, 6a543840, 869cd8d0; 14/11 · 4bca0e36 |
-| Regras específicas por frente fixas no código (RX, MAMA, MEDICINA INTERNA etc.) | Configuração do robô por tela. Antes de modelar, analisar com cuidado cada regra no dashboards-one e no rpa-dashboards-one: o que faz, por que existe, casos de borda e como vira configuração sem perder comportamento | Decidido / Pendente (análise) | 16/11 · 861a9c45 |
+| Regras específicas por frente fixas no código (RX, MAMA, MEDICINA INTERNA etc.) | Regras da frente na aba Distribuição da especialidade ou modalidade: Lista (prioridades e prazo mínimo ou SLA), urgência pelo SLA na Lista, recolhe ou não, robô e horários sem robô, divisão, teto por médico opcional, segmentos (teto, piso, mistura, pacote à parte) | Decidido | 16/11 · 861a9c45; 17/11 · 48d350b6 |
 | A distribuição não leva em conta a qualidade | Priorizar clientes e médicos com melhor classificação. Depende das classificações de médico e de cliente (seção 13). O peso da qualidade deve ser configurável | Decidido / Pendente (como pesar) | 16/11 · 861a9c45 |
-| Lista seguia o SLA | Lista não segue o SLA, exceto com exceção configurada; prioridade vem do arranjo | Regra do legado | 05/11 · 98e6f8f9 |
-| Urgências de RX ficavam sem médico | Só no RX, urgência entra pelo SLA quando o arranjo do médico inclui urgência | Regra do legado | 13/11 · 3ab3e455 |
+| Lista seguia o SLA | A regra da Lista é da frente: MAMA, CARDIO e outras recebem o que vai entrando sem exceção por médico; prioridade vem do arranjo | Regra do legado / Decidido | 05/11 · 98e6f8f9; 17/11 · 48d350b6 |
+| Urgências de RX ficavam sem médico | Urgência entra pelo SLA na Lista quando o arranjo do médico inclui urgência, nas frentes marcadas (hoje RX), sem nome fixo no código | Regra do legado / Decidido | 13/11 · 3ab3e455; 17/11 · 48d350b6 |
 | Médico recebia acima da capacidade do período (espaço livre medido pela pilha, não pelo recebido) | Capacidade descontando o que já recebeu; Lista a cada 30 min só para quem não completou a carga | Regra do legado | 12/11 · b36831d3 |
 | Rodadas próximas contavam a mesma vaga duas vezes (carga vinha do pipeline importado) | Carga inclui o que o robô acabou de atribuir | Ideia | 12/11 · 8616a9d9 |
 | Produtividade vazia na escala tratada como "sem teto" | Vazio não vira sem teto | Pendente | 16/11 · 69872d75 |
@@ -129,6 +129,12 @@
 | Diagnóstico "por que o médico não pegou" leva até 1 min (remonta a rodada) | Diagnóstico a partir do registro da rodada | Ideia | 13/11 · 3ab3e455 |
 | Diálogo de exceções sem filtro por frente; "Adicionar médico" parecia só adicionar | Filtro por frente; "Editar médicos" | Regra do legado | 05–06/11 · 843cf69f, ff6e6e45 |
 | Modal de vínculo do médico ao turno abria sem seguir o arranjo do cadastro | Vem pré-preenchido com o arranjo, sem travar as outras opções | Regra do legado | 05/11 · 6dd356e5 |
+| Arranjo, escala, ausência, exceções, prioridade de cliente, políticas e janelas em telas diferentes; parâmetros do robô espalhados | Um lugar por pergunta: o que o médico lauda (Médicos › Distribuição), quando trabalha (Escala), regra da frente (especialidade/modalidade), cliente, equipe, global (Configurações › Distribuição), rodar (Operação › Distribuição) | Decidido | 17/11 · 48d350b6 |
+| Exceções do robô usadas por médico todo dia para contornar a regra da Lista (36, uma com 103 médicos) | Exceção deixa de ser cadastro: o temporário é ajuste do dia na Escala; o que se repete é regra da frente | Decidido | 17/11 · 48d350b6 |
+| Parâmetros sem uso em produção: escape, pesos, lote, exceção do médico, listas de médicos por cliente/exame, categoria no arranjo | Não migrados | Decidido | 17/11 · 48d350b6 |
+| "RX 150 por dia": o motor ignorava o "dia" | Não migrado; o teto por médico fica disponível, vazio | Decidido | 17/11 · 48d350b6 |
+| Agenda das rodadas automáticas fixa no código | Sem rodadas automáticas por ora; agenda configurável anotada no TODO | Decidido | 17/11 · 48d350b6 |
+| Designação gravava o nome do paciente | Id do exame na MobileMed + HMAC do paciente; nome só na conferência, com permissão | Decidido | 17/11 · 48d350b6 |
 
 ## 8. Robôs e integração com a MobileMed
 
