@@ -9,6 +9,7 @@ import { ComumModule } from './comum/comum.module';
 import { ErroDeDominioFilter } from './comum/erro-de-dominio.filter';
 import { validarAmbiente } from './config/ambiente';
 import { DatabaseModule } from './database/database.module';
+import { DistribuicaoModule } from './distribuicao/distribuicao.module';
 import { EscalaModule } from './escala/escala.module';
 import { IdentidadeModule } from './identidade/identidade.module';
 import { IngestaoModule } from './ingestao/ingestao.module';
@@ -25,6 +26,7 @@ import { MedicosModule } from './medicos/medicos.module';
     MedicosModule,
     EscalaModule,
     IngestaoModule,
+    DistribuicaoModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ErroDeDominioFilter }],
 })

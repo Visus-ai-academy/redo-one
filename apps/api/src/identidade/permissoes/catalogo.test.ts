@@ -96,7 +96,11 @@ describe('catálogo de permissões', () => {
     ]);
     expect(especiais('escala')).toEqual([]);
     expect(especiais('ausencias')).toEqual(['ausencias.aprovar', 'ausencias.observacoes.ver']);
-    expect(especiais('medicos')).toEqual(['medicos.pagamento.ver', 'medicos.pagamento.editar']);
+    expect(especiais('medicos')).toEqual([
+      'medicos.pagamento.ver',
+      'medicos.pagamento.editar',
+      'medicos.distribuicao.editar',
+    ]);
     expect(especiais('avisos')).toEqual(['avisos.triar']);
     expect(especiais('faturamento')).toEqual([
       'faturamento.demonstrativo.gerar',

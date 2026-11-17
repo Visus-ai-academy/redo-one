@@ -1,6 +1,6 @@
 import { Client } from 'pg';
 
-import type { LegadoCatalogo, LegadoEscala, LegadoMedicos } from './legado';
+import type { LegadoCatalogo, LegadoDistribuicao, LegadoEscala, LegadoMedicos } from './legado';
 
 /**
  * Lê o banco do dashboards-one (em produção) SÓ PARA LEITURA: uma conexão, uma transação
@@ -8,9 +8,12 @@ import type { LegadoCatalogo, LegadoEscala, LegadoMedicos } from './legado';
  * pequenas (cadastros), então cada uma vem numa consulta só. A ordem física (`ctid`) é a mesma em
  * que o Prisma de lá as lê, e é ela que decide os empates no resolvedor de clientes.
  */
-export async function lerLegado(
-  url: string,
-): Promise<{ catalogo: LegadoCatalogo; medicos: LegadoMedicos; escala: LegadoEscala }> {
+export async function lerLegado(url: string): Promise<{
+  catalogo: LegadoCatalogo;
+  medicos: LegadoMedicos;
+  escala: LegadoEscala;
+  distribuicao: LegadoDistribuicao;
+}> {
   const cliente = new Client({
     connectionString: url,
     application_name: 'redo-one-migracao-leitura',
@@ -130,8 +133,23 @@ export async function lerLegado(
           order by ctid`,
       ),
     };
+    const eixosArranjo = `id, "especialidadeId", modalidades, subespecialidades, prioridades,
+      "modoClientes", clientes, "modoExames", exames, ordem, ativo`;
+    const distribuicao: LegadoDistribuicao = {
+      arranjosMedico: await ler(
+        `select ${eixosArranjo}, "medicoId", "clientesExclusivos" from medico_regras_distribuicao
+          order by "medicoId", ordem, "criadoEm"`,
+      ),
+      arranjosEquipe: await ler(
+        `select ${eixosArranjo}, "equipeId" from equipe_regras_distribuicao
+          order by "equipeId", ordem, "criadoEm"`,
+      ),
+      habilitados: (
+        await ler<{ id: string }>('select id from medicos where "distribuicaoAutomatica"')
+      ).map((m) => m.id),
+    };
     await cliente.query('COMMIT');
-    return { catalogo, medicos, escala };
+    return { catalogo, medicos, escala, distribuicao };
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;

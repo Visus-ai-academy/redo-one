@@ -1,0 +1,100 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { InMemoryAuditoria } from '../../../auditoria/testing';
+import { ArranjosEmMemoria, arranjoVazio, CadastrosEmMemoria } from '../../testing/fakes';
+import {
+  ArranjosInvalidosError,
+  EquipeNaoEncontradaError,
+  MedicoNaoEncontradoError,
+} from '../erros';
+import { ConsultarArranjos, SalvarArranjos } from './arranjos';
+
+const agora = new Date('2026-11-17T18:00:00Z');
+const ator = { tipo: 'usuario' as const, id: 'u1' };
+
+describe('arranjos', () => {
+  let repo: ArranjosEmMemoria;
+  let cadastros: CadastrosEmMemoria;
+  let auditoria: InMemoryAuditoria;
+  let consultar: ConsultarArranjos;
+  let salvar: SalvarArranjos;
+
+  beforeEach(() => {
+    repo = new ArranjosEmMemoria();
+    cadastros = new CadastrosEmMemoria();
+    cadastros.medicos.add('m1');
+    cadastros.equipes.add('e1');
+    auditoria = new InMemoryAuditoria();
+    consultar = new ConsultarArranjos(repo, cadastros);
+    salvar = new SalvarArranjos(repo, cadastros, auditoria, () => agora);
+  });
+
+  it('consulta os arranjos do médico com os nomes dos clientes e exames marcados', async () => {
+    cadastros.nomes.set('c1', 'CLINIMAGEM');
+    cadastros.nomes.set('x1', 'TC CRANIO');
+    const lista = [
+      arranjoVazio({
+        modoClientes: 'apenas',
+        clienteIds: ['c1'],
+        clientesExclusivosIds: ['c1'],
+        modoExames: 'exceto',
+        exameIds: ['x1'],
+      }),
+    ];
+    repo.porDono.set('medico:m1', lista);
+    expect(await consultar.executar({ tipo: 'medico', id: 'm1' })).toEqual({
+      arranjos: lista,
+      clientes: [{ id: 'c1', nome: 'CLINIMAGEM' }],
+      exames: [{ id: 'x1', nome: 'TC CRANIO' }],
+    });
+  });
+
+  it('médico ou equipe inexistente dá não encontrado', async () => {
+    await expect(consultar.executar({ tipo: 'medico', id: 'x' })).rejects.toThrow(
+      MedicoNaoEncontradoError,
+    );
+    await expect(salvar.executar(ator, { tipo: 'equipe', id: 'x' }, [])).rejects.toThrow(
+      EquipeNaoEncontradaError,
+    );
+  });
+
+  it('salva a lista e audita antes e depois', async () => {
+    const novos = [arranjoVazio({ especialidadeId: 'neuro', prioridadeIds: ['rotina'] })];
+    await salvar.executar(ator, { tipo: 'medico', id: 'm1' }, novos);
+    expect(repo.porDono.get('medico:m1')).toEqual(novos);
+    expect(auditoria.eventos).toEqual([
+      {
+        ator,
+        entidade: 'arranjos_medico',
+        entidadeId: 'm1',
+        acao: 'alterado',
+        antes: { arranjos: [] },
+        depois: { arranjos: novos },
+        em: agora,
+      },
+    ]);
+  });
+
+  it('na equipe, audita como arranjos_equipe', async () => {
+    await salvar.executar(ator, { tipo: 'equipe', id: 'e1' }, [arranjoVazio()]);
+    expect(auditoria.eventos[0]?.entidade).toBe('arranjos_equipe');
+  });
+
+  it('sem mudança, não grava nem audita (a ordem das listas não conta)', async () => {
+    repo.porDono.set('medico:m1', [arranjoVazio({ modalidadeIds: ['ct', 'mr'] })]);
+    await salvar.executar(ator, { tipo: 'medico', id: 'm1' }, [
+      arranjoVazio({ modalidadeIds: ['mr', 'ct'] }),
+    ]);
+    expect(repo.substituicoes).toBe(0);
+    expect(auditoria.eventos).toEqual([]);
+  });
+
+  it('recusa arranjo inválido sem gravar', async () => {
+    await expect(
+      salvar.executar(ator, { tipo: 'equipe', id: 'e1' }, [
+        arranjoVazio({ clientesExclusivosIds: ['c1'] }),
+      ]),
+    ).rejects.toThrow(ArranjosInvalidosError);
+    expect(repo.substituicoes).toBe(0);
+  });
+});

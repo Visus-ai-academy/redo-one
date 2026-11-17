@@ -6,7 +6,7 @@ import { CLOCK, type Clock, systemClock } from '../identidade/clock';
 import { ALIASES_CLIENTE_REPOSITORY } from './clientes/aliases-cliente.repository';
 import { AliasesClienteService } from './clientes/aliases-cliente.service';
 import { ClientesController } from './clientes/clientes.controller';
-import { CLIENTES_REPOSITORY } from './clientes/clientes.repository';
+import { CLIENTES_REPOSITORY, type ClientesRepository } from './clientes/clientes.repository';
 import { ClientesService } from './clientes/clientes.service';
 import { DrizzleClientesRepository } from './clientes/drizzle-clientes.repository';
 import { UNIDADES_CLIENTE_REPOSITORY } from './clientes/unidades-cliente.repository';
@@ -178,8 +178,13 @@ function dePara<D extends object>(
     dePara(SUFIXOS_CLIENTE, () => REGRA_SUFIXO, TABELA_SUFIXO),
     {
       provide: OpcoesService,
-      inject: [DATABASE, CONTRATADOS_REPOSITORY, EXAMES_REPOSITORY],
-      useFactory: (db: Database, contratados: ContratadosRepository, exames: ExamesRepository) =>
+      inject: [DATABASE, CONTRATADOS_REPOSITORY, EXAMES_REPOSITORY, CLIENTES_REPOSITORY],
+      useFactory: (
+        db: Database,
+        contratados: ContratadosRepository,
+        exames: ExamesRepository,
+        clientes: ClientesRepository,
+      ) =>
         new OpcoesService(
           {
             modalidades: new DrizzleListaRepository(db, LISTAS.modalidades),
@@ -190,6 +195,7 @@ function dePara<D extends object>(
           },
           contratados,
           exames,
+          clientes,
         ),
     },
   ],

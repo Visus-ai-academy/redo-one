@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { DadosSubespecialidade } from '../listas/lista.repository';
 import {
+  InMemoryClientesRepository,
   InMemoryContratadosRepository,
   InMemoryExamesRepository,
   InMemoryListaRepository,
@@ -41,6 +42,7 @@ describe('OpcoesService', () => {
       },
       contratados,
       new InMemoryExamesRepository(),
+      new InMemoryClientesRepository(contratados),
     );
     const opcoes = await service.listas();
 
@@ -80,11 +82,49 @@ describe('OpcoesService', () => {
       },
       new InMemoryContratadosRepository(),
       exames,
+      new InMemoryClientesRepository(new InMemoryContratadosRepository()),
     );
 
     const achados = await service.exames('tc');
 
     expect(achados).toHaveLength(20);
     expect(achados[0]).toEqual({ id: expect.any(String), nome: 'TC 00', modalidade: null });
+  });
+
+  it('busca até 20 clientes ativos pelo nome, com o nome fantasia', async () => {
+    const contratados = new InMemoryContratadosRepository();
+    const clientes = new InMemoryClientesRepository(contratados);
+    const cliente = (nome: string, ativo = true) => ({
+      nome,
+      chaveNormalizada: nome.toLowerCase(),
+      nomeFantasia: nome === 'CLINIMAGEM' ? 'Clinimagem Centro' : null,
+      razaoSocial: null,
+      tipoPessoa: null,
+      cnpj: null,
+      cpf: null,
+      contratadoId: null,
+      ativo,
+      ocultoDashboards: false,
+      observacoes: null,
+    });
+    await clientes.criar(cliente('CLINIMAGEM') as never);
+    await clientes.criar(cliente('CLINICA VELHA', false) as never);
+    const vazia = new InMemoryListaRepository();
+    const service = new OpcoesService(
+      {
+        modalidades: vazia,
+        especialidades: vazia,
+        subespecialidades: vazia as never,
+        categoriasExame: vazia,
+        prioridades: vazia,
+      },
+      contratados,
+      new InMemoryExamesRepository(),
+      clientes,
+    );
+
+    expect(await service.clientes('clin')).toEqual([
+      { id: expect.any(String), nome: 'CLINIMAGEM', nomeFantasia: 'Clinimagem Centro' },
+    ]);
   });
 });

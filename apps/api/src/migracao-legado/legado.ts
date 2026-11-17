@@ -224,3 +224,28 @@ export interface LegadoEscala {
     escopoEspecialidadeIds: string[];
   }[];
 }
+
+/** Um arranjo do dashboards-one (`medico_regras_distribuicao` ou `equipe_regras_distribuicao`). */
+export interface LegadoArranjo {
+  id: string;
+  especialidadeId: string | null;
+  /** Códigos (CT, MR, RX…). */
+  modalidades: string[];
+  /** Nomes; "(SEM SUBESPECIALIDADE)" é o geral. */
+  subespecialidades: string[];
+  /** Grafias da MobileMed (Rotina, Urgência, Internado…). */
+  prioridades: string[];
+  modoClientes: string;
+  clientes: string[];
+  modoExames: string;
+  exames: string[];
+  ordem: number;
+  ativo: boolean;
+}
+
+export interface LegadoDistribuicao {
+  arranjosMedico: (LegadoArranjo & { medicoId: string; clientesExclusivos: string[] })[];
+  arranjosEquipe: (LegadoArranjo & { equipeId: string })[];
+  /** Médicos com `distribuicaoAutomatica` (habilitados no robô). */
+  habilitados: string[];
+}

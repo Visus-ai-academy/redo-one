@@ -4064,6 +4064,40 @@
         ]
       }
     },
+    "/catalogo/opcoes/clientes": {
+      "get": {
+        "operationId": "OpcoesController_clientes",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome ou o código.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Até 20 clientes ativos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpcaoClienteDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "catalogo"
+        ]
+      }
+    },
     "/medicos": {
       "get": {
         "operationId": "MedicosController_listar",
@@ -6916,6 +6950,229 @@
         },
         "tags": [
           "ingestao"
+        ]
+      }
+    },
+    "/distribuicao/medicos/{medicoId}": {
+      "get": {
+        "operationId": "DistribuicaoMedicoController_obter",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DistribuicaoMedicoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/medicos/{medicoId}/arranjos": {
+      "put": {
+        "operationId": "DistribuicaoMedicoController_salvarArranjos",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalvarArranjosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/medicos/{medicoId}/robo": {
+      "put": {
+        "operationId": "DistribuicaoMedicoController_salvarRobo",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoboMedicoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/equipes/{equipeId}": {
+      "get": {
+        "operationId": "DistribuicaoEquipeController_obter",
+        "parameters": [
+          {
+            "name": "equipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArranjosDoDonoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/equipes/{equipeId}/arranjos": {
+      "put": {
+        "operationId": "DistribuicaoEquipeController_salvarArranjos",
+        "parameters": [
+          {
+            "name": "equipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalvarArranjosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/sugestao-alocacao": {
+      "get": {
+        "operationId": "SugestaoAlocacaoController_obter",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "frenteId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaSugestaoAlocacaoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
         ]
       }
     }
@@ -9793,6 +10050,27 @@
           "id",
           "nome",
           "modalidade"
+        ]
+      },
+      "OpcaoClienteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "nomeFantasia"
         ]
       },
       "MedicoResumoDto": {
@@ -13040,6 +13318,254 @@
           "travaRemocaoMinimo",
           "travaRemocaoFator",
           "retencaoLinhasBrutasDias"
+        ]
+      },
+      "ModoVinculo": {
+        "type": "string",
+        "enum": [
+          "todos",
+          "apenas",
+          "exceto"
+        ]
+      },
+      "ArranjoDto": {
+        "type": "object",
+        "properties": {
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Nula = todas."
+          },
+          "modalidadeIds": {
+            "description": "Modalidades; vazia = todas.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeIds": {
+            "description": "Segmentos; vazia e sem o geral = todos.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeGeral": {
+            "type": "boolean",
+            "description": "O recorte de segmento inclui o exame sem segmento (geral)."
+          },
+          "prioridadeIds": {
+            "description": "Prioridades do catálogo; vazia = todas.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "modoClientes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoVinculo"
+              }
+            ]
+          },
+          "clienteIds": {
+            "description": "Clientes, lidos conforme o modo.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "modoExames": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoVinculo"
+              }
+            ]
+          },
+          "exameIds": {
+            "description": "Exames, lidos conforme o modo.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "clientesExclusivosIds": {
+            "description": "Clínicas exclusivas (só em arranjo de médico).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "especialidadeId",
+          "modalidadeIds",
+          "subespecialidadeIds",
+          "subespecialidadeGeral",
+          "prioridadeIds",
+          "modoClientes",
+          "clienteIds",
+          "modoExames",
+          "exameIds",
+          "clientesExclusivosIds"
+        ]
+      },
+      "RotuloDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "DistribuicaoMedicoDto": {
+        "type": "object",
+        "properties": {
+          "arranjos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArranjoDto"
+            }
+          },
+          "clientes": {
+            "description": "Nomes dos clientes marcados.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RotuloDto"
+            }
+          },
+          "exames": {
+            "description": "Nomes dos exames marcados.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RotuloDto"
+            }
+          },
+          "habilitadoRobo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "arranjos",
+          "clientes",
+          "exames",
+          "habilitadoRobo"
+        ]
+      },
+      "SalvarArranjosDto": {
+        "type": "object",
+        "properties": {
+          "arranjos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArranjoDto"
+            }
+          }
+        },
+        "required": [
+          "arranjos"
+        ]
+      },
+      "RoboMedicoDto": {
+        "type": "object",
+        "properties": {
+          "habilitadoRobo": {
+            "type": "boolean",
+            "description": "O robô pode entregar exames a ele."
+          }
+        },
+        "required": [
+          "habilitadoRobo"
+        ]
+      },
+      "ArranjosDoDonoDto": {
+        "type": "object",
+        "properties": {
+          "arranjos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArranjoDto"
+            }
+          },
+          "clientes": {
+            "description": "Nomes dos clientes marcados.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RotuloDto"
+            }
+          },
+          "exames": {
+            "description": "Nomes dos exames marcados.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RotuloDto"
+            }
+          }
+        },
+        "required": [
+          "arranjos",
+          "clientes",
+          "exames"
+        ]
+      },
+      "SugestaoAlocacaoDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeGeral": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "prioridadeIds",
+          "subespecialidadeIds",
+          "subespecialidadeGeral"
+        ]
+      },
+      "RespostaSugestaoAlocacaoDto": {
+        "type": "object",
+        "properties": {
+          "sugestao": {
+            "nullable": true,
+            "description": "Nula quando nenhum arranjo do médico é da frente.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SugestaoAlocacaoDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "sugestao"
         ]
       }
     }

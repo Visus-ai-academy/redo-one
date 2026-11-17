@@ -14,6 +14,7 @@ import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
 import type { CatalogoMigrado } from './mapear-catalogo';
+import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
 
@@ -71,6 +72,7 @@ export async function gravarMigracao(
   { tabelas: c, removidos }: CatalogoMigrado,
   { tabelas: m }: MedicosMigrados,
   escala?: EscalaMigrada,
+  distribuicao?: DistribuicaoMigrada,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -150,7 +152,41 @@ export async function gravarMigracao(
     await upsert(tx, schema.equipesMembros, m.equipesMembros, ['equipeId', 'medicoId']);
 
     if (escala) await gravarEscala(tx, escala);
+    if (distribuicao) await gravarDistribuicao(tx, distribuicao);
   });
+}
+
+/**
+ * Distribuição. Para cada médico ou equipe que a carga traz com arranjo, a lista inteira é a do
+ * dashboards-one (os eixos caem junto em cascata); quem não tinha arranjo lá fica como está.
+ */
+async function gravarDistribuicao(tx: Transacao, { tabelas: d }: DistribuicaoMigrada) {
+  const medicos = [...new Set(d.arranjos.flatMap((a) => (a.medicoId ? [a.medicoId] : [])))];
+  const equipes = [...new Set(d.arranjos.flatMap((a) => (a.equipeId ? [a.equipeId] : [])))];
+  if (medicos.length)
+    await tx.delete(schema.arranjos).where(inArray(schema.arranjos.medicoId, medicos));
+  if (equipes.length)
+    await tx.delete(schema.arranjos).where(inArray(schema.arranjos.equipeId, equipes));
+  await upsert(tx, schema.arranjos, d.arranjos);
+  await upsert(tx, schema.arranjosModalidades, d.arranjosModalidades, [
+    'arranjoId',
+    'modalidadeId',
+  ]);
+  await upsert(tx, schema.arranjosSubespecialidades, d.arranjosSubespecialidades, [
+    'arranjoId',
+    'subespecialidadeId',
+  ]);
+  await upsert(tx, schema.arranjosPrioridades, d.arranjosPrioridades, [
+    'arranjoId',
+    'prioridadeId',
+  ]);
+  await upsert(tx, schema.arranjosClientes, d.arranjosClientes, ['arranjoId', 'clienteId']);
+  await upsert(tx, schema.arranjosExames, d.arranjosExames, ['arranjoId', 'exameId']);
+  await upsert(tx, schema.arranjosClientesExclusivos, d.arranjosClientesExclusivos, [
+    'arranjoId',
+    'clienteId',
+  ]);
+  await upsert(tx, schema.medicosDistribuicao, d.medicosDistribuicao, ['medicoId']);
 }
 
 /**

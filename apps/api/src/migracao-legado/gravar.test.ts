@@ -10,6 +10,7 @@ import * as schema from '../database/schema';
 import { gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
+import { mapearDistribuicao } from './mapear-distribuicao';
 import { type EscalaMigrada, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
 
@@ -211,7 +212,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
+      sql`truncate table arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
     );
   });
 
@@ -466,5 +467,46 @@ describe.skipIf(!url)('gravarMigracao', () => {
       sql`select turno_id::text turno, frente_id::text frente from usuarios_escopos_escala`,
     );
     expect(linhas.rows).toEqual([{ turno: turnoId, frente: null }]);
+  });
+
+  it('grava os arranjos e o robô; rodar de novo troca a lista do médico pela do dashboards-one', async () => {
+    const arranjo = {
+      especialidadeId: 'es-neuro',
+      modalidades: ['CT'],
+      subespecialidades: [],
+      prioridades: [],
+      modoClientes: 'todos',
+      clientes: [],
+      modoExames: 'todos',
+      exames: [],
+      ordem: 0,
+      ativo: true,
+    };
+    const distribuicao = mapearDistribuicao(
+      {
+        arranjosMedico: [{ ...arranjo, id: 'r1', medicoId: 'm1', clientesExclusivos: [] }],
+        arranjosEquipe: [{ ...arranjo, id: 'q1', equipeId: 'e1' }],
+        habilitados: ['m1'],
+      },
+      { legadoCatalogo, catalogo: catalogo.tabelas, medicos: medicos.tabelas },
+    );
+    const contar = async () => {
+      const r = await db.execute<{ t: string; n: number }>(sql`
+        select 'arranjos' t, count(*)::int n from arranjos union all
+        select 'modalidades', count(*)::int from arranjos_modalidades union all
+        select 'habilitados', count(*)::int from medicos_distribuicao where habilitado_robo`);
+      return Object.fromEntries(r.rows.map((l) => [l.t, l.n]));
+    };
+
+    await gravarMigracao(db, catalogo, medicos, undefined, distribuicao);
+    const primeira = await contar();
+    // Um arranjo criado no redo-one para o mesmo médico: a carga devolve a lista de lá.
+    await db.execute(
+      sql`insert into arranjos (medico_id) select medico_id from arranjos where medico_id is not null limit 1`,
+    );
+    await gravarMigracao(db, catalogo, medicos, undefined, distribuicao);
+
+    expect(await contar()).toEqual(primeira);
+    expect(primeira).toEqual({ arranjos: 2, modalidades: 2, habilitados: 1 });
   });
 });

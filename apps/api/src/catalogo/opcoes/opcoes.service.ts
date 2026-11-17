@@ -1,3 +1,4 @@
+import type { ClientesRepository } from '../clientes/clientes.repository';
 import type { ContratadosRepository } from '../contratados/contratados.repository';
 import type { ExamesRepository } from '../exames/exames.repository';
 import type { DadosSubespecialidade, ListaRepository } from '../listas/lista.repository';
@@ -5,6 +6,7 @@ import type { DadosSubespecialidade, ListaRepository } from '../listas/lista.rep
 /** As listas do catálogo são curtas (dezenas de itens); o teto só protege de surpresa. */
 const TETO_LISTA = 500;
 const TETO_EXAMES = 20;
+const TETO_CLIENTES = 20;
 
 export interface OpcaoLista {
   id: string;
@@ -26,6 +28,7 @@ export class OpcoesService {
     private readonly listasDoCatalogo: ListasDoCatalogo,
     private readonly contratados: Pick<ContratadosRepository, 'listar'>,
     private readonly examesRepo: Pick<ExamesRepository, 'listar'>,
+    private readonly clientesRepo: Pick<ClientesRepository, 'listar'>,
   ) {}
 
   async listas() {
@@ -68,5 +71,16 @@ export class OpcoesService {
       porPagina: TETO_EXAMES,
     });
     return itens.map((e) => ({ id: e.id, nome: e.nome, modalidade: e.modalidade?.nome ?? null }));
+  }
+
+  /** Clientes ativos pela busca (nome, nome fantasia, razão social ou CNPJ): ~200 no total. */
+  async clientes(busca: string) {
+    const { itens } = await this.clientesRepo.listar({
+      busca: busca || undefined,
+      ativo: true,
+      pagina: 1,
+      porPagina: TETO_CLIENTES,
+    });
+    return itens.map((c) => ({ id: c.id, nome: c.nome, nomeFantasia: c.nomeFantasia }));
   }
 }

@@ -196,6 +196,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Mudar os dados de pagamento do médico.',
         sensivel: true,
       },
+      // O arranjo decide o que o robô entrega a cada médico e equipe.
+      {
+        chave: 'medicos.distribuicao.editar',
+        rotulo: 'Editar distribuição',
+        descricao:
+          'Mudar os arranjos (o que o médico ou a equipe lauda), as clínicas exclusivas e quem o robô pode usar.',
+        sensivel: true,
+      },
     ],
   },
   {

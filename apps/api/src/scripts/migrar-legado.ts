@@ -1,4 +1,4 @@
-// Migra o catálogo, os médicos e a escala do banco do dashboards-one para o banco do redo-one
+// Migra o catálogo, os médicos, a escala e os arranjos da distribuição do banco do dashboards-one para o banco do redo-one
 // (DATABASE_URL). O banco do dashboards-one é aberto SÓ PARA LEITURA; do redo-one, sem --gravar, só
 // se leem os usuários (a escala casa autor, revisor e gestora com eles). Sem --gravar, só mostra o
 // que faria. Uso:
@@ -17,6 +17,7 @@ import type { Aviso } from '../migracao-legado/comum';
 import { gravarMigracao } from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
+import { mapearDistribuicao } from '../migracao-legado/mapear-distribuicao';
 import { mapearEscala } from '../migracao-legado/mapear-escala';
 import { mapearMedicos } from '../migracao-legado/mapear-medicos';
 
@@ -42,6 +43,11 @@ async function migrarLegado() {
   const legado = await lerLegado(url);
   const catalogo = mapearCatalogo(legado.catalogo);
   const medicos = mapearMedicos(legado.medicos);
+  const distribuicao = mapearDistribuicao(legado.distribuicao, {
+    legadoCatalogo: legado.catalogo,
+    catalogo: catalogo.tabelas,
+    medicos: medicos.tabelas,
+  });
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   try {
@@ -59,6 +65,7 @@ async function migrarLegado() {
       ...catalogo.tabelas,
       ...medicos.tabelas,
       ...escala.tabelas,
+      ...distribuicao.tabelas,
     })) {
       console.log(`  ${tabela.padEnd(34)} ${String(linhas.length).padStart(5)}`);
     }
@@ -66,7 +73,16 @@ async function migrarLegado() {
     for (const [chave, n] of Object.entries(escala.resumo).sort()) {
       console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);
     }
-    const avisos = [...catalogo.avisos, ...medicos.avisos, ...escala.avisos];
+    console.log('\nDistribuição: o que a carga mudou ou deixou de fora.');
+    for (const [chave, n] of Object.entries(distribuicao.resumo).sort()) {
+      console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);
+    }
+    const avisos = [
+      ...catalogo.avisos,
+      ...medicos.avisos,
+      ...escala.avisos,
+      ...distribuicao.avisos,
+    ];
     console.log(`\nAvisos (${avisos.length}): o que não migrou como estava.`);
     mostrarAvisos(avisos);
 
@@ -74,7 +90,7 @@ async function migrarLegado() {
       console.log('\nNada gravado. Rode com --gravar para gravar no banco do redo-one.');
       return;
     }
-    await gravarMigracao(db, catalogo, medicos, escala);
+    await gravarMigracao(db, catalogo, medicos, escala, distribuicao);
     console.log('\nGravado no banco do redo-one.');
   } finally {
     await app.close();

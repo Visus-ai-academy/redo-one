@@ -33,6 +33,10 @@ export class OpcaoExameDto extends OpcaoDto {
   modalidade!: string | null;
 }
 
+export class OpcaoClienteDto extends OpcaoDto {
+  @ApiProperty({ type: String, nullable: true }) nomeFantasia!: string | null;
+}
+
 export class BuscarExamesDto {
   @ApiPropertyOptional({ description: 'Parte do nome ou o código.' })
   @Transform(aparar)
@@ -61,5 +65,11 @@ export class OpcoesController {
   @ApiOkResponse({ type: [OpcaoExameDto], description: 'Até 20 exames ativos.' })
   exames(@Query() query: BuscarExamesDto): Promise<OpcaoExameDto[]> {
     return this.service.exames(query.busca ?? '');
+  }
+
+  @Get('clientes')
+  @ApiOkResponse({ type: [OpcaoClienteDto], description: 'Até 20 clientes ativos.' })
+  clientes(@Query() query: BuscarExamesDto): Promise<OpcaoClienteDto[]> {
+    return this.service.clientes(query.busca ?? '');
   }
 }
