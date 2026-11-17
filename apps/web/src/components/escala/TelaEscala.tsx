@@ -441,11 +441,17 @@ function Conteudo({
       frentes: frentesVistas,
       por: filtros.agrupar,
     });
-    // Buscando um médico, só as frentes (ou turnos) em que ele aparece; sem busca, a vazia fica
-    // para alocar.
-    return filtros.busca
-      ? { ...montada, calendarios: montada.calendarios.filter((c) => c.plantoes > 0) }
-      : montada;
+    // Só as frentes (ou turnos) com alguém na semana. A escolhida no filtro aparece mesmo vazia,
+    // para usar o "+" dela, salvo buscando um médico.
+    const escolhidos = new Set(
+      (filtros.agrupar === 'frente' ? filtros.frenteIds : filtros.turnoIds) ?? [],
+    );
+    return {
+      ...montada,
+      calendarios: montada.calendarios.filter(
+        (c) => c.plantoes > 0 || (!filtros.busca && escolhidos.has(c.id)),
+      ),
+    };
   }, [
     ocorrencias,
     turnos,
@@ -548,7 +554,7 @@ function Conteudo({
           <p className="bg-card text-muted-foreground rounded-lg border p-4">
             {filtros.busca
               ? `Ninguém com “${filtros.busca}” nesta semana.`
-              : 'Nenhum turno com frente para mostrar. Confira os filtros ou ligue frentes aos turnos em Configurações › Escala médica.'}
+              : `Ninguém escalado nesta semana.${aoAlocar ? ' Para escalar, use “Alocar médico”.' : ''}`}
           </p>
         ) : (
           <>

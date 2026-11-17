@@ -196,9 +196,23 @@ describe('TelaEscala', () => {
     expect(screen.getByText('Ninguém com “zeca” nesta semana.')).toBeInTheDocument();
   });
 
-  it('sem busca, frente vazia continua aparecendo (é nela que se aloca)', async () => {
+  it('frente sem ninguém na semana não aparece', async () => {
     await montar();
+    expect(screen.getByRole('table', { name: 'TC Neuro' })).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'RM Geral' })).not.toBeInTheDocument();
+  });
+
+  it('frente escolhida no filtro aparece mesmo vazia (para usar o "+")', async () => {
+    await montar({
+      filtros: { modo: 'semana', agrupar: 'frente', data: '2026-11-18', frenteIds: ['f-rm'] },
+    });
     expect(screen.getByRole('table', { name: 'RM Geral' })).toBeInTheDocument();
+  });
+
+  it('semana sem ninguém escalado avisa no lugar dos calendários', async () => {
+    await montar({ dados: { ocorrencias: [], conflitos: [] } });
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText(/Ninguém escalado nesta semana/)).toBeInTheDocument();
   });
 
   it('avisos de conflito depois de salvar, sem bloquear', async () => {
