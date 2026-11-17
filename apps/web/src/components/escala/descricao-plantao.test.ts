@@ -63,7 +63,7 @@ describe('descreverPlantao', () => {
       },
     );
     expect(linha(itens, 'Prioridades')).toBe('URGÊNCIA');
-    expect(linha(itens, 'Subespecialidades')).toBe('CRÂNIO, 1 outra e Geral');
+    expect(linha(itens, 'Segmentos')).toBe('CRÂNIO, 1 outro e Geral');
     expect(linha(itens, 'Recortes')).toBeUndefined();
     const semCatalogo = descreverPlantao(ocorrencia({ prioridadeIds: ['p1', 'p2'] }), {
       ...vazio,

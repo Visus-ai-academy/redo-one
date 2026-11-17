@@ -307,11 +307,11 @@ function FormArranjo({
                 return (
                   (subs.length > 0 || field.state.value.length > 0) && (
                     <field.SelecaoMultiplaField
-                      label="Subespecialidades"
+                      label="Segmentos"
                       placeholder="Todas"
                       opcoes={[
                         ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
-                        { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
+                        { valor: GERAL, rotulo: 'Geral (sem segmento)' },
                       ]}
                     />
                   )

@@ -167,10 +167,10 @@ export function resumoDoArranjo(
   });
   if (a.subespecialidadeIds.length || a.subespecialidadeGeral) {
     linhas.push({
-      rotulo: 'Subespecialidades',
+      rotulo: 'Segmentos',
       valor: listar([
         ...nomesNaOrdemDe(a.subespecialidadeIds, catalogo.subespecialidades, 'Inativa'),
-        ...(a.subespecialidadeGeral ? ['Geral (sem subespecialidade)'] : []),
+        ...(a.subespecialidadeGeral ? ['Geral (sem segmento)'] : []),
       ]),
     });
   }

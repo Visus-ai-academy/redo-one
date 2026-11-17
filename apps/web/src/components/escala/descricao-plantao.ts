@@ -28,12 +28,13 @@ function nomes(
   ids: readonly string[],
   catalogo: ReadonlyMap<string, string>,
   [um, varios]: [string, string],
+  [outra, outras]: [string, string] = ['outra', 'outras'],
 ) {
   const conhecidos = ids.flatMap((id) => catalogo.get(id) ?? []);
   const outros = ids.length - conhecidos.length;
   if (outros === 0) return conhecidos;
   if (conhecidos.length === 0) return [`${outros} ${outros === 1 ? um : varios}`];
-  return [...conhecidos, `${outros} ${outros === 1 ? 'outra' : 'outras'}`];
+  return [...conhecidos, `${outros} ${outros === 1 ? outra : outras}`];
 }
 
 function vigencia(o: OcorrenciaDto) {
@@ -66,17 +67,19 @@ export function descreverPlantao(o: OcorrenciaDto, contexto: ContextoDescricao):
 
   const prioridades = nomes(o.prioridadeIds, contexto.prioridades, ['prioridade', 'prioridades']);
   const subs = [
-    ...nomes(o.subespecialidadeIds, contexto.subespecialidades, [
-      'subespecialidade',
-      'subespecialidades',
-    ]),
+    ...nomes(
+      o.subespecialidadeIds,
+      contexto.subespecialidades,
+      ['segmento', 'segmentos'],
+      ['outro', 'outros'],
+    ),
     ...(o.subespecialidadeGeral ? ['Geral'] : []),
   ];
   if (prioridades.length === 0 && subs.length === 0) {
     itens.push({ rotulo: 'Recortes', valor: 'Sem restrição' });
   } else {
     if (prioridades.length > 0) itens.push({ rotulo: 'Prioridades', valor: emLista(prioridades) });
-    if (subs.length > 0) itens.push({ rotulo: 'Subespecialidades', valor: emLista(subs) });
+    if (subs.length > 0) itens.push({ rotulo: 'Segmentos', valor: emLista(subs) });
   }
 
   if (o.coberturaDe)

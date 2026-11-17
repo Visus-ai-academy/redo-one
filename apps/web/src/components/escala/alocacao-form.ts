@@ -6,7 +6,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { horarioValido, normalizarHorario } from '../escala-config/horario';
 import { diaDaSemana } from './calendario';
 
-/** Marca "Geral (sem subespecialidade)" entre as subespecialidades do formulário. */
+/** Marca "Geral (sem segmento)" entre as subespecialidades do formulário. */
 export const GERAL = 'geral';
 
 export const TODOS_OS_DIAS = ['1', '2', '3', '4', '5', '6', '0'];

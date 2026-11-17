@@ -395,10 +395,10 @@ export function PainelAlocacao({
                     // Só com frente de especialidade que tem subespecialidades (ou algo já marcado).
                     (subs.length > 0 || field.state.value.length > 0) && (
                       <CaixasField
-                        label="Subespecialidades"
+                        label="Segmentos"
                         opcoes={[
                           ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
-                          { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
+                          { valor: GERAL, rotulo: 'Geral (sem segmento)' },
                         ]}
                         description={ajuda('subespecialidadeIds')}
                       />

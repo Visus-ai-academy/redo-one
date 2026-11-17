@@ -182,7 +182,7 @@ describe('resumoDoArranjo', () => {
       titulo: 'NEURO',
       linhas: [
         { rotulo: 'Modalidades', valor: 'TC, RM' },
-        { rotulo: 'Subespecialidades', valor: 'Cabeça, Geral (sem subespecialidade)' },
+        { rotulo: 'Segmentos', valor: 'Cabeça, Geral (sem segmento)' },
         { rotulo: 'Prioridades', valor: 'URGÊNCIA' },
         { rotulo: 'Clientes', valor: 'Só Clínica Alfa, Hospital Beta' },
         { rotulo: 'Exames', valor: 'Todos, exceto TC de crânio' },
@@ -219,7 +219,7 @@ describe('resumoDoArranjo', () => {
     );
     expect(r.linhas).toEqual([
       { rotulo: 'Modalidades', valor: 'TC, RM, Inativa' },
-      { rotulo: 'Subespecialidades', valor: 'Cabeça, Colunas' },
+      { rotulo: 'Segmentos', valor: 'Cabeça, Colunas' },
       { rotulo: 'Prioridades', valor: 'ROTINA, URGÊNCIA' },
     ]);
   });
