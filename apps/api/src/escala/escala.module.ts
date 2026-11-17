@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AlocacoesModule } from './alocacoes/alocacoes.module';
 import { AusenciasModule } from './ausencias/ausencias.module';
 import { CadastrosEscalaModule } from './cadastros/cadastros-escala.module';
+import { ClassificacoesEscalaModule } from './classificacoes-escala/classificacoes-escala.module';
 import { EscalaFixaModule } from './escala-fixa/escala-fixa.module';
 import { DrizzleEscopoEscalaRepository } from './escopo/drizzle-escopo.repository';
 import { ESCOPO_ESCALA_REPOSITORY } from './escopo/escopo';
@@ -17,6 +18,7 @@ import { OcorrenciasModule } from './ocorrencias/ocorrencias.module';
     AlocacoesModule,
     AusenciasModule,
     CadastrosEscalaModule,
+    ClassificacoesEscalaModule,
     EscalaFixaModule,
     EscopoApiModule,
     HistoricoModule,

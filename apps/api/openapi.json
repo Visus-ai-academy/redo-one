@@ -6143,6 +6143,27 @@
         ]
       }
     },
+    "/escala/classificacoes": {
+      "get": {
+        "operationId": "ClassificacoesEscalaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Listas inteiras, inativas inclusive, por ordem e nome.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassificacoesEscalaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "escala"
+        ]
+      }
+    },
     "/escala/medicos/{medicoId}/escala-fixa": {
       "get": {
         "operationId": "EscalaFixaController_obter",
@@ -11978,6 +11999,75 @@
           "gravidade",
           "soGestor",
           "contaComoFalta"
+        ]
+      },
+      "PrioridadeEscalaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "ativo"
+        ]
+      },
+      "SubespecialidadeEscalaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "especialidadeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "ativo",
+          "especialidadeIds"
+        ]
+      },
+      "ClassificacoesEscalaDto": {
+        "type": "object",
+        "properties": {
+          "prioridades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrioridadeEscalaDto"
+            }
+          },
+          "subespecialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubespecialidadeEscalaDto"
+            }
+          }
+        },
+        "required": [
+          "prioridades",
+          "subespecialidades"
         ]
       },
       "CelulaEscalaFixaDto": {

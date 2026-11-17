@@ -5,7 +5,8 @@ import { subespecialidades, subespecialidadesEspecialidades } from '../../databa
 import { DrizzleListaRepository } from '../listas/drizzle-lista.repository';
 import type { DadosSubespecialidade } from '../listas/lista.repository';
 
-const especialidadeIds = sql<string[]>`coalesce((
+/** As especialidades da subespecialidade, em lista (também lida pela escala). */
+export const especialidadeIds = sql<string[]>`coalesce((
   select array_agg(${subespecialidadesEspecialidades.especialidadeId}::text order by ${subespecialidadesEspecialidades.especialidadeId})
   from ${subespecialidadesEspecialidades}
   where ${subespecialidadesEspecialidades.subespecialidadeId} = ${subespecialidades.id}
