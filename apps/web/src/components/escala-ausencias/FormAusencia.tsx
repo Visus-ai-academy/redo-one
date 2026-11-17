@@ -14,6 +14,8 @@ import { PainelLateral } from '../painel/PainelLateral';
 import { CampoDiasSemana, CampoMedicos } from './campos';
 
 type Opcao = { valor: string; rotulo: string };
+/** Tipo e turno levam a cor (a bolinha antes do nome). */
+type OpcaoComCor = Opcao & { cor?: string | null };
 
 const FALHA_AO_SALVAR = 'Não foi possível salvar agora. Confira sua conexão e tente de novo.';
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -52,10 +54,10 @@ export type FormAusenciaProps = {
   /** Aviso no topo do formulário (ex.: o médico pedido pela Escala não existe mais). */
   aviso?: string;
   /** Tipos ativos. */
-  tipos: Opcao[];
+  tipos: OpcaoComCor[];
   /** Com `grupo` (especialidades e modalidades) e `cor`: `opcoesDeFrentes`. */
   frentes: OpcaoMarcar[];
-  turnos: Opcao[];
+  turnos: OpcaoComCor[];
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
   /** Na edição, `medicoIds` traz só o médico da ausência. */
   onSalvar: (dados: CriarAusenciasDto) => Promise<void>;
@@ -78,7 +80,7 @@ export function FormAusencia({
   // Ausência com tipo hoje inativo: o tipo dela continua na lista para não sumir da edição.
   const opcoesTipo =
     ausencia && !tipos.some((t) => t.valor === ausencia.tipo.id)
-      ? [...tipos, { valor: ausencia.tipo.id, rotulo: ausencia.tipo.nome }]
+      ? [...tipos, { valor: ausencia.tipo.id, rotulo: ausencia.tipo.nome, cor: ausencia.tipo.cor }]
       : tipos;
 
   // Sem `ausencias.observacoes.ver` a API manda o texto nulo: o campo some, o nulo volta como veio

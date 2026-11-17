@@ -287,7 +287,7 @@ function Ausencias() {
             onValueChange={(valor) => filtrar({ tipoId: valor || undefined })}
             opcoes={[
               { valor: '', rotulo: 'Todos os tipos' },
-              ...tipos.itens.map((t) => ({ valor: t.id, rotulo: t.nome })),
+              ...tipos.itens.map((t) => ({ valor: t.id, rotulo: t.nome, cor: t.cor })),
             ]}
             className="w-auto min-w-[160px] flex-[1_1_auto] xl:flex-[0_0_auto]"
           />
@@ -380,9 +380,13 @@ function useOpcoesDoFormulario() {
   const { data: frentes } = useSuspenseQuery(frentesControllerListarQueryOptions(TODOS));
   const { data: turnos } = useSuspenseQuery(turnosControllerListarQueryOptions(TODOS));
   return {
-    tipos: tipos.itens.filter((t) => t.ativo).map((t) => ({ valor: t.id, rotulo: t.nome })),
+    tipos: tipos.itens
+      .filter((t) => t.ativo)
+      .map((t) => ({ valor: t.id, rotulo: t.nome, cor: t.cor })),
     frentes: opcoesDeFrentes(frentes.itens.filter((f) => f.ativo)),
-    turnos: turnos.itens.filter((t) => t.ativo).map((t) => ({ valor: t.id, rotulo: t.nome })),
+    turnos: turnos.itens
+      .filter((t) => t.ativo)
+      .map((t) => ({ valor: t.id, rotulo: t.nome, cor: t.cor })),
   };
 }
 

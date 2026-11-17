@@ -11,8 +11,8 @@ const bruno = { valor: 'm-bruno', rotulo: 'Bruno Alves' };
 
 const OPCOES = {
   tipos: [
-    { valor: 't-ferias', rotulo: 'Férias' },
-    { valor: 't-congresso', rotulo: 'Congresso' },
+    { valor: 't-ferias', rotulo: 'Férias', cor: '#5677B8' },
+    { valor: 't-congresso', rotulo: 'Congresso', cor: null },
   ],
   frentes: [
     { valor: 'f-neuro', rotulo: 'NEURO' },
@@ -106,7 +106,10 @@ describe('FormAusencia', () => {
       }),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('combobox', { name: 'Tipo' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'Férias' }));
+    const ferias = await screen.findByRole('option', { name: 'Férias' });
+    // Cada tipo com a bolinha da cor dele.
+    expect(ferias.querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#5677B8' });
+    await userEvent.click(ferias);
     await userEvent.click(screen.getByRole('button', { name: 'Lançar ausência' }));
 
     expect(onSalvar).toHaveBeenCalledWith({
