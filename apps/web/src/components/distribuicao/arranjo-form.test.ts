@@ -201,6 +201,29 @@ describe('resumoDoArranjo', () => {
     expect(r.linhas).toContainEqual({ rotulo: 'Clientes', valor: 'Só A, B, C e mais 2' });
   });
 
+  it('modalidades, subespecialidades e prioridades na ordem do catálogo, não na dos ids', () => {
+    const r = resumoDoArranjo(
+      arranjo({
+        modalidadeIds: ['m-velha', 'm-rm', 'm-tc'],
+        subespecialidadeIds: ['s-col', 's-cab'],
+        prioridadeIds: ['p-urg', 'p-rot'],
+      }),
+      {
+        ...CATALOGO,
+        subespecialidades: [
+          { id: 's-cab', nome: 'Cabeça' },
+          { id: 's-col', nome: 'Colunas' },
+        ],
+      },
+      NOMES,
+    );
+    expect(r.linhas).toEqual([
+      { rotulo: 'Modalidades', valor: 'TC, RM, Inativa' },
+      { rotulo: 'Subespecialidades', valor: 'Cabeça, Colunas' },
+      { rotulo: 'Prioridades', valor: 'ROTINA, URGÊNCIA' },
+    ]);
+  });
+
   it('item que saiu do catálogo aparece como removido', () => {
     const r = resumoDoArranjo(arranjo({ modalidadeIds: ['m-velha'] }), CATALOGO, NOMES);
     expect(r.linhas[0]).toEqual({ rotulo: 'Modalidades', valor: 'Inativa' });

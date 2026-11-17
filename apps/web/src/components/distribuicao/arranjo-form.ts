@@ -142,6 +142,12 @@ function listar(nomes: string[]) {
 const nomesDe = (ids: string[], lista: RotuloDto[], ausente: string) =>
   ids.map((id) => lista.find((item) => item.id === id)?.nome ?? ausente);
 
+/** Do catálogo: na ordem dele (a mesma do formulário), com os que saíram no fim. */
+const nomesNaOrdemDe = (ids: string[], catalogo: RotuloDto[], ausente: string) => [
+  ...catalogo.filter((item) => ids.includes(item.id)).map((item) => item.nome),
+  ...ids.filter((id) => !catalogo.some((item) => item.id === id)).map(() => ausente),
+];
+
 function vinculo(modoAtual: ModoVinculoKey, nomes: string[]) {
   return modoAtual === 'apenas' ? `Só ${listar(nomes)}` : `Todos, exceto ${listar(nomes)}`;
 }
@@ -156,14 +162,14 @@ export function resumoDoArranjo(
   linhas.push({
     rotulo: 'Modalidades',
     valor: a.modalidadeIds.length
-      ? listar(nomesDe(a.modalidadeIds, catalogo.modalidades, 'Inativa'))
+      ? listar(nomesNaOrdemDe(a.modalidadeIds, catalogo.modalidades, 'Inativa'))
       : 'Todas',
   });
   if (a.subespecialidadeIds.length || a.subespecialidadeGeral) {
     linhas.push({
       rotulo: 'Subespecialidades',
       valor: listar([
-        ...nomesDe(a.subespecialidadeIds, catalogo.subespecialidades, 'Inativa'),
+        ...nomesNaOrdemDe(a.subespecialidadeIds, catalogo.subespecialidades, 'Inativa'),
         ...(a.subespecialidadeGeral ? ['Geral (sem subespecialidade)'] : []),
       ]),
     });
@@ -171,7 +177,7 @@ export function resumoDoArranjo(
   linhas.push({
     rotulo: 'Prioridades',
     valor: a.prioridadeIds.length
-      ? listar(nomesDe(a.prioridadeIds, catalogo.prioridades, 'Inativa'))
+      ? listar(nomesNaOrdemDe(a.prioridadeIds, catalogo.prioridades, 'Inativa'))
       : 'Todas',
   });
   if (a.modoClientes !== 'todos') {
