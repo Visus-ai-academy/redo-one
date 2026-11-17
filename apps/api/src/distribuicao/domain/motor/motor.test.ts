@@ -708,5 +708,244 @@ describe('o que o robô não distribui', () => {
   });
 });
 
-// Usado nos casos de mistura e adiados (próximo bloco).
-void [CP, CT, MR];
+describe('proporção por modalidade e adiados', () => {
+  const MI_60_40 = new RegrasPorFrente([
+    frenteEsp(MI, {
+      divisao: {
+        metodo: 'proporcao',
+        proporcoes: [
+          { modalidadeId: MR, percentual: 60 },
+          { modalidadeId: CT, percentual: 40 },
+        ],
+      },
+    }),
+  ]);
+  const ex = (id: string, modalidadeId: string, restanteMin: number, p: Partial<ExameMotor> = {}) =>
+    exame({ id, especialidadeId: MI, modalidadeId, restanteMin, entradaEm: agora, ...p });
+  const um = (capacidade: number) => [medico('A', { capacidade })];
+  const recebidos = (r: Resultado) => ids(r).sort();
+
+  it('folga do atrasado: 100 ignora a proporção, 20 mantém uma margem, 0 segue o 60/40', () => {
+    const fila = [
+      ...Array.from({ length: 5 }, (_, i) => ex(`mrAtr${i}`, MR, -60 + i)),
+      ...Array.from({ length: 3 }, (_, i) => ex(`ctLongo${i}`, CT, 2000 + i)),
+    ];
+    const r = (folgaAtrasadoPct: number) =>
+      recebidos(
+        rodar({
+          exames: fila,
+          medicos: um(5),
+          regras: MI_60_40,
+          config: { ...CONFIG, folgaAtrasadoPct },
+        }),
+      );
+    expect(r(100)).toEqual(['mrAtr0', 'mrAtr1', 'mrAtr2', 'mrAtr3', 'mrAtr4']);
+    expect(r(20)).toEqual(['ctLongo0', 'mrAtr0', 'mrAtr1', 'mrAtr2', 'mrAtr3']);
+    expect(r(0)).toEqual(['ctLongo0', 'ctLongo1', 'mrAtr0', 'mrAtr1', 'mrAtr2']);
+  });
+
+  it('a vaga que a TC reabre é do RM adiado, não do RM de prazo longo que vem atrás', () => {
+    const fila = [
+      ex('mr60', MR, 60),
+      ex('mr61', MR, 61),
+      ex('mr62', MR, 62),
+      ex('ct2000', CT, 2000),
+      ex('mr2001', MR, 2001),
+    ];
+    const r = rodar({
+      exames: fila,
+      medicos: um(4),
+      regras: MI_60_40,
+      config: { ...CONFIG, folgaAtrasadoPct: 100 },
+    });
+    expect(ids(r)).toContain('mr62');
+    expect(ids(r)).toContain('ct2000');
+    expect(ids(r)).not.toContain('mr2001');
+    expect(r.trilha.adiados).toBeGreaterThan(0);
+  });
+
+  it('se só chegou RM, a proporção cede e RM continua indo', () => {
+    const r = rodar({
+      exames: Array.from({ length: 6 }, (_, i) => ex(`mr${i}`, MR, 600)),
+      medicos: um(6),
+      regras: MI_60_40,
+    });
+    expect(r.designacoes).toHaveLength(6);
+    expect(r.trilha.cederam).toBeGreaterThan(0);
+  });
+});
+
+describe('mistura entre segmentos (a do neurologista)', () => {
+  const ANGIO = 'seg-angio';
+  const CRANIO = 'seg-cranio';
+  const mistura = [
+    { especialidadeId: null, subespecialidadeId: COLUNAS },
+    { especialidadeId: NEURO, subespecialidadeId: ANGIO },
+    { especialidadeId: NEURO, subespecialidadeId: CRANIO },
+    { especialidadeId: NEURO, subespecialidadeId: null },
+    { especialidadeId: MSK, subespecialidadeId: null },
+  ];
+  const proporcao = (pct: { MR: number; CT: number }) => ({
+    metodo: 'proporcao' as const,
+    proporcoes: [
+      { modalidadeId: MR, percentual: pct.MR },
+      { modalidadeId: CT, percentual: pct.CT },
+    ],
+  });
+  const regrasCom = (neuro: Partial<RegrasFrente> = {}, msk: Partial<RegrasFrente> = {}) =>
+    new RegrasPorFrente([frenteEsp(NEURO, { mistura, ...neuro }), frenteEsp(MSK, msk)]);
+  let n = 0;
+  const SEG = { col: COLUNAS, ang: ANGIO, cra: CRANIO, ger: null } as const;
+  const ex = (tipo: keyof typeof SEG, modalidadeId = MR, p: Partial<ExameMotor> = {}) => {
+    n++;
+    return exame({
+      id: `${tipo}${n}`,
+      especialidadeId: tipo === 'col' ? MSK : NEURO,
+      subespecialidadeId: SEG[tipo],
+      modalidadeId,
+      restanteMin: 60 + n,
+      entradaEm: agora,
+      ...p,
+    });
+  };
+  const varios2 = (k: number, tipo: keyof typeof SEG, p: Partial<ExameMotor> = {}) =>
+    Array.from({ length: k }, () => ex(tipo, MR, p));
+  const med = (
+    id: string,
+    faz: (e: string) => boolean,
+    capacidade: number,
+    p: Partial<MedicoDisponivel> = {},
+  ) => medico(id, { elegivelPara: faz, capacidade, produtividade: capacidade, ...p });
+  const conta = (r: Resultado, m: string, prefixo: string) =>
+    de(r, m).filter((d) => d.exameId.startsWith(prefixo)).length;
+  const frentes = (r: Resultado, m: string) =>
+    ['col', 'ang', 'cra', 'ger'].map((t) => conta(r, m, t));
+
+  it('neurologistas ficam meio a meio; a médica de MSK, sem crânio para misturar, segue na coluna', () => {
+    const fila = [...varios2(20, 'col'), ...varios2(20, 'cra')];
+    const ehCol = (id: string) => id.startsWith('col');
+    const r = rodar({
+      exames: fila,
+      regras: regrasCom(),
+      medicos: [med('A', () => true, 10), med('B', () => true, 10), med('MSK', ehCol, 10)],
+    });
+    expect([conta(r, 'A', 'col'), conta(r, 'A', 'cra')]).toEqual([5, 5]);
+    expect([conta(r, 'B', 'col'), conta(r, 'B', 'cra')]).toEqual([5, 5]);
+    expect(conta(r, 'MSK', 'col')).toBe(10);
+  });
+
+  it('a coluna do neurologista segue a regra da frente dona da mistura (NEURO 50/50)', () => {
+    const fila = [
+      ...Array.from({ length: 4 }, () => ex('col', MR)),
+      ...Array.from({ length: 4 }, () => ex('col', CT)),
+      ...Array.from({ length: 4 }, () => ex('cra', CT)),
+    ];
+    const regras = regrasCom({ divisao: proporcao({ MR: 50, CT: 50 }) });
+    const mod = (r: Resultado, m: string, modalidadeId: string) =>
+      de(r, m).filter((d) => fila.find((e) => e.id === d.exameId)?.modalidadeId === modalidadeId)
+        .length;
+    const r = rodar({ exames: fila, regras, medicos: [med('A', () => true, 6)] });
+    expect([mod(r, 'A', MR), mod(r, 'A', CT)]).toEqual([3, 3]);
+    const msk = rodar({
+      exames: fila,
+      regras,
+      medicos: [med('M', (id) => id.startsWith('col'), 6)],
+    });
+    expect([mod(msk, 'M', MR), mod(msk, 'M', CT)]).toEqual([4, 2]);
+  });
+
+  it('o teto por médico de MSK não vale para a coluna do neurologista (Henrique, 09/10)', () => {
+    const fila = [...varios2(10, 'cra'), ...varios2(10, 'col')];
+    const r = rodar({
+      exames: fila,
+      regras: regrasCom({}, { tetoPorMedico: 5 }),
+      medicos: [med('H', () => true, 20, { cargaInicial: 10 })],
+    });
+    expect([conta(r, 'H', 'cra'), conta(r, 'H', 'col')]).toEqual([5, 5]);
+  });
+
+  it('atrasado não espera a mistura; as colunas compensam no que sobra', () => {
+    const atrasados = varios2(6, 'cra', { restanteMin: -60 });
+    const fila = [...atrasados, ...varios2(10, 'col'), ...varios2(4, 'cra')];
+    const r = rodar({ exames: fila, regras: regrasCom(), medicos: [med('A', () => true, 10)] });
+    expect(atrasados.every((e) => ids(r).includes(e.id))).toBe(true);
+    expect(conta(r, 'A', 'col')).toBe(4);
+  });
+
+  it('as frentes por igual, limitado ao que a fila tem: 2 colunas e 6/6/6', () => {
+    const fila = [
+      ...varios2(40, 'cra'),
+      ...varios2(40, 'ger'),
+      ...varios2(20, 'ang'),
+      ...varios2(2, 'col'),
+    ];
+    const r = rodar({ exames: fila, regras: regrasCom(), medicos: [med('A', () => true, 20)] });
+    expect(frentes(r, 'A')).toEqual([2, 6, 6, 6]);
+  });
+
+  it('quem não faz ANGIO divide a vaga entre as que faz', () => {
+    const fila = [
+      ...varios2(20, 'ang'),
+      ...varios2(20, 'cra'),
+      ...varios2(20, 'ger'),
+      ...varios2(20, 'col'),
+    ];
+    const r = rodar({
+      exames: fila,
+      regras: regrasCom(),
+      medicos: [med('A', (id) => !id.startsWith('ang'), 12)],
+    });
+    expect(frentes(r, 'A')).toEqual([4, 0, 4, 4]);
+  });
+
+  it('fila menor que a vaga: a mistura não segura nada', () => {
+    const fila = [
+      ...varios2(10, 'cra'),
+      ...varios2(10, 'ger'),
+      ...varios2(5, 'ang'),
+      ...varios2(2, 'col'),
+    ];
+    expect(
+      rodar({ exames: fila, regras: regrasCom(), medicos: [med('A', () => true, 50)] }).designacoes,
+    ).toHaveLength(fila.length);
+  });
+
+  it('o que vence antes da próxima rodada não espera a mistura', () => {
+    const fila = [...varios2(8, 'cra', { restanteMin: 20 }), ...varios2(8, 'ger')];
+    const r = rodar({ exames: fila, regras: regrasCom(), medicos: [med('A', () => true, 8)] });
+    expect(frentes(r, 'A')).toEqual([0, 0, 8, 0]);
+  });
+
+  it('a carga total não muda: dois médicos de 15 saem cheios', () => {
+    const fila = [
+      ...varios2(30, 'cra'),
+      ...varios2(25, 'ger'),
+      ...varios2(4, 'ang'),
+      ...varios2(1, 'col'),
+    ];
+    const r = rodar({
+      exames: fila,
+      regras: regrasCom(),
+      medicos: [med('A', () => true, 15), med('B', () => true, 15)],
+    });
+    expect(r.designacoes).toHaveLength(30);
+  });
+
+  it('a coluna que entra reabre a mistura para o crânio adiado antes dela (14/10 11:45)', () => {
+    const fila = [
+      ex('cra', MR, { id: 'craA', restanteMin: 60 }),
+      ex('cra', MR, { id: 'craB', restanteMin: 61 }),
+      ex('col', MR, { id: 'col1', restanteMin: 62 }),
+      ex('cra', MR, { id: 'craC', restanteMin: 2000 }),
+      ex('col', MR, { id: 'col2', restanteMin: 3000 }),
+      ex('col', MR, { id: 'col3', restanteMin: 3001 }),
+    ];
+    const r = rodar({
+      exames: fila,
+      regras: regrasCom({ divisao: proporcao({ MR: 50, CT: 50 }) }),
+      medicos: [med('A', () => true, 3)],
+      config: { ...CONFIG, folgaAtrasadoPct: 100 },
+    });
+    expect(ids(r).sort()).toEqual(['col1', 'craA', 'craB']);
+  });
+});
