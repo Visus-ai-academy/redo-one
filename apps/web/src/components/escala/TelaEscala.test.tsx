@@ -245,6 +245,30 @@ describe('TelaEscala', () => {
     expect(onMontarEscala).toHaveBeenCalled();
   });
 
+  it('por médico: resumo do mês, calendário e o "+" com o médico e a data', async () => {
+    const acoes = await montar({
+      filtros: { modo: 'medico', agrupar: 'frente', data: '2026-11-18', medicoId: 'm1' },
+      medico: { valor: 'm1', rotulo: 'Ana Souza' },
+    });
+    expect(screen.getByText('2 plantões no mês')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Seg 16/11' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fim de semana' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Alocar Ana Souza em Qua 18/11' }));
+    expect(acoes.onAlocar).toHaveBeenLastCalledWith({
+      data: '2026-11-18',
+      medico: { valor: 'm1', rotulo: 'Ana Souza' },
+    });
+  });
+
+  it('por médico sem permissão de criar: sem "+" nos dias', async () => {
+    await montar({
+      filtros: { modo: 'medico', agrupar: 'frente', data: '2026-11-18', medicoId: 'm1' },
+      medico: { valor: 'm1', rotulo: 'Ana Souza' },
+      permissoes: { criar: false, editar: false, excluir: false },
+    });
+    expect(screen.queryByRole('button', { name: /^Alocar Ana Souza em/ })).not.toBeInTheDocument();
+  });
+
   it('montar escala some sem médico ou sem permissão', async () => {
     const filtros = { modo: 'medico' as const, agrupar: 'frente' as const, data: '2026-11-18' };
     await montar({ filtros, medico: null, dados: undefined, onMontarEscala: vi.fn() });

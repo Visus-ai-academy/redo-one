@@ -50,6 +50,8 @@ import { descreverPlantao } from './descricao-plantao';
 import { EscolhaSegmentada } from './EscolhaSegmentada';
 import { FiltroMultiplo } from './FiltroMultiplo';
 import { MesCalendario } from './MesCalendario';
+import { MesDoMedico, ResumoDoMes } from './MesDoMedico';
+import { doMes } from './mes-do-medico';
 import { type LugarDoAlocar, SemanaCalendarios, SemanaLista } from './SemanaEscala';
 
 export type FiltrosEscala = {
@@ -238,10 +240,12 @@ export function TelaEscala({
               onMudar={(novo) => onMudar({ agrupar: novo })}
             />
           )}
-          {modo !== 'medico' && (
+          {/* No Por médico, o celular mostra a lista dos dias com plantão: sem colunas a ligar. */}
+          {(modo !== 'medico' || filtros.medicoId) && (
             <Alternador
               ligado={Boolean(filtros.fimDeSemana)}
               onMudar={(ligado) => onMudar({ fimDeSemana: ligado ? 1 : undefined })}
+              className={cn(modo === 'medico' && 'hidden md:inline-flex')}
             >
               Fim de semana
             </Alternador>
@@ -330,6 +334,7 @@ export function TelaEscala({
         turnos={turnos}
         frentes={frentes}
         permissoes={permissoes}
+        medico={medico}
         ausencias={ausencias}
         erroAusencias={erroAusencias}
         catalogo={catalogo}
@@ -385,6 +390,7 @@ function Conteudo({
   turnos,
   frentes,
   permissoes,
+  medico,
   ausencias,
   erroAusencias,
   catalogo,
@@ -402,6 +408,7 @@ function Conteudo({
   | 'turnos'
   | 'frentes'
   | 'permissoes'
+  | 'medico'
   | 'ausencias'
   | 'onMudar'
   | 'onAbrirPlantao'
@@ -549,13 +556,32 @@ function Conteudo({
         />
       )}
       {modo === 'medico' && (
-        <AgendaMedico
-          ocorrencias={ocorrencias}
-          conflitos={conflitos}
-          horarios={horarios}
-          descrever={descrever}
-          onAbrir={onAbrirPlantao}
-        />
+        <div className="flex flex-col gap-3">
+          <ResumoDoMes data={data} ocorrencias={ocorrencias} />
+          <div className="hidden md:block">
+            <MesDoMedico
+              data={data}
+              hoje={hoje}
+              ocorrencias={ocorrencias}
+              mostrarFimDeSemana={Boolean(filtros.fimDeSemana)}
+              conflitos={conflitos}
+              horarios={horarios}
+              descrever={descrever}
+              onAbrir={onAbrirPlantao}
+              medicoNome={medico?.rotulo}
+              onAlocar={aoAlocar && ((dia) => aoAlocar({ data: dia, ...(medico && { medico }) }))}
+            />
+          </div>
+          <div className="md:hidden">
+            <AgendaMedico
+              ocorrencias={doMes(ocorrencias, data)}
+              conflitos={conflitos}
+              horarios={horarios}
+              descrever={descrever}
+              onAbrir={onAbrirPlantao}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

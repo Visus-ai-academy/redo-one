@@ -8,6 +8,7 @@ import { AusenciasDaSemana } from './AusenciasDaSemana';
 import { montarCalendarios } from './agrupar';
 import { descreverPlantao } from './descricao-plantao';
 import { MesCalendario } from './MesCalendario';
+import { MesDoMedico, ResumoDoMes } from './MesDoMedico';
 import { SemanaCalendarios, SemanaLista, type SemanaProps } from './SemanaEscala';
 import { FRENTE_RM, FRENTE_TC, frenteDoTurno, ocorrencia, turno } from './teste-dados';
 
@@ -428,7 +429,7 @@ describe('AgendaMedico', () => {
     expect(plantoes[0]).not.toHaveTextContent('Ana Souza');
     // Faixa na cor do turno e bolinha na cor da frente.
     expect(plantoes[0]?.closest('[data-plantao]')).toHaveStyle({ borderLeftColor: '#214037' });
-    expect(plantoes[0]?.querySelector('[data-cor-frente]')).toHaveStyle({
+    expect(plantoes[0]?.querySelector('[data-cor]')).toHaveStyle({
       backgroundColor: '#1F7A4D',
     });
   });
@@ -478,5 +479,141 @@ describe('AgendaMedico', () => {
       />,
     );
     expect(screen.getByText('Nenhum plantão deste médico no mês.')).toBeInTheDocument();
+  });
+});
+
+describe('MesDoMedico', () => {
+  const descrever = (o: Parameters<typeof descreverPlantao>[0]) =>
+    descreverPlantao(o, { prioridades: new Map(), subespecialidades: new Map(), conflitos: [] });
+  const tarde = {
+    turnoId: 't-tarde',
+    turnoNome: 'Tarde',
+    turnoCor: '#7A4D00',
+    turnoOrdem: 2,
+    horarioInicio: '13:00',
+    horarioFim: '19:00',
+  };
+  const props = {
+    data: '2026-11-10',
+    hoje: '2026-11-17',
+    conflitos: new Set<string>(),
+    horarios: { 't-manha': '07:00–13:00' },
+    descrever,
+    onAbrir: vi.fn(),
+  };
+
+  it('grade do mês com os plantões no dia certo, no cartão da semana', async () => {
+    const onAbrir = vi.fn();
+    render(
+      <MesDoMedico
+        {...props}
+        onAbrir={onAbrir}
+        ocorrencias={[
+          ocorrencia({ alocacaoId: 't', data: '2026-11-18', diaSemana: 3, ...tarde }),
+          ocorrencia({ alocacaoId: 'm', data: '2026-11-18', diaSemana: 3 }),
+          ocorrencia({ alocacaoId: 'x', data: '2026-10-28', diaSemana: 3 }),
+        ]}
+      />,
+    );
+    const dia = screen.getByRole('list', { name: 'Qua 18/11' });
+    const plantoes = within(dia).getAllByRole('button');
+    expect(plantoes.map((b) => b.textContent)).toEqual([
+      expect.stringMatching(/^TC Neuro · Manhã07:00–13:00/),
+      expect.stringMatching(/^TC Neuro · Tarde13:00–19:00/),
+    ]);
+    // Faixa na cor do turno e bolinha na cor da frente, como na semana.
+    expect(plantoes[1]?.closest('[data-plantao]')).toHaveStyle({ borderLeftColor: '#7A4D00' });
+    expect(plantoes[0]?.querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#1F7A4D' });
+    // O dia do mês vizinho aparece esmaecido, com o plantão dele.
+    const vizinho = screen.getByRole('list', { name: 'Qua 28/10' });
+    expect(vizinho.closest('[data-dia]')).toHaveAttribute('data-fora-do-mes');
+    // Hoje marcado.
+    expect(screen.getByText('17').closest('[data-dia]')).toHaveAttribute('aria-current', 'date');
+    await userEvent.hover(plantoes[1] as HTMLElement);
+    expect(await screen.findByText('Onde', {}, { timeout: 2000 })).toBeInTheDocument();
+    await userEvent.unhover(plantoes[1] as HTMLElement);
+    await userEvent.click(plantoes[0] as HTMLElement);
+    expect(onAbrir).toHaveBeenCalledWith(expect.objectContaining({ alocacaoId: 'm' }));
+  });
+
+  it('sáb e dom só com plantão ou ausência no mês, ou com o alternador', () => {
+    const { rerender } = render(<MesDoMedico {...props} ocorrencias={[ocorrencia()]} />);
+    expect(screen.getByText('Sex')).toBeInTheDocument();
+    expect(screen.queryByText('Sáb')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dom')).not.toBeInTheDocument();
+
+    rerender(
+      <MesDoMedico
+        {...props}
+        ocorrencias={[ocorrencia({ data: '2026-11-21', diaSemana: 6, ausente: true })]}
+      />,
+    );
+    expect(screen.getByText('Sáb')).toBeInTheDocument();
+    expect(screen.queryByText('Dom')).not.toBeInTheDocument();
+
+    rerender(<MesDoMedico {...props} ocorrencias={[]} mostrarFimDeSemana />);
+    expect(screen.getByText('Sáb')).toBeInTheDocument();
+    expect(screen.getByText('Dom')).toBeInTheDocument();
+  });
+
+  it('ausência riscada com o selo do tipo e a cobertura; conflito com selo', () => {
+    render(
+      <MesDoMedico
+        {...props}
+        conflitos={new Set(['g|2026-11-16'])}
+        ocorrencias={[
+          ocorrencia({
+            ausente: true,
+            tipoAusenciaNome: 'Férias',
+            tipoAusenciaCor: '#2F6FB2',
+            cobertoPor: { alocacaoId: 'c', medicoId: 'm3', medicoNome: 'Carla Dias' },
+          }),
+          ocorrencia({ alocacaoId: 'g', ...tarde }),
+        ]}
+      />,
+    );
+    const manha = screen.getByRole('button', { name: /Manhã/ });
+    expect(manha.querySelector('.line-through')).toHaveTextContent('TC Neuro · Manhã');
+    expect(manha).toHaveTextContent('Férias');
+    expect(manha).toHaveTextContent('Coberto por Carla Dias');
+    expect(screen.getByRole('button', { name: /Tarde/ })).toHaveTextContent('Conflito');
+  });
+
+  it('"+" no dia só com permissão, com a data', async () => {
+    const onAlocar = vi.fn();
+    const { rerender } = render(
+      <MesDoMedico {...props} ocorrencias={[]} medicoNome="Ana Souza" onAlocar={onAlocar} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Alocar Ana Souza em Qui 19/11' }));
+    expect(onAlocar).toHaveBeenCalledWith('2026-11-19');
+
+    rerender(<MesDoMedico {...props} ocorrencias={[]} medicoNome="Ana Souza" />);
+    expect(screen.queryByRole('button', { name: /^Alocar/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('ResumoDoMes', () => {
+  it('total do mês e uma linha por frente, turno e horário', () => {
+    render(
+      <ResumoDoMes
+        data="2026-11-10"
+        ocorrencias={[
+          ocorrencia({ data: '2026-11-19', diaSemana: 4, turnoNome: 'Tarde', turnoId: 't-tarde' }),
+          ocorrencia({ data: '2026-11-20', diaSemana: 5, turnoNome: 'Tarde', turnoId: 't-tarde' }),
+          ocorrencia({ data: '2026-12-03', diaSemana: 4 }),
+        ]}
+      />,
+    );
+    expect(screen.getByText('2 plantões no mês')).toBeInTheDocument();
+    const linhas = within(screen.getByRole('list', { name: 'Plantões do mês' })).getAllByRole(
+      'listitem',
+    );
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]).toHaveTextContent('TC NeuroTardeQui e Sex, 07:00–13:00 · 2 plantões');
+  });
+
+  it('sem plantão no mês, diz', () => {
+    render(<ResumoDoMes data="2026-11-10" ocorrencias={[]} />);
+    expect(screen.getByText('Nenhum plantão no mês')).toBeInTheDocument();
   });
 });

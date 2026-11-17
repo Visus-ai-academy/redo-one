@@ -58,8 +58,8 @@ describe('janelaDoModo', () => {
     expect(janelaDoModo('mes', '2026-11-10')).toEqual({ de: '2026-10-26', ate: '2026-12-06' });
   });
 
-  it('por médico: o mês inteiro', () => {
-    expect(janelaDoModo('medico', '2026-12-31')).toEqual({ de: '2026-12-01', ate: '2026-12-31' });
+  it('por médico: a grade do mês, como no mês', () => {
+    expect(janelaDoModo('medico', '2026-12-31')).toEqual({ de: '2026-11-30', ate: '2027-01-03' });
   });
 
   it('ausências da semana: como a semana', () => {

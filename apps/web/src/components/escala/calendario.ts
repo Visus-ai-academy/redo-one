@@ -81,12 +81,9 @@ export function janelaDoModo(modo: ModoEscala, data: string) {
     const inicio = inicioDaSemana(data);
     return { de: inicio, ate: somarDias(inicio, 6) };
   }
-  if (modo === 'mes') {
-    // A grade do mês mostra os dias dos meses vizinhos que completam as semanas: vêm junto.
-    const semanas = semanasDoMes(data);
-    return { de: semanas[0]?.[0] as string, ate: semanas.at(-1)?.[6] as string };
-  }
-  return { de: inicioDoMes(data), ate: fimDoMes(data) };
+  // Mês e por médico: a grade mostra os dias dos meses vizinhos que completam as semanas; vêm junto.
+  const semanas = semanasDoMes(data);
+  return { de: semanas[0]?.[0] as string, ate: semanas.at(-1)?.[6] as string };
 }
 
 /** ◀ ▶: uma semana na semana; um mês (no dia 1) no mês e na agenda do médico. */

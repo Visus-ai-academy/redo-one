@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import { cn } from '../../lib/cn';
+import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { Dica } from '../dica/Dica';
 import {
@@ -19,8 +20,13 @@ import { diaDaSemana, NOMES_DIAS_LONGOS, rotuloDia } from './calendario';
 import type { ItemDescricao } from './descricao-plantao';
 import { type CartaoDoPlantao, CartaoFlutuante, LinhaMedico } from './LinhaMedico';
 
-/** Onde o "+" abre o alocar já preenchido. */
-export type LugarDoAlocar = { data: string; frenteId?: string; turnoId?: string };
+/** Onde o "+" abre o alocar já preenchido (no Por médico, com o médico). */
+export type LugarDoAlocar = {
+  data: string;
+  frenteId?: string;
+  turnoId?: string;
+  medico?: OpcaoBusca;
+};
 
 export type SemanaProps = {
   calendarios: CalendarioDaSemana[];
@@ -253,7 +259,16 @@ function BlocosDoDia({
   );
 }
 
-function BotaoMais({ rotulo, onClick }: { rotulo: string; onClick: () => void }) {
+/** O "+" de um dia: abre o alocar já preenchido. */
+export function BotaoMais({
+  rotulo,
+  onClick,
+  className,
+}: {
+  rotulo: string;
+  onClick: () => void;
+  className?: string;
+}) {
   return (
     <Dica rotulo={rotulo} lado="top">
       <Button
@@ -262,7 +277,7 @@ function BotaoMais({ rotulo, onClick }: { rotulo: string; onClick: () => void })
         onClick={onClick}
         className={buttonClassName({
           variant: 'ghost',
-          className: 'text-subtle-foreground hover:text-foreground h-7 w-full px-0',
+          className: cn('text-subtle-foreground hover:text-foreground h-7 w-full px-0', className),
         })}
       >
         <Plus size={16} aria-hidden />

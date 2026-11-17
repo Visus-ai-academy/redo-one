@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import { cn } from '../../lib/cn';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { SeloCor } from '../selo-cor/SeloCor';
 import { dataCurta, diaDaSemana, NOMES_DIAS_LONGOS } from './calendario';
@@ -120,14 +121,7 @@ export function LinhaMedico({
             o.ausente && 'text-muted-foreground line-through',
           )}
         >
-          <span
-            aria-hidden
-            data-cor-frente
-            className="border-border size-2 flex-none rounded-full border"
-            style={
-              o.frenteCor ? { backgroundColor: o.frenteCor, borderColor: o.frenteCor } : undefined
-            }
-          />
+          <BolinhaCor cor={o.frenteCor} />
           <span className="truncate">{`${o.frenteRotulo} · ${o.turnoNome}`}</span>
         </span>
       ) : (
@@ -155,6 +149,22 @@ export function LinhaMedico({
       )}
       {selos.length > 0 && <span className="flex max-w-full flex-wrap gap-1">{selos}</span>}
     </PreviewCard.Trigger>
+  );
+}
+
+/**
+ * Um plantão na agenda de um médico (lista do celular e calendário do mês): a faixa lateral na
+ * cor do turno, como os blocos da semana, e a linha com onde é e o horário.
+ */
+export function PlantaoDoMedico({ ocorrencia: o, ...props }: Omit<LinhaMedicoProps, 'local'>) {
+  return (
+    <li
+      data-plantao
+      className="border-l-border bg-card overflow-hidden rounded-md border border-l-[3px]"
+      style={o.turnoCor ? { borderLeftColor: o.turnoCor } : undefined}
+    >
+      <LinhaMedico ocorrencia={o} local {...props} />
+    </li>
   );
 }
 
