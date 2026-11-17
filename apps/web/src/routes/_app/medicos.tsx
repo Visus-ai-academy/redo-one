@@ -8,6 +8,7 @@ import { createDataTableColumnHelper } from '../../components/data-table/columns
 import { AbaDistribuicaoMedico } from '../../components/distribuicao/AbaDistribuicaoMedico';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { AbaEscalaMedico } from '../../components/medicos/AbaEscalaMedico';
 import { FormPagamento } from '../../components/medicos/FormPagamento';
 import { PainelMedico } from '../../components/medicos/PainelMedico';
@@ -316,6 +317,7 @@ function PainelDoMedico({
           <AbaDistribuicaoMedico medicoId={id} podeEditar={abas.distribuicao.editar} />
         ) : undefined
       }
+      historico={id ? <HistoricoCadastro key={id} cadastro="medico" id={id} /> : undefined}
     />
   );
 }

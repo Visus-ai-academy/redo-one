@@ -120,6 +120,19 @@ describe('PainelExame', () => {
     expect(onExcluir).toHaveBeenCalled();
   });
 
+  it('editando, o Histórico vem numa aba depois do cadastro (com a quebra)', async () => {
+    montar({ exame, historico: <p>conteúdo do histórico</p> });
+
+    expect(screen.getAllByRole('tab').map((aba) => aba.textContent)).toEqual([
+      'Cadastro',
+      'Histórico',
+    ]);
+    expect(screen.getByRole('button', { name: 'Abrir a quebra' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    expect(screen.getByText('conteúdo do histórico')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Abrir a quebra' })).not.toBeInTheDocument();
+  });
+
   describe('só a subespecialidade (exames.subespecialidade.editar)', () => {
     const restrito = (props: Partial<PainelExameProps> = {}) => {
       const onSalvarSubespecialidade = vi.fn(async () => undefined);

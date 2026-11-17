@@ -23,10 +23,21 @@ export type CadastroComHistorico = 'medico' | 'cliente' | 'exame';
 /** Num painel lateral, 10 mudanças por página (a API pagina). */
 const POR_PAGINA = 10;
 
-function opcoesDaConsulta(cadastro: CadastroComHistorico, id: string, pagina: number) {
+/** As três rotas devolvem a mesma página; o tipo é o da do médico. */
+type OpcoesHistorico = ReturnType<typeof historicoCadastroControllerDoMedicoQueryOptions>;
+
+function opcoesDaConsulta(
+  cadastro: CadastroComHistorico,
+  id: string,
+  pagina: number,
+): OpcoesHistorico {
   const args = { path: { id }, query: { pagina, porPagina: POR_PAGINA } };
-  if (cadastro === 'cliente') return historicoCadastroControllerDoClienteQueryOptions(args);
-  if (cadastro === 'exame') return historicoCadastroControllerDoExameQueryOptions(args);
+  if (cadastro === 'cliente') {
+    return historicoCadastroControllerDoClienteQueryOptions(args) as unknown as OpcoesHistorico;
+  }
+  if (cadastro === 'exame') {
+    return historicoCadastroControllerDoExameQueryOptions(args) as unknown as OpcoesHistorico;
+  }
   return historicoCadastroControllerDoMedicoQueryOptions(args);
 }
 
@@ -46,11 +57,11 @@ export function HistoricoCadastro({
   const [referencia] = useState(() => agora ?? new Date());
   const [pagina, setPagina] = useState(1);
   const consulta = useQuery({
-    ...(opcoesDaConsulta(cadastro, id, pagina) as ReturnType<typeof opcoesDaConsulta>),
+    ...opcoesDaConsulta(cadastro, id, pagina),
     // Trocando de página, a anterior fica à vista (esmaecida) até a nova chegar.
     placeholderData: keepPreviousData,
   });
-  const dados = consulta.data as PaginaHistoricoCadastroDto | undefined;
+  const dados: PaginaHistoricoCadastroDto | undefined = consulta.data;
 
   if (consulta.isError && !dados) {
     return (

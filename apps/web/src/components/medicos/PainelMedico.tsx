@@ -41,6 +41,8 @@ export type PainelMedicoProps = {
   escala?: ReactNode;
   /** Conteúdo da aba Distribuição (robô e arranjos); sem ele (sem permissão), a aba não aparece. */
   distribuicao?: ReactNode;
+  /** Conteúdo da aba Histórico (a última); sem ele, a aba não aparece. */
+  historico?: ReactNode;
 };
 
 const FUNCOES = {
@@ -94,6 +96,7 @@ export function PainelMedico({
   acesso,
   escala,
   distribuicao,
+  historico,
 }: PainelMedicoProps) {
   const [aba, setAba] = useState('cadastro');
   const abas = medico
@@ -103,6 +106,7 @@ export function PainelMedico({
         ...(acesso ? [{ valor: 'acesso', rotulo: 'Acesso' }] : []),
         ...(escala ? [{ valor: 'escala', rotulo: 'Escala' }] : []),
         ...(distribuicao ? [{ valor: 'distribuicao', rotulo: 'Distribuição' }] : []),
+        ...(historico ? [{ valor: 'historico', rotulo: 'Histórico' }] : []),
       ]
     : [];
 
@@ -153,7 +157,9 @@ export function PainelMedico({
                 ? escala
                 : aba === 'distribuicao'
                   ? distribuicao
-                  : cadastro}
+                  : aba === 'historico'
+                    ? historico
+                    : cadastro}
         </Abas>
       ) : (
         cadastro

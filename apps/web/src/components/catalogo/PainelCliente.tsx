@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Trash } from '@phosphor-icons/react';
-import { useId, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { z } from 'zod';
 
 import type { AliasDto } from '../../gen/types/AliasDto';
@@ -12,6 +12,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { buttonClassName } from '../button/button-class';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -36,6 +37,8 @@ export type PainelClienteProps = {
   /** Unificação (unidades que respondem por um principal); sem ela, a seção não aparece. */
   unificacao?: Omit<UnidadesClienteProps, 'unificadoEm' | 'unidades' | 'podeCriar' | 'podeExcluir'>;
   onFechar: () => void;
+  /** Conteúdo da aba Histórico; sem ele (ou criando), o painel fica sem abas. */
+  historico?: ReactNode;
 };
 
 const TIPOS_APELIDO = {
@@ -84,6 +87,7 @@ export function PainelCliente({
   onExcluirApelido,
   unificacao,
   onFechar,
+  historico,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
@@ -144,168 +148,178 @@ export function PainelCliente({
       subtitulo={cliente?.nomeFantasia ?? undefined}
       onFechar={onFechar}
     >
-      {podeEditar ? (
-        <form
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault();
-            void form.handleSubmit();
-          }}
-          className="flex flex-col gap-4 p-4"
-        >
-          {erro && <Alerta tom="erro">{erro}</Alerta>}
-          <form.AppField name="nome">
-            {(field) => (
-              <field.TextField
-                label="Nome na MobileMed"
-                placeholder="Ex.: CEDIDIAG"
-                description="Exatamente como chega nos laudos; outras grafias vão nos apelidos."
-                autoComplete="off"
-                required
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="nomeFantasia">
-            {(field) => (
-              <field.TextField
-                label="Nome fantasia"
-                placeholder="Ex.: Cedi Diagnósticos"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="razaoSocial">
-            {(field) => (
-              <field.TextField
-                label="Razão social"
-                placeholder="Ex.: Centro de Diagnóstico Ltda"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.Subscribe selector={(estado) => estado.values.tipoPessoa}>
-            {(tipo) => (
-              <div className="flex flex-wrap gap-4">
-                <form.AppField name="tipoPessoa">
-                  {(field) => (
-                    <field.SelectField
-                      label="Tipo de pessoa"
-                      placeholder="Escolha"
-                      opcoes={[
-                        { valor: 'PJ', rotulo: 'Pessoa jurídica' },
-                        { valor: 'PF', rotulo: 'Pessoa física' },
-                      ]}
-                      className="flex-[1_1_150px]"
-                    />
-                  )}
-                </form.AppField>
-                {tipo === 'PJ' ? (
-                  <form.AppField name="cnpj">
-                    {(field) => (
-                      <field.TextField
-                        label="CNPJ"
-                        mascara="cnpj"
-                        placeholder="00.000.000/0000-00"
-                        autoComplete="off"
-                        className="flex-[1_1_180px]"
-                      />
-                    )}
-                  </form.AppField>
-                ) : (
-                  <form.AppField name="cpf">
-                    {(field) => (
-                      <field.TextField
-                        label="CPF"
-                        mascara="cpf"
-                        placeholder="000.000.000-00"
-                        autoComplete="off"
-                        className="flex-[1_1_180px]"
-                      />
-                    )}
-                  </form.AppField>
-                )}
-              </div>
-            )}
-          </form.Subscribe>
-          <form.AppField name="contratadoId">
-            {(field) => (
-              <field.SelectField
-                label="Empresa que fatura"
-                placeholder="Escolha o contratado"
-                required
-                description="Decide em qual demonstrativo o cliente entra e quem emite a nota."
-                opcoes={opcoesContratado.map((c) => ({ valor: c.id, rotulo: c.nome }))}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="ocultoDashboards">
-            {(field) => (
-              <field.CheckboxField
-                label="Oculto nos painéis"
-                description="Some da volumetria e do painel executivo; continua no faturamento."
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="ativo">
-            {(field) => (
-              <field.CheckboxField
-                label="Ativo"
-                description="Inativo some das listas de escolha; o histórico continua."
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="observacoes">
-            {(field) => (
-              <field.TextAreaField label="Observações" placeholder="Ex.: unidade aberta em 2026" />
-            )}
-          </form.AppField>
-          <form.AppForm>
-            <RodapePainel
-              rotuloCriar="Criar cliente"
-              editando={Boolean(cliente)}
-              excluir={excluir}
-              onCancelar={onFechar}
-            />
-          </form.AppForm>
-        </form>
-      ) : (
-        cliente && (
-          <div className="flex flex-col gap-4 p-4">
+      <AbasComHistorico
+        historico={cliente ? historico : undefined}
+        aria-label="Partes do cadastro do cliente"
+      >
+        {podeEditar ? (
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void form.handleSubmit();
+            }}
+            className="flex flex-col gap-4 p-4"
+          >
             {erro && <Alerta tom="erro">{erro}</Alerta>}
-            <CampoSomenteLeitura label="Razão social" value={cliente.razaoSocial ?? '—'} />
-            <CampoSomenteLeitura
-              label={cliente.tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}
-              value={
-                cliente.tipoPessoa === 'PF' ? formatarCpf(cliente.cpf) : formatarCnpj(cliente.cnpj)
-              }
-            />
-            <CampoSomenteLeitura
-              label="Empresa que fatura"
-              value={cliente.contratado?.razaoSocial ?? '—'}
-            />
-            <CampoSomenteLeitura label="Situação" value={cliente.ativo ? 'Ativo' : 'Inativo'} />
-            <RodapeSomenteLeitura excluir={excluir} />
-          </div>
-        )
-      )}
-      {cliente && (
-        <Apelidos
-          apelidos={cliente.aliases}
-          podeCriar={podeCriar}
-          podeExcluir={podeExcluir}
-          onCriar={onCriarApelido}
-          onExcluir={onExcluirApelido}
-        />
-      )}
-      {cliente && unificacao && (
-        <UnidadesCliente
-          unificadoEm={cliente.unificadoEm}
-          unidades={cliente.unidades}
-          podeCriar={podeCriar}
-          podeExcluir={podeExcluir}
-          {...unificacao}
-        />
-      )}
+            <form.AppField name="nome">
+              {(field) => (
+                <field.TextField
+                  label="Nome na MobileMed"
+                  placeholder="Ex.: CEDIDIAG"
+                  description="Exatamente como chega nos laudos; outras grafias vão nos apelidos."
+                  autoComplete="off"
+                  required
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="nomeFantasia">
+              {(field) => (
+                <field.TextField
+                  label="Nome fantasia"
+                  placeholder="Ex.: Cedi Diagnósticos"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="razaoSocial">
+              {(field) => (
+                <field.TextField
+                  label="Razão social"
+                  placeholder="Ex.: Centro de Diagnóstico Ltda"
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+            <form.Subscribe selector={(estado) => estado.values.tipoPessoa}>
+              {(tipo) => (
+                <div className="flex flex-wrap gap-4">
+                  <form.AppField name="tipoPessoa">
+                    {(field) => (
+                      <field.SelectField
+                        label="Tipo de pessoa"
+                        placeholder="Escolha"
+                        opcoes={[
+                          { valor: 'PJ', rotulo: 'Pessoa jurídica' },
+                          { valor: 'PF', rotulo: 'Pessoa física' },
+                        ]}
+                        className="flex-[1_1_150px]"
+                      />
+                    )}
+                  </form.AppField>
+                  {tipo === 'PJ' ? (
+                    <form.AppField name="cnpj">
+                      {(field) => (
+                        <field.TextField
+                          label="CNPJ"
+                          mascara="cnpj"
+                          placeholder="00.000.000/0000-00"
+                          autoComplete="off"
+                          className="flex-[1_1_180px]"
+                        />
+                      )}
+                    </form.AppField>
+                  ) : (
+                    <form.AppField name="cpf">
+                      {(field) => (
+                        <field.TextField
+                          label="CPF"
+                          mascara="cpf"
+                          placeholder="000.000.000-00"
+                          autoComplete="off"
+                          className="flex-[1_1_180px]"
+                        />
+                      )}
+                    </form.AppField>
+                  )}
+                </div>
+              )}
+            </form.Subscribe>
+            <form.AppField name="contratadoId">
+              {(field) => (
+                <field.SelectField
+                  label="Empresa que fatura"
+                  placeholder="Escolha o contratado"
+                  required
+                  description="Decide em qual demonstrativo o cliente entra e quem emite a nota."
+                  opcoes={opcoesContratado.map((c) => ({ valor: c.id, rotulo: c.nome }))}
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="ocultoDashboards">
+              {(field) => (
+                <field.CheckboxField
+                  label="Oculto nos painéis"
+                  description="Some da volumetria e do painel executivo; continua no faturamento."
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="ativo">
+              {(field) => (
+                <field.CheckboxField
+                  label="Ativo"
+                  description="Inativo some das listas de escolha; o histórico continua."
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="observacoes">
+              {(field) => (
+                <field.TextAreaField
+                  label="Observações"
+                  placeholder="Ex.: unidade aberta em 2026"
+                />
+              )}
+            </form.AppField>
+            <form.AppForm>
+              <RodapePainel
+                rotuloCriar="Criar cliente"
+                editando={Boolean(cliente)}
+                excluir={excluir}
+                onCancelar={onFechar}
+              />
+            </form.AppForm>
+          </form>
+        ) : (
+          cliente && (
+            <div className="flex flex-col gap-4 p-4">
+              {erro && <Alerta tom="erro">{erro}</Alerta>}
+              <CampoSomenteLeitura label="Razão social" value={cliente.razaoSocial ?? '—'} />
+              <CampoSomenteLeitura
+                label={cliente.tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}
+                value={
+                  cliente.tipoPessoa === 'PF'
+                    ? formatarCpf(cliente.cpf)
+                    : formatarCnpj(cliente.cnpj)
+                }
+              />
+              <CampoSomenteLeitura
+                label="Empresa que fatura"
+                value={cliente.contratado?.razaoSocial ?? '—'}
+              />
+              <CampoSomenteLeitura label="Situação" value={cliente.ativo ? 'Ativo' : 'Inativo'} />
+              <RodapeSomenteLeitura excluir={excluir} />
+            </div>
+          )
+        )}
+        {cliente && (
+          <Apelidos
+            apelidos={cliente.aliases}
+            podeCriar={podeCriar}
+            podeExcluir={podeExcluir}
+            onCriar={onCriarApelido}
+            onExcluir={onExcluirApelido}
+          />
+        )}
+        {cliente && unificacao && (
+          <UnidadesCliente
+            unificadoEm={cliente.unificadoEm}
+            unidades={cliente.unidades}
+            podeCriar={podeCriar}
+            podeExcluir={podeExcluir}
+            {...unificacao}
+          />
+        )}
+      </AbasComHistorico>
     </PainelLateral>
   );
 }

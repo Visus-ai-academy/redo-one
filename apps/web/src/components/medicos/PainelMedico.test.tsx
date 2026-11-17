@@ -138,6 +138,24 @@ describe('PainelMedico', () => {
     expect(screen.getByText('conteúdo do pagamento')).toBeInTheDocument();
   });
 
+  it('o Histórico é a última aba', async () => {
+    montar({
+      medico,
+      pagamento: <p>pagamento</p>,
+      distribuicao: <p>distribuição</p>,
+      historico: <p>conteúdo do histórico</p>,
+    });
+
+    expect(screen.getAllByRole('tab').map((aba) => aba.textContent)).toEqual([
+      'Cadastro',
+      'Pagamento',
+      'Distribuição',
+      'Histórico',
+    ]);
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    expect(screen.getByText('conteúdo do histórico')).toBeInTheDocument();
+  });
+
   it('sem permissão de editar, só mostra', () => {
     montar({ medico, podeEditar: false, podeCriar: false, podeExcluir: false });
 

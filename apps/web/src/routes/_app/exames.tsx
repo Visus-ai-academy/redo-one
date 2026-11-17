@@ -11,6 +11,7 @@ import { PainelQuebra } from '../../components/catalogo/PainelQuebra';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
 import { useAvisos } from '../../components/toast/use-avisos';
@@ -365,6 +366,7 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
       podeEditar={id ? permissoes.editar : permissoes.criar}
       podeCriar={permissoes.criar}
       onFechar={fechar}
+      historico={id ? <HistoricoCadastro key={id} cadastro="exame" id={id} /> : undefined}
       onSalvar={async (body) => {
         let alvo = id;
         if (id) await examesControllerAtualizar({ path: { id }, body }).unwrap();

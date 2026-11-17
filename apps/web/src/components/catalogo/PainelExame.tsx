@@ -1,5 +1,5 @@
 import { Button } from '@base-ui/react/button';
-import { useId, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { z } from 'zod';
 
 import type { ExameDetalheDto } from '../../gen/types/ExameDetalheDto';
@@ -10,6 +10,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { buttonClassName } from '../button/button-class';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
@@ -34,6 +35,8 @@ export type PainelExameProps = {
   /** Cria a quebra do estudo com o nome do exame e a abre. */
   onCriarQuebra: () => Promise<void>;
   onFechar: () => void;
+  /** Conteúdo da aba Histórico; sem ele (ou criando), o painel fica sem abas. */
+  historico?: ReactNode;
 };
 
 const opcional = (texto: string) => texto.trim() || null;
@@ -55,6 +58,7 @@ export function PainelExame({
   onAbrirQuebra,
   onCriarQuebra,
   onFechar,
+  historico,
 }: PainelExameProps) {
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
@@ -121,192 +125,197 @@ export function PainelExame({
       subtitulo={exame?.codigo ?? undefined}
       onFechar={onFechar}
     >
-      {podeEditar ? (
-        <form
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault();
-            void form.handleSubmit();
-          }}
-          className="flex flex-col gap-4 p-4"
-        >
-          {erro && <Alerta tom="erro">{erro}</Alerta>}
-          <form.AppField name="nome">
-            {(field) => (
-              <field.TextField
-                label="Nome"
-                placeholder="Ex.: TC CRANIO"
-                description="Como o estudo chega da MobileMed."
-                autoComplete="off"
-                required
-              />
-            )}
-          </form.AppField>
-          <div className="flex flex-wrap gap-4">
-            <form.AppField name="codigo">
+      <AbasComHistorico
+        historico={exame ? historico : undefined}
+        aria-label="Partes do cadastro do exame"
+      >
+        {podeEditar ? (
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void form.handleSubmit();
+            }}
+            className="flex flex-col gap-4 p-4"
+          >
+            {erro && <Alerta tom="erro">{erro}</Alerta>}
+            <form.AppField name="nome">
               {(field) => (
                 <field.TextField
-                  label="Código"
-                  placeholder="Ex.: 40808041"
+                  label="Nome"
+                  placeholder="Ex.: TC CRANIO"
+                  description="Como o estudo chega da MobileMed."
                   autoComplete="off"
-                  className="flex-[1_1_140px]"
+                  required
                 />
               )}
             </form.AppField>
-            <form.AppField name="modalidadeId">
+            <div className="flex flex-wrap gap-4">
+              <form.AppField name="codigo">
+                {(field) => (
+                  <field.TextField
+                    label="Código"
+                    placeholder="Ex.: 40808041"
+                    autoComplete="off"
+                    className="flex-[1_1_140px]"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="modalidadeId">
+                {(field) => (
+                  <field.SelectField
+                    label="Modalidade"
+                    placeholder="Sem modalidade"
+                    opcoes={[nenhum('Sem modalidade'), ...comoOpcoes(opcoes.modalidades)]}
+                    className="flex-[1_1_140px]"
+                  />
+                )}
+              </form.AppField>
+            </div>
+            <form.AppField name="descricao">
               {(field) => (
-                <field.SelectField
-                  label="Modalidade"
-                  placeholder="Sem modalidade"
-                  opcoes={[nenhum('Sem modalidade'), ...comoOpcoes(opcoes.modalidades)]}
-                  className="flex-[1_1_140px]"
+                <field.TextField
+                  label="Descrição"
+                  placeholder="Ex.: Tomografia de crânio sem contraste"
+                  autoComplete="off"
                 />
               )}
             </form.AppField>
-          </div>
-          <form.AppField name="descricao">
-            {(field) => (
-              <field.TextField
-                label="Descrição"
-                placeholder="Ex.: Tomografia de crânio sem contraste"
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.Subscribe
-            selector={(estado) =>
-              [estado.values.especialidadeId, estado.values.subespecialidadeId] as const
-            }
-          >
-            {([especialidadeId, subespecialidadeId]) => (
-              <>
-                <form.AppField name="especialidadeId">
-                  {(field) => (
-                    <field.SelectField
-                      label="Especialidade"
-                      placeholder="Sem especialidade"
-                      opcoes={[nenhum('Sem especialidade'), ...comoOpcoes(opcoes.especialidades)]}
-                    />
-                  )}
-                </form.AppField>
-                <form.AppField name="subespecialidadeId">
-                  {(field) => (
-                    <field.SelectField
-                      label="Subespecialidade"
-                      placeholder="Sem subespecialidade"
-                      description="Sem subespecialidade, o exame não vai para médico restrito a uma."
-                      opcoes={[
-                        nenhum('Sem subespecialidade'),
-                        ...comoOpcoes(
-                          opcoes.subespecialidades.filter(
-                            (s) =>
-                              !especialidadeId ||
-                              s.especialidadeIds.includes(especialidadeId) ||
-                              s.id === subespecialidadeId,
+            <form.Subscribe
+              selector={(estado) =>
+                [estado.values.especialidadeId, estado.values.subespecialidadeId] as const
+              }
+            >
+              {([especialidadeId, subespecialidadeId]) => (
+                <>
+                  <form.AppField name="especialidadeId">
+                    {(field) => (
+                      <field.SelectField
+                        label="Especialidade"
+                        placeholder="Sem especialidade"
+                        opcoes={[nenhum('Sem especialidade'), ...comoOpcoes(opcoes.especialidades)]}
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="subespecialidadeId">
+                    {(field) => (
+                      <field.SelectField
+                        label="Subespecialidade"
+                        placeholder="Sem subespecialidade"
+                        description="Sem subespecialidade, o exame não vai para médico restrito a uma."
+                        opcoes={[
+                          nenhum('Sem subespecialidade'),
+                          ...comoOpcoes(
+                            opcoes.subespecialidades.filter(
+                              (s) =>
+                                !especialidadeId ||
+                                s.especialidadeIds.includes(especialidadeId) ||
+                                s.id === subespecialidadeId,
+                            ),
                           ),
-                        ),
-                      ]}
-                    />
-                  )}
-                </form.AppField>
-              </>
-            )}
-          </form.Subscribe>
-          <div className="flex flex-wrap gap-4">
-            <form.AppField name="categoriaId">
+                        ]}
+                      />
+                    )}
+                  </form.AppField>
+                </>
+              )}
+            </form.Subscribe>
+            <div className="flex flex-wrap gap-4">
+              <form.AppField name="categoriaId">
+                {(field) => (
+                  <field.SelectField
+                    label="Categoria"
+                    placeholder="Sem categoria"
+                    opcoes={[nenhum('Sem categoria'), ...comoOpcoes(opcoes.categoriasExame)]}
+                    className="flex-[1_1_140px]"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="prioridadeId">
+                {(field) => (
+                  <field.SelectField
+                    label="Prioridade"
+                    placeholder="Sem prioridade"
+                    opcoes={[nenhum('Sem prioridade'), ...comoOpcoes(opcoes.prioridades)]}
+                    className="flex-[1_1_140px]"
+                  />
+                )}
+              </form.AppField>
+            </div>
+            <form.AppField name="exigeRevisaoManual">
               {(field) => (
-                <field.SelectField
-                  label="Categoria"
-                  placeholder="Sem categoria"
-                  opcoes={[nenhum('Sem categoria'), ...comoOpcoes(opcoes.categoriasExame)]}
-                  className="flex-[1_1_140px]"
+                <field.CheckboxField
+                  label="Exige revisão manual"
+                  description="O robô separa para a operação analisar em vez de distribuir (ex.: idade óssea)."
                 />
               )}
             </form.AppField>
-            <form.AppField name="prioridadeId">
+            <form.AppField name="permiteQuebra">
+              {(field) => <field.CheckboxField label="Permite quebra" />}
+            </form.AppField>
+            <form.AppField name="ativo">
               {(field) => (
-                <field.SelectField
-                  label="Prioridade"
-                  placeholder="Sem prioridade"
-                  opcoes={[nenhum('Sem prioridade'), ...comoOpcoes(opcoes.prioridades)]}
-                  className="flex-[1_1_140px]"
+                <field.CheckboxField
+                  label="Ativo"
+                  description="Inativo some das buscas de exame; o histórico continua."
                 />
               )}
             </form.AppField>
-          </div>
-          <form.AppField name="exigeRevisaoManual">
-            {(field) => (
-              <field.CheckboxField
-                label="Exige revisão manual"
-                description="O robô separa para a operação analisar em vez de distribuir (ex.: idade óssea)."
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="permiteQuebra">
-            {(field) => <field.CheckboxField label="Permite quebra" />}
-          </form.AppField>
-          <form.AppField name="ativo">
-            {(field) => (
-              <field.CheckboxField
-                label="Ativo"
-                description="Inativo some das buscas de exame; o histórico continua."
-              />
-            )}
-          </form.AppField>
-          <form.AppForm>
-            <RodapePainel
-              rotuloCriar="Criar exame"
-              editando={Boolean(exame)}
-              excluir={excluir}
-              onCancelar={onFechar}
-            />
-          </form.AppForm>
-        </form>
-      ) : (
-        exame && (
-          <div className="flex flex-col gap-4 p-4">
-            {erro && <Alerta tom="erro">{erro}</Alerta>}
-            <CampoSomenteLeitura
-              label="Modalidade"
-              value={nomeDe(opcoes.modalidades, exame.modalidadeId)}
-            />
-            <CampoSomenteLeitura
-              label="Especialidade"
-              value={nomeDe(opcoes.especialidades, exame.especialidadeId)}
-            />
-            {onSalvarSubespecialidade ? (
-              <FormSubespecialidade
-                exame={exame}
-                opcoes={opcoes}
-                onSalvar={(subespecialidadeId) =>
-                  tentar(() => onSalvarSubespecialidade(subespecialidadeId))
-                }
+            <form.AppForm>
+              <RodapePainel
+                rotuloCriar="Criar exame"
+                editando={Boolean(exame)}
+                excluir={excluir}
                 onCancelar={onFechar}
               />
-            ) : (
+            </form.AppForm>
+          </form>
+        ) : (
+          exame && (
+            <div className="flex flex-col gap-4 p-4">
+              {erro && <Alerta tom="erro">{erro}</Alerta>}
               <CampoSomenteLeitura
-                label="Subespecialidade"
-                value={nomeDe(opcoes.subespecialidades, exame.subespecialidadeId)}
+                label="Modalidade"
+                value={nomeDe(opcoes.modalidades, exame.modalidadeId)}
               />
-            )}
-            <CampoSomenteLeitura
-              label="Categoria"
-              value={nomeDe(opcoes.categoriasExame, exame.categoriaId)}
-            />
-            <CampoSomenteLeitura label="Situação" value={exame.ativo ? 'Ativo' : 'Inativo'} />
-            <RodapeSomenteLeitura excluir={excluir} />
-          </div>
-        )
-      )}
-      {/* Quem só muda a subespecialidade não mexe em quebras: nem abre, nem cria. */}
-      {exame && !(onSalvarSubespecialidade && !podeEditar) && (
-        <QuebraDoExame
-          quebra={exame.quebra}
-          podeCriar={podeCriar}
-          onAbrir={onAbrirQuebra}
-          onCriar={onCriarQuebra}
-        />
-      )}
+              <CampoSomenteLeitura
+                label="Especialidade"
+                value={nomeDe(opcoes.especialidades, exame.especialidadeId)}
+              />
+              {onSalvarSubespecialidade ? (
+                <FormSubespecialidade
+                  exame={exame}
+                  opcoes={opcoes}
+                  onSalvar={(subespecialidadeId) =>
+                    tentar(() => onSalvarSubespecialidade(subespecialidadeId))
+                  }
+                  onCancelar={onFechar}
+                />
+              ) : (
+                <CampoSomenteLeitura
+                  label="Subespecialidade"
+                  value={nomeDe(opcoes.subespecialidades, exame.subespecialidadeId)}
+                />
+              )}
+              <CampoSomenteLeitura
+                label="Categoria"
+                value={nomeDe(opcoes.categoriasExame, exame.categoriaId)}
+              />
+              <CampoSomenteLeitura label="Situação" value={exame.ativo ? 'Ativo' : 'Inativo'} />
+              <RodapeSomenteLeitura excluir={excluir} />
+            </div>
+          )
+        )}
+        {/* Quem só muda a subespecialidade não mexe em quebras: nem abre, nem cria. */}
+        {exame && !(onSalvarSubespecialidade && !podeEditar) && (
+          <QuebraDoExame
+            quebra={exame.quebra}
+            podeCriar={podeCriar}
+            onAbrir={onAbrirQuebra}
+            onCriar={onCriarQuebra}
+          />
+        )}
+      </AbasComHistorico>
     </PainelLateral>
   );
 }

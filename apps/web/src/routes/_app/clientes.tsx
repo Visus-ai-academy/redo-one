@@ -8,6 +8,7 @@ import { PainelCliente } from '../../components/catalogo/PainelCliente';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
 import { clientesControllerAdicionarUnidade } from '../../gen/clients/clientesControllerAdicionarUnidade';
@@ -256,6 +257,7 @@ function Painel({
       podeCriar={permissoes.criar}
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
+      historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
       onSalvar={async (body) => {
         let alvo = id;
         if (id) await clientesControllerAtualizar({ path: { id }, body }).unwrap();

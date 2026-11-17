@@ -112,6 +112,24 @@ describe('PainelCliente', () => {
     expect(onExcluirApelido).toHaveBeenCalledWith('a-1');
   });
 
+  it('editando, o Histórico vem numa aba depois do cadastro', async () => {
+    montar({ cliente, historico: <p>conteúdo do histórico</p> });
+
+    expect(screen.getAllByRole('tab').map((aba) => aba.textContent)).toEqual([
+      'Cadastro',
+      'Histórico',
+    ]);
+    expect(screen.queryByText('conteúdo do histórico')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    expect(screen.getByText('conteúdo do histórico')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Nome na MobileMed' })).not.toBeInTheDocument();
+  });
+
+  it('criando, sem abas', () => {
+    montar({ historico: <p>conteúdo do histórico</p> });
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  });
+
   it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {
     const onExcluir = vi.fn(async () => undefined);
     montar({ cliente, podeEditar: false, podeCriar: false, podeExcluir: false, onExcluir });
