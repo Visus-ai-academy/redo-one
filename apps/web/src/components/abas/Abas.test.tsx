@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -38,5 +38,67 @@ describe('Abas', () => {
     );
 
     expect(screen.queryByRole('tabpanel')).not.toBeInTheDocument();
+  });
+
+  it('com mais abas do que cabem: sem barra de rolagem, esmaece a borda que tem mais abas', () => {
+    render(
+      <Abas
+        aria-label="Abas largas"
+        valor="a"
+        onMudar={vi.fn()}
+        abas={[
+          { valor: 'a', rotulo: 'A' },
+          { valor: 'b', rotulo: 'B' },
+        ]}
+      />,
+    );
+    const lista = screen.getByRole('tablist', { name: 'Abas largas' });
+    expect(lista.className).toContain('[scrollbar-width:none]');
+    // jsdom não mede: simula a lista mais larga que o espaço, rolada até o começo.
+    Object.defineProperty(lista, 'scrollWidth', { configurable: true, value: 500 });
+    Object.defineProperty(lista, 'clientWidth', { configurable: true, value: 300 });
+    fireEvent.scroll(lista);
+
+    expect(lista).toHaveAttribute('data-mais-a-direita');
+    expect(lista).not.toHaveAttribute('data-mais-a-esquerda');
+  });
+
+  it('leva a aba atual para a vista', () => {
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    render(
+      <Abas
+        aria-label="Abas"
+        valor="b"
+        onMudar={vi.fn()}
+        abas={[
+          { valor: 'a', rotulo: 'A' },
+          { valor: 'b', rotulo: 'B' },
+        ]}
+      />,
+    );
+
+    expect(rolar).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
+
+  it('a roda vertical do mouse rola as abas para o lado quando elas não cabem', () => {
+    render(
+      <Abas
+        aria-label="Abas"
+        valor="a"
+        onMudar={vi.fn()}
+        abas={[
+          { valor: 'a', rotulo: 'A' },
+          { valor: 'b', rotulo: 'B' },
+        ]}
+      />,
+    );
+    const lista = screen.getByRole('tablist', { name: 'Abas' });
+    Object.defineProperty(lista, 'scrollWidth', { configurable: true, value: 500 });
+    Object.defineProperty(lista, 'clientWidth', { configurable: true, value: 300 });
+
+    fireEvent.wheel(lista, { deltaY: 40, deltaX: 0 });
+
+    expect(lista.scrollLeft).toBe(40);
   });
 });
