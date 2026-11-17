@@ -142,6 +142,19 @@ export class UsuariosService {
     }
   }
 
+  /** A conta ligada ao médico (aba Acesso do painel do médico), ou `null` se ele não tem. */
+  async contaDoMedico(medicoId: string): Promise<UsuarioResumo | null> {
+    if (!(await this.usuarios.buscarMedico(medicoId))) throw new MedicoNaoEncontradoError();
+    const { itens } = await this.listar({ medicoId, pagina: 1, porPagina: 1 });
+    return itens[0] ?? null;
+  }
+
+  /** Desliga a conta do médico, se houver; mesma regra e auditoria de `vincularMedico`. */
+  async desligarMedico(ator: PrincipalUsuario, medicoId: string): Promise<void> {
+    const conta = await this.contaDoMedico(medicoId);
+    if (conta) await this.vincularMedico(ator, conta.id, null);
+  }
+
   async desbloquear(ator: PrincipalUsuario, id: string): Promise<void> {
     const usuario = await this.obter(id);
     await this.usuarios.desbloquear(id);

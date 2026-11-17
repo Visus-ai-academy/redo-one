@@ -19,9 +19,9 @@ export type SecaoAcessoProps = {
   conta: UsuarioResumoDto | null;
   /** Papéis para o convite (só os atribuíveis aparecem). */
   papeis: PapelAtribuivelDto[];
-  /** `usuarios.criar`. */
+  /** `medicos.acesso.editar`. */
   podeConvidar: boolean;
-  /** `usuarios.editar`: ligar e desligar uma conta. */
+  /** `medicos.acesso.editar`: ligar e desligar uma conta. */
   podeLigar: boolean;
   buscarUsuarios: (termo: string) => Promise<OpcaoBusca[]>;
   onConvidar: (dados: { nome: string; email: string; papelId: string }) => Promise<void>;

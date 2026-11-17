@@ -37,6 +37,7 @@ import { TOKENS_SENHA_REPOSITORY } from './senha/tokens-senha.repository';
 import { DrizzleSessoesRepository } from './sessoes/drizzle-sessoes.repository';
 import { SessaoAutenticador } from './sessoes/sessao-autenticador';
 import { SESSOES_REPOSITORY } from './sessoes/sessoes.repository';
+import { AcessoMedicoController } from './usuarios/acesso-medico.controller';
 import { DrizzleGestaoUsuariosRepository } from './usuarios/drizzle-gestao-usuarios.repository';
 import { DrizzleUsuariosRepository } from './usuarios/drizzle-usuarios.repository';
 import { GESTAO_USUARIOS_REPOSITORY } from './usuarios/gestao-usuarios.repository';
@@ -52,6 +53,7 @@ import { UsuariosService } from './usuarios/usuarios.service';
     PermissoesController,
     SenhaController,
     UsuariosController,
+    AcessoMedicoController,
     ContaController,
     ChavesRoboController,
   ],

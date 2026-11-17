@@ -412,5 +412,35 @@ describe('UsuariosService', () => {
 
       expect(itens.map((u) => u.id)).toEqual(['u-joao']);
     });
+
+    it('acha a conta ligada ao médico (ou nenhuma) e recusa médico inexistente', async () => {
+      await expect(service.contaDoMedico('m-carla')).resolves.toBeNull();
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+
+      await expect(service.contaDoMedico('m-carla')).resolves.toMatchObject({
+        id: 'u-joao',
+        nome: 'João',
+      });
+      await expect(service.contaDoMedico('m-nao-existe')).rejects.toThrow(MedicoNaoEncontradoError);
+    });
+
+    it('desliga a conta do médico pelo médico, com a mesma auditoria; sem conta, não faz nada', async () => {
+      await service.vincularMedico(admin, 'u-joao', 'm-carla');
+
+      await service.desligarMedico(admin, 'm-carla');
+
+      expect(gestao.medicoDoUsuarioMap.has('u-joao')).toBe(false);
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        entidadeId: 'u-joao',
+        acao: 'medico_desvinculado',
+        antes: { medicoId: 'm-carla' },
+      });
+      const eventos = auditoria.eventos.length;
+      await service.desligarMedico(admin, 'm-carla');
+      expect(auditoria.eventos).toHaveLength(eventos);
+      await expect(service.desligarMedico(admin, 'm-nao-existe')).rejects.toThrow(
+        MedicoNaoEncontradoError,
+      );
+    });
   });
 });

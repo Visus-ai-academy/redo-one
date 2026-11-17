@@ -787,6 +787,221 @@
         ]
       }
     },
+    "/medicos/{medicoId}/acesso": {
+      "get": {
+        "operationId": "AcessoMedicoController_obter",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcessoMedicoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Médico não encontrado."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "put": {
+        "operationId": "AcessoMedicoController_ligar",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LigarContaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Conta ligada ao médico; as sessões dela foram encerradas."
+          },
+          "404": {
+            "description": "Usuário ou médico não encontrado."
+          },
+          "409": {
+            "description": "O médico já tem acesso por outra conta."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      },
+      "delete": {
+        "operationId": "AcessoMedicoController_desligar",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Conta desligada; as sessões dela foram encerradas."
+          },
+          "404": {
+            "description": "Médico não encontrado."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/medicos/{medicoId}/acesso/papeis": {
+      "get": {
+        "operationId": "AcessoMedicoController_papeis",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Papéis para o convite, marcando os que quem está logado pode dar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PapelAtribuivelDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/medicos/{medicoId}/acesso/contas": {
+      "get": {
+        "operationId": "AcessoMedicoController_buscarContas",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
+            "required": true,
+            "in": "query",
+            "description": "Parte do nome ou do e-mail, ou o CPF.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Até 20 contas que casam com a busca.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContaParaLigarDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
+    "/medicos/{medicoId}/acesso/convite": {
+      "post": {
+        "operationId": "AcessoMedicoController_convidar",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConviteMedicoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conta criada e convite enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioCriadoDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Papel com permissões que quem convida não tem."
+          },
+          "409": {
+            "description": "E-mail já cadastrado ou médico já com acesso."
+          }
+        },
+        "tags": [
+          "identidade"
+        ]
+      }
+    },
     "/conta": {
       "get": {
         "operationId": "ContaController_obter",
@@ -7943,6 +8158,80 @@
         },
         "required": [
           "medicoId"
+        ]
+      },
+      "AcessoMedicoDto": {
+        "type": "object",
+        "properties": {
+          "conta": {
+            "nullable": true,
+            "description": "Conta do portal ligada ao médico; nula se ele ainda não tem acesso.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UsuarioResumoDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "conta"
+        ]
+      },
+      "ContaParaLigarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email"
+        ]
+      },
+      "ConviteMedicoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Augusto Lima",
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "example": "nome@clinica.com.br"
+          },
+          "papelId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "papelId"
+        ]
+      },
+      "LigarContaDto": {
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Conta que já existe e passa a ser a do médico."
+          }
+        },
+        "required": [
+          "usuarioId"
         ]
       },
       "MinhaSessaoDto": {

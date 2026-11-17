@@ -15,21 +15,22 @@ import { SecaoAcesso } from '../../components/medicos/SecaoAcesso';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
 import { CamposCarregando } from '../../components/skeleton/CamposCarregando';
+import { acessoMedicoControllerBuscarContas } from '../../gen/clients/acessoMedicoControllerBuscarContas';
+import { acessoMedicoControllerConvidar } from '../../gen/clients/acessoMedicoControllerConvidar';
+import { acessoMedicoControllerDesligar } from '../../gen/clients/acessoMedicoControllerDesligar';
+import { acessoMedicoControllerLigar } from '../../gen/clients/acessoMedicoControllerLigar';
 import { medicosControllerAtualizar } from '../../gen/clients/medicosControllerAtualizar';
 import { medicosControllerCriar } from '../../gen/clients/medicosControllerCriar';
 import { medicosControllerCriarAlias } from '../../gen/clients/medicosControllerCriarAlias';
 import { medicosControllerExcluir } from '../../gen/clients/medicosControllerExcluir';
 import { medicosControllerExcluirAlias } from '../../gen/clients/medicosControllerExcluirAlias';
 import { medicosControllerSalvarPagamento } from '../../gen/clients/medicosControllerSalvarPagamento';
-import { usuariosControllerConvidar } from '../../gen/clients/usuariosControllerConvidar';
-import { usuariosControllerListar } from '../../gen/clients/usuariosControllerListar';
-import { usuariosControllerVincularMedico } from '../../gen/clients/usuariosControllerVincularMedico';
+import { acessoMedicoControllerObterQueryOptions } from '../../gen/hooks/useAcessoMedicoControllerObter';
+import { acessoMedicoControllerPapeisQueryOptions } from '../../gen/hooks/useAcessoMedicoControllerPapeis';
 import { medicosControllerListarQueryOptions } from '../../gen/hooks/useMedicosControllerListar';
 import { medicosControllerObterQueryOptions } from '../../gen/hooks/useMedicosControllerObter';
 import { medicosControllerObterPagamentoQueryOptions } from '../../gen/hooks/useMedicosControllerObterPagamento';
 import { niveisMedicoControllerListarQueryOptions } from '../../gen/hooks/useNiveisMedicoControllerListar';
-import { usuariosControllerListarQueryOptions } from '../../gen/hooks/useUsuariosControllerListar';
-import { usuariosControllerPapeisQueryOptions } from '../../gen/hooks/useUsuariosControllerPapeis';
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import type { MedicoResumoDto } from '../../gen/types/MedicoResumoDto';
 import { abasDoMedico, invalidarMedicos } from '../../lib/medicos';
@@ -305,12 +306,8 @@ function PainelDoMedico({
         ) : undefined
       }
       acesso={
-        medico && pode(sessao, 'usuarios.ver') ? (
-          <AbaAcesso
-            medico={medico}
-            podeConvidar={pode(sessao, 'usuarios.criar')}
-            podeLigar={pode(sessao, 'usuarios.editar')}
-          />
+        medico && abas.acesso.ver ? (
+          <AbaAcesso medico={medico} podeEditar={abas.acesso.editar} />
         ) : undefined
       }
       escala={id && pode(sessao, 'escala.ver') ? <AbaEscalaMedico medicoId={id} /> : undefined}
@@ -349,56 +346,41 @@ function AbaPagamento({ medicoId, podeEditar }: { medicoId: string; podeEditar: 
   );
 }
 
-function AbaAcesso({
-  medico,
-  podeConvidar,
-  podeLigar,
-}: {
-  medico: MedicoDetalheDto;
-  podeConvidar: boolean;
-  podeLigar: boolean;
-}) {
+/** Usa as rotas do acesso do médico (`medicos.acesso.*`), não as da tela Usuários. */
+function AbaAcesso({ medico, podeEditar }: { medico: MedicoDetalheDto; podeEditar: boolean }) {
   const queryClient = useQueryClient();
-  const { data: contas } = useQuery(
-    usuariosControllerListarQueryOptions({ query: { medicoId: medico.id, porPagina: 1 } }),
-  );
+  const path = { medicoId: medico.id };
+  const { data: acesso } = useQuery(acessoMedicoControllerObterQueryOptions({ path }));
   const { data: papeis = [] } = useQuery({
-    ...usuariosControllerPapeisQueryOptions(),
-    enabled: podeConvidar,
+    ...acessoMedicoControllerPapeisQueryOptions({ path }),
+    enabled: podeEditar,
   });
-  if (!contas) return <CamposCarregando quantidade={2} />;
-  const conta = contas.itens[0] ?? null;
+  if (!acesso) return <CamposCarregando quantidade={2} />;
 
   return (
     <SecaoAcesso
       medico={{ nome: medico.nome, email: medico.email }}
-      conta={conta}
+      conta={acesso.conta}
       papeis={papeis}
-      podeConvidar={podeConvidar}
-      podeLigar={podeLigar}
+      podeConvidar={podeEditar}
+      podeLigar={podeEditar}
       buscarUsuarios={async (termo) => {
-        const { itens } = await usuariosControllerListar({
-          query: { busca: termo, porPagina: 20 },
+        const contas = await acessoMedicoControllerBuscarContas({
+          path,
+          query: { busca: termo },
         }).unwrap();
-        return itens.map((u) => ({ valor: u.id, rotulo: u.nome, detalhe: u.email }));
+        return contas.map((u) => ({ valor: u.id, rotulo: u.nome, detalhe: u.email }));
       }}
       onConvidar={async (dados) => {
-        await usuariosControllerConvidar({ body: { ...dados, medicoId: medico.id } }).unwrap();
+        await acessoMedicoControllerConvidar({ path, body: dados }).unwrap();
         await invalidarMedicos(queryClient);
       }}
       onLigar={async (usuarioId) => {
-        await usuariosControllerVincularMedico({
-          path: { id: usuarioId },
-          body: { medicoId: medico.id },
-        }).unwrap();
+        await acessoMedicoControllerLigar({ path, body: { usuarioId } }).unwrap();
         await invalidarMedicos(queryClient);
       }}
       onDesligar={async () => {
-        if (!conta) return;
-        await usuariosControllerVincularMedico({
-          path: { id: conta.id },
-          body: { medicoId: null },
-        }).unwrap();
+        await acessoMedicoControllerDesligar({ path }).unwrap();
         await invalidarMedicos(queryClient);
       }}
     />
