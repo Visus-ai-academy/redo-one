@@ -128,7 +128,7 @@ describe('ConsultaOcorrenciasEscala', () => {
     expect((await ids({ escopo: null })).length).toBe(3);
   });
 
-  it('aponta a sobreposição de horário do mesmo médico como conflito', async () => {
+  it('aponta a sobreposição de horário do mesmo médico no mesmo turno como conflito', async () => {
     const consulta = new ConsultaOcorrenciasEscala(
       new FakeCarregadorEscala(
         dadosEscala({
@@ -136,7 +136,7 @@ describe('ConsultaOcorrenciasEscala', () => {
             alocacaoEscala({ id: 'a1' }),
             alocacaoEscala({
               id: 'a2',
-              turnoId: 't-tarde',
+              turnoId: 't-manha',
               frenteId: 'f-tc',
               horarioInicio: '12:00',
               horarioFim: '19:00',
@@ -167,8 +167,8 @@ describe('ConsultaOcorrenciasEscala', () => {
         b: {
           alocacaoId: 'a2',
           data: '2026-11-16',
-          turnoId: 't-tarde',
-          turnoNome: 'Tarde',
+          turnoId: 't-manha',
+          turnoNome: 'Manhã',
           frenteId: 'f-tc',
           frenteRotulo: 'TC',
           inicio: '2026-11-16T12:00:00-03:00',

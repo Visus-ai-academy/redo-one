@@ -63,7 +63,7 @@ export interface AlocacaoDetalhada extends AlocacaoGravada {
 }
 
 export interface ResultadoEscrita {
-  /** Sobreposições de horário do médico (não bloqueiam); fora do recorte, sem detalhes. */
+  /** Sobreposições do médico no mesmo turno (não bloqueiam); fora do recorte, sem detalhes. */
   avisos: AvisoConflito[];
 }
 

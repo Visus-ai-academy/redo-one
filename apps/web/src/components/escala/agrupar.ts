@@ -287,7 +287,7 @@ export function filtrarPorMedico(ocorrencias: readonly OcorrenciaDto[], termo: s
 
 export const chavePlantao = (alocacaoId: string, data: string) => `${alocacaoId}|${data}`;
 
-/** Plantões que se sobrepõem a outro do mesmo médico no dia. */
+/** Plantões que se sobrepõem a outro do mesmo médico no mesmo turno. */
 export function chavesEmConflito(conflitos: readonly ConflitoEscalaDto[]) {
   const chaves = new Set<string>();
   for (const c of conflitos) {

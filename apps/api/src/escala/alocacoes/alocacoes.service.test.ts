@@ -246,13 +246,13 @@ describe('AlocacoesService', () => {
         frenteIds: ['f-neuro'],
       });
       repo.medicos.set('m-ana', { ativo: true });
-      // Ana já tem a Noite (19:00 → 09:00) todo dia; a nova Manhã começa hoje, segunda 16/11.
+      // Ana já tem a Manhã estendida (19:00 → 09:00) todo dia; a nova Manhã começa hoje, segunda 16/11.
       const carregador = new FakeCarregadorEscala(
         dadosEscala({
           alocacoes: [
             alocacaoEscala({
               id: 'noite',
-              turnoId: 't-tarde',
+              turnoId: 't-manha',
               horarioInicio: '19:00',
               horarioFim: '09:00',
               diasSemana: [0, 1, 2, 3, 4, 5, 6],

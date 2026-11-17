@@ -90,7 +90,7 @@ export function PainelPlantao({
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         {doPlantao.length > 0 && (
           <Alerta tom="atencao">
-            Este plantão se sobrepõe a outro do médico no dia:{' '}
+            Este plantão se sobrepõe a outro do médico no mesmo turno:{' '}
             {doPlantao
               .map((p) => `${p.frenteRotulo}, ${p.turnoNome} (${hora(p.inicio)}–${hora(p.fim)})`)
               .join('; ')}

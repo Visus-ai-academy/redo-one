@@ -2,6 +2,7 @@
 export interface OcorrenciaComIntervalo {
   alocacaoId: string;
   medicoId: string;
+  turnoId: string;
   /** Instantes ISO com offset. */
   inicio: string;
   fim: string;
@@ -16,9 +17,10 @@ export interface ConflitoDeHorario<T extends OcorrenciaComIntervalo> {
 }
 
 /**
- * Pares de ocorrências do mesmo médico com intervalos [inicio, fim) sobrepostos, para a tela
- * avisar (sobreposição não bloqueia o cadastro). Ocorrência ausente (coberta ou com ausência) fica
- * de fora: o médico não está naquele plantão.
+ * Pares de ocorrências do mesmo médico no mesmo turno com intervalos [inicio, fim) sobrepostos,
+ * para a tela avisar (sobreposição não bloqueia o cadastro). Turnos diferentes no mesmo horário
+ * (ex.: Tarde dentro da Lista de 24 h) são trabalhos paralelos, não conflito. Ocorrência ausente
+ * (coberta ou com ausência) fica de fora: o médico não está naquele plantão.
  */
 export function conflitosDoMedico<T extends OcorrenciaComIntervalo>(
   ocorrencias: readonly T[],
@@ -38,6 +40,7 @@ export function conflitosDoMedico<T extends OcorrenciaComIntervalo>(
     }
     abertos = abertos.filter((aberto) => aberto.fim > atual.inicio);
     for (const aberto of abertos) {
+      if (aberto.o.turnoId !== atual.o.turnoId) continue;
       conflitos.push({ medicoId: atual.o.medicoId, a: aberto.o, b: atual.o });
     }
     abertos.push(atual);

@@ -11,6 +11,7 @@ function oc(
   return {
     alocacaoId,
     medicoId: 'ana',
+    turnoId: 'manha',
     data: inicio.slice(0, 10),
     inicio,
     fim,
@@ -28,6 +29,12 @@ describe('conflitosDoMedico', () => {
     expect(conflitosDoMedico([manha, extra])).toEqual([{ medicoId: 'ana', a: manha, b: extra }]);
   });
 
+  it('turnos diferentes no mesmo horário não conflitam (ex.: Tarde dentro da Lista de 24 h)', () => {
+    const lista = oc('lista', t('17', '07:00'), t('18', '07:00'), { turnoId: 'lista' });
+    const tarde = oc('tarde', t('17', '13:00'), t('17', '19:00'), { turnoId: 'tarde' });
+    expect(conflitosDoMedico([lista, tarde])).toEqual([]);
+  });
+
   it('encostar não é sobrepor (intervalo [inicio, fim))', () => {
     const manha = oc('manha', t('02', '07:00'), t('02', '13:00'));
     const tarde = oc('tarde', t('02', '13:00'), t('02', '19:00'));
@@ -35,10 +42,10 @@ describe('conflitosDoMedico', () => {
   });
 
   it('pega a virada da meia-noite e a Lista de 24 h em dias seguidos sem falso conflito', () => {
-    const noite = oc('noite', t('02', '19:00'), t('03', '07:00'));
-    const madrugada = oc('extra', t('03', '06:00'), t('03', '10:00'));
-    const lista1 = oc('lista', t('04', '07:00'), t('05', '07:00'));
-    const lista2 = oc('lista', t('05', '07:00'), t('06', '07:00'));
+    const noite = oc('noite', t('02', '19:00'), t('03', '07:00'), { turnoId: 'noite' });
+    const madrugada = oc('extra', t('03', '06:00'), t('03', '10:00'), { turnoId: 'noite' });
+    const lista1 = oc('lista', t('04', '07:00'), t('05', '07:00'), { turnoId: 'lista' });
+    const lista2 = oc('lista', t('05', '07:00'), t('06', '07:00'), { turnoId: 'lista' });
     expect(conflitosDoMedico([lista2, noite, lista1, madrugada])).toEqual([
       { medicoId: 'ana', a: noite, b: madrugada },
     ]);

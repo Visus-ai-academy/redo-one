@@ -352,7 +352,7 @@ function AvisosConflito({
   return (
     <Alerta tom="atencao">
       <div className="flex flex-col gap-2">
-        <p>Salvo, mas há plantões do mesmo médico que se sobrepõem:</p>
+        <p>Salvo, mas o médico ficou duas vezes no mesmo turno:</p>
         <ul className="list-disc pl-5">
           {visiveis.map((c) => (
             <li key={`${c.data}|${c.a.alocacaoId}|${c.b.alocacaoId}`} className="tabular-nums">

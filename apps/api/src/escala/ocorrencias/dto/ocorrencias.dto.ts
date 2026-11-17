@@ -143,7 +143,7 @@ export class PlantaoEmConflitoDto {
   @ApiProperty() fim!: string;
 }
 
-/** Dois plantões do mesmo médico com horários sobrepostos (aviso; não bloqueia). */
+/** Dois plantões do mesmo médico no mesmo turno com horários sobrepostos (aviso; não bloqueia). */
 export class ConflitoEscalaDto {
   @ApiProperty({ format: 'uuid' }) medicoId!: string;
   @ApiProperty() medicoNome!: string;
