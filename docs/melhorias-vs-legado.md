@@ -128,7 +128,7 @@
 | A operação tira exames do robô pela MobileMed sem registro; não dá para saber quem tirou | Rastrear as mudanças de mão | Ideia | 12/11 · f9ca81ff; 16/11 · 82f7879a |
 | Diagnóstico "por que o médico não pegou" leva até 1 min (remonta a rodada) | Diagnóstico a partir do registro da rodada | Ideia | 13/11 · 3ab3e455 |
 | Diálogo de exceções sem filtro por frente; "Adicionar médico" parecia só adicionar | Filtro por frente; "Editar médicos" | Regra do legado | 05–06/11 · 843cf69f, ff6e6e45 |
-| Modal de vínculo do médico ao turno abria sem seguir o arranjo do cadastro | Vem pré-preenchido com o arranjo, sem travar as outras opções | Regra do legado | 05/11 · 6dd356e5 |
+| Modal de vínculo do médico ao turno abria sem seguir o arranjo do cadastro | Vem pré-preenchido com o arranjo, sem travar as outras opções | Feito | 05/11 · 6dd356e5 |
 | Arranjo, escala, ausência, exceções, prioridade de cliente, políticas e janelas em telas diferentes; parâmetros do robô espalhados | Um lugar por pergunta: o que o médico lauda (Médicos › Distribuição), quando trabalha (Escala), regra da frente (especialidade/modalidade), cliente, equipe, global (Configurações › Distribuição), rodar (Operação › Distribuição) | Decidido | 17/11 · 48d350b6 |
 | Exceções do robô usadas por médico todo dia para contornar a regra da Lista (36, uma com 103 médicos) | Exceção deixa de ser cadastro: o temporário é ajuste do dia na Escala; o que se repete é regra da frente | Decidido | 17/11 · 48d350b6 |
 | Parâmetros sem uso em produção: escape, pesos, lote, exceção do médico, listas de médicos por cliente/exame, categoria no arranjo | Não migrados | Decidido | 17/11 · 48d350b6 |
@@ -166,7 +166,7 @@
 | Semana com uma linha por turno espalhava os médicos do dia | Semana no formato que a operação prefere: um calendário por frente, médicos do mesmo turno em bloco com a faixa lateral na cor do turno, cartão com a descrição ao passar o mouse e modo Ausências da semana | Feito | 16/11 · 6b9cff3f |
 | Sábado e domingo sempre na grade, quase sempre vazios | Semana de segunda a sexta; sábado e domingo aparecem quando há plantão ou ausência, ou pelo alternador "Fim de semana", que permite escalar neles | Feito | 17/11 · 6b9cff3f |
 | Frentes, turnos e tipos de ausência sem cor ou com cores parecidas | Cores de matizes bem separados e pouco saturados, editáveis na tela; a carga não sobrescreve a cor escolhida no redo-one | Feito | 16/11 · 6b9cff3f |
-| Arranjo do médico pré-preenchia o vínculo lendo a distribuição de dentro da escala | O formulário recebe valores iniciais; o pré-preenchimento vem da `distribuicao` pelo front | Pendente (com a `distribuicao`) | 16/11 · 6b9cff3f |
+| Arranjo do médico pré-preenchia o vínculo lendo a distribuição de dentro da escala | O formulário recebe valores iniciais; o pré-preenchimento vem da `distribuicao` pelo front | Feito | 16/11 · 6b9cff3f |
 
 ## 10. Faturamento
 
