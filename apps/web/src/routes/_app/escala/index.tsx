@@ -18,12 +18,11 @@ import {
 } from '../../../components/escala/TelaEscala';
 import { SemPermissao } from '../../../components/estado/estados';
 import { ausenciasControllerListarQueryOptions } from '../../../gen/hooks/useAusenciasControllerListar';
+import { classificacoesEscalaControllerListarQueryOptions } from '../../../gen/hooks/useClassificacoesEscalaControllerListar';
 import { escopoApiControllerMeuQueryOptions } from '../../../gen/hooks/useEscopoApiControllerMeu';
 import { frentesControllerListarQueryOptions } from '../../../gen/hooks/useFrentesControllerListar';
 import { medicosEscalaControllerObterQueryOptions } from '../../../gen/hooks/useMedicosEscalaControllerObter';
 import { ocorrenciasControllerListarQueryOptions } from '../../../gen/hooks/useOcorrenciasControllerListar';
-import { prioridadesControllerListarQueryOptions } from '../../../gen/hooks/usePrioridadesControllerListar';
-import { subespecialidadesControllerListarQueryOptions } from '../../../gen/hooks/useSubespecialidadesControllerListar';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
 import type { AvisoConflitoDto } from '../../../gen/types/AvisoConflitoDto';
 import { pode, podeNaTela } from '../../../lib/permissoes';
@@ -165,22 +164,17 @@ function Escala() {
     placeholderData: keepPreviousData,
   });
 
-  // Os nomes de prioridades e subespecialidades (para o cartão do plantão) vêm do catálogo.
-  const podeVerCatalogo = pode(sessao, 'catalogo.ver');
-  const prioridades = useQuery({
-    ...prioridadesControllerListarQueryOptions(ATIVOS),
-    enabled: podeVerCatalogo,
-  });
-  const subespecialidades = useQuery({
-    ...subespecialidadesControllerListarQueryOptions(ATIVOS),
-    enabled: podeVerCatalogo,
-  });
+  // Os nomes de prioridades e subespecialidades (para o cartão do plantão), inativas inclusive:
+  // vêm da escala, com `escala.ver`, sem depender de `catalogo.ver`.
+  const classificacoes = useQuery(classificacoesEscalaControllerListarQueryOptions());
   const catalogo: NomesDoCatalogo = useMemo(
     () => ({
-      prioridades: new Map((prioridades.data?.itens ?? []).map((p) => [p.id, p.nome])),
-      subespecialidades: new Map((subespecialidades.data?.itens ?? []).map((s) => [s.id, s.nome])),
+      prioridades: new Map((classificacoes.data?.prioridades ?? []).map((p) => [p.id, p.nome])),
+      subespecialidades: new Map(
+        (classificacoes.data?.subespecialidades ?? []).map((s) => [s.id, s.nome]),
+      ),
     }),
-    [prioridades.data, subespecialidades.data],
+    [classificacoes.data],
   );
   const modoAusencias = busca.modo === 'ausencias';
 
@@ -258,7 +252,6 @@ function Escala() {
           conflitos={ocorrencias.data?.conflitos ?? []}
           permissoes={permissoes}
           podeDefinirAusencia={pode(sessao, 'ausencias.criar')}
-          podeVerCatalogo={podeVerCatalogo}
           onAbrir={setPainel}
           onAvisos={setAvisos}
         />

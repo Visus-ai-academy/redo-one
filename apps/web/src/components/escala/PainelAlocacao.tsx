@@ -36,9 +36,9 @@ export type PainelAlocacaoProps = {
   /** Turnos e frentes que quem edita pode usar (o recorte, se houver). */
   turnos: TurnoItemDto[];
   frentes: FrenteItemDto[];
-  /** Sem acesso ao catálogo, as restrições não aparecem (a alocação fica sem restrição). */
-  prioridades?: { id: string; nome: string }[];
-  subespecialidades?: { id: string; nome: string; especialidadeIds: string[] }[];
+  /** Inativas inclusive: o formulário oferece as ativas e as já marcadas na alocação. */
+  prioridades: { id: string; nome: string; ativo: boolean }[];
+  subespecialidades: { id: string; nome: string; ativo: boolean; especialidadeIds: string[] }[];
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
   onSalvar: (dados: AlocacaoDto) => Promise<void>;
   onFechar: () => void;
@@ -63,19 +63,26 @@ export function PainelAlocacao({
   const [erro, setErro] = useState<string>();
   const editando = Boolean(alocacao);
 
+  const iniciais = valoresIniciais({
+    hoje,
+    alocacao,
+    medico: alocacao && medicoNome ? { valor: alocacao.medicoId, rotulo: medicoNome } : undefined,
+    inicial: (() => {
+      // O "+" já traz o turno: o horário começa no dele.
+      const t = turnos.find((x) => x.id === inicial?.turnoId);
+      return t ? { horarioInicio: t.horarioInicio, horarioFim: t.horarioFim, ...inicial } : inicial;
+    })(),
+  });
+  // Uma inativa já marcada continua à mostra (com o nome), para manter ou desmarcar.
+  const oferecida = (marcadas: string[]) => (item: { id: string; ativo: boolean }) =>
+    item.ativo || marcadas.includes(item.id);
+  const prioridadesOferecidas = prioridades.filter(oferecida(iniciais.prioridadeIds));
+  const subespecialidadesOferecidas = subespecialidades.filter(
+    oferecida(iniciais.subespecialidadeIds),
+  );
+
   const form = useAppForm({
-    defaultValues: valoresIniciais({
-      hoje,
-      alocacao,
-      medico: alocacao && medicoNome ? { valor: alocacao.medicoId, rotulo: medicoNome } : undefined,
-      inicial: (() => {
-        // O "+" já traz o turno: o horário começa no dele.
-        const t = turnos.find((x) => x.id === inicial?.turnoId);
-        return t
-          ? { horarioInicio: t.horarioInicio, horarioFim: t.horarioFim, ...inicial }
-          : inicial;
-      })(),
-    }),
+    defaultValues: iniciais,
     validators: { onSubmit: esquemaAlocacao },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -185,7 +192,7 @@ export function PainelAlocacao({
             const lista = turno?.tipo === 'lista';
             const comFim = gratificado || vigencia === 'periodo';
             const frente = frentes.find((f) => f.id === frenteId);
-            const subs = (subespecialidades ?? []).filter(
+            const subs = subespecialidadesOferecidas.filter(
               (s) =>
                 !frente?.especialidadeId || s.especialidadeIds.includes(frente.especialidadeId),
             );
@@ -320,37 +327,27 @@ export function PainelAlocacao({
                     )
                   }
                 </form.AppField>
-                {prioridades ? (
-                  <form.AppField name="prioridadeIds">
-                    {() => (
-                      <CaixasField
-                        label="Prioridades"
-                        opcoes={prioridades.map((p) => ({ valor: p.id, rotulo: p.nome }))}
-                        description={AJUDA_RESTRICAO}
-                      />
-                    )}
-                  </form.AppField>
-                ) : null}
-                {subespecialidades ? (
-                  <form.AppField name="subespecialidadeIds">
-                    {() => (
-                      <CaixasField
-                        label="Subespecialidades"
-                        opcoes={[
-                          ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
-                          { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
-                        ]}
-                        description={AJUDA_RESTRICAO}
-                      />
-                    )}
-                  </form.AppField>
-                ) : null}
-                {!prioridades && !subespecialidades && (
-                  <Alerta tom="info" role="note">
-                    Seu papel não vê o catálogo: prioridades e subespecialidades ficam sem
-                    restrição.
-                  </Alerta>
-                )}
+                <form.AppField name="prioridadeIds">
+                  {() => (
+                    <CaixasField
+                      label="Prioridades"
+                      opcoes={prioridadesOferecidas.map((p) => ({ valor: p.id, rotulo: p.nome }))}
+                      description={AJUDA_RESTRICAO}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="subespecialidadeIds">
+                  {() => (
+                    <CaixasField
+                      label="Subespecialidades"
+                      opcoes={[
+                        ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
+                        { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
+                      ]}
+                      description={AJUDA_RESTRICAO}
+                    />
+                  )}
+                </form.AppField>
               </>
             );
           }}

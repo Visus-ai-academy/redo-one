@@ -49,10 +49,14 @@ function montar(props: Partial<PainelAlocacaoProps> = {}) {
         hoje="2026-11-16"
         turnos={TURNOS}
         frentes={FRENTES}
-        prioridades={[{ id: 'p-urg', nome: 'Urgente' }]}
+        prioridades={[
+          { id: 'p-urg', nome: 'Urgente', ativo: true },
+          { id: 'p-velha', nome: 'Antiga', ativo: false },
+        ]}
         subespecialidades={[
-          { id: 's-cab', nome: 'Cabeça', especialidadeIds: ['e-neuro'] },
-          { id: 's-msk', nome: 'Joelho', especialidadeIds: ['e-msk'] },
+          { id: 's-cab', nome: 'Cabeça', ativo: true, especialidadeIds: ['e-neuro'] },
+          { id: 's-msk', nome: 'Joelho', ativo: true, especialidadeIds: ['e-msk'] },
+          { id: 's-avc', nome: 'AVC', ativo: false, especialidadeIds: ['e-neuro'] },
         ]}
         buscarMedicos={async () => [{ valor: 'm1', rotulo: 'Ana Souza' }]}
         onSalvar={onSalvar}
@@ -63,6 +67,27 @@ function montar(props: Partial<PainelAlocacaoProps> = {}) {
   );
   return { onSalvar };
 }
+
+const ALOCACAO: AlocacaoItemDto = {
+  id: 'a1',
+  medicoId: 'm1',
+  turnoId: 't-manha',
+  frenteId: 'f-tc',
+  diasSemana: [1],
+  semanasDoMes: [],
+  horarioInicio: '07:00',
+  horarioFim: '13:00',
+  dataInicio: '2026-11-02',
+  dataFim: null,
+  produtividade: null,
+  gratificado: false,
+  subespecialidadeGeral: false,
+  prioridadeIds: [],
+  subespecialidadeIds: [],
+  coberturaDeId: null,
+  observacoes: null,
+  classificacao: 'fixa',
+};
 
 async function escolherMedico() {
   await userEvent.type(screen.getByRole('combobox', { name: 'Médico' }), 'Ana');
@@ -110,6 +135,34 @@ describe('PainelAlocacao', () => {
     ).toBeInTheDocument();
   });
 
+  it('oferece só prioridades e subespecialidades ativas', () => {
+    montar({ inicial: { frenteId: 'f-tc' } });
+    expect(screen.getByRole('checkbox', { name: 'Urgente' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Antiga' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Cabeça' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'AVC' })).not.toBeInTheDocument();
+  });
+
+  it('na edição mantém marcada, com o nome, a inativa já gravada', async () => {
+    const { onSalvar } = montar({
+      alocacao: { ...ALOCACAO, prioridadeIds: ['p-velha'], subespecialidadeIds: ['s-avc'] },
+      medicoNome: 'Ana Souza',
+    });
+    expect(screen.getByRole('checkbox', { name: 'Antiga' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'AVC' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Urgente' })).not.toBeChecked();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ prioridadeIds: ['p-velha'], subespecialidadeIds: ['s-avc'] }),
+    );
+  });
+
+  it('não mostra mais o aviso de catálogo', () => {
+    montar();
+    expect(screen.queryByText(/não vê o catálogo/)).not.toBeInTheDocument();
+  });
+
   it('período único marca todos os dias e pede início e fim', async () => {
     const { onSalvar } = montar({ inicial: { frenteId: 'f-tc', turnoId: 't-manha' } });
     await escolherMedico();
@@ -129,26 +182,6 @@ describe('PainelAlocacao', () => {
   });
 
   it('na edição o médico fica travado e o erro da API aparece', async () => {
-    const alocacao: AlocacaoItemDto = {
-      id: 'a1',
-      medicoId: 'm1',
-      turnoId: 't-manha',
-      frenteId: 'f-tc',
-      diasSemana: [1],
-      semanasDoMes: [],
-      horarioInicio: '07:00',
-      horarioFim: '13:00',
-      dataInicio: '2026-11-02',
-      dataFim: null,
-      produtividade: null,
-      gratificado: false,
-      subespecialidadeGeral: false,
-      prioridadeIds: [],
-      subespecialidadeIds: [],
-      coberturaDeId: null,
-      observacoes: null,
-      classificacao: 'fixa',
-    };
     const onSalvar = vi.fn(async () => {
       throw new ResponseError({
         status: 400,
@@ -158,7 +191,7 @@ describe('PainelAlocacao', () => {
         response: new Response(),
       });
     });
-    montar({ alocacao, medicoNome: 'Ana Souza', onSalvar });
+    montar({ alocacao: ALOCACAO, medicoNome: 'Ana Souza', onSalvar });
     expect(screen.getByRole('dialog', { name: 'Editar alocação' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Médico' })).toHaveValue('Ana Souza');
     expect(screen.getByRole('textbox', { name: 'Médico' })).toHaveAttribute('readonly');

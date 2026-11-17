@@ -9,8 +9,7 @@ import { coberturasControllerAtualizar } from '../../gen/clients/coberturasContr
 import { escalaFixaControllerDefinir } from '../../gen/clients/escalaFixaControllerDefinir';
 import { escalaFixaControllerObter } from '../../gen/clients/escalaFixaControllerObter';
 import { alocacoesControllerObterQueryOptions } from '../../gen/hooks/useAlocacoesControllerObter';
-import { prioridadesControllerListarQueryOptions } from '../../gen/hooks/usePrioridadesControllerListar';
-import { subespecialidadesControllerListarQueryOptions } from '../../gen/hooks/useSubespecialidadesControllerListar';
+import { classificacoesEscalaControllerListarQueryOptions } from '../../gen/hooks/useClassificacoesEscalaControllerListar';
 import type { AvisoConflitoDto } from '../../gen/types/AvisoConflitoDto';
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { FrenteItemDto } from '../../gen/types/FrenteItemDto';
@@ -46,14 +45,10 @@ type PaineisEscalaProps = {
   permissoes: PodeNaTela;
   /** `ausencias.criar`: o atalho "Definir ausência" do plantão. */
   podeDefinirAusencia: boolean;
-  /** Prioridades e subespecialidades vêm do catálogo; sem acesso, ficam sem restrição. */
-  podeVerCatalogo: boolean;
   onAbrir: (painel: PainelAberto | null) => void;
   /** Conflitos que a escrita criou (aviso que não bloqueia). */
   onAvisos: (avisos: AvisoConflitoDto[]) => void;
 };
-
-const ATIVOS = { query: { ativo: true, porPagina: 100 } };
 
 /** Depois de qualquer escrita na escala, refaz as ocorrências e as alocações abertas. */
 function invalidarEscala(queryClient: QueryClient) {
@@ -74,7 +69,6 @@ export function PaineisEscala({
   conflitos,
   permissoes,
   podeDefinirAusencia,
-  podeVerCatalogo,
   onAbrir,
   onAvisos,
 }: PaineisEscalaProps) {
@@ -164,7 +158,6 @@ export function PaineisEscala({
       hoje={hoje}
       turnos={turnos}
       frentes={frentes}
-      podeVerCatalogo={podeVerCatalogo}
       onFechar={fechar}
       onSalvo={async (texto, novos) => {
         await depois(texto, novos);
@@ -179,7 +172,6 @@ function PainelDeAlocacao({
   hoje,
   turnos,
   frentes,
-  podeVerCatalogo,
   onFechar,
   onSalvo,
 }: {
@@ -187,7 +179,6 @@ function PainelDeAlocacao({
   hoje: string;
   turnos: TurnoItemDto[];
   frentes: FrenteItemDto[];
-  podeVerCatalogo: boolean;
   onFechar: () => void;
   onSalvo: (texto: string, avisos: AvisoConflitoDto[]) => Promise<void>;
 }) {
@@ -196,18 +187,11 @@ function PainelDeAlocacao({
     ...alocacoesControllerObterQueryOptions({ path: { id } }),
     enabled: Boolean(id),
   });
-  const prioridades = useQuery({
-    ...prioridadesControllerListarQueryOptions(ATIVOS),
-    enabled: podeVerCatalogo,
-  });
-  const subespecialidades = useQuery({
-    ...subespecialidadesControllerListarQueryOptions(ATIVOS),
-    enabled: podeVerCatalogo,
-  });
+  // Prioridades e subespecialidades com `escala.ver`, sem depender de `catalogo.ver`.
+  const classificacoes = useQuery(classificacoesEscalaControllerListarQueryOptions());
   const faltaAlocacao = Boolean(id) && !alocacao.data;
-  const faltaCatalogo = podeVerCatalogo && (!prioridades.data || !subespecialidades.data);
-  if (faltaAlocacao || faltaCatalogo) {
-    const erro = alocacao.isError || prioridades.isError || subespecialidades.isError;
+  if (faltaAlocacao || !classificacoes.data) {
+    const erro = alocacao.isError || classificacoes.isError;
     return (
       <PainelCarregando
         key={`alocacao-${id}`}
@@ -215,8 +199,7 @@ function PainelDeAlocacao({
         erro={erro}
         onTentarDeNovo={() => {
           void alocacao.refetch();
-          void prioridades.refetch();
-          void subespecialidades.refetch();
+          void classificacoes.refetch();
         }}
       />
     );
@@ -231,8 +214,8 @@ function PainelDeAlocacao({
       hoje={hoje}
       turnos={turnos}
       frentes={frentes}
-      prioridades={prioridades.data?.itens}
-      subespecialidades={subespecialidades.data?.itens}
+      prioridades={classificacoes.data.prioridades}
+      subespecialidades={classificacoes.data.subespecialidades}
       buscarMedicos={buscarMedicosAtivos}
       onFechar={onFechar}
       onSalvar={async (dados) => {
