@@ -249,4 +249,60 @@ describe('PainelAlocacao', () => {
     });
     expect(tc.querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#8A4A4A' });
   });
+
+  describe('pré-preenchimento pelos arranjos do médico', () => {
+    const sugestao = {
+      prioridadeIds: ['p-urg'],
+      subespecialidadeIds: ['s-cab'],
+      subespecialidadeGeral: true,
+    };
+
+    it('ao escolher médico e frente, marca prioridades e subespecialidades sem travar as outras', async () => {
+      const buscarSugestao = vi.fn(async () => sugestao);
+      montar({ buscarSugestao });
+      await escolherMedico();
+      await escolherOpcao('Frente', 'TC Neuro');
+      expect(await screen.findByRole('checkbox', { name: 'Cabeça' })).toBeChecked();
+      expect(buscarSugestao).toHaveBeenCalledWith('m1', 'f-tc');
+      expect(screen.getByRole('checkbox', { name: 'Urgente' })).toBeChecked();
+      const geral = screen.getByRole('checkbox', { name: 'Geral (sem subespecialidade)' });
+      expect(geral).toBeChecked();
+      expect(screen.getAllByText(/Veio dos arranjos do médico/)).toHaveLength(2);
+      await userEvent.click(geral);
+      expect(geral).not.toBeChecked();
+      expect(screen.getAllByText(/Veio dos arranjos do médico/)).toHaveLength(1);
+    });
+
+    it('não sobrescreve o que a pessoa já marcou', async () => {
+      const buscarSugestao = vi.fn(async () => sugestao);
+      montar({ buscarSugestao, inicial: { frenteId: 'f-tc' } });
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Geral (sem subespecialidade)' }));
+      await escolherMedico();
+      expect(await screen.findByRole('checkbox', { name: 'Urgente' })).toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'Cabeça' })).not.toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'Geral (sem subespecialidade)' })).toBeChecked();
+    });
+
+    it('trocar para um médico sem arranjo da frente desfaz a sugestão', async () => {
+      const buscarSugestao = vi
+        .fn<(medicoId: string, frenteId: string) => Promise<typeof sugestao | null>>()
+        .mockResolvedValueOnce(sugestao)
+        .mockResolvedValueOnce(null);
+      montar({ buscarSugestao, inicial: { frenteId: 'f-tc' } });
+      await escolherMedico();
+      expect(await screen.findByRole('checkbox', { name: 'Urgente' })).toBeChecked();
+      await escolherOpcao('Frente', 'RM Geral');
+      await escolherOpcao('Frente', 'TC Neuro');
+      await vi.waitFor(() =>
+        expect(screen.getByRole('checkbox', { name: 'Urgente' })).not.toBeChecked(),
+      );
+    });
+
+    it('na edição não busca sugestão', async () => {
+      const buscarSugestao = vi.fn(async () => sugestao);
+      montar({ buscarSugestao, alocacao: ALOCACAO, medicoNome: 'Ana Souza' });
+      await screen.findByRole('dialog', { name: 'Editar alocação' });
+      expect(buscarSugestao).not.toHaveBeenCalled();
+    });
+  });
 });

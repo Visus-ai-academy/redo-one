@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useStore } from '@tanstack/react-form';
+import { useEffect, useRef, useState } from 'react';
 
 import type { AlocacaoDto } from '../../gen/types/AlocacaoDto';
 import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
 import type { FrenteItemDto } from '../../gen/types/FrenteItemDto';
+import type { SugestaoAlocacaoDto } from '../../gen/types/SugestaoAlocacaoDto';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
@@ -40,6 +42,11 @@ export type PainelAlocacaoProps = {
   prioridades: { id: string; nome: string; ativo: boolean }[];
   subespecialidades: { id: string; nome: string; ativo: boolean; especialidadeIds: string[] }[];
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  /**
+   * Em alocação nova: prioridades e subespecialidades sugeridas pelos arranjos do médico na
+   * frente (null = nenhum arranjo dela). Sem a função, nada é sugerido.
+   */
+  buscarSugestao?: (medicoId: string, frenteId: string) => Promise<SugestaoAlocacaoDto | null>;
   onSalvar: (dados: AlocacaoDto) => Promise<void>;
   onFechar: () => void;
 };
@@ -57,6 +64,7 @@ export function PainelAlocacao({
   prioridades,
   subespecialidades,
   buscarMedicos,
+  buscarSugestao,
   onSalvar,
   onFechar,
 }: PainelAlocacaoProps) {
@@ -102,6 +110,28 @@ export function PainelAlocacao({
   });
 
   const opcoesFrentes = opcoesDeFrentes(frentes);
+  const sugerido = useSugestaoDoMedico({
+    form,
+    ativo: !editando && Boolean(buscarSugestao),
+    buscarSugestao,
+    iniciais,
+    filtrar: (sugestao, frenteId) => {
+      const subs = subsDaFrente(frentes.find((f) => f.id === frenteId));
+      return {
+        prioridadeIds: sugestao.prioridadeIds.filter((id) =>
+          prioridadesOferecidas.some((p) => p.id === id),
+        ),
+        subespecialidadeIds: [
+          ...sugestao.subespecialidadeIds.filter((id) => subs.some((s) => s.id === id)),
+          ...(sugestao.subespecialidadeGeral && subs.length > 0 ? [GERAL] : []),
+        ],
+      };
+    },
+  });
+  const ajuda = (campo: CampoSugerido) =>
+    sugerido.has(campo) && !form.getFieldMeta(campo)?.isTouched
+      ? `${AJUDA_RESTRICAO} Veio dos arranjos do médico.`
+      : AJUDA_RESTRICAO;
 
   return (
     <PainelLateral titulo={editando ? 'Editar alocação' : 'Alocar médico'} onFechar={onFechar}>
@@ -149,8 +179,12 @@ export function PainelAlocacao({
               const ficam = marcadas.filter((id) =>
                 id === GERAL ? daFrente.length > 0 : daFrente.some((s) => s.id === id),
               );
+              // Sem marcar o campo como mexido: a sugestão do médico ainda pode preenchê-lo.
               if (ficam.length !== marcadas.length)
-                form.setFieldValue('subespecialidadeIds', ficam);
+                form.setFieldValue('subespecialidadeIds', ficam, {
+                  dontUpdateMeta: true,
+                  dontValidate: true,
+                });
             },
           }}
         >
@@ -352,7 +386,7 @@ export function PainelAlocacao({
                     <CaixasField
                       label="Prioridades"
                       opcoes={prioridadesOferecidas.map((p) => ({ valor: p.id, rotulo: p.nome }))}
-                      description={AJUDA_RESTRICAO}
+                      description={ajuda('prioridadeIds')}
                     />
                   )}
                 </form.AppField>
@@ -366,7 +400,7 @@ export function PainelAlocacao({
                           ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
                           { valor: GERAL, rotulo: 'Geral (sem subespecialidade)' },
                         ]}
-                        description={AJUDA_RESTRICAO}
+                        description={ajuda('subespecialidadeIds')}
                       />
                     )
                   }
@@ -389,4 +423,77 @@ export function PainelAlocacao({
       </form>
     </PainelLateral>
   );
+}
+
+type CampoSugerido = 'prioridadeIds' | 'subespecialidadeIds';
+const CAMPOS_SUGERIDOS: CampoSugerido[] = ['prioridadeIds', 'subespecialidadeIds'];
+
+type FormAlocacao = {
+  store: Parameters<typeof useStore>[0];
+  getFieldMeta: (campo: CampoSugerido) => { isTouched?: boolean } | undefined;
+  setFieldValue: (
+    campo: CampoSugerido,
+    valor: string[],
+    opcoes: { dontUpdateMeta: boolean; dontValidate: boolean },
+  ) => void;
+};
+
+/**
+ * Com médico e frente escolhidos, busca a sugestão dos arranjos e preenche prioridades e
+ * subespecialidades que a pessoa ainda não mexeu (sem a sugestão, voltam ao valor inicial). As
+ * outras opções continuam livres. Devolve os campos que estão com a sugestão.
+ */
+function useSugestaoDoMedico({
+  form,
+  ativo,
+  buscarSugestao,
+  iniciais,
+  filtrar,
+}: {
+  form: FormAlocacao;
+  ativo: boolean;
+  buscarSugestao?: PainelAlocacaoProps['buscarSugestao'];
+  iniciais: { prioridadeIds: string[]; subespecialidadeIds: string[] };
+  filtrar: (sugestao: SugestaoAlocacaoDto, frenteId: string) => Record<CampoSugerido, string[]>;
+}) {
+  const medicoId = useStore(
+    form.store,
+    (estado) => (estado as { values: { medico: OpcaoBusca | null } }).values.medico?.valor ?? '',
+  );
+  const frenteId = useStore(
+    form.store,
+    (estado) => (estado as { values: { frenteId: string } }).values.frenteId,
+  );
+  const [sugerido, setSugerido] = useState<ReadonlySet<CampoSugerido>>(new Set());
+  // As funções mudam a cada render; o efeito só roda quando médico ou frente mudam.
+  const atual = useRef({ buscarSugestao, iniciais, filtrar });
+  atual.current = { buscarSugestao, iniciais, filtrar };
+
+  useEffect(() => {
+    const { buscarSugestao: buscar, iniciais: inicio, filtrar: recortar } = atual.current;
+    if (!ativo || !buscar || !medicoId || !frenteId) return;
+    let valendo = true;
+    Promise.resolve()
+      .then(() => buscar(medicoId, frenteId))
+      .catch(() => null)
+      .then((sugestao) => {
+        if (!valendo) return;
+        const valores = sugestao ? recortar(sugestao, frenteId) : null;
+        const preenchidos = new Set<CampoSugerido>();
+        for (const campo of CAMPOS_SUGERIDOS) {
+          if (form.getFieldMeta(campo)?.isTouched) continue;
+          form.setFieldValue(campo, valores?.[campo] ?? inicio[campo], {
+            dontUpdateMeta: true,
+            dontValidate: true,
+          });
+          if (valores?.[campo].length) preenchidos.add(campo);
+        }
+        setSugerido(preenchidos);
+      });
+    return () => {
+      valendo = false;
+    };
+  }, [ativo, medicoId, frenteId, form]);
+
+  return sugerido;
 }

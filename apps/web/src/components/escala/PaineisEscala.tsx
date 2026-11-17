@@ -8,6 +8,7 @@ import { alocacoesControllerRemover } from '../../gen/clients/alocacoesControlle
 import { coberturasControllerAtualizar } from '../../gen/clients/coberturasControllerAtualizar';
 import { escalaFixaControllerDefinir } from '../../gen/clients/escalaFixaControllerDefinir';
 import { escalaFixaControllerObter } from '../../gen/clients/escalaFixaControllerObter';
+import { sugestaoAlocacaoControllerObter } from '../../gen/clients/sugestaoAlocacaoControllerObter';
 import { alocacoesControllerObterQueryOptions } from '../../gen/hooks/useAlocacoesControllerObter';
 import { classificacoesEscalaControllerListarQueryOptions } from '../../gen/hooks/useClassificacoesEscalaControllerListar';
 import type { AvisoConflitoDto } from '../../gen/types/AvisoConflitoDto';
@@ -167,6 +168,14 @@ export function PaineisEscala({
   );
 }
 
+/** O que os arranjos do médico sugerem para a alocação na frente (null = nada a sugerir). */
+async function buscarSugestaoAlocacao(medicoId: string, frenteId: string) {
+  const { sugestao } = await sugestaoAlocacaoControllerObter({
+    query: { medicoId, frenteId },
+  }).unwrap();
+  return sugestao;
+}
+
 function PainelDeAlocacao({
   painel,
   hoje,
@@ -217,6 +226,7 @@ function PainelDeAlocacao({
       prioridades={classificacoes.data.prioridades}
       subespecialidades={classificacoes.data.subespecialidades}
       buscarMedicos={buscarMedicosAtivos}
+      buscarSugestao={buscarSugestaoAlocacao}
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {
