@@ -256,14 +256,11 @@ function Descricao({
   );
 }
 
-function ComCor({ cor, children }: { cor: string | null; children: string }) {
+/** Nome com a bolinha da cor que é dado (frente, turno, tipo de ausência). */
+export function ComCor({ cor, children }: { cor: string | null; children: string }) {
   return (
     <span className="inline-flex max-w-full items-center gap-1.5">
-      <span
-        aria-hidden
-        className="border-border size-2 flex-none rounded-full border"
-        style={cor ? { backgroundColor: cor, borderColor: cor } : undefined}
-      />
+      <BolinhaCor cor={cor} />
       <span className="truncate">{children}</span>
     </span>
   );

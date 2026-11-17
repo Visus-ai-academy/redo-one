@@ -2,7 +2,6 @@ import { Button } from '@base-ui/react/button';
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { z } from 'zod';
-
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { PodeNaTela } from '../../lib/permissoes';
@@ -13,6 +12,7 @@ import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
 import { dataCurta, diaDaSemana, NOMES_DIAS_LONGOS } from './calendario';
+import { ComCor } from './LinhaMedico';
 
 export type PainelPlantaoProps = {
   ocorrencia: OcorrenciaDto;
@@ -98,7 +98,12 @@ export function PainelPlantao({
           </Alerta>
         )}
         <dl className="flex flex-col gap-3">
-          <Linha rotulo="Onde">{local}</Linha>
+          <Linha rotulo="Onde">
+            <span className="flex flex-wrap gap-x-3 gap-y-0.5">
+              <ComCor cor={o.frenteCor}>{o.frenteRotulo}</ComCor>
+              <ComCor cor={o.turnoCor}>{o.turnoNome}</ComCor>
+            </span>
+          </Linha>
           <Linha rotulo="Horário">
             <span className="tabular-nums">
               {o.horarioInicio}–{o.horarioFim}
@@ -111,7 +116,11 @@ export function PainelPlantao({
           {o.cobertoPor && <Linha rotulo="Cobertura">Coberto por {o.cobertoPor.medicoNome}</Linha>}
           {o.ausente && (
             <Linha rotulo="Ausência">
-              {o.tipoAusenciaNome ? `Ausente: ${o.tipoAusenciaNome}` : 'Ausente'}
+              {o.tipoAusenciaNome ? (
+                <ComCor cor={o.tipoAusenciaCor}>{o.tipoAusenciaNome}</ComCor>
+              ) : (
+                'Ausente'
+              )}
             </Linha>
           )}
         </dl>

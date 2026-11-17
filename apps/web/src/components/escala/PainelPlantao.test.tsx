@@ -45,6 +45,17 @@ describe('PainelPlantao', () => {
     expect(acoes.onCobertura).toHaveBeenCalled();
   });
 
+  it('onde e ausência com as cores da frente, do turno e do tipo', async () => {
+    await montar(
+      ocorrencia({ ausente: true, tipoAusenciaNome: 'Férias', tipoAusenciaCor: '#5677B8' }),
+    );
+    const cor = (texto: string) =>
+      screen.getByText(texto).parentElement?.querySelector('[data-cor]');
+    expect(cor('TC Neuro')).toHaveStyle({ backgroundColor: '#1F7A4D' });
+    expect(cor('Manhã')).toHaveStyle({ backgroundColor: '#214037' });
+    expect(cor('Férias')).toHaveStyle({ backgroundColor: '#5677B8' });
+  });
+
   it('definir ausência leva à tela de ausências já preenchida', async () => {
     await montar(ocorrencia());
     const link = screen.getByRole('link', { name: 'Definir ausência' });
