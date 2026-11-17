@@ -37,6 +37,12 @@ export type ExamesControllerListarQuery = {
    * @type string | undefined
    */
   especialidadeId?: string;
+  /**
+   * @description
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  subespecialidadeId?: string;
 };
 
 export type ExamesControllerListarStatus200 = PaginaExamesDto;

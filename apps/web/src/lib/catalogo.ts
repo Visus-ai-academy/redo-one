@@ -13,3 +13,28 @@ export function invalidarCatalogo(queryClient: QueryClient) {
     },
   });
 }
+
+type SubespecialidadeDeEspecialidades = { id: string; especialidadeIds: string[] };
+
+/** Subespecialidades que se oferecem com a especialidade escolhida (sem ela, todas). */
+export function subespecialidadesDaEspecialidade<T extends SubespecialidadeDeEspecialidades>(
+  subespecialidades: T[],
+  especialidadeId: string | undefined,
+): T[] {
+  if (!especialidadeId) return subespecialidades;
+  return subespecialidades.filter((s) => s.especialidadeIds.includes(especialidadeId));
+}
+
+/** Ao trocar a especialidade, a subespecialidade escolhida só fica se pertencer à nova. */
+export function subespecialidadeQueFica(
+  subespecialidades: SubespecialidadeDeEspecialidades[],
+  subespecialidadeId: string | undefined,
+  especialidadeId: string | undefined,
+): string | undefined {
+  if (!subespecialidadeId) return undefined;
+  return subespecialidadesDaEspecialidade(subespecialidades, especialidadeId).some(
+    (s) => s.id === subespecialidadeId,
+  )
+    ? subespecialidadeId
+    : undefined;
+}

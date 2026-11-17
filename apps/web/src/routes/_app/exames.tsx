@@ -36,7 +36,11 @@ import { quebrasControllerObterQueryOptions } from '../../gen/hooks/useQuebrasCo
 import type { DeParaValorItemDto } from '../../gen/types/DeParaValorItemDto';
 import type { ExameResumoDto } from '../../gen/types/ExameResumoDto';
 import type { QuebraResumoDto } from '../../gen/types/QuebraResumoDto';
-import { invalidarCatalogo } from '../../lib/catalogo';
+import {
+  invalidarCatalogo,
+  subespecialidadeQueFica,
+  subespecialidadesDaEspecialidade,
+} from '../../lib/catalogo';
 import { type PodeNaTela, pode, podeNaTela } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
@@ -57,6 +61,7 @@ const buscaSchema = z.object({
   busca: z.string().trim().min(1).optional().catch(undefined),
   modalidadeId: z.uuid().optional().catch(undefined),
   especialidadeId: z.uuid().optional().catch(undefined),
+  subespecialidadeId: z.uuid().optional().catch(undefined),
   situacao: z.enum(['ativos', 'inativos']).optional().catch(undefined),
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   id: z.uuid().optional().catch(undefined),
@@ -69,6 +74,7 @@ const consulta = (b: Busca) => ({
     busca: b.busca,
     modalidadeId: b.modalidadeId,
     especialidadeId: b.especialidadeId,
+    subespecialidadeId: b.subespecialidadeId,
     ativo: b.situacao === undefined ? undefined : b.situacao === 'ativos',
     pagina: b.pagina ?? 1,
     porPagina: POR_PAGINA,
@@ -215,7 +221,9 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
     [abrir],
   );
 
-  const temFiltro = Boolean(busca.situacao || busca.modalidadeId || busca.especialidadeId);
+  const temFiltro = Boolean(
+    busca.situacao || busca.modalidadeId || busca.especialidadeId || busca.subespecialidadeId,
+  );
   return (
     <ListaCadastro
       titulo="Exames"
@@ -243,12 +251,34 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
           <Select
             aria-label="Filtrar por especialidade"
             value={busca.especialidadeId ?? ''}
-            onValueChange={(v) => filtrar({ especialidadeId: v || undefined })}
+            onValueChange={(v) =>
+              filtrar({
+                especialidadeId: v || undefined,
+                subespecialidadeId: subespecialidadeQueFica(
+                  opcoes.subespecialidades,
+                  busca.subespecialidadeId,
+                  v || undefined,
+                ),
+              })
+            }
             opcoes={[
               { valor: '', rotulo: 'Todas as especialidades' },
               ...opcoes.especialidades.map((e) => ({ valor: e.id, rotulo: e.nome })),
             ]}
             className="flex-[1_1_160px] md:flex-[0_1_220px]"
+          />
+          <Select
+            aria-label="Filtrar por subespecialidade"
+            value={busca.subespecialidadeId ?? ''}
+            onValueChange={(v) => filtrar({ subespecialidadeId: v || undefined })}
+            opcoes={[
+              { valor: '', rotulo: 'Todas as subespecialidades' },
+              ...subespecialidadesDaEspecialidade(
+                opcoes.subespecialidades,
+                busca.especialidadeId,
+              ).map((s) => ({ valor: s.id, rotulo: s.nome })),
+            ]}
+            className="flex-[1_1_160px] md:flex-[0_1_230px]"
           />
           <Select
             aria-label="Filtrar por situação"
@@ -285,6 +315,7 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
           situacao: undefined,
           modalidadeId: undefined,
           especialidadeId: undefined,
+          subespecialidadeId: undefined,
         })
       }
       onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}

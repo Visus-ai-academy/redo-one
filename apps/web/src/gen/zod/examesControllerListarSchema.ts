@@ -30,6 +30,10 @@ export const examesControllerListarQueryEspecialidadeIdSchema = z.uuid().optiona
 
 export type ExamesControllerListarQueryEspecialidadeIdSchemaType = z.infer<typeof examesControllerListarQueryEspecialidadeIdSchema>
 
+export const examesControllerListarQuerySubespecialidadeIdSchema = z.uuid().optional()
+
+export type ExamesControllerListarQuerySubespecialidadeIdSchemaType = z.infer<typeof examesControllerListarQuerySubespecialidadeIdSchema>
+
 export const examesControllerListarStatus200Schema = paginaExamesDtoSchema
 
 export type ExamesControllerListarStatus200SchemaType = z.infer<typeof examesControllerListarStatus200Schema>
@@ -45,6 +49,7 @@ export const examesControllerListarQuerySchema = z.object({
   ativo: z.boolean().optional(),
   modalidadeId: z.uuid().optional(),
   especialidadeId: z.uuid().optional(),
+  subespecialidadeId: z.uuid().optional(),
 })
 
 export type ExamesControllerListarQuerySchemaType = z.infer<typeof examesControllerListarQuerySchema>
