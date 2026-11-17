@@ -53,6 +53,7 @@
 | JWT continua valendo depois de trocar senha ou papel | Sessão no banco em cookie `httpOnly` (7 dias sem uso, máximo de 30); trocar senha ou papel derruba as sessões | Feito | 13/11 · 54a72938, b42fd822 |
 | Médico criado com senha padrão (`Mudar@123`) | Primeiro acesso por convite (7 dias), feito no painel do médico | Feito / Decidido | 13/11 · b42fd822; 14/11 · 78757306 |
 | Permissões concedidas por script em produção, uma a uma, conforme o usuário esbarrava | Papéis editáveis por tela, permissões `tela.ação` de um catálogo único | Feito | 09–10/11 · 5693887a, 70f6e884; 14/11 · 39b43759 |
+| Permissão `X.editar` valia para criar, editar e excluir; checklist longa e sem agrupamento | Permissões CRUD por tela (`ver`, `criar`, `editar`, `excluir`) e ações especiais à parte; editor em matriz por área, com só leitura e copiar de outro papel; observação de ausência só com `ausencias.observacoes.ver` | Feito | 16–17/11 · 6b9cff3f |
 | Papéis feitos por pessoa, sem equivalência entre eles | Papéis por função | Ideia | 12/11 · 82c4002f |
 | Recorte da gestora de escala aplicado em só 2 rotas | RBAC com recortes por atributo aplicados de forma consistente | Feito (escala) / Pendente (`medicos`) | 13/11 · 54a72938 |
 | Só a escala era auditada; catálogo sem auditoria apesar de decidir preço | Auditoria única nas entidades críticas, incluindo todo o catálogo e a leitura dos dados de pagamento do médico | Feito (catálogo e médicos) | 13/11 · 54a72938; 14/11 · 78757306 |
@@ -157,6 +158,7 @@
 | Gestora precisava de acesso ao cadastro de médicos para escalar | Lista de médicos da escala (só id, nome e ativo) com `escala.ver` | Feito | 16/11 · 6b9cff3f |
 | Escalar um médico com produtividade diferente por dia exigia um vínculo por combinação (ou a grade do cadastro, que era um segundo editor) | "Montar escala" no modo Por médico: grade turnos × dias com produtividade por célula; vira as alocações sozinha e aplica só a diferença | Feito | 16/11 · 6b9cff3f |
 | Semana com uma linha por turno espalhava os médicos do dia | Semana no formato que a operação prefere: um calendário por frente, médicos do mesmo turno em bloco com a faixa lateral na cor do turno, cartão com a descrição ao passar o mouse e modo Ausências da semana | Feito | 16/11 · 6b9cff3f |
+| Sábado e domingo sempre na grade, quase sempre vazios | Semana de segunda a sexta; sábado e domingo aparecem quando há plantão ou ausência, ou pelo alternador "Fim de semana", que permite escalar neles | Feito | 17/11 · 6b9cff3f |
 | Frentes, turnos e tipos de ausência sem cor ou com cores parecidas | Cores de matizes bem separados e pouco saturados, editáveis na tela; a carga não sobrescreve a cor escolhida no redo-one | Feito | 16/11 · 6b9cff3f |
 | Arranjo do médico pré-preenchia o vínculo lendo a distribuição de dentro da escala | O formulário recebe valores iniciais; o pré-preenchimento vem da `distribuicao` pelo front | Pendente (com a `distribuicao`) | 16/11 · 6b9cff3f |
 
