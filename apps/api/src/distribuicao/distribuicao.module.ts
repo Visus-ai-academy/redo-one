@@ -127,8 +127,11 @@ import {
 } from './infrastructure/http/prioridades-operacao.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { RodadasController } from './infrastructure/http/rodadas.controller';
+import { ClienteMobileMed } from './infrastructure/mobilemed/cliente-mobilemed';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
+import { MobileMedReal } from './infrastructure/mobilemed/mobilemed-real';
+import { TokenMobileMedDoAmbiente } from './infrastructure/mobilemed/token-mobilemed';
 import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzle-ajustes-dia.repository';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
@@ -202,17 +205,34 @@ const CASOS_RODADA = [
     { provide: ESCOPO_RODADA, useClass: EscopoRodadaAdapter },
     DrizzleAmostraCatalogo,
     {
-      // TODO(adaptador real): trocar pela integração HTTP com a MobileMed depois do mapeamento.
+      // Fake (padrão) ou a MobileMed de verdade: só `DISTRIBUICAO_MOBILEMED=real` liga a integração.
       provide: MOBILEMED,
       inject: [DrizzleAmostraCatalogo, ConfigService],
-      useFactory: (amostra: DrizzleAmostraCatalogo, config: ConfigService) =>
-        new MobileMedFake(() => amostra.carregar(), agora, {
+      useFactory: (amostra: DrizzleAmostraCatalogo, config: ConfigService) => {
+        if (config.get<string>('DISTRIBUICAO_MOBILEMED') === 'real') {
+          const cliente = new ClienteMobileMed({
+            baseUrl: (
+              config.get<string>('MOBILEMED_PORTAL_API_URL') ||
+              'https://gateway-sa.mobilemed.com.br/portal-api'
+            ).replace(/\/+$/, ''),
+            token: new TokenMobileMedDoAmbiente(config.get<string>('MOBILEMED_ACCESS_TOKEN')),
+            timeoutMs: inteiro(config, 'MOBILEMED_TIMEOUT_MS', 90_000),
+            concorrencia: inteiro(config, 'MOBILEMED_CONCORRENCIA', 1),
+            limiteAnomalias: inteiro(config, 'MOBILEMED_LIMITE_ANOMALIAS', 2),
+          });
+          return new MobileMedReal(cliente, {
+            porPagina: inteiro(config, 'MOBILEMED_PAGINA', 1_000),
+            maximoExames: inteiro(config, 'MOBILEMED_MAXIMO_EXAMES', 20_000),
+          });
+        }
+        return new MobileMedFake(() => amostra.carregar(), agora, {
           tamanho: inteiro(config, 'DISTRIBUICAO_FAKE_TAMANHO', 300),
           semente: inteiro(config, 'DISTRIBUICAO_FAKE_SEMENTE', 1),
           falhasPct: inteiro(config, 'DISTRIBUICAO_FAKE_FALHAS_PCT', 0),
           porForaPct: inteiro(config, 'DISTRIBUICAO_FAKE_POR_FORA_PCT', 0),
           abertosPct: inteiro(config, 'DISTRIBUICAO_FAKE_ABERTOS_PCT', 0),
-        }),
+        });
+      },
     },
     { provide: FILA_EXAMES, useExisting: MOBILEMED },
     { provide: ATRIBUIDOR_EXAMES, useExisting: MOBILEMED },

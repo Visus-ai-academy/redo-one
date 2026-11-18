@@ -28,6 +28,23 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('DISTRIBUICAO_FAKE_POR_FORA_PCT', inteiroAte(100), 'inteiro de 0 a 100');
   opcional('DISTRIBUICAO_FAKE_ABERTOS_PCT', inteiroAte(100), 'inteiro de 0 a 100');
 
+  opcional('DISTRIBUICAO_MOBILEMED', (v) => v === 'fake' || v === 'real', 'use fake ou real');
+  opcional(
+    'MOBILEMED_PORTAL_API_URL',
+    (v) => /^https:\/\//.test(v),
+    'precisa começar com https://',
+  );
+  const inteiroEntre = (min: number, max: number) => (v: string) =>
+    /^\d+$/.test(v) && Number(v) >= min && Number(v) <= max;
+  opcional('MOBILEMED_PAGINA', inteiroEntre(1, 5_000), 'inteiro de 1 a 5000');
+  opcional('MOBILEMED_MAXIMO_EXAMES', inteiroEntre(1, 1_000_000), 'inteiro de 1 a 1000000');
+  opcional('MOBILEMED_TIMEOUT_MS', inteiroEntre(1_000, 600_000), 'inteiro de 1000 a 600000');
+  opcional('MOBILEMED_CONCORRENCIA', inteiroEntre(1, 10), 'inteiro de 1 a 10');
+  opcional('MOBILEMED_LIMITE_ANOMALIAS', inteiroEntre(1, 100), 'inteiro de 1 a 100');
+  if (texto('DISTRIBUICAO_MOBILEMED') === 'real' && !texto('MOBILEMED_ACCESS_TOKEN')) {
+    erros.push('MOBILEMED_ACCESS_TOKEN: obrigatória com DISTRIBUICAO_MOBILEMED=real');
+  }
+
   if (erros.length) throw new Error(`Variáveis de ambiente inválidas:\n- ${erros.join('\n- ')}`);
   return env;
 }
