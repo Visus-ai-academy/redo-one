@@ -52,7 +52,7 @@ export function CelulaComPopover({
           collisionPadding={16}
           className="z-50 outline-none"
         >
-          <Popover.Popup className="bg-popover text-popover-foreground w-[min(320px,calc(100vw-32px))] origin-(--transform-origin) rounded-lg border p-3 text-sm shadow-lg transition-[opacity,scale] duration-150 ease-out outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
+          <Popover.Popup className="bg-popover text-popover-foreground max-h-(--available-height) w-[min(320px,calc(100vw-32px))] origin-(--transform-origin) overflow-y-auto rounded-lg border p-3 text-sm shadow-lg transition-[opacity,scale] duration-150 ease-out outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
             <Popover.Title className="mb-2 font-semibold">{titulo}</Popover.Title>
             {children}
           </Popover.Popup>
