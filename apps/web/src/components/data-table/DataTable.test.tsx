@@ -30,6 +30,14 @@ describe('DataTable', () => {
     expect(within(table).getByRole('cell', { name: 'alan@example.com' })).toBeInTheDocument();
   });
 
+  it('a caixa que rola segue o raio do painel no topo: o fundo do cabeçalho não vaza no canto', () => {
+    render(<DataTable caption="Usuários" columns={columns} data={[]} />);
+
+    const caixa = screen.getByRole('table', { name: 'Usuários' }).parentElement;
+    // Raio interno do painel (8px menos a borda de 1px); a rolagem continua na própria caixa.
+    expect(caixa).toHaveClass('rounded-t-[calc(var(--radius-lg)-1px)]', 'overflow-x-auto');
+  });
+
   it('mostra a mensagem de vazio quando não há registros', () => {
     render(<DataTable columns={columns} data={[]} emptyMessage="Nenhum usuário" />);
 

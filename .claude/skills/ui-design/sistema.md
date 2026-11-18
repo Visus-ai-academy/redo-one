@@ -58,6 +58,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 - Controles 36px de altura no app, 44px nas telas de acesso (com texto de 16px, que evita o zoom automático do iOS ao focar).
 - Linha de tabela 44px; padding de painel 16px; espaço entre seções 24–32px.
 - Raio: 6px controles, 8px painéis e tabelas, 12px modal.
+- Tabela encostada na borda de um painel: o fundo do cabeçalho segue o raio da caixa, nunca canto reto sobre o canto arredondado. O `DataTable` já arredonda o topo da caixa que rola (raio interno: 8px menos a borda); tabela fora do kit põe o `overflow-x-auto` no próprio elemento com borda e raio, ou dentro de caixa que corta (ex.: `Caixa`).
 
 ### Movimento (aprovado em 14/11/2026)
 

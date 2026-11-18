@@ -112,8 +112,16 @@ export function DataTable<TData extends RowData>({
 
   return (
     // Sem borda própria: a tabela fica dentro de um Painel (ou seção com borda), nunca cartão no cartão.
-    // Rola na horizontal dentro da caixa no celular.
-    <div ref={caixa} className={cn('group/tabela w-full overflow-x-auto', className)}>
+    // Rola na horizontal dentro da caixa no celular. O topo segue o raio interno do painel (8px
+    // menos a borda): o clipe da rolagem corta o fundo do cabeçalho no canto, sem overflow-hidden
+    // no painel (a rolagem, o cabeçalho fixo e os popovers, que vão para um portal, continuam).
+    <div
+      ref={caixa}
+      className={cn(
+        'group/tabela w-full overflow-x-auto rounded-t-[calc(var(--radius-lg)-1px)]',
+        className,
+      )}
+    >
       <table className="w-full caption-bottom tabular-nums">
         {caption && <caption className="text-muted-foreground mt-4 text-[13px]">{caption}</caption>}
         <thead>
