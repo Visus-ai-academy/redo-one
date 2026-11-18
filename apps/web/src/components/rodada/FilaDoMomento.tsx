@@ -235,7 +235,7 @@ export function FilaDoMomento({
 
 /** Prioridade sem cor cadastrada: tons de neutro na ordem da operação (a primeira, mais escura). */
 const TONS_NEUTROS = [85, 64, 48, 36, 28];
-const corDaPrioridade = (p: { cor?: string | null }, i: number) =>
+const corDaPrioridade = (p: { cor: string | null }, i: number) =>
   p.cor ??
   `color-mix(in srgb, var(--muted-foreground) ${TONS_NEUTROS[Math.min(i, TONS_NEUTROS.length - 1)]}%, white)`;
 
@@ -251,7 +251,7 @@ type PrioridadeComCor = FilaDoMomentoDto['prioridades'][number] & { cor: string 
 function PorFrente({ fila }: { fila: FilaDoMomentoDto }) {
   const prioridades: PrioridadeComCor[] = fila.prioridades.map((p, i) => ({
     ...p,
-    cor: corDaPrioridade(p as { cor?: string | null }, i),
+    cor: corDaPrioridade(p, i),
   }));
   return (
     <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3 lg:col-span-1">

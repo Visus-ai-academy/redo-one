@@ -7,6 +7,7 @@ import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDt
 import type { PrioridadeOperacaoEdicaoDto } from '../../gen/types/PrioridadeOperacaoEdicaoDto';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { buttonClassName } from '../button/button-class';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
@@ -24,6 +25,8 @@ type Props = {
   onExcluir: (id: string) => Promise<void>;
 };
 
+const HEX = /^#[0-9a-f]{6}$/i;
+
 const schema = z
   .object({
     nome: z.string().trim().min(1, 'Informe o nome.').max(60, 'Use até 60 caracteres.'),
@@ -32,6 +35,12 @@ const schema = z
     horas: z.string(),
     padrao: z.boolean(),
     grafias: z.string(),
+    cor: z
+      .string()
+      .refine(
+        (cor) => cor.trim() === '' || HEX.test(cor.trim()),
+        'Use o formato #RRGGBB, como #1F7A4D.',
+      ),
   })
   .superRefine((v, ctx) => {
     if (Number(v.posicao) < 1) {
@@ -67,6 +76,7 @@ function PainelPrioridade({
       horas: prioridade?.urgencia.horas === null ? '' : String(prioridade?.urgencia.horas ?? ''),
       padrao: prioridade?.padrao ?? false,
       grafias: (prioridade?.grafias ?? []).join('\n'),
+      cor: prioridade?.cor ?? '',
     },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
@@ -81,6 +91,7 @@ function PainelPrioridade({
               : { tipo: value.urgencia, horas: null },
           padrao: value.padrao,
           grafias: grafiasDoTexto(value.grafias),
+          cor: value.cor.trim() || null,
         });
       } catch (falha) {
         setErro(mensagemDaApi(falha, 'Não foi possível salvar a prioridade.'));
@@ -123,6 +134,7 @@ function PainelPrioridade({
             label="Grafias da MobileMed"
             value={prioridade.grafias.join(', ') || '—'}
           />
+          <CampoSomenteLeitura label="Cor" value={prioridade.cor ?? 'Sem cor'} />
           <RodapeSomenteLeitura />
         </div>
       </PainelLateral>
@@ -190,6 +202,16 @@ function PainelPrioridade({
             )
           }
         </form.Subscribe>
+        <form.AppField name="cor">
+          {(field) => (
+            <field.TextField
+              label="Cor"
+              placeholder="#1F7A4D"
+              autoComplete="off"
+              description="Cor da prioridade na barra da fila do momento (Operação › Distribuição). Sem cor, fica cinza."
+            />
+          )}
+        </form.AppField>
         <form.AppField name="grafias">
           {(field) => (
             <field.TextAreaField
@@ -272,6 +294,7 @@ export function PrioridadesOperacao({
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex flex-wrap items-center gap-2">
+                    <BolinhaCor cor={p.cor} className="size-2.5" />
                     <span className="font-medium">{p.nome}</span>
                     {p.padrao && <Etiqueta tom="info">Padrão</Etiqueta>}
                   </span>

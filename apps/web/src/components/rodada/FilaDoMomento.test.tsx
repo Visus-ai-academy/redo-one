@@ -21,6 +21,11 @@ describe('FilaDoMomento', () => {
     const legenda = screen.getByRole('list', { name: 'Total por prioridade' });
     expect(legenda).toHaveTextContent('Urgência5');
     expect(legenda).toHaveTextContent('Rotina25');
+    // A cor cadastrada da prioridade na legenda; sem cor, um neutro.
+    const bolinha = (nome: string) =>
+      within(legenda).getByText(nome).closest('li')?.querySelector<HTMLElement>('[data-cor]');
+    expect(bolinha('Urgência')?.style.backgroundColor).toBe('rgb(181, 83, 90)');
+    expect(bolinha('Rotina')?.style.backgroundColor).toMatch(/color-mix/);
 
     expect(screen.getByText('1–10 de 12')).toBeInTheDocument();
     expect(screen.getByText('No teto')).toBeInTheDocument();

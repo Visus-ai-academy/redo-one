@@ -13,6 +13,7 @@ const AMBULATORIO: PrioridadeOperacaoDto = {
   urgencia: { tipo: 'prazo', horas: 24 },
   padrao: false,
   grafias: ['Ambulatório'],
+  cor: '#5677B8',
 };
 const ROTINA: PrioridadeOperacaoDto = {
   id: 'op-rot',
@@ -21,6 +22,7 @@ const ROTINA: PrioridadeOperacaoDto = {
   urgencia: { tipo: 'nunca', horas: null },
   padrao: true,
   grafias: ['P4', 'Rotina'],
+  cor: null,
 };
 
 const montar = (podeEditar = true) => {
@@ -43,6 +45,10 @@ describe('PrioridadesOperacao', () => {
     expect(linhas[0]).toHaveTextContent('Urgência: com menos de 24 h até o prazo');
     expect(within(linhas[1] as HTMLElement).getByText('Padrão')).toBeInTheDocument();
     expect(linhas[1]).toHaveTextContent('P4, Rotina');
+    // A cor cadastrada, na bolinha antes do nome.
+    expect(linhas[0]?.querySelector<HTMLElement>('[data-cor]')?.style.backgroundColor).toBe(
+      'rgb(86, 119, 184)',
+    );
   });
 
   it('cria uma prioridade com as grafias por linha', async () => {
@@ -56,6 +62,7 @@ describe('PrioridadesOperacao', () => {
       '6',
     );
     await userEvent.type(screen.getByRole('textbox', { name: /Grafias/ }), 'P9{enter}p9.Teste');
+    await userEvent.type(screen.getByRole('textbox', { name: /Cor/ }), ' #8A8A45 ');
     await userEvent.click(screen.getByRole('button', { name: 'Criar prioridade' }));
     expect(onCriar).toHaveBeenCalledWith({
       nome: 'TESTE',
@@ -63,7 +70,23 @@ describe('PrioridadesOperacao', () => {
       urgencia: { tipo: 'prazo', horas: 6 },
       padrao: false,
       grafias: ['P9', 'p9.Teste'],
+      cor: '#8A8A45',
     });
+  });
+
+  it('a cor fora do formato #RRGGBB não salva; vazia salva sem cor', async () => {
+    const { onEditar } = montar();
+    await userEvent.click(screen.getByRole('button', { name: /AMBULATÓRIO/ }));
+    const cor = await screen.findByRole('textbox', { name: /Cor/ });
+    expect(cor).toHaveValue('#5677B8');
+    await userEvent.clear(cor);
+    await userEvent.type(cor, 'azul');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Use o formato #RRGGBB, como #1F7A4D.')).toBeInTheDocument();
+    expect(onEditar).not.toHaveBeenCalled();
+    await userEvent.clear(cor);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onEditar).toHaveBeenCalledWith('op-amb', expect.objectContaining({ cor: null }));
   });
 
   it('edita a que abriu e exclui com confirmação', async () => {

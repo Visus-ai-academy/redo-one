@@ -281,6 +281,7 @@ describe('resumo das regras (só leitura)', () => {
             urgencia: { tipo: 'prazo', horas: 24 },
             padrao: false,
             grafias: [],
+            cor: null,
           },
           {
             id: 'op-rot',
@@ -289,6 +290,7 @@ describe('resumo das regras (só leitura)', () => {
             urgencia: { tipo: 'nunca', horas: null },
             padrao: true,
             grafias: [],
+            cor: null,
           },
         ],
         turnos: [{ id: 't-manha', nome: 'Manhã' }],

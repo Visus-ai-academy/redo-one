@@ -14,6 +14,7 @@ const prioridade = (id: string, nome: string, posicao: number): PrioridadeOperac
   urgencia: { tipo: 'nunca', horas: null },
   padrao: false,
   grafias: [],
+  cor: null,
 });
 const PRIORIDADES = [prioridade('urg', 'URGÊNCIA', 1), prioridade('rot', 'ROTINA', 3)];
 const TURNOS = [

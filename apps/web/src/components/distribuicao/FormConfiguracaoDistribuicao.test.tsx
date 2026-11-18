@@ -36,6 +36,7 @@ const ROTINA: PrioridadeOperacaoDto = {
   urgencia: { tipo: 'nunca', horas: null },
   padrao: true,
   grafias: [],
+  cor: null,
 };
 const TARDE_24 = {
   prioridadeOperacaoId: 'op-rot',

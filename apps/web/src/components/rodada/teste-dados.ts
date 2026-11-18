@@ -40,8 +40,8 @@ export const FILA: FilaDoMomentoDto = {
   habilitados: 62,
   roboAtivo: true,
   prioridades: [
-    { prioridadeOperacaoId: 'p-urg', nome: 'Urgência', exames: 5, urgentes: 5 },
-    { prioridadeOperacaoId: 'p-rot', nome: 'Rotina', exames: 25, urgentes: 0 },
+    { prioridadeOperacaoId: 'p-urg', nome: 'Urgência', cor: '#B5535A', exames: 5, urgentes: 5 },
+    { prioridadeOperacaoId: 'p-rot', nome: 'Rotina', cor: null, exames: 25, urgentes: 0 },
   ],
   porFrente: [
     {
