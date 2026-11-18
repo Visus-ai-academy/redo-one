@@ -156,19 +156,21 @@ function examesPorModalidade(g: GrupoExames): Map<string, number> {
 /**
  * A proporção por modalidade é medida em EXAMES, sobre a mistura corrente desta rodada: o pacote
  * cabe se, depois de entrar, nenhuma modalidade da proporção passa do alvo (ceil: o primeiro
- * exame sempre entra). O atrasado pode passar do alvo até a folga configurada.
+ * exame sempre entra). O pacote atrasado ou que vence antes da próxima rodada pode passar do
+ * alvo até a folga configurada: não espera a mistura, mas também não ignora a proporção.
  */
 function cabeNaProporcao(
   st: EstadoMedico,
   g: GrupoExames,
   regras: RegrasFrente | null,
-  folgaAtrasado: number,
+  config: Pick<ConfiguracaoDistribuicao, 'folgaProporcaoPct' | 'cicloMinutos'>,
 ): boolean {
   if (regras?.divisao.metodo !== 'proporcao') return true;
   const alvos = new Map(regras.divisao.proporcoes.map((p) => [p.modalidadeId, p.percentual]));
-  const folga = g.exames.some((e) => (e.restanteMin ?? Number.POSITIVE_INFINITY) < 0)
-    ? folgaAtrasado
-    : 0;
+  const naoEspera = g.exames.some(
+    (e) => (e.restanteMin ?? Number.POSITIVE_INFINITY) < config.cicloMinutos,
+  );
+  const folga = naoEspera ? config.folgaProporcaoPct : 0;
   const doGrupo = examesPorModalidade(g);
   let parDepois = 0;
   for (const m of alvos.keys()) parDepois += (st.porModalidade.get(m) ?? 0) + (doGrupo.get(m) ?? 0);
@@ -569,7 +571,7 @@ export function distribuirNaOrdem(
     const naMistura = dentroDoSegmento.filter(
       (st) =>
         pelaReserva(st, g) ||
-        ((!exigir.proporcao || cabeNaProporcao(st, g, regrasDo(st, g), config.folgaAtrasadoPct)) &&
+        ((!exigir.proporcao || cabeNaProporcao(st, g, regrasDo(st, g), config)) &&
           (!exigir.mistura || cabeNaMistura(st, g))),
     );
     if (!naMistura.length) return { r: 'sem_fatia', seg: null };

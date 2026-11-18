@@ -31,7 +31,7 @@ const CONFIG: ConfiguracaoDistribuicao = {
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
   margemUrgenciaPct: 0,
-  folgaAtrasadoPct: 20,
+  folgaProporcaoPct: 20,
   prazoCriticoMin: 60,
   antecedenciaPeriodoMin: 180,
   cicloMinutos: 30,

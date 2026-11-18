@@ -30,7 +30,7 @@ const CONFIG: ConfiguracaoDistribuicao = {
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
   margemUrgenciaPct: 0,
-  folgaAtrasadoPct: 20,
+  folgaProporcaoPct: 20,
   prazoCriticoMin: 60,
   antecedenciaPeriodoMin: 180,
   cicloMinutos: 30,
@@ -726,23 +726,70 @@ describe('proporção por modalidade e adiados', () => {
   const um = (capacidade: number) => [medico('A', { capacidade })];
   const recebidos = (r: Resultado) => ids(r).sort();
 
-  it('folga do atrasado: 100 ignora a proporção, 20 mantém uma margem, 0 segue o 60/40', () => {
+  it('folga da proporção para o atrasado: 100 ignora a proporção, 20 mantém uma margem, 0 segue o 60/40', () => {
     const fila = [
       ...Array.from({ length: 5 }, (_, i) => ex(`mrAtr${i}`, MR, -60 + i)),
       ...Array.from({ length: 3 }, (_, i) => ex(`ctLongo${i}`, CT, 2000 + i)),
     ];
-    const r = (folgaAtrasadoPct: number) =>
+    const r = (folgaProporcaoPct: number) =>
       recebidos(
         rodar({
           exames: fila,
           medicos: um(5),
           regras: MI_60_40,
-          config: { ...CONFIG, folgaAtrasadoPct },
+          config: { ...CONFIG, folgaProporcaoPct },
         }),
       );
     expect(r(100)).toEqual(['mrAtr0', 'mrAtr1', 'mrAtr2', 'mrAtr3', 'mrAtr4']);
     expect(r(20)).toEqual(['ctLongo0', 'mrAtr0', 'mrAtr1', 'mrAtr2', 'mrAtr3']);
     expect(r(0)).toEqual(['ctLongo0', 'ctLongo1', 'mrAtr0', 'mrAtr1', 'mrAtr2']);
+  });
+
+  describe('folga para o pacote que não pode esperar a próxima rodada', () => {
+    // Pela ordem de entrada: o médico chega a 3 RM / 2 TC (60/40) e depois vem um pacote de
+    // 3 RM do mesmo paciente. Sem folga, 6 RM em 8 passa de ceil(60% de 8) = 5; com 20 pontos,
+    // ceil(80% de 8) = 7. Só cabem 8 laudos: adiado o pacote, a TC de trás fica com a vaga.
+    const minuto = (n: number) => new Date(agora.getTime() + n * 60_000);
+    const rodarCom = (prazoPacoteMin: number) =>
+      recebidos(
+        rodar({
+          exames: [
+            ex('mr0', MR, 600, { entradaEm: minuto(0) }),
+            ex('mr1', MR, 600, { entradaEm: minuto(1) }),
+            ex('ct0', CT, 2000, { entradaEm: minuto(2) }),
+            ex('mr2', MR, 600, { entradaEm: minuto(3) }),
+            ex('ct1', CT, 2000, { entradaEm: minuto(4) }),
+            ...[0, 1, 2].map((i) =>
+              ex(`pac${i}`, MR, i === 0 ? prazoPacoteMin : 600, {
+                entradaEm: minuto(5 + i),
+                paciente: 'PAC',
+              }),
+            ),
+            ex('ct2', CT, 2000, { entradaEm: minuto(9) }),
+          ],
+          medicos: um(8),
+          regras: MI_60_40,
+          config: {
+            ...CONFIG,
+            ordemFila: [{ criterio: 'antiguidade', direcao: 'asc' }],
+            folgaProporcaoPct: 20,
+            cicloMinutos: 30,
+          },
+        }),
+      );
+    const comPacote = ['ct0', 'ct1', 'mr0', 'mr1', 'mr2', 'pac0', 'pac1', 'pac2'];
+
+    it('o pacote de RM que vence antes da próxima rodada entra pela folga', () => {
+      expect(rodarCom(10)).toEqual(comPacote);
+    });
+
+    it('o mesmo pacote com prazo longo é adiado e a TC fica com a vaga', () => {
+      expect(rodarCom(600)).toEqual(['ct0', 'ct1', 'ct2', 'mr0', 'mr1', 'mr2']);
+    });
+
+    it('o pacote atrasado continua entrando pela folga', () => {
+      expect(rodarCom(-5)).toEqual(comPacote);
+    });
   });
 
   it('a vaga que a TC reabre é do RM adiado, não do RM de prazo longo que vem atrás', () => {
@@ -757,7 +804,7 @@ describe('proporção por modalidade e adiados', () => {
       exames: fila,
       medicos: um(4),
       regras: MI_60_40,
-      config: { ...CONFIG, folgaAtrasadoPct: 100 },
+      config: { ...CONFIG, folgaProporcaoPct: 100 },
     });
     expect(ids(r)).toContain('mr62');
     expect(ids(r)).toContain('ct2000');
@@ -945,7 +992,7 @@ describe('mistura entre segmentos (a do neurologista)', () => {
       exames: fila,
       regras: regrasCom({ divisao: proporcao({ MR: 50, CT: 50 }) }),
       medicos: [med('A', () => true, 3)],
-      config: { ...CONFIG, folgaAtrasadoPct: 100 },
+      config: { ...CONFIG, folgaProporcaoPct: 100 },
     });
     expect(ids(r).sort()).toEqual(['col1', 'craA', 'craB']);
   });

@@ -51,8 +51,11 @@ export interface ConfiguracaoDistribuicao {
   toleranciaAcimaTeto: number;
   /** Margem (%) acima do teto só para urgência; a rotina vai até o teto. */
   margemUrgenciaPct: number;
-  /** Pontos percentuais que o atrasado pode passar da proporção por modalidade (100 = ignora). */
-  folgaAtrasadoPct: number;
+  /**
+   * Pontos percentuais que o pacote atrasado ou vencendo antes da próxima rodada pode passar da
+   * proporção por modalidade (100 = ignora).
+   */
+  folgaProporcaoPct: number;
   /** A menos disto do prazo (ou atrasado), a prioridade do cliente sobe na fila. */
   prazoCriticoMin: number;
   /** Com quanta antecedência um turno que ainda não começou entra na rodada. */
