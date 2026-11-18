@@ -28,6 +28,7 @@ import { FiltroMultiplo } from '../escala/FiltroMultiplo';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { SeloCor } from '../selo-cor/SeloCor';
+import { Skeleton } from '../skeleton/Skeleton';
 import { Caixa, CargaDoMedico, TituloSecao, Vazio } from './comum';
 
 const SEM_FILTROS: FiltrosEmTurno = { turnos: [], frentes: [], segmentos: [] };
@@ -486,5 +487,41 @@ function MedicosEmTurno({
         </>
       )}
     </section>
+  );
+}
+
+/** Enquanto a fila chega: o formato da tela (título, cinco números, frentes em 1/3, médicos em 2/3). */
+export function FilaCarregando() {
+  return (
+    <div aria-busy className="flex flex-col gap-6">
+      <span className="sr-only">Carregando a distribuição</span>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-6 w-48" />
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border xl:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              data-numero=""
+              className="bg-card flex flex-col gap-2 p-4 last:odd:col-span-2 xl:last:odd:col-span-1"
+            >
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-7 w-14" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div data-frentes="" className="flex flex-col gap-3 lg:col-span-1">
+          <Skeleton className="h-6 w-56" />
+          <Skeleton className="h-80 w-full" />
+        </div>
+        <div data-medicos="" className="flex flex-col gap-3 lg:col-span-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
+    </div>
   );
 }

@@ -42,7 +42,7 @@ import { Execucao, LendoFila, Parcial } from './Andamento';
 import { type AcoesRodada, invalidarRodadas, useAcoesRodada } from './acoes';
 import { buscarClientes, buscarMedicos } from './buscas';
 import { CartaoRodada } from './CartaoRodada';
-import { FilaDoMomento } from './FilaDoMomento';
+import { FilaCarregando, FilaDoMomento } from './FilaDoMomento';
 import { Historico } from './Historico';
 import { PainelDistribuirAgora } from './PainelDistribuirAgora';
 import { PainelMedico } from './PainelMedico';
@@ -194,7 +194,7 @@ export function TelaDistribuicao({
             </button>
           </Alerta>
         ) : !viva.data ? (
-          <Carregando />
+          <FilaCarregando />
         ) : rodada ? (
           <RodadaViva
             rodada={rodada}
@@ -234,6 +234,16 @@ export function TelaDistribuicao({
   );
 }
 
+function Carregando() {
+  return (
+    <div aria-busy className="flex flex-col gap-4">
+      <span className="sr-only">Carregando a rodada</span>
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-72 w-full" />
+    </div>
+  );
+}
+
 function nomesDaFila(
   fila:
     | {
@@ -252,20 +262,6 @@ function nomesDaFila(
     if (p.prioridadeOperacaoId) nomes.set(p.prioridadeOperacaoId, p.nome);
   for (const m of fila.medicosEmTurno) nomes.set(m.medicoId, m.nome);
   return nomes;
-}
-
-function Carregando() {
-  return (
-    <div aria-busy className="flex flex-col gap-4">
-      <span className="sr-only">Carregando a distribuição</span>
-      <Skeleton className="h-6 w-48" />
-      <Skeleton className="h-24 w-full" />
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <Skeleton className="h-72 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </div>
-    </div>
-  );
 }
 
 function SemRodada({
@@ -303,7 +299,7 @@ function SemRodada({
         </button>
       </Alerta>
     ) : (
-      <Carregando />
+      <FilaCarregando />
     );
   }
   const emTurno = new Set(dados.medicosEmTurno.map((m) => m.medicoId)).size;

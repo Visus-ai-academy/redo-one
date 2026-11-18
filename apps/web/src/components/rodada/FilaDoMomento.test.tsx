@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { FilaDoMomento } from './FilaDoMomento';
+import { FilaCarregando, FilaDoMomento } from './FilaDoMomento';
 import { FILA, medicoEmTurno } from './teste-dados';
 
 describe('FilaDoMomento', () => {
@@ -151,5 +151,13 @@ describe('FilaDoMomento', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
     expect(screen.getByText('1–10 de 13')).toBeInTheDocument();
+  });
+
+  it('carregando imita a fila: cinco números, frentes em 1/3 e médicos em 2/3', () => {
+    const { container } = render(<FilaCarregando />);
+    expect(screen.getByText('Carregando a distribuição')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-numero]')).toHaveLength(5);
+    expect(container.querySelector('[data-frentes]')).toHaveClass('lg:col-span-1');
+    expect(container.querySelector('[data-medicos]')).toHaveClass('lg:col-span-2');
   });
 });
