@@ -4,9 +4,11 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
+  text,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -19,6 +21,7 @@ import {
   prioridades,
   subespecialidades,
 } from './catalogo';
+import { turnos } from './escala';
 import { equipes, medicos } from './medicos';
 
 // Contexto `distribuicao`: o que cada médico (ou equipe) lauda e os parâmetros do robô por
@@ -158,4 +161,71 @@ export const medicosDistribuicao = pgTable(
     atualizadoEm: atualizadoEm(),
   },
   (t) => [index('medicos_distribuicao_habilitado_idx').on(t.habilitadoRobo)],
+);
+
+// ---------------------------------------------------------------------------------------------
+// Configurações › Distribuição (global). Uma linha só; histórico em `eventos_auditoria`
+// (entidade `configuracao_distribuicao`, id `global`). As listas que apontam para o catálogo e
+// para a escala ficam em tabelas filhas (chave estrangeira), não em arrays.
+// ---------------------------------------------------------------------------------------------
+
+/** Critério da fila e direção, na ordem em que desempatam. */
+export type ItemOrdemFilaGravado = {
+  criterio: 'prioridade' | 'prazo' | 'antiguidade';
+  direcao: 'asc' | 'desc';
+};
+
+export const configuracaoDistribuicao = pgTable(
+  'configuracao_distribuicao',
+  {
+    id: integer('id').primaryKey().default(1),
+    ordemFila: jsonb('ordem_fila').$type<ItemOrdemFilaGravado[]>().notNull(),
+    agruparPorPaciente: boolean('agrupar_por_paciente').notNull(),
+    /** 0 = sem limite. */
+    janelaPacienteHoras: integer('janela_paciente_horas').notNull(),
+    toleranciaAcimaTeto: integer('tolerancia_acima_teto').notNull(),
+    margemUrgenciaPct: integer('margem_urgencia_pct').notNull(),
+    folgaProporcaoPct: integer('folga_proporcao_pct').notNull(),
+    prazoCriticoMin: integer('prazo_critico_min').notNull(),
+    antecedenciaPeriodoMin: integer('antecedencia_periodo_min').notNull(),
+    cicloMinutos: integer('ciclo_minutos').notNull(),
+    marcadoresEquilibrio: text('marcadores_equilibrio').array().notNull(),
+    escalaRestringeEspecialidade: boolean('escala_restringe_especialidade').notNull(),
+    diasJaEntregue: integer('dias_ja_entregue').notNull(),
+    /** "HH:MM" da rodada que enche os turnos posteriores; null = nenhum turno posterior. */
+    turnosPosterioresCheiaEm: text('turnos_posteriores_cheia_em'),
+    /** Null = a Lista segue o SLA (sem prazo mínimo). */
+    listaPrazoMinimoHoras: integer('lista_prazo_minimo_horas'),
+    /** Null = recolhimento desligado. */
+    recolhimentoAposTurnoMin: integer('recolhimento_apos_turno_min'),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [check('configuracao_distribuicao_unica', sql`${t.id} = 1`)],
+);
+
+/** Prioridades do catálogo que contam como urgentes (hoje só URGÊNCIA). */
+export const configuracaoDistribuicaoUrgentes = pgTable('configuracao_distribuicao_urgentes', {
+  prioridadeId: uuid('prioridade_id')
+    .primaryKey()
+    .references(() => prioridades.id, { onDelete: 'cascade' }),
+});
+
+/** Prioridades que a Lista aceita pela regra padrão; nenhuma linha = todas. */
+export const configuracaoDistribuicaoListaPrioridades = pgTable(
+  'configuracao_distribuicao_lista_prioridades',
+  {
+    prioridadeId: uuid('prioridade_id')
+      .primaryKey()
+      .references(() => prioridades.id, { onDelete: 'cascade' }),
+  },
+);
+
+/** Turnos que só recebem numa rodada posterior do dia (no dashboards-one, a Tarde). */
+export const configuracaoDistribuicaoTurnosPosteriores = pgTable(
+  'configuracao_distribuicao_turnos_posteriores',
+  {
+    turnoId: uuid('turno_id')
+      .primaryKey()
+      .references(() => turnos.id, { onDelete: 'cascade' }),
+  },
 );

@@ -7469,6 +7469,52 @@
         ]
       }
     },
+    "/distribuicao/configuracao": {
+      "get": {
+        "operationId": "ConfiguracaoDistribuicaoController_obter",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoDistribuicaoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "put": {
+        "operationId": "ConfiguracaoDistribuicaoController_salvar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfiguracaoDistribuicaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/medicos/{id}/historico": {
       "get": {
         "operationId": "HistoricoCadastroController_doMedico",
@@ -14124,6 +14170,196 @@
         },
         "required": [
           "sugestao"
+        ]
+      },
+      "CriterioFila": {
+        "type": "string",
+        "enum": [
+          "prioridade",
+          "prazo",
+          "antiguidade"
+        ]
+      },
+      "DirecaoOrdem": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ]
+      },
+      "ItemOrdemFilaDto": {
+        "type": "object",
+        "properties": {
+          "criterio": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CriterioFila"
+              }
+            ]
+          },
+          "direcao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DirecaoOrdem"
+              }
+            ]
+          }
+        },
+        "required": [
+          "criterio",
+          "direcao"
+        ]
+      },
+      "TurnosPosterioresDto": {
+        "type": "object",
+        "properties": {
+          "turnoIds": {
+            "description": "Turnos que só recebem numa rodada posterior do dia (a Tarde).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "cheiaEm": {
+            "type": "string",
+            "example": "10:50",
+            "description": "HH:MM (Brasília) da rodada que enche esses turnos; dali em diante a Lista não guarda nada."
+          }
+        },
+        "required": [
+          "turnoIds",
+          "cheiaEm"
+        ]
+      },
+      "RegraListaDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeIds": {
+            "description": "Prioridades do catálogo que a Lista aceita; vazia = todas.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prazoMinimoHoras": {
+            "type": "number",
+            "nullable": true,
+            "description": "Prazo restante mínimo (horas) para entrar; nulo = segue o SLA."
+          }
+        },
+        "required": [
+          "prioridadeIds",
+          "prazoMinimoHoras"
+        ]
+      },
+      "ConfiguracaoDistribuicaoDto": {
+        "type": "object",
+        "properties": {
+          "ordemFila": {
+            "description": "Critérios da fila, na ordem em que desempatam.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdemFilaDto"
+            }
+          },
+          "prioridadeIdsUrgentes": {
+            "description": "Prioridades do catálogo que contam como urgentes (fila, margem e rodízio).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "agruparPorPaciente": {
+            "type": "boolean",
+            "description": "Exames do mesmo paciente e especialidade vão juntos para um médico."
+          },
+          "janelaPacienteHoras": {
+            "type": "number",
+            "description": "Distância máxima (horas) entre os exames do pacote; 0 = sem limite."
+          },
+          "toleranciaAcimaTeto": {
+            "type": "number",
+            "description": "Folga aceita acima do teto do médico, em carga."
+          },
+          "margemUrgenciaPct": {
+            "type": "number",
+            "description": "Margem (%) acima do teto só para urgência."
+          },
+          "folgaProporcaoPct": {
+            "type": "number",
+            "description": "Pontos percentuais que o pacote atrasado ou vencendo antes da próxima rodada pode passar da proporção por modalidade (100 = ignora)."
+          },
+          "prazoCriticoMin": {
+            "type": "number",
+            "description": "A menos disto (minutos) do prazo, a prioridade do cliente sobe na fila."
+          },
+          "antecedenciaPeriodoMin": {
+            "type": "number",
+            "description": "Antecedência (minutos) com que um turno que ainda não começou entra na rodada."
+          },
+          "cicloMinutos": {
+            "type": "number",
+            "description": "Intervalo entre rodadas (minutos)."
+          },
+          "marcadoresEquilibrio": {
+            "description": "Marcadores no nome do exame distribuídos por igual entre os elegíveis (ex.: ONCO).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "escalaRestringeEspecialidade": {
+            "type": "boolean",
+            "description": "A frente da escala limita o que o médico recebe no período."
+          },
+          "diasJaEntregue": {
+            "type": "number",
+            "description": "Exame entregue a um médico nos últimos N dias e de volta à fila não volta para ele."
+          },
+          "turnosPosteriores": {
+            "nullable": true,
+            "description": "Nulo = nenhum turno posterior (a Lista não guarda nada).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TurnosPosterioresDto"
+              }
+            ]
+          },
+          "lista": {
+            "description": "Regra padrão da Lista, para a frente sem a sua.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegraListaDto"
+              }
+            ]
+          },
+          "recolhimentoAposTurnoMin": {
+            "type": "number",
+            "nullable": true,
+            "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
+          }
+        },
+        "required": [
+          "ordemFila",
+          "prioridadeIdsUrgentes",
+          "agruparPorPaciente",
+          "janelaPacienteHoras",
+          "toleranciaAcimaTeto",
+          "margemUrgenciaPct",
+          "folgaProporcaoPct",
+          "prazoCriticoMin",
+          "antecedenciaPeriodoMin",
+          "cicloMinutos",
+          "marcadoresEquilibrio",
+          "escalaRestringeEspecialidade",
+          "diasJaEntregue",
+          "turnosPosteriores",
+          "lista",
+          "recolhimentoAposTurnoMin"
         ]
       },
       "ItemHistoricoCadastroDto": {

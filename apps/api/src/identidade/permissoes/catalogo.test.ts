@@ -79,6 +79,7 @@ describe('catálogo de permissões', () => {
       catalogo: ['Configurações', crud],
       'de-para': ['Configurações', crud],
       'escala-config': ['Configurações', crud],
+      'distribuicao-config': ['Configurações', ['ver', 'editar']],
       'chaves-robo': ['Configurações', ['ver']],
     });
   });
@@ -123,6 +124,7 @@ describe('catálogo de permissões', () => {
 
     expect(sensiveis('qualidade')).toEqual(['qualidade.radshield.ver']);
     expect(sensiveis('distribuicao')).toEqual(['distribuicao.rodada.aprovar']);
+    expect(sensiveis('distribuicao-config')).toEqual(['distribuicao-config.editar']);
     expect(sensiveis('ausencias')).toEqual(['ausencias.observacoes.ver']);
     expect(sensiveis('exames')).toEqual(['exames.editar', 'exames.excluir']);
     expect(sensiveis('medicos')).toEqual([

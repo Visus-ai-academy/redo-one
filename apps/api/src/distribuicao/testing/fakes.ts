@@ -1,5 +1,10 @@
 import type { ArranjosRepository, Dono } from '../application/ports/arranjos.repository';
-import type { CadastrosDistribuicao } from '../application/ports/cadastros-distribuicao';
+import type {
+  CadastrosDistribuicao,
+  Referencias,
+  TipoReferencia,
+} from '../application/ports/cadastros-distribuicao';
+import type { ConfiguracaoDistribuicaoRepository } from '../application/ports/configuracao-distribuicao.repository';
 import type {
   ParametrosEquipe,
   ParametrosEquipeRepository,
@@ -9,6 +14,7 @@ import type {
   ParametrosMedicoRepository,
 } from '../application/ports/parametros-medico.repository';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
+import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
 
 export class ArranjosEmMemoria implements ArranjosRepository {
   readonly porDono = new Map<string, Arranjo[]>();
@@ -67,6 +73,18 @@ export class CadastrosEmMemoria implements CadastrosDistribuicao {
     return this.frentes.get(id) ?? null;
   }
 
+  /** Ids que existem nos cadastros, por tipo; tipo ausente = qualquer id existe. */
+  readonly existentes = new Map<TipoReferencia, Set<string>>();
+
+  async faltando(referencias: Referencias) {
+    return (Object.entries(referencias) as [TipoReferencia, readonly string[]][])
+      .filter(([tipo, ids]) => {
+        const ok = this.existentes.get(tipo);
+        return ok ? ids.some((id) => !ok.has(id)) : false;
+      })
+      .map(([tipo]) => tipo);
+  }
+
   async rotulos({ clienteIds, exameIds }: { clienteIds: string[]; exameIds: string[] }) {
     const com = (ids: string[]) => ids.map((id) => ({ id, nome: this.nomes.get(id) ?? id }));
     return { clientes: com(clienteIds), exames: com(exameIds) };
@@ -86,3 +104,17 @@ export const arranjoVazio = (parcial: Partial<Arranjo> = {}): Arranjo => ({
   clientesExclusivosIds: [],
   ...parcial,
 });
+
+export class ConfiguracaoEmMemoria implements ConfiguracaoDistribuicaoRepository {
+  atual: ConfiguracaoGlobal | null = null;
+  gravacoes = 0;
+
+  async obter() {
+    return this.atual && structuredClone(this.atual);
+  }
+
+  async salvar(configuracao: ConfiguracaoGlobal) {
+    this.gravacoes++;
+    this.atual = structuredClone(configuracao);
+  }
+}

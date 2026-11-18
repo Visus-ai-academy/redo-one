@@ -10,7 +10,20 @@ export interface CadastrosDistribuicao {
   frente(id: string): Promise<FrenteEscala | null>;
   /** Nomes dos clientes e exames marcados nos arranjos (listas grandes, a tela não as carrega). */
   rotulos(ids: { clienteIds: string[]; exameIds: string[] }): Promise<RotulosArranjos>;
+  /** Quais tipos de cadastro têm algum id que não existe (vazio = todos existem). */
+  faltando(referencias: Referencias): Promise<TipoReferencia[]>;
 }
+
+export type TipoReferencia =
+  | 'prioridade'
+  | 'turno'
+  | 'especialidade'
+  | 'modalidade'
+  | 'subespecialidade'
+  | 'cliente';
+
+/** Ids que a configuração cita, por tipo de cadastro. */
+export type Referencias = Partial<Record<TipoReferencia, readonly string[]>>;
 
 export interface Rotulo {
   id: string;

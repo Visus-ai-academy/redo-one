@@ -10,6 +10,10 @@ import {
   type CadastrosDistribuicao,
 } from './application/ports/cadastros-distribuicao';
 import {
+  CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
+  type ConfiguracaoDistribuicaoRepository,
+} from './application/ports/configuracao-distribuicao.repository';
+import {
   PARAMETROS_EQUIPE_REPOSITORY,
   type ParametrosEquipeRepository,
 } from './application/ports/parametros-equipe.repository';
@@ -18,6 +22,10 @@ import {
   type ParametrosMedicoRepository,
 } from './application/ports/parametros-medico.repository';
 import { ConsultarArranjos, SalvarArranjos } from './application/use-cases/arranjos';
+import {
+  DefinirConfiguracaoGlobal,
+  ObterConfiguracaoGlobal,
+} from './application/use-cases/configuracao-global';
 import { DefinirRoboMedico, ObterRoboMedico } from './application/use-cases/robo-medico';
 import { SugerirAlocacao } from './application/use-cases/sugerir-alocacao';
 import { DefinirUsoEquipe, ObterUsoEquipe } from './application/use-cases/uso-equipe';
@@ -26,21 +34,42 @@ import {
   DistribuicaoMedicoController,
   SugestaoAlocacaoController,
 } from './infrastructure/http/arranjos.controller';
+import { ConfiguracaoDistribuicaoController } from './infrastructure/http/configuracao.controller';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
+import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
 import { DrizzleParametrosEquipeRepository } from './infrastructure/persistence/drizzle-parametros-equipe.repository';
 import { DrizzleParametrosMedicoRepository } from './infrastructure/persistence/drizzle-parametros-medico.repository';
 
 const agora = () => new Date();
 
-/** Contexto `distribuicao` (hexagonal): arranjos, parâmetros e rodadas do robô. */
+/** Contexto `distribuicao` (hexagonal): arranjos, parâmetros, configuração e rodadas do robô. */
 @Module({
   controllers: [
     DistribuicaoMedicoController,
     DistribuicaoEquipeController,
     SugestaoAlocacaoController,
+    ConfiguracaoDistribuicaoController,
   ],
   providers: [
+    {
+      provide: CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
+      useClass: DrizzleConfiguracaoDistribuicaoRepository,
+    },
+    {
+      provide: ObterConfiguracaoGlobal,
+      inject: [CONFIGURACAO_DISTRIBUICAO_REPOSITORY],
+      useFactory: (repo: ConfiguracaoDistribuicaoRepository) => new ObterConfiguracaoGlobal(repo),
+    },
+    {
+      provide: DefinirConfiguracaoGlobal,
+      inject: [CONFIGURACAO_DISTRIBUICAO_REPOSITORY, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      useFactory: (
+        repo: ConfiguracaoDistribuicaoRepository,
+        cadastros: CadastrosDistribuicao,
+        auditoria: Auditoria,
+      ) => new DefinirConfiguracaoGlobal(repo, cadastros, auditoria, agora),
+    },
     { provide: ARRANJOS_REPOSITORY, useClass: DrizzleArranjosRepository },
     { provide: PARAMETROS_MEDICO_REPOSITORY, useClass: DrizzleParametrosMedicoRepository },
     { provide: PARAMETROS_EQUIPE_REPOSITORY, useClass: DrizzleParametrosEquipeRepository },

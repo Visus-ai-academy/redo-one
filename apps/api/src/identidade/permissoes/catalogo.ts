@@ -383,6 +383,15 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     exige: ['escala'],
   },
   {
+    // Configurações › Distribuição (global) e a aba Distribuição de cada especialidade e
+    // modalidade (regras da frente): decidem o que o robô entrega a quem.
+    tela: 'distribuicao-config',
+    rotulo: 'Distribuição (robô e regras das frentes)',
+    area: 'Configurações',
+    padrao: [{ acao: 'ver' }, { acao: 'editar', sensivel: true }],
+    especiais: [],
+  },
+  {
     tela: 'chaves-robo',
     rotulo: 'Chaves dos robôs',
     area: 'Configurações',

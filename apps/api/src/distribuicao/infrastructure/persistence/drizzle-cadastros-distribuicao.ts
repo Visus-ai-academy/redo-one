@@ -1,13 +1,36 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
-
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { DATABASE, type Database } from '../../../database/database';
-import { clientes, equipes, exames, frentesEscala, medicos } from '../../../database/schema';
+
+import {
+  clientes,
+  equipes,
+  especialidades,
+  exames,
+  frentesEscala,
+  medicos,
+  modalidades,
+  prioridades,
+  subespecialidades,
+  turnos,
+} from '../../../database/schema';
 import type {
   CadastrosDistribuicao,
+  Referencias,
   RotulosArranjos,
+  TipoReferencia,
 } from '../../application/ports/cadastros-distribuicao';
 import type { FrenteEscala } from '../../domain/arranjo';
+
+const COLUNA_ID: Readonly<Record<TipoReferencia, AnyPgColumn>> = {
+  prioridade: prioridades.id,
+  turno: turnos.id,
+  especialidade: especialidades.id,
+  modalidade: modalidades.id,
+  subespecialidade: subespecialidades.id,
+  cliente: clientes.id,
+};
 
 /** Leitura (só leitura) dos cadastros de médicos e da escala que a distribuição usa. */
 @Injectable()
@@ -62,5 +85,20 @@ export class DrizzleCadastrosDistribuicao implements CadastrosDistribuicao {
         : [],
     ]);
     return { clientes: cs, exames: es };
+  }
+
+  async faltando(referencias: Referencias): Promise<TipoReferencia[]> {
+    const faltas: TipoReferencia[] = [];
+    for (const [tipo, lista] of Object.entries(referencias) as [TipoReferencia, string[]][]) {
+      const ids = [...new Set(lista)];
+      if (!ids.length) continue;
+      const coluna = COLUNA_ID[tipo];
+      const achados = await this.db
+        .select({ id: coluna })
+        .from(coluna.table)
+        .where(inArray(coluna, ids));
+      if (achados.length < ids.length) faltas.push(tipo);
+    }
+    return faltas;
   }
 }
