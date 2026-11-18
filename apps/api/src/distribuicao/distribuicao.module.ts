@@ -21,11 +21,20 @@ import {
   PARAMETROS_MEDICO_REPOSITORY,
   type ParametrosMedicoRepository,
 } from './application/ports/parametros-medico.repository';
+import {
+  REGRAS_FRENTE_REPOSITORY,
+  type RegrasFrenteRepository,
+} from './application/ports/regras-frente.repository';
 import { ConsultarArranjos, SalvarArranjos } from './application/use-cases/arranjos';
 import {
   DefinirConfiguracaoGlobal,
   ObterConfiguracaoGlobal,
 } from './application/use-cases/configuracao-global';
+import {
+  DefinirRegrasFrente,
+  ListarRegrasFrente,
+  ObterRegrasFrente,
+} from './application/use-cases/regras-frente';
 import { DefinirRoboMedico, ObterRoboMedico } from './application/use-cases/robo-medico';
 import { SugerirAlocacao } from './application/use-cases/sugerir-alocacao';
 import { DefinirUsoEquipe, ObterUsoEquipe } from './application/use-cases/uso-equipe';
@@ -35,11 +44,13 @@ import {
   SugestaoAlocacaoController,
 } from './infrastructure/http/arranjos.controller';
 import { ConfiguracaoDistribuicaoController } from './infrastructure/http/configuracao.controller';
+import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
 import { DrizzleParametrosEquipeRepository } from './infrastructure/persistence/drizzle-parametros-equipe.repository';
 import { DrizzleParametrosMedicoRepository } from './infrastructure/persistence/drizzle-parametros-medico.repository';
+import { DrizzleRegrasFrenteRepository } from './infrastructure/persistence/drizzle-regras-frente.repository';
 
 const agora = () => new Date();
 
@@ -50,8 +61,30 @@ const agora = () => new Date();
     DistribuicaoEquipeController,
     SugestaoAlocacaoController,
     ConfiguracaoDistribuicaoController,
+    RegrasFrenteController,
   ],
   providers: [
+    { provide: REGRAS_FRENTE_REPOSITORY, useClass: DrizzleRegrasFrenteRepository },
+    {
+      provide: ObterRegrasFrente,
+      inject: [REGRAS_FRENTE_REPOSITORY, CADASTROS_DISTRIBUICAO],
+      useFactory: (repo: RegrasFrenteRepository, cadastros: CadastrosDistribuicao) =>
+        new ObterRegrasFrente(repo, cadastros),
+    },
+    {
+      provide: ListarRegrasFrente,
+      inject: [REGRAS_FRENTE_REPOSITORY],
+      useFactory: (repo: RegrasFrenteRepository) => new ListarRegrasFrente(repo),
+    },
+    {
+      provide: DefinirRegrasFrente,
+      inject: [REGRAS_FRENTE_REPOSITORY, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      useFactory: (
+        repo: RegrasFrenteRepository,
+        cadastros: CadastrosDistribuicao,
+        auditoria: Auditoria,
+      ) => new DefinirRegrasFrente(repo, cadastros, auditoria, agora),
+    },
     {
       provide: CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
       useClass: DrizzleConfiguracaoDistribuicaoRepository,

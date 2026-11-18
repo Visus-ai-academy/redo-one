@@ -127,6 +127,13 @@
       "when": 1794963216901,
       "tag": "0017_distribuicao_configuracao",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794963515965,
+      "tag": "0018_distribuicao_regras_frente",
+      "breakpoints": true
     }
   ]
 }

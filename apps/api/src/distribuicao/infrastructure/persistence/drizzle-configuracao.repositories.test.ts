@@ -7,9 +7,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
+import type { FrenteEscala } from '../../domain/arranjo';
 import { CONFIGURACAO_INICIAL } from '../../domain/configuracao-global';
+import { REGRAS_NEUTRAS, type RegrasFrente } from '../../domain/motor/configuracao';
 import { DrizzleCadastrosDistribuicao } from './drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './drizzle-configuracao-distribuicao.repository';
+import { DrizzleRegrasFrenteRepository } from './drizzle-regras-frente.repository';
 
 const url = process.env.TEST_DATABASE_URL;
 const NENHUM = '00000000-0000-0000-0000-000000000000';
@@ -33,7 +36,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table configuracao_distribuicao, configuracao_distribuicao_urgentes,
+      sql`truncate table regras_frente, configuracao_distribuicao, configuracao_distribuicao_urgentes,
         configuracao_distribuicao_lista_prioridades, configuracao_distribuicao_turnos_posteriores,
         turnos, clientes, modalidades, especialidades, subespecialidades, prioridades cascade`,
     );
@@ -102,5 +105,64 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     expect(
       await cad.faltando({ prioridade: [id('urg'), NENHUM], turno: [], cliente: [NENHUM] }),
     ).toEqual(['prioridade', 'cliente']);
+  });
+
+  it('regras da frente: grava tudo, lê igual, troca inteiro e separa especialidade de modalidade', async () => {
+    const repo = new DrizzleRegrasFrenteRepository(db);
+    const neuro: FrenteEscala = {
+      tipo: 'especialidade',
+      especialidadeId: id('neuro'),
+      modalidadeId: null,
+    };
+    const ct: FrenteEscala = { tipo: 'modalidade', especialidadeId: null, modalidadeId: id('ct') };
+    expect(await repo.obter(neuro)).toBeNull();
+
+    const cheia: RegrasFrente = {
+      frente: neuro,
+      listaPrioridadeIds: [id('rot')],
+      listaPrazoMinimoHoras: null,
+      recolheAoFimDoTurno: false,
+      distribuiPeloRobo: true,
+      horariosSemRobo: [{ diasSemana: [1, 5], inicio: '19:00', fim: '07:00' }],
+      divisao: {
+        metodo: 'proporcao',
+        proporcoes: [
+          { modalidadeId: id('ct'), percentual: 40 },
+          { modalidadeId: id('mr'), percentual: 60 },
+        ].sort((a, b) => (a.modalidadeId < b.modalidadeId ? -1 : 1)),
+      },
+      tetoPorMedico: 30,
+      segmentos: [
+        {
+          subespecialidadeId: id('cp'),
+          teto: 7,
+          tetoReduzido: { produtividadeAte: 15, teto: 4 },
+          piso: null,
+          pacoteAParte: false,
+        },
+      ],
+      mistura: [
+        { especialidadeId: null, subespecialidadeId: id('cp') },
+        { especialidadeId: id('neuro'), subespecialidadeId: null },
+      ],
+      listaDepoisDosFixos: true,
+    };
+    await repo.salvar(cheia);
+    expect(await repo.obter(neuro)).toEqual(cheia);
+
+    // Os campos da Lista ausentes = seguem o padrão; troca inteira some com as filhas.
+    const neutra = { frente: neuro, ...REGRAS_NEUTRAS };
+    await repo.salvar(neutra);
+    expect(await repo.obter(neuro)).toEqual(neutra);
+
+    const plantao = {
+      ...REGRAS_NEUTRAS,
+      frente: ct,
+      listaPrazoMinimoHoras: 12,
+      horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+    };
+    await repo.salvar(plantao);
+    expect(await repo.obter(ct)).toEqual(plantao);
+    expect(await repo.listar()).toEqual([neutra, plantao]);
   });
 });

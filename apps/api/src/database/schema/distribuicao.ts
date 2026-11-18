@@ -10,6 +10,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -228,4 +229,147 @@ export const configuracaoDistribuicaoTurnosPosteriores = pgTable(
       .primaryKey()
       .references(() => turnos.id, { onDelete: 'cascade' }),
   },
+);
+
+// ---------------------------------------------------------------------------------------------
+// Regras da frente: comportamento de uma especialidade OU modalidade do catálogo na distribuição
+// (aba Distribuição no painel dela). Frente sem linha = regras neutras. Histórico em
+// `eventos_auditoria` (entidade `regras_frente`, id = o da especialidade ou da modalidade).
+// ---------------------------------------------------------------------------------------------
+
+export const metodoDivisao = pgEnum('metodo_divisao', ['igualitaria', 'proporcao']);
+
+export const regrasFrente = pgTable(
+  'regras_frente',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
+      onDelete: 'cascade',
+    }),
+    modalidadeId: uuid('modalidade_id').references(() => modalidades.id, { onDelete: 'cascade' }),
+    /** Falso = a Lista desta frente aceita as prioridades da regra padrão (configuração global). */
+    listaPrioridadesPropria: boolean('lista_prioridades_propria').notNull().default(false),
+    /** Falso = o prazo mínimo da Lista é o da regra padrão. */
+    listaPrazoProprio: boolean('lista_prazo_proprio').notNull().default(false),
+    /** Com prazo próprio: null = segue o SLA (MAMA, CARDIO). */
+    listaPrazoMinimoHoras: integer('lista_prazo_minimo_horas'),
+    recolheAoFimDoTurno: boolean('recolhe_ao_fim_do_turno').notNull().default(true),
+    distribuiPeloRobo: boolean('distribui_pelo_robo').notNull().default(true),
+    divisao: metodoDivisao('divisao').notNull().default('igualitaria'),
+    /** Teto por médico a cada rodada, além do da escala; null = só o da escala. */
+    tetoPorMedico: integer('teto_por_medico'),
+    listaDepoisDosFixos: boolean('lista_depois_dos_fixos').notNull().default(false),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex('regras_frente_especialidade_key').on(t.especialidadeId),
+    uniqueIndex('regras_frente_modalidade_key').on(t.modalidadeId),
+    check(
+      'regras_frente_frente_check',
+      sql`(${t.especialidadeId} is null) <> (${t.modalidadeId} is null)`,
+    ),
+    check(
+      'regras_frente_prazo_check',
+      sql`${t.listaPrazoProprio} or ${t.listaPrazoMinimoHoras} is null`,
+    ),
+  ],
+);
+
+const daRegra = () =>
+  uuid('regra_frente_id')
+    .notNull()
+    .references(() => regrasFrente.id, { onDelete: 'cascade' });
+
+/** Prioridades da Lista da frente (com `lista_prioridades_propria`); nenhuma linha = todas. */
+export const regrasFrenteListaPrioridades = pgTable(
+  'regras_frente_lista_prioridades',
+  {
+    regraFrenteId: daRegra(),
+    prioridadeId: uuid('prioridade_id')
+      .notNull()
+      .references(() => prioridades.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.regraFrenteId, t.prioridadeId] })],
+);
+
+/** Faixas em que a frente não é distribuída pelo robô (podem cruzar a meia-noite). */
+export const regrasFrenteHorariosSemRobo = pgTable(
+  'regras_frente_horarios_sem_robo',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    regraFrenteId: daRegra(),
+    /** 0 = domingo … 6 = sábado; vazio = todos os dias. */
+    diasSemana: integer('dias_semana').array().notNull(),
+    inicio: text('inicio').notNull(),
+    fim: text('fim').notNull(),
+    ordem: integer('ordem').notNull().default(0),
+  },
+  (t) => [index('regras_frente_horarios_sem_robo_regra_idx').on(t.regraFrenteId)],
+);
+
+/** Proporção por modalidade (divisão `proporcao`), em exames. */
+export const regrasFrenteProporcoes = pgTable(
+  'regras_frente_proporcoes',
+  {
+    regraFrenteId: daRegra(),
+    modalidadeId: uuid('modalidade_id')
+      .notNull()
+      .references(() => modalidades.id, { onDelete: 'cascade' }),
+    percentual: integer('percentual').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.regraFrenteId, t.modalidadeId] }),
+    check('regras_frente_proporcoes_percentual_check', sql`${t.percentual} between 1 and 100`),
+  ],
+);
+
+/** Regras por segmento: teto (e o reduzido), piso e pacote à parte. */
+export const regrasFrenteSegmentos = pgTable(
+  'regras_frente_segmentos',
+  {
+    regraFrenteId: daRegra(),
+    subespecialidadeId: uuid('subespecialidade_id')
+      .notNull()
+      .references(() => subespecialidades.id, { onDelete: 'cascade' }),
+    /** Máximo de exames do segmento por médico a cada rodada; null = sem teto. */
+    teto: integer('teto'),
+    /** Teto menor para quem tem produtividade de escala até `teto_reduzido_produtividade_ate`. */
+    tetoReduzido: integer('teto_reduzido'),
+    tetoReduzidoProdutividadeAte: integer('teto_reduzido_produtividade_ate'),
+    piso: integer('piso'),
+    pacoteAParte: boolean('pacote_a_parte').notNull().default(false),
+  },
+  (t) => [
+    primaryKey({ columns: [t.regraFrenteId, t.subespecialidadeId] }),
+    check(
+      'regras_frente_segmentos_reduzido_check',
+      sql`(${t.tetoReduzido} is null) = (${t.tetoReduzidoProdutividadeAte} is null)`,
+    ),
+  ],
+);
+
+/**
+ * Mistura entre segmentos (a do neurologista), na ordem do cadastro. Especialidade nula = o
+ * segmento em qualquer especialidade; segmento nulo = o geral da especialidade.
+ */
+export const regrasFrenteMistura = pgTable(
+  'regras_frente_mistura',
+  {
+    regraFrenteId: daRegra(),
+    ordem: integer('ordem').notNull(),
+    especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
+      onDelete: 'cascade',
+    }),
+    subespecialidadeId: uuid('subespecialidade_id').references(() => subespecialidades.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.regraFrenteId, t.ordem] }),
+    check(
+      'regras_frente_mistura_fatia_check',
+      sql`${t.especialidadeId} is not null or ${t.subespecialidadeId} is not null`,
+    ),
+  ],
 );

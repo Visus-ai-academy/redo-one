@@ -13,8 +13,10 @@ import type {
   ParametrosMedico,
   ParametrosMedicoRepository,
 } from '../application/ports/parametros-medico.repository';
+import type { RegrasFrenteRepository } from '../application/ports/regras-frente.repository';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
 import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
+import type { RegrasFrente } from '../domain/motor/configuracao';
 
 export class ArranjosEmMemoria implements ArranjosRepository {
   readonly porDono = new Map<string, Arranjo[]>();
@@ -116,5 +118,26 @@ export class ConfiguracaoEmMemoria implements ConfiguracaoDistribuicaoRepository
   async salvar(configuracao: ConfiguracaoGlobal) {
     this.gravacoes++;
     this.atual = structuredClone(configuracao);
+  }
+}
+
+const chave = (f: FrenteEscala) => f.especialidadeId ?? f.modalidadeId;
+
+export class RegrasFrenteEmMemoria implements RegrasFrenteRepository {
+  readonly porFrente = new Map<string, RegrasFrente>();
+  gravacoes = 0;
+
+  async obter(frente: FrenteEscala) {
+    const r = this.porFrente.get(chave(frente));
+    return r ? structuredClone(r) : null;
+  }
+
+  async listar() {
+    return [...this.porFrente.values()].map((r) => structuredClone(r));
+  }
+
+  async salvar(regras: RegrasFrente) {
+    this.gravacoes++;
+    this.porFrente.set(chave(regras.frente), structuredClone(regras));
   }
 }

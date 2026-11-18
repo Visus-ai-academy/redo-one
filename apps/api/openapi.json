@@ -7515,6 +7515,170 @@
         ]
       }
     },
+    "/distribuicao/regras-frente": {
+      "get": {
+        "operationId": "RegrasFrenteController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Só as frentes com cadastro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegrasDaFrenteDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/regras-frente/especialidades/{especialidadeId}": {
+      "get": {
+        "operationId": "RegrasFrenteController_obterEspecialidade",
+        "parameters": [
+          {
+            "name": "especialidadeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegrasDaFrenteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "put": {
+        "operationId": "RegrasFrenteController_salvarEspecialidade",
+        "parameters": [
+          {
+            "name": "especialidadeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegrasFrenteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/regras-frente/modalidades/{modalidadeId}": {
+      "get": {
+        "operationId": "RegrasFrenteController_obterModalidade",
+        "parameters": [
+          {
+            "name": "modalidadeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegrasDaFrenteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "put": {
+        "operationId": "RegrasFrenteController_salvarModalidade",
+        "parameters": [
+          {
+            "name": "modalidadeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegrasFrenteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/medicos/{id}/historico": {
       "get": {
         "operationId": "HistoricoCadastroController_doMedico",
@@ -14360,6 +14524,290 @@
           "turnosPosteriores",
           "lista",
           "recolhimentoAposTurnoMin"
+        ]
+      },
+      "TipoFrenteCatalogo": {
+        "type": "string",
+        "enum": [
+          "especialidade",
+          "modalidade"
+        ]
+      },
+      "FrenteCatalogoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoFrenteCatalogo"
+              }
+            ]
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Na frente de especialidade."
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Na frente de modalidade."
+          }
+        },
+        "required": [
+          "tipo",
+          "especialidadeId",
+          "modalidadeId"
+        ]
+      },
+      "ModoPrazoLista": {
+        "type": "string",
+        "enum": [
+          "padrao",
+          "sla",
+          "minimo"
+        ],
+        "description": "padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`."
+      },
+      "HorarioSemRoboDto": {
+        "type": "object",
+        "properties": {
+          "diasSemana": {
+            "description": "Dias da semana (0 = domingo … 6 = sábado); vazio = todos os dias.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "inicio": {
+            "type": "string",
+            "example": "19:00",
+            "description": "HH:MM (Brasília)."
+          },
+          "fim": {
+            "type": "string",
+            "example": "07:00",
+            "description": "HH:MM (Brasília); antes do início = vira a meia-noite."
+          }
+        },
+        "required": [
+          "diasSemana",
+          "inicio",
+          "fim"
+        ]
+      },
+      "MetodoDivisao": {
+        "type": "string",
+        "enum": [
+          "igualitaria",
+          "proporcao"
+        ]
+      },
+      "ProporcaoModalidadeDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "percentual": {
+            "type": "number",
+            "description": "Percentual de exames (os da frente somam 100)."
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "percentual"
+        ]
+      },
+      "TetoReduzidoDto": {
+        "type": "object",
+        "properties": {
+          "produtividadeAte": {
+            "type": "number",
+            "description": "Vale para quem tem produtividade de escala até este valor."
+          },
+          "teto": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "produtividadeAte",
+          "teto"
+        ]
+      },
+      "RegraSegmentoDto": {
+        "type": "object",
+        "properties": {
+          "subespecialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teto": {
+            "type": "number",
+            "nullable": true,
+            "description": "Máximo de exames do segmento por médico a cada rodada; nulo = sem teto."
+          },
+          "tetoReduzido": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TetoReduzidoDto"
+              }
+            ]
+          },
+          "piso": {
+            "type": "number",
+            "nullable": true,
+            "description": "Quantos do segmento cada médico que o lauda recebe logo depois das urgências."
+          },
+          "pacoteAParte": {
+            "type": "boolean",
+            "description": "No pacote do paciente, o segmento não se junta ao resto (COLUNAS de MSK)."
+          }
+        },
+        "required": [
+          "subespecialidadeId",
+          "teto",
+          "tetoReduzido",
+          "piso",
+          "pacoteAParte"
+        ]
+      },
+      "FatiaMisturaDto": {
+        "type": "object",
+        "properties": {
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Nula = o segmento em qualquer especialidade."
+          },
+          "subespecialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Nulo = o geral (exame sem segmento) da especialidade."
+          }
+        },
+        "required": [
+          "especialidadeId",
+          "subespecialidadeId"
+        ]
+      },
+      "RegrasFrenteDto": {
+        "type": "object",
+        "properties": {
+          "listaPrioridadeIds": {
+            "nullable": true,
+            "description": "Prioridades que a Lista desta frente aceita (vazia = todas); nulo = as da regra padrão (configuração global).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "listaPrazo": {
+            "description": "padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoPrazoLista"
+              }
+            ]
+          },
+          "listaPrazoMinimoHoras": {
+            "type": "number",
+            "nullable": true,
+            "description": "Só com `listaPrazo` = minimo."
+          },
+          "recolheAoFimDoTurno": {
+            "type": "boolean",
+            "description": "Ao fim do turno, o exame não aberto volta para a fila."
+          },
+          "distribuiPeloRobo": {
+            "type": "boolean",
+            "description": "Falso = a frente é toda manual."
+          },
+          "horariosSemRobo": {
+            "description": "Faixas em que o robô não distribui a frente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HorarioSemRoboDto"
+            }
+          },
+          "divisao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetodoDivisao"
+              }
+            ]
+          },
+          "proporcoes": {
+            "description": "Só na divisão por proporção (vazia na igualitária).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProporcaoModalidadeDto"
+            }
+          },
+          "tetoPorMedico": {
+            "type": "number",
+            "nullable": true,
+            "description": "Teto por médico a cada rodada, além do da escala; nulo = só o da escala."
+          },
+          "segmentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegraSegmentoDto"
+            }
+          },
+          "mistura": {
+            "description": "Mistura entre segmentos (a do neurologista), na ordem; vazia = nenhuma.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FatiaMisturaDto"
+            }
+          },
+          "listaDepoisDosFixos": {
+            "type": "boolean",
+            "description": "Antes de os turnos posteriores começarem, a Lista fica só com o que eles não vão dar conta."
+          }
+        },
+        "required": [
+          "listaPrioridadeIds",
+          "listaPrazo",
+          "listaPrazoMinimoHoras",
+          "recolheAoFimDoTurno",
+          "distribuiPeloRobo",
+          "horariosSemRobo",
+          "divisao",
+          "proporcoes",
+          "tetoPorMedico",
+          "segmentos",
+          "mistura",
+          "listaDepoisDosFixos"
+        ]
+      },
+      "RegrasDaFrenteDto": {
+        "type": "object",
+        "properties": {
+          "frente": {
+            "$ref": "#/components/schemas/FrenteCatalogoDto"
+          },
+          "regras": {
+            "$ref": "#/components/schemas/RegrasFrenteDto"
+          },
+          "cadastrada": {
+            "type": "boolean",
+            "description": "Falso = a frente não tem cadastro: as regras são as neutras."
+          }
+        },
+        "required": [
+          "frente",
+          "regras",
+          "cadastrada"
         ]
       },
       "ItemHistoricoCadastroDto": {
