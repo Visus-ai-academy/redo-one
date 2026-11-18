@@ -1,5 +1,4 @@
 import { Button } from '@base-ui/react/button';
-import { Popover } from '@base-ui/react/popover';
 import { ArrowClockwise, CheckCircle, Clock, UsersThree } from '@phosphor-icons/react';
 import { type ReactNode, useMemo, useState } from 'react';
 
@@ -17,9 +16,7 @@ import {
 } from '../../lib/rodada';
 import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { Alerta } from '../alerta/Alerta';
-import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
-import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
@@ -30,6 +27,7 @@ import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { SeloCor } from '../selo-cor/SeloCor';
 import { Skeleton } from '../skeleton/Skeleton';
 import { Caixa, CargaDoMedico, TituloSecao, Vazio } from './comum';
+import { PorFrente } from './PorFrente';
 
 const SEM_FILTROS: FiltrosEmTurno = { turnos: [], frentes: [], segmentos: [] };
 
@@ -230,147 +228,6 @@ export function FilaDoMomento({
         />
       </div>
     </div>
-  );
-}
-
-/** Prioridade sem cor cadastrada: tons de neutro na ordem da operação (a primeira, mais escura). */
-const TONS_NEUTROS = [85, 64, 48, 36, 28];
-const corDaPrioridade = (p: { cor: string | null }, i: number) =>
-  p.cor ??
-  `color-mix(in srgb, var(--muted-foreground) ${TONS_NEUTROS[Math.min(i, TONS_NEUTROS.length - 1)]}%, white)`;
-
-const urgentesTexto = (n: number) => `${num(n)} ${n === 1 ? 'urgente' : 'urgentes'}`;
-
-type PrioridadeComCor = FilaDoMomentoDto['prioridades'][number] & { cor: string };
-
-/**
- * Cada frente numa linha: nome, total e quantos são tratados como urgência, com uma barra
- * empilhada pela prioridade da operação. O detalhe por prioridade abre na barra (popover); a
- * legenda embaixo dá o total de cada prioridade. Cabe em 1/3 da largura e no celular sem rolar.
- */
-function PorFrente({ fila }: { fila: FilaDoMomentoDto }) {
-  const prioridades: PrioridadeComCor[] = fila.prioridades.map((p, i) => ({
-    ...p,
-    cor: corDaPrioridade(p, i),
-  }));
-  return (
-    <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3 lg:col-span-1">
-      <TituloSecao
-        titulo="Por frente e prioridade da operação"
-        id="titulo-matriz"
-        ajuda={
-          <AjudaContextual assunto="a frente e a prioridade da operação">
-            Frente é a da escala (especialidade ou modalidade). A prioridade da operação vem do
-            de-para em Configurações › Distribuição. Passe o mouse, toque ou tecle Enter na barra
-            para ver os exames de cada prioridade.
-          </AjudaContextual>
-        }
-      />
-      <Caixa>
-        <ul aria-labelledby="titulo-matriz" className="divide-y">
-          {fila.porFrente.map((f) => (
-            <LinhaFrente key={f.frenteId ?? 'sem-frente'} frente={f} prioridades={prioridades} />
-          ))}
-        </ul>
-        <ul
-          aria-label="Total por prioridade"
-          className="bg-muted flex flex-wrap gap-x-4 gap-y-1 border-t px-4 py-2.5 text-[13px] tabular-nums"
-        >
-          {prioridades.map((p) => (
-            <li key={p.prioridadeOperacaoId ?? 'sem'} className="flex items-center gap-1.5">
-              <BolinhaCor cor={p.cor} className="size-2.5" />
-              <span className="text-muted-foreground">{p.nome}</span>
-              <span className="font-semibold">{num(p.exames)}</span>
-            </li>
-          ))}
-        </ul>
-      </Caixa>
-    </section>
-  );
-}
-
-function LinhaFrente({
-  frente: f,
-  prioridades,
-}: {
-  frente: FilaDoMomentoDto['porFrente'][number];
-  prioridades: PrioridadeComCor[];
-}) {
-  const daPrioridade = (id: string | null) =>
-    f.porPrioridade.find((x) => x.prioridadeOperacaoId === id) ?? { exames: 0, urgentes: 0 };
-  const total = Math.max(f.exames, 1);
-  return (
-    <li className="flex flex-col gap-1 px-4 pt-2.5 pb-1.5">
-      <div className="flex items-baseline gap-2">
-        <span className="min-w-0 flex-1 font-medium break-words">{f.nome}</span>
-        {f.urgentes > 0 && (
-          <span className="text-destructive text-[13px] font-medium whitespace-nowrap tabular-nums">
-            {urgentesTexto(f.urgentes)}
-          </span>
-        )}
-        <span className="min-w-8 text-right text-base font-semibold tabular-nums">
-          {num(f.exames)}
-        </span>
-      </div>
-      <Popover.Root>
-        <Popover.Trigger
-          openOnHover
-          delay={150}
-          aria-label={`${f.nome} por prioridade`}
-          className="focus-visible:outline-ring -mx-1 flex rounded-md px-1 py-1.5 focus-visible:outline-2"
-        >
-          <BarraEmpilhada
-            separados
-            className="h-2 w-full"
-            rotulo={prioridades
-              .map((p) => `${p.nome}: ${num(daPrioridade(p.prioridadeOperacaoId).exames)}`)
-              .join(', ')}
-            segmentos={prioridades.map((p) => ({
-              pct: (daPrioridade(p.prioridadeOperacaoId).exames / total) * 100,
-              cor: p.cor,
-            }))}
-          />
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Positioner
-            side="bottom"
-            align="start"
-            sideOffset={4}
-            collisionPadding={16}
-            className="z-50 outline-none"
-          >
-            <Popover.Popup className="bg-popover text-popover-foreground w-[min(280px,calc(100vw-32px))] origin-(--transform-origin) rounded-lg border p-3 text-[13px] shadow-lg transition-[opacity,scale] duration-150 ease-out outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
-              <Popover.Title className="mb-2 text-sm font-semibold tabular-nums">
-                {f.nome}: {num(f.exames)} {f.exames === 1 ? 'exame' : 'exames'}
-              </Popover.Title>
-              <ul className="flex flex-col gap-1 tabular-nums">
-                {prioridades.map((p) => {
-                  const c = daPrioridade(p.prioridadeOperacaoId);
-                  return (
-                    <li
-                      key={p.prioridadeOperacaoId ?? 'sem'}
-                      className={cn(
-                        'flex items-center gap-2',
-                        !c.exames && 'text-subtle-foreground',
-                      )}
-                    >
-                      <BolinhaCor cor={p.cor} className="size-2.5" />
-                      <span className="min-w-0 flex-1 truncate">{p.nome}</span>
-                      {c.urgentes > 0 && (
-                        <span className="text-destructive font-medium">
-                          {urgentesTexto(c.urgentes)}
-                        </span>
-                      )}
-                      <span className="min-w-8 text-right font-semibold">{num(c.exames)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Popover.Popup>
-          </Popover.Positioner>
-        </Popover.Portal>
-      </Popover.Root>
-    </li>
   );
 }
 

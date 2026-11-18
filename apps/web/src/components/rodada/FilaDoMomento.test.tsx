@@ -1,9 +1,13 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FilaCarregando, FilaDoMomento } from './FilaDoMomento';
 import { FILA, medicoEmTurno } from './teste-dados';
+
+/** O detalhe por prioridade (Tooltip do Base UI, sem papel ARIA próprio), achado pelo título. */
+const dicaDe = async (titulo: string) =>
+  (await screen.findByText(titulo, { selector: 'p' })).parentElement as HTMLElement;
 
 describe('FilaDoMomento', () => {
   it('números do momento, as frentes com a barra por prioridade e os médicos em turno paginados', async () => {
@@ -12,10 +16,11 @@ describe('FilaDoMomento', () => {
     expect(screen.getByText('De 62 habilitados no robô')).toBeInTheDocument();
 
     const lista = screen.getByRole('list', { name: 'Por frente e prioridade da operação' });
-    const neuro = within(lista).getByRole('listitem');
+    const [neuro, rx] = within(lista).getAllByRole('listitem');
     expect(neuro).toHaveTextContent('NEURO');
     expect(neuro).toHaveTextContent('5 urgentes');
-    expect(neuro).toHaveTextContent('30');
+    expect(neuro).toHaveTextContent('26');
+    expect(rx).toHaveTextContent('RX4');
     expect(screen.queryByRole('table', { name: /Por frente/ })).not.toBeInTheDocument();
     // A legenda dá o total de cada prioridade (no lugar da linha Total).
     const legenda = screen.getByRole('list', { name: 'Total por prioridade' });
@@ -34,17 +39,73 @@ describe('FilaDoMomento', () => {
     expect(screen.queryByText('Médico 01')).not.toBeInTheDocument();
   });
 
-  it('o detalhe da frente por prioridade abre na barra, também pelo teclado', async () => {
+  it('passar o mouse na frente mostra os exames de cada prioridade (só as com exame) e o total', async () => {
     render(<FilaDoMomento fila={FILA} intervalo="1 min" />);
-    const barra = screen.getByRole('button', { name: 'NEURO por prioridade' });
-    barra.focus();
-    await userEvent.keyboard('{Enter}');
-    const detalhe = await screen.findByRole('dialog');
-    expect(detalhe).toHaveTextContent('NEURO: 30 exames');
-    expect(within(detalhe).getByText('Urgência').closest('li')).toHaveTextContent(
-      'Urgência5 urgentes5',
+    await userEvent.hover(screen.getByRole('button', { name: /^NEURO/ }));
+    const dica = await dicaDe('NEURO');
+    expect(within(dica).getByText('Urgência').closest('li')).toHaveTextContent('Urgência5');
+    expect(within(dica).getByText('Rotina').closest('li')).toHaveTextContent('Rotina21');
+    expect(dica).toHaveTextContent('Total26');
+    await userEvent.unhover(screen.getByRole('button', { name: /^NEURO/ }));
+
+    // Frente sem exame de urgência: a prioridade zerada não aparece.
+    await userEvent.hover(screen.getByRole('button', { name: /^RX/ }));
+    const dicaRx = await dicaDe('RX');
+    expect(dicaRx).toHaveTextContent('Total4');
+    expect(within(dicaRx).queryByText('Urgência')).not.toBeInTheDocument();
+  });
+
+  it('o detalhe por prioridade também abre no foco pelo teclado', async () => {
+    render(<FilaDoMomento fila={FILA} intervalo="1 min" />);
+    const neuro = screen.getByRole('button', { name: /^NEURO/ });
+    for (let i = 0; i < 20 && document.activeElement !== neuro; i++) await userEvent.tab();
+    expect(neuro).toHaveFocus();
+    expect(await dicaDe('NEURO')).toHaveTextContent('Total26');
+  });
+
+  it('no toque, tocar na barra abre o detalhe sem expandir a frente', async () => {
+    render(<FilaDoMomento fila={FILA} intervalo="1 min" />);
+    const neuro = screen.getByRole('button', { name: /^NEURO/ });
+    const barra = within(neuro).getByRole('img');
+    fireEvent.pointerDown(barra, { pointerType: 'touch' });
+    fireEvent.click(barra);
+    expect(await dicaDe('NEURO')).toHaveTextContent('Total26');
+    expect(neuro).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('clicar na frente mostra as subespecialidades, cada uma com a sua barra; a aberta sobrevive à atualização', async () => {
+    const { rerender } = render(<FilaDoMomento fila={FILA} intervalo="1 min" />);
+    const neuro = screen.getByRole('button', { name: /^NEURO/ });
+    expect(neuro).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('CRÂNIO')).not.toBeInTheDocument();
+    await userEvent.click(neuro);
+    expect(neuro).toHaveAttribute('aria-expanded', 'true');
+    const subs = screen.getByRole('list', { name: 'Subespecialidades de NEURO' });
+    const [cranio, sem] = within(subs).getAllByRole('listitem') as [HTMLElement, HTMLElement];
+    expect(cranio).toHaveTextContent('CRÂNIO3 urgentes18');
+    expect(sem).toHaveTextContent('Sem subespecialidade2 urgentes8');
+    expect(within(cranio).getByRole('img')).toHaveAccessibleName('Urgência: 3, Rotina: 15');
+
+    // A subespecialidade tem o mesmo detalhe ao passar o mouse.
+    await userEvent.hover(within(cranio).getByRole('button'));
+    expect(await dicaDe('NEURO › CRÂNIO')).toHaveTextContent('Total18');
+
+    // A atualização de 1 min traz outro objeto: a frente continua aberta.
+    rerender(<FilaDoMomento fila={structuredClone(FILA)} intervalo="1 min" />);
+    expect(screen.getByRole('button', { name: /^NEURO/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(subs).getByText('CRÂNIO')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /^NEURO/ }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('list', { name: 'Subespecialidades de NEURO' }),
+      ).not.toBeInTheDocument(),
     );
-    expect(within(detalhe).getByText('Rotina').closest('li')).toHaveTextContent('Rotina25');
+  });
+
+  it('frente sem subespecialidade (modalidade) não expande', () => {
+    render(<FilaDoMomento fila={FILA} intervalo="1 min" />);
+    expect(screen.getByRole('button', { name: /^RX/ })).not.toHaveAttribute('aria-expanded');
   });
 
   it('vencidos separados dos que vencem na próxima hora', () => {
