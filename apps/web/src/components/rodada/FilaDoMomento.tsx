@@ -214,7 +214,6 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
       (s, f) => s + (f.porPrioridade.find((p) => p.prioridadeOperacaoId === id)?.exames ?? 0),
       0,
     );
-  const primeiro = fila.primeiroVencimento;
   const th = 'text-subtle-foreground h-10 px-3 text-xs font-medium whitespace-nowrap';
   return (
     <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3">
@@ -238,9 +237,6 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
                 ))}
                 <th scope="col" className={cn(th, 'text-right')}>
                   Total
-                </th>
-                <th scope="col" className={cn(th, 'text-right')}>
-                  Vence primeiro
                 </th>
               </tr>
             </thead>
@@ -268,9 +264,6 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
                     );
                   })}
                   <td className="px-3 text-right font-semibold">{num(f.exames)}</td>
-                  <td className="text-muted-foreground px-3 text-right">
-                    {f.primeiroVencimento ? horaDeBrasilia(f.primeiroVencimento) : '—'}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -288,9 +281,6 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
                   </td>
                 ))}
                 <td className="px-3 text-right font-semibold">{num(fila.total)}</td>
-                <td className="text-muted-foreground px-3 text-right">
-                  {primeiro ? horaDeBrasilia(primeiro) : '—'}
-                </td>
               </tr>
             </tfoot>
           </table>

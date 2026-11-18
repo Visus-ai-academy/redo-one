@@ -14,7 +14,13 @@ describe('FilaDoMomento', () => {
 
     const matriz = screen.getByRole('table', { name: 'Por frente e prioridade da operação' });
     const neuro = within(matriz).getByRole('row', { name: /NEURO/ });
-    expect(neuro).toHaveTextContent('NEURO52530');
+    expect(neuro).toHaveTextContent(/^NEURO52530$/);
+    expect(
+      within(matriz)
+        .getAllByRole('columnheader')
+        .map((c) => c.textContent),
+    ).not.toContain('Vence primeiro');
+    expect(within(matriz).getAllByRole('row').at(-1)).toHaveTextContent(/^Total\d+$/);
 
     expect(screen.getByText('1–10 de 12')).toBeInTheDocument();
     expect(screen.getByText('No teto')).toBeInTheDocument();
