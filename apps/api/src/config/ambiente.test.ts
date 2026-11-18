@@ -25,6 +25,7 @@ describe('validarAmbiente', () => {
     ['DISTRIBUICAO_FAKE_SEMENTE', '-1'],
     ['DISTRIBUICAO_FAKE_FALHAS_PCT', '101'],
     ['DISTRIBUICAO_FAKE_POR_FORA_PCT', '200'],
+    ['DISTRIBUICAO_FAKE_ABERTOS_PCT', '101'],
   ])('recusa %s=%s, dizendo qual variável está errada', (nome, valor) => {
     expect(() => validarAmbiente({ ...minimo, [nome]: valor })).toThrow(nome);
   });

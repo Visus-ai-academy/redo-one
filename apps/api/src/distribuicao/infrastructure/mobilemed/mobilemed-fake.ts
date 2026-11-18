@@ -3,7 +3,13 @@ import type {
   PedidoAtribuicao,
   ResultadoAtribuicao,
 } from '../../application/ports/atribuidor-exames';
-import type { FilaExames, LeituraFila } from '../../application/ports/fila-exames';
+import type {
+  ExameComDono,
+  ExameDaFila,
+  ExameEmMaos,
+  FilaExames,
+  LeituraFila,
+} from '../../application/ports/fila-exames';
 import { type AmostraCatalogo, gerarFilaSintetica } from './fila-sintetica';
 
 export interface OpcoesMobileMedFake {
@@ -17,6 +23,11 @@ export interface OpcoesMobileMedFake {
    * por fora do robô (`DISTRIBUICAO_FAKE_POR_FORA_PCT`).
    */
   porForaPct?: number;
+  /**
+   * % dos exames com médico que ele já abriu (LAUDANDO): não são recolhidos e prendem o pacote
+   * (`DISTRIBUICAO_FAKE_ABERTOS_PCT`).
+   */
+  abertosPct?: number;
 }
 
 /** Conta na MobileMed de "alguém de fora" (um médico que pegou o exame sem o robô). */
@@ -29,8 +40,10 @@ const hashDo = (id: string) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0
 
 /**
  * MobileMed de mentira, na memória do processo: a fila é a sintética (refeita a cada hora, para os
- * prazos acompanharem o relógio) e a atribuição só registra quem recebeu o quê. Nada sai do
- * processo; reiniciar a API zera as atribuições.
+ * prazos acompanharem o relógio) e a atribuição só registra quem recebeu o quê. As entregas do robô
+ * gravadas no banco (designações executadas) contam como atribuídas, para os exames entregues por
+ * rodadas anteriores seguirem com o médico depois de reiniciar a API (e poderem ser recolhidos).
+ * Nada sai do processo; nenhum exame chega a médico de verdade.
  */
 export class MobileMedFake implements FilaExames, AtribuidorExames {
   private readonly atribuidos = new Map<string, number>();
@@ -42,67 +55,107 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     private readonly opcoes: OpcoesMobileMedFake,
   ) {}
 
-  private async gerada(): Promise<LeituraFila> {
+  private statusDe(idExame: string): string {
+    const pct = this.opcoes.abertosPct ?? 0;
+    return pct > 0 && hashDo(`aberto:${idExame}`) % 100 < pct ? 'LAUDANDO' : 'NOVO';
+  }
+
+  async ler(): Promise<LeituraFila> {
+    const amostra = await this.carregarAmostra();
     const base = new Date(Math.floor(this.agora().getTime() / HORA) * HORA);
-    return gerarFilaSintetica({
-      amostra: await this.carregarAmostra(),
+    const { semMedico, emMaos } = gerarFilaSintetica({
+      amostra,
       tamanho: this.opcoes.tamanho,
       semente: this.opcoes.semente,
       base,
     });
-  }
-
-  async ler(): Promise<LeituraFila> {
-    const { semMedico, emMaos } = await this.gerada();
-    const atribuidos = semMedico.filter((e) => this.atribuidos.has(e.idExame));
+    // As entregas gravadas primeiro; o que este processo atribuiu depois vale por cima.
+    const donos = new Map<string, number>([
+      ...(amostra.entregues ?? []).map((e) => [e.idExame, e.medicoIdMobilemed] as const),
+      ...this.atribuidos,
+    ]);
+    const comDono = (e: ExameEmMaos | ExameDaFila): ExameEmMaos => ({
+      idExame: e.idExame,
+      medicoIdMobilemed:
+        donos.get(e.idExame) ?? ('medicoIdMobilemed' in e ? e.medicoIdMobilemed : 0),
+      status: this.statusDe(e.idExame),
+      prioridade: e.prioridade,
+      estudo: e.estudo,
+      unidade: e.unidade,
+      modalidade: e.modalidade,
+      especialidade: e.especialidade,
+      laudos: e.laudos,
+      realizadoEm: e.realizadoEm,
+      entradaEm: e.entradaEm,
+      prazo: e.prazo,
+      paciente: e.paciente,
+    });
     return {
-      semMedico: semMedico.filter((e) => !this.atribuidos.has(e.idExame)),
-      emMaos: [
-        ...emMaos,
-        ...atribuidos.map((e) => ({
-          idExame: e.idExame,
-          medicoIdMobilemed: this.atribuidos.get(e.idExame) ?? 0,
-          estudo: e.estudo,
-          unidade: e.unidade,
-          modalidade: e.modalidade,
-          especialidade: e.especialidade,
-          laudos: e.laudos,
-          paciente: e.paciente,
-        })),
-      ],
+      semMedico: semMedico.filter((e) => !donos.has(e.idExame)),
+      emMaos: [...emMaos, ...semMedico.filter((e) => donos.has(e.idExame))].map(comDono),
     };
   }
 
   async nomesPacientes(idsExame: readonly string[]): Promise<Map<string, string>> {
     const pedidos = new Set(idsExame);
-    const { semMedico } = await this.ler();
+    const { semMedico, emMaos } = await this.ler();
     return new Map(
-      semMedico.filter((e) => pedidos.has(e.idExame)).map((e) => [e.idExame, e.paciente.nome]),
+      [...semMedico, ...emMaos]
+        .filter((e) => pedidos.has(e.idExame))
+        .map((e) => [e.idExame, e.paciente.nome]),
     );
   }
 
-  async semMedico(idsExame: readonly string[]): Promise<Set<string>> {
+  async intocados(exames: readonly ExameComDono[]): Promise<Set<string>> {
     const pct = this.opcoes.porForaPct ?? 0;
-    for (const id of idsExame) {
+    for (const { idExame: id, medicoIdMobilemed } of exames) {
       // O hash deslocado não coincide com o das falhas.
-      if (pct > 0 && hashDo(`fora:${id}`) % 100 < pct && !this.atribuidos.has(id)) {
+      if (
+        medicoIdMobilemed === null &&
+        pct > 0 &&
+        hashDo(`fora:${id}`) % 100 < pct &&
+        !this.atribuidos.has(id)
+      ) {
         this.atribuidos.set(id, CONTA_DE_FORA);
       }
     }
-    const { semMedico } = await this.ler();
+    const { semMedico, emMaos } = await this.ler();
     const livres = new Set(semMedico.map((e) => e.idExame));
-    return new Set(idsExame.filter((id) => livres.has(id)));
+    const comMedico = new Map(
+      emMaos.filter((e) => e.status === 'NOVO').map((e) => [e.idExame, e.medicoIdMobilemed]),
+    );
+    return new Set(
+      exames
+        .filter((e) =>
+          e.medicoIdMobilemed === null
+            ? livres.has(e.idExame)
+            : comMedico.get(e.idExame) === e.medicoIdMobilemed,
+        )
+        .map((e) => e.idExame),
+    );
   }
 
   async atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao> {
-    const { semMedico } = await this.ler();
-    if (!semMedico.some((e) => e.idExame === pedido.idExame)) {
-      return {
-        status: 'pulada',
-        motivo: 'saiu_da_fila',
-        detalhe: 'MobileMed: o exame não está mais sem médico.',
-        retentavel: false,
-      };
+    const intocado = (
+      await this.intocados([
+        { idExame: pedido.idExame, medicoIdMobilemed: pedido.deMedicoIdMobilemed },
+      ])
+    ).has(pedido.idExame);
+    if (!intocado) {
+      return pedido.deMedicoIdMobilemed === null
+        ? {
+            status: 'pulada',
+            motivo: 'saiu_da_fila',
+            detalhe: 'MobileMed: o exame não está mais sem médico.',
+            retentavel: false,
+          }
+        : {
+            status: 'pulada',
+            motivo: 'mudou_de_dono',
+            detalhe:
+              'MobileMed: o exame já foi aberto ou trocado de médico desde que foi recolhido.',
+            retentavel: false,
+          };
     }
     const tentativa = (this.tentativas.get(pedido.idExame) ?? 0) + 1;
     this.tentativas.set(pedido.idExame, tentativa);

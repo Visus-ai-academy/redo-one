@@ -13,6 +13,14 @@ import {
   RECORTES_VAZIOS,
 } from './entrada';
 
+const EM_MAOS = {
+  status: 'NOVO',
+  prioridade: 'Rotina',
+  realizadoEm: new Date('2026-11-18T10:00:00Z'),
+  entradaEm: new Date('2026-11-18T10:10:00Z'),
+  prazo: null,
+};
+
 const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 const agora = br('2026-11-18T09:00');
 const MI = 'esp-mi';
@@ -192,6 +200,7 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
           {
             idExame: 'm1',
             medicoIdMobilemed: 102,
+            ...EM_MAOS,
             estudo: 'TC TORAX',
             unidade: 'HOSPITAL A',
             modalidade: 'CT',
@@ -202,6 +211,7 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
           {
             idExame: 'm2',
             medicoIdMobilemed: 999,
+            ...EM_MAOS,
             estudo: 'TC TORAX',
             unidade: 'HOSPITAL A',
             modalidade: 'CT',
@@ -235,6 +245,7 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
           {
             idExame: 'm1',
             medicoIdMobilemed: 101,
+            ...EM_MAOS,
             estudo: 'TC TORAX',
             unidade: 'HOSPITAL A',
             modalidade: 'CT',

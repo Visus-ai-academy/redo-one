@@ -205,6 +205,7 @@ const CASOS_RODADA = [
           semente: inteiro(config, 'DISTRIBUICAO_FAKE_SEMENTE', 1),
           falhasPct: inteiro(config, 'DISTRIBUICAO_FAKE_FALHAS_PCT', 0),
           porForaPct: inteiro(config, 'DISTRIBUICAO_FAKE_POR_FORA_PCT', 0),
+          abertosPct: inteiro(config, 'DISTRIBUICAO_FAKE_ABERTOS_PCT', 0),
         }),
     },
     { provide: FILA_EXAMES, useExisting: MOBILEMED },

@@ -20,6 +20,11 @@ export interface AmostraCatalogo {
   clientes: string[];
   /** Contas na MobileMed dos médicos habilitados (`medicos.id_mobilemed`). */
   medicosMobilemed: number[];
+  /**
+   * A última entrega do robô de cada exame (designação executada), com a conta do médico: a
+   * MobileMed de mentira lembra quem recebeu o quê mesmo depois de reiniciar a API.
+   */
+  entregues?: { idExame: string; medicoIdMobilemed: number }[];
 }
 
 export interface OpcoesFilaSintetica {
@@ -124,14 +129,22 @@ export function gerarFilaSintetica(o: OpcoesFilaSintetica): LeituraFila {
       // Um terço é de paciente que também está na fila: exercita a aderência.
       const daFila = r.chance(0.33) ? r.um(semMedico) : null;
       const exame = r.um(exames);
+      const p = prioridade();
+      const realizadoEm = new Date(o.base.getTime() - r.inteiro(60, 72 * 60) * 60_000);
       emMaos.push({
         idExame: String(8_000_000 + i),
         medicoIdMobilemed: r.um(o.amostra.medicosMobilemed),
+        // O status de quem já está com médico (NOVO ou aberto) é do adaptador: depende do tempo.
+        status: 'NOVO',
+        prioridade: p.grafia,
         estudo: daFila?.estudo ?? exame.nome,
         unidade: daFila?.unidade ?? r.um(clientes),
         modalidade: daFila?.modalidade ?? exame.modalidade,
         especialidade: daFila?.especialidade ?? exame.especialidade,
         laudos: 1,
+        realizadoEm,
+        entradaEm: new Date(realizadoEm.getTime() + r.inteiro(5, 90) * 60_000),
+        prazo: new Date(realizadoEm.getTime() + r.inteiro(...p.prazoHoras) * HORA),
         paciente: daFila?.paciente ?? novoPaciente(pacientes++),
       });
     }

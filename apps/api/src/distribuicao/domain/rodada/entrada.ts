@@ -55,10 +55,15 @@ export interface ExameDaLeitura {
   paciente: PacienteDaLeitura;
 }
 
-/** Exame já com médico e não laudado (carga em mãos e aderência). */
+/** Exame já com médico e não laudado (carga em mãos, aderência e recolhimento). */
 export interface ExameEmMaosDaLeitura {
   idExame: string;
   medicoIdMobilemed: number;
+  status: string;
+  prioridade: string | null;
+  realizadoEm: Date;
+  entradaEm: Date;
+  prazo: Date | null;
   estudo: string;
   unidade: string;
   modalidade: string | null;

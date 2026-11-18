@@ -5,6 +5,11 @@ export interface PedidoAtribuicao {
   idExame: string;
   /** Conta do médico na MobileMed (`medicos.id_mobilemed`). */
   medicoIdMobilemed: number;
+  /**
+   * Recolhido: a conta de quem tinha o exame; a MobileMed só troca se ele segue com esse médico e
+   * NOVO. Null = o exame estava sem médico.
+   */
+  deMedicoIdMobilemed: number | null;
 }
 
 /**

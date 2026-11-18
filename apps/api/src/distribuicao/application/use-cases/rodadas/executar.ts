@@ -61,7 +61,11 @@ export class ExecutarRodada {
             detalhe: 'O médico está inativo ou sem conta na MobileMed no cadastro.',
             retentavel: false,
           };
-        } else if (conferir && !(await this.d.fila.semMedico([p.idExameMobilemed])).size) {
+        } else if (
+          conferir &&
+          !(await this.d.fila.intocados([{ idExame: p.idExameMobilemed, medicoIdMobilemed: null }]))
+            .size
+        ) {
           resultado = {
             status: 'pulada',
             motivo: 'ja_atribuido_mobilemed',
@@ -75,6 +79,7 @@ export class ExecutarRodada {
               await this.d.atribuidor.atribuir({
                 idExame: p.idExameMobilemed,
                 medicoIdMobilemed: conta.idMobilemed,
+                deMedicoIdMobilemed: null,
               }),
             );
           } catch (erro) {

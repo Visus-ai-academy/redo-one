@@ -25,7 +25,7 @@ import type {
   PedidoAtribuicao,
   ResultadoAtribuicao,
 } from '../../ports/atribuidor-exames';
-import type { FilaExames, LeituraFila } from '../../ports/fila-exames';
+import type { ExameComDono, FilaExames, LeituraFila } from '../../ports/fila-exames';
 import { RodadaRecusadaError, RodadaVivaError } from './erros';
 import { criarCasosDeUsoRodada } from './index';
 
@@ -54,8 +54,8 @@ class MobileMedDeTeste implements FilaExames, AtribuidorExames {
   }
   /** Exames que ganharam médico na MobileMed por fora do robô. */
   atribuidosPorFora = new Set<string>();
-  async semMedico(ids: readonly string[]) {
-    return new Set(ids.filter((id) => !this.atribuidosPorFora.has(id)));
+  async intocados(exames: readonly ExameComDono[]) {
+    return new Set(exames.map((e) => e.idExame).filter((id) => !this.atribuidosPorFora.has(id)));
   }
   async atribuir(p: PedidoAtribuicao): Promise<ResultadoAtribuicao> {
     this.pedidos.push(p);

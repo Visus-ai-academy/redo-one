@@ -34,17 +34,32 @@ export interface ExameDaFila {
   paciente: PacienteDaFila;
 }
 
-/** Exame que já está com um médico e ainda não foi laudado: carga em mãos e aderência. */
+/**
+ * Exame que já está com um médico e ainda não foi laudado: carga em mãos, aderência e o
+ * recolhimento (o NOVO entregue pelo robô a quem saiu do turno volta para a rodada).
+ */
 export interface ExameEmMaos {
   idExame: string;
   /** Conta do médico na MobileMed (`medicos.id_mobilemed`). */
   medicoIdMobilemed: number;
+  /** Status na MobileMed: NOVO = o médico ainda não abriu (só esse é recolhido). */
+  status: string;
+  prioridade: string | null;
   estudo: string;
   unidade: string;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;
+  realizadoEm: Date;
+  entradaEm: Date;
+  prazo: Date | null;
   paciente: PacienteDaFila;
+}
+
+/** O exame e com quem a rodada o viu: null = sem médico. */
+export interface ExameComDono {
+  idExame: string;
+  medicoIdMobilemed: number | null;
 }
 
 export interface LeituraFila {
@@ -63,13 +78,15 @@ export interface LeituraFila {
 export interface FilaExames {
   ler(): Promise<LeituraFila>;
   /**
-   * Nome do paciente de cada exame, lido na MobileMed agora (nunca do banco). Só para a
-   * conferência, com permissão e auditoria; exame que saiu da fila não volta no mapa.
+   * Nome do paciente de cada exame (sem médico ou com médico e não laudado), lido na MobileMed agora
+   * (nunca do banco). Só para a conferência, com permissão e auditoria; exame laudado não volta no
+   * mapa.
    */
   nomesPacientes(idsExame: readonly string[]): Promise<Map<string, string>>;
   /**
-   * Dos exames pedidos, os que seguem NOVO e sem médico agora. A retomada confere antes de
-   * atribuir cada um: o que ganhou médico por fora é pulado.
+   * Dos exames pedidos, os que seguem NOVO e com o mesmo dono de quando a rodada os leu (sem médico,
+   * ou o médico de quem foram recolhidos). A retomada confere antes de atribuir cada um: o que
+   * mudou de mão por fora é pulado.
    */
-  semMedico(idsExame: readonly string[]): Promise<Set<string>>;
+  intocados(exames: readonly ExameComDono[]): Promise<Set<string>>;
 }
