@@ -20,6 +20,7 @@ export const filaDoMomentoDtoSchema = z.object({
   vencemProximaHora: z.int().describe('Prazo na próxima hora (ou já vencido).'),
   primeiroVencimento: z.iso.datetime().nullable(),
   habilitados: z.int().describe('Ativos e habilitados no robô.'),
+  roboAtivo: z.boolean().describe('Robô ligado em Configurações › Distribuição.'),
   prioridades: z.array(contagemPrioridadeDtoSchema).describe('Na ordem da operação.'),
   porFrente: z.array(frenteDaFilaDtoSchema),
   turnos: z.array(turnoDaFilaDtoSchema).describe('Turnos de hoje que não acabaram.'),

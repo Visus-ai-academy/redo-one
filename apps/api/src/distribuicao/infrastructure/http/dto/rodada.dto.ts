@@ -551,6 +551,8 @@ export class FilaDoMomentoDto {
   primeiroVencimento!: Date | null;
   @ApiProperty({ type: 'integer', description: 'Ativos e habilitados no robô.' })
   habilitados!: number;
+  @ApiProperty({ description: 'Robô ligado em Configurações › Distribuição.' })
+  roboAtivo!: boolean;
   @ApiProperty({ type: [ContagemPrioridadeDto], description: 'Na ordem da operação.' })
   prioridades!: ContagemPrioridadeDto[];
   @ApiProperty({ type: [FrenteDaFilaDto] }) porFrente!: FrenteDaFilaDto[];

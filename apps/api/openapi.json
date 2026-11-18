@@ -15837,6 +15837,10 @@
             "type": "integer",
             "description": "Ativos e habilitados no robô."
           },
+          "roboAtivo": {
+            "type": "boolean",
+            "description": "Robô ligado em Configurações › Distribuição."
+          },
           "prioridades": {
             "description": "Na ordem da operação.",
             "type": "array",
@@ -15892,6 +15896,7 @@
           "vencemProximaHora",
           "primeiroVencimento",
           "habilitados",
+          "roboAtivo",
           "prioridades",
           "porFrente",
           "turnos",

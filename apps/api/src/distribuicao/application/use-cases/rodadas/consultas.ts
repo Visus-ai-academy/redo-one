@@ -173,6 +173,8 @@ export interface FilaDoMomento {
   primeiroVencimento: Date | null;
   /** Ativos e habilitados no robô. */
   habilitados: number;
+  /** Desligado em Configurações › Distribuição, ninguém inicia rodada. */
+  roboAtivo: boolean;
   /** As prioridades da operação, na ordem (as colunas da tabela por frente). */
   prioridades: ({ prioridadeOperacaoId: string | null; nome: string } & ContagemFila)[];
   porFrente: FrenteDaFila[];
@@ -318,6 +320,7 @@ export class ConsultarFilaDoMomento {
       vencemProximaHora: comPrazo.filter((l) => (l.prazo as Date).getTime() <= limite).length,
       primeiroVencimento: comPrazo.reduce<Date | null>((m, l) => menor(m, l.prazo), null),
       habilitados: insumos.medicos.length,
+      roboAtivo: insumos.config.roboAtivo,
       prioridades,
       porFrente: [...porFrente.values()].sort(
         (a, b) => Number(a.frenteId === null) - Number(b.frenteId === null) || b.exames - a.exames,

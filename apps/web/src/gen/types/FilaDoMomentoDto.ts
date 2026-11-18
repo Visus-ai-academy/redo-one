@@ -42,6 +42,11 @@ export type FilaDoMomentoDto = {
    */
   habilitados: number;
   /**
+   * @description Robô ligado em Configurações › Distribuição.
+   * @type boolean
+   */
+  roboAtivo: boolean;
+  /**
    * @description Na ordem da operação.
    * @type array
    */

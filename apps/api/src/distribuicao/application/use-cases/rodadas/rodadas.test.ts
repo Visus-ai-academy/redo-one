@@ -691,6 +691,7 @@ describe('rodada do robô (casos de uso)', () => {
       insumos.insumos = { ...insumosBase(), nomes: { [MI]: 'MEDICINA INTERNA', manha: 'Manhã' } };
       const f = await casos.filaDoMomento.executar();
       expect(f).toMatchObject({
+        roboAtivo: true,
         habilitados: 2,
         vencemProximaHora: 2,
         primeiroVencimento: br('2026-11-18T09:20'),
