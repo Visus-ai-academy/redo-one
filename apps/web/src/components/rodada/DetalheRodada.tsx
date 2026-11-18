@@ -19,6 +19,7 @@ import {
   juntarNomes,
   type LinhaFunil,
   num,
+  resumoDoRecolhimento,
   situacaoDaRodada,
   tituloDaRodada,
 } from '../../lib/rodada';
@@ -71,6 +72,7 @@ export function DetalheRodada({
       ].filter(Boolean)
     : [];
   const fim = rodada.eventos.at(-1)?.em;
+  const recolhimento = resumoDoRecolhimento(resumo?.recolhimento);
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,7 +105,7 @@ export function DetalheRodada({
           </Dado>
           <Dado rotulo="Fila lida">
             {rodada.lidaEm
-              ? `${horaDeBrasilia(rodada.lidaEm)}, ${num(rodada.lidos)} exames (${num(rodada.urgentes)} urgências)`
+              ? `${horaDeBrasilia(rodada.lidaEm)}, ${num(rodada.lidos)} exames${rodada.recolhidos ? ` e ${num(rodada.recolhidos)} recolhido(s)` : ''} (${num(rodada.urgentes)} urgências)`
               : 'Não chegou a ler'}
           </Dado>
           <Dado rotulo="Aprovada">
@@ -120,6 +122,21 @@ export function DetalheRodada({
           <Dado rotulo="Conferência">
             {conferencia.length ? juntarNomes(conferencia as string[]) : 'Sem ajustes'}
           </Dado>
+          {recolhimento && (
+            <Dado rotulo="Recolhimento">
+              {recolhimento.texto}
+              {recolhimento.ficaram.length > 0 && (
+                <span className="text-muted-foreground block text-[13px]">
+                  {`Ficaram com o médico: ${recolhimento.ficaram
+                    .map(
+                      (f) =>
+                        `${f.rotulo.charAt(0).toLowerCase()}${f.rotulo.slice(1)} (${num(f.quantidade)})`,
+                    )
+                    .join('; ')}`}
+                </span>
+              )}
+            </Dado>
+          )}
         </dl>
         {rodada.erro && (
           <Alerta tom="erro" className="mt-3">
@@ -202,8 +219,9 @@ function FunilExames({
   onPorQue: (exame: OpcaoBusca) => void;
 }) {
   const [aberta, setAberta] = useState<string | null>(null);
-  const linhas = funilDosExames(rodada.lidos, resumo.motivos);
-  const base = Math.max(rodada.lidos, 1);
+  const linhas = funilDosExames(rodada.lidos, resumo.motivos, rodada.recolhidos);
+  const total = rodada.lidos + rodada.recolhidos;
+  const base = Math.max(total, 1);
   return (
     <section aria-labelledby="titulo-funil" className="flex min-w-0 flex-col gap-3">
       <TituloSecao titulo="Funil dos exames" id="titulo-funil" />
@@ -227,7 +245,7 @@ function FunilExames({
                   <span className="w-12 text-right">{num(l.restam)}</span>
                   <BarraEmpilhada
                     className="flex-1"
-                    rotulo={`${num(l.restam)} de ${num(rodada.lidos)}`}
+                    rotulo={`${num(l.restam)} de ${num(total)}`}
                     segmentos={[{ pct: (l.restam / base) * 100, tom: l.marco ? 'forte' : 'suave' }]}
                   />
                 </span>

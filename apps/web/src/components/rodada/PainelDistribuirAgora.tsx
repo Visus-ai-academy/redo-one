@@ -1,9 +1,10 @@
 import { Button } from '@base-ui/react/button';
 import { Play } from '@phosphor-icons/react';
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
+import type { RecolhimentoPrevistoDto } from '../../gen/types/RecolhimentoPrevistoDto';
 import type { RecortesRodadaDto } from '../../gen/types/RecortesRodadaDto';
 import { horaDeBrasilia } from '../../lib/acesso';
-import { num } from '../../lib/rodada';
+import { num, recolhimentoPrevistoEmTexto } from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
@@ -24,12 +25,15 @@ import {
  */
 export function PainelDistribuirAgora({
   fila,
+  recolhimento,
   onFechar,
   onDistribuir,
   buscarClientes,
   buscarMedicos,
 }: {
   fila: FilaDoMomentoDto;
+  /** Quantos a rodada recolheria agora; undefined = ainda contando. */
+  recolhimento?: RecolhimentoPrevistoDto;
   onFechar: () => void;
   onDistribuir: (recortes: RecortesRodadaDto) => Promise<void>;
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
@@ -174,6 +178,9 @@ export function PainelDistribuirAgora({
           {erro && <Alerta tom="erro">{erro}</Alerta>}
         </div>
         <div className="bg-card sticky bottom-0 flex flex-col gap-3 border-t px-4 py-3">
+          <p className="text-muted-foreground text-[13px] tabular-nums">
+            {recolhimentoPrevistoEmTexto(recolhimento) ?? 'Contando os exames a recolher…'}
+          </p>
           <form.Subscribe selector={(s) => s.values}>
             {(v) => {
               const e = estimativa(v, fila);

@@ -4,6 +4,9 @@ import type { ContagemDesignacoesDto } from '../gen/types/ContagemDesignacoesDto
 import type { ContagemMotivoDto } from '../gen/types/ContagemMotivoDto';
 import type { FunilMedicosDto } from '../gen/types/FunilMedicosDto';
 import type { MedicoEmTurnoDto } from '../gen/types/MedicoEmTurnoDto';
+import type { MotivoRecolhimentoKey } from '../gen/types/MotivoRecolhimento';
+import type { RecolhimentoPrevistoDto } from '../gen/types/RecolhimentoPrevistoDto';
+import type { RecolhimentoRodadaDto } from '../gen/types/RecolhimentoRodadaDto';
 import type { RecortesRodadaDto } from '../gen/types/RecortesRodadaDto';
 import type { StatusDesignacaoKey } from '../gen/types/StatusDesignacao';
 import type { StatusRodadaKey } from '../gen/types/StatusRodada';
@@ -63,6 +66,7 @@ const MOTIVOS: Record<string, string> = {
   saiu_da_fila: 'Já tinha médico quando o robô chegou',
   sessao_caiu: 'A sessão da MobileMed caiu',
   ja_atribuido_mobilemed: 'Já atribuído na MobileMed',
+  mudou_de_dono: 'Aberto ou trocado de médico desde o recolhimento',
 };
 
 export function rotuloMotivo(motivo: string | null | undefined) {
@@ -71,6 +75,59 @@ export function rotuloMotivo(motivo: string | null | undefined) {
   if (conhecido) return conhecido;
   const texto = motivo.replaceAll('_', ' ');
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+const MOTIVOS_RECOLHIMENTO: Record<MotivoRecolhimentoKey, string> = {
+  turno_encerrado: 'Turno encerrado',
+  ausencia: 'Ausente hoje',
+};
+
+/** A marca do exame recolhido na proposta: de quem sai e por quê; null = veio da fila sem médico. */
+export function rotuloRecolhido(d: {
+  recolhidoDe: { id: string; nome: string } | null;
+  motivoRecolhimento: MotivoRecolhimentoKey | null;
+}) {
+  if (!d.recolhidoDe) return null;
+  return {
+    etiqueta: `Recolhido de ${d.recolhidoDe.nome}`,
+    motivo: d.motivoRecolhimento ? MOTIVOS_RECOLHIMENTO[d.motivoRecolhimento] : null,
+  };
+}
+
+/** Por que um exame que podia ser recolhido ficou com o médico, em ordem de exibição. */
+const FICARAM: [keyof RecolhimentoRodadaDto['naoRecolhidos'], string][] = [
+  ['turno_em_curso', 'Turno da entrega ainda em curso (ou na carência)'],
+  ['aberto', 'Já aberto pelo médico'],
+  ['frente_nao_recolhe', 'Frente que não recolhe ao fim do turno'],
+  ['pacote_aberto', 'Outro exame do pacote já aberto'],
+  ['trocado_por_fora', 'Trocado de médico à mão depois do robô'],
+];
+
+/** O recolhimento da leitura (detalhe e conferência); null = desligado ou leitura antiga. */
+export function resumoDoRecolhimento(r: RecolhimentoRodadaDto | null | undefined) {
+  if (!r) return null;
+  const texto = r.recolhiveis
+    ? `${num(r.recolhiveis)} recolhido(s) de médicos fora do turno ou ausentes` +
+      (r.porAusencia ? ` (${num(r.porAusencia)} por ausência)` : '') +
+      `: ${num(r.propostos)} propostos a outro médico` +
+      (r.semDestino ? `, ${num(r.semDestino)} fica(m) com quem tem` : '')
+    : 'Nenhum exame a recolher';
+  const ficaram = FICARAM.map(([chave, rotulo]) => ({ rotulo, quantidade: r.naoRecolhidos[chave] }))
+    .filter((f) => f.quantidade > 0)
+    .sort((a, b) => b.quantidade - a.quantidade);
+  return { texto, ficaram };
+}
+
+/** A prévia do "Distribuir agora"; null = ainda não chegou. */
+export function recolhimentoPrevistoEmTexto(p: RecolhimentoPrevistoDto | undefined) {
+  if (!p) return null;
+  if (!p.ligado) return 'Recolhimento desligado em Configurações › Distribuição.';
+  if (!p.recolhiveis) return 'Nenhum exame a recolher de médicos fora do turno ou ausentes.';
+  return (
+    `Mais ${num(p.recolhiveis)} exame(s) a recolher de médicos fora do turno ou ausentes` +
+    (p.porAusencia ? ` (${num(p.porAusencia)} por ausência)` : '') +
+    ', se houver quem os pegue.'
+  );
 }
 
 /** "Rodada de hoje, 10:31", "Rodada de ontem, 22:10", "Rodada de 17/11, 10:31". */
@@ -202,11 +259,26 @@ export type LinhaFunil = {
 };
 
 /** Dos lidos aos atribuídos: o que o motor deixou de fora, a conferência tirou e a execução não fez. */
-export function funilDosExames(lidos: number, motivos: readonly ContagemMotivoDto[]): LinhaFunil[] {
+export function funilDosExames(
+  lidos: number,
+  motivos: readonly ContagemMotivoDto[],
+  /** Recolhidos de outros médicos que entraram na proposta. */
+  recolhidos = 0,
+): LinhaFunil[] {
   let restam = lidos;
   const linhas: LinhaFunil[] = [
     { rotulo: 'Lidos na fila', saem: 0, restam, marco: true, filtro: null },
   ];
+  if (recolhidos) {
+    restam += recolhidos;
+    linhas.push({
+      rotulo: 'Mais os recolhidos de outros médicos',
+      saem: 0,
+      restam,
+      marco: true,
+      filtro: null,
+    });
+  }
   const etapa = (status: StatusDesignacaoKey, ordem: (m: ContagemMotivoDto) => number) =>
     motivos
       .filter((m) => m.status === status)

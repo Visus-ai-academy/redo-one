@@ -14,7 +14,10 @@ import {
   juntarNomes,
   medicosEmTurno,
   opcoesDosFiltros,
+  recolhimentoPrevistoEmTexto,
+  resumoDoRecolhimento,
   rotuloMotivo,
+  rotuloRecolhido,
   situacaoDaRodada,
   tituloDaRodada,
 } from './rodada';
@@ -265,5 +268,97 @@ describe('rodada do robô na tela', () => {
       teto: null,
       noTeto: false,
     });
+  });
+});
+
+describe('recolhimento na tela', () => {
+  it('o funil soma os recolhidos que entraram na proposta aos lidos', () => {
+    const funil = funilDosExames(
+      10,
+      [{ status: 'pulada', motivo: 'removido_na_conferencia', quantidade: 1 }],
+      3,
+    );
+    expect(funil.map((f) => [f.rotulo, f.saem, f.restam, f.marco])).toEqual([
+      ['Lidos na fila', 0, 10, true],
+      ['Mais os recolhidos de outros médicos', 0, 13, true],
+      ['Propostos', 0, 13, true],
+      ['Tirado na conferência', 1, 12, false],
+      ['Atribuídos ou por atribuir', 0, 12, true],
+    ]);
+  });
+
+  it('diz de quem o exame foi recolhido e por quê', () => {
+    expect(rotuloRecolhido({ recolhidoDe: null, motivoRecolhimento: null })).toBeNull();
+    expect(
+      rotuloRecolhido({
+        recolhidoDe: { id: 'a', nome: 'Dra. Ana' },
+        motivoRecolhimento: 'turno_encerrado',
+      }),
+    ).toEqual({ etiqueta: 'Recolhido de Dra. Ana', motivo: 'Turno encerrado' });
+    expect(
+      rotuloRecolhido({
+        recolhidoDe: { id: 'a', nome: 'Dra. Ana' },
+        motivoRecolhimento: 'ausencia',
+      }),
+    ).toEqual({ etiqueta: 'Recolhido de Dra. Ana', motivo: 'Ausente hoje' });
+  });
+
+  it('o resumo da leitura em frases legíveis, só com os motivos que contam', () => {
+    expect(resumoDoRecolhimento(null)).toBeNull();
+    const r = resumoDoRecolhimento({
+      recolhiveis: 5,
+      porAusencia: 2,
+      propostos: 4,
+      semDestino: 1,
+      naoRecolhidos: {
+        aberto: 3,
+        trocado_por_fora: 0,
+        pacote_aberto: 1,
+        turno_em_curso: 6,
+        frente_nao_recolhe: 2,
+      },
+    });
+    expect(r).toEqual({
+      texto:
+        '5 recolhido(s) de médicos fora do turno ou ausentes (2 por ausência): 4 propostos a outro médico, 1 fica(m) com quem tem',
+      ficaram: [
+        { rotulo: 'Turno da entrega ainda em curso (ou na carência)', quantidade: 6 },
+        { rotulo: 'Já aberto pelo médico', quantidade: 3 },
+        { rotulo: 'Frente que não recolhe ao fim do turno', quantidade: 2 },
+        { rotulo: 'Outro exame do pacote já aberto', quantidade: 1 },
+      ],
+    });
+    expect(
+      resumoDoRecolhimento({
+        recolhiveis: 0,
+        porAusencia: 0,
+        propostos: 0,
+        semDestino: 0,
+        naoRecolhidos: {
+          aberto: 0,
+          trocado_por_fora: 0,
+          pacote_aberto: 0,
+          turno_em_curso: 0,
+          frente_nao_recolhe: 0,
+        },
+      })?.texto,
+    ).toBe('Nenhum exame a recolher');
+  });
+
+  it('a prévia do "Distribuir agora"', () => {
+    expect(recolhimentoPrevistoEmTexto(undefined)).toBeNull();
+    expect(recolhimentoPrevistoEmTexto({ ligado: false, recolhiveis: 0, porAusencia: 0 })).toBe(
+      'Recolhimento desligado em Configurações › Distribuição.',
+    );
+    expect(recolhimentoPrevistoEmTexto({ ligado: true, recolhiveis: 0, porAusencia: 0 })).toBe(
+      'Nenhum exame a recolher de médicos fora do turno ou ausentes.',
+    );
+    expect(recolhimentoPrevistoEmTexto({ ligado: true, recolhiveis: 7, porAusencia: 2 })).toBe(
+      'Mais 7 exame(s) a recolher de médicos fora do turno ou ausentes (2 por ausência), se houver quem os pegue.',
+    );
+  });
+
+  it('motivo da execução do recolhido que mudou de mão', () => {
+    expect(rotuloMotivo('mudou_de_dono')).toBe('Aberto ou trocado de médico desde o recolhimento');
   });
 });

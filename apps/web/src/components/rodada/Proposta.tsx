@@ -9,7 +9,13 @@ import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import type { ResumoRodadaDto } from '../../gen/types/ResumoRodadaDto';
 import type { RodadaDto } from '../../gen/types/RodadaDto';
 import { dataHoraCurta } from '../../lib/datas';
-import { juntarNomes, num, rotuloMotivo, tomDaPrioridade } from '../../lib/rodada';
+import {
+  juntarNomes,
+  num,
+  resumoDoRecolhimento,
+  rotuloMotivo,
+  tomDaPrioridade,
+} from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
@@ -67,6 +73,7 @@ export function Conferencia(p: ConferenciaProps) {
   const comExames = resumo.medicos.filter((m) => m.previstas > 0);
   const urgentesPropostos = resumo.medicos.reduce((s, m) => s + m.urgencias, 0);
   const { tirados, movidos, naMao } = resumo.ajustes;
+  const recolhimento = resumoDoRecolhimento(resumo.recolhimento);
   const conferencia = [
     tirados && `${num(tirados)} tirado(s)`,
     movidos && `${num(movidos)} movido(s)`,
@@ -78,7 +85,17 @@ export function Conferencia(p: ConferenciaProps) {
       <section aria-label="Resumo da proposta" className="flex flex-col gap-3">
         <FaixaDeNumeros
           numeros={[
-            { rotulo: 'Lidos na fila', valor: num(rodada.lidos) },
+            {
+              rotulo: 'Lidos na fila',
+              valor: num(rodada.lidos),
+              ...(recolhimento
+                ? {
+                    legenda: rodada.recolhidos
+                      ? `Mais ${num(rodada.recolhidos)} recolhido(s) de outros médicos`
+                      : 'Nenhum recolhido de outros médicos',
+                  }
+                : {}),
+            },
             {
               rotulo: 'Propostos',
               valor: num(c.prevista),
@@ -345,10 +362,13 @@ function FicaramDeFora({
         header: 'Por que ficou de fora',
         cell: ({ row }) => {
           const d = row.original;
-          const detalhe =
+          const tirado =
             d.motivo === 'removido_na_conferencia' && d.retiradoDe
               ? `Tirado de ${d.retiradoDe.nome}${d.retiradaEm ? ` às ${dataHoraCurta(d.retiradaEm).split(' ').at(-1)}` : ''}`
               : d.detalhe;
+          // O recolhido tirado da proposta segue com quem já o tinha na MobileMed.
+          const detalhe =
+            tirado && d.recolhidoDe ? `${tirado}; fica com ${d.recolhidoDe.nome}` : tirado;
           return (
             <span className="flex max-w-96 min-w-56 flex-col whitespace-normal">
               <span>{rotuloMotivo(d.motivo)}</span>

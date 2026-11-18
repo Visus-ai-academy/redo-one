@@ -1,5 +1,5 @@
 import { Button } from '@base-ui/react/button';
-import { Info, MinusCircle, Package } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, Info, MinusCircle, Package } from '@phosphor-icons/react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -7,7 +7,7 @@ import { rodadasControllerDesignacoesQueryOptions } from '../../gen/hooks/useRod
 import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import { dataHoraCurta } from '../../lib/datas';
-import { juntarNomes, num, tomDaPrioridade } from '../../lib/rodada';
+import { juntarNomes, num, rotuloRecolhido, tomDaPrioridade } from '../../lib/rodada';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { Etiqueta } from '../etiqueta/Etiqueta';
@@ -39,6 +39,7 @@ export function ExameDaProposta({
   acoes?: AcoesDoExame;
   ocupado?: boolean;
 }) {
+  const recolhido = rotuloRecolhido(d);
   return (
     <li className="flex items-start justify-between gap-3 border-b px-4 py-3 last:border-b-0">
       <div className="flex min-w-0 flex-col gap-1">
@@ -48,6 +49,13 @@ export function ExameDaProposta({
             <Etiqueta tom={tomDaPrioridade(d)}>{d.prioridadeOperacao.nome}</Etiqueta>
           )}
           {d.naMao && <Etiqueta tom="info">Na mão</Etiqueta>}
+          {recolhido && (
+            <Etiqueta tom="atencao" icone={ArrowBendUpLeft}>
+              {recolhido.motivo
+                ? `${recolhido.etiqueta} (${recolhido.motivo.toLowerCase()})`
+                : recolhido.etiqueta}
+            </Etiqueta>
+          )}
         </div>
         <span className="text-muted-foreground text-xs tabular-nums">
           {d.cliente?.nome ?? d.unidade}

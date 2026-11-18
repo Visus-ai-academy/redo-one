@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
+import type { RecolhimentoPrevistoDto } from '../../gen/types/RecolhimentoPrevistoDto';
 import { renderComRotas } from '../../test/render';
 import { PainelDistribuirAgora } from './PainelDistribuirAgora';
 import { FILA } from './teste-dados';
@@ -31,10 +32,14 @@ const fila: FilaDoMomentoDto = {
   ],
 };
 
-const abrir = (onDistribuir = vi.fn(async () => undefined)) => {
+const abrir = (
+  onDistribuir = vi.fn(async () => undefined),
+  recolhimento: RecolhimentoPrevistoDto | undefined = undefined,
+) => {
   renderComRotas(
     <PainelDistribuirAgora
       fila={fila}
+      recolhimento={recolhimento}
       onFechar={() => undefined}
       onDistribuir={onDistribuir}
       buscarClientes={async () => []}
@@ -70,6 +75,20 @@ describe('PainelDistribuirAgora', () => {
     expect(onDistribuir).toHaveBeenCalledWith(
       expect.objectContaining({ turnoIds: [], prioridadeOperacaoIds: ['p-urg'] }),
     );
+  });
+
+  it('mostra quantos exames a rodada recolheria de médicos fora do turno ou ausentes', async () => {
+    abrir(undefined, { ligado: true, recolhiveis: 4, porAusencia: 1 });
+    expect(
+      await screen.findByText(
+        'Mais 4 exame(s) a recolher de médicos fora do turno ou ausentes (1 por ausência), se houver quem os pegue.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('enquanto conta o recolhimento, diz que está contando', async () => {
+    abrir();
+    expect(await screen.findByText('Contando os exames a recolher…')).toBeInTheDocument();
   });
 
   it('sem turno marcado, pede ao menos um', async () => {

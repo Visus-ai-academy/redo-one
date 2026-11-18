@@ -91,6 +91,7 @@ export function Historico({
         cell: (i) => <span className="text-muted-foreground text-[13px]">{i.getValue()}</span>,
       }),
       coluna.accessor('lidos', { header: aDireita('Lidos'), cell: numero }),
+      coluna.accessor('recolhidos', { header: aDireita('Recolhidos'), cell: numero }),
       coluna.accessor('propostos', { header: aDireita('Propostos'), cell: numero }),
       coluna.accessor('executadas', { header: aDireita('Atribuídos'), cell: numero }),
       coluna.accessor('deFora', { header: aDireita('De fora'), cell: numero }),

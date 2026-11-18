@@ -59,9 +59,11 @@ export function MoverExame({
   const naMao = designacao.status === 'recusada';
   const leva = outros > 0 && levar ? outros + 1 : 1;
   const termo = semAcento(busca.trim());
+  // O recolhido não volta para quem o tinha (a API recusa).
+  const fica = (id: string) => id === designacao.medico?.id || id === designacao.recolhidoDe?.id;
 
   const daRodada: Candidato[] = medicos
-    .filter((m) => m.medicoId !== designacao.medico?.id)
+    .filter((m) => !fica(m.medicoId))
     .map((m) => ({
       id: m.medicoId,
       nome: m.nome,
@@ -87,7 +89,7 @@ export function MoverExame({
   });
   const naRodada = new Set(daRodada.map((c) => c.id));
   const foraDaRodada: Candidato[] = (termo.length >= 2 ? (deFora.data ?? []) : [])
-    .filter((o) => !naRodada.has(o.valor) && o.valor !== designacao.medico?.id)
+    .filter((o) => !naRodada.has(o.valor) && !fica(o.valor))
     .map((o) => ({
       id: o.valor,
       nome: o.rotulo,

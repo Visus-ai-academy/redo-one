@@ -93,6 +93,25 @@ describe('MoverExame', () => {
     expect(onEscolher).toHaveBeenCalledWith('B', true);
   });
 
+  it('o recolhido não volta para quem o tinha: ele nem aparece na lista nem na busca', async () => {
+    renderComRotas(
+      <MoverExame
+        designacao={designacao({
+          recolhidoDe: { id: 'C', nome: 'Carla' },
+          motivoRecolhimento: 'turno_encerrado',
+        })}
+        medicos={MEDICOS}
+        buscarMedicos={async () => [{ valor: 'C', rotulo: 'Carla' }]}
+        onEscolher={vi.fn(async () => undefined)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
+    expect(screen.getByRole('button', { name: /Bruno/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Carla/ })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar médico' }), 'car');
+    expect(await screen.findByText(/Nenhum médico/)).toBeInTheDocument();
+  });
+
   it('desmarcada a caixa do pacote, move só o exame', async () => {
     const onEscolher = vi.fn(async () => undefined);
     renderComRotas(

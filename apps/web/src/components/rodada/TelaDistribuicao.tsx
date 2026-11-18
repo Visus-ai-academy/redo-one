@@ -18,6 +18,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { rodadasControllerFilaQueryOptions } from '../../gen/hooks/useRodadasControllerFila';
 import { rodadasControllerHistoricoQueryOptions } from '../../gen/hooks/useRodadasControllerHistorico';
+import { rodadasControllerRecolhimentoQueryOptions } from '../../gen/hooks/useRodadasControllerRecolhimento';
 import { rodadasControllerResumoQueryOptions } from '../../gen/hooks/useRodadasControllerResumo';
 import { rodadasControllerSituacaoQueryOptions } from '../../gen/hooks/useRodadasControllerSituacao';
 import { rodadasControllerVivaQueryOptions } from '../../gen/hooks/useRodadasControllerViva';
@@ -129,6 +130,12 @@ export function TelaDistribuicao({
   });
   const robo = fila.data?.roboAtivo;
 
+  // Prévia do recolhimento: só com o "Distribuir agora" aberto (lê a fila e a escala).
+  const recolhimento = useQuery({
+    ...rodadasControllerRecolhimentoQueryOptions(),
+    enabled: Boolean(busca.distribuir && podeIniciar && !rodada),
+  });
+
   const historicoUltima = useQuery({
     ...rodadasControllerHistoricoQueryOptions({ query: { pagina: 1, porPagina: 1 } }),
     enabled: !rodada && viva.isSuccess,
@@ -220,6 +227,7 @@ export function TelaDistribuicao({
       {busca.distribuir && podeIniciar && !rodada && fila.data && (
         <PainelDistribuirAgora
           fila={fila.data}
+          recolhimento={recolhimento.data}
           onFechar={fecharPainel}
           buscarClientes={buscarClientes}
           buscarMedicos={buscarMedicos}
