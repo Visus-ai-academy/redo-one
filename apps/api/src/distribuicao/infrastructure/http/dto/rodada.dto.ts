@@ -568,10 +568,27 @@ export class FilaDoMomentoDto {
   @ApiProperty({ type: 'integer' }) urgentes!: number;
   @ApiProperty({ type: 'integer' }) semCatalogo!: number;
   @ApiProperty({ type: 'integer' }) semCliente!: number;
-  @ApiProperty({ type: 'integer', description: 'Prazo na próxima hora (ou já vencido).' })
+  @ApiProperty({ type: 'integer', description: 'Prazo já passou.' })
+  vencidos!: number;
+  @ApiProperty({
+    type: 'integer',
+    description: 'Prazo na próxima hora, sem os já vencidos.',
+  })
   vencemProximaHora!: number;
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'O prazo mais antigo da fila (o vencido mais antigo, se houver).',
+  })
   primeiroVencimento!: Date | null;
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'O próximo prazo a vencer (o primeiro ainda não vencido).',
+  })
+  proximoVencimento!: Date | null;
   @ApiProperty({ type: 'integer', description: 'Ativos e habilitados no robô.' })
   habilitados!: number;
   @ApiProperty({ description: 'Robô ligado em Configurações › Distribuição.' })

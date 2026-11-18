@@ -33,8 +33,10 @@ export const FILA: FilaDoMomentoDto = {
   urgentes: 5,
   semCatalogo: 0,
   semCliente: 0,
+  vencidos: 0,
   vencemProximaHora: 2,
   primeiroVencimento: '2026-11-18T13:52:00Z',
+  proximoVencimento: '2026-11-18T13:52:00Z',
   habilitados: 62,
   roboAtivo: true,
   prioridades: [

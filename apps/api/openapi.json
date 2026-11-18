@@ -15882,14 +15882,25 @@
           "semCliente": {
             "type": "integer"
           },
+          "vencidos": {
+            "type": "integer",
+            "description": "Prazo já passou."
+          },
           "vencemProximaHora": {
             "type": "integer",
-            "description": "Prazo na próxima hora (ou já vencido)."
+            "description": "Prazo na próxima hora, sem os já vencidos."
           },
           "primeiroVencimento": {
             "type": "string",
             "format": "date-time",
-            "nullable": true
+            "nullable": true,
+            "description": "O prazo mais antigo da fila (o vencido mais antigo, se houver)."
+          },
+          "proximoVencimento": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "O próximo prazo a vencer (o primeiro ainda não vencido)."
           },
           "habilitados": {
             "type": "integer",
@@ -15951,8 +15962,10 @@
           "urgentes",
           "semCatalogo",
           "semCliente",
+          "vencidos",
           "vencemProximaHora",
           "primeiroVencimento",
+          "proximoVencimento",
           "habilitados",
           "roboAtivo",
           "prioridades",

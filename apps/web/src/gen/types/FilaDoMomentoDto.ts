@@ -26,16 +26,29 @@ export type FilaDoMomentoDto = {
   semCatalogo: number;
   semCliente: number;
   /**
-   * @description Prazo na próxima hora (ou já vencido).
+   * @description Prazo já passou.
+   * @type integer
+   */
+  vencidos: number;
+  /**
+   * @description Prazo na próxima hora, sem os já vencidos.
    * @type integer
    */
   vencemProximaHora: number;
   /**
-   * @description
+   * @description O prazo mais antigo da fila (o vencido mais antigo, se houver).
+   *
    * Format: `date-time`
    * @type string
    */
   primeiroVencimento: string | null;
+  /**
+   * @description O próximo prazo a vencer (o primeiro ainda não vencido).
+   *
+   * Format: `date-time`
+   * @type string
+   */
+  proximoVencimento: string | null;
   /**
    * @description Ativos e habilitados no robô.
    * @type integer

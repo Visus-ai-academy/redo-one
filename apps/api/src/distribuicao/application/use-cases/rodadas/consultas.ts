@@ -170,9 +170,14 @@ export interface FilaDoMomento {
   /** Exames NOVO sem médico. */
   total: number;
   urgentes: number;
-  /** Prazo na próxima hora (ou já vencido). */
+  /** Prazo já passou. */
+  vencidos: number;
+  /** Prazo na próxima hora, sem os já vencidos. */
   vencemProximaHora: number;
+  /** O prazo mais antigo da fila (o vencido mais antigo, se houver). */
   primeiroVencimento: Date | null;
+  /** O próximo prazo a vencer (o primeiro ainda não vencido). */
+  proximoVencimento: Date | null;
   /** Ativos e habilitados no robô. */
   habilitados: number;
   /** Desligado em Configurações › Distribuição, ninguém inicia rodada. */
@@ -353,13 +358,16 @@ export class ConsultarFilaDoMomento {
     }
 
     const limite = agora.getTime() + HORA;
-    const comPrazo = fila.filter((l) => l.prazo !== null);
+    const prazos = fila.flatMap((l) => (l.prazo ? [l.prazo.getTime()] : []));
+    const aVencer = prazos.filter((t) => t >= agora.getTime());
     return {
       lidaEm: agora,
       total: fila.length,
       urgentes: fila.filter((l) => l.urgente).length,
-      vencemProximaHora: comPrazo.filter((l) => (l.prazo as Date).getTime() <= limite).length,
-      primeiroVencimento: comPrazo.reduce<Date | null>((m, l) => menor(m, l.prazo), null),
+      vencidos: prazos.length - aVencer.length,
+      vencemProximaHora: aVencer.filter((t) => t <= limite).length,
+      primeiroVencimento: prazos.length ? new Date(Math.min(...prazos)) : null,
+      proximoVencimento: aVencer.length ? new Date(Math.min(...aVencer)) : null,
       habilitados: insumos.medicos.length,
       roboAtivo: insumos.config.roboAtivo,
       prioridades,

@@ -747,6 +747,27 @@ describe('rodada do robô (casos de uso)', () => {
       expect(f.medicosEmTurno[0]).toMatchObject({ turno: 'Manhã', frenteNome: 'MEDICINA INTERNA' });
     });
 
+    it('fila do momento: vencidos separados dos que vencem na próxima hora', async () => {
+      mobilemed.leitura = {
+        semMedico: [
+          exame({ idExame: 'v1', prazo: br('2026-11-17T21:30') }),
+          exame({ idExame: 'v2', prazo: br('2026-11-18T08:59') }),
+          exame({ idExame: 'v3', prazo: br('2026-11-18T09:20') }),
+          exame({ idExame: 'v4', prazo: br('2026-11-18T10:00') }),
+          exame({ idExame: 'v5', prazo: br('2026-11-18T10:01') }),
+          exame({ idExame: 'v6' }),
+        ],
+        emMaos: [],
+      };
+      const f = await casos.filaDoMomento.executar();
+      expect(f).toMatchObject({
+        vencidos: 2,
+        vencemProximaHora: 2,
+        primeiroVencimento: br('2026-11-17T21:30'),
+        proximoVencimento: br('2026-11-18T09:20'),
+      });
+    });
+
     it('busca de médicos para a conferência: só ativos com conta na MobileMed', async () => {
       const r = await casos.buscarMedicos.executar('d');
       expect(r.map((m) => m.id)).toEqual(['A', 'B']);
