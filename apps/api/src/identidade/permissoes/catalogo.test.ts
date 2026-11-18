@@ -105,6 +105,10 @@ describe('catálogo de permissões', () => {
       'medicos.acesso.ver',
       'medicos.acesso.editar',
     ]);
+    expect(especiais('clientes')).toEqual([
+      'clientes.distribuicao.ver',
+      'clientes.distribuicao.editar',
+    ]);
     expect(especiais('exames')).toEqual(['exames.subespecialidade.editar']);
     expect(especiais('avisos')).toEqual(['avisos.triar']);
     expect(especiais('faturamento')).toEqual([
@@ -135,7 +139,7 @@ describe('catálogo de permissões', () => {
     ]);
     expect(sensiveis('papeis')).toEqual(['papeis.criar', 'papeis.editar', 'papeis.excluir']);
     expect(sensiveis('de-para')).toEqual(['de-para.criar', 'de-para.editar', 'de-para.excluir']);
-    expect(sensiveis('clientes')).toEqual([]);
+    expect(sensiveis('clientes')).toEqual(['clientes.distribuicao.editar']);
     expect(sensiveis('usuarios')).toEqual([
       'usuarios.desbloquear',
       'usuarios.desativar',

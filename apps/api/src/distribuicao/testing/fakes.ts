@@ -13,10 +13,12 @@ import type {
   ParametrosMedico,
   ParametrosMedicoRepository,
 } from '../application/ports/parametros-medico.repository';
+import type { PrioridadesClienteRepository } from '../application/ports/prioridades-cliente.repository';
 import type { RegrasFrenteRepository } from '../application/ports/regras-frente.repository';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
 import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
 import type { RegrasFrente } from '../domain/motor/configuracao';
+import type { PrioridadeDaFrente } from '../domain/prioridade-cliente';
 
 export class ArranjosEmMemoria implements ArranjosRepository {
   readonly porDono = new Map<string, Arranjo[]>();
@@ -139,5 +141,25 @@ export class RegrasFrenteEmMemoria implements RegrasFrenteRepository {
   async salvar(regras: RegrasFrente) {
     this.gravacoes++;
     this.porFrente.set(chave(regras.frente), structuredClone(regras));
+  }
+}
+
+export class PrioridadesClienteEmMemoria implements PrioridadesClienteRepository {
+  readonly porCliente = new Map<string, PrioridadeDaFrente[]>();
+  gravacoes = 0;
+
+  async doCliente(clienteId: string) {
+    return structuredClone(this.porCliente.get(clienteId) ?? []);
+  }
+
+  async substituir(clienteId: string, itens: PrioridadeDaFrente[]) {
+    this.gravacoes++;
+    this.porCliente.set(clienteId, structuredClone(itens));
+  }
+
+  async todas() {
+    return [...this.porCliente].flatMap(([clienteId, itens]) =>
+      itens.map((i) => ({ clienteId, ...structuredClone(i) })),
+    );
   }
 }

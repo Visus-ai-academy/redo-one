@@ -7679,6 +7679,76 @@
         ]
       }
     },
+    "/distribuicao/clientes/{clienteId}/prioridades": {
+      "get": {
+        "operationId": "PrioridadesClienteController_obter",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrioridadesClienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "put": {
+        "operationId": "PrioridadesClienteController_salvar",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrioridadesClienteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/medicos/{id}/historico": {
       "get": {
         "operationId": "HistoricoCadastroController_doMedico",
@@ -14808,6 +14878,44 @@
           "frente",
           "regras",
           "cadastrada"
+        ]
+      },
+      "PrioridadeClienteDto": {
+        "type": "object",
+        "properties": {
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "nivel": {
+            "type": "number",
+            "description": "1 = Alta, 2 = Média. Frente sem linha = normal."
+          }
+        },
+        "required": [
+          "especialidadeId",
+          "modalidadeId",
+          "nivel"
+        ]
+      },
+      "PrioridadesClienteDto": {
+        "type": "object",
+        "properties": {
+          "prioridades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrioridadeClienteDto"
+            }
+          }
+        },
+        "required": [
+          "prioridades"
         ]
       },
       "ItemHistoricoCadastroDto": {

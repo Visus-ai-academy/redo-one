@@ -12,6 +12,7 @@ import { CONFIGURACAO_INICIAL } from '../../domain/configuracao-global';
 import { REGRAS_NEUTRAS, type RegrasFrente } from '../../domain/motor/configuracao';
 import { DrizzleCadastrosDistribuicao } from './drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './drizzle-configuracao-distribuicao.repository';
+import { DrizzlePrioridadesClienteRepository } from './drizzle-prioridades-cliente.repository';
 import { DrizzleRegrasFrenteRepository } from './drizzle-regras-frente.repository';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -36,7 +37,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table regras_frente, configuracao_distribuicao, configuracao_distribuicao_urgentes,
+      sql`truncate table prioridades_cliente, regras_frente, configuracao_distribuicao, configuracao_distribuicao_urgentes,
         configuracao_distribuicao_lista_prioridades, configuracao_distribuicao_turnos_posteriores,
         turnos, clientes, modalidades, especialidades, subespecialidades, prioridades cascade`,
     );
@@ -164,5 +165,27 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     await repo.salvar(plantao);
     expect(await repo.obter(ct)).toEqual(plantao);
     expect(await repo.listar()).toEqual([neutra, plantao]);
+  });
+
+  it('prioridade do cliente: troca a lista do cliente e lê no formato do motor', async () => {
+    const repo = new DrizzlePrioridadesClienteRepository(db);
+    const neuro: FrenteEscala = {
+      tipo: 'especialidade',
+      especialidadeId: id('neuro'),
+      modalidadeId: null,
+    };
+    const ct: FrenteEscala = { tipo: 'modalidade', especialidadeId: null, modalidadeId: id('ct') };
+    expect(await repo.doCliente(id('cli'))).toEqual([]);
+    await repo.substituir(id('cli'), [
+      { frente: ct, nivel: 2 },
+      { frente: neuro, nivel: 1 },
+    ]);
+    expect(await repo.doCliente(id('cli'))).toEqual([
+      { frente: neuro, nivel: 1 },
+      { frente: ct, nivel: 2 },
+    ]);
+    expect(await repo.todas()).toHaveLength(2);
+    await repo.substituir(id('cli'), [{ frente: ct, nivel: 1 }]);
+    expect(await repo.todas()).toEqual([{ clienteId: id('cli'), frente: ct, nivel: 1 }]);
   });
 });

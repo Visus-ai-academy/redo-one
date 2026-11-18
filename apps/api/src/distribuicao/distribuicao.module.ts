@@ -22,6 +22,10 @@ import {
   type ParametrosMedicoRepository,
 } from './application/ports/parametros-medico.repository';
 import {
+  PRIORIDADES_CLIENTE_REPOSITORY,
+  type PrioridadesClienteRepository,
+} from './application/ports/prioridades-cliente.repository';
+import {
   REGRAS_FRENTE_REPOSITORY,
   type RegrasFrenteRepository,
 } from './application/ports/regras-frente.repository';
@@ -30,6 +34,10 @@ import {
   DefinirConfiguracaoGlobal,
   ObterConfiguracaoGlobal,
 } from './application/use-cases/configuracao-global';
+import {
+  DefinirPrioridadesCliente,
+  ObterPrioridadesCliente,
+} from './application/use-cases/prioridades-cliente';
 import {
   DefinirRegrasFrente,
   ListarRegrasFrente,
@@ -44,12 +52,14 @@ import {
   SugestaoAlocacaoController,
 } from './infrastructure/http/arranjos.controller';
 import { ConfiguracaoDistribuicaoController } from './infrastructure/http/configuracao.controller';
+import { PrioridadesClienteController } from './infrastructure/http/prioridades-cliente.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
 import { DrizzleParametrosEquipeRepository } from './infrastructure/persistence/drizzle-parametros-equipe.repository';
 import { DrizzleParametrosMedicoRepository } from './infrastructure/persistence/drizzle-parametros-medico.repository';
+import { DrizzlePrioridadesClienteRepository } from './infrastructure/persistence/drizzle-prioridades-cliente.repository';
 import { DrizzleRegrasFrenteRepository } from './infrastructure/persistence/drizzle-regras-frente.repository';
 
 const agora = () => new Date();
@@ -62,8 +72,25 @@ const agora = () => new Date();
     SugestaoAlocacaoController,
     ConfiguracaoDistribuicaoController,
     RegrasFrenteController,
+    PrioridadesClienteController,
   ],
   providers: [
+    { provide: PRIORIDADES_CLIENTE_REPOSITORY, useClass: DrizzlePrioridadesClienteRepository },
+    {
+      provide: ObterPrioridadesCliente,
+      inject: [PRIORIDADES_CLIENTE_REPOSITORY, CADASTROS_DISTRIBUICAO],
+      useFactory: (repo: PrioridadesClienteRepository, cadastros: CadastrosDistribuicao) =>
+        new ObterPrioridadesCliente(repo, cadastros),
+    },
+    {
+      provide: DefinirPrioridadesCliente,
+      inject: [PRIORIDADES_CLIENTE_REPOSITORY, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      useFactory: (
+        repo: PrioridadesClienteRepository,
+        cadastros: CadastrosDistribuicao,
+        auditoria: Auditoria,
+      ) => new DefinirPrioridadesCliente(repo, cadastros, auditoria, agora),
+    },
     { provide: REGRAS_FRENTE_REPOSITORY, useClass: DrizzleRegrasFrenteRepository },
     {
       provide: ObterRegrasFrente,

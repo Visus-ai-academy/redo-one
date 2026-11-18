@@ -32,3 +32,10 @@ export class FrenteCatalogoNaoEncontradaError extends ErroDeDominio {
     super('Especialidade ou modalidade não encontrada.');
   }
 }
+
+export class ClienteNaoEncontradoError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Cliente não encontrado.');
+  }
+}

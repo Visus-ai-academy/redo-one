@@ -178,7 +178,22 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     rotulo: 'Clientes',
     area: 'Cadastros',
     padrao: crud(),
-    especiais: [],
+    especiais: [
+      {
+        chave: 'clientes.distribuicao.ver',
+        rotulo: 'Ver distribuição',
+        descricao: 'Abrir a aba Distribuição do cliente: a prioridade dele em cada frente.',
+      },
+      // A prioridade do cliente decide quem passa na frente na fila do robô.
+      {
+        chave: 'clientes.distribuicao.editar',
+        rotulo: 'Editar distribuição',
+        descricao:
+          'Mudar a prioridade (Alta, Média) do cliente em cada especialidade ou modalidade.',
+        sensivel: true,
+        implica: ['clientes.distribuicao.ver'],
+      },
+    ],
   },
   {
     tela: 'medicos',

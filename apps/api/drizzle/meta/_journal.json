@@ -134,6 +134,20 @@
       "when": 1794963515965,
       "tag": "0018_distribuicao_regras_frente",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794963702200,
+      "tag": "0019_distribuicao_prioridades_cliente",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794963728366,
+      "tag": "0020_permissoes_distribuicao_cliente",
+      "breakpoints": true
     }
   ]
 }

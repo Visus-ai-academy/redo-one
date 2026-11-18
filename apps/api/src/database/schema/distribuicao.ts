@@ -373,3 +373,33 @@ export const regrasFrenteMistura = pgTable(
     ),
   ],
 );
+
+/**
+ * Prioridade do cliente numa frente (especialidade OU modalidade do catálogo), aba Distribuição
+ * do cliente: 1 = Alta, 2 = Média; sem linha = normal. Histórico em `eventos_auditoria`
+ * (entidade `prioridades_cliente`, id = o do cliente).
+ */
+export const prioridadesCliente = pgTable(
+  'prioridades_cliente',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clienteId: uuid('cliente_id')
+      .notNull()
+      .references(() => clientes.id, { onDelete: 'cascade' }),
+    especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
+      onDelete: 'cascade',
+    }),
+    modalidadeId: uuid('modalidade_id').references(() => modalidades.id, { onDelete: 'cascade' }),
+    nivel: integer('nivel').notNull(),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    uniqueIndex('prioridades_cliente_especialidade_key').on(t.clienteId, t.especialidadeId),
+    uniqueIndex('prioridades_cliente_modalidade_key').on(t.clienteId, t.modalidadeId),
+    check(
+      'prioridades_cliente_frente_check',
+      sql`(${t.especialidadeId} is null) <> (${t.modalidadeId} is null)`,
+    ),
+    check('prioridades_cliente_nivel_check', sql`${t.nivel} in (1, 2)`),
+  ],
+);
