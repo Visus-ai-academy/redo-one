@@ -169,7 +169,7 @@ function Escala() {
           chaveDoPlantao(a.alocacaoId, a.data),
           {
             prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
-            listaSegueSla: a.listaSegueSla,
+            segueSla: a.segueSla,
             clienteNome: a.clienteNome,
           },
         ]),

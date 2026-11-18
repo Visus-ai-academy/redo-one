@@ -43,11 +43,11 @@ describe('AjusteDistribuicaoDia', () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
     expect(screen.queryByRole('checkbox', { name: /ANTIGA/ })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'A Lista segue o SLA neste dia' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Segue o SLA neste dia' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: ['p-urg'],
-      listaSegueSla: true,
+      segueSla: true,
       clienteId: null,
     });
     expect(screen.queryByRole('button', { name: 'Tirar ajuste' })).not.toBeInTheDocument();
@@ -57,7 +57,7 @@ describe('AjusteDistribuicaoDia', () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('button', { name: 'Salvar ajuste' }));
     expect(
-      await screen.findByText('Marque uma prioridade ou "A Lista segue o SLA".'),
+      await screen.findByText('Marque uma prioridade ou "Segue o SLA neste dia".'),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });
@@ -71,7 +71,7 @@ describe('AjusteDistribuicaoDia', () => {
       turnoId: 't',
       frenteId: 'f',
       prioridadeIdsLiberadas: ['p-urg'],
-      listaSegueSla: false,
+      segueSla: false,
       clienteId: 'c-hc',
       clienteNome: 'HCLONDRINA',
     });
@@ -81,7 +81,7 @@ describe('AjusteDistribuicaoDia', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tirar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: [],
-      listaSegueSla: false,
+      segueSla: false,
       clienteId: null,
     });
   });

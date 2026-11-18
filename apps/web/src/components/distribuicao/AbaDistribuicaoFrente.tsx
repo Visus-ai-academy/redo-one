@@ -4,29 +4,46 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { regrasFrenteControllerSalvarEspecialidade } from '../../gen/clients/regrasFrenteControllerSalvarEspecialidade';
 import { regrasFrenteControllerSalvarModalidade } from '../../gen/clients/regrasFrenteControllerSalvarModalidade';
+import { gradeRecebimentoControllerObterQueryOptions } from '../../gen/hooks/useGradeRecebimentoControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
+import { prioridadesOperacaoControllerListarQueryOptions } from '../../gen/hooks/usePrioridadesOperacaoControllerListar';
 import { regrasFrenteControllerObterEspecialidadeQueryOptions } from '../../gen/hooks/useRegrasFrenteControllerObterEspecialidade';
 import { regrasFrenteControllerObterModalidadeQueryOptions } from '../../gen/hooks/useRegrasFrenteControllerObterModalidade';
+import { turnosControllerListarQueryOptions } from '../../gen/hooks/useTurnosControllerListar';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CaixasField, OpcoesField } from '../escala/campos';
 import { useAppForm } from '../form/form';
+import { Select } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
 import { limparErrosDasListas } from './erros-das-listas';
 import { AbaCarregando, AbaComErro } from './estados';
+import { CampoHoras, GradeRecebimento } from './GradeRecebimento';
 import { AcoesDaLinha, ErroDaLista, ItemDaLista, ResumoEmGrupos, Secao } from './partes-form';
+import {
+  errosDaGrade,
+  type Grade,
+  gradeDasCelulas,
+  OPCOES_URGENCIA,
+  rotuloUrgencia,
+  type ValorUrgencia,
+} from './recebimento';
 import {
   type CatalogoRegras,
   DIAS_DA_SEMANA,
   esquemaRegras,
+  type ReferenciasOperacao,
   regrasParaApi,
   resumoRegras,
   SEGMENTO_VAZIO,
   type TipoFrente,
   valoresDasRegras,
 } from './regras-frente-form';
+
+/** Turnos ativos da escala (são poucos): as colunas da grade de recebimento. */
+const TURNOS = { query: { ativo: true, porPagina: 100 } };
 
 type Props = {
   tipo: TipoFrente;
@@ -52,28 +69,37 @@ export function AbaDistribuicaoFrente({ tipo, id, podeEditar }: Props) {
   const opcoes = opcoesDaConsulta(tipo, id);
   const consulta = useQuery(opcoes);
   const catalogo = useQuery(opcoesControllerListasQueryOptions());
+  const prioridades = useQuery(prioridadesOperacaoControllerListarQueryOptions());
+  const grade = useQuery(gradeRecebimentoControllerObterQueryOptions());
+  const turnos = useQuery(turnosControllerListarQueryOptions(TURNOS));
+  const consultas = [consulta, catalogo, prioridades, grade, turnos];
 
-  if (consulta.isError || catalogo.isError) {
+  if (consultas.some((c) => c.isError)) {
     return (
       <AbaComErro
         onTentarDeNovo={() => {
-          void consulta.refetch();
-          void catalogo.refetch();
+          for (const c of consultas) if (c.isError) void c.refetch();
         }}
       >
         Não foi possível carregar as regras da distribuição agora.
       </AbaComErro>
     );
   }
-  if (!consulta.data || !catalogo.data) return <AbaCarregando />;
+  if (!consulta.data || !catalogo.data || !prioridades.data || !grade.data || !turnos.data)
+    return <AbaCarregando />;
   const { regras, cadastrada } = consulta.data;
+  const operacao: ReferenciasOperacao & { geral: Grade } = {
+    prioridades: prioridades.data,
+    turnos: turnos.data.itens,
+    geral: gradeDasCelulas(grade.data.celulas),
+  };
 
   return (
     <div className="flex flex-col gap-6 p-4">
       {!cadastrada && (
         <Alerta tom="info" role="note">
-          Esta frente ainda não tem regra própria: valem a regra padrão da Lista e a distribuição
-          comum do robô.
+          Esta frente ainda não tem regra própria: valem a urgência e a grade de recebimento gerais
+          e a distribuição comum do robô.
         </Alerta>
       )}
       {podeEditar ? (
@@ -82,24 +108,16 @@ export function AbaDistribuicaoFrente({ tipo, id, podeEditar }: Props) {
           id={id}
           regras={regras}
           catalogo={catalogo.data}
+          operacao={operacao}
           queryKey={opcoes.queryKey}
         />
       ) : (
-        <ResumoEmGrupos grupos={resumoRegras(regras, catalogo.data, tipo)} />
+        <ResumoEmGrupos grupos={resumoRegras(regras, catalogo.data, tipo, operacao)} />
       )}
     </div>
   );
 }
 
-const OPCOES_PRIORIDADES = [
-  { valor: 'padrao', rotulo: 'As da regra padrão' },
-  { valor: 'proprias', rotulo: 'Próprias' },
-];
-const OPCOES_PRAZO = [
-  { valor: 'padrao', rotulo: 'O da regra padrão' },
-  { valor: 'sla', rotulo: 'Segue o SLA' },
-  { valor: 'minimo', rotulo: 'Prazo mínimo próprio' },
-];
 const OPCOES_DIVISAO = [
   { valor: 'igualitaria', rotulo: 'Igualitária' },
   { valor: 'proporcao', rotulo: 'Proporção por modalidade' },
@@ -113,12 +131,14 @@ function FormRegras({
   id,
   regras,
   catalogo,
+  operacao,
   queryKey,
 }: {
   tipo: TipoFrente;
   id: string;
   regras: RegrasFrenteDto;
   catalogo: CatalogoRegras;
+  operacao: ReferenciasOperacao & { geral: Grade };
   queryKey: readonly unknown[];
 }) {
   const queryClient = useQueryClient();
@@ -176,54 +196,46 @@ function FormRegras({
       {erro && <Alerta tom="erro">{erro}</Alerta>}
 
       <Secao
-        titulo="Lista"
-        ajuda="A Lista de produção (o turno de 24 h) só recebe da fila o que passa por esta regra."
+        titulo="Prioridades nesta frente"
+        ajuda="Mude só o que esta frente faz diferente; o resto segue a configuração geral (Configurações › Distribuição)."
       >
-        <form.AppField name="listaPrioridades">
-          {() => <OpcoesField label="Prioridades aceitas" opcoes={OPCOES_PRIORIDADES} />}
-        </form.AppField>
-        <form.Subscribe selector={(s) => s.values.listaPrioridades}>
-          {(modo) =>
-            modo === 'proprias' && (
-              <form.AppField name="listaPrioridadeIds">
-                {() => (
-                  <CaixasField
-                    label="Prioridades da Lista"
-                    description="Nada marcado: todas."
-                    opcoes={catalogo.prioridades.map((p) => ({ valor: p.id, rotulo: p.nome }))}
+        {operacao.prioridades.length === 0 ? (
+          <p className="text-muted-foreground">
+            Não há prioridades da operação cadastradas em Configurações › Distribuição.
+          </p>
+        ) : (
+          <>
+            <form.AppField name="urgencias">
+              {(field) => (
+                <UrgenciasDaFrente
+                  prioridades={operacao.prioridades}
+                  valor={field.state.value}
+                  onChange={field.handleChange}
+                  erros={field.state.meta.errors.length > 0}
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="recebimento">
+              {(field) => (
+                <div className="flex flex-col gap-2">
+                  <span className="font-medium">Grade de recebimento</span>
+                  <p className="text-muted-foreground text-[13px]">
+                    "Geral" segue a célula da grade geral, que aparece entre parênteses.
+                  </p>
+                  <GradeRecebimento
+                    prioridades={operacao.prioridades}
+                    turnos={operacao.turnos}
+                    valor={field.state.value}
+                    onChange={field.handleChange}
+                    geral={operacao.geral}
+                    erros={field.state.meta.errors.length ? errosDaGrade(field.state.value) : {}}
                   />
-                )}
-              </form.AppField>
-            )
-          }
-        </form.Subscribe>
-        <form.AppField name="listaPrazo">
-          {() => (
-            <OpcoesField
-              label="Prazo para entrar na Lista"
-              opcoes={OPCOES_PRAZO}
-              description="Segue o SLA: entra qualquer exame, sem prazo mínimo."
-            />
-          )}
-        </form.AppField>
-        <form.Subscribe selector={(s) => s.values.listaPrazo}>
-          {(prazo) =>
-            prazo === 'minimo' && (
-              <form.AppField name="listaPrazoMinimoHoras">
-                {(field) => (
-                  <field.NumberField
-                    label="Horas até o prazo, no mínimo"
-                    placeholder="Ex.: 24"
-                    description="Só entra na Lista o exame que ainda tem pelo menos estas horas até vencer."
-                    min={0}
-                    max={720}
-                    required
-                  />
-                )}
-              </form.AppField>
-            )
-          }
-        </form.Subscribe>
+                  <ErroDaLista erros={field.state.meta.errors} />
+                </div>
+              )}
+            </form.AppField>
+          </>
+        )}
         <form.AppField name="listaDepoisDosFixos">
           {(field) => (
             <field.CheckboxField
@@ -645,5 +657,64 @@ function FormRegras({
         </form.AppForm>
       </div>
     </form>
+  );
+}
+
+/** A urgência de cada prioridade nesta frente: a geral (da própria prioridade) ou outra. */
+function UrgenciasDaFrente({
+  prioridades,
+  valor,
+  onChange,
+  erros,
+}: {
+  prioridades: ReferenciasOperacao['prioridades'];
+  valor: Record<string, ValorUrgencia>;
+  onChange: (valor: Record<string, ValorUrgencia>) => void;
+  erros: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="font-medium">Tratar como urgência</span>
+      <ul className={listaClasse}>
+        {prioridades.map((p) => {
+          const atual = valor[p.id] ?? { tipo: 'geral', horas: '' };
+          const invalida = erros && atual.tipo === 'prazo' && !/^\d+$/.test(atual.horas.trim());
+          return (
+            <li key={p.id} className="flex flex-wrap items-center gap-3 p-3">
+              <span className="min-w-[120px] flex-1 font-medium">{p.nome}</span>
+              <Select
+                value={atual.tipo}
+                onValueChange={(tipo) =>
+                  onChange({
+                    ...valor,
+                    [p.id]: {
+                      tipo: tipo as ValorUrgencia['tipo'],
+                      horas: tipo === 'prazo' ? atual.horas || '24' : '',
+                    },
+                  })
+                }
+                opcoes={[
+                  { valor: 'geral', rotulo: `Geral (${rotuloUrgencia(p.urgencia).toLowerCase()})` },
+                  ...OPCOES_URGENCIA,
+                ]}
+                aria-label={`Urgência de ${p.nome} nesta frente`}
+                className="w-[240px] max-w-full"
+              />
+              {atual.tipo === 'prazo' && (
+                <CampoHoras
+                  valor={atual.horas}
+                  onChange={(horas) => onChange({ ...valor, [p.id]: { ...atual, horas } })}
+                  rotulo={`Urgência de ${p.nome}: horas até o prazo`}
+                  invalido={invalida}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-muted-foreground text-[13px]">
+        Perto do prazo: urgência quando faltar menos que as horas informadas para vencer.
+      </p>
+    </div>
   );
 }

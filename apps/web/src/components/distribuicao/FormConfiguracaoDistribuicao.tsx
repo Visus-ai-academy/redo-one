@@ -6,7 +6,7 @@ import type { RotuloDto } from '../../gen/types/RotuloDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
-import { CaixasField, OpcoesField } from '../escala/campos';
+import { CaixasField } from '../escala/campos';
 import { useAppForm } from '../form/form';
 import { Painel } from '../painel/Painel';
 import {
@@ -22,8 +22,6 @@ import { limparErrosDasListas } from './erros-das-listas';
 import { AcoesDaLinha, ErroDaLista } from './partes-form';
 
 export type ReferenciasConfiguracao = {
-  /** Prioridades ativas do catálogo. */
-  prioridades: RotuloDto[];
   /** Turnos ativos da escala. */
   turnos: RotuloDto[];
 };
@@ -35,15 +33,9 @@ type Props = ReferenciasConfiguracao & {
   onSalvar: (configuracao: ConfiguracaoDistribuicaoDto) => Promise<void>;
 };
 
-const OPCOES_PRAZO = [
-  { valor: 'sla', rotulo: 'Segue o SLA' },
-  { valor: 'minimo', rotulo: 'Prazo mínimo' },
-];
-
 /** O que vale para todas as frentes do robô (Configurações › Distribuição). */
 export function FormConfiguracaoDistribuicao({
   configuracao,
-  prioridades,
   turnos,
   podeEditar,
   onSalvar,
@@ -60,7 +52,7 @@ export function FormConfiguracaoDistribuicao({
   if (!podeEditar) {
     return (
       <div className="flex flex-col gap-6">
-        {resumoConfiguracao(configuracao, { prioridades, turnos }).map((g) => (
+        {resumoConfiguracao(configuracao, { turnos }).map((g) => (
           <Painel key={g.titulo} titulo={g.titulo}>
             <dl className="flex flex-col gap-2">
               {g.linhas.map((l) => (
@@ -76,7 +68,6 @@ export function FormConfiguracaoDistribuicao({
     );
   }
 
-  const opcoesPrioridade = prioridades.map((p) => ({ valor: p.id, rotulo: p.nome }));
   // Turno já escolhido que ficou inativo continua à vista para poder ser tirado.
   const opcoesTurno = [
     ...turnos.map((t) => ({ valor: t.id, rotulo: t.nome })),
@@ -159,15 +150,6 @@ export function FormConfiguracaoDistribuicao({
               );
             }}
           </form.AppField>
-          <form.AppField name="prioridadeIdsUrgentes">
-            {() => (
-              <CaixasField
-                label="Prioridades urgentes"
-                description="Contam como urgência na fila, na margem acima do teto e no rodízio de urgência."
-                opcoes={opcoesPrioridade}
-              />
-            )}
-          </form.AppField>
           <form.AppField name="prazoCriticoMin">
             {(field) => (
               <field.NumberField
@@ -246,50 +228,6 @@ export function FormConfiguracaoDistribuicao({
               />
             )}
           </form.AppField>
-        </div>
-      </Painel>
-
-      <Painel
-        titulo="Lista padrão"
-        descricao="O que a Lista de produção recebe nas frentes que não têm regra própria."
-      >
-        <div className="flex flex-col gap-4">
-          <form.AppField name="listaPrioridadeIds">
-            {() => (
-              <CaixasField
-                label="Prioridades aceitas"
-                description="Nada marcado: todas."
-                opcoes={opcoesPrioridade}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="listaPrazo">
-            {() => (
-              <OpcoesField
-                label="Prazo para entrar na Lista"
-                opcoes={OPCOES_PRAZO}
-                description="Segue o SLA: entra qualquer exame, sem prazo mínimo."
-              />
-            )}
-          </form.AppField>
-          <form.Subscribe selector={(s) => s.values.listaPrazo}>
-            {(prazo) =>
-              prazo === 'minimo' && (
-                <form.AppField name="listaPrazoMinimoHoras">
-                  {(field) => (
-                    <field.NumberField
-                      label="Horas até o prazo, no mínimo"
-                      placeholder="Ex.: 24"
-                      description="Só entra na Lista o exame que ainda tem pelo menos estas horas até vencer."
-                      min={0}
-                      max={720}
-                      required
-                    />
-                  )}
-                </form.AppField>
-              )
-            }
-          </form.Subscribe>
         </div>
       </Painel>
 

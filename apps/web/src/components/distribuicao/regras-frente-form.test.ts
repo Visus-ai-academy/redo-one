@@ -10,9 +10,8 @@ import {
 } from './regras-frente-form';
 
 const NEUTRAS: RegrasFrenteDto = {
-  listaPrioridadeIds: null,
-  listaPrazo: 'padrao',
-  listaPrazoMinimoHoras: null,
+  urgencias: [],
+  recebimento: [],
   recolheAoFimDoTurno: true,
   distribuiPeloRobo: true,
   horariosSemRobo: [],
@@ -57,9 +56,19 @@ describe('regras da frente no formulário', () => {
   it('ida e volta de uma regra completa', () => {
     const regras: RegrasFrenteDto = {
       ...NEUTRAS,
-      listaPrioridadeIds: ['p-rot'],
-      listaPrazo: 'minimo',
-      listaPrazoMinimoHoras: 12,
+      urgencias: [{ prioridadeOperacaoId: 'op-amb', urgencia: { tipo: 'prazo', horas: 12 } }],
+      recebimento: [
+        {
+          prioridadeOperacaoId: 'op-rot',
+          turnoId: 't-manha',
+          regra: { tipo: 'prazo_minimo', horas: 48 },
+        },
+        {
+          prioridadeOperacaoId: 'op-rot',
+          turnoId: 't-lista',
+          regra: { tipo: 'segue_sla', horas: null },
+        },
+      ],
       horariosSemRobo: [{ diasSemana: [1, 2], inicio: '19:00', fim: '07:00' }],
       divisao: 'proporcao',
       proporcoes: [
@@ -86,9 +95,25 @@ describe('regras da frente no formulário', () => {
     expect(regrasParaApi(valores, 'especialidade')).toEqual(regras);
   });
 
-  it('prioridades próprias sem nenhuma marcada são todas (lista vazia)', () => {
-    const v = { ...valoresDasRegras(NEUTRAS), listaPrioridades: 'proprias' as const };
-    expect(regrasParaApi(v, 'especialidade').listaPrioridadeIds).toEqual([]);
+  it('célula e urgência "geral" não vão para a API; prazo sem horas é recusado', () => {
+    const v: ValoresRegras = {
+      ...valoresDasRegras(NEUTRAS),
+      urgencias: { 'op-rot': { tipo: 'geral', horas: '' }, 'op-urg': { tipo: 'prazo', horas: '' } },
+      recebimento: {
+        'op-rot|t-manha': { tipo: 'geral', horas: '' },
+        'op-rot|t-lista': { tipo: 'prazo_minimo', horas: '' },
+      },
+    };
+    expect(erros(v)).toEqual([
+      'urgencias: Informe as horas da urgência (1 a 720) em op-urg.',
+      'recebimento: Informe as horas do prazo mínimo (1 a 720) nas células marcadas.',
+    ]);
+    const ok = {
+      ...v,
+      urgencias: { 'op-rot': { tipo: 'geral' as const, horas: '' } },
+      recebimento: { 'op-rot|t-manha': { tipo: 'geral' as const, horas: '' } },
+    };
+    expect(regrasParaApi(ok, 'especialidade')).toMatchObject({ urgencias: [], recebimento: [] });
   });
 
   it('a modalidade nunca manda proporção', () => {
@@ -100,11 +125,6 @@ describe('regras da frente no formulário', () => {
     const api = regrasParaApi(v, 'modalidade');
     expect(api.divisao).toBe('igualitaria');
     expect(api.proporcoes).toEqual([]);
-  });
-
-  it('exige o prazo mínimo quando a Lista tem prazo próprio', () => {
-    const v = { ...valoresDasRegras(NEUTRAS), listaPrazo: 'minimo' as const };
-    expect(erros(v)).toEqual(['listaPrazoMinimoHoras: Informe as horas, de 0 a 720.']);
   });
 
   it('recusa horário fora do formato e início igual ao fim', () => {
@@ -199,6 +219,7 @@ describe('resumo das regras (só leitura)', () => {
   it('descreve as regras neutras pelo padrão', () => {
     const grupos = resumoRegras(NEUTRAS, CATALOGO, 'especialidade');
     expect(grupos.map((g) => g.titulo)).toEqual([
+      'Prioridades nesta frente',
       'Lista',
       'Robô',
       'Recolhimento',
@@ -207,8 +228,9 @@ describe('resumo das regras (só leitura)', () => {
       'Mistura entre segmentos',
     ]);
     expect(grupos[0]?.linhas).toEqual([
-      { rotulo: 'Prioridades aceitas', valor: 'As da regra padrão' },
-      { rotulo: 'Prazo', valor: 'O da regra padrão' },
+      { rotulo: 'Urgência e recebimento', valor: 'Como na configuração geral' },
+    ]);
+    expect(grupos[1]?.linhas).toEqual([
       { rotulo: 'Guardar para os turnos posteriores', valor: 'Não' },
     ]);
   });
@@ -217,8 +239,14 @@ describe('resumo das regras (só leitura)', () => {
     const grupos = resumoRegras(
       {
         ...NEUTRAS,
-        listaPrioridadeIds: [],
-        listaPrazo: 'sla',
+        urgencias: [{ prioridadeOperacaoId: 'op-amb', urgencia: { tipo: 'nunca', horas: null } }],
+        recebimento: [
+          {
+            prioridadeOperacaoId: 'op-rot',
+            turnoId: 't-manha',
+            regra: { tipo: 'prazo_minimo', horas: 48 },
+          },
+        ],
         distribuiPeloRobo: true,
         horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
         recolheAoFimDoTurno: false,
@@ -244,15 +272,37 @@ describe('resumo das regras (só leitura)', () => {
       },
       CATALOGO,
       'especialidade',
+      {
+        prioridades: [
+          {
+            id: 'op-amb',
+            nome: 'AMBULATÓRIO',
+            posicao: 2,
+            urgencia: { tipo: 'prazo', horas: 24 },
+            padrao: false,
+            grafias: [],
+          },
+          {
+            id: 'op-rot',
+            nome: 'ROTINA',
+            posicao: 3,
+            urgencia: { tipo: 'nunca', horas: null },
+            padrao: true,
+            grafias: [],
+          },
+        ],
+        turnos: [{ id: 't-manha', nome: 'Manhã' }],
+      },
     );
     const valor = (titulo: string) =>
       grupos
         .find((g) => g.titulo === titulo)
         ?.linhas.map((l) => `${l.rotulo}: ${l.valor}`)
         .join(' | ');
-    expect(valor('Lista')).toBe(
-      'Prioridades aceitas: Todas | Prazo: Segue o SLA | Guardar para os turnos posteriores: Não',
+    expect(valor('Prioridades nesta frente')).toBe(
+      'Urgência de AMBULATÓRIO: Nunca | ROTINA no turno Manhã: Só com 48 h ou mais até o prazo',
     );
+    expect(valor('Lista')).toBe('Guardar para os turnos posteriores: Não');
     expect(valor('Robô')).toBe(
       'Distribui pelo robô: Sim | Horários sem robô: Todos os dias, 19:00–07:00',
     );

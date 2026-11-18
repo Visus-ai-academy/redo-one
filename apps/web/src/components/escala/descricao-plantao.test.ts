@@ -133,12 +133,12 @@ describe('descreverPlantao', () => {
       conflitos: [],
       ajusteDistribuicao: {
         prioridadeIdsLiberadas: ['p-urg'],
-        listaSegueSla: true,
+        segueSla: true,
         clienteNome: 'HCLONDRINA',
       },
     });
     expect(linha(itens, 'Robô neste dia')).toBe(
-      'Aceita também URGÊNCIA; a Lista segue o SLA; só para HCLONDRINA',
+      'Aceita também URGÊNCIA; segue o SLA neste dia; só para HCLONDRINA',
     );
   });
 

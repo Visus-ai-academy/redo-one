@@ -10,7 +10,6 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
     { criterio: 'prioridade', direcao: 'desc' },
     { criterio: 'prazo', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: ['p-urg'],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -23,15 +22,10 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
   escalaRestringeEspecialidade: true,
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
-  lista: { prioridadeIds: ['p-rot'], prazoMinimoHoras: 24 },
   recolhimentoAposTurnoMin: 60,
 };
 
 const REF = {
-  prioridades: [
-    { id: 'p-urg', nome: 'URGÊNCIA' },
-    { id: 'p-rot', nome: 'ROTINA' },
-  ],
   turnos: [
     { id: 't-manha', nome: 'Manhã' },
     { id: 't-tarde', nome: 'Tarde' },

@@ -24,36 +24,36 @@ type Props = {
 
 type Valores = {
   prioridadeIdsLiberadas: string[];
-  listaSegueSla: boolean;
+  segueSla: boolean;
   cliente: OpcaoBusca | null;
 };
 
 const esquema = z
   .object({
     prioridadeIdsLiberadas: z.array(z.string()),
-    listaSegueSla: z.boolean(),
+    segueSla: z.boolean(),
     cliente: z.custom<OpcaoBusca | null>(),
   })
   .superRefine((v, ctx) => {
-    const nada = v.prioridadeIdsLiberadas.length === 0 && !v.listaSegueSla;
+    const nada = v.prioridadeIdsLiberadas.length === 0 && !v.segueSla;
     if (nada && v.cliente) {
       ctx.addIssue({
         code: 'custom',
         path: ['cliente'],
-        message: 'O cliente só recorta as prioridades aceitas ou "a Lista segue o SLA".',
+        message: 'O cliente só recorta as prioridades aceitas ou "segue o SLA neste dia".',
       });
     } else if (nada) {
       ctx.addIssue({
         code: 'custom',
         path: ['prioridadeIdsLiberadas'],
-        message: 'Marque uma prioridade ou "A Lista segue o SLA".',
+        message: 'Marque uma prioridade ou "Segue o SLA neste dia".',
       });
     }
   });
 
 /**
  * O que muda no robô para este plantão só neste dia (a "exceção do robô" do dashboards-one):
- * prioridades que ele aceita além do arranjo, a Lista pelo SLA e, opcionalmente, só um cliente.
+ * prioridades que ele aceita além do arranjo, "segue o SLA neste dia" e, opcionalmente, só um cliente.
  * O "+N laudos" é a produtividade do dia, logo acima.
  */
 export function AjusteDistribuicaoDia({
@@ -94,7 +94,7 @@ export function AjusteDistribuicaoDia({
           key={JSON.stringify(consulta.data.ajuste)}
           inicial={{
             prioridadeIdsLiberadas: consulta.data.ajuste?.prioridadeIdsLiberadas ?? [],
-            listaSegueSla: consulta.data.ajuste?.listaSegueSla ?? false,
+            segueSla: consulta.data.ajuste?.segueSla ?? false,
             cliente: consulta.data.ajuste?.clienteId
               ? {
                   valor: consulta.data.ajuste.clienteId,
@@ -131,7 +131,7 @@ function FormAjuste({
     onSubmit: ({ value }) =>
       onSalvar({
         prioridadeIdsLiberadas: value.prioridadeIdsLiberadas,
-        listaSegueSla: value.listaSegueSla,
+        segueSla: value.segueSla,
         clienteId: value.cliente?.valor ?? null,
       }),
   });
@@ -158,11 +158,11 @@ function FormAjuste({
           />
         )}
       </form.AppField>
-      <form.AppField name="listaSegueSla">
+      <form.AppField name="segueSla">
         {(field) => (
           <field.CheckboxField
-            label="A Lista segue o SLA neste dia"
-            description="Na Lista dele entra qualquer prioridade, sem prazo mínimo."
+            label="Segue o SLA neste dia"
+            description="O prazo mínimo da grade de recebimento não vale para ele hoje, em nenhum turno. O que o turno não recebe continua de fora."
           />
         )}
       </form.AppField>
@@ -182,7 +182,7 @@ function FormAjuste({
           <Button
             type="button"
             onClick={() =>
-              void onSalvar({ prioridadeIdsLiberadas: [], listaSegueSla: false, clienteId: null })
+              void onSalvar({ prioridadeIdsLiberadas: [], segueSla: false, clienteId: null })
             }
             className={buttonClassName({ variant: 'secondary' })}
           >

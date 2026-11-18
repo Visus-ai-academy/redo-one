@@ -1,7 +1,19 @@
 import { z } from 'zod';
-
+import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
+import {
+  celulasParaApi,
+  errosDaGrade,
+  type Grade,
+  gradeDasCelulas,
+  rotuloRecebimento,
+  rotuloUrgencia,
+  urgenciasDaFrente,
+  urgenciasParaApi,
+  urgenciaValida,
+  type ValorUrgencia,
+} from './recebimento';
 
 /** A frente do catálogo cujas regras se editam (aba Distribuição do painel). */
 export type TipoFrente = 'especialidade' | 'modalidade';
@@ -30,10 +42,10 @@ export type ValoresFatia = { especialidadeId: string; subespecialidadeId: string
 
 /** Números como texto (o `NumberField` do kit guarda texto; "" é vazio). */
 export type ValoresRegras = {
-  listaPrioridades: 'padrao' | 'proprias';
-  listaPrioridadeIds: string[];
-  listaPrazo: RegrasFrenteDto['listaPrazo'];
-  listaPrazoMinimoHoras: string;
+  /** Urgência por prioridade da operação; "geral" = a da própria prioridade. */
+  urgencias: Record<string, ValorUrgencia>;
+  /** Células que mudam nesta frente; "geral" (ou ausente) = a da grade geral. */
+  recebimento: Grade;
   listaDepoisDosFixos: boolean;
   distribuiPeloRobo: boolean;
   horariosSemRobo: ValoresHorario[];
@@ -60,10 +72,8 @@ export const SEGMENTO_VAZIO: ValoresSegmento = {
 
 export function valoresDasRegras(r: RegrasFrenteDto): ValoresRegras {
   return {
-    listaPrioridades: r.listaPrioridadeIds === null ? 'padrao' : 'proprias',
-    listaPrioridadeIds: r.listaPrioridadeIds ?? [],
-    listaPrazo: r.listaPrazo,
-    listaPrazoMinimoHoras: texto(r.listaPrazoMinimoHoras),
+    urgencias: urgenciasDaFrente(r.urgencias, []),
+    recebimento: gradeDasCelulas(r.recebimento),
     listaDepoisDosFixos: r.listaDepoisDosFixos,
     distribuiPeloRobo: r.distribuiPeloRobo,
     horariosSemRobo: r.horariosSemRobo.map((h) => ({
@@ -97,9 +107,8 @@ export function valoresDasRegras(r: RegrasFrenteDto): ValoresRegras {
 export function regrasParaApi(v: ValoresRegras, tipo: TipoFrente): RegrasFrenteDto {
   const proporcao = tipo === 'especialidade' && v.divisao === 'proporcao';
   return {
-    listaPrioridadeIds: v.listaPrioridades === 'padrao' ? null : v.listaPrioridadeIds,
-    listaPrazo: v.listaPrazo,
-    listaPrazoMinimoHoras: v.listaPrazo === 'minimo' ? numeroOuNulo(v.listaPrazoMinimoHoras) : null,
+    urgencias: urgenciasParaApi(v.urgencias),
+    recebimento: celulasParaApi(v.recebimento, { omitirSla: false }),
     recolheAoFimDoTurno: v.recolheAoFimDoTurno,
     distribuiPeloRobo: v.distribuiPeloRobo,
     horariosSemRobo: v.horariosSemRobo.map((h) => ({
@@ -167,10 +176,17 @@ function validarInteiro(
 }
 
 const valoresSchema = z.object({
-  listaPrioridades: z.enum(['padrao', 'proprias']),
-  listaPrioridadeIds: z.array(z.string()),
-  listaPrazo: z.enum(['padrao', 'sla', 'minimo']),
-  listaPrazoMinimoHoras: z.string(),
+  urgencias: z.record(
+    z.string(),
+    z.object({ tipo: z.enum(['geral', 'nunca', 'sempre', 'prazo']), horas: z.string() }),
+  ),
+  recebimento: z.record(
+    z.string(),
+    z.object({
+      tipo: z.enum(['geral', 'segue_sla', 'prazo_minimo', 'nao_recebe']),
+      horas: z.string(),
+    }),
+  ),
   listaDepoisDosFixos: z.boolean(),
   distribuiPeloRobo: z.boolean(),
   horariosSemRobo: z.array(
@@ -196,13 +212,16 @@ const valoresSchema = z.object({
 
 export function esquemaRegras(tipo: TipoFrente) {
   return valoresSchema.superRefine((v, ctx) => {
-    if (v.listaPrazo === 'minimo') {
-      validarInteiro(ctx, v.listaPrazoMinimoHoras, ['listaPrazoMinimoHoras'], {
-        min: 0,
-        max: 720,
-        obrigatorio: true,
-        mensagem: 'Informe as horas, de 0 a 720.',
-      });
+    for (const [id, u] of Object.entries(v.urgencias)) {
+      if (!urgenciaValida(u))
+        problema(ctx, ['urgencias'], `Informe as horas da urgência (1 a 720) em ${id}.`);
+    }
+    if (Object.keys(errosDaGrade(v.recebimento)).length) {
+      problema(
+        ctx,
+        ['recebimento'],
+        'Informe as horas do prazo mínimo (1 a 720) nas células marcadas.',
+      );
     }
 
     v.horariosSemRobo.forEach((h, i) => {
@@ -326,24 +345,30 @@ export function resumoDias(dias: readonly number[]) {
 const nomeDe = (lista: readonly RotuloDto[], id: string) =>
   lista.find((x) => x.id === id)?.nome ?? '(fora do catálogo)';
 
+/** As prioridades da operação e os turnos, para dizer o que a frente muda na grade. */
+export type ReferenciasOperacao = {
+  prioridades: readonly PrioridadeOperacaoDto[];
+  turnos: readonly RotuloDto[];
+};
+
 export function resumoRegras(
   r: RegrasFrenteDto,
   c: CatalogoRegras,
   tipo: TipoFrente,
+  op: ReferenciasOperacao = { prioridades: [], turnos: [] },
 ): GrupoResumo[] {
-  const prioridades =
-    r.listaPrioridadeIds === null
-      ? 'As da regra padrão'
-      : r.listaPrioridadeIds.length === 0
-        ? 'Todas'
-        : r.listaPrioridadeIds.map((id) => nomeDe(c.prioridades, id)).join(', ');
-  const prazo =
-    r.listaPrazo === 'padrao'
-      ? 'O da regra padrão'
-      : r.listaPrazo === 'sla'
-        ? 'Segue o SLA'
-        : `Só com ${r.listaPrazoMinimoHoras} h ou mais até o prazo`;
-
+  const nomePrioridade = (id: string) =>
+    op.prioridades.find((p) => p.id === id)?.nome ?? '(prioridade excluída)';
+  const prioridadesNaFrente: LinhaResumo[] = [
+    ...r.urgencias.map((u) => ({
+      rotulo: `Urgência de ${nomePrioridade(u.prioridadeOperacaoId)}`,
+      valor: rotuloUrgencia(u.urgencia),
+    })),
+    ...r.recebimento.map((x) => ({
+      rotulo: `${nomePrioridade(x.prioridadeOperacaoId)} no turno ${nomeDe([...op.turnos], x.turnoId)}`,
+      valor: rotuloRecebimento(x.regra),
+    })),
+  ];
   const divisao: LinhaResumo[] = [];
   if (tipo === 'especialidade') {
     divisao.push({
@@ -390,10 +415,14 @@ export function resumoRegras(
 
   return [
     {
+      titulo: 'Prioridades nesta frente',
+      linhas: prioridadesNaFrente.length
+        ? prioridadesNaFrente
+        : [{ rotulo: 'Urgência e recebimento', valor: 'Como na configuração geral' }],
+    },
+    {
       titulo: 'Lista',
       linhas: [
-        { rotulo: 'Prioridades aceitas', valor: prioridades },
-        { rotulo: 'Prazo', valor: prazo },
         {
           rotulo: 'Guardar para os turnos posteriores',
           valor: r.listaDepoisDosFixos ? 'Sim' : 'Não',

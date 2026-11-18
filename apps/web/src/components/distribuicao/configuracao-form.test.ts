@@ -15,7 +15,6 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: ['p-urg'],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -28,7 +27,6 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
   escalaRestringeEspecialidade: true,
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
-  lista: { prioridadeIds: ['p-rot'], prazoMinimoHoras: 24 },
   recolhimentoAposTurnoMin: 60,
 };
 
@@ -44,17 +42,15 @@ describe('configuração global no formulário', () => {
     expect(configuracaoParaApi(v)).toEqual(PRODUCAO);
   });
 
-  it('desligados viram nulo: turnos posteriores, recolhimento e a Lista pelo SLA', () => {
+  it('desligados viram nulo: turnos posteriores e recolhimento', () => {
     const v: ValoresConfiguracao = {
       ...valoresDaConfiguracao(PRODUCAO),
       temTurnosPosteriores: false,
       recolhe: false,
-      listaPrazo: 'sla',
     };
     const api = configuracaoParaApi(v);
     expect(api.turnosPosteriores).toBeNull();
     expect(api.recolhimentoAposTurnoMin).toBeNull();
-    expect(api.lista.prazoMinimoHoras).toBeNull();
   });
 
   it('marcadores separados por vírgula, aparados e sem vazios', () => {
@@ -86,22 +82,15 @@ describe('configuração global no formulário', () => {
 describe('resumo da configuração (só leitura)', () => {
   it('descreve cada grupo com os nomes', () => {
     const grupos = resumoConfiguracao(PRODUCAO, {
-      prioridades: [
-        { id: 'p-urg', nome: 'URGÊNCIA' },
-        { id: 'p-rot', nome: 'ROTINA' },
-      ],
       turnos: [{ id: 't-tarde', nome: 'Tarde' }],
     });
     const tudo = Object.fromEntries(
       grupos.flatMap((g) => g.linhas.map((l) => [`${g.titulo} › ${l.rotulo}`, l.valor])),
     );
     expect(tudo['Fila › Ordem da fila']).toBe(
-      '1. Prioridade: urgente primeiro; 2. Prazo: vence antes primeiro; 3. Chegada: mais antigo primeiro',
+      '1. Posição da prioridade: posição 1 primeiro; 2. Prazo: vence antes primeiro; 3. Chegada: mais antigo primeiro',
     );
-    expect(tudo['Fila › Prioridades urgentes']).toBe('URGÊNCIA');
-    expect(tudo['Lista padrão › Prazo para entrar na Lista']).toBe(
-      'Só com 24 h ou mais até o prazo',
-    );
+    expect(Object.keys(tudo).some((k) => k.startsWith('Lista padrão'))).toBe(false);
     expect(tudo['Rodada › Turnos posteriores']).toBe('Tarde, cheios na rodada das 10:50');
     expect(tudo['Rodada › Recolhimento']).toBe('60 min depois do fim do turno');
     expect(tudo['Equilíbrio › Marcadores no nome do exame']).toBe('ONCO');

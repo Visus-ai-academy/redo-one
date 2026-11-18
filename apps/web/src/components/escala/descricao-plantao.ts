@@ -12,7 +12,7 @@ export type ContextoDescricao = {
   /** O ajuste do dia da distribuição deste plantão, se houver. */
   ajusteDistribuicao?: {
     prioridadeIdsLiberadas: readonly string[];
-    listaSegueSla: boolean;
+    segueSla: boolean;
     clienteNome: string | null;
   };
 };
@@ -114,8 +114,8 @@ export function descreverPlantao(o: OcorrenciaDto, contexto: ContextoDescricao):
       'prioridades',
     ]);
     if (liberadas.length > 0) partes.push(`Aceita também ${emLista(liberadas)}`);
-    if (ajuste.listaSegueSla)
-      partes.push(partes.length ? 'a Lista segue o SLA' : 'A Lista segue o SLA');
+    if (ajuste.segueSla)
+      partes.push(partes.length ? 'segue o SLA neste dia' : 'Segue o SLA neste dia');
     if (ajuste.clienteNome) partes.push(`só para ${ajuste.clienteNome}`);
     if (partes.length > 0) itens.push({ rotulo: 'Robô neste dia', valor: partes.join('; ') });
   }

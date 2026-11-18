@@ -130,7 +130,9 @@ const CAMPOS: Record<string, string> = {
   soGestor: 'Só o gestor lança',
   contaComoFalta: 'Conta como falta',
   prioridadeIdsLiberadas: 'Aceita também',
+  /** Eventos de antes de 18/11/2026 (o ajuste valia só para a Lista). */
   listaSegueSla: 'A Lista segue o SLA',
+  segueSla: 'Segue o SLA neste dia',
   clienteId: 'Só para o cliente',
 };
 

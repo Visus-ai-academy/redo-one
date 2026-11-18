@@ -14,8 +14,8 @@ export const CRITERIOS_FILA: Record<
   { rotulo: string; direcoes: Record<Direcao, string> }
 > = {
   prioridade: {
-    rotulo: 'Prioridade',
-    direcoes: { desc: 'urgente primeiro', asc: 'urgente por último' },
+    rotulo: 'Posição da prioridade',
+    direcoes: { desc: 'posição 1 primeiro', asc: 'posição 1 por último' },
   },
   prazo: {
     rotulo: 'Prazo',
@@ -37,16 +37,12 @@ export const DIRECAO_PADRAO: Record<Criterio, Direcao> = {
 /** Números como texto (o `NumberField` do kit guarda texto). */
 export type ValoresConfiguracao = {
   ordemFila: { criterio: Criterio; direcao: Direcao }[];
-  prioridadeIdsUrgentes: string[];
   prazoCriticoMin: string;
   agruparPorPaciente: boolean;
   janelaPacienteHoras: string;
   toleranciaAcimaTeto: string;
   margemUrgenciaPct: string;
   folgaProporcaoPct: string;
-  listaPrioridadeIds: string[];
-  listaPrazo: 'sla' | 'minimo';
-  listaPrazoMinimoHoras: string;
   cicloMinutos: string;
   antecedenciaPeriodoMin: string;
   temTurnosPosteriores: boolean;
@@ -63,17 +59,12 @@ export type ValoresConfiguracao = {
 export function valoresDaConfiguracao(c: ConfiguracaoDistribuicaoDto): ValoresConfiguracao {
   return {
     ordemFila: c.ordemFila.map((i) => ({ criterio: i.criterio, direcao: i.direcao })),
-    prioridadeIdsUrgentes: c.prioridadeIdsUrgentes,
     prazoCriticoMin: String(c.prazoCriticoMin),
     agruparPorPaciente: c.agruparPorPaciente,
     janelaPacienteHoras: String(c.janelaPacienteHoras),
     toleranciaAcimaTeto: String(c.toleranciaAcimaTeto),
     margemUrgenciaPct: String(c.margemUrgenciaPct),
     folgaProporcaoPct: String(c.folgaProporcaoPct),
-    listaPrioridadeIds: c.lista.prioridadeIds,
-    listaPrazo: c.lista.prazoMinimoHoras === null ? 'sla' : 'minimo',
-    listaPrazoMinimoHoras:
-      c.lista.prazoMinimoHoras === null ? '' : String(c.lista.prazoMinimoHoras),
     cicloMinutos: String(c.cicloMinutos),
     antecedenciaPeriodoMin: String(c.antecedenciaPeriodoMin),
     temTurnosPosteriores: c.turnosPosteriores !== null,
@@ -102,7 +93,6 @@ const hora = (t: string) => {
 export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistribuicaoDto {
   return {
     ordemFila: v.ordemFila,
-    prioridadeIdsUrgentes: v.prioridadeIdsUrgentes,
     agruparPorPaciente: v.agruparPorPaciente,
     janelaPacienteHoras: Number(v.janelaPacienteHoras),
     toleranciaAcimaTeto: Number(v.toleranciaAcimaTeto),
@@ -117,10 +107,6 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
     turnosPosteriores: v.temTurnosPosteriores
       ? { turnoIds: v.turnoIds, cheiaEm: hora(v.cheiaEm) }
       : null,
-    lista: {
-      prioridadeIds: v.listaPrioridadeIds,
-      prazoMinimoHoras: v.listaPrazo === 'minimo' ? Number(v.listaPrazoMinimoHoras) : null,
-    },
     recolhimentoAposTurnoMin: v.recolhe ? Number(v.recolhimentoAposTurnoMin) : null,
   };
 }
@@ -134,16 +120,12 @@ const valoresSchema = z.object({
       direcao: z.enum(['asc', 'desc']),
     }),
   ),
-  prioridadeIdsUrgentes: z.array(z.string()),
   prazoCriticoMin: z.string(),
   agruparPorPaciente: z.boolean(),
   janelaPacienteHoras: z.string(),
   toleranciaAcimaTeto: z.string(),
   margemUrgenciaPct: z.string(),
   folgaProporcaoPct: z.string(),
-  listaPrioridadeIds: z.array(z.string()),
-  listaPrazo: z.enum(['sla', 'minimo']),
-  listaPrazoMinimoHoras: z.string(),
   cicloMinutos: z.string(),
   antecedenciaPeriodoMin: z.string(),
   temTurnosPosteriores: z.boolean(),
@@ -177,7 +159,6 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
 
   if (v.ordemFila.length === 0) erro('ordemFila', 'A fila precisa de ao menos um critério.');
   for (const [campo, min, max] of FAIXAS) faixa(campo, min, max);
-  if (v.listaPrazo === 'minimo') faixa('listaPrazoMinimoHoras', 0, 720);
   faixa('cicloMinutos', 1, 1440);
   faixa('antecedenciaPeriodoMin', 0, 1440);
   if (v.temTurnosPosteriores) {
@@ -200,7 +181,7 @@ const nomes = (lista: readonly RotuloDto[], ids: readonly string[]) =>
 
 export function resumoConfiguracao(
   c: ConfiguracaoDistribuicaoDto,
-  ref: { prioridades: RotuloDto[]; turnos: RotuloDto[] },
+  ref: { turnos: RotuloDto[] },
 ): GrupoResumo[] {
   const minutos = (n: number) => `${n} min`;
   return [
@@ -215,12 +196,6 @@ export function resumoConfiguracao(
               return `${n + 1}. ${info.rotulo}: ${info.direcoes[i.direcao]}`;
             })
             .join('; '),
-        },
-        {
-          rotulo: 'Prioridades urgentes',
-          valor: c.prioridadeIdsUrgentes.length
-            ? nomes(ref.prioridades, c.prioridadeIdsUrgentes)
-            : 'Nenhuma',
         },
         { rotulo: 'Prazo crítico', valor: minutos(c.prazoCriticoMin) },
         {
@@ -241,24 +216,6 @@ export function resumoConfiguracao(
         {
           rotulo: 'Folga da proporção para exame atrasado ou vencendo',
           valor: `${c.folgaProporcaoPct} pontos %`,
-        },
-      ],
-    },
-    {
-      titulo: 'Lista padrão',
-      linhas: [
-        {
-          rotulo: 'Prioridades aceitas',
-          valor: c.lista.prioridadeIds.length
-            ? nomes(ref.prioridades, c.lista.prioridadeIds)
-            : 'Todas',
-        },
-        {
-          rotulo: 'Prazo para entrar na Lista',
-          valor:
-            c.lista.prazoMinimoHoras === null
-              ? 'Segue o SLA'
-              : `Só com ${c.lista.prazoMinimoHoras} h ou mais até o prazo`,
         },
       ],
     },

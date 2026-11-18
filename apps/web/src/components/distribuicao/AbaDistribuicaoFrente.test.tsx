@@ -3,11 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResponseError } from '../../gen/.kubb/client';
+import { gradeRecebimentoControllerObter } from '../../gen/clients/gradeRecebimentoControllerObter';
 import { opcoesControllerListas } from '../../gen/clients/opcoesControllerListas';
+import { prioridadesOperacaoControllerListar } from '../../gen/clients/prioridadesOperacaoControllerListar';
 import { regrasFrenteControllerObterEspecialidade } from '../../gen/clients/regrasFrenteControllerObterEspecialidade';
 import { regrasFrenteControllerObterModalidade } from '../../gen/clients/regrasFrenteControllerObterModalidade';
 import { regrasFrenteControllerSalvarEspecialidade } from '../../gen/clients/regrasFrenteControllerSalvarEspecialidade';
 import { regrasFrenteControllerSalvarModalidade } from '../../gen/clients/regrasFrenteControllerSalvarModalidade';
+import { turnosControllerListar } from '../../gen/clients/turnosControllerListar';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
@@ -15,6 +18,13 @@ import { escolherOpcao } from '../../test/select';
 import { AbaDistribuicaoFrente } from './AbaDistribuicaoFrente';
 
 vi.mock('../../gen/clients/opcoesControllerListas', () => ({ opcoesControllerListas: vi.fn() }));
+vi.mock('../../gen/clients/prioridadesOperacaoControllerListar', () => ({
+  prioridadesOperacaoControllerListar: vi.fn(),
+}));
+vi.mock('../../gen/clients/gradeRecebimentoControllerObter', () => ({
+  gradeRecebimentoControllerObter: vi.fn(),
+}));
+vi.mock('../../gen/clients/turnosControllerListar', () => ({ turnosControllerListar: vi.fn() }));
 vi.mock('../../gen/clients/regrasFrenteControllerObterEspecialidade', () => ({
   regrasFrenteControllerObterEspecialidade: vi.fn(),
 }));
@@ -29,9 +39,8 @@ vi.mock('../../gen/clients/regrasFrenteControllerSalvarModalidade', () => ({
 }));
 
 const NEUTRAS: RegrasFrenteDto = {
-  listaPrioridadeIds: null,
-  listaPrazo: 'padrao',
-  listaPrazoMinimoHoras: null,
+  urgencias: [],
+  recebimento: [],
   recolheAoFimDoTurno: true,
   distribuiPeloRobo: true,
   horariosSemRobo: [],
@@ -74,6 +83,48 @@ beforeEach(() => {
       contratados: [],
     }),
   } as never);
+  vi.mocked(prioridadesOperacaoControllerListar).mockReturnValue({
+    unwrap: async () => [
+      {
+        id: 'op-urg',
+        nome: 'URGÊNCIA',
+        posicao: 1,
+        urgencia: { tipo: 'sempre', horas: null },
+        padrao: false,
+        grafias: ['P1'],
+      },
+      {
+        id: 'op-rot',
+        nome: 'ROTINA',
+        posicao: 3,
+        urgencia: { tipo: 'nunca', horas: null },
+        padrao: true,
+        grafias: ['Rotina'],
+      },
+    ],
+  } as never);
+  vi.mocked(gradeRecebimentoControllerObter).mockReturnValue({
+    unwrap: async () => ({
+      celulas: [
+        {
+          prioridadeOperacaoId: 'op-rot',
+          turnoId: 't-lista',
+          regra: { tipo: 'prazo_minimo', horas: 24 },
+        },
+      ],
+    }),
+  } as never);
+  vi.mocked(turnosControllerListar).mockReturnValue({
+    unwrap: async () => ({
+      itens: [
+        { id: 't-manha', nome: 'Manhã' },
+        { id: 't-lista', nome: 'Lista' },
+      ],
+      total: 2,
+      pagina: 1,
+      porPagina: 100,
+    }),
+  } as never);
   comRegras(NEUTRAS, false);
   for (const s of [salvarEsp, salvarMod]) {
     s.mockReset();
@@ -82,14 +133,34 @@ beforeEach(() => {
 });
 
 describe('AbaDistribuicaoFrente', () => {
-  it('sem regra própria, avisa e salva a Lista seguindo o SLA', async () => {
+  it('sem regra própria, sobrescreve só a célula ROTINA × Manhã (48 h) e a urgência da URGÊNCIA', async () => {
     renderComRotas(<AbaDistribuicaoFrente tipo="especialidade" id="e-mi" podeEditar />);
     expect(await screen.findByText(/ainda não tem regra própria/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('radio', { name: 'Segue o SLA' }));
+    // A célula herdada mostra a da geral.
+    expect(screen.getByRole('combobox', { name: 'ROTINA no turno Lista' })).toHaveTextContent(
+      'Geral (≥ 24 h)',
+    );
+    await escolherOpcao('ROTINA no turno Manhã', 'Prazo mínimo');
+    const horas = screen.getByRole('textbox', {
+      name: 'Horas mínimas até o prazo: ROTINA no turno Manhã',
+    });
+    await userEvent.clear(horas);
+    await userEvent.type(horas, '48');
+    await escolherOpcao('Urgência de URGÊNCIA nesta frente', 'Nunca');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
     expect(salvarEsp).toHaveBeenCalledWith({
       path: { especialidadeId: 'e-mi' },
-      body: { ...NEUTRAS, listaPrazo: 'sla' },
+      body: {
+        ...NEUTRAS,
+        urgencias: [{ prioridadeOperacaoId: 'op-urg', urgencia: { tipo: 'nunca', horas: null } }],
+        recebimento: [
+          {
+            prioridadeOperacaoId: 'op-rot',
+            turnoId: 't-manha',
+            regra: { tipo: 'prazo_minimo', horas: 48 },
+          },
+        ],
+      },
     });
     expect(await acharAviso()).toHaveTextContent('Regras da distribuição salvas.');
   });
@@ -159,7 +230,7 @@ describe('AbaDistribuicaoFrente', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Adicionar segmento' }));
     await userEvent.click(screen.getByRole('combobox', { name: 'Segmento' }));
     expect(screen.queryByRole('option', { name: 'OUTRA' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('option', { name: 'TÓRAX' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'TÓRAX' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Teto por rodada' }), '5');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
     expect(salvarEsp).toHaveBeenCalledWith(
@@ -194,11 +265,21 @@ describe('AbaDistribuicaoFrente', () => {
   });
 
   it('sem editar, mostra o resumo das regras', async () => {
-    comRegras({ ...NEUTRAS, recolheAoFimDoTurno: false, listaPrazo: 'sla' });
+    comRegras({
+      ...NEUTRAS,
+      recolheAoFimDoTurno: false,
+      recebimento: [
+        {
+          prioridadeOperacaoId: 'op-rot',
+          turnoId: 't-manha',
+          regra: { tipo: 'prazo_minimo', horas: 48 },
+        },
+      ],
+    });
     renderComRotas(<AbaDistribuicaoFrente tipo="especialidade" id="e-mi" podeEditar={false} />);
     const recolhimento = await screen.findByRole('region', { name: 'Recolhimento' });
     expect(within(recolhimento).getByText('Não recolhe')).toBeInTheDocument();
-    expect(screen.getByText('Segue o SLA')).toBeInTheDocument();
+    expect(screen.getByText('Só com 48 h ou mais até o prazo')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar regras' })).not.toBeInTheDocument();
   });
 
