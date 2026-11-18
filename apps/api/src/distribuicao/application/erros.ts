@@ -46,3 +46,10 @@ export class AlocacaoNaoEncontradaError extends ErroDeDominio {
     super('Alocação não encontrada.');
   }
 }
+
+export class PrioridadeOperacaoNaoEncontradaError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Prioridade da operação não encontrada.');
+  }
+}

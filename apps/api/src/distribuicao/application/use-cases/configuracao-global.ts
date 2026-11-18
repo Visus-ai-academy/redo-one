@@ -12,12 +12,10 @@ import { diferenca, exigirReferencias, ordenados } from '../referencias';
 /** Listas de ids em ordem fixa: comparar e gravar não depende da ordem em que vieram. */
 const canonica = (c: ConfiguracaoGlobal): ConfiguracaoGlobal => ({
   ...c,
-  prioridadeIdsUrgentes: ordenados(c.prioridadeIdsUrgentes),
   turnosPosteriores: c.turnosPosteriores && {
     ...c.turnosPosteriores,
     turnoIds: ordenados(c.turnosPosteriores.turnoIds),
   },
-  lista: { ...c.lista, prioridadeIds: ordenados(c.lista.prioridadeIds) },
 });
 
 /** Configurações › Distribuição. Sem nada salvo, a inicial. */
@@ -42,7 +40,6 @@ export class DefinirConfiguracaoGlobal {
     const nova = canonica(normalizarConfiguracao(entrada));
     validarConfiguracaoGlobal(nova);
     await exigirReferencias(this.cadastros, {
-      prioridade: [...nova.prioridadeIdsUrgentes, ...nova.lista.prioridadeIds],
       turno: nova.turnosPosteriores?.turnoIds ?? [],
     });
     const atual = canonica((await this.repo.obter()) ?? CONFIGURACAO_INICIAL);

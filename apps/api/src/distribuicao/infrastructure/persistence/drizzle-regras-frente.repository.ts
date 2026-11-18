@@ -5,14 +5,21 @@ import { DATABASE, type Database } from '../../../database/database';
 import {
   regrasFrente,
   regrasFrenteHorariosSemRobo,
-  regrasFrenteListaPrioridades,
   regrasFrenteMistura,
   regrasFrenteProporcoes,
+  regrasFrenteRecebimento,
   regrasFrenteSegmentos,
+  regrasFrenteUrgencias,
 } from '../../../database/schema';
 import type { RegrasFrenteRepository } from '../../application/ports/regras-frente.repository';
 import type { FrenteEscala } from '../../domain/arranjo';
 import type { RegrasFrente } from '../../domain/motor/configuracao';
+import {
+  linhaDaRegraRecebimento,
+  linhaDaUrgencia,
+  regraRecebimentoDa,
+  urgenciaDa,
+} from './regras-operacao.mapper';
 
 type Linha = typeof regrasFrente.$inferSelect;
 
@@ -46,11 +53,20 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
   private async montar(linhas: Linha[]): Promise<RegrasFrente[]> {
     if (!linhas.length) return [];
     const ids = linhas.map((l) => l.id);
-    const [prios, horarios, props, segs, mist] = await Promise.all([
+    const [urgs, receb, horarios, props, segs, mist] = await Promise.all([
       this.db
         .select()
-        .from(regrasFrenteListaPrioridades)
-        .where(inArray(regrasFrenteListaPrioridades.regraFrenteId, ids)),
+        .from(regrasFrenteUrgencias)
+        .where(inArray(regrasFrenteUrgencias.regraFrenteId, ids))
+        .orderBy(asc(regrasFrenteUrgencias.prioridadeOperacaoId)),
+      this.db
+        .select()
+        .from(regrasFrenteRecebimento)
+        .where(inArray(regrasFrenteRecebimento.regraFrenteId, ids))
+        .orderBy(
+          asc(regrasFrenteRecebimento.prioridadeOperacaoId),
+          asc(regrasFrenteRecebimento.turnoId),
+        ),
       this.db
         .select()
         .from(regrasFrenteHorariosSemRobo)
@@ -72,7 +88,8 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
         .where(inArray(regrasFrenteMistura.regraFrenteId, ids))
         .orderBy(asc(regrasFrenteMistura.ordem)),
     ]);
-    const priosDe = agrupar(prios);
+    const urgsDe = agrupar(urgs);
+    const recebDe = agrupar(receb);
     const horariosDe = agrupar(horarios);
     const propsDe = agrupar(props);
     const segsDe = agrupar(segs);
@@ -83,14 +100,15 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
         : { tipo: 'modalidade', especialidadeId: null, modalidadeId: l.modalidadeId ?? '' };
       return {
         frente,
-        ...(l.listaPrioridadesPropria
-          ? {
-              listaPrioridadeIds: priosDe(l.id)
-                .map((p) => p.prioridadeId)
-                .sort(),
-            }
-          : {}),
-        ...(l.listaPrazoProprio ? { listaPrazoMinimoHoras: l.listaPrazoMinimoHoras } : {}),
+        urgencias: urgsDe(l.id).map((u) => ({
+          prioridadeOperacaoId: u.prioridadeOperacaoId,
+          urgencia: urgenciaDa(u),
+        })),
+        recebimento: recebDe(l.id).map((c) => ({
+          prioridadeOperacaoId: c.prioridadeOperacaoId,
+          turnoId: c.turnoId,
+          regra: regraRecebimentoDa(c),
+        })),
         recolheAoFimDoTurno: l.recolheAoFimDoTurno,
         distribuiPeloRobo: l.distribuiPeloRobo,
         horariosSemRobo: horariosDe(l.id).map((h) => ({
@@ -130,9 +148,6 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
 
   async salvar(r: RegrasFrente): Promise<void> {
     const linha = {
-      listaPrioridadesPropria: r.listaPrioridadeIds !== undefined,
-      listaPrazoProprio: r.listaPrazoMinimoHoras !== undefined,
-      listaPrazoMinimoHoras: r.listaPrazoMinimoHoras ?? null,
       recolheAoFimDoTurno: r.recolheAoFimDoTurno,
       distribuiPeloRobo: r.distribuiPeloRobo,
       divisao: r.divisao.metodo,
@@ -148,7 +163,8 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
       if (id) {
         await tx.update(regrasFrente).set(linha).where(eq(regrasFrente.id, id));
         for (const filha of [
-          regrasFrenteListaPrioridades,
+          regrasFrenteUrgencias,
+          regrasFrenteRecebimento,
           regrasFrenteHorariosSemRobo,
           regrasFrenteProporcoes,
           regrasFrenteSegmentos,
@@ -169,10 +185,23 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
       }
       if (!id) throw new Error('As regras da frente não foram gravadas.');
       const regraFrenteId = id;
-      if (r.listaPrioridadeIds?.length)
-        await tx
-          .insert(regrasFrenteListaPrioridades)
-          .values(r.listaPrioridadeIds.map((prioridadeId) => ({ regraFrenteId, prioridadeId })));
+      if (r.urgencias.length)
+        await tx.insert(regrasFrenteUrgencias).values(
+          r.urgencias.map((u) => ({
+            regraFrenteId,
+            prioridadeOperacaoId: u.prioridadeOperacaoId,
+            ...linhaDaUrgencia(u.urgencia),
+          })),
+        );
+      if (r.recebimento.length)
+        await tx.insert(regrasFrenteRecebimento).values(
+          r.recebimento.map((c) => ({
+            regraFrenteId,
+            prioridadeOperacaoId: c.prioridadeOperacaoId,
+            turnoId: c.turnoId,
+            ...linhaDaRegraRecebimento(c.regra),
+          })),
+        );
       if (r.horariosSemRobo.length)
         await tx
           .insert(regrasFrenteHorariosSemRobo)

@@ -11,9 +11,7 @@ const ator = { tipo: 'usuario' as const, id: 'u1' };
 
 const producao = (parcial: Partial<ConfiguracaoGlobal> = {}): ConfiguracaoGlobal => ({
   ...CONFIGURACAO_INICIAL,
-  prioridadeIdsUrgentes: ['urg'],
   marcadoresEquilibrio: ['ONCO'],
-  lista: { prioridadeIds: ['rot'], prazoMinimoHoras: 24 },
   turnosPosteriores: { turnoIds: ['tarde'], cheiaEm: '10:50' },
   ...parcial,
 });
@@ -29,7 +27,7 @@ describe('configuração global da distribuição', () => {
     repo = new ConfiguracaoEmMemoria();
     cadastros = new CadastrosEmMemoria();
     cadastros.existentes.set('prioridade', new Set(['urg', 'rot']));
-    cadastros.existentes.set('turno', new Set(['tarde']));
+    cadastros.existentes.set('turno', new Set(['tarde', 'noite']));
     auditoria = new InMemoryAuditoria();
     obter = new ObterConfiguracaoGlobal(repo);
     definir = new DefinirConfiguracaoGlobal(repo, cadastros, auditoria, () => agora);
@@ -59,9 +57,10 @@ describe('configuração global da distribuição', () => {
   });
 
   it('nada mudou (mesmas listas em outra ordem): não grava nem audita', async () => {
-    await definir.executar(ator, producao({ prioridadeIdsUrgentes: ['urg', 'rot'] }));
+    const posteriores = (turnoIds: string[]) => ({ turnoIds, cheiaEm: '10:50' });
+    await definir.executar(ator, producao({ turnosPosteriores: posteriores(['tarde', 'noite']) }));
     const gravacoes = repo.gravacoes;
-    await definir.executar(ator, producao({ prioridadeIdsUrgentes: ['rot', 'urg'] }));
+    await definir.executar(ator, producao({ turnosPosteriores: posteriores(['noite', 'tarde']) }));
     expect(repo.gravacoes).toBe(gravacoes);
     expect(auditoria.eventos).toHaveLength(1);
   });
@@ -78,10 +77,7 @@ describe('configuração global da distribuição', () => {
     expect(repo.gravacoes).toBe(0);
   });
 
-  it('recusa prioridade ou turno que não existe', async () => {
-    await expect(
-      definir.executar(ator, producao({ prioridadeIdsUrgentes: ['sumiu'] })),
-    ).rejects.toThrow(/prioridade não encontrada/i);
+  it('recusa turno que não existe', async () => {
     await expect(
       definir.executar(
         ator,

@@ -4,7 +4,6 @@
 */
 
 import type { ItemOrdemFilaDto } from './ItemOrdemFilaDto'
-import type { RegraListaDto } from './RegraListaDto'
 import type { TurnosPosterioresDto } from './TurnosPosterioresDto'
 
 export type ConfiguracaoDistribuicaoDto = {
@@ -13,11 +12,6 @@ export type ConfiguracaoDistribuicaoDto = {
    * @type array
    */
   ordemFila: ItemOrdemFilaDto[];
-  /**
-   * @description Prioridades do catálogo que contam como urgentes (fila, margem e rodízio).
-   * @type array
-   */
-  prioridadeIdsUrgentes: string[];
   /**
    * @description Exames do mesmo paciente e especialidade vão juntos para um médico.
    * @type boolean
@@ -78,11 +72,6 @@ export type ConfiguracaoDistribuicaoDto = {
    * @type object
    */
   turnosPosteriores: TurnosPosterioresDto | null;
-  /**
-   * @description Regra padrão da Lista, para a frente sem a sua.
-   * @type object
-   */
-  lista: RegraListaDto;
   /**
    * @description Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado.
    * @type number

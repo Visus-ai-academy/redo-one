@@ -7,6 +7,10 @@ import type { CriterioFilaKey } from './CriterioFila'
 import type { DirecaoOrdemKey } from './DirecaoOrdem'
 
 export type ItemOrdemFilaDto = {
+  /**
+   * @description "prioridade" = posição da prioridade da operação ("desc" = a posição 1 primeiro).
+   * @type string
+   */
   criterio: CriterioFilaKey;
   direcao: DirecaoOrdemKey;
 };

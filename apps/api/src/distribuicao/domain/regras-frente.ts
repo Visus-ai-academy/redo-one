@@ -1,4 +1,5 @@
 import type { RegrasFrente } from './motor/configuracao';
+import { canonicaCelulas, validarCelulas, validarRegraUrgencia } from './prioridades-operacao';
 import { inteiroEntre, invalida, semRepetidos, validarHorario } from './validacao';
 
 /**
@@ -6,15 +7,13 @@ import { inteiroEntre, invalida, semRepetidos, validarHorario } from './validaca
  * aqui ficam as invariantes do cadastro. A frente sem linha usa `REGRAS_NEUTRAS`.
  */
 
-const LIMITE_HORAS = 720;
-
 export function validarRegrasFrente(r: RegrasFrente): void {
-  if (r.listaPrioridadeIds) {
-    semRepetidos(r.listaPrioridadeIds, 'Há prioridade repetida na Lista da frente.');
-  }
-  if (r.listaPrazoMinimoHoras !== undefined && r.listaPrazoMinimoHoras !== null) {
-    inteiroEntre(r.listaPrazoMinimoHoras, 0, LIMITE_HORAS, 'Prazo mínimo da Lista (horas)');
-  }
+  semRepetidos(
+    r.urgencias.map((u) => u.prioridadeOperacaoId),
+    'Há prioridade repetida na urgência da frente.',
+  );
+  for (const u of r.urgencias) validarRegraUrgencia(u.urgencia);
+  validarCelulas(r.recebimento);
 
   if (r.horariosSemRobo.length > 20) invalida('Use no máximo 20 horários sem robô.');
   for (const h of r.horariosSemRobo) {
@@ -92,7 +91,10 @@ const porTexto = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 export function canonicaRegras(r: RegrasFrente): RegrasFrente {
   return {
     ...r,
-    ...(r.listaPrioridadeIds ? { listaPrioridadeIds: [...r.listaPrioridadeIds].sort() } : {}),
+    urgencias: [...r.urgencias].sort((a, b) =>
+      porTexto(a.prioridadeOperacaoId, b.prioridadeOperacaoId),
+    ),
+    recebimento: canonicaCelulas(r.recebimento),
     horariosSemRobo: r.horariosSemRobo.map((h) => ({
       ...h,
       diasSemana: [...h.diasSemana].sort((a, b) => a - b),
@@ -115,7 +117,11 @@ export function canonicaRegras(r: RegrasFrente): RegrasFrente {
 /** Os ids do catálogo que a regra cita (para recusar o que não existe). */
 export function referenciasDasRegras(r: RegrasFrente) {
   return {
-    prioridade: r.listaPrioridadeIds ?? [],
+    prioridadeOperacao: [
+      ...r.urgencias.map((u) => u.prioridadeOperacaoId),
+      ...r.recebimento.map((c) => c.prioridadeOperacaoId),
+    ],
+    turno: r.recebimento.map((c) => c.turnoId),
     modalidade:
       r.divisao.metodo === 'proporcao' ? r.divisao.proporcoes.map((p) => p.modalidadeId) : [],
     subespecialidade: [

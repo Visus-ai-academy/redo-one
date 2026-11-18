@@ -14,7 +14,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-const MODOS_PRAZO = ['padrao', 'sla', 'minimo'] as const;
+import { CelulaRecebimentoDto, UrgenciaFrenteDto } from './prioridades-operacao.dto';
+
 const DIVISOES = ['igualitaria', 'proporcao'] as const;
 const TIPOS_FRENTE = ['especialidade', 'modalidade'] as const;
 
@@ -117,31 +118,25 @@ export class FatiaMisturaDto {
 /** As regras de uma frente, como a tela edita. O PUT troca tudo. */
 export class RegrasFrenteDto {
   @ApiProperty({
-    type: [String],
-    format: 'uuid',
-    nullable: true,
-    description:
-      'Prioridades que a Lista desta frente aceita (vazia = todas); nulo = as da regra padrão (configuração global).',
+    type: [UrgenciaFrenteDto],
+    description: 'Urgência sobrescrita nesta frente; a prioridade ausente segue a dela.',
   })
-  @ValidateIf((_, v) => v !== null)
   @IsArray()
-  @ArrayMaxSize(20)
-  @IsUUID('all', { each: true })
-  listaPrioridadeIds!: string[] | null;
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => UrgenciaFrenteDto)
+  urgencias!: UrgenciaFrenteDto[];
 
   @ApiProperty({
-    enum: MODOS_PRAZO,
-    enumName: 'ModoPrazoLista',
+    type: [CelulaRecebimentoDto],
     description:
-      'padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`.',
+      'Células da grade de recebimento que mudam nesta frente; as ausentes seguem a grade geral.',
   })
-  @IsIn(MODOS_PRAZO)
-  listaPrazo!: (typeof MODOS_PRAZO)[number];
-
-  @ApiProperty({ type: Number, nullable: true, description: 'Só com `listaPrazo` = minimo.' })
-  @ValidateIf((_, v) => v !== null)
-  @IsInt()
-  listaPrazoMinimoHoras!: number | null;
+  @IsArray()
+  @ArrayMaxSize(2000)
+  @ValidateNested({ each: true })
+  @Type(() => CelulaRecebimentoDto)
+  recebimento!: CelulaRecebimentoDto[];
 
   @ApiProperty({ description: 'Ao fim do turno, o exame não aberto volta para a fila.' })
   @IsBoolean()

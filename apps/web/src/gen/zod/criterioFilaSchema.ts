@@ -5,6 +5,6 @@
 
 import * as z from 'zod'
 
-export const criterioFilaSchema = z.enum(['prioridade', 'prazo', 'antiguidade'])
+export const criterioFilaSchema = z.enum(['prioridade', 'prazo', 'antiguidade']).describe('"prioridade" = posição da prioridade da operação ("desc" = a posição 1 primeiro).')
 
 export type CriterioFilaSchemaType = z.infer<typeof criterioFilaSchema>

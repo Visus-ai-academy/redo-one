@@ -197,30 +197,11 @@ export const configuracaoDistribuicao = pgTable(
     diasJaEntregue: integer('dias_ja_entregue').notNull(),
     /** "HH:MM" da rodada que enche os turnos posteriores; null = nenhum turno posterior. */
     turnosPosterioresCheiaEm: text('turnos_posteriores_cheia_em'),
-    /** Null = a Lista segue o SLA (sem prazo mínimo). */
-    listaPrazoMinimoHoras: integer('lista_prazo_minimo_horas'),
     /** Null = recolhimento desligado. */
     recolhimentoAposTurnoMin: integer('recolhimento_apos_turno_min'),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [check('configuracao_distribuicao_unica', sql`${t.id} = 1`)],
-);
-
-/** Prioridades do catálogo que contam como urgentes (hoje só URGÊNCIA). */
-export const configuracaoDistribuicaoUrgentes = pgTable('configuracao_distribuicao_urgentes', {
-  prioridadeId: uuid('prioridade_id')
-    .primaryKey()
-    .references(() => prioridades.id, { onDelete: 'cascade' }),
-});
-
-/** Prioridades que a Lista aceita pela regra padrão; nenhuma linha = todas. */
-export const configuracaoDistribuicaoListaPrioridades = pgTable(
-  'configuracao_distribuicao_lista_prioridades',
-  {
-    prioridadeId: uuid('prioridade_id')
-      .primaryKey()
-      .references(() => prioridades.id, { onDelete: 'cascade' }),
-  },
 );
 
 /** Turnos que só recebem numa rodada posterior do dia (no dashboards-one, a Tarde). */
@@ -231,6 +212,92 @@ export const configuracaoDistribuicaoTurnosPosteriores = pgTable(
       .primaryKey()
       .references(() => turnos.id, { onDelete: 'cascade' }),
   },
+);
+
+// ---------------------------------------------------------------------------------------------
+// Prioridades da operação (Configurações › Distribuição, decisões de 18/11/2026): cadastro da
+// distribuição, separado das prioridades do catálogo (faturamento, escala e arranjo). Cada uma
+// tem posição na fila, regra de urgência e um de-para próprio de grafias da MobileMed. Histórico
+// em `eventos_auditoria` (entidade `prioridade_operacao`).
+// ---------------------------------------------------------------------------------------------
+
+/** Quando a operação trata a prioridade como urgência. */
+export const tipoUrgencia = pgEnum('tipo_urgencia', ['nunca', 'sempre', 'prazo']);
+/** O que um turno recebe de uma prioridade da operação. */
+export const tipoRecebimento = pgEnum('tipo_recebimento', [
+  'segue_sla',
+  'prazo_minimo',
+  'nao_recebe',
+]);
+
+export const prioridadesOperacao = pgTable(
+  'prioridades_operacao',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nome: text('nome').notNull(),
+    /** 1 = primeiro na fila; empate permitido. */
+    posicao: integer('posicao').notNull(),
+    urgencia: tipoUrgencia('urgencia').notNull(),
+    /** Só com urgência "prazo": urgente quando o prazo restante fica abaixo disto. */
+    urgenciaHoras: integer('urgencia_horas'),
+    /** Vale para a grafia sem de-para; no máximo uma. */
+    padrao: boolean('padrao').notNull().default(false),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex('prioridades_operacao_nome_key').on(sql`upper(${t.nome})`),
+    uniqueIndex('prioridades_operacao_padrao_key').on(t.padrao).where(sql`${t.padrao}`),
+    check('prioridades_operacao_posicao_check', sql`${t.posicao} >= 1`),
+    check(
+      'prioridades_operacao_urgencia_check',
+      sql`(${t.urgencia} = 'prazo') = (${t.urgenciaHoras} is not null)`,
+    ),
+  ],
+);
+
+/** De-para de grafias da MobileMed: cada grafia (sem acento, maiúscula) cai em uma prioridade. */
+export const prioridadesOperacaoGrafias = pgTable(
+  'prioridades_operacao_grafias',
+  {
+    /** Sem acento, sem espaços nas pontas e em maiúsculas: a chave do de-para. */
+    grafiaNormalizada: text('grafia_normalizada').primaryKey(),
+    /** Como foi cadastrada (para a tela). */
+    grafia: text('grafia').notNull(),
+    prioridadeOperacaoId: uuid('prioridade_operacao_id')
+      .notNull()
+      .references(() => prioridadesOperacao.id, { onDelete: 'cascade' }),
+  },
+  (t) => [index('prioridades_operacao_grafias_prioridade_idx').on(t.prioridadeOperacaoId)],
+);
+
+const daPrioridadeOperacao = () =>
+  uuid('prioridade_operacao_id')
+    .notNull()
+    .references(() => prioridadesOperacao.id, { onDelete: 'cascade' });
+
+/**
+ * Grade geral de recebimento: prioridade da operação × turno da escala. Célula sem linha = segue
+ * o SLA. Histórico em `eventos_auditoria` (entidade `recebimento_distribuicao`, id `geral`).
+ */
+export const recebimentoGeral = pgTable(
+  'recebimento_geral',
+  {
+    prioridadeOperacaoId: daPrioridadeOperacao(),
+    turnoId: uuid('turno_id')
+      .notNull()
+      .references(() => turnos.id, { onDelete: 'cascade' }),
+    regra: tipoRecebimento('regra').notNull(),
+    /** Só com "prazo_minimo". */
+    prazoMinimoHoras: integer('prazo_minimo_horas'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.prioridadeOperacaoId, t.turnoId] }),
+    check(
+      'recebimento_geral_prazo_check',
+      sql`(${t.regra} = 'prazo_minimo') = (${t.prazoMinimoHoras} is not null)`,
+    ),
+  ],
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -249,12 +316,6 @@ export const regrasFrente = pgTable(
       onDelete: 'cascade',
     }),
     modalidadeId: uuid('modalidade_id').references(() => modalidades.id, { onDelete: 'cascade' }),
-    /** Falso = a Lista desta frente aceita as prioridades da regra padrão (configuração global). */
-    listaPrioridadesPropria: boolean('lista_prioridades_propria').notNull().default(false),
-    /** Falso = o prazo mínimo da Lista é o da regra padrão. */
-    listaPrazoProprio: boolean('lista_prazo_proprio').notNull().default(false),
-    /** Com prazo próprio: null = segue o SLA (MAMA, CARDIO). */
-    listaPrazoMinimoHoras: integer('lista_prazo_minimo_horas'),
     recolheAoFimDoTurno: boolean('recolhe_ao_fim_do_turno').notNull().default(true),
     distribuiPeloRobo: boolean('distribui_pelo_robo').notNull().default(true),
     divisao: metodoDivisao('divisao').notNull().default('igualitaria'),
@@ -271,10 +332,6 @@ export const regrasFrente = pgTable(
       'regras_frente_frente_check',
       sql`(${t.especialidadeId} is null) <> (${t.modalidadeId} is null)`,
     ),
-    check(
-      'regras_frente_prazo_check',
-      sql`${t.listaPrazoProprio} or ${t.listaPrazoMinimoHoras} is null`,
-    ),
   ],
 );
 
@@ -283,16 +340,43 @@ const daRegra = () =>
     .notNull()
     .references(() => regrasFrente.id, { onDelete: 'cascade' });
 
-/** Prioridades da Lista da frente (com `lista_prioridades_propria`); nenhuma linha = todas. */
-export const regrasFrenteListaPrioridades = pgTable(
-  'regras_frente_lista_prioridades',
+/** Urgência sobrescrita na frente, por prioridade da operação. */
+export const regrasFrenteUrgencias = pgTable(
+  'regras_frente_urgencias',
   {
     regraFrenteId: daRegra(),
-    prioridadeId: uuid('prioridade_id')
-      .notNull()
-      .references(() => prioridades.id, { onDelete: 'cascade' }),
+    prioridadeOperacaoId: daPrioridadeOperacao(),
+    urgencia: tipoUrgencia('urgencia').notNull(),
+    urgenciaHoras: integer('urgencia_horas'),
   },
-  (t) => [primaryKey({ columns: [t.regraFrenteId, t.prioridadeId] })],
+  (t) => [
+    primaryKey({ columns: [t.regraFrenteId, t.prioridadeOperacaoId] }),
+    check(
+      'regras_frente_urgencias_horas_check',
+      sql`(${t.urgencia} = 'prazo') = (${t.urgenciaHoras} is not null)`,
+    ),
+  ],
+);
+
+/** Células da grade de recebimento que mudam na frente (as ausentes seguem a geral). */
+export const regrasFrenteRecebimento = pgTable(
+  'regras_frente_recebimento',
+  {
+    regraFrenteId: daRegra(),
+    prioridadeOperacaoId: daPrioridadeOperacao(),
+    turnoId: uuid('turno_id')
+      .notNull()
+      .references(() => turnos.id, { onDelete: 'cascade' }),
+    regra: tipoRecebimento('regra').notNull(),
+    prazoMinimoHoras: integer('prazo_minimo_horas'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.regraFrenteId, t.prioridadeOperacaoId, t.turnoId] }),
+    check(
+      'regras_frente_recebimento_prazo_check',
+      sql`(${t.regra} = 'prazo_minimo') = (${t.prazoMinimoHoras} is not null)`,
+    ),
+  ],
 );
 
 /** Faixas em que a frente não é distribuída pelo robô (podem cruzar a meia-noite). */
@@ -408,7 +492,8 @@ export const prioridadesCliente = pgTable(
 
 /**
  * Ajuste do dia da distribuição por alocação da escala e dia (a "exceção do robô" do
- * dashboards-one): prioridades liberadas e "a Lista segue o SLA", com recorte opcional por
+ * dashboards-one): prioridades liberadas e "segue o SLA neste dia" (o prazo mínimo da grade de
+ * recebimento não vale), com recorte opcional por
  * cliente. O "+N laudos" é o `ajustes_produtividade` da escala, não fica aqui. A ação fica na tela
  * Escala; histórico em `eventos_auditoria` (entidade `ajuste_dia_distribuicao`).
  */
@@ -420,7 +505,7 @@ export const ajustesDiaDistribuicao = pgTable(
       .notNull()
       .references(() => alocacoes.id, { onDelete: 'cascade' }),
     data: date('data').notNull(),
-    listaSegueSla: boolean('lista_segue_sla').notNull().default(false),
+    segueSla: boolean('segue_sla').notNull().default(false),
     /** Só os exames deste cliente; null = todos. */
     clienteId: uuid('cliente_id').references(() => clientes.id, { onDelete: 'cascade' }),
     criadoEm: criadoEm(),

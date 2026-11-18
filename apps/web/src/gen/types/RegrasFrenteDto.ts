@@ -3,29 +3,25 @@
 * Do not edit manually.
 */
 
+import type { CelulaRecebimentoDto } from './CelulaRecebimentoDto'
 import type { FatiaMisturaDto } from './FatiaMisturaDto'
 import type { HorarioSemRoboDto } from './HorarioSemRoboDto'
 import type { MetodoDivisaoKey } from './MetodoDivisao'
-import type { ModoPrazoListaKey } from './ModoPrazoLista'
 import type { ProporcaoModalidadeDto } from './ProporcaoModalidadeDto'
 import type { RegraSegmentoDto } from './RegraSegmentoDto'
+import type { UrgenciaFrenteDto } from './UrgenciaFrenteDto'
 
 export type RegrasFrenteDto = {
   /**
-   * @description Prioridades que a Lista desta frente aceita (vazia = todas); nulo = as da regra padrão (configuração global).
+   * @description Urgência sobrescrita nesta frente; a prioridade ausente segue a dela.
    * @type array
    */
-  listaPrioridadeIds: string[] | null;
+  urgencias: UrgenciaFrenteDto[];
   /**
-   * @description padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`.
-   * @type string
+   * @description Células da grade de recebimento que mudam nesta frente; as ausentes seguem a grade geral.
+   * @type array
    */
-  listaPrazo: ModoPrazoListaKey;
-  /**
-   * @description Só com `listaPrazo` = minimo.
-   * @type number
-   */
-  listaPrazoMinimoHoras: number | null;
+  recebimento: CelulaRecebimentoDto[];
   /**
    * @description Ao fim do turno, o exame não aberto volta para a fila.
    * @type boolean

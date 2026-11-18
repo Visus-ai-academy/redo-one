@@ -4,17 +4,17 @@
 */
 
 import * as z from 'zod'
+import { celulaRecebimentoDtoSchema } from './celulaRecebimentoDtoSchema'
 import { fatiaMisturaDtoSchema } from './fatiaMisturaDtoSchema'
 import { horarioSemRoboDtoSchema } from './horarioSemRoboDtoSchema'
 import { metodoDivisaoSchema } from './metodoDivisaoSchema'
-import { modoPrazoListaSchema } from './modoPrazoListaSchema'
 import { proporcaoModalidadeDtoSchema } from './proporcaoModalidadeDtoSchema'
 import { regraSegmentoDtoSchema } from './regraSegmentoDtoSchema'
+import { urgenciaFrenteDtoSchema } from './urgenciaFrenteDtoSchema'
 
 export const regrasFrenteDtoSchema = z.object({
-  listaPrioridadeIds: z.array(z.uuid()).nullable().describe('Prioridades que a Lista desta frente aceita (vazia = todas); nulo = as da regra padrão (configuração global).'),
-  listaPrazo: modoPrazoListaSchema.describe('padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`.'),
-  listaPrazoMinimoHoras: z.number().nullable().describe('Só com `listaPrazo` = minimo.'),
+  urgencias: z.array(urgenciaFrenteDtoSchema).describe('Urgência sobrescrita nesta frente; a prioridade ausente segue a dela.'),
+  recebimento: z.array(celulaRecebimentoDtoSchema).describe('Células da grade de recebimento que mudam nesta frente; as ausentes seguem a grade geral.'),
   recolheAoFimDoTurno: z.boolean().describe('Ao fim do turno, o exame não aberto volta para a fila.'),
   distribuiPeloRobo: z.boolean().describe('Falso = a frente é toda manual.'),
   horariosSemRobo: z.array(horarioSemRoboDtoSchema).describe('Faixas em que o robô não distribui a frente.'),

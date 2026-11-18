@@ -38,7 +38,7 @@ const atorDe = (p: PrincipalUsuario): AtorEscala => ({
 });
 
 /**
- * Ajuste do dia da distribuição (prioridades liberadas, "a Lista segue o SLA", cliente), por
+ * Ajuste do dia da distribuição (prioridades liberadas, "segue o SLA neste dia", cliente), por
  * alocação e dia. A ação fica na tela Escala: permissões da escala e recorte da gestora.
  */
 @ApiTags('distribuicao')

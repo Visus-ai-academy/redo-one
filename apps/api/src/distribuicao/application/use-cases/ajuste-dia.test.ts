@@ -16,7 +16,7 @@ const gestora = { usuarioId: 'g1', acessoTotal: false };
 const DIA = '2026-11-18';
 const liberar = (parcial = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
-  listaSegueSla: false,
+  segueSla: false,
   clienteId: null,
   ...parcial,
 });
@@ -51,13 +51,13 @@ describe('ajuste do dia da distribuição', () => {
   });
 
   it('cria e audita com o contexto da escala (médico, turno, frente)', async () => {
-    await definir.executar(admin, 'a1', DIA, liberar({ listaSegueSla: true, clienteId: 'c1' }));
+    await definir.executar(admin, 'a1', DIA, liberar({ segueSla: true, clienteId: 'c1' }));
     const lido = await obter.executar(admin, 'a1', DIA);
     expect(lido).toMatchObject({
       alocacaoId: 'a1',
       data: DIA,
       prioridadeIdsLiberadas: ['urg'],
-      listaSegueSla: true,
+      segueSla: true,
       clienteId: 'c1',
       clienteNome: 'CLINICA X',
       medicoId: 'm1',
@@ -72,7 +72,7 @@ describe('ajuste do dia da distribuição', () => {
           alocacaoId: 'a1',
           data: DIA,
           prioridadeIdsLiberadas: ['urg'],
-          listaSegueSla: true,
+          segueSla: true,
           clienteId: 'c1',
           medicoId: 'm1',
           turnoId: 't1',
@@ -88,13 +88,13 @@ describe('ajuste do dia da distribuição', () => {
     const id = (await obter.executar(admin, 'a1', DIA))?.id;
     await definir.executar(admin, 'a1', DIA, liberar());
     expect(repo.gravacoes).toBe(1);
-    await definir.executar(admin, 'a1', DIA, liberar({ listaSegueSla: true }));
+    await definir.executar(admin, 'a1', DIA, liberar({ segueSla: true }));
     expect((await obter.executar(admin, 'a1', DIA))?.id).toBe(id);
     expect(auditoria.eventos[1]).toMatchObject({
       acao: 'alterado',
       entidadeId: id,
-      antes: { listaSegueSla: false },
-      depois: { listaSegueSla: true, medicoId: 'm1', data: DIA },
+      antes: { segueSla: false },
+      depois: { segueSla: true, medicoId: 'm1', data: DIA },
     });
   });
 

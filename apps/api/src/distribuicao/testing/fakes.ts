@@ -24,12 +24,15 @@ import type {
   ParametrosMedicoRepository,
 } from '../application/ports/parametros-medico.repository';
 import type { PrioridadesClienteRepository } from '../application/ports/prioridades-cliente.repository';
+import type { PrioridadesOperacaoRepository } from '../application/ports/prioridades-operacao.repository';
 import type { RegrasFrenteRepository } from '../application/ports/regras-frente.repository';
 import type { AjusteDiaDistribuicao } from '../domain/ajuste-dia';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
 import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
 import type { RegrasFrente } from '../domain/motor/configuracao';
+import type { CelulaRecebimento, PrioridadeOperacao } from '../domain/motor/prioridades-operacao';
 import type { PrioridadeDaFrente } from '../domain/prioridade-cliente';
+import type { EdicaoPrioridadeOperacao } from '../domain/prioridades-operacao';
 
 export class ArranjosEmMemoria implements ArranjosRepository {
   readonly porDono = new Map<string, Arranjo[]>();
@@ -242,5 +245,45 @@ export class AjustesDiaEmMemoria implements AjustesDiaRepository {
       .map((a) => this.ler(a))
       .filter((a) => !f.medicoId || a.medicoId === f.medicoId)
       .sort((a, b) => (a.data < b.data ? -1 : 1));
+  }
+}
+
+export class PrioridadesOperacaoEmMemoria implements PrioridadesOperacaoRepository {
+  readonly porId = new Map<string, PrioridadeOperacao>();
+  grade: CelulaRecebimento[] = [];
+  gravacoes = 0;
+  private seq = 0;
+
+  async listar() {
+    return [...this.porId.values()]
+      .sort((a, b) => a.posicao - b.posicao || a.nome.localeCompare(b.nome))
+      .map((p) => structuredClone(p));
+  }
+
+  async criar(edicao: EdicaoPrioridadeOperacao) {
+    const id = `op${++this.seq}`;
+    await this.salvar({ id, ...edicao });
+    return id;
+  }
+
+  async salvar(p: PrioridadeOperacao) {
+    this.gravacoes++;
+    if (p.padrao) for (const o of this.porId.values()) o.padrao = false;
+    this.porId.set(p.id, structuredClone(p));
+  }
+
+  async excluir(id: string) {
+    this.gravacoes++;
+    this.porId.delete(id);
+    this.grade = this.grade.filter((c) => c.prioridadeOperacaoId !== id);
+  }
+
+  async obterGrade() {
+    return structuredClone(this.grade);
+  }
+
+  async salvarGrade(celulas: readonly CelulaRecebimento[]) {
+    this.gravacoes++;
+    this.grade = structuredClone([...celulas]);
   }
 }

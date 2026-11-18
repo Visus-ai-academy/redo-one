@@ -30,8 +30,6 @@ export async function exigirFrenteDoCatalogo(cadastros: CadastrosDistribuicao, f
 
 /** Fotografia para a auditoria: as regras sem a frente (que vai à parte no `depois`). */
 const foto = ({ frente: _, ...campos }: RegrasFrente): Record<string, unknown> => ({
-  listaPrioridadeIds: undefined,
-  listaPrazoMinimoHoras: undefined,
   ...campos,
 });
 

@@ -16,6 +16,7 @@ export interface CadastrosDistribuicao {
 
 export type TipoReferencia =
   | 'prioridade'
+  | 'prioridadeOperacao'
   | 'turno'
   | 'especialidade'
   | 'modalidade'

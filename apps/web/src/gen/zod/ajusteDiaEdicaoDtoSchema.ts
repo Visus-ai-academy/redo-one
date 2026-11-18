@@ -7,7 +7,7 @@ import * as z from 'zod'
 
 export const ajusteDiaEdicaoDtoSchema = z.object({
   prioridadeIdsLiberadas: z.array(z.uuid()).describe('Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.'),
-  listaSegueSla: z.boolean().describe('A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo).'),
+  segueSla: z.boolean().describe('Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele.'),
   clienteId: z.uuid().nullable().describe('Só os exames deste cliente; nulo = todos.'),
 })
 

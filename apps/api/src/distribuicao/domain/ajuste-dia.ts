@@ -9,8 +9,8 @@ import { invalida, semRepetidos } from './validacao';
 export interface AjusteDiaEdicao {
   /** Prioridades do catálogo que o médico passa a receber além do arranjo e da Lista. */
   prioridadeIdsLiberadas: string[];
-  /** A Lista dele segue o SLA (qualquer prioridade aceita, sem prazo mínimo). */
-  listaSegueSla: boolean;
+  /** Segue o SLA neste dia: o prazo mínimo das células da grade de recebimento não vale. */
+  segueSla: boolean;
   /** Só os exames deste cliente; null = todos. */
   clienteId: string | null;
 }
@@ -23,13 +23,12 @@ export interface AjusteDiaDistribuicao extends AjusteDiaEdicao {
 }
 
 /** Nada liberado e a Lista como sempre: o ajuste não muda nada (gravar = remover). */
-export const ajusteVazio = (a: AjusteDiaEdicao) =>
-  !a.prioridadeIdsLiberadas.length && !a.listaSegueSla;
+export const ajusteVazio = (a: AjusteDiaEdicao) => !a.prioridadeIdsLiberadas.length && !a.segueSla;
 
 export function validarAjusteDia(a: AjusteDiaEdicao): void {
   semRepetidos(a.prioridadeIdsLiberadas, 'Há prioridade repetida no ajuste do dia.');
   if (a.clienteId !== null && ajusteVazio(a)) {
-    invalida('O cliente só recorta prioridades liberadas ou "a Lista segue o SLA".');
+    invalida('O cliente só recorta prioridades liberadas ou "segue o SLA neste dia".');
   }
 }
 

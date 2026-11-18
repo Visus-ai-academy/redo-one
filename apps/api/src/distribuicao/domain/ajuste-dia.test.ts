@@ -4,18 +4,16 @@ import { ajusteVazio, canonicaAjuste, validarAjusteDia } from './ajuste-dia';
 
 const ajuste = (parcial = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
-  listaSegueSla: false,
+  segueSla: false,
   clienteId: null,
   ...parcial,
 });
 
 describe('ajuste do dia da distribuição', () => {
-  it('aceita prioridades liberadas, "a Lista segue o SLA" e o recorte por cliente', () => {
+  it('aceita prioridades liberadas, "segue o SLA neste dia" e o recorte por cliente', () => {
     expect(() => validarAjusteDia(ajuste())).not.toThrow();
     expect(() =>
-      validarAjusteDia(
-        ajuste({ prioridadeIdsLiberadas: [], listaSegueSla: true, clienteId: 'c1' }),
-      ),
+      validarAjusteDia(ajuste({ prioridadeIdsLiberadas: [], segueSla: true, clienteId: 'c1' })),
     ).not.toThrow();
   });
 

@@ -10,10 +10,10 @@ export type AjusteDiaEdicaoDto = {
    */
   prioridadeIdsLiberadas: string[];
   /**
-   * @description A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo).
+   * @description Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele.
    * @type boolean
    */
-  listaSegueSla: boolean;
+  segueSla: boolean;
   /**
    * @description Só os exames deste cliente; nulo = todos.
    *

@@ -8,7 +8,7 @@ import { criterioFilaSchema } from './criterioFilaSchema'
 import { direcaoOrdemSchema } from './direcaoOrdemSchema'
 
 export const itemOrdemFilaDtoSchema = z.object({
-  criterio: criterioFilaSchema,
+  criterio: criterioFilaSchema.describe('"prioridade" = posição da prioridade da operação ("desc" = a posição 1 primeiro).'),
   direcao: direcaoOrdemSchema,
 })
 

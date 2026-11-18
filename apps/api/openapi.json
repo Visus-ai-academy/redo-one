@@ -7515,6 +7515,171 @@
         ]
       }
     },
+    "/distribuicao/prioridades-operacao": {
+      "get": {
+        "operationId": "PrioridadesOperacaoController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrioridadeOperacaoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "post": {
+        "operationId": "PrioridadesOperacaoController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrioridadeOperacaoEdicaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/prioridades-operacao/{id}": {
+      "put": {
+        "operationId": "PrioridadesOperacaoController_editar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrioridadeOperacaoEdicaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "delete": {
+        "operationId": "PrioridadesOperacaoController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/recebimento": {
+      "get": {
+        "operationId": "GradeRecebimentoController_obter",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradeRecebimentoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "put": {
+        "operationId": "GradeRecebimentoController_salvar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeRecebimentoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/distribuicao/regras-frente": {
       "get": {
         "operationId": "RegrasFrenteController_listar",
@@ -14555,7 +14720,8 @@
           "prioridade",
           "prazo",
           "antiguidade"
-        ]
+        ],
+        "description": "\"prioridade\" = posição da prioridade da operação (\"desc\" = a posição 1 primeiro)."
       },
       "DirecaoOrdem": {
         "type": "string",
@@ -14568,6 +14734,7 @@
         "type": "object",
         "properties": {
           "criterio": {
+            "description": "\"prioridade\" = posição da prioridade da operação (\"desc\" = a posição 1 primeiro).",
             "allOf": [
               {
                 "$ref": "#/components/schemas/CriterioFila"
@@ -14609,28 +14776,6 @@
           "cheiaEm"
         ]
       },
-      "RegraListaDto": {
-        "type": "object",
-        "properties": {
-          "prioridadeIds": {
-            "description": "Prioridades do catálogo que a Lista aceita; vazia = todas.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "prazoMinimoHoras": {
-            "type": "number",
-            "nullable": true,
-            "description": "Prazo restante mínimo (horas) para entrar; nulo = segue o SLA."
-          }
-        },
-        "required": [
-          "prioridadeIds",
-          "prazoMinimoHoras"
-        ]
-      },
       "ConfiguracaoDistribuicaoDto": {
         "type": "object",
         "properties": {
@@ -14639,14 +14784,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ItemOrdemFilaDto"
-            }
-          },
-          "prioridadeIdsUrgentes": {
-            "description": "Prioridades do catálogo que contam como urgentes (fila, margem e rodízio).",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
             }
           },
           "agruparPorPaciente": {
@@ -14706,14 +14843,6 @@
               }
             ]
           },
-          "lista": {
-            "description": "Regra padrão da Lista, para a frente sem a sua.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RegraListaDto"
-              }
-            ]
-          },
           "recolhimentoAposTurnoMin": {
             "type": "number",
             "nullable": true,
@@ -14722,7 +14851,6 @@
         },
         "required": [
           "ordemFila",
-          "prioridadeIdsUrgentes",
           "agruparPorPaciente",
           "janelaPacienteHoras",
           "toleranciaAcimaTeto",
@@ -14735,8 +14863,188 @@
           "escalaRestringeEspecialidade",
           "diasJaEntregue",
           "turnosPosteriores",
-          "lista",
           "recolhimentoAposTurnoMin"
+        ]
+      },
+      "TipoUrgencia": {
+        "type": "string",
+        "enum": [
+          "nunca",
+          "sempre",
+          "prazo"
+        ],
+        "description": "nunca, sempre, ou prazo = quando o prazo restante fica abaixo de `horas`."
+      },
+      "RegraUrgenciaDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "description": "nunca, sempre, ou prazo = quando o prazo restante fica abaixo de `horas`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoUrgencia"
+              }
+            ]
+          },
+          "horas": {
+            "type": "number",
+            "nullable": true,
+            "description": "Só com tipo = prazo."
+          }
+        },
+        "required": [
+          "tipo",
+          "horas"
+        ]
+      },
+      "PrioridadeOperacaoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "AMBULATÓRIO"
+          },
+          "posicao": {
+            "type": "number",
+            "description": "Posição na fila: 1 = primeiro; empate permitido."
+          },
+          "urgencia": {
+            "description": "Quando a operação a trata como urgência.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegraUrgenciaDto"
+              }
+            ]
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Vale para a grafia sem de-para (só uma prioridade)."
+          },
+          "grafias": {
+            "description": "Grafias da MobileMed que caem nesta prioridade (sem diferenciar acento e maiúsculas).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "nome",
+          "posicao",
+          "urgencia",
+          "padrao",
+          "grafias",
+          "id"
+        ]
+      },
+      "PrioridadeOperacaoEdicaoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "AMBULATÓRIO"
+          },
+          "posicao": {
+            "type": "number",
+            "description": "Posição na fila: 1 = primeiro; empate permitido."
+          },
+          "urgencia": {
+            "description": "Quando a operação a trata como urgência.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegraUrgenciaDto"
+              }
+            ]
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Vale para a grafia sem de-para (só uma prioridade)."
+          },
+          "grafias": {
+            "description": "Grafias da MobileMed que caem nesta prioridade (sem diferenciar acento e maiúsculas).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "nome",
+          "posicao",
+          "urgencia",
+          "padrao",
+          "grafias"
+        ]
+      },
+      "TipoRecebimento": {
+        "type": "string",
+        "enum": [
+          "segue_sla",
+          "prazo_minimo",
+          "nao_recebe"
+        ],
+        "description": "segue_sla; prazo_minimo = só o exame com prazo restante acima de `horas`; nao_recebe."
+      },
+      "RegraRecebimentoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "description": "segue_sla; prazo_minimo = só o exame com prazo restante acima de `horas`; nao_recebe.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoRecebimento"
+              }
+            ]
+          },
+          "horas": {
+            "type": "number",
+            "nullable": true,
+            "description": "Só com tipo = prazo_minimo."
+          }
+        },
+        "required": [
+          "tipo",
+          "horas"
+        ]
+      },
+      "CelulaRecebimentoDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Turno da escala."
+          },
+          "regra": {
+            "$ref": "#/components/schemas/RegraRecebimentoDto"
+          }
+        },
+        "required": [
+          "prioridadeOperacaoId",
+          "turnoId",
+          "regra"
+        ]
+      },
+      "GradeRecebimentoDto": {
+        "type": "object",
+        "properties": {
+          "celulas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelulaRecebimentoDto"
+            }
+          }
+        },
+        "required": [
+          "celulas"
         ]
       },
       "TipoFrenteCatalogo": {
@@ -14775,14 +15083,21 @@
           "modalidadeId"
         ]
       },
-      "ModoPrazoLista": {
-        "type": "string",
-        "enum": [
-          "padrao",
-          "sla",
-          "minimo"
-        ],
-        "description": "padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`."
+      "UrgenciaFrenteDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "urgencia": {
+            "$ref": "#/components/schemas/RegraUrgenciaDto"
+          }
+        },
+        "required": [
+          "prioridadeOperacaoId",
+          "urgencia"
+        ]
       },
       "HorarioSemRoboDto": {
         "type": "object",
@@ -14914,27 +15229,19 @@
       "RegrasFrenteDto": {
         "type": "object",
         "properties": {
-          "listaPrioridadeIds": {
-            "nullable": true,
-            "description": "Prioridades que a Lista desta frente aceita (vazia = todas); nulo = as da regra padrão (configuração global).",
+          "urgencias": {
+            "description": "Urgência sobrescrita nesta frente; a prioridade ausente segue a dela.",
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/UrgenciaFrenteDto"
             }
           },
-          "listaPrazo": {
-            "description": "padrao = o da configuração global; sla = segue o SLA (sem mínimo); minimo = `listaPrazoMinimoHoras`.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ModoPrazoLista"
-              }
-            ]
-          },
-          "listaPrazoMinimoHoras": {
-            "type": "number",
-            "nullable": true,
-            "description": "Só com `listaPrazo` = minimo."
+          "recebimento": {
+            "description": "Células da grade de recebimento que mudam nesta frente; as ausentes seguem a grade geral.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelulaRecebimentoDto"
+            }
           },
           "recolheAoFimDoTurno": {
             "type": "boolean",
@@ -14989,9 +15296,8 @@
           }
         },
         "required": [
-          "listaPrioridadeIds",
-          "listaPrazo",
-          "listaPrazoMinimoHoras",
+          "urgencias",
+          "recebimento",
           "recolheAoFimDoTurno",
           "distribuiPeloRobo",
           "horariosSemRobo",
@@ -15072,9 +15378,9 @@
               "format": "uuid"
             }
           },
-          "listaSegueSla": {
+          "segueSla": {
             "type": "boolean",
-            "description": "A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo)."
+            "description": "Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele."
           },
           "clienteId": {
             "type": "string",
@@ -15113,7 +15419,7 @@
         },
         "required": [
           "prioridadeIdsLiberadas",
-          "listaSegueSla",
+          "segueSla",
           "clienteId",
           "id",
           "alocacaoId",
@@ -15153,9 +15459,9 @@
               "format": "uuid"
             }
           },
-          "listaSegueSla": {
+          "segueSla": {
             "type": "boolean",
-            "description": "A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo)."
+            "description": "Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele."
           },
           "clienteId": {
             "type": "string",
@@ -15166,7 +15472,7 @@
         },
         "required": [
           "prioridadeIdsLiberadas",
-          "listaSegueSla",
+          "segueSla",
           "clienteId"
         ]
       },

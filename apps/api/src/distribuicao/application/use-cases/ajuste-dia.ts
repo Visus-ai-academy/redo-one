@@ -34,7 +34,7 @@ const foto = (a: AjusteDiaDistribuicao, aloc: AlocacaoDoAjuste): Record<string, 
   alocacaoId: a.alocacaoId,
   data: a.data,
   prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
-  listaSegueSla: a.listaSegueSla,
+  segueSla: a.segueSla,
   clienteId: a.clienteId,
   medicoId: aloc.medicoId,
   turnoId: aloc.turnoId,
@@ -108,7 +108,7 @@ export class DefinirAjusteDia {
       alocacaoId: lido.alocacaoId,
       data: lido.data,
       prioridadeIdsLiberadas: lido.prioridadeIdsLiberadas,
-      listaSegueSla: lido.listaSegueSla,
+      segueSla: lido.segueSla,
       clienteId: lido.clienteId,
     };
     const registrar = (
@@ -148,7 +148,7 @@ export class DefinirAjusteDia {
       alocacaoId,
       data,
       prioridadeIdsLiberadas: edicao.prioridadeIdsLiberadas,
-      listaSegueSla: edicao.listaSegueSla,
+      segueSla: edicao.segueSla,
       clienteId: edicao.clienteId,
     };
     if (!existente) {

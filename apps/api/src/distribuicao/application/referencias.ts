@@ -7,6 +7,7 @@ import type {
 
 const MENSAGEM: Readonly<Record<TipoReferencia, string>> = {
   prioridade: 'Prioridade não encontrada no catálogo.',
+  prioridadeOperacao: 'Prioridade da operação não encontrada.',
   turno: 'Turno não encontrado na escala.',
   especialidade: 'Especialidade não encontrada no catálogo.',
   modalidade: 'Modalidade não encontrada no catálogo.',

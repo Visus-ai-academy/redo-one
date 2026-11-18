@@ -30,13 +30,14 @@ describe('regras da frente', () => {
     cadastros = new CadastrosEmMemoria();
     cadastros.existentes.set('especialidade', new Set(['mama']));
     cadastros.existentes.set('modalidade', new Set(['ct', 'mr']));
-    cadastros.existentes.set('prioridade', new Set(['rot']));
+    cadastros.existentes.set('prioridadeOperacao', new Set(['op-rot']));
+    cadastros.existentes.set('turno', new Set(['lista']));
     auditoria = new InMemoryAuditoria();
     obter = new ObterRegrasFrente(repo, cadastros);
     definir = new DefinirRegrasFrente(repo, cadastros, auditoria, () => agora);
   });
 
-  it('frente sem cadastro: as regras neutras, sem campos da Lista (seguem o padrão)', async () => {
+  it('frente sem cadastro: as regras neutras, sem sobrescrita de urgência nem de recebimento', async () => {
     expect(await obter.executar(MAMA)).toEqual({
       regras: { frente: MAMA, ...REGRAS_NEUTRAS },
       cadastrada: false,
@@ -52,7 +53,10 @@ describe('regras da frente', () => {
   });
 
   it('cria, audita com a frente e lê de volta', async () => {
-    const mama = editadas({ listaPrazoMinimoHoras: null, recolheAoFimDoTurno: false });
+    const segueSla = [
+      { prioridadeOperacaoId: 'op-rot', turnoId: 'lista', regra: { tipo: 'segue_sla' as const } },
+    ];
+    const mama = editadas({ recebimento: segueSla, recolheAoFimDoTurno: false });
     await definir.executar(ator, MAMA, mama);
     expect(await obter.executar(MAMA)).toEqual({
       regras: { frente: MAMA, ...mama },
@@ -64,8 +68,8 @@ describe('regras da frente', () => {
         entidade: 'regras_frente',
         entidadeId: 'mama',
         acao: 'criado',
-        antes: { listaPrazoMinimoHoras: undefined, recolheAoFimDoTurno: true },
-        depois: { listaPrazoMinimoHoras: null, recolheAoFimDoTurno: false, frente: MAMA },
+        antes: { recebimento: [], recolheAoFimDoTurno: true },
+        depois: { recebimento: segueSla, recolheAoFimDoTurno: false, frente: MAMA },
         em: agora,
       },
     ]);
@@ -107,8 +111,25 @@ describe('regras da frente', () => {
       ),
     ).rejects.toBeInstanceOf(ConfiguracaoInvalidaError);
     await expect(
-      definir.executar(ator, MAMA, editadas({ listaPrioridadeIds: ['sumiu'] })),
-    ).rejects.toThrow(/Prioridade não encontrada/);
+      definir.executar(
+        ator,
+        MAMA,
+        editadas({
+          urgencias: [{ prioridadeOperacaoId: 'sumiu', urgencia: { tipo: 'sempre' } }],
+        }),
+      ),
+    ).rejects.toThrow(/Prioridade da operação não encontrada/);
+    await expect(
+      definir.executar(
+        ator,
+        MAMA,
+        editadas({
+          recebimento: [
+            { prioridadeOperacaoId: 'op-rot', turnoId: 'sumiu', regra: { tipo: 'nao_recebe' } },
+          ],
+        }),
+      ),
+    ).rejects.toThrow(/Turno não encontrado/);
     expect(repo.gravacoes).toBe(0);
   });
 

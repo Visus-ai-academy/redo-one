@@ -18,7 +18,12 @@ const CRITERIOS = ['prioridade', 'prazo', 'antiguidade'] as const;
 const DIRECOES = ['asc', 'desc'] as const;
 
 export class ItemOrdemFilaDto {
-  @ApiProperty({ enum: CRITERIOS, enumName: 'CriterioFila' })
+  @ApiProperty({
+    enum: CRITERIOS,
+    enumName: 'CriterioFila',
+    description:
+      '"prioridade" = posição da prioridade da operação ("desc" = a posição 1 primeiro).',
+  })
   @IsIn(CRITERIOS)
   criterio!: (typeof CRITERIOS)[number];
 
@@ -48,27 +53,6 @@ export class TurnosPosterioresDto {
   cheiaEm!: string;
 }
 
-export class RegraListaDto {
-  @ApiProperty({
-    type: [String],
-    format: 'uuid',
-    description: 'Prioridades do catálogo que a Lista aceita; vazia = todas.',
-  })
-  @IsArray()
-  @ArrayMaxSize(20)
-  @IsUUID('all', { each: true })
-  prioridadeIds!: string[];
-
-  @ApiProperty({
-    type: Number,
-    nullable: true,
-    description: 'Prazo restante mínimo (horas) para entrar; nulo = segue o SLA.',
-  })
-  @ValidateIf((_, v) => v !== null)
-  @IsInt()
-  prazoMinimoHoras!: number | null;
-}
-
 /** Configurações › Distribuição (global). O PUT troca tudo. */
 export class ConfiguracaoDistribuicaoDto {
   @ApiProperty({
@@ -80,16 +64,6 @@ export class ConfiguracaoDistribuicaoDto {
   @ValidateNested({ each: true })
   @Type(() => ItemOrdemFilaDto)
   ordemFila!: ItemOrdemFilaDto[];
-
-  @ApiProperty({
-    type: [String],
-    format: 'uuid',
-    description: 'Prioridades do catálogo que contam como urgentes (fila, margem e rodízio).',
-  })
-  @IsArray()
-  @ArrayMaxSize(20)
-  @IsUUID('all', { each: true })
-  prioridadeIdsUrgentes!: string[];
 
   @ApiProperty({
     description: 'Exames do mesmo paciente e especialidade vão juntos para um médico.',
@@ -166,15 +140,6 @@ export class ConfiguracaoDistribuicaoDto {
   @ValidateNested()
   @Type(() => TurnosPosterioresDto)
   turnosPosteriores!: TurnosPosterioresDto | null;
-
-  @ApiProperty({
-    type: RegraListaDto,
-    description: 'Regra padrão da Lista, para a frente sem a sua.',
-  })
-  @IsObject()
-  @ValidateNested()
-  @Type(() => RegraListaDto)
-  lista!: RegraListaDto;
 
   @ApiProperty({
     type: Number,

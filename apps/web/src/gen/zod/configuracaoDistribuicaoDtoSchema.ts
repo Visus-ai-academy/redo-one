@@ -5,12 +5,10 @@
 
 import * as z from 'zod'
 import { itemOrdemFilaDtoSchema } from './itemOrdemFilaDtoSchema'
-import { regraListaDtoSchema } from './regraListaDtoSchema'
 import { turnosPosterioresDtoSchema } from './turnosPosterioresDtoSchema'
 
 export const configuracaoDistribuicaoDtoSchema = z.object({
   ordemFila: z.array(itemOrdemFilaDtoSchema).describe('Critérios da fila, na ordem em que desempatam.'),
-  prioridadeIdsUrgentes: z.array(z.uuid()).describe('Prioridades do catálogo que contam como urgentes (fila, margem e rodízio).'),
   agruparPorPaciente: z.boolean().describe('Exames do mesmo paciente e especialidade vão juntos para um médico.'),
   janelaPacienteHoras: z.number().describe('Distância máxima (horas) entre os exames do pacote; 0 = sem limite.'),
   toleranciaAcimaTeto: z.number().describe('Folga aceita acima do teto do médico, em carga.'),
@@ -23,7 +21,6 @@ export const configuracaoDistribuicaoDtoSchema = z.object({
   escalaRestringeEspecialidade: z.boolean().describe('A frente da escala limita o que o médico recebe no período.'),
   diasJaEntregue: z.number().describe('Exame entregue a um médico nos últimos N dias e de volta à fila não volta para ele.'),
   turnosPosteriores: turnosPosterioresDtoSchema.nullable().describe('Nulo = nenhum turno posterior (a Lista não guarda nada).'),
-  lista: regraListaDtoSchema.describe('Regra padrão da Lista, para a frente sem a sua.'),
   recolhimentoAposTurnoMin: z.number().nullable().describe('Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado.'),
 })
 

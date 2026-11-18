@@ -32,36 +32,55 @@ describe('controller das regras da frente', () => {
       expect(exigidas(m)).toEqual(['distribuicao-config.editar']);
   });
 
-  it('a neutra vira "padrão" na Lista e divisão igualitária sem proporções', () => {
+  it('a neutra vai sem sobrescritas e com divisão igualitária sem proporções', () => {
     expect(neutroDto()).toMatchObject({
-      listaPrioridadeIds: null,
-      listaPrazo: 'padrao',
-      listaPrazoMinimoHoras: null,
+      urgencias: [],
+      recebimento: [],
       divisao: 'igualitaria',
       proporcoes: [],
     });
     expect(regrasDoDto(neutroDto())).toEqual(REGRAS_NEUTRAS);
   });
 
-  it('"segue o SLA" e "prazo mínimo" vão e voltam', () => {
-    const sla = regrasDoDto({ ...neutroDto(), listaPrazo: 'sla', listaPrioridadeIds: [] });
-    expect(sla).toMatchObject({ listaPrazoMinimoHoras: null, listaPrioridadeIds: [] });
-    expect(regrasParaDto({ frente: MAMA, ...sla }).listaPrazo).toBe('sla');
-    const minimo = regrasDoDto({ ...neutroDto(), listaPrazo: 'minimo', listaPrazoMinimoHoras: 12 });
-    expect(minimo.listaPrazoMinimoHoras).toBe(12);
-    expect(regrasParaDto({ frente: MAMA, ...minimo })).toMatchObject({
-      listaPrazo: 'minimo',
-      listaPrazoMinimoHoras: 12,
-    });
+  it('urgência e células sobrescritas vão e voltam', () => {
+    const dto: RegrasFrenteDto = {
+      ...neutroDto(),
+      urgencias: [{ prioridadeOperacaoId: 'amb', urgencia: { tipo: 'prazo', horas: 12 } }],
+      recebimento: [
+        {
+          prioridadeOperacaoId: 'rot',
+          turnoId: 'manha',
+          regra: { tipo: 'prazo_minimo', horas: 48 },
+        },
+        {
+          prioridadeOperacaoId: 'rot',
+          turnoId: 'lista',
+          regra: { tipo: 'segue_sla', horas: null },
+        },
+      ],
+    };
+    const regras = regrasDoDto(dto);
+    expect(regras.urgencias).toEqual([
+      { prioridadeOperacaoId: 'amb', urgencia: { tipo: 'prazo', horas: 12 } },
+    ]);
+    expect(regras.recebimento[0]?.regra).toEqual({ tipo: 'prazo_minimo', horas: 48 });
+    expect(regras.recebimento[1]?.regra).toEqual({ tipo: 'segue_sla' });
+    expect(regrasParaDto({ frente: MAMA, ...regras })).toEqual(dto);
   });
 
-  it('recusa prazo mínimo sem horas, horas fora do "mínimo" e proporção na igualitária', () => {
-    expect(() => regrasDoDto({ ...neutroDto(), listaPrazo: 'minimo' })).toThrow(
-      ConfiguracaoInvalidaError,
-    );
-    expect(() => regrasDoDto({ ...neutroDto(), listaPrazoMinimoHoras: 3 })).toThrow(
-      ConfiguracaoInvalidaError,
-    );
+  it('recusa prazo sem horas, horas fora do prazo e proporção na igualitária', () => {
+    const celula = (tipo: 'prazo_minimo' | 'nao_recebe', horas: number | null) => ({
+      ...neutroDto(),
+      recebimento: [{ prioridadeOperacaoId: 'r', turnoId: 't', regra: { tipo, horas } }],
+    });
+    expect(() => regrasDoDto(celula('prazo_minimo', null))).toThrow(ConfiguracaoInvalidaError);
+    expect(() => regrasDoDto(celula('nao_recebe', 3))).toThrow(ConfiguracaoInvalidaError);
+    expect(() =>
+      regrasDoDto({
+        ...neutroDto(),
+        urgencias: [{ prioridadeOperacaoId: 'r', urgencia: { tipo: 'prazo', horas: null } }],
+      }),
+    ).toThrow(ConfiguracaoInvalidaError);
     expect(() =>
       regrasDoDto({ ...neutroDto(), proporcoes: [{ modalidadeId: 'mr', percentual: 100 }] }),
     ).toThrow(ConfiguracaoInvalidaError);

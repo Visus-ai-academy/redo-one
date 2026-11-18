@@ -31,6 +31,10 @@ import {
   type PrioridadesClienteRepository,
 } from './application/ports/prioridades-cliente.repository';
 import {
+  PRIORIDADES_OPERACAO_REPOSITORY,
+  type PrioridadesOperacaoRepository,
+} from './application/ports/prioridades-operacao.repository';
+import {
   REGRAS_FRENTE_REPOSITORY,
   type RegrasFrenteRepository,
 } from './application/ports/regras-frente.repository';
@@ -49,6 +53,14 @@ import {
   ObterPrioridadesCliente,
 } from './application/use-cases/prioridades-cliente';
 import {
+  CriarPrioridadeOperacao,
+  DefinirGradeRecebimento,
+  EditarPrioridadeOperacao,
+  ExcluirPrioridadeOperacao,
+  ListarPrioridadesOperacao,
+  ObterGradeRecebimento,
+} from './application/use-cases/prioridades-operacao';
+import {
   DefinirRegrasFrente,
   ListarRegrasFrente,
   ObterRegrasFrente,
@@ -65,6 +77,10 @@ import {
 } from './infrastructure/http/arranjos.controller';
 import { ConfiguracaoDistribuicaoController } from './infrastructure/http/configuracao.controller';
 import { PrioridadesClienteController } from './infrastructure/http/prioridades-cliente.controller';
+import {
+  GradeRecebimentoController,
+  PrioridadesOperacaoController,
+} from './infrastructure/http/prioridades-operacao.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzle-ajustes-dia.repository';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
@@ -73,6 +89,7 @@ import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/pers
 import { DrizzleParametrosEquipeRepository } from './infrastructure/persistence/drizzle-parametros-equipe.repository';
 import { DrizzleParametrosMedicoRepository } from './infrastructure/persistence/drizzle-parametros-medico.repository';
 import { DrizzlePrioridadesClienteRepository } from './infrastructure/persistence/drizzle-prioridades-cliente.repository';
+import { DrizzlePrioridadesOperacaoRepository } from './infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from './infrastructure/persistence/drizzle-regras-frente.repository';
 
 const agora = () => new Date();
@@ -84,6 +101,8 @@ const agora = () => new Date();
     DistribuicaoEquipeController,
     SugestaoAlocacaoController,
     ConfiguracaoDistribuicaoController,
+    PrioridadesOperacaoController,
+    GradeRecebimentoController,
     RegrasFrenteController,
     PrioridadesClienteController,
     AjustesDiaController,
@@ -149,6 +168,34 @@ const agora = () => new Date();
         cadastros: CadastrosDistribuicao,
         auditoria: Auditoria,
       ) => new DefinirRegrasFrente(repo, cadastros, auditoria, agora),
+    },
+    { provide: PRIORIDADES_OPERACAO_REPOSITORY, useClass: DrizzlePrioridadesOperacaoRepository },
+    {
+      provide: ListarPrioridadesOperacao,
+      inject: [PRIORIDADES_OPERACAO_REPOSITORY],
+      useFactory: (repo: PrioridadesOperacaoRepository) => new ListarPrioridadesOperacao(repo),
+    },
+    ...[CriarPrioridadeOperacao, EditarPrioridadeOperacao, ExcluirPrioridadeOperacao].map(
+      (Caso) => ({
+        provide: Caso,
+        inject: [PRIORIDADES_OPERACAO_REPOSITORY, AUDITORIA],
+        useFactory: (repo: PrioridadesOperacaoRepository, auditoria: Auditoria) =>
+          new Caso(repo, auditoria, agora),
+      }),
+    ),
+    {
+      provide: ObterGradeRecebimento,
+      inject: [PRIORIDADES_OPERACAO_REPOSITORY],
+      useFactory: (repo: PrioridadesOperacaoRepository) => new ObterGradeRecebimento(repo),
+    },
+    {
+      provide: DefinirGradeRecebimento,
+      inject: [PRIORIDADES_OPERACAO_REPOSITORY, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      useFactory: (
+        repo: PrioridadesOperacaoRepository,
+        cadastros: CadastrosDistribuicao,
+        auditoria: Auditoria,
+      ) => new DefinirGradeRecebimento(repo, cadastros, auditoria, agora),
     },
     {
       provide: CONFIGURACAO_DISTRIBUICAO_REPOSITORY,

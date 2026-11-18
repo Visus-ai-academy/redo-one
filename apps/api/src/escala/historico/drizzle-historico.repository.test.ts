@@ -374,7 +374,7 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
             turnoId,
             frenteId: tc,
             data: '2026-12-01',
-            listaSegueSla: true,
+            segueSla: true,
             clienteId: cliente?.id,
           },
         })),

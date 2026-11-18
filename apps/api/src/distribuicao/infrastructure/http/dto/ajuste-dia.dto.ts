@@ -25,9 +25,11 @@ export class AjusteDiaEdicaoDto {
   @IsUUID('all', { each: true })
   prioridadeIdsLiberadas!: string[];
 
-  @ApiProperty({ description: 'A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo).' })
+  @ApiProperty({
+    description: 'Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele.',
+  })
   @IsBoolean()
-  listaSegueSla!: boolean;
+  segueSla!: boolean;
 
   @ApiProperty({
     type: String,

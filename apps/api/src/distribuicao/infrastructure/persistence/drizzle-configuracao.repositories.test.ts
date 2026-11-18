@@ -15,6 +15,7 @@ import { DrizzleAjustesDiaRepository } from './drizzle-ajustes-dia.repository';
 import { DrizzleCadastrosDistribuicao } from './drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './drizzle-configuracao-distribuicao.repository';
 import { DrizzlePrioridadesClienteRepository } from './drizzle-prioridades-cliente.repository';
+import { DrizzlePrioridadesOperacaoRepository } from './drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from './drizzle-regras-frente.repository';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -39,8 +40,8 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table ajustes_dia_distribuicao, alocacoes, frentes_escala, usuarios, papeis, medicos, prioridades_cliente, regras_frente, configuracao_distribuicao, configuracao_distribuicao_urgentes,
-        configuracao_distribuicao_lista_prioridades, configuracao_distribuicao_turnos_posteriores,
+      sql`truncate table ajustes_dia_distribuicao, alocacoes, frentes_escala, usuarios, papeis, medicos, prioridades_cliente, regras_frente, configuracao_distribuicao, prioridades_operacao,
+        configuracao_distribuicao_turnos_posteriores,
         turnos, clientes, modalidades, especialidades, subespecialidades, prioridades cascade`,
     );
     ids.urg = await primeiro(
@@ -67,6 +68,12 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
         .values({ nome: 'Tarde', horarioInicio: '13:00', horarioFim: '19:00' })
         .returning(),
     );
+    ids.opRot = await primeiro(
+      db
+        .insert(schema.prioridadesOperacao)
+        .values({ nome: 'ROTINA', posicao: 3, urgencia: 'nunca' })
+        .returning(),
+    );
   });
 
   it('configuração global: sem linha é null; grava, lê e troca as listas', async () => {
@@ -74,19 +81,15 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     expect(await repo.obter()).toBeNull();
     const producao = {
       ...CONFIGURACAO_INICIAL,
-      prioridadeIdsUrgentes: [id('urg')],
       marcadoresEquilibrio: ['ONCO'],
       turnosPosteriores: { turnoIds: [id('tarde')], cheiaEm: '10:50' },
-      lista: { prioridadeIds: [id('rot')], prazoMinimoHoras: 24 },
     };
     await repo.salvar(producao);
     expect(await repo.obter()).toEqual(producao);
 
     const semPosteriores = {
       ...producao,
-      prioridadeIdsUrgentes: [],
       turnosPosteriores: null,
-      lista: { prioridadeIds: [], prazoMinimoHoras: null },
       recolhimentoAposTurnoMin: null,
     };
     await repo.salvar(semPosteriores);
@@ -122,8 +125,14 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
 
     const cheia: RegrasFrente = {
       frente: neuro,
-      listaPrioridadeIds: [id('rot')],
-      listaPrazoMinimoHoras: null,
+      urgencias: [{ prioridadeOperacaoId: id('opRot'), urgencia: { tipo: 'prazo', horas: 6 } }],
+      recebimento: [
+        {
+          prioridadeOperacaoId: id('opRot'),
+          turnoId: id('tarde'),
+          regra: { tipo: 'prazo_minimo', horas: 48 },
+        },
+      ],
       recolheAoFimDoTurno: false,
       distribuiPeloRobo: true,
       horariosSemRobo: [{ diasSemana: [1, 5], inicio: '19:00', fim: '07:00' }],
@@ -153,7 +162,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     await repo.salvar(cheia);
     expect(await repo.obter(neuro)).toEqual(cheia);
 
-    // Os campos da Lista ausentes = seguem o padrão; troca inteira some com as filhas.
+    // Sem sobrescritas = seguem as gerais; troca inteira some com as filhas.
     const neutra = { frente: neuro, ...REGRAS_NEUTRAS };
     await repo.salvar(neutra);
     expect(await repo.obter(neuro)).toEqual(neutra);
@@ -161,12 +170,72 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     const plantao = {
       ...REGRAS_NEUTRAS,
       frente: ct,
-      listaPrazoMinimoHoras: 12,
+      recebimento: [
+        {
+          prioridadeOperacaoId: id('opRot'),
+          turnoId: id('tarde'),
+          regra: { tipo: 'nao_recebe' as const },
+        },
+      ],
       horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
     };
     await repo.salvar(plantao);
     expect(await repo.obter(ct)).toEqual(plantao);
     expect(await repo.listar()).toEqual([neutra, plantao]);
+  });
+
+  it('prioridades da operação: cria, troca o de-para, move a padrão, grava a grade e exclui em cascata', async () => {
+    const repo = new DrizzlePrioridadesOperacaoRepository(db);
+    const urg = await repo.criar({
+      nome: 'URGÊNCIA',
+      posicao: 1,
+      urgencia: { tipo: 'sempre' },
+      padrao: true,
+      grafias: ['Emergência', 'P1'],
+    });
+    const amb = await repo.criar({
+      nome: 'AMBULATÓRIO',
+      posicao: 2,
+      urgencia: { tipo: 'prazo', horas: 24 },
+      padrao: false,
+      grafias: ['Ambulatório'],
+    });
+    await repo.salvar({
+      id: amb,
+      nome: 'AMBULATÓRIO',
+      posicao: 2,
+      urgencia: { tipo: 'prazo', horas: 12 },
+      padrao: true,
+      grafias: ['Ambulatório', 'P6'],
+    });
+    const lidas = await repo.listar();
+    // Pela posição: URGÊNCIA (1), AMBULATÓRIO (2), ROTINA (3, a do beforeEach).
+    expect(lidas.map((p) => [p.nome, p.padrao, p.grafias])).toEqual([
+      ['URGÊNCIA', false, ['Emergência', 'P1']],
+      ['AMBULATÓRIO', true, ['Ambulatório', 'P6']],
+      ['ROTINA', false, []],
+    ]);
+    expect(lidas.find((p) => p.id === amb)?.urgencia).toEqual({ tipo: 'prazo', horas: 12 });
+    // A grafia é única no de-para (sem acento e sem maiúsculas).
+    const urgencia = lidas.find((p) => p.id === urg);
+    if (!urgencia) throw new Error('URGÊNCIA não gravada');
+    await expect(repo.salvar({ ...urgencia, grafias: ['ambulatorio'] })).rejects.toThrow();
+
+    const celulas = [
+      {
+        prioridadeOperacaoId: amb,
+        turnoId: id('tarde'),
+        regra: { tipo: 'prazo_minimo' as const, horas: 24 },
+      },
+      { prioridadeOperacaoId: urg, turnoId: id('tarde'), regra: { tipo: 'nao_recebe' as const } },
+    ];
+    await repo.salvarGrade(celulas);
+    expect(await repo.obterGrade()).toEqual(
+      [...celulas].sort((a, b) => (a.prioridadeOperacaoId < b.prioridadeOperacaoId ? -1 : 1)),
+    );
+    await repo.excluir(amb);
+    expect(await repo.obterGrade()).toEqual([celulas[1]]);
+    expect((await repo.listar()).map((p) => p.nome)).toEqual(['URGÊNCIA', 'ROTINA']);
   });
 
   it('prioridade do cliente: troca a lista do cliente e lê no formato do motor', async () => {
@@ -229,21 +298,21 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       alocacaoId: alocacao,
       data: '2026-11-18',
       prioridadeIdsLiberadas: [id('urg')],
-      listaSegueSla: false,
+      segueSla: false,
       clienteId: null,
     };
     await repo.salvar(base);
     await repo.salvar({
       ...base,
       prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
-      listaSegueSla: true,
+      segueSla: true,
       clienteId: id('cli'),
     });
     const lido = await repo.obter(alocacao, '2026-11-18');
     expect(lido).toEqual({
       ...base,
       prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
-      listaSegueSla: true,
+      segueSla: true,
       clienteId: id('cli'),
       clienteNome: 'CLINICA X',
       medicoId: medico,

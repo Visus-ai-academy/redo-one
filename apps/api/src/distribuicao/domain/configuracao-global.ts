@@ -24,8 +24,7 @@ export interface ConfiguracaoGlobal extends ConfiguracaoDistribuicao {
 
 /**
  * Valores enquanto ninguém salvou a configuração (sem linha no banco). Os números são os de
- * produção do dashboards-one; as listas que dependem do catálogo (urgentes, Lista, turnos
- * posteriores) ficam vazias, e a carga do dashboards-one grava a configuração de verdade.
+ * produção do dashboards-one; os turnos posteriores ficam vazios, e a carga do dashboards-one grava a configuração de verdade.
  */
 export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   ordemFila: [
@@ -33,7 +32,6 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: [],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -46,7 +44,6 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   escalaRestringeEspecialidade: true,
   diasJaEntregue: 7,
   turnosPosteriores: null,
-  lista: { prioridadeIds: [], prazoMinimoHoras: 24 },
   recolhimentoAposTurnoMin: 60,
 };
 
@@ -69,7 +66,6 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
     c.ordemFila.map((i) => i.criterio),
     'Há critério repetido na ordem da fila.',
   );
-  semRepetidos(c.prioridadeIdsUrgentes, 'Há prioridade urgente repetida.');
 
   inteiroEntre(c.janelaPacienteHoras, 0, 720, 'Janela do pacote do paciente (horas)');
   inteiroEntre(c.toleranciaAcimaTeto, 0, 100, 'Tolerância acima do teto');
@@ -96,10 +92,5 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
     }
     semRepetidos(c.turnosPosteriores.turnoIds, 'Há turno repetido nos turnos posteriores.');
     validarHorario(c.turnosPosteriores.cheiaEm, 'Hora da cheia dos turnos posteriores');
-  }
-
-  semRepetidos(c.lista.prioridadeIds, 'Há prioridade da Lista repetida.');
-  if (c.lista.prazoMinimoHoras !== null) {
-    inteiroEntre(c.lista.prazoMinimoHoras, 0, 720, 'Prazo mínimo da Lista (horas)');
   }
 }

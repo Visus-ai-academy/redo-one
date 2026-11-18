@@ -29,7 +29,9 @@ describe('regras da frente', () => {
     expect(() =>
       validarRegrasFrente(
         regras({
-          listaPrazoMinimoHoras: null,
+          recebimento: [
+            { prioridadeOperacaoId: 'op-rot', turnoId: 'lista', regra: { tipo: 'segue_sla' } },
+          ],
           recolheAoFimDoTurno: false,
           segmentos: [
             {
@@ -49,9 +51,21 @@ describe('regras da frente', () => {
     ).not.toThrow();
   });
 
-  it('a Lista: prioridade repetida e prazo negativo não passam', () => {
-    falha(regras({ listaPrioridadeIds: ['r', 'r'] }), /prioridade repetida/);
-    falha(regras({ listaPrazoMinimoHoras: -1 }), /Prazo mínimo/);
+  it('urgência e recebimento: sem repetir a prioridade (ou a célula) e com horas válidas', () => {
+    const sempre = { prioridadeOperacaoId: 'r', urgencia: { tipo: 'sempre' as const } };
+    falha(regras({ urgencias: [sempre, sempre] }), /prioridade repetida/);
+    falha(
+      regras({ urgencias: [{ prioridadeOperacaoId: 'r', urgencia: { tipo: 'prazo', horas: 0 } }] }),
+      /horas do prazo/,
+    );
+    const celula = (horas: number) => ({
+      prioridadeOperacaoId: 'r',
+      turnoId: 'manha',
+      regra: { tipo: 'prazo_minimo' as const, horas },
+    });
+    falha(regras({ recebimento: [celula(48), celula(24)] }), /célula repetida/);
+    falha(regras({ recebimento: [celula(-1)] }), /prazo mínimo/);
+    expect(() => validarRegrasFrente(regras({ recebimento: [celula(48)] }))).not.toThrow();
   });
 
   it('horários sem robô: HH:MM, início diferente do fim, dias de 0 a 6 sem repetir', () => {
@@ -143,7 +157,15 @@ describe('regras da frente', () => {
   it('canônica: listas de ids e dias ordenados (a ordem da mistura conta)', () => {
     const r = canonicaRegras(
       regras({
-        listaPrioridadeIds: ['b', 'a'],
+        urgencias: [
+          { prioridadeOperacaoId: 'b', urgencia: { tipo: 'nunca' } },
+          { prioridadeOperacaoId: 'a', urgencia: { tipo: 'sempre' } },
+        ],
+        recebimento: [
+          { prioridadeOperacaoId: 'b', turnoId: 't1', regra: { tipo: 'nao_recebe' } },
+          { prioridadeOperacaoId: 'a', turnoId: 't2', regra: { tipo: 'nao_recebe' } },
+          { prioridadeOperacaoId: 'a', turnoId: 't1', regra: { tipo: 'nao_recebe' } },
+        ],
         horariosSemRobo: [{ inicio: '19:00', fim: '07:00', diasSemana: [5, 1] }],
         divisao: {
           metodo: 'proporcao',
@@ -158,7 +180,12 @@ describe('regras da frente', () => {
         ],
       }),
     );
-    expect(r.listaPrioridadeIds).toEqual(['a', 'b']);
+    expect(r.urgencias.map((u) => u.prioridadeOperacaoId)).toEqual(['a', 'b']);
+    expect(r.recebimento.map((c) => `${c.prioridadeOperacaoId}${c.turnoId}`)).toEqual([
+      'at1',
+      'at2',
+      'bt1',
+    ]);
     expect(r.horariosSemRobo[0]?.diasSemana).toEqual([1, 5]);
     expect(r.divisao).toEqual({
       metodo: 'proporcao',
@@ -174,7 +201,10 @@ describe('regras da frente', () => {
     expect(
       referenciasDasRegras(
         regras({
-          listaPrioridadeIds: ['rot'],
+          urgencias: [{ prioridadeOperacaoId: 'amb', urgencia: { tipo: 'nunca' } }],
+          recebimento: [
+            { prioridadeOperacaoId: 'rot', turnoId: 'manha', regra: { tipo: 'segue_sla' } },
+          ],
           divisao: {
             metodo: 'proporcao',
             proporcoes: [
@@ -198,7 +228,8 @@ describe('regras da frente', () => {
         }),
       ),
     ).toEqual({
-      prioridade: ['rot'],
+      prioridadeOperacao: ['amb', 'rot'],
+      turno: ['manha'],
       modalidade: ['mr', 'ct'],
       subespecialidade: ['cp', 'colunas'],
       especialidade: ['msk'],

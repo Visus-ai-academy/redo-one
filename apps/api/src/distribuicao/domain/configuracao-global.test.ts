@@ -10,8 +10,6 @@ import {
 
 const valida = (parcial: Partial<ConfiguracaoGlobal> = {}): ConfiguracaoGlobal => ({
   ...CONFIGURACAO_INICIAL,
-  prioridadeIdsUrgentes: ['urg'],
-  lista: { prioridadeIds: ['rot'], prazoMinimoHoras: 24 },
   turnosPosteriores: { turnoIds: ['tarde'], cheiaEm: '10:50' },
   ...parcial,
 });
@@ -20,10 +18,9 @@ const falha = (parcial: Partial<ConfiguracaoGlobal>, trecho: RegExp) =>
   expect(() => validarConfiguracaoGlobal(valida(parcial))).toThrow(trecho);
 
 describe('configuração global da distribuição', () => {
-  it('a inicial (sem linha no banco) é válida, sem turnos posteriores e com a Lista aceitando tudo', () => {
+  it('a inicial (sem linha no banco) é válida, sem turnos posteriores', () => {
     expect(() => validarConfiguracaoGlobal(CONFIGURACAO_INICIAL)).not.toThrow();
     expect(CONFIGURACAO_INICIAL.turnosPosteriores).toBeNull();
-    expect(CONFIGURACAO_INICIAL.lista.prioridadeIds).toEqual([]);
   });
 
   it('aceita a configuração de produção', () => {
@@ -52,11 +49,6 @@ describe('configuração global da distribuição', () => {
     );
   });
 
-  it('recusa prioridade repetida nas urgentes e na Lista', () => {
-    falha({ prioridadeIdsUrgentes: ['urg', 'urg'] }, /prioridade urgente repetida/);
-    falha({ lista: { prioridadeIds: ['rot', 'rot'], prazoMinimoHoras: 24 } }, /da Lista repetida/);
-  });
-
   it.each([
     ['janelaPacienteHoras', -1],
     ['toleranciaAcimaTeto', -1],
@@ -69,13 +61,6 @@ describe('configuração global da distribuição', () => {
     ['recolhimentoAposTurnoMin', -1],
   ] as const)('recusa %s = %s', (campo, valor) => {
     falha({ [campo]: valor }, /./);
-  });
-
-  it('o prazo mínimo da Lista pode ser nulo (segue o SLA), mas não negativo', () => {
-    expect(() =>
-      validarConfiguracaoGlobal(valida({ lista: { prioridadeIds: [], prazoMinimoHoras: null } })),
-    ).not.toThrow();
-    falha({ lista: { prioridadeIds: [], prazoMinimoHoras: -1 } }, /Prazo mínimo/);
   });
 
   it('turnos posteriores precisam de ao menos um turno, sem repetir, e da hora da cheia', () => {

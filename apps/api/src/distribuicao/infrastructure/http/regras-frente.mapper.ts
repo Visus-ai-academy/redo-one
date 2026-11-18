@@ -1,23 +1,24 @@
 import type { RegrasFrente } from '../../domain/motor/configuracao';
 import { invalida } from '../../domain/validacao';
 import type { RegrasFrenteDto } from './dto/regras-frente.dto';
+import {
+  celulaDoDto,
+  celulaParaDto,
+  urgenciaDoDto,
+  urgenciaParaDto,
+} from './regras-operacao.mapper';
 
-/** Do formato da tela para o do motor (campo da Lista ausente = segue a regra padrão). */
+/** Do formato da tela para o do motor (urgência e célula ausentes = seguem as gerais). */
 export function regrasDoDto(dto: RegrasFrenteDto): Omit<RegrasFrente, 'frente'> {
-  if (dto.listaPrazo === 'minimo' && dto.listaPrazoMinimoHoras === null) {
-    invalida('Informe o prazo mínimo da Lista, em horas.');
-  }
-  if (dto.listaPrazo !== 'minimo' && dto.listaPrazoMinimoHoras !== null) {
-    invalida('O prazo mínimo da Lista só vale com "prazo mínimo".');
-  }
   if (dto.divisao === 'igualitaria' && dto.proporcoes.length) {
     invalida('A divisão igualitária não tem proporção por modalidade.');
   }
   return {
-    ...(dto.listaPrioridadeIds === null ? {} : { listaPrioridadeIds: dto.listaPrioridadeIds }),
-    ...(dto.listaPrazo === 'padrao'
-      ? {}
-      : { listaPrazoMinimoHoras: dto.listaPrazo === 'sla' ? null : dto.listaPrazoMinimoHoras }),
+    urgencias: dto.urgencias.map((u) => ({
+      prioridadeOperacaoId: u.prioridadeOperacaoId,
+      urgencia: urgenciaDoDto(u.urgencia),
+    })),
+    recebimento: dto.recebimento.map(celulaDoDto),
     recolheAoFimDoTurno: dto.recolheAoFimDoTurno,
     distribuiPeloRobo: dto.distribuiPeloRobo,
     horariosSemRobo: dto.horariosSemRobo.map((h) => ({
@@ -55,11 +56,12 @@ export function regrasDoDto(dto: RegrasFrenteDto): Omit<RegrasFrente, 'frente'> 
 }
 
 export function regrasParaDto(r: RegrasFrente): RegrasFrenteDto {
-  const prazo = r.listaPrazoMinimoHoras;
   return {
-    listaPrioridadeIds: r.listaPrioridadeIds ?? null,
-    listaPrazo: prazo === undefined ? 'padrao' : prazo === null ? 'sla' : 'minimo',
-    listaPrazoMinimoHoras: prazo ?? null,
+    urgencias: r.urgencias.map((u) => ({
+      prioridadeOperacaoId: u.prioridadeOperacaoId,
+      urgencia: urgenciaParaDto(u.urgencia),
+    })),
+    recebimento: r.recebimento.map(celulaParaDto),
     recolheAoFimDoTurno: r.recolheAoFimDoTurno,
     distribuiPeloRobo: r.distribuiPeloRobo,
     horariosSemRobo: r.horariosSemRobo.map((h) => ({ ...h, diasSemana: [...h.diasSemana] })),

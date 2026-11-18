@@ -12,6 +12,7 @@ import {
   medicos,
   modalidades,
   prioridades,
+  prioridadesOperacao,
   subespecialidades,
   turnos,
 } from '../../../database/schema';
@@ -25,6 +26,7 @@ import type { FrenteEscala } from '../../domain/arranjo';
 
 const COLUNA_ID: Readonly<Record<TipoReferencia, AnyPgColumn>> = {
   prioridade: prioridades.id,
+  prioridadeOperacao: prioridadesOperacao.id,
   turno: turnos.id,
   especialidade: especialidades.id,
   modalidade: modalidades.id,
