@@ -133,6 +133,87 @@ describe('regras da frente', () => {
     expect(repo.gravacoes).toBe(0);
   });
 
+  describe('segmento da especialidade', () => {
+    const NEURO: FrenteEscala = {
+      tipo: 'especialidade',
+      especialidadeId: 'neuro',
+      modalidadeId: null,
+    };
+    const segmento = (subespecialidadeId: string) => ({
+      subespecialidadeId,
+      teto: 5,
+      tetoReduzido: null,
+      piso: null,
+      pacoteAParte: false,
+    });
+
+    beforeEach(() => {
+      cadastros.existentes.set('especialidade', new Set(['mama', 'neuro', 'msk']));
+      cadastros.segmentosCadastrados.push(
+        { id: 's-avc', nome: 'AVC', especialidadeIds: ['neuro'] },
+        { id: 's-colunas', nome: 'COLUNAS', especialidadeIds: ['neuro', 'msk'] },
+      );
+    });
+
+    it('recusa regra de segmento que a especialidade da frente não tem', async () => {
+      await expect(
+        definir.executar(ator, MAMA, editadas({ segmentos: [segmento('s-avc')] })),
+      ).rejects.toThrow(
+        new ConfiguracaoInvalidaError(
+          'O segmento AVC não existe na especialidade desta frente. Escolha um segmento dela ou deixe sem segmento.',
+        ),
+      );
+      await definir.executar(ator, NEURO, editadas({ segmentos: [segmento('s-colunas')] }));
+      expect(repo.gravacoes).toBe(1);
+    });
+
+    it('frente de modalidade aceita segmento de qualquer especialidade', async () => {
+      await definir.executar(ator, CT, editadas({ segmentos: [segmento('s-avc')] }));
+      expect(repo.gravacoes).toBe(1);
+    });
+
+    it('recusa fatia da mistura com segmento que a especialidade dela não tem', async () => {
+      await expect(
+        definir.executar(
+          ator,
+          NEURO,
+          editadas({
+            mistura: [
+              { especialidadeId: 'msk', subespecialidadeId: 's-avc' },
+              { especialidadeId: 'neuro', subespecialidadeId: null },
+            ],
+          }),
+        ),
+      ).rejects.toThrow(/O segmento AVC não existe na especialidade da fatia da mistura/);
+      await definir.executar(
+        ator,
+        NEURO,
+        editadas({
+          mistura: [
+            { especialidadeId: 'msk', subespecialidadeId: 's-colunas' },
+            { especialidadeId: null, subespecialidadeId: 's-avc' },
+          ],
+        }),
+      );
+      expect(repo.gravacoes).toBe(1);
+    });
+
+    it('não barra o que já estava gravado fora da regra e segue igual', async () => {
+      const antigas = editadas({
+        segmentos: [segmento('s-avc')],
+        mistura: [
+          { especialidadeId: 'msk', subespecialidadeId: 's-avc' },
+          { especialidadeId: 'mama', subespecialidadeId: null },
+        ],
+      });
+      await repo.salvar({ frente: MAMA, ...antigas });
+
+      await definir.executar(ator, MAMA, { ...antigas, tetoPorMedico: 10 });
+
+      expect((await repo.obter(MAMA))?.tetoPorMedico).toBe(10);
+    });
+  });
+
   it('lista só as frentes cadastradas', async () => {
     await definir.executar(ator, CT, editadas({ distribuiPeloRobo: false }));
     const listar = new ListarRegrasFrente(repo);

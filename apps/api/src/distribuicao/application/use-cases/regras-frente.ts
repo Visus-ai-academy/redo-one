@@ -1,4 +1,5 @@
 import type { Ator, Auditoria } from '../../../auditoria/auditoria';
+import { mensagemSegmentoFora, segmentoForaDaEspecialidade } from '../../../comum/segmentos';
 import type { FrenteEscala } from '../../domain/arranjo';
 import { REGRAS_NEUTRAS, type RegrasFrente } from '../../domain/motor/configuracao';
 import {
@@ -6,6 +7,7 @@ import {
   referenciasDasRegras,
   validarRegrasFrente,
 } from '../../domain/regras-frente';
+import { invalida } from '../../domain/validacao';
 import { FrenteCatalogoNaoEncontradaError } from '../erros';
 import type { CadastrosDistribuicao } from '../ports/cadastros-distribuicao';
 import type { RegrasFrenteRepository } from '../ports/regras-frente.repository';
@@ -26,6 +28,53 @@ export async function exigirFrenteDoCatalogo(cadastros: CadastrosDistribuicao, f
       : { modalidade: [f.modalidadeId] },
   );
   if (faltas.length) throw new FrenteCatalogoNaoEncontradaError();
+}
+
+/**
+ * Segmento é recorte da especialidade: a regra de segmento numa frente de especialidade só cita
+ * segmento que ela tem, e a fatia da mistura com especialidade e segmento, um segmento dela. A
+ * frente de modalidade (RX, TC) junta especialidades, então aceita qualquer segmento, como a
+ * fatia sem especialidade. Só o que é novo ou mudou passa pela regra: o já gravado fora dela,
+ * se segue igual, não trava a edição do resto.
+ */
+async function exigirSegmentosDaEspecialidade(
+  cadastros: CadastrosDistribuicao,
+  atuais: RegrasFrente | null,
+  novas: RegrasFrente,
+): Promise<void> {
+  const especialidadeDaFrente = novas.frente.especialidadeId;
+  const segmentosJaGravados = new Set(atuais?.segmentos.map((s) => s.subespecialidadeId));
+  const fatiaChave = (f: { especialidadeId: string | null; subespecialidadeId: string | null }) =>
+    `${f.especialidadeId}|${f.subespecialidadeId}`;
+  const fatiasJaGravadas = new Set(atuais?.mistura.map(fatiaChave));
+
+  const checar: { subespecialidadeId: string; especialidadeId: string; onde: string }[] = [];
+  if (especialidadeDaFrente) {
+    for (const s of novas.segmentos) {
+      if (!segmentosJaGravados.has(s.subespecialidadeId)) {
+        checar.push({
+          subespecialidadeId: s.subespecialidadeId,
+          especialidadeId: especialidadeDaFrente,
+          onde: 'desta frente',
+        });
+      }
+    }
+  }
+  for (const f of novas.mistura) {
+    if (f.especialidadeId && f.subespecialidadeId && !fatiasJaGravadas.has(fatiaChave(f))) {
+      checar.push({
+        subespecialidadeId: f.subespecialidadeId,
+        especialidadeId: f.especialidadeId,
+        onde: 'da fatia da mistura',
+      });
+    }
+  }
+  if (!checar.length) return;
+  const segmentos = await cadastros.segmentos(checar.map((c) => c.subespecialidadeId));
+  for (const c of checar) {
+    const fora = segmentoForaDaEspecialidade(segmentos, [c.subespecialidadeId], c.especialidadeId);
+    if (fora) invalida(mensagemSegmentoFora(fora, c.onde));
+  }
 }
 
 /** Fotografia para a auditoria: as regras sem a frente (que vai à parte no `depois`). */
@@ -73,6 +122,7 @@ export class DefinirRegrasFrente {
     validarRegrasFrente(novas);
     await exigirReferencias(this.cadastros, referenciasDasRegras(novas));
     const atuais = await this.repo.obter(frente);
+    await exigirSegmentosDaEspecialidade(this.cadastros, atuais, novas);
     const mudancas = diferenca(
       foto(canonicaRegras(atuais ?? { frente, ...REGRAS_NEUTRAS })),
       foto(novas),
