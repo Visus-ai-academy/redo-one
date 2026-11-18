@@ -62,6 +62,9 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     status: 'prevista',
     motivo: null,
     detalhe: null,
+    elegiveis: [],
+    barrados: {},
+    naMao: false,
     ...p,
   });
 
@@ -83,6 +86,8 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
         funil: {} as never,
         trilha: [] as never,
         grafiasSemDePara: [],
+        habilitados: [medicoId],
+        medicos: [],
       },
       lidaEm: agora,
       expiraEm: minutos(45),
@@ -212,13 +217,86 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       .insert(schema.medicos)
       .values({ nome: 'Dr. Beto', chaveNormalizada: `beto ${Math.random()}` })
       .returning();
-    expect(await repo.removerDaProposta(id, [a?.id ?? ''])).toBe(1);
+    expect(await repo.removerDaProposta(id, [a?.id ?? ''], minutos(2))).toBe(1);
     expect(
-      await repo.moverNaProposta(id, [{ designacaoId: b?.id ?? '', medicoId: outro?.id ?? '' }]),
+      await repo.moverNaProposta(id, [
+        { designacaoId: b?.id ?? '', medicoId: outro?.id ?? '', naMao: false },
+      ]),
     ).toBe(1);
     const lidas = await repo.designacoesPorId(id, [a?.id ?? '', b?.id ?? '']);
-    expect(lidas.find((d) => d.id === a?.id)).toMatchObject({ status: 'pulada', medicoId: null });
+    expect(lidas.find((d) => d.id === a?.id)).toMatchObject({
+      status: 'pulada',
+      medicoId: null,
+      retiradoDeId: medicoId,
+    });
     expect(lidas.find((d) => d.id === b?.id)?.medicoId).toBe(outro?.id);
+    expect(await repo.ajustes(id)).toEqual({ tirados: 1, movidos: 1, naMao: 0 });
+
+    // O tirado não volta a quem saiu (como o já entregue); desfazer devolve e libera.
+    expect((await repo.entregues(['e1'], agora)).get('e1')).toEqual([
+      { medicoId, em: minutos(2), origem: 'conferencia' },
+    ]);
+    expect(await repo.restaurarNaProposta(id, [a?.id ?? ''])).toBe(1);
+    expect((await repo.designacoesPorId(id, [a?.id ?? '']))[0]).toMatchObject({
+      status: 'prevista',
+      medicoId,
+      retiradoDeId: null,
+    });
+    expect(await repo.entregues(['e1'], agora)).toEqual(new Map());
+  });
+
+  it('manda na mão a recusada, com o pacote do paciente e as contagens por médico e motivo', async () => {
+    const id = await criarComProposta([
+      designacao('p1', { pacienteChave: 'pac', urgente: true }),
+      designacao('p2', { ordem: 1, pacienteChave: 'pac' }),
+      designacao('r1', {
+        ordem: 2,
+        status: 'recusada',
+        medicoId: null,
+        medicoPropostoId: null,
+        motivo: 'sem_espaco',
+        elegiveis: [medicoId],
+        barrados: { x: 'arranjo' },
+      }),
+    ]);
+    const [r1] = (await repo.designacoes(id, { pagina: 1, porPagina: 10, status: ['recusada'] }))
+      .itens;
+    const p1 = (await repo.previstas(id))[0];
+    expect((await repo.doMesmoPaciente(id, p1?.id ?? '')).map((d) => d.idExameMobilemed)).toEqual([
+      'p2',
+    ]);
+    expect(await repo.porMotivo(id)).toEqual([
+      { status: 'recusada', motivo: 'sem_espaco', quantidade: 1 },
+    ]);
+    expect(
+      await repo.moverNaProposta(id, [{ designacaoId: r1?.id ?? '', medicoId, naMao: true }]),
+    ).toBe(1);
+    const lista = await repo.designacoes(id, { pagina: 1, porPagina: 10, naMao: true });
+    expect(lista.itens).toEqual([
+      expect.objectContaining({ idExameMobilemed: 'r1', status: 'prevista', naMao: true }),
+    ]);
+    const pacote = (await repo.designacoes(id, { pagina: 1, porPagina: 10 })).itens[0]?.pacote;
+    expect(pacote).toEqual({ id: expect.any(String), exames: 2 });
+    expect(await repo.porMedico(id)).toEqual([
+      expect.objectContaining({
+        medicoId,
+        nome: 'Dra. Ana',
+        propostos: 3,
+        urgencias: 1,
+        pacotes: 1,
+        previstas: 3,
+        naMao: 1,
+      }),
+    ]);
+    const explicada = await repo.designacaoExplicada(id, r1?.id ?? '');
+    expect(explicada).toMatchObject({ elegiveis: [medicoId], barrados: { x: 'arranjo' } });
+  });
+
+  it('a retomada soma na rodada; os insumos voltam como gravados', async () => {
+    const id = await criarComProposta([designacao('e1')]);
+    await repo.mudar(id, ['aguardando_aprovacao'], { status: 'pausada', retomada: true });
+    expect((await repo.obter(id))?.retomadas).toBe(1);
+    expect((await repo.insumos(id))?.habilitados).toEqual([medicoId]);
   });
 
   it('o evento de progresso substitui o anterior em vez de empilhar', async () => {
@@ -239,7 +317,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       minutos(5),
     );
     const entregues = await repo.entregues(['e1', 'e2'], agora);
-    expect(entregues.get('e1')).toEqual([{ medicoId, em: minutos(5) }]);
+    expect(entregues.get('e1')).toEqual([{ medicoId, em: minutos(5), origem: 'execucao' }]);
     expect(entregues.has('e2')).toBe(false);
     expect(await repo.entregues(['e1'], minutos(10))).toEqual(new Map());
     expect(await repo.cotaEntregue([])).toEqual({});
@@ -280,13 +358,20 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
         (d) => d.idExameMobilemed,
       ),
     ).toEqual(['e1']);
-    const historico = await repo.historico(1, 10);
+    const historico = await repo.historico({ pagina: 1, porPagina: 10 });
     expect(historico.itens[0]).toMatchObject({
       id,
       solicitadaPor: { id: usuarioId, nome: 'Maria Operação' },
       lidos: 3,
+      propostos: 3,
       executadas: 0,
+      deFora: 1,
     });
+    expect(
+      (await repo.historico({ pagina: 1, porPagina: 10, status: ['concluida'] })).itens.some(
+        (r) => r.id === id,
+      ),
+    ).toBe(false);
     expect((await repo.nomesUsuarios([usuarioId])).get(usuarioId)).toBe('Maria Operação');
   });
 });

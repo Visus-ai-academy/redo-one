@@ -6,8 +6,9 @@
 import * as z from 'zod'
 
 export const movimentoPropostaDtoSchema = z.object({
-  designacaoId: z.uuid(),
+  designacaoId: z.uuid().describe('Designação prevista (troca o médico) ou deixada de fora (vai na mão).'),
   medicoId: z.uuid().describe('Médico ativo, com conta na MobileMed.'),
+  levarPacote: z.boolean().optional().describe('Leva junto os outros exames do mesmo paciente que estavam com ela.'),
 })
 
 export type MovimentoPropostaDtoSchemaType = z.infer<typeof movimentoPropostaDtoSchema>

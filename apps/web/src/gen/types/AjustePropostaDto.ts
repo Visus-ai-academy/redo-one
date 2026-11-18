@@ -16,4 +16,9 @@ export type AjustePropostaDto = {
    * @type array
    */
   mover: MovimentoPropostaDto[];
+  /**
+   * @description Desfaz o "tirar": volta ao médico de quem saiu.
+   * @type array | undefined
+   */
+  restaurar?: string[];
 };

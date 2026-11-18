@@ -91,12 +91,14 @@ import {
   AprovarRodada,
   CancelarRodada,
   ConsultarFilaDoMomento,
+  ConsultarResumo,
   ConsultarRodada,
   ConsultarSituacao,
   CriarRodada,
   type DependenciasRodada,
   EncerrarRodada,
   ExecutarRodada,
+  ExplicarDesignacao,
   LerFila,
   ListarDesignacoes,
   PausarRodada,
@@ -164,6 +166,8 @@ const CASOS_RODADA = [
   ConsultarRodada,
   ListarDesignacoes,
   ConsultarFilaDoMomento,
+  ConsultarResumo,
+  ExplicarDesignacao,
 ];
 
 /** Contexto `distribuicao` (hexagonal): arranjos, parâmetros, configuração e rodadas do robô. */
@@ -198,6 +202,7 @@ const CASOS_RODADA = [
           tamanho: inteiro(config, 'DISTRIBUICAO_FAKE_TAMANHO', 300),
           semente: inteiro(config, 'DISTRIBUICAO_FAKE_SEMENTE', 1),
           falhasPct: inteiro(config, 'DISTRIBUICAO_FAKE_FALHAS_PCT', 0),
+          porForaPct: inteiro(config, 'DISTRIBUICAO_FAKE_POR_FORA_PCT', 0),
         }),
     },
     { provide: FILA_EXAMES, useExisting: MOBILEMED },

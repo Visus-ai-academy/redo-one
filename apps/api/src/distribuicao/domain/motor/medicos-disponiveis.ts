@@ -85,8 +85,34 @@ export interface AjusteDia {
 /** Exame da fila diante da elegibilidade. */
 export interface ExameElegivel extends AlvoExame {
   id: string;
-  /** Entregas anteriores do robô (executadas); o exame de volta à fila foi tirado de quem o tinha. */
-  entregues: readonly { medicoId: string; em: Date }[];
+  /**
+   * Entregas anteriores do robô (executadas) e tiradas na conferência: o exame nunca volta a quem
+   * já o recebeu ou de quem a operação o tirou nos últimos `diasJaEntregue` dias.
+   */
+  entregues: readonly EntregaAnterior[];
+}
+
+export interface EntregaAnterior {
+  medicoId: string;
+  em: Date;
+  /** `execucao` (padrão): o robô entregou e o exame voltou à fila; `conferencia`: tirado antes. */
+  origem?: 'execucao' | 'conferencia';
+}
+
+/** Onde um médico em turno parou diante de um exame (o "por que este médico não pegou"). */
+export type Barreira =
+  | 'escala'
+  | 'arranjo'
+  | 'equipe'
+  | 'reservado'
+  | 'ja_entregue'
+  | 'retirado_na_conferencia';
+
+export interface ExplicacaoExame {
+  /** Médicos que passaram por todos os portões (o motor escolhe entre eles). */
+  elegiveis: string[];
+  /** Médico em turno → o portão onde parou. Quem não está aqui nem é elegível não estava em turno. */
+  barrados: Record<string, Barreira>;
 }
 
 export interface EntradaMedicos {
@@ -153,6 +179,8 @@ export interface MedicosMontados {
   etapaElegibilidade: Map<string, EtapaElegibilidade>;
   /** Exames que a Lista levaria sem o corte dos turnos posteriores. */
   guardadosParaPosteriores: Set<string>;
+  /** Por exame: quem foi elegível e onde cada outro médico em turno parou. */
+  explicacao: (exameId: string) => ExplicacaoExame;
   /** Alocação gratificada cuja cota o exame abate, se sair para o médico pela cota. */
   gratificadoPara: (medicoId: string, exameId: string) => string | null;
   /** Titular cuja escala é a única que aceita o exame no médico (ele está cobrindo). */
@@ -353,6 +381,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
   const extras = new Map<string, number>();
   const etapaElegibilidade = new Map<string, EtapaElegibilidade>();
   const guardadosParaPosteriores = new Set<string>();
+  const barradosPorExame = new Map<string, Record<string, Barreira>>();
   const funilExames = {
     total: entrada.exames.length,
     escala: 0,
@@ -375,6 +404,8 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     const daEquipe = direcionadoPara(entrada.equipes, e);
     const doExame = new Set<string>();
     const alcancou = { escala: false, arranjo: false, equipe: false, reservado: false };
+    const barrados: Record<string, Barreira> = {};
+    barradosPorExame.set(e.id, barrados);
 
     for (const [medicoId, escalado] of naEscala) {
       const medico = medicosPorId.get(medicoId) as MedicoRodada;
@@ -402,21 +433,37 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         ) {
           guardadosParaPosteriores.add(e.id);
         }
+        barrados[medicoId] = 'escala';
         continue;
       }
       alcancou.escala = true;
       const segmentoDaEscala = escalaMarcaSegmento(aceitos, e.subespecialidadeId);
       if (
         !medico.arranjos.some((a) => casaArranjo(a, e, { prioridadesLiberadas, segmentoDaEscala }))
-      )
+      ) {
+        barrados[medicoId] = 'arranjo';
         continue;
+      }
       alcancou.arranjo = true;
-      if (daEquipe && !daEquipe.medicos.has(medicoId)) continue;
-      alcancou.equipe = true;
-      if (reservaram.size && !reservaram.has(medicoId)) continue;
-      alcancou.reservado = true;
-      if (e.entregues.some((x) => x.medicoId === medicoId && x.em.getTime() >= limiteEntregue))
+      if (daEquipe && !daEquipe.medicos.has(medicoId)) {
+        barrados[medicoId] = 'equipe';
         continue;
+      }
+      alcancou.equipe = true;
+      if (reservaram.size && !reservaram.has(medicoId)) {
+        barrados[medicoId] = 'reservado';
+        continue;
+      }
+      alcancou.reservado = true;
+      const entregas = e.entregues.filter(
+        (x) => x.medicoId === medicoId && x.em.getTime() >= limiteEntregue,
+      );
+      if (entregas.length) {
+        barrados[medicoId] = entregas.some((x) => x.origem === 'conferencia')
+          ? 'retirado_na_conferencia'
+          : 'ja_entregue';
+        continue;
+      }
 
       doExame.add(medicoId);
       const k = par(medicoId, e.id);
@@ -506,6 +553,10 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     medicos,
     etapaElegibilidade,
     guardadosParaPosteriores,
+    explicacao: (exameId) => ({
+      elegiveis: [...(elegiveis.get(exameId) ?? [])],
+      barrados: { ...(barradosPorExame.get(exameId) ?? {}) },
+    }),
     gratificadoPara: (medicoId, exameId) => gratificados.get(par(medicoId, exameId)) ?? null,
     coberturaPara: (medicoId, exameId) => coberturas.get(par(medicoId, exameId)) ?? null,
     funil: {

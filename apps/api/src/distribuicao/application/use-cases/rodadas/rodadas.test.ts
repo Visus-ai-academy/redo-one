@@ -52,6 +52,11 @@ class MobileMedDeTeste implements FilaExames, AtribuidorExames {
         .map((e) => [e.idExame, e.paciente.nome]),
     );
   }
+  /** Exames que ganharam médico na MobileMed por fora do robô. */
+  atribuidosPorFora = new Set<string>();
+  async semMedico(ids: readonly string[]) {
+    return new Set(ids.filter((id) => !this.atribuidosPorFora.has(id)));
+  }
   async atribuir(p: PedidoAtribuicao): Promise<ResultadoAtribuicao> {
     this.pedidos.push(p);
     await this.aoAtribuir(p);
@@ -345,6 +350,84 @@ describe('rodada do robô (casos de uso)', () => {
       ).rejects.toThrow(/previsto/);
     });
 
+    it('tirar guarda de quem o exame saiu; desfazer devolve ao mesmo médico', async () => {
+      const id = await criarELer();
+      const e1 = designacao('e1');
+      const medico = e1?.medicoId;
+      await casos.ajustarProposta.executar(admin, id, { remover: [e1?.id ?? ''], mover: [] });
+      expect(designacao('e1')).toMatchObject({
+        status: 'pulada',
+        medicoId: null,
+        retiradoDeId: medico,
+        retiradaEm: agora,
+      });
+      await casos.ajustarProposta.executar(admin, id, {
+        remover: [],
+        mover: [],
+        restaurar: [e1?.id ?? ''],
+      });
+      expect(designacao('e1')).toMatchObject({
+        status: 'prevista',
+        medicoId: medico,
+        retiradoDeId: null,
+        motivo: null,
+      });
+    });
+
+    it('o exame tirado de um médico na conferência não volta a ele na próxima rodada', async () => {
+      insumos.insumos = { ...insumosBase(), medicos: [insumosBase().medicos[0] as never] };
+      const id1 = await criarELer();
+      expect(designacao('e1')?.medicoId).toBe('A');
+      await casos.ajustarProposta.executar(admin, id1, {
+        remover: [designacao('e1')?.id ?? ''],
+        mover: [],
+      });
+      await casos.cancelar.executar(admin, id1);
+      const id2 = await criarELer();
+      const e1 = repo.designacoesGravadas.find((d) => d.rodadaId === id2 && d.idExame === 'e1');
+      expect(e1).toMatchObject({ status: 'recusada', motivo: 'retirado_do_medico' });
+      expect(e1?.detalhe).toMatch(/conferência/);
+      expect(e1?.barrados).toEqual({ A: 'retirado_na_conferencia' });
+    });
+
+    it('mover com o pacote leva os outros exames do paciente que iam ao mesmo médico; sem, só o exame', async () => {
+      insumos.insumos = { ...insumosBase(), medicos: [insumosBase().medicos[0] as never] };
+      const paciente = { codigo: 'p1', nome: 'Paciente Fictício do Pacote' };
+      mobilemed.leitura = {
+        semMedico: [
+          exame({ idExame: 'p-a', paciente }),
+          exame({ idExame: 'p-b', paciente }),
+          exame({ idExame: 'p-c', paciente }),
+        ],
+        emMaos: [],
+      };
+      const id = await criarELer();
+      await casos.ajustarProposta.executar(admin, id, {
+        remover: [],
+        mover: [{ designacaoId: designacao('p-a')?.id ?? '', medicoId: 'B' }],
+      });
+      expect(['p-a', 'p-b', 'p-c'].map((x) => designacao(x)?.medicoId)).toEqual(['B', 'A', 'A']);
+      await casos.ajustarProposta.executar(admin, id, {
+        remover: [],
+        mover: [{ designacaoId: designacao('p-b')?.id ?? '', medicoId: 'B', levarPacote: true }],
+      });
+      expect(['p-a', 'p-b', 'p-c'].map((x) => designacao(x)?.medicoId)).toEqual(['B', 'B', 'B']);
+    });
+
+    it('manda na mão um exame que o motor deixou de fora: entra na proposta marcado', async () => {
+      const id = await criarELer();
+      const e3 = designacao('e3');
+      expect(e3?.status).toBe('recusada');
+      await casos.ajustarProposta.executar(admin, id, {
+        remover: [],
+        mover: [{ designacaoId: e3?.id ?? '', medicoId: 'B' }],
+      });
+      expect(designacao('e3')).toMatchObject({ status: 'prevista', medicoId: 'B', naMao: true });
+      await casos.aprovar.executar(admin, id);
+      await jobs();
+      expect(designacao('e3')).toMatchObject({ status: 'executada', naMao: true });
+    });
+
     it('só ajusta enquanto aguarda aprovação', async () => {
       const id = await criarELer();
       await casos.aprovar.executar(admin, id);
@@ -397,6 +480,27 @@ describe('rodada do robô (casos de uso)', () => {
       expect(designacao('e1')?.status).toBe('executada');
     });
 
+    it('ao retomar, o exame que ganhou médico na MobileMed é pulado sem atribuir', async () => {
+      const id = await criarELer();
+      await casos.aprovar.executar(admin, id);
+      mobilemed.aoAtribuir = async () => {
+        mobilemed.aoAtribuir = async () => undefined;
+        await casos.pausar.executar(admin, id);
+      };
+      await jobs();
+      expect(mobilemed.pedidos.map((p) => p.idExame)).toEqual(['e2']);
+      mobilemed.atribuidosPorFora.add('e1');
+      await casos.retomar.executar(admin, id);
+      await jobs();
+      expect(mobilemed.pedidos.map((p) => p.idExame)).toEqual(['e2']);
+      expect(designacao('e1')).toMatchObject({
+        status: 'pulada',
+        motivo: 'ja_atribuido_mobilemed',
+      });
+      expect(designacao('e1')?.detalhe).toMatch(/já atribuído na MobileMed/);
+      expect(repo.rodadas.get(id)?.status).toBe('concluida');
+    });
+
     it('respeita a pausa entre um exame e outro', async () => {
       const id = await criarELer();
       await casos.aprovar.executar(admin, id);
@@ -440,6 +544,33 @@ describe('rodada do robô (casos de uso)', () => {
       expect(auditoria.eventos.map((e) => e.acao)).toEqual(
         expect.arrayContaining(['encerrada', 'cancelada']),
       );
+    });
+
+    it('a proposta expirada fica no histórico com os ajustes: não se relê', async () => {
+      const id = await criarELer();
+      await casos.ajustarProposta.executar(admin, id, {
+        remover: [designacao('e1')?.id ?? ''],
+        mover: [],
+      });
+      agora = br('2026-11-18T10:00');
+      await expect(casos.reler.executar(admin, id)).rejects.toThrow(/histórico/);
+      expect(repo.rodadas.get(id)?.status).toBe('expirada');
+      expect(designacao('e1')).toMatchObject({
+        status: 'pulada',
+        motivo: 'removido_na_conferencia',
+      });
+    });
+
+    it('cancelar durante a execução deixa o que falta como pulado', async () => {
+      const id = await criarELer();
+      await casos.aprovar.executar(admin, id);
+      mobilemed.aoAtribuir = async () => {
+        mobilemed.aoAtribuir = async () => undefined;
+        await casos.cancelar.executar(admin, id);
+      };
+      await jobs();
+      expect(repo.rodadas.get(id)?.status).toBe('cancelada');
+      expect(designacao('e1')).toMatchObject({ status: 'pulada', motivo: 'rodada_cancelada' });
     });
 
     it('reler apaga a leitura e lê de novo, só sem execução', async () => {
@@ -496,6 +627,93 @@ describe('rodada do robô (casos de uso)', () => {
         depois: { exames: 3 },
       });
       expect(JSON.stringify(auditoria.eventos)).not.toMatch(/Fict/);
+    });
+
+    it('resumo da proposta: por médico (teto, carga, propostos, urgências), motivos e ajustes', async () => {
+      const id = await criarELer();
+      const e1 = designacao('e1');
+      await casos.ajustarProposta.executar(admin, id, { remover: [e1?.id ?? ''], mover: [] });
+      const r = await casos.resumo.executar(id);
+      const propostos = r.medicos.reduce((s, m) => s + m.propostos, 0);
+      expect(propostos).toBe(1);
+      expect(r.medicos.map((m) => m.medicoId).sort()).toEqual(['A', 'B']);
+      expect(r.medicos[0]).toMatchObject({
+        turnos: ['manha'],
+        capacidade: expect.any(Number),
+        cargaEmMaos: 0,
+      });
+      expect(r.motivos).toEqual(
+        expect.arrayContaining([
+          { status: 'pulada', motivo: 'removido_na_conferencia', quantidade: 1 },
+          expect.objectContaining({ status: 'recusada', quantidade: 1 }),
+        ]),
+      );
+      expect(r.ajustes).toEqual({ tirados: 1, movidos: 0, naMao: 0 });
+      expect(r.funilMedicos).toMatchObject({ habilitados: 2, noHorario: 2, receberam: 1 });
+    });
+
+    it('por que este médico não pegou: os portões do médico diante do exame', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        medicos: [
+          insumosBase().medicos[0] as never,
+          {
+            id: 'B',
+            nome: 'Dr. B',
+            idMobilemed: 102,
+            arranjos: [{ ...arranjo, especialidadeId: 'outra' }],
+          },
+        ],
+      };
+      const id = await criarELer();
+      const e1 = designacao('e1')?.id ?? '';
+      const b = await casos.explicar.executar(id, e1, 'B');
+      expect(b.pegou).toBe(false);
+      expect(b.titulo).toMatch(/arranjo|lauda/i);
+      expect(b.checks.at(-1)).toMatchObject({ ok: false });
+      const a = await casos.explicar.executar(id, e1, 'A');
+      expect(a.pegou).toBe(true);
+      expect(a.checks.every((c) => c.ok)).toBe(true);
+      const c = await casos.explicar.executar(id, e1, 'C');
+      expect(c.checks[0]).toMatchObject({ ok: false, titulo: 'Habilitado no robô' });
+    });
+
+    it('fila do momento: por frente e prioridade, vencimentos, turnos e habilitados', async () => {
+      mobilemed.leitura = {
+        semMedico: [
+          exame({ idExame: 'v1', prazo: br('2026-11-18T09:40') }),
+          exame({ idExame: 'v2', prioridade: 'Urgência', prazo: br('2026-11-18T09:20') }),
+          exame({ idExame: 'v3' }),
+          exame({ idExame: 'v4', estudo: 'ESTUDO SEM CADASTRO' }),
+        ],
+        emMaos: [],
+      };
+      insumos.insumos = { ...insumosBase(), nomes: { [MI]: 'MEDICINA INTERNA', manha: 'Manhã' } };
+      const f = await casos.filaDoMomento.executar();
+      expect(f).toMatchObject({
+        habilitados: 2,
+        vencemProximaHora: 2,
+        primeiroVencimento: br('2026-11-18T09:20'),
+      });
+      expect(f.porFrente).toEqual([
+        expect.objectContaining({
+          frenteId: 'f-mi',
+          nome: 'MEDICINA INTERNA',
+          exames: 3,
+          urgentes: 1,
+          primeiroVencimento: br('2026-11-18T09:20'),
+          porPrioridade: expect.arrayContaining([
+            { prioridadeOperacaoId: 'op-urg', exames: 1, urgentes: 1 },
+            { prioridadeOperacaoId: 'op-rot', exames: 2, urgentes: 0 },
+          ]),
+        }),
+        expect.objectContaining({ frenteId: null, nome: 'Sem frente', exames: 1 }),
+      ]);
+      expect(f.prioridades.map((p) => p.prioridadeOperacaoId)).toEqual(['op-urg', 'op-rot']);
+      expect(f.turnos).toEqual([
+        expect.objectContaining({ turnoId: 'manha', nome: 'Manhã', medicos: 2, emAndamento: true }),
+      ]);
+      expect(f.medicosEmTurno[0]).toMatchObject({ turno: 'Manhã', frenteNome: 'MEDICINA INTERNA' });
     });
 
     it('fila do momento: contagens por prioridade da operação e frente, e quem está em turno', async () => {

@@ -5,7 +5,8 @@
 
 export type MovimentoPropostaDto = {
   /**
-   * @description
+   * @description Designação prevista (troca o médico) ou deixada de fora (vai na mão).
+   *
    * Format: `uuid`
    * @type string
    */
@@ -17,4 +18,9 @@ export type MovimentoPropostaDto = {
    * @type string
    */
   medicoId: string;
+  /**
+   * @description Leva junto os outros exames do mesmo paciente que estavam com ela.
+   * @type boolean | undefined
+   */
+  levarPacote?: boolean;
 };

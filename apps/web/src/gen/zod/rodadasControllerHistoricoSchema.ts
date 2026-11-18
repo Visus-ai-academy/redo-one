@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { paginaRodadasDtoSchema } from './paginaRodadasDtoSchema'
+import { statusRodadaSchema } from './statusRodadaSchema'
 
 export const rodadasControllerHistoricoQueryPaginaSchema = z.int().min(1).optional().default(1)
 
@@ -13,6 +14,18 @@ export type RodadasControllerHistoricoQueryPaginaSchemaType = z.infer<typeof rod
 export const rodadasControllerHistoricoQueryPorPaginaSchema = z.int().min(1).max(100).optional().default(25)
 
 export type RodadasControllerHistoricoQueryPorPaginaSchemaType = z.infer<typeof rodadasControllerHistoricoQueryPorPaginaSchema>
+
+export const rodadasControllerHistoricoQueryStatusSchema = z.array(statusRodadaSchema).optional()
+
+export type RodadasControllerHistoricoQueryStatusSchemaType = z.infer<typeof rodadasControllerHistoricoQueryStatusSchema>
+
+export const rodadasControllerHistoricoQuerySolicitadaPorIdSchema = z.uuid().optional().describe('Quem pediu.')
+
+export type RodadasControllerHistoricoQuerySolicitadaPorIdSchemaType = z.infer<typeof rodadasControllerHistoricoQuerySolicitadaPorIdSchema>
+
+export const rodadasControllerHistoricoQueryDesdeSchema = z.iso.datetime().optional().describe('Pedidas a partir deste instante.')
+
+export type RodadasControllerHistoricoQueryDesdeSchemaType = z.infer<typeof rodadasControllerHistoricoQueryDesdeSchema>
 
 export const rodadasControllerHistoricoStatus200Schema = paginaRodadasDtoSchema
 
@@ -25,6 +38,9 @@ export type RodadasControllerHistoricoResponseSchemaType = z.infer<typeof rodada
 export const rodadasControllerHistoricoQuerySchema = z.object({
   pagina: z.int().min(1).optional().default(1),
   porPagina: z.int().min(1).max(100).optional().default(25),
+  status: z.array(statusRodadaSchema).optional(),
+  solicitadaPorId: z.uuid().optional().describe('Quem pediu.'),
+  desde: z.iso.datetime().optional().describe('Pedidas a partir deste instante.'),
 })
 
 export type RodadasControllerHistoricoQuerySchemaType = z.infer<typeof rodadasControllerHistoricoQuerySchema>

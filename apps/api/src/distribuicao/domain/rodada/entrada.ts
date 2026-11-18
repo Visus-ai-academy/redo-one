@@ -8,7 +8,12 @@ import {
 } from '../motor/configuracao';
 import { type DirecaoEquipe, type ReservaMedico, reservadoPara } from '../motor/elegibilidade';
 import type { PrioridadeCliente } from '../motor/fila';
-import type { AjusteDia, MedicoRodada, OcorrenciaRodada } from '../motor/medicos-disponiveis';
+import type {
+  AjusteDia,
+  EntregaAnterior,
+  MedicoRodada,
+  OcorrenciaRodada,
+} from '../motor/medicos-disponiveis';
 import {
   type CelulaRecebimento,
   criarLeitorPrioridade,
@@ -117,8 +122,11 @@ export interface InsumosRodada {
 
 /** O que as rodadas anteriores já entregaram. */
 export interface Entregas {
-  /** Exame (id na MobileMed) → a quem o robô o entregou nos últimos `diasJaEntregue` dias. */
-  porExame: ReadonlyMap<string, readonly { medicoId: string; em: Date }[]>;
+  /**
+   * Exame (id na MobileMed) → a quem o robô o entregou, ou de quem a conferência o tirou, nos
+   * últimos `diasJaEntregue` dias.
+   */
+  porExame: ReadonlyMap<string, readonly EntregaAnterior[]>;
   /** Alocação gratificada → o já executado por ela. */
   cotaEntregue: Readonly<Record<string, number>>;
 }
@@ -166,6 +174,25 @@ export interface EntradaMontada {
   lidos: ExameLido[];
   semCatalogo: number;
   semCliente: number;
+}
+
+/** Turnos e frentes em andamento de cada médico no instante (nomes, sem repetir). */
+export function escalaDosMedicos(
+  insumos: Pick<InsumosRodada, 'ocorrencias' | 'nomes'>,
+  agora: Date,
+): Record<string, { turnos: string[]; frentes: string[] }> {
+  const nome = (id: string) => insumos.nomes[id] ?? id;
+  const r: Record<string, { turnos: string[]; frentes: string[] }> = {};
+  for (const o of insumos.ocorrencias) {
+    if (o.ausente || o.inicio > agora || agora >= o.fim) continue;
+    const m = r[o.medicoId] ?? { turnos: [], frentes: [] };
+    r[o.medicoId] = m;
+    const turno = nome(o.turnoId);
+    const frente = nome(o.frente.especialidadeId ?? o.frente.modalidadeId);
+    if (!m.turnos.includes(turno)) m.turnos.push(turno);
+    if (!m.frentes.includes(frente)) m.frentes.push(frente);
+  }
+  return r;
 }
 
 export function configuracaoDoMotor(c: ConfiguracaoGlobal): ConfiguracaoDistribuicao {

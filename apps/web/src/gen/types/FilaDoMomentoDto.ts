@@ -6,7 +6,9 @@
 import type { ContagemEspecialidadeDto } from './ContagemEspecialidadeDto'
 import type { ContagemModalidadeDto } from './ContagemModalidadeDto'
 import type { ContagemPrioridadeDto } from './ContagemPrioridadeDto'
+import type { FrenteDaFilaDto } from './FrenteDaFilaDto'
 import type { MedicoEmTurnoDto } from './MedicoEmTurnoDto'
+import type { TurnoDaFilaDto } from './TurnoDaFilaDto'
 
 export type FilaDoMomentoDto = {
   /**
@@ -23,6 +25,33 @@ export type FilaDoMomentoDto = {
   urgentes: number;
   semCatalogo: number;
   semCliente: number;
+  /**
+   * @description Prazo na próxima hora (ou já vencido).
+   * @type integer
+   */
+  vencemProximaHora: number;
+  /**
+   * @description
+   * Format: `date-time`
+   * @type string
+   */
+  primeiroVencimento: string | null;
+  /**
+   * @description Ativos e habilitados no robô.
+   * @type integer
+   */
+  habilitados: number;
+  /**
+   * @description Na ordem da operação.
+   * @type array
+   */
+  prioridades: ContagemPrioridadeDto[];
+  porFrente: FrenteDaFilaDto[];
+  /**
+   * @description Turnos de hoje que não acabaram.
+   * @type array
+   */
+  turnos: TurnoDaFilaDto[];
   porPrioridade: ContagemPrioridadeDto[];
   porEspecialidade: ContagemEspecialidadeDto[];
   porModalidade: ContagemModalidadeDto[];

@@ -26,6 +26,8 @@ export class ExecutarRodada {
   async executar(rodadaId: string): Promise<void> {
     const r = await this.d.rodadas.obter(rodadaId);
     if (!r) return;
+    // Retomada (ou o job que caiu no meio): a fila pode ter mudado; confere cada exame antes.
+    const conferir = r.retomadas > 0 || r.status === 'executando';
     if (r.status === 'aprovada') {
       const status = iniciarExecucao(r);
       if (!(await this.d.rodadas.mudar(rodadaId, ['aprovada'], { status }))) return;
@@ -57,6 +59,14 @@ export class ExecutarRodada {
             status: 'falhou',
             motivo: 'sem_conta_mobilemed',
             detalhe: 'O médico está inativo ou sem conta na MobileMed no cadastro.',
+            retentavel: false,
+          };
+        } else if (conferir && !(await this.d.fila.semMedico([p.idExameMobilemed])).size) {
+          resultado = {
+            status: 'pulada',
+            motivo: 'ja_atribuido_mobilemed',
+            detalhe:
+              'Pulado ao retomar: já atribuído na MobileMed (ganhou médico por fora do robô).',
             retentavel: false,
           };
         } else {

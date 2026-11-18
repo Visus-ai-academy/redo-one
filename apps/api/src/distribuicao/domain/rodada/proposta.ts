@@ -5,7 +5,8 @@ import {
   montarFila,
   type PrioridadeCliente,
 } from '../motor/fila';
-import type { ResultadoRodada } from '../motor/rodada';
+import type { Barreira } from '../motor/medicos-disponiveis';
+import type { MedicoNaRodada, ResultadoRodada } from '../motor/rodada';
 import type { ExameLido } from './entrada';
 
 /**
@@ -26,7 +27,22 @@ export interface DesignacaoNova extends ExameLido {
   status: 'prevista' | 'recusada';
   motivo: string | null;
   detalhe: string | null;
+  /** Quem podia laudar o exame nesta leitura. */
+  elegiveis: string[];
+  /** Médico em turno → onde parou diante do exame (o "por que este médico não pegou"). */
+  barrados: Record<string, Barreira>;
+  /** Mandado a um médico na conferência, depois que o motor o deixou de fora. */
+  naMao: boolean;
 }
+
+/** Turnos e frentes em que o médico estava na escala no instante da leitura (só os nomes). */
+export interface EscalaDoMedico {
+  turnos: string[];
+  frentes: string[];
+}
+
+/** O médico da rodada como a tela da proposta o mostra (teto, carga em mãos, turno). */
+export interface MedicoGravado extends MedicoNaRodada, EscalaDoMedico {}
 
 /** O que o motor viu, guardado para o "por que este médico não pegou" (passo 5). */
 export interface InsumosGravados {
@@ -34,6 +50,10 @@ export interface InsumosGravados {
   funil: ResultadoRodada['funil'];
   trilha: ResultadoRodada['trilha'];
   grafiasSemDePara: string[];
+  /** Ativos e habilitados no robô no instante da leitura. */
+  habilitados: string[];
+  /** Os médicos que entraram na rodada. */
+  medicos: MedicoGravado[];
 }
 
 export interface Proposta {
@@ -93,6 +113,8 @@ export function montarProposta(p: {
   prioridadesCliente: readonly PrioridadeCliente[];
   semCatalogo: number;
   semCliente: number;
+  escalaDosMedicos: Readonly<Record<string, EscalaDoMedico>>;
+  habilitados: string[];
 }): Proposta {
   const { config } = p;
   const item = new Map(p.resultado.itens.map((i) => [i.exameId, i]));
@@ -131,6 +153,9 @@ export function montarProposta(p: {
         : vai
           ? null
           : (it?.detalhe ?? null),
+      elegiveis: it?.elegiveis ?? [],
+      barrados: it?.barrados ?? {},
+      naMao: false,
     };
   });
 
@@ -166,6 +191,12 @@ export function montarProposta(p: {
       funil: p.resultado.funil,
       trilha: p.resultado.trilha,
       grafiasSemDePara: p.resultado.grafiasSemDePara,
+      habilitados: p.habilitados,
+      medicos: p.resultado.medicos.map((m) => ({
+        ...m,
+        turnos: p.escalaDosMedicos[m.id]?.turnos ?? [],
+        frentes: p.escalaDosMedicos[m.id]?.frentes ?? [],
+      })),
     },
   };
 }

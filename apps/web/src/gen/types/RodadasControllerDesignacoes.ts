@@ -50,6 +50,16 @@ export type RodadasControllerDesignacoesQuery = {
    */
   modalidadeId?: string;
   /**
+   * @description Código do motivo (ex.: `sem_espaco`).
+   * @type array | undefined
+   */
+  motivo?: string[];
+  /**
+   * @description Só os mandados na mão (true) ou só os do motor (false).
+   * @type boolean | undefined
+   */
+  naMao?: boolean;
+  /**
    * @description Trecho do estudo ou da unidade.
    * @type string | undefined
    */

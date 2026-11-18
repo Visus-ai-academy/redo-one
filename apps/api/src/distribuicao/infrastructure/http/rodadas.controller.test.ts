@@ -36,6 +36,8 @@ const casos = () => {
     },
     designacoes: { executar: vi.fn(async () => ({ itens: [], total: 0 })) },
     filaDoMomento: fn(),
+    resumo: fn(),
+    explicar: fn(),
   };
 };
 
@@ -54,13 +56,24 @@ const controller = (c: ReturnType<typeof casos>) =>
     c.consultar as never,
     c.designacoes as never,
     c.filaDoMomento as never,
+    c.resumo as never,
+    c.explicar as never,
   );
 
 describe('controller das rodadas', () => {
   it('cada rota pede a permissão certa', () => {
     const p = RodadasController.prototype;
     expect(reflector.get(PATH_METADATA, RodadasController)).toBe('distribuicao/rodadas');
-    for (const leitura of [p.viva, p.historico, p.fila, p.obter, p.situacao, p.designacoes]) {
+    for (const leitura of [
+      p.viva,
+      p.historico,
+      p.fila,
+      p.obter,
+      p.situacao,
+      p.designacoes,
+      p.resumo,
+      p.explicacao,
+    ]) {
       expect(exigidas(leitura)).toEqual(['distribuicao.ver']);
     }
     expect(exigidas(p.criar)).toEqual(['distribuicao.rodada.iniciar']);
@@ -100,6 +113,28 @@ describe('controller das rodadas', () => {
     );
     await controller(c).designacoes(principal(['distribuicao.paciente.ver']), 'r1', q);
     expect(c.designacoes.executar).toHaveBeenLastCalledWith(expect.anything(), 'r1', q, true);
+  });
+
+  it('histórico com filtros de situação, período e quem pediu', async () => {
+    const c = casos();
+    await controller(c).historico({
+      pagina: 2,
+      porPagina: 10,
+      status: ['concluida'],
+      desde: '2026-11-11T00:00:00.000Z',
+    });
+    expect(c.consultar.historico).toHaveBeenCalledWith({
+      pagina: 2,
+      porPagina: 10,
+      status: ['concluida'],
+      desde: new Date('2026-11-11T00:00:00.000Z'),
+    });
+  });
+
+  it('o "por quê" pede o exame e o médico', async () => {
+    const c = casos();
+    await controller(c).explicacao('r1', 'd1', { medicoId: 'm1' });
+    expect(c.explicar.executar).toHaveBeenCalledWith('r1', 'd1', 'm1');
   });
 
   it('sem rodada viva, devolve nula embrulhada', async () => {

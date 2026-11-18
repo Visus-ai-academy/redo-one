@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { PacoteDto } from './PacoteDto'
 import type { RotuloRodadaDto } from './RotuloRodadaDto'
 import type { StatusDesignacaoKey } from './StatusDesignacao'
 
@@ -72,11 +73,27 @@ export type DesignacaoDto = {
    */
   medico: RotuloRodadaDto | null;
   /**
-   * @description Id na MobileMed do exame com quem anda no pacote do paciente.
+   * @description Os exames do mesmo paciente na rodada; nulo = só este.
+   * @type object
+   */
+  pacote: PacoteDto | null;
+  gratificado: boolean;
+  /**
+   * @description Mandado na mão na conferência (o motor o tinha deixado de fora).
+   * @type boolean
+   */
+  naMao: boolean;
+  /**
+   * @description De quem a conferência o tirou.
+   * @type object
+   */
+  retiradoDe: RotuloRodadaDto | null;
+  /**
+   * @description
+   * Format: `date-time`
    * @type string
    */
-  agrupadoCom: string | null;
-  gratificado: boolean;
+  retiradaEm: string | null;
   status: StatusDesignacaoKey;
   /**
    * @description Código do motivo.

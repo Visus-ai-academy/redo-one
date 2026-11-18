@@ -9,6 +9,7 @@ import { movimentoPropostaDtoSchema } from './movimentoPropostaDtoSchema'
 export const ajustePropostaDtoSchema = z.object({
   remover: z.array(z.uuid()).describe('Designações que saem da proposta.'),
   mover: z.array(movimentoPropostaDtoSchema).describe('Designações que mudam de médico.'),
+  restaurar: z.array(z.uuid()).optional().describe('Desfaz o "tirar": volta ao médico de quem saiu.'),
 })
 
 export type AjustePropostaDtoSchemaType = z.infer<typeof ajustePropostaDtoSchema>

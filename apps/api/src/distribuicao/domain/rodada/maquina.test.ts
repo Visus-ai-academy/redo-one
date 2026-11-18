@@ -126,20 +126,24 @@ describe('máquina de estados da rodada', () => {
     }
   });
 
-  it('relê só sem execução, a partir da proposta, da expirada, da que falhou ou da parcial', () => {
-    for (const s of ['aguardando_aprovacao', 'expirada', 'falhou', 'parcial'] as const) {
+  it('relê só sem execução, a partir da proposta, da que falhou ou da parcial', () => {
+    for (const s of ['aguardando_aprovacao', 'falhou', 'parcial'] as const) {
       expect(reler(rodada(s), { executadas: 0 })).toBe('solicitada');
     }
     expect(() => reler(rodada('parcial'), { executadas: 1 })).toThrow(/já atribuiu 1/);
-    for (const s of exceto('aguardando_aprovacao', 'expirada', 'falhou', 'parcial')) {
+    for (const s of exceto('aguardando_aprovacao', 'falhou', 'parcial')) {
       expect(() => reler(rodada(s), { executadas: 0 })).toThrow(RodadaEmEstadoInvalidoError);
     }
+  });
+
+  it('a proposta expirada fica no histórico como está: não se relê, pede-se outra rodada', () => {
+    expect(() => reler(rodada('expirada'), { executadas: 0 })).toThrow(/histórico/);
   });
 
   it('ajustar médicos: antes da leitura só grava; com a proposta pronta, relê; lendo ou executando, recusa', () => {
     expect(ajusteDeMedicos(rodada('solicitada'), { executadas: 0 })).toBe('gravar');
     expect(ajusteDeMedicos(rodada('aguardando_aprovacao'), { executadas: 0 })).toBe('reler');
-    expect(ajusteDeMedicos(rodada('expirada'), { executadas: 0 })).toBe('reler');
+    expect(() => ajusteDeMedicos(rodada('expirada'), { executadas: 0 })).toThrow(/histórico/);
     expect(() => ajusteDeMedicos(rodada('lendo'), { executadas: 0 })).toThrow(/lendo/);
     expect(() => ajusteDeMedicos(rodada('executando'), { executadas: 0 })).toThrow();
     expect(() => ajusteDeMedicos(rodada('parcial'), { executadas: 2 })).toThrow(/já atribuiu/);

@@ -33,13 +33,18 @@ import {
 } from '../../../database/schema';
 import type {
   ConsultaRodadas,
+  ContagemPorMedico,
   DesignacaoDetalhada,
+  DesignacaoExplicada,
   FiltroDesignacoes,
+  FiltroHistorico,
 } from '../../application/ports/consulta-rodadas';
 import type {
   ContagemDesignacoes,
   Designacao,
+  EntregaRegistrada,
   EventoRodada,
+  MovimentoProposta,
   MudancaRodada,
   ResultadoDesignacao,
   Rodada,
@@ -52,6 +57,7 @@ import {
   TAREFA_LER_FILA,
 } from '../../application/tarefas';
 import { RodadaVivaError } from '../../application/use-cases/rodadas/erros';
+import type { Barreira } from '../../domain/motor/medicos-disponiveis';
 import type { RecortesRodada } from '../../domain/rodada/entrada';
 import { STATUS_VIVOS, type StatusRodada } from '../../domain/rodada/maquina';
 import type { DesignacaoNova, InsumosGravados } from '../../domain/rodada/proposta';
@@ -81,6 +87,8 @@ const violouUnico = (erro: unknown) => {
 
 const LOTE = 500;
 const medicoProposto = alias(medicos, 'medico_proposto');
+const medicoRetirado = alias(medicos, 'medico_retirado');
+const outra = alias(designacoes, 'outra');
 const solicitante = alias(usuarios, 'solicitante');
 const aprovador = alias(usuarios, 'aprovador');
 
@@ -108,6 +116,7 @@ const comoRodada = (r: LinhaRodada): Rodada => ({
     medicosExcluidos: r.medicosExcluidos,
     medicosIncluidos: r.medicosIncluidos,
   },
+  retomadas: r.retomadas,
 });
 
 const comoDesignacao = (d: LinhaDesignacao): Designacao => ({
@@ -116,6 +125,8 @@ const comoDesignacao = (d: LinhaDesignacao): Designacao => ({
   idExameMobilemed: d.idExameMobilemed,
   medicoId: d.medicoId,
   status: d.status,
+  pacienteChave: d.pacienteChave,
+  retiradoDeId: d.retiradoDeId,
   posicao: d.posicao,
   urgente: d.urgente,
   prazo: d.prazo,
@@ -155,6 +166,9 @@ const linhaDaDesignacao = (rodadaId: string, d: DesignacaoNova) => ({
   status: d.status,
   motivo: d.motivo,
   detalhe: d.detalhe,
+  elegiveis: d.elegiveis,
+  barrados: d.barrados,
+  naMao: d.naMao,
 });
 
 const recortesComoLinha = (r: RecortesRodada) => ({
@@ -225,9 +239,10 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
   ): Promise<boolean> {
     try {
       return await this.db.transaction(async (tx) => {
+        const { retomada, ...mudanca } = m;
         const linhas = await tx
           .update(rodadas)
-          .set(m)
+          .set({ ...mudanca, ...(retomada ? { retomadas: sql`${rodadas.retomadas} + 1` } : {}) })
           .where(and(eq(rodadas.id, id), inArray(rodadas.status, [...de])))
           .returning({ id: rodadas.id });
         if (!linhas.length) return false;
@@ -351,12 +366,44 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
     return linhas.map(comoDesignacao);
   }
 
-  async removerDaProposta(rodadaId: string, ids: readonly string[]) {
+  async insumos(id: string) {
+    const [r] = await this.db
+      .select({ insumos: rodadas.insumos })
+      .from(rodadas)
+      .where(eq(rodadas.id, id));
+    return (r?.insumos as InsumosGravados | null | undefined) ?? null;
+  }
+
+  async doMesmoPaciente(rodadaId: string, designacaoId: string) {
+    const linhas = await this.db
+      .select({ d: designacoes })
+      .from(designacoes)
+      .innerJoin(
+        outra,
+        and(
+          eq(outra.rodadaId, designacoes.rodadaId),
+          eq(outra.pacienteChave, designacoes.pacienteChave),
+        ),
+      )
+      .where(
+        and(
+          eq(outra.id, designacaoId),
+          eq(designacoes.rodadaId, rodadaId),
+          sql`${designacoes.id} <> ${designacaoId}`,
+        ),
+      )
+      .orderBy(asc(designacoes.ordem));
+    return linhas.map((l) => comoDesignacao(l.d));
+  }
+
+  async removerDaProposta(rodadaId: string, ids: readonly string[], agora: Date) {
     if (!ids.length) return 0;
     const linhas = await this.db
       .update(designacoes)
       .set({
         status: 'pulada',
+        retiradoDeId: sql`${designacoes.medicoId}`,
+        retiradaEm: agora,
         medicoId: null,
         motivo: 'removido_na_conferencia',
         detalhe: 'Tirado da proposta na conferência.',
@@ -372,22 +419,48 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
     return linhas.length;
   }
 
-  async moverNaProposta(
-    rodadaId: string,
-    mover: readonly { designacaoId: string; medicoId: string }[],
-  ) {
+  async restaurarNaProposta(rodadaId: string, ids: readonly string[]) {
+    if (!ids.length) return 0;
+    const linhas = await this.db
+      .update(designacoes)
+      .set({
+        status: 'prevista',
+        medicoId: sql`${designacoes.retiradoDeId}`,
+        retiradoDeId: null,
+        retiradaEm: null,
+        motivo: null,
+        detalhe: null,
+      })
+      .where(
+        and(
+          eq(designacoes.rodadaId, rodadaId),
+          inArray(designacoes.id, [...ids]),
+          eq(designacoes.status, 'pulada'),
+          isNotNull(designacoes.retiradoDeId),
+        ),
+      )
+      .returning({ id: designacoes.id });
+    return linhas.length;
+  }
+
+  async moverNaProposta(rodadaId: string, mover: readonly MovimentoProposta[]) {
     if (!mover.length) return 0;
     return this.db.transaction(async (tx) => {
       let n = 0;
       for (const m of mover) {
+        // A recusada mandada na mão guarda o motivo do motor (o histórico mostra os dois).
         const linhas = await tx
           .update(designacoes)
-          .set({ medicoId: m.medicoId, motivo: null, detalhe: null })
+          .set(
+            m.naMao
+              ? { medicoId: m.medicoId, status: 'prevista', naMao: true }
+              : { medicoId: m.medicoId, motivo: null, detalhe: null },
+          )
           .where(
             and(
               eq(designacoes.rodadaId, rodadaId),
               eq(designacoes.id, m.designacaoId),
-              eq(designacoes.status, 'prevista'),
+              eq(designacoes.status, m.naMao ? 'recusada' : 'prevista'),
             ),
           )
           .returning({ id: designacoes.id });
@@ -481,26 +554,49 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
   }
 
   async entregues(idsExame: readonly string[], desde: Date) {
-    const mapa = new Map<string, { medicoId: string; em: Date }[]>();
+    const mapa = new Map<string, EntregaRegistrada[]>();
+    const somar = (id: string, e: EntregaRegistrada) => mapa.set(id, [...(mapa.get(id) ?? []), e]);
     for (let i = 0; i < idsExame.length; i += LOTE) {
-      const linhas = await this.db
-        .select({
-          idExame: designacoes.idExameMobilemed,
-          medicoId: designacoes.medicoId,
-          em: designacoes.executadaEm,
-        })
-        .from(designacoes)
-        .where(
-          and(
-            inArray(designacoes.idExameMobilemed, idsExame.slice(i, i + LOTE)),
-            eq(designacoes.status, 'executada'),
-            gte(designacoes.executadaEm, desde),
-            isNotNull(designacoes.medicoId),
+      const lote = idsExame.slice(i, i + LOTE);
+      const [executadas, retiradas] = await Promise.all([
+        this.db
+          .select({
+            idExame: designacoes.idExameMobilemed,
+            medicoId: designacoes.medicoId,
+            em: designacoes.executadaEm,
+          })
+          .from(designacoes)
+          .where(
+            and(
+              inArray(designacoes.idExameMobilemed, lote),
+              eq(designacoes.status, 'executada'),
+              gte(designacoes.executadaEm, desde),
+              isNotNull(designacoes.medicoId),
+            ),
           ),
-        );
-      for (const l of linhas) {
-        if (!l.medicoId || !l.em) continue;
-        mapa.set(l.idExame, [...(mapa.get(l.idExame) ?? []), { medicoId: l.medicoId, em: l.em }]);
+        this.db
+          .select({
+            idExame: designacoes.idExameMobilemed,
+            medicoId: designacoes.retiradoDeId,
+            em: designacoes.retiradaEm,
+          })
+          .from(designacoes)
+          .where(
+            and(
+              inArray(designacoes.idExameMobilemed, lote),
+              isNotNull(designacoes.retiradoDeId),
+              gte(designacoes.retiradaEm, desde),
+            ),
+          ),
+      ]);
+      for (const l of executadas) {
+        if (l.medicoId && l.em)
+          somar(l.idExame, { medicoId: l.medicoId, em: l.em, origem: 'execucao' });
+      }
+      for (const l of retiradas) {
+        if (l.medicoId && l.em) {
+          somar(l.idExame, { medicoId: l.medicoId, em: l.em, origem: 'conferencia' });
+        }
       }
     }
     return mapa;
@@ -534,9 +630,53 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
   // Consultas da tela
   // ------------------------------------------------------------------------------------------
 
+  private selecaoDetalhada() {
+    // O pacote: os exames do mesmo paciente (pseudônimo) na rodada.
+    const doPaciente = sql`o.rodada_id = ${designacoes.rodadaId} and o.paciente_chave = ${designacoes.pacienteChave}`;
+    return this.db
+      .select({
+        d: designacoes,
+        cliente: clientes.nome,
+        prioridade: prioridadesOperacao.nome,
+        especialidade: especialidades.nome,
+        modalidade: modalidades.codigo,
+        subespecialidade: subespecialidades.nome,
+        medico: medicos.nome,
+        proposto: medicoProposto.nome,
+        retirado: medicoRetirado.nome,
+        pacoteExames: sql<number>`(select count(*) from designacoes o where ${doPaciente})`.mapWith(
+          Number,
+        ),
+        pacoteId: sql<string>`(select min(o.id::text) from designacoes o where ${doPaciente})`,
+      })
+      .from(designacoes)
+      .leftJoin(clientes, eq(clientes.id, designacoes.clienteId))
+      .leftJoin(prioridadesOperacao, eq(prioridadesOperacao.id, designacoes.prioridadeOperacaoId))
+      .leftJoin(especialidades, eq(especialidades.id, designacoes.especialidadeId))
+      .leftJoin(modalidades, eq(modalidades.id, designacoes.modalidadeId))
+      .leftJoin(subespecialidades, eq(subespecialidades.id, designacoes.subespecialidadeId))
+      .leftJoin(medicos, eq(medicos.id, designacoes.medicoId))
+      .leftJoin(medicoProposto, eq(medicoProposto.id, designacoes.medicoPropostoId))
+      .leftJoin(medicoRetirado, eq(medicoRetirado.id, designacoes.retiradoDeId));
+  }
+
+  async designacaoExplicada(rodadaId: string, designacaoId: string) {
+    const [l] = await this.selecaoDetalhada().where(
+      and(eq(designacoes.rodadaId, rodadaId), eq(designacoes.id, designacaoId)),
+    );
+    if (!l) return null;
+    return {
+      ...comoDetalhada(l),
+      elegiveis: l.d.elegiveis,
+      barrados: l.d.barrados as Record<string, Barreira>,
+    } satisfies DesignacaoExplicada;
+  }
+
   async designacoes(rodadaId: string, f: FiltroDesignacoes) {
     const filtros: (SQL | undefined)[] = [eq(designacoes.rodadaId, rodadaId)];
     if (f.status?.length) filtros.push(inArray(designacoes.status, f.status));
+    if (f.motivo?.length) filtros.push(inArray(designacoes.motivo, f.motivo));
+    if (f.naMao !== undefined) filtros.push(eq(designacoes.naMao, f.naMao));
     if (f.medicoId) filtros.push(eq(designacoes.medicoId, f.medicoId));
     if (f.prioridadeOperacaoId) {
       filtros.push(eq(designacoes.prioridadeOperacaoId, f.prioridadeOperacaoId));
@@ -549,85 +689,46 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
     }
     const onde = and(...filtros);
     const [linhas, [total]] = await Promise.all([
-      this.db
-        .select({
-          d: designacoes,
-          cliente: clientes.nome,
-          prioridade: prioridadesOperacao.nome,
-          especialidade: especialidades.nome,
-          modalidade: modalidades.codigo,
-          subespecialidade: subespecialidades.nome,
-          medico: medicos.nome,
-          proposto: medicoProposto.nome,
-        })
-        .from(designacoes)
-        .leftJoin(clientes, eq(clientes.id, designacoes.clienteId))
-        .leftJoin(prioridadesOperacao, eq(prioridadesOperacao.id, designacoes.prioridadeOperacaoId))
-        .leftJoin(especialidades, eq(especialidades.id, designacoes.especialidadeId))
-        .leftJoin(modalidades, eq(modalidades.id, designacoes.modalidadeId))
-        .leftJoin(subespecialidades, eq(subespecialidades.id, designacoes.subespecialidadeId))
-        .leftJoin(medicos, eq(medicos.id, designacoes.medicoId))
-        .leftJoin(medicoProposto, eq(medicoProposto.id, designacoes.medicoPropostoId))
+      this.selecaoDetalhada()
         .where(onde)
         .orderBy(asc(designacoes.ordem))
         .limit(f.porPagina)
         .offset((f.pagina - 1) * f.porPagina),
       this.db.select({ n: count() }).from(designacoes).where(onde),
     ]);
-    const rotulo = (id: string | null, nome: string | null) =>
-      id ? { id, nome: nome ?? '' } : null;
-    return {
-      total: total?.n ?? 0,
-      itens: linhas.map(
-        ({ d, ...n }): DesignacaoDetalhada => ({
-          id: d.id,
-          ordem: d.ordem,
-          idExameMobilemed: d.idExameMobilemed,
-          estudo: d.estudo,
-          unidade: d.unidade,
-          cliente: rotulo(d.clienteId, n.cliente),
-          prioridadeGrafia: d.prioridadeGrafia,
-          prioridadeOperacao: rotulo(d.prioridadeOperacaoId, n.prioridade),
-          especialidade: rotulo(d.especialidadeId, n.especialidade),
-          modalidade: rotulo(d.modalidadeId, n.modalidade),
-          subespecialidade: rotulo(d.subespecialidadeId, n.subespecialidade),
-          laudos: d.laudos,
-          realizadoEm: d.realizadoEm,
-          prazo: d.prazo,
-          urgente: d.urgente,
-          medicoProposto: rotulo(d.medicoPropostoId, n.proposto),
-          medico: rotulo(d.medicoId, n.medico),
-          agrupadoCom: d.agrupadoCom,
-          gratificado: d.gratificado,
-          status: d.status,
-          motivo: d.motivo,
-          detalhe: d.detalhe,
-          executadaEm: d.executadaEm,
-        }),
-      ),
-    };
+    return { total: total?.n ?? 0, itens: linhas.map(comoDetalhada) };
   }
 
-  async historico(pagina: number, porPagina: number) {
-    const executadas = sql<number>`(
-      select count(*) from ${designacoes}
-      where ${designacoes.rodadaId} = ${rodadas.id} and ${designacoes.status} = 'executada'
-    )`.mapWith(Number);
+  async historico(f: FiltroHistorico) {
+    const contarDesignacoes = (condicao: SQL) =>
+      sql<number>`(
+        select count(*) from ${designacoes}
+        where ${designacoes.rodadaId} = ${rodadas.id} and ${condicao}
+      )`.mapWith(Number);
+    const filtros: (SQL | undefined)[] = [];
+    if (f.status?.length) filtros.push(inArray(rodadas.status, f.status));
+    if (f.solicitadaPorId) filtros.push(eq(rodadas.solicitadaPorId, f.solicitadaPorId));
+    if (f.desde) filtros.push(gte(rodadas.criadoEm, f.desde));
+    const onde = and(...filtros);
+    const { pagina, porPagina } = f;
     const [linhas, [total]] = await Promise.all([
       this.db
         .select({
           r: rodadas,
           solicitante: solicitante.nome,
           aprovador: aprovador.nome,
-          executadas,
+          executadas: contarDesignacoes(sql`${designacoes.status} = 'executada'`),
+          propostos: contarDesignacoes(sql`${designacoes.medicoPropostoId} is not null`),
+          deFora: contarDesignacoes(sql`${designacoes.status} = 'recusada'`),
         })
         .from(rodadas)
         .leftJoin(solicitante, eq(solicitante.id, rodadas.solicitadaPorId))
         .leftJoin(aprovador, eq(aprovador.id, rodadas.aprovadaPorId))
+        .where(onde)
         .orderBy(desc(rodadas.criadoEm))
         .limit(porPagina)
         .offset((pagina - 1) * porPagina),
-      this.db.select({ n: count() }).from(rodadas),
+      this.db.select({ n: count() }).from(rodadas).where(onde),
     ]);
     return {
       total: total?.n ?? 0,
@@ -641,9 +742,89 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
         aprovadaPor: l.r.aprovadaPorId ? { id: l.r.aprovadaPorId, nome: l.aprovador ?? '' } : null,
         aprovadaEm: l.r.aprovadaEm,
         lidos: l.r.lidos,
+        propostos: l.propostos,
         executadas: l.executadas,
+        deFora: l.deFora,
+        atualizadoEm: l.r.atualizadoEm,
+        recortes: comoRodada(l.r).recortes,
       })),
     };
+  }
+
+  async porMedico(rodadaId: string): Promise<ContagemPorMedico[]> {
+    const conta = (condicao: SQL) =>
+      sql<number>`count(*) filter (where ${condicao})`.mapWith(Number);
+    const daRodada = and(eq(designacoes.rodadaId, rodadaId), isNotNull(designacoes.medicoId));
+    const [linhas, pacotes] = await Promise.all([
+      this.db
+        .select({
+          medicoId: designacoes.medicoId,
+          nome: medicos.nome,
+          propostos: count(),
+          urgencias: conta(sql`${designacoes.urgente}`),
+          previstas: conta(sql`${designacoes.status} = 'prevista'`),
+          executadas: conta(sql`${designacoes.status} = 'executada'`),
+          puladas: conta(sql`${designacoes.status} = 'pulada'`),
+          falharam: conta(sql`${designacoes.status} = 'falhou'`),
+          naMao: conta(sql`${designacoes.naMao}`),
+        })
+        .from(designacoes)
+        .innerJoin(medicos, eq(medicos.id, designacoes.medicoId))
+        .where(daRodada)
+        .groupBy(designacoes.medicoId, medicos.nome),
+      this.db
+        .select({ medicoId: designacoes.medicoId, n: count() })
+        .from(designacoes)
+        .where(daRodada)
+        .groupBy(designacoes.medicoId, designacoes.pacienteChave)
+        .having(sql`count(*) > 1`),
+    ]);
+    const pacotesDe = new Map<string, number>();
+    for (const p of pacotes) {
+      if (p.medicoId) pacotesDe.set(p.medicoId, (pacotesDe.get(p.medicoId) ?? 0) + 1);
+    }
+    return linhas.flatMap((l) =>
+      l.medicoId ? [{ ...l, medicoId: l.medicoId, pacotes: pacotesDe.get(l.medicoId) ?? 0 }] : [],
+    );
+  }
+
+  async porMotivo(rodadaId: string) {
+    const linhas = await this.db
+      .select({ status: designacoes.status, motivo: designacoes.motivo, quantidade: count() })
+      .from(designacoes)
+      .where(
+        and(
+          eq(designacoes.rodadaId, rodadaId),
+          inArray(designacoes.status, ['recusada', 'pulada', 'falhou']),
+        ),
+      )
+      .groupBy(designacoes.status, designacoes.motivo);
+    return linhas;
+  }
+
+  async ajustes(rodadaId: string) {
+    const conta = (condicao: SQL) =>
+      sql<number>`count(*) filter (where ${condicao})`.mapWith(Number);
+    const [l] = await this.db
+      .select({
+        tirados: conta(sql`${designacoes.motivo} = 'removido_na_conferencia'`),
+        movidos: conta(
+          sql`not ${designacoes.naMao} and ${designacoes.medicoId} is not null and ${designacoes.medicoPropostoId} is not null and ${designacoes.medicoId} <> ${designacoes.medicoPropostoId}`,
+        ),
+        naMao: conta(sql`${designacoes.naMao}`),
+      })
+      .from(designacoes)
+      .where(eq(designacoes.rodadaId, rodadaId));
+    return l ?? { tirados: 0, movidos: 0, naMao: 0 };
+  }
+
+  async nomesMedicos(ids: readonly string[]) {
+    if (!ids.length) return new Map<string, string>();
+    const linhas = await this.db
+      .select({ id: medicos.id, nome: medicos.nome })
+      .from(medicos)
+      .where(inArray(medicos.id, [...ids]));
+    return new Map(linhas.map((m) => [m.id, m.nome]));
   }
 
   async nomesUsuarios(ids: readonly string[]) {
@@ -654,4 +835,51 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
       .where(inArray(usuarios.id, [...ids]));
     return new Map(linhas.map((u) => [u.id, u.nome]));
   }
+}
+
+type LinhaDetalhada = {
+  d: LinhaDesignacao;
+  cliente: string | null;
+  prioridade: string | null;
+  especialidade: string | null;
+  modalidade: string | null;
+  subespecialidade: string | null;
+  medico: string | null;
+  proposto: string | null;
+  retirado: string | null;
+  pacoteExames: number;
+  pacoteId: string;
+};
+
+const rotulo = (id: string | null, nome: string | null) => (id ? { id, nome: nome ?? '' } : null);
+
+function comoDetalhada({ d, ...n }: LinhaDetalhada): DesignacaoDetalhada {
+  return {
+    id: d.id,
+    ordem: d.ordem,
+    idExameMobilemed: d.idExameMobilemed,
+    estudo: d.estudo,
+    unidade: d.unidade,
+    cliente: rotulo(d.clienteId, n.cliente),
+    prioridadeGrafia: d.prioridadeGrafia,
+    prioridadeOperacao: rotulo(d.prioridadeOperacaoId, n.prioridade),
+    especialidade: rotulo(d.especialidadeId, n.especialidade),
+    modalidade: rotulo(d.modalidadeId, n.modalidade),
+    subespecialidade: rotulo(d.subespecialidadeId, n.subespecialidade),
+    laudos: d.laudos,
+    realizadoEm: d.realizadoEm,
+    prazo: d.prazo,
+    urgente: d.urgente,
+    medicoProposto: rotulo(d.medicoPropostoId, n.proposto),
+    medico: rotulo(d.medicoId, n.medico),
+    pacote: n.pacoteExames > 1 ? { id: n.pacoteId, exames: n.pacoteExames } : null,
+    gratificado: d.gratificado,
+    naMao: d.naMao,
+    retiradoDe: rotulo(d.retiradoDeId, n.retirado),
+    retiradaEm: d.retiradaEm,
+    status: d.status,
+    motivo: d.motivo,
+    detalhe: d.detalhe,
+    executadaEm: d.executadaEm,
+  };
 }

@@ -25,6 +25,7 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('DISTRIBUICAO_FAKE_TAMANHO', inteiroAte(100_000), 'inteiro de 0 a 100000');
   opcional('DISTRIBUICAO_FAKE_SEMENTE', inteiroAte(4_294_967_295), 'inteiro não negativo');
   opcional('DISTRIBUICAO_FAKE_FALHAS_PCT', inteiroAte(100), 'inteiro de 0 a 100');
+  opcional('DISTRIBUICAO_FAKE_POR_FORA_PCT', inteiroAte(100), 'inteiro de 0 a 100');
 
   if (erros.length) throw new Error(`Variáveis de ambiente inválidas:\n- ${erros.join('\n- ')}`);
   return env;

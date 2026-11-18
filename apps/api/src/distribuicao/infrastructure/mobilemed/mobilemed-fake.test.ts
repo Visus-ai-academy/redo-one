@@ -9,11 +9,12 @@ const amostra: AmostraCatalogo = {
   medicosMobilemed: [101, 102],
 };
 const relogio = (iso: string) => () => new Date(iso);
-const criar = (opcoes: Partial<{ tamanho: number; falhasPct: number }> = {}) =>
+const criar = (opcoes: Partial<{ tamanho: number; falhasPct: number; porForaPct: number }> = {}) =>
   new MobileMedFake(async () => amostra, relogio('2026-11-18T12:34:00Z'), {
     tamanho: opcoes.tamanho ?? 20,
     semente: 3,
     falhasPct: opcoes.falhasPct ?? 0,
+    porForaPct: opcoes.porForaPct ?? 0,
   });
 
 describe('MobileMed fake (fila sintética e atribuição que só registra)', () => {
@@ -84,5 +85,27 @@ describe('MobileMed fake (fila sintética e atribuição que só registra)', () 
     expect([...nomes.keys()]).toEqual([a?.idExame]);
     expect(nomes.get(a?.idExame ?? '')).toBe(a?.paciente.nome);
     expect(nomes.has(b?.idExame ?? '')).toBe(false);
+  });
+
+  it('confere quem segue sem médico: o já atribuído sai da resposta', async () => {
+    const fake = criar();
+    const [a, b] = (await fake.ler()).semMedico;
+    await fake.atribuir({ idExame: a?.idExame ?? '', medicoIdMobilemed: 101 });
+    expect(await fake.semMedico([a?.idExame ?? '', b?.idExame ?? '', 'nao-existe'])).toEqual(
+      new Set([b?.idExame]),
+    );
+  });
+
+  it('com "por fora" ligado, parte dos exames conferidos já ganhou médico fora do robô', async () => {
+    const fake = criar({ tamanho: 100, porForaPct: 30 });
+    const ids = (await fake.ler()).semMedico.map((e) => e.idExame);
+    const livres = await fake.semMedico(ids);
+    expect(livres.size).toBeLessThan(90);
+    expect(livres.size).toBeGreaterThan(40);
+    const porFora = ids.find((id) => !livres.has(id)) ?? '';
+    expect((await fake.ler()).semMedico.map((e) => e.idExame)).not.toContain(porFora);
+    expect(await fake.atribuir({ idExame: porFora, medicoIdMobilemed: 101 })).toMatchObject({
+      status: 'pulada',
+    });
   });
 });

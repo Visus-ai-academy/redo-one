@@ -1,15 +1,21 @@
 import type { FrenteEscala } from '../../../domain/arranjo';
+import type { Barreira } from '../../../domain/motor/medicos-disponiveis';
 import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
 import type { StatusRodada } from '../../../domain/rodada/maquina';
+import type { InsumosGravados } from '../../../domain/rodada/proposta';
 import type {
+  AjustesConferencia,
+  ContagemPorMotivo,
   DesignacaoDetalhada,
   FiltroDesignacoes,
+  FiltroHistorico,
   Pagina,
   RodadaListada,
   RotuloRodada,
 } from '../../ports/consulta-rodadas';
 import type { ContagemDesignacoes, EventoRodada, Rodada } from '../../ports/rodadas.repository';
 import { type AtorRodada, auditar, type DependenciasRodada, rodadaOuErro } from './comum';
+import { DesignacaoNaoEncontradaError } from './erros';
 
 /** Linhas do diário que a tela mostra. */
 const EVENTOS_NO_DETALHE = 60;
@@ -72,9 +78,9 @@ export class ConsultarRodada {
     return r ? this.detalhe(r) : null;
   }
 
-  async historico(pagina: number, porPagina: number): Promise<Pagina<RodadaListada>> {
+  async historico(filtro: FiltroHistorico): Promise<Pagina<RodadaListada>> {
     await this.d.rodadas.expirarVencidas(this.d.agora());
-    return this.d.consulta.historico(pagina, porPagina);
+    return this.d.consulta.historico(filtro);
   }
 
   private async detalhe(r: Rodada): Promise<RodadaDetalhe> {
@@ -139,11 +145,39 @@ export interface ContagemFila {
   urgentes: number;
 }
 
+export interface FrenteDaFila extends ContagemFila {
+  /** Frente da escala (`frentes_escala.id`); null = o exame não casa com nenhuma. */
+  frenteId: string | null;
+  nome: string;
+  primeiroVencimento: Date | null;
+  porPrioridade: ({ prioridadeOperacaoId: string | null } & ContagemFila)[];
+}
+
+export interface TurnoDaFila {
+  turnoId: string;
+  nome: string;
+  inicio: Date;
+  fim: Date;
+  /** Médicos habilitados escalados (sem ausência). */
+  medicos: number;
+  emAndamento: boolean;
+}
+
 export interface FilaDoMomento {
   lidaEm: Date;
   /** Exames NOVO sem médico. */
   total: number;
   urgentes: number;
+  /** Prazo na próxima hora (ou já vencido). */
+  vencemProximaHora: number;
+  primeiroVencimento: Date | null;
+  /** Ativos e habilitados no robô. */
+  habilitados: number;
+  /** As prioridades da operação, na ordem (as colunas da tabela por frente). */
+  prioridades: ({ prioridadeOperacaoId: string | null; nome: string } & ContagemFila)[];
+  porFrente: FrenteDaFila[];
+  /** Turnos de hoje que ainda não acabaram. */
+  turnos: TurnoDaFila[];
   semCatalogo: number;
   semCliente: number;
   porPrioridade: ({ prioridadeOperacaoId: string | null; nome: string } & ContagemFila)[];
@@ -159,8 +193,13 @@ export interface FilaDoMomento {
     fim: Date;
     produtividade: number | null;
     cargaEmMaos: number;
+    turno: string;
+    frenteNome: string;
   }[];
 }
+
+const HORA = 3_600_000;
+const menor = (a: Date | null, b: Date | null) => (a && b ? (a < b ? a : b) : (a ?? b));
 
 /**
  * A fila agora, para a tela antes de distribuir: contagens por prioridade da operação e frente e
@@ -200,10 +239,92 @@ export class ConsultarFilaDoMomento {
     };
     const carga = new Map(entrada.medicos.map((m) => [m.id, m.cargaEmMaos]));
     const nomeMedico = new Map(insumos.medicos.map((m) => [m.id, m.nome]));
+
+    // --- por frente da escala × prioridade da operação ---
+    const frentes = Object.entries(insumos.frentes);
+    const frenteDo = (l: (typeof fila)[number]) =>
+      (frentes.find(([, f]) => f.especialidadeId && f.especialidadeId === l.especialidadeId) ??
+        frentes.find(([, f]) => f.modalidadeId && f.modalidadeId === l.modalidadeId))?.[0] ?? null;
+    const porFrente = new Map<string | null, FrenteDaFila>();
+    for (const l of fila) {
+      const id = frenteDo(l);
+      const f = insumos.frentes[id ?? ''];
+      const linha = porFrente.get(id) ?? {
+        frenteId: id,
+        nome: f ? nome(f.especialidadeId ?? f.modalidadeId, '') : 'Sem frente',
+        exames: 0,
+        urgentes: 0,
+        primeiroVencimento: null,
+        porPrioridade: [],
+      };
+      linha.exames++;
+      if (l.urgente) linha.urgentes++;
+      linha.primeiroVencimento = menor(linha.primeiroVencimento, l.prazo);
+      let p = linha.porPrioridade.find((x) => x.prioridadeOperacaoId === l.prioridadeOperacaoId);
+      if (!p) {
+        p = { prioridadeOperacaoId: l.prioridadeOperacaoId, exames: 0, urgentes: 0 };
+        linha.porPrioridade.push(p);
+      }
+      p.exames++;
+      if (l.urgente) p.urgentes++;
+      porFrente.set(id, linha);
+    }
+    const contagemPrioridade = contar((l) => l.prioridadeOperacaoId);
+    const daPrioridade = (id: string | null) =>
+      contagemPrioridade.find((c) => c.id === id) ?? { exames: 0, urgentes: 0 };
+    const prioridades = [...insumos.prioridadesOperacao]
+      .sort((a, b) => a.posicao - b.posicao)
+      .map((p) => ({
+        prioridadeOperacaoId: p.id as string | null,
+        nome: p.nome,
+        ...daPrioridade(p.id),
+      }));
+    if (contagemPrioridade.some((c) => c.id === null)) {
+      prioridades.push({
+        prioridadeOperacaoId: null,
+        nome: 'Sem prioridade',
+        ...daPrioridade(null),
+      });
+    }
+
+    // --- turnos de hoje que ainda não acabaram ---
+    const turnos = new Map<string, TurnoDaFila & { ids: Set<string> }>();
+    for (const o of insumos.ocorrencias) {
+      if (o.ausente || !nomeMedico.has(o.medicoId) || o.fim <= agora) continue;
+      if (o.inicio.getTime() > agora.getTime() + 24 * HORA) continue;
+      const t = turnos.get(o.turnoId) ?? {
+        turnoId: o.turnoId,
+        nome: nome(o.turnoId, ''),
+        inicio: o.inicio,
+        fim: o.fim,
+        medicos: 0,
+        emAndamento: false,
+        ids: new Set<string>(),
+      };
+      t.ids.add(o.medicoId);
+      t.medicos = t.ids.size;
+      if (o.inicio < t.inicio) t.inicio = o.inicio;
+      if (o.fim > t.fim) t.fim = o.fim;
+      if (o.inicio <= agora && agora < o.fim) t.emAndamento = true;
+      turnos.set(o.turnoId, t);
+    }
+
+    const limite = agora.getTime() + HORA;
+    const comPrazo = fila.filter((l) => l.prazo !== null);
     return {
       lidaEm: agora,
       total: fila.length,
       urgentes: fila.filter((l) => l.urgente).length,
+      vencemProximaHora: comPrazo.filter((l) => (l.prazo as Date).getTime() <= limite).length,
+      primeiroVencimento: comPrazo.reduce<Date | null>((m, l) => menor(m, l.prazo), null),
+      habilitados: insumos.medicos.length,
+      prioridades,
+      porFrente: [...porFrente.values()].sort(
+        (a, b) => Number(a.frenteId === null) - Number(b.frenteId === null) || b.exames - a.exames,
+      ),
+      turnos: [...turnos.values()]
+        .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
+        .map(({ ids: _, ...t }) => t),
       semCatalogo,
       semCliente,
       porPrioridade: contar((l) => l.prioridadeOperacaoId).map(({ id, ...c }) => ({
@@ -235,7 +356,342 @@ export class ConsultarFilaDoMomento {
           fim: o.fim,
           produtividade: o.produtividade,
           cargaEmMaos: carga.get(o.medicoId) ?? 0,
+          turno: nome(o.turnoId, ''),
+          frenteNome: nome(o.frente.especialidadeId ?? o.frente.modalidadeId, ''),
         })),
     };
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Resumo da proposta e o "por que este médico não pegou" (passo 5), dos insumos gravados
+// ---------------------------------------------------------------------------------------------
+
+export interface MedicoDoResumo {
+  medicoId: string;
+  nome: string;
+  turnos: string[];
+  frentes: string[];
+  /** Teto da escala comum na leitura; null = sem teto conhecido. */
+  capacidade: number | null;
+  /** Carga em mãos na leitura (já aberta na MobileMed). */
+  cargaEmMaos: number;
+  propostos: number;
+  urgencias: number;
+  pacotes: number;
+  previstas: number;
+  executadas: number;
+  puladas: number;
+  falharam: number;
+  naMao: number;
+}
+
+export interface ResumoRodada {
+  medicos: MedicoDoResumo[];
+  motivos: ContagemPorMotivo[];
+  ajustes: AjustesConferencia;
+  funilExames: InsumosGravados['funil']['exames'] | null;
+  funilMedicos: {
+    habilitados: number;
+    escalados: number;
+    disponiveis: number;
+    noTurno: number;
+    noHorario: number;
+    tirados: number;
+    receberam: number;
+  } | null;
+  trilha: { pacotes: number; examesAgrupados: number; aderencia: number } | null;
+}
+
+const ZERO = {
+  propostos: 0,
+  urgencias: 0,
+  pacotes: 0,
+  previstas: 0,
+  executadas: 0,
+  puladas: 0,
+  falharam: 0,
+  naMao: 0,
+};
+
+/** A tabela por médico, os motivos de quem ficou de fora, os ajustes e o funil da rodada. */
+export class ConsultarResumo {
+  constructor(private readonly d: DependenciasRodada) {}
+
+  async executar(id: string): Promise<ResumoRodada> {
+    const r = await rodadaOuErro(this.d, id);
+    const [insumos, contagens, motivos, ajustes] = await Promise.all([
+      this.d.rodadas.insumos(id),
+      this.d.consulta.porMedico(id),
+      this.d.consulta.porMotivo(id),
+      this.d.consulta.ajustes(id),
+    ]);
+    const retrato = insumos?.medicos ?? [];
+    const porId = new Map(contagens.map((c) => [c.medicoId, c]));
+    const medicos: MedicoDoResumo[] = retrato.map((m) => {
+      const {
+        medicoId: _,
+        nome: __,
+        ...c
+      } = porId.get(m.id) ?? { medicoId: m.id, nome: m.nome, ...ZERO };
+      return {
+        medicoId: m.id,
+        nome: m.nome,
+        turnos: m.turnos,
+        frentes: m.frentes,
+        capacidade: m.capacidade,
+        cargaEmMaos: m.cargaEmMaos,
+        ...c,
+      };
+    });
+    const noRetrato = new Set(retrato.map((m) => m.id));
+    for (const c of contagens) {
+      if (noRetrato.has(c.medicoId)) continue;
+      // Mandado na conferência a quem não estava na rodada.
+      medicos.push({ ...c, turnos: [], frentes: [], capacidade: null, cargaEmMaos: 0 });
+    }
+    medicos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return {
+      medicos,
+      motivos,
+      ajustes,
+      funilExames: insumos?.funil.exames ?? null,
+      funilMedicos: insumos
+        ? {
+            habilitados: insumos.habilitados.length,
+            ...insumos.funil.medicos,
+            tirados: r.recortes.medicosExcluidos.length,
+            receberam: contagens.filter((c) => c.propostos > 0).length,
+          }
+        : null,
+      trilha: insumos
+        ? {
+            pacotes: insumos.trilha.pacotes,
+            examesAgrupados: insumos.trilha.examesAgrupados,
+            aderencia: insumos.trilha.aderencia,
+          }
+        : null,
+    };
+  }
+}
+
+export interface CheckExplicacao {
+  ok: boolean;
+  titulo: string;
+  detalhe: string;
+}
+
+export interface Explicacao {
+  medico: RotuloRodada;
+  /** O médico ficou com o exame (proposto ou atribuído). */
+  pegou: boolean;
+  /** A frase do desfecho ("Não pegou porque..."). */
+  titulo: string;
+  /** Os portões, na ordem, até o primeiro que barrou. */
+  checks: CheckExplicacao[];
+}
+
+/** Recusas que acontecem antes de olhar os médicos (o exame nem entrou na distribuição). */
+const ANTES_DOS_MEDICOS = new Set([
+  'nao_novo',
+  'fora_da_prioridade',
+  'fora_da_clinica',
+  'fora_da_frente',
+  'horario_sem_robo',
+  'frente_manual',
+]);
+
+const PORTOES: {
+  barreira: Barreira[];
+  titulo: string;
+  ok: string;
+  falha: string;
+  frase: string;
+}[] = [
+  {
+    barreira: ['escala'],
+    titulo: 'O turno recebe o exame',
+    ok: 'Algum período dele aceita a frente, a prioridade e o segmento agora',
+    falha:
+      'Nenhum período dele aceita este exame agora (frente, prioridade, segmento, grade de recebimento ou horário sem robô)',
+    frase: 'o turno dele não recebe este exame agora',
+  },
+  {
+    barreira: ['arranjo'],
+    titulo: 'Lauda o exame',
+    ok: 'Um arranjo dele casa com o exame',
+    falha:
+      'Nenhum arranjo dele casa com o exame (especialidade, modalidade, prioridade, cliente ou exame)',
+    frase: 'não lauda este exame pelo arranjo',
+  },
+  {
+    barreira: ['equipe'],
+    titulo: 'Da equipe do exame',
+    ok: 'O exame não é direcionado a outra equipe',
+    falha: 'O exame é direcionado a uma equipe da qual ele não faz parte',
+    frase: 'o exame é de outra equipe',
+  },
+  {
+    barreira: ['reservado'],
+    titulo: 'A clínica não é exclusiva de outro médico',
+    ok: 'Sem exclusividade de outro médico para este exame',
+    falha: 'A clínica é exclusiva de outro(s) médico(s) neste recorte',
+    frase: 'a clínica é exclusiva de outro médico',
+  },
+  {
+    barreira: ['ja_entregue', 'retirado_na_conferencia'],
+    titulo: 'Não tinha sido tirado deste exame',
+    ok: 'O robô nunca devolve o exame a quem já o recebeu ou de quem a operação o tirou',
+    falha: '',
+    frase: '',
+  },
+];
+
+const FALHA_ENTREGA: Record<
+  'ja_entregue' | 'retirado_na_conferencia',
+  { detalhe: string; frase: string }
+> = {
+  ja_entregue: {
+    detalhe: 'O robô já o entregou a ele e o exame voltou à fila: não volta para ele',
+    frase: 'já tinha recebido este exame do robô',
+  },
+  retirado_na_conferencia: {
+    detalhe: 'Retirado deste médico na conferência de uma rodada: o robô não o devolve a ele',
+    frase: 'o exame foi retirado deste médico na conferência',
+  },
+};
+
+/**
+ * "Por que este médico não pegou este exame?", lido do registro da rodada: os portões que o médico
+ * passou e o primeiro que o barrou, como estavam na leitura.
+ */
+export class ExplicarDesignacao {
+  constructor(private readonly d: DependenciasRodada) {}
+
+  async executar(rodadaId: string, designacaoId: string, medicoId: string): Promise<Explicacao> {
+    const r = await rodadaOuErro(this.d, rodadaId);
+    const [d, insumos] = await Promise.all([
+      this.d.consulta.designacaoExplicada(rodadaId, designacaoId),
+      this.d.rodadas.insumos(rodadaId),
+    ]);
+    if (!d) throw new DesignacaoNaoEncontradaError();
+    const retrato = insumos?.medicos.find((m) => m.id === medicoId);
+    const nome =
+      retrato?.nome ?? (await this.d.consulta.nomesMedicos([medicoId])).get(medicoId) ?? '';
+    const checks: CheckExplicacao[] = [];
+    const fim = (pegou: boolean, titulo: string): Explicacao => ({
+      medico: { id: medicoId, nome },
+      pegou,
+      titulo,
+      checks,
+    });
+    const passo = (ok: boolean, titulo: string, detalhe: string) =>
+      checks.push({ ok, titulo, detalhe });
+
+    const habilitado = insumos?.habilitados.includes(medicoId) ?? false;
+    passo(
+      habilitado,
+      'Habilitado no robô',
+      habilitado
+        ? 'Ativo e habilitado na aba Distribuição do médico'
+        : 'Não estava ativo e habilitado no robô na hora da leitura',
+    );
+    if (!habilitado) return fim(false, 'Não pegou porque não estava habilitado no robô.');
+
+    const tirado = r.recortes.medicosExcluidos.includes(medicoId);
+    passo(
+      !tirado,
+      'Na rodada',
+      tirado ? 'Foi tirado desta rodada ao pedir a distribuição' : 'Não foi tirado desta rodada',
+    );
+    if (tirado) return fim(false, 'Não pegou porque foi tirado desta rodada.');
+
+    passo(
+      !!retrato,
+      'Em turno na rodada',
+      retrato
+        ? `${retrato.turnos.join(' e ')}${retrato.frentes.length ? `: ${retrato.frentes.join(', ')}` : ''}`
+        : 'Sem período em andamento nos turnos e frentes da rodada (ou com ausência no dia)',
+    );
+    if (!retrato) return fim(false, 'Não pegou porque não estava em turno na rodada.');
+
+    const barreira = d.barrados[medicoId];
+    const elegivel = d.elegiveis.includes(medicoId);
+    if (!barreira && !elegivel) {
+      passo(
+        false,
+        'O exame entrou na distribuição',
+        d.detalhe ?? 'O exame não chegou aos médicos.',
+      );
+      return fim(
+        false,
+        d.motivo && ANTES_DOS_MEDICOS.has(d.motivo)
+          ? 'Não pegou porque o exame ficou de fora antes de olhar os médicos.'
+          : 'Não pegou: o exame não chegou a ele nesta leitura.',
+      );
+    }
+    for (const p of PORTOES) {
+      const barrou = barreira && p.barreira.includes(barreira);
+      if (!barrou) {
+        passo(true, p.titulo, p.ok);
+        continue;
+      }
+      const entrega = barreira === 'ja_entregue' || barreira === 'retirado_na_conferencia';
+      const falha = entrega ? FALHA_ENTREGA[barreira] : { detalhe: p.falha, frase: p.frase };
+      passo(false, p.titulo, falha.detalhe);
+      return fim(false, `Não pegou porque ${falha.frase}.`);
+    }
+
+    // Elegível: o desfecho veio da distribuição (teto, ordem) ou da conferência.
+    const ficou = d.medico?.id === medicoId;
+    if (ficou) {
+      passo(
+        true,
+        d.status === 'executada' ? 'Recebeu o exame' : 'Ficou com o exame na proposta',
+        d.naMao
+          ? 'Mandado na mão na conferência'
+          : d.medicoProposto?.id === medicoId
+            ? 'Escolhido pelo robô'
+            : 'Movido para ele na conferência',
+      );
+      return fim(
+        true,
+        d.status === 'executada' ? 'Pegou este exame.' : 'Este exame está com ele na proposta.',
+      );
+    }
+    if (d.medicoProposto?.id === medicoId) {
+      passo(
+        false,
+        'Ficou com ele na proposta',
+        d.retiradoDe
+          ? 'Tirado da proposta na conferência'
+          : `Movido para ${d.medico?.nome ?? 'outro médico'} na conferência`,
+      );
+      return fim(false, 'O robô propôs a ele, mas a conferência mudou.');
+    }
+    if (d.status === 'recusada' && (d.motivo === 'sem_espaco' || d.motivo === 'teto_do_segmento')) {
+      const teto =
+        retrato.capacidade === null ? 'sem teto conhecido' : `teto de ${retrato.capacidade}`;
+      passo(
+        false,
+        d.motivo === 'sem_espaco'
+          ? 'Tinha espaço no teto do turno'
+          : 'Tinha espaço no teto do segmento',
+        `Já tinha ${retrato.cargaEmMaos} em mãos (${teto}) e os exames que vieram antes na fila o encheram`,
+      );
+      return fim(false, 'Não pegou porque estava no teto quando o exame chegou na vez dele.');
+    }
+    if (d.motivo === 'teto_da_rodada') {
+      passo(false, 'Dentro do teto de exames da rodada', d.detalhe ?? '');
+      return fim(false, 'Não pegou porque a rodada chegou ao teto de exames.');
+    }
+    passo(
+      false,
+      'Foi o escolhido entre os elegíveis',
+      d.medicoProposto
+        ? `O robô escolheu ${d.medicoProposto.nome} (menos carga ou o pacote do paciente já com ele)`
+        : (d.detalhe ?? 'O exame ficou de fora'),
+    );
+    return fim(false, 'Não pegou: o exame foi para outro médico que também podia laudar.');
   }
 }

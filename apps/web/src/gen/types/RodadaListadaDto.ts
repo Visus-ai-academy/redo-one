@@ -3,10 +3,29 @@
 * Do not edit manually.
 */
 
+import type { RecortesRodadaDto } from './RecortesRodadaDto'
 import type { RotuloRodadaDto } from './RotuloRodadaDto'
 import type { StatusRodadaKey } from './StatusRodada'
 
 export type RodadaListadaDto = {
+  recortes: RecortesRodadaDto;
+  /**
+   * @description Os que o motor propôs.
+   * @type integer
+   */
+  propostos: number;
+  /**
+   * @description Os que o motor deixou de fora.
+   * @type integer
+   */
+  deFora: number;
+  /**
+   * @description Último movimento da rodada (o fim, na encerrada).
+   *
+   * Format: `date-time`
+   * @type string
+   */
+  atualizadoEm: string;
   /**
    * @description
    * Format: `uuid`

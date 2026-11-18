@@ -7,6 +7,7 @@ import type { PrioridadeOperacao } from '../motor/prioridades-operacao';
 import {
   type CatalogoDaFila,
   type ExameDaLeitura,
+  escalaDosMedicos,
   type InsumosRodada,
   montarEntrada,
   RECORTES_VAZIOS,
@@ -280,5 +281,30 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
     const { entrada } = montar();
     expect(entrada.config).not.toHaveProperty('roboAtivo');
     expect(entrada.config.diasJaEntregue).toBe(CONFIGURACAO_INICIAL.diasJaEntregue);
+  });
+});
+
+describe('escala dos médicos no instante da leitura', () => {
+  it('turnos e frentes em andamento, com os nomes, sem ausência nem turno encerrado', () => {
+    const r = escalaDosMedicos(
+      insumos({
+        ocorrencias: [
+          oc('A'),
+          oc('A', {
+            turnoId: 'lista',
+            frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: CT },
+          }),
+          oc('B', { ausente: true }),
+          oc('A', {
+            turnoId: 'noite',
+            inicio: br('2026-11-18T19:00'),
+            fim: br('2026-11-19T07:00'),
+          }),
+        ],
+        nomes: { manha: 'Manhã', lista: 'Lista', [MI]: 'MEDICINA INTERNA', [CT]: 'CT' },
+      }),
+      agora,
+    );
+    expect(r).toEqual({ A: { turnos: ['Manhã', 'Lista'], frentes: ['MEDICINA INTERNA', 'CT'] } });
   });
 });

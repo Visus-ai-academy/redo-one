@@ -12,7 +12,15 @@ export interface OpcoesMobileMedFake {
   semente: number;
   /** % dos exames que falham na 1ª tentativa, retentáveis (`DISTRIBUICAO_FAKE_FALHAS_PCT`). */
   falhasPct: number;
+  /**
+   * % dos exames que, ao serem conferidos (a retomada confere antes de atribuir), já ganharam médico
+   * por fora do robô (`DISTRIBUICAO_FAKE_POR_FORA_PCT`).
+   */
+  porForaPct?: number;
 }
+
+/** Conta na MobileMed de "alguém de fora" (um médico que pegou o exame sem o robô). */
+const CONTA_DE_FORA = 0;
 
 const HORA = 3_600_000;
 
@@ -71,6 +79,19 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     return new Map(
       semMedico.filter((e) => pedidos.has(e.idExame)).map((e) => [e.idExame, e.paciente.nome]),
     );
+  }
+
+  async semMedico(idsExame: readonly string[]): Promise<Set<string>> {
+    const pct = this.opcoes.porForaPct ?? 0;
+    for (const id of idsExame) {
+      // O hash deslocado não coincide com o das falhas.
+      if (pct > 0 && hashDo(`fora:${id}`) % 100 < pct && !this.atribuidos.has(id)) {
+        this.atribuidos.set(id, CONTA_DE_FORA);
+      }
+    }
+    const { semMedico } = await this.ler();
+    const livres = new Set(semMedico.map((e) => e.idExame));
+    return new Set(idsExame.filter((id) => livres.has(id)));
   }
 
   async atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao> {

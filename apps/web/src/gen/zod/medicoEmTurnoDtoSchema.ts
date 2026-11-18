@@ -16,6 +16,8 @@ export const medicoEmTurnoDtoSchema = z.object({
   fim: z.iso.datetime(),
   produtividade: z.int().nullable(),
   cargaEmMaos: z.int().describe('Exames com ele ainda não laudados.'),
+  turno: z.string().describe('Nome do turno.'),
+  frenteNome: z.string().describe('Nome da frente (especialidade ou modalidade).'),
 })
 
 export type MedicoEmTurnoDtoSchemaType = z.infer<typeof medicoEmTurnoDtoSchema>

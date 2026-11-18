@@ -10,6 +10,8 @@ import {
 } from './fila';
 import {
   type AjusteDia,
+  type Barreira,
+  type EntregaAnterior,
   type EtapaElegibilidade,
   type ExameElegivel,
   type MedicoRodada,
@@ -62,7 +64,7 @@ export interface ExameFilaRodada {
   /** Só exame NOVO na MobileMed é distribuído. */
   novo: boolean;
   medicoAderente: string | null;
-  entregues: readonly { medicoId: string; em: Date }[];
+  entregues: readonly EntregaAnterior[];
 }
 
 export interface FiltroRodada {
@@ -138,6 +140,10 @@ export interface ItemRodada {
   gratificado: boolean;
   alocacaoGratificadaId: string | null;
   coberturaDeId: string | null;
+  /** Médicos que podiam laudar o exame nesta leitura (o "mover" e o "por quê" usam). */
+  elegiveis: string[];
+  /** Médico em turno → onde parou diante deste exame. */
+  barrados: Record<string, Barreira>;
 }
 
 export interface ResultadoRodada {
@@ -150,6 +156,18 @@ export interface ResultadoRodada {
    * prioridade padrão. É o aviso para cadastrar a grafia (a tela da rodada o mostra).
    */
   grafiasSemDePara: string[];
+  /** Os médicos que entraram na rodada (em turno, no recorte), como o motor os leu. */
+  medicos: MedicoNaRodada[];
+}
+
+export interface MedicoNaRodada {
+  id: string;
+  nome: string;
+  /** Teto da escala comum; null = sem teto conhecido. */
+  capacidade: number | null;
+  /** Carga em mãos que ocupa o teto (sem a exclusiva). */
+  cargaEmMaos: number;
+  cotaGratificada: number;
 }
 
 const semItem = (exameId: string, motivo: MotivoRodada, detalhe: string): ItemRodada => ({
@@ -161,6 +179,8 @@ const semItem = (exameId: string, motivo: MotivoRodada, detalhe: string): ItemRo
   gratificado: false,
   alocacaoGratificadaId: null,
   coberturaDeId: null,
+  elegiveis: [],
+  barrados: {},
 });
 
 export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
@@ -331,9 +351,13 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   const itens = entrada.exames.map((e): ItemRodada => {
     const recusa = recusas.get(e.id);
     if (recusa) return recusa;
+    const explicado = (i: Omit<ItemRodada, 'elegiveis' | 'barrados'>): ItemRodada => ({
+      ...i,
+      ...montados.explicacao(e.id),
+    });
     const d = designacao.get(e.id);
     if (d) {
-      return {
+      return explicado({
         exameId: e.id,
         medicoId: d.medicoId,
         motivo: null,
@@ -342,32 +366,43 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
         gratificado: d.gratificado,
         alocacaoGratificadaId: d.gratificado ? montados.gratificadoPara(d.medicoId, e.id) : null,
         coberturaDeId: montados.coberturaPara(d.medicoId, e.id),
-      };
+      });
     }
     const n = naoDistribuido.get(e.id);
     if (n?.motivo !== 'sem_medico_elegivel') {
-      return semItem(
-        e.id,
-        n?.motivo ?? 'sem_medico_elegivel',
-        n ? `${ROTULO_MOTIVO[n.motivo]}. ${n.detalhe}` : '',
+      return explicado(
+        semItem(
+          e.id,
+          n?.motivo ?? 'sem_medico_elegivel',
+          n ? `${ROTULO_MOTIVO[n.motivo]}. ${n.detalhe}` : '',
+        ),
       );
     }
     const etapa = montados.etapaElegibilidade.get(e.id);
     if (etapa === 'retirado') {
-      return semItem(
-        e.id,
-        'retirado_do_medico',
-        'Quem laudaria este exame já o recebeu do robô e o teve retirado.',
+      const naConferencia = Object.values(montados.explicacao(e.id).barrados).includes(
+        'retirado_na_conferencia',
+      );
+      return explicado(
+        semItem(
+          e.id,
+          'retirado_do_medico',
+          naConferencia
+            ? 'Quem laudaria este exame o teve retirado na conferência de uma rodada: o robô não o devolve a ele.'
+            : 'Quem laudaria este exame já o recebeu do robô e o teve retirado.',
+        ),
       );
     }
     if (etapa === 'escala' && montados.guardadosParaPosteriores.has(e.id)) {
-      return semItem(
-        e.id,
-        'guardado_para_posteriores',
-        'A Lista que segue o SLA neste dia levaria este exame, mas ele vence antes do fim dos turnos posteriores e fica para eles.',
+      return explicado(
+        semItem(
+          e.id,
+          'guardado_para_posteriores',
+          'A Lista que segue o SLA neste dia levaria este exame, mas ele vence antes do fim dos turnos posteriores e fica para eles.',
+        ),
       );
     }
-    return semItem(e.id, 'sem_medico_elegivel', POR_QUE_SEM_MEDICO[etapa ?? 'pacote']);
+    return explicado(semItem(e.id, 'sem_medico_elegivel', POR_QUE_SEM_MEDICO[etapa ?? 'pacote']));
   });
 
   const distribuidos = itens.filter((i) => i.medicoId !== null).length;
@@ -377,5 +412,12 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     funil: montados.funil,
     trilha: resultado.trilha,
     grafiasSemDePara: [...grafiasSemDePara].sort(),
+    medicos: montados.medicos.map((m) => ({
+      id: m.id,
+      nome: m.nome,
+      capacidade: m.capacidade,
+      cargaEmMaos: m.cargaInicial,
+      cotaGratificada: m.cotaGratificada,
+    })),
   };
 }

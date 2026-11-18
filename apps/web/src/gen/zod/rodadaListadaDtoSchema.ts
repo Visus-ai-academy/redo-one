@@ -4,10 +4,15 @@
 */
 
 import * as z from 'zod'
+import { recortesRodadaDtoSchema } from './recortesRodadaDtoSchema'
 import { rotuloRodadaDtoSchema } from './rotuloRodadaDtoSchema'
 import { statusRodadaSchema } from './statusRodadaSchema'
 
 export const rodadaListadaDtoSchema = z.object({
+  recortes: recortesRodadaDtoSchema,
+  propostos: z.int().describe('Os que o motor propôs.'),
+  deFora: z.int().describe('Os que o motor deixou de fora.'),
+  atualizadoEm: z.iso.datetime().describe('Último movimento da rodada (o fim, na encerrada).'),
   id: z.uuid(),
   status: statusRodadaSchema,
   criadoEm: z.iso.datetime(),

@@ -4,6 +4,7 @@
 */
 
 import type { PaginaRodadasDto } from './PaginaRodadasDto'
+import type { StatusRodadaKey } from './StatusRodada'
 
 export type RodadasControllerHistoricoQuery = {
   /**
@@ -19,6 +20,21 @@ export type RodadasControllerHistoricoQuery = {
    * @type integer | undefined
    */
   porPagina?: number;
+  status?: StatusRodadaKey[];
+  /**
+   * @description Quem pediu.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  solicitadaPorId?: string;
+  /**
+   * @description Pedidas a partir deste instante.
+   *
+   * Format: `date-time`
+   * @type string | undefined
+   */
+  desde?: string;
 };
 
 export type RodadasControllerHistoricoStatus200 = PaginaRodadasDto;

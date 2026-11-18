@@ -44,4 +44,14 @@ export type MedicoEmTurnoDto = {
    * @type integer
    */
   cargaEmMaos: number;
+  /**
+   * @description Nome do turno.
+   * @type string
+   */
+  turno: string;
+  /**
+   * @description Nome da frente (especialidade ou modalidade).
+   * @type string
+   */
+  frenteNome: string;
 };

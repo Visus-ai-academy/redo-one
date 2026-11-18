@@ -39,6 +39,14 @@ export const rodadasControllerDesignacoesQueryModalidadeIdSchema = z.uuid().opti
 
 export type RodadasControllerDesignacoesQueryModalidadeIdSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryModalidadeIdSchema>
 
+export const rodadasControllerDesignacoesQueryMotivoSchema = z.array(z.string()).optional().describe('Código do motivo (ex.: `sem_espaco`).')
+
+export type RodadasControllerDesignacoesQueryMotivoSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryMotivoSchema>
+
+export const rodadasControllerDesignacoesQueryNaMaoSchema = z.boolean().optional().describe('Só os mandados na mão (true) ou só os do motor (false).')
+
+export type RodadasControllerDesignacoesQueryNaMaoSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryNaMaoSchema>
+
 export const rodadasControllerDesignacoesQueryBuscaSchema = z.string().optional().describe('Trecho do estudo ou da unidade.')
 
 export type RodadasControllerDesignacoesQueryBuscaSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryBuscaSchema>
@@ -73,6 +81,8 @@ export const rodadasControllerDesignacoesQuerySchema = z.object({
   prioridadeOperacaoId: z.uuid().optional(),
   especialidadeId: z.uuid().optional(),
   modalidadeId: z.uuid().optional(),
+  motivo: z.array(z.string()).optional().describe('Código do motivo (ex.: `sem_espaco`).'),
+  naMao: z.boolean().optional().describe('Só os mandados na mão (true) ou só os do motor (false).'),
   busca: z.string().optional().describe('Trecho do estudo ou da unidade.'),
 })
 

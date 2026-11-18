@@ -111,12 +111,17 @@ const oc = (medicoId: string, p: Partial<OcorrenciaRodada> = {}): OcorrenciaRoda
   ausente: false,
   ...p,
 });
-const medico = (id: string, arranjos: Arranjo[] = [arranjo()]) => ({
+const medico = (
+  id: string,
+  arranjos: Arranjo[] = [arranjo()],
+  extra: { cargaEmMaos?: number } = {},
+) => ({
   id,
   nome: id,
   arranjos,
   cargaEmMaos: 0,
   cargaReservadaEmMaos: 0,
+  ...extra,
 });
 
 const rodar = (p: Partial<EntradaRodada>) =>
@@ -350,6 +355,30 @@ describe('rodarMotor', () => {
       exames: [exame({ id: 'ret', entregues: [{ medicoId: 'A', em: br('2026-11-16T10:00') }] })],
     });
     expect(item(r, 'ret')).toMatchObject({ motivo: 'retirado_do_medico' });
+  });
+
+  it('exame tirado do médico na conferência: o porquê diz a conferência', () => {
+    const r = rodar({
+      exames: [
+        exame({
+          id: 'ret',
+          entregues: [{ medicoId: 'A', em: br('2026-11-16T10:00'), origem: 'conferencia' }],
+        }),
+      ],
+    });
+    expect(item(r, 'ret')).toMatchObject({ motivo: 'retirado_do_medico' });
+    expect(item(r, 'ret')?.detalhe).toMatch(/conferência/);
+    expect(item(r, 'ret')).toMatchObject({
+      elegiveis: [],
+      barrados: { A: 'retirado_na_conferencia' },
+    });
+  });
+
+  it('devolve os médicos que entraram na rodada, com o teto e a carga em mãos', () => {
+    const r = rodar({ medicos: [medico('A', undefined, { cargaEmMaos: 3 })] });
+    expect(r.medicos).toEqual([
+      expect.objectContaining({ id: 'A', capacidade: expect.any(Number), cargaEmMaos: 3 }),
+    ]);
   });
 
   it('a designação leva a cota gratificada e a cobertura', () => {

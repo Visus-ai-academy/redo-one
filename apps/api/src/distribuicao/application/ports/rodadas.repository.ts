@@ -25,6 +25,8 @@ export interface Rodada {
   lidos: number;
   urgentes: number;
   recortes: RecortesRodada;
+  /** Quantas vezes a execução foi retomada: a retomada confere a fila antes de cada exame. */
+  retomadas: number;
 }
 
 export interface ContagemDesignacoes {
@@ -44,6 +46,10 @@ export interface Designacao {
   idExameMobilemed: string;
   medicoId: string | null;
   status: StatusDesignacao;
+  /** HMAC do paciente: o pacote (os exames do mesmo paciente) anda junto ao mover. */
+  pacienteChave: string;
+  /** De quem a conferência o tirou (para o "Desfazer" e o bloqueio nas próximas rodadas). */
+  retiradoDeId: string | null;
   posicao: number | null;
   urgente: boolean;
   prazo: Date | null;
@@ -67,6 +73,23 @@ export interface MudancaRodada {
   erro?: string | null;
   aprovadaPorId?: string | null;
   aprovadaEm?: Date | null;
+  /** Soma uma retomada (a execução passa a conferir a fila antes de cada exame). */
+  retomada?: boolean;
+}
+
+/** Um ajuste de destino na conferência. */
+export interface MovimentoProposta {
+  designacaoId: string;
+  medicoId: string;
+  /** O exame estava de fora (recusado pelo motor) e foi mandado na mão. */
+  naMao: boolean;
+}
+
+/** Entrega anterior que barra o exame para o médico (executada ou tirada na conferência). */
+export interface EntregaRegistrada {
+  medicoId: string;
+  em: Date;
+  origem: 'execucao' | 'conferencia';
 }
 
 export interface ResultadoDesignacao {
@@ -126,13 +149,22 @@ export interface RodadasRepository {
   /** As previstas (a execução ordena pela fila do momento). */
   previstas(id: string): Promise<Designacao[]>;
   designacoesPorId(rodadaId: string, ids: readonly string[]): Promise<Designacao[]>;
-  /** Tira da proposta (prevista → pulada, sem médico); devolve quantas. */
-  removerDaProposta(rodadaId: string, ids: readonly string[]): Promise<number>;
-  /** Troca o médico das previstas; devolve quantas. */
-  moverNaProposta(
-    rodadaId: string,
-    mover: readonly { designacaoId: string; medicoId: string }[],
-  ): Promise<number>;
+  /** Os insumos gravados na leitura (o "por quê" e o resumo por médico). */
+  insumos(id: string): Promise<InsumosGravados | null>;
+  /** As outras designações do mesmo paciente na rodada (o pacote). */
+  doMesmoPaciente(rodadaId: string, designacaoId: string): Promise<Designacao[]>;
+  /**
+   * Tira da proposta (prevista → pulada, sem médico), guardando de quem saiu e quando; devolve
+   * quantas.
+   */
+  removerDaProposta(rodadaId: string, ids: readonly string[], agora: Date): Promise<number>;
+  /** Desfaz o "tirar": a designação volta prevista para o médico de quem saiu; devolve quantas. */
+  restaurarNaProposta(rodadaId: string, ids: readonly string[]): Promise<number>;
+  /**
+   * Troca o médico das previstas; a recusada mandada na mão vira prevista com `naMao`. Devolve
+   * quantas.
+   */
+  moverNaProposta(rodadaId: string, mover: readonly MovimentoProposta[]): Promise<number>;
   /** Grava o resultado de uma prevista; false se ela já não estava prevista. */
   registrarResultado(
     designacaoId: string,
@@ -154,11 +186,11 @@ export interface RodadasRepository {
     progresso?: { atual: number; total: number },
   ): Promise<void>;
   eventos(rodadaId: string, limite: number): Promise<EventoRodada[]>;
-  /** Exame (id na MobileMed) → a quem o robô o entregou desde `desde` (executadas). */
-  entregues(
-    idsExame: readonly string[],
-    desde: Date,
-  ): Promise<Map<string, { medicoId: string; em: Date }[]>>;
+  /**
+   * Exame (id na MobileMed) → a quem o robô o entregou (executadas) ou de quem a conferência o
+   * tirou, desde `desde`.
+   */
+  entregues(idsExame: readonly string[], desde: Date): Promise<Map<string, EntregaRegistrada[]>>;
   /** Alocação gratificada → laudos já executados por ela desde o início do plantão em curso. */
   cotaEntregue(
     plantoes: readonly { alocacaoId: string; desde: Date }[],

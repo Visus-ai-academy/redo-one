@@ -1,8 +1,10 @@
 import type { DependenciasRodada } from './comum';
 import {
   ConsultarFilaDoMomento,
+  ConsultarResumo,
   ConsultarRodada,
   ConsultarSituacao,
+  ExplicarDesignacao,
   ListarDesignacoes,
 } from './consultas';
 import {
@@ -26,11 +28,13 @@ export {
   AprovarRodada,
   CancelarRodada,
   ConsultarFilaDoMomento,
+  ConsultarResumo,
   ConsultarRodada,
   ConsultarSituacao,
   CriarRodada,
   EncerrarRodada,
   ExecutarRodada,
+  ExplicarDesignacao,
   LerFila,
   ListarDesignacoes,
   PausarRodada,
@@ -59,6 +63,8 @@ export function criarCasosDeUsoRodada(d: DependenciasRodada) {
     consultar: new ConsultarRodada(d),
     designacoes: new ListarDesignacoes(d),
     filaDoMomento: new ConsultarFilaDoMomento(d),
+    resumo: new ConsultarResumo(d),
+    explicar: new ExplicarDesignacao(d),
   };
 }
 

@@ -1,5 +1,5 @@
 import { rodarMotor } from '../../../domain/motor/rodada';
-import { montarEntrada } from '../../../domain/rodada/entrada';
+import { escalaDosMedicos, montarEntrada } from '../../../domain/rodada/entrada';
 import { iniciarLeitura, propor, STATUS_VIVOS } from '../../../domain/rodada/maquina';
 import { montarProposta } from '../../../domain/rodada/proposta';
 import { type DependenciasRodada, mensagemDo } from './comum';
@@ -61,6 +61,8 @@ export class LerFila {
         prioridadesCliente: insumos.prioridadesCliente,
         semCatalogo: montada.semCatalogo,
         semCliente: montada.semCliente,
+        escalaDosMedicos: escalaDosMedicos(insumos, agora),
+        habilitados: insumos.medicos.map((m) => m.id),
       });
       const { expiraEm } = propor(
         { status: 'lendo', expiraEm: null },

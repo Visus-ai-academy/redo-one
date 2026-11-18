@@ -4,6 +4,7 @@
 */
 
 import * as z from 'zod'
+import { pacoteDtoSchema } from './pacoteDtoSchema'
 import { rotuloRodadaDtoSchema } from './rotuloRodadaDtoSchema'
 import { statusDesignacaoSchema } from './statusDesignacaoSchema'
 
@@ -25,8 +26,11 @@ export const designacaoDtoSchema = z.object({
   urgente: z.boolean().describe('A operação trata como urgência.'),
   medicoProposto: rotuloRodadaDtoSchema.nullable().describe('Quem o motor propôs (fica mesmo se a conferência mover ou tirar).'),
   medico: rotuloRodadaDtoSchema.nullable().describe('A quem vai ou foi.'),
-  agrupadoCom: z.string().nullable().describe('Id na MobileMed do exame com quem anda no pacote do paciente.'),
+  pacote: pacoteDtoSchema.nullable().describe('Os exames do mesmo paciente na rodada; nulo = só este.'),
   gratificado: z.boolean(),
+  naMao: z.boolean().describe('Mandado na mão na conferência (o motor o tinha deixado de fora).'),
+  retiradoDe: rotuloRodadaDtoSchema.nullable().describe('De quem a conferência o tirou.'),
+  retiradaEm: z.iso.datetime().nullable(),
   status: statusDesignacaoSchema,
   motivo: z.string().nullable().describe('Código do motivo.'),
   detalhe: z.string().nullable().describe('O porquê, para a pessoa.'),

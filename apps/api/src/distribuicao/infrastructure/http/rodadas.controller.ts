@@ -22,7 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { IdCriadoDto, PaginacaoDto } from '../../../catalogo/comum/dto';
+import { IdCriadoDto } from '../../../catalogo/comum/dto';
 import { Permissao, PrincipalAtual } from '../../../identidade/acesso/decorators';
 import { type PrincipalUsuario, temPermissao } from '../../../identidade/principal';
 import {
@@ -32,10 +32,12 @@ import {
   type AtorRodada,
   CancelarRodada,
   ConsultarFilaDoMomento,
+  ConsultarResumo,
   ConsultarRodada,
   ConsultarSituacao,
   CriarRodada,
   EncerrarRodada,
+  ExplicarDesignacao,
   ListarDesignacoes,
   PausarRodada,
   RelerRodada,
@@ -45,11 +47,15 @@ import type { RodadaDetalhe } from '../../application/use-cases/rodadas/consulta
 import {
   AjustePropostaDto,
   DesignacoesQueryDto,
+  ExplicacaoDto,
+  ExplicacaoQueryDto,
   FilaDoMomentoDto,
+  HistoricoQueryDto,
   MedicosRodadaDto,
   PaginaDesignacoesDto,
   PaginaRodadasDto,
   RecortesRodadaDto,
+  ResumoRodadaDto,
   RodadaDto,
   RodadaVivaDto,
   SituacaoRodadaDto,
@@ -102,6 +108,8 @@ export class RodadasController {
     private readonly consultar: ConsultarRodada,
     private readonly listarDesignacoes: ListarDesignacoes,
     private readonly consultarFila: ConsultarFilaDoMomento,
+    private readonly consultarResumo: ConsultarResumo,
+    private readonly explicar: ExplicarDesignacao,
   ) {}
 
   @Get('viva')
@@ -115,8 +123,14 @@ export class RodadasController {
   @Get()
   @Permissao('distribuicao.ver')
   @ApiOkResponse({ type: PaginaRodadasDto, description: 'Histórico, da mais nova à mais antiga.' })
-  async historico(@Query() q: PaginacaoDto): Promise<PaginaRodadasDto> {
-    const { itens, total } = await this.consultar.historico(q.pagina, q.porPagina);
+  async historico(@Query() q: HistoricoQueryDto): Promise<PaginaRodadasDto> {
+    const { itens, total } = await this.consultar.historico({
+      pagina: q.pagina,
+      porPagina: q.porPagina,
+      ...(q.status?.length ? { status: q.status } : {}),
+      ...(q.solicitadaPorId ? { solicitadaPorId: q.solicitadaPorId } : {}),
+      ...(q.desde ? { desde: new Date(q.desde) } : {}),
+    });
     return { itens, total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
@@ -177,10 +191,40 @@ export class RodadasController {
     return { itens, total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
+  @Get(':id/resumo')
+  @Permissao('distribuicao.ver')
+  @ApiOkResponse({
+    type: ResumoRodadaDto,
+    description:
+      'Por médico (teto, carga, propostos), motivos de quem ficou de fora, ajustes e funil.',
+  })
+  @ApiNotFoundResponse()
+  resumo(@Param('id', ID) id: string): Promise<ResumoRodadaDto> {
+    return this.consultarResumo.executar(id);
+  }
+
+  @Get(':id/designacoes/:designacaoId/explicacao')
+  @Permissao('distribuicao.ver')
+  @ApiOkResponse({
+    type: ExplicacaoDto,
+    description: 'Por que este médico não pegou este exame, lido do registro da rodada.',
+  })
+  @ApiNotFoundResponse()
+  explicacao(
+    @Param('id', ID) id: string,
+    @Param('designacaoId', ID) designacaoId: string,
+    @Query() q: ExplicacaoQueryDto,
+  ): Promise<ExplicacaoDto> {
+    return this.explicar.executar(id, designacaoId, q.medicoId);
+  }
+
   @Patch(':id/proposta')
   @Permissao('distribuicao.rodada.ajustar')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse({ description: 'Tira e move exames previstos (antes de aprovar).' })
+  @ApiNoContentResponse({
+    description:
+      'Tira (e desfaz), move exames previstos, com ou sem o pacote, e manda na mão os de fora (antes de aprovar).',
+  })
   @ApiBadRequestResponse()
   @ApiConflictResponse({ description: 'A rodada não aguarda aprovação.' })
   ajustarProposta(

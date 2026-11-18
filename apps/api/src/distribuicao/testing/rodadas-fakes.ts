@@ -1,7 +1,10 @@
 import type {
   ConsultaRodadas,
+  ContagemPorMedico,
+  ContagemPorMotivo,
   DesignacaoDetalhada,
   FiltroDesignacoes,
+  FiltroHistorico,
 } from '../application/ports/consulta-rodadas';
 import type {
   EscopoDoAtor,
@@ -13,7 +16,9 @@ import type {
 import type {
   ContagemDesignacoes,
   Designacao,
+  EntregaRegistrada,
   EventoRodada,
+  MovimentoProposta,
   MudancaRodada,
   ResultadoDesignacao,
   Rodada,
@@ -23,7 +28,7 @@ import type {
 import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
 import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
 import { estaViva, type StatusRodada } from '../domain/rodada/maquina';
-import type { DesignacaoNova, StatusDesignacao } from '../domain/rodada/proposta';
+import type { DesignacaoNova, InsumosGravados, StatusDesignacao } from '../domain/rodada/proposta';
 
 export interface DesignacaoGravada extends Omit<DesignacaoNova, 'status'> {
   id: string;
@@ -31,6 +36,8 @@ export interface DesignacaoGravada extends Omit<DesignacaoNova, 'status'> {
   status: StatusDesignacao;
   retentavel: boolean;
   executadaEm: Date | null;
+  retiradoDeId: string | null;
+  retiradaEm: Date | null;
 }
 
 /** Repositório das rodadas na memória, com as tarefas enfileiradas à vista. */
@@ -39,7 +46,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   designacoesGravadas: DesignacaoGravada[] = [];
   readonly diario: (EventoRodada & { rodadaId: string })[] = [];
   readonly jobs: { tarefa: TarefaRodada; rodadaId: string }[] = [];
-  readonly insumos = new Map<string, unknown>();
+  readonly insumosGravados = new Map<string, InsumosGravados>();
   private seq = 0;
 
   async criar(d: {
@@ -64,6 +71,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       lidos: 0,
       urgentes: 0,
       recortes: d.recortes,
+      retomadas: 0,
     });
     this.diario.push({ rodadaId: id, em: d.agora, texto: d.evento, atual: null, total: null });
     this.jobs.push({ tarefa: 'ler', rodadaId: id });
@@ -98,7 +106,9 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   ) {
     const r = this.rodadas.get(id);
     if (!r || !de.includes(r.status)) return false;
-    Object.assign(r, m);
+    const { retomada, ...mudanca } = m;
+    Object.assign(r, mudanca);
+    if (retomada) r.retomadas++;
     if (enfileirar) this.jobs.push({ tarefa: enfileirar, rodadaId: id });
     return true;
   }
@@ -117,6 +127,8 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
         rodadaId: id,
         retentavel: false,
         executadaEm: null,
+        retiradoDeId: null,
+        retiradaEm: null,
       });
     }
     Object.assign(r, {
@@ -128,7 +140,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       expiraEm: p.expiraEm,
       erro: null,
     });
-    this.insumos.set(id, p.insumos);
+    this.insumosGravados.set(id, p.insumos);
     return true;
   }
 
@@ -166,6 +178,8 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
     idExameMobilemed: d.idExame,
     medicoId: d.medicoId,
     status: d.status,
+    pacienteChave: d.pacienteChave,
+    retiradoDeId: d.retiradoDeId,
     posicao: d.posicao,
     urgente: d.urgente,
     prazo: d.prazo,
@@ -187,26 +201,60 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       .map(this.comoDesignacao);
   }
 
-  async removerDaProposta(rodadaId: string, ids: readonly string[]) {
+  async insumos(id: string) {
+    return this.insumosGravados.get(id) ?? null;
+  }
+
+  async doMesmoPaciente(rodadaId: string, designacaoId: string) {
+    const d = this.daRodada(rodadaId).find((x) => x.id === designacaoId);
+    if (!d) return [];
+    return this.daRodada(rodadaId)
+      .filter((x) => x.id !== d.id && x.pacienteChave === d.pacienteChave)
+      .map(this.comoDesignacao);
+  }
+
+  async removerDaProposta(rodadaId: string, ids: readonly string[], agora: Date) {
     let n = 0;
     for (const d of this.daRodada(rodadaId)) {
       if (ids.includes(d.id) && d.status === 'prevista') {
-        Object.assign(d, { status: 'pulada', medicoId: null, motivo: 'removido_na_conferencia' });
+        Object.assign(d, {
+          status: 'pulada',
+          retiradoDeId: d.medicoId,
+          retiradaEm: agora,
+          medicoId: null,
+          motivo: 'removido_na_conferencia',
+          detalhe: 'Tirado da proposta na conferência.',
+        });
         n++;
       }
     }
     return n;
   }
 
-  async moverNaProposta(
-    rodadaId: string,
-    mover: readonly { designacaoId: string; medicoId: string }[],
-  ) {
+  async restaurarNaProposta(rodadaId: string, ids: readonly string[]) {
+    let n = 0;
+    for (const d of this.daRodada(rodadaId)) {
+      if (ids.includes(d.id) && d.status === 'pulada' && d.retiradoDeId) {
+        Object.assign(d, {
+          status: 'prevista',
+          medicoId: d.retiradoDeId,
+          retiradoDeId: null,
+          retiradaEm: null,
+          motivo: null,
+          detalhe: null,
+        });
+        n++;
+      }
+    }
+    return n;
+  }
+
+  async moverNaProposta(rodadaId: string, mover: readonly MovimentoProposta[]) {
     let n = 0;
     for (const m of mover) {
       const d = this.daRodada(rodadaId).find((x) => x.id === m.designacaoId);
-      if (d?.status === 'prevista') {
-        d.medicoId = m.medicoId;
+      if (d?.status === 'prevista' || (m.naMao && d?.status === 'recusada')) {
+        Object.assign(d, { medicoId: m.medicoId, status: 'prevista', naMao: d.naMao || m.naMao });
         n++;
       }
     }
@@ -267,14 +315,16 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   }
 
   async entregues(idsExame: readonly string[], desde: Date) {
-    const mapa = new Map<string, { medicoId: string; em: Date }[]>();
+    const mapa = new Map<string, EntregaRegistrada[]>();
+    const somar = (id: string, e: EntregaRegistrada) => mapa.set(id, [...(mapa.get(id) ?? []), e]);
     for (const d of this.designacoesGravadas) {
-      if (d.status !== 'executada' || !d.medicoId || !d.executadaEm) continue;
-      if (!idsExame.includes(d.idExame) || d.executadaEm < desde) continue;
-      mapa.set(d.idExame, [
-        ...(mapa.get(d.idExame) ?? []),
-        { medicoId: d.medicoId, em: d.executadaEm },
-      ]);
+      if (!idsExame.includes(d.idExame)) continue;
+      if (d.status === 'executada' && d.medicoId && d.executadaEm && d.executadaEm >= desde) {
+        somar(d.idExame, { medicoId: d.medicoId, em: d.executadaEm, origem: 'execucao' });
+      }
+      if (d.retiradoDeId && d.retiradaEm && d.retiradaEm >= desde) {
+        somar(d.idExame, { medicoId: d.retiradoDeId, em: d.retiradaEm, origem: 'conferencia' });
+      }
     }
     return mapa;
   }
@@ -294,44 +344,123 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   }
 
   // --- consulta ---
+  private detalhada = (d: DesignacaoGravada): DesignacaoDetalhada => {
+    const rotulo = (id: string | null) => (id ? { id, nome: id } : null);
+    const doPaciente = this.daRodada(d.rodadaId).filter((x) => x.pacienteChave === d.pacienteChave);
+    return {
+      id: d.id,
+      ordem: d.ordem,
+      idExameMobilemed: d.idExame,
+      estudo: d.estudo,
+      unidade: d.unidade,
+      cliente: rotulo(d.clienteId),
+      prioridadeGrafia: d.prioridadeGrafia,
+      prioridadeOperacao: rotulo(d.prioridadeOperacaoId),
+      especialidade: rotulo(d.especialidadeId),
+      modalidade: rotulo(d.modalidadeId),
+      subespecialidade: rotulo(d.subespecialidadeId),
+      laudos: d.laudos,
+      realizadoEm: d.realizadoEm,
+      prazo: d.prazo,
+      urgente: d.urgente,
+      medicoProposto: rotulo(d.medicoPropostoId),
+      medico: rotulo(d.medicoId),
+      pacote:
+        doPaciente.length > 1 ? { id: doPaciente[0]?.id ?? d.id, exames: doPaciente.length } : null,
+      gratificado: d.gratificado,
+      naMao: d.naMao,
+      retiradoDe: rotulo(d.retiradoDeId),
+      retiradaEm: d.retiradaEm,
+      status: d.status,
+      motivo: d.motivo,
+      detalhe: d.detalhe,
+      executadaEm: d.executadaEm,
+    };
+  };
+
   async designacoes(rodadaId: string, f: FiltroDesignacoes) {
     const todas = this.daRodada(rodadaId)
       .filter((d) => !f.status?.length || f.status.includes(d.status))
       .filter((d) => !f.medicoId || d.medicoId === f.medicoId)
+      .filter((d) => !f.motivo?.length || f.motivo.includes(d.motivo ?? ''))
+      .filter((d) => f.naMao === undefined || d.naMao === f.naMao)
       .sort((a, b) => a.ordem - b.ordem);
-    const rotulo = (id: string | null) => (id ? { id, nome: id } : null);
-    const itens = todas.slice((f.pagina - 1) * f.porPagina, f.pagina * f.porPagina).map(
-      (d): DesignacaoDetalhada => ({
-        id: d.id,
-        ordem: d.ordem,
-        idExameMobilemed: d.idExame,
-        estudo: d.estudo,
-        unidade: d.unidade,
-        cliente: rotulo(d.clienteId),
-        prioridadeGrafia: d.prioridadeGrafia,
-        prioridadeOperacao: rotulo(d.prioridadeOperacaoId),
-        especialidade: rotulo(d.especialidadeId),
-        modalidade: rotulo(d.modalidadeId),
-        subespecialidade: rotulo(d.subespecialidadeId),
-        laudos: d.laudos,
-        realizadoEm: d.realizadoEm,
-        prazo: d.prazo,
-        urgente: d.urgente,
-        medicoProposto: rotulo(d.medicoPropostoId),
-        medico: rotulo(d.medicoId),
-        agrupadoCom: d.agrupadoCom,
-        gratificado: d.gratificado,
-        status: d.status,
-        motivo: d.motivo,
-        detalhe: d.detalhe,
-        executadaEm: d.executadaEm,
-      }),
-    );
+    const itens = todas
+      .slice((f.pagina - 1) * f.porPagina, f.pagina * f.porPagina)
+      .map(this.detalhada);
     return { itens, total: todas.length };
   }
 
-  async historico(pagina: number, porPagina: number) {
-    const todas = [...this.rodadas.values()].reverse();
+  async designacaoExplicada(rodadaId: string, designacaoId: string) {
+    const d = this.daRodada(rodadaId).find((x) => x.id === designacaoId);
+    return d ? { ...this.detalhada(d), elegiveis: d.elegiveis, barrados: d.barrados } : null;
+  }
+
+  async porMedico(rodadaId: string): Promise<ContagemPorMedico[]> {
+    const mapa = new Map<string, ContagemPorMedico>();
+    const pacientes = new Map<string, Map<string, number>>();
+    for (const d of this.daRodada(rodadaId)) {
+      if (!d.medicoId) continue;
+      const c = mapa.get(d.medicoId) ?? {
+        medicoId: d.medicoId,
+        nome: d.medicoId,
+        propostos: 0,
+        urgencias: 0,
+        pacotes: 0,
+        previstas: 0,
+        executadas: 0,
+        puladas: 0,
+        falharam: 0,
+        naMao: 0,
+      };
+      c.propostos++;
+      if (d.urgente) c.urgencias++;
+      if (d.status === 'prevista') c.previstas++;
+      if (d.status === 'executada') c.executadas++;
+      if (d.status === 'pulada') c.puladas++;
+      if (d.status === 'falhou') c.falharam++;
+      if (d.naMao) c.naMao++;
+      const p = pacientes.get(d.medicoId) ?? new Map<string, number>();
+      p.set(d.pacienteChave, (p.get(d.pacienteChave) ?? 0) + 1);
+      pacientes.set(d.medicoId, p);
+      c.pacotes = [...p.values()].filter((n) => n > 1).length;
+      mapa.set(d.medicoId, c);
+    }
+    return [...mapa.values()];
+  }
+
+  async porMotivo(rodadaId: string): Promise<ContagemPorMotivo[]> {
+    const mapa = new Map<string, ContagemPorMotivo>();
+    for (const d of this.daRodada(rodadaId)) {
+      if (d.status === 'prevista' || d.status === 'executada') continue;
+      const k = `${d.status}|${d.motivo}`;
+      const c = mapa.get(k) ?? { status: d.status, motivo: d.motivo, quantidade: 0 };
+      c.quantidade++;
+      mapa.set(k, c);
+    }
+    return [...mapa.values()];
+  }
+
+  async ajustes(rodadaId: string) {
+    const ds = this.daRodada(rodadaId);
+    return {
+      tirados: ds.filter((d) => d.motivo === 'removido_na_conferencia').length,
+      movidos: ds.filter(
+        (d) => !d.naMao && d.medicoId && d.medicoPropostoId && d.medicoId !== d.medicoPropostoId,
+      ).length,
+      naMao: ds.filter((d) => d.naMao).length,
+    };
+  }
+
+  async nomesMedicos(ids: readonly string[]) {
+    return new Map(ids.map((id) => [id, id]));
+  }
+
+  async historico(f: FiltroHistorico) {
+    const todas = [...this.rodadas.values()]
+      .reverse()
+      .filter((r) => !f.status?.length || f.status.includes(r.status));
+    const { pagina, porPagina } = f;
     return {
       itens: todas.slice((pagina - 1) * porPagina, pagina * porPagina).map((r) => ({
         id: r.id,
@@ -343,7 +472,11 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
         aprovadaPor: r.aprovadaPorId ? { id: r.aprovadaPorId, nome: r.aprovadaPorId } : null,
         aprovadaEm: r.aprovadaEm,
         lidos: r.lidos,
+        propostos: this.daRodada(r.id).filter((d) => d.medicoPropostoId).length,
         executadas: this.daRodada(r.id).filter((d) => d.status === 'executada').length,
+        deFora: this.daRodada(r.id).filter((d) => d.status === 'recusada').length,
+        atualizadoEm: r.criadoEm,
+        recortes: r.recortes,
       })),
       total: todas.length,
     };

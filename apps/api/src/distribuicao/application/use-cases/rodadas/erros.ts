@@ -20,3 +20,10 @@ export class RodadaVivaError extends ErroDeDominio {
 export class RodadaRecusadaError extends ErroDeDominio {
   readonly tipo = 'invalido';
 }
+
+export class DesignacaoNaoEncontradaError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Exame não encontrado nesta rodada.');
+  }
+}

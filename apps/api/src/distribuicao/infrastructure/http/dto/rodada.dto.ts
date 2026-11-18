@@ -3,6 +3,8 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
+  IsDateString,
   IsIn,
   IsOptional,
   IsString,
@@ -144,6 +146,16 @@ export class RodadaVivaDto {
 }
 
 export class RodadaListadaDto {
+  @ApiProperty({ type: RecortesRodadaDto }) recortes!: RecortesRodadaDto;
+  @ApiProperty({ type: 'integer', description: 'Os que o motor propôs.' }) propostos!: number;
+  @ApiProperty({ type: 'integer', description: 'Os que o motor deixou de fora.' })
+  deFora!: number;
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    description: 'Último movimento da rodada (o fim, na encerrada).',
+  })
+  atualizadoEm!: Date;
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ enum: STATUS_RODADA, enumName: 'StatusRodada' })
   status!: (typeof STATUS_RODADA)[number];
@@ -160,6 +172,12 @@ export class PaginaRodadasDto {
   @ApiProperty({ type: 'integer' }) total!: number;
   @ApiProperty({ type: 'integer' }) pagina!: number;
   @ApiProperty({ type: 'integer' }) porPagina!: number;
+}
+
+export class PacoteDto {
+  @ApiProperty({ description: 'Estável na rodada (agrupa os exames do mesmo paciente).' })
+  id!: string;
+  @ApiProperty({ type: 'integer' }) exames!: number;
 }
 
 export class DesignacaoDto {
@@ -191,12 +209,21 @@ export class DesignacaoDto {
   @ApiProperty({ type: RotuloRodadaDto, nullable: true, description: 'A quem vai ou foi.' })
   medico!: RotuloRodadaDto | null;
   @ApiProperty({
-    type: String,
+    type: () => PacoteDto,
     nullable: true,
-    description: 'Id na MobileMed do exame com quem anda no pacote do paciente.',
+    description: 'Os exames do mesmo paciente na rodada; nulo = só este.',
   })
-  agrupadoCom!: string | null;
+  pacote!: PacoteDto | null;
   @ApiProperty() gratificado!: boolean;
+  @ApiProperty({ description: 'Mandado na mão na conferência (o motor o tinha deixado de fora).' })
+  naMao!: boolean;
+  @ApiProperty({
+    type: RotuloRodadaDto,
+    nullable: true,
+    description: 'De quem a conferência o tirou.',
+  })
+  retiradoDe!: RotuloRodadaDto | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) retiradaEm!: Date | null;
   @ApiProperty({ enum: STATUS_DESIGNACAO, enumName: 'StatusDesignacao' })
   status!: (typeof STATUS_DESIGNACAO)[number];
   @ApiProperty({ type: String, nullable: true, description: 'Código do motivo.' })
@@ -239,6 +266,19 @@ export class DesignacoesQueryDto extends PaginacaoDto {
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() especialidadeId?: string;
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() modalidadeId?: string;
 
+  @ApiPropertyOptional({ type: [String], description: 'Código do motivo (ex.: `sem_espaco`).' })
+  @Transform(umOuVarios)
+  @IsOptional()
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  motivo?: string[];
+
+  @ApiPropertyOptional({ description: 'Só os mandados na mão (true) ou só os do motor (false).' })
+  @Transform(({ value }) => (value === undefined ? undefined : value === true || value === 'true'))
+  @IsOptional()
+  @IsBoolean()
+  naMao?: boolean;
+
   @ApiPropertyOptional({ description: 'Trecho do estudo ou da unidade.' })
   @Transform(aparar)
   @IsOptional()
@@ -248,10 +288,21 @@ export class DesignacoesQueryDto extends PaginacaoDto {
 }
 
 export class MovimentoPropostaDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() designacaoId!: string;
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Designação prevista (troca o médico) ou deixada de fora (vai na mão).',
+  })
+  @IsUUID()
+  designacaoId!: string;
   @ApiProperty({ format: 'uuid', description: 'Médico ativo, com conta na MobileMed.' })
   @IsUUID()
   medicoId!: string;
+  @ApiPropertyOptional({
+    description: 'Leva junto os outros exames do mesmo paciente que estavam com ela.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  levarPacote?: boolean;
 }
 
 /** Ajustes da conferência, antes de aprovar. */
@@ -268,6 +319,121 @@ export class AjustePropostaDto {
   @ValidateNested({ each: true })
   @Type(() => MovimentoPropostaDto)
   mover!: MovimentoPropostaDto[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    format: 'uuid',
+    description: 'Desfaz o "tirar": volta ao médico de quem saiu.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5000)
+  @IsUUID('all', { each: true })
+  restaurar?: string[];
+}
+
+export class HistoricoQueryDto extends PaginacaoDto {
+  @ApiPropertyOptional({ enum: STATUS_RODADA, enumName: 'StatusRodada', isArray: true })
+  @Transform(umOuVarios)
+  @IsOptional()
+  @IsIn(STATUS_RODADA, { each: true })
+  status?: (typeof STATUS_RODADA)[number][];
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Quem pediu.' })
+  @IsOptional()
+  @IsUUID()
+  solicitadaPorId?: string;
+
+  @ApiPropertyOptional({ format: 'date-time', description: 'Pedidas a partir deste instante.' })
+  @IsOptional()
+  @IsDateString()
+  desde?: string;
+}
+
+export class ExplicacaoQueryDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() medicoId!: string;
+}
+
+export class CheckExplicacaoDto {
+  @ApiProperty() ok!: boolean;
+  @ApiProperty() titulo!: string;
+  @ApiProperty() detalhe!: string;
+}
+
+export class ExplicacaoDto {
+  @ApiProperty({ type: RotuloRodadaDto }) medico!: RotuloRodadaDto;
+  @ApiProperty({ description: 'Ficou com o exame (proposto ou atribuído).' }) pegou!: boolean;
+  @ApiProperty({ description: 'O desfecho, em uma frase.' }) titulo!: string;
+  @ApiProperty({ type: [CheckExplicacaoDto], description: 'Os portões, até o que barrou.' })
+  checks!: CheckExplicacaoDto[];
+}
+
+export class MedicoResumoDto {
+  @ApiProperty({ format: 'uuid' }) medicoId!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: [String] }) turnos!: string[];
+  @ApiProperty({ type: [String] }) frentes!: string[];
+  @ApiProperty({ type: 'integer', nullable: true, description: 'Teto da escala na leitura.' })
+  capacidade!: number | null;
+  @ApiProperty({ type: 'integer', description: 'Já aberto na MobileMed na leitura.' })
+  cargaEmMaos!: number;
+  @ApiProperty({ type: 'integer' }) propostos!: number;
+  @ApiProperty({ type: 'integer' }) urgencias!: number;
+  @ApiProperty({ type: 'integer', description: 'Pacientes com mais de um exame com ele.' })
+  pacotes!: number;
+  @ApiProperty({ type: 'integer' }) previstas!: number;
+  @ApiProperty({ type: 'integer' }) executadas!: number;
+  @ApiProperty({ type: 'integer' }) puladas!: number;
+  @ApiProperty({ type: 'integer' }) falharam!: number;
+  @ApiProperty({ type: 'integer' }) naMao!: number;
+}
+
+export class ContagemMotivoDto {
+  @ApiProperty({ enum: STATUS_DESIGNACAO, enumName: 'StatusDesignacao' })
+  status!: (typeof STATUS_DESIGNACAO)[number];
+  @ApiProperty({ type: String, nullable: true }) motivo!: string | null;
+  @ApiProperty({ type: 'integer' }) quantidade!: number;
+}
+
+export class AjustesConferenciaDto {
+  @ApiProperty({ type: 'integer' }) tirados!: number;
+  @ApiProperty({ type: 'integer' }) movidos!: number;
+  @ApiProperty({ type: 'integer' }) naMao!: number;
+}
+
+export class FunilExamesDto {
+  @ApiProperty({ type: 'integer' }) total!: number;
+  @ApiProperty({ type: 'integer' }) escala!: number;
+  @ApiProperty({ type: 'integer' }) arranjo!: number;
+  @ApiProperty({ type: 'integer' }) equipe!: number;
+  @ApiProperty({ type: 'integer' }) reservado!: number;
+  @ApiProperty({ type: 'integer' }) elegiveis!: number;
+}
+
+export class FunilMedicosDto {
+  @ApiProperty({ type: 'integer' }) habilitados!: number;
+  @ApiProperty({ type: 'integer' }) escalados!: number;
+  @ApiProperty({ type: 'integer' }) disponiveis!: number;
+  @ApiProperty({ type: 'integer' }) noTurno!: number;
+  @ApiProperty({ type: 'integer' }) noHorario!: number;
+  @ApiProperty({ type: 'integer' }) tirados!: number;
+  @ApiProperty({ type: 'integer' }) receberam!: number;
+}
+
+export class TrilhaRodadaDto {
+  @ApiProperty({ type: 'integer' }) pacotes!: number;
+  @ApiProperty({ type: 'integer' }) examesAgrupados!: number;
+  @ApiProperty({ type: 'integer', description: 'Foram ao médico que já tinha o paciente.' })
+  aderencia!: number;
+}
+
+export class ResumoRodadaDto {
+  @ApiProperty({ type: [MedicoResumoDto] }) medicos!: MedicoResumoDto[];
+  @ApiProperty({ type: [ContagemMotivoDto] }) motivos!: ContagemMotivoDto[];
+  @ApiProperty({ type: AjustesConferenciaDto }) ajustes!: AjustesConferenciaDto;
+  @ApiProperty({ type: FunilExamesDto, nullable: true }) funilExames!: FunilExamesDto | null;
+  @ApiProperty({ type: FunilMedicosDto, nullable: true }) funilMedicos!: FunilMedicosDto | null;
+  @ApiProperty({ type: TrilhaRodadaDto, nullable: true }) trilha!: TrilhaRodadaDto | null;
 }
 
 export class MedicosRodadaDto {
@@ -330,6 +496,42 @@ export class MedicoEmTurnoDto {
   @ApiProperty({ type: 'integer', nullable: true }) produtividade!: number | null;
   @ApiProperty({ type: 'integer', description: 'Exames com ele ainda não laudados.' })
   cargaEmMaos!: number;
+  @ApiProperty({ description: 'Nome do turno.' }) turno!: string;
+  @ApiProperty({ description: 'Nome da frente (especialidade ou modalidade).' })
+  frenteNome!: string;
+}
+
+export class ContagemFrentePrioridadeDto {
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  prioridadeOperacaoId!: string | null;
+  @ApiProperty({ type: 'integer' }) exames!: number;
+  @ApiProperty({ type: 'integer' }) urgentes!: number;
+}
+
+export class FrenteDaFilaDto {
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Frente da escala; nula = o exame não casa com nenhuma.',
+  })
+  frenteId!: string | null;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: 'integer' }) exames!: number;
+  @ApiProperty({ type: 'integer' }) urgentes!: number;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  primeiroVencimento!: Date | null;
+  @ApiProperty({ type: [ContagemFrentePrioridadeDto] })
+  porPrioridade!: ContagemFrentePrioridadeDto[];
+}
+
+export class TurnoDaFilaDto {
+  @ApiProperty({ format: 'uuid' }) turnoId!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: String, format: 'date-time' }) inicio!: Date;
+  @ApiProperty({ type: String, format: 'date-time' }) fim!: Date;
+  @ApiProperty({ type: 'integer', description: 'Médicos habilitados escalados.' }) medicos!: number;
+  @ApiProperty() emAndamento!: boolean;
 }
 
 export class FilaDoMomentoDto {
@@ -338,6 +540,17 @@ export class FilaDoMomentoDto {
   @ApiProperty({ type: 'integer' }) urgentes!: number;
   @ApiProperty({ type: 'integer' }) semCatalogo!: number;
   @ApiProperty({ type: 'integer' }) semCliente!: number;
+  @ApiProperty({ type: 'integer', description: 'Prazo na próxima hora (ou já vencido).' })
+  vencemProximaHora!: number;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  primeiroVencimento!: Date | null;
+  @ApiProperty({ type: 'integer', description: 'Ativos e habilitados no robô.' })
+  habilitados!: number;
+  @ApiProperty({ type: [ContagemPrioridadeDto], description: 'Na ordem da operação.' })
+  prioridades!: ContagemPrioridadeDto[];
+  @ApiProperty({ type: [FrenteDaFilaDto] }) porFrente!: FrenteDaFilaDto[];
+  @ApiProperty({ type: [TurnoDaFilaDto], description: 'Turnos de hoje que não acabaram.' })
+  turnos!: TurnoDaFilaDto[];
   @ApiProperty({ type: [ContagemPrioridadeDto] }) porPrioridade!: ContagemPrioridadeDto[];
   @ApiProperty({ type: [ContagemEspecialidadeDto] })
   porEspecialidade!: ContagemEspecialidadeDto[];

@@ -596,6 +596,8 @@ export const rodadas = pgTable(
     urgentes: integer('urgentes').notNull().default(0),
     /** O que o motor viu (funil, trilha, médicos, grafias sem de-para): o "por quê" do passo 5. */
     insumos: jsonb('insumos'),
+    /** Vezes que a execução foi retomada: a retomada confere a fila antes de cada exame. */
+    retomadas: integer('retomadas').notNull().default(0),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
@@ -683,6 +685,18 @@ export const designacoes = pgTable(
     /** A falha (ou o pulo) que vale tentar de novo ao retomar. */
     retentavel: boolean('retentavel').notNull().default(false),
     executadaEm: timestamp('executada_em', { withTimezone: true }),
+    /**
+     * De quem a conferência tirou o exame: o "Desfazer" devolve a ele, e o robô não o devolve a
+     * esse médico por `dias_ja_entregue` dias (como o já entregue).
+     */
+    retiradoDeId: uuid('retirado_de_id').references(() => medicos.id, { onDelete: 'set null' }),
+    retiradaEm: timestamp('retirada_em', { withTimezone: true }),
+    /** Mandado a um médico na conferência depois que o motor o deixou de fora. */
+    naMao: boolean('na_mao').notNull().default(false),
+    /** Médicos que podiam laudar o exame na leitura, sem chave estrangeira (é histórico). */
+    elegiveis: uuid('elegiveis').array().notNull().default(sql`'{}'`),
+    /** Médico em turno → o portão onde parou diante do exame (o "por que não pegou"). */
+    barrados: jsonb('barrados').$type<Record<string, string>>().notNull().default({}),
   },
   (t) => [
     unique('designacoes_rodada_exame_key').on(t.rodadaId, t.idExameMobilemed),
@@ -697,6 +711,10 @@ export const designacoes = pgTable(
       .on(t.alocacaoGratificadaId, t.executadaEm)
       .where(sql`${t.status} = 'executada' and ${t.alocacaoGratificadaId} is not null`),
     index('designacoes_medico_idx').on(t.medicoId),
+    // "Tirado na conferência": o exame não volta ao médico de quem saiu nos últimos N dias.
+    index('designacoes_exame_retiradas_idx')
+      .on(t.idExameMobilemed, t.retiradaEm)
+      .where(sql`${t.retiradoDeId} is not null`),
   ],
 );
 

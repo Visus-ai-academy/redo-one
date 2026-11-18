@@ -67,4 +67,9 @@ export interface FilaExames {
    * conferência, com permissão e auditoria; exame que saiu da fila não volta no mapa.
    */
   nomesPacientes(idsExame: readonly string[]): Promise<Map<string, string>>;
+  /**
+   * Dos exames pedidos, os que seguem NOVO e sem médico agora. A retomada confere antes de
+   * atribuir cada um: o que ganhou médico por fora é pulado.
+   */
+  semMedico(idsExame: readonly string[]): Promise<Set<string>>;
 }

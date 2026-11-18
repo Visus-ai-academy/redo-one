@@ -163,7 +163,13 @@ const exigirSemExecucao = (executadas: number) => {
 /** Lê a fila de novo na mesma rodada (a leitura anterior é descartada). */
 export function reler(r: EstadoRodada, { executadas }: { executadas: number }): StatusRodada {
   exigirSemExecucao(executadas);
-  exigir(r, ['aguardando_aprovacao', 'expirada', 'falhou', 'parcial'], 'ser lida de novo');
+  // A expirada fica no histórico como estava (com os ajustes): pede-se outra rodada.
+  if (r.status === 'expirada') {
+    recusa(
+      'A proposta expirou e fica no histórico como estava: peça outra rodada com os mesmos recortes.',
+    );
+  }
+  exigir(r, ['aguardando_aprovacao', 'falhou', 'parcial'], 'ser lida de novo');
   return 'solicitada';
 }
 

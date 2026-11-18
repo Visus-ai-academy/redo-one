@@ -10,7 +10,7 @@ import {
   retomar,
   STATUS_VIVOS,
 } from '../../../domain/rodada/maquina';
-import type { Rodada } from '../../ports/rodadas.repository';
+import type { Designacao, MovimentoProposta, Rodada } from '../../ports/rodadas.repository';
 import {
   type AtorRodada,
   auditar,
@@ -59,20 +59,31 @@ export class AprovarRodada extends AcaoNaRodada {
 export interface AjusteProposta {
   /** Designações que saem da proposta. */
   remover: string[];
-  /** Designações que mudam de médico. */
-  mover: { designacaoId: string; medicoId: string }[];
+  /**
+   * Designações que mudam de médico. A prevista troca de destino; a que o motor deixou de fora é
+   * mandada na mão. Com `levarPacote`, os outros exames do mesmo paciente que estavam juntos (mesmo
+   * médico, ou também de fora) vão para o mesmo destino.
+   */
+  mover: { designacaoId: string; medicoId: string; levarPacote?: boolean }[];
+  /** Desfaz o "tirar": volta para o médico de quem saiu. */
+  restaurar?: string[];
 }
 
 /**
- * Ajustes de quem confere, antes de aprovar: tirar exame e mandar exame para outro médico ativo
- * (com conta na MobileMed). Só mexe no que está previsto.
+ * Ajustes de quem confere, antes de aprovar: tirar exame (e desfazer), mandar exame para outro
+ * médico ativo (com conta na MobileMed), com ou sem o pacote do paciente, e mandar na mão o que o
+ * motor deixou de fora.
  */
 export class AjustarProposta extends AcaoNaRodada {
   async executar(ator: AtorRodada, id: string, ajuste: AjusteProposta): Promise<void> {
     const r = await this.rodada(ator, id);
-    exigirProposta(r, this.d.agora());
+    const agora = this.d.agora();
+    exigirProposta(r, agora);
     const remover = [...new Set(ajuste.remover)];
-    const mover = ajuste.mover.filter((m) => !remover.includes(m.designacaoId));
+    const restaurar = [...new Set(ajuste.restaurar ?? [])].filter((x) => !remover.includes(x));
+    const mover = ajuste.mover.filter(
+      (m) => !remover.includes(m.designacaoId) && !restaurar.includes(m.designacaoId),
+    );
     const destinos = await this.d.medicos.doCadastro([...new Set(mover.map((m) => m.medicoId))]);
     for (const m of mover) {
       const medico = destinos.get(m.medicoId);
@@ -82,22 +93,54 @@ export class AjustarProposta extends AcaoNaRodada {
         );
       }
     }
-    const ids = [...remover, ...mover.map((m) => m.designacaoId)];
-    const encontradas = await this.d.rodadas.designacoesPorId(id, ids);
-    if (
-      encontradas.length !== new Set(ids).size ||
-      encontradas.some((x) => x.status !== 'prevista')
-    ) {
-      throw new RodadaRecusadaError('Só dá para ajustar exame previsto nesta proposta.');
+    const ids = [...remover, ...restaurar, ...mover.map((m) => m.designacaoId)];
+    const encontradas = new Map(
+      (await this.d.rodadas.designacoesPorId(id, ids)).map((x) => [x.id, x]),
+    );
+    const invalida =
+      encontradas.size !== new Set(ids).size ||
+      remover.some((x) => encontradas.get(x)?.status !== 'prevista') ||
+      mover.some(
+        (m) => !['prevista', 'recusada'].includes(encontradas.get(m.designacaoId)?.status ?? ''),
+      ) ||
+      restaurar.some((x) => encontradas.get(x)?.retiradoDeId == null);
+    if (invalida) {
+      throw new RodadaRecusadaError(
+        'Só dá para ajustar exame previsto ou deixado de fora nesta proposta.',
+      );
     }
-    const removidas = await this.d.rodadas.removerDaProposta(id, remover);
-    const movidas = await this.d.rodadas.moverNaProposta(id, mover);
+
+    const movimentos = new Map<string, MovimentoProposta>();
+    for (const m of mover) {
+      const origem = encontradas.get(m.designacaoId) as Designacao;
+      const naMao = origem.status === 'recusada';
+      movimentos.set(m.designacaoId, { designacaoId: m.designacaoId, medicoId: m.medicoId, naMao });
+      if (!m.levarPacote) continue;
+      for (const o of await this.d.rodadas.doMesmoPaciente(id, m.designacaoId)) {
+        const junto = o.status === origem.status && (naMao || o.medicoId === origem.medicoId);
+        if (junto && !remover.includes(o.id) && !movimentos.has(o.id)) {
+          movimentos.set(o.id, { designacaoId: o.id, medicoId: m.medicoId, naMao });
+        }
+      }
+    }
+
+    const removidas = await this.d.rodadas.removerDaProposta(id, remover, agora);
+    const restauradas = await this.d.rodadas.restaurarNaProposta(id, restaurar);
+    const lista = [...movimentos.values()];
+    const movidas = await this.d.rodadas.moverNaProposta(id, lista);
+    const naMao = lista.filter((m) => m.naMao).length;
     const partes = [
       removidas && `${removidas} exame(s) tirado(s) da proposta`,
-      movidas && `${movidas} exame(s) redirecionado(s)`,
+      restauradas && `${restauradas} devolvido(s) à proposta`,
+      movidas - naMao > 0 && `${movidas - naMao} exame(s) redirecionado(s)`,
+      naMao && `${naMao} exame(s) de fora mandado(s) na mão`,
     ].filter(Boolean);
-    if (partes.length) await this.evento(id, `Ajuste na conferência: ${partes.join(' e ')}.`);
-    await auditar(this.d, ator, id, 'proposta_ajustada', { removidas: remover, movidas: mover });
+    if (partes.length) await this.evento(id, `Ajuste na conferência: ${partes.join(', ')}.`);
+    await auditar(this.d, ator, id, 'proposta_ajustada', {
+      removidas: remover,
+      restauradas: restaurar,
+      movidas: lista,
+    });
   }
 }
 
@@ -118,7 +161,7 @@ export class RetomarRodada extends AcaoNaRodada {
     const c = await this.d.rodadas.contar(id);
     const status = retomar(r, { restam: c.prevista + c.retentaveis });
     const voltaram = await this.d.rodadas.reenfileirarRetentaveis(id);
-    await this.d.rodadas.mudar(id, [r.status], { status, erro: null }, 'executar');
+    await this.d.rodadas.mudar(id, [r.status], { status, erro: null, retomada: true }, 'executar');
     await this.evento(
       id,
       `Retomando: ${c.prevista + voltaram} exame(s) por atribuir${voltaram ? ` (${voltaram} que falharam voltaram à fila)` : ''}.`,

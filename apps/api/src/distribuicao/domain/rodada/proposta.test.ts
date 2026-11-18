@@ -39,6 +39,8 @@ const vai = (exameId: string, medicoId: string, p: Partial<ItemRodada> = {}): It
   gratificado: false,
   alocacaoGratificadaId: null,
   coberturaDeId: null,
+  elegiveis: [medicoId],
+  barrados: {},
   ...p,
 });
 const fica = (exameId: string): ItemRodada => ({
@@ -56,6 +58,10 @@ const resultado = (itens: ItemRodada[], p: Partial<ResultadoRodada> = {}): Resul
   },
   trilha: [] as unknown as ResultadoRodada['trilha'],
   grafiasSemDePara: [],
+  medicos: [
+    { id: 'A', nome: 'Ana', capacidade: 20, cargaEmMaos: 5, cotaGratificada: 0 },
+    { id: 'B', nome: 'Bia', capacidade: null, cargaEmMaos: 0, cotaGratificada: 0 },
+  ],
   ...p,
 });
 const propor = (p: Partial<Parameters<typeof montarProposta>[0]> = {}) =>
@@ -67,10 +73,52 @@ const propor = (p: Partial<Parameters<typeof montarProposta>[0]> = {}) =>
     prioridadesCliente: [],
     semCatalogo: 0,
     semCliente: 0,
+    escalaDosMedicos: { A: { turnos: ['Manhã'], frentes: ['MEDICINA INTERNA'] } },
+    habilitados: ['A', 'B', 'C', 'D', 'E'],
     ...p,
   });
 
 describe('proposta da rodada', () => {
+  it('cada designação guarda quem podia laudar e onde os outros pararam', () => {
+    const { designacoes } = propor({
+      resultado: resultado([
+        vai('r', 'A', { elegiveis: ['A', 'B'], barrados: { C: 'arranjo' } }),
+        vai('u', 'B'),
+        fica('x'),
+      ]),
+    });
+    expect(designacoes.find((d) => d.idExame === 'r')).toMatchObject({
+      elegiveis: ['A', 'B'],
+      barrados: { C: 'arranjo' },
+      naMao: false,
+    });
+  });
+
+  it('os insumos guardam os médicos da rodada com turno, frentes, teto e carga', () => {
+    const { insumos } = propor();
+    expect(insumos.habilitados).toHaveLength(5);
+    expect(insumos.medicos).toEqual([
+      {
+        id: 'A',
+        nome: 'Ana',
+        capacidade: 20,
+        cargaEmMaos: 5,
+        cotaGratificada: 0,
+        turnos: ['Manhã'],
+        frentes: ['MEDICINA INTERNA'],
+      },
+      {
+        id: 'B',
+        nome: 'Bia',
+        capacidade: null,
+        cargaEmMaos: 0,
+        cotaGratificada: 0,
+        turnos: [],
+        frentes: [],
+      },
+    ]);
+  });
+
   it('uma designação por exame lido, na ordem da fila (posição 1 primeiro)', () => {
     const { designacoes } = propor();
     expect(designacoes.map((d) => [d.idExame, d.ordem])).toEqual([
