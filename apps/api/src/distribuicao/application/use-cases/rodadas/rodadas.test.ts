@@ -678,6 +678,36 @@ describe('rodada do robô (casos de uso)', () => {
       expect(c.checks[0]).toMatchObject({ ok: false, titulo: 'Habilitado no robô' });
     });
 
+    it('médico sem conta na MobileMed não recebe: sai no funil e no "por quê"', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        medicos: [
+          insumosBase().medicos[0] as never,
+          { id: 'B', nome: 'Dr. B', idMobilemed: null, arranjos: [arranjo] },
+        ],
+      };
+      const id = await criarELer();
+      expect(repo.designacoesGravadas.filter((d) => d.medicoId === 'B')).toEqual([]);
+      expect(designacao('e1')?.medicoId).toBe('A');
+      const resumo = await casos.resumo.executar(id);
+      expect(resumo.funilMedicos).toMatchObject({ noHorario: 2, comConta: 1, receberam: 1 });
+      const b = await casos.explicar.executar(id, designacao('e1')?.id ?? '', 'B');
+      expect(b.pegou).toBe(false);
+      expect(b.titulo).toMatch(/conta na MobileMed/);
+      expect(b.checks.at(-1)).toMatchObject({ ok: false, titulo: 'Tem conta na MobileMed' });
+    });
+
+    it('só médico sem conta na MobileMed em turno: o exame sai explicado e com aviso', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        medicos: [{ id: 'B', nome: 'Dr. B', idMobilemed: null, arranjos: [arranjo] }],
+      };
+      const id = await criarELer();
+      expect(designacao('e1')).toMatchObject({ status: 'recusada', motivo: 'sem_medico_elegivel' });
+      expect(designacao('e1')?.detalhe).toMatch(/conta na MobileMed/);
+      expect(repo.rodadas.get(id)?.avisos.some((a) => /conta na MobileMed/.test(a))).toBe(true);
+    });
+
     it('fila do momento: por frente e prioridade, vencimentos, turnos e habilitados', async () => {
       mobilemed.leitura = {
         semMedico: [

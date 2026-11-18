@@ -162,6 +162,10 @@ export function montarProposta(p: {
   const avisos: string[] = [];
   if (p.resultado.funil.medicos.noHorario === 0) {
     avisos.push('Nenhum médico habilitado está em turno agora.');
+  } else if (p.resultado.funil.medicos.comConta === 0) {
+    avisos.push(
+      'Nenhum médico em turno tem conta na MobileMed cadastrada: cadastre o id da MobileMed em Médicos.',
+    );
   }
   if (p.semCatalogo > 0) {
     avisos.push(`${p.semCatalogo} exame(s) com estudo fora do catálogo: cadastre em Exames.`);

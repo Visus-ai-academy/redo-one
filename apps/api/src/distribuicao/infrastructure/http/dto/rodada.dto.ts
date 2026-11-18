@@ -421,6 +421,8 @@ export class FunilMedicosDto {
   @ApiProperty({ type: 'integer' }) disponiveis!: number;
   @ApiProperty({ type: 'integer' }) noTurno!: number;
   @ApiProperty({ type: 'integer' }) noHorario!: number;
+  @ApiProperty({ type: 'integer', description: 'Dos no horário, os com conta na MobileMed.' })
+  comConta!: number;
   @ApiProperty({ type: 'integer' }) tirados!: number;
   @ApiProperty({ type: 'integer' }) receberam!: number;
 }

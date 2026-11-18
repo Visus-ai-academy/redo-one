@@ -2,6 +2,7 @@
 import type { TomEtiqueta } from '../components/etiqueta/Etiqueta';
 import type { ContagemDesignacoesDto } from '../gen/types/ContagemDesignacoesDto';
 import type { ContagemMotivoDto } from '../gen/types/ContagemMotivoDto';
+import type { FunilMedicosDto } from '../gen/types/FunilMedicosDto';
 import type { MedicoEmTurnoDto } from '../gen/types/MedicoEmTurnoDto';
 import type { RecortesRodadaDto } from '../gen/types/RecortesRodadaDto';
 import type { StatusDesignacaoKey } from '../gen/types/StatusDesignacao';
@@ -227,6 +228,25 @@ export function funilDosExames(lidos: number, motivos: readonly ContagemMotivoDt
   etapa('falhou', () => 0);
   linhas.push({ rotulo: 'Atribuídos ou por atribuir', saem: 0, restam, marco: true, filtro: null });
   return linhas;
+}
+
+export type LinhaFunilMedicos = { rotulo: string; restam: number; saem: number; marco?: boolean };
+
+/** Dos habilitados aos que receberam: onde cada médico ficou de fora da rodada. */
+export function funilDosMedicos(f: FunilMedicosDto): LinhaFunilMedicos[] {
+  return [
+    { rotulo: 'Habilitados no robô', restam: f.habilitados, saem: 0, marco: true },
+    { rotulo: 'Sem escala agora', restam: f.escalados, saem: f.habilitados - f.escalados },
+    { rotulo: 'Com ausência no dia', restam: f.disponiveis, saem: f.escalados - f.disponiveis },
+    {
+      rotulo: 'Fora dos turnos e frentes da rodada (ou tirados)',
+      restam: f.noTurno,
+      saem: f.disponiveis - f.noTurno,
+    },
+    { rotulo: 'Fora do horário agora', restam: f.noHorario, saem: f.noTurno - f.noHorario },
+    { rotulo: 'Sem conta na MobileMed', restam: f.comConta, saem: f.noHorario - f.comConta },
+    { rotulo: 'Receberam exames', restam: f.receberam, saem: 0, marco: true },
+  ];
 }
 
 export type MedicoEmTurno = {

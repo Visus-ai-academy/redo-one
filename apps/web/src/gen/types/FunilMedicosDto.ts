@@ -9,6 +9,11 @@ export type FunilMedicosDto = {
   disponiveis: number;
   noTurno: number;
   noHorario: number;
+  /**
+   * @description Dos no horário, os com conta na MobileMed.
+   * @type integer
+   */
+  comConta: number;
   tirados: number;
   receberam: number;
 };

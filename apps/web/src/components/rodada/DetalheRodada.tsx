@@ -15,6 +15,7 @@ import { dataHoraCurta } from '../../lib/datas';
 import {
   descreverRecortes,
   funilDosExames,
+  funilDosMedicos,
   juntarNomes,
   type LinhaFunil,
   num,
@@ -345,18 +346,7 @@ function ExamesDaEtapa({
 function FunilMedicos({ resumo }: { resumo: ResumoRodadaDto }) {
   const f = resumo.funilMedicos;
   if (!f) return null;
-  const linhas: { rotulo: string; restam: number; saem: number; marco?: boolean }[] = [
-    { rotulo: 'Habilitados no robô', restam: f.habilitados, saem: 0, marco: true },
-    { rotulo: 'Sem escala agora', restam: f.escalados, saem: f.habilitados - f.escalados },
-    { rotulo: 'Com ausência no dia', restam: f.disponiveis, saem: f.escalados - f.disponiveis },
-    {
-      rotulo: 'Fora dos turnos e frentes da rodada (ou tirados)',
-      restam: f.noTurno,
-      saem: f.disponiveis - f.noTurno,
-    },
-    { rotulo: 'Fora do horário agora', restam: f.noHorario, saem: f.noTurno - f.noHorario },
-    { rotulo: 'Receberam exames', restam: f.receberam, saem: 0, marco: true },
-  ];
+  const linhas = funilDosMedicos(f);
   return (
     <section aria-labelledby="titulo-funil-medicos" className="flex flex-col gap-3">
       <TituloSecao titulo="Funil dos médicos" id="titulo-funil-medicos" />

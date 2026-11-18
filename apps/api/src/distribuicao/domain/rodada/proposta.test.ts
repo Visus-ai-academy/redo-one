@@ -53,7 +53,7 @@ const resultado = (itens: ItemRodada[], p: Partial<ResultadoRodada> = {}): Resul
   itens,
   totais: { exames: itens.length, distribuidos: 0, emAberto: 0 },
   funil: {
-    medicos: { escalados: 2, disponiveis: 2, noTurno: 2, noHorario: 2 },
+    medicos: { escalados: 2, disponiveis: 2, noTurno: 2, noHorario: 2, comConta: 2 },
     exames: { total: 0, escala: 0, arranjo: 0, equipe: 0, reservado: 0, elegiveis: 0 },
   },
   trilha: [] as unknown as ResultadoRodada['trilha'],
@@ -168,7 +168,7 @@ describe('proposta da rodada', () => {
       resultado: resultado([], {
         grafiasSemDePara: ['Eletivo'],
         funil: {
-          medicos: { escalados: 0, disponiveis: 0, noTurno: 0, noHorario: 0 },
+          medicos: { escalados: 0, disponiveis: 0, noTurno: 0, noHorario: 0, comConta: 0 },
           exames: { total: 0, escala: 0, arranjo: 0, equipe: 0, reservado: 0, elegiveis: 0 },
         },
       }),

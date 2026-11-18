@@ -121,6 +121,8 @@ export const POR_QUE_SEM_MEDICO: Record<
   string
 > = {
   plantao: 'O exame é do plantão de uma equipe: o robô não o entrega a ninguém.',
+  conta:
+    'Nenhum médico em turno na rodada tem conta na MobileMed cadastrada: o robô não tem como atribuir a eles.',
   escala:
     'Nenhum médico da rodada tem período que aceite este exame (frente, prioridade, segmento, regra de recebimento do turno ou horário sem robô).',
   arranjo: 'Há médico no período, mas o arranjo de nenhum deles casa com o exame.',

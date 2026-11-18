@@ -11,6 +11,7 @@ export const funilMedicosDtoSchema = z.object({
   disponiveis: z.int(),
   noTurno: z.int(),
   noHorario: z.int(),
+  comConta: z.int().describe('Dos no horário, os com conta na MobileMed.'),
   tirados: z.int(),
   receberam: z.int(),
 })

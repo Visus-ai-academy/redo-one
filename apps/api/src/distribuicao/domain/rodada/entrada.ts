@@ -320,6 +320,7 @@ export function montarEntrada(p: {
     arranjos: m.arranjos,
     cargaEmMaos: carga.get(m.id) ?? 0,
     cargaReservadaEmMaos: cargaReservada.get(m.id) ?? 0,
+    semContaMobilemed: m.idMobilemed === null,
   }));
 
   const filtro: FiltroRodada = {};

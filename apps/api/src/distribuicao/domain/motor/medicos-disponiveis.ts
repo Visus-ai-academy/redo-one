@@ -59,6 +59,11 @@ export interface MedicoRodada {
   cargaEmMaos: number;
   /** Dessa carga, a do recorte de clínica exclusiva (fica fora do teto). */
   cargaReservadaEmMaos: number;
+  /**
+   * Sem conta na MobileMed (`medicos.id_mobilemed` nulo): não há como atribuir a ele, então fica
+   * barrado em todo exame (portão `sem_conta_mobilemed`), mesmo em turno.
+   */
+  semContaMobilemed?: boolean;
 }
 
 /**
@@ -101,6 +106,7 @@ export interface EntregaAnterior {
 
 /** Onde um médico em turno parou diante de um exame (o "por que este médico não pegou"). */
 export type Barreira =
+  | 'sem_conta_mobilemed'
   | 'escala'
   | 'arranjo'
   | 'equipe'
@@ -168,6 +174,7 @@ export interface MedicoDisponivel {
 /** Onde a elegibilidade de um exame zerou (o primeiro portão sem nenhum médico). */
 export type EtapaElegibilidade =
   | 'plantao'
+  | 'conta'
   | 'escala'
   | 'arranjo'
   | 'equipe'
@@ -186,7 +193,14 @@ export interface MedicosMontados {
   /** Titular cuja escala é a única que aceita o exame no médico (ele está cobrindo). */
   coberturaPara: (medicoId: string, exameId: string) => string | null;
   funil: {
-    medicos: { escalados: number; disponiveis: number; noTurno: number; noHorario: number };
+    medicos: {
+      escalados: number;
+      disponiveis: number;
+      noTurno: number;
+      noHorario: number;
+      /** Dos no horário, os com conta na MobileMed (os outros não recebem). */
+      comConta: number;
+    };
     exames: {
       total: number;
       escala: number;
@@ -403,12 +417,23 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     const reservaram = reservas.length ? reservadoPara(reservas, e) : new Set<string>();
     const daEquipe = direcionadoPara(entrada.equipes, e);
     const doExame = new Set<string>();
-    const alcancou = { escala: false, arranjo: false, equipe: false, reservado: false };
+    const alcancou = {
+      conta: false,
+      escala: false,
+      arranjo: false,
+      equipe: false,
+      reservado: false,
+    };
     const barrados: Record<string, Barreira> = {};
     barradosPorExame.set(e.id, barrados);
 
     for (const [medicoId, escalado] of naEscala) {
       const medico = medicosPorId.get(medicoId) as MedicoRodada;
+      if (medico.semContaMobilemed) {
+        barrados[medicoId] = 'sem_conta_mobilemed';
+        continue;
+      }
+      alcancou.conta = true;
       const ajustes = entrada.ajustes.filter(
         (a) => a.medicoId === medicoId && ajusteCobre(a, e, agora),
       );
@@ -487,17 +512,19 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     if (doExame.size) funilExames.elegiveis++;
     const zerou: EtapaElegibilidade | null = daEquipe?.plantao
       ? 'plantao'
-      : !alcancou.escala
-        ? 'escala'
-        : !alcancou.arranjo
-          ? 'arranjo'
-          : !alcancou.equipe
-            ? 'equipe'
-            : !alcancou.reservado
-              ? 'reservado'
-              : !doExame.size
-                ? 'retirado'
-                : null;
+      : !alcancou.conta && naEscala.size
+        ? 'conta'
+        : !alcancou.escala
+          ? 'escala'
+          : !alcancou.arranjo
+            ? 'arranjo'
+            : !alcancou.equipe
+              ? 'equipe'
+              : !alcancou.reservado
+                ? 'reservado'
+                : !doExame.size
+                  ? 'retirado'
+                  : null;
     if (zerou) etapaElegibilidade.set(e.id, zerou);
   }
 
@@ -565,6 +592,9 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         disponiveis: funilMedicos.disponiveis.size,
         noTurno: funilMedicos.noTurno.size,
         noHorario: funilMedicos.noHorario.size,
+        comConta: [...funilMedicos.noHorario].filter(
+          (id) => !medicosPorId.get(id)?.semContaMobilemed,
+        ).length,
       },
       exames: funilExames,
     },

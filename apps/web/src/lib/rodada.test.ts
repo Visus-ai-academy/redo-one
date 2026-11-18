@@ -5,6 +5,7 @@ import {
   descreverRecortes,
   etapasDaRodada,
   funilDosExames,
+  funilDosMedicos,
   intervaloDaRodada,
   juntarNomes,
   medicosEmTurno,
@@ -114,6 +115,28 @@ describe('rodada do robô na tela', () => {
       { rotulo: 'Prioridades', valor: 'Urgência' },
       { rotulo: 'Clientes', valor: '3 clientes' },
       { rotulo: 'Médicos', valor: 'Sem Gustavo Vilela' },
+    ]);
+  });
+
+  it('funil dos médicos: dos habilitados aos que receberam, com o portão da conta na MobileMed', () => {
+    const funil = funilDosMedicos({
+      habilitados: 281,
+      escalados: 40,
+      disponiveis: 38,
+      noTurno: 30,
+      noHorario: 20,
+      comConta: 2,
+      tirados: 0,
+      receberam: 2,
+    });
+    expect(funil.map((l) => [l.rotulo, l.saem, l.restam])).toEqual([
+      ['Habilitados no robô', 0, 281],
+      ['Sem escala agora', 241, 40],
+      ['Com ausência no dia', 2, 38],
+      ['Fora dos turnos e frentes da rodada (ou tirados)', 8, 30],
+      ['Fora do horário agora', 10, 20],
+      ['Sem conta na MobileMed', 18, 2],
+      ['Receberam exames', 0, 2],
     ]);
   });
 

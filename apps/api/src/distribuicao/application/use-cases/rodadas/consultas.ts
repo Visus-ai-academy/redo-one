@@ -400,6 +400,8 @@ export interface ResumoRodada {
     disponiveis: number;
     noTurno: number;
     noHorario: number;
+    /** Dos no horário, os com conta na MobileMed. */
+    comConta: number;
     tirados: number;
     receberam: number;
   } | null;
@@ -463,6 +465,8 @@ export class ConsultarResumo {
         ? {
             habilitados: insumos.habilitados.length,
             ...insumos.funil.medicos,
+            // Leituras gravadas antes do portão da conta não o têm: todos seguiram.
+            comConta: insumos.funil.medicos.comConta ?? insumos.funil.medicos.noHorario,
             tirados: r.recortes.medicosExcluidos.length,
             receberam: contagens.filter((c) => c.propostos > 0).length,
           }
@@ -511,6 +515,13 @@ const PORTOES: {
   falha: string;
   frase: string;
 }[] = [
+  {
+    barreira: ['sem_conta_mobilemed'],
+    titulo: 'Tem conta na MobileMed',
+    ok: 'O id dele na MobileMed está cadastrado',
+    falha: 'Sem id da MobileMed no cadastro do médico: o robô não tem como atribuir a ele',
+    frase: 'não tem conta na MobileMed cadastrada',
+  },
   {
     barreira: ['escala'],
     titulo: 'O turno recebe o exame',

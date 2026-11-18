@@ -16398,6 +16398,10 @@
           "noHorario": {
             "type": "integer"
           },
+          "comConta": {
+            "type": "integer",
+            "description": "Dos no horário, os com conta na MobileMed."
+          },
           "tirados": {
             "type": "integer"
           },
@@ -16411,6 +16415,7 @@
           "disponiveis",
           "noTurno",
           "noHorario",
+          "comConta",
           "tirados",
           "receberam"
         ]

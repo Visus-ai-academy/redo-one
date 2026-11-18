@@ -149,7 +149,13 @@ describe('montarMedicosDisponiveis: quem está na rodada', () => {
       ],
     });
     expect(r.medicos.map((m) => m.id)).toEqual(['A']);
-    expect(r.funil.medicos).toEqual({ escalados: 4, disponiveis: 3, noTurno: 3, noHorario: 1 });
+    expect(r.funil.medicos).toEqual({
+      escalados: 4,
+      disponiveis: 3,
+      noTurno: 3,
+      noHorario: 1,
+      comConta: 1,
+    });
   });
 
   it('turno marcado no filtro da rodada entra cheio; os outros turnos saem', () => {
@@ -361,6 +367,27 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
       elegiveis: ['A'],
       barrados: { B: 'arranjo', C: 'ja_entregue' },
     });
+  });
+
+  it('sem conta na MobileMed: em turno, mas barrado em todo exame antes da escala', () => {
+    const r = montar({
+      exames: [exame('e1'), exame('e2')],
+      medicos: [medico('A'), medico('B', [arranjo()], { semContaMobilemed: true })],
+      ocorrencias: [oc('A'), oc('B')],
+    });
+    expect(r.funil.medicos).toMatchObject({ noHorario: 2, comConta: 1 });
+    expect(r.explicacao('e1')).toEqual({
+      elegiveis: ['A'],
+      barrados: { B: 'sem_conta_mobilemed' },
+    });
+    expect(doMedico(r, 'B')?.elegivelPara('e2')).toBe(false);
+    expect(r.etapaElegibilidade.has('e1')).toBe(false);
+  });
+
+  it('só médico sem conta na MobileMed em turno: a elegibilidade zera no portão da conta', () => {
+    const r = montar({ medicos: [medico('A', [arranjo()], { semContaMobilemed: true })] });
+    expect(r.etapaElegibilidade.get('e1')).toBe('conta');
+    expect(r.funil.exames.escala).toBe(0);
   });
 
   it('horário sem robô fecha só o período fixo que começa nele (o plantão), não a Lista', () => {
