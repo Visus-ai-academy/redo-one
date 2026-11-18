@@ -302,7 +302,10 @@ function Rodape({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-card sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-lg border-t p-4">
+    <div
+      data-rodape-fixo=""
+      className="bg-card sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-lg border-t p-4"
+    >
       <span className="flex min-w-0 flex-[1_1_240px] flex-col gap-0.5 text-[13px]">
         <span className="text-foreground font-medium tabular-nums">{resumo}</span>
         {aviso && <span className="text-warning">{aviso}</span>}

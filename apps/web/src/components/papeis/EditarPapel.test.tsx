@@ -102,6 +102,10 @@ describe('EditarPapel', () => {
     );
     expect(within(secao).getByRole('checkbox', { name: 'Repasse: Ver' })).toBeChecked();
     expect(within(secao).getByText('1 permissão em 1 tela')).toBeInTheDocument();
+    // Rodapé fixo marcado: os avisos (toast) sobem para o topo e não cobrem os botões dele.
+    expect(
+      within(secao).getByText('1 permissão em 1 tela').closest('[data-rodape-fixo]'),
+    ).not.toBeNull();
   });
 
   it('ao mudar as permissões, avisa que as sessões caem e salva', async () => {

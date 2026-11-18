@@ -212,6 +212,7 @@
    * - Painel aberto sem conteúdo largo ao lado (tela cheia abaixo de lg; painel de 400px abaixo de
    *   1280px; o de 720px abaixo de 1552px): no topo, sobre o título do painel, livre do X.
    * - Celular sem painel: no topo, na barra verde, à direita do botão do menu.
+   * - Tela com rodapé fixo (`data-rodape-fixo`, os botões ocupam a largura): no topo, centralizada.
    */
   .faixa-avisos {
     --menu-largura: 0px;
@@ -243,6 +244,12 @@
   @media (width >= 97rem) {
     :root:has([data-painel-lateral="larga"]) .faixa-avisos {
       --painel-largura: 720px;
+    }
+  }
+  @media (width >= 48rem) {
+    :root:has([data-rodape-fixo]) .faixa-avisos {
+      top: 16px;
+      bottom: auto;
     }
   }
   /* Sobre o título do painel: o X (36px a 16px da borda) fica livre. */
