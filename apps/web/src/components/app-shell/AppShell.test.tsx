@@ -153,6 +153,8 @@ describe('AppShell', () => {
 
     const expandir = screen.getByRole('button', { name: 'Expandir menu' });
     expect(expandir).toHaveAttribute('aria-expanded', 'false');
+    // Os avisos (toast) se posicionam pela largura do menu.
+    expect(expandir.closest('aside')).toHaveAttribute('data-menu-recolhido');
     const menu = screen.getByRole('navigation', { name: 'Menu principal' });
     expect(screen.queryByText('Maria Souza')).not.toBeInTheDocument();
     await userEvent.hover(within(menu).getByRole('link', { name: 'Usuários' }));

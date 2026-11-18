@@ -32,6 +32,21 @@ describe('Avisos', () => {
     vi.useRealTimers();
   });
 
+  it('a faixa dos avisos não bloqueia cliques no que está embaixo; só o aviso é clicável', async () => {
+    render(
+      <Avisos>
+        <Salvar />
+      </Avisos>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    const aviso = await screen.findByText('Dados salvos.');
+
+    const regiao = screen.getByRole('region', { name: 'Avisos' });
+    expect(regiao).toHaveClass('pointer-events-none');
+    expect(regiao).toHaveAttribute('data-avisos');
+    expect(aviso.closest('[data-avisos] > *')).toHaveClass('pointer-events-auto');
+  });
+
   it('fecha pelo botão', async () => {
     render(
       <Avisos>

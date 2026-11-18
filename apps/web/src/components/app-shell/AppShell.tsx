@@ -120,6 +120,7 @@ export function AppShell({
         </header>
 
         <aside
+          data-menu-recolhido={recolhido || undefined}
           className={cn(
             'sticky top-0 hidden h-dvh flex-none transition-[width] duration-200 ease-out motion-reduce:transition-none md:block',
             recolhido ? 'w-16' : 'w-60',

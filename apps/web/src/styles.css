@@ -205,6 +205,53 @@
 }
 
 @layer components {
+  /*
+   * Faixa dos avisos (toast): embaixo, centralizada na área de conteúdo, entre o menu e o painel
+   * lateral aberto, para não cobrir os botões do painel nem os dos rodapés (que ficam nas pontas).
+   * Sem espaço ao lado do painel (tela cheia abaixo de lg, ou o painel largo em tela estreita), vai
+   * para o topo, deixando livre o X do painel. Regra no sistema.md da skill ui-design.
+   */
+  .faixa-avisos {
+    --menu-largura: 0px;
+    --painel-largura: 0px;
+    left: calc(var(--menu-largura) + 16px);
+    right: calc(var(--painel-largura) + 16px);
+    bottom: 16px;
+  }
+  @media (width >= 48rem) {
+    .faixa-avisos {
+      --menu-largura: 240px;
+    }
+    :root:has([data-menu-recolhido]) .faixa-avisos {
+      --menu-largura: 64px;
+    }
+  }
+  @media (width >= 64rem) {
+    :root:has([data-painel-lateral="padrao"]) .faixa-avisos {
+      --painel-largura: 400px;
+    }
+    :root:has([data-painel-lateral="larga"]) .faixa-avisos {
+      --painel-largura: 720px;
+    }
+  }
+  /* Painel de tela cheia: topo, sem cobrir o X (botão de 36px a 16px da borda). */
+  @media (width < 64rem) {
+    :root:has([data-painel-lateral]) .faixa-avisos {
+      top: 16px;
+      bottom: auto;
+      right: 64px;
+    }
+  }
+  /* Painel largo sem 392px livres ao lado (menu + 720 + aviso): topo, sobre o título do painel. */
+  @media (64rem <= width < 85rem) {
+    :root:has([data-painel-lateral="larga"]) .faixa-avisos {
+      --painel-largura: 0px;
+      top: 16px;
+      bottom: auto;
+      right: 64px;
+    }
+  }
+
   /* Grade sutil do painel verde das telas de acesso. */
   .grade-acesso {
     --linha: color-mix(in srgb, var(--sidebar-foreground) 6%, transparent);
