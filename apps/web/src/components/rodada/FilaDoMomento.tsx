@@ -5,6 +5,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
 import { horaDeBrasilia } from '../../lib/acesso';
 import { cn } from '../../lib/cn';
+import { dataHoraCurta } from '../../lib/datas';
 import { type MedicoEmTurno, medicosEmTurno, num } from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
@@ -138,10 +139,12 @@ export function FilaDoMomento({
                 extra:
                   primeiro && new Date(primeiro).getTime() <= agora + UMA_HORA ? (
                     <Etiqueta tom="erro" icone={Clock}>
-                      {`O primeiro às ${horaDeBrasilia(primeiro)}`}
+                      {new Date(primeiro).getTime() < agora
+                        ? `Já vencido desde ${dataHoraCurta(primeiro).toLowerCase()}`
+                        : `O primeiro às ${horaDeBrasilia(primeiro)}`}
                     </Etiqueta>
                   ) : null,
-                legenda: 'Pelo SLA do cliente',
+                legenda: 'Pelo SLA do cliente, contando os já vencidos',
               },
               {
                 rotulo: 'Médicos em turno agora',
@@ -169,7 +172,7 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
       0,
     );
   const primeiro = fila.primeiroVencimento;
-  const th = 'text-subtle-foreground h-10 px-4 text-xs font-medium whitespace-nowrap';
+  const th = 'text-subtle-foreground h-10 px-3 text-xs font-medium whitespace-nowrap';
   return (
     <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3">
       <TituloSecao titulo="Por frente e prioridade da operação" id="titulo-matriz" />
@@ -201,7 +204,7 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
             <tbody>
               {fila.porFrente.map((f) => (
                 <tr key={f.frenteId ?? 'sem-frente'} className="hover:bg-muted border-b">
-                  <th scope="row" className="h-11 px-4 text-left font-medium whitespace-nowrap">
+                  <th scope="row" className="h-11 px-3 text-left font-medium whitespace-nowrap">
                     {f.nome}
                   </th>
                   {colunas.map((p) => {
@@ -212,7 +215,7 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
                       <td
                         key={p.prioridadeOperacaoId ?? 'sem'}
                         className={cn(
-                          'px-4 text-right',
+                          'px-3 text-right',
                           !c?.exames && 'text-subtle-foreground',
                           (c?.urgentes ?? 0) > 0 && 'text-destructive font-semibold',
                         )}
@@ -221,8 +224,8 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
                       </td>
                     );
                   })}
-                  <td className="px-4 text-right font-semibold">{num(f.exames)}</td>
-                  <td className="text-muted-foreground px-4 text-right">
+                  <td className="px-3 text-right font-semibold">{num(f.exames)}</td>
+                  <td className="text-muted-foreground px-3 text-right">
                     {f.primeiroVencimento ? horaDeBrasilia(f.primeiroVencimento) : '—'}
                   </td>
                 </tr>
@@ -230,19 +233,19 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
             </tbody>
             <tfoot>
               <tr>
-                <th scope="row" className="h-11 px-4 text-left font-semibold">
+                <th scope="row" className="h-11 px-3 text-left font-semibold">
                   Total
                 </th>
                 {colunas.map((p) => (
                   <td
                     key={p.prioridadeOperacaoId ?? 'sem'}
-                    className="px-4 text-right font-semibold"
+                    className="px-3 text-right font-semibold"
                   >
                     {num(total(p.prioridadeOperacaoId))}
                   </td>
                 ))}
-                <td className="px-4 text-right font-semibold">{num(fila.total)}</td>
-                <td className="text-muted-foreground px-4 text-right">
+                <td className="px-3 text-right font-semibold">{num(fila.total)}</td>
+                <td className="text-muted-foreground px-3 text-right">
                   {primeiro ? horaDeBrasilia(primeiro) : '—'}
                 </td>
               </tr>

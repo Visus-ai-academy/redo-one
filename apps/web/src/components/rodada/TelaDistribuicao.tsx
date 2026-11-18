@@ -29,7 +29,7 @@ import { horaDeBrasilia } from '../../lib/acesso';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
 import { pode } from '../../lib/permissoes';
-import { intervaloDaRodada, num, type Periodo, situacaoDaRodada } from '../../lib/rodada';
+import { intervaloDaRodada, num, type Periodo } from '../../lib/rodada';
 import { Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
@@ -715,7 +715,7 @@ function RodadaViva({
           onClick={() => onAbrirRodada(rodada.id)}
           className="text-primary self-start text-[13px] underline-offset-2 hover:underline"
         >
-          Ver o detalhe da rodada ({situacaoDaRodada(rodada.status).texto.toLowerCase()})
+          Ver o detalhe da rodada
         </button>
       </CartaoRodada>
       {corpo}

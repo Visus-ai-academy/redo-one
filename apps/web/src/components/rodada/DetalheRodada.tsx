@@ -139,7 +139,6 @@ export function DetalheRodada({
                 <TituloSecao titulo="Como o robô montou a proposta" id="titulo-trilha" />
                 <Caixa>
                   <dl className="divide-y">
-                    <Linha rotulo="Pacotes do mesmo paciente" valor={num(resumo.trilha.pacotes)} />
                     <Linha
                       rotulo="Exames que foram em pacote"
                       valor={num(resumo.trilha.examesAgrupados)}
@@ -451,6 +450,8 @@ function PorQue({
               Exame
             </label>
             <BuscaSelecao
+              // O "Por quê?" do funil troca o exame de fora: o campo remonta com ele.
+              key={exame?.valor ?? 'vazio'}
               id="pq-exame"
               chave={`exames-da-rodada-${rodada.id}`}
               buscar={buscarExames}
