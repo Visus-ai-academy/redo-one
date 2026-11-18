@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import type { EventoAuditoria } from '../../auditoria/auditoria';
+import type { Segmento } from '../../comum/segmentos';
 import { DATABASE, type Database } from '../../database/database';
 import {
   ajustesProdutividade,
@@ -9,11 +10,12 @@ import {
   alocacoesPrioridades,
   alocacoesSubespecialidades,
   eventosAuditoria,
+  frentesEscala,
   medicos,
   prioridades,
-  subespecialidades,
   turnos,
 } from '../../database/schema';
+import { lerSegmentos } from '../../database/segmentos';
 import { EscalaInvalidaError } from '../domain';
 import type {
   AjusteGravado,
@@ -112,13 +114,16 @@ export class DrizzleAlocacoesRepository implements AlocacoesRepository {
     return linhas.map((l) => l.id);
   }
 
-  async subespecialidadesExistentes(ids: string[]) {
-    if (!ids.length) return [];
-    const linhas = await this.db
-      .select({ id: subespecialidades.id })
-      .from(subespecialidades)
-      .where(inArray(subespecialidades.id, ids));
-    return linhas.map((l) => l.id);
+  segmentos(ids: string[]): Promise<Segmento[]> {
+    return lerSegmentos(this.db, ids);
+  }
+
+  async especialidadeDaFrente(frenteId: string) {
+    const [linha] = await this.db
+      .select({ especialidadeId: frentesEscala.especialidadeId })
+      .from(frentesEscala)
+      .where(eq(frentesEscala.id, frenteId));
+    return linha?.especialidadeId ?? null;
   }
 
   async ajuste(alocacaoId: string, data: string) {

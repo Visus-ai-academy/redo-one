@@ -1,4 +1,5 @@
 import type { EventoAuditoria } from '../../auditoria/auditoria';
+import type { Segmento } from '../../comum/segmentos';
 import type { Data, TurnoDaAlocacao } from '../domain';
 
 export const ALOCACOES_REPOSITORY = Symbol('ALOCACOES_REPOSITORY');
@@ -61,7 +62,10 @@ export interface AlocacoesRepository {
   medico(id: string): Promise<{ ativo: boolean } | null>;
   /** Os ids pedidos que existem. */
   prioridadesExistentes(ids: string[]): Promise<string[]>;
-  subespecialidadesExistentes(ids: string[]): Promise<string[]>;
+  /** Os segmentos pedidos que existem, com as especialidades em que existem. */
+  segmentos(ids: string[]): Promise<Segmento[]>;
+  /** A especialidade da frente; null na frente de modalidade (ou se a frente não existe). */
+  especialidadeDaFrente(frenteId: string): Promise<string | null>;
   ajuste(alocacaoId: string, data: Data): Promise<AjusteGravado | null>;
   ajustesDe(alocacaoIds: string[]): Promise<AjusteGravado[]>;
   /** Grava com o id já definido, os recortes e os eventos. */

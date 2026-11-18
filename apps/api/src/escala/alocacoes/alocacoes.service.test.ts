@@ -304,6 +304,61 @@ describe('AlocacoesService', () => {
     });
   });
 
+  describe('segmento da especialidade da frente', () => {
+    function comSegmentos() {
+      const montado = montar();
+      montado.repo.especialidadesDasFrentes.set('f-neuro', 'e-neuro');
+      montado.repo.subespecialidades.add('s-joelho');
+      montado.repo.especialidadesDosSegmentos.set('s-avc', ['e-neuro']);
+      montado.repo.especialidadesDosSegmentos.set('s-joelho', ['e-msk']);
+      montado.repo.nomesDosSegmentos.set('s-joelho', 'JOELHO');
+      return montado;
+    }
+
+    it('recusa segmento que a especialidade da frente não tem', async () => {
+      const { repo, service } = comSegmentos();
+      await expect(
+        service.criar(admin, entrada({ subespecialidadeIds: ['s-avc', 's-joelho'] })),
+      ).rejects.toThrow(
+        'O segmento JOELHO não existe na especialidade desta frente. Escolha um segmento dela ou deixe sem segmento.',
+      );
+      expect(repo.alocacoes.size).toBe(0);
+    });
+
+    it('frente de modalidade aceita qualquer segmento', async () => {
+      const { service } = comSegmentos();
+      await expect(
+        service.criar(admin, entrada({ frenteId: 'f-tc', subespecialidadeIds: ['s-joelho'] })),
+      ).resolves.toMatchObject({ avisos: [] });
+    });
+
+    it('não barra a edição de vínculo já gravado fora da regra que mantém o segmento', async () => {
+      const { repo, service } = comSegmentos();
+      const { id } = await service.criar(
+        admin,
+        entrada({ frenteId: 'f-tc', subespecialidadeIds: ['s-joelho'] }),
+      );
+      // Gravado antes da regra: o vínculo passa a apontar para a frente de NEURO.
+      const gravada = repo.alocacoes.get(id);
+      if (gravada) gravada.frenteId = 'f-neuro';
+
+      await service.atualizar(
+        admin,
+        id,
+        entrada({ subespecialidadeIds: ['s-joelho'], produtividade: 12 }),
+      );
+
+      expect(repo.alocacoes.get(id)?.produtividade).toBe(12);
+      await expect(
+        service.atualizar(
+          admin,
+          id,
+          entrada({ subespecialidadeIds: ['s-joelho'], frenteId: 'f-neuro', turnoId: 't-lista' }),
+        ),
+      ).resolves.toBeDefined();
+    });
+  });
+
   describe('obter', () => {
     it('devolve com a classificação; fora do recorte é não encontrada', async () => {
       const { escopos, service } = montar();

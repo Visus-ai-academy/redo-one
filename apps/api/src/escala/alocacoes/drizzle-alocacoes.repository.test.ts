@@ -62,6 +62,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       .returning();
     const [urgente] = await db.insert(schema.prioridades).values({ nome: 'URGENTE' }).returning();
     const [avc] = await db.insert(schema.subespecialidades).values({ nome: 'AVC' }).returning();
+    await db
+      .insert(schema.subespecialidadesEspecialidades)
+      .values({ subespecialidadeId: avc?.id ?? '', especialidadeId: esp?.id ?? '' });
     const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão' }).returning();
     const [usuario] = await db
       .insert(schema.usuarios)
@@ -74,6 +77,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       bruno: bruno?.id ?? '',
       urgente: urgente?.id ?? '',
       avc: avc?.id ?? '',
+      espNeuro: esp?.id ?? '',
       usuario: usuario?.id ?? '',
     };
   });
@@ -102,7 +106,10 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     });
     expect(await repo.medico(id('ana'))).toEqual({ ativo: true });
     expect(await repo.prioridadesExistentes([id('urgente'), id('avc')])).toEqual([id('urgente')]);
-    expect(await repo.subespecialidadesExistentes([id('avc')])).toEqual([id('avc')]);
+    expect(await repo.segmentos([id('avc')])).toEqual([
+      { id: id('avc'), nome: 'AVC', especialidadeIds: [id('espNeuro')] },
+    ]);
+    expect(await repo.especialidadeDaFrente(id('neuro'))).toBe(id('espNeuro'));
     expect(await repo.prioridadesExistentes([])).toEqual([]);
   });
 

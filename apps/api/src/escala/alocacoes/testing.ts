@@ -17,6 +17,11 @@ export class FakeAlocacoesRepository implements AlocacoesRepository {
   readonly medicos = new Map<string, { ativo: boolean }>();
   readonly prioridades = new Set<string>();
   readonly subespecialidades = new Set<string>();
+  /** Segmento sem entrada aqui não é de nenhuma especialidade. */
+  readonly especialidadesDosSegmentos = new Map<string, string[]>();
+  readonly nomesDosSegmentos = new Map<string, string>();
+  /** Frente sem entrada aqui é de modalidade. */
+  readonly especialidadesDasFrentes = new Map<string, string>();
   readonly eventos: EventoAuditoria[] = [];
 
   async buscar(id: string) {
@@ -40,8 +45,18 @@ export class FakeAlocacoesRepository implements AlocacoesRepository {
     return ids.filter((id) => this.prioridades.has(id));
   }
 
-  async subespecialidadesExistentes(ids: string[]) {
-    return ids.filter((id) => this.subespecialidades.has(id));
+  async segmentos(ids: string[]) {
+    return ids
+      .filter((id) => this.subespecialidades.has(id))
+      .map((id) => ({
+        id,
+        nome: this.nomesDosSegmentos.get(id) ?? id,
+        especialidadeIds: this.especialidadesDosSegmentos.get(id) ?? [],
+      }));
+  }
+
+  async especialidadeDaFrente(frenteId: string) {
+    return this.especialidadesDasFrentes.get(frenteId) ?? null;
   }
 
   async ajuste(alocacaoId: string, data: string) {

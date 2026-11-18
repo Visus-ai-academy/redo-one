@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 
+import {
+  mensagemSegmentoFora,
+  type Segmento,
+  segmentoForaDaEspecialidade,
+} from '../../comum/segmentos';
 import { CLOCK, type Clock } from '../../identidade/clock';
 import {
   type ClassificacaoAlocacao,
@@ -97,7 +102,7 @@ export class AlocacoesService {
     const escopo = await escopoDo(this.escopos, ator);
     exigirNoEscopo(escopo, entrada);
     await this.exigirMedicoAtivo(entrada.medicoId);
-    const alocacao = await this.montar(randomUUID(), entrada, entrada.gratificado === true);
+    const alocacao = await this.montar(randomUUID(), entrada, entrada.gratificado === true, null);
     await this.repo.criar(alocacao, [this.eventos(ator).alocacaoCriada(alocacao)]);
     return { id: alocacao.id, avisos: await this.avisos(alocacao, escopo) };
   }
@@ -115,7 +120,12 @@ export class AlocacoesService {
     exigirNoEscopo(escopo, entrada);
     if (entrada.medicoId !== atual.medicoId) await this.exigirMedicoAtivo(entrada.medicoId);
     // Como no dashboards-one, gratificado ausente na edição não troca a situação.
-    const alocacao = await this.montar(id, entrada, entrada.gratificado ?? atual.gratificado);
+    const alocacao = await this.montar(
+      id,
+      entrada,
+      entrada.gratificado ?? atual.gratificado,
+      atual,
+    );
     await this.exigirCoberturasNoVinculo(atual, alocacao);
 
     const evento = this.eventos(ator).alocacaoAlterada(atual, alocacao);
@@ -189,6 +199,8 @@ export class AlocacoesService {
     id: string,
     entrada: EntradaAlocacao,
     gratificado: boolean,
+    /** O vínculo como está gravado (na edição), para a regra do segmento valer só no que muda. */
+    atual: AlocacaoGravada | null,
   ): Promise<AlocacaoGravada> {
     const turno = await this.turnoComFrente(entrada.turnoId, entrada.frenteId);
     const validada = validarAlocacao({ ...entrada, gratificado }, turno);
@@ -199,12 +211,13 @@ export class AlocacoesService {
         'Prioridade não encontrada. Atualize a tela e escolha de novo.',
       );
     }
-    const subsExistentes = await this.repo.subespecialidadesExistentes(subespecialidadeIds);
-    if (subsExistentes.length !== subespecialidadeIds.length) {
+    const segmentos = await this.repo.segmentos(subespecialidadeIds);
+    if (segmentos.length !== subespecialidadeIds.length) {
       throw new EscalaInvalidaError(
         'Subespecialidade não encontrada. Atualize a tela e escolha de novo.',
       );
     }
+    await this.exigirSegmentosDaFrente(entrada.frenteId, subespecialidadeIds, segmentos, atual);
     return {
       id,
       medicoId: entrada.medicoId,
@@ -251,6 +264,26 @@ export class AlocacoesService {
       observacoes: texto(entrada.observacoes),
     };
     return { cobertura, conferir: (outras) => void validar(outras) };
+  }
+
+  /**
+   * Segmento é recorte da especialidade: na frente de especialidade, só os segmentos que ela tem.
+   * A frente de modalidade (RX, TC) junta especialidades e aceita qualquer segmento. Na edição, o
+   * segmento que já estava no vínculo, na mesma frente, não passa pela regra (gravado antes dela).
+   */
+  private async exigirSegmentosDaFrente(
+    frenteId: string,
+    subespecialidadeIds: string[],
+    segmentos: Segmento[],
+    atual: AlocacaoGravada | null,
+  ) {
+    const jaGravados = atual?.frenteId === frenteId ? atual.subespecialidadeIds : [];
+    const novos = subespecialidadeIds.filter((s) => !jaGravados.includes(s));
+    if (!novos.length) return;
+    const especialidadeId = await this.repo.especialidadeDaFrente(frenteId);
+    if (!especialidadeId) return;
+    const fora = segmentoForaDaEspecialidade(segmentos, novos, especialidadeId);
+    if (fora) throw new EscalaInvalidaError(mensagemSegmentoFora(fora, 'desta frente'));
   }
 
   private async turnoComFrente(turnoId: string, frenteId: string): Promise<TurnoParaAlocar> {
