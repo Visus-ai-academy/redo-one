@@ -6,7 +6,6 @@ import {
   chavePacote,
   criarNivelDoExame,
   type ExameMotor,
-  ehUrgente,
   montarFila,
   type PrioridadeCliente,
   recortarClinicas,
@@ -26,7 +25,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: ['pri-urg'],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -39,7 +37,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: false,
   diasJaEntregue: 7,
   turnosPosteriores: null,
-  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 const SEM_REGRAS = new RegrasPorFrente([]);
 const MSK_COLUNAS_A_PARTE = new RegrasPorFrente([
@@ -67,6 +64,7 @@ const exame = (id: string, p: Partial<ExameMotor> = {}): ExameMotor => ({
   modalidadeId: CT,
   subespecialidadeId: null,
   clienteId: null,
+  posicao: 3,
   urgente: false,
   paciente: id,
   restanteMin: 600,
@@ -89,21 +87,23 @@ const grupos = (exames: ExameMotor[], prioridades?: PrioridadeCliente[], regras 
   );
 };
 
-describe('ehUrgente', () => {
-  it('compara a prioridade do catálogo já traduzida com as urgentes da configuração', () => {
-    expect(ehUrgente('pri-urg', CONFIG)).toBe(true);
-    // Internado é variação de ROTINA: não é urgente (decisão de 17/11/2026).
-    expect(ehUrgente('pri-rotina', CONFIG)).toBe(false);
-    expect(ehUrgente(null, CONFIG)).toBe(false);
-  });
-});
-
 describe('montarFila', () => {
+  it('a posição da prioridade da operação ordena; no empate, o prazo', () => {
+    expect(
+      ordem([
+        exame('rotina', { restanteMin: 10 }),
+        exame('internado', { posicao: 3, restanteMin: 5 }),
+        exame('ambulatorio', { posicao: 2, restanteMin: 900 }),
+        exame('urgencia', { posicao: 1, urgente: true, restanteMin: 500 }),
+      ]),
+    ).toEqual(['urgencia', 'ambulatorio', 'internado', 'rotina']);
+  });
+
   it('urgência sobe, mesmo com prazo mais longo', () => {
     expect(
       ordem([
         exame('rotina', { restanteMin: 10 }),
-        exame('urg', { urgente: true, restanteMin: 500 }),
+        exame('urg', { posicao: 1, urgente: true, restanteMin: 500 }),
       ])[0],
     ).toBe('urg');
   });
@@ -133,8 +133,8 @@ describe('montarFila', () => {
   it('urgência do VIP antes da do normal; urgência de qualquer um antes da rotina do VIP', () => {
     const exames = [
       exame('vipRotina', { clienteId: 'VIP', restanteMin: -100 }),
-      exame('normalUrg', { clienteId: 'N', restanteMin: 30, urgente: true }),
-      exame('vipUrg', { clienteId: 'VIP', restanteMin: 200, urgente: true }),
+      exame('normalUrg', { clienteId: 'N', restanteMin: 30, posicao: 1, urgente: true }),
+      exame('vipUrg', { clienteId: 'VIP', restanteMin: 200, posicao: 1, urgente: true }),
     ];
     expect(ordem(exames, [vip('VIP', MI, 1)])).toEqual(['vipUrg', 'normalUrg', 'vipRotina']);
   });
@@ -217,7 +217,10 @@ describe('agruparPorPaciente', () => {
       grupos([doPaciente('CURTO', 60), ...[1, 2, 3].map(() => doPaciente('P3', 170))]),
     ).toEqual(['CURTO:1', 'P3:3']);
     expect(
-      grupos([doPaciente('U', 170, { urgente: true }), ...[1, 2].map(() => doPaciente('P2', 170))]),
+      grupos([
+        doPaciente('U', 170, { posicao: 1, urgente: true }),
+        ...[1, 2].map(() => doPaciente('P2', 170)),
+      ]),
     ).toEqual(['U:1', 'P2:2']);
   });
 

@@ -17,6 +17,9 @@ export interface ExameMotor {
   modalidadeId: string | null;
   subespecialidadeId: string | null;
   clienteId: string | null;
+  /** Posição da prioridade da operação na fila (1 = primeiro). */
+  posicao: number;
+  /** A operação trata o exame como urgência (regra da prioridade, com a da frente). */
   urgente: boolean;
   /** Chave do paciente (HMAC): agrupa o pacote, nunca o nome. */
   paciente: string;
@@ -32,17 +35,6 @@ export interface ExameMotor {
 /** Sem acento, sem espaços nas pontas e em maiúsculas: a tela manda "Urgência". */
 export const normalizar = (s: string): string =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase();
-
-/**
- * A prioridade do exame (do catálogo, já traduzida pelas variações) é urgente pela configuração.
- * Nunca pela grafia crua da MobileMed.
- */
-export function ehUrgente(
-  prioridadeId: string | null,
-  config: Pick<ConfiguracaoDistribuicao, 'prioridadeIdsUrgentes'>,
-): boolean {
-  return prioridadeId !== null && config.prioridadeIdsUrgentes.includes(prioridadeId);
-}
 
 /** Prioridade do cliente no pico, num recorte (frente de especialidade ou de modalidade). */
 export interface PrioridadeCliente {
@@ -80,7 +72,7 @@ export function criarNivelDoExame(
 
 type CriterioInterno = ItemOrdemFila['criterio'] | 'prazoCritico' | 'cliente';
 
-/** Prazo crítico e nível do cliente entram logo depois da urgência (ou no topo, sem ela). */
+/** Prazo crítico e nível do cliente entram logo depois da prioridade (ou no topo, sem ela). */
 function comFaixasDoCliente(ordem: readonly ItemOrdemFila[]) {
   const i = ordem.findIndex((o) => o.criterio === 'prioridade') + 1;
   return [
@@ -93,7 +85,7 @@ function comFaixasDoCliente(ordem: readonly ItemOrdemFila[]) {
 
 /**
  * Ordena pela `ordemFila` configurada; o primeiro critério que desempata decide. Com prioridade de
- * cliente, logo depois da urgência entram a faixa do prazo crítico e o nível do cliente.
+ * cliente, logo depois da prioridade da operação entram a faixa do prazo crítico e o nível do cliente.
  */
 export function montarFila<T extends ExameMotor>(
   exames: readonly T[],
@@ -106,7 +98,8 @@ export function montarFila<T extends ExameMotor>(
   const valor = (e: T, criterio: CriterioInterno): number => {
     switch (criterio) {
       case 'prioridade':
-        return e.urgente ? 1 : 0;
+        // "desc" = a posição 1 primeiro (o mesmo sentido de "mais prioritário primeiro").
+        return -e.posicao;
       case 'prazoCritico':
         // A urgência é uma faixa só: dentro dela o nível do cliente vem antes do prazo.
         if (e.urgente) return 0;
@@ -155,7 +148,7 @@ export interface GrupoExames {
 
 /**
  * Junta os exames do mesmo pacote num lote indivisível, que herda a posição do seu exame mais bem
- * colocado. No mesmo prazo, mesma urgência e mesmo nível de cliente, o pacote maior vem antes: o
+ * colocado. Na mesma posição, mesmo prazo, mesma urgência e mesmo nível de cliente, o pacote maior vem antes: o
  * teto é tudo ou nada, e os avulsos enchiam as vagas antes dele (15/10).
  */
 export function agruparPorPaciente(
@@ -198,7 +191,7 @@ export function agruparPorPaciente(
 
   const faixa = (g: GrupoExames) => {
     const e = fila[g.posicao] as ExameMotor;
-    return `${e.urgente ? 1 : 0}|${nivelDoExame ? nivelDoExame(e) : ''}|${e.restanteMin ?? ''}`;
+    return `${e.posicao}|${e.urgente ? 1 : 0}|${nivelDoExame ? nivelDoExame(e) : ''}|${e.restanteMin ?? ''}`;
   };
   for (let i = 0; i < grupos.length; ) {
     let fim = i + 1;

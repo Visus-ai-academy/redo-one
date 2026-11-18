@@ -14,6 +14,7 @@ import {
   montarMedicosDisponiveis,
   type OcorrenciaRodada,
 } from './medicos-disponiveis';
+import { type CelulaRecebimento, GradeRecebimento } from './prioridades-operacao';
 
 const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 const MI = 'esp-mi';
@@ -21,6 +22,13 @@ const MSK = 'esp-msk';
 const CT = 'mod-ct';
 const ROTINA = 'pri-rotina';
 const URGENCIA = 'pri-urgencia';
+const OP_ROTINA = 'op-rotina';
+const OP_URGENCIA = 'op-urgencia';
+/** A Lista: rotina só com mais de 24 h; urgência não entra. */
+const GRADE_LISTA: CelulaRecebimento[] = [
+  { prioridadeOperacaoId: OP_ROTINA, turnoId: 'lista', regra: { tipo: 'prazo_minimo', horas: 24 } },
+  { prioridadeOperacaoId: OP_URGENCIA, turnoId: 'lista', regra: { tipo: 'nao_recebe' } },
+];
 const FRENTE_MI = { tipo: 'especialidade' as const, especialidadeId: MI, modalidadeId: null };
 const FRENTE_MSK = { tipo: 'especialidade' as const, especialidadeId: MSK, modalidadeId: null };
 const FRENTE_CT = { tipo: 'modalidade' as const, especialidadeId: null, modalidadeId: CT };
@@ -31,7 +39,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: [URGENCIA],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -44,7 +51,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: true,
   diasJaEntregue: 7,
   turnosPosteriores: null,
-  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
@@ -87,6 +93,8 @@ const exame = (id: string, p: Partial<ExameElegivel> = {}): ExameElegivel => ({
   modalidadeId: CT,
   subespecialidadeId: null,
   prioridadeId: ROTINA,
+  prioridadeOperacaoId: OP_ROTINA,
+  urgente: false,
   exameId: null,
   clienteId: null,
   restanteMin: 3000,
@@ -107,19 +115,26 @@ const medico = (
   ...extra,
 });
 
-const montar = (p: Partial<EntradaMedicos>) =>
-  montarMedicosDisponiveis({
+const montar = ({
+  geral = [],
+  ...p
+}: Partial<EntradaMedicos> & { geral?: CelulaRecebimento[] }) => {
+  const regras = p.regras ?? new RegrasPorFrente([]);
+  return montarMedicosDisponiveis({
     agora: br('2026-11-17T08:00'),
     exames: [exame('e1')],
     medicos: [medico('A')],
     ocorrencias: [oc('A')],
     equipes: [],
     ajustes: [],
-    regras: new RegrasPorFrente([]),
     config: CONFIG,
+    grade: new GradeRecebimento(geral, regras),
+    prioridadeIdsUrgenciaCatalogo: [URGENCIA],
     cotaEntregue: {},
     ...p,
+    regras,
   });
+};
 const doMedico = (r: ReturnType<typeof montar>, id: string) => r.medicos.find((m) => m.id === id);
 
 describe('montarMedicosDisponiveis: quem está na rodada', () => {
@@ -215,19 +230,14 @@ describe('montarMedicosDisponiveis: escala gratificada', () => {
 });
 
 describe('montarMedicosDisponiveis: elegibilidade', () => {
-  it('o período decide: a Lista da frente barra a rotina curta', () => {
+  it('o período decide: a célula da frente barra a rotina curta na Lista', () => {
     const regras = new RegrasPorFrente([
-      {
-        ...REGRAS_NEUTRAS,
-        frente: FRENTE_MI,
-        listaPrioridadeIds: [ROTINA],
-        listaPrazoMinimoHoras: 24,
-      },
+      { ...REGRAS_NEUTRAS, frente: FRENTE_MI, recebimento: GRADE_LISTA },
     ]);
     const r = montar({
       regras,
       exames: [exame('curto', { restanteMin: 60 }), exame('longo', { restanteMin: 2000 })],
-      ocorrencias: [oc('A', { turnoTipo: 'lista', fim: br('2026-11-18T07:00') })],
+      ocorrencias: [oc('A', { turnoId: 'lista', turnoTipo: 'lista', fim: br('2026-11-18T07:00') })],
     });
     expect(doMedico(r, 'A')?.elegivelPara('curto')).toBe(false);
     expect(doMedico(r, 'A')?.elegivelPara('longo')).toBe(true);
@@ -235,24 +245,30 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
   });
 
   it('a Lista com urgência marcada na alocação recebe a urgência curta pelo SLA', () => {
-    const regras = new RegrasPorFrente([
-      {
-        ...REGRAS_NEUTRAS,
-        frente: FRENTE_MI,
-        listaPrioridadeIds: [ROTINA],
-        listaPrazoMinimoHoras: 24,
-      },
-    ]);
-    const urgencia = exame('urg', { prioridadeId: URGENCIA, restanteMin: 60 });
+    const urgencia = exame('urg', {
+      prioridadeId: URGENCIA,
+      prioridadeOperacaoId: OP_URGENCIA,
+      urgente: true,
+      restanteMin: 60,
+    });
     const lista = (prioridadeIds: string[]) =>
-      oc('A', { turnoTipo: 'lista', fim: br('2026-11-18T07:00'), prioridadeIds });
+      oc('A', {
+        turnoId: 'lista',
+        turnoTipo: 'lista',
+        fim: br('2026-11-18T07:00'),
+        prioridadeIds,
+      });
     const marcada = montar({
-      regras,
+      geral: GRADE_LISTA,
       exames: [urgencia],
       ocorrencias: [lista([ROTINA, URGENCIA])],
     });
     expect(doMedico(marcada, 'A')?.elegivelPara('urg')).toBe(true);
-    const soRotina = montar({ regras, exames: [urgencia], ocorrencias: [lista([ROTINA])] });
+    const soRotina = montar({
+      geral: GRADE_LISTA,
+      exames: [urgencia],
+      ocorrencias: [lista([ROTINA])],
+    });
     expect(doMedico(soRotina, 'A')?.elegivelPara('urg')).toBe(false);
   });
 
@@ -372,7 +388,7 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
     medicoId: 'A',
     laudosExtra: 10,
     prioridadeIdsLiberadas: [],
-    listaSegueSla: false,
+    segueSla: false,
     recorte: {
       clienteId: null,
       especialidadeId: null,
@@ -418,30 +434,24 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
     expect(doMedico(r, 'A')?.elegivelPara('u')).toBe(true);
   });
 
-  it('sem regra da frente vale a padrão da Lista, e "a Lista segue o SLA" fura só para o médico do ajuste', () => {
-    const config = { ...CONFIG, lista: { prioridadeIds: [ROTINA], prazoMinimoHoras: 24 } };
+  it('sem sobrescrita da frente vale a grade geral, e "segue o SLA neste dia" fura só para o médico do ajuste', () => {
     const lista = (medicoId: string) =>
-      oc(medicoId, { turnoTipo: 'lista', fim: br('2026-11-18T07:00') });
+      oc(medicoId, { turnoId: 'lista', turnoTipo: 'lista', fim: br('2026-11-18T07:00') });
     const r = montar({
-      config,
+      geral: GRADE_LISTA,
       exames: [exame('curto', { restanteMin: 60 }), exame('longo', { restanteMin: 2000 })],
       medicos: [medico('A'), medico('B')],
       ocorrencias: [lista('A'), lista('B')],
-      ajustes: [ajuste({ medicoId: 'A', laudosExtra: 0, listaSegueSla: true })],
+      ajustes: [ajuste({ medicoId: 'A', laudosExtra: 0, segueSla: true })],
     });
     expect(doMedico(r, 'A')?.elegivelPara('curto')).toBe(true);
     expect(doMedico(r, 'B')?.elegivelPara('curto')).toBe(false);
     expect(doMedico(r, 'B')?.elegivelPara('longo')).toBe(true);
   });
 
-  it('"a Lista segue o SLA" tira a regra da Lista e, antes da cheia, guarda o curto para o turno posterior', () => {
+  it('"segue o SLA neste dia" tira o prazo mínimo e, antes da cheia, a Lista guarda o curto para o turno posterior', () => {
     const regras = new RegrasPorFrente([
-      {
-        ...REGRAS_NEUTRAS,
-        frente: FRENTE_MI,
-        listaPrioridadeIds: [ROTINA],
-        listaPrazoMinimoHoras: 24,
-      } as RegrasFrente,
+      { ...REGRAS_NEUTRAS, frente: FRENTE_MI, recebimento: GRADE_LISTA } as RegrasFrente,
     ]);
     const lista = oc('A', {
       turnoId: 'lista',
@@ -463,7 +473,7 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
       exames,
       medicos: [medico('A'), medico('T')],
       ocorrencias: [lista, tarde],
-      ajustes: [ajuste({ laudosExtra: 0, listaSegueSla: true })],
+      ajustes: [ajuste({ laudosExtra: 0, segueSla: true })],
     });
     expect(doMedico(r, 'A')?.elegivelPara('curto')).toBe(false);
     expect(r.guardadosParaPosteriores.has('curto')).toBe(true);

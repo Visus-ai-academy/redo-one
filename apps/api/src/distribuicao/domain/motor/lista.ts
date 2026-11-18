@@ -35,7 +35,7 @@ function totalPorFrente(listas: readonly ListaDaConta[]): Map<string, number> {
 }
 
 /**
- * Com o ajuste "a Lista segue o SLA", antes da cheia dos turnos posteriores a Lista não leva o
+ * Com o ajuste "segue o SLA neste dia", antes da cheia dos turnos posteriores a Lista não leva o
  * exame que vence até o fim deles (corte, em minutos a partir de agora) e recebe a produtividade
  * menos a sua parte do que eles não vão dar conta (reserva), para ter vaga depois.
  *

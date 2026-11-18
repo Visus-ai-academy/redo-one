@@ -9,7 +9,6 @@ import {
 } from './configuracao';
 import {
   type AlvoExame,
-  arranjoMarcaPrioridade,
   casaArranjo,
   type DirecaoEquipe,
   direcionadoPara,
@@ -21,6 +20,7 @@ import {
   segmentoUnico,
 } from './elegibilidade';
 import { guardaParaPosteriores, listaDepoisDosFixos } from './lista';
+import type { GradeRecebimento } from './prioridades-operacao';
 
 /**
  * Quem está na rodada e o que cada um pode pegar, a partir da escala do momento. Fonte:
@@ -63,13 +63,14 @@ export interface MedicoRodada {
 
 /**
  * Ajuste do dia do médico vindo da escala (no dashboards-one, a "exceção do robô"/reforço): laudos
- * acima do teto, prioridades liberadas e "a Lista segue o SLA", num recorte opcional.
+ * acima do teto, prioridades liberadas e "segue o SLA neste dia" (o prazo mínimo das células da
+ * grade de recebimento não vale para ele), num recorte opcional.
  */
 export interface AjusteDia {
   medicoId: string;
   laudosExtra: number;
   prioridadeIdsLiberadas: readonly string[];
-  listaSegueSla: boolean;
+  segueSla: boolean;
   /** Null em cada eixo = todos. */
   recorte: {
     clienteId: string | null;
@@ -97,6 +98,10 @@ export interface EntradaMedicos {
   ajustes: readonly AjusteDia[];
   regras: RegrasPorFrente;
   config: ConfiguracaoDistribuicao;
+  /** Grade de recebimento prioridade da operação × turno (com as sobrescritas das frentes). */
+  grade: GradeRecebimento;
+  /** Prioridades do catálogo que marcam urgência na alocação (ver `ContextoPeriodo`). */
+  prioridadeIdsUrgenciaCatalogo: readonly string[];
   /** Alocação gratificada → o que já foi executado por ela (abate a cota). */
   cotaEntregue: Readonly<Record<string, number>>;
   /** Turnos que a rodada atende; vazio ou ausente = todos. */
@@ -281,13 +286,13 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     frente: chaveFrente(o.frente) as string,
     produtividade: o.produtividade ?? 0,
   });
-  const comListaSegueSla = new Set(
+  const comSegueSla = new Set(
     entrada.ajustes
-      .filter((a) => a.listaSegueSla && agora >= a.inicio && agora < a.fim)
+      .filter((a) => a.segueSla && agora >= a.inicio && agora < a.fim)
       .map((a) => a.medicoId),
   );
   const guarda =
-    config.turnosPosteriores && comListaSegueSla.size
+    config.turnosPosteriores && comSegueSla.size
       ? guardaParaPosteriores({
           agora,
           cheiaEm: config.turnosPosteriores.cheiaEm,
@@ -297,7 +302,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
             fim: o.fim,
             vaga: vagaDe(o),
           })),
-          listas: listasComuns.filter((o) => comListaSegueSla.has(o.medicoId)).map(listaDaConta),
+          listas: listasComuns.filter((o) => comSegueSla.has(o.medicoId)).map(listaDaConta),
           fila: entrada.exames,
         })
       : { corte: new Map<string, number>(), reserva: new Map<string, number>() };
@@ -359,16 +364,12 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         (a) => a.medicoId === medicoId && ajusteCobre(a, e, agora),
       );
       const prioridadesLiberadas = new Set(ajustes.flatMap((a) => a.prioridadeIdsLiberadas));
-      const listaSegueSla = ajustes.some((a) => a.listaSegueSla);
-      const marca = arranjoMarcaPrioridade(medico.arranjos, e, { prioridadesLiberadas });
       const ctx = {
         escalaRestringeEspecialidade: config.escalaRestringeEspecialidade,
-        regras,
-        listaPadrao: config.lista,
+        grade: entrada.grade,
+        prioridadeIdsUrgenciaCatalogo: entrada.prioridadeIdsUrgenciaCatalogo,
         prioridadesLiberadas,
-        listaSegueSla,
-        arranjoMarcaPrioridade: marca,
-        prioridadeIdsUrgentes: config.prioridadeIdsUrgentes,
+        segueSlaNoDia: ajustes.some((a) => a.segueSla),
       };
       const aceitos = escalado.periodos.filter(
         (p) =>

@@ -1,12 +1,12 @@
 import type { Arranjo, FrenteEscala, ModoVinculo } from '../arranjo';
-import { type RegraLista, type RegrasPorFrente, regraListaDa } from './configuracao';
+import type { GradeRecebimento } from './prioridades-operacao';
 
 /**
  * Elegibilidade de um médico para um exame: o casamento do arranjo, o direcionamento das equipes,
  * a clínica exclusiva e o recorte de cada período da escala. Fonte: dashboards-one
  * `src/lib/services/distribuicao/arranjo.ts`. Diferenças de propósito: tudo por id do catálogo (o
- * legado comparava nomes normalizados), a regra da Lista é a padrão da configuração global com a
- * exceção da frente do período (não RX fixo no código) e a urgência na Lista vem da alocação.
+ * legado comparava nomes normalizados), o recebimento é a grade prioridade da operação × turno
+ * (a Lista deixou de ser especial) e a urgência pela alocação vale em qualquer turno.
  */
 
 /** O exame como a elegibilidade o vê, já resolvido contra o catálogo. */
@@ -18,6 +18,10 @@ export interface AlvoExame {
   subespecialidadeId: string | null;
   /** Prioridade do catálogo, já traduzida pelas variações (Internado → ROTINA). */
   prioridadeId: string | null;
+  /** Prioridade da operação (de-para próprio da distribuição); null = sem nenhuma cadastrada. */
+  prioridadeOperacaoId: string | null;
+  /** A operação trata o exame como urgência. */
+  urgente: boolean;
   exameId: string | null;
   clienteId: string | null;
   /** Minutos até o prazo; negativo = vencido; null = ilegível. */
@@ -82,25 +86,6 @@ export function casaArranjo(a: Arranjo, alvo: AlvoExame, opcoes: OpcoesCasamento
   return true;
 }
 
-/**
- * Algum arranjo que casa o exame inclui a prioridade dele (marcada ou "todas"): o cadastro pediu,
- * então a Lista não barra a prioridade (o prazo mínimo segue valendo).
- */
-export function arranjoMarcaPrioridade(
-  arranjos: readonly Arranjo[],
-  alvo: AlvoExame,
-  opcoes: OpcoesCasamento = {},
-): boolean {
-  const p = alvo.prioridadeId;
-  return (
-    p !== null &&
-    arranjos.some(
-      (a) =>
-        (!a.prioridadeIds.length || a.prioridadeIds.includes(p)) && casaArranjo(a, alvo, opcoes),
-    )
-  );
-}
-
 /** Só se reserva ou direciona o que se sabe que é do recorte (cliente e exame conhecidos). */
 function sabeQueEDoRecorte(a: Arranjo, alvo: AlvoExame): boolean {
   if (a.modoClientes !== 'todos' && !alvo.clienteId) return false;
@@ -159,9 +144,9 @@ export function direcionadoPara(
 export interface PeriodoEscala {
   alocacaoId: string;
   turnoId: string;
-  /** Turno do tipo Lista e não gratificado: segue a regra da Lista da frente. */
+  /** Turno do tipo Lista e não gratificado: guarda o curto para os turnos posteriores. */
   lista: boolean;
-  /** Escala gratificada: segue o SLA puro, com cota à parte. */
+  /** Escala gratificada: segue o SLA puro (fora da grade de recebimento), com cota à parte. */
   gratificado: boolean;
   frente: FrenteEscala;
   /** Recortes da alocação; vazio = sem recorte. */
@@ -174,17 +159,17 @@ export interface PeriodoEscala {
 
 export interface ContextoPeriodo {
   escalaRestringeEspecialidade: boolean;
-  regras: RegrasPorFrente;
-  /** Regra padrão da Lista (`ConfiguracaoDistribuicao.lista`); a da frente a sobrescreve. */
-  listaPadrao: RegraLista;
+  /** Grade de recebimento prioridade da operação × turno, com as sobrescritas das frentes. */
+  grade: GradeRecebimento;
+  /**
+   * Prioridades do catálogo que marcam urgência na alocação: as das grafias das prioridades da
+   * operação tratadas sempre como urgência (hoje, URGÊNCIA).
+   */
+  prioridadeIdsUrgenciaCatalogo: readonly string[];
   /** Prioridades liberadas pelo ajuste do dia do médico. */
   prioridadesLiberadas?: ReadonlySet<string>;
-  /** Ajuste do dia "a Lista segue o SLA". */
-  listaSegueSla?: boolean;
-  /** Ver `arranjoMarcaPrioridade`. */
-  arranjoMarcaPrioridade?: boolean;
-  /** Prioridades do catálogo que contam como urgentes (`ConfiguracaoDistribuicao`). */
-  prioridadeIdsUrgentes: readonly string[];
+  /** Ajuste do dia "segue o SLA neste dia": o prazo mínimo das células não vale. */
+  segueSlaNoDia?: boolean;
   /** Frente (id da especialidade ou modalidade) → minutos até o fim dos turnos posteriores. */
   cortePosteriores?: ReadonlyMap<string, number>;
 }
@@ -192,17 +177,14 @@ export interface ContextoPeriodo {
 const horas = (min: number) => Math.round(min / 60);
 
 /**
- * "Se na escala do médico tem Lista e urgência, ele precisa receber as urgências" (17/11/2026): a
- * alocação da Lista que marca uma prioridade urgente recebe os exames dela pelo SLA, sem a regra
- * da Lista (prioridades aceitas e prazo mínimo). Alocação sem recorte não marca nada. No
- * dashboards-one era só URGÊNCIA de RX com o arranjo marcando, fixo no código.
+ * "Se na escala do médico tem Lista e urgência, ele precisa receber as urgências" (17/11/2026):
+ * a alocação que marca a URGÊNCIA do catálogo recebe o que a operação trata como urgência pelo
+ * SLA, mesmo que a célula diga "não recebe" ou prazo mínimo. Vale em qualquer turno (18/11: a
+ * Lista deixou de ser especial). Alocação sem recorte não marca nada; o recorte de prioridade da
+ * alocação continua valendo depois.
  */
 function urgenciaPelaAlocacao(p: PeriodoEscala, a: AlvoExame, ctx: ContextoPeriodo): boolean {
-  return (
-    a.prioridadeId !== null &&
-    p.prioridadeIds.includes(a.prioridadeId) &&
-    ctx.prioridadeIdsUrgentes.includes(a.prioridadeId)
-  );
+  return a.urgente && p.prioridadeIds.some((id) => ctx.prioridadeIdsUrgenciaCatalogo.includes(id));
 }
 
 /** O período aceita o exame? Null = aceita; senão, o porquê legível. */
@@ -220,29 +202,22 @@ export function porQuePeriodoRecusa(
   }
 
   const liberada = a.prioridadeId !== null && !!ctx.prioridadesLiberadas?.has(a.prioridadeId);
-  if (p.lista && !liberada) {
-    if (!ctx.listaSegueSla) {
-      if (!urgenciaPelaAlocacao(p, a, ctx)) {
-        const regra = regraListaDa(ctx.listaPadrao, ctx.regras.daFrente(p.frente));
-        const aceitas = regra.prioridadeIds;
-        if (
-          !ctx.arranjoMarcaPrioridade &&
-          aceitas.length &&
-          (a.prioridadeId === null || !aceitas.includes(a.prioridadeId))
-        ) {
-          return 'Lista: a prioridade do exame não entra na Lista desta frente.';
-        }
-        const minimo = regra.prazoMinimoHoras;
-        if (minimo !== null && (a.restanteMin ?? -1) <= minimo * 60) {
-          return `Lista: o prazo ${a.restanteMin === null ? 'ilegível' : `(${horas(a.restanteMin)}h)`} não passa do mínimo de ${minimo}h.`;
-        }
+  if (!p.gratificado && !liberada) {
+    const regra = ctx.grade.regra(a.prioridadeOperacaoId, p.turnoId, p.frente);
+    if (regra.tipo !== 'segue_sla' && !urgenciaPelaAlocacao(p, a, ctx)) {
+      if (regra.tipo === 'nao_recebe') {
+        return 'Recebimento: este turno não recebe a prioridade do exame.';
       }
-    } else if (ctx.cortePosteriores) {
+      if (!ctx.segueSlaNoDia && (a.restanteMin ?? -1) <= regra.horas * 60) {
+        return `Recebimento: o prazo ${a.restanteMin === null ? 'ilegível' : `(${horas(a.restanteMin)}h)`} não passa do mínimo de ${regra.horas}h deste turno.`;
+      }
+    }
+    if (p.lista && ctx.segueSlaNoDia && ctx.cortePosteriores) {
       const corte =
         (a.especialidadeId !== null ? ctx.cortePosteriores.get(a.especialidadeId) : undefined) ??
         (a.modalidadeId !== null ? ctx.cortePosteriores.get(a.modalidadeId) : undefined);
       if (corte !== undefined && a.restanteMin !== null && a.restanteMin <= corte) {
-        return `Lista (segue o SLA): vence em ${horas(a.restanteMin)}h, antes do fim dos turnos posteriores; fica para eles.`;
+        return `Lista (segue o SLA no dia): vence em ${horas(a.restanteMin)}h, antes do fim dos turnos posteriores; fica para eles.`;
       }
     }
   }

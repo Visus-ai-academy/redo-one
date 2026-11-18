@@ -1,4 +1,5 @@
 import type { FrenteEscala } from '../arranjo';
+import type { CelulaRecebimento, UrgenciaFrente } from './prioridades-operacao';
 
 /**
  * Configuração do motor de distribuição: a global (Configurações › Distribuição) e as regras de
@@ -17,7 +18,7 @@ export interface ItemOrdemFila {
   direcao: 'asc' | 'desc';
 }
 
-/** Papel dos turnos na regra da Lista (no dashboards-one, o turno de nome "TARDE" e as 10:50). */
+/** Turnos que recebem numa rodada mais tarde no dia (no dashboards-one, "TARDE" e as 10:50). */
 export interface TurnosPosteriores {
   /** Turnos que só recebem numa rodada posterior do dia; a Lista guarda o que eles vão pegar. */
   turnoIds: string[];
@@ -25,24 +26,12 @@ export interface TurnosPosteriores {
   cheiaEm: Horario;
 }
 
-/** Regra da Lista de produção: o que entra nela, além do recorte da escala. */
-export interface RegraLista {
-  /** Prioridades do catálogo que a Lista aceita; vazio = todas. */
-  prioridadeIds: string[];
-  /** O prazo restante tem de passar disto para entrar; null = segue o SLA (sem mínimo). */
-  prazoMinimoHoras: number | null;
-}
-
 export interface ConfiguracaoDistribuicao {
-  /** Critérios da fila, na ordem em que desempatam. */
-  ordemFila: ItemOrdemFila[];
   /**
-   * Prioridades do CATÁLOGO que contam como urgentes (hoje só URGÊNCIA), comparadas com a
-   * prioridade do exame já traduzida pelas variações (Internado → ROTINA, Emergência → URGÊNCIA).
-   * Vale para a urgência na fila, a margem de urgência e o rodízio. Decisão de 17/11/2026: o
-   * dashboards-one tratava INTERNADO como urgente; aqui o internado passa na frente pelo prazo.
+   * Critérios da fila, na ordem em que desempatam. "prioridade" é a posição da prioridade da
+   * operação ("desc" = a posição 1 primeiro); a urgência vem da regra de cada prioridade.
    */
-  prioridadeIdsUrgentes: string[];
+  ordemFila: ItemOrdemFila[];
   /** Exames do mesmo paciente e da mesma especialidade andam juntos (pacote indivisível). */
   agruparPorPaciente: boolean;
   /** Distância máxima entre as entradas para juntar no pacote; 0 = sem limite. */
@@ -70,11 +59,6 @@ export interface ConfiguracaoDistribuicao {
   diasJaEntregue: number;
   /** Null = nenhum turno com papel de "posterior": a Lista não guarda nada. */
   turnosPosteriores: TurnosPosteriores | null;
-  /**
-   * Regra padrão da Lista, para toda frente que não tem a sua (no dashboards-one, ROTINA e
-   * "SLA > 24 h" globais). Os valores são dado da configuração, não constante do código.
-   */
-  lista: RegraLista;
 }
 
 /** Faixa em que a frente não é distribuída pelo robô; pode cruzar a meia-noite. */
@@ -115,16 +99,10 @@ export interface FatiaMistura {
 /** Comportamento de uma frente (especialidade ou modalidade do catálogo) na distribuição. */
 export interface RegrasFrente {
   frente: FrenteEscala;
-  /**
-   * Prioridades que a Lista desta frente aceita; vazio = todas. Ausente = as da regra padrão
-   * (`ConfiguracaoDistribuicao.lista`).
-   */
-  listaPrioridadeIds?: string[];
-  /**
-   * Prazo restante mínimo para entrar pela Lista desta frente; null = segue o SLA (MAMA, CARDIO).
-   * Ausente = o da regra padrão.
-   */
-  listaPrazoMinimoHoras?: number | null;
+  /** Urgência sobrescrita por prioridade da operação; as ausentes seguem a da prioridade. */
+  urgencias: UrgenciaFrente[];
+  /** Células da grade de recebimento que mudam nesta frente; as ausentes seguem a geral. */
+  recebimento: CelulaRecebimento[];
   /** Ao fim do turno, o exame não aberto volta para a fila (usado pelo recolhimento, não aqui). */
   recolheAoFimDoTurno: boolean;
   /** Falso = a frente é toda manual. */
@@ -143,6 +121,8 @@ export interface RegrasFrente {
 
 /** Regras sem nada ligado: o que vale para a frente que não tem cadastro. */
 export const REGRAS_NEUTRAS: Omit<RegrasFrente, 'frente'> = {
+  urgencias: [],
+  recebimento: [],
   recolheAoFimDoTurno: true,
   distribuiPeloRobo: true,
   horariosSemRobo: [],
@@ -152,17 +132,6 @@ export const REGRAS_NEUTRAS: Omit<RegrasFrente, 'frente'> = {
   mistura: [],
   listaDepoisDosFixos: false,
 };
-
-/** A regra da Lista que vale na frente: a dela, campo a campo, sobre a padrão. */
-export function regraListaDa(padrao: RegraLista, regras: RegrasFrente | null): RegraLista {
-  return {
-    prioridadeIds: regras?.listaPrioridadeIds ?? padrao.prioridadeIds,
-    prazoMinimoHoras:
-      regras?.listaPrazoMinimoHoras === undefined
-        ? padrao.prazoMinimoHoras
-        : regras.listaPrazoMinimoHoras,
-  };
-}
 
 const chaveFrente = (f: FrenteEscala) =>
   f.tipo === 'especialidade' ? `E|${f.especialidadeId}` : `M|${f.modalidadeId}`;

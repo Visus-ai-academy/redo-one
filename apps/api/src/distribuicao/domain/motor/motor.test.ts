@@ -25,7 +25,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: [],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -38,7 +37,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: false,
   diasJaEntregue: 7,
   turnosPosteriores: null,
-  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 
 const agora = new Date('2026-10-16T13:00:00Z');
@@ -52,6 +50,8 @@ const exame = (p: Partial<ExameMotor> = {}): ExameMotor => {
     modalidadeId: MR,
     subespecialidadeId: null,
     clienteId: null,
+    // A urgência dos casos daqui é a da prioridade URGÊNCIA (posição 1); o resto, posição 3.
+    posicao: p.urgente ? 1 : 3,
     urgente: false,
     paciente: `P${id}`,
     restanteMin: 600,

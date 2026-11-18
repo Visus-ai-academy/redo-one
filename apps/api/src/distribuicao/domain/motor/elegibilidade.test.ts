@@ -4,7 +4,6 @@ import type { Arranjo } from '../arranjo';
 import { REGRAS_NEUTRAS, type RegrasFrente, RegrasPorFrente } from './configuracao';
 import {
   type AlvoExame,
-  arranjoMarcaPrioridade,
   type ContextoPeriodo,
   casaArranjo,
   direcionadoPara,
@@ -14,6 +13,7 @@ import {
   reservadoPara,
   segmentoUnico,
 } from './elegibilidade';
+import { type CelulaRecebimento, GradeRecebimento } from './prioridades-operacao';
 
 // Ids do catálogo (fictícios, com nomes legíveis).
 const NEURO = 'esp-neuro';
@@ -29,6 +29,15 @@ const TUMOR = 'seg-tumor';
 const ROTINA = 'pri-rotina';
 const URGENCIA = 'pri-urgencia';
 const PLANTAO = 'pri-plantao';
+// Prioridades da operação.
+const OP_URGENCIA = 'op-urgencia';
+const OP_AMBULATORIO = 'op-ambulatorio';
+const OP_ROTINA = 'op-rotina';
+const OP_PLANTAO = 'op-plantao';
+// Turnos da escala.
+const MANHA = 'turno-manha';
+const LISTA = 'turno-lista';
+const CARDIO = 'esp-cardio';
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
   especialidadeId: null,
@@ -50,6 +59,8 @@ const alvo = (p: Partial<AlvoExame> = {}): AlvoExame => ({
   modalidadeId: RX,
   subespecialidadeId: null,
   prioridadeId: ROTINA,
+  prioridadeOperacaoId: OP_ROTINA,
+  urgente: false,
   exameId: null,
   clienteId: null,
   restanteMin: 3000,
@@ -176,18 +187,6 @@ describe('casaArranjo', () => {
   });
 });
 
-describe('arranjoMarcaPrioridade', () => {
-  const urg = alvo({ especialidadeId: MI, modalidadeId: MR, prioridadeId: URGENCIA });
-  it('marca quando o arranjo que casa o exame inclui a prioridade, ou não recorta', () => {
-    expect(arranjoMarcaPrioridade([arranjo({ prioridadeIds: [URGENCIA] })], urg)).toBe(true);
-    expect(arranjoMarcaPrioridade([arranjo()], urg)).toBe(true);
-    expect(arranjoMarcaPrioridade([arranjo({ prioridadeIds: [ROTINA] })], urg)).toBe(false);
-    expect(
-      arranjoMarcaPrioridade([arranjo({ especialidadeId: NEURO, prioridadeIds: [URGENCIA] })], urg),
-    ).toBe(false);
-  });
-});
-
 describe('reservadoPara (clínica exclusiva)', () => {
   const regra = arranjo({
     especialidadeId: MSK,
@@ -265,30 +264,50 @@ describe('direcionadoPara (arranjo de equipe)', () => {
 });
 
 describe('porQuePeriodoRecusa', () => {
-  // MI e RX sem regra de Lista própria: valem o padrão global (ROTINA, prazo > 24 h).
-  const regrasMi: RegrasFrente = {
-    ...REGRAS_NEUTRAS,
-    frente: { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null },
-  };
-  const regrasRx: RegrasFrente = {
-    ...REGRAS_NEUTRAS,
-    frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: RX },
-  };
+  // A grade geral dos valores iniciais: a Lista com prazo mínimo de 24 h para AMBULATÓRIO e
+  // ROTINA, e sem URGÊNCIA e PLANTÃO; os outros turnos seguem o SLA (sem célula).
+  const GERAL: CelulaRecebimento[] = [
+    {
+      prioridadeOperacaoId: OP_AMBULATORIO,
+      turnoId: LISTA,
+      regra: { tipo: 'prazo_minimo', horas: 24 },
+    },
+    { prioridadeOperacaoId: OP_ROTINA, turnoId: LISTA, regra: { tipo: 'prazo_minimo', horas: 24 } },
+    { prioridadeOperacaoId: OP_URGENCIA, turnoId: LISTA, regra: { tipo: 'nao_recebe' } },
+    { prioridadeOperacaoId: OP_PLANTAO, turnoId: LISTA, regra: { tipo: 'nao_recebe' } },
+  ];
+  // MAMA e CARDIO: a Lista segue o SLA nas rotinas; CARDIO de manhã só com mais de 48 h.
   const regrasMama: RegrasFrente = {
     ...REGRAS_NEUTRAS,
     frente: { tipo: 'especialidade', especialidadeId: MAMA, modalidadeId: null },
-    listaPrazoMinimoHoras: null,
+    recebimento: [OP_AMBULATORIO, OP_ROTINA].map((prioridadeOperacaoId) => ({
+      prioridadeOperacaoId,
+      turnoId: LISTA,
+      regra: { tipo: 'segue_sla' as const },
+    })),
   };
+  const regrasCardio: RegrasFrente = {
+    ...REGRAS_NEUTRAS,
+    frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null },
+    recebimento: [
+      ...regrasMama.recebimento,
+      {
+        prioridadeOperacaoId: OP_ROTINA,
+        turnoId: MANHA,
+        regra: { tipo: 'prazo_minimo', horas: 48 },
+      },
+    ],
+  };
+  const regras = new RegrasPorFrente([regrasMama, regrasCardio]);
   const ctx = (p: Partial<ContextoPeriodo> = {}): ContextoPeriodo => ({
     escalaRestringeEspecialidade: true,
-    regras: new RegrasPorFrente([regrasMi, regrasRx, regrasMama]),
-    listaPadrao: { prioridadeIds: [ROTINA], prazoMinimoHoras: 24 },
-    prioridadeIdsUrgentes: [URGENCIA],
+    grade: new GradeRecebimento(GERAL, regras),
+    prioridadeIdsUrgenciaCatalogo: [URGENCIA],
     ...p,
   });
   const periodo = (p: Partial<PeriodoEscala> = {}): PeriodoEscala => ({
     alocacaoId: 'a',
-    turnoId: 't',
+    turnoId: MANHA,
     lista: false,
     gratificado: false,
     frente: { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null },
@@ -300,9 +319,11 @@ describe('porQuePeriodoRecusa', () => {
   });
   const exame = (p: Partial<AlvoExame> = {}) =>
     alvo({ especialidadeId: MI, modalidadeId: CT, restanteMin: 3000, ...p });
+  const urgencia = (p: Partial<AlvoExame> = {}) =>
+    exame({ prioridadeId: URGENCIA, prioridadeOperacaoId: OP_URGENCIA, urgente: true, ...p });
   const aceita = (ps: PeriodoEscala[], a = exame(), c = ctx()) =>
     ps.some((p) => porQuePeriodoRecusa(p, a, c) === null);
-  const lista = periodo({ lista: true });
+  const lista = periodo({ turnoId: LISTA, lista: true });
 
   it('frente de especialidade: o exame de outra especialidade não passa', () => {
     expect(aceita([periodo()], exame({ especialidadeId: NEURO }))).toBe(false);
@@ -334,52 +355,74 @@ describe('porQuePeriodoRecusa', () => {
     expect(aceita([manhaUrgencia, lista], exame())).toBe(true);
   });
 
-  it('Lista: só as prioridades da frente e com prazo acima do mínimo; prazo ilegível não entra', () => {
+  it('célula sem valor segue o SLA: a Manhã recebe a rotina vencendo e a urgência', () => {
+    expect(aceita([periodo()], exame({ restanteMin: -30 }))).toBe(true);
+    expect(aceita([periodo()], exame({ restanteMin: null }))).toBe(true);
+    expect(aceita([periodo()], urgencia({ restanteMin: 30 }))).toBe(true);
+  });
+
+  it('prazo mínimo: só acima do mínimo; prazo ilegível não entra', () => {
+    expect(aceita([lista], exame({ restanteMin: 25 * 60 }))).toBe(true);
+    expect(aceita([lista], exame({ restanteMin: 24 * 60 }))).toBe(false);
     expect(aceita([lista], exame({ restanteMin: 60 }))).toBe(false);
     expect(aceita([lista], exame({ restanteMin: null }))).toBe(false);
-    expect(aceita([lista], exame({ prioridadeId: URGENCIA, restanteMin: -30 }))).toBe(false);
   });
 
-  it('Lista gratificada segue o SLA puro, mas o recorte da escala continua', () => {
-    const grat = periodo({ lista: false, gratificado: true });
-    expect(aceita([grat], exame({ prioridadeId: URGENCIA, restanteMin: -30 }))).toBe(true);
-    expect(aceita([grat], exame({ restanteMin: null }))).toBe(true);
+  it('não recebe: nem com prazo longo', () => {
+    expect(aceita([lista], urgencia({ restanteMin: 50 * 60 }))).toBe(false);
     expect(
-      aceita(
-        [periodo({ gratificado: true, prioridadeIds: [ROTINA] })],
-        exame({ prioridadeId: URGENCIA }),
-      ),
+      aceita([lista], exame({ prioridadeId: PLANTAO, prioridadeOperacaoId: OP_PLANTAO })),
     ).toBe(false);
+    expect(porQuePeriodoRecusa(lista, urgencia(), ctx())).toMatch(/não recebe/);
   });
 
-  it('frente sem regra própria (nem cadastro) usa a regra padrão da Lista', () => {
-    const neuro = periodo({
-      lista: true,
-      frente: { tipo: 'especialidade', especialidadeId: NEURO, modalidadeId: null },
+  it('CARDIO ROTINA × Manhã = 48 h: o exame de 30 h não vai ao médico da Manhã de CARDIO, o de 50 h vai', () => {
+    const manhaCardio = periodo({
+      frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null },
     });
-    const doNeuro = (p: Partial<AlvoExame>) => exame({ especialidadeId: NEURO, ...p });
-    expect(aceita([neuro], doNeuro({ restanteMin: 25 * 60 }))).toBe(true);
-    expect(aceita([neuro], doNeuro({ restanteMin: 60 }))).toBe(false);
-    expect(aceita([neuro], doNeuro({ prioridadeId: PLANTAO, restanteMin: 25 * 60 }))).toBe(false);
-    // O padrão vem da configuração: sem prazo mínimo nem prioridades, segue o SLA.
-    const semRegra = ctx({ listaPadrao: { prioridadeIds: [], prazoMinimoHoras: null } });
-    expect(aceita([neuro], doNeuro({ prioridadeId: PLANTAO, restanteMin: 60 }), semRegra)).toBe(
-      true,
-    );
+    const doCardio = (horas: number) => exame({ especialidadeId: CARDIO, restanteMin: horas * 60 });
+    expect(aceita([manhaCardio], doCardio(30))).toBe(false);
+    expect(aceita([manhaCardio], doCardio(50))).toBe(true);
+    // Só a frente sobrescrita muda: a Manhã de MI segue o SLA.
+    expect(aceita([periodo()], exame({ restanteMin: 30 * 60 }))).toBe(true);
   });
 
-  it('frente com "segue o SLA" (MAMA) recebe na Lista o exame com prazo abaixo de 24 h', () => {
+  it('frente que sobrescreve a Lista com "segue o SLA" (MAMA) recebe a rotina abaixo de 24 h', () => {
     const mama = periodo({
+      turnoId: LISTA,
       lista: true,
       frente: { tipo: 'especialidade', especialidadeId: MAMA, modalidadeId: null },
     });
     const daMama = (p: Partial<AlvoExame>) => exame({ especialidadeId: MAMA, ...p });
     expect(aceita([mama], daMama({ restanteMin: 60 }))).toBe(true);
     expect(aceita([mama], daMama({ restanteMin: -10 }))).toBe(true);
-    // Só o prazo é da frente; as prioridades seguem o padrão.
-    expect(aceita([mama], daMama({ prioridadeId: PLANTAO, restanteMin: 60 }))).toBe(false);
-    const todas = new RegrasPorFrente([{ ...regrasMama, listaPrioridadeIds: [] }]);
-    expect(aceita([mama], daMama({ prioridadeId: PLANTAO }), ctx({ regras: todas }))).toBe(true);
+    // Só as células sobrescritas mudam: o PLANTÃO segue sem entrar na Lista.
+    expect(
+      aceita([mama], daMama({ prioridadeId: PLANTAO, prioridadeOperacaoId: OP_PLANTAO })),
+    ).toBe(false);
+  });
+
+  it('a célula é a da frente do período, não a do exame', () => {
+    const listaMama = periodo({
+      turnoId: LISTA,
+      lista: true,
+      frente: { tipo: 'especialidade', especialidadeId: MAMA, modalidadeId: null },
+    });
+    // Com a escala sem restringir especialidade, o exame de MI na Lista de MAMA vale pela MAMA.
+    const semRestricao = ctx({ escalaRestringeEspecialidade: false });
+    expect(aceita([listaMama], exame({ restanteMin: 60 }), semRestricao)).toBe(true);
+    expect(aceita([lista], exame({ especialidadeId: MAMA, restanteMin: 60 }), semRestricao)).toBe(
+      false,
+    );
+  });
+
+  it('gratificado segue o SLA puro (fora da grade), mas o recorte da escala continua', () => {
+    const grat = periodo({ turnoId: LISTA, lista: false, gratificado: true });
+    expect(aceita([grat], urgencia({ restanteMin: -30 }))).toBe(true);
+    expect(aceita([grat], exame({ restanteMin: null }))).toBe(true);
+    expect(
+      aceita([periodo({ turnoId: LISTA, gratificado: true, prioridadeIds: [ROTINA] })], urgencia()),
+    ).toBe(false);
   });
 
   it('frente de modalidade restringe sempre, qualquer especialidade', () => {
@@ -401,92 +444,103 @@ describe('porQuePeriodoRecusa', () => {
     ).toBe(false);
   });
 
-  it('prioridade liberada fura a Lista e o recorte de prioridade, só para ela', () => {
-    const urg = exame({ prioridadeId: URGENCIA, restanteMin: 60 });
+  it('prioridade liberada fura a célula e o recorte de prioridade, só para ela', () => {
+    const urg = urgencia({ restanteMin: 60 });
     const lib = { prioridadesLiberadas: new Set([URGENCIA]) };
     expect(porQuePeriodoRecusa(lista, urg, ctx())).not.toBeNull();
     expect(porQuePeriodoRecusa(lista, urg, ctx(lib))).toBeNull();
-    expect(porQuePeriodoRecusa(lista, exame({ prioridadeId: PLANTAO }), ctx(lib))).not.toBeNull();
-    expect(
-      porQuePeriodoRecusa(periodo({ lista: true, prioridadeIds: [ROTINA] }), urg, ctx(lib)),
-    ).toBeNull();
-  });
-
-  it('o arranjo que marca a prioridade abre a prioridade na Lista, não o prazo mínimo', () => {
-    const marca = ctx({ arranjoMarcaPrioridade: true });
-    expect(
-      porQuePeriodoRecusa(lista, exame({ prioridadeId: URGENCIA, restanteMin: 25 * 60 }), marca),
-    ).toBeNull();
-    expect(
-      porQuePeriodoRecusa(lista, exame({ prioridadeId: URGENCIA, restanteMin: 60 }), marca),
-    ).not.toBeNull();
-    // Dra. Daniela (05/11): rotina com prazo curto não entra.
-    expect(porQuePeriodoRecusa(lista, exame({ restanteMin: 60 }), marca)).not.toBeNull();
-    // O recorte do período continua.
     expect(
       porQuePeriodoRecusa(
-        periodo({ lista: true, prioridadeIds: [ROTINA] }),
-        exame({ prioridadeId: URGENCIA, restanteMin: 25 * 60 }),
-        marca,
+        lista,
+        exame({ prioridadeId: PLANTAO, prioridadeOperacaoId: OP_PLANTAO }),
+        ctx(lib),
       ),
     ).not.toBeNull();
+    expect(
+      porQuePeriodoRecusa(
+        periodo({ turnoId: LISTA, lista: true, prioridadeIds: [ROTINA] }),
+        urg,
+        ctx(lib),
+      ),
+    ).toBeNull();
   });
 
-  it('Lista com urgência marcada na alocação recebe as urgências pelo SLA (HPRIMAVERA, RX)', () => {
+  it('Dra. Daniela (05/11): na Lista, a rotina com prazo curto não entra', () => {
+    expect(porQuePeriodoRecusa(lista, exame({ restanteMin: 60 }), ctx())).toMatch(/mínimo de 24h/);
+  });
+
+  it('alocação com URGÊNCIA marcada recebe pelo SLA o que a operação trata como urgência (HPRIMAVERA, RX)', () => {
     const listaRx = periodo({
+      turnoId: LISTA,
       lista: true,
       frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: RX },
       prioridadeIds: [ROTINA, URGENCIA],
     });
-    const urgRx = exame({ modalidadeId: RX, prioridadeId: URGENCIA, restanteMin: 60 });
+    const urgRx = urgencia({ modalidadeId: RX, restanteMin: 60 });
     expect(porQuePeriodoRecusa(listaRx, urgRx, ctx())).toBeNull();
     expect(porQuePeriodoRecusa(listaRx, { ...urgRx, restanteMin: -30 }, ctx())).toBeNull();
-    // Sem a urgência marcada na alocação (ou sem recorte), a Lista segue a regra dela.
+    // O AMBULATÓRIO perto do prazo é urgência da operação: entra também (o catálogo é ROTINA).
+    const ambulatorioUrgente = exame({
+      modalidadeId: RX,
+      prioridadeOperacaoId: OP_AMBULATORIO,
+      urgente: true,
+      restanteMin: 600,
+    });
+    expect(porQuePeriodoRecusa(listaRx, ambulatorioUrgente, ctx())).toBeNull();
+    // Sem a URGÊNCIA marcada na alocação (ou sem recorte), vale a célula.
     expect(
-      porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [ROTINA] }, urgRx, ctx()),
+      porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [ROTINA] }, ambulatorioUrgente, ctx()),
     ).not.toBeNull();
     expect(porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [] }, urgRx, ctx())).not.toBeNull();
-    // Só a prioridade urgente: a rotina curta continua barrada.
-    expect(porQuePeriodoRecusa(listaRx, { ...urgRx, prioridadeId: ROTINA }, ctx())).not.toBeNull();
+    // Só o que é urgência: a rotina curta continua barrada.
+    expect(
+      porQuePeriodoRecusa(listaRx, exame({ modalidadeId: RX, restanteMin: 60 }), ctx()),
+    ).not.toBeNull();
+    // O recorte da alocação continua: a urgência marcada não abre a prioridade que ela não aceita.
+    expect(
+      porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [URGENCIA] }, ambulatorioUrgente, ctx()),
+    ).not.toBeNull();
   });
 
-  it('a urgência pela alocação vale em qualquer frente e só para as prioridades urgentes da configuração', () => {
-    const listaMi = periodo({ lista: true, prioridadeIds: [URGENCIA, PLANTAO] });
+  it('a urgência pela alocação vale em qualquer turno e só para a URGÊNCIA do catálogo da configuração', () => {
+    const manhaCardio = periodo({
+      frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null },
+      prioridadeIds: [ROTINA, URGENCIA],
+    });
+    // Uma ROTINA tratada como urgência na frente (sobrescrita) com 30 h, na Manhã de CARDIO (48 h).
+    const rotinaUrgente = exame({ especialidadeId: CARDIO, urgente: true, restanteMin: 30 * 60 });
+    expect(porQuePeriodoRecusa(manhaCardio, rotinaUrgente, ctx())).toBeNull();
     expect(
-      porQuePeriodoRecusa(listaMi, exame({ prioridadeId: URGENCIA, restanteMin: 60 }), ctx()),
-    ).toBeNull();
-    expect(
-      porQuePeriodoRecusa(listaMi, exame({ prioridadeId: PLANTAO, restanteMin: 60 }), ctx()),
+      porQuePeriodoRecusa(manhaCardio, rotinaUrgente, ctx({ prioridadeIdsUrgenciaCatalogo: [] })),
     ).not.toBeNull();
+    const listaMi = periodo({ turnoId: LISTA, lista: true, prioridadeIds: [URGENCIA, PLANTAO] });
     expect(
       porQuePeriodoRecusa(
         listaMi,
-        exame({ prioridadeId: URGENCIA, restanteMin: 60 }),
-        ctx({ prioridadeIdsUrgentes: [] }),
+        exame({ prioridadeId: PLANTAO, prioridadeOperacaoId: OP_PLANTAO }),
+        ctx(),
       ),
     ).not.toBeNull();
   });
 
-  it('"a Lista segue o SLA" (ajuste do dia) dispensa a regra da Lista, a da frente e a padrão', () => {
+  it('"segue o SLA neste dia" (ajuste do dia) dispensa o prazo mínimo de qualquer turno, não o "não recebe"', () => {
     expect(
-      porQuePeriodoRecusa(
-        lista,
-        exame({ prioridadeId: URGENCIA, restanteMin: 60 }),
-        ctx({ listaSegueSla: true }),
-      ),
+      porQuePeriodoRecusa(lista, exame({ restanteMin: 60 }), ctx({ segueSlaNoDia: true })),
     ).toBeNull();
-    const neuro = periodo({
-      lista: true,
-      frente: { tipo: 'especialidade', especialidadeId: NEURO, modalidadeId: null },
+    const manhaCardio = periodo({
+      frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null },
     });
-    const curto = exame({ especialidadeId: NEURO, restanteMin: 60 });
-    expect(porQuePeriodoRecusa(neuro, curto, ctx())).not.toBeNull();
-    expect(porQuePeriodoRecusa(neuro, curto, ctx({ listaSegueSla: true }))).toBeNull();
+    const curto = exame({ especialidadeId: CARDIO, restanteMin: 30 * 60 });
+    expect(porQuePeriodoRecusa(manhaCardio, curto, ctx())).not.toBeNull();
+    expect(porQuePeriodoRecusa(manhaCardio, curto, ctx({ segueSlaNoDia: true }))).toBeNull();
+    expect(
+      porQuePeriodoRecusa(lista, urgencia({ restanteMin: 60 }), ctx({ segueSlaNoDia: true })),
+    ).not.toBeNull();
   });
 
-  it('com o corte dos turnos posteriores, a Lista que segue o SLA não leva o que eles vão pegar', () => {
+  it('com o corte dos turnos posteriores, a Lista que segue o SLA no dia não leva o que eles vão pegar', () => {
     const corte = new Map([[MI, 360]]);
-    const c = ctx({ listaSegueSla: true, cortePosteriores: corte });
+    const c = ctx({ segueSlaNoDia: true, cortePosteriores: corte });
     expect(porQuePeriodoRecusa(lista, exame({ restanteMin: 300 }), c)).not.toBeNull();
     expect(porQuePeriodoRecusa(lista, exame({ restanteMin: 400 }), c)).toBeNull();
     // A prioridade liberada nominalmente não é cortada.
@@ -496,6 +550,8 @@ describe('porQuePeriodoRecusa', () => {
         prioridadesLiberadas: new Set([ROTINA]),
       }),
     ).toBeNull();
+    // O corte é da Lista: a Manhã que segue o SLA no dia não é cortada.
+    expect(porQuePeriodoRecusa(periodo(), exame({ restanteMin: 300 }), c)).toBeNull();
   });
 });
 

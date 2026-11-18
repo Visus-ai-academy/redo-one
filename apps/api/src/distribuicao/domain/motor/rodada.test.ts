@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Arranjo } from '../arranjo';
-import type { ConfiguracaoDistribuicao } from './configuracao';
+import { type ConfiguracaoDistribuicao, REGRAS_NEUTRAS } from './configuracao';
 import type { OcorrenciaRodada } from './medicos-disponiveis';
+import type { CelulaRecebimento, PrioridadeOperacao } from './prioridades-operacao';
 import { type EntradaRodada, type ExameFilaRodada, rodarMotor } from './rodada';
 
 const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 const MI = 'esp-mi';
 const CT = 'mod-ct';
+const CARDIO = 'esp-cardio';
 const ROTINA = 'pri-rotina';
 const URGENCIA = 'pri-urgencia';
 /** As variações do catálogo: Ambulatório e Internado → ROTINA, Emergência → URGÊNCIA. */
@@ -20,6 +22,20 @@ const VARIACOES: Record<string, string> = {
 };
 const traduzirPrioridade = (grafia: string) =>
   VARIACOES[grafia.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()] ?? null;
+/** As prioridades da operação dos valores iniciais (18/11/2026), resumidas. */
+const op = (
+  id: string,
+  posicao: number,
+  urgencia: PrioridadeOperacao['urgencia'],
+  grafias: string[],
+  padrao = false,
+): PrioridadeOperacao => ({ id, nome: id, posicao, urgencia, padrao, grafias });
+const PRIORIDADES_OPERACAO = [
+  op('op-urgencia', 1, { tipo: 'sempre' }, ['Urgência', 'Emergência']),
+  op('op-ambulatorio', 2, { tipo: 'prazo', horas: 24 }, ['Ambulatório']),
+  op('op-internado', 3, { tipo: 'nunca' }, ['Internado']),
+  op('op-rotina', 3, { tipo: 'nunca' }, ['Rotina'], true),
+];
 
 const CONFIG: ConfiguracaoDistribuicao = {
   ordemFila: [
@@ -27,7 +43,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
     { criterio: 'prazo', direcao: 'asc' },
     { criterio: 'antiguidade', direcao: 'asc' },
   ],
-  prioridadeIdsUrgentes: [URGENCIA],
   agruparPorPaciente: true,
   janelaPacienteHoras: 0,
   toleranciaAcimaTeto: 0,
@@ -40,7 +55,6 @@ const CONFIG: ConfiguracaoDistribuicao = {
   escalaRestringeEspecialidade: true,
   diasJaEntregue: 7,
   turnosPosteriores: null,
-  lista: { prioridadeIds: [], prazoMinimoHoras: null },
 };
 
 const agora = br('2026-11-17T08:00');
@@ -116,6 +130,8 @@ const rodar = (p: Partial<EntradaRodada>) =>
     regrasFrente: [],
     config: CONFIG,
     traduzirPrioridade,
+    prioridadesOperacao: PRIORIDADES_OPERACAO,
+    gradeRecebimento: [],
     prioridadesCliente: [],
     cotaEntregue: {},
     ...p,
@@ -157,6 +173,84 @@ describe('rodarMotor', () => {
     });
     expect(item(r, 'eme')?.medicoId).toBe('A');
     expect(item(r, 'rot')?.motivo).toBe('sem_espaco');
+  });
+
+  it('AMBULATÓRIO perto do prazo é urgência da operação; longe do prazo, não', () => {
+    const exames = [
+      exame({ id: 'rot', prazo: br('2026-11-17T09:00') }),
+      exame({ id: 'amb', prioridade: 'Ambulatorio', prazo: br('2026-11-17T20:00') }),
+    ];
+    const r = rodar({ exames, ocorrencias: [oc('A', { produtividade: 1 })] });
+    expect(item(r, 'amb')?.medicoId).toBe('A');
+    expect(item(r, 'rot')?.motivo).toBe('sem_espaco');
+  });
+
+  it('a fila segue a posição da prioridade da operação, não o prazo', () => {
+    const exames = [
+      exame({ id: 'rot', prazo: br('2026-11-17T09:00') }),
+      exame({ id: 'amb', prioridade: 'Ambulatório', prazo: br('2026-11-20T08:00') }),
+    ];
+    const r = rodar({ exames, ocorrencias: [oc('A', { produtividade: 1 })] });
+    expect(item(r, 'amb')?.medicoId).toBe('A');
+  });
+
+  it('grafia sem de-para vale como a prioridade padrão e sai no aviso da rodada', () => {
+    const r = rodar({
+      exames: [exame({ id: 'x', prioridade: 'P9.Nova' }), exame({ prioridade: 'Rotina' })],
+    });
+    expect(item(r, 'x')?.medicoId).toBe('A');
+    expect(r.grafiasSemDePara).toEqual(['P9.Nova']);
+  });
+
+  it('CARDIO ROTINA × Manhã = 48 h: o de 30 h não vai ao médico da Manhã de CARDIO, o de 50 h vai', () => {
+    const doCardio = (id: string, horas: number) =>
+      exame({
+        id,
+        especialidadeId: CARDIO,
+        prazo: new Date(agora.getTime() + horas * 3_600_000),
+      });
+    const r = rodar({
+      exames: [doCardio('30h', 30), doCardio('50h', 50)],
+      ocorrencias: [
+        oc('A', { frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null } }),
+      ],
+      regrasFrente: [
+        {
+          ...REGRAS_NEUTRAS,
+          frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null },
+          recebimento: [
+            {
+              prioridadeOperacaoId: 'op-rotina',
+              turnoId: 'manha',
+              regra: { tipo: 'prazo_minimo', horas: 48 },
+            },
+          ],
+        },
+      ],
+    });
+    expect(item(r, '30h')).toMatchObject({ medicoId: null, motivo: 'sem_medico_elegivel' });
+    expect(item(r, '50h')?.medicoId).toBe('A');
+  });
+
+  it('na Lista sem URGÊNCIA, só quem marcou URGÊNCIA na alocação recebe a urgência', () => {
+    const grade: CelulaRecebimento[] = [
+      { prioridadeOperacaoId: 'op-urgencia', turnoId: 'lista', regra: { tipo: 'nao_recebe' } },
+    ];
+    const lista = (medicoId: string, prioridadeIds: string[]) =>
+      oc(medicoId, {
+        alocacaoId: `l-${medicoId}`,
+        turnoId: 'lista',
+        turnoTipo: 'lista',
+        fim: br('2026-11-18T07:00'),
+        prioridadeIds,
+      });
+    const r = rodar({
+      exames: [exame({ id: 'u', prioridade: 'Urgência' })],
+      medicos: [medico('A'), medico('B')],
+      ocorrencias: [lista('A', [ROTINA]), lista('B', [ROTINA, URGENCIA])],
+      gradeRecebimento: grade,
+    });
+    expect(item(r, 'u')?.medicoId).toBe('B');
   });
 
   it('só exame NOVO entra', () => {

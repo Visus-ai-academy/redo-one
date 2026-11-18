@@ -2,7 +2,6 @@ import { type ConfiguracaoDistribuicao, type RegrasFrente, RegrasPorFrente } fro
 import type { DirecaoEquipe } from './elegibilidade';
 import {
   type ExameMotor,
-  ehUrgente,
   normalizar,
   type PrioridadeCliente,
   recortarClinicas,
@@ -18,10 +17,19 @@ import {
   type OcorrenciaRodada,
 } from './medicos-disponiveis';
 import { distribuir, type MotivoNaoDistribuido, ROTULO_MOTIVO, type TrilhaMotor } from './motor';
+import {
+  type CelulaRecebimento,
+  criarLeitorPrioridade,
+  GradeRecebimento,
+  type PrioridadeOperacao,
+  urgenciaNaFrente,
+  urgente,
+} from './prioridades-operacao';
 
 /**
- * Uma rodada do motor, de ponta a ponta e sem banco: traduz a prioridade de cada exame pelas
- * variações do catálogo, aplica os recortes da rodada, monta os médicos pela escala, distribui e
+ * Uma rodada do motor, de ponta a ponta e sem banco: lê a prioridade de cada exame duas vezes (a
+ * do catálogo, pelas variações, para os recortes de escala e arranjo; a da operação, pelo de-para
+ * da distribuição, para a fila, a urgência e o recebimento), aplica os recortes da rodada, monta os médicos pela escala, distribui e
  * explica cada exame que ficou (motivo e texto legível). Fonte: dashboards-one `rodadas.ts`
  * (montagem da proposta) sem a leitura da MobileMed, o crédito e a gravação.
  */
@@ -37,7 +45,10 @@ export interface ExameFilaRodada {
   especialidadesDoSegmento: readonly string[];
   modalidadeId: string | null;
   subespecialidadeId: string | null;
-  /** Grafia que chega da MobileMed; vira prioridade do catálogo por `traduzirPrioridade`. */
+  /**
+   * Grafia que chega da MobileMed: vira prioridade do catálogo por `traduzirPrioridade` e
+   * prioridade da operação pelo de-para das `prioridadesOperacao`.
+   */
   prioridade: string | null;
   /** Nome do estudo, onde se procuram os marcadores de equilíbrio. */
   nome: string;
@@ -71,6 +82,10 @@ export interface EntradaRodada {
   config: ConfiguracaoDistribuicao;
   /** Grafia da MobileMed → prioridade do catálogo (pelas variações); null = sem tradução. */
   traduzirPrioridade: (grafia: string) => string | null;
+  /** Prioridades da operação, com o de-para de grafias (Configurações › Distribuição). */
+  prioridadesOperacao: readonly PrioridadeOperacao[];
+  /** Grade geral de recebimento prioridade da operação × turno; célula ausente = segue o SLA. */
+  gradeRecebimento: readonly CelulaRecebimento[];
   prioridadesCliente: readonly PrioridadeCliente[];
   /** Alocação gratificada → o já executado por ela. */
   cotaEntregue: Readonly<Record<string, number>>;
@@ -94,7 +109,7 @@ export const POR_QUE_SEM_MEDICO: Record<
 > = {
   plantao: 'O exame é do plantão de uma equipe: o robô não o entrega a ninguém.',
   escala:
-    'Nenhum médico da rodada tem período que aceite este exame (frente, prioridade, segmento, regra da Lista ou horário sem robô).',
+    'Nenhum médico da rodada tem período que aceite este exame (frente, prioridade, segmento, regra de recebimento do turno ou horário sem robô).',
   arranjo: 'Há médico no período, mas o arranjo de nenhum deles casa com o exame.',
   equipe: 'O exame é direcionado a uma equipe e nenhum membro dela pode recebê-lo nesta rodada.',
   reservado:
@@ -119,6 +134,11 @@ export interface ResultadoRodada {
   totais: { exames: number; distribuidos: number; emAberto: number };
   funil: MedicosMontados['funil'];
   trilha: TrilhaMotor;
+  /**
+   * Grafias da MobileMed sem de-para nas prioridades da operação: os exames valeram como a
+   * prioridade padrão. É o aviso para cadastrar a grafia (a tela da rodada o mostra).
+   */
+  grafiasSemDePara: string[];
 }
 
 const semItem = (exameId: string, motivo: MotivoRodada, detalhe: string): ItemRodada => ({
@@ -138,17 +158,36 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   const nome = (id: string) => entrada.nomes?.[id] ?? id;
   const marcadores = config.marcadoresEquilibrio.map(normalizar).filter(Boolean);
 
-  // --- a prioridade do catálogo e o resto do exame como o motor o lê ---
+  // --- as duas prioridades e o resto do exame como o motor o lê ---
+  const lerPrioridade = criarLeitorPrioridade(entrada.prioridadesOperacao);
+  const grafiasSemDePara = new Set<string>();
   const lidos = entrada.exames.map((e) => {
     const prioridadeId = e.prioridade === null ? null : entrada.traduzirPrioridade(e.prioridade);
+    const leitura = lerPrioridade(e.prioridade);
+    if (leitura.semDePara && e.prioridade?.trim()) grafiasSemDePara.add(e.prioridade.trim());
+    const restanteMin = e.prazo === null ? null : (e.prazo.getTime() - agora.getTime()) / 60_000;
+    const op = leitura.prioridade;
     const nomeNormal = normalizar(e.nome);
     return {
       fila: e,
       prioridadeId,
-      restanteMin: e.prazo === null ? null : (e.prazo.getTime() - agora.getTime()) / 60_000,
+      prioridadeOperacaoId: op?.id ?? null,
+      posicao: op?.posicao ?? Number.MAX_SAFE_INTEGER,
+      urgente: op !== null && urgente(urgenciaNaFrente(op, e, regras), restanteMin),
+      restanteMin,
       marcador: marcadores.find((m) => nomeNormal.includes(m)) ?? null,
     };
   });
+  // A URGÊNCIA do catálogo, para a alocação que a marca: a das grafias tratadas sempre como
+  // urgência pela operação.
+  const prioridadeIdsUrgenciaCatalogo = [
+    ...new Set(
+      entrada.prioridadesOperacao
+        .filter((p) => p.urgencia.tipo === 'sempre')
+        .flatMap((p) => p.grafias.map((g) => entrada.traduzirPrioridade(g)))
+        .filter((id): id is string => id !== null),
+    ),
+  ];
 
   // --- recusas antes do motor ---
   const recusas = new Map<string, ItemRodada>();
@@ -196,6 +235,8 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     modalidadeId: l.fila.modalidadeId,
     subespecialidadeId: l.fila.subespecialidadeId,
     prioridadeId: l.prioridadeId,
+    prioridadeOperacaoId: l.prioridadeOperacaoId,
+    urgente: l.urgente,
     exameId: l.fila.exameId,
     clienteId: l.fila.clienteId,
     restanteMin: l.restanteMin,
@@ -210,6 +251,8 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     ajustes: entrada.ajustes,
     regras,
     config,
+    grade: new GradeRecebimento(entrada.gradeRecebimento, regras),
+    prioridadeIdsUrgenciaCatalogo,
     cotaEntregue: entrada.cotaEntregue,
     ...(filtro.turnoIds ? { filtroTurnoIds: filtro.turnoIds } : {}),
   });
@@ -222,7 +265,8 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     modalidadeId: l.fila.modalidadeId,
     subespecialidadeId: l.fila.subespecialidadeId,
     clienteId: l.fila.clienteId,
-    urgente: ehUrgente(l.prioridadeId, config),
+    posicao: l.posicao,
+    urgente: l.urgente,
     paciente: l.fila.paciente,
     restanteMin: l.restanteMin,
     entradaEm: l.fila.entradaEm,
@@ -278,7 +322,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       return semItem(
         e.id,
         'guardado_para_posteriores',
-        'A Lista que segue o SLA levaria este exame, mas ele vence antes do fim dos turnos posteriores e fica para eles.',
+        'A Lista que segue o SLA neste dia levaria este exame, mas ele vence antes do fim dos turnos posteriores e fica para eles.',
       );
     }
     return semItem(e.id, 'sem_medico_elegivel', POR_QUE_SEM_MEDICO[etapa ?? 'pacote']);
@@ -290,5 +334,6 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     totais: { exames: itens.length, distribuidos, emAberto: itens.length - distribuidos },
     funil: montados.funil,
     trilha: resultado.trilha,
+    grafiasSemDePara: [...grafiasSemDePara].sort(),
   };
 }
