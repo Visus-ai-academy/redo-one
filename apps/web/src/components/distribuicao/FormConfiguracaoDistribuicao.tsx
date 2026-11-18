@@ -1,7 +1,10 @@
 import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 
+import type { CelulaRecebimentoDto } from '../../gen/types/CelulaRecebimentoDto';
 import type { ConfiguracaoDistribuicaoDto } from '../../gen/types/ConfiguracaoDistribuicaoDto';
+import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
@@ -19,39 +22,98 @@ import {
   valoresDaConfiguracao,
 } from './configuracao-form';
 import { limparErrosDasListas } from './erros-das-listas';
+import { GradeRecebimento } from './GradeRecebimento';
 import { AcoesDaLinha, ErroDaLista } from './partes-form';
+import { celulasParaApi, errosDaGrade, type Grade, gradeDasCelulas } from './recebimento';
 
 export type ReferenciasConfiguracao = {
-  /** Turnos ativos da escala. */
+  /** Turnos ativos da escala: as colunas da grade e a escolha dos turnos posteriores. */
   turnos: RotuloDto[];
+  /** Prioridades da operação: as linhas da grade de recebimento. */
+  prioridades: readonly PrioridadeOperacaoDto[];
 };
 
 type Props = ReferenciasConfiguracao & {
   configuracao: ConfiguracaoDistribuicaoDto;
+  /** A grade geral de recebimento (célula ausente = segue o SLA). */
+  celulas: readonly CelulaRecebimentoDto[];
   /** `distribuicao-config.editar`; sem ela, o resumo. */
   podeEditar: boolean;
-  onSalvar: (configuracao: ConfiguracaoDistribuicaoDto) => Promise<void>;
+  /** Um botão só salva a configuração e a grade. */
+  onSalvar: (
+    configuracao: ConfiguracaoDistribuicaoDto,
+    celulas: CelulaRecebimentoDto[],
+  ) => Promise<void>;
 };
+
+/** O painel da grade de recebimento: a grade, ou o aviso quando falta prioridade ou turno. */
+function PainelGrade({
+  prioridades,
+  turnos,
+  children,
+}: {
+  prioridades: readonly PrioridadeOperacaoDto[];
+  turnos: readonly RotuloDto[];
+  children: ReactNode;
+}) {
+  return (
+    <Painel
+      titulo="Grade de recebimento"
+      descricao="O que cada turno da escala recebe de cada prioridade. Cada frente pode mudar células na aba Distribuição dela."
+    >
+      {prioridades.length === 0 || turnos.length === 0 ? (
+        <p className="text-muted-foreground">
+          {prioridades.length === 0
+            ? 'Cadastre as prioridades da operação para montar a grade.'
+            : 'Cadastre os turnos da escala para montar a grade.'}
+        </p>
+      ) : (
+        children
+      )}
+    </Painel>
+  );
+}
 
 /** O que vale para todas as frentes do robô (Configurações › Distribuição). */
 export function FormConfiguracaoDistribuicao({
   configuracao,
+  celulas,
   turnos,
+  prioridades,
   podeEditar,
   onSalvar,
 }: Props) {
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
-    defaultValues: valoresDaConfiguracao(configuracao),
+    defaultValues: valoresDaConfiguracao(configuracao, celulas),
     validators: { onSubmit: esquemaConfiguracao },
     // O erro de uma lista inteira (ex.: a soma) sai quando qualquer item dela muda.
-    listeners: { onChange: ({ formApi }) => limparErrosDasListas(formApi, ['ordemFila']) },
-    onSubmit: ({ value }) => tentar(() => onSalvar(configuracaoParaApi(value))),
+    listeners: {
+      onChange: ({ formApi }) => limparErrosDasListas(formApi, ['ordemFila', 'recebimento']),
+    },
+    onSubmit: ({ value }) =>
+      tentar(() =>
+        onSalvar(
+          configuracaoParaApi(value),
+          celulasParaApi(value.recebimento, {
+            omitirSla: true,
+            prioridadeIds: prioridades.map((p) => p.id),
+          }),
+        ),
+      ),
   });
 
   if (!podeEditar) {
     return (
       <div className="flex flex-col gap-6">
+        <PainelGrade prioridades={prioridades} turnos={turnos}>
+          <GradeRecebimento
+            prioridades={prioridades}
+            turnos={turnos}
+            valor={gradeDasCelulas(celulas)}
+            somenteLeitura
+          />
+        </PainelGrade>
         {resumoConfiguracao(configuracao, { turnos }).map((g) => (
           <Painel key={g.titulo} titulo={g.titulo}>
             <dl className="flex flex-col gap-2">
@@ -85,6 +147,23 @@ export function FormConfiguracaoDistribuicao({
       }}
       className="flex flex-col gap-6"
     >
+      <PainelGrade prioridades={prioridades} turnos={turnos}>
+        <form.AppField name="recebimento">
+          {(field) => (
+            <div className="flex flex-col gap-2">
+              <GradeRecebimento
+                prioridades={prioridades}
+                turnos={turnos}
+                valor={field.state.value as Grade}
+                onChange={field.handleChange}
+                erros={field.state.meta.errors.length ? errosDaGrade(field.state.value) : {}}
+              />
+              <ErroDaLista erros={field.state.meta.errors} />
+            </div>
+          )}
+        </form.AppField>
+      </PainelGrade>
+
       <Painel titulo="Fila" descricao="Em que ordem o robô olha os exames pendentes a cada rodada.">
         <div className="flex flex-col gap-4">
           <form.AppField name="ordemFila" mode="array">

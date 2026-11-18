@@ -5,7 +5,6 @@ import { ConfiguracoesLayout } from '../../../components/configuracoes/Configura
 import { AbaComErro } from '../../../components/distribuicao/estados';
 import { FormConfiguracaoDistribuicao } from '../../../components/distribuicao/FormConfiguracaoDistribuicao';
 import { PrioridadesOperacao } from '../../../components/distribuicao/PrioridadesOperacao';
-import { SecaoGradeRecebimento } from '../../../components/distribuicao/SecaoGradeRecebimento';
 import { SemPermissao } from '../../../components/estado/estados';
 import { CamposCarregando } from '../../../components/skeleton/CamposCarregando';
 import { useAvisos } from '../../../components/toast/use-avisos';
@@ -105,26 +104,20 @@ function Configuracao() {
               sucesso('Prioridade excluída.');
             }}
           />
-          <SecaoGradeRecebimento
-            // Remonta com a grade nova quando as prioridades mudam (a exclusão tira células).
-            key={JSON.stringify(grade.celulas)}
-            prioridades={prioridades}
-            turnos={turnos.data.itens}
-            celulas={grade.celulas}
-            podeEditar={podeEditar}
-            onSalvar={async (celulas) => {
-              await gradeRecebimentoControllerSalvar({ body: { celulas } }).unwrap();
-              await queryClient.invalidateQueries({ queryKey: opcoesGrade.queryKey });
-              sucesso('Grade de recebimento salva.');
-            }}
-          />
           <FormConfiguracaoDistribuicao
             configuracao={configuracao}
+            celulas={grade.celulas}
             turnos={turnos.data.itens}
+            prioridades={prioridades}
             podeEditar={podeEditar}
-            onSalvar={async (nova) => {
+            // Um botão só: a configuração e a grade (a API não audita o que não mudou).
+            onSalvar={async (nova, celulas) => {
               await configuracaoDistribuicaoControllerSalvar({ body: nova }).unwrap();
-              await queryClient.invalidateQueries({ queryKey: opcoes.queryKey });
+              await gradeRecebimentoControllerSalvar({ body: { celulas } }).unwrap();
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: opcoes.queryKey }),
+                queryClient.invalidateQueries({ queryKey: opcoesGrade.queryKey }),
+              ]);
               sucesso('Configuração da distribuição salva.');
             }}
           />

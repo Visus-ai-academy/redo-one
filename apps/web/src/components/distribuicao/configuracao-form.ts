@@ -1,8 +1,9 @@
 import { z } from 'zod';
-
+import type { CelulaRecebimentoDto } from '../../gen/types/CelulaRecebimentoDto';
 import type { ConfiguracaoDistribuicaoDto } from '../../gen/types/ConfiguracaoDistribuicaoDto';
 import type { ItemOrdemFilaDto } from '../../gen/types/ItemOrdemFilaDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
+import { errosDaGrade, type Grade, gradeDasCelulas } from './recebimento';
 import type { GrupoResumo } from './regras-frente-form';
 
 type Criterio = ItemOrdemFilaDto['criterio'];
@@ -54,9 +55,14 @@ export type ValoresConfiguracao = {
   escalaRestringeEspecialidade: boolean;
   /** Separados por vírgula. */
   marcadores: string;
+  /** A grade geral de recebimento (salva junto, no mesmo botão). */
+  recebimento: Grade;
 };
 
-export function valoresDaConfiguracao(c: ConfiguracaoDistribuicaoDto): ValoresConfiguracao {
+export function valoresDaConfiguracao(
+  c: ConfiguracaoDistribuicaoDto,
+  celulas: readonly CelulaRecebimentoDto[] = [],
+): ValoresConfiguracao {
   return {
     ordemFila: c.ordemFila.map((i) => ({ criterio: i.criterio, direcao: i.direcao })),
     prazoCriticoMin: String(c.prazoCriticoMin),
@@ -76,6 +82,7 @@ export function valoresDaConfiguracao(c: ConfiguracaoDistribuicaoDto): ValoresCo
     diasJaEntregue: String(c.diasJaEntregue),
     escalaRestringeEspecialidade: c.escalaRestringeEspecialidade,
     marcadores: c.marcadoresEquilibrio.join(', '),
+    recebimento: gradeDasCelulas(celulas),
   };
 }
 
@@ -136,6 +143,13 @@ const valoresSchema = z.object({
   diasJaEntregue: z.string(),
   escalaRestringeEspecialidade: z.boolean(),
   marcadores: z.string(),
+  recebimento: z.record(
+    z.string(),
+    z.object({
+      tipo: z.enum(['geral', 'segue_sla', 'prazo_minimo', 'nao_recebe']),
+      horas: z.string(),
+    }),
+  ),
 });
 
 /** As faixas do domínio (`configuracao-global.ts` da API), na ordem dos campos. */
@@ -172,6 +186,9 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
   const marcadores = marcadoresDe(v.marcadores).map((m) => m.toUpperCase());
   if (marcadores.some((m) => m.length > 40)) erro('marcadores', 'Use até 40 letras por marcador.');
   if (new Set(marcadores).size !== marcadores.length) erro('marcadores', 'Há marcador repetido.');
+  if (Object.keys(errosDaGrade(v.recebimento)).length) {
+    erro('recebimento', 'Informe as horas do prazo mínimo (1 a 720) nas células marcadas.');
+  }
 });
 
 // --- Resumo (quem só pode ver) ---
