@@ -110,6 +110,12 @@ describe('AbaDistribuicaoFrente', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
     expect(await screen.findByText(/precisam somar 100 \(hoje somam 90\)/)).toBeInTheDocument();
     expect(salvarEsp).not.toHaveBeenCalled();
+
+    // Corrigido o percentual, o erro da lista não prende o formulário.
+    await userEvent.clear(percentual);
+    await userEvent.type(percentual, '40');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
+    await vi.waitFor(() => expect(salvarEsp).toHaveBeenCalledTimes(1));
   });
 
   it('adiciona um horário sem robô que vira a meia-noite', async () => {

@@ -14,6 +14,7 @@ import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CaixasField, OpcoesField } from '../escala/campos';
 import { useAppForm } from '../form/form';
 import { useAvisos } from '../toast/use-avisos';
+import { limparErrosDasListas } from './erros-das-listas';
 import { AbaCarregando, AbaComErro } from './estados';
 import { AcoesDaLinha, ErroDaLista, ItemDaLista, ResumoEmGrupos, Secao } from './partes-form';
 import {
@@ -128,6 +129,10 @@ function FormRegras({
   const form = useAppForm({
     defaultValues: valoresDasRegras(regras),
     validators: { onSubmit: esquemaRegras(tipo) },
+    // O erro de uma lista inteira (ex.: a soma) sai quando qualquer item dela muda.
+    listeners: {
+      onChange: ({ formApi }) => limparErrosDasListas(formApi, ['proporcoes', 'mistura']),
+    },
     onSubmit: ({ value }) =>
       tentar(async () => {
         const body = regrasParaApi(value, tipo);
