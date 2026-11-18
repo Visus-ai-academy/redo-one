@@ -9,7 +9,16 @@ export type ContextoDescricao = {
   conflitos: readonly ConflitoEscalaDto[];
   /** O período da ausência do dia, quando se sabe. */
   ausencia?: { dataInicio: string; dataFim: string };
+  /** O ajuste do dia da distribuição deste plantão, se houver. */
+  ajusteDistribuicao?: {
+    prioridadeIdsLiberadas: readonly string[];
+    listaSegueSla: boolean;
+    clienteNome: string | null;
+  };
 };
+
+/** Alocação e dia: a chave dos ajustes do dia de um plantão. */
+export const chaveDoPlantao = (alocacaoId: string, data: string) => `${alocacaoId}|${data}`;
 
 export type ItemDescricao = { rotulo: string; valor: string };
 
@@ -95,6 +104,20 @@ export function descreverPlantao(o: OcorrenciaDto, contexto: ContextoDescricao):
         : `, de ${diaMes(contexto.ausencia.dataInicio)} a ${diaMes(contexto.ausencia.dataFim)}`
       : '';
     itens.push({ rotulo: 'Ausência', valor: `${tipo}${periodo}` });
+  }
+
+  const ajuste = contexto.ajusteDistribuicao;
+  if (ajuste) {
+    const partes: string[] = [];
+    const liberadas = nomes(ajuste.prioridadeIdsLiberadas, contexto.prioridades, [
+      'prioridade',
+      'prioridades',
+    ]);
+    if (liberadas.length > 0) partes.push(`Aceita também ${emLista(liberadas)}`);
+    if (ajuste.listaSegueSla)
+      partes.push(partes.length ? 'a Lista segue o SLA' : 'A Lista segue o SLA');
+    if (ajuste.clienteNome) partes.push(`só para ${ajuste.clienteNome}`);
+    if (partes.length > 0) itens.push({ rotulo: 'Robô neste dia', valor: partes.join('; ') });
   }
 
   const outros = contexto.conflitos

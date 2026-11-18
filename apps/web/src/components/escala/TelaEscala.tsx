@@ -46,7 +46,7 @@ import {
   rotuloDia,
   rotuloPeriodo,
 } from './calendario';
-import { descreverPlantao } from './descricao-plantao';
+import { type ContextoDescricao, chaveDoPlantao, descreverPlantao } from './descricao-plantao';
 import { EscolhaSegmentada } from './EscolhaSegmentada';
 import { FiltroMultiplo } from './FiltroMultiplo';
 import { MesCalendario } from './MesCalendario';
@@ -84,6 +84,9 @@ export type NomesDoCatalogo = {
   subespecialidades: ReadonlyMap<string, string>;
 };
 
+/** O que o cartão do plantão mostra do ajuste do dia da distribuição. */
+export type AjusteDoPlantao = NonNullable<ContextoDescricao['ajusteDistribuicao']>;
+
 export type TelaEscalaProps = {
   filtros: FiltrosEscala;
   hoje: string;
@@ -103,6 +106,8 @@ export type TelaEscalaProps = {
   ausencias?: PaginaAusencias;
   erroAusencias?: boolean;
   catalogo?: NomesDoCatalogo;
+  /** Ajustes do dia da distribuição no período, por `chaveDoPlantao` (o cartão do plantão diz). */
+  ajustesDistribuicao?: ReadonlyMap<string, AjusteDoPlantao>;
   /** O médico do modo Por médico, com o nome. */
   medico: OpcaoBusca | null;
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
@@ -151,6 +156,7 @@ export function TelaEscala({
   ausencias,
   erroAusencias = false,
   catalogo = SEM_NOMES,
+  ajustesDistribuicao,
   onDispensarAvisos,
   onMudar,
   onAbrirPlantao,
@@ -338,6 +344,7 @@ export function TelaEscala({
         ausencias={ausencias}
         erroAusencias={erroAusencias}
         catalogo={catalogo}
+        ajustesDistribuicao={ajustesDistribuicao}
         onMudar={onMudar}
         onAbrirPlantao={onAbrirPlantao}
         onAlocar={onAlocar}
@@ -394,6 +401,7 @@ function Conteudo({
   ausencias,
   erroAusencias,
   catalogo,
+  ajustesDistribuicao,
   onMudar,
   onAbrirPlantao,
   onAlocar,
@@ -413,6 +421,7 @@ function Conteudo({
   | 'onMudar'
   | 'onAbrirPlantao'
   | 'onAlocar'
+  | 'ajustesDistribuicao'
 > & { erroAusencias: boolean; catalogo: NomesDoCatalogo }) {
   const { modo, data } = filtros;
   const ocorrencias = useMemo(
@@ -466,6 +475,7 @@ function Conteudo({
       descreverPlantao(o, {
         ...catalogo,
         conflitos: dados?.conflitos ?? [],
+        ajusteDistribuicao: ajustesDistribuicao?.get(chaveDoPlantao(o.alocacaoId, o.data)),
         ausencia: o.ausente
           ? ausencias?.itens.find(
               (a) =>
@@ -477,7 +487,7 @@ function Conteudo({
             )
           : undefined,
       }),
-    [catalogo, dados, ausencias],
+    [catalogo, dados, ausencias, ajustesDistribuicao],
   );
 
   if (modo === 'ausencias') {

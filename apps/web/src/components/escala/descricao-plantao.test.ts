@@ -125,4 +125,25 @@ describe('descreverPlantao', () => {
     expect(linha(itens, 'Cobertura')).toBe('Cobrindo Carla Dias');
     expect(linha(itens, 'Vigência')).toBe('Cobertura de Carla Dias');
   });
+
+  it('com ajuste do dia da distribuição, diz o que muda no robô', () => {
+    const itens = descreverPlantao(ocorrencia(), {
+      prioridades: new Map([['p-urg', 'URGÊNCIA']]),
+      subespecialidades: new Map(),
+      conflitos: [],
+      ajusteDistribuicao: {
+        prioridadeIdsLiberadas: ['p-urg'],
+        listaSegueSla: true,
+        clienteNome: 'HCLONDRINA',
+      },
+    });
+    expect(linha(itens, 'Robô neste dia')).toBe(
+      'Aceita também URGÊNCIA; a Lista segue o SLA; só para HCLONDRINA',
+    );
+  });
+
+  it('sem ajuste do dia, nada sobre o robô', () => {
+    const itens = descreverPlantao(ocorrencia(), { ...vazio, conflitos: [] });
+    expect(linha(itens, 'Robô neste dia')).toBeUndefined();
+  });
 });

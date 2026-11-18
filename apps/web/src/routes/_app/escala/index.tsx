@@ -10,6 +10,7 @@ import {
   janelaDoModo,
   type ModoEscala,
 } from '../../../components/escala/calendario';
+import { chaveDoPlantao } from '../../../components/escala/descricao-plantao';
 import { PaineisEscala, type PainelAberto } from '../../../components/escala/PaineisEscala';
 import {
   type FiltrosEscala,
@@ -17,6 +18,7 @@ import {
   TelaEscala,
 } from '../../../components/escala/TelaEscala';
 import { SemPermissao } from '../../../components/estado/estados';
+import { ajustesDiaControllerListarQueryOptions } from '../../../gen/hooks/useAjustesDiaControllerListar';
 import { ausenciasControllerListarQueryOptions } from '../../../gen/hooks/useAusenciasControllerListar';
 import { classificacoesEscalaControllerListarQueryOptions } from '../../../gen/hooks/useClassificacoesEscalaControllerListar';
 import { escopoApiControllerMeuQueryOptions } from '../../../gen/hooks/useEscopoApiControllerMeu';
@@ -147,6 +149,34 @@ function Escala() {
     placeholderData: keepPreviousData,
   });
 
+  // Ajustes do dia da distribuição no período, para o cartão do plantão.
+  const ajustes = useQuery({
+    ...ajustesDiaControllerListarQueryOptions({
+      query: {
+        ...(opcoes?.query
+          ? { de: opcoes.query.de, ate: opcoes.query.ate }
+          : { de: hoje, ate: hoje }),
+        ...(opcoes?.query.medicoId && { medicoId: opcoes.query.medicoId }),
+      },
+    }),
+    enabled: Boolean(opcoes),
+    placeholderData: keepPreviousData,
+  });
+  const ajustesDistribuicao = useMemo(
+    () =>
+      new Map(
+        (ajustes.data ?? []).map((a) => [
+          chaveDoPlantao(a.alocacaoId, a.data),
+          {
+            prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
+            listaSegueSla: a.listaSegueSla,
+            clienteNome: a.clienteNome,
+          },
+        ]),
+      ),
+    [ajustes.data],
+  );
+
   // O nome do médico do Por médico: dos plantões carregados ou, sem nenhum, do cadastro da escala.
   const nomeNosPlantoes = ocorrencias.data?.ocorrencias.find(
     (o) => o.medicoId === busca.medicoId,
@@ -225,6 +255,7 @@ function Escala() {
         ausencias={opcoesAusencias ? ausencias.data : undefined}
         erroAusencias={ausencias.isError}
         catalogo={catalogo}
+        ajustesDistribuicao={ajustesDistribuicao}
         onTentarDeNovo={() => void (modoAusencias ? ausencias.refetch() : ocorrencias.refetch())}
         turnos={turnos}
         frentes={frentes}

@@ -1,5 +1,5 @@
 import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
-
+import { ajustesDiaControllerSalvar } from '../../gen/clients/ajustesDiaControllerSalvar';
 import { alocacoesControllerAtualizar } from '../../gen/clients/alocacoesControllerAtualizar';
 import { alocacoesControllerCriar } from '../../gen/clients/alocacoesControllerCriar';
 import { alocacoesControllerCriarCobertura } from '../../gen/clients/alocacoesControllerCriarCobertura';
@@ -18,6 +18,7 @@ import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
 import type { PodeNaTela } from '../../lib/permissoes';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
+import { buscarClientes } from '../distribuicao/buscas';
 import { PainelCarregando } from '../painel/PainelCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import type { InicialAlocacao } from './alocacao-form';
@@ -56,7 +57,11 @@ function invalidarEscala(queryClient: QueryClient) {
   return queryClient.invalidateQueries({
     predicate: (consulta) => {
       const url = (consulta.queryKey[0] as { url?: unknown } | undefined)?.url;
-      return typeof url === 'string' && /^\/escala\/(ocorrencias|alocacoes|historico)/.test(url);
+      return (
+        typeof url === 'string' &&
+        (/^\/escala\/(ocorrencias|alocacoes|historico)/.test(url) ||
+          /^\/distribuicao\/(ajustes-dia|alocacoes\/)/.test(url))
+      );
     },
   });
 }
@@ -85,35 +90,103 @@ export function PaineisEscala({
   if (painel.tipo === 'plantao') {
     const o = painel.ocorrencia;
     return (
-      <PainelPlantao
-        key={`plantao-${o.alocacaoId}-${o.data}`}
-        ocorrencia={o}
+      <PlantaoAberto
+        o={o}
         conflitos={conflitos}
         permissoes={permissoes}
         podeDefinirAusencia={podeDefinirAusencia}
-        onEditar={() => onAbrir({ tipo: 'editar', ocorrencia: o })}
-        onCobertura={() => onAbrir({ tipo: 'cobertura', ocorrencia: o })}
-        onRemover={async () => {
-          await alocacoesControllerRemover({ path: { id: o.alocacaoId } }).unwrap();
-          await depois(o.coberturaDe ? 'Cobertura removida.' : 'Alocação removida.');
-          fechar();
-        }}
-        onAjustar={async (produtividade, observacoes) => {
-          await alocacoesControllerDefinirAjuste({
-            path: { id: o.alocacaoId, data: o.data },
-            body: { produtividade, observacoes },
-          }).unwrap();
-          await depois(
-            produtividade === null
-              ? 'O dia voltou à produtividade da escala.'
-              : 'Produtividade do dia salva.',
-          );
-        }}
-        onFechar={fechar}
+        onAbrir={onAbrir}
+        depois={depois}
+        fechar={fechar}
       />
     );
   }
+  return <OutrosPaineis {...{ painel, hoje, turnos, frentes, fechar, depois }} />;
+}
 
+function PlantaoAberto({
+  o,
+  conflitos,
+  permissoes,
+  podeDefinirAusencia,
+  onAbrir,
+  depois,
+  fechar,
+}: {
+  o: OcorrenciaDto;
+  conflitos: readonly ConflitoEscalaDto[];
+  permissoes: PodeNaTela;
+  podeDefinirAusencia: boolean;
+  onAbrir: (painel: PainelAberto | null) => void;
+  depois: (texto: string, novos?: AvisoConflitoDto[]) => Promise<void>;
+  fechar: () => void;
+}) {
+  // Prioridades do ajuste do dia com `escala.ver` (a gestora não tem `catalogo.ver`).
+  const classificacoes = useQuery({
+    ...classificacoesEscalaControllerListarQueryOptions(),
+    enabled: permissoes.editar,
+  });
+  return (
+    <PainelPlantao
+      key={`plantao-${o.alocacaoId}-${o.data}`}
+      ocorrencia={o}
+      conflitos={conflitos}
+      permissoes={permissoes}
+      podeDefinirAusencia={podeDefinirAusencia}
+      onEditar={() => onAbrir({ tipo: 'editar', ocorrencia: o })}
+      onCobertura={() => onAbrir({ tipo: 'cobertura', ocorrencia: o })}
+      onRemover={async () => {
+        await alocacoesControllerRemover({ path: { id: o.alocacaoId } }).unwrap();
+        await depois(o.coberturaDe ? 'Cobertura removida.' : 'Alocação removida.');
+        fechar();
+      }}
+      onAjustar={async (produtividade, observacoes) => {
+        await alocacoesControllerDefinirAjuste({
+          path: { id: o.alocacaoId, data: o.data },
+          body: { produtividade, observacoes },
+        }).unwrap();
+        await depois(
+          produtividade === null
+            ? 'O dia voltou à produtividade da escala.'
+            : 'Produtividade do dia salva.',
+        );
+      }}
+      distribuicao={
+        classificacoes.data
+          ? {
+              prioridades: classificacoes.data.prioridades,
+              buscarClientes,
+              onSalvar: async (ajuste) => {
+                await ajustesDiaControllerSalvar({
+                  path: { alocacaoId: o.alocacaoId, data: o.data },
+                  body: ajuste,
+                }).unwrap();
+                const vazio = !ajuste.prioridadeIdsLiberadas.length && !ajuste.listaSegueSla;
+                await depois(vazio ? 'Ajuste do robô tirado.' : 'Ajuste do robô salvo.');
+              },
+            }
+          : undefined
+      }
+      onFechar={fechar}
+    />
+  );
+}
+
+function OutrosPaineis({
+  painel,
+  hoje,
+  turnos,
+  frentes,
+  fechar,
+  depois,
+}: {
+  painel: Exclude<PainelAberto, { tipo: 'plantao' }>;
+  hoje: string;
+  turnos: TurnoItemDto[];
+  frentes: FrenteItemDto[];
+  fechar: () => void;
+  depois: (texto: string, novos?: AvisoConflitoDto[]) => Promise<void>;
+}) {
   if (painel.tipo === 'escala-fixa') {
     const { medico } = painel;
     return (

@@ -2,15 +2,19 @@ import { Button } from '@base-ui/react/button';
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { z } from 'zod';
+import type { AjusteDiaEdicaoDto } from '../../gen/types/AjusteDiaEdicaoDto';
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
+import type { PrioridadeEscalaDto } from '../../gen/types/PrioridadeEscalaDto';
 import type { PodeNaTela } from '../../lib/permissoes';
 import { Alerta } from '../alerta/Alerta';
+import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
+import { AjusteDistribuicaoDia } from './AjusteDistribuicaoDia';
 import { dataCurta, diaDaSemana, NOMES_DIAS_LONGOS } from './calendario';
 import { ComCor } from './LinhaMedico';
 
@@ -28,6 +32,12 @@ export type PainelPlantaoProps = {
   onRemover: () => Promise<void>;
   /** Produtividade do dia; `null` volta à da escala. */
   onAjustar: (produtividade: number | null, observacoes: string | null) => Promise<void>;
+  /** Ajuste do dia da distribuição (`escala.editar`); sem ele, a seção não aparece. */
+  distribuicao?: {
+    prioridades: PrioridadeEscalaDto[];
+    buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
+    onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
+  };
   onFechar: () => void;
 };
 
@@ -69,6 +79,7 @@ export function PainelPlantao({
   onCobertura,
   onRemover,
   onAjustar,
+  distribuicao,
   onFechar,
 }: PainelPlantaoProps) {
   const { erro, tentar } = useErroDoPainel();
@@ -183,6 +194,15 @@ export function PainelPlantao({
 
         {permissoes.editar && !o.gratificado && (
           <AjusteDoDia ocorrencia={o} onAjustar={(p, obs) => tentar(() => onAjustar(p, obs))} />
+        )}
+        {permissoes.editar && distribuicao && (
+          <AjusteDistribuicaoDia
+            alocacaoId={o.alocacaoId}
+            data={o.data}
+            prioridades={distribuicao.prioridades}
+            buscarClientes={distribuicao.buscarClientes}
+            onSalvar={(ajuste) => tentar(() => distribuicao.onSalvar(ajuste))}
+          />
         )}
       </div>
     </PainelLateral>
