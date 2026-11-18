@@ -596,7 +596,9 @@ export const rodadas = pgTable(
     avisos: text('avisos').array().notNull().default(sql`'{}'`),
     /** Exames lidos da fila sem médico. */
     lidos: integer('lidos').notNull().default(0),
-    /** Desses, os tratados como urgência pela operação. */
+    /** Exames recolhidos de médicos (fim do turno ou ausência) que entraram na proposta. */
+    recolhidos: integer('recolhidos').notNull().default(0),
+    /** Dos exames da proposta (lidos e recolhidos), os tratados como urgência pela operação. */
     urgentes: integer('urgentes').notNull().default(0),
     /** O que o motor viu (funil, trilha, médicos, grafias sem de-para): o "por quê" do passo 5. */
     insumos: jsonb('insumos'),
@@ -697,6 +699,13 @@ export const designacoes = pgTable(
     retiradaEm: timestamp('retirada_em', { withTimezone: true }),
     /** Mandado a um médico na conferência depois que o motor o deixou de fora. */
     naMao: boolean('na_mao').notNull().default(false),
+    /**
+     * Recolhido: de quem o exame sai (estava com ele, NOVO, entregue pelo robô ou com ausência no
+     * dia). A execução só troca se ele ainda estiver com esse médico; o robô não o devolve a ele.
+     */
+    recolhidoDeId: uuid('recolhido_de_id').references(() => medicos.id, { onDelete: 'set null' }),
+    /** Por que foi recolhido: `turno_encerrado` ou `ausencia`. */
+    motivoRecolhimento: text('motivo_recolhimento'),
     /** Médicos que podiam laudar o exame na leitura, sem chave estrangeira (é histórico). */
     elegiveis: uuid('elegiveis').array().notNull().default(sql`'{}'`),
     /** Médico em turno → o portão onde parou diante do exame (o "por que não pegou"). */

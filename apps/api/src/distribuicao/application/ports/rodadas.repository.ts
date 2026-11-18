@@ -23,6 +23,8 @@ export interface Rodada {
   erro: string | null;
   avisos: string[];
   lidos: number;
+  /** Recolhidos de médicos que entraram na proposta. */
+  recolhidos: number;
   urgentes: number;
   recortes: RecortesRodada;
   /** Quantas vezes a execução foi retomada: a retomada confere a fila antes de cada exame. */
@@ -50,6 +52,8 @@ export interface Designacao {
   pacienteChave: string;
   /** De quem a conferência o tirou (para o "Desfazer" e o bloqueio nas próximas rodadas). */
   retiradoDeId: string | null;
+  /** Recolhido: de quem sai (a execução só troca se ainda estiver com ele, NOVO). */
+  recolhidoDeId: string | null;
   posicao: number | null;
   urgente: boolean;
   prazo: Date | null;
@@ -89,7 +93,12 @@ export interface MovimentoProposta {
 export interface EntregaRegistrada {
   medicoId: string;
   em: Date;
-  origem: 'execucao' | 'conferencia';
+  origem: 'execucao' | 'conferencia' | 'recolhimento';
+}
+
+export interface UltimaEntrega {
+  medicoId: string;
+  em: Date;
 }
 
 export interface ResultadoDesignacao {
@@ -132,6 +141,7 @@ export interface RodadasRepository {
       designacoes: readonly DesignacaoNova[];
       avisos: string[];
       lidos: number;
+      recolhidos: number;
       urgentes: number;
       insumos: InsumosGravados;
       lidaEm: Date;
@@ -187,10 +197,15 @@ export interface RodadasRepository {
   ): Promise<void>;
   eventos(rodadaId: string, limite: number): Promise<EventoRodada[]>;
   /**
-   * Exame (id na MobileMed) → a quem o robô o entregou (executadas) ou de quem a conferência o
-   * tirou, desde `desde`.
+   * Exame (id na MobileMed) → a quem o robô o entregou (executadas), de quem a conferência o tirou
+   * ou de quem foi recolhido, desde `desde`.
    */
   entregues(idsExame: readonly string[], desde: Date): Promise<Map<string, EntregaRegistrada[]>>;
+  /**
+   * Exame (id na MobileMed) → a última entrega do robô (designação executada): o médico e quando.
+   * O recolhimento parte daqui (sem limite de dias para trás).
+   */
+  ultimasEntregas(idsExame: readonly string[]): Promise<Map<string, UltimaEntrega>>;
   /** Alocação gratificada → laudos já executados por ela desde o início do plantão em curso. */
   cotaEntregue(
     plantoes: readonly { alocacaoId: string; desde: Date }[],

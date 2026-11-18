@@ -100,8 +100,11 @@ export interface ExameElegivel extends AlvoExame {
 export interface EntregaAnterior {
   medicoId: string;
   em: Date;
-  /** `execucao` (padrão): o robô entregou e o exame voltou à fila; `conferencia`: tirado antes. */
-  origem?: 'execucao' | 'conferencia';
+  /**
+   * `execucao` (padrão): o robô entregou e o exame voltou à fila; `conferencia`: tirado antes;
+   * `recolhimento`: recolhido dele ao fim do turno ou pela ausência.
+   */
+  origem?: 'execucao' | 'conferencia' | 'recolhimento';
 }
 
 /** Onde um médico em turno parou diante de um exame (o "por que este médico não pegou"). */
@@ -112,7 +115,8 @@ export type Barreira =
   | 'equipe'
   | 'reservado'
   | 'ja_entregue'
-  | 'retirado_na_conferencia';
+  | 'retirado_na_conferencia'
+  | 'recolhido';
 
 export interface ExplicacaoExame {
   /** Médicos que passaram por todos os portões (o motor escolhe entre eles). */
@@ -486,7 +490,9 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
       if (entregas.length) {
         barrados[medicoId] = entregas.some((x) => x.origem === 'conferencia')
           ? 'retirado_na_conferencia'
-          : 'ja_entregue';
+          : entregas.some((x) => x.origem === 'recolhimento')
+            ? 'recolhido'
+            : 'ja_entregue';
         continue;
       }
 

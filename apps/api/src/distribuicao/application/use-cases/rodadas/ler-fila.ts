@@ -73,6 +73,7 @@ export class LerFila {
         designacoes: proposta.designacoes,
         avisos: proposta.avisos,
         lidos: montada.lidos.length,
+        recolhidos: proposta.recolhidos,
         urgentes: proposta.urgentes,
         insumos: proposta.insumos,
         lidaEm: agora,

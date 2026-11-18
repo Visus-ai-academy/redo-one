@@ -382,16 +382,18 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     }
     const etapa = montados.etapaElegibilidade.get(e.id);
     if (etapa === 'retirado') {
-      const naConferencia = Object.values(montados.explicacao(e.id).barrados).includes(
-        'retirado_na_conferencia',
-      );
+      const barreiras = Object.values(montados.explicacao(e.id).barrados);
+      const naConferencia = barreiras.includes('retirado_na_conferencia');
+      const recolhido = barreiras.includes('recolhido');
       return explicado(
         semItem(
           e.id,
           'retirado_do_medico',
           naConferencia
             ? 'Quem laudaria este exame o teve retirado na conferência de uma rodada: o robô não o devolve a ele.'
-            : 'Quem laudaria este exame já o recebeu do robô e o teve retirado.',
+            : recolhido
+              ? 'Só quem o tinha (e de quem foi recolhido) laudaria este exame: o robô não o devolve a ele.'
+              : 'Quem laudaria este exame já o recebeu do robô e o teve retirado.',
         ),
       );
     }

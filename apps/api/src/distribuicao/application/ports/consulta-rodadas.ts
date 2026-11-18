@@ -39,6 +39,9 @@ export interface DesignacaoDetalhada {
   /** De quem a conferência o tirou, e quando. */
   retiradoDe: RotuloRodada | null;
   retiradaEm: Date | null;
+  /** Recolhido: de quem sai e por quê (`turno_encerrado` ou `ausencia`). */
+  recolhidoDe: RotuloRodada | null;
+  motivoRecolhimento: string | null;
   status: StatusDesignacao;
   motivo: string | null;
   detalhe: string | null;
@@ -53,6 +56,8 @@ export interface FiltroDesignacoes {
   modalidadeId?: string;
   motivo?: string[];
   naMao?: boolean;
+  /** Só os recolhidos (true) ou só os da fila sem médico (false). */
+  recolhido?: boolean;
   /** Trecho do estudo ou da unidade. */
   busca?: string;
   pagina: number;
@@ -67,6 +72,8 @@ export interface RodadaListada {
   aprovadaPor: RotuloRodada | null;
   aprovadaEm: Date | null;
   lidos: number;
+  /** Recolhidos de médicos que entraram na proposta. */
+  recolhidos: number;
   /** Os que o motor propôs (com médico na leitura). */
   propostos: number;
   executadas: number;

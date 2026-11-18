@@ -232,3 +232,59 @@ describe('ordem de execução', () => {
     expect(ordem).toEqual(['u', 'r-cedo', 'r-tarde']);
   });
 });
+
+describe('proposta com os recolhidos', () => {
+  const ficaram = {
+    aberto: 1,
+    trocado_por_fora: 0,
+    pacote_aberto: 2,
+    turno_em_curso: 3,
+    frente_nao_recolhe: 0,
+  };
+  const comRecolhidos = () =>
+    propor({
+      lidos: [lido('r'), lido('rc1'), lido('rc2'), lido('rc3', { urgente: true })],
+      resultado: resultado([vai('r', 'A'), vai('rc1', 'B'), vai('rc2', 'A'), fica('rc3')]),
+      recolhimento: {
+        recolhidos: [
+          { idExame: 'rc1', deMedicoId: 'C', motivo: 'turno_encerrado' },
+          { idExame: 'rc2', deMedicoId: 'D', motivo: 'ausencia' },
+          { idExame: 'rc3', deMedicoId: 'C', motivo: 'turno_encerrado' },
+        ],
+        ficaram,
+      },
+    });
+
+  it('marca de quem o exame sai e por quê; o que ninguém pega fica com quem tem (fora da proposta)', () => {
+    const p = comRecolhidos();
+    expect(p.designacoes.map((d) => [d.idExame, d.recolhidoDeId, d.motivoRecolhimento])).toEqual([
+      ['r', null, null],
+      ['rc1', 'C', 'turno_encerrado'],
+      ['rc2', 'D', 'ausencia'],
+    ]);
+    expect(p.recolhidos).toBe(2);
+    // O urgente que ficou com quem tem não conta nas urgências da proposta.
+    expect(p.urgentes).toBe(0);
+  });
+
+  it('guarda o resumo do recolhimento e avisa quantos vão e quantos ficam', () => {
+    const p = comRecolhidos();
+    expect(p.insumos.recolhimento).toEqual({
+      recolhiveis: 3,
+      porAusencia: 1,
+      propostos: 2,
+      semDestino: 1,
+      naoRecolhidos: ficaram,
+    });
+    expect(p.avisos).toContain(
+      'Recolhimento: 3 exame(s) intocado(s) de médico fora do turno ou ausente (1 por ausência); 2 vão para outro médico nesta proposta, 1 fica(m) com quem tem.',
+    );
+  });
+
+  it('sem recolhimento, nada muda', () => {
+    const p = propor();
+    expect(p.recolhidos).toBe(0);
+    expect(p.insumos.recolhimento).toBeUndefined();
+    expect(p.designacoes.every((d) => d.recolhidoDeId === null)).toBe(true);
+  });
+});

@@ -65,6 +65,8 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     elegiveis: [],
     barrados: {},
     naMao: false,
+    recolhidoDeId: null,
+    motivoRecolhimento: null,
     ...p,
   });
 
@@ -80,6 +82,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       designacoes: lista,
       avisos: ['aviso'],
       lidos: lista.length,
+      recolhidos: lista.filter((d) => d.recolhidoDeId).length,
       urgentes: 0,
       insumos: {
         leituraEm: agora.toISOString(),
@@ -321,6 +324,41 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     expect(entregues.has('e2')).toBe(false);
     expect(await repo.entregues(['e1'], minutos(10))).toEqual(new Map());
     expect(await repo.cotaEntregue([])).toEqual({});
+  });
+
+  it('recolhido: marca de quem sai, bloqueia a volta a ele e a última entrega é do novo dono', async () => {
+    const [outro] = await db
+      .insert(schema.medicos)
+      .values({ nome: 'Dr. Bruno', chaveNormalizada: `bruno ${Math.random()}`, idMobilemed: 7 })
+      .returning();
+    const deId = outro?.id ?? '';
+    const id = await criarComProposta([
+      designacao('e1', { recolhidoDeId: deId, motivoRecolhimento: 'turno_encerrado' }),
+      designacao('e2', { ordem: 1 }),
+    ]);
+    expect((await repo.obter(id))?.recolhidos).toBe(1);
+    const [p1] = await repo.previstas(id);
+    expect(p1?.recolhidoDeId).toBe(deId);
+    await repo.registrarResultado(
+      p1?.id ?? '',
+      { status: 'executada', motivo: null, detalhe: null, retentavel: false },
+      minutos(5),
+    );
+    expect((await repo.entregues(['e1'], agora)).get('e1')).toEqual([
+      { medicoId, em: minutos(5), origem: 'execucao' },
+      { medicoId: deId, em: minutos(5), origem: 'recolhimento' },
+    ]);
+    expect(await repo.ultimasEntregas(['e1', 'e2'])).toEqual(
+      new Map([['e1', { medicoId, em: minutos(5) }]]),
+    );
+    const so = await repo.designacoes(id, { recolhido: true, pagina: 1, porPagina: 10 });
+    expect(so.itens.map((d) => [d.idExameMobilemed, d.recolhidoDe, d.motivoRecolhimento])).toEqual([
+      ['e1', { id: deId, nome: 'Dr. Bruno' }, 'turno_encerrado'],
+    ]);
+    const fora = await repo.designacoes(id, { recolhido: false, pagina: 1, porPagina: 10 });
+    expect(fora.itens.map((d) => d.idExameMobilemed)).toEqual(['e2']);
+    const h = await repo.historico({ pagina: 1, porPagina: 10 });
+    expect(h.itens[0]?.recolhidos).toBe(1);
   });
 
   it('reiniciar a leitura apaga as designações e volta a solicitada com a leitura enfileirada', async () => {

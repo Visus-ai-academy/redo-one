@@ -211,6 +211,13 @@
       "when": 1795029555184,
       "tag": "0029_recolhimento_lista",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795029816495,
+      "tag": "0030_recolhimento_rodada",
+      "breakpoints": true
     }
   ]
 }

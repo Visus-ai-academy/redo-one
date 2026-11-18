@@ -24,6 +24,7 @@ import type {
   Rodada,
   RodadasRepository,
   TarefaRodada,
+  UltimaEntrega,
 } from '../application/ports/rodadas.repository';
 import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
 import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
@@ -69,6 +70,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       erro: null,
       avisos: [],
       lidos: 0,
+      recolhidos: 0,
       urgentes: 0,
       recortes: d.recortes,
       retomadas: 0,
@@ -135,6 +137,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       status: 'aguardando_aprovacao',
       avisos: p.avisos,
       lidos: p.lidos,
+      recolhidos: p.recolhidos,
       urgentes: p.urgentes,
       lidaEm: p.lidaEm,
       expiraEm: p.expiraEm,
@@ -148,7 +151,14 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
     const r = this.rodadas.get(id);
     if (!r || !de.includes(r.status)) return false;
     this.designacoesGravadas = this.designacoesGravadas.filter((d) => d.rodadaId !== id);
-    Object.assign(r, { status: 'solicitada', erro: null, expiraEm: null, lidos: 0, urgentes: 0 });
+    Object.assign(r, {
+      status: 'solicitada',
+      erro: null,
+      expiraEm: null,
+      lidos: 0,
+      recolhidos: 0,
+      urgentes: 0,
+    });
     if (recortes) r.recortes = recortes;
     this.jobs.push({ tarefa: 'ler', rodadaId: id });
     return true;
@@ -180,6 +190,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
     status: d.status,
     pacienteChave: d.pacienteChave,
     retiradoDeId: d.retiradoDeId,
+    recolhidoDeId: d.recolhidoDeId,
     posicao: d.posicao,
     urgente: d.urgente,
     prazo: d.prazo,
@@ -321,9 +332,29 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       if (!idsExame.includes(d.idExame)) continue;
       if (d.status === 'executada' && d.medicoId && d.executadaEm && d.executadaEm >= desde) {
         somar(d.idExame, { medicoId: d.medicoId, em: d.executadaEm, origem: 'execucao' });
+        if (d.recolhidoDeId) {
+          somar(d.idExame, {
+            medicoId: d.recolhidoDeId,
+            em: d.executadaEm,
+            origem: 'recolhimento',
+          });
+        }
       }
       if (d.retiradoDeId && d.retiradaEm && d.retiradaEm >= desde) {
         somar(d.idExame, { medicoId: d.retiradoDeId, em: d.retiradaEm, origem: 'conferencia' });
+      }
+    }
+    return mapa;
+  }
+
+  async ultimasEntregas(idsExame: readonly string[]) {
+    const mapa = new Map<string, UltimaEntrega>();
+    for (const d of this.designacoesGravadas) {
+      if (!idsExame.includes(d.idExame) || d.status !== 'executada') continue;
+      if (!d.medicoId || !d.executadaEm) continue;
+      const atual = mapa.get(d.idExame);
+      if (!atual || atual.em < d.executadaEm) {
+        mapa.set(d.idExame, { medicoId: d.medicoId, em: d.executadaEm });
       }
     }
     return mapa;
@@ -372,6 +403,8 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       elegiveis: d.elegiveis,
       retiradoDe: rotulo(d.retiradoDeId),
       retiradaEm: d.retiradaEm,
+      recolhidoDe: rotulo(d.recolhidoDeId),
+      motivoRecolhimento: d.motivoRecolhimento,
       status: d.status,
       motivo: d.motivo,
       detalhe: d.detalhe,
@@ -385,6 +418,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       .filter((d) => !f.medicoId || d.medicoId === f.medicoId)
       .filter((d) => !f.motivo?.length || f.motivo.includes(d.motivo ?? ''))
       .filter((d) => f.naMao === undefined || d.naMao === f.naMao)
+      .filter((d) => f.recolhido === undefined || (d.recolhidoDeId !== null) === f.recolhido)
       .sort((a, b) => a.ordem - b.ordem);
     const itens = todas
       .slice((f.pagina - 1) * f.porPagina, f.pagina * f.porPagina)
@@ -473,6 +507,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
         aprovadaPor: r.aprovadaPorId ? { id: r.aprovadaPorId, nome: r.aprovadaPorId } : null,
         aprovadaEm: r.aprovadaEm,
         lidos: r.lidos,
+        recolhidos: r.recolhidos,
         propostos: this.daRodada(r.id).filter((d) => d.medicoPropostoId).length,
         executadas: this.daRodada(r.id).filter((d) => d.status === 'executada').length,
         deFora: this.daRodada(r.id).filter((d) => d.status === 'recusada').length,

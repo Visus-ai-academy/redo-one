@@ -9,6 +9,7 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   lt,
   or,
   type SQL,
@@ -50,6 +51,7 @@ import type {
   Rodada,
   RodadasRepository,
   TarefaRodada,
+  UltimaEntrega,
 } from '../../application/ports/rodadas.repository';
 import {
   FILA_DISTRIBUICAO,
@@ -88,6 +90,7 @@ const violouUnico = (erro: unknown) => {
 const LOTE = 500;
 const medicoProposto = alias(medicos, 'medico_proposto');
 const medicoRetirado = alias(medicos, 'medico_retirado');
+const medicoRecolhido = alias(medicos, 'medico_recolhido');
 const outra = alias(designacoes, 'outra');
 const solicitante = alias(usuarios, 'solicitante');
 const aprovador = alias(usuarios, 'aprovador');
@@ -107,6 +110,7 @@ const comoRodada = (r: LinhaRodada): Rodada => ({
   erro: r.erro,
   avisos: r.avisos,
   lidos: r.lidos,
+  recolhidos: r.recolhidos,
   urgentes: r.urgentes,
   recortes: {
     turnoIds: r.turnoIds,
@@ -127,6 +131,7 @@ const comoDesignacao = (d: LinhaDesignacao): Designacao => ({
   status: d.status,
   pacienteChave: d.pacienteChave,
   retiradoDeId: d.retiradoDeId,
+  recolhidoDeId: d.recolhidoDeId,
   posicao: d.posicao,
   urgente: d.urgente,
   prazo: d.prazo,
@@ -169,6 +174,8 @@ const linhaDaDesignacao = (rodadaId: string, d: DesignacaoNova) => ({
   elegiveis: d.elegiveis,
   barrados: d.barrados,
   naMao: d.naMao,
+  recolhidoDeId: d.recolhidoDeId,
+  motivoRecolhimento: d.motivoRecolhimento,
 });
 
 const recortesComoLinha = (r: RecortesRodada) => ({
@@ -262,6 +269,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
       designacoes: readonly DesignacaoNova[];
       avisos: string[];
       lidos: number;
+      recolhidos: number;
       urgentes: number;
       insumos: InsumosGravados;
       lidaEm: Date;
@@ -275,6 +283,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
           status: 'aguardando_aprovacao',
           avisos: p.avisos,
           lidos: p.lidos,
+          recolhidos: p.recolhidos,
           urgentes: p.urgentes,
           insumos: p.insumos,
           lidaEm: p.lidaEm,
@@ -563,6 +572,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
           .select({
             idExame: designacoes.idExameMobilemed,
             medicoId: designacoes.medicoId,
+            recolhidoDeId: designacoes.recolhidoDeId,
             em: designacoes.executadaEm,
           })
           .from(designacoes)
@@ -592,11 +602,39 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
       for (const l of executadas) {
         if (l.medicoId && l.em)
           somar(l.idExame, { medicoId: l.medicoId, em: l.em, origem: 'execucao' });
+        if (l.recolhidoDeId && l.em) {
+          somar(l.idExame, { medicoId: l.recolhidoDeId, em: l.em, origem: 'recolhimento' });
+        }
       }
       for (const l of retiradas) {
         if (l.medicoId && l.em) {
           somar(l.idExame, { medicoId: l.medicoId, em: l.em, origem: 'conferencia' });
         }
+      }
+    }
+    return mapa;
+  }
+
+  async ultimasEntregas(idsExame: readonly string[]) {
+    const mapa = new Map<string, UltimaEntrega>();
+    for (let i = 0; i < idsExame.length; i += LOTE) {
+      const linhas = await this.db
+        .selectDistinctOn([designacoes.idExameMobilemed], {
+          idExame: designacoes.idExameMobilemed,
+          medicoId: designacoes.medicoId,
+          em: designacoes.executadaEm,
+        })
+        .from(designacoes)
+        .where(
+          and(
+            inArray(designacoes.idExameMobilemed, idsExame.slice(i, i + LOTE)),
+            eq(designacoes.status, 'executada'),
+            isNotNull(designacoes.medicoId),
+          ),
+        )
+        .orderBy(designacoes.idExameMobilemed, desc(designacoes.executadaEm));
+      for (const l of linhas) {
+        if (l.medicoId && l.em) mapa.set(l.idExame, { medicoId: l.medicoId, em: l.em });
       }
     }
     return mapa;
@@ -644,6 +682,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
         medico: medicos.nome,
         proposto: medicoProposto.nome,
         retirado: medicoRetirado.nome,
+        recolhido: medicoRecolhido.nome,
         pacoteExames: sql<number>`(select count(*) from designacoes o where ${doPaciente})`.mapWith(
           Number,
         ),
@@ -657,7 +696,8 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
       .leftJoin(subespecialidades, eq(subespecialidades.id, designacoes.subespecialidadeId))
       .leftJoin(medicos, eq(medicos.id, designacoes.medicoId))
       .leftJoin(medicoProposto, eq(medicoProposto.id, designacoes.medicoPropostoId))
-      .leftJoin(medicoRetirado, eq(medicoRetirado.id, designacoes.retiradoDeId));
+      .leftJoin(medicoRetirado, eq(medicoRetirado.id, designacoes.retiradoDeId))
+      .leftJoin(medicoRecolhido, eq(medicoRecolhido.id, designacoes.recolhidoDeId));
   }
 
   async designacaoExplicada(rodadaId: string, designacaoId: string) {
@@ -676,6 +716,11 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
     if (f.status?.length) filtros.push(inArray(designacoes.status, f.status));
     if (f.motivo?.length) filtros.push(inArray(designacoes.motivo, f.motivo));
     if (f.naMao !== undefined) filtros.push(eq(designacoes.naMao, f.naMao));
+    if (f.recolhido !== undefined) {
+      filtros.push(
+        f.recolhido ? isNotNull(designacoes.recolhidoDeId) : isNull(designacoes.recolhidoDeId),
+      );
+    }
     if (f.medicoId) filtros.push(eq(designacoes.medicoId, f.medicoId));
     if (f.prioridadeOperacaoId) {
       filtros.push(eq(designacoes.prioridadeOperacaoId, f.prioridadeOperacaoId));
@@ -741,6 +786,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
         aprovadaPor: l.r.aprovadaPorId ? { id: l.r.aprovadaPorId, nome: l.aprovador ?? '' } : null,
         aprovadaEm: l.r.aprovadaEm,
         lidos: l.r.lidos,
+        recolhidos: l.r.recolhidos,
         propostos: l.propostos,
         executadas: l.executadas,
         deFora: l.deFora,
@@ -846,6 +892,7 @@ type LinhaDetalhada = {
   medico: string | null;
   proposto: string | null;
   retirado: string | null;
+  recolhido: string | null;
   pacoteExames: number;
   pacoteId: string;
 };
@@ -877,6 +924,8 @@ function comoDetalhada({ d, ...n }: LinhaDetalhada): DesignacaoDetalhada {
     elegiveis: d.elegiveis,
     retiradoDe: rotulo(d.retiradoDeId, n.retirado),
     retiradaEm: d.retiradaEm,
+    recolhidoDe: rotulo(d.recolhidoDeId, n.recolhido),
+    motivoRecolhimento: d.motivoRecolhimento,
     status: d.status,
     motivo: d.motivo,
     detalhe: d.detalhe,

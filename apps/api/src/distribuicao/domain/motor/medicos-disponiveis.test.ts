@@ -357,6 +357,18 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
     expect(r.explicacao('e1').barrados).toEqual({ A: 'retirado_na_conferencia' });
   });
 
+  it('nunca volta ao médico de quem foi recolhido', () => {
+    const r = montar({
+      exames: [
+        exame('e1', {
+          entregues: [{ medicoId: 'A', em: br('2026-11-16T10:00'), origem: 'recolhimento' }],
+        }),
+      ],
+    });
+    expect(doMedico(r, 'A')?.elegivelPara('e1')).toBe(false);
+    expect(r.explicacao('e1').barrados).toEqual({ A: 'recolhido' });
+  });
+
   it('explica, por exame, quem foi elegível e onde cada médico em turno barrou', () => {
     const r = montar({
       exames: [exame('e1', { entregues: [{ medicoId: 'C', em: br('2026-11-16T10:00') }] })],

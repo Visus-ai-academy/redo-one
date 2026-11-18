@@ -663,7 +663,7 @@ const PORTOES: {
     frase: 'a clínica é exclusiva de outro médico',
   },
   {
-    barreira: ['ja_entregue', 'retirado_na_conferencia'],
+    barreira: ['ja_entregue', 'retirado_na_conferencia', 'recolhido'],
     titulo: 'Não tinha sido tirado deste exame',
     ok: 'O robô nunca devolve o exame a quem já o recebeu ou de quem a operação o tirou',
     falha: '',
@@ -672,12 +672,16 @@ const PORTOES: {
 ];
 
 const FALHA_ENTREGA: Record<
-  'ja_entregue' | 'retirado_na_conferencia',
+  'ja_entregue' | 'retirado_na_conferencia' | 'recolhido',
   { detalhe: string; frase: string }
 > = {
   ja_entregue: {
     detalhe: 'O robô já o entregou a ele e o exame voltou à fila: não volta para ele',
     frase: 'já tinha recebido este exame do robô',
+  },
+  recolhido: {
+    detalhe: 'Recolhido dele ao fim do turno (ou pela ausência no dia): o robô não o devolve a ele',
+    frase: 'o exame foi recolhido dele',
   },
   retirado_na_conferencia: {
     detalhe: 'Retirado deste médico na conferência de uma rodada: o robô não o devolve a ele',
@@ -760,7 +764,10 @@ export class ExplicarDesignacao {
         passo(true, p.titulo, p.ok);
         continue;
       }
-      const entrega = barreira === 'ja_entregue' || barreira === 'retirado_na_conferencia';
+      const entrega =
+        barreira === 'ja_entregue' ||
+        barreira === 'retirado_na_conferencia' ||
+        barreira === 'recolhido';
       const falha = entrega ? FALHA_ENTREGA[barreira] : { detalhe: p.falha, frase: p.frase };
       passo(false, p.titulo, falha.detalhe);
       return fim(false, `Não pegou porque ${falha.frase}.`);

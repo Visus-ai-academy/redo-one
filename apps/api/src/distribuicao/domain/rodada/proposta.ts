@@ -8,6 +8,7 @@ import {
 import type { Barreira } from '../motor/medicos-disponiveis';
 import type { MedicoNaRodada, ResultadoRodada } from '../motor/rodada';
 import type { ExameLido } from './entrada';
+import type { MotivoFica, MotivoRecolhimento, Recolhimento } from './recolhimento';
 
 /**
  * A proposta gravada: uma designação por exame lido (inclusive os recusados, com o motivo), na
@@ -33,6 +34,23 @@ export interface DesignacaoNova extends ExameLido {
   barrados: Record<string, Barreira>;
   /** Mandado a um médico na conferência, depois que o motor o deixou de fora. */
   naMao: boolean;
+  /** Recolhido: de quem sai (a execução só troca se ainda estiver com ele, NOVO). */
+  recolhidoDeId: string | null;
+  motivoRecolhimento: MotivoRecolhimento | null;
+}
+
+/** O recolhimento da leitura, para o funil e o diário. */
+export interface RecolhimentoGravado {
+  /** Exames que saíram dos médicos e entraram na rodada. */
+  recolhiveis: number;
+  /** Desses, os de médico com ausência no dia. */
+  porAusencia: number;
+  /** Desses, os que o robô propôs a outro médico. */
+  propostos: number;
+  /** Desses, os que ninguém da rodada podia pegar: ficam com quem tem. */
+  semDestino: number;
+  /** Os que podiam ser recolhidos e ficaram com o médico, por motivo. */
+  naoRecolhidos: Record<MotivoFica, number>;
 }
 
 /** Turnos e frentes em que o médico estava na escala no instante da leitura (só os nomes). */
@@ -54,12 +72,17 @@ export interface InsumosGravados {
   habilitados: string[];
   /** Os médicos que entraram na rodada. */
   medicos: MedicoGravado[];
+  /** Ausente nas leituras gravadas antes do recolhimento (ou com ele desligado). */
+  recolhimento?: RecolhimentoGravado;
 }
 
 export interface Proposta {
   designacoes: DesignacaoNova[];
   avisos: string[];
+  /** Urgências entre os exames da proposta (os lidos e os recolhidos que entraram). */
   urgentes: number;
+  /** Recolhidos que entraram na proposta. */
+  recolhidos: number;
   insumos: InsumosGravados;
 }
 
@@ -115,6 +138,11 @@ export function montarProposta(p: {
   semCliente: number;
   escalaDosMedicos: Readonly<Record<string, EscalaDoMedico>>;
   habilitados: string[];
+  /**
+   * Os exames recolhidos (já entre os lidos). O que o motor propôs a outro médico entra marcado;
+   * o que ninguém pega segue com quem tem e fica fora da proposta (como no dashboards-one).
+   */
+  recolhimento?: Recolhimento;
 }): Proposta {
   const { config } = p;
   const item = new Map(p.resultado.itens.map((i) => [i.exameId, i]));
@@ -126,10 +154,11 @@ export function montarProposta(p: {
     p.agora,
   );
 
+  const recolhidoDe = new Map((p.recolhimento?.recolhidos ?? []).map((r) => [r.idExame, r]));
   const teto = config.tetoPorRodada;
   let previstas = 0;
   let acimaDoTeto = 0;
-  const designacoes = ordem.map((id, i): DesignacaoNova => {
+  const todas = ordem.map((id, i): DesignacaoNova => {
     const l = lidoPorId.get(id) as ExameLido;
     const it = item.get(id);
     const medico = it?.medicoId ?? null;
@@ -156,8 +185,12 @@ export function montarProposta(p: {
       elegiveis: it?.elegiveis ?? [],
       barrados: it?.barrados ?? {},
       naMao: false,
+      recolhidoDeId: recolhidoDe.get(id)?.deMedicoId ?? null,
+      motivoRecolhimento: recolhidoDe.get(id)?.motivo ?? null,
     };
   });
+  const designacoes = todas.filter((d) => d.recolhidoDeId === null || d.status === 'prevista');
+  const recolhidos = designacoes.filter((d) => d.recolhidoDeId !== null).length;
 
   const avisos: string[] = [];
   if (p.resultado.funil.medicos.noHorario === 0) {
@@ -180,6 +213,17 @@ export function montarProposta(p: {
       `Prioridade da MobileMed sem de-para na distribuição: ${p.resultado.grafiasSemDePara.join(', ')} (valeu como a padrão). Cadastre em Configurações › Distribuição.`,
     );
   }
+  const r = p.recolhimento;
+  if (r?.recolhidos.length) {
+    const ausentes = r.recolhidos.filter((x) => x.motivo === 'ausencia').length;
+    const ficam = r.recolhidos.length - recolhidos;
+    avisos.push(
+      `Recolhimento: ${r.recolhidos.length} exame(s) intocado(s) de médico fora do turno ou ausente` +
+        (ausentes ? ` (${ausentes} por ausência)` : '') +
+        `; ${recolhidos} vão para outro médico nesta proposta` +
+        (ficam ? `, ${ficam} fica(m) com quem tem.` : '.'),
+    );
+  }
   if (acimaDoTeto > 0) {
     avisos.push(
       `${acimaDoTeto} exame(s) acima do teto de ${teto} por rodada ficam para a próxima.`,
@@ -189,7 +233,8 @@ export function montarProposta(p: {
   return {
     designacoes,
     avisos,
-    urgentes: p.lidos.filter((l) => l.urgente).length,
+    urgentes: designacoes.filter((d) => d.urgente).length,
+    recolhidos,
     insumos: {
       leituraEm: p.agora.toISOString(),
       funil: p.resultado.funil,
@@ -201,6 +246,17 @@ export function montarProposta(p: {
         turnos: p.escalaDosMedicos[m.id]?.turnos ?? [],
         frentes: p.escalaDosMedicos[m.id]?.frentes ?? [],
       })),
+      ...(r
+        ? {
+            recolhimento: {
+              recolhiveis: r.recolhidos.length,
+              porAusencia: r.recolhidos.filter((x) => x.motivo === 'ausencia').length,
+              propostos: recolhidos,
+              semDestino: r.recolhidos.length - recolhidos,
+              naoRecolhidos: r.ficaram,
+            },
+          }
+        : {}),
     },
   };
 }
