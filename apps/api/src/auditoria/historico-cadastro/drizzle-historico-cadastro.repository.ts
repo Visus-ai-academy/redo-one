@@ -22,6 +22,17 @@ const ACOES_ACESSO = ['convidado', 'medico_vinculado', 'medico_desvinculado'];
 const cita = (campo: string, id: string) =>
   sql`(${e.antes}->>${campo} = ${id} or ${e.depois}->>${campo} = ${id})`;
 
+/** O médico está na lista `medicoIds` do antes (ou do depois) do evento da equipe. */
+const naEquipe = (lado: typeof e.antes | typeof e.depois, id: string) =>
+  sql`coalesce(${lado}->'medicoIds' @> jsonb_build_array(${id}::text), false)`;
+
+/**
+ * Evento de equipe em que a participação do médico mudou: criada com ele, ele entrou ou saiu,
+ * ou excluída com ele dentro. Mudanças da equipe que não mexem nele ficam de fora.
+ */
+const mudouNaEquipe = (id: string) =>
+  and(eq(e.entidade, 'equipe'), sql`${naEquipe(e.antes, id)} <> ${naEquipe(e.depois, id)}`) as SQL;
+
 function doAlvo(alvo: AlvoHistorico): SQL {
   const proprio = (entidade: string) => and(eq(e.entidade, entidade), eq(e.entidadeId, alvo.id));
   if (alvo.cadastro === 'cliente') return proprio('cliente') as SQL;
@@ -33,6 +44,7 @@ function doAlvo(alvo: AlvoHistorico): SQL {
   }
   const { incluir } = alvo;
   const partes: SQL[] = [
+    mudouNaEquipe(alvo.id),
     incluir.pagamento
       ? (proprio('medico') as SQL)
       : (and(
@@ -124,28 +136,42 @@ export class DrizzleHistoricoCadastroRepository implements HistoricoCadastroRepo
       .from(e)
       .where(onde);
 
-    const itens: ItemHistoricoCadastro[] = linhas.map((l) => ({
-      id: l.id,
-      ocorridoEm: l.ocorridoEm,
-      ator: { tipo: l.atorTipo as ItemHistoricoCadastro['ator']['tipo'], nome: l.atorNome },
-      entidade: l.entidade,
-      entidadeId: l.entidadeId,
-      acao: l.acao,
-      antes: l.antes as Json,
-      depois: l.depois as Json,
-    }));
+    const nomesDosEventos: Record<string, string> = {};
+    const itens: ItemHistoricoCadastro[] = linhas.map((l) => {
+      const item: ItemHistoricoCadastro = {
+        id: l.id,
+        ocorridoEm: l.ocorridoEm,
+        ator: { tipo: l.atorTipo as ItemHistoricoCadastro['ator']['tipo'], nome: l.atorNome },
+        entidade: l.entidade,
+        entidadeId: l.entidadeId,
+        acao: l.acao,
+        antes: l.antes as Json,
+        depois: l.depois as Json,
+      };
+      if (item.entidade !== 'equipe' || alvo.cadastro !== 'medico') return item;
+      // No médico, o evento da equipe vira "entrou", "saiu" ou "equipe excluída"; o resto da
+      // equipe (outros membros, plantão) é da tela da equipe.
+      const nome = (item.antes?.nome ?? item.depois?.nome) as string | undefined;
+      if (nome) nomesDosEventos[item.entidadeId.toLowerCase()] = nome;
+      const entrou = ((item.depois?.medicoIds ?? []) as string[]).includes(alvo.id);
+      const acao =
+        item.acao === 'excluido' ? 'equipe_excluida' : entrou ? 'membro_entrou' : 'membro_saiu';
+      return { ...item, acao, antes: null, depois: null };
+    });
 
     const ids = new Set<string>();
     for (const item of itens) {
       uuidsDe(item.antes, ids);
       uuidsDe(item.depois, ids);
-      // Na aba Acesso, o evento é da conta: o nome dela vem pelo id do evento.
-      if (item.entidade === 'usuario') uuidsDe(item.entidadeId, ids);
+      // Na aba Acesso, o evento é da conta, e o da equipe é dela: o nome vem pelo id do evento.
+      if (item.entidade === 'usuario' || item.entidade === 'equipe') uuidsDe(item.entidadeId, ids);
       if (item.entidade === 'exame' || item.entidade === 'de_para_valor_exame') {
         uuidsDe(item.entidadeId, ids);
       }
     }
-    return { itens, total: contagem?.total ?? 0, nomes: await this.nomes([...ids]) };
+    // A equipe excluída não está mais na tabela: o nome vem do próprio evento.
+    const nomes = { ...nomesDosEventos, ...(await this.nomes([...ids])) };
+    return { itens, total: contagem?.total ?? 0, nomes };
   }
 
   /** Uma consulta só por página: cada tabela com os ids da página, numa união. */

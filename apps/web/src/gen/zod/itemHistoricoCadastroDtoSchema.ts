@@ -10,7 +10,7 @@ export const itemHistoricoCadastroDtoSchema = z.object({
   id: z.uuid(),
   ocorridoEm: z.iso.datetime(),
   ator: atorHistoricoDtoSchema,
-  entidade: z.string().describe('`medico`, `medico_distribuicao`, `arranjos_medico`, `usuario` (conta do portal do médico), `cliente`, `exame` ou `de_para_valor_exame`.').meta({ examples: ['medico'] }),
+  entidade: z.string().describe('`medico`, `medico_distribuicao`, `arranjos_medico`, `usuario` (conta do portal do médico), `equipe` (no médico, com a ação `membro_entrou`, `membro_saiu` ou `equipe_excluida`), `cliente`, `exame` ou `de_para_valor_exame`.').meta({ examples: ['medico'] }),
   entidadeId: z.string(),
   acao: z.string().meta({ examples: ['alterado'] }),
   antes: z.looseObject({}).nullable().describe('Campos antes da mudança (sensíveis já mascarados); `null` na criação.'),

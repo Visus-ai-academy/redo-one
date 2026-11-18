@@ -85,7 +85,7 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table eventos_auditoria, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis cascade`,
+      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis cascade`,
     );
     minuto = 0;
     for (const k of Object.keys(ev)) delete ev[k];
@@ -234,6 +234,71 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
         [ana]: 'Ana Reis',
         [conta]: 'Dr. Ana (portal)',
       });
+    });
+
+    it('entra e sai de equipe, só quando a participação dele muda, com o nome da equipe', async () => {
+      const [equipe] = await db.insert(schema.equipes).values({ nome: 'Equipe 2' }).returning();
+      const equipeId = equipe?.id ?? '';
+      const apagada = '00000000-0000-4000-8000-0000000000aa';
+      await evento('equipeCriada', {
+        entidade: 'equipe',
+        entidadeId: equipeId,
+        acao: 'criado',
+        depois: { nome: 'Equipe 2', medicoIds: [ana], plantao: false },
+      });
+      await evento('outroEntrou', {
+        entidade: 'equipe',
+        entidadeId: equipeId,
+        acao: 'alterado',
+        antes: { medicoIds: [ana] },
+        depois: { medicoIds: [ana, bruno] },
+      });
+      await evento('plantao', {
+        entidade: 'equipe',
+        entidadeId: equipeId,
+        acao: 'alterado',
+        antes: { plantao: false },
+        depois: { plantao: true },
+      });
+      await evento('anaSaiu', {
+        entidade: 'equipe',
+        entidadeId: equipeId,
+        acao: 'alterado',
+        antes: { medicoIds: [ana, bruno] },
+        depois: { medicoIds: [bruno] },
+      });
+      await evento('apagada', {
+        entidade: 'equipe',
+        entidadeId: apagada,
+        acao: 'excluido',
+        antes: { nome: 'Equipe Velha', medicoIds: [ana] },
+      });
+
+      const r = await repo.listar(medico(ana), pagina);
+
+      expect(apelidos(r.itens)).toEqual(['apagada', 'anaSaiu', 'equipeCriada', 'criado']);
+      expect(r.itens.slice(0, 3)).toMatchObject([
+        {
+          entidade: 'equipe',
+          entidadeId: apagada,
+          acao: 'equipe_excluida',
+          antes: null,
+          depois: null,
+        },
+        {
+          entidade: 'equipe',
+          entidadeId: equipeId,
+          acao: 'membro_saiu',
+          antes: null,
+          depois: null,
+        },
+        { entidade: 'equipe', entidadeId: equipeId, acao: 'membro_entrou' },
+      ]);
+      expect(r.nomes).toMatchObject({ [equipeId]: 'Equipe 2', [apagada]: 'Equipe Velha' });
+      expect(apelidos((await repo.listar(medico(bruno), pagina)).itens)).toEqual([
+        'outroEntrou',
+        'outroMedico',
+      ]);
     });
 
     it('robô e sistema sem usuário aparecem pelo tipo', async () => {

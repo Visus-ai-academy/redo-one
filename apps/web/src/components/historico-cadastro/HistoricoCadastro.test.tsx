@@ -95,6 +95,31 @@ describe('HistoricoCadastro', () => {
     );
   });
 
+  it('entrada na equipe aparece com o nome dela, sem linhas de campo', async () => {
+    const ID_EQUIPE = '66666666-6666-4666-8666-666666666666';
+    doMedico.mockImplementation((() => ({
+      unwrap: async () => ({
+        itens: [
+          item({
+            entidade: 'equipe',
+            entidadeId: ID_EQUIPE,
+            acao: 'membro_entrou',
+            antes: null,
+            depois: null,
+          }),
+        ],
+        total: 1,
+        nomes: { [ID_EQUIPE]: 'Equipe 2' },
+        pagina: 1,
+        porPagina: 10,
+      }),
+    })) as never);
+    montar();
+
+    const [linha] = await screen.findAllByRole('listitem', { name: /./ });
+    expect(within(linha as HTMLElement).getByText('Entrou na Equipe 2')).toBeInTheDocument();
+  });
+
   it('sem eventos, diz que não há mudanças registradas', async () => {
     responder(doMedico, []);
     montar();

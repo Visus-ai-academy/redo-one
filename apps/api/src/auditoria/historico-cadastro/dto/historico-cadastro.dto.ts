@@ -10,7 +10,7 @@ export class ItemHistoricoCadastroDto {
   @ApiProperty({
     example: 'medico',
     description:
-      '`medico`, `medico_distribuicao`, `arranjos_medico`, `usuario` (conta do portal do médico), `cliente`, `exame` ou `de_para_valor_exame`.',
+      '`medico`, `medico_distribuicao`, `arranjos_medico`, `usuario` (conta do portal do médico), `equipe` (no médico, com a ação `membro_entrou`, `membro_saiu` ou `equipe_excluida`), `cliente`, `exame` ou `de_para_valor_exame`.',
   })
   entidade!: string;
 

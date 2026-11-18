@@ -56,13 +56,35 @@ const NOME_DA_ENTIDADE: Record<string, string> = {
   medico_distribuicao: 'Distribuição',
   arranjos_medico: 'Arranjos',
   usuario: 'Conta do portal',
+  equipe: 'Equipe',
   cliente: 'Cliente',
   exame: 'Exame',
   de_para_valor_exame: 'Valor fora do padrão',
 };
 
-/** "Médico criado", "Apelido adicionado", "Arranjos alterados". */
-export function descreverEventoCadastro(entidade: string, acao: string): string {
+/** No médico, o evento da equipe diz o que mudou para ele; `nome` é o da equipe. */
+function fraseDaEquipe(acao: string, nome: string | undefined): string | undefined {
+  if (acao === 'membro_entrou') return nome ? `Entrou na ${nome}` : 'Entrou numa equipe';
+  if (acao === 'membro_saiu') return nome ? `Saiu da ${nome}` : 'Saiu de uma equipe';
+  if (acao === 'equipe_excluida') {
+    return `${nome ? `Saiu da ${nome}` : 'Saiu de uma equipe'} (equipe excluída)`;
+  }
+  return undefined;
+}
+
+/**
+ * "Médico criado", "Apelido adicionado", "Arranjos alterados". `nomeDoAlvo` é o nome do id do
+ * evento, usado quando a frase o cita ("Entrou na Equipe 2").
+ */
+export function descreverEventoCadastro(
+  entidade: string,
+  acao: string,
+  nomeDoAlvo?: string,
+): string {
+  if (entidade === 'equipe') {
+    const frase = fraseDaEquipe(acao, nomeDoAlvo);
+    if (frase) return frase;
+  }
   return (
     FRASES[entidade]?.[acao] ??
     `${NOME_DA_ENTIDADE[entidade] ?? entidade}: ${acao.replace(/_/g, ' ')}`

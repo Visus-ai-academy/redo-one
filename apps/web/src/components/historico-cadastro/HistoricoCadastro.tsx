@@ -106,7 +106,11 @@ export function HistoricoCadastro({
         )}
       >
         {dados.itens.map((item) => {
-          const frase = descreverEventoCadastro(item.entidade, item.acao);
+          const frase = descreverEventoCadastro(
+            item.entidade,
+            item.acao,
+            dados.nomes[item.entidadeId.toLowerCase()],
+          );
           return (
             <li key={item.id} aria-label={frase} className="flex flex-col gap-1 px-4 py-3">
               <span className="flex items-baseline justify-between gap-3">

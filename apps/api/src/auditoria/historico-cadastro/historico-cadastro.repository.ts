@@ -19,7 +19,7 @@ export interface ItemHistoricoCadastro {
   id: string;
   ocorridoEm: Date;
   ator: { tipo: 'usuario' | 'robo' | 'sistema'; nome: string | null };
-  /** `medico`, `medico_distribuicao`, `arranjos_medico`, `usuario`, `cliente`, `exame`, `de_para_valor_exame`. */
+  /** `medico`, `medico_distribuicao`, `arranjos_medico`, `usuario`, `equipe` (no médico: `membro_entrou`, `membro_saiu`, `equipe_excluida`), `cliente`, `exame`, `de_para_valor_exame`. */
   entidade: string;
   entidadeId: string;
   acao: string;

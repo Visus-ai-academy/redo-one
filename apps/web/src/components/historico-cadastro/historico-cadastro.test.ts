@@ -37,6 +37,17 @@ const arranjo = (mudar: Record<string, unknown> = {}) => ({
 });
 
 describe('descreverEventoCadastro', () => {
+  it('equipe do médico: entrou, saiu ou a equipe foi excluída, com o nome dela', () => {
+    expect(descreverEventoCadastro('equipe', 'membro_entrou', 'Equipe 2')).toBe(
+      'Entrou na Equipe 2',
+    );
+    expect(descreverEventoCadastro('equipe', 'membro_saiu', 'Equipe 2')).toBe('Saiu da Equipe 2');
+    expect(descreverEventoCadastro('equipe', 'equipe_excluida', 'Equipe 2')).toBe(
+      'Saiu da Equipe 2 (equipe excluída)',
+    );
+    expect(descreverEventoCadastro('equipe', 'membro_entrou')).toBe('Entrou numa equipe');
+  });
+
   it('diz o que aconteceu em português, por cadastro', () => {
     expect(descreverEventoCadastro('medico', 'criado')).toBe('Médico criado');
     expect(descreverEventoCadastro('medico', 'alterado')).toBe('Cadastro alterado');
