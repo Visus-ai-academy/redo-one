@@ -36,7 +36,7 @@ export function FaixaDeNumeros({
       {numeros.map((n) => (
         <div
           key={n.rotulo}
-          className="-mt-px -ml-px flex min-w-0 flex-col gap-1 border-t border-l p-4"
+          className="-mt-px -ml-px flex min-w-0 flex-col gap-1 border-t border-l p-4 last:odd:col-span-2 xl:last:odd:col-span-1"
         >
           <dt className="text-muted-foreground text-[13px]">{n.rotulo}</dt>
           <dd className="flex flex-wrap items-center gap-2">
