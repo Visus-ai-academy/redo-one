@@ -279,6 +279,66 @@ describe('rodarMotor', () => {
     });
   });
 
+  it('recorte pela prioridade da operação, sem partir o pacote do paciente', () => {
+    const r = rodar({
+      exames: [
+        exame({ id: 'u', prioridade: 'Urgência', paciente: 'P1' }),
+        exame({ id: 'r1', paciente: 'P1' }),
+        exame({ id: 'r2', paciente: 'P2' }),
+      ],
+      filtro: { prioridadeOperacaoIds: ['op-urgencia'] },
+      nomes: { 'op-urgencia': 'URGÊNCIA' },
+    });
+    expect(item(r, 'u')?.medicoId).toBe('A');
+    expect(item(r, 'r1')?.medicoId).toBe('A');
+    expect(item(r, 'r2')).toMatchObject({
+      motivo: 'fora_da_prioridade',
+      detalhe: 'A rodada distribui só URGÊNCIA.',
+    });
+  });
+
+  it('recorte de frentes: o exame de outra frente fica de fora, e o médico só entra pelo período da frente', () => {
+    const NEURO = 'esp-neuro';
+    const RX = 'mod-rx';
+    const r = rodar({
+      exames: [
+        exame({ id: 'mi' }),
+        exame({ id: 'neuro', especialidadeId: NEURO }),
+        exame({ id: 'rx-mi', modalidadeId: RX }),
+      ],
+      medicos: [medico('A'), medico('B')],
+      ocorrencias: [
+        oc('A', { frente: { tipo: 'especialidade', especialidadeId: NEURO, modalidadeId: null } }),
+        oc('B'),
+      ],
+      filtro: {
+        frentes: [{ tipo: 'especialidade', especialidadeId: MI, modalidadeId: null }],
+      },
+      nomes: { [MI]: 'MEDICINA INTERNA' },
+    });
+    expect(item(r, 'mi')?.medicoId).toBe('B');
+    expect(item(r, 'rx-mi')?.medicoId).toBe('B');
+    expect(item(r, 'neuro')).toMatchObject({
+      motivo: 'fora_da_frente',
+      detalhe: 'A rodada distribui só MEDICINA INTERNA.',
+    });
+    expect(r.funil.medicos.noTurno).toBe(1);
+  });
+
+  it('médico incluído entra mesmo fora dos turnos e das frentes do recorte', () => {
+    const r = rodar({
+      exames: [exame({ id: 'mi' })],
+      medicos: [medico('A')],
+      ocorrencias: [oc('A', { turnoId: 'tarde' })],
+      filtro: {
+        turnoIds: ['manha'],
+        frentes: [{ tipo: 'modalidade', especialidadeId: null, modalidadeId: CT }],
+        medicosIncluidos: ['A'],
+      },
+    });
+    expect(item(r, 'mi')?.medicoId).toBe('A');
+  });
+
   it('sem médico elegível: o motivo diz onde a elegibilidade zerou', () => {
     const r = rodar({ medicos: [medico('A', [arranjo({ especialidadeId: 'outra' })])] });
     expect(item(r, r.itens[0]?.exameId ?? '')).toMatchObject({ motivo: 'sem_medico_elegivel' });

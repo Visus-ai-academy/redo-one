@@ -1,3 +1,4 @@
+import type { FrenteEscala } from '../arranjo';
 import { type ConfiguracaoDistribuicao, type RegrasFrente, RegrasPorFrente } from './configuracao';
 import type { DirecaoEquipe } from './elegibilidade';
 import {
@@ -68,7 +69,16 @@ export interface FiltroRodada {
   turnoIds?: readonly string[];
   /** Prioridades do catálogo. */
   prioridadeIds?: readonly string[];
+  /** Prioridades da operação (o recorte da tela da rodada); o pacote do paciente não se parte. */
+  prioridadeOperacaoIds?: readonly string[];
   clienteIds?: readonly string[];
+  /**
+   * Frentes da escala: o exame de fora delas é recusado, e o médico entra só pelos períodos delas
+   * (o de frente de modalidade também, para os exames das especialidades marcadas).
+   */
+  frentes?: readonly FrenteEscala[];
+  /** Entram mesmo fora dos turnos e das frentes do recorte. */
+  medicosIncluidos?: readonly string[];
 }
 
 export interface EntradaRodada {
@@ -99,6 +109,7 @@ export type MotivoRodada =
   | 'nao_novo'
   | 'fora_da_prioridade'
   | 'fora_da_clinica'
+  | 'fora_da_frente'
   | 'retirado_do_medico'
   | 'guardado_para_posteriores';
 
@@ -215,6 +226,35 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       ),
     );
   }
+  const prioridadeOperacaoIds = filtro.prioridadeOperacaoIds ?? [];
+  for (const id of recortarPrioridades(
+    naoRecusados().map((l) => ({ ...l.fila, prioridadeId: l.prioridadeOperacaoId })),
+    prioridadeOperacaoIds,
+    regras,
+  )) {
+    recusas.set(
+      id,
+      semItem(
+        id,
+        'fora_da_prioridade',
+        `A rodada distribui só ${prioridadeOperacaoIds.map(nome).join(', ')}.`,
+      ),
+    );
+  }
+  const frentes = filtro.frentes ?? [];
+  if (frentes.length) {
+    const esp = new Set(frentes.flatMap((f) => (f.especialidadeId ? [f.especialidadeId] : [])));
+    const mod = new Set(frentes.flatMap((f) => (f.modalidadeId ? [f.modalidadeId] : [])));
+    const detalhe = `A rodada distribui só ${frentes
+      .map((f) => nome(f.especialidadeId ?? f.modalidadeId ?? ''))
+      .join(', ')}.`;
+    for (const l of naoRecusados()) {
+      const dentro =
+        (l.fila.especialidadeId !== null && esp.has(l.fila.especialidadeId)) ||
+        (l.fila.modalidadeId !== null && mod.has(l.fila.modalidadeId));
+      if (!dentro) recusas.set(l.fila.id, semItem(l.fila.id, 'fora_da_frente', detalhe));
+    }
+  }
   const clienteIds = filtro.clienteIds ?? [];
   for (const id of recortarClinicas(
     naoRecusados().map((l) => l.fila),
@@ -255,6 +295,8 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     prioridadeIdsUrgenciaCatalogo,
     cotaEntregue: entrada.cotaEntregue,
     ...(filtro.turnoIds ? { filtroTurnoIds: filtro.turnoIds } : {}),
+    ...(frentes.length ? { filtroFrentes: frentes } : {}),
+    ...(filtro.medicosIncluidos ? { medicosIncluidos: filtro.medicosIncluidos } : {}),
   });
 
   // --- o motor ---

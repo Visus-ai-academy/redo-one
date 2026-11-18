@@ -82,9 +82,12 @@ const comChave = (tipo: TipoAviso, valor: string): PendenciaCadastro => ({
  * Pseudônimo do paciente: o código sem zeros à esquerda (como a MobileMed compara) ou, sem código,
  * o nome normalizado. O texto cru só passa pelo HMAC; nunca é gravado no laudo.
  */
-function textoDoPaciente(l: LinhaLaudo): string {
-  const codigo = l.codigoPaciente?.replace(/^0+(?=.)/, '');
-  return codigo ? `codigo:${codigo}` : `nome:${normalizarNome(l.nomePaciente ?? '')}`;
+export function textoDoPaciente(p: {
+  codigoPaciente?: string | null;
+  nomePaciente?: string | null;
+}): string {
+  const codigo = p.codigoPaciente?.replace(/^0+(?=.)/, '');
+  return codigo ? `codigo:${codigo}` : `nome:${normalizarNome(p.nomePaciente ?? '')}`;
 }
 
 /**
