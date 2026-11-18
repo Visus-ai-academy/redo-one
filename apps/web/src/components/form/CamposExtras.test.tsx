@@ -43,6 +43,30 @@ function Formulario({ onSubmit }: { onSubmit: (valores: Valores) => void }) {
   );
 }
 
+function FormularioFaixa({ onSubmit }: { onSubmit: (valores: { minutos: string }) => void }) {
+  const form = useAppForm({
+    defaultValues: { minutos: '30' },
+    validators: { onSubmit: z.object({ minutos: z.string() }) },
+    onSubmit: ({ value }) => onSubmit(value),
+  });
+  return (
+    <form
+      noValidate
+      onSubmit={(evento) => {
+        evento.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <form.AppField name="minutos">
+        {(field) => (
+          <field.NumberField label="Minutos" placeholder="30" min={1} max={1440} required />
+        )}
+      </form.AppField>
+      <button type="submit">Salvar</button>
+    </form>
+  );
+}
+
 describe('campos de caixa de marcar, texto longo e número', () => {
   it('enviam os valores digitados', async () => {
     const onSubmit = vi.fn();
@@ -82,5 +106,41 @@ describe('campos de caixa de marcar, texto longo e número', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ ordem: '990001' }));
+  });
+
+  describe('fora da faixa (min/max)', () => {
+    it('não corrige sozinho para o limite: mostra o erro e não envia', async () => {
+      const onSubmit = vi.fn();
+      render(<FormularioFaixa onSubmit={onSubmit} />);
+      const minutos = screen.getByRole('textbox', { name: 'Minutos' });
+
+      await userEvent.clear(minutos);
+      await userEvent.type(minutos, '2000');
+      await userEvent.tab();
+
+      expect(minutos).toHaveValue('2000');
+      expect(await screen.findByText('Use um valor entre 1 e 1440.')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('o erro some ao voltar para a faixa, e aí envia', async () => {
+      const onSubmit = vi.fn();
+      render(<FormularioFaixa onSubmit={onSubmit} />);
+      const minutos = screen.getByRole('textbox', { name: 'Minutos' });
+
+      await userEvent.clear(minutos);
+      await userEvent.type(minutos, '0');
+      await userEvent.tab();
+      expect(await screen.findByText('Use um valor entre 1 e 1440.')).toBeInTheDocument();
+
+      await userEvent.clear(minutos);
+      await userEvent.type(minutos, '45');
+      await userEvent.tab();
+      expect(screen.queryByText('Use um valor entre 1 e 1440.')).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      expect(onSubmit).toHaveBeenCalledWith({ minutos: '45' });
+    });
   });
 });

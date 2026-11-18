@@ -1,9 +1,11 @@
 import { Field } from '@base-ui/react/field';
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field';
+import { useEffect } from 'react';
 
 import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
 import { controlClassName } from './control-class';
+import { erroDeFaixa } from './faixa-numero';
 import { FieldError, FieldLabel } from './field-parts';
 
 type NumberFieldProps = {
@@ -22,6 +24,11 @@ type NumberFieldProps = {
  * Número no kit de formulário, sobre o NumberField do Base UI (aceita só número, setas sobem e
  * descem pelo `step`). O valor do campo fica como texto ("" quando vazio); o schema Zod valida e
  * converte.
+ *
+ * Fora de `min`/`max`, o campo não corrige sozinho para o limite (`allowOutOfRange`): mostra "Use
+ * um valor entre 1 e 1440." e o formulário não envia. O erro entra no `errorMap` do campo na
+ * chave `onServer`, que a validação do TanStack Form não apaga: o `handleSubmit` barra o envio
+ * como faria com o erro do schema, e o erro sai assim que o valor volta para a faixa.
  */
 export function NumberField({
   label,
@@ -34,9 +41,22 @@ export function NumberField({
   className,
 }: NumberFieldProps) {
   const field = useFieldContext<string>();
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
+  const foraDaFaixa = erroDeFaixa(field.state.value, min, max);
+  const registrado = field.state.meta.errorMap.onServer;
+  useEffect(() => {
+    if (registrado === foraDaFaixa) return;
+    field.setMeta((meta) => ({
+      ...meta,
+      errorMap: { ...meta.errorMap, onServer: foraDaFaixa },
+    }));
+  }, [field, registrado, foraDaFaixa]);
+
+  // Fora da faixa, só esse erro: o do schema costuma repetir a faixa com outras palavras.
+  const errors = foraDaFaixa
+    ? [foraDaFaixa]
+    : field.state.meta.errors.map((error) =>
+        typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
+      );
   const invalid = errors.length > 0;
 
   return (
@@ -52,6 +72,7 @@ export function NumberField({
         onValueChange={(valor) => field.handleChange(valor === null ? '' : String(valor))}
         min={min}
         max={max}
+        allowOutOfRange
         step={step}
         required={required}
         // Sem separador de milhar: código e ID (990001) não viram "990.001".

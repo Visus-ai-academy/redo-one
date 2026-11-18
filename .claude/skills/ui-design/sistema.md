@@ -152,6 +152,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 ## Formulários
 
 - `*` vermelho no rótulo de todo campo obrigatório + `required`; legenda "* Campo obrigatório" quando há campos opcionais.
+- Campo numérico com faixa (`min`/`max`) nunca corrige sozinho para o limite: mostra o erro abaixo do campo ("Use um valor entre 1 e 1440.", "Use um valor a partir de 0.", "Use um valor até 100.") e o formulário não envia até voltar para a faixa. Regra única no `NumberField` do kit; as setas do teclado continuam parando no limite. Aprovado em 18/11/2026.
 - Todo campo de texto tem placeholder com um exemplo do formato esperado (`nome@empresa.com.br`, `000.000.000-00`, `Ex.: Maria Souza`). O placeholder nunca substitui o rótulo.
 
 ## Acesso (login, recuperação, convite)
