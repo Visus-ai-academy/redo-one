@@ -218,6 +218,11 @@ export class DesignacaoDto {
   @ApiProperty({ description: 'Mandado na mão na conferência (o motor o tinha deixado de fora).' })
   naMao!: boolean;
   @ApiProperty({
+    type: [String],
+    description: 'Médicos que podiam laudar o exame na leitura (o "mover" sugere estes).',
+  })
+  elegiveis!: string[];
+  @ApiProperty({
     type: RotuloRodadaDto,
     nullable: true,
     description: 'De quem a conferência o tirou.',
@@ -557,4 +562,20 @@ export class FilaDoMomentoDto {
   @ApiProperty({ type: [ContagemModalidadeDto] }) porModalidade!: ContagemModalidadeDto[];
   @ApiProperty({ type: [MedicoEmTurnoDto], description: 'Habilitados no robô em turno agora.' })
   medicosEmTurno!: MedicoEmTurnoDto[];
+}
+
+export class BuscaMedicosQueryDto {
+  @ApiPropertyOptional({ description: 'Parte do nome.' })
+  @Transform(aparar)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  busca?: string;
+}
+
+export class MedicoDaBuscaDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ description: 'Habilitado no robô (aba Distribuição do médico).' })
+  habilitadoRobo!: boolean;
 }

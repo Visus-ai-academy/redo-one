@@ -38,6 +38,7 @@ const casos = () => {
     filaDoMomento: fn(),
     resumo: fn(),
     explicar: fn(),
+    buscarMedicos: { executar: vi.fn(async () => []) },
   };
 };
 
@@ -58,6 +59,7 @@ const controller = (c: ReturnType<typeof casos>) =>
     c.filaDoMomento as never,
     c.resumo as never,
     c.explicar as never,
+    c.buscarMedicos as never,
   );
 
 describe('controller das rodadas', () => {
@@ -73,6 +75,7 @@ describe('controller das rodadas', () => {
       p.designacoes,
       p.resumo,
       p.explicacao,
+      p.medicosDaBusca,
     ]) {
       expect(exigidas(leitura)).toEqual(['distribuicao.ver']);
     }

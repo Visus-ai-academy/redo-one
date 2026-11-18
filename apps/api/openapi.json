@@ -7361,6 +7361,40 @@
         ]
       }
     },
+    "/distribuicao/rodadas/medicos": {
+      "get": {
+        "operationId": "RodadasController_medicosDaBusca",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Até 20 médicos ativos com conta na MobileMed (mover, mandar na mão, incluir).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MedicoDaBuscaDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/distribuicao/rodadas/{id}": {
       "get": {
         "operationId": "RodadasController_obter",
@@ -15867,6 +15901,27 @@
           "medicosEmTurno"
         ]
       },
+      "MedicoDaBuscaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "habilitadoRobo": {
+            "type": "boolean",
+            "description": "Habilitado no robô (aba Distribuição do médico)."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "habilitadoRobo"
+        ]
+      },
       "SituacaoRodadaDto": {
         "type": "object",
         "properties": {
@@ -16065,6 +16120,13 @@
             "type": "boolean",
             "description": "Mandado na mão na conferência (o motor o tinha deixado de fora)."
           },
+          "elegiveis": {
+            "description": "Médicos que podiam laudar o exame na leitura (o \"mover\" sugere estes).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "retiradoDe": {
             "nullable": true,
             "description": "De quem a conferência o tirou.",
@@ -16129,6 +16191,7 @@
           "pacote",
           "gratificado",
           "naMao",
+          "elegiveis",
           "retiradoDe",
           "retiradaEm",
           "status",

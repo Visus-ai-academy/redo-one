@@ -667,7 +667,6 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
     if (!l) return null;
     return {
       ...comoDetalhada(l),
-      elegiveis: l.d.elegiveis,
       barrados: l.d.barrados as Record<string, Barreira>,
     } satisfies DesignacaoExplicada;
   }
@@ -875,6 +874,7 @@ function comoDetalhada({ d, ...n }: LinhaDetalhada): DesignacaoDetalhada {
     pacote: n.pacoteExames > 1 ? { id: n.pacoteId, exames: n.pacoteExames } : null,
     gratificado: d.gratificado,
     naMao: d.naMao,
+    elegiveis: d.elegiveis,
     retiradoDe: rotulo(d.retiradoDeId, n.retirado),
     retiradaEm: d.retiradaEm,
     status: d.status,

@@ -695,3 +695,12 @@ export class ExplicarDesignacao {
     return fim(false, 'Não pegou: o exame foi para outro médico que também podia laudar.');
   }
 }
+
+/** Médicos para mover, mandar na mão ou incluir na rodada: ativos e com conta na MobileMed. */
+export class BuscarMedicosDaRodada {
+  constructor(private readonly d: DependenciasRodada) {}
+
+  executar(termo: string) {
+    return this.d.medicos.buscar(termo.trim(), 20);
+  }
+}

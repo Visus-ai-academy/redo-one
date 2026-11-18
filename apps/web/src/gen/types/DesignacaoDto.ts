@@ -84,6 +84,11 @@ export type DesignacaoDto = {
    */
   naMao: boolean;
   /**
+   * @description Médicos que podiam laudar o exame na leitura (o "mover" sugere estes).
+   * @type array
+   */
+  elegiveis: string[];
+  /**
    * @description De quem a conferência o tirou.
    * @type object
    */

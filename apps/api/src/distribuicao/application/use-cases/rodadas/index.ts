@@ -1,5 +1,6 @@
 import type { DependenciasRodada } from './comum';
 import {
+  BuscarMedicosDaRodada,
   ConsultarFilaDoMomento,
   ConsultarResumo,
   ConsultarRodada,
@@ -26,6 +27,7 @@ export {
   AjustarMedicosRodada,
   AjustarProposta,
   AprovarRodada,
+  BuscarMedicosDaRodada,
   CancelarRodada,
   ConsultarFilaDoMomento,
   ConsultarResumo,
@@ -65,6 +67,7 @@ export function criarCasosDeUsoRodada(d: DependenciasRodada) {
     filaDoMomento: new ConsultarFilaDoMomento(d),
     resumo: new ConsultarResumo(d),
     explicar: new ExplicarDesignacao(d),
+    buscarMedicos: new BuscarMedicosDaRodada(d),
   };
 }
 

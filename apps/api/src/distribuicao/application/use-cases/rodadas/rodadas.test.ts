@@ -716,6 +716,12 @@ describe('rodada do robô (casos de uso)', () => {
       expect(f.medicosEmTurno[0]).toMatchObject({ turno: 'Manhã', frenteNome: 'MEDICINA INTERNA' });
     });
 
+    it('busca de médicos para a conferência: só ativos com conta na MobileMed', async () => {
+      const r = await casos.buscarMedicos.executar('d');
+      expect(r.map((m) => m.id)).toEqual(['A', 'B']);
+      expect(r[0]).toMatchObject({ nome: 'Dra. A', habilitadoRobo: true });
+    });
+
     it('fila do momento: contagens por prioridade da operação e frente, e quem está em turno', async () => {
       const f = await casos.filaDoMomento.executar();
       expect(f.total).toBe(3);

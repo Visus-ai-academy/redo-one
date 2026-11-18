@@ -34,6 +34,8 @@ export interface DesignacaoDetalhada {
   gratificado: boolean;
   /** Mandado a um médico na conferência depois que o motor o deixou de fora. */
   naMao: boolean;
+  /** Quem podia laudar o exame na leitura. */
+  elegiveis: string[];
   /** De quem a conferência o tirou, e quando. */
   retiradoDe: RotuloRodada | null;
   retiradaEm: Date | null;
@@ -105,7 +107,6 @@ export interface AjustesConferencia {
 
 /** A designação com o que o motor viu dela (o "por que este médico não pegou"). */
 export interface DesignacaoExplicada extends DesignacaoDetalhada {
-  elegiveis: string[];
   barrados: Record<string, Barreira>;
 }
 

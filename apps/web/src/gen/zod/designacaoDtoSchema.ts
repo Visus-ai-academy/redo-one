@@ -29,6 +29,7 @@ export const designacaoDtoSchema = z.object({
   pacote: pacoteDtoSchema.nullable().describe('Os exames do mesmo paciente na rodada; nulo = só este.'),
   gratificado: z.boolean(),
   naMao: z.boolean().describe('Mandado na mão na conferência (o motor o tinha deixado de fora).'),
+  elegiveis: z.array(z.string()).describe('Médicos que podiam laudar o exame na leitura (o "mover" sugere estes).'),
   retiradoDe: rotuloRodadaDtoSchema.nullable().describe('De quem a conferência o tirou.'),
   retiradaEm: z.iso.datetime().nullable(),
   status: statusDesignacaoSchema,

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, isNotNull } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../../database/database';
 import { medicos, medicosDistribuicao } from '../../../database/schema';
@@ -33,5 +33,25 @@ export class DrizzleMedicosRodada implements MedicosRodada {
       .leftJoin(medicosDistribuicao, eq(medicosDistribuicao.medicoId, medicos.id))
       .where(inArray(medicos.id, [...ids]));
     return new Map(linhas.map((m) => [m.id, { ...m, habilitadoRobo: m.habilitadoRobo ?? false }]));
+  }
+
+  async buscar(termo: string, limite: number): Promise<MedicoDaConta[]> {
+    const padrao = `%${termo.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+    const linhas = await this.db
+      .select({
+        id: medicos.id,
+        nome: medicos.nome,
+        ativo: medicos.ativo,
+        idMobilemed: medicos.idMobilemed,
+        habilitadoRobo: medicosDistribuicao.habilitadoRobo,
+      })
+      .from(medicos)
+      .leftJoin(medicosDistribuicao, eq(medicosDistribuicao.medicoId, medicos.id))
+      .where(
+        and(eq(medicos.ativo, true), isNotNull(medicos.idMobilemed), ilike(medicos.nome, padrao)),
+      )
+      .orderBy(asc(medicos.nome))
+      .limit(limite);
+    return linhas.map((m) => ({ ...m, habilitadoRobo: m.habilitadoRobo ?? false }));
   }
 }

@@ -89,6 +89,7 @@ import {
   AjustarMedicosRodada,
   AjustarProposta,
   AprovarRodada,
+  BuscarMedicosDaRodada,
   CancelarRodada,
   ConsultarFilaDoMomento,
   ConsultarResumo,
@@ -168,6 +169,7 @@ const CASOS_RODADA = [
   ConsultarFilaDoMomento,
   ConsultarResumo,
   ExplicarDesignacao,
+  BuscarMedicosDaRodada,
 ];
 
 /** Contexto `distribuicao` (hexagonal): arranjos, parâmetros, configuração e rodadas do robô. */

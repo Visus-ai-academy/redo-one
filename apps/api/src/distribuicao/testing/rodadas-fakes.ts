@@ -369,6 +369,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
         doPaciente.length > 1 ? { id: doPaciente[0]?.id ?? d.id, exames: doPaciente.length } : null,
       gratificado: d.gratificado,
       naMao: d.naMao,
+      elegiveis: d.elegiveis,
       retiradoDe: rotulo(d.retiradoDeId),
       retiradaEm: d.retiradaEm,
       status: d.status,
@@ -393,7 +394,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
 
   async designacaoExplicada(rodadaId: string, designacaoId: string) {
     const d = this.daRodada(rodadaId).find((x) => x.id === designacaoId);
-    return d ? { ...this.detalhada(d), elegiveis: d.elegiveis, barrados: d.barrados } : null;
+    return d ? { ...this.detalhada(d), barrados: d.barrados } : null;
   }
 
   async porMedico(rodadaId: string): Promise<ContagemPorMedico[]> {
@@ -496,6 +497,13 @@ export class MedicosRodadaEmMemoria implements MedicosRodada {
 
   async doCadastro(ids: readonly string[]) {
     return new Map(this.medicos.filter((m) => ids.includes(m.id)).map((m) => [m.id, m]));
+  }
+
+  async buscar(termo: string, limite: number) {
+    const t = termo.toLowerCase();
+    return this.medicos
+      .filter((m) => m.ativo && m.idMobilemed !== null && m.nome.toLowerCase().includes(t))
+      .slice(0, limite);
   }
 }
 

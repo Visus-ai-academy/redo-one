@@ -30,6 +30,7 @@ import {
   AjustarProposta,
   AprovarRodada,
   type AtorRodada,
+  BuscarMedicosDaRodada,
   CancelarRodada,
   ConsultarFilaDoMomento,
   ConsultarResumo,
@@ -46,11 +47,13 @@ import {
 import type { RodadaDetalhe } from '../../application/use-cases/rodadas/consultas';
 import {
   AjustePropostaDto,
+  BuscaMedicosQueryDto,
   DesignacoesQueryDto,
   ExplicacaoDto,
   ExplicacaoQueryDto,
   FilaDoMomentoDto,
   HistoricoQueryDto,
+  MedicoDaBuscaDto,
   MedicosRodadaDto,
   PaginaDesignacoesDto,
   PaginaRodadasDto,
@@ -110,6 +113,7 @@ export class RodadasController {
     private readonly consultarFila: ConsultarFilaDoMomento,
     private readonly consultarResumo: ConsultarResumo,
     private readonly explicar: ExplicarDesignacao,
+    private readonly buscarMedicos: BuscarMedicosDaRodada,
   ) {}
 
   @Get('viva')
@@ -142,6 +146,17 @@ export class RodadasController {
   })
   fila(): Promise<FilaDoMomentoDto> {
     return this.consultarFila.executar();
+  }
+
+  @Get('medicos')
+  @Permissao('distribuicao.ver')
+  @ApiOkResponse({
+    type: [MedicoDaBuscaDto],
+    description: 'Até 20 médicos ativos com conta na MobileMed (mover, mandar na mão, incluir).',
+  })
+  async medicosDaBusca(@Query() q: BuscaMedicosQueryDto): Promise<MedicoDaBuscaDto[]> {
+    const lista = await this.buscarMedicos.executar(q.busca ?? '');
+    return lista.map((m) => ({ id: m.id, nome: m.nome, habilitadoRobo: m.habilitadoRobo }));
   }
 
   @Post()

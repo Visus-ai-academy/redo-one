@@ -28,6 +28,8 @@ export interface MedicosRodada {
   /** Quantos médicos ativos estão habilitados no robô. */
   habilitados(): Promise<number>;
   doCadastro(ids: readonly string[]): Promise<Map<string, MedicoDaConta>>;
+  /** Ativos com conta na MobileMed cujo nome casa com o termo (a conferência e o "incluir"). */
+  buscar(termo: string, limite: number): Promise<MedicoDaConta[]>;
 }
 
 export const ESCOPO_RODADA = Symbol('ESCOPO_RODADA');
