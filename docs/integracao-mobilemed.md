@@ -1,0 +1,419 @@
+# Integração com a MobileMed: rotas internas do portal
+
+Fase 1 do "plano B" (aprovado em 18/11/2026): a MobileMed não tem API oficial, e o uso das chamadas internas do portal está autorizado. Este documento mapeia as **rotas** (método, URL, corpo, resposta) que a distribuição precisa, para orientar os adaptadores reais das portas `FilaExames` e `AtribuidorExames` (`apps/api/src/distribuicao/application/ports`) e o de-para `medicos.id_mobilemed`.
+
+Feito **só lendo código**. Nenhuma requisição foi feita à MobileMed. O login (Cognito, token de 5 min, renovação, conta de serviço com TOTP) é outro trabalho, já planejado no `TODO.md` ("Integração com a MobileMed"); aqui só entra o que as chamadas exigem de cabeçalho.
+
+**Legenda**
+
+- **CONHECIDO**: está no código (bundle do portal ou robô legado).
+- **PROVÁVEL**: deduzido do código, sem prova direta.
+- **DESCONHECIDO**: o código não mostra. A fase 2 (HAR, seção 7) responde.
+
+**Fontes**
+
+| Fonte | O que tem |
+| --- | --- |
+| `mobile.js` (raiz do redo-one, **fora do git**: é código do fornecedor) | Bundle AngularJS do portal `laudos.mobilemed.com.br` (~80 mil linhas). Os serviços HTTP com método, URL e corpo; o controller da janela "Dados da equipe" (`modalMedicoCtrl`); os modelos que montam os corpos. Linhas citadas como `mobile.js:N` |
+| `../rpa-dashboards-one` | O robô legado: `rpa/distribuicao/fila_api.py`, `atribuir_api.py`, `tela_exames.py`, `scheduler.py`, `nomes.py`, `rpa/mobilemed.py`, `rpa/comentarios.py`, `DISTRIBUICAO.md`, `COMENTARIOS.md`, `config.example.env`. Mostra como o robô usa as rotas e os casos de borda que encontrou em produção |
+| `../dashboards-one` | `prisma/schema.prisma` (`Medico.idMobilemed`), `src/lib/services/distribuicao/rodadas.ts` |
+| `TODO.md` (redo-one) | Achado de 18/11 sobre o `reports-api` e o Cognito |
+
+O `mobile.js` é uma foto do bundle: a MobileMed pode mudá-lo a qualquer deploy. As linhas citadas valem para esta cópia.
+
+---
+
+## 1. Visão geral
+
+### 1.1 Hosts (`mobile.js:1`)
+
+| Constante | Valor | Uso |
+| --- | --- | --- |
+| `API_URL` (e `ENV_API_URL_AUTENTICACAO`) | `https://gateway-sa.mobilemed.com.br/portal-api` | Todas as rotas da distribuição |
+| `API_URL_REPORTS` | `https://gateway-sa.mobilemed.com.br/reports-api` | Relatórios (descritivo, CSV da lista) |
+| `OAUTH2_AUTHORITY` | `https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej` | Login OIDC (pool do Cognito) |
+| `MOBI_IA_API_URL` | `https://gateway-sa.mobilemed.com.br/ai-api` | IA (fora do escopo) |
+| `PUBLIC_API_URL` | `https://integracao.mobilemed.com.br/v1` | **API pública de integração** da MobileMed. Não é usada pela distribuição no bundle; vale perguntar à MobileMed o que ela cobre |
+| `ENV_URL_PORTAL_USUARIO` | `https://laudos.mobilemed.com.br/` | O portal |
+
+`config.example.env` do legado usa `https://app.mobilemed.com.br/login` como porta de entrada.
+
+### 1.2 Cabeçalhos exigidos (CONHECIDO)
+
+Todo serviço monta a requisição com `Content-Type: application/json` e um cabeçalho `token`. Um interceptor troca isso antes de enviar:
+
+- `loginInterceptor` (`mobile.js:8662-8680`): se a requisição tem `headers.token`, pega o access token do `authService.getAccessToken()` (cliente `Oidc.UserManager`, `mobile.js:1799-1900`), põe **`Authorization: Bearer <access token>`** e apaga o `token`.
+- `traceparentInterceptor` (`mobile.js:8687+`): acrescenta `traceparent`/`tracestate` (rastreamento APM). Não parece obrigatório.
+- Nenhum cabeçalho de unidade ou tenant nas rotas da distribuição: a unidade vai no corpo ou na URL.
+
+Respostas de erro que o portal trata (`httpInterceptor`, `mobile.js:8595-8625`): `data.error_reason = "invalid_token"` (sessão inválida → logout), `"forbidden_access"` (mudança de IP em `/laudo` e `/viewer`), `410` com `x-force-logout: true` ("sessão encerrada por um administrador"). Formato geral do erro: `{ error_code, error_msg, error_reason?, error_desc? }`.
+
+Comportamento de sessão observado pelo robô legado (para o desenho do login, não deste documento): token de 5 min; rotação de refresh token (duas abas ou processos renovando o mesmo refresh se derrubam); `500 "Refresh token not found"` pouco depois de o access token vencer; dois robôs na mesma conta se derrubam, por isso uma conta por robô.
+
+### 1.3 Navegador × HTTP
+
+O robô legado faz tudo de dentro do navegador (chama os serviços do Angular por `page.evaluate`). Com o bundle, **todas as rotas da distribuição ficam conhecidas como HTTP comum** (JSON + `Authorization: Bearer`). O navegador só seria necessário para obter o token, e isso é o trabalho do login planejado no `TODO.md`.
+
+---
+
+## 2. Rotas
+
+Todas em `API_URL` = `https://gateway-sa.mobilemed.com.br/portal-api`, salvo indicação.
+
+### 2.1 Lista de exames: `POST /exame/lista`
+
+- Serviço: `exameHttpServices.buscaListaExames(exames, filtroContagem)` (`mobile.js:3705-3718`). CONHECIDO.
+- Corpo: `{ exames: <filtro>, filtroContagem: <obj> }`. O portal e o robô passam `filtroContagem: {}` na consulta simples (`mobile.js:23344`).
+- O filtro é montado por `exameModel.filtroExames` (`mobile.js:68191-68270`):
+
+```json
+{
+  "filtro": {
+    "is_excluido": false,
+    "modalidades": [], "prioridades": [], "medicos": [], "empresas": [],
+    "pesquisa": "", "nome_paciente": "", "codigo_paciente": "", "estudo_descricao": "",
+    "prioridade_id": 0,
+    "periodo": { "data_inicial": "", "data_final": "" },
+    "transferencia": { "data_inicial_transferencia": "", "data_final_transferencia": "" },
+    "tipo_tempo": 2,
+    "tipo_exame": 1, "listagem_id": 2, "tipo_listagem": 1, "is_crescente": false,
+    "array_prioridade": [], "array_status_id": null,
+    "limpar_data": false,
+    "pesquisa_geral": "", "pesquisa_id_exame": null,
+    "status_id": "(só se informado)",
+    "...": "dezenas de flags booleanas (is_audio, is_comentario, is_duplicado, exibirExamesPendentes...)"
+  },
+  "paginacao": { "pagina": 1, "total_registros": 10 }
+}
+```
+
+| Filtro | Efeito | Status |
+| --- | --- | --- |
+| `medicos: [0]` | "Sem médico" (o que a tela manda; medido pelo legado em 01/10) | CONHECIDO |
+| `medicos: []` | Sem filtro de médico (o legado usa para reconferir um exame que alguém pode ter pego) | CONHECIDO |
+| `medicos: [id]` | Exames de um médico | CONHECIDO |
+| `pesquisa_id_exame: id` | Busca um exame pelo id | CONHECIDO |
+| `nome_paciente` + `limpar_data: true` | Busca por paciente; `limpar_data` zera `tipo_tempo` (sem limite de data) | CONHECIDO |
+| `tipo_tempo` | 1 = período personalizado (`periodo.data_inicial/final`); outros valores (padrão 2, presets até 9) | Significado de 2..9 DESCONHECIDO |
+| `status_id` / `array_status_id` | Filtro de status | CONHECIDO que existe; formato aceito (número ou lista) PROVÁVEL pelo código (`mobile.js:68270`) |
+| `modalidades`, `prioridades`, `empresas` | Omitidos quando "todas" estão marcadas na tela | CONHECIDO |
+
+- Resposta: `data.lista` (exames crus) e `data.paginacao` com `total`, `current_page`, `last_page` (`mobile.js:31151-31170`); também `data.elasticAtivo`. CONHECIDO.
+- Desempenho (legado): 2.850 exames numa página de 3.000 em 7,5 s (01/10). Um 500 nesta rota já deixou a MobileMed muda por 90 s (10/11).
+
+**Campos do exame cru** (lidos pelo legado, pelo `modalMedicoCtrl` ou pelo `exameModel`):
+
+| Campo | Significado | Status |
+| --- | --- | --- |
+| `id` | Id do exame | CONHECIDO |
+| `nome_paciente`, `codigo_paciente`, `aniversario_paciente`, `sexo_paciente_id`, `identidade_paciente` | Paciente (LGPD). `codigo_paciente` aparece em filtros e relatórios; no item da lista é PROVÁVEL | CONHECIDO / PROVÁVEL |
+| `estudo_descricao` | Nome do estudo | CONHECIDO |
+| `modalidade_id`, `modalidade` | Modalidade (id e objeto/texto) | CONHECIDO que existem; formato de `modalidade` DESCONHECIDO |
+| `subespecialidade_id` | Especialidade do exame na MobileMed (`GET /exame/subespecialidade/{id}` dá o valor) | CONHECIDO |
+| `prioridade_id` | 1 Rotina, 2 Ambulatório, 3 Urgência, 4 Emergência, 5 Plantão, 6 Internado (`prioridadeEnum`, `mobile.js:64762-64790`) | CONHECIDO |
+| `status_id` | 0 Novo, 1 Assinado, 2 Laudando, 3 Pendente, 4 Reavaliar, 5 Reassinado, 6 Digitado, 7 Reconvocar, 8 Digitado IA, 9 A preparar, 10 Pré-laudado, 11 Digitando (`mobile.js:64874-64910` e `68347-68420`) | CONHECIDO |
+| `data_realizacao`, `data_transferencia_final` | Realização e entrada na fila (ISO UTC) | CONHECIDO |
+| `sla_expiration_date`, `sla_empresa_id`, `sla_reference_date` | Prazo e de qual unidade ele vem | CONHECIDO |
+| `usuario_id`, `usuario_nome` | Médico realizante (vazio = sem médico) | CONHECIDO |
+| `empresa_id`, `nome_fantasia`, `empresa` | Unidade. O objeto `empresa` traz `exigir_motivo`, `permissao_sla_medico`, `permissao_devolver_fila` e permissões | CONHECIDO |
+| `is_shared_exam` (calculado pelo front), `compartilhamentos[]` (`empresa_compartilhada_id`, `empresa_destino`, `permissao_sla_medico`), `permissao` | Exame compartilhado | CONHECIDO |
+| `laudo[]` (com `residente_id`, `laudoUsuarios`) | Laudos do exame | CONHECIDO |
+| `is_complementar`, `is_duplicado`, `is_original`, `is_anterior`, `pacs_accession_no`, `is_achado_critico` | Flags usadas na atribuição | CONHECIDO |
+| Quantidade de laudos do registro (no relatório, `valor`) | | DESCONHECIDO no item da lista |
+
+Regras de leitura (legado, CONHECIDO): só `status_id = 0` **e** `usuario_id` vazio é distribuível (o filtro "Sem médico" traz também exame aberto sem médico realizante; em 09/11 o robô deu a outra médica um RX pré-laudado). A leitura falha inteira se as páginas não fecharem com `paginacao.total` ou se aparecer prioridade desconhecida.
+
+### 2.2 Um exame: `GET /exame/{id}`
+
+- `exameHttpServices.getExame` (`mobile.js:3719-3728`). Resposta: `data.exame` (o portal lê `status_id`; o legado lê `usuario_id`). CONHECIDO.
+- Campos completos de `data.exame`: DESCONHECIDOS (PROVÁVEL: os mesmos do item da lista).
+
+### 2.3 Médicos da unidade: `POST /usuario/lista/empresa`
+
+- `selectUnicoHttpServices.buscarUsuariosFiltro` (`mobile.js:74772-74782`), corpo de `usuarioModel.backUsuarioFiltro` (`mobile.js:72805-72823`):
+
+```json
+{ "filtro": { "textoPesquisa": "", "empresa_id": 123, "is_excluido": false,
+              "perfis": [3], "is_ativo": true, "grupo_id": 0 } }
+```
+
+  Sem `paginacao` (a janela não pede; só vai se o chamador passar). `perfis: [3]` = MÉDICO (`permissaoSistemaEnum`, `mobile.js:65176-65188`: 1 Proprietário, 2 Gestor, 3 Médico, 4 Técnico, 5 Residente, 6 Somente leitura, 7 Digitador, 8 Solicitante, 9 Financeiro).
+- Resposta: `data.lista` com `{ id, nome, ... }`. CONHECIDO.
+- Por unidade e filtrada pela habilitação (o legado confirmou com a operação em 11/09). Exame compartilhado: a janela usa a unidade de destino (`compartilhamentos[0].empresa_compartilhada_id`) quando o usuário não tem permissão na origem (`mobile.js:43062-43065`).
+- **CRM:** o objeto de usuário do portal tem `crm` e `crm_uf` (`usuarioModel.frontUsuario`, `mobile.js:72562-72604`; listas de usuários, `mobile.js:72834-72846`), e o laudo traz `usuario.crm`. Se **esta** lista traz `crm`: PROVÁVEL, a confirmar no HAR.
+
+Rotas vizinhas usadas pela janela (CONHECIDO):
+
+| Rota | Uso |
+| --- | --- |
+| `GET /usuario/{id}` (`mobile.js:7720-7729`) | Dados de um usuário (`data` → `frontUsuario`, com `crm`, `crm_uf`) |
+| `GET /usuario/residentes/empresa/{empresa_id}` (`mobile.js:74825-74833`) | Residentes da unidade (`data` = lista) |
+| `GET /usuario/digitadores/empresa/{empresa_id}` (`mobile.js:74834-74842`) | Digitadores da unidade |
+| `GET /usuario/medicos/{empresa_id}?isVincularMascara=` (`mobile.js:74843+`) | Outra lista de médicos (não usada na janela) |
+
+### 2.4 Laudos do exame: `GET /laudo/lista/{exame_id}`
+
+- `laudoHttpService.buscarLaudos` (`mobile.js:5461-5470`). Resposta `data.lista`; o front (`laudoModel.frontLaudoLista`, `mobile.js:69442-69484`) usa `id`, `exame_id`, `usuario_id`, `status_id`, `html` (**texto do laudo**), `residente_id`, `digitador_id`, `laudoUsuarios` (`action: "ADDITIONAL_DOCTOR"` = Médico 02), `usuario.nome`, `usuario.crm`, `digitador.nome`, datas, OIT/mamografia/eco. CONHECIDO.
+
+### 2.5 Atribuir, trocar e retirar médico
+
+O portal tem **dois caminhos** para a mesma coisa:
+
+**A) Janela "Dados da equipe Médica" (`modalMedicoCtrl`, `mobile.js:43044-43437`).** É o que o robô legado roda. Injeções: `o = exameHttpServices`, `r = laudoHttpService`, `i = laudoModel`, `m = selectUnicoHttpServices`, `p = motivoHttpServices`, `g = exameModel`.
+
+Ao abrir, a janela carrega: médicos da unidade (2.3), residentes, digitadores, subespecialidades (`GET /exame/subespecialidade/{empresa_id}/{modalidade_id}`), laudos (2.4), motivos (`POST /motivo/busca`), e os usuários atuais (`GET /usuario/{id}` para Médico 01, Médico 02, residente, digitador, preparador).
+
+Ao salvar, `atribuir(exame, motivo)` (`mobile.js:43299-43322`):
+
+1. `exameModel.definirFlagsResetSla(exame, novoMedicoId)` (`mobile.js:68850-68864`) calcula `alterarSla` (exame na unidade de origem com `empresa.permissao_sla_medico`) e `alterarSlaEmpresaCompartilhada` (compartilhado, com a permissão no compartilhamento).
+2. Se o médico muda (de alguém ou para alguém) **e** `empresa.exigir_motivo`: exige motivo (e comentário com 10+ caracteres se o motivo for "OUTROS") e grava o motivo antes (2.6). Senão segue direto.
+3. `atribuirMedicos` (`mobile.js:43324-43359`):
+   - `GET /exame/{id}`; se `status_id` é 1 ou 5 (assinado), para com "EXAME_JA_ASSINADO". **Não confere se o exame já tem médico**: essa guarda é nossa.
+   - `PUT /exame` (`exameHttpServices.atualizarExame`, `mobile.js:3739-3749`) com corpo `{ exame: E }`, onde `E` é **a linha inteira da lista** (cópia, sem `pacs_studies_iuid` e `sla_expiration_date`) com `estudo_descricao`, `prioridade_id`, `is_anterior`, `usuario_id` (`""` vira `null`), `pacs_accession_no`, `subespecialidade_id`, `alterarSla`, `alterarSlaEmpresaCompartilhada` sobrescritos.
+4. `alterarLaudo` (`mobile.js:43361-43420`), com `manterStatus: true`:
+   - `GET /laudo/lista/{exame_id}`.
+   - Se há laudo: `PUT /laudo/` (`laudoHttpService.atualizarLaudo`, `mobile.js:5358-5372`) com `{ exameLaudo: <laudo do frontLaudoLista, inteiro, com html>, permissao: false, is_revisor: false, is_achado_critico: exame.is_achado_critico }`, depois de pôr no laudo `residente_id` e `digitador_id` **da janela** (os carregados por `GET /usuario/{id}`; `null` se ainda não carregaram) e `usuario_id` do novo médico. É por isso que salvar antes de a janela carregar apagava residente e digitador.
+   - Se não há laudo: `POST /laudo/` (`mobile.js:5490-5503`) com `{ exameLaudo: { html: "", exame_id, status_id: 0, birads: null, residente_id: null, is_OIT: false, ... , manterStatus: true }, permissao: false }` (`laudoModel.criarLaudo`, `mobile.js:69485-69520`), depois o mesmo `PUT /laudo/` com o laudo criado (`data.exameLaudo`) e a equipe.
+
+**B) "Atribuir exames ao médico" na lista (vários exames de uma vez; `examesCtrl.atribuirExamesAoMedico`, `mobile.js:31776-31940`, e `exameAtribuirAoMedicoCtrl`, `mobile.js:39278-39345`).**
+
+1. A janela pede o médico e, se algum exame tem médico ou a unidade exige motivo, o motivo; grava `POST /motivo/` por exame quando a unidade exige.
+2. `GET /exame/{id}` de cada exame; Laudando (2) pede confirmação; assinado (1, 5) pede confirmação e reabre o laudo (reassinatura).
+3. Para cada exame, `PUT /exame` com corpo **mínimo** (`exameModel.backExamAtribuirMedico`, `mobile.js:68704-68714`):
+
+```json
+{ "exame": { "id": 123, "usuario_id": 456, "is_complementar": false, "is_duplicado": false,
+             "is_original": false, "alterarSla": false, "alterarSlaEmpresaCompartilhada": false } }
+```
+
+4. **Não mexe no laudo.**
+
+**Retirar médico** (devolver à fila): no caminho A, "Sem médico" na lista (`id: null`) → `usuario_id: null`; no caminho B, médico `0` → `usuario_id: 0` (`mobile.js:31850-31853`). **Trocar médico** (recolhimento) é a mesma chamada com outro `usuario_id`; nas unidades que exigem motivo, qualquer mudança exige motivo.
+
+Outras rotas de equipe que existem e **não** são usadas na atribuição: `PUT /laudo/atualizarUsuario/` (`{ laudoId, exameId, usuarioId }`, `mobile.js:5404-5416`), `PUT /exame/simples` (`mobile.js:4139-4149`), `PUT /exame/status/alterar`, `PUT /laudo/revogarResidente`.
+
+### 2.6 Motivo (unidades com `empresa.exigir_motivo`)
+
+| Rota | Corpo | Resposta |
+| --- | --- | --- |
+| `POST /motivo/busca` (`mobile.js:6341-6353`) | `{ "tipo_acao": "ATRIBUIR" }` | `data.data` = lista de motivos `{ id, descricao, ... }` |
+| `POST /motivo/` (`mobile.js:6309-6323`) | `{ motivo: { id, descricao, tipo_acao: "ATRIBUIR", comentario }, exameMotivo: { exame_id, usuario_id: <quem atribui>, usuario_atribuido: <novo médico> }, comentario: { exame_id }, motivoComentario: <texto> }` | DESCONHECIDA |
+
+`descricao` e `motivoComentario` vão traduzidos (`$filter("translate")`; o texto de `COMENTARIO_MOTIVO_ATRIBUIR` está nos arquivos de tradução, fora do bundle: DESCONHECIDO). Quais unidades exigem motivo e quais motivos existem: só lendo `empresa.exigir_motivo` na lista e `POST /motivo/busca` (leitura).
+
+### 2.7 Comentários: `GET /exame/comentario/{id}`
+
+- `comentarioHttpServices.buscarComentarios` (`mobile.js:76844-76853`). Resposta `data.lista` com `nome_usuario`/`nome`, `data_criacao`, `descricao` (pelo legado). CONHECIDO.
+
+### 2.8 Relatório descritivo: `POST {API_URL_REPORTS}/exame/relatorio/descritivoEspecialidade`
+
+- `relatorioHttpService.buscarRelatorioDescritivoEspecialidades` (`mobile.js:7321-7331`). Da `ingestao`, registrado aqui porque o `TODO.md` o lista.
+- Corpo de `relatorioModel` `r(...)` (`mobile.js:70038-70110`):
+
+```json
+{
+  "filtro": {
+    "data_realizacao": { "data_inicial": "", "data_final": "" },
+    "data_laudo": { "data_inicial": "ISO UTC", "data_final": "ISO UTC (23:59:59)" },
+    "data_criacao": { "data_inicial": "", "data_final": "" },
+    "tipoAssinatura": 1, "residente_id": 0, "empresa_id": 0, "gruposEmpresas_id": 0,
+    "is_concluido": null, "prioridade_id": [], "modalidades": [],
+    "isEspecialidades": true, "isDescritivo": false, "exibirNaoTratados": false,
+    "isResidentes": false, "isDigitadores": false, "isJustificado": false, "tipoAcao": false,
+    "status_empresa": null, "is_complementar": null, "usuario_id": 0,
+    "perfis": [1, 2, 9]
+  },
+  "paginacao": { "pagina": 1, "total_registros": 50 }
+}
+```
+
+  A tela "Especialidades" põe `isEspecialidades: true` e `perfis: [1, 2, 9]` (+5 com residentes, `[3]` em "meus exames") (`mobile.js:55111-55130`). `empresa_id` é 0 (todas) ou lista de ids.
+- Resposta: `data.lista`; a tela usa `lista.length` como total e **pagina no navegador** (`mobile.js:55130-55135`), o que sugere que a resposta vem inteira e a `paginacao` do corpo é ignorada (PROVÁVEL; o `TODO.md` supunha 50 por página).
+- Campos (`frontRelatorioDescritivoEspecialidade`, `mobile.js:72110+`): `id`, `prioridade_id`, `modalidade_id`, `nome_fantasia`, `codigo_paciente`, `nome_paciente`, `estudo_descricao`, `data_realizacao`, `data_criacao` (transferência), `pacs_accession_no`, `is_duplicado`, `especialidade`, `valor`, `cod_interno`, `sla_expiration_date`, `digitador`, `residente`, `is_anterior`, `is_complementar`, `identidade_paciente`, `segunda_assinatura_laudo`. **Traz o `id` do exame**, que pode virar a chave natural do laudo na ingestão.
+- Vizinhos: `POST /exame/relatorio/examesCompartilhados` (compartilhamento) e `POST /exame/relatorio/csv` (o CSV da lista de exames, com o filtro de 2.1; `mobile.js:7196-7206`).
+
+---
+
+## 3. Atribuição
+
+### 3.1 Casos de borda que o robô legado trata (`atribuir_api.py`)
+
+Antes de cada exame, relê pelo id (`pesquisa_id_exame`, `medicos: []`):
+
+| Situação | Legado | Motivo |
+| --- | --- | --- |
+| Id não volta | Não atribui | `linha_nao_encontrada` |
+| Id volta com outro paciente/estudo/data | Anomalia; manda para a tela | |
+| Já tem médico | Não sobrescreve (ou `executada` se é o médico que ele mesmo tentou antes e só a confirmação falhou) | `ja_atribuido` |
+| Assinado (1, 5) | Não atribui | `assinado` |
+| Sem médico mas aberto (`status_id` ≠ 0) | Não atribui | `exame_ja_aberto` |
+| Unidade exige motivo | Manda para a tela | |
+| Janela não carregou em 15 s (médicos, laudo, residente, digitador) | Anomalia; nova tentativa no fim | `janela_nao_carregou` |
+| Médico fora da lista da unidade ou ambíguo | Não atribui | `medico_nao_encontrado` / `medico_ambiguo` |
+| Salvar sem fim em 30 s, `Notification.error`, ou `usuario_id` relido ≠ pedido | Anomalia; nova tentativa no fim; depois tela | |
+| Recolhimento (troca A→B) | Só se o exame segue com A (por id da conta) e `status_id = 0` | `ja_atribuido` / `medico_ja_abriu` |
+
+Freio e tempos: dois lotes seguidos com anomalia param a API; com religação (espera 30 s, recarrega, relogando se preciso) testa de novo com 1 exame, até 2 vezes. 429 e 5xx (exceto `/oauth/`) encolhem o lote pela metade; lote começa em 4, cresce de 1 em 1, nunca com o mesmo paciente duas vezes; desligado por padrão (1 por vez). Prazos: fila 90 s, médicos 15 s, janela 15 s, salvar 30 s (o `$http` do portal não tem timeout). ~5,4 s por exame pela API (~6 requisições em sequência), ~20–40 s pela tela.
+
+### 3.2 Proposta para o nosso adaptador
+
+**Usar o caminho B (`PUT /exame` com corpo mínimo)** para atribuir exame Novo sem médico:
+
+- É uma rota que o próprio portal usa para atribuir (inclusive vários exames), com corpo pequeno e conhecido.
+- Não reenvia a linha inteira do exame nem o laudo inteiro (com o texto do laudo): menos chance de sobrescrever algo, nada de dado de paciente no corpo.
+- Não depende de carregar residente e digitador: não toca no laudo, então não os apaga.
+
+O que o caminho B deixa em aberto (HAR): se, num exame Novo com laudo já criado (`status_id 0`), o `usuario_id` do laudo precisa acompanhar (o caminho A o atualiza; o B não). Se precisar, a alternativa é o caminho A sem a janela: `GET /laudo/lista/{id}` e `PUT /laudo/` com o laudo devolvido e `residente_id`/`digitador_id` **do próprio laudo** (não de uma janela).
+
+Sequência por exame:
+
+1. `POST /exame/lista` com `pesquisa_id_exame`, `medicos: []`: o exame existe, `usuario_id` vazio, `status_id = 0`. Senão `pulada` com o motivo (não retentável).
+2. `empresa.exigir_motivo` → `pulada`, `unidade_exige_motivo` (até a operação decidir que motivo o One manda; não inventar).
+3. `POST /usuario/lista/empresa` da unidade (a de destino, se compartilhado) com cache curto por rodada: `medicoIdMobilemed` na lista; senão `pulada`, `medico_fora_da_unidade`.
+4. `definirFlagsResetSla` portado (regra do portal, não nossa): `alterarSla` e `alterarSlaEmpresaCompartilhada`.
+5. `PUT /exame` com o corpo mínimo.
+6. `GET /exame/{id}` (ou a lista por id): `usuario_id` = pedido → `executada`; senão `falhou`, `nao_confirmado`, retentável.
+7. Erros: 401 / `invalid_token` → `falhou`, `sessao_caiu`, retentável depois de renovar; 429, 5xx, tempo esgotado → `falhou`, `mobilemed_indisponivel`, retentável; corpo fora do esperado → `falhou`, `resposta_inesperada`, e o freio para a rodada.
+
+Regras que vêm do legado: nunca sobrescrever médico; confirmar relendo; idempotência na nova tentativa (o exame já com o médico pedido é `executada`); prazo em toda chamada; mensagem dizendo que a falha veio da MobileMed; leitura completa ou nada.
+
+---
+
+## 4. Médicos e ids da MobileMed
+
+### 4.1 De onde vêm
+
+- A conta do médico é o `usuario.id` (inteiro): `usuario_id` no exame e `id` em `/usuario/lista/empresa`. CONHECIDO.
+- Lista por unidade, filtrada pela habilitação. No legado (`fila_api.py::medicos_do_modal`), uma consulta por exame, sem cache.
+- No dashboards-one, `Medico.idMobilemed` (`Int? @unique`) era **digitado à mão** ("ID na MobileMed"); nada o preenchia sozinho. O redo-one migrou para `medicos.id_mobilemed` (`integer unique`) e **já exige o id para atribuir** (`executar.ts`: sem id = `sem_conta_mobilemed`, sem cair para o nome).
+- CRM: existe no usuário do portal (`crm`, `crm_uf`); se vem na lista da unidade, a confirmar (2.3). Se vier, é a melhor chave de casamento com `medicos.crm`.
+
+### 4.2 Como o legado escolhe a conta (`fila_api.py::escolher_conta`)
+
+1. Com id no cadastro: vale só o id; fora da lista = `medico_nao_encontrado` com a pista "pelo nome, casaria: ...".
+2. Sem id: casa pelo nome (`casa_nome`), deduplica por id, descarta contas com sufixo `(E2)`, `(F)` (secundárias, decisão de 01/10; exceção fixa no código para uma médica). Uma principal = atribui; mais de uma = `medico_ambiguo`; só secundária, nome parecido ou nada = `medico_nao_encontrado` com o detalhe da situação.
+
+Casamento de nomes (`nomes.py`, espelho do `normalizeNomeMedico`): minúsculo, sem acento, sem `(…)`, sem `Dr.`/`Dra.` inicial, sem apóstrofo e ponto. `casa_nome` aceita o mesmo primeiro nome, o mesmo último sobrenome (inicial vale) e os do meio em ordem, com abreviação nos dois sentidos; partículas não contam. `nome_parecido` (2 núcleos em comum) só para diagnóstico.
+
+### 4.3 Proposta de de-para
+
+1. **O id no cadastro é a fonte de verdade**, editado na tela do médico com auditoria. Nada de escolher conta por nome na hora de atribuir.
+2. **Conferência assistida, só leitura:** ler `/usuario/lista/empresa` das unidades, casar com o cadastro (por CRM se a lista trouxer; senão pelas regras do 4.2, portadas para TS) e mostrar por médico: confere, sem id, id fora das unidades, ambíguo, só secundária, nome parecido. Quem grava o id é a pessoa. É tela nova: precisa de análise e aprovação antes.
+3. **Antes de cada atribuição**, conferir o id na lista da unidade do exame (3.2, passo 3).
+4. Contas secundárias deixam de precisar de regra no código: o id escolhido no cadastro resolve (inclusive a exceção de hoje).
+
+---
+
+## 5. Mapeamento para as portas do redo-one
+
+### 5.1 `FilaExames.ler()`
+
+`semMedico`: `POST /exame/lista` com `medicos: [0]`, `limpar_data: true` (sem limite de data; a confirmar que traz a fila inteira), paginado até `last_page`, mantendo só `status_id = 0` e `usuario_id` vazio.
+
+| `ExameDaFila` | Origem | Status |
+| --- | --- | --- |
+| `idExame` | `id` (número → texto) | CONHECIDO |
+| `prioridade` | `prioridade_id` → grafia (`ROTINA`, `AMBULATORIO`, `URGENCIA`, `EMERGENCIA`, `PLANTAO`, `INTERNADO`); o de-para das prioridades da operação decide | CONHECIDO |
+| `estudo` | `estudo_descricao` | CONHECIDO |
+| `unidade` | `nome_fantasia` | CONHECIDO |
+| `modalidade` | `modalidade` / `modalidade_id` | Formato DESCONHECIDO |
+| `especialidade` | `subespecialidade_id` (+ descrição por `GET /exame/subespecialidade/{id}`, ou o catálogo pelo estudo) | Formato DESCONHECIDO |
+| `laudos` | não achado no item da lista | DESCONHECIDO (null = 1) |
+| `realizadoEm` | `data_realizacao` | CONHECIDO |
+| `entradaEm` | `data_transferencia_final` | CONHECIDO |
+| `prazo` | `sla_expiration_date` | CONHECIDO |
+| `status` | `status_id` → texto | CONHECIDO |
+| `paciente.nome` | `nome_paciente` (só memória; vira HMAC) | CONHECIDO |
+| `paciente.codigo` | `codigo_paciente` | PROVÁVEL |
+
+`emMaos`: `medicos: []` (todos) com status não assinado, ou `array_status_id`/`status_id` com os abertos; mantendo `usuario_id` preenchido. O volume e o melhor filtro: a confirmar no HAR. `medicoIdMobilemed` = `usuario_id`.
+
+### 5.2 `nomesPacientes(ids)` e `semMedico(ids)`
+
+Uma consulta por id (`pesquisa_id_exame`, `medicos: []`, `total_registros: 5`), como o legado. Se o filtro aceita vários ids: DESCONHECIDO (o campo é um valor só). `semMedico` = `usuario_id` vazio e `status_id = 0`.
+
+### 5.3 `AtribuidorExames.atribuir`
+
+Sequência do 3.2. Resultados: `executada`; `pulada` (`saiu_da_fila`, `ja_tem_medico`, `assinado`, `exame_ja_aberto`, `unidade_exige_motivo`, `medico_fora_da_unidade`); `falhou` (`sessao_caiu`, `mobilemed_indisponivel`, `nao_confirmado` retentáveis; `resposta_inesperada` não).
+
+### 5.4 O que falta
+
+| Falta | Como resolver |
+| --- | --- |
+| Valores reais e formato de `modalidade`, especialidade, quantidade de laudos, `codigo_paciente` no item da lista | HAR (estrutura, valores trocados) |
+| Se `limpar_data: true` + `medicos: [0]` traz a fila inteira; o maior `total_registros` aceito | HAR de uma busca + teste de leitura com a flag |
+| Corpo de resposta do `PUT /exame` e do `POST /motivo/` | HAR |
+| Se o caminho B basta num exame Novo com laudo criado (ou se o laudo precisa do `usuario_id`) | HAR das duas atribuições (janela e lista) |
+| Se `/usuario/lista/empresa` traz `crm` | HAR |
+| Que motivo o One manda nas unidades que exigem | Decisão da operação |
+| Token | Trabalho do login (`TODO.md`) |
+
+---
+
+## 6. O mobile.js tem tudo?
+
+| Item | Tem? | O que o bundle resolve | O que ainda pede o HAR |
+| --- | --- | --- | --- |
+| (a) `atribuir` do `modalMedicoCtrl`: sequência, método, URL, corpo do `PUT /exame` e do laudo | **Sim** | Sequência completa (`mobile.js:43299-43420`): motivo → `GET /exame/{id}` → `PUT /exame {exame: linha}` → `GET /laudo/lista/{id}` → `PUT /laudo/` (ou `POST /laudo/` + `PUT /laudo/`), com residente, digitador e `manterStatus` | Ver o corpo real no fio (confirma que nada é acrescentado por outro interceptor) e a resposta |
+| (a') Caminho mínimo de atribuição | **Sim** | `PUT /exame` com `backExamAtribuirMedico` (`mobile.js:68704`, `31850`) | Confirmar o efeito no laudo de um exame Novo |
+| (b) Lista de exames: filtros e paginação | **Sim** | Corpo inteiro (`mobile.js:68191-68270`), resposta `lista` + `paginacao {total, current_page, last_page}` | Valores reais de `modalidade` e afins; maior página aceita |
+| (b) Detalhe do exame | **Sim** (rota) / **Não** (campos) | `GET /exame/{id}` → `data.exame` | Campos completos |
+| (b) Médicos da unidade, com id | **Sim** | `POST /usuario/lista/empresa`, corpo e `data.lista {id, nome}` | Se traz `crm` |
+| (b) Trocar e retirar médico (recolhimento) | **Sim** | Mesmo `PUT /exame` com outro `usuario_id`, `null` (janela) ou `0` (lista); motivo quando a unidade exige | Qual dos dois "sem médico" o servidor prefere (`null` × `0`) |
+| (c) Autenticação: cabeçalhos | **Sim** | `Authorization: Bearer <access token>` + `Content-Type: application/json`; `traceparent` opcional; erros `invalid_token`, `410 x-force-logout` | Nada para as rotas (o login é outro trabalho) |
+| (d) Unidade que exige motivo | **Sim** | `empresa.exigir_motivo` vem na linha; `POST /motivo/busca` e `POST /motivo/` com corpos | Textos traduzidos (`motivoComentario`) e a resposta; decisão da operação |
+| Comentários `GET /exame/comentario/{id}` | **Sim** | Rota e resposta | — |
+| Relatório `descritivoEspecialidade` | **Sim** | Corpo, filtros, campos da resposta (com `id` do exame) | Se a paginação é respeitada; amostra real para casar com o XLSX |
+
+Resumo: **para as rotas, o bundle resolve tudo o que o legado deixava como desconhecido** (corpo do `PUT /exame`, laudo, residente e digitador, motivo, lista de médicos, cabeçalhos). O HAR passa a servir para **conferir valores reais e formatos** antes da primeira gravação, não para descobrir rotas.
+
+---
+
+## 7. Fase 2: HAR de atribuições reais feitas pela operação
+
+Agora o objetivo é **confirmar** o que o bundle diz, com atribuições que a operação faria de qualquer jeito, no navegador dela. Nenhum robô, nenhuma gravação nossa.
+
+### 7.1 Passo a passo (Chrome ou Edge)
+
+1. Entrar no portal normalmente e ir para `/exames`.
+2. F12 → **Network**. Marcar **Preserve log** e **Disable cache**; filtro **Fetch/XHR**; limpar.
+3. Fazer, cada uma num HAR separado:
+   - uma atribuição pela janela "Dados da equipe" de um exame Novo sem médico, numa unidade **sem** motivo;
+   - uma atribuição pela lista (marcar o exame → "Atribuir exames ao médico"), outro exame Novo;
+   - se houver, uma atribuição numa unidade **com** motivo.
+4. Anotar horário e id de cada exame.
+5. Exportar com **Export HAR (sanitized)** (tira `Authorization`, cookies e `Set-Cookie`); sem essa opção, "Export HAR" e limpar no 7.3.
+
+### 7.2 O que conferir
+
+- `PUT /exame`: o corpo é o do 2.5 (janela: a linha inteira; lista: o mínimo)? Resposta?
+- `PUT /laudo/` / `POST /laudo/`: aparecem na janela; **não** aparecem na lista? O `usuario_id` do laudo muda nos dois casos (comparar `GET /laudo/lista/{id}` antes e depois, se a tela o chamar)?
+- `POST /exame/lista`: o filtro que a tela manda de verdade; estrutura de um item (nomes e tipos de `modalidade`, especialidade, `codigo_paciente`, laudos).
+- `POST /usuario/lista/empresa`: vem `crm`?
+- `POST /motivo/` (unidade com motivo): corpo e resposta.
+- Cabeçalhos por **nome** (não valor): só `Authorization`, `Content-Type` e `traceparent`?
+
+### 7.3 Limpar antes de mandar
+
+- **Sessão:** apagar valores de `Authorization`, `Cookie`, `Set-Cookie` e qualquer token (`access_token`, `id_token`, `refresh_token`, `code`, `token`) em cabeçalho ou corpo.
+- **Paciente:** trocar por `"X"` os valores de `nome_paciente`, `codigo_paciente`, `aniversario_paciente`, `sexo_paciente_id`, `identidade_paciente`, `convenio`, `medico_solicitante`, `email_solicitante`, `pacs_accession_no`, `pacs_studies_iuid`, e **todo `html` de laudo**. Na dúvida, trocar.
+- **Remover** as respostas de chamadas que não são de exame, laudo, usuário ou motivo.
+- Manter nomes de campo, tipos, ids numéricos (exame, usuário, empresa), status e datas.
+- Procurar no arquivo pelo nome do paciente e pelo começo do token antes de mandar.
+- O HAR **não entra no repositório**; no redo-one entram só amostras pequenas montadas à mão, com "X".
+
+---
+
+## 8. Riscos e salvaguardas
+
+| Risco | Salvaguarda |
+| --- | --- |
+| Gravar errado num sistema de terceiros (médico errado, laudo ou equipe sobrescritos) | Adaptador real atrás de **flag desligada por padrão** (o fake segue o padrão no dev); caminho de corpo mínimo; primeira gravação real só com aval da operação, num exame escolhido e conferido na tela da MobileMed depois |
+| Derrubar a sessão da operação ou dos robôs legados | **Conta própria do redo-one**, permissões mínimas, credenciais só no `.env` (nunca em arquivo do repo), uma sessão só |
+| Atribuir sem humano | **Só rodada manual** (já decidido) |
+| Rajada de gravações / 429 | **1 exame por vez** no começo; lotes só depois de medir, nunca o mesmo paciente no mesmo lote |
+| Erro em cascata | **Parar na primeira anomalia** (status ou corpo inesperado, confirmação divergente, 401/403/429/5xx); o resto fica retentável. O legado parava na segunda porque tinha a tela como reserva |
+| Sobrescrever trabalho humano | Reconferir pelo id antes (sem médico e Novo; o portal não faz essa guarda) e confirmar depois |
+| A MobileMed muda o bundle | Validação estrita das respostas; falha alta com "veio da MobileMed"; o `mobile.js` é foto datada, rever quando algo quebrar |
+| LGPD | Paciente só por id do exame e HMAC; nome só na memória da leitura e na conferência com permissão e auditoria; nunca nome, código ou laudo em log, evento, detalhe ou amostra de teste; o caminho de corpo mínimo não leva dado de paciente |
+| Autorização | Uso autorizado; perguntar à MobileMed pela `integracao.mobilemed.com.br/v1` e por credencial de integração |
