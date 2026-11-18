@@ -478,6 +478,12 @@ export class ContagemPrioridadeDto {
   @ApiProperty({ type: 'integer' }) urgentes!: number;
 }
 
+/** Uma prioridade da operação na fila do momento, com a cor cadastrada. */
+export class PrioridadeDaFilaDto extends ContagemPrioridadeDto {
+  @ApiProperty({ type: String, nullable: true, description: 'Hex #RRGGBB; null = neutra.' })
+  cor!: string | null;
+}
+
 export class ContagemEspecialidadeDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) especialidadeId!: string | null;
   @ApiProperty() nome!: string;
@@ -593,8 +599,8 @@ export class FilaDoMomentoDto {
   habilitados!: number;
   @ApiProperty({ description: 'Robô ligado em Configurações › Distribuição.' })
   roboAtivo!: boolean;
-  @ApiProperty({ type: [ContagemPrioridadeDto], description: 'Na ordem da operação.' })
-  prioridades!: ContagemPrioridadeDto[];
+  @ApiProperty({ type: [PrioridadeDaFilaDto], description: 'Na ordem da operação.' })
+  prioridades!: PrioridadeDaFilaDto[];
   @ApiProperty({ type: [FrenteDaFilaDto] }) porFrente!: FrenteDaFilaDto[];
   @ApiProperty({ type: [TurnoDaFilaDto], description: 'Turnos de hoje que não acabaram.' })
   turnos!: TurnoDaFilaDto[];

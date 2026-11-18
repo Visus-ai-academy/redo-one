@@ -31,4 +31,10 @@ export type PrioridadeOperacaoEdicaoDto = {
    * @type array
    */
   grafias: string[];
+  /**
+   * @description Hex #RRGGBB da prioridade nas telas; sem cor, fica neutra.
+   * @example #5677B8
+   * @type string | undefined
+   */
+  cor?: string | null;
 };

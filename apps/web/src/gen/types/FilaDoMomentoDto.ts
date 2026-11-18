@@ -8,6 +8,7 @@ import type { ContagemModalidadeDto } from './ContagemModalidadeDto'
 import type { ContagemPrioridadeDto } from './ContagemPrioridadeDto'
 import type { FrenteDaFilaDto } from './FrenteDaFilaDto'
 import type { MedicoEmTurnoDto } from './MedicoEmTurnoDto'
+import type { PrioridadeDaFilaDto } from './PrioridadeDaFilaDto'
 import type { TurnoDaFilaDto } from './TurnoDaFilaDto'
 
 export type FilaDoMomentoDto = {
@@ -63,7 +64,7 @@ export type FilaDoMomentoDto = {
    * @description Na ordem da operação.
    * @type array
    */
-  prioridades: ContagemPrioridadeDto[];
+  prioridades: PrioridadeDaFilaDto[];
   porFrente: FrenteDaFilaDto[];
   /**
    * @description Turnos de hoje que não acabaram.

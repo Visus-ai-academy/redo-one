@@ -112,6 +112,7 @@ const op = (id: string, posicao: number, urgencia: PrioridadeOperacao['urgencia'
     urgencia,
     padrao: id === 'op-rot',
     grafias: [g],
+    cor: id === 'op-urg' ? '#B5535A' : null,
   }) as PrioridadeOperacao;
 const insumosBase = (): InsumosRodada => ({
   config: CONFIGURACAO_INICIAL,
@@ -740,7 +741,10 @@ describe('rodada do robô (casos de uso)', () => {
         }),
         expect.objectContaining({ frenteId: null, nome: 'Sem frente', exames: 1 }),
       ]);
-      expect(f.prioridades.map((p) => p.prioridadeOperacaoId)).toEqual(['op-urg', 'op-rot']);
+      expect(f.prioridades.map((p) => [p.prioridadeOperacaoId, p.cor])).toEqual([
+        ['op-urg', '#B5535A'],
+        ['op-rot', null],
+      ]);
       expect(f.turnos).toEqual([
         expect.objectContaining({ turnoId: 'manha', nome: 'Manhã', medicos: 2, emAndamento: true }),
       ]);

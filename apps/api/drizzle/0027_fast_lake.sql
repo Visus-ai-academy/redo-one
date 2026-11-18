@@ -1,0 +1,1 @@
+ALTER TABLE "prioridades_operacao" ADD COLUMN "cor" text;

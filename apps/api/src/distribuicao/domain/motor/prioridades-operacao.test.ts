@@ -24,6 +24,7 @@ const URGENCIA: PrioridadeOperacao = {
   posicao: 1,
   urgencia: { tipo: 'sempre' },
   padrao: false,
+  cor: null,
   grafias: [
     'Urgência',
     'Urgencia',
@@ -41,6 +42,7 @@ const AMBULATORIO: PrioridadeOperacao = {
   posicao: 2,
   urgencia: { tipo: 'prazo', horas: 24 },
   padrao: false,
+  cor: null,
   grafias: ['Ambulatório', 'Ambulatorio'],
 };
 const ROTINA: PrioridadeOperacao = {
@@ -49,6 +51,7 @@ const ROTINA: PrioridadeOperacao = {
   posicao: 3,
   urgencia: { tipo: 'nunca' },
   padrao: true,
+  cor: null,
   grafias: ['Rotina', 'P4', 'P4.Rotina+', 'P5', 'P5.Rotina'],
 };
 const PRIORIDADES = [URGENCIA, AMBULATORIO, ROTINA];

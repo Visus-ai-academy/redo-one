@@ -56,6 +56,7 @@ const edicaoDoDto = (d: PrioridadeOperacaoEdicaoDto): EdicaoPrioridadeOperacao =
   urgencia: urgenciaDoDto(d.urgencia),
   padrao: d.padrao,
   grafias: d.grafias,
+  cor: d.cor ?? null,
 });
 
 /** Configurações › Distribuição: as prioridades da operação, com o de-para de grafias. */

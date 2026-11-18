@@ -249,6 +249,8 @@ export const prioridadesOperacao = pgTable(
     urgenciaHoras: integer('urgencia_horas'),
     /** Vale para a grafia sem de-para; no máximo uma. */
     padrao: boolean('padrao').notNull().default(false),
+    /** Hex `#RRGGBB` nas telas (barra da fila do momento); nula = neutra. */
+    cor: text('cor'),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },

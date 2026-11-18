@@ -32,6 +32,12 @@ export type PrioridadeOperacaoDto = {
    */
   grafias: string[];
   /**
+   * @description Hex #RRGGBB; null = neutra.
+   * @example #5677B8
+   * @type string
+   */
+  cor: string | null;
+  /**
    * @description
    * Format: `uuid`
    * @type string

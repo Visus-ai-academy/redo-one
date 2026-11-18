@@ -33,6 +33,8 @@ export interface PrioridadeOperacao {
   padrao: boolean;
   /** Grafias da MobileMed que caem nesta prioridade. */
   grafias: readonly string[];
+  /** Hex `#RRGGBB` da prioridade nas telas (barra da fila do momento); null = neutra. */
+  cor: string | null;
 }
 
 /** Uma célula da grade de recebimento. */

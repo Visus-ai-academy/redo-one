@@ -193,6 +193,13 @@ async function gravarPrioridadesOperacao(tx: Transacao, c: ConfiguracaoDistribui
   if (!c.prioridadesOperacao.length) return;
   const t = schema.prioridadesOperacao;
   const ids = c.prioridadesOperacao.map((p) => p.id);
+  // A cor é escolhida na tela (a carga não traz): fica a que já havia, pelo nome.
+  const corDe = new Map(
+    (await tx.select({ nome: t.nome, cor: t.cor }).from(t)).map((l) => [
+      l.nome.toUpperCase(),
+      l.cor,
+    ]),
+  );
   await tx.delete(t).where(
     and(
       notInArray(t.id, ids),
@@ -215,7 +222,7 @@ async function gravarPrioridadesOperacao(tx: Transacao, c: ConfiguracaoDistribui
       .insert(t)
       .values({ id: p.id, nome: p.nome, posicao: p.posicao, urgencia: 'nunca' })
       .onConflictDoNothing();
-    await repo.salvar(p);
+    await repo.salvar({ ...p, cor: p.cor ?? corDe.get(p.nome.toUpperCase()) ?? null });
   }
   await repo.salvarGrade(c.gradeRecebimento);
 }

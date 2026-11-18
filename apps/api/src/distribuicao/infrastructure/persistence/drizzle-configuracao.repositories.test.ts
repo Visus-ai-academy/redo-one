@@ -192,6 +192,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       urgencia: { tipo: 'sempre' },
       padrao: true,
       grafias: ['Emergência', 'P1'],
+      cor: null,
     });
     const amb = await repo.criar({
       nome: 'AMBULATÓRIO',
@@ -199,6 +200,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       urgencia: { tipo: 'prazo', horas: 24 },
       padrao: false,
       grafias: ['Ambulatório'],
+      cor: null,
     });
     await repo.salvar({
       id: amb,
@@ -207,6 +209,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       urgencia: { tipo: 'prazo', horas: 12 },
       padrao: true,
       grafias: ['Ambulatório', 'P6'],
+      cor: '#5677B8',
     });
     const lidas = await repo.listar();
     // Pela posição: URGÊNCIA (1), AMBULATÓRIO (2), ROTINA (3, a do beforeEach).
@@ -216,6 +219,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       ['ROTINA', false, []],
     ]);
     expect(lidas.find((p) => p.id === amb)?.urgencia).toEqual({ tipo: 'prazo', horas: 12 });
+    expect(lidas.find((p) => p.id === amb)?.cor).toBe('#5677B8');
     // A grafia é única no de-para (sem acento e sem maiúsculas).
     const urgencia = lidas.find((p) => p.id === urg);
     if (!urgencia) throw new Error('URGÊNCIA não gravada');

@@ -9,6 +9,7 @@ import { contagemModalidadeDtoSchema } from './contagemModalidadeDtoSchema'
 import { contagemPrioridadeDtoSchema } from './contagemPrioridadeDtoSchema'
 import { frenteDaFilaDtoSchema } from './frenteDaFilaDtoSchema'
 import { medicoEmTurnoDtoSchema } from './medicoEmTurnoDtoSchema'
+import { prioridadeDaFilaDtoSchema } from './prioridadeDaFilaDtoSchema'
 import { turnoDaFilaDtoSchema } from './turnoDaFilaDtoSchema'
 
 export const filaDoMomentoDtoSchema = z.object({
@@ -23,7 +24,7 @@ export const filaDoMomentoDtoSchema = z.object({
   proximoVencimento: z.iso.datetime().nullable().describe('O próximo prazo a vencer (o primeiro ainda não vencido).'),
   habilitados: z.int().describe('Ativos e habilitados no robô.'),
   roboAtivo: z.boolean().describe('Robô ligado em Configurações › Distribuição.'),
-  prioridades: z.array(contagemPrioridadeDtoSchema).describe('Na ordem da operação.'),
+  prioridades: z.array(prioridadeDaFilaDtoSchema).describe('Na ordem da operação.'),
   porFrente: z.array(frenteDaFilaDtoSchema),
   turnos: z.array(turnoDaFilaDtoSchema).describe('Turnos de hoje que não acabaram.'),
   porPrioridade: z.array(contagemPrioridadeDtoSchema),

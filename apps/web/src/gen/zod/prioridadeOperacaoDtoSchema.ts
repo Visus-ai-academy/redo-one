@@ -12,6 +12,7 @@ export const prioridadeOperacaoDtoSchema = z.object({
   urgencia: regraUrgenciaDtoSchema.describe('Quando a operação a trata como urgência.'),
   padrao: z.boolean().describe('Vale para a grafia sem de-para (só uma prioridade).'),
   grafias: z.array(z.string()).describe('Grafias da MobileMed que caem nesta prioridade (sem diferenciar acento e maiúsculas).'),
+  cor: z.string().nullable().describe('Hex #RRGGBB; null = neutra.').meta({ examples: ['#5677B8'] }),
   id: z.uuid(),
 })
 

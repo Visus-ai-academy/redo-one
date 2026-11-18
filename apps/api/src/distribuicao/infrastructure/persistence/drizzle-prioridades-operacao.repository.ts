@@ -48,6 +48,7 @@ export class DrizzlePrioridadesOperacaoRepository implements PrioridadesOperacao
       posicao: l.posicao,
       urgencia: urgenciaDa(l),
       padrao: l.padrao,
+      cor: l.cor,
       grafias: (grafiasDe.get(l.id) ?? []).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     }));
   }
@@ -119,6 +120,7 @@ export class DrizzlePrioridadesOperacaoRepository implements PrioridadesOperacao
       nome: p.nome,
       posicao: p.posicao,
       padrao: p.padrao,
+      cor: p.cor,
       ...linhaDaUrgencia(p.urgencia),
     };
   }

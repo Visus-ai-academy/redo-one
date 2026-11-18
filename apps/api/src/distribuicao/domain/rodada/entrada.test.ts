@@ -47,6 +47,7 @@ const op = (id: string, posicao: number, urg: PrioridadeOperacao['urgencia'], gr
     urgencia: urg,
     padrao: id === 'op-rotina',
     grafias,
+    cor: null,
   }) as PrioridadeOperacao;
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({

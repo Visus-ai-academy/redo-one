@@ -15540,7 +15540,7 @@
           "porPagina"
         ]
       },
-      "ContagemPrioridadeDto": {
+      "PrioridadeDaFilaDto": {
         "type": "object",
         "properties": {
           "prioridadeOperacaoId": {
@@ -15556,13 +15556,19 @@
           },
           "urgentes": {
             "type": "integer"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hex #RRGGBB; null = neutra."
           }
         },
         "required": [
           "prioridadeOperacaoId",
           "nome",
           "exames",
-          "urgentes"
+          "urgentes",
+          "cor"
         ]
       },
       "ContagemFrentePrioridadeDto": {
@@ -15664,6 +15670,31 @@
           "medicos",
           "emAndamento",
           "cor"
+        ]
+      },
+      "ContagemPrioridadeDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "nome": {
+            "type": "string"
+          },
+          "exames": {
+            "type": "integer"
+          },
+          "urgentes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "prioridadeOperacaoId",
+          "nome",
+          "exames",
+          "urgentes"
         ]
       },
       "ContagemEspecialidadeDto": {
@@ -15914,7 +15945,7 @@
             "description": "Na ordem da operação.",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ContagemPrioridadeDto"
+              "$ref": "#/components/schemas/PrioridadeDaFilaDto"
             }
           },
           "porFrente": {
@@ -17291,6 +17322,12 @@
               "type": "string"
             }
           },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#5677B8",
+            "description": "Hex #RRGGBB; null = neutra."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -17302,6 +17339,7 @@
           "urgencia",
           "padrao",
           "grafias",
+          "cor",
           "id"
         ]
       },
@@ -17334,6 +17372,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#5677B8",
+            "description": "Hex #RRGGBB da prioridade nas telas; sem cor, fica neutra."
           }
         },
         "required": [

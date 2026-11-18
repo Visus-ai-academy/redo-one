@@ -537,6 +537,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
           urgencia: { tipo: 'nunca' },
           padrao: true,
           grafias: ['P4', 'Rotina'],
+          cor: null,
         },
       ],
       gradeRecebimento: [
@@ -597,5 +598,10 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(primeira.prioridades).toEqual([
       { clienteId, ...migrada.prioridadesCliente[0]?.itens[0] },
     ]);
+
+    // A cor é dado da tela: a carga (que não traz cor) não apaga a que foi escolhida.
+    await db.execute(sql`update prioridades_operacao set cor = '#5A9A64' where nome = 'ROTINA'`);
+    await gravarMigracao(db, catalogo, medicos, escala, undefined, migrada);
+    expect((await ler()).operacao[0]?.cor).toBe('#5A9A64');
   });
 });

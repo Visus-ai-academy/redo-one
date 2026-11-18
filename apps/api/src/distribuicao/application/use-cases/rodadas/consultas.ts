@@ -183,7 +183,12 @@ export interface FilaDoMomento {
   /** Desligado em Configurações › Distribuição, ninguém inicia rodada. */
   roboAtivo: boolean;
   /** As prioridades da operação, na ordem (as colunas da tabela por frente). */
-  prioridades: ({ prioridadeOperacaoId: string | null; nome: string } & ContagemFila)[];
+  prioridades: ({
+    prioridadeOperacaoId: string | null;
+    nome: string;
+    /** A cor cadastrada; null = neutra. */
+    cor: string | null;
+  } & ContagemFila)[];
   porFrente: FrenteDaFila[];
   /** Turnos de hoje que ainda não acabaram. */
   turnos: TurnoDaFila[];
@@ -324,12 +329,14 @@ export class ConsultarFilaDoMomento {
       .map((p) => ({
         prioridadeOperacaoId: p.id as string | null,
         nome: p.nome,
+        cor: p.cor,
         ...daPrioridade(p.id),
       }));
     if (contagemPrioridade.some((c) => c.id === null)) {
       prioridades.push({
         prioridadeOperacaoId: null,
         nome: 'Sem prioridade',
+        cor: null,
         ...daPrioridade(null),
       });
     }

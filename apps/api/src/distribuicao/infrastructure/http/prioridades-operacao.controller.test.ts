@@ -24,6 +24,7 @@ const AMBULATORIO = {
   urgencia: { tipo: 'prazo' as const, horas: 24 },
   padrao: false,
   grafias: ['Ambulatório'],
+  cor: '#5677B8',
 };
 
 describe('controller das prioridades da operação', () => {

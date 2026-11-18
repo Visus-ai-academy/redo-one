@@ -1,12 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsHexColor,
   IsIn,
   IsInt,
   IsObject,
+  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -109,11 +111,24 @@ export class PrioridadeOperacaoEdicaoDto {
   @IsString({ each: true })
   @MaxLength(60, { each: true })
   grafias!: string[];
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    example: '#5677B8',
+    description: 'Hex #RRGGBB da prioridade nas telas; sem cor, fica neutra.',
+  })
+  @IsOptional()
+  @IsHexColor()
+  cor: string | null = null;
 }
 
 export class PrioridadeOperacaoDto extends PrioridadeOperacaoEdicaoDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Hex #RRGGBB; null = neutra.' })
+  override cor: string | null = null;
 }
 
 /** A grade geral de recebimento. O PUT troca tudo; célula ausente = segue o SLA. */

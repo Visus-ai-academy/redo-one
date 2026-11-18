@@ -29,7 +29,7 @@ const op = (
   urgencia: PrioridadeOperacao['urgencia'],
   grafias: string[],
   padrao = false,
-): PrioridadeOperacao => ({ id, nome: id, posicao, urgencia, padrao, grafias });
+): PrioridadeOperacao => ({ id, nome: id, posicao, urgencia, padrao, grafias, cor: null });
 const PRIORIDADES_OPERACAO = [
   op('op-urgencia', 1, { tipo: 'sempre' }, ['Urgência', 'Emergência']),
   op('op-ambulatorio', 2, { tipo: 'prazo', horas: 24 }, ['Ambulatório']),

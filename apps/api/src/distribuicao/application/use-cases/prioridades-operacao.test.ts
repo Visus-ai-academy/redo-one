@@ -23,6 +23,7 @@ const edicao = (p: Partial<EdicaoPrioridadeOperacao> = {}): EdicaoPrioridadeOper
   urgencia: { tipo: 'prazo', horas: 24 },
   padrao: false,
   grafias: ['Ambulatório', 'P6'],
+  cor: null,
   ...p,
 });
 
@@ -64,6 +65,21 @@ describe('prioridades da operação', () => {
         em: agora,
       }),
     ]);
+  });
+
+  it('guarda a cor em #RRGGBB aparada (vazia vira sem cor) e audita a troca', async () => {
+    const id = await criar.executar(ator, edicao({ cor: ' #5677B8 ' }));
+    expect((await listar.executar())[0]?.cor).toBe('#5677B8');
+    await editar.executar(ator, id, edicao({ cor: '' }));
+    expect((await listar.executar())[0]?.cor).toBeNull();
+    expect(auditoria.eventos.at(-1)).toMatchObject({
+      acao: 'alterado',
+      antes: { cor: '#5677B8' },
+      depois: { cor: null },
+    });
+    await expect(
+      criar.executar(ator, edicao({ nome: 'OUTRA', grafias: [], cor: 'azul' })),
+    ).rejects.toThrow(/Cor/);
   });
 
   it('lista pela posição (empate pelo nome)', async () => {

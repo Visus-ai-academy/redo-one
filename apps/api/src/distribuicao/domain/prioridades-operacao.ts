@@ -14,6 +14,7 @@ import { inteiroEntre, invalida, semRepetidos } from './validacao';
 
 const LIMITE_HORAS = 720;
 const LIMITE_GRAFIAS = 50;
+const HEX = /^#[0-9a-f]{6}$/i;
 
 export type EdicaoPrioridadeOperacao = Omit<PrioridadeOperacao, 'id'>;
 
@@ -39,7 +40,7 @@ export function normalizarPrioridade(p: EdicaoPrioridadeOperacao): EdicaoPriorid
     grafias.push(g);
   }
   grafias.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  return { ...p, nome: p.nome.trim(), grafias };
+  return { ...p, nome: p.nome.trim(), grafias, cor: p.cor?.trim() || null };
 }
 
 export function validarPrioridadeOperacao(p: EdicaoPrioridadeOperacao): void {
@@ -49,6 +50,7 @@ export function validarPrioridadeOperacao(p: EdicaoPrioridadeOperacao): void {
   validarRegraUrgencia(p.urgencia);
   if (p.grafias.length > LIMITE_GRAFIAS) invalida(`Use no máximo ${LIMITE_GRAFIAS} grafias.`);
   if (p.grafias.some((g) => g.length > 60)) invalida('Grafia: use até 60 caracteres.');
+  if (p.cor !== null && !HEX.test(p.cor)) invalida('Cor: use o formato #RRGGBB, como #1F7A4D.');
 }
 
 /** Uma grafia (sem acento e sem maiúsculas) só pode estar no de-para de uma prioridade. */
