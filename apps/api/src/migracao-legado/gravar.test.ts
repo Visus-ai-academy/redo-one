@@ -7,9 +7,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
+import { CONFIGURACAO_INICIAL } from '../distribuicao/domain/configuracao-global';
+import { REGRAS_NEUTRAS } from '../distribuicao/domain/motor/configuracao';
+import { DrizzleConfiguracaoDistribuicaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
+import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-cliente.repository';
+import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import { gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
+import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
 import { mapearDistribuicao } from './mapear-distribuicao';
 import { type EscalaMigrada, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
@@ -212,7 +218,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
+      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
     );
   });
 
@@ -508,5 +514,60 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
     expect(await contar()).toEqual(primeira);
     expect(primeira).toEqual({ arranjos: 2, modalidades: 2, habilitados: 1 });
+  });
+
+  it('configuração do robô: grava a global, as regras da frente e a prioridade do cliente; de novo, igual', async () => {
+    await gravarMigracao(db, catalogo, medicos, escala);
+    const neuro = catalogo.tabelas.especialidades[0]?.id as string;
+    const ct = catalogo.tabelas.modalidades[0]?.id as string;
+    const clienteId = catalogo.tabelas.clientes[0]?.id as string;
+    const tarde = escala.tabelas.turnos[0]?.id as string;
+    const migrada: ConfiguracaoDistribuicaoMigrada = {
+      configuracao: {
+        ...CONFIGURACAO_INICIAL,
+        marcadoresEquilibrio: ['ONCO'],
+        turnosPosteriores: { turnoIds: [tarde], cheiaEm: '10:50' },
+      },
+      regrasFrente: [
+        {
+          frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: ct },
+          ...REGRAS_NEUTRAS,
+          horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+        },
+        {
+          frente: { tipo: 'especialidade', especialidadeId: neuro, modalidadeId: null },
+          ...REGRAS_NEUTRAS,
+          recolheAoFimDoTurno: false,
+          listaPrazoMinimoHoras: null,
+        },
+      ],
+      prioridadesCliente: [
+        {
+          clienteId,
+          itens: [
+            {
+              frente: { tipo: 'especialidade', especialidadeId: neuro, modalidadeId: null },
+              nivel: 1,
+            },
+          ],
+        },
+      ],
+      avisos: [],
+      resumo: {},
+    };
+    const ler = async () => ({
+      configuracao: await new DrizzleConfiguracaoDistribuicaoRepository(db).obter(),
+      regras: await new DrizzleRegrasFrenteRepository(db).listar(),
+      prioridades: await new DrizzlePrioridadesClienteRepository(db).todas(),
+    });
+    await gravarMigracao(db, catalogo, medicos, escala, undefined, migrada);
+    const primeira = await ler();
+    await gravarMigracao(db, catalogo, medicos, escala, undefined, migrada);
+    expect(await ler()).toEqual(primeira);
+    expect(primeira.configuracao).toEqual(migrada.configuracao);
+    expect(primeira.regras).toHaveLength(2);
+    expect(primeira.prioridades).toEqual([
+      { clienteId, ...migrada.prioridadesCliente[0]?.itens[0] },
+    ]);
   });
 });

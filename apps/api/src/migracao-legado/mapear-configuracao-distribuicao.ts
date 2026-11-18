@@ -1,0 +1,405 @@
+import type { FrenteEscala } from '../distribuicao/domain/arranjo';
+import type { ConfiguracaoGlobal } from '../distribuicao/domain/configuracao-global';
+import {
+  type CriterioFila,
+  REGRAS_NEUTRAS,
+  type RegrasFrente,
+} from '../distribuicao/domain/motor/configuracao';
+import type { PrioridadeDaFrente } from '../distribuicao/domain/prioridade-cliente';
+import { canonicaRegras, validarRegrasFrente } from '../distribuicao/domain/regras-frente';
+import { type Aviso, idDoLegado } from './comum';
+import type { LegadoCatalogo, LegadoConfiguracaoDistribuicao, LegadoPolitica } from './legado';
+import { type CatalogoMigrado, chaveCadastro } from './mapear-catalogo';
+
+/**
+ * Configuração do robô (global, regras da frente e prioridade do cliente) a partir do
+ * dashboards-one. Além do que está gravado lá, a carga traz regras que eram constantes no código
+ * de lá e viraram dado da frente (decisões do usuário de 17/11/2026, cortex "Distribuição
+ * organizada por pergunta…"). Não migram: escape, pesos, lote, exceções/reforços e rodadas.
+ */
+
+export interface ContextoConfiguracaoDistribuicao {
+  legadoCatalogo: LegadoCatalogo;
+  catalogo: CatalogoMigrado['tabelas'];
+  /** Turnos da escala já migrados (id do redo-one e nome). */
+  turnos: { id: string; nome: string }[];
+}
+
+export interface ConfiguracaoDistribuicaoMigrada {
+  configuracao: ConfiguracaoGlobal | null;
+  regrasFrente: RegrasFrente[];
+  prioridadesCliente: { clienteId: string; itens: PrioridadeDaFrente[] }[];
+  avisos: Aviso[];
+  resumo: Record<string, number>;
+}
+
+// Constantes do código do dashboards-one que viram configuração (fonte entre parênteses).
+/** `PRAZO_CRITICO_MIN` (motor.ts). */
+const PRAZO_CRITICO_MIN = 60;
+/** `ANTECEDENCIA_PERIODO_MIN` (capacidade.ts). */
+const ANTECEDENCIA_PERIODO_MIN = 180;
+/** `DIAS_JA_ENTREGUE` (rodadas.ts). */
+const DIAS_JA_ENTREGUE = 7;
+/** O turno "TARDE" e a cheia das 10:50 (`CHEIA_TARDE_MIN`, arranjo.ts). */
+const TURNO_POSTERIOR = 'TARDE';
+const CHEIA_POSTERIORES = '10:50';
+/** `SEM_RECOLHIMENTO` (recolher.ts); MAMO é MAMA. */
+const SEM_RECOLHIMENTO = ['CARDIO', 'MAMA'];
+/** Decisão do usuário (17/11/2026): a Lista de MAMA e de CARDIO segue o SLA. */
+const LISTA_SEGUE_SLA = ['MAMA', 'CARDIO'];
+/** `FRENTES` do neurologista (motor.ts): colunas, angio, crânio, geral de NEURO, geral de MSK. */
+const MISTURA_NEURO: { especialidade: string | null; segmento: string | null }[] = [
+  { especialidade: null, segmento: 'COLUNAS' },
+  { especialidade: 'NEURO', segmento: 'ANGIO' },
+  { especialidade: 'NEURO', segmento: 'CRANIO' },
+  { especialidade: 'NEURO', segmento: null },
+  { especialidade: 'MUSCULO ESQUELETICO', segmento: null },
+];
+/** COLUNAS de MÚSCULO ESQUELÉTICO é outro pacote (`chavePacote`, motor.ts). */
+const PACOTE_A_PARTE = { especialidade: 'MUSCULO ESQUELETICO', segmento: 'COLUNAS' };
+/** Decisão do usuário (16/11/2026): MAMO é MAMA. */
+const ESPECIALIDADE_TROCADA: Record<string, string> = { MAMO: 'MAMA' };
+
+const CRITERIOS = new Set<string>(['prioridade', 'prazo', 'antiguidade']);
+
+export function mapearConfiguracaoDistribuicao(
+  legado: LegadoConfiguracaoDistribuicao,
+  ctx: ContextoConfiguracaoDistribuicao,
+): ConfiguracaoDistribuicaoMigrada {
+  const avisos: Aviso[] = [];
+  const resumo: Record<string, number> = {};
+  const contar = (chave: string, n = 1) => {
+    resumo[chave] = (resumo[chave] ?? 0) + n;
+  };
+  const c = ctx.catalogo;
+
+  const especialidadePorNome = new Map(
+    c.especialidades.map((e) => [chaveCadastro(e.nome), e.id as string]),
+  );
+  const especialidade = (nome: string | null | undefined) => {
+    const k = chaveCadastro(nome);
+    return especialidadePorNome.get(ESPECIALIDADE_TROCADA[k] ?? k) ?? null;
+  };
+  const modalidadePorCodigo = new Map([
+    ...c.modalidadesDePara.map((d) => [chaveCadastro(d.origem), d.modalidadeId] as const),
+    ...c.modalidades.map((m) => [chaveCadastro(m.codigo), m.id as string] as const),
+  ]);
+  const modalidade = (codigo: string | null | undefined) =>
+    modalidadePorCodigo.get(chaveCadastro(codigo)) ?? null;
+  const subPorNome = new Map(
+    c.subespecialidades.map((s) => [chaveCadastro(s.nome), s.id as string]),
+  );
+  const segmento = (nome: string) => subPorNome.get(chaveCadastro(nome)) ?? null;
+  const prioridadePorNome = new Map(
+    c.prioridades.map((p) => [chaveCadastro(p.nome), p.id as string]),
+  );
+  const prioridadePorGrafia = new Map([
+    ...prioridadePorNome,
+    ...c.prioridadesDePara
+      .filter((d) => d.ativo !== false)
+      .map((d) => [chaveCadastro(d.origem), d.prioridadeId] as const),
+  ]);
+
+  // ---- Configuração global ----
+  let configuracao: ConfiguracaoGlobal | null = null;
+  const cfg = legado.config;
+  if (cfg) {
+    // Urgente é só a prioridade do CATÁLOGO com o mesmo nome (decisão de 17/11: internado =
+    // rotina; emergência já é variação de URGÊNCIA). O resto sai com aviso.
+    const urgentes: string[] = [];
+    for (const grafia of cfg.prioridadesUrgentes) {
+      const id = prioridadePorNome.get(chaveCadastro(grafia));
+      if (id) {
+        if (!urgentes.includes(id)) urgentes.push(id);
+      } else {
+        avisos.push({
+          tabela: 'configuracao_distribuicao',
+          item: grafia,
+          motivo:
+            'Não é prioridade do catálogo: não conta como urgente (Internado = ROTINA; Emergência é variação de URGÊNCIA).',
+        });
+      }
+    }
+    const listaPrioridades: string[] = [];
+    for (const grafia of cfg.listaPrioridades) {
+      const id = prioridadePorGrafia.get(chaveCadastro(grafia));
+      if (!id) {
+        avisos.push({
+          tabela: 'configuracao_distribuicao',
+          item: grafia,
+          motivo: 'Prioridade da Lista sem equivalente no catálogo: ficou de fora.',
+        });
+      } else if (!listaPrioridades.includes(id)) listaPrioridades.push(id);
+    }
+    const tarde = ctx.turnos.filter((t) => chaveCadastro(t.nome) === TURNO_POSTERIOR);
+    if (!tarde.length) {
+      avisos.push({
+        tabela: 'configuracao_distribuicao',
+        item: 'Turnos posteriores',
+        motivo: 'Turno "Tarde" não encontrado na escala: ficou sem turno posterior.',
+      });
+    }
+    if (cfg.roboListaDepoisDosFixos.length) {
+      avisos.push({
+        tabela: 'configuracao_distribuicao',
+        item: 'Lista depois dos fixos',
+        motivo: `Frentes ${cfg.roboListaDepoisDosFixos.join(', ')}: marque na regra de cada frente.`,
+      });
+    }
+    configuracao = {
+      ordemFila: cfg.ordemFila
+        .filter((i) => CRITERIOS.has(i.criterio))
+        .map((i) => ({
+          criterio: i.criterio as CriterioFila,
+          direcao: i.direcao === 'desc' ? 'desc' : 'asc',
+        })),
+      prioridadeIdsUrgentes: urgentes.sort(),
+      agruparPorPaciente: cfg.agruparPorPaciente,
+      janelaPacienteHoras: cfg.janelaPacienteHoras,
+      toleranciaAcimaTeto: cfg.toleranciaAcimaCapacidade,
+      margemUrgenciaPct: cfg.reservaUrgenciaPct,
+      folgaProporcaoPct: cfg.folgaAtrasadoPct,
+      prazoCriticoMin: PRAZO_CRITICO_MIN,
+      antecedenciaPeriodoMin: ANTECEDENCIA_PERIODO_MIN,
+      cicloMinutos: cfg.cicloMinutos,
+      marcadoresEquilibrio: cfg.marcadoresEquilibrio.map((m) => m.trim()).filter(Boolean),
+      escalaRestringeEspecialidade: cfg.escalaRestringeEspecialidade,
+      diasJaEntregue: DIAS_JA_ENTREGUE,
+      turnosPosteriores: tarde.length
+        ? { turnoIds: tarde.map((t) => t.id).sort(), cheiaEm: CHEIA_POSTERIORES }
+        : null,
+      lista: {
+        prioridadeIds: listaPrioridades.sort(),
+        prazoMinimoHoras: cfg.listaPrazoMinimoHoras,
+      },
+      recolhimentoAposTurnoMin: cfg.roboRecolherAposTurnoMin,
+    };
+    contar('configuracaoGlobal');
+  }
+
+  // ---- Regras da frente ----
+  const porFrente = new Map<string, RegrasFrente>();
+  const regrasDe = (frente: FrenteEscala) => {
+    const k = frente.especialidadeId ?? frente.modalidadeId;
+    let r = porFrente.get(k);
+    if (!r) {
+      r = structuredClone({ frente, ...REGRAS_NEUTRAS });
+      porFrente.set(k, r);
+    }
+    return r;
+  };
+  const frenteEsp = (id: string): FrenteEscala => ({
+    tipo: 'especialidade',
+    especialidadeId: id,
+    modalidadeId: null,
+  });
+  const frenteMod = (id: string): FrenteEscala => ({
+    tipo: 'modalidade',
+    especialidadeId: null,
+    modalidadeId: id,
+  });
+  const avisar = (item: string, motivo: string) => {
+    avisos.push({ tabela: 'regras_frente', item, motivo });
+    contar('regrasFrenteAvisos');
+  };
+
+  const naoMigrado = (p: LegadoPolitica, item: string) => {
+    if (p.cotaValor !== null) {
+      avisar(
+        item,
+        `Teto de ${p.cotaValor} por ${p.cotaJanela ?? 'janela'} não migrado: o teto por médico fica vazio.`,
+      );
+    }
+    if (p.loteTamanho !== null) avisar(item, 'Divisão em lote não migrada (sem uso).');
+    if (p.pesos && Object.values(p.pesos).some((v) => v)) avisar(item, 'Pesos não migrados.');
+  };
+
+  for (const p of legado.politicas.filter((x) => x.ativo)) {
+    const item = [p.escopo, p.especialidade, p.modalidade].filter(Boolean).join(' · ');
+    const temRegra = !p.automatico || p.metodoDivisao === 'proporcao' || !!p.tetosSubespecialidade;
+    let frente: FrenteEscala | null = null;
+    if (p.escopo === 'especialidade') {
+      const id = especialidade(p.especialidade);
+      // Especialidade que lá era frente de modalidade (TC, RX…): vale para a modalidade.
+      const leg = ctx.legadoCatalogo.especialidades.find(
+        (e) => chaveCadastro(e.nome) === chaveCadastro(p.especialidade),
+      );
+      const mid = leg?.modalidade ? modalidade(leg.modalidade) : null;
+      frente = id ? frenteEsp(id) : mid ? frenteMod(mid) : null;
+    } else if (p.escopo === 'modalidade') {
+      const id = modalidade(p.modalidade);
+      frente = id ? frenteMod(id) : null;
+    } else {
+      naoMigrado(p, item);
+      if (temRegra)
+        avisar(item, `Política de escopo "${p.escopo}" não tem lugar nas regras da frente.`);
+      contar('politicasSemRegra');
+      continue;
+    }
+    if (!frente) {
+      avisar(item, 'Especialidade ou modalidade não existe no redo-one.');
+      continue;
+    }
+    naoMigrado(p, item);
+    if (!temRegra) {
+      contar('politicasSemRegra');
+      continue;
+    }
+    const r = regrasDe(frente);
+    if (!p.automatico) r.distribuiPeloRobo = false;
+    if (p.metodoDivisao === 'proporcao' && p.proporcoes) {
+      const proporcoes = Object.entries(p.proporcoes).map(([codigo, percentual]) => ({
+        modalidadeId: modalidade(codigo),
+        percentual,
+      }));
+      if (proporcoes.some((x) => !x.modalidadeId)) {
+        avisar(item, 'Proporção com modalidade que não existe no redo-one: ficou igualitária.');
+      } else {
+        r.divisao = {
+          metodo: 'proporcao',
+          proporcoes: proporcoes as { modalidadeId: string; percentual: number }[],
+        };
+      }
+    }
+    for (const [nome, t] of Object.entries(p.tetosSubespecialidade ?? {})) {
+      const sid = segmento(nome);
+      if (!sid) {
+        avisar(item, `Segmento "${nome}" não existe no redo-one.`);
+        continue;
+      }
+      r.segmentos.push({
+        subespecialidadeId: sid,
+        teto: t.max,
+        tetoReduzido: t.reduzido
+          ? { produtividadeAte: t.reduzido.produtividadeAte, teto: t.reduzido.max }
+          : null,
+        piso: t.piso ?? null,
+        pacoteAParte: false,
+      });
+    }
+  }
+
+  for (const j of legado.janelas.filter((x) => x.ativo)) {
+    const mid = j.modalidade ? modalidade(j.modalidade) : null;
+    const eid = j.especialidade ? especialidade(j.especialidade) : null;
+    if ((mid === null) === (eid === null)) {
+      avisos.push({
+        tabela: 'regras_frente',
+        item: j.nome,
+        motivo:
+          'Janela sem automação sem uma frente só (especialidade ou modalidade): não migrada.',
+      });
+      continue;
+    }
+    regrasDe(mid ? frenteMod(mid) : frenteEsp(eid as string)).horariosSemRobo.push({
+      diasSemana: [...j.diasSemana].sort((a, b) => a - b),
+      inicio: j.horaInicio,
+      fim: j.horaFim,
+    });
+    contar('horariosSemRobo');
+  }
+
+  // Regras que eram fixas no código do dashboards-one.
+  const comEspecialidade = (nome: string, aplicar: (r: RegrasFrente, id: string) => void) => {
+    const id = especialidade(nome);
+    if (id) aplicar(regrasDe(frenteEsp(id)), id);
+    else avisar(nome, 'Especialidade não existe no redo-one: regra fixa do código não migrada.');
+  };
+  for (const nome of SEM_RECOLHIMENTO)
+    comEspecialidade(nome, (r) => {
+      r.recolheAoFimDoTurno = false;
+    });
+  for (const nome of LISTA_SEGUE_SLA)
+    comEspecialidade(nome, (r) => {
+      r.listaPrazoMinimoHoras = null;
+    });
+  comEspecialidade('NEURO', (r) => {
+    const fatias = MISTURA_NEURO.map((f) => ({
+      especialidadeId: f.especialidade === null ? null : especialidade(f.especialidade),
+      subespecialidadeId: f.segmento === null ? null : segmento(f.segmento),
+    }));
+    const faltou = MISTURA_NEURO.some(
+      (f, i) =>
+        (f.especialidade !== null && !fatias[i]?.especialidadeId) ||
+        (f.segmento !== null && !fatias[i]?.subespecialidadeId),
+    );
+    if (faltou) avisar('NEURO', 'Mistura do neurologista com segmento ou especialidade ausente.');
+    else r.mistura = fatias;
+  });
+  comEspecialidade(PACOTE_A_PARTE.especialidade, (r) => {
+    const sid = segmento(PACOTE_A_PARTE.segmento);
+    if (!sid) return avisar('MUSCULO ESQUELETICO', 'Segmento COLUNAS não existe no redo-one.');
+    const existente = r.segmentos.find((s) => s.subespecialidadeId === sid);
+    if (existente) existente.pacoteAParte = true;
+    else
+      r.segmentos.push({
+        subespecialidadeId: sid,
+        teto: null,
+        tetoReduzido: null,
+        piso: null,
+        pacoteAParte: true,
+      });
+  });
+
+  const regrasFrente: RegrasFrente[] = [];
+  for (const r of porFrente.values()) {
+    const canonica = canonicaRegras(r);
+    try {
+      validarRegrasFrente(canonica);
+      regrasFrente.push(canonica);
+      contar('regrasFrente');
+    } catch (erro) {
+      avisar(
+        r.frente.especialidadeId ?? r.frente.modalidadeId,
+        `Regra inválida, não migrada: ${(erro as Error).message}`,
+      );
+    }
+  }
+
+  // ---- Prioridade do cliente ----
+  const clientesMigrados = new Set(c.clientes.map((x) => x.id));
+  const legEsp = new Map(ctx.legadoCatalogo.especialidades.map((e) => [e.id, e]));
+  const nomeCliente = new Map(ctx.legadoCatalogo.clientes.map((x) => [x.id, x.nome]));
+  const porCliente = new Map<string, PrioridadeDaFrente[]>();
+  for (const p of legado.prioridadesCliente) {
+    const clienteId = idDoLegado('clientes', p.clienteId);
+    const item = nomeCliente.get(p.clienteId) ?? p.clienteId;
+    const aviso = (motivo: string) => {
+      avisos.push({ tabela: 'prioridades_cliente', item, motivo });
+      contar('prioridadesClienteDescartadas');
+    };
+    if (!clientesMigrados.has(clienteId)) {
+      aviso('Cliente não migrou.');
+      continue;
+    }
+    if (p.nivel !== 1 && p.nivel !== 2) {
+      aviso(`Nível ${p.nivel} fora de 1 (Alta) e 2 (Média).`);
+      continue;
+    }
+    const e = legEsp.get(p.especialidadeId);
+    const mid = e?.modalidade ? modalidade(e.modalidade) : null;
+    const eid = e && !e.modalidade ? especialidade(e.nome) : null;
+    const frente = mid ? frenteMod(mid) : eid ? frenteEsp(eid) : null;
+    if (!frente) {
+      aviso(`Frente "${e?.nome ?? p.especialidadeId}" não existe no redo-one.`);
+      continue;
+    }
+    const itens = porCliente.get(clienteId) ?? [];
+    const k = frente.especialidadeId ?? frente.modalidadeId;
+    if (itens.some((i) => (i.frente.especialidadeId ?? i.frente.modalidadeId) === k)) {
+      aviso('Frente repetida (MAMO e MAMA): ficou a primeira.');
+      continue;
+    }
+    itens.push({ frente, nivel: p.nivel });
+    porCliente.set(clienteId, itens);
+    contar('prioridadesCliente');
+  }
+
+  return {
+    configuracao,
+    regrasFrente,
+    prioridadesCliente: [...porCliente].map(([clienteId, itens]) => ({ clienteId, itens })),
+    avisos,
+    resumo,
+  };
+}

@@ -1,6 +1,12 @@
 import { Client } from 'pg';
 
-import type { LegadoCatalogo, LegadoDistribuicao, LegadoEscala, LegadoMedicos } from './legado';
+import type {
+  LegadoCatalogo,
+  LegadoConfiguracaoDistribuicao,
+  LegadoDistribuicao,
+  LegadoEscala,
+  LegadoMedicos,
+} from './legado';
 
 /**
  * Lê o banco do dashboards-one (em produção) SÓ PARA LEITURA: uma conexão, uma transação
@@ -13,6 +19,7 @@ export async function lerLegado(url: string): Promise<{
   medicos: LegadoMedicos;
   escala: LegadoEscala;
   distribuicao: LegadoDistribuicao;
+  configuracaoDistribuicao: LegadoConfiguracaoDistribuicao;
 }> {
   const cliente = new Client({
     connectionString: url,
@@ -148,8 +155,30 @@ export async function lerLegado(url: string): Promise<{
         await ler<{ id: string }>('select id from medicos where "distribuicaoAutomatica"')
       ).map((m) => m.id),
     };
+    const [configRobo] = await ler<LegadoConfiguracaoDistribuicao['config'] & object>(
+      `select "ordemFila", "prioridadesUrgentes", "agruparPorPaciente", "janelaPacienteHoras",
+        "escalaRestringeEspecialidade", "toleranciaAcimaCapacidade", "reservaUrgenciaPct",
+        "folgaAtrasadoPct", "cicloMinutos", "marcadoresEquilibrio", "listaPrioridades",
+        "listaPrazoMinimoHoras", "roboRecolherAposTurnoMin", "roboListaDepoisDosFixos"
+        from configuracao_distribuicao order by ctid limit 1`,
+    );
+    const configuracaoDistribuicao: LegadoConfiguracaoDistribuicao = {
+      config: configRobo ?? null,
+      politicas: await ler(
+        `select id, escopo, especialidade, modalidade, ativo, automatico, "metodoDivisao",
+          proporcoes, "loteTamanho", "cotaValor", "cotaJanela", pesos, "tetosSubespecialidade"
+          from politicas_distribuicao order by ordem, ctid`,
+      ),
+      janelas: await ler(
+        `select id, nome, "diasSemana", "horaInicio", "horaFim", modalidade, especialidade, ativo
+          from janelas_sem_automacao order by ctid`,
+      ),
+      prioridadesCliente: await ler(
+        'select "clienteId", "especialidadeId", nivel from prioridades_cliente order by ctid',
+      ),
+    };
     await cliente.query('COMMIT');
-    return { catalogo, medicos, escala, distribuicao };
+    return { catalogo, medicos, escala, distribuicao, configuracaoDistribuicao };
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;

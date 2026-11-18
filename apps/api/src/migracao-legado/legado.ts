@@ -249,3 +249,62 @@ export interface LegadoDistribuicao {
   /** Médicos com `distribuicaoAutomatica` (habilitados no robô). */
   habilitados: string[];
 }
+
+/** `configuracao_distribuicao` (linha "default"): só o que a configuração do robô usa. */
+export interface LegadoConfiguracaoRobo {
+  ordemFila: { criterio: string; direcao: string }[];
+  prioridadesUrgentes: string[];
+  agruparPorPaciente: boolean;
+  janelaPacienteHoras: number;
+  escalaRestringeEspecialidade: boolean;
+  toleranciaAcimaCapacidade: number;
+  reservaUrgenciaPct: number;
+  folgaAtrasadoPct: number;
+  cicloMinutos: number;
+  marcadoresEquilibrio: string[];
+  listaPrioridades: string[];
+  listaPrazoMinimoHoras: number;
+  roboRecolherAposTurnoMin: number | null;
+  roboListaDepoisDosFixos: string[];
+}
+
+/** `politicas_distribuicao`. */
+export interface LegadoPolitica {
+  id: string;
+  escopo: string;
+  especialidade: string | null;
+  modalidade: string | null;
+  ativo: boolean;
+  automatico: boolean;
+  metodoDivisao: string;
+  proporcoes: Record<string, number> | null;
+  loteTamanho: number | null;
+  cotaValor: number | null;
+  cotaJanela: string | null;
+  pesos: Record<string, number> | null;
+  /** { "CABEÇA E PESCOÇO": { max, piso?, reduzido?: { max, produtividadeAte } } } */
+  tetosSubespecialidade: Record<
+    string,
+    { max: number; piso?: number; reduzido?: { max: number; produtividadeAte: number } }
+  > | null;
+}
+
+/** `janelas_sem_automacao`. */
+export interface LegadoJanelaSemAutomacao {
+  id: string;
+  nome: string;
+  diasSemana: number[];
+  horaInicio: string;
+  horaFim: string;
+  modalidade: string | null;
+  especialidade: string | null;
+  ativo: boolean;
+}
+
+export interface LegadoConfiguracaoDistribuicao {
+  config: LegadoConfiguracaoRobo | null;
+  politicas: LegadoPolitica[];
+  janelas: LegadoJanelaSemAutomacao[];
+  /** `prioridades_cliente`: o id é de `especialidades` (que lá também guarda frente de modalidade). */
+  prioridadesCliente: { clienteId: string; especialidadeId: string; nivel: number }[];
+}

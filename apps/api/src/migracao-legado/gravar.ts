@@ -13,7 +13,11 @@ import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
+import { DrizzleConfiguracaoDistribuicaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
+import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-cliente.repository';
+import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import type { CatalogoMigrado } from './mapear-catalogo';
+import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
 import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
@@ -73,6 +77,7 @@ export async function gravarMigracao(
   { tabelas: m }: MedicosMigrados,
   escala?: EscalaMigrada,
   distribuicao?: DistribuicaoMigrada,
+  configuracaoDistribuicao?: ConfiguracaoDistribuicaoMigrada,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -153,7 +158,26 @@ export async function gravarMigracao(
 
     if (escala) await gravarEscala(tx, escala);
     if (distribuicao) await gravarDistribuicao(tx, distribuicao);
+    if (configuracaoDistribuicao)
+      await gravarConfiguracaoDistribuicao(tx, configuracaoDistribuicao);
   });
+}
+
+/**
+ * Configuração do robô. Usa os repositórios da distribuição (a mesma gravação da tela) dentro da
+ * transação da carga: a global é trocada inteira, e as regras de cada frente e as prioridades de
+ * cada cliente que a carga traz também (o dashboards-one é a fonte). Frente ou cliente que a
+ * carga não traz fica como está.
+ */
+async function gravarConfiguracaoDistribuicao(tx: Transacao, c: ConfiguracaoDistribuicaoMigrada) {
+  // A transação tem a mesma interface de consulta do banco (a `transaction` aninhada vira savepoint).
+  const db = tx as unknown as Database;
+  if (c.configuracao)
+    await new DrizzleConfiguracaoDistribuicaoRepository(db).salvar(c.configuracao);
+  const regras = new DrizzleRegrasFrenteRepository(db);
+  for (const r of c.regrasFrente) await regras.salvar(r);
+  const prioridades = new DrizzlePrioridadesClienteRepository(db);
+  for (const p of c.prioridadesCliente) await prioridades.substituir(p.clienteId, p.itens);
 }
 
 /**
