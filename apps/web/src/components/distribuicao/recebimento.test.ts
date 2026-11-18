@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  aplicarNasCelulas,
   celulasParaApi,
   chaveCelula,
   errosDaGrade,
@@ -65,6 +66,34 @@ describe('grade de recebimento no formulário', () => {
     expect(celulasParaApi(grade, { omitirSla: false })).toEqual([
       celula('rot', 'lista', 'prazo_minimo', 24),
       celula('rot', 'manha', 'segue_sla'),
+    ]);
+  });
+
+  it('aplica a mesma regra a uma linha ou coluna inteira, sem mexer no resto', () => {
+    const grade = {
+      [chaveCelula('rot', 'lista')]: { tipo: 'prazo_minimo' as const, horas: '24' },
+      [chaveCelula('urg', 'lista')]: { tipo: 'nao_recebe' as const, horas: '' },
+    };
+    const naoRecebe = { tipo: 'nao_recebe' as const, horas: '' };
+    expect(aplicarNasCelulas(grade, ['rot'], ['manha', 'lista'], naoRecebe)).toEqual({
+      [chaveCelula('rot', 'manha')]: naoRecebe,
+      [chaveCelula('rot', 'lista')]: naoRecebe,
+      [chaveCelula('urg', 'lista')]: naoRecebe,
+    });
+    const prazo = { tipo: 'prazo_minimo' as const, horas: '12' };
+    expect(aplicarNasCelulas(grade, ['rot', 'urg'], ['lista'], prazo)).toEqual({
+      [chaveCelula('rot', 'lista')]: prazo,
+      [chaveCelula('urg', 'lista')]: prazo,
+    });
+  });
+
+  it('para a API, só as células das prioridades que ainda existem', () => {
+    const grade = {
+      [chaveCelula('rot', 'lista')]: { tipo: 'prazo_minimo' as const, horas: '24' },
+      [chaveCelula('excluida', 'lista')]: { tipo: 'nao_recebe' as const, horas: '' },
+    };
+    expect(celulasParaApi(grade, { omitirSla: true, prioridadeIds: ['rot'] })).toEqual([
+      celula('rot', 'lista', 'prazo_minimo', 24),
     ]);
   });
 

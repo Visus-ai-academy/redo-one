@@ -219,9 +219,6 @@ function FormRegras({
               {(field) => (
                 <div className="flex flex-col gap-2">
                   <span className="font-medium">Grade de recebimento</span>
-                  <p className="text-muted-foreground text-[13px]">
-                    "Geral" segue a célula da grade geral, que aparece entre parênteses.
-                  </p>
                   <GradeRecebimento
                     prioridades={operacao.prioridades}
                     turnos={operacao.turnos}

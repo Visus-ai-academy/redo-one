@@ -79,12 +79,31 @@ export function regraEfetiva(
   return regraEfetiva(geral, prioridadeOperacaoId, turnoId);
 }
 
-/** Para a API: a geral não grava "segue o SLA" (é o vazio); "geral" (herdado) nunca vai. */
-export function celulasParaApi(grade: Grade, opcoes: { omitirSla: boolean }) {
+/** A mesma regra em todas as células de prioridades × turnos (uma linha ou uma coluna inteira). */
+export function aplicarNasCelulas(
+  grade: Grade,
+  prioridadeIds: readonly string[],
+  turnoIds: readonly string[],
+  valor: ValorCelula,
+): Grade {
+  const nova = { ...grade };
+  for (const p of prioridadeIds) for (const t of turnoIds) nova[chaveCelula(p, t)] = valor;
+  return nova;
+}
+
+/**
+ * Para a API: a geral não grava "segue o SLA" (é o vazio); "geral" (herdado) nunca vai. Com
+ * `prioridadeIds`, só as células das prioridades que ainda existem (a excluída sai da grade).
+ */
+export function celulasParaApi(
+  grade: Grade,
+  opcoes: { omitirSla: boolean; prioridadeIds?: readonly string[] },
+) {
   const celulas: CelulaRecebimentoDto[] = [];
   for (const [chave, v] of Object.entries(grade)) {
     if (v.tipo === 'geral' || (opcoes.omitirSla && v.tipo === 'segue_sla')) continue;
     const [prioridadeOperacaoId = '', turnoId = ''] = chave.split('|');
+    if (opcoes.prioridadeIds && !opcoes.prioridadeIds.includes(prioridadeOperacaoId)) continue;
     celulas.push({ prioridadeOperacaoId, turnoId, regra: regraDoValor(v) });
   }
   return celulas;

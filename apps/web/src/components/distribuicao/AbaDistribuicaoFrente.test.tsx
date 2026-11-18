@@ -136,16 +136,17 @@ describe('AbaDistribuicaoFrente', () => {
   it('sem regra própria, sobrescreve só a célula ROTINA × Manhã (48 h) e a urgência da URGÊNCIA', async () => {
     renderComRotas(<AbaDistribuicaoFrente tipo="especialidade" id="e-mi" podeEditar />);
     expect(await screen.findByText(/ainda não tem regra própria/)).toBeInTheDocument();
-    // A célula herdada mostra a da geral.
-    expect(screen.getByRole('combobox', { name: 'ROTINA no turno Lista' })).toHaveTextContent(
-      'Geral (≥ 24 h)',
-    );
-    await escolherOpcao('ROTINA no turno Manhã', 'Prazo mínimo');
-    const horas = screen.getByRole('textbox', {
-      name: 'Horas mínimas até o prazo: ROTINA no turno Manhã',
-    });
+    // A célula herdada mostra a da geral, com a marca "geral".
+    const herdada = screen.getByRole('button', { name: /^ROTINA no turno Lista: .*como na geral/ });
+    expect(herdada).toHaveTextContent('≥ 24 h');
+    expect(herdada).toHaveTextContent('geral');
+    await userEvent.click(screen.getByRole('button', { name: /^ROTINA no turno Manhã/ }));
+    const editor = await screen.findByRole('dialog', { name: 'ROTINA no turno Manhã' });
+    await userEvent.click(within(editor).getByRole('radio', { name: 'Prazo mínimo' }));
+    const horas = within(editor).getByRole('textbox', { name: 'Horas mínimas até o prazo' });
     await userEvent.clear(horas);
     await userEvent.type(horas, '48');
+    await userEvent.keyboard('{Escape}');
     await escolherOpcao('Urgência de URGÊNCIA nesta frente', 'Nunca');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
     expect(salvarEsp).toHaveBeenCalledWith({
