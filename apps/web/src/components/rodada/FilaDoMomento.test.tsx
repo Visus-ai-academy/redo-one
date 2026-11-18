@@ -29,6 +29,21 @@ describe('FilaDoMomento', () => {
     expect(screen.queryByText('Médico 01')).not.toBeInTheDocument();
   });
 
+  it('no computador, a tabela de frentes fica com 1/3 e os médicos em turno com 2/3', () => {
+    const { unmount } = render(<FilaDoMomento fila={FILA} intervalo="1 min" />);
+    const secao = (nome: string) => screen.getByRole('heading', { name: nome }).closest('section');
+    expect(secao('Por frente e prioridade da operação')?.parentElement).toHaveClass(
+      'lg:grid-cols-3',
+    );
+    expect(secao('Por frente e prioridade da operação')).toHaveClass('lg:col-span-1');
+    expect(secao('Médicos em turno agora')).toHaveClass('lg:col-span-2');
+    unmount();
+
+    // Sem exame na fila não há tabela de frentes: os médicos ocupam a largura toda.
+    render(<FilaDoMomento fila={{ ...FILA, total: 0, porFrente: [] }} intervalo="1 min" />);
+    expect(secao('Médicos em turno agora')).toHaveClass('lg:col-span-3');
+  });
+
   it('fila vazia diz que todo exame já tem médico', () => {
     render(<FilaDoMomento fila={{ ...FILA, total: 0, porFrente: [] }} intervalo="1 min" />);
     expect(screen.getByText('Nenhum exame esperando na fila')).toBeInTheDocument();

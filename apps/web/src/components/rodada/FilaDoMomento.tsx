@@ -40,7 +40,13 @@ const coluna = createDataTableColumnHelper<MedicoEmTurno>();
 const COLUNAS = [
   coluna.accessor('nome', {
     header: 'Médico',
-    cell: (i) => <span className="font-medium">{i.getValue()}</span>,
+    // Com 2/3 da largura, o nome ganha largura mínima e quebra menos; a 1280 px ela é menor para a
+    // tabela não rolar de lado (os selos de frente precisam do espaço).
+    cell: (i) => (
+      <span className="block font-medium min-[1400px]:min-w-56 xl:max-[1399px]:min-w-36">
+        {i.getValue()}
+      </span>
+    ),
   }),
   coluna.display({
     id: 'turno',
@@ -199,9 +205,15 @@ export function FilaDoMomento({
         )}
       </section>
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      {/* No computador, 1/3 para a tabela de frentes (estreita sem o vencimento) e 2/3 para os
+          médicos, que têm filtros e selos de frente; abaixo de lg, uma embaixo da outra. */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         {fila.total > 0 && <MatrizFrentes fila={fila} />}
-        <MedicosEmTurno medicos={medicos} irParaEscala={irParaEscala} />
+        <MedicosEmTurno
+          medicos={medicos}
+          irParaEscala={irParaEscala}
+          className={fila.total > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}
+        />
       </div>
     </div>
   );
@@ -216,7 +228,7 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
     );
   const th = 'text-subtle-foreground h-10 px-3 text-xs font-medium whitespace-nowrap';
   return (
-    <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3">
+    <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3 lg:col-span-1">
       <TituloSecao titulo="Por frente e prioridade da operação" id="titulo-matriz" />
       <Caixa>
         <div className="overflow-x-auto">
@@ -297,9 +309,11 @@ function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
 function MedicosEmTurno({
   medicos,
   irParaEscala,
+  className,
 }: {
   medicos: MedicoEmTurno[];
   irParaEscala?: ReactNode;
+  className?: string;
 }) {
   const [busca, setBusca] = useState('');
   const [filtros, setFiltros] = useState<FiltrosEmTurno>(SEM_FILTROS);
@@ -320,7 +334,10 @@ function MedicosEmTurno({
   };
 
   return (
-    <section aria-labelledby="titulo-medicos-turno" className="flex min-w-0 flex-col gap-3">
+    <section
+      aria-labelledby="titulo-medicos-turno"
+      className={cn('flex min-w-0 flex-col gap-3', className)}
+    >
       <TituloSecao titulo="Médicos em turno agora" id="titulo-medicos-turno" />
       {medicos.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
@@ -332,7 +349,7 @@ function MedicosEmTurno({
               setBusca(v);
               pagina.irPara(1);
             }}
-            className="flex-[1_1_200px] md:max-w-[240px]"
+            className="flex-[1_1_180px] md:max-w-[240px]"
           />
           <FiltroMultiplo
             rotulo="Turnos"
@@ -340,7 +357,7 @@ function MedicosEmTurno({
             opcoes={opcoes.turnos}
             valor={filtros.turnos}
             onMudar={(turnos) => filtrar({ turnos })}
-            className="flex-[1_1_160px] md:max-w-[220px]"
+            className="flex-[1_1_150px] md:max-w-[200px]"
           />
           <FiltroMultiplo
             rotulo="Frentes"
@@ -348,7 +365,7 @@ function MedicosEmTurno({
             opcoes={opcoes.frentes}
             valor={filtros.frentes}
             onMudar={(frentes) => filtrar({ frentes })}
-            className="flex-[1_1_160px] md:max-w-[220px]"
+            className="flex-[1_1_150px] md:max-w-[200px]"
           />
           {opcoes.segmentos.length > 0 && (
             <FiltroMultiplo
@@ -357,7 +374,7 @@ function MedicosEmTurno({
               opcoes={opcoes.segmentos}
               valor={filtros.segmentos}
               onMudar={(segmentos) => filtrar({ segmentos })}
-              className="flex-[1_1_200px] md:max-w-[280px]"
+              className="flex-[1_1_240px] md:max-w-[280px]"
             />
           )}
           {(termo || temFiltroDeLista) && (
