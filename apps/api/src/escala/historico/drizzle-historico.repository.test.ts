@@ -38,7 +38,7 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table eventos_auditoria, alocacoes, tipos_ausencia, prioridades, subespecialidades, medicos, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
+      sql`truncate table eventos_auditoria, clientes, alocacoes, tipos_ausencia, prioridades, subespecialidades, medicos, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
     );
     const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [u] = await db
@@ -352,6 +352,46 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
     const { nomes } = await repo.listar({ pagina: 1, porPagina: 1, escopo: null });
 
     expect(nomes).toEqual({ [m.bruno]: 'Bruno Alves', [carla]: 'Carla Lima' });
+  });
+
+  it('o ajuste do dia da distribuição entra pelo turno ou pela frente, com o nome do cliente', async () => {
+    const [cliente] = await db
+      .insert(schema.clientes)
+      .values({ nome: 'HCLONDRINA', chaveNormalizada: 'hclondrina' })
+      .returning();
+    const [dentro, fora] = await db
+      .insert(schema.eventosAuditoria)
+      .values(
+        [manha, tarde].map((turnoId, i) => ({
+          ocorridoEm: new Date(Date.UTC(2026, 11, 1 + i, 15)),
+          atorTipo: 'usuario' as const,
+          atorId: carla,
+          entidade: 'ajuste_dia_distribuicao',
+          entidadeId: crypto.randomUUID(),
+          acao: 'criado',
+          depois: {
+            medicoId: m.bruno,
+            turnoId,
+            frenteId: tc,
+            data: '2026-12-01',
+            listaSegueSla: true,
+            clienteId: cliente?.id,
+          },
+        })),
+      )
+      .returning();
+    const repo = new DrizzleHistoricoEscalaRepository(db);
+
+    const { itens, nomes } = await repo.listar({
+      ...pagina,
+      escopo: recorte,
+      entidade: 'ajuste_dia_distribuicao',
+    });
+
+    expect(itens.map((i) => i.id)).toEqual([dentro?.id]);
+    expect(itens.map((i) => i.id)).not.toContain(fora?.id);
+    expect(itens[0]?.medico).toEqual({ id: m.bruno, nome: 'Bruno Alves' });
+    expect(nomes[cliente?.id ?? '']).toBe('HCLONDRINA');
   });
 
   it('página sem ids não consulta nomes', async () => {

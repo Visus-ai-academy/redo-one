@@ -13539,6 +13539,7 @@
           "tipo_ausencia",
           "alocacao",
           "ajuste_produtividade",
+          "ajuste_dia_distribuicao",
           "ausencia",
           "escopo_escala"
         ]

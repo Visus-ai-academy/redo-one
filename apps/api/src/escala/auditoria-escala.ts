@@ -11,6 +11,8 @@ export const ENTIDADES_ESCALA = [
   'tipo_ausencia',
   'alocacao',
   'ajuste_produtividade',
+  // Ajuste do dia da distribuição (contexto `distribuicao`), editado na tela Escala.
+  'ajuste_dia_distribuicao',
   'ausencia',
   'escopo_escala',
 ] as const;
@@ -19,7 +21,7 @@ export type EntidadeEscala = (typeof ENTIDADES_ESCALA)[number];
 
 /**
  * Chaves de contexto que todo evento de alocação, ajuste e ausência carrega no JSON:
- * - alocação e ajuste: `medicoId`, `turnoId`, `frenteId`;
+ * - alocação e ajustes (produtividade e distribuição do dia): `medicoId`, `turnoId`, `frenteId`;
  * - ausência: `medicoId`, `turnoIds`, `frenteIds` (vazios = todos).
  * Turno, frente, tipo de ausência e escopo não têm médico: só gestor sem recorte os vê.
  */

@@ -9,6 +9,7 @@ export const entidadeEscala = {
   tipo_ausencia: 'tipo_ausencia',
   alocacao: 'alocacao',
   ajuste_produtividade: 'ajuste_produtividade',
+  ajuste_dia_distribuicao: 'ajuste_dia_distribuicao',
   ausencia: 'ausencia',
   escopo_escala: 'escopo_escala',
 } as const;

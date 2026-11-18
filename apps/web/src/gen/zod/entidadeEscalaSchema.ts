@@ -5,6 +5,6 @@
 
 import * as z from 'zod'
 
-export const entidadeEscalaSchema = z.enum(['turno', 'frente_escala', 'tipo_ausencia', 'alocacao', 'ajuste_produtividade', 'ausencia', 'escopo_escala'])
+export const entidadeEscalaSchema = z.enum(['turno', 'frente_escala', 'tipo_ausencia', 'alocacao', 'ajuste_produtividade', 'ajuste_dia_distribuicao', 'ausencia', 'escopo_escala'])
 
 export type EntidadeEscalaSchemaType = z.infer<typeof entidadeEscalaSchema>

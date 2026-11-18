@@ -220,4 +220,36 @@ describe('alteracoesDoEvento', () => {
       { rotulo: 'Campo novo x', antes: null, depois: '3' },
     ]);
   });
+
+  it('ajuste do dia do robô: rótulos da operação, sem o contexto e com o nome do cliente', () => {
+    expect(descreverEvento('ajuste_dia_distribuicao', 'criado')).toBe(
+      'Ajuste do robô no dia criado',
+    );
+    const linhas = alteracoesDoEvento(
+      {
+        entidade: 'ajuste_dia_distribuicao',
+        antes: null,
+        depois: {
+          alocacaoId: 'a',
+          medicoId: 'm',
+          turnoId: 't',
+          frenteId: 'f',
+          data: '2026-11-18',
+          prioridadeIdsLiberadas: ['11111111-1111-4111-8111-111111111111'],
+          listaSegueSla: true,
+          clienteId: '22222222-2222-4222-8222-222222222222',
+        },
+      },
+      {
+        '11111111-1111-4111-8111-111111111111': 'URGÊNCIA',
+        '22222222-2222-4222-8222-222222222222': 'HCLONDRINA',
+      },
+    );
+    expect(linhas).toEqual([
+      { rotulo: 'Dia', antes: null, depois: '18/11/2026' },
+      { rotulo: 'Aceita também', antes: null, depois: 'URGÊNCIA' },
+      { rotulo: 'A Lista segue o SLA', antes: null, depois: 'Sim' },
+      { rotulo: 'Só para o cliente', antes: null, depois: 'HCLONDRINA' },
+    ]);
+  });
 });

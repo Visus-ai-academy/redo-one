@@ -5,6 +5,7 @@ import { DATABASE, type Database } from '../../database/database';
 import {
   alocacoes,
   chavesRobo,
+  clientes,
   eventosAuditoria as e,
   especialidades,
   frentesEscala,
@@ -75,7 +76,7 @@ function noRecorte(escopo: EscopoEscala): SQL {
   );
 
   return sql`(
-    (${e.entidade} in ('alocacao', 'ajuste_produtividade')
+    (${e.entidade} in ('alocacao', 'ajuste_produtividade', 'ajuste_dia_distribuicao')
       and (${campoNoRecorte('turnoId', turnoIds)} or ${campoNoRecorte('frenteId', frenteIds)}))
     or (${e.entidade} = 'ausencia' and (
       ${listaToca('turnoIds', turnoIds)}
@@ -189,6 +190,10 @@ export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaReposito
         .select({ id: medicos.id, nome: medicos.nome })
         .from(medicos)
         .where(inArray(medicos.id, ids)),
+      this.db
+        .select({ id: clientes.id, nome: clientes.nome })
+        .from(clientes)
+        .where(inArray(clientes.id, ids)),
       this.db
         .select({ id: usuarios.id, nome: usuarios.nome })
         .from(usuarios)

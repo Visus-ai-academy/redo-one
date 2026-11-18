@@ -10,6 +10,7 @@ type Genero = 'f' | 'm';
 export const ENTIDADES_HISTORICO: Record<EntidadeEscalaKey, { rotulo: string; genero: Genero }> = {
   alocacao: { rotulo: 'Alocação', genero: 'f' },
   ajuste_produtividade: { rotulo: 'Ajuste de produtividade', genero: 'm' },
+  ajuste_dia_distribuicao: { rotulo: 'Ajuste do robô no dia', genero: 'm' },
   ausencia: { rotulo: 'Ausência', genero: 'f' },
   turno: { rotulo: 'Turno', genero: 'm' },
   frente_escala: { rotulo: 'Frente', genero: 'f' },
@@ -62,6 +63,8 @@ export function rotuloDoAtor(ator: AtorHistoricoDto): string {
 const CONTEXTO_DA_ENTIDADE: Record<string, Set<string>> = {
   alocacao: new Set(['id', 'medicoId', 'turnoId', 'frenteId']),
   ajuste_produtividade: new Set(['id', 'medicoId', 'turnoId', 'frenteId']),
+  // O médico já vem no cabeçalho do evento; a alocação repetiria médico, turno e frente.
+  ajuste_dia_distribuicao: new Set(['id', 'alocacaoId', 'medicoId', 'turnoId', 'frenteId']),
   ausencia: new Set(['id', 'medicoId', 'turnoIds', 'frenteIds']),
   escopo_escala: new Set(['id', 'turnoIds', 'frenteIds']),
   turno: new Set(['id', 'especialidadeIds', 'modalidadeIds']),
@@ -126,6 +129,9 @@ const CAMPOS: Record<string, string> = {
   gravidade: 'Gravidade',
   soGestor: 'Só o gestor lança',
   contaComoFalta: 'Conta como falta',
+  prioridadeIdsLiberadas: 'Aceita também',
+  listaSegueSla: 'A Lista segue o SLA',
+  clienteId: 'Só para o cliente',
 };
 
 const VALORES: Record<string, string> = {
