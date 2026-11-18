@@ -25,8 +25,11 @@ const TURNOS = { query: { ativo: true, porPagina: 100 } };
 export const Route = createFileRoute('/_app/configuracoes/distribuicao')({
   loader: async ({ context }) => {
     if (!pode(context.sessao, 'distribuicao-config.ver')) return;
-    void context.queryClient.prefetchQuery(turnosControllerListarQueryOptions(TURNOS));
     await Promise.all([
+      // Esperado (sem lançar: o erro vira o aviso da tela) para o SSR e o cliente renderizarem
+      // o mesmo: sem o await, o servidor desenhava o esqueleto e o cliente hidratava já com os
+      // turnos e as prioridades (erro de hidratação).
+      context.queryClient.prefetchQuery(turnosControllerListarQueryOptions(TURNOS)),
       context.queryClient.ensureQueryData(configuracaoDistribuicaoControllerObterQueryOptions()),
       context.queryClient.ensureQueryData(prioridadesOperacaoControllerListarQueryOptions()),
       context.queryClient.ensureQueryData(gradeRecebimentoControllerObterQueryOptions()),
