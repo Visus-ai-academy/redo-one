@@ -8,6 +8,7 @@ import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import { cn } from '../../lib/cn';
 import { juntarNomes, num } from '../../lib/rodada';
+import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
@@ -34,7 +35,8 @@ type Candidato = {
  * "Mover" (ou "Mandar a um médico", para o que o motor deixou de fora): popover ancorado no botão,
  * com busca, os médicos que podiam laudar o exame primeiro e a carga de cada um depois da troca.
  * Mandar na mão pode passar do teto: o aviso "Acima do teto" fica ao lado do nome. Com o pacote do
- * paciente, a caixa "Levar os outros exames" vem marcada.
+ * paciente, a caixa "Levar os outros exames" vem marcada. Se a API recusa, o erro aparece no
+ * próprio popover, que fica aberto para escolher de novo (`onEscolher` rejeita com a mensagem).
  */
 export function MoverExame({
   designacao,
@@ -51,6 +53,7 @@ export function MoverExame({
 }) {
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
   const outros = (designacao.pacote?.exames ?? 1) - 1;
   const [levar, setLevar] = useState(true);
   const naMao = designacao.status === 'recusada';
@@ -96,13 +99,25 @@ export function MoverExame({
   const lista = [...visiveis, ...foraDaRodada];
 
   const escolher = async (id: string) => {
-    await onEscolher(id, outros > 0 && levar);
+    setErro(null);
+    try {
+      await onEscolher(id, outros > 0 && levar);
+    } catch (falha) {
+      setErro(falha instanceof Error && falha.message ? falha.message : 'Não foi possível mover.');
+      return;
+    }
     setAberto(false);
     setBusca('');
   };
 
   return (
-    <Popover.Root open={aberto} onOpenChange={setAberto}>
+    <Popover.Root
+      open={aberto}
+      onOpenChange={(abrir) => {
+        setAberto(abrir);
+        if (!abrir) setErro(null);
+      }}
+    >
       <Popover.Trigger
         disabled={desabilitado}
         className={buttonClassName({ variant: 'ghost', className: 'h-8 px-2 text-[13px]' })}
@@ -123,6 +138,7 @@ export function MoverExame({
                 valor={busca}
                 onMudar={setBusca}
               />
+              {erro && <Alerta tom="erro">{erro}</Alerta>}
             </div>
             <ul aria-label="Médicos" className="flex-1 overflow-y-auto p-1">
               {lista.length === 0 ? (

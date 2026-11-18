@@ -83,5 +83,24 @@ export function useAcoesRodada() {
         }).unwrap();
         return true;
       }),
+    /**
+     * Ajusta e lança o erro com a mensagem da API, para quem pediu mostrar junto da ação (o
+     * popover do "Mover"), em vez de no cartão da rodada.
+     */
+    ajustarOuFalhar: async (id: string, ajuste: Partial<AjustePropostaDto>) => {
+      setOcupada('ajustar');
+      setErro(null);
+      try {
+        await rodadasControllerAjustarProposta({
+          path: { id },
+          body: { remover: [], mover: [], ...ajuste },
+        }).unwrap();
+      } catch (falha) {
+        throw new Error(mensagemDaApi(falha, FALHA));
+      } finally {
+        setOcupada(null);
+        await invalidarRodadas(queryClient);
+      }
+    },
   };
 }

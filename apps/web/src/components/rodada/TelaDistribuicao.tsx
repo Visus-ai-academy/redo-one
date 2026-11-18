@@ -557,18 +557,17 @@ function RodadaViva({
             },
             mover: async (d: DesignacaoDto, medicoId: string, levarPacote: boolean) => {
               const nome = nomes.get(medicoId) ?? 'o médico';
-              if (
-                await acoes.ajustar(rodada.id, {
-                  mover: [{ designacaoId: d.id, medicoId, levarPacote }],
-                })
-              )
-                sucesso(
-                  d.status === 'recusada'
-                    ? `Exame mandado na mão para ${nome}.`
-                    : levarPacote
-                      ? `Pacote movido para ${nome}.`
-                      : `Exame movido para ${nome}.`,
-                );
+              // O erro volta ao popover do "Mover", onde a pessoa está (não ao cartão atrás).
+              await acoes.ajustarOuFalhar(rodada.id, {
+                mover: [{ designacaoId: d.id, medicoId, levarPacote }],
+              });
+              sucesso(
+                d.status === 'recusada'
+                  ? `Exame mandado na mão para ${nome}.`
+                  : levarPacote
+                    ? `Pacote movido para ${nome}.`
+                    : `Exame movido para ${nome}.`,
+              );
             },
           }
         : undefined;

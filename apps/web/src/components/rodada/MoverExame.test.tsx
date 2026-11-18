@@ -123,4 +123,27 @@ describe('MoverExame', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Zélia Fora/ }));
     expect(onEscolher).toHaveBeenCalledWith('Z', false);
   });
+  it('a API recusa: o erro aparece no popover, que fica aberto para escolher de novo', async () => {
+    const onEscolher = vi
+      .fn<(id: string, levar: boolean) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error('Médico de destino sem conta na MobileMed.'))
+      .mockResolvedValueOnce(undefined);
+    renderComRotas(
+      <MoverExame
+        designacao={designacao()}
+        medicos={MEDICOS}
+        buscarMedicos={async () => []}
+        onEscolher={onEscolher}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
+    await userEvent.click(screen.getByRole('button', { name: /Bruno/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Médico de destino sem conta na MobileMed.',
+    );
+    expect(screen.getByRole('button', { name: /Carla/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Carla/ }));
+    expect(onEscolher).toHaveBeenLastCalledWith('C', true);
+    await vi.waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
 });
