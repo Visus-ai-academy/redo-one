@@ -21,6 +21,9 @@ describe('validarAmbiente', () => {
     ['S3_ENDPOINT', 'localhost:9000'],
     ['S3_FORCAR_PATH_STYLE', 'sim'],
     ['PACIENTE_HMAC_SEGREDO', 'curto'],
+    ['DISTRIBUICAO_FAKE_TAMANHO', 'muitos'],
+    ['DISTRIBUICAO_FAKE_SEMENTE', '-1'],
+    ['DISTRIBUICAO_FAKE_FALHAS_PCT', '101'],
   ])('recusa %s=%s, dizendo qual variável está errada', (nome, valor) => {
     expect(() => validarAmbiente({ ...minimo, [nome]: valor })).toThrow(nome);
   });

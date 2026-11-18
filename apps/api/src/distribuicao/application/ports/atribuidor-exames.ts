@@ -1,0 +1,36 @@
+export const ATRIBUIDOR_EXAMES = Symbol('ATRIBUIDOR_EXAMES');
+
+export interface PedidoAtribuicao {
+  /** Id do exame na MobileMed. */
+  idExame: string;
+  /** Conta do médico na MobileMed (`medicos.id_mobilemed`). */
+  medicoIdMobilemed: number;
+}
+
+/**
+ * O que a MobileMed respondeu para um exame. `pulada`: a MobileMed recusou de propósito (o exame
+ * já tem médico, saiu da fila); `falhou`: erro de comunicação ou da MobileMed. `retentavel` diz se
+ * vale tentar de novo ao retomar a rodada (sessão caiu, tempo esgotado): só o adaptador sabe.
+ */
+export type ResultadoAtribuicao =
+  | { status: 'executada' }
+  | {
+      status: 'pulada' | 'falhou';
+      /** Código curto (ex.: `ja_tem_medico`, `sessao_caiu`). */
+      motivo: string;
+      /** Texto para a pessoa, dizendo que a falha veio da MobileMed; nunca com dado de paciente. */
+      detalhe: string | null;
+      retentavel: boolean;
+    };
+
+/**
+ * Atribuição do exame ao médico na MobileMed, um por vez (a execução confere a pausa entre um e
+ * outro). Até o mapeamento da API, o adaptador é o fake, que só registra na memória; nada sai do
+ * processo.
+ *
+ * TODO(adaptador real): `PUT /exame` com o corpo exato (residente e digitador), conferindo antes
+ * que o exame segue sem médico e NOVO. Depende do mapeamento da API da MobileMed (TODO.md).
+ */
+export interface AtribuidorExames {
+  atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao>;
+}

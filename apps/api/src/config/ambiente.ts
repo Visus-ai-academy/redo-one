@@ -21,6 +21,10 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('S3_ENDPOINT', (v) => /^https?:\/\//.test(v), 'precisa começar com http:// ou https://');
   opcional('S3_FORCAR_PATH_STYLE', (v) => v === 'true' || v === 'false', 'use true ou false');
   opcional('PACIENTE_HMAC_SEGREDO', (v) => v.length >= 32, 'precisa ter pelo menos 32 caracteres');
+  const inteiroAte = (max: number) => (v: string) => /^\d+$/.test(v) && Number(v) <= max;
+  opcional('DISTRIBUICAO_FAKE_TAMANHO', inteiroAte(100_000), 'inteiro de 0 a 100000');
+  opcional('DISTRIBUICAO_FAKE_SEMENTE', inteiroAte(4_294_967_295), 'inteiro não negativo');
+  opcional('DISTRIBUICAO_FAKE_FALHAS_PCT', inteiroAte(100), 'inteiro de 0 a 100');
 
   if (erros.length) throw new Error(`Variáveis de ambiente inválidas:\n- ${erros.join('\n- ')}`);
   return env;
