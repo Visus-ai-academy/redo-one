@@ -417,3 +417,49 @@ Agora o objetivo é **confirmar** o que o bundle diz, com atribuições que a op
 | A MobileMed muda o bundle | Validação estrita das respostas; falha alta com "veio da MobileMed"; o `mobile.js` é foto datada, rever quando algo quebrar |
 | LGPD | Paciente só por id do exame e HMAC; nome só na memória da leitura e na conferência com permissão e auditoria; nunca nome, código ou laudo em log, evento, detalhe ou amostra de teste; o caminho de corpo mínimo não leva dado de paciente |
 | Autorização | Uso autorizado; perguntar à MobileMed pela `integracao.mobilemed.com.br/v1` e por credencial de integração |
+
+---
+
+## 9. Adaptador real (`apps/api/src/distribuicao/infrastructure/mobilemed`)
+
+Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo contrato do fake (`mobilemed-fake.ts`). Testado só com HTTP simulado (fetch injetado); **nenhuma requisição foi feita à MobileMed** para construí-lo.
+
+| Arquivo | O que faz |
+| --- | --- |
+| `cliente-mobilemed.ts` | HTTP do `portal-api`: `Content-Type: application/json` + `Authorization: Bearer`, prazo por chamada, chamadas simultâneas limitadas, validação da resposta (Zod), classificação dos erros (`sessao`, `indisponivel`, `resposta_inesperada`, `recusada`) e o freio. Logs JSON só com rota genérica (`GET /exame/{id}`), tipo e status HTTP; mensagens nunca copiam o texto do erro nem valores da resposta (só o `error_code` e os caminhos dos campos) |
+| `token-mobilemed.ts` | Porta `TokenMobileMed` e o único adaptador por ora, `TokenMobileMedDoAmbiente` (lê `MOBILEMED_ACCESS_TOKEN`; sem ele, falha dizendo qual variável definir) |
+| `esquemas-mobilemed.ts` | Esquemas Zod das respostas e os enums de `prioridade_id` e `status_id` (seção 2.1). Só os campos usados sobrevivem à validação |
+| `mobilemed-real.ts` | `MobileMedReal`: leitura, conferência, atribuição, troca, retirada, `medicosDaUnidade` e o porte de `definirFlagsResetSla` |
+
+### 9.1 Como ligar
+
+1. No `apps/api/.env`: `DISTRIBUICAO_MOBILEMED=real` e `MOBILEMED_ACCESS_TOKEN=<token da conta de serviço>`. Sem `real`, vale o fake (padrão); com `real` e sem token, a API não sobe.
+2. Reiniciar a API. **A partir daí, a rodada aprovada atribui exames de verdade.** Primeira vez só com aval da operação (seção 8).
+
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `DISTRIBUICAO_MOBILEMED` | `fake` | `fake` ou `real` |
+| `MOBILEMED_PORTAL_API_URL` | `https://gateway-sa.mobilemed.com.br/portal-api` | Base das rotas (só `https://`) |
+| `MOBILEMED_ACCESS_TOKEN` | — | Access token (obrigatório com `real`) |
+| `MOBILEMED_PAGINA` | 1000 | `total_registros` por página da lista |
+| `MOBILEMED_MAXIMO_EXAMES` | 20000 | Lista com `paginacao.total` acima disso é recusada (filtro ignorado traria o histórico) |
+| `MOBILEMED_TIMEOUT_MS` | 90000 | Prazo de cada chamada |
+| `MOBILEMED_CONCORRENCIA` | 1 | Chamadas ao mesmo tempo |
+| `MOBILEMED_LIMITE_ANOMALIAS` | 2 | Anomalias seguidas que param a atribuição |
+
+### 9.2 Comportamento
+
+- **`ler()`**: `POST /exame/lista` com `medicos: [0]` e `limpar_data: true` (sem médico) e de novo com `medicos: []` e `array_status_id` = todos os status menos assinados (em mãos), cada uma paginada até `last_page`. A soma das páginas tem que bater com `paginacao.total` (e o total não pode mudar entre páginas); prioridade ou status desconhecidos, ou item fora do formato, derrubam a leitura inteira. `semMedico` traz também o aberto sem médico (status ≠ NOVO), como o fake: o domínio só distribui o NOVO. Leituras simultâneas (tela e job) dividem a mesma ida.
+- Corpo da resposta: o que o portal lê como `response.data` (`{ lista, paginacao }`, `{ exame }`); a confirmar no HAR.
+- **`nomesPacientes(ids)`** e **`intocados(exames)`**: um pedido por exame (`pesquisa_id_exame` e `GET /exame/{id}`). Se a conferência falha por erro da MobileMed, o exame segue para a atribuição, que reconfere e devolve a falha como retentável.
+- **`atribuir` (inclui a troca do recolhimento) e `tirar`**: `GET /exame/{id}` → já com o médico pedido = `executada`; assinado = `pulada/assinado`; já com médico (sem ser troca) = `ja_tem_medico`; troca com outro dono = `mudou_de_dono`; status ≠ NOVO = `exame_ja_aberto`; sumiu = `saiu_da_fila`; `empresa.exigir_motivo` = `unidade_exige_motivo` (decisão: a operação atribui à mão). Depois `PUT /exame` com o corpo mínimo (`usuario_id: 0` para tirar) e as flags de SLA do portal, e nova leitura: `usuario_id` gravado ≠ pedido = `falhou/nao_confirmado` (retentável).
+- **Erros**: sessão (401, 403, 410, `invalid_token`) = `sessao_caiu`, retentável; 429, 5xx, sem resposta ou tempo esgotado = `mobilemed_indisponivel`, retentável; corpo fora do formato = `resposta_inesperada`; outro 4xx = `recusada_mobilemed`.
+- **Freio**: depois de `MOBILEMED_LIMITE_ANOMALIAS` anomalias seguidas (429, 5xx, sem resposta, fora do formato), cada atribuição volta `falhou/freio_mobilemed` (retentável) sem chamar a MobileMed, até uma chamada dar certo (ex.: a conferência ao retomar).
+- **`medicosDaUnidade(empresaId)`**: `POST /usuario/lista/empresa` com `perfis: [3]`; devolve `{ id, nome }`. Base do futuro de-para de `medicos.id_mobilemed` (sem tela).
+
+### 9.3 O que falta
+
+- **Login**: Cognito com TOTP, renovação pelo refresh token, nova tentativa após `invalid_token` (novo adaptador de `TokenMobileMed`). Até lá o token do ambiente vence em ~5 min.
+- Especialidade (`subespecialidade_id`) e quantidade de laudos não são lidas (o catálogo decide pelo estudo; `laudos` = 1); formato de `modalidade` aceito como texto ou objeto. Conferir no HAR (5.4).
+- Conferir o médico na lista da unidade antes de atribuir (`medico_fora_da_unidade`, 3.2 passo 3) e o motivo nas unidades que exigem: não implementados.
+- A tela "fila do momento" e a prévia do recolhimento chamam `ler()` a cada consulta: com o real, cada consulta é uma leitura inteira da fila na MobileMed.
