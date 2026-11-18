@@ -5,21 +5,27 @@ import { cargaDoMedico, num } from '../../lib/rodada';
 import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 
-/** Título de seção da tela (h2 de 16px) com algo à direita (busca, filtro, hora). */
+/** Título de seção da tela (h2 de 16px), com ajuda ao lado e algo à direita (busca, filtro, hora). */
 export function TituloSecao({
   titulo,
   children,
   id,
+  ajuda,
 }: {
   titulo: string;
   children?: ReactNode;
   id?: string;
+  /** Ícone de ajuda logo depois do título (`AjudaContextual`). */
+  ajuda?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 id={id} className="text-base font-semibold">
-        {titulo}
-      </h2>
+      <div className="flex min-w-0 items-center gap-1">
+        <h2 id={id} className="text-base font-semibold">
+          {titulo}
+        </h2>
+        {ajuda}
+      </div>
       {children}
     </div>
   );

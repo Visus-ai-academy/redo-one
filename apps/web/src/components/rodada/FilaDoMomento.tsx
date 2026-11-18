@@ -1,4 +1,5 @@
 import { Button } from '@base-ui/react/button';
+import { Popover } from '@base-ui/react/popover';
 import { ArrowClockwise, CheckCircle, Clock, UsersThree } from '@phosphor-icons/react';
 import { type ReactNode, useMemo, useState } from 'react';
 
@@ -14,20 +15,21 @@ import {
   num,
   opcoesDosFiltros,
 } from '../../lib/rodada';
+import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { Alerta } from '../alerta/Alerta';
+import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { FiltroMultiplo } from '../escala/FiltroMultiplo';
-import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { SeloCor } from '../selo-cor/SeloCor';
 import { Caixa, CargaDoMedico, TituloSecao, Vazio } from './comum';
 
-const UMA_HORA = 3_600_000;
 const SEM_FILTROS: FiltrosEmTurno = { turnos: [], frentes: [], segmentos: [] };
 
 const semAcento = (t: string) =>
@@ -40,12 +42,10 @@ const coluna = createDataTableColumnHelper<MedicoEmTurno>();
 const COLUNAS = [
   coluna.accessor('nome', {
     header: 'Médico',
-    // Com 2/3 da largura, o nome ganha largura mínima e quebra menos; a 1280 px ela é menor para a
-    // tabela não rolar de lado (os selos de frente precisam do espaço).
+    // O nome tem largura mínima para não quebrar em várias linhas (no celular a tabela rola dentro
+    // da caixa); com 2/3 de uma tela larga, ganha mais.
     cell: (i) => (
-      <span className="block font-medium min-[1400px]:min-w-56 xl:max-[1399px]:min-w-36">
-        {i.getValue()}
-      </span>
+      <span className="block min-w-36 font-medium min-[1400px]:min-w-56">{i.getValue()}</span>
     ),
   }),
   coluna.display({
@@ -89,7 +89,14 @@ const COLUNAS = [
   }),
   coluna.display({
     id: 'carga',
-    header: 'Carga agora',
+    header: () => (
+      <span className="inline-flex items-center gap-1">
+        Carga agora
+        <AjudaContextual assunto="a carga">
+          Carga é o que o médico tem aberto na MobileMed agora, contra o teto do turno na escala.
+        </AjudaContextual>
+      </span>
+    ),
     cell: ({ row }) => (
       <CargaDoMedico
         cargaEmMaos={row.original.cargaEmMaos}
@@ -124,8 +131,7 @@ export function FilaDoMomento({
   irParaEscala?: ReactNode;
 }) {
   const medicos = useMemo(() => medicosEmTurno(fila.medicosEmTurno), [fila.medicosEmTurno]);
-  const agora = new Date(fila.lidaEm).getTime();
-  const primeiro = fila.primeiroVencimento;
+  const lida = new Date(fila.lidaEm);
   const urgentesPorPrioridade = fila.prioridades.filter((p) => p.urgentes > 0);
 
   return (
@@ -183,17 +189,24 @@ export function FilaDoMomento({
                   : 'Nenhum agora',
               },
               {
+                rotulo: 'Vencidos',
+                valor: (
+                  <span className={cn(fila.vencidos > 0 && 'text-destructive')}>
+                    {num(fila.vencidos)}
+                  </span>
+                ),
+                legenda:
+                  fila.vencidos > 0 && fila.primeiroVencimento
+                    ? `O mais antigo desde ${dataHoraCurta(fila.primeiroVencimento, lida).toLowerCase()}`
+                    : 'Nenhum fora do prazo',
+              },
+              {
                 rotulo: 'Vencem na próxima hora',
                 valor: num(fila.vencemProximaHora),
-                extra:
-                  primeiro && new Date(primeiro).getTime() <= agora + UMA_HORA ? (
-                    <Etiqueta tom="erro" icone={Clock}>
-                      {new Date(primeiro).getTime() < agora
-                        ? `Já vencido desde ${dataHoraCurta(primeiro).toLowerCase()}`
-                        : `O primeiro às ${horaDeBrasilia(primeiro)}`}
-                    </Etiqueta>
-                  ) : null,
-                legenda: 'Pelo SLA do cliente, contando os já vencidos',
+                legenda:
+                  fila.vencemProximaHora > 0 && fila.proximoVencimento
+                    ? `O primeiro às ${horaDeBrasilia(fila.proximoVencimento)}`
+                    : 'Nenhum na próxima hora',
               },
               {
                 rotulo: 'Médicos em turno agora',
@@ -208,7 +221,7 @@ export function FilaDoMomento({
       {/* No computador, 1/3 para a tabela de frentes (estreita sem o vencimento) e 2/3 para os
           médicos, que têm filtros e selos de frente; abaixo de lg, uma embaixo da outra. */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        {fila.total > 0 && <MatrizFrentes fila={fila} />}
+        {fila.total > 0 && <PorFrente fila={fila} />}
         <MedicosEmTurno
           medicos={medicos}
           irParaEscala={irParaEscala}
@@ -219,90 +232,144 @@ export function FilaDoMomento({
   );
 }
 
-function MatrizFrentes({ fila }: { fila: FilaDoMomentoDto }) {
-  const colunas = fila.prioridades;
-  const total = (id: string | null) =>
-    fila.porFrente.reduce(
-      (s, f) => s + (f.porPrioridade.find((p) => p.prioridadeOperacaoId === id)?.exames ?? 0),
-      0,
-    );
-  const th = 'text-subtle-foreground h-10 px-3 text-xs font-medium whitespace-nowrap';
+/** Prioridade sem cor cadastrada: tons de neutro na ordem da operação (a primeira, mais escura). */
+const TONS_NEUTROS = [85, 64, 48, 36, 28];
+const corDaPrioridade = (p: { cor?: string | null }, i: number) =>
+  p.cor ??
+  `color-mix(in srgb, var(--muted-foreground) ${TONS_NEUTROS[Math.min(i, TONS_NEUTROS.length - 1)]}%, white)`;
+
+const urgentesTexto = (n: number) => `${num(n)} ${n === 1 ? 'urgente' : 'urgentes'}`;
+
+type PrioridadeComCor = FilaDoMomentoDto['prioridades'][number] & { cor: string };
+
+/**
+ * Cada frente numa linha: nome, total e quantos são tratados como urgência, com uma barra
+ * empilhada pela prioridade da operação. O detalhe por prioridade abre na barra (popover); a
+ * legenda embaixo dá o total de cada prioridade. Cabe em 1/3 da largura e no celular sem rolar.
+ */
+function PorFrente({ fila }: { fila: FilaDoMomentoDto }) {
+  const prioridades: PrioridadeComCor[] = fila.prioridades.map((p, i) => ({
+    ...p,
+    cor: corDaPrioridade(p as { cor?: string | null }, i),
+  }));
   return (
     <section aria-labelledby="titulo-matriz" className="flex min-w-0 flex-col gap-3 lg:col-span-1">
-      <TituloSecao titulo="Por frente e prioridade da operação" id="titulo-matriz" />
+      <TituloSecao
+        titulo="Por frente e prioridade da operação"
+        id="titulo-matriz"
+        ajuda={
+          <AjudaContextual assunto="a frente e a prioridade da operação">
+            Frente é a da escala (especialidade ou modalidade). A prioridade da operação vem do
+            de-para em Configurações › Distribuição. Passe o mouse, toque ou tecle Enter na barra
+            para ver os exames de cada prioridade.
+          </AjudaContextual>
+        }
+      />
       <Caixa>
-        <div className="overflow-x-auto">
-          <table aria-labelledby="titulo-matriz" className="w-full tabular-nums">
-            <thead>
-              <tr className="border-b">
-                <th scope="col" className={cn(th, 'text-left')}>
-                  Frente
-                </th>
-                {colunas.map((p) => (
-                  <th
-                    key={p.prioridadeOperacaoId ?? 'sem'}
-                    scope="col"
-                    className={cn(th, 'text-right')}
-                  >
-                    {p.nome}
-                  </th>
-                ))}
-                <th scope="col" className={cn(th, 'text-right')}>
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {fila.porFrente.map((f) => (
-                <tr key={f.frenteId ?? 'sem-frente'} className="hover:bg-muted border-b">
-                  <th scope="row" className="h-11 px-3 text-left font-medium whitespace-nowrap">
-                    {f.nome}
-                  </th>
-                  {colunas.map((p) => {
-                    const c = f.porPrioridade.find(
-                      (x) => x.prioridadeOperacaoId === p.prioridadeOperacaoId,
-                    );
-                    return (
-                      <td
-                        key={p.prioridadeOperacaoId ?? 'sem'}
-                        className={cn(
-                          'px-3 text-right',
-                          !c?.exames && 'text-subtle-foreground',
-                          (c?.urgentes ?? 0) > 0 && 'text-destructive font-semibold',
-                        )}
-                      >
-                        {num(c?.exames ?? 0)}
-                      </td>
-                    );
-                  })}
-                  <td className="px-3 text-right font-semibold">{num(f.exames)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <th scope="row" className="h-11 px-3 text-left font-semibold">
-                  Total
-                </th>
-                {colunas.map((p) => (
-                  <td
-                    key={p.prioridadeOperacaoId ?? 'sem'}
-                    className="px-3 text-right font-semibold"
-                  >
-                    {num(total(p.prioridadeOperacaoId))}
-                  </td>
-                ))}
-                <td className="px-3 text-right font-semibold">{num(fila.total)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <ul aria-labelledby="titulo-matriz" className="divide-y">
+          {fila.porFrente.map((f) => (
+            <LinhaFrente key={f.frenteId ?? 'sem-frente'} frente={f} prioridades={prioridades} />
+          ))}
+        </ul>
+        <ul
+          aria-label="Total por prioridade"
+          className="bg-muted flex flex-wrap gap-x-4 gap-y-1 border-t px-4 py-2.5 text-[13px] tabular-nums"
+        >
+          {prioridades.map((p) => (
+            <li key={p.prioridadeOperacaoId ?? 'sem'} className="flex items-center gap-1.5">
+              <BolinhaCor cor={p.cor} className="size-2.5" />
+              <span className="text-muted-foreground">{p.nome}</span>
+              <span className="font-semibold">{num(p.exames)}</span>
+            </li>
+          ))}
+        </ul>
       </Caixa>
-      <p className="text-subtle-foreground text-xs">
-        Frente é a da escala (especialidade ou modalidade). A prioridade da operação vem do de-para
-        em Configurações › Distribuição; em vermelho, as células com exame tratado como urgência.
-      </p>
     </section>
+  );
+}
+
+function LinhaFrente({
+  frente: f,
+  prioridades,
+}: {
+  frente: FilaDoMomentoDto['porFrente'][number];
+  prioridades: PrioridadeComCor[];
+}) {
+  const daPrioridade = (id: string | null) =>
+    f.porPrioridade.find((x) => x.prioridadeOperacaoId === id) ?? { exames: 0, urgentes: 0 };
+  const total = Math.max(f.exames, 1);
+  return (
+    <li className="flex flex-col gap-1 px-4 pt-2.5 pb-1.5">
+      <div className="flex items-baseline gap-2">
+        <span className="min-w-0 flex-1 font-medium break-words">{f.nome}</span>
+        {f.urgentes > 0 && (
+          <span className="text-destructive text-[13px] font-medium whitespace-nowrap tabular-nums">
+            {urgentesTexto(f.urgentes)}
+          </span>
+        )}
+        <span className="min-w-8 text-right text-base font-semibold tabular-nums">
+          {num(f.exames)}
+        </span>
+      </div>
+      <Popover.Root>
+        <Popover.Trigger
+          openOnHover
+          delay={150}
+          aria-label={`${f.nome} por prioridade`}
+          className="focus-visible:outline-ring -mx-1 flex rounded-md px-1 py-1.5 focus-visible:outline-2"
+        >
+          <BarraEmpilhada
+            separados
+            className="h-2 w-full"
+            rotulo={prioridades
+              .map((p) => `${p.nome}: ${num(daPrioridade(p.prioridadeOperacaoId).exames)}`)
+              .join(', ')}
+            segmentos={prioridades.map((p) => ({
+              pct: (daPrioridade(p.prioridadeOperacaoId).exames / total) * 100,
+              cor: p.cor,
+            }))}
+          />
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Positioner
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            collisionPadding={16}
+            className="z-50 outline-none"
+          >
+            <Popover.Popup className="bg-popover text-popover-foreground w-[min(280px,calc(100vw-32px))] origin-(--transform-origin) rounded-lg border p-3 text-[13px] shadow-lg transition-[opacity,scale] duration-150 ease-out outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none">
+              <Popover.Title className="mb-2 text-sm font-semibold tabular-nums">
+                {f.nome}: {num(f.exames)} {f.exames === 1 ? 'exame' : 'exames'}
+              </Popover.Title>
+              <ul className="flex flex-col gap-1 tabular-nums">
+                {prioridades.map((p) => {
+                  const c = daPrioridade(p.prioridadeOperacaoId);
+                  return (
+                    <li
+                      key={p.prioridadeOperacaoId ?? 'sem'}
+                      className={cn(
+                        'flex items-center gap-2',
+                        !c.exames && 'text-subtle-foreground',
+                      )}
+                    >
+                      <BolinhaCor cor={p.cor} className="size-2.5" />
+                      <span className="min-w-0 flex-1 truncate">{p.nome}</span>
+                      {c.urgentes > 0 && (
+                        <span className="text-destructive font-medium">
+                          {urgentesTexto(c.urgentes)}
+                        </span>
+                      )}
+                      <span className="min-w-8 text-right font-semibold">{num(c.exames)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+    </li>
   );
 }
 
@@ -416,9 +483,6 @@ function MedicosEmTurno({
               onIrPara={pagina.irPara}
             />
           </Caixa>
-          <p className="text-subtle-foreground text-xs">
-            Carga é o que o médico tem aberto na MobileMed agora, contra o teto do turno na escala.
-          </p>
         </>
       )}
     </section>
