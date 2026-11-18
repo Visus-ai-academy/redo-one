@@ -373,7 +373,7 @@ export class ExplicacaoDto {
   checks!: CheckExplicacaoDto[];
 }
 
-export class MedicoResumoDto {
+export class MedicoDaRodadaDto {
   @ApiProperty({ format: 'uuid' }) medicoId!: string;
   @ApiProperty() nome!: string;
   @ApiProperty({ type: [String] }) turnos!: string[];
@@ -433,7 +433,7 @@ export class TrilhaRodadaDto {
 }
 
 export class ResumoRodadaDto {
-  @ApiProperty({ type: [MedicoResumoDto] }) medicos!: MedicoResumoDto[];
+  @ApiProperty({ type: [MedicoDaRodadaDto] }) medicos!: MedicoDaRodadaDto[];
   @ApiProperty({ type: [ContagemMotivoDto] }) motivos!: ContagemMotivoDto[];
   @ApiProperty({ type: AjustesConferenciaDto }) ajustes!: AjustesConferenciaDto;
   @ApiProperty({ type: FunilExamesDto, nullable: true }) funilExames!: FunilExamesDto | null;

@@ -7,11 +7,11 @@ import type { AjustesConferenciaDto } from './AjustesConferenciaDto'
 import type { ContagemMotivoDto } from './ContagemMotivoDto'
 import type { FunilExamesDto } from './FunilExamesDto'
 import type { FunilMedicosDto } from './FunilMedicosDto'
-import type { MedicoResumoDto } from './MedicoResumoDto'
+import type { MedicoDaRodadaDto } from './MedicoDaRodadaDto'
 import type { TrilhaRodadaDto } from './TrilhaRodadaDto'
 
 export type ResumoRodadaDto = {
-  medicos: MedicoResumoDto[];
+  medicos: MedicoDaRodadaDto[];
   motivos: ContagemMotivoDto[];
   ajustes: AjustesConferenciaDto;
   funilExames: FunilExamesDto | null;

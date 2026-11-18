@@ -16232,6 +16232,80 @@
           "porPagina"
         ]
       },
+      "MedicoDaRodadaDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "turnos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "frentes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "capacidade": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Teto da escala na leitura."
+          },
+          "cargaEmMaos": {
+            "type": "integer",
+            "description": "Já aberto na MobileMed na leitura."
+          },
+          "propostos": {
+            "type": "integer"
+          },
+          "urgencias": {
+            "type": "integer"
+          },
+          "pacotes": {
+            "type": "integer",
+            "description": "Pacientes com mais de um exame com ele."
+          },
+          "previstas": {
+            "type": "integer"
+          },
+          "executadas": {
+            "type": "integer"
+          },
+          "puladas": {
+            "type": "integer"
+          },
+          "falharam": {
+            "type": "integer"
+          },
+          "naMao": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "medicoId",
+          "nome",
+          "turnos",
+          "frentes",
+          "capacidade",
+          "cargaEmMaos",
+          "propostos",
+          "urgencias",
+          "pacotes",
+          "previstas",
+          "executadas",
+          "puladas",
+          "falharam",
+          "naMao"
+        ]
+      },
       "ContagemMotivoDto": {
         "type": "object",
         "properties": {
@@ -16367,7 +16441,7 @@
           "medicos": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MedicoResumoDto"
+              "$ref": "#/components/schemas/MedicoDaRodadaDto"
             }
           },
           "motivos": {

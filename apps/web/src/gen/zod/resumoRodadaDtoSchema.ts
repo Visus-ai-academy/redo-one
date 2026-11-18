@@ -8,11 +8,11 @@ import { ajustesConferenciaDtoSchema } from './ajustesConferenciaDtoSchema'
 import { contagemMotivoDtoSchema } from './contagemMotivoDtoSchema'
 import { funilExamesDtoSchema } from './funilExamesDtoSchema'
 import { funilMedicosDtoSchema } from './funilMedicosDtoSchema'
-import { medicoResumoDtoSchema } from './medicoResumoDtoSchema'
+import { medicoDaRodadaDtoSchema } from './medicoDaRodadaDtoSchema'
 import { trilhaRodadaDtoSchema } from './trilhaRodadaDtoSchema'
 
 export const resumoRodadaDtoSchema = z.object({
-  medicos: z.array(medicoResumoDtoSchema),
+  medicos: z.array(medicoDaRodadaDtoSchema),
   motivos: z.array(contagemMotivoDtoSchema),
   ajustes: ajustesConferenciaDtoSchema,
   funilExames: funilExamesDtoSchema.nullable(),
