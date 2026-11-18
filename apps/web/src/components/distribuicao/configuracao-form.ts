@@ -57,6 +57,10 @@ export type ValoresConfiguracao = {
   marcadores: string;
   /** A grade geral de recebimento (salva junto, no mesmo botão). */
   recebimento: Grade;
+  roboAtivo: boolean;
+  expiracaoPropostaMin: string;
+  temTeto: boolean;
+  tetoPorRodada: string;
 };
 
 export function valoresDaConfiguracao(
@@ -83,6 +87,10 @@ export function valoresDaConfiguracao(
     escalaRestringeEspecialidade: c.escalaRestringeEspecialidade,
     marcadores: c.marcadoresEquilibrio.join(', '),
     recebimento: gradeDasCelulas(celulas),
+    roboAtivo: c.roboAtivo ?? true,
+    expiracaoPropostaMin: String(c.expiracaoPropostaMin ?? 45),
+    temTeto: c.tetoPorRodada != null,
+    tetoPorRodada: c.tetoPorRodada == null ? '' : String(c.tetoPorRodada),
   };
 }
 
@@ -115,6 +123,9 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
       ? { turnoIds: v.turnoIds, cheiaEm: hora(v.cheiaEm) }
       : null,
     recolhimentoAposTurnoMin: v.recolhe ? Number(v.recolhimentoAposTurnoMin) : null,
+    roboAtivo: v.roboAtivo,
+    expiracaoPropostaMin: Number(v.expiracaoPropostaMin),
+    tetoPorRodada: v.temTeto ? Number(v.tetoPorRodada) : null,
   };
 }
 
@@ -150,6 +161,10 @@ const valoresSchema = z.object({
       horas: z.string(),
     }),
   ),
+  roboAtivo: z.boolean(),
+  expiracaoPropostaMin: z.string(),
+  temTeto: z.boolean(),
+  tetoPorRodada: z.string(),
 });
 
 /** As faixas do domínio (`configuracao-global.ts` da API), na ordem dos campos. */
@@ -171,6 +186,8 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
     }
   };
 
+  faixa('expiracaoPropostaMin', 1, 1440);
+  if (v.temTeto) faixa('tetoPorRodada', 1, 100_000);
   if (v.ordemFila.length === 0) erro('ordemFila', 'A fila precisa de ao menos um critério.');
   for (const [campo, min, max] of FAIXAS) faixa(campo, min, max);
   faixa('cicloMinutos', 1, 1440);
@@ -202,6 +219,17 @@ export function resumoConfiguracao(
 ): GrupoResumo[] {
   const minutos = (n: number) => `${n} min`;
   return [
+    {
+      titulo: 'Robô',
+      linhas: [
+        { rotulo: 'Robô', valor: (c.roboAtivo ?? true) ? 'Ligado' : 'Desligado' },
+        { rotulo: 'Validade da proposta', valor: minutos(c.expiracaoPropostaMin ?? 45) },
+        {
+          rotulo: 'Teto de exames por rodada',
+          valor: c.tetoPorRodada == null ? 'Sem teto' : `${c.tetoPorRodada} exames`,
+        },
+      ],
+    },
     {
       titulo: 'Fila',
       linhas: [

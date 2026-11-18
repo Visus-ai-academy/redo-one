@@ -28,6 +28,9 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
   recolhimentoAposTurnoMin: 60,
+  roboAtivo: true,
+  expiracaoPropostaMin: 45,
+  tetoPorRodada: null,
 };
 
 const erros = (v: ValoresConfiguracao) => {
@@ -56,6 +59,22 @@ describe('configuração global no formulário', () => {
   it('marcadores separados por vírgula, aparados e sem vazios', () => {
     const v = { ...valoresDaConfiguracao(PRODUCAO), marcadores: ' ONCO, PED ,, ' };
     expect(configuracaoParaApi(v).marcadoresEquilibrio).toEqual(['ONCO', 'PED']);
+  });
+
+  it('robô: ligado, validade da proposta e teto por rodada (sem teto = nulo)', () => {
+    const v = valoresDaConfiguracao({ ...PRODUCAO, roboAtivo: false, tetoPorRodada: 300 });
+    expect(v).toMatchObject({
+      roboAtivo: false,
+      expiracaoPropostaMin: '45',
+      temTeto: true,
+      tetoPorRodada: '300',
+    });
+    expect(configuracaoParaApi(v)).toMatchObject({ roboAtivo: false, tetoPorRodada: 300 });
+    expect(configuracaoParaApi({ ...v, temTeto: false })).toMatchObject({ tetoPorRodada: null });
+    expect(erros({ ...v, expiracaoPropostaMin: '0', tetoPorRodada: '0' })).toEqual([
+      'expiracaoPropostaMin: Use um número inteiro de 1 a 1440.',
+      'tetoPorRodada: Use um número inteiro de 1 a 100000.',
+    ]);
   });
 
   it('valida faixas, turnos posteriores e marcadores repetidos', () => {
@@ -94,5 +113,8 @@ describe('resumo da configuração (só leitura)', () => {
     expect(tudo['Rodada › Turnos posteriores']).toBe('Tarde, cheios na rodada das 10:50');
     expect(tudo['Rodada › Recolhimento']).toBe('60 min depois do fim do turno');
     expect(tudo['Equilíbrio › Marcadores no nome do exame']).toBe('ONCO');
+    expect(tudo['Robô › Robô']).toBe('Ligado');
+    expect(tudo['Robô › Validade da proposta']).toBe('45 min');
+    expect(tudo['Robô › Teto de exames por rodada']).toBe('Sem teto');
   });
 });

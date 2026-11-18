@@ -147,6 +147,59 @@ export function FormConfiguracaoDistribuicao({
       }}
       className="flex flex-col gap-6"
     >
+      <Painel
+        titulo="Robô"
+        descricao="Se dá para pedir rodada e quanto tempo a proposta espera a aprovação."
+      >
+        <div className="flex flex-col gap-4">
+          <form.AppField name="roboAtivo">
+            {(field) => (
+              <field.CheckboxField
+                label="Robô ligado"
+                description="Desligado, ninguém inicia rodada e os exames ficam para a distribuição à mão."
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="expiracaoPropostaMin">
+            {(field) => (
+              <field.NumberField
+                label="Validade da proposta (minutos)"
+                placeholder="Ex.: 45"
+                description="A proposta não aprovada nesse tempo expira: a fila já mudou."
+                min={1}
+                max={1440}
+                required
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="temTeto">
+            {(field) => (
+              <field.CheckboxField
+                label="Limitar os exames por rodada"
+                description="O que passar do teto fica para a próxima rodada."
+              />
+            )}
+          </form.AppField>
+          <form.Subscribe selector={(s) => s.values.temTeto}>
+            {(temTeto) =>
+              temTeto && (
+                <form.AppField name="tetoPorRodada">
+                  {(field) => (
+                    <field.NumberField
+                      label="Teto de exames por rodada"
+                      placeholder="Ex.: 1500"
+                      min={1}
+                      max={100000}
+                      required
+                    />
+                  )}
+                </form.AppField>
+              )
+            }
+          </form.Subscribe>
+        </div>
+      </Painel>
+
       <PainelGrade prioridades={prioridades} turnos={turnos}>
         <form.AppField name="recebimento">
           {(field) => (

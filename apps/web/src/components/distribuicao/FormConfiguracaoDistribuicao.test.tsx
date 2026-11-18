@@ -24,6 +24,9 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
   recolhimentoAposTurnoMin: 60,
+  roboAtivo: true,
+  expiracaoPropostaMin: 45,
+  tetoPorRodada: null,
 };
 
 const ROTINA: PrioridadeOperacaoDto = {
@@ -73,6 +76,26 @@ describe('FormConfiguracaoDistribuicao', () => {
         ordemFila: [...CONFIG.ordemFila, { criterio: 'antiguidade', direcao: 'asc' }],
       },
       [TARDE_24],
+    );
+  });
+
+  it('desliga o robô e põe teto por rodada', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(
+      <FormConfiguracaoDistribuicao
+        configuracao={CONFIG}
+        {...REF}
+        podeEditar
+        onSalvar={onSalvar}
+      />,
+    );
+    await userEvent.click(screen.getByRole('checkbox', { name: /Robô ligado/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Limitar os exames por rodada/ }));
+    await userEvent.type(screen.getByRole('textbox', { name: /Teto de exames por rodada/ }), '500');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ roboAtivo: false, tetoPorRodada: 500, expiracaoPropostaMin: 45 }),
+      expect.anything(),
     );
   });
 
