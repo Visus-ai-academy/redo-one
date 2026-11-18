@@ -2,7 +2,9 @@ import type { Clock } from '../../identidade/clock';
 import {
   AcaoProibidaEscalaError,
   adicionarDias,
+  caiNoDia,
   type Data,
+  diaDaSemana,
   diaEmBrasilia,
   RegistroEscalaNaoEncontradoError,
 } from '../domain';
@@ -39,6 +41,26 @@ export async function alocacaoNoEscopo(
     throw new RegistroEscalaNaoEncontradoError('Alocação não encontrada.');
   }
   return alocacao;
+}
+
+/**
+ * O dia é de plantão do vínculo? Na cobertura: dia e período dela, e plantão do titular naquele
+ * dia. Usado pelos ajustes do dia (produtividade na escala, prioridades na distribuição).
+ */
+export async function ehDiaDePlantao(
+  repo: Pick<AlocacoesRepository, 'buscar'>,
+  alocacao: AlocacaoGravada,
+  dia: Data,
+): Promise<boolean> {
+  if (alocacao.coberturaDeId === null) return caiNoDia(alocacao, dia);
+  const titular = await repo.buscar(alocacao.coberturaDeId);
+  return (
+    titular !== null &&
+    dia >= alocacao.dataInicio &&
+    (alocacao.dataFim === null || dia <= alocacao.dataFim) &&
+    alocacao.diasSemana.includes(diaDaSemana(dia)) &&
+    caiNoDia(titular, dia)
+  );
 }
 
 export function exigirNoEscopo(

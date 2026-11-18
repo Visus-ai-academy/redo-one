@@ -26,3 +26,13 @@ const HORARIO = /^([01]\d|2[0-3]):[0-5]\d$/;
 export function validarHorario(valor: string, rotulo: string): void {
   if (!HORARIO.test(valor)) invalida(`${rotulo}: use HH:MM, de 00:00 a 23:59.`);
 }
+
+const DATA = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "YYYY-MM-DD" que existe no calendário. */
+export function validarData(valor: string, rotulo = 'Data'): void {
+  const d = new Date(`${valor}T00:00:00Z`);
+  if (!DATA.test(valor) || Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== valor) {
+    invalida(`${rotulo} inválida: use AAAA-MM-DD.`);
+  }
+}

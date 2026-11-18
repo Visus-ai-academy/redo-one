@@ -2,21 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { CLOCK, type Clock } from '../../identidade/clock';
-import {
-  caiNoDia,
-  type Data,
-  diaDaSemana,
-  EscalaInvalidaError,
-  validarData,
-  validarProdutividade,
-} from '../domain';
+import { EscalaInvalidaError, validarData, validarProdutividade } from '../domain';
 import { ESCOPO_ESCALA_REPOSITORY, type EscopoEscalaRepository } from '../escopo/escopo';
-import {
-  ALOCACOES_REPOSITORY,
-  type AlocacaoGravada,
-  type AlocacoesRepository,
-} from './alocacoes.repository';
-import { alocacaoNoEscopo, escopoDo } from './apoio';
+import { ALOCACOES_REPOSITORY, type AlocacoesRepository } from './alocacoes.repository';
+import { alocacaoNoEscopo, ehDiaDePlantao, escopoDo } from './apoio';
 import { type AtorEscala, EventosEscala } from './eventos';
 
 export interface EntradaAjuste {
@@ -67,7 +56,7 @@ export class AjustesProdutividadeService {
     }
 
     const produtividade = validarProdutividade(entrada.produtividade) as number;
-    if (!(await this.ehDiaDePlantao(alocacao, dia))) {
+    if (!(await ehDiaDePlantao(this.repo, alocacao, dia))) {
       throw new EscalaInvalidaError(
         `${formatarData(dia)} não é dia de plantão deste vínculo. Escolha um dia da escala.`,
       );
@@ -83,18 +72,5 @@ export class AjustesProdutividadeService {
       ? eventos.ajusteAlterado(existente, ajuste, alocacao)
       : eventos.ajusteCriado(ajuste, alocacao);
     await this.repo.salvarAjuste(ajuste, evento ? [evento] : []);
-  }
-
-  /** Na cobertura: dia e período dela, e plantão do titular naquele dia. */
-  private async ehDiaDePlantao(alocacao: AlocacaoGravada, dia: Data): Promise<boolean> {
-    if (alocacao.coberturaDeId === null) return caiNoDia(alocacao, dia);
-    const titular = await this.repo.buscar(alocacao.coberturaDeId);
-    return (
-      titular !== null &&
-      dia >= alocacao.dataInicio &&
-      (alocacao.dataFim === null || dia <= alocacao.dataFim) &&
-      alocacao.diasSemana.includes(diaDaSemana(dia)) &&
-      caiNoDia(titular, dia)
-    );
   }
 }

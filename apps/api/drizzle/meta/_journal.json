@@ -148,6 +148,13 @@
       "when": 1794963728366,
       "tag": "0020_permissoes_distribuicao_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795002475503,
+      "tag": "0021_distribuicao_ajustes_dia",
+      "breakpoints": true
     }
   ]
 }

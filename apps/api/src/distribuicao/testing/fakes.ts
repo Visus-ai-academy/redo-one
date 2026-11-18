@@ -1,3 +1,8 @@
+import type {
+  AjusteDiaLido,
+  AjustesDiaRepository,
+  FiltroAjustesDia,
+} from '../application/ports/ajustes-dia.repository';
 import type { ArranjosRepository, Dono } from '../application/ports/arranjos.repository';
 import type {
   CadastrosDistribuicao,
@@ -5,6 +10,11 @@ import type {
   TipoReferencia,
 } from '../application/ports/cadastros-distribuicao';
 import type { ConfiguracaoDistribuicaoRepository } from '../application/ports/configuracao-distribuicao.repository';
+import type {
+  AlocacaoDoAjuste,
+  AtorEscala,
+  EscalaDoAjuste,
+} from '../application/ports/escala-do-ajuste';
 import type {
   ParametrosEquipe,
   ParametrosEquipeRepository,
@@ -15,6 +25,7 @@ import type {
 } from '../application/ports/parametros-medico.repository';
 import type { PrioridadesClienteRepository } from '../application/ports/prioridades-cliente.repository';
 import type { RegrasFrenteRepository } from '../application/ports/regras-frente.repository';
+import type { AjusteDiaDistribuicao } from '../domain/ajuste-dia';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
 import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
 import type { RegrasFrente } from '../domain/motor/configuracao';
@@ -161,5 +172,75 @@ export class PrioridadesClienteEmMemoria implements PrioridadesClienteRepository
     return [...this.porCliente].flatMap(([clienteId, itens]) =>
       itens.map((i) => ({ clienteId, ...structuredClone(i) })),
     );
+  }
+}
+
+export class EscalaDoAjusteEmMemoria implements EscalaDoAjuste {
+  readonly alocacoes = new Map<string, AlocacaoDoAjuste>();
+  /** Dias de plantão por alocação. */
+  readonly plantoes = new Map<string, Set<string>>();
+  /** Recorte por usuário (frentes liberadas); sem entrada = sem recorte. */
+  readonly recortes = new Map<string, Set<string>>();
+
+  private noRecorte(ator: AtorEscala, alvo: { frenteId: string }) {
+    const r = ator.acessoTotal ? undefined : this.recortes.get(ator.usuarioId);
+    return !r || r.has(alvo.frenteId);
+  }
+
+  async alocacaoNoRecorte(ator: AtorEscala, alocacaoId: string) {
+    const a = this.alocacoes.get(alocacaoId);
+    return a && this.noRecorte(ator, a) ? { ...a } : null;
+  }
+
+  async ehDiaDePlantao(alocacaoId: string, data: string) {
+    return this.plantoes.get(alocacaoId)?.has(data) ?? false;
+  }
+
+  async recorteDo(ator: AtorEscala) {
+    return (alvo: { turnoId: string; frenteId: string }) => this.noRecorte(ator, alvo);
+  }
+}
+
+export class AjustesDiaEmMemoria implements AjustesDiaRepository {
+  readonly itens = new Map<string, AjusteDiaDistribuicao>();
+  gravacoes = 0;
+
+  constructor(
+    private readonly escala: EscalaDoAjusteEmMemoria,
+    private readonly nomes = new Map<string, string>(),
+  ) {}
+
+  private ler(a: AjusteDiaDistribuicao): AjusteDiaLido {
+    const aloc = this.escala.alocacoes.get(a.alocacaoId) as AlocacaoDoAjuste;
+    return {
+      ...structuredClone(a),
+      medicoId: aloc.medicoId,
+      turnoId: aloc.turnoId,
+      frenteId: aloc.frenteId,
+      clienteNome: a.clienteId ? (this.nomes.get(a.clienteId) ?? null) : null,
+    };
+  }
+
+  async obter(alocacaoId: string, data: string) {
+    const a = this.itens.get(`${alocacaoId}|${data}`);
+    return a ? this.ler(a) : null;
+  }
+
+  async salvar(ajuste: AjusteDiaDistribuicao) {
+    this.gravacoes++;
+    this.itens.set(`${ajuste.alocacaoId}|${ajuste.data}`, structuredClone(ajuste));
+  }
+
+  async remover(id: string) {
+    this.gravacoes++;
+    for (const [k, a] of this.itens) if (a.id === id) this.itens.delete(k);
+  }
+
+  async listar(f: FiltroAjustesDia) {
+    return [...this.itens.values()]
+      .filter((a) => a.data >= f.de && a.data <= f.ate)
+      .map((a) => this.ler(a))
+      .filter((a) => !f.medicoId || a.medicoId === f.medicoId)
+      .sort((a, b) => (a.data < b.data ? -1 : 1));
   }
 }

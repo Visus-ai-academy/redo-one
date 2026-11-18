@@ -39,3 +39,10 @@ export class ClienteNaoEncontradoError extends ErroDeDominio {
     super('Cliente não encontrado.');
   }
 }
+
+export class AlocacaoNaoEncontradaError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Alocação não encontrada.');
+  }
+}

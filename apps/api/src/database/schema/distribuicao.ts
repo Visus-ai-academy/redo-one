@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -10,6 +11,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -22,7 +24,7 @@ import {
   prioridades,
   subespecialidades,
 } from './catalogo';
-import { turnos } from './escala';
+import { alocacoes, turnos } from './escala';
 import { equipes, medicos } from './medicos';
 
 // Contexto `distribuicao`: o que cada médico (ou equipe) lauda e os parâmetros do robô por
@@ -402,4 +404,44 @@ export const prioridadesCliente = pgTable(
     ),
     check('prioridades_cliente_nivel_check', sql`${t.nivel} in (1, 2)`),
   ],
+);
+
+/**
+ * Ajuste do dia da distribuição por alocação da escala e dia (a "exceção do robô" do
+ * dashboards-one): prioridades liberadas e "a Lista segue o SLA", com recorte opcional por
+ * cliente. O "+N laudos" é o `ajustes_produtividade` da escala, não fica aqui. A ação fica na tela
+ * Escala; histórico em `eventos_auditoria` (entidade `ajuste_dia_distribuicao`).
+ */
+export const ajustesDiaDistribuicao = pgTable(
+  'ajustes_dia_distribuicao',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    alocacaoId: uuid('alocacao_id')
+      .notNull()
+      .references(() => alocacoes.id, { onDelete: 'cascade' }),
+    data: date('data').notNull(),
+    listaSegueSla: boolean('lista_segue_sla').notNull().default(false),
+    /** Só os exames deste cliente; null = todos. */
+    clienteId: uuid('cliente_id').references(() => clientes.id, { onDelete: 'cascade' }),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    unique('ajustes_dia_distribuicao_alocacao_data_key').on(t.alocacaoId, t.data),
+    index('ajustes_dia_distribuicao_data_idx').on(t.data),
+  ],
+);
+
+/** Prioridades do catálogo liberadas no ajuste do dia. */
+export const ajustesDiaDistribuicaoPrioridades = pgTable(
+  'ajustes_dia_distribuicao_prioridades',
+  {
+    ajusteId: uuid('ajuste_id')
+      .notNull()
+      .references(() => ajustesDiaDistribuicao.id, { onDelete: 'cascade' }),
+    prioridadeId: uuid('prioridade_id')
+      .notNull()
+      .references(() => prioridades.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.ajusteId, t.prioridadeId] })],
 );

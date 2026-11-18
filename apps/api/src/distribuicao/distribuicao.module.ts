@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import {
+  AJUSTES_DIA_REPOSITORY,
+  type AjustesDiaRepository,
+} from './application/ports/ajustes-dia.repository';
+import {
   ARRANJOS_REPOSITORY,
   type ArranjosRepository,
 } from './application/ports/arranjos.repository';
@@ -13,6 +17,7 @@ import {
   CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
   type ConfiguracaoDistribuicaoRepository,
 } from './application/ports/configuracao-distribuicao.repository';
+import { ESCALA_DO_AJUSTE, type EscalaDoAjuste } from './application/ports/escala-do-ajuste';
 import {
   PARAMETROS_EQUIPE_REPOSITORY,
   type ParametrosEquipeRepository,
@@ -29,6 +34,11 @@ import {
   REGRAS_FRENTE_REPOSITORY,
   type RegrasFrenteRepository,
 } from './application/ports/regras-frente.repository';
+import {
+  DefinirAjusteDia,
+  ListarAjustesDia,
+  ObterAjusteDia,
+} from './application/use-cases/ajuste-dia';
 import { ConsultarArranjos, SalvarArranjos } from './application/use-cases/arranjos';
 import {
   DefinirConfiguracaoGlobal,
@@ -46,6 +56,8 @@ import {
 import { DefinirRoboMedico, ObterRoboMedico } from './application/use-cases/robo-medico';
 import { SugerirAlocacao } from './application/use-cases/sugerir-alocacao';
 import { DefinirUsoEquipe, ObterUsoEquipe } from './application/use-cases/uso-equipe';
+import { EscalaDoAjusteAdapter } from './infrastructure/escala/escala-do-ajuste.adapter';
+import { AjustesDiaController } from './infrastructure/http/ajuste-dia.controller';
 import {
   DistribuicaoEquipeController,
   DistribuicaoMedicoController,
@@ -54,6 +66,7 @@ import {
 import { ConfiguracaoDistribuicaoController } from './infrastructure/http/configuracao.controller';
 import { PrioridadesClienteController } from './infrastructure/http/prioridades-cliente.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
+import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzle-ajustes-dia.repository';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
@@ -73,8 +86,33 @@ const agora = () => new Date();
     ConfiguracaoDistribuicaoController,
     RegrasFrenteController,
     PrioridadesClienteController,
+    AjustesDiaController,
   ],
   providers: [
+    { provide: AJUSTES_DIA_REPOSITORY, useClass: DrizzleAjustesDiaRepository },
+    { provide: ESCALA_DO_AJUSTE, useClass: EscalaDoAjusteAdapter },
+    {
+      provide: ObterAjusteDia,
+      inject: [AJUSTES_DIA_REPOSITORY, ESCALA_DO_AJUSTE],
+      useFactory: (repo: AjustesDiaRepository, escala: EscalaDoAjuste) =>
+        new ObterAjusteDia(repo, escala),
+    },
+    {
+      provide: ListarAjustesDia,
+      inject: [AJUSTES_DIA_REPOSITORY, ESCALA_DO_AJUSTE],
+      useFactory: (repo: AjustesDiaRepository, escala: EscalaDoAjuste) =>
+        new ListarAjustesDia(repo, escala),
+    },
+    {
+      provide: DefinirAjusteDia,
+      inject: [AJUSTES_DIA_REPOSITORY, ESCALA_DO_AJUSTE, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      useFactory: (
+        repo: AjustesDiaRepository,
+        escala: EscalaDoAjuste,
+        cadastros: CadastrosDistribuicao,
+        auditoria: Auditoria,
+      ) => new DefinirAjusteDia(repo, escala, cadastros, auditoria, agora),
+    },
     { provide: PRIORIDADES_CLIENTE_REPOSITORY, useClass: DrizzlePrioridadesClienteRepository },
     {
       provide: ObterPrioridadesCliente,

@@ -10,6 +10,8 @@ import * as schema from '../../../database/schema';
 import type { FrenteEscala } from '../../domain/arranjo';
 import { CONFIGURACAO_INICIAL } from '../../domain/configuracao-global';
 import { REGRAS_NEUTRAS, type RegrasFrente } from '../../domain/motor/configuracao';
+import { EscalaDoAjusteAdapter } from '../escala/escala-do-ajuste.adapter';
+import { DrizzleAjustesDiaRepository } from './drizzle-ajustes-dia.repository';
 import { DrizzleCadastrosDistribuicao } from './drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './drizzle-configuracao-distribuicao.repository';
 import { DrizzlePrioridadesClienteRepository } from './drizzle-prioridades-cliente.repository';
@@ -37,7 +39,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table prioridades_cliente, regras_frente, configuracao_distribuicao, configuracao_distribuicao_urgentes,
+      sql`truncate table ajustes_dia_distribuicao, alocacoes, frentes_escala, usuarios, papeis, medicos, prioridades_cliente, regras_frente, configuracao_distribuicao, configuracao_distribuicao_urgentes,
         configuracao_distribuicao_lista_prioridades, configuracao_distribuicao_turnos_posteriores,
         turnos, clientes, modalidades, especialidades, subespecialidades, prioridades cascade`,
     );
@@ -187,5 +189,99 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     expect(await repo.todas()).toHaveLength(2);
     await repo.substituir(id('cli'), [{ frente: ct, nivel: 1 }]);
     expect(await repo.todas()).toEqual([{ clienteId: id('cli'), frente: ct, nivel: 1 }]);
+  });
+
+  it('ajuste do dia: grava, troca pelas mesmas alocação e data, lista, remove; adaptador da escala', async () => {
+    const medico = await primeiro(
+      db.insert(schema.medicos).values({ nome: 'Ana', chaveNormalizada: 'ana' }).returning(),
+    );
+    const frente = await primeiro(
+      db
+        .insert(schema.frentesEscala)
+        .values({ tipo: 'especialidade', especialidadeId: id('neuro') })
+        .returning(),
+    );
+    const outraFrente = await primeiro(
+      db
+        .insert(schema.frentesEscala)
+        .values({ tipo: 'modalidade', modalidadeId: id('ct') })
+        .returning(),
+    );
+    // 2026-11-18 é quarta (3).
+    const alocacao = await primeiro(
+      db
+        .insert(schema.alocacoes)
+        .values({
+          medicoId: medico,
+          turnoId: id('tarde'),
+          frenteId: frente,
+          diasSemana: [3],
+          horarioInicio: '13:00',
+          horarioFim: '19:00',
+          dataInicio: '2026-11-01',
+        })
+        .returning(),
+    );
+    const repo = new DrizzleAjustesDiaRepository(db);
+    expect(await repo.obter(alocacao, '2026-11-18')).toBeNull();
+    const base = {
+      id: '11111111-1111-4111-8111-111111111111',
+      alocacaoId: alocacao,
+      data: '2026-11-18',
+      prioridadeIdsLiberadas: [id('urg')],
+      listaSegueSla: false,
+      clienteId: null,
+    };
+    await repo.salvar(base);
+    await repo.salvar({
+      ...base,
+      prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
+      listaSegueSla: true,
+      clienteId: id('cli'),
+    });
+    const lido = await repo.obter(alocacao, '2026-11-18');
+    expect(lido).toEqual({
+      ...base,
+      prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
+      listaSegueSla: true,
+      clienteId: id('cli'),
+      clienteNome: 'CLINICA X',
+      medicoId: medico,
+      turnoId: id('tarde'),
+      frenteId: frente,
+    });
+    expect(await repo.listar({ de: '2026-11-01', ate: '2026-11-30' })).toHaveLength(1);
+    expect(await repo.listar({ de: '2026-11-01', ate: '2026-11-30', medicoId: NENHUM })).toEqual(
+      [],
+    );
+    expect(await repo.listar({ de: '2026-11-19', ate: '2026-11-30' })).toEqual([]);
+    await repo.remover(base.id);
+    expect(await repo.obter(alocacao, '2026-11-18')).toBeNull();
+
+    const escala = new EscalaDoAjusteAdapter(db);
+    const admin = { usuarioId: NENHUM, acessoTotal: true };
+    expect(await escala.alocacaoNoRecorte(admin, alocacao)).toEqual({
+      id: alocacao,
+      medicoId: medico,
+      turnoId: id('tarde'),
+      frenteId: frente,
+    });
+    expect(await escala.ehDiaDePlantao(alocacao, '2026-11-18')).toBe(true);
+    expect(await escala.ehDiaDePlantao(alocacao, '2026-11-19')).toBe(false);
+    const papel = await primeiro(db.insert(schema.papeis).values({ nome: 'Gestora' }).returning());
+    const gestora = await primeiro(
+      db
+        .insert(schema.usuarios)
+        .values({ nome: 'G', email: 'g@x.com', papelId: papel })
+        .returning(),
+    );
+    await db
+      .insert(schema.usuariosEscoposEscala)
+      .values({ usuarioId: gestora, frenteId: outraFrente });
+    const ator = { usuarioId: gestora, acessoTotal: false };
+    expect(await escala.alocacaoNoRecorte(ator, alocacao)).toBeNull();
+    const noRecorte = await escala.recorteDo(ator);
+    expect(noRecorte({ turnoId: id('tarde'), frenteId: outraFrente })).toBe(true);
+    expect(noRecorte({ turnoId: id('tarde'), frenteId: frente })).toBe(false);
   });
 });

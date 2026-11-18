@@ -7749,6 +7749,148 @@
         ]
       }
     },
+    "/distribuicao/ajustes-dia": {
+      "get": {
+        "operationId": "AjustesDiaController_listar",
+        "parameters": [
+          {
+            "name": "de",
+            "required": true,
+            "in": "query",
+            "description": "Início do período (até 42 dias).",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "medicoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AjusteDiaDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/alocacoes/{alocacaoId}/ajustes-dia/{data}": {
+      "get": {
+        "operationId": "AjustesDiaController_obter",
+        "parameters": [
+          {
+            "name": "alocacaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "data",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaAjusteDiaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "put": {
+        "operationId": "AjustesDiaController_salvar",
+        "parameters": [
+          {
+            "name": "alocacaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "data",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjusteDiaEdicaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Ajuste vazio remove o do dia."
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/medicos/{id}/historico": {
       "get": {
         "operationId": "HistoricoCadastroController_doMedico",
@@ -14916,6 +15058,115 @@
         },
         "required": [
           "prioridades"
+        ]
+      },
+      "AjusteDiaDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeIdsLiberadas": {
+            "description": "Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "listaSegueSla": {
+            "type": "boolean",
+            "description": "A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo)."
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só os exames deste cliente; nulo = todos."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clienteNome": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "prioridadeIdsLiberadas",
+          "listaSegueSla",
+          "clienteId",
+          "id",
+          "alocacaoId",
+          "data",
+          "medicoId",
+          "turnoId",
+          "frenteId",
+          "clienteNome"
+        ]
+      },
+      "RespostaAjusteDiaDto": {
+        "type": "object",
+        "properties": {
+          "ajuste": {
+            "nullable": true,
+            "description": "Nulo = sem ajuste no dia.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ajuste"
+        ]
+      },
+      "AjusteDiaEdicaoDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeIdsLiberadas": {
+            "description": "Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "listaSegueSla": {
+            "type": "boolean",
+            "description": "A Lista dele segue o SLA (qualquer prioridade, sem prazo mínimo)."
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só os exames deste cliente; nulo = todos."
+          }
+        },
+        "required": [
+          "prioridadeIdsLiberadas",
+          "listaSegueSla",
+          "clienteId"
         ]
       },
       "ItemHistoricoCadastroDto": {
