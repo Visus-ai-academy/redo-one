@@ -62,7 +62,12 @@ export type RodadaDto = {
    */
   lidos: number;
   /**
-   * @description Desses, os tratados como urgência.
+   * @description Recolhidos de médicos (fim do turno ou ausência) que entraram na proposta.
+   * @type integer
+   */
+  recolhidos: number;
+  /**
+   * @description Dos exames da proposta (lidos e recolhidos), os tratados como urgência.
    * @type integer
    */
   urgentes: number;

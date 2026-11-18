@@ -976,6 +976,17 @@ describe('rodada do robô (casos de uso)', () => {
       expect(repo.diario.filter((e) => e.rodadaId === id).at(-1)?.texto).toMatch(
         /Proposta pronta: 1 de 1 exame\(s\), 1 recolhido\(s\)/,
       );
+      expect((await casos.resumo.executar(id)).recolhimento).toMatchObject({
+        recolhiveis: 1,
+        propostos: 1,
+      });
+      const so = await casos.designacoes.executar(
+        admin,
+        id,
+        { recolhido: true, pagina: 1, porPagina: 10 },
+        false,
+      );
+      expect(so.itens.map((d) => d.recolhidoDe)).toEqual([{ id: 'A', nome: 'A' }]);
       // Na conferência nada saiu da Dra. A.
       expect(mobilemed.pedidos).toEqual([]);
       await casos.aprovar.executar(admin, id);

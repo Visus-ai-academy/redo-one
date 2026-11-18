@@ -41,6 +41,7 @@ import {
   ExplicarDesignacao,
   ListarDesignacoes,
   PausarRodada,
+  PreverRecolhimento,
   RelerRodada,
   RetomarRodada,
 } from '../../application/use-cases/rodadas';
@@ -57,6 +58,7 @@ import {
   MedicosRodadaDto,
   PaginaDesignacoesDto,
   PaginaRodadasDto,
+  RecolhimentoPrevistoDto,
   RecortesRodadaDto,
   ResumoRodadaDto,
   RodadaDto,
@@ -83,6 +85,7 @@ const rodadaDto = (r: RodadaDetalhe): RodadaDto => ({
   lidaEm: r.lidaEm,
   avisos: r.avisos,
   lidos: r.lidos,
+  recolhidos: r.recolhidos,
   urgentes: r.urgentes,
   recortes: r.recortes,
   eventos: r.eventos,
@@ -114,6 +117,7 @@ export class RodadasController {
     private readonly consultarResumo: ConsultarResumo,
     private readonly explicar: ExplicarDesignacao,
     private readonly buscarMedicos: BuscarMedicosDaRodada,
+    private readonly preverRecolhimento: PreverRecolhimento,
   ) {}
 
   @Get('viva')
@@ -146,6 +150,17 @@ export class RodadasController {
   })
   fila(): Promise<FilaDoMomentoDto> {
     return this.consultarFila.executar();
+  }
+
+  @Get('recolhimento')
+  @Permissao('distribuicao.ver')
+  @ApiOkResponse({
+    type: RecolhimentoPrevistoDto,
+    description:
+      'Prévia do "Distribuir agora": quantos exames a rodada recolheria agora de médicos fora do turno ou ausentes.',
+  })
+  recolhimento(): Promise<RecolhimentoPrevistoDto> {
+    return this.preverRecolhimento.executar();
   }
 
   @Get('medicos')

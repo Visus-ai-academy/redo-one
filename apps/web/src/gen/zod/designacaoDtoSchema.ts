@@ -4,6 +4,7 @@
 */
 
 import * as z from 'zod'
+import { motivoRecolhimentoSchema } from './motivoRecolhimentoSchema'
 import { pacoteDtoSchema } from './pacoteDtoSchema'
 import { rotuloRodadaDtoSchema } from './rotuloRodadaDtoSchema'
 import { statusDesignacaoSchema } from './statusDesignacaoSchema'
@@ -32,6 +33,8 @@ export const designacaoDtoSchema = z.object({
   elegiveis: z.array(z.string()).describe('Médicos que podiam laudar o exame na leitura (o "mover" sugere estes).'),
   retiradoDe: rotuloRodadaDtoSchema.nullable().describe('De quem a conferência o tirou.'),
   retiradaEm: z.iso.datetime().nullable(),
+  recolhidoDe: rotuloRodadaDtoSchema.nullable().describe('Recolhido: de quem o exame sai (só sai ao executar); nulo = estava sem médico na leitura.'),
+  motivoRecolhimento: z.union([motivoRecolhimentoSchema, z.null()]).describe('`turno_encerrado` (o turno da entrega acabou) ou `ausencia` (ausente hoje).'),
   status: statusDesignacaoSchema,
   motivo: z.string().nullable().describe('Código do motivo.'),
   detalhe: z.string().nullable().describe('O porquê, para a pessoa.'),

@@ -7361,6 +7361,27 @@
         ]
       }
     },
+    "/distribuicao/rodadas/recolhimento": {
+      "get": {
+        "operationId": "RodadasController_recolhimento",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Prévia do \"Distribuir agora\": quantos exames a rodada recolheria agora de médicos fora do turno ou ausentes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecolhimentoPrevistoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/distribuicao/rodadas/medicos": {
       "get": {
         "operationId": "RodadasController_medicosDaBusca",
@@ -7558,6 +7579,15 @@
             "required": false,
             "in": "query",
             "description": "Só os mandados na mão (true) ou só os do motor (false).",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "recolhido",
+            "required": false,
+            "in": "query",
+            "description": "Só os recolhidos de médicos (true) ou só os da fila sem médico (false).",
             "schema": {
               "type": "boolean"
             }
@@ -15383,9 +15413,13 @@
             "type": "integer",
             "description": "Exames lidos da fila sem médico."
           },
+          "recolhidos": {
+            "type": "integer",
+            "description": "Recolhidos de médicos (fim do turno ou ausência) que entraram na proposta."
+          },
           "urgentes": {
             "type": "integer",
-            "description": "Desses, os tratados como urgência."
+            "description": "Dos exames da proposta (lidos e recolhidos), os tratados como urgência."
           },
           "recortes": {
             "$ref": "#/components/schemas/RecortesRodadaDto"
@@ -15412,6 +15446,7 @@
           "lidaEm",
           "avisos",
           "lidos",
+          "recolhidos",
           "urgentes",
           "recortes",
           "eventos"
@@ -15495,6 +15530,10 @@
           "lidos": {
             "type": "integer"
           },
+          "recolhidos": {
+            "type": "integer",
+            "description": "Recolhidos de médicos que entraram na proposta."
+          },
           "executadas": {
             "type": "integer"
           }
@@ -15511,6 +15550,7 @@
           "aprovadaPor",
           "aprovadaEm",
           "lidos",
+          "recolhidos",
           "executadas"
         ]
       },
@@ -16055,6 +16095,28 @@
           "medicosEmTurno"
         ]
       },
+      "RecolhimentoPrevistoDto": {
+        "type": "object",
+        "properties": {
+          "ligado": {
+            "type": "boolean",
+            "description": "Falso = carência nula em Configurações › Distribuição."
+          },
+          "recolhiveis": {
+            "type": "integer",
+            "description": "Exames que sairiam dos médicos se a rodada fosse pedida agora."
+          },
+          "porAusencia": {
+            "type": "integer",
+            "description": "Desses, os de médico ausente hoje."
+          }
+        },
+        "required": [
+          "ligado",
+          "recolhiveis",
+          "porAusencia"
+        ]
+      },
       "MedicoDaBuscaDto": {
         "type": "object",
         "properties": {
@@ -16147,6 +16209,14 @@
           "id",
           "exames"
         ]
+      },
+      "MotivoRecolhimento": {
+        "type": "string",
+        "enum": [
+          "turno_encerrado",
+          "ausencia"
+        ],
+        "description": "`turno_encerrado` (o turno da entrega acabou) ou `ausencia` (ausente hoje)."
       },
       "DesignacaoDto": {
         "type": "object",
@@ -16296,6 +16366,25 @@
             "format": "date-time",
             "nullable": true
           },
+          "recolhidoDe": {
+            "nullable": true,
+            "description": "Recolhido: de quem o exame sai (só sai ao executar); nulo = estava sem médico na leitura.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "motivoRecolhimento": {
+            "nullable": true,
+            "description": "`turno_encerrado` (o turno da entrega acabou) ou `ausencia` (ausente hoje).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MotivoRecolhimento"
+              }
+            ]
+          },
           "status": {
             "allOf": [
               {
@@ -16348,6 +16437,8 @@
           "elegiveis",
           "retiradoDe",
           "retiradaEm",
+          "recolhidoDe",
+          "motivoRecolhimento",
           "status",
           "motivo",
           "detalhe",
@@ -16589,6 +16680,74 @@
           "aderencia"
         ]
       },
+      "NaoRecolhidosDto": {
+        "type": "object",
+        "properties": {
+          "aberto": {
+            "type": "integer",
+            "description": "O médico já abriu."
+          },
+          "trocado_por_fora": {
+            "type": "integer",
+            "description": "Trocado à mão depois do robô."
+          },
+          "pacote_aberto": {
+            "type": "integer",
+            "description": "Outro exame do pacote já foi aberto."
+          },
+          "turno_em_curso": {
+            "type": "integer",
+            "description": "O turno da entrega (mais a carência) segue."
+          },
+          "frente_nao_recolhe": {
+            "type": "integer",
+            "description": "A frente não recolhe ao fim do turno."
+          }
+        },
+        "required": [
+          "aberto",
+          "trocado_por_fora",
+          "pacote_aberto",
+          "turno_em_curso",
+          "frente_nao_recolhe"
+        ]
+      },
+      "RecolhimentoRodadaDto": {
+        "type": "object",
+        "properties": {
+          "recolhiveis": {
+            "type": "integer",
+            "description": "Saíram dos médicos e entraram na rodada."
+          },
+          "porAusencia": {
+            "type": "integer",
+            "description": "Desses, os de médico ausente hoje."
+          },
+          "propostos": {
+            "type": "integer",
+            "description": "Desses, os propostos a outro médico."
+          },
+          "semDestino": {
+            "type": "integer",
+            "description": "Desses, os sem destino: ficam com quem tem."
+          },
+          "naoRecolhidos": {
+            "description": "Os que ficaram com o médico, por motivo.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NaoRecolhidosDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "recolhiveis",
+          "porAusencia",
+          "propostos",
+          "semDestino",
+          "naoRecolhidos"
+        ]
+      },
       "ResumoRodadaDto": {
         "type": "object",
         "properties": {
@@ -16633,6 +16792,16 @@
                 "$ref": "#/components/schemas/TrilhaRodadaDto"
               }
             ]
+          },
+          "recolhimento": {
+            "nullable": true,
+            "description": "Nulo = recolhimento desligado na leitura (ou leitura anterior a ele).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecolhimentoRodadaDto"
+              }
+            ]
           }
         },
         "required": [
@@ -16641,7 +16810,8 @@
           "ajustes",
           "funilExames",
           "funilMedicos",
-          "trilha"
+          "trilha",
+          "recolhimento"
         ]
       },
       "CheckExplicacaoDto": {

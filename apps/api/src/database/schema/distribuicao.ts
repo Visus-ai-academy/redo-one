@@ -705,7 +705,7 @@ export const designacoes = pgTable(
      */
     recolhidoDeId: uuid('recolhido_de_id').references(() => medicos.id, { onDelete: 'set null' }),
     /** Por que foi recolhido: `turno_encerrado` ou `ausencia`. */
-    motivoRecolhimento: text('motivo_recolhimento'),
+    motivoRecolhimento: text('motivo_recolhimento').$type<'turno_encerrado' | 'ausencia'>(),
     /** Médicos que podiam laudar o exame na leitura, sem chave estrangeira (é histórico). */
     elegiveis: uuid('elegiveis').array().notNull().default(sql`'{}'`),
     /** Médico em turno → o portão onde parou diante do exame (o "por que não pegou"). */

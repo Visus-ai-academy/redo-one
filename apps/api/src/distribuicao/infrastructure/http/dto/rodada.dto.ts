@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 
 import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
+import { MOTIVOS_RECOLHIMENTO } from '../../../domain/rodada/recolhimento';
 
 const STATUS_RODADA = [
   'solicitada',
@@ -133,7 +134,15 @@ export class RodadaDto extends SituacaoRodadaDto {
   avisos!: string[];
   @ApiProperty({ type: 'integer', description: 'Exames lidos da fila sem médico.' })
   lidos!: number;
-  @ApiProperty({ type: 'integer', description: 'Desses, os tratados como urgência.' })
+  @ApiProperty({
+    type: 'integer',
+    description: 'Recolhidos de médicos (fim do turno ou ausência) que entraram na proposta.',
+  })
+  recolhidos!: number;
+  @ApiProperty({
+    type: 'integer',
+    description: 'Dos exames da proposta (lidos e recolhidos), os tratados como urgência.',
+  })
   urgentes!: number;
   @ApiProperty({ type: RecortesRodadaDto }) recortes!: RecortesRodadaDto;
   @ApiProperty({ type: [EventoRodadaDto], description: 'O diário, do mais antigo ao mais novo.' })
@@ -164,6 +173,8 @@ export class RodadaListadaDto {
   @ApiProperty({ type: RotuloRodadaDto, nullable: true }) aprovadaPor!: RotuloRodadaDto | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) aprovadaEm!: Date | null;
   @ApiProperty({ type: 'integer' }) lidos!: number;
+  @ApiProperty({ type: 'integer', description: 'Recolhidos de médicos que entraram na proposta.' })
+  recolhidos!: number;
   @ApiProperty({ type: 'integer' }) executadas!: number;
 }
 
@@ -229,6 +240,20 @@ export class DesignacaoDto {
   })
   retiradoDe!: RotuloRodadaDto | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) retiradaEm!: Date | null;
+  @ApiProperty({
+    type: RotuloRodadaDto,
+    nullable: true,
+    description:
+      'Recolhido: de quem o exame sai (só sai ao executar); nulo = estava sem médico na leitura.',
+  })
+  recolhidoDe!: RotuloRodadaDto | null;
+  @ApiProperty({
+    enum: MOTIVOS_RECOLHIMENTO,
+    enumName: 'MotivoRecolhimento',
+    nullable: true,
+    description: '`turno_encerrado` (o turno da entrega acabou) ou `ausencia` (ausente hoje).',
+  })
+  motivoRecolhimento!: (typeof MOTIVOS_RECOLHIMENTO)[number] | null;
   @ApiProperty({ enum: STATUS_DESIGNACAO, enumName: 'StatusDesignacao' })
   status!: (typeof STATUS_DESIGNACAO)[number];
   @ApiProperty({ type: String, nullable: true, description: 'Código do motivo.' })
@@ -283,6 +308,14 @@ export class DesignacoesQueryDto extends PaginacaoDto {
   @IsOptional()
   @IsBoolean()
   naMao?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Só os recolhidos de médicos (true) ou só os da fila sem médico (false).',
+  })
+  @Transform(({ value }) => (value === undefined ? undefined : value === true || value === 'true'))
+  @IsOptional()
+  @IsBoolean()
+  recolhido?: boolean;
 
   @ApiPropertyOptional({ description: 'Trecho do estudo ou da unidade.' })
   @Transform(aparar)
@@ -434,6 +467,43 @@ export class TrilhaRodadaDto {
   aderencia!: number;
 }
 
+export class NaoRecolhidosDto {
+  @ApiProperty({ type: 'integer', description: 'O médico já abriu.' }) aberto!: number;
+  @ApiProperty({ type: 'integer', description: 'Trocado à mão depois do robô.' })
+  trocado_por_fora!: number;
+  @ApiProperty({ type: 'integer', description: 'Outro exame do pacote já foi aberto.' })
+  pacote_aberto!: number;
+  @ApiProperty({ type: 'integer', description: 'O turno da entrega (mais a carência) segue.' })
+  turno_em_curso!: number;
+  @ApiProperty({ type: 'integer', description: 'A frente não recolhe ao fim do turno.' })
+  frente_nao_recolhe!: number;
+}
+
+export class RecolhimentoRodadaDto {
+  @ApiProperty({ type: 'integer', description: 'Saíram dos médicos e entraram na rodada.' })
+  recolhiveis!: number;
+  @ApiProperty({ type: 'integer', description: 'Desses, os de médico ausente hoje.' })
+  porAusencia!: number;
+  @ApiProperty({ type: 'integer', description: 'Desses, os propostos a outro médico.' })
+  propostos!: number;
+  @ApiProperty({ type: 'integer', description: 'Desses, os sem destino: ficam com quem tem.' })
+  semDestino!: number;
+  @ApiProperty({ type: NaoRecolhidosDto, description: 'Os que ficaram com o médico, por motivo.' })
+  naoRecolhidos!: NaoRecolhidosDto;
+}
+
+export class RecolhimentoPrevistoDto {
+  @ApiProperty({ description: 'Falso = carência nula em Configurações › Distribuição.' })
+  ligado!: boolean;
+  @ApiProperty({
+    type: 'integer',
+    description: 'Exames que sairiam dos médicos se a rodada fosse pedida agora.',
+  })
+  recolhiveis!: number;
+  @ApiProperty({ type: 'integer', description: 'Desses, os de médico ausente hoje.' })
+  porAusencia!: number;
+}
+
 export class ResumoRodadaDto {
   @ApiProperty({ type: [MedicoDaRodadaDto] }) medicos!: MedicoDaRodadaDto[];
   @ApiProperty({ type: [ContagemMotivoDto] }) motivos!: ContagemMotivoDto[];
@@ -441,6 +511,12 @@ export class ResumoRodadaDto {
   @ApiProperty({ type: FunilExamesDto, nullable: true }) funilExames!: FunilExamesDto | null;
   @ApiProperty({ type: FunilMedicosDto, nullable: true }) funilMedicos!: FunilMedicosDto | null;
   @ApiProperty({ type: TrilhaRodadaDto, nullable: true }) trilha!: TrilhaRodadaDto | null;
+  @ApiProperty({
+    type: RecolhimentoRodadaDto,
+    nullable: true,
+    description: 'Nulo = recolhimento desligado na leitura (ou leitura anterior a ele).',
+  })
+  recolhimento!: RecolhimentoRodadaDto | null;
 }
 
 export class MedicosRodadaDto {

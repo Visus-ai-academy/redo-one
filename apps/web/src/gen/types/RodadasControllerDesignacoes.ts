@@ -60,6 +60,11 @@ export type RodadasControllerDesignacoesQuery = {
    */
   naMao?: boolean;
   /**
+   * @description Só os recolhidos de médicos (true) ou só os da fila sem médico (false).
+   * @type boolean | undefined
+   */
+  recolhido?: boolean;
+  /**
    * @description Trecho do estudo ou da unidade.
    * @type string | undefined
    */

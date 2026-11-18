@@ -47,6 +47,10 @@ export const rodadasControllerDesignacoesQueryNaMaoSchema = z.boolean().optional
 
 export type RodadasControllerDesignacoesQueryNaMaoSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryNaMaoSchema>
 
+export const rodadasControllerDesignacoesQueryRecolhidoSchema = z.boolean().optional().describe('Só os recolhidos de médicos (true) ou só os da fila sem médico (false).')
+
+export type RodadasControllerDesignacoesQueryRecolhidoSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryRecolhidoSchema>
+
 export const rodadasControllerDesignacoesQueryBuscaSchema = z.string().optional().describe('Trecho do estudo ou da unidade.')
 
 export type RodadasControllerDesignacoesQueryBuscaSchemaType = z.infer<typeof rodadasControllerDesignacoesQueryBuscaSchema>
@@ -83,6 +87,7 @@ export const rodadasControllerDesignacoesQuerySchema = z.object({
   modalidadeId: z.uuid().optional(),
   motivo: z.array(z.string()).optional().describe('Código do motivo (ex.: `sem_espaco`).'),
   naMao: z.boolean().optional().describe('Só os mandados na mão (true) ou só os do motor (false).'),
+  recolhido: z.boolean().optional().describe('Só os recolhidos de médicos (true) ou só os da fila sem médico (false).'),
   busca: z.string().optional().describe('Trecho do estudo ou da unidade.'),
 })
 

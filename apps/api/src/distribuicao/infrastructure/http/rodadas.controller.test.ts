@@ -39,6 +39,9 @@ const casos = () => {
     resumo: fn(),
     explicar: fn(),
     buscarMedicos: { executar: vi.fn(async () => []) },
+    recolhimentoPrevisto: {
+      executar: vi.fn(async () => ({ ligado: true, recolhiveis: 3, porAusencia: 1 })),
+    },
   };
 };
 
@@ -60,6 +63,7 @@ const controller = (c: ReturnType<typeof casos>) =>
     c.resumo as never,
     c.explicar as never,
     c.buscarMedicos as never,
+    c.recolhimentoPrevisto as never,
   );
 
 describe('controller das rodadas', () => {
@@ -76,6 +80,7 @@ describe('controller das rodadas', () => {
       p.resumo,
       p.explicacao,
       p.medicosDaBusca,
+      p.recolhimento,
     ]) {
       expect(exigidas(leitura)).toEqual(['distribuicao.ver']);
     }
@@ -85,6 +90,15 @@ describe('controller das rodadas', () => {
     for (const controle of [p.pausar, p.retomar, p.encerrar, p.cancelar, p.reler, p.medicos]) {
       expect(exigidas(controle)).toEqual(['distribuicao.rodada.controlar']);
     }
+  });
+
+  it('a prévia do recolhimento vem do caso de uso, sem rodada', async () => {
+    const c = casos();
+    expect(await controller(c).recolhimento()).toEqual({
+      ligado: true,
+      recolhiveis: 3,
+      porAusencia: 1,
+    });
   });
 
   it('cria em nome de quem está logado, com o recorte dele', async () => {

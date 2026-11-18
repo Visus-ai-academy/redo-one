@@ -48,5 +48,10 @@ export type RodadaListadaDto = {
    */
   aprovadaEm: string | null;
   lidos: number;
+  /**
+   * @description Recolhidos de médicos que entraram na proposta.
+   * @type integer
+   */
+  recolhidos: number;
   executadas: number;
 };

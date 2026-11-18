@@ -8,6 +8,7 @@ import type { ContagemMotivoDto } from './ContagemMotivoDto'
 import type { FunilExamesDto } from './FunilExamesDto'
 import type { FunilMedicosDto } from './FunilMedicosDto'
 import type { MedicoDaRodadaDto } from './MedicoDaRodadaDto'
+import type { RecolhimentoRodadaDto } from './RecolhimentoRodadaDto'
 import type { TrilhaRodadaDto } from './TrilhaRodadaDto'
 
 export type ResumoRodadaDto = {
@@ -17,4 +18,9 @@ export type ResumoRodadaDto = {
   funilExames: FunilExamesDto | null;
   funilMedicos: FunilMedicosDto | null;
   trilha: TrilhaRodadaDto | null;
+  /**
+   * @description Nulo = recolhimento desligado na leitura (ou leitura anterior a ele).
+   * @type object
+   */
+  recolhimento: RecolhimentoRodadaDto | null;
 };

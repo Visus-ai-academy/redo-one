@@ -20,6 +20,7 @@ export const rodadaListadaDtoSchema = z.object({
   aprovadaPor: rotuloRodadaDtoSchema.nullable(),
   aprovadaEm: z.iso.datetime().nullable(),
   lidos: z.int(),
+  recolhidos: z.int().describe('Recolhidos de médicos que entraram na proposta.'),
   executadas: z.int(),
 })
 

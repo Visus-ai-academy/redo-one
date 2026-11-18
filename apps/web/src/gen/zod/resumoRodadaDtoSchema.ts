@@ -9,6 +9,7 @@ import { contagemMotivoDtoSchema } from './contagemMotivoDtoSchema'
 import { funilExamesDtoSchema } from './funilExamesDtoSchema'
 import { funilMedicosDtoSchema } from './funilMedicosDtoSchema'
 import { medicoDaRodadaDtoSchema } from './medicoDaRodadaDtoSchema'
+import { recolhimentoRodadaDtoSchema } from './recolhimentoRodadaDtoSchema'
 import { trilhaRodadaDtoSchema } from './trilhaRodadaDtoSchema'
 
 export const resumoRodadaDtoSchema = z.object({
@@ -18,6 +19,7 @@ export const resumoRodadaDtoSchema = z.object({
   funilExames: funilExamesDtoSchema.nullable(),
   funilMedicos: funilMedicosDtoSchema.nullable(),
   trilha: trilhaRodadaDtoSchema.nullable(),
+  recolhimento: recolhimentoRodadaDtoSchema.nullable().describe('Nulo = recolhimento desligado na leitura (ou leitura anterior a ele).'),
 })
 
 export type ResumoRodadaDtoSchemaType = z.infer<typeof resumoRodadaDtoSchema>

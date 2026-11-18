@@ -24,7 +24,8 @@ export const rodadaDtoSchema = z.object({
   lidaEm: z.iso.datetime().nullable().describe('Instante da leitura da fila (o minuto da escala que valeu).'),
   avisos: z.array(z.string()).describe('Avisos da proposta (catálogo, cliente, grafia sem de-para, teto, escala).'),
   lidos: z.int().describe('Exames lidos da fila sem médico.'),
-  urgentes: z.int().describe('Desses, os tratados como urgência.'),
+  recolhidos: z.int().describe('Recolhidos de médicos (fim do turno ou ausência) que entraram na proposta.'),
+  urgentes: z.int().describe('Dos exames da proposta (lidos e recolhidos), os tratados como urgência.'),
   recortes: recortesRodadaDtoSchema,
   eventos: z.array(eventoRodadaDtoSchema).describe('O diário, do mais antigo ao mais novo.'),
 })

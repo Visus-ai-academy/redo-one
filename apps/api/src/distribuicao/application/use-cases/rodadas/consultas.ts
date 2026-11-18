@@ -2,7 +2,7 @@ import type { FrenteEscala } from '../../../domain/arranjo';
 import type { Barreira } from '../../../domain/motor/medicos-disponiveis';
 import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
 import type { StatusRodada } from '../../../domain/rodada/maquina';
-import type { InsumosGravados } from '../../../domain/rodada/proposta';
+import type { InsumosGravados, RecolhimentoGravado } from '../../../domain/rodada/proposta';
 import type {
   AjustesConferencia,
   ContagemPorMotivo,
@@ -516,6 +516,8 @@ export interface ResumoRodada {
     receberam: number;
   } | null;
   trilha: { pacotes: number; examesAgrupados: number; aderencia: number } | null;
+  /** Null = recolhimento desligado na leitura (ou leitura gravada antes dele). */
+  recolhimento: RecolhimentoGravado | null;
 }
 
 const ZERO = {
@@ -588,6 +590,7 @@ export class ConsultarResumo {
             aderencia: insumos.trilha.aderencia,
           }
         : null,
+      recolhimento: insumos?.recolhimento ?? null,
     };
   }
 }

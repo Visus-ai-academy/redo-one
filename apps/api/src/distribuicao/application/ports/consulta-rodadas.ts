@@ -2,6 +2,7 @@ import type { Barreira } from '../../domain/motor/medicos-disponiveis';
 import type { RecortesRodada } from '../../domain/rodada/entrada';
 import type { StatusRodada } from '../../domain/rodada/maquina';
 import type { StatusDesignacao } from '../../domain/rodada/proposta';
+import type { MotivoRecolhimento } from '../../domain/rodada/recolhimento';
 
 export const CONSULTA_RODADAS = Symbol('CONSULTA_RODADAS');
 
@@ -41,7 +42,7 @@ export interface DesignacaoDetalhada {
   retiradaEm: Date | null;
   /** Recolhido: de quem sai e por quê (`turno_encerrado` ou `ausencia`). */
   recolhidoDe: RotuloRodada | null;
-  motivoRecolhimento: string | null;
+  motivoRecolhimento: MotivoRecolhimento | null;
   status: StatusDesignacao;
   motivo: string | null;
   detalhe: string | null;

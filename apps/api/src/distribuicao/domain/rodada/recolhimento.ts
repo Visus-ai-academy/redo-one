@@ -73,7 +73,8 @@ export interface EntradaRecolhimento {
   recolhe: (e: { especialidadeId: string | null; modalidadeId: string | null }) => boolean;
 }
 
-export type MotivoRecolhimento = 'turno_encerrado' | 'ausencia';
+export const MOTIVOS_RECOLHIMENTO = ['turno_encerrado', 'ausencia'] as const;
+export type MotivoRecolhimento = (typeof MOTIVOS_RECOLHIMENTO)[number];
 
 export interface ExameRecolhido {
   idExame: string;

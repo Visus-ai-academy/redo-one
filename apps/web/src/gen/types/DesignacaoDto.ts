@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { MotivoRecolhimentoKey } from './MotivoRecolhimento'
 import type { PacoteDto } from './PacoteDto'
 import type { RotuloRodadaDto } from './RotuloRodadaDto'
 import type { StatusDesignacaoKey } from './StatusDesignacao'
@@ -99,6 +100,15 @@ export type DesignacaoDto = {
    * @type string
    */
   retiradaEm: string | null;
+  /**
+   * @description Recolhido: de quem o exame sai (só sai ao executar); nulo = estava sem médico na leitura.
+   * @type object
+   */
+  recolhidoDe: RotuloRodadaDto | null;
+  /**
+   * @description `turno_encerrado` (o turno da entrega acabou) ou `ausencia` (ausente hoje).
+   */
+  motivoRecolhimento: MotivoRecolhimentoKey | null;
   status: StatusDesignacaoKey;
   /**
    * @description Código do motivo.

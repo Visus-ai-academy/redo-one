@@ -105,6 +105,7 @@ import {
   LerFila,
   ListarDesignacoes,
   PausarRodada,
+  PreverRecolhimento,
   RelerRodada,
   RetomarRodada,
 } from './application/use-cases/rodadas';
@@ -173,6 +174,7 @@ const CASOS_RODADA = [
   ConsultarResumo,
   ExplicarDesignacao,
   BuscarMedicosDaRodada,
+  PreverRecolhimento,
 ];
 
 /** Contexto `distribuicao` (hexagonal): arranjos, parâmetros, configuração e rodadas do robô. */

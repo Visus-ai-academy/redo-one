@@ -53,6 +53,8 @@ const designacao = (p: Partial<DesignacaoDto> = {}): DesignacaoDto => ({
   elegiveis: ['A', 'B', 'C'],
   retiradoDe: null,
   retiradaEm: null,
+  recolhidoDe: null,
+  motivoRecolhimento: null,
   status: 'prevista',
   motivo: null,
   detalhe: null,
