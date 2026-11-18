@@ -24,6 +24,7 @@ import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configu
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
 import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
+import { Route as AppConfiguracoesDistribuicaoRouteImport } from './routes/_app/configuracoes/distribuicao'
 import { Route as AppConfiguracoesEquipesRouteImport } from './routes/_app/configuracoes/equipes'
 import { Route as AppConfiguracoesEscalaRouteImport } from './routes/_app/configuracoes/escala'
 import { Route as AppConfiguracoesImportacaoRouteImport } from './routes/_app/configuracoes/importacao'
@@ -111,6 +112,12 @@ const AppConfiguracoesDeParasRoute = AppConfiguracoesDeParasRouteImport.update({
   path: '/configuracoes/de-paras',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesDistribuicaoRoute =
+  AppConfiguracoesDistribuicaoRouteImport.update({
+    id: '/configuracoes/distribuicao',
+    path: '/configuracoes/distribuicao',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppConfiguracoesEquipesRoute = AppConfiguracoesEquipesRouteImport.update({
   id: '/configuracoes/equipes',
   path: '/configuracoes/equipes',
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
+  '/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
   '/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
   '/configuracoes/escala': typeof AppConfiguracoesEscalaRoute
   '/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
@@ -206,6 +214,7 @@ export interface FileRoutesByTo {
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
+  '/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
   '/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
   '/configuracoes/escala': typeof AppConfiguracoesEscalaRoute
   '/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
@@ -234,6 +243,7 @@ export interface FileRoutesById {
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
+  '/_app/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
   '/_app/configuracoes/equipes': typeof AppConfiguracoesEquipesRoute
   '/_app/configuracoes/escala': typeof AppConfiguracoesEscalaRoute
   '/_app/configuracoes/importacao': typeof AppConfiguracoesImportacaoRoute
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
+    | '/configuracoes/distribuicao'
     | '/configuracoes/equipes'
     | '/configuracoes/escala'
     | '/configuracoes/importacao'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
+    | '/configuracoes/distribuicao'
     | '/configuracoes/equipes'
     | '/configuracoes/escala'
     | '/configuracoes/importacao'
@@ -315,6 +327,7 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/contratados'
     | '/_app/configuracoes/de-paras'
+    | '/_app/configuracoes/distribuicao'
     | '/_app/configuracoes/equipes'
     | '/_app/configuracoes/escala'
     | '/_app/configuracoes/importacao'
@@ -442,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesDeParasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/distribuicao': {
+      id: '/_app/configuracoes/distribuicao'
+      path: '/configuracoes/distribuicao'
+      fullPath: '/configuracoes/distribuicao'
+      preLoaderRoute: typeof AppConfiguracoesDistribuicaoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/equipes': {
       id: '/_app/configuracoes/equipes'
       path: '/configuracoes/equipes'
@@ -526,6 +546,7 @@ interface AppRouteChildren {
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
   AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
+  AppConfiguracoesDistribuicaoRoute: typeof AppConfiguracoesDistribuicaoRoute
   AppConfiguracoesEquipesRoute: typeof AppConfiguracoesEquipesRoute
   AppConfiguracoesEscalaRoute: typeof AppConfiguracoesEscalaRoute
   AppConfiguracoesImportacaoRoute: typeof AppConfiguracoesImportacaoRoute
@@ -550,6 +571,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
   AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,
+  AppConfiguracoesDistribuicaoRoute: AppConfiguracoesDistribuicaoRoute,
   AppConfiguracoesEquipesRoute: AppConfiguracoesEquipesRoute,
   AppConfiguracoesEscalaRoute: AppConfiguracoesEscalaRoute,
   AppConfiguracoesImportacaoRoute: AppConfiguracoesImportacaoRoute,

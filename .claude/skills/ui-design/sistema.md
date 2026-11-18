@@ -102,7 +102,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
   - Sua conta: Meu perfil (dados, senha, sessões e acessos numa tela só; um item por destino, nunca dois itens para a mesma tela).
   - Acesso: Usuários, Papéis, Chaves dos robôs.
   - Catálogo: Classificação dos exames (modalidades, especialidades, subespecialidades, categorias e prioridades, em abas), Contratados, De-paras (só o que não tem forma certa: valores que não são especialidade e sufixos de cliente), Equipes médicas, Níveis dos médicos.
-  - Operação: Importação de laudos (trava contra arquivo incompleto e retenção da linha da planilha), Robô de distribuição, Escala médica.
+  - Operação: Importação de laudos (trava contra arquivo incompleto e retenção da linha da planilha), Escala médica, Distribuição (o que vale para todas as frentes do robô; a regra de cada frente fica na aba Distribuição da especialidade ou da modalidade).
   - Financeiro: Tipificação, Impostos, Parâmetros de contrato.
   - Avisos e metas: Notificações, Metas mensais.
   - Cada item exige a sua permissão; sem nenhuma, a entrada Configurações some.
@@ -139,7 +139,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 | De-paras | `ArrowsLeftRight` |
 | Equipes médicas | `UsersThree` |
 | Níveis dos médicos | `Ranking` |
-| Robô de distribuição | `Robot` |
+| Distribuição (configuração do robô) | `Robot` |
 | Tipificação | `ListChecks` |
 | Impostos | `Percent` |
 | Parâmetros de contrato | `FileText` |

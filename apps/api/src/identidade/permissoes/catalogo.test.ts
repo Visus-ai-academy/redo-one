@@ -212,6 +212,14 @@ describe('catálogo de permissões', () => {
     ]);
   });
 
+  it('qualquer ação da configuração da distribuição leva junto o ver da escala (a tela lê os turnos)', () => {
+    expect(normalizarPermissoes(['distribuicao-config.editar'])).toEqual([
+      'distribuicao-config.editar',
+      'distribuicao-config.ver',
+      'escala.ver',
+    ]);
+  });
+
   it('qualquer ação das ausências leva junto o ver da escala (o formulário lê turnos, frentes e médicos dela)', () => {
     expect(normalizarPermissoes(['ausencias.criar'])).toEqual([
       'ausencias.criar',

@@ -405,6 +405,8 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     area: 'Configurações',
     padrao: [{ acao: 'ver' }, { acao: 'editar', sensivel: true }],
     especiais: [],
+    // Os turnos posteriores da configuração global vêm de GET /escala/turnos (escala.ver).
+    exige: ['escala'],
   },
   {
     tela: 'chaves-robo',
