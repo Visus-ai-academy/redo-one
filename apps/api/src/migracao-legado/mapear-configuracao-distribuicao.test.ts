@@ -89,6 +89,9 @@ const config: LegadoConfiguracaoRobo = {
   listaPrioridades: ['Rotina'],
   listaPrazoMinimoHoras: 24,
   roboRecolherAposTurnoMin: 60,
+  roboAtivo: true,
+  roboExpiracaoMin: 45,
+  roboTetoPorRodada: null,
   roboListaDepoisDosFixos: [],
 };
 
@@ -179,6 +182,9 @@ describe('mapearConfiguracaoDistribuicao', () => {
       diasJaEntregue: 7,
       turnosPosteriores: { turnoIds: ['tu-tarde'], cheiaEm: '10:50' },
       recolhimentoAposTurnoMin: 60,
+      roboAtivo: true,
+      expiracaoPropostaMin: 45,
+      tetoPorRodada: null,
     });
     expect(avisos.filter((a) => a.tabela === 'configuracao_distribuicao')).toEqual([]);
   });

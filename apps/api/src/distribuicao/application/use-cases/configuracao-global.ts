@@ -2,6 +2,7 @@ import type { Ator, Auditoria } from '../../../auditoria/auditoria';
 import {
   CONFIGURACAO_INICIAL,
   type ConfiguracaoGlobal,
+  type EdicaoConfiguracaoGlobal,
   normalizarConfiguracao,
   validarConfiguracaoGlobal,
 } from '../../domain/configuracao-global';
@@ -36,13 +37,21 @@ export class DefinirConfiguracaoGlobal {
     private readonly agora: () => Date,
   ) {}
 
-  async executar(ator: Ator, entrada: ConfiguracaoGlobal): Promise<void> {
-    const nova = canonica(normalizarConfiguracao(entrada));
+  async executar(ator: Ator, entrada: EdicaoConfiguracaoGlobal): Promise<void> {
+    const atual = canonica((await this.repo.obter()) ?? CONFIGURACAO_INICIAL);
+    const nova = canonica(
+      normalizarConfiguracao({
+        ...entrada,
+        roboAtivo: entrada.roboAtivo ?? atual.roboAtivo,
+        expiracaoPropostaMin: entrada.expiracaoPropostaMin ?? atual.expiracaoPropostaMin,
+        tetoPorRodada:
+          entrada.tetoPorRodada === undefined ? atual.tetoPorRodada : entrada.tetoPorRodada,
+      }),
+    );
     validarConfiguracaoGlobal(nova);
     await exigirReferencias(this.cadastros, {
       turno: nova.turnosPosteriores?.turnoIds ?? [],
     });
-    const atual = canonica((await this.repo.obter()) ?? CONFIGURACAO_INICIAL);
     const mudancas = diferenca({ ...atual }, { ...nova });
     if (!mudancas) return;
     await this.repo.salvar(nova);

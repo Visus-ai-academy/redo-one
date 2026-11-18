@@ -169,6 +169,13 @@
       "when": 1795006110253,
       "tag": "0023_distribuicao_recebimento_por_turno",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795009134654,
+      "tag": "0024_distribuicao_rodadas",
+      "breakpoints": true
     }
   ]
 }

@@ -59,8 +59,20 @@ describe('configuração global da distribuição', () => {
     ['cicloMinutos', 0],
     ['diasJaEntregue', -1],
     ['recolhimentoAposTurnoMin', -1],
+    ['expiracaoPropostaMin', 0],
+    ['expiracaoPropostaMin', 1441],
+    ['tetoPorRodada', 0],
+    ['tetoPorRodada', 2.5],
   ] as const)('recusa %s = %s', (campo, valor) => {
     falha({ [campo]: valor }, /./);
+  });
+
+  it('o robô começa ligado, com a proposta valendo 45 min e sem teto por rodada', () => {
+    expect(CONFIGURACAO_INICIAL).toMatchObject({
+      roboAtivo: true,
+      expiracaoPropostaMin: 45,
+      tetoPorRodada: null,
+    });
   });
 
   it('turnos posteriores precisam de ao menos um turno, sem repetir, e da hora da cheia', () => {

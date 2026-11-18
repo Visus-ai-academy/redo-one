@@ -199,6 +199,9 @@ export function mapearConfiguracaoDistribuicao(
         ? { turnoIds: tarde.map((t) => t.id).sort(), cheiaEm: CHEIA_POSTERIORES }
         : null,
       recolhimentoAposTurnoMin: cfg.roboRecolherAposTurnoMin,
+      roboAtivo: cfg.roboAtivo,
+      expiracaoPropostaMin: cfg.roboExpiracaoMin,
+      tetoPorRodada: cfg.roboTetoPorRodada,
     };
     contar('configuracaoGlobal');
   }

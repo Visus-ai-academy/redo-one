@@ -7,6 +7,7 @@ import {
   IsIn,
   IsInt,
   IsObject,
+  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -150,4 +151,49 @@ export class ConfiguracaoDistribuicaoDto {
   @ValidateIf((_, v) => v !== null)
   @IsInt()
   recolhimentoAposTurnoMin!: number | null;
+
+  @ApiProperty({
+    required: false,
+    description: 'Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  roboAtivo?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Minutos que a proposta vale sem aprovação; depois expira. Ausente = mantém o gravado.',
+  })
+  @IsOptional()
+  @IsInt()
+  expiracaoPropostaMin?: number;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    required: false,
+    description:
+      'Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado.',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  tetoPorRodada?: number | null;
+}
+
+/** A configuração como está gravada (os campos do robô sempre presentes). */
+export class ConfiguracaoDistribuicaoRespostaDto extends ConfiguracaoDistribuicaoDto {
+  @ApiProperty({ description: 'Robô ligado: desligado, ninguém inicia rodada.' })
+  declare roboAtivo: boolean;
+
+  @ApiProperty({ description: 'Minutos que a proposta vale sem aprovação; depois expira.' })
+  declare expiracaoPropostaMin: number;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Máximo de exames propostos por rodada; nulo = sem teto.',
+  })
+  declare tetoPorRodada: number | null;
 }

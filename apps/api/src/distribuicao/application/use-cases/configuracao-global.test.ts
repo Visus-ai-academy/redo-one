@@ -65,6 +65,25 @@ describe('configuração global da distribuição', () => {
     expect(auditoria.eventos).toHaveLength(1);
   });
 
+  it('sem os campos do robô no pedido, mantém os gravados (a tela antiga não os manda)', async () => {
+    await definir.executar(ator, producao({ roboAtivo: false, tetoPorRodada: 300 }));
+    const {
+      roboAtivo: _,
+      expiracaoPropostaMin: __,
+      tetoPorRodada: ___,
+      ...semRobo
+    } = producao({
+      cicloMinutos: 20,
+    });
+    await definir.executar(ator, semRobo);
+    expect(await obter.executar()).toMatchObject({
+      roboAtivo: false,
+      tetoPorRodada: 300,
+      expiracaoPropostaMin: 45,
+      cicloMinutos: 20,
+    });
+  });
+
   it('apara os marcadores antes de gravar', async () => {
     await definir.executar(ator, producao({ marcadoresEquilibrio: [' ONCO '] }));
     expect((await obter.executar()).marcadoresEquilibrio).toEqual(['ONCO']);

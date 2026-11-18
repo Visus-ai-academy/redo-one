@@ -25,6 +25,7 @@ import {
   subespecialidades,
 } from './catalogo';
 import { alocacoes, turnos } from './escala';
+import { usuarios } from './identidade';
 import { equipes, medicos } from './medicos';
 
 // Contexto `distribuicao`: o que cada médico (ou equipe) lauda e os parâmetros do robô por
@@ -199,6 +200,12 @@ export const configuracaoDistribuicao = pgTable(
     turnosPosterioresCheiaEm: text('turnos_posteriores_cheia_em'),
     /** Null = recolhimento desligado. */
     recolhimentoAposTurnoMin: integer('recolhimento_apos_turno_min'),
+    /** Desligado, ninguém inicia rodada. */
+    roboAtivo: boolean('robo_ativo').notNull().default(true),
+    /** Minutos que a proposta vale sem aprovação. */
+    expiracaoPropostaMin: integer('expiracao_proposta_min').notNull().default(45),
+    /** Máximo de exames propostos por rodada; null = sem teto. */
+    tetoPorRodada: integer('teto_por_rodada'),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [check('configuracao_distribuicao_unica', sql`${t.id} = 1`)],
@@ -529,4 +536,182 @@ export const ajustesDiaDistribuicaoPrioridades = pgTable(
       .references(() => prioridades.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.ajusteId, t.prioridadeId] })],
+);
+
+// ---------------------------------------------------------------------------------------------
+// Rodadas do robô (Operação › Distribuição): pedido, leitura da fila, proposta, aprovação e
+// execução. Só manual por ora (decisão de 17/11/2026). Ver `distribuicao/domain/rodada`.
+//
+// LGPD: o nome do paciente NUNCA é coluna. A designação guarda o id do exame na MobileMed e o
+// HMAC do paciente (agrupa o pacote); o nome é lido na MobileMed na hora da conferência, só por
+// quem tem `distribuicao.paciente.ver`, com auditoria. Retenção das designações: a definir (TODO).
+// ---------------------------------------------------------------------------------------------
+
+export const statusRodada = pgEnum('status_rodada', [
+  'solicitada',
+  'lendo',
+  'aguardando_aprovacao',
+  'aprovada',
+  'executando',
+  'pausada',
+  'parcial',
+  'concluida',
+  'expirada',
+  'cancelada',
+  'falhou',
+]);
+
+export const rodadas = pgTable(
+  'rodadas',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    status: statusRodada('status').notNull().default('solicitada'),
+    solicitadaPorId: uuid('solicitada_por_id').references(() => usuarios.id, {
+      onDelete: 'set null',
+    }),
+    aprovadaPorId: uuid('aprovada_por_id').references(() => usuarios.id, {
+      onDelete: 'set null',
+    }),
+    aprovadaEm: timestamp('aprovada_em', { withTimezone: true }),
+    // Recortes: foto do pedido, em arrays de ids SEM chave estrangeira de propósito (o histórico
+    // não pode sumir nem travar a exclusão de um turno ou cliente). Vazio = sem recorte.
+    turnoIds: uuid('turno_ids').array().notNull().default(sql`'{}'`),
+    /** Frentes da escala (`frentes_escala`). */
+    frenteIds: uuid('frente_ids').array().notNull().default(sql`'{}'`),
+    prioridadeOperacaoIds: uuid('prioridade_operacao_ids').array().notNull().default(sql`'{}'`),
+    clienteIds: uuid('cliente_ids').array().notNull().default(sql`'{}'`),
+    medicosExcluidos: uuid('medicos_excluidos').array().notNull().default(sql`'{}'`),
+    /** Entram mesmo fora dos turnos e das frentes do recorte. */
+    medicosIncluidos: uuid('medicos_incluidos').array().notNull().default(sql`'{}'`),
+    /** Instante da leitura da fila (o minuto da escala que valeu). */
+    lidaEm: timestamp('lida_em', { withTimezone: true }),
+    /** A proposta não aprovada até aqui expira. */
+    expiraEm: timestamp('expira_em', { withTimezone: true }),
+    erro: text('erro'),
+    /** Avisos da proposta (leitura, cadastro, cota gratificada, grafias sem de-para). */
+    avisos: text('avisos').array().notNull().default(sql`'{}'`),
+    /** Exames lidos da fila sem médico. */
+    lidos: integer('lidos').notNull().default(0),
+    /** Desses, os tratados como urgência pela operação. */
+    urgentes: integer('urgentes').notNull().default(0),
+    /** O que o motor viu (funil, trilha, médicos, grafias sem de-para): o "por quê" do passo 5. */
+    insumos: jsonb('insumos'),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    // No máximo uma rodada viva por vez: dois robôs lendo a mesma fila dariam o exame duas vezes.
+    uniqueIndex('rodadas_uma_viva_key')
+      .on(sql`(true)`)
+      .where(
+        sql`${t.status} in ('solicitada', 'lendo', 'aguardando_aprovacao', 'aprovada', 'executando', 'pausada', 'parcial')`,
+      ),
+    index('rodadas_criado_em_idx').on(t.criadoEm),
+    index('rodadas_status_idx').on(t.status),
+  ],
+);
+
+export const statusDesignacao = pgEnum('status_designacao', [
+  /** Na proposta, a atribuir. */
+  'prevista',
+  'executada',
+  /** Tirada (conferência, encerramento, cancelamento) ou recusada pela MobileMed. */
+  'pulada',
+  'falhou',
+  /** O motor não a distribuiu (motivo e detalhe dizem por quê). */
+  'recusada',
+]);
+
+/** Cada exame lido numa rodada, com o destino proposto e o resultado. */
+export const designacoes = pgTable(
+  'designacoes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rodadaId: uuid('rodada_id')
+      .notNull()
+      .references(() => rodadas.id, { onDelete: 'cascade' }),
+    /** Ordem da fila do motor na leitura. */
+    ordem: integer('ordem').notNull(),
+    idExameMobilemed: text('id_exame_mobilemed').notNull(),
+    /** HMAC do paciente: agrupa o pacote; nunca o nome. */
+    pacienteChave: text('paciente_chave').notNull(), // LGPD: saúde (pseudônimo)
+    estudo: text('estudo').notNull(),
+    unidade: text('unidade').notNull(),
+    exameId: uuid('exame_id').references(() => exames.id, { onDelete: 'set null' }),
+    clienteId: uuid('cliente_id').references(() => clientes.id, { onDelete: 'set null' }),
+    /** Grafia da prioridade na MobileMed. */
+    prioridadeGrafia: text('prioridade_grafia'),
+    prioridadeOperacaoId: uuid('prioridade_operacao_id').references(() => prioridadesOperacao.id, {
+      onDelete: 'set null',
+    }),
+    /** Prioridade do catálogo (pelas variações). */
+    prioridadeId: uuid('prioridade_id').references(() => prioridades.id, { onDelete: 'set null' }),
+    especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
+      onDelete: 'set null',
+    }),
+    modalidadeId: uuid('modalidade_id').references(() => modalidades.id, {
+      onDelete: 'set null',
+    }),
+    subespecialidadeId: uuid('subespecialidade_id').references(() => subespecialidades.id, {
+      onDelete: 'set null',
+    }),
+    laudos: integer('laudos').notNull().default(1),
+    realizadoEm: timestamp('realizado_em', { withTimezone: true }).notNull(),
+    entradaEm: timestamp('entrada_em', { withTimezone: true }).notNull(),
+    prazo: timestamp('prazo', { withTimezone: true }),
+    /** Posição da prioridade da operação na leitura (a ordem da execução usa). */
+    posicao: integer('posicao'),
+    urgente: boolean('urgente').notNull().default(false),
+    /** Quem o motor propôs (fica mesmo se a conferência mover ou tirar). */
+    medicoPropostoId: uuid('medico_proposto_id').references(() => medicos.id, {
+      onDelete: 'set null',
+    }),
+    /** A quem vai (prevista) ou foi (executada); null = ninguém. */
+    medicoId: uuid('medico_id').references(() => medicos.id, { onDelete: 'set null' }),
+    /** Id do exame (na MobileMed) com quem anda no pacote do paciente. */
+    agrupadoCom: text('agrupado_com'),
+    gratificado: boolean('gratificado').notNull().default(false),
+    alocacaoGratificadaId: uuid('alocacao_gratificada_id').references(() => alocacoes.id, {
+      onDelete: 'set null',
+    }),
+    coberturaDeId: uuid('cobertura_de_id').references(() => alocacoes.id, {
+      onDelete: 'set null',
+    }),
+    status: statusDesignacao('status').notNull(),
+    motivo: text('motivo'),
+    detalhe: text('detalhe'),
+    /** A falha (ou o pulo) que vale tentar de novo ao retomar. */
+    retentavel: boolean('retentavel').notNull().default(false),
+    executadaEm: timestamp('executada_em', { withTimezone: true }),
+  },
+  (t) => [
+    unique('designacoes_rodada_exame_key').on(t.rodadaId, t.idExameMobilemed),
+    index('designacoes_rodada_status_idx').on(t.rodadaId, t.status),
+    index('designacoes_rodada_ordem_idx').on(t.rodadaId, t.ordem),
+    // "Já entregue": o exame executado para alguém nos últimos N dias.
+    index('designacoes_exame_executadas_idx')
+      .on(t.idExameMobilemed, t.executadaEm)
+      .where(sql`${t.status} = 'executada'`),
+    // Cota da Lista gratificada: o que já saiu por ela.
+    index('designacoes_alocacao_gratificada_idx')
+      .on(t.alocacaoGratificadaId, t.executadaEm)
+      .where(sql`${t.status} = 'executada' and ${t.alocacaoGratificadaId} is not null`),
+    index('designacoes_medico_idx').on(t.medicoId),
+  ],
+);
+
+/** O diário da rodada: o que a tela mostra enquanto ela anda; com total, a tela desenha a barra. */
+export const eventosRodada = pgTable(
+  'eventos_rodada',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    rodadaId: uuid('rodada_id')
+      .notNull()
+      .references(() => rodadas.id, { onDelete: 'cascade' }),
+    em: timestamp('em', { withTimezone: true }).notNull().defaultNow(),
+    texto: text('texto').notNull(),
+    atual: integer('atual'),
+    total: integer('total'),
+  },
+  (t) => [index('eventos_rodada_rodada_em_idx').on(t.rodadaId, t.em)],
 );

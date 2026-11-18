@@ -159,7 +159,8 @@ export async function lerLegado(url: string): Promise<{
       `select "ordemFila", "prioridadesUrgentes", "agruparPorPaciente", "janelaPacienteHoras",
         "escalaRestringeEspecialidade", "toleranciaAcimaCapacidade", "reservaUrgenciaPct",
         "folgaAtrasadoPct", "cicloMinutos", "marcadoresEquilibrio", "listaPrioridades",
-        "listaPrazoMinimoHoras", "roboRecolherAposTurnoMin", "roboListaDepoisDosFixos"
+        "listaPrazoMinimoHoras", "roboRecolherAposTurnoMin", "roboListaDepoisDosFixos",
+        "roboAtivo", "roboExpiracaoMin", "roboTetoPorRodada"
         from configuracao_distribuicao order by ctid limit 1`,
     );
     const configuracaoDistribuicao: LegadoConfiguracaoDistribuicao = {

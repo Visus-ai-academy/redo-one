@@ -20,7 +20,18 @@ export interface ConfiguracaoGlobal extends ConfiguracaoDistribuicao {
    * `roboRecolherAposTurnoMin` (60 em produção). O motor não usa; o recolhimento (passo 5) usa.
    */
   recolhimentoAposTurnoMin: number | null;
+  /** Desligado, ninguém inicia rodada (no dashboards-one, `roboAtivo`). */
+  roboAtivo: boolean;
+  /** Minutos que a proposta vale antes de expirar sem aprovação (`roboExpiracaoMin`). */
+  expiracaoPropostaMin: number;
+  /** Máximo de exames propostos por rodada; null = sem teto (`roboTetoPorRodada`). */
+  tetoPorRodada: number | null;
 }
+
+/** Os campos do robô: a tela de antes deles não os manda, e o PUT sem eles mantém os gravados. */
+export type CamposRobo = 'roboAtivo' | 'expiracaoPropostaMin' | 'tetoPorRodada';
+export type EdicaoConfiguracaoGlobal = Omit<ConfiguracaoGlobal, CamposRobo> &
+  Partial<Pick<ConfiguracaoGlobal, CamposRobo>>;
 
 /**
  * Valores enquanto ninguém salvou a configuração (sem linha no banco). Os números são os de
@@ -45,6 +56,9 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   diasJaEntregue: 7,
   turnosPosteriores: null,
   recolhimentoAposTurnoMin: 60,
+  roboAtivo: true,
+  expiracaoPropostaMin: 45,
+  tetoPorRodada: null,
 };
 
 const CRITERIOS = new Set(['prioridade', 'prazo', 'antiguidade']);
@@ -77,6 +91,11 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
   inteiroEntre(c.diasJaEntregue, 0, 90, 'Dias do "já entregue"');
   if (c.recolhimentoAposTurnoMin !== null) {
     inteiroEntre(c.recolhimentoAposTurnoMin, 0, 1440, 'Carência do recolhimento (minutos)');
+  }
+
+  inteiroEntre(c.expiracaoPropostaMin, 1, 1440, 'Validade da proposta (minutos)');
+  if (c.tetoPorRodada !== null) {
+    inteiroEntre(c.tetoPorRodada, 1, 100_000, 'Teto de exames por rodada');
   }
 
   const marcadores = c.marcadoresEquilibrio.map((m) => m.trim());

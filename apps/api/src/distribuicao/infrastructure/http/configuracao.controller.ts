@@ -12,7 +12,10 @@ import {
   DefinirConfiguracaoGlobal,
   ObterConfiguracaoGlobal,
 } from '../../application/use-cases/configuracao-global';
-import { ConfiguracaoDistribuicaoDto } from './dto/configuracao.dto';
+import {
+  ConfiguracaoDistribuicaoDto,
+  ConfiguracaoDistribuicaoRespostaDto,
+} from './dto/configuracao.dto';
 
 /** Configurações › Distribuição: a configuração global do robô (linha única). */
 @ApiTags('distribuicao')
@@ -25,8 +28,8 @@ export class ConfiguracaoDistribuicaoController {
 
   @Get()
   @Permissao('distribuicao-config.ver')
-  @ApiOkResponse({ type: ConfiguracaoDistribuicaoDto })
-  obter(): Promise<ConfiguracaoDistribuicaoDto> {
+  @ApiOkResponse({ type: ConfiguracaoDistribuicaoRespostaDto })
+  obter(): Promise<ConfiguracaoDistribuicaoRespostaDto> {
     return this.obterConfiguracao.executar();
   }
 

@@ -266,6 +266,9 @@ export interface LegadoConfiguracaoRobo {
   listaPrazoMinimoHoras: number;
   roboRecolherAposTurnoMin: number | null;
   roboListaDepoisDosFixos: string[];
+  roboAtivo: boolean;
+  roboExpiracaoMin: number;
+  roboTetoPorRodada: number | null;
 }
 
 /** `politicas_distribuicao`. */
