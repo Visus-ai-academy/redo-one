@@ -116,7 +116,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 | Volumetria | `ChartBar` |
 | SLA e prazos | `Timer` |
 | Qualidade | `ShieldCheck` |
-| Distribuição | `Shuffle` |
+| Distribuição (tela de trabalho, Operação) | `Robot` |
 | Fila pendente | `Queue` |
 | Escala médica | `CalendarDots` |
 | Clientes | `Buildings` |

@@ -7,6 +7,7 @@ import {
   Flask,
   Gear,
   type Icon,
+  Robot,
   Stethoscope,
 } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
@@ -36,6 +37,12 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         to: '/importacao',
         icone: FileArrowUp,
         permissao: 'importacao.ver',
+      },
+      {
+        nome: 'Distribuição',
+        to: '/distribuicao',
+        icone: Robot,
+        permissao: 'distribuicao.ver',
       },
       { nome: 'Escala', to: '/escala', icone: CalendarDots, permissao: 'escala.ver' },
       { nome: 'Ausências', to: '/escala/ausencias', icone: CalendarX, permissao: 'ausencias.ver' },

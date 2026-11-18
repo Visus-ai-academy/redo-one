@@ -12,10 +12,11 @@ describe('GRUPOS_MENU', () => {
     ]);
   });
 
-  it('Operação tem Importação, Escala e Ausências, cada um exigindo o ver da tela', () => {
+  it('Operação tem Importação, Distribuição, Escala e Ausências, cada um exigindo o ver da tela', () => {
     const operacao = GRUPOS_MENU.find((g) => g.titulo === 'Operação');
     expect(operacao?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Importação', '/importacao', 'importacao.ver'],
+      ['Distribuição', '/distribuicao', 'distribuicao.ver'],
       ['Escala', '/escala', 'escala.ver'],
       ['Ausências', '/escala/ausencias', 'ausencias.ver'],
     ]);

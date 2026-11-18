@@ -32,9 +32,11 @@ import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/con
 import { Route as AppConfiguracoesNiveisMedicoRouteImport } from './routes/_app/configuracoes/niveis-medico'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
 import { Route as AppConfiguracoesUsuariosRouteImport } from './routes/_app/configuracoes/usuarios'
+import { Route as AppDistribuicaoIndexRouteImport } from './routes/_app/distribuicao/index'
 import { Route as AppEscalaIndexRouteImport } from './routes/_app/escala/index'
 import { Route as AppEscalaAusenciasRouteImport } from './routes/_app/escala/ausencias'
 import { Route as AppEscalaHistoricoRouteImport } from './routes/_app/escala/historico'
+import { Route as AppDistribuicaoRodadasIdRouteImport } from './routes/_app/distribuicao/rodadas.$id'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -157,6 +159,11 @@ const AppConfiguracoesUsuariosRoute =
     path: '/configuracoes/usuarios',
     getParentRoute: () => AppRoute,
   } as any)
+const AppDistribuicaoIndexRoute = AppDistribuicaoIndexRouteImport.update({
+  id: '/distribuicao/',
+  path: '/distribuicao/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEscalaIndexRoute = AppEscalaIndexRouteImport.update({
   id: '/escala/',
   path: '/escala/',
@@ -172,6 +179,12 @@ const AppEscalaHistoricoRoute = AppEscalaHistoricoRouteImport.update({
   path: '/escala/historico',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDistribuicaoRodadasIdRoute =
+  AppDistribuicaoRodadasIdRouteImport.update({
+    id: '/distribuicao/rodadas/$id',
+    path: '/distribuicao/rodadas/$id',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -198,7 +211,9 @@ export interface FileRoutesByFullPath {
   '/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/escala/historico': typeof AppEscalaHistoricoRoute
   '/configuracoes/': typeof AppConfiguracoesIndexRoute
+  '/distribuicao/': typeof AppDistribuicaoIndexRoute
   '/escala/': typeof AppEscalaIndexRoute
+  '/distribuicao/rodadas/$id': typeof AppDistribuicaoRodadasIdRoute
 }
 export interface FileRoutesByTo {
   '/definir-senha': typeof DefinirSenhaRoute
@@ -225,7 +240,9 @@ export interface FileRoutesByTo {
   '/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/escala/historico': typeof AppEscalaHistoricoRoute
   '/configuracoes': typeof AppConfiguracoesIndexRoute
+  '/distribuicao': typeof AppDistribuicaoIndexRoute
   '/escala': typeof AppEscalaIndexRoute
+  '/distribuicao/rodadas/$id': typeof AppDistribuicaoRodadasIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -254,7 +271,9 @@ export interface FileRoutesById {
   '/_app/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/_app/escala/historico': typeof AppEscalaHistoricoRoute
   '/_app/configuracoes/': typeof AppConfiguracoesIndexRoute
+  '/_app/distribuicao/': typeof AppDistribuicaoIndexRoute
   '/_app/escala/': typeof AppEscalaIndexRoute
+  '/_app/distribuicao/rodadas/$id': typeof AppDistribuicaoRodadasIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -283,7 +302,9 @@ export interface FileRouteTypes {
     | '/escala/ausencias'
     | '/escala/historico'
     | '/configuracoes/'
+    | '/distribuicao/'
     | '/escala/'
+    | '/distribuicao/rodadas/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/definir-senha'
@@ -310,7 +331,9 @@ export interface FileRouteTypes {
     | '/escala/ausencias'
     | '/escala/historico'
     | '/configuracoes'
+    | '/distribuicao'
     | '/escala'
+    | '/distribuicao/rodadas/$id'
   id:
     | '__root__'
     | '/_app'
@@ -338,7 +361,9 @@ export interface FileRouteTypes {
     | '/_app/escala/ausencias'
     | '/_app/escala/historico'
     | '/_app/configuracoes/'
+    | '/_app/distribuicao/'
     | '/_app/escala/'
+    | '/_app/distribuicao/rodadas/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -511,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesUsuariosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/distribuicao/': {
+      id: '/_app/distribuicao/'
+      path: '/distribuicao'
+      fullPath: '/distribuicao/'
+      preLoaderRoute: typeof AppDistribuicaoIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/escala/': {
       id: '/_app/escala/'
       path: '/escala'
@@ -530,6 +562,13 @@ declare module '@tanstack/react-router' {
       path: '/escala/historico'
       fullPath: '/escala/historico'
       preLoaderRoute: typeof AppEscalaHistoricoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/distribuicao/rodadas/$id': {
+      id: '/_app/distribuicao/rodadas/$id'
+      path: '/distribuicao/rodadas/$id'
+      fullPath: '/distribuicao/rodadas/$id'
+      preLoaderRoute: typeof AppDistribuicaoRodadasIdRouteImport
       parentRoute: typeof AppRoute
     }
   }
@@ -557,7 +596,9 @@ interface AppRouteChildren {
   AppEscalaAusenciasRoute: typeof AppEscalaAusenciasRoute
   AppEscalaHistoricoRoute: typeof AppEscalaHistoricoRoute
   AppConfiguracoesIndexRoute: typeof AppConfiguracoesIndexRoute
+  AppDistribuicaoIndexRoute: typeof AppDistribuicaoIndexRoute
   AppEscalaIndexRoute: typeof AppEscalaIndexRoute
+  AppDistribuicaoRodadasIdRoute: typeof AppDistribuicaoRodadasIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -582,7 +623,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppEscalaAusenciasRoute: AppEscalaAusenciasRoute,
   AppEscalaHistoricoRoute: AppEscalaHistoricoRoute,
   AppConfiguracoesIndexRoute: AppConfiguracoesIndexRoute,
+  AppDistribuicaoIndexRoute: AppDistribuicaoIndexRoute,
   AppEscalaIndexRoute: AppEscalaIndexRoute,
+  AppDistribuicaoRodadasIdRoute: AppDistribuicaoRodadasIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
