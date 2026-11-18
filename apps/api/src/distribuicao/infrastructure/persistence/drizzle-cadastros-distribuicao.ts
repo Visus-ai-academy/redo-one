@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import type { Segmento } from '../../../comum/segmentos';
 import { DATABASE, type Database } from '../../../database/database';
-
 import {
   clientes,
   equipes,
@@ -16,6 +16,7 @@ import {
   subespecialidades,
   turnos,
 } from '../../../database/schema';
+import { lerSegmentos } from '../../../database/segmentos';
 import type {
   CadastrosDistribuicao,
   Referencias,
@@ -102,5 +103,9 @@ export class DrizzleCadastrosDistribuicao implements CadastrosDistribuicao {
       if (achados.length < ids.length) faltas.push(tipo);
     }
     return faltas;
+  }
+
+  segmentos(ids: readonly string[]): Promise<Segmento[]> {
+    return lerSegmentos(this.db, ids);
   }
 }

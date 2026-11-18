@@ -97,4 +97,44 @@ describe('arranjos', () => {
     ).rejects.toThrow(ArranjosInvalidosError);
     expect(repo.substituicoes).toBe(0);
   });
+
+  describe('segmento da especialidade', () => {
+    const dono = { tipo: 'medico' as const, id: 'm1' };
+    beforeEach(() => {
+      cadastros.segmentosCadastrados.push(
+        { id: 's-avc', nome: 'AVC', especialidadeIds: ['e-neuro'] },
+        { id: 's-colunas', nome: 'COLUNAS', especialidadeIds: ['e-neuro', 'e-msk'] },
+      );
+    });
+
+    it('recusa segmento que a especialidade do arranjo não tem, sem gravar', async () => {
+      await expect(
+        salvar.executar(ator, dono, [
+          arranjoVazio({ especialidadeId: 'e-msk', subespecialidadeIds: ['s-colunas', 's-avc'] }),
+        ]),
+      ).rejects.toThrow(
+        new ArranjosInvalidosError(
+          'O segmento AVC não existe na especialidade do arranjo. Escolha um segmento dela ou deixe sem segmento.',
+        ),
+      );
+      expect(repo.substituicoes).toBe(0);
+    });
+
+    it('arranjo sem especialidade (todas) aceita qualquer segmento', async () => {
+      await salvar.executar(ator, dono, [arranjoVazio({ subespecialidadeIds: ['s-avc'] })]);
+      expect(repo.substituicoes).toBe(1);
+    });
+
+    it('não barra arranjo já gravado fora da regra que segue igual', async () => {
+      const antigo = arranjoVazio({ especialidadeId: 'e-msk', subespecialidadeIds: ['s-avc'] });
+      repo.porDono.set('medico:m1', [antigo]);
+
+      await salvar.executar(ator, dono, [
+        antigo,
+        arranjoVazio({ especialidadeId: 'e-neuro', subespecialidadeIds: ['s-avc'] }),
+      ]);
+
+      expect(repo.substituicoes).toBe(1);
+    });
+  });
 });

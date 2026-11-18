@@ -1,3 +1,4 @@
+import type { Segmento } from '../../comum/segmentos';
 import type {
   AjusteDiaLido,
   AjustesDiaRepository,
@@ -78,6 +79,11 @@ export class CadastrosEmMemoria implements CadastrosDistribuicao {
   readonly equipes = new Set<string>();
   readonly frentes = new Map<string, FrenteEscala>();
   readonly nomes = new Map<string, string>();
+  readonly segmentosCadastrados: Segmento[] = [];
+
+  async segmentos(ids: readonly string[]) {
+    return this.segmentosCadastrados.filter((s) => ids.includes(s.id));
+  }
 
   async medicoExiste(id: string) {
     return this.medicos.has(id);

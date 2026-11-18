@@ -1,3 +1,4 @@
+import type { Segmento } from '../../../comum/segmentos';
 import type { FrenteEscala } from '../../domain/arranjo';
 
 export const CADASTROS_DISTRIBUICAO = Symbol('CADASTROS_DISTRIBUICAO');
@@ -12,6 +13,8 @@ export interface CadastrosDistribuicao {
   rotulos(ids: { clienteIds: string[]; exameIds: string[] }): Promise<RotulosArranjos>;
   /** Quais tipos de cadastro têm algum id que não existe (vazio = todos existem). */
   faltando(referencias: Referencias): Promise<TipoReferencia[]>;
+  /** Os segmentos pedidos, com as especialidades do catálogo em que existem. */
+  segmentos(ids: readonly string[]): Promise<Segmento[]>;
 }
 
 export type TipoReferencia =
