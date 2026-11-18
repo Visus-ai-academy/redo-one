@@ -95,10 +95,20 @@ export const expirou = (r: EstadoRodada, agora: Date) =>
   r.expiraEm !== null &&
   r.expiraEm.getTime() < agora.getTime();
 
-export function aprovar(r: EstadoRodada, agora: Date): StatusRodada {
+const exigirNaoVencida = (r: EstadoRodada, agora: Date) => {
   if (r.status === 'expirada' || expirou(r, agora)) {
     recusa('A proposta expirou: a fila da MobileMed já mudou. Leia de novo.');
   }
+};
+
+/** Quem confere só mexe na proposta antes do "Aprovar": depois, a execução já está atribuindo. */
+export function exigirProposta(r: EstadoRodada, agora: Date): void {
+  exigirNaoVencida(r, agora);
+  exigir(r, ['aguardando_aprovacao'], 'ser ajustada');
+}
+
+export function aprovar(r: EstadoRodada, agora: Date): StatusRodada {
+  exigirNaoVencida(r, agora);
   exigir(r, ['aguardando_aprovacao'], 'ser aprovada');
   return 'aprovada';
 }

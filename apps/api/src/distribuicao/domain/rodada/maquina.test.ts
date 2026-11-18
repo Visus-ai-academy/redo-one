@@ -7,6 +7,7 @@ import {
   desfechoExecucao,
   encerrar,
   estaViva,
+  exigirProposta,
   expirou,
   falhar,
   iniciarExecucao,
@@ -69,6 +70,14 @@ describe('máquina de estados da rodada', () => {
       expect(() => iniciarLeitura(rodada(s))).toThrow(RodadaEmEstadoInvalidoError);
     }
     for (const s of exceto('lendo')) expect(() => propor(rodada(s), agora, 45)).toThrow();
+  });
+
+  it('a proposta só se ajusta enquanto aguarda aprovação e não venceu', () => {
+    expect(() => exigirProposta(rodada('aguardando_aprovacao', minutos(5)), agora)).not.toThrow();
+    expect(() => exigirProposta(rodada('aguardando_aprovacao', minutos(-5)), agora)).toThrow(
+      /expirou/,
+    );
+    expect(() => exigirProposta(rodada('aprovada'), agora)).toThrow(/ajustada/);
   });
 
   it('a proposta vencida expira e não pode mais ser aprovada', () => {
