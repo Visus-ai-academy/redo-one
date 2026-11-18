@@ -30,11 +30,9 @@ export type ResultadoAtribuicao =
 
 /**
  * Atribuição do exame ao médico na MobileMed, um por vez (a execução confere a pausa entre um e
- * outro). Até o mapeamento da API, o adaptador é o fake, que só registra na memória; nada sai do
- * processo.
- *
- * TODO(adaptador real): `PUT /exame` com o corpo exato (residente e digitador), conferindo antes
- * que o exame segue sem médico e NOVO. Depende do mapeamento da API da MobileMed (TODO.md).
+ * outro). Adaptadores em `infrastructure/mobilemed`: o fake (padrão, só registra na memória) e o
+ * real (`DISTRIBUICAO_MOBILEMED=real`: `PUT /exame` com o corpo mínimo, conferindo antes e
+ * relendo depois).
  */
 export interface AtribuidorExames {
   atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao>;

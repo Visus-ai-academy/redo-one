@@ -68,12 +68,8 @@ export interface LeituraFila {
 }
 
 /**
- * Leitura da fila da MobileMed. Até o mapeamento da API da MobileMed (TODO.md, "Integração com a
- * MobileMed"), o adaptador é a fila sintética (`infrastructure/mobilemed`).
- *
- * TODO(adaptador real): `POST /exame/lista` com o filtro "sem médico" (e a lista dos exames com
- * médico ainda não laudados, para a carga em mãos), login com TOTP e renovação do token, e a
- * mensagem de erro dizendo que a falha veio da MobileMed. Depende do mapeamento da API.
+ * Leitura da fila da MobileMed. Adaptadores em `infrastructure/mobilemed`: a fila sintética
+ * (padrão) e o real (`DISTRIBUICAO_MOBILEMED=real`: `POST /exame/lista`).
  */
 export interface FilaExames {
   ler(): Promise<LeituraFila>;
