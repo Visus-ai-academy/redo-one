@@ -11,32 +11,46 @@ const tons: Record<TomSegmento, string> = {
   neutro: 'bg-input',
 };
 
+/** Segmento da barra: um tom do sistema ou a cor que é dado (ex.: a cor cadastrada). */
+export type SegmentoBarra = { pct: number; tom?: TomSegmento; cor?: string };
+
 /**
  * Barra fina com segmentos (ex.: carga aberta + proposta contra o teto; atribuídos, pulados e
  * falhas da execução). Cada segmento em % da largura; o texto ao lado dá os números, e o
- * `rotulo` descreve a barra para o leitor de tela.
+ * `rotulo` descreve a barra para o leitor de tela. `separados` põe um fio da cor do fundo entre
+ * os segmentos (e tira os vazios), para cores parecidas não se fundirem.
  */
 export function BarraEmpilhada({
   segmentos,
   rotulo,
+  separados = false,
   className,
 }: {
-  segmentos: readonly { pct: number; tom: TomSegmento }[];
+  segmentos: readonly SegmentoBarra[];
   rotulo: string;
+  separados?: boolean;
   className?: string;
 }) {
+  const visiveis = separados ? segmentos.filter((s) => s.pct > 0) : segmentos;
   return (
     <span
       role="img"
       aria-label={rotulo}
       className={cn('bg-muted flex h-1.5 overflow-hidden rounded-full', className)}
     >
-      {segmentos.map((s, i) => (
+      {visiveis.map((s, i) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: segmentos fixos, na ordem.
           key={i}
-          className={cn('h-full', tons[s.tom])}
-          style={{ width: `${Math.max(0, Math.min(100, s.pct))}%` }}
+          className={cn(
+            'h-full',
+            !s.cor && tons[s.tom ?? 'neutro'],
+            separados && i < visiveis.length - 1 && 'border-card border-r-2',
+          )}
+          style={{
+            width: `${Math.max(0, Math.min(100, s.pct))}%`,
+            ...(s.cor ? { backgroundColor: s.cor } : {}),
+          }}
         />
       ))}
     </span>

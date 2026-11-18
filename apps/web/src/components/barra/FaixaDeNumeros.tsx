@@ -12,7 +12,7 @@ export type NumeroDaFaixa = {
 
 /**
  * Faixa de poucos números do momento (fila, proposta, resultado) num só painel, separados por
- * divisória; quebra em linhas no celular. Não é "métrica herói": número de 22px com rótulo e
+ * divisória; duas colunas no celular e até cinco no computador. Não é "métrica herói": número de 22px com rótulo e
  * legenda curta.
  */
 export function FaixaDeNumeros({
@@ -28,7 +28,8 @@ export function FaixaDeNumeros({
     <dl
       aria-label={ariaLabel}
       className={cn(
-        'bg-card grid grid-cols-1 overflow-hidden rounded-lg border sm:grid-cols-2 xl:grid-cols-4',
+        'bg-card grid grid-cols-2 overflow-hidden rounded-lg border',
+        numeros.length >= 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-4',
         className,
       )}
     >
