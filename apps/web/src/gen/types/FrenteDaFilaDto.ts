@@ -4,6 +4,7 @@
 */
 
 import type { ContagemFrentePrioridadeDto } from './ContagemFrentePrioridadeDto'
+import type { SegmentoDaFilaDto } from './SegmentoDaFilaDto'
 
 export type FrenteDaFilaDto = {
   /**
@@ -23,4 +24,9 @@ export type FrenteDaFilaDto = {
    */
   primeiroVencimento: string | null;
   porPrioridade: ContagemFrentePrioridadeDto[];
+  /**
+   * @description Frente de especialidade: exames por segmento × prioridade (só os com exame, os sem segmento por último). Frente de modalidade: vazio.
+   * @type array
+   */
+  porSegmento: SegmentoDaFilaDto[];
 };

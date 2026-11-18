@@ -540,6 +540,23 @@ export class ContagemFrentePrioridadeDto {
   @ApiProperty({ type: 'integer' }) urgentes!: number;
 }
 
+export class SegmentoDaFilaDto {
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Segmento (subespecialidade) do catálogo do exame; nulo = exame sem segmento.',
+  })
+  segmentoId!: string | null;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Cor cadastrada; null = sem cor.' })
+  cor!: string | null;
+  @ApiProperty({ type: 'integer' }) exames!: number;
+  @ApiProperty({ type: 'integer' }) urgentes!: number;
+  @ApiProperty({ type: [ContagemFrentePrioridadeDto] })
+  porPrioridade!: ContagemFrentePrioridadeDto[];
+}
+
 export class FrenteDaFilaDto {
   @ApiProperty({
     type: String,
@@ -555,6 +572,12 @@ export class FrenteDaFilaDto {
   primeiroVencimento!: Date | null;
   @ApiProperty({ type: [ContagemFrentePrioridadeDto] })
   porPrioridade!: ContagemFrentePrioridadeDto[];
+  @ApiProperty({
+    type: [SegmentoDaFilaDto],
+    description:
+      'Frente de especialidade: exames por segmento × prioridade (só os com exame, os sem segmento por último). Frente de modalidade: vazio.',
+  })
+  porSegmento!: SegmentoDaFilaDto[];
 }
 
 export class TurnoDaFilaDto {

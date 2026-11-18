@@ -751,6 +751,82 @@ describe('rodada do robô (casos de uso)', () => {
       expect(f.medicosEmTurno[0]).toMatchObject({ turno: 'Manhã', frenteNome: 'MEDICINA INTERNA' });
     });
 
+    it('fila do momento: cada frente quebrada por segmento × prioridade; sem segmento à parte', async () => {
+      // O segmento vem do catálogo do exame: TC TORAX → seg-1; TC CRANIO → seg-2; RX → sem.
+      insumos.catalogo = {
+        ...catalogo,
+        classificar: (e) => ({
+          ...catalogo.classificar(e),
+          ...(e.estudo !== 'ESTUDO SEM CADASTRO' && {
+            exameId: 'ex',
+            especialidadeId: e.modalidade === 'MR' ? null : MI,
+            modalidadeId: e.modalidade === 'MR' ? 'mod-mr' : CT,
+          }),
+          subespecialidadeId:
+            e.estudo === 'TC TORAX' ? 'seg-1' : e.estudo === 'TC CRANIO' ? 'seg-2' : null,
+        }),
+      };
+      mobilemed.leitura = {
+        semMedico: [
+          exame({ idExame: 's1' }),
+          exame({ idExame: 's2', prioridade: 'Urgência' }),
+          exame({ idExame: 's3', estudo: 'TC CRANIO' }),
+          exame({ idExame: 's4', estudo: 'TC CRANIO' }),
+          exame({ idExame: 's5', estudo: 'TC CRANIO', prioridade: 'Urgência' }),
+          exame({ idExame: 's6', estudo: 'TC ABDOME' }),
+          exame({ idExame: 's7', estudo: 'RM JOELHO', modalidade: 'MR' }),
+        ],
+        emMaos: [],
+      };
+      insumos.insumos = {
+        ...insumosBase(),
+        frentes: {
+          'f-mi': { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null },
+          'f-mr': { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'mod-mr' },
+        },
+        nomes: { [MI]: 'NEURO', 'mod-mr': 'RM', 'seg-1': 'Tórax', 'seg-2': 'Crânio' },
+        cores: { 'seg-1': '#3E8E5E' },
+        segmentos: { [MI]: ['seg-1', 'seg-2'] },
+      };
+      const f = await casos.filaDoMomento.executar();
+      const neuro = f.porFrente.find((x) => x.frenteId === 'f-mi');
+      expect(neuro?.exames).toBe(6);
+      expect(neuro?.porSegmento).toEqual([
+        {
+          segmentoId: 'seg-2',
+          nome: 'Crânio',
+          cor: null,
+          exames: 3,
+          urgentes: 1,
+          porPrioridade: expect.arrayContaining([
+            { prioridadeOperacaoId: 'op-rot', exames: 2, urgentes: 0 },
+            { prioridadeOperacaoId: 'op-urg', exames: 1, urgentes: 1 },
+          ]),
+        },
+        {
+          segmentoId: 'seg-1',
+          nome: 'Tórax',
+          cor: '#3E8E5E',
+          exames: 2,
+          urgentes: 1,
+          porPrioridade: expect.arrayContaining([
+            { prioridadeOperacaoId: 'op-rot', exames: 1, urgentes: 0 },
+            { prioridadeOperacaoId: 'op-urg', exames: 1, urgentes: 1 },
+          ]),
+        },
+        {
+          segmentoId: null,
+          nome: 'Sem subespecialidade',
+          cor: null,
+          exames: 1,
+          urgentes: 0,
+          porPrioridade: [{ prioridadeOperacaoId: 'op-rot', exames: 1, urgentes: 0 }],
+        },
+      ]);
+      // Frente de modalidade não tem segmento.
+      expect(f.porFrente.find((x) => x.frenteId === 'f-mr')?.porSegmento).toEqual([]);
+    });
+
     it('fila do momento: vencidos separados dos que vencem na próxima hora', async () => {
       mobilemed.leitura = {
         semMedico: [

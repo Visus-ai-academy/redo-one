@@ -54,6 +54,7 @@ export const FILA: FilaDoMomentoDto = {
         { prioridadeOperacaoId: 'p-urg', exames: 5, urgentes: 5 },
         { prioridadeOperacaoId: 'p-rot', exames: 25, urgentes: 0 },
       ],
+      porSegmento: [],
     },
   ],
   porPrioridade: [],

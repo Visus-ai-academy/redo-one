@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { contagemFrentePrioridadeDtoSchema } from './contagemFrentePrioridadeDtoSchema'
+import { segmentoDaFilaDtoSchema } from './segmentoDaFilaDtoSchema'
 
 export const frenteDaFilaDtoSchema = z.object({
   frenteId: z.uuid().nullable().describe('Frente da escala; nula = o exame não casa com nenhuma.'),
@@ -13,6 +14,7 @@ export const frenteDaFilaDtoSchema = z.object({
   urgentes: z.int(),
   primeiroVencimento: z.iso.datetime().nullable(),
   porPrioridade: z.array(contagemFrentePrioridadeDtoSchema),
+  porSegmento: z.array(segmentoDaFilaDtoSchema).describe('Frente de especialidade: exames por segmento × prioridade (só os com exame, os sem segmento por último). Frente de modalidade: vazio.'),
 })
 
 export type FrenteDaFilaDtoSchemaType = z.infer<typeof frenteDaFilaDtoSchema>

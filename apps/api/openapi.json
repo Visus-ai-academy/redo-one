@@ -15592,6 +15592,45 @@
           "urgentes"
         ]
       },
+      "SegmentoDaFilaDto": {
+        "type": "object",
+        "properties": {
+          "segmentoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Segmento (subespecialidade) do catálogo do exame; nulo = exame sem segmento."
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cor cadastrada; null = sem cor."
+          },
+          "exames": {
+            "type": "integer"
+          },
+          "urgentes": {
+            "type": "integer"
+          },
+          "porPrioridade": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContagemFrentePrioridadeDto"
+            }
+          }
+        },
+        "required": [
+          "segmentoId",
+          "nome",
+          "cor",
+          "exames",
+          "urgentes",
+          "porPrioridade"
+        ]
+      },
       "FrenteDaFilaDto": {
         "type": "object",
         "properties": {
@@ -15620,6 +15659,13 @@
             "items": {
               "$ref": "#/components/schemas/ContagemFrentePrioridadeDto"
             }
+          },
+          "porSegmento": {
+            "description": "Frente de especialidade: exames por segmento × prioridade (só os com exame, os sem segmento por último). Frente de modalidade: vazio.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SegmentoDaFilaDto"
+            }
           }
         },
         "required": [
@@ -15628,7 +15674,8 @@
           "exames",
           "urgentes",
           "primeiroVencimento",
-          "porPrioridade"
+          "porPrioridade",
+          "porSegmento"
         ]
       },
       "TurnoDaFilaDto": {

@@ -145,12 +145,27 @@ export interface ContagemFila {
   urgentes: number;
 }
 
+type ContagemPorPrioridade = { prioridadeOperacaoId: string | null } & ContagemFila;
+
+export interface SegmentoDaFila extends ContagemFila {
+  /** O segmento (subespecialidade) do catálogo do exame; null = exame sem segmento. */
+  segmentoId: string | null;
+  nome: string;
+  cor: string | null;
+  porPrioridade: ContagemPorPrioridade[];
+}
+
 export interface FrenteDaFila extends ContagemFila {
   /** Frente da escala (`frentes_escala.id`); null = o exame não casa com nenhuma. */
   frenteId: string | null;
   nome: string;
   primeiroVencimento: Date | null;
-  porPrioridade: ({ prioridadeOperacaoId: string | null } & ContagemFila)[];
+  porPrioridade: ContagemPorPrioridade[];
+  /**
+   * Frente de especialidade: os exames por segmento × prioridade (só os segmentos com exame, do
+   * maior para o menor, e os sem segmento por último). Frente de modalidade e "Sem frente": vazio.
+   */
+  porSegmento: SegmentoDaFila[];
 }
 
 export interface TurnoDaFila {
@@ -297,6 +312,20 @@ export class ConsultarFilaDoMomento {
     const frenteDo = (l: (typeof fila)[number]) =>
       (frentes.find(([, f]) => f.especialidadeId && f.especialidadeId === l.especialidadeId) ??
         frentes.find(([, f]) => f.modalidadeId && f.modalidadeId === l.modalidadeId))?.[0] ?? null;
+    const somar = (
+      c: ContagemFila & { porPrioridade: ContagemPorPrioridade[] },
+      l: (typeof fila)[number],
+    ) => {
+      c.exames++;
+      if (l.urgente) c.urgentes++;
+      let p = c.porPrioridade.find((x) => x.prioridadeOperacaoId === l.prioridadeOperacaoId);
+      if (!p) {
+        p = { prioridadeOperacaoId: l.prioridadeOperacaoId, exames: 0, urgentes: 0 };
+        c.porPrioridade.push(p);
+      }
+      p.exames++;
+      if (l.urgente) p.urgentes++;
+    };
     const porFrente = new Map<string | null, FrenteDaFila>();
     for (const l of fila) {
       const id = frenteDo(l);
@@ -308,18 +337,34 @@ export class ConsultarFilaDoMomento {
         urgentes: 0,
         primeiroVencimento: null,
         porPrioridade: [],
+        porSegmento: [],
       };
-      linha.exames++;
-      if (l.urgente) linha.urgentes++;
+      somar(linha, l);
       linha.primeiroVencimento = menor(linha.primeiroVencimento, l.prazo);
-      let p = linha.porPrioridade.find((x) => x.prioridadeOperacaoId === l.prioridadeOperacaoId);
-      if (!p) {
-        p = { prioridadeOperacaoId: l.prioridadeOperacaoId, exames: 0, urgentes: 0 };
-        linha.porPrioridade.push(p);
+      // Só a frente de especialidade se quebra por segmento (o da classificação do exame).
+      if (f?.tipo === 'especialidade') {
+        const segId = l.subespecialidadeId;
+        let sg = linha.porSegmento.find((x) => x.segmentoId === segId);
+        if (!sg) {
+          sg = {
+            segmentoId: segId,
+            nome: nome(segId, 'Sem subespecialidade'),
+            cor: cor(segId),
+            exames: 0,
+            urgentes: 0,
+            porPrioridade: [],
+          };
+          linha.porSegmento.push(sg);
+        }
+        somar(sg, l);
       }
-      p.exames++;
-      if (l.urgente) p.urgentes++;
       porFrente.set(id, linha);
+    }
+    for (const linha of porFrente.values()) {
+      linha.porSegmento.sort(
+        (a, b) =>
+          Number(a.segmentoId === null) - Number(b.segmentoId === null) || b.exames - a.exames,
+      );
     }
     const contagemPrioridade = contar((l) => l.prioridadeOperacaoId);
     const daPrioridade = (id: string | null) =>
