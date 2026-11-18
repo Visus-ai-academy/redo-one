@@ -2,10 +2,12 @@
 import { createFormHook } from '@tanstack/react-form';
 
 import { BuscaField } from './BuscaField';
+import { CaixasComContagemField } from './CaixasComContagemField';
 import { CheckboxField } from './CheckboxField';
 import { CheckboxListField } from './CheckboxListField';
 import { fieldContext, formContext } from './context';
 import { EscolhaMultiplaField } from './EscolhaMultiplaField';
+import { EscolhidosField } from './EscolhidosField';
 import { NumberField } from './NumberField';
 import { PasswordField } from './PasswordField';
 import { RequiredLegend } from './RequiredLegend';
@@ -29,6 +31,8 @@ export const { useAppForm, withForm } = createFormHook({
     TextAreaField,
     NumberField,
     SelecaoMultiplaField,
+    CaixasComContagemField,
+    EscolhidosField,
   },
   formComponents: { SubmitButton, RequiredLegend },
 });

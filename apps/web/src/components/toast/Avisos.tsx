@@ -41,6 +41,14 @@ function ListaDeAvisos() {
     >
       <CheckCircle size={18} aria-hidden className="text-success mt-px flex-none" />
       <Toast.Title className="min-w-0 flex-1 leading-normal" />
+      {aviso.actionProps && (
+        <Toast.Action
+          className={buttonClassName({
+            variant: 'ghost',
+            className: 'text-primary -my-1 h-7 flex-none px-2',
+          })}
+        />
+      )}
       <Toast.Close
         aria-label="Fechar aviso"
         className={buttonClassName({
