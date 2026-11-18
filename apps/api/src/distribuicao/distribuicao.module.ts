@@ -26,7 +26,9 @@ import { CONSULTA_RODADAS, type ConsultaRodadas } from './application/ports/cons
 import { ESCALA_DO_AJUSTE, type EscalaDoAjuste } from './application/ports/escala-do-ajuste';
 import { FILA_EXAMES, type FilaExames } from './application/ports/fila-exames';
 import {
+  ESCALA_RECOLHIMENTO,
   ESCOPO_RODADA,
+  type EscalaRecolhimento,
   type EscopoRodada,
   INSUMOS_RODADA,
   type LeitorInsumosRodada,
@@ -130,6 +132,7 @@ import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzl
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
+import { DrizzleEscalaRecolhimento } from './infrastructure/persistence/drizzle-escala-recolhimento';
 import { DrizzleInsumosRodada } from './infrastructure/persistence/drizzle-insumos-rodada';
 import { DrizzleMedicosRodada } from './infrastructure/persistence/drizzle-medicos-rodada';
 import { DrizzleParametrosEquipeRepository } from './infrastructure/persistence/drizzle-parametros-equipe.repository';
@@ -192,6 +195,7 @@ const CASOS_RODADA = [
     { provide: RODADAS_REPOSITORY, useExisting: DrizzleRodadasRepository },
     { provide: CONSULTA_RODADAS, useExisting: DrizzleRodadasRepository },
     { provide: INSUMOS_RODADA, useClass: DrizzleInsumosRodada },
+    { provide: ESCALA_RECOLHIMENTO, useClass: DrizzleEscalaRecolhimento },
     { provide: MEDICOS_RODADA, useClass: DrizzleMedicosRodada },
     { provide: ESCOPO_RODADA, useClass: EscopoRodadaAdapter },
     DrizzleAmostraCatalogo,
@@ -224,6 +228,7 @@ const CASOS_RODADA = [
         FILA_EXAMES,
         ATRIBUIDOR_EXAMES,
         INSUMOS_RODADA,
+        ESCALA_RECOLHIMENTO,
         MEDICOS_RODADA,
         ESCOPO_RODADA,
         CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
@@ -237,6 +242,7 @@ const CASOS_RODADA = [
         fila: FilaExames,
         atribuidor: AtribuidorExames,
         insumos: LeitorInsumosRodada,
+        escalaRecolhimento: EscalaRecolhimento,
         medicos: MedicosRodada,
         escopo: EscopoRodada,
         configuracao: ConfiguracaoDistribuicaoRepository,
@@ -249,6 +255,7 @@ const CASOS_RODADA = [
         fila,
         atribuidor,
         insumos,
+        escalaRecolhimento,
         medicos,
         escopo,
         configuracao,

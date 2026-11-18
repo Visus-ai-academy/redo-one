@@ -6,6 +6,7 @@ import type { ConfiguracaoDistribuicaoRepository } from '../../ports/configuraca
 import type { ConsultaRodadas } from '../../ports/consulta-rodadas';
 import type { FilaExames } from '../../ports/fila-exames';
 import type {
+  EscalaRecolhimento,
   EscopoRodada,
   LeitorInsumosRodada,
   MedicosRodada,
@@ -22,6 +23,7 @@ export interface DependenciasRodada {
   fila: FilaExames;
   atribuidor: AtribuidorExames;
   insumos: LeitorInsumosRodada;
+  escalaRecolhimento: EscalaRecolhimento;
   medicos: MedicosRodada;
   escopo: EscopoRodada;
   configuracao: ConfiguracaoDistribuicaoRepository;

@@ -2,7 +2,9 @@ import { rodarMotor } from '../../../domain/motor/rodada';
 import { escalaDosMedicos, montarEntrada } from '../../../domain/rodada/entrada';
 import { iniciarLeitura, propor, STATUS_VIVOS } from '../../../domain/rodada/maquina';
 import { montarProposta } from '../../../domain/rodada/proposta';
+import { entregasComRecolhidos, leituraComRecolhidos } from '../../../domain/rodada/recolhimento';
 import { type DependenciasRodada, mensagemDo } from './comum';
+import { lerRecolhimento } from './recolhimento';
 
 const DIA = 86_400_000;
 
@@ -29,9 +31,18 @@ export class LerFila {
     await this.d.rodadas.registrarEvento(rodadaId, 'Lendo a fila da MobileMed.', agora);
 
     try {
-      const leitura = await this.d.fila.ler();
+      const lida = await this.d.fila.ler();
       const { insumos, catalogo } = await this.d.insumos.carregar(agora);
       const { config } = insumos;
+      // O recolhimento roda no começo da rodada: o recolhido entra na fila dela, sem sair do médico.
+      const recolhimento = await lerRecolhimento(this.d, {
+        agora,
+        leitura: lida,
+        insumos,
+        catalogo,
+      });
+      const recolhidos = recolhimento?.recolhidos ?? [];
+      const leitura = leituraComRecolhidos(lida, recolhidos);
       const [porExame, cotaEntregue] = await Promise.all([
         this.d.rodadas.entregues(
           leitura.semMedico.map((e) => e.idExame),
@@ -48,7 +59,7 @@ export class LerFila {
         leitura,
         catalogo,
         insumos,
-        entregas: { porExame, cotaEntregue },
+        entregas: { porExame: entregasComRecolhidos(porExame, recolhidos, agora), cotaEntregue },
         recortes: r.recortes,
         pseudonimo: (t) => this.d.pseudonimizador.pseudonimo(t),
       });
@@ -63,6 +74,7 @@ export class LerFila {
         semCliente: montada.semCliente,
         escalaDosMedicos: escalaDosMedicos(insumos, agora),
         habilitados: insumos.medicos.map((m) => m.id),
+        recolhimento,
       });
       const { expiraEm } = propor(
         { status: 'lendo', expiraEm: null },
@@ -72,7 +84,7 @@ export class LerFila {
       const gravou = await this.d.rodadas.gravarProposta(rodadaId, {
         designacoes: proposta.designacoes,
         avisos: proposta.avisos,
-        lidos: montada.lidos.length,
+        lidos: lida.semMedico.length,
         recolhidos: proposta.recolhidos,
         urgentes: proposta.urgentes,
         insumos: proposta.insumos,
@@ -82,9 +94,11 @@ export class LerFila {
       if (!gravou) return;
       const previstas = proposta.designacoes.filter((d) => d.status === 'prevista');
       const medicos = new Set(previstas.map((d) => d.medicoId)).size;
+      const naRodada = lida.semMedico.length + proposta.recolhidos;
+      const comRecolhidos = proposta.recolhidos ? `, ${proposta.recolhidos} recolhido(s),` : '';
       await this.d.rodadas.registrarEvento(
         rodadaId,
-        `Proposta pronta: ${previstas.length} de ${montada.lidos.length} exame(s) para ${medicos} médico(s); vale até ${horaBrasilia(expiraEm)}.`,
+        `Proposta pronta: ${previstas.length} de ${naRodada} exame(s)${comRecolhidos} para ${medicos} médico(s); vale até ${horaBrasilia(expiraEm)}.`,
         this.d.agora(),
       );
     } catch (erro) {

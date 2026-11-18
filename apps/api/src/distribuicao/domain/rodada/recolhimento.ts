@@ -1,5 +1,7 @@
 import type { FrenteEscala } from '../arranjo';
+import type { EntregaAnterior } from '../motor/medicos-disponiveis';
 import { normalizarGrafia } from '../motor/prioridades-operacao';
+import type { ExameDaLeitura, ExameEmMaosDaLeitura } from './entrada';
 
 /**
  * RECOLHIMENTO: o exame que o robô entregou, que o médico não abriu e cujo turno já acabou (mais a
@@ -268,4 +270,42 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
     }),
     ficaram,
   };
+}
+
+/**
+ * A leitura que a rodada distribui: o recolhido sai das mãos do médico (não pesa mais na carga dele)
+ * e entra na fila da rodada como o exame sem médico, com o que a MobileMed mostra dele.
+ */
+export function leituraComRecolhidos<
+  L extends {
+    semMedico: readonly ExameDaLeitura[];
+    emMaos: readonly ExameEmMaosDaLeitura[];
+  },
+>(leitura: L, recolhidos: readonly ExameRecolhido[]): L {
+  if (!recolhidos.length) return leitura;
+  const saem = new Set(recolhidos.map((r) => r.idExame));
+  const vem = leitura.emMaos
+    .filter((e) => saem.has(e.idExame))
+    .map(({ medicoIdMobilemed: _, ...e }): ExameDaLeitura => e);
+  return {
+    ...leitura,
+    semMedico: [...leitura.semMedico, ...vem],
+    emMaos: leitura.emMaos.filter((e) => !saem.has(e.idExame)),
+  };
+}
+
+/** O recolhido não volta a quem o tinha: entra nas entregas como do recolhimento. */
+export function entregasComRecolhidos(
+  porExame: ReadonlyMap<string, readonly EntregaAnterior[]>,
+  recolhidos: readonly ExameRecolhido[],
+  agora: Date,
+): Map<string, EntregaAnterior[]> {
+  const mapa = new Map([...porExame].map(([id, es]) => [id, [...es]]));
+  for (const r of recolhidos) {
+    mapa.set(r.idExame, [
+      ...(mapa.get(r.idExame) ?? []),
+      { medicoId: r.deMedicoId, em: agora, origem: 'recolhimento' },
+    ]);
+  }
+  return mapa;
 }

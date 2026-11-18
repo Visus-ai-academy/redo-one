@@ -7,6 +7,7 @@ import type {
   FiltroHistorico,
 } from '../application/ports/consulta-rodadas';
 import type {
+  EscalaRecolhimento,
   EscopoDoAtor,
   EscopoRodada,
   LeitorInsumosRodada,
@@ -30,6 +31,7 @@ import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
 import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
 import { estaViva, type StatusRodada } from '../domain/rodada/maquina';
 import type { DesignacaoNova, InsumosGravados, StatusDesignacao } from '../domain/rodada/proposta';
+import type { AusenciaDoDia, PeriodoDoMedico } from '../domain/rodada/recolhimento';
 
 export interface DesignacaoGravada extends Omit<DesignacaoNova, 'status'> {
   id: string;
@@ -561,5 +563,21 @@ export class InsumosFixos implements LeitorInsumosRodada {
   async carregar(agora: Date) {
     this.instantes.push(agora);
     return { insumos: this.insumos, catalogo: this.catalogo };
+  }
+}
+
+/** A escala do recolhimento na memória: devolve os períodos que começam até `agora`. */
+export class EscalaRecolhimentoEmMemoria implements EscalaRecolhimento {
+  periodosGravados: PeriodoDoMedico[] = [];
+  ausencias: AusenciaDoDia[] = [];
+  readonly pedidos: { desde: Date; agora: Date }[] = [];
+
+  async periodos(desde: Date, agora: Date) {
+    this.pedidos.push({ desde, agora });
+    return this.periodosGravados.filter((p) => p.fim >= desde && p.inicio <= agora);
+  }
+
+  async ausenciasDoDia() {
+    return this.ausencias;
   }
 }

@@ -4,6 +4,8 @@ import type { FrenteEscala } from '../arranjo';
 import {
   type EntradaRecolhimento,
   type ExameComMedico,
+  entregasComRecolhidos,
+  leituraComRecolhidos,
   type PeriodoDoMedico,
   protegidoPelaEscala,
   recolher,
@@ -264,5 +266,59 @@ describe('protegidoPelaEscala (dashboards-one `protegidoPelaEscala`)', () => {
   it('o período com ausência não protege', () => {
     const manha = [periodo('ana', h('07:00'), h('13:00'), { ausente: true })];
     expect(proteje(manha, h('09:00'), h('10:00'))).toBe(false);
+  });
+});
+
+describe('a leitura da rodada com os recolhidos', () => {
+  const PACIENTE = { codigo: 'P1', nome: 'Fulano' };
+  const emMaos = (idExame: string, medicoIdMobilemed: number) => ({
+    idExame,
+    medicoIdMobilemed,
+    status: 'NOVO',
+    prioridade: 'Rotina',
+    estudo: 'TC CRANIO',
+    unidade: 'HOSPITAL A',
+    modalidade: 'CT',
+    especialidade: 'NEURO',
+    laudos: 2,
+    realizadoEm: h('08:00'),
+    entradaEm: h('08:10'),
+    prazo: h('20:00'),
+    paciente: PACIENTE,
+  });
+  const semDono = (idExame: string) => {
+    const { medicoIdMobilemed: _, ...e } = emMaos(idExame, 0);
+    return e;
+  };
+  const leitura = { semMedico: [semDono('s1')], emMaos: [emMaos('r1', 1), emMaos('m1', 2)] };
+
+  it('o recolhido sai das mãos do médico e entra na fila da rodada, com o que a MobileMed mostra', () => {
+    const l = leituraComRecolhidos(leitura, [
+      { idExame: 'r1', deMedicoId: 'ana', motivo: 'turno_encerrado' },
+    ]);
+    expect(l.emMaos.map((e) => e.idExame)).toEqual(['m1']);
+    expect(l.semMedico.map((e) => e.idExame)).toEqual(['s1', 'r1']);
+    expect(l.semMedico[1]).toEqual(semDono('r1'));
+  });
+
+  it('sem recolhidos a leitura é a mesma', () => {
+    expect(leituraComRecolhidos(leitura, [])).toEqual(leitura);
+  });
+
+  it('o recolhido não volta a quem o tinha: entra como entrega do recolhimento', () => {
+    const anterior = { medicoId: 'bia', em: h('07:00', 17), origem: 'conferencia' as const };
+    const porExame = entregasComRecolhidos(
+      new Map([['r1', [anterior]]]),
+      [
+        { idExame: 'r1', deMedicoId: 'ana', motivo: 'turno_encerrado' },
+        { idExame: 'r2', deMedicoId: 'caio', motivo: 'ausencia' },
+      ],
+      AGORA,
+    );
+    expect(porExame.get('r1')).toEqual([
+      anterior,
+      { medicoId: 'ana', em: AGORA, origem: 'recolhimento' },
+    ]);
+    expect(porExame.get('r2')).toEqual([{ medicoId: 'caio', em: AGORA, origem: 'recolhimento' }]);
   });
 });

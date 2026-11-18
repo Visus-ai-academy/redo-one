@@ -109,6 +109,11 @@ export class AjustarProposta extends AcaoNaRodada {
         'Só dá para ajustar exame previsto ou deixado de fora nesta proposta.',
       );
     }
+    if (mover.some((m) => encontradas.get(m.designacaoId)?.recolhidoDeId === m.medicoId)) {
+      throw new RodadaRecusadaError(
+        'O exame recolhido não volta para quem o tinha: para deixá-lo com ele, tire-o da proposta.',
+      );
+    }
 
     const movimentos = new Map<string, MovimentoProposta>();
     for (const m of mover) {

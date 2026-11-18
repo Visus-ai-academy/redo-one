@@ -1,4 +1,5 @@
 import type { CatalogoDaFila, InsumosRodada } from '../../domain/rodada/entrada';
+import type { AusenciaDoDia, PeriodoDoMedico } from '../../domain/rodada/recolhimento';
 
 export const INSUMOS_RODADA = Symbol('INSUMOS_RODADA');
 
@@ -49,4 +50,16 @@ export const PSEUDONIMIZADOR_PACIENTE = Symbol('PSEUDONIMIZADOR_PACIENTE');
 /** HMAC com o segredo da ingestão (`PACIENTE_HMAC_SEGREDO`): o mesmo pseudônimo do laudo. */
 export interface PseudonimizadorPaciente {
   pseudonimo(texto: string): string;
+}
+
+export const ESCALA_RECOLHIMENTO = Symbol('ESCALA_RECOLHIMENTO');
+
+/**
+ * A escala que o recolhimento lê: os períodos de todos os médicos desde a entrega mais antiga (o
+ * turno que conta é o da entrega, por mais antiga que seja) e as ausências aprovadas de dia inteiro
+ * que cobrem hoje.
+ */
+export interface EscalaRecolhimento {
+  periodos(desde: Date, agora: Date): Promise<PeriodoDoMedico[]>;
+  ausenciasDoDia(agora: Date): Promise<AusenciaDoDia[]>;
 }

@@ -21,8 +21,10 @@ import {
 import { CriarRodada } from './criar';
 import { ExecutarRodada } from './executar';
 import { LerFila } from './ler-fila';
+import { PreverRecolhimento } from './recolhimento';
 
 export type { AtorRodada, DependenciasRodada } from './comum';
+export type { RecolhimentoPrevisto } from './recolhimento';
 export {
   AjustarMedicosRodada,
   AjustarProposta,
@@ -40,6 +42,7 @@ export {
   LerFila,
   ListarDesignacoes,
   PausarRodada,
+  PreverRecolhimento,
   RelerRodada,
   RetomarRodada,
 };
@@ -68,6 +71,7 @@ export function criarCasosDeUsoRodada(d: DependenciasRodada) {
     resumo: new ConsultarResumo(d),
     explicar: new ExplicarDesignacao(d),
     buscarMedicos: new BuscarMedicosDaRodada(d),
+    recolhimentoPrevisto: new PreverRecolhimento(d),
   };
 }
 

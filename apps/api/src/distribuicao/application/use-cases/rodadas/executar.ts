@@ -45,7 +45,9 @@ export class ExecutarRodada {
       const porId = new Map(previstas.map((p) => [p.id, p]));
       // Do cadastro de agora, não da hora da proposta: a conta corrigida no meio já vale.
       const contas = await this.d.medicos.doCadastro([
-        ...new Set(previstas.flatMap((p) => (p.medicoId ? [p.medicoId] : []))),
+        ...new Set(
+          previstas.flatMap((p) => [p.medicoId, p.recolhidoDeId].filter((x) => x !== null)),
+        ),
       ]);
       const total = ordem.length;
       for (const [i, id] of ordem.entries()) {
@@ -53,6 +55,8 @@ export class ExecutarRodada {
         if (atual?.status !== 'executando') break;
         const p = porId.get(id);
         const conta = p?.medicoId ? contas.get(p.medicoId) : undefined;
+        // Recolhido: a conta de quem o tem (a MobileMed só troca se ele segue com ela, NOVO).
+        const de = p?.recolhidoDeId ? (contas.get(p.recolhidoDeId)?.idMobilemed ?? null) : null;
         let resultado: ResultadoDesignacao;
         if (!p?.medicoId || !conta?.ativo || conta.idMobilemed === null) {
           resultado = {
@@ -61,16 +65,24 @@ export class ExecutarRodada {
             detalhe: 'O médico está inativo ou sem conta na MobileMed no cadastro.',
             retentavel: false,
           };
+        } else if (p.recolhidoDeId && de === null) {
+          resultado = {
+            status: 'falhou',
+            motivo: 'sem_conta_mobilemed',
+            detalhe: 'O médico de quem o exame foi recolhido está sem conta na MobileMed.',
+            retentavel: false,
+          };
         } else if (
           conferir &&
-          !(await this.d.fila.intocados([{ idExame: p.idExameMobilemed, medicoIdMobilemed: null }]))
+          !(await this.d.fila.intocados([{ idExame: p.idExameMobilemed, medicoIdMobilemed: de }]))
             .size
         ) {
           resultado = {
             status: 'pulada',
             motivo: 'ja_atribuido_mobilemed',
-            detalhe:
-              'Pulado ao retomar: já atribuído na MobileMed (ganhou médico por fora do robô).',
+            detalhe: p.recolhidoDeId
+              ? 'Pulado ao retomar: o médico já abriu o exame recolhido ou ele mudou de mão na MobileMed.'
+              : 'Pulado ao retomar: já atribuído na MobileMed (ganhou médico por fora do robô).',
             retentavel: false,
           };
         } else {
@@ -79,7 +91,7 @@ export class ExecutarRodada {
               await this.d.atribuidor.atribuir({
                 idExame: p.idExameMobilemed,
                 medicoIdMobilemed: conta.idMobilemed,
-                deMedicoIdMobilemed: null,
+                deMedicoIdMobilemed: de,
               }),
             );
           } catch (erro) {
