@@ -200,6 +200,8 @@ export const configuracaoDistribuicao = pgTable(
     turnosPosterioresCheiaEm: text('turnos_posteriores_cheia_em'),
     /** Null = recolhimento desligado. */
     recolhimentoAposTurnoMin: integer('recolhimento_apos_turno_min'),
+    /** Carência do recolhimento depois do fim da Lista (no dashboards-one, 24 h fixas). */
+    recolhimentoAposListaMin: integer('recolhimento_apos_lista_min').notNull().default(1440),
     /** Desligado, ninguém inicia rodada. */
     roboAtivo: boolean('robo_ativo').notNull().default(true),
     /** Minutos que a proposta vale sem aprovação. */

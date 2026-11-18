@@ -24,6 +24,7 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
   recolhimentoAposTurnoMin: 60,
+  recolhimentoAposListaMin: 1440,
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,

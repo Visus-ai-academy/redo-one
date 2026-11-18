@@ -17171,6 +17171,10 @@
             "nullable": true,
             "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
           },
+          "recolhimentoAposListaMin": {
+            "type": "integer",
+            "description": "Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080)."
+          },
           "roboAtivo": {
             "type": "boolean",
             "description": "Robô ligado: desligado, ninguém inicia rodada."
@@ -17200,6 +17204,7 @@
           "diasJaEntregue",
           "turnosPosteriores",
           "recolhimentoAposTurnoMin",
+          "recolhimentoAposListaMin",
           "roboAtivo",
           "expiracaoPropostaMin",
           "tetoPorRodada"
@@ -17277,6 +17282,10 @@
             "nullable": true,
             "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
           },
+          "recolhimentoAposListaMin": {
+            "type": "integer",
+            "description": "Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080)."
+          },
           "roboAtivo": {
             "type": "boolean",
             "description": "Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado."
@@ -17305,7 +17314,8 @@
           "escalaRestringeEspecialidade",
           "diasJaEntregue",
           "turnosPosteriores",
-          "recolhimentoAposTurnoMin"
+          "recolhimentoAposTurnoMin",
+          "recolhimentoAposListaMin"
         ]
       },
       "TipoUrgencia": {

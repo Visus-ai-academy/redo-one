@@ -48,6 +48,8 @@ const PRAZO_CRITICO_MIN = 60;
 const ANTECEDENCIA_PERIODO_MIN = 180;
 /** `DIAS_JA_ENTREGUE` (rodadas.ts). */
 const DIAS_JA_ENTREGUE = 7;
+/** `CARENCIA_LISTA_MIN` (distribuicao/recolhimento.ts). */
+const CARENCIA_LISTA_MIN = 24 * 60;
 /** O turno "TARDE" e a cheia das 10:50 (`CHEIA_TARDE_MIN`, arranjo.ts). */
 const TURNO_POSTERIOR = 'TARDE';
 const CHEIA_POSTERIORES = '10:50';
@@ -204,6 +206,7 @@ export function mapearConfiguracaoDistribuicao(
         ? { turnoIds: tarde.map((t) => t.id).sort(), cheiaEm: CHEIA_POSTERIORES }
         : null,
       recolhimentoAposTurnoMin: cfg.roboRecolherAposTurnoMin,
+      recolhimentoAposListaMin: CARENCIA_LISTA_MIN,
       roboAtivo: cfg.roboAtivo,
       expiracaoPropostaMin: cfg.roboExpiracaoMin,
       tetoPorRodada: cfg.roboTetoPorRodada,

@@ -204,6 +204,13 @@
       "when": 1795026783145,
       "tag": "0028_cores_prioridades_operacao",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795029555184,
+      "tag": "0029_recolhimento_lista",
+      "breakpoints": true
     }
   ]
 }

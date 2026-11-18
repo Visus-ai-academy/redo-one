@@ -51,6 +51,7 @@ export type ValoresConfiguracao = {
   cheiaEm: string;
   recolhe: boolean;
   recolhimentoAposTurnoMin: string;
+  recolhimentoAposListaMin: string;
   diasJaEntregue: string;
   escalaRestringeEspecialidade: boolean;
   /** Separados por vírgula. */
@@ -83,6 +84,7 @@ export function valoresDaConfiguracao(
     recolhe: c.recolhimentoAposTurnoMin !== null,
     recolhimentoAposTurnoMin:
       c.recolhimentoAposTurnoMin === null ? '' : String(c.recolhimentoAposTurnoMin),
+    recolhimentoAposListaMin: String(c.recolhimentoAposListaMin ?? 1440),
     diasJaEntregue: String(c.diasJaEntregue),
     escalaRestringeEspecialidade: c.escalaRestringeEspecialidade,
     marcadores: c.marcadoresEquilibrio.join(', '),
@@ -123,6 +125,7 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
       ? { turnoIds: v.turnoIds, cheiaEm: hora(v.cheiaEm) }
       : null,
     recolhimentoAposTurnoMin: v.recolhe ? Number(v.recolhimentoAposTurnoMin) : null,
+    recolhimentoAposListaMin: Number(v.recolhimentoAposListaMin),
     roboAtivo: v.roboAtivo,
     expiracaoPropostaMin: Number(v.expiracaoPropostaMin),
     tetoPorRodada: v.temTeto ? Number(v.tetoPorRodada) : null,
@@ -151,6 +154,7 @@ const valoresSchema = z.object({
   cheiaEm: z.string(),
   recolhe: z.boolean(),
   recolhimentoAposTurnoMin: z.string(),
+  recolhimentoAposListaMin: z.string(),
   diasJaEntregue: z.string(),
   escalaRestringeEspecialidade: z.boolean(),
   marcadores: z.string(),
@@ -198,7 +202,10 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
     }
     if (!HORA.test(v.cheiaEm.trim())) erro('cheiaEm', 'Use HH:MM, como 10:50.');
   }
-  if (v.recolhe) faixa('recolhimentoAposTurnoMin', 0, 1440);
+  if (v.recolhe) {
+    faixa('recolhimentoAposTurnoMin', 0, 1440);
+    faixa('recolhimentoAposListaMin', 0, 10_080);
+  }
   faixa('diasJaEntregue', 0, 90);
   const marcadores = marcadoresDe(v.marcadores).map((m) => m.toUpperCase());
   if (marcadores.some((m) => m.length > 40)) erro('marcadores', 'Use até 40 letras por marcador.');
@@ -280,7 +287,7 @@ export function resumoConfiguracao(
           valor:
             c.recolhimentoAposTurnoMin === null
               ? 'Desligado'
-              : `${c.recolhimentoAposTurnoMin} min depois do fim do turno`,
+              : `${c.recolhimentoAposTurnoMin} min depois do fim do turno; ${c.recolhimentoAposListaMin} min depois do fim da Lista`,
         },
         { rotulo: 'Não volta ao mesmo médico por', valor: `${c.diasJaEntregue} dias` },
         {

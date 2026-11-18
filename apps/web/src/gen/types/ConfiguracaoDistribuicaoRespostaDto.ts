@@ -78,6 +78,11 @@ export type ConfiguracaoDistribuicaoRespostaDto = {
    */
   recolhimentoAposTurnoMin: number | null;
   /**
+   * @description Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080).
+   * @type integer
+   */
+  recolhimentoAposListaMin: number;
+  /**
    * @description Robô ligado: desligado, ninguém inicia rodada.
    * @type boolean
    */

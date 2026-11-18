@@ -22,6 +22,7 @@ export const configuracaoDistribuicaoDtoSchema = z.object({
   diasJaEntregue: z.number().describe('Exame entregue a um médico nos últimos N dias e de volta à fila não volta para ele.'),
   turnosPosteriores: turnosPosterioresDtoSchema.nullable().describe('Nulo = nenhum turno posterior (a Lista não guarda nada).'),
   recolhimentoAposTurnoMin: z.number().nullable().describe('Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado.'),
+  recolhimentoAposListaMin: z.int().describe('Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080).'),
   roboAtivo: z.boolean().optional().describe('Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado.'),
   expiracaoPropostaMin: z.number().optional().describe('Minutos que a proposta vale sem aprovação; depois expira. Ausente = mantém o gravado.'),
   tetoPorRodada: z.number().nullish().describe('Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado.'),

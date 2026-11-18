@@ -153,6 +153,14 @@ export class ConfiguracaoDistribuicaoDto {
   recolhimentoAposTurnoMin!: number | null;
 
   @ApiProperty({
+    type: 'integer',
+    description:
+      'Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080).',
+  })
+  @IsInt()
+  recolhimentoAposListaMin!: number;
+
+  @ApiProperty({
     required: false,
     description: 'Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado.',
   })

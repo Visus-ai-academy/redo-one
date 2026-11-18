@@ -59,6 +59,8 @@ describe('configuração global da distribuição', () => {
     ['cicloMinutos', 0],
     ['diasJaEntregue', -1],
     ['recolhimentoAposTurnoMin', -1],
+    ['recolhimentoAposListaMin', -1],
+    ['recolhimentoAposListaMin', 10_081],
     ['expiracaoPropostaMin', 0],
     ['expiracaoPropostaMin', 1441],
     ['tetoPorRodada', 0],

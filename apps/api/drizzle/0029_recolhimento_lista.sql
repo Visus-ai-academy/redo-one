@@ -1,0 +1,1 @@
+ALTER TABLE "configuracao_distribuicao" ADD COLUMN "recolhimento_apos_lista_min" integer DEFAULT 1440 NOT NULL;

@@ -20,6 +20,12 @@ export interface ConfiguracaoGlobal extends ConfiguracaoDistribuicao {
    * `roboRecolherAposTurnoMin` (60 em produção). O motor não usa; o recolhimento (passo 5) usa.
    */
   recolhimentoAposTurnoMin: number | null;
+  /**
+   * Carência do recolhimento depois do fim da Lista (no lugar da de cima): o exame entregue numa
+   * Lista fica com o médico até estes minutos depois do fim dela. No dashboards-one,
+   * `CARENCIA_LISTA_MIN` (24 h, fixo no código).
+   */
+  recolhimentoAposListaMin: number;
   /** Desligado, ninguém inicia rodada (no dashboards-one, `roboAtivo`). */
   roboAtivo: boolean;
   /** Minutos que a proposta vale antes de expirar sem aprovação (`roboExpiracaoMin`). */
@@ -56,6 +62,7 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   diasJaEntregue: 7,
   turnosPosteriores: null,
   recolhimentoAposTurnoMin: 60,
+  recolhimentoAposListaMin: 1440,
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
@@ -92,6 +99,12 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
   if (c.recolhimentoAposTurnoMin !== null) {
     inteiroEntre(c.recolhimentoAposTurnoMin, 0, 1440, 'Carência do recolhimento (minutos)');
   }
+  inteiroEntre(
+    c.recolhimentoAposListaMin,
+    0,
+    10_080,
+    'Carência do recolhimento na Lista (minutos)',
+  );
 
   inteiroEntre(c.expiracaoPropostaMin, 1, 1440, 'Validade da proposta (minutos)');
   if (c.tetoPorRodada !== null) {

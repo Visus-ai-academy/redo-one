@@ -28,6 +28,7 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
   recolhimentoAposTurnoMin: 60,
+  recolhimentoAposListaMin: 1440,
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
@@ -54,6 +55,16 @@ describe('configuração global no formulário', () => {
     const api = configuracaoParaApi(v);
     expect(api.turnosPosteriores).toBeNull();
     expect(api.recolhimentoAposTurnoMin).toBeNull();
+  });
+
+  it('carência da Lista no recolhimento: ida e volta e faixa de 0 a 10080', () => {
+    const v = valoresDaConfiguracao({ ...PRODUCAO, recolhimentoAposListaMin: 720 });
+    expect(v.recolhimentoAposListaMin).toBe('720');
+    expect(configuracaoParaApi(v).recolhimentoAposListaMin).toBe(720);
+    expect(erros({ ...v, recolhimentoAposListaMin: '10081' })).toEqual([
+      'recolhimentoAposListaMin: Use um número inteiro de 0 a 10080.',
+    ]);
+    expect(erros({ ...v, recolhe: false, recolhimentoAposListaMin: '10081' })).toEqual([]);
   });
 
   it('marcadores separados por vírgula, aparados e sem vazios', () => {
@@ -111,7 +122,9 @@ describe('resumo da configuração (só leitura)', () => {
     );
     expect(Object.keys(tudo).some((k) => k.startsWith('Lista padrão'))).toBe(false);
     expect(tudo['Rodada › Turnos posteriores']).toBe('Tarde, cheios na rodada das 10:50');
-    expect(tudo['Rodada › Recolhimento']).toBe('60 min depois do fim do turno');
+    expect(tudo['Rodada › Recolhimento']).toBe(
+      '60 min depois do fim do turno; 1440 min depois do fim da Lista',
+    );
     expect(tudo['Equilíbrio › Marcadores no nome do exame']).toBe('ONCO');
     expect(tudo['Robô › Robô']).toBe('Ligado');
     expect(tudo['Robô › Validade da proposta']).toBe('45 min');

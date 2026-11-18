@@ -429,17 +429,31 @@ export function FormConfiguracaoDistribuicao({
           <form.Subscribe selector={(s) => s.values.recolhe}>
             {(recolhe) =>
               recolhe && (
-                <form.AppField name="recolhimentoAposTurnoMin">
-                  {(field) => (
-                    <field.NumberField
-                      label="Minutos depois do fim do turno"
-                      placeholder="Ex.: 60"
-                      min={0}
-                      max={1440}
-                      required
-                    />
-                  )}
-                </form.AppField>
+                <>
+                  <form.AppField name="recolhimentoAposTurnoMin">
+                    {(field) => (
+                      <field.NumberField
+                        label="Minutos depois do fim do turno"
+                        placeholder="Ex.: 60"
+                        min={0}
+                        max={1440}
+                        required
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="recolhimentoAposListaMin">
+                    {(field) => (
+                      <field.NumberField
+                        label="Minutos depois do fim da Lista"
+                        placeholder="Ex.: 1440"
+                        description="O exame entregue numa Lista fica com o médico até este tempo depois do fim dela (1440 = 24 horas)."
+                        min={0}
+                        max={10080}
+                        required
+                      />
+                    )}
+                  </form.AppField>
+                </>
               )
             }
           </form.Subscribe>
