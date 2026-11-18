@@ -938,7 +938,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Até 20 contas que casam com a busca.",
+            "description": "Até 20 contas, ainda sem médico ligado, que casam com a busca.",
             "content": {
               "application/json": {
                 "schema": {

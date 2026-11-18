@@ -320,9 +320,13 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     });
     const daConta = await repo.listar({ medicoId, pagina: 1, porPagina: 25, agora });
     expect(daConta.itens.map((u) => u.id)).toEqual([usuarioId]);
+    const semMedico = await repo.listar({ semMedico: true, pagina: 1, porPagina: 25, agora });
+    expect(semMedico.itens.map((u) => u.id)).not.toContain(usuarioId);
 
     await repo.vincularMedico(usuarioId, null);
     await expect(repo.medicoDoUsuario(usuarioId)).resolves.toBeNull();
+    const deNovoLivre = await repo.listar({ semMedico: true, pagina: 1, porPagina: 25, agora });
+    expect(deNovoLivre.itens.map((u) => u.id)).toContain(usuarioId);
   });
 
   it('chaves de robô: cria, acha pelo hash, registra uso e revoga', async () => {

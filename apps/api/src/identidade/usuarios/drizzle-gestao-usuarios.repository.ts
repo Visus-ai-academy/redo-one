@@ -59,6 +59,7 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
     if (filtro.papelId) condicoes.push(eq(usuarios.papelId, filtro.papelId));
     if (filtro.situacao) condicoes.push(sql`(${situacao(filtro.agora)}) = ${filtro.situacao}`);
     if (filtro.medicoId) condicoes.push(eq(usuarios.medicoId, filtro.medicoId));
+    if (filtro.semMedico) condicoes.push(isNull(usuarios.medicoId));
     const onde = and(...condicoes);
 
     const [itens, [totalLinha]] = await Promise.all([

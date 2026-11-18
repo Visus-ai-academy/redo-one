@@ -69,13 +69,21 @@ export class AcessoMedicoController {
 
   @Get('contas')
   @Permissao('medicos.acesso.editar')
-  @ApiOkResponse({ type: [ContaParaLigarDto], description: 'Até 20 contas que casam com a busca.' })
+  @ApiOkResponse({
+    type: [ContaParaLigarDto],
+    description: 'Até 20 contas, ainda sem médico ligado, que casam com a busca.',
+  })
   async buscarContas(
-    // Só para a rota documentar o parâmetro: a busca é em todas as contas.
+    // Só para a rota documentar o parâmetro: a busca é nas contas ainda sem médico.
     @MedicoId() _medicoId: string,
     @Query() query: BuscarContasDto,
   ): Promise<ContaParaLigarDto[]> {
-    const { itens } = await this.usuarios.listar({ busca: query.busca, pagina: 1, porPagina: 20 });
+    const { itens } = await this.usuarios.listar({
+      busca: query.busca,
+      semMedico: true,
+      pagina: 1,
+      porPagina: 20,
+    });
     return itens.map(({ id, nome, email }) => ({ id, nome, email }));
   }
 

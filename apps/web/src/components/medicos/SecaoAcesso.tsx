@@ -223,7 +223,7 @@ function Ligar({
             placeholder="Nome ou e-mail"
             chave="usuarios"
             buscar={buscarUsuarios}
-            description="A pessoa passa a ver os dados deste médico no portal; as sessões dela são encerradas."
+            description="Só aparecem contas ainda sem médico. A pessoa passa a ver os dados deste médico no portal; as sessões dela são encerradas."
           />
         )}
       </form.AppField>

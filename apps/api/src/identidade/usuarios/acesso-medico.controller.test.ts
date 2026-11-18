@@ -70,13 +70,18 @@ describe('AcessoMedicoController', () => {
     expect(service.desligarMedico).toHaveBeenCalledWith(ator, 'm-1');
   });
 
-  it('busca contas para ligar devolvendo só id, nome e e-mail (no máximo 20)', async () => {
+  it('busca só contas ainda sem médico, devolvendo id, nome e e-mail (no máximo 20)', async () => {
     const service = { listar: vi.fn(async () => ({ itens: [conta], total: 1 })) };
 
     await expect(montar(service).buscarContas('m-1', { busca: 'jo' })).resolves.toEqual([
       { id: 'u-joao', nome: 'João', email: 'joao@clinica.com' },
     ]);
-    expect(service.listar).toHaveBeenCalledWith({ busca: 'jo', pagina: 1, porPagina: 20 });
+    expect(service.listar).toHaveBeenCalledWith({
+      busca: 'jo',
+      semMedico: true,
+      pagina: 1,
+      porPagina: 20,
+    });
   });
 
   it('lista os papéis que quem está logado pode dar no convite', async () => {

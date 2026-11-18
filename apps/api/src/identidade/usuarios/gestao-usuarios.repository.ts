@@ -13,6 +13,8 @@ export interface FiltroUsuarios {
   situacao?: SituacaoUsuario;
   /** Só a conta ligada a este médico. */
   medicoId?: string;
+  /** Só contas ainda não ligadas a nenhum médico (para ligar uma a um médico). */
+  semMedico?: boolean;
   pagina: number;
   porPagina: number;
   /** Referência para saber quem está bloqueado agora. */
