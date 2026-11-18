@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
-
+import type { Segmento } from '../../comum/segmentos';
 import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
 import {
@@ -14,6 +14,7 @@ import {
   quebrasEstudoPecas,
   subespecialidades,
 } from '../../database/schema';
+import { lerSegmentos } from '../../database/segmentos';
 import { ReferenciaInexistenteError } from '../comum/catalogo.errors';
 import { violouChaveEstrangeira } from '../comum/erros-do-banco';
 import type {
@@ -158,5 +159,9 @@ export class DrizzleExamesRepository implements ExamesRepository {
       if (violouChaveEstrangeira(erro)) return false;
       throw erro;
     }
+  }
+
+  segmentos(ids: string[]): Promise<Segmento[]> {
+    return lerSegmentos(this.db, ids);
   }
 }

@@ -1,8 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AUDITORIA, type Auditoria } from '../../auditoria/auditoria';
+import { segmentoForaDaEspecialidade } from '../../comum/segmentos';
 import { CLOCK, type Clock } from '../../identidade/clock';
-import { ItemEmUsoError, ItemNaoEncontradoError } from '../comum/catalogo.errors';
+import {
+  ItemEmUsoError,
+  ItemNaoEncontradoError,
+  SegmentoForaDaEspecialidadeError,
+} from '../comum/catalogo.errors';
 import { textoOpcional } from '../comum/documentos';
 import { normalizarNome } from '../comum/nomes';
 import type { Pagina } from '../comum/paginacao';
@@ -42,6 +47,7 @@ export class ExamesService {
 
   async criar(ator: AtorCatalogo, dados: DadosExame): Promise<string> {
     const validos = limpar(dados);
+    await this.exigirSegmentoDaEspecialidade(validos);
     const id = await this.repo.criar({
       ...validos,
       chaveNormalizada: normalizarNome(validos.nome),
@@ -53,6 +59,13 @@ export class ExamesService {
   async atualizar(ator: AtorCatalogo, id: string, dados: DadosExame): Promise<void> {
     const { id: _, quebra: __, ...atual } = await this.obter(id);
     const validos = limpar(dados);
+    // Só o par que muda passa pela regra: o que já está gravado não trava a edição do resto.
+    if (
+      validos.subespecialidadeId !== atual.subespecialidadeId ||
+      validos.especialidadeId !== atual.especialidadeId
+    ) {
+      await this.exigirSegmentoDaEspecialidade(validos);
+    }
     await this.repo.atualizar(id, { ...validos, chaveNormalizada: normalizarNome(validos.nome) });
     await this.registro.alterado(ator, id, atual, validos);
   }
@@ -68,6 +81,7 @@ export class ExamesService {
   ): Promise<void> {
     const atual = await this.obter(id);
     if (atual.subespecialidadeId === subespecialidadeId) return;
+    await this.exigirSegmentoDaEspecialidade({ ...atual, subespecialidadeId });
     await this.repo.definirSubespecialidade(id, subespecialidadeId);
     await this.registro.alterado(
       ator,
@@ -75,6 +89,20 @@ export class ExamesService {
       { subespecialidadeId: atual.subespecialidadeId },
       { subespecialidadeId },
     );
+  }
+
+  /** O segmento (se houver) precisa existir na especialidade do exame. */
+  private async exigirSegmentoDaEspecialidade(
+    exame: Pick<DadosExame, 'especialidadeId' | 'subespecialidadeId'>,
+  ): Promise<void> {
+    if (!exame.subespecialidadeId) return;
+    const ids = [exame.subespecialidadeId];
+    const fora = segmentoForaDaEspecialidade(
+      await this.repo.segmentos(ids),
+      ids,
+      exame.especialidadeId,
+    );
+    if (fora) throw new SegmentoForaDaEspecialidadeError(fora);
   }
 
   async excluir(ator: AtorCatalogo, id: string): Promise<void> {

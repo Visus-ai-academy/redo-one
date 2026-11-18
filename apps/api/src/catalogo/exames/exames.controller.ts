@@ -65,7 +65,9 @@ export class ExamesController {
   @Post()
   @Permissao('exames.criar')
   @ApiCreatedResponse({ type: IdCriadoDto })
-  @ApiBadRequestResponse({ description: 'Cadastro ligado inexistente.' })
+  @ApiBadRequestResponse({
+    description: 'Cadastro ligado inexistente ou segmento que a especialidade não tem.',
+  })
   async criar(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Body() corpo: ExameDto,
@@ -77,7 +79,9 @@ export class ExamesController {
   @Permissao('exames.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  @ApiBadRequestResponse({ description: 'Cadastro ligado inexistente.' })
+  @ApiBadRequestResponse({
+    description: 'Cadastro ligado inexistente ou segmento que a especialidade não tem.',
+  })
   atualizar(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
@@ -90,7 +94,9 @@ export class ExamesController {
   @Permissao('exames.subespecialidade.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Só a subespecialidade muda; os outros campos ficam.' })
-  @ApiBadRequestResponse({ description: 'Subespecialidade inexistente.' })
+  @ApiBadRequestResponse({
+    description: 'Segmento inexistente ou que a especialidade do exame não tem.',
+  })
   @ApiNotFoundResponse()
   definirSubespecialidade(
     @PrincipalAtual() ator: PrincipalUsuario,

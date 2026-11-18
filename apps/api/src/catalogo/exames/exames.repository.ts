@@ -1,3 +1,4 @@
+import type { Segmento } from '../../comum/segmentos';
 import type { Pagina, Paginacao } from '../comum/paginacao';
 
 export const EXAMES_REPOSITORY = Symbol('EXAMES_REPOSITORY');
@@ -59,6 +60,8 @@ export interface ExamesRepository {
   atualizar(id: string, dados: DadosExame & { chaveNormalizada: string }): Promise<void>;
   /** Grava só a subespecialidade. Lança `ReferenciaInexistenteError` se ela não existe. */
   definirSubespecialidade(id: string, subespecialidadeId: string | null): Promise<void>;
+  /** Os segmentos pedidos, com as especialidades em que existem. */
+  segmentos(ids: string[]): Promise<Segmento[]>;
   /** `false` quando o exame é peça de uma quebra ou outro cadastro o usa. */
   excluir(id: string): Promise<boolean>;
 }

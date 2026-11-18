@@ -2852,7 +2852,7 @@
             }
           },
           "400": {
-            "description": "Cadastro ligado inexistente."
+            "description": "Cadastro ligado inexistente ou segmento que a especialidade não tem."
           }
         },
         "tags": [
@@ -2919,7 +2919,7 @@
             "description": ""
           },
           "400": {
-            "description": "Cadastro ligado inexistente."
+            "description": "Cadastro ligado inexistente ou segmento que a especialidade não tem."
           }
         },
         "tags": [
@@ -2979,7 +2979,7 @@
             "description": "Só a subespecialidade muda; os outros campos ficam."
           },
           "400": {
-            "description": "Subespecialidade inexistente."
+            "description": "Segmento inexistente ou que a especialidade do exame não tem."
           },
           "404": {
             "description": ""

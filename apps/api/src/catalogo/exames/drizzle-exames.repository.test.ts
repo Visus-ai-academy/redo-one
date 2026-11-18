@@ -130,6 +130,24 @@ describe.skipIf(!url)('DrizzleExamesRepository', () => {
     ).rejects.toThrow(ReferenciaInexistenteError);
   });
 
+  it('lê os segmentos com as especialidades em que existem', async () => {
+    const [msk] = await db.insert(schema.especialidades).values({ nome: 'MSK' }).returning();
+    const [colunas] = await db
+      .insert(schema.subespecialidades)
+      .values({ nome: 'COLUNAS' })
+      .returning();
+    await db.insert(schema.subespecialidadesEspecialidades).values([
+      { subespecialidadeId: colunas?.id ?? '', especialidadeId: neuro },
+      { subespecialidadeId: colunas?.id ?? '', especialidadeId: msk?.id ?? '' },
+    ]);
+
+    const [lido] = await repo.segmentos([colunas?.id ?? '']);
+
+    expect(lido?.nome).toBe('COLUNAS');
+    expect([...(lido?.especialidadeIds ?? [])].sort()).toEqual([neuro, msk?.id].sort());
+    await expect(repo.segmentos([])).resolves.toEqual([]);
+  });
+
   it('cadastro ligado inexistente vira erro de domínio', async () => {
     await expect(
       repo.criar(dados('X', { modalidadeId: '00000000-0000-4000-8000-000000000000' })),

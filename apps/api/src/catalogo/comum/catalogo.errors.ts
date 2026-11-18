@@ -1,4 +1,5 @@
 import { ErroDeDominio } from '../../comum/erro-de-dominio';
+import { mensagemSegmentoFora, type Segmento } from '../../comum/segmentos';
 import type { Rotulo } from './rotulo';
 
 export class ItemNaoEncontradoError extends ErroDeDominio {
@@ -47,5 +48,14 @@ export class ReferenciaInexistenteError extends ErroDeDominio {
 
   constructor() {
     super('Um dos cadastros escolhidos não existe mais. Recarregue a página e escolha de novo.');
+  }
+}
+
+/** O segmento escolhido não existe na especialidade do exame. */
+export class SegmentoForaDaEspecialidadeError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor(segmento: Segmento) {
+    super(mensagemSegmentoFora(segmento, 'do exame'));
   }
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Segmento } from '../../comum/segmentos';
 
 import type { AliasesClienteRepository } from '../clientes/aliases-cliente.repository';
 import type {
@@ -284,6 +285,11 @@ type ExameGuardado = DadosExame & { id: string; chaveNormalizada: string };
 export class InMemoryExamesRepository implements ExamesRepository {
   readonly itens = new Map<string, ExameGuardado>();
   readonly emUso = new Set<string>();
+  readonly segmentosCadastrados: Segmento[] = [];
+
+  async segmentos(ids: string[]) {
+    return this.segmentosCadastrados.filter((s) => ids.includes(s.id));
+  }
 
   async listar(filtro: FiltroExames) {
     const filtrados = [...this.itens.values()]
