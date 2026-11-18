@@ -8,6 +8,7 @@ import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { type AbaExtra, AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapeSomenteLeitura } from './rodape-painel';
 
@@ -47,6 +48,8 @@ export type PainelItemListaProps = {
   onFechar: () => void;
   /** Seções abaixo do cadastro (ex.: variações da prioridade). */
   children?: ReactNode;
+  /** Abas além do cadastro (ex.: Distribuição da especialidade); sem elas, o painel não tem abas. */
+  abas?: AbaExtra[];
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -82,6 +85,7 @@ export function PainelItemLista({
   onExcluir,
   onFechar,
   children,
+  abas,
 }: PainelItemListaProps) {
   const [erro, setErro] = useState<string>();
   const novo = rotulos.genero === 'f' ? 'Nova' : 'Novo';
@@ -142,133 +146,140 @@ export function PainelItemLista({
   if (!podeEditar && item) {
     return (
       <PainelLateral titulo={titulo} onFechar={onFechar}>
-        <div className="flex flex-col gap-4 p-4">
-          {erro && <Alerta tom="erro">{erro}</Alerta>}
-          <CampoSomenteLeitura label={rotulos.campoNome} value={item.nome} />
-          <CampoSomenteLeitura label="Descrição" value={item.descricao ?? '—'} />
-          {variante === 'subespecialidade' && (
-            <CampoSomenteLeitura
-              label="Especialidades"
-              value={especialidades
-                .filter((e) => item.especialidadeIds?.includes(e.id))
-                .map((e) => e.nome)
-                .join(', ')}
-            />
-          )}
-          <CampoSomenteLeitura label="Situação" value={item.ativo ? 'Ativo' : 'Inativo'} />
-          <RodapeSomenteLeitura excluir={excluir} />
-        </div>
-        {children}
+        <AbasComHistorico extras={abas} aria-label={`Partes d${artigo} ${rotulos.singular}`}>
+          <div className="flex flex-col gap-4 p-4">
+            {erro && <Alerta tom="erro">{erro}</Alerta>}
+            <CampoSomenteLeitura label={rotulos.campoNome} value={item.nome} />
+            <CampoSomenteLeitura label="Descrição" value={item.descricao ?? '—'} />
+            {variante === 'subespecialidade' && (
+              <CampoSomenteLeitura
+                label="Especialidades"
+                value={especialidades
+                  .filter((e) => item.especialidadeIds?.includes(e.id))
+                  .map((e) => e.nome)
+                  .join(', ')}
+              />
+            )}
+            <CampoSomenteLeitura label="Situação" value={item.ativo ? 'Ativo' : 'Inativo'} />
+            <RodapeSomenteLeitura excluir={excluir} />
+          </div>
+          {children}
+        </AbasComHistorico>
       </PainelLateral>
     );
   }
 
   return (
     <PainelLateral titulo={titulo} onFechar={onFechar}>
-      <form
-        noValidate
-        onSubmit={(evento) => {
-          evento.preventDefault();
-          void form.handleSubmit();
-        }}
-        className="flex flex-col gap-4 p-4"
+      <AbasComHistorico
+        extras={item ? abas : undefined}
+        aria-label={`Partes d${artigo} ${rotulos.singular}`}
       >
-        {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <form.AppField name="nome">
-          {(field) => (
-            <field.TextField
-              label={rotulos.campoNome}
-              placeholder={rotulos.exemploNome}
-              autoComplete="off"
-              required
-            />
-          )}
-        </form.AppField>
-        <form.AppField name="descricao">
-          {(field) => (
-            <field.TextField
-              label="Descrição"
-              placeholder={rotulos.exemploDescricao}
-              autoComplete="off"
-            />
-          )}
-        </form.AppField>
-        {variante === 'subespecialidade' && (
-          <form.AppField name="especialidadeIds">
-            {(field) => (
-              <field.CheckboxListField
-                label="Especialidades"
-                required
-                description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
-                opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome }))}
-              />
-            )}
-          </form.AppField>
-        )}
-        <div className="flex flex-wrap gap-4">
-          <form.AppField name="cor">
+        <form
+          noValidate
+          onSubmit={(evento) => {
+            evento.preventDefault();
+            void form.handleSubmit();
+          }}
+          className="flex flex-col gap-4 p-4"
+        >
+          {erro && <Alerta tom="erro">{erro}</Alerta>}
+          <form.AppField name="nome">
             {(field) => (
               <field.TextField
-                label="Cor"
-                placeholder="#1F7A4D"
+                label={rotulos.campoNome}
+                placeholder={rotulos.exemploNome}
                 autoComplete="off"
-                description="Cor do selo nas telas."
-                className="flex-[1_1_160px]"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="ordem">
-            {(field) => (
-              <field.NumberField
-                label="Ordem"
-                placeholder="0"
-                min={0}
-                max={9999}
                 required
-                description="Menor aparece primeiro."
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
-        {variante === 'prioridade' && (
-          <form.AppField name="urgente">
+          <form.AppField name="descricao">
+            {(field) => (
+              <field.TextField
+                label="Descrição"
+                placeholder={rotulos.exemploDescricao}
+                autoComplete="off"
+              />
+            )}
+          </form.AppField>
+          {variante === 'subespecialidade' && (
+            <form.AppField name="especialidadeIds">
+              {(field) => (
+                <field.CheckboxListField
+                  label="Especialidades"
+                  required
+                  description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
+                  opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome }))}
+                />
+              )}
+            </form.AppField>
+          )}
+          <div className="flex flex-wrap gap-4">
+            <form.AppField name="cor">
+              {(field) => (
+                <field.TextField
+                  label="Cor"
+                  placeholder="#1F7A4D"
+                  autoComplete="off"
+                  description="Cor do selo nas telas."
+                  className="flex-[1_1_160px]"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="ordem">
+              {(field) => (
+                <field.NumberField
+                  label="Ordem"
+                  placeholder="0"
+                  min={0}
+                  max={9999}
+                  required
+                  description="Menor aparece primeiro."
+                  className="flex-[1_1_120px]"
+                />
+              )}
+            </form.AppField>
+          </div>
+          {variante === 'prioridade' && (
+            <form.AppField name="urgente">
+              {(field) => (
+                <field.CheckboxField
+                  label="Urgente"
+                  description="A distribuição trata como urgente."
+                />
+              )}
+            </form.AppField>
+          )}
+          <form.AppField name="ativo">
             {(field) => (
               <field.CheckboxField
-                label="Urgente"
-                description="A distribuição trata como urgente."
+                label="Ativo"
+                description={`Inativ${artigo} some das listas de escolha, mas continua nos cadastros que já usam.`}
               />
             )}
           </form.AppField>
-        )}
-        <form.AppField name="ativo">
-          {(field) => (
-            <field.CheckboxField
-              label="Ativo"
-              description={`Inativ${artigo} some das listas de escolha, mas continua nos cadastros que já usam.`}
-            />
-          )}
-        </form.AppField>
-        <form.AppForm>
-          <form.RequiredLegend />
-          <div className="flex flex-wrap items-center gap-2">
-            {excluir && <ConfirmarAcao {...excluir} />}
-            <span className="ml-auto flex gap-2">
-              <Button
-                type="button"
-                onClick={onFechar}
-                className={buttonClassName({ variant: 'secondary' })}
-              >
-                Cancelar
-              </Button>
-              <form.SubmitButton pendingLabel="Salvando…">
-                {item ? 'Salvar' : `Criar ${rotulos.singular}`}
-              </form.SubmitButton>
-            </span>
-          </div>
-        </form.AppForm>
-      </form>
-      {children}
+          <form.AppForm>
+            <form.RequiredLegend />
+            <div className="flex flex-wrap items-center gap-2">
+              {excluir && <ConfirmarAcao {...excluir} />}
+              <span className="ml-auto flex gap-2">
+                <Button
+                  type="button"
+                  onClick={onFechar}
+                  className={buttonClassName({ variant: 'secondary' })}
+                >
+                  Cancelar
+                </Button>
+                <form.SubmitButton pendingLabel="Salvando…">
+                  {item ? 'Salvar' : `Criar ${rotulos.singular}`}
+                </form.SubmitButton>
+              </span>
+            </div>
+          </form.AppForm>
+        </form>
+        {children}
+      </AbasComHistorico>
     </PainelLateral>
   );
 }

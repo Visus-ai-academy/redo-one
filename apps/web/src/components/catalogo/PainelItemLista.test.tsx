@@ -171,4 +171,15 @@ describe('PainelItemLista', () => {
 
     expect(onExcluir).toHaveBeenCalled();
   });
+
+  it('com outras abas (ex.: Distribuição), o cadastro vira a primeira aba', async () => {
+    montar({
+      item: { id: 'm1', nome: 'MR', descricao: null, cor: null, ordem: 0, ativo: true },
+      abas: [{ valor: 'distribuicao', rotulo: 'Distribuição', conteudo: 'regras da frente' }],
+    });
+    expect(screen.getByRole('textbox', { name: 'Código' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Distribuição' }));
+    expect(screen.getByText('regras da frente')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Código' })).not.toBeInTheDocument();
+  });
 });

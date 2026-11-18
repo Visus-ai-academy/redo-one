@@ -17,6 +17,7 @@ import { PainelItemLista } from '../../../components/catalogo/PainelItemLista';
 import { type Variacao, VariacoesForma } from '../../../components/catalogo/VariacoesForma';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { AbaDistribuicaoFrente } from '../../../components/distribuicao/AbaDistribuicaoFrente';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
@@ -294,6 +295,27 @@ function ConteudoDoPainel({
     typeof lista.obter
   >);
   const item = id ? (consulta.data as unknown as ItemDaLista | undefined) : undefined;
+  const { sessao } = Route.useRouteContext();
+  // Especialidade e modalidade são frentes da distribuição: a aba mostra as regras do robô.
+  const frente =
+    aba === 'especialidades' ? 'especialidade' : aba === 'modalidades' ? 'modalidade' : null;
+  const abas =
+    item && frente && pode(sessao, 'distribuicao-config.ver')
+      ? [
+          {
+            valor: 'distribuicao',
+            rotulo: 'Distribuição',
+            conteudo: (
+              <AbaDistribuicaoFrente
+                key={item.id}
+                tipo={frente}
+                id={item.id}
+                podeEditar={pode(sessao, 'distribuicao-config.editar')}
+              />
+            ),
+          },
+        ]
+      : undefined;
   if (id && !item)
     return (
       <PainelCarregando
@@ -309,6 +331,7 @@ function ConteudoDoPainel({
       item={item}
       especialidades={aba === 'subespecialidades' ? especialidades : []}
       podeEditar={id ? permissoes.editar : permissoes.criar}
+      abas={abas}
       onFechar={onFechar}
       onSalvar={async (dados) => {
         if (id) {
