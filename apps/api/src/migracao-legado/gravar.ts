@@ -5,6 +5,7 @@ import {
   getTableName,
   inArray,
   isNull,
+  notInArray,
   or,
   type SQL,
   sql,
@@ -13,8 +14,10 @@ import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
+import { normalizarGrafia } from '../distribuicao/domain/motor/prioridades-operacao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
 import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-cliente.repository';
+import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import type { CatalogoMigrado } from './mapear-catalogo';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
@@ -174,10 +177,47 @@ async function gravarConfiguracaoDistribuicao(tx: Transacao, c: ConfiguracaoDist
   const db = tx as unknown as Database;
   if (c.configuracao)
     await new DrizzleConfiguracaoDistribuicaoRepository(db).salvar(c.configuracao);
+  await gravarPrioridadesOperacao(tx, c);
   const regras = new DrizzleRegrasFrenteRepository(db);
   for (const r of c.regrasFrente) await regras.salvar(r);
   const prioridades = new DrizzlePrioridadesClienteRepository(db);
   for (const p of c.prioridadesCliente) await prioridades.substituir(p.clienteId, p.itens);
+}
+
+/**
+ * Prioridades da operação pelos ids estáveis (upsert) e a grade geral trocada inteira. A carga é a
+ * fonte: a grafia que estava no de-para de outra prioridade passa para a da carga, e a prioridade
+ * criada pela tela com o mesmo nome dá lugar à da carga.
+ */
+async function gravarPrioridadesOperacao(tx: Transacao, c: ConfiguracaoDistribuicaoMigrada) {
+  if (!c.prioridadesOperacao.length) return;
+  const t = schema.prioridadesOperacao;
+  const ids = c.prioridadesOperacao.map((p) => p.id);
+  await tx.delete(t).where(
+    and(
+      notInArray(t.id, ids),
+      inArray(
+        sql`upper(${t.nome})`,
+        c.prioridadesOperacao.map((p) => p.nome.toUpperCase()),
+      ),
+    ),
+  );
+  await tx.delete(schema.prioridadesOperacaoGrafias).where(
+    inArray(
+      schema.prioridadesOperacaoGrafias.grafiaNormalizada,
+      c.prioridadesOperacao.flatMap((p) => p.grafias.map(normalizarGrafia)),
+    ),
+  );
+  if (c.prioridadesOperacao.some((p) => p.padrao)) await tx.update(t).set({ padrao: false });
+  const repo = new DrizzlePrioridadesOperacaoRepository(tx as unknown as Database);
+  for (const p of c.prioridadesOperacao) {
+    await tx
+      .insert(t)
+      .values({ id: p.id, nome: p.nome, posicao: p.posicao, urgencia: 'nunca' })
+      .onConflictDoNothing();
+    await repo.salvar(p);
+  }
+  await repo.salvarGrade(c.gradeRecebimento);
 }
 
 /**

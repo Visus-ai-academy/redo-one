@@ -92,6 +92,10 @@ async function migrarLegado() {
       console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);
     }
     console.log(JSON.stringify(configuracaoDistribuicao.configuracao, null, 2));
+    for (const p of configuracaoDistribuicao.prioridadesOperacao)
+      console.log(`  prioridade da operação: ${JSON.stringify(p)}`);
+    for (const c of configuracaoDistribuicao.gradeRecebimento)
+      console.log(`  grade: ${JSON.stringify(c)}`);
     for (const r of configuracaoDistribuicao.regrasFrente) console.log(`  ${JSON.stringify(r)}`);
     for (const p of configuracaoDistribuicao.prioridadesCliente)
       console.log(`  prioridade ${p.clienteId}: ${JSON.stringify(p.itens)}`);

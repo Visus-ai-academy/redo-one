@@ -65,10 +65,10 @@ const catalogo = mapearCatalogo(legadoCatalogo).tabelas;
 const esp = (nome: string) => catalogo.especialidades.find((e) => e.nome === nome)?.id as string;
 const mod = (codigo: string) => catalogo.modalidades.find((m) => m.codigo === codigo)?.id as string;
 const sub = (nome: string) => catalogo.subespecialidades.find((s) => s.nome === nome)?.id as string;
-const pri = (nome: string) => catalogo.prioridades.find((p) => p.nome === nome)?.id as string;
 const turnos = [
-  { id: 'tu-manha', nome: 'Manhã', horarioInicio: '07:00', horarioFim: '13:00' },
-  { id: 'tu-tarde', nome: 'Tarde', horarioInicio: '13:00', horarioFim: '19:00' },
+  { id: 'tu-manha', nome: 'Manhã', tipo: 'fixo' as const },
+  { id: 'tu-tarde', nome: 'Tarde', tipo: 'fixo' as const },
+  { id: 'tu-lista', nome: 'Lista', tipo: 'lista' as const },
 ];
 
 const config: LegadoConfiguracaoRobo = {
@@ -162,11 +162,10 @@ const regrasDa = (m: ReturnType<typeof mapear>, id: string) =>
   m.regrasFrente.find((r) => (r.frente.especialidadeId ?? r.frente.modalidadeId) === id);
 
 describe('mapearConfiguracaoDistribuicao', () => {
-  it('configuração global com os valores de produção; urgente só URGÊNCIA (internado = rotina)', () => {
+  it('configuração global com os valores de produção', () => {
     const { configuracao, avisos } = mapear();
     expect(configuracao).toEqual({
       ordemFila: config.ordemFila,
-      prioridadeIdsUrgentes: [pri('URGÊNCIA')],
       agruparPorPaciente: true,
       janelaPacienteHoras: 0,
       toleranciaAcimaTeto: 0,
@@ -179,10 +178,44 @@ describe('mapearConfiguracaoDistribuicao', () => {
       escalaRestringeEspecialidade: true,
       diasJaEntregue: 7,
       turnosPosteriores: { turnoIds: ['tu-tarde'], cheiaEm: '10:50' },
-      lista: { prioridadeIds: [pri('ROTINA')], prazoMinimoHoras: 24 },
       recolhimentoAposTurnoMin: 60,
     });
-    expect(avisos.map((a) => a.item)).toEqual(expect.arrayContaining(['INTERNADO', 'EMERGENCIA']));
+    expect(avisos.filter((a) => a.tabela === 'configuracao_distribuicao')).toEqual([]);
+  });
+
+  it('prioridades da operação dos valores aprovados (18/11/2026), com o de-para sem repetir grafia', () => {
+    const { prioridadesOperacao } = mapear();
+    expect(
+      prioridadesOperacao.map((p) => [p.nome, p.posicao, p.urgencia, p.padrao, p.grafias]),
+    ).toEqual([
+      [
+        'URGÊNCIA',
+        1,
+        { tipo: 'sempre' },
+        false,
+        ['Emergência', 'P1', 'P1.Imediato', 'P2', 'P2.Urgente', 'Urgência', 'Urgente'],
+      ],
+      ['AMBULATÓRIO', 2, { tipo: 'prazo', horas: 24 }, false, ['Ambulatório']],
+      ['INTERNADO', 3, { tipo: 'nunca' }, false, ['Internado', 'P3', 'P3.Internado']],
+      ['ROTINA', 3, { tipo: 'nunca' }, true, ['P4', 'P4.Rotina+', 'P5', 'P5.Rotina', 'Rotina']],
+      ['PLANTÃO', 3, { tipo: 'nunca' }, false, ['Plantão']],
+    ]);
+    // Ids estáveis: a carga de novo atualiza as mesmas.
+    expect(prioridadesOperacao[0]?.id).toBe(idDoLegado('prioridades_operacao', 'URGÊNCIA'));
+  });
+
+  it('grade geral: só a Lista tem célula (24 h nas rotinas, URGÊNCIA e PLANTÃO não entram)', () => {
+    const { prioridadesOperacao, gradeRecebimento } = mapear();
+    const nome = (id: string) => prioridadesOperacao.find((p) => p.id === id)?.nome;
+    expect(gradeRecebimento.map((c) => [nome(c.prioridadeOperacaoId), c.turnoId, c.regra])).toEqual(
+      [
+        ['AMBULATÓRIO', 'tu-lista', { tipo: 'prazo_minimo', horas: 24 }],
+        ['INTERNADO', 'tu-lista', { tipo: 'prazo_minimo', horas: 24 }],
+        ['ROTINA', 'tu-lista', { tipo: 'prazo_minimo', horas: 24 }],
+        ['URGÊNCIA', 'tu-lista', { tipo: 'nao_recebe' }],
+        ['PLANTÃO', 'tu-lista', { tipo: 'nao_recebe' }],
+      ],
+    );
   });
 
   it('sem a linha de configuração no dashboards-one, não grava configuração', () => {
@@ -231,12 +264,22 @@ describe('mapearConfiguracaoDistribuicao', () => {
     ]);
   });
 
-  it('MAMA e CARDIO: não recolhem e a Lista segue o SLA', () => {
-    for (const nome of ['MAMA', 'CARDIO']) {
-      expect(regrasDa(mapear(), esp(nome))).toMatchObject({
-        recolheAoFimDoTurno: false,
-        listaPrazoMinimoHoras: null,
-      });
+  it('MAMA e CARDIO: não recolhem e a Lista segue o SLA nas rotinas (URGÊNCIA e PLANTÃO como na geral)', () => {
+    const m = mapear();
+    const nome = (id: string) => m.prioridadesOperacao.find((p) => p.id === id)?.nome;
+    for (const frente of ['MAMA', 'CARDIO']) {
+      const r = regrasDa(m, esp(frente));
+      expect(r?.recolheAoFimDoTurno).toBe(false);
+      expect(r?.recebimento.map((c) => [nome(c.prioridadeOperacaoId), c.turnoId, c.regra])).toEqual(
+        [
+          ['AMBULATÓRIO', 'tu-lista', { tipo: 'segue_sla' }],
+          ['INTERNADO', 'tu-lista', { tipo: 'segue_sla' }],
+          ['ROTINA', 'tu-lista', { tipo: 'segue_sla' }],
+        ].sort((a, b) => {
+          const id = (n: unknown) => m.prioridadesOperacao.find((p) => p.nome === n)?.id ?? '';
+          return id(a[0]) < id(b[0]) ? -1 : 1;
+        }),
+      );
     }
   });
 

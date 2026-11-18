@@ -5,7 +5,12 @@ import {
   REGRAS_NEUTRAS,
   type RegrasFrente,
 } from '../distribuicao/domain/motor/configuracao';
+import type {
+  CelulaRecebimento,
+  PrioridadeOperacao,
+} from '../distribuicao/domain/motor/prioridades-operacao';
 import type { PrioridadeDaFrente } from '../distribuicao/domain/prioridade-cliente';
+import { normalizarPrioridade } from '../distribuicao/domain/prioridades-operacao';
 import { canonicaRegras, validarRegrasFrente } from '../distribuicao/domain/regras-frente';
 import { type Aviso, idDoLegado } from './comum';
 import type { LegadoCatalogo, LegadoConfiguracaoDistribuicao, LegadoPolitica } from './legado';
@@ -21,12 +26,15 @@ import { type CatalogoMigrado, chaveCadastro } from './mapear-catalogo';
 export interface ContextoConfiguracaoDistribuicao {
   legadoCatalogo: LegadoCatalogo;
   catalogo: CatalogoMigrado['tabelas'];
-  /** Turnos da escala já migrados (id do redo-one e nome). */
-  turnos: { id: string; nome: string }[];
+  /** Turnos da escala já migrados (id do redo-one, nome e tipo). */
+  turnos: { id: string; nome: string; tipo?: 'fixo' | 'lista' | null }[];
 }
 
 export interface ConfiguracaoDistribuicaoMigrada {
   configuracao: ConfiguracaoGlobal | null;
+  /** Prioridades da operação com o de-para (ids estáveis pelo nome) e a grade geral. */
+  prioridadesOperacao: PrioridadeOperacao[];
+  gradeRecebimento: CelulaRecebimento[];
   regrasFrente: RegrasFrente[];
   prioridadesCliente: { clienteId: string; itens: PrioridadeDaFrente[] }[];
   avisos: Aviso[];
@@ -45,7 +53,66 @@ const TURNO_POSTERIOR = 'TARDE';
 const CHEIA_POSTERIORES = '10:50';
 /** `SEM_RECOLHIMENTO` (recolher.ts); MAMO é MAMA. */
 const SEM_RECOLHIMENTO = ['CARDIO', 'MAMA'];
-/** Decisão do usuário (17/11/2026): a Lista de MAMA e de CARDIO segue o SLA. */
+/**
+ * Prioridades da operação (decisão do usuário de 18/11/2026): posição, urgência e grafias da
+ * MobileMed. ROTINA é a padrão (grafia sem de-para). Viram dado editável em Configurações ›
+ * Distribuição; a carga só semeia.
+ */
+const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
+  {
+    nome: 'URGÊNCIA',
+    posicao: 1,
+    urgencia: { tipo: 'sempre' },
+    padrao: false,
+    grafias: [
+      'Urgência',
+      'Urgencia',
+      'Urgente',
+      'Emergência',
+      'P1',
+      'P1.Imediato',
+      'P2',
+      'P2.Urgente',
+    ],
+  },
+  {
+    nome: 'AMBULATÓRIO',
+    posicao: 2,
+    urgencia: { tipo: 'prazo', horas: 24 },
+    padrao: false,
+    grafias: ['Ambulatório', 'Ambulatorio'],
+  },
+  {
+    nome: 'INTERNADO',
+    posicao: 3,
+    urgencia: { tipo: 'nunca' },
+    padrao: false,
+    grafias: ['Internado', 'P3', 'P3.Internado'],
+  },
+  {
+    nome: 'ROTINA',
+    posicao: 3,
+    urgencia: { tipo: 'nunca' },
+    padrao: true,
+    grafias: ['Rotina', 'P4', 'P4.Rotina+', 'P5', 'P5.Rotina'],
+  },
+  {
+    nome: 'PLANTÃO',
+    posicao: 3,
+    urgencia: { tipo: 'nunca' },
+    padrao: false,
+    grafias: ['Plantão', 'Plantao'],
+  },
+];
+/**
+ * Grade geral (18/11/2026): os turnos fixos seguem o SLA em tudo (célula vazia); nos turnos do
+ * tipo Lista, prazo mínimo de 24 h para AMBULATÓRIO, INTERNADO e ROTINA (o "ROTINA, SLA > 24 h"
+ * do dashboards-one) e URGÊNCIA e PLANTÃO não entram.
+ */
+const LISTA_PRAZO_MINIMO_HORAS = 24;
+const LISTA_COM_PRAZO = ['AMBULATÓRIO', 'INTERNADO', 'ROTINA'];
+const LISTA_NAO_RECEBE = ['URGÊNCIA', 'PLANTÃO'];
+/** Decisão do usuário (17/11/2026): a Lista de MAMA e de CARDIO segue o SLA (nas rotinas). */
 const LISTA_SEGUE_SLA = ['MAMA', 'CARDIO'];
 /** `FRENTES` do neurologista (motor.ts): colunas, angio, crânio, geral de NEURO, geral de MSK. */
 const MISTURA_NEURO: { especialidade: string | null; segmento: string | null }[] = [
@@ -90,47 +157,11 @@ export function mapearConfiguracaoDistribuicao(
     c.subespecialidades.map((s) => [chaveCadastro(s.nome), s.id as string]),
   );
   const segmento = (nome: string) => subPorNome.get(chaveCadastro(nome)) ?? null;
-  const prioridadePorNome = new Map(
-    c.prioridades.map((p) => [chaveCadastro(p.nome), p.id as string]),
-  );
-  const prioridadePorGrafia = new Map([
-    ...prioridadePorNome,
-    ...c.prioridadesDePara
-      .filter((d) => d.ativo !== false)
-      .map((d) => [chaveCadastro(d.origem), d.prioridadeId] as const),
-  ]);
 
   // ---- Configuração global ----
   let configuracao: ConfiguracaoGlobal | null = null;
   const cfg = legado.config;
   if (cfg) {
-    // Urgente é só a prioridade do CATÁLOGO com o mesmo nome (decisão de 17/11: internado =
-    // rotina; emergência já é variação de URGÊNCIA). O resto sai com aviso.
-    const urgentes: string[] = [];
-    for (const grafia of cfg.prioridadesUrgentes) {
-      const id = prioridadePorNome.get(chaveCadastro(grafia));
-      if (id) {
-        if (!urgentes.includes(id)) urgentes.push(id);
-      } else {
-        avisos.push({
-          tabela: 'configuracao_distribuicao',
-          item: grafia,
-          motivo:
-            'Não é prioridade do catálogo: não conta como urgente (Internado = ROTINA; Emergência é variação de URGÊNCIA).',
-        });
-      }
-    }
-    const listaPrioridades: string[] = [];
-    for (const grafia of cfg.listaPrioridades) {
-      const id = prioridadePorGrafia.get(chaveCadastro(grafia));
-      if (!id) {
-        avisos.push({
-          tabela: 'configuracao_distribuicao',
-          item: grafia,
-          motivo: 'Prioridade da Lista sem equivalente no catálogo: ficou de fora.',
-        });
-      } else if (!listaPrioridades.includes(id)) listaPrioridades.push(id);
-    }
     const tarde = ctx.turnos.filter((t) => chaveCadastro(t.nome) === TURNO_POSTERIOR);
     if (!tarde.length) {
       avisos.push({
@@ -153,7 +184,6 @@ export function mapearConfiguracaoDistribuicao(
           criterio: i.criterio as CriterioFila,
           direcao: i.direcao === 'desc' ? 'desc' : 'asc',
         })),
-      prioridadeIdsUrgentes: urgentes.sort(),
       agruparPorPaciente: cfg.agruparPorPaciente,
       janelaPacienteHoras: cfg.janelaPacienteHoras,
       toleranciaAcimaTeto: cfg.toleranciaAcimaCapacidade,
@@ -168,14 +198,43 @@ export function mapearConfiguracaoDistribuicao(
       turnosPosteriores: tarde.length
         ? { turnoIds: tarde.map((t) => t.id).sort(), cheiaEm: CHEIA_POSTERIORES }
         : null,
-      lista: {
-        prioridadeIds: listaPrioridades.sort(),
-        prazoMinimoHoras: cfg.listaPrazoMinimoHoras,
-      },
       recolhimentoAposTurnoMin: cfg.roboRecolherAposTurnoMin,
     };
     contar('configuracaoGlobal');
   }
+
+  // ---- Prioridades da operação e grade geral de recebimento ----
+  const prioridadesOperacao: PrioridadeOperacao[] = PRIORIDADES_OPERACAO.map((p) => ({
+    id: idDoLegado('prioridades_operacao', p.nome),
+    ...normalizarPrioridade(p),
+  }));
+  const idOperacao = (nome: string) =>
+    prioridadesOperacao.find((p) => p.nome === nome)?.id as string;
+  const turnosLista = ctx.turnos
+    .filter((t) => t.tipo === 'lista')
+    .map((t) => t.id)
+    .sort();
+  if (!turnosLista.length) {
+    avisos.push({
+      tabela: 'recebimento_geral',
+      item: 'Lista',
+      motivo: 'Nenhum turno do tipo Lista na escala: a grade geral ficou toda "segue o SLA".',
+    });
+  }
+  const gradeRecebimento: CelulaRecebimento[] = turnosLista.flatMap((turnoId) => [
+    ...LISTA_COM_PRAZO.map((nome) => ({
+      prioridadeOperacaoId: idOperacao(nome),
+      turnoId,
+      regra: { tipo: 'prazo_minimo' as const, horas: LISTA_PRAZO_MINIMO_HORAS },
+    })),
+    ...LISTA_NAO_RECEBE.map((nome) => ({
+      prioridadeOperacaoId: idOperacao(nome),
+      turnoId,
+      regra: { tipo: 'nao_recebe' as const },
+    })),
+  ]);
+  contar('prioridadesOperacao', prioridadesOperacao.length);
+  contar('gradeRecebimento', gradeRecebimento.length);
 
   // ---- Regras da frente ----
   const porFrente = new Map<string, RegrasFrente>();
@@ -311,7 +370,13 @@ export function mapearConfiguracaoDistribuicao(
     });
   for (const nome of LISTA_SEGUE_SLA)
     comEspecialidade(nome, (r) => {
-      r.listaPrazoMinimoHoras = null;
+      r.recebimento = turnosLista.flatMap((turnoId) =>
+        LISTA_COM_PRAZO.map((p) => ({
+          prioridadeOperacaoId: idOperacao(p),
+          turnoId,
+          regra: { tipo: 'segue_sla' as const },
+        })),
+      );
     });
   comEspecialidade('NEURO', (r) => {
     const fatias = MISTURA_NEURO.map((f) => ({
@@ -397,6 +462,8 @@ export function mapearConfiguracaoDistribuicao(
 
   return {
     configuracao,
+    prioridadesOperacao,
+    gradeRecebimento,
     regrasFrente,
     prioridadesCliente: [...porCliente].map(([clienteId, itens]) => ({ clienteId, itens })),
     avisos,

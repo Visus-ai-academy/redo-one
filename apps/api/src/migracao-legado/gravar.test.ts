@@ -11,6 +11,7 @@ import { CONFIGURACAO_INICIAL } from '../distribuicao/domain/configuracao-global
 import { REGRAS_NEUTRAS } from '../distribuicao/domain/motor/configuracao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
 import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-cliente.repository';
+import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import { gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
@@ -528,6 +529,23 @@ describe.skipIf(!url)('gravarMigracao', () => {
         marcadoresEquilibrio: ['ONCO'],
         turnosPosteriores: { turnoIds: [tarde], cheiaEm: '10:50' },
       },
+      prioridadesOperacao: [
+        {
+          id: '5b8c1b5e-0000-4000-8000-000000000001',
+          nome: 'ROTINA',
+          posicao: 3,
+          urgencia: { tipo: 'nunca' },
+          padrao: true,
+          grafias: ['P4', 'Rotina'],
+        },
+      ],
+      gradeRecebimento: [
+        {
+          prioridadeOperacaoId: '5b8c1b5e-0000-4000-8000-000000000001',
+          turnoId: tarde,
+          regra: { tipo: 'prazo_minimo', horas: 24 },
+        },
+      ],
       regrasFrente: [
         {
           frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: ct },
@@ -538,7 +556,13 @@ describe.skipIf(!url)('gravarMigracao', () => {
           frente: { tipo: 'especialidade', especialidadeId: neuro, modalidadeId: null },
           ...REGRAS_NEUTRAS,
           recolheAoFimDoTurno: false,
-          listaPrazoMinimoHoras: null,
+          recebimento: [
+            {
+              prioridadeOperacaoId: '5b8c1b5e-0000-4000-8000-000000000001',
+              turnoId: tarde,
+              regra: { tipo: 'segue_sla' },
+            },
+          ],
         },
       ],
       prioridadesCliente: [
@@ -559,6 +583,8 @@ describe.skipIf(!url)('gravarMigracao', () => {
       configuracao: await new DrizzleConfiguracaoDistribuicaoRepository(db).obter(),
       regras: await new DrizzleRegrasFrenteRepository(db).listar(),
       prioridades: await new DrizzlePrioridadesClienteRepository(db).todas(),
+      operacao: await new DrizzlePrioridadesOperacaoRepository(db).listar(),
+      grade: await new DrizzlePrioridadesOperacaoRepository(db).obterGrade(),
     });
     await gravarMigracao(db, catalogo, medicos, escala, undefined, migrada);
     const primeira = await ler();
@@ -566,6 +592,8 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(await ler()).toEqual(primeira);
     expect(primeira.configuracao).toEqual(migrada.configuracao);
     expect(primeira.regras).toHaveLength(2);
+    expect(primeira.operacao).toEqual(migrada.prioridadesOperacao);
+    expect(primeira.grade).toEqual(migrada.gradeRecebimento);
     expect(primeira.prioridades).toEqual([
       { clienteId, ...migrada.prioridadesCliente[0]?.itens[0] },
     ]);
