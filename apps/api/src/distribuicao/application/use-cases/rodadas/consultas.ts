@@ -248,8 +248,9 @@ const HORA = 3_600_000;
 const menor = (a: Date | null, b: Date | null) => (a && b ? (a < b ? a : b) : (a ?? b));
 
 /**
- * A fila agora, para a tela antes de distribuir: contagens por prioridade da operação e frente e
- * quem está em turno. Lê a porta da fila e as tabelas, sem gravar nada.
+ * A fila agora, para a tela antes de distribuir: contagens por prioridade da operação e frente
+ * (a de especialidade também por segmento) e quem está em turno. Lê a porta da fila e as
+ * tabelas, sem gravar nada.
  */
 export class ConsultarFilaDoMomento {
   constructor(private readonly d: DependenciasRodada) {}
