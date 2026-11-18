@@ -766,5 +766,53 @@ describe('rodada do robô (casos de uso)', () => {
       );
       expect(f.medicosEmTurno.map((m) => m.medicoId).sort()).toEqual(['A', 'B']);
     });
+
+    it('fila do momento: quem está em turno com a frente, as cores e os segmentos que cobre', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        ocorrencias: [oc('A', { subespecialidadeIds: ['seg-1'] }), oc('B')],
+        nomes: { [MI]: 'NEURO', manha: 'Manhã', 'seg-1': 'Cabeça e pescoço', 'seg-2': 'AVC' },
+        cores: { manha: '#2F6FB2', [MI]: '#7A5AB5', 'seg-1': '#3E8E5E' },
+        segmentos: { [MI]: ['seg-1', 'seg-2'] },
+      };
+      const f = await casos.filaDoMomento.executar();
+      const de = (id: string) => f.medicosEmTurno.find((m) => m.medicoId === id);
+      expect(de('A')).toMatchObject({
+        frenteId: 'f-mi',
+        turnoCor: '#2F6FB2',
+        frenteCor: '#7A5AB5',
+        segmentosRecortados: true,
+        segmentos: [{ id: 'seg-1', nome: 'Cabeça e pescoço', cor: '#3E8E5E' }],
+      });
+      expect(de('B')).toMatchObject({
+        segmentosRecortados: false,
+        segmentos: [
+          { id: 'seg-1', nome: 'Cabeça e pescoço', cor: '#3E8E5E' },
+          { id: 'seg-2', nome: 'AVC', cor: null },
+        ],
+      });
+      expect(f.turnos[0]).toMatchObject({ turnoId: 'manha', cor: '#2F6FB2' });
+    });
+
+    it('fila do momento: frente de modalidade não cobre segmento; só o geral também não', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        frentes: {
+          'f-mi': { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null },
+          'f-ct': { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'mod-ct' },
+        },
+        ocorrencias: [
+          oc('A', {
+            frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'mod-ct' },
+          }),
+          oc('B', { subespecialidadeGeral: true }),
+        ],
+        segmentos: { [MI]: ['seg-1'] },
+      };
+      const f = await casos.filaDoMomento.executar();
+      const de = (id: string) => f.medicosEmTurno.find((m) => m.medicoId === id);
+      expect(de('A')).toMatchObject({ frenteId: 'f-ct', frenteCor: null, segmentos: [] });
+      expect(de('B')).toMatchObject({ segmentosRecortados: true, segmentos: [] });
+    });
   });
 });

@@ -6,19 +6,29 @@ import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
 import { horaDeBrasilia } from '../../lib/acesso';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
-import { type MedicoEmTurno, medicosEmTurno, num } from '../../lib/rodada';
+import {
+  type FiltrosEmTurno,
+  filtrarMedicosEmTurno,
+  type MedicoEmTurno,
+  medicosEmTurno,
+  num,
+  opcoesDosFiltros,
+} from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
+import { FiltroMultiplo } from '../escala/FiltroMultiplo';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { SeloCor } from '../selo-cor/SeloCor';
 import { Caixa, CargaDoMedico, TituloSecao, Vazio } from './comum';
 
 const UMA_HORA = 3_600_000;
+const SEM_FILTROS: FiltrosEmTurno = { turnos: [], frentes: [], segmentos: [] };
 
 const semAcento = (t: string) =>
   t
@@ -32,11 +42,44 @@ const COLUNAS = [
     header: 'Médico',
     cell: (i) => <span className="font-medium">{i.getValue()}</span>,
   }),
-  coluna.accessor((m) => m.turnos.join(', '), { id: 'turno', header: 'Turno' }),
-  coluna.accessor((m) => m.frentes.join(', '), {
+  coluna.display({
+    id: 'turno',
+    header: 'Turno',
+    cell: ({ row }) => (
+      <span className="flex flex-wrap gap-1">
+        {row.original.turnos.map((t) => (
+          <SeloCor key={t.id} cor={t.cor}>
+            {t.nome}
+          </SeloCor>
+        ))}
+      </span>
+    ),
+  }),
+  coluna.display({
     id: 'frentes',
     header: 'Frentes',
-    cell: (i) => <span className="text-muted-foreground text-[13px]">{i.getValue()}</span>,
+    cell: ({ row }) => (
+      <span className="flex flex-wrap gap-1">
+        {row.original.frentes.map((f) => {
+          // O recorte de segmento da alocação vem junto da frente ("NEURO · Cabeça e pescoço").
+          const recorte = f.recorte.map((sg) => sg.nome).join(', ');
+          return (
+            <span
+              key={f.id}
+              title={recorte ? `${f.nome} · ${recorte}` : undefined}
+              className="inline-flex max-w-full min-w-0 flex-wrap gap-1"
+            >
+              <SeloCor cor={f.cor}>{f.nome}</SeloCor>
+              {f.recorte.map((sg) => (
+                <SeloCor key={sg.id} cor={sg.cor}>
+                  {sg.nome}
+                </SeloCor>
+              ))}
+            </span>
+          );
+        })}
+      </span>
+    ),
   }),
   coluna.display({
     id: 'carga',
@@ -269,14 +312,28 @@ function MedicosEmTurno({
   irParaEscala?: ReactNode;
 }) {
   const [busca, setBusca] = useState('');
+  const [filtros, setFiltros] = useState<FiltrosEmTurno>(SEM_FILTROS);
+  const opcoes = useMemo(() => opcoesDosFiltros(medicos), [medicos]);
   const termo = semAcento(busca.trim());
-  const filtrados = termo ? medicos.filter((m) => semAcento(m.nome).includes(termo)) : medicos;
+  // Filtros antes da paginação: a contagem do rodapé é a do recorte.
+  const filtrados = filtrarMedicosEmTurno(
+    termo ? medicos.filter((m) => semAcento(m.nome).includes(termo)) : medicos,
+    filtros,
+  );
   const pagina = usePaginaLocal(filtrados, 10);
+  const temFiltroDeLista = Boolean(
+    filtros.turnos.length || filtros.frentes.length || filtros.segmentos.length,
+  );
+  const filtrar = (f: Partial<FiltrosEmTurno>) => {
+    setFiltros((atual) => ({ ...atual, ...f }));
+    pagina.irPara(1);
+  };
 
   return (
     <section aria-labelledby="titulo-medicos-turno" className="flex min-w-0 flex-col gap-3">
-      <TituloSecao titulo="Médicos em turno agora" id="titulo-medicos-turno">
-        {medicos.length > 0 && (
+      <TituloSecao titulo="Médicos em turno agora" id="titulo-medicos-turno" />
+      {medicos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
           <CampoBusca
             rotulo="Buscar médico"
             placeholder="Buscar médico"
@@ -285,10 +342,48 @@ function MedicosEmTurno({
               setBusca(v);
               pagina.irPara(1);
             }}
-            className="w-full sm:w-56"
+            className="flex-[1_1_200px] md:max-w-[240px]"
           />
-        )}
-      </TituloSecao>
+          <FiltroMultiplo
+            rotulo="Turnos"
+            todos="Todos"
+            opcoes={opcoes.turnos}
+            valor={filtros.turnos}
+            onMudar={(turnos) => filtrar({ turnos })}
+            className="flex-[1_1_160px] md:max-w-[220px]"
+          />
+          <FiltroMultiplo
+            rotulo="Frentes"
+            todos="Todas"
+            opcoes={opcoes.frentes}
+            valor={filtros.frentes}
+            onMudar={(frentes) => filtrar({ frentes })}
+            className="flex-[1_1_160px] md:max-w-[220px]"
+          />
+          {opcoes.segmentos.length > 0 && (
+            <FiltroMultiplo
+              rotulo="Subespecialidades"
+              todos="Todas"
+              opcoes={opcoes.segmentos}
+              valor={filtros.segmentos}
+              onMudar={(segmentos) => filtrar({ segmentos })}
+              className="flex-[1_1_200px] md:max-w-[280px]"
+            />
+          )}
+          {(termo || temFiltroDeLista) && (
+            <Button
+              type="button"
+              onClick={() => {
+                setBusca('');
+                filtrar(SEM_FILTROS);
+              }}
+              className={buttonClassName({ variant: 'ghost' })}
+            >
+              Limpar filtros
+            </Button>
+          )}
+        </div>
+      )}
       {medicos.length === 0 ? (
         <Vazio icone={<UsersThree size={28} />} titulo="Ninguém em turno agora" acao={irParaEscala}>
           Nenhum médico habilitado no robô está em turno. Até começar o próximo turno, uma rodada
@@ -301,7 +396,11 @@ function MedicosEmTurno({
               columns={COLUNAS}
               data={pagina.itensDaPagina}
               getRowId={(m) => m.medicoId}
-              emptyMessage="Nenhum médico com esse nome em turno."
+              emptyMessage={
+                temFiltroDeLista
+                  ? 'Nenhum médico em turno com esses filtros.'
+                  : 'Nenhum médico com esse nome em turno.'
+              }
             />
             <Paginacao
               pagina={pagina.pagina}

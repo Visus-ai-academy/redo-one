@@ -160,6 +160,8 @@ export interface TurnoDaFila {
   fim: Date;
   /** Médicos habilitados escalados (sem ausência). */
   medicos: number;
+  /** Cor cadastrada do turno; null = sem cor. */
+  cor: string | null;
   emAndamento: boolean;
 }
 
@@ -197,7 +199,24 @@ export interface FilaDoMomento {
     cargaEmMaos: number;
     turno: string;
     frenteNome: string;
+    /** A frente da escala (`frentes_escala.id`); null = sem cadastro. */
+    frenteId: string | null;
+    turnoCor: string | null;
+    frenteCor: string | null;
+    /**
+     * Os segmentos que a alocação cobre: sem recorte, todos os da especialidade da frente; com
+     * recorte, só os recortados. Frente de modalidade não tem segmento.
+     */
+    segmentos: SegmentoEmTurno[];
+    /** A alocação tem recorte de segmento (a tela o mostra junto da frente). */
+    segmentosRecortados: boolean;
   }[];
+}
+
+export interface SegmentoEmTurno {
+  id: string;
+  nome: string;
+  cor: string | null;
 }
 
 const HORA = 3_600_000;
@@ -240,6 +259,27 @@ export class ConsultarFilaDoMomento {
       return [...mapa].map(([id, c]) => ({ id, ...c }));
     };
     const carga = new Map(entrada.medicos.map((m) => [m.id, m.cargaEmMaos]));
+    const cor = (id: string | null) => (id ? (insumos.cores?.[id] ?? null) : null);
+    const segmento = (id: string): SegmentoEmTurno => ({ id, nome: nome(id, ''), cor: cor(id) });
+    const frenteIdDe = (f: FrenteEscala) =>
+      Object.entries(insumos.frentes).find(
+        ([, x]) =>
+          x.tipo === f.tipo &&
+          x.especialidadeId === f.especialidadeId &&
+          x.modalidadeId === f.modalidadeId,
+      )?.[0] ?? null;
+    // Recorte de segmento: vazio sem o geral = todos; com ele, só os recortados (o geral é o exame
+    // sem segmento, que não casa com nenhum filtro de segmento).
+    const segmentosDe = (o: (typeof insumos.ocorrencias)[number]) => {
+      const recortado = o.subespecialidadeIds.length > 0 || o.subespecialidadeGeral;
+      if (o.frente.tipo !== 'especialidade' || !o.frente.especialidadeId) {
+        return { segmentos: [], recortado };
+      }
+      const ids = recortado
+        ? o.subespecialidadeIds
+        : (insumos.segmentos?.[o.frente.especialidadeId] ?? []);
+      return { segmentos: ids.map(segmento), recortado };
+    };
     const nomeMedico = new Map(insumos.medicos.map((m) => [m.id, m.nome]));
 
     // --- por frente da escala × prioridade da operação ---
@@ -299,6 +339,7 @@ export class ConsultarFilaDoMomento {
         nome: nome(o.turnoId, ''),
         inicio: o.inicio,
         fim: o.fim,
+        cor: cor(o.turnoId),
         medicos: 0,
         emAndamento: false,
         ids: new Set<string>(),
@@ -349,19 +390,27 @@ export class ConsultarFilaDoMomento {
         .filter(
           (o) => !o.ausente && nomeMedico.has(o.medicoId) && o.inicio <= agora && agora < o.fim,
         )
-        .map((o) => ({
-          medicoId: o.medicoId,
-          nome: nomeMedico.get(o.medicoId) ?? '',
-          alocacaoId: o.alocacaoId,
-          turnoId: o.turnoId,
-          frente: o.frente,
-          inicio: o.inicio,
-          fim: o.fim,
-          produtividade: o.produtividade,
-          cargaEmMaos: carga.get(o.medicoId) ?? 0,
-          turno: nome(o.turnoId, ''),
-          frenteNome: nome(o.frente.especialidadeId ?? o.frente.modalidadeId, ''),
-        })),
+        .map((o) => {
+          const { segmentos, recortado } = segmentosDe(o);
+          return {
+            medicoId: o.medicoId,
+            nome: nomeMedico.get(o.medicoId) ?? '',
+            alocacaoId: o.alocacaoId,
+            turnoId: o.turnoId,
+            frente: o.frente,
+            inicio: o.inicio,
+            fim: o.fim,
+            produtividade: o.produtividade,
+            cargaEmMaos: carga.get(o.medicoId) ?? 0,
+            turno: nome(o.turnoId, ''),
+            frenteNome: nome(o.frente.especialidadeId ?? o.frente.modalidadeId, ''),
+            frenteId: frenteIdDe(o.frente),
+            turnoCor: cor(o.turnoId),
+            frenteCor: cor(o.frente.especialidadeId ?? o.frente.modalidadeId),
+            segmentos,
+            segmentosRecortados: recortado,
+          };
+        }),
     };
   }
 }

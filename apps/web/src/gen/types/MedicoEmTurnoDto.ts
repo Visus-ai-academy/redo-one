@@ -4,6 +4,7 @@
 */
 
 import type { FrenteRodadaDto } from './FrenteRodadaDto'
+import type { SegmentoEmTurnoDto } from './SegmentoEmTurnoDto'
 
 export type MedicoEmTurnoDto = {
   /**
@@ -54,4 +55,23 @@ export type MedicoEmTurnoDto = {
    * @type string
    */
   frenteNome: string;
+  /**
+   * @description A frente da escala.
+   *
+   * Format: `uuid`
+   * @type string
+   */
+  frenteId: string | null;
+  turnoCor: string | null;
+  frenteCor: string | null;
+  /**
+   * @description Segmentos que a alocação cobre: sem recorte, todos os da especialidade da frente; com recorte, só os recortados; frente de modalidade, nenhum.
+   * @type array
+   */
+  segmentos: SegmentoEmTurnoDto[];
+  /**
+   * @description A alocação tem recorte de segmento.
+   * @type boolean
+   */
+  segmentosRecortados: boolean;
 };

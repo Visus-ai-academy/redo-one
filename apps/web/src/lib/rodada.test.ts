@@ -1,20 +1,35 @@
 import { describe, expect, it } from 'vitest';
 
+import { medicoEmTurno } from '../components/rodada/teste-dados';
+import type { MedicoEmTurnoDto } from '../gen/types/MedicoEmTurnoDto';
+
 import {
   cargaDoMedico,
   descreverRecortes,
   etapasDaRodada,
+  filtrarMedicosEmTurno,
   funilDosExames,
   funilDosMedicos,
   intervaloDaRodada,
   juntarNomes,
   medicosEmTurno,
+  opcoesDosFiltros,
   rotuloMotivo,
   situacaoDaRodada,
   tituloDaRodada,
 } from './rodada';
 
 const agora = new Date('2026-11-18T14:00:00Z'); // 11:00 em Brasília
+const CABECA = { id: 'cab', nome: 'Cabeça e pescoço', cor: '#3E8E5E' };
+const AVC = { id: 'avc', nome: 'AVC', cor: null };
+const oc = (p: Partial<MedicoEmTurnoDto>): MedicoEmTurnoDto =>
+  medicoEmTurno('m1', 'Helena', 18, 60, {
+    alocacaoId: 'a',
+    turnoId: 't',
+    frenteId: 'f-mi',
+    frenteNome: 'MEDICINA INTERNA',
+    ...p,
+  });
 
 describe('rodada do robô na tela', () => {
   it('situação com rótulo e tom; consulta a cada 4 s só nas etapas que andam sozinhas', () => {
@@ -162,44 +177,76 @@ describe('rodada do robô na tela', () => {
   });
 
   it('médicos em turno: um por médico, com os turnos e frentes juntos e o maior teto', () => {
-    const oc = (p: Partial<Parameters<typeof medicosEmTurno>[0][number]>) => ({
-      medicoId: 'm1',
-      nome: 'Helena',
-      alocacaoId: 'a',
-      turnoId: 't',
-      frente: { tipo: 'especialidade' as const, especialidadeId: 'e', modalidadeId: null },
-      inicio: '',
-      fim: '',
-      produtividade: 60,
-      cargaEmMaos: 18,
-      turno: 'Manhã',
-      frenteNome: 'MEDICINA INTERNA',
-      ...p,
-    });
     expect(
       medicosEmTurno([
         oc({}),
-        oc({ frenteNome: 'CT', produtividade: 90 }),
-        oc({ medicoId: 'm2', nome: 'Ana', turno: 'Lista', produtividade: null }),
+        oc({ frenteId: 'f-ct', frenteNome: 'CT', frenteCor: null, produtividade: 90 }),
+        oc({ medicoId: 'm2', nome: 'Ana', turnoId: 't2', turno: 'Lista', produtividade: null }),
       ]),
     ).toEqual([
-      {
+      expect.objectContaining({
         medicoId: 'm2',
         nome: 'Ana',
-        turnos: ['Lista'],
-        frentes: ['MEDICINA INTERNA'],
+        turnos: [{ id: 't2', nome: 'Lista', cor: '#2F6FB2' }],
+        frentes: [{ id: 'f-mi', nome: 'MEDICINA INTERNA', cor: '#7A5AB5', recorte: [] }],
         cargaEmMaos: 18,
         teto: null,
-      },
-      {
+      }),
+      expect.objectContaining({
         medicoId: 'm1',
-        nome: 'Helena',
-        turnos: ['Manhã'],
-        frentes: ['MEDICINA INTERNA', 'CT'],
-        cargaEmMaos: 18,
+        turnos: [{ id: 't', nome: 'Manhã', cor: '#2F6FB2' }],
+        frentes: [
+          { id: 'f-mi', nome: 'MEDICINA INTERNA', cor: '#7A5AB5', recorte: [] },
+          { id: 'f-ct', nome: 'CT', cor: null, recorte: [] },
+        ],
         teto: 90,
-      },
+      }),
     ]);
+  });
+
+  it('médicos em turno: o recorte de segmento aparece na frente; sem recorte em outro período, some', () => {
+    const [helena] = medicosEmTurno([oc({ segmentosRecortados: true, segmentos: [CABECA] })]);
+    expect(helena?.frentes[0]?.recorte).toEqual([CABECA]);
+    const [junto] = medicosEmTurno([
+      oc({ segmentosRecortados: true, segmentos: [CABECA] }),
+      oc({ alocacaoId: 'b', segmentos: [CABECA, AVC] }),
+    ]);
+    expect(junto?.frentes[0]?.recorte).toEqual([]);
+  });
+
+  it('filtros dos médicos em turno: opções dos dados; turno e frente por qualquer um; segmento pelo que a frente cobre', () => {
+    const medicos = medicosEmTurno([
+      oc({ segmentos: [CABECA, AVC] }),
+      oc({
+        medicoId: 'm2',
+        nome: 'Ana',
+        turnoId: 't2',
+        turno: 'Tarde',
+        segmentosRecortados: true,
+        segmentos: [AVC],
+      }),
+      oc({
+        medicoId: 'm3',
+        nome: 'Caio',
+        frenteId: 'f-ct',
+        frenteNome: 'CT',
+        frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'ct' },
+      }),
+    ]);
+    const opcoes = opcoesDosFiltros(medicos);
+    expect(opcoes.turnos.map((o) => o.rotulo)).toEqual(['Manhã', 'Tarde']);
+    expect(opcoes.frentes.map((o) => o.rotulo)).toEqual(['CT', 'MEDICINA INTERNA']);
+    expect(opcoes.segmentos).toEqual([
+      { valor: 'avc', rotulo: 'AVC', cor: null },
+      { valor: 'cab', rotulo: 'Cabeça e pescoço', cor: '#3E8E5E' },
+    ]);
+    const nomes = (f: Parameters<typeof filtrarMedicosEmTurno>[1]) =>
+      filtrarMedicosEmTurno(medicos, f).map((m) => m.nome);
+    expect(nomes({ turnos: ['t2'], frentes: [], segmentos: [] })).toEqual(['Ana']);
+    expect(nomes({ turnos: [], frentes: ['f-ct', 'f-mi'], segmentos: [] })).toHaveLength(3);
+    expect(nomes({ turnos: [], frentes: [], segmentos: ['cab'] })).toEqual(['Helena']);
+    expect(nomes({ turnos: [], frentes: [], segmentos: ['avc'] })).toEqual(['Ana', 'Helena']);
+    expect(nomes({ turnos: ['t'], frentes: [], segmentos: ['avc'] })).toEqual(['Helena']);
   });
 
   it('carga do médico depois da rodada, contra o teto', () => {

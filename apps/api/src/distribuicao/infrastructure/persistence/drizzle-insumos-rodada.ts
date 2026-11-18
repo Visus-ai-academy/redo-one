@@ -79,7 +79,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       listaArranjos,
       listaEquipes,
       membros,
-      nomes,
+      { nomes, cores },
       cadastros,
       examesSub,
       subsEsp,
@@ -104,7 +104,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         .from(equipes)
         .where(eq(equipes.ativo, true)),
       db.select().from(equipesMembros),
-      this.nomes(),
+      this.nomesECores(),
       new DrizzleCadastrosIngestao(db).carregar(),
       db
         .select({ id: exames.id, subespecialidadeId: exames.subespecialidadeId })
@@ -283,23 +283,48 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         gradeRecebimento,
         prioridadesCliente,
         nomes,
+        cores,
+        segmentos: Object.fromEntries(
+          [...new Set(subsEsp.map((s) => s.especialidadeId))].map((e) => [
+            e,
+            subsEsp.filter((s) => s.especialidadeId === e).map((s) => s.subespecialidadeId),
+          ]),
+        ),
       },
     };
   }
 
-  /** Nomes para os textos da rodada (prioridades, frentes, segmentos, clientes, turnos). */
-  private async nomes(): Promise<Record<string, string>> {
+  /**
+   * Nomes para os textos da rodada (prioridades, frentes, segmentos, clientes, turnos) e as cores
+   * cadastradas das listas (turnos, especialidades, modalidades, segmentos).
+   */
+  private async nomesECores(): Promise<{
+    nomes: Record<string, string>;
+    cores: Record<string, string | null>;
+  }> {
     const db = this.db;
     const [esp, mod, sub, cli, tur, ops] = await Promise.all([
-      db.select({ id: especialidades.id, nome: especialidades.nome }).from(especialidades),
-      db.select({ id: modalidades.id, nome: modalidades.codigo }).from(modalidades),
-      db.select({ id: subespecialidades.id, nome: subespecialidades.nome }).from(subespecialidades),
+      db
+        .select({ id: especialidades.id, nome: especialidades.nome, cor: especialidades.cor })
+        .from(especialidades),
+      db
+        .select({ id: modalidades.id, nome: modalidades.codigo, cor: modalidades.cor })
+        .from(modalidades),
+      db
+        .select({
+          id: subespecialidades.id,
+          nome: subespecialidades.nome,
+          cor: subespecialidades.cor,
+        })
+        .from(subespecialidades),
       db.select({ id: clientes.id, nome: clientes.nome }).from(clientes),
-      db.select({ id: turnos.id, nome: turnos.nome }).from(turnos),
+      db.select({ id: turnos.id, nome: turnos.nome, cor: turnos.cor }).from(turnos),
       new DrizzlePrioridadesOperacaoRepository(db).listar(),
     ]);
-    return Object.fromEntries(
-      [...esp, ...mod, ...sub, ...cli, ...tur, ...ops].map((x) => [x.id, x.nome]),
-    );
+    const comCor = [...esp, ...mod, ...sub, ...tur];
+    return {
+      nomes: Object.fromEntries([...comCor, ...cli, ...ops].map((x) => [x.id, x.nome])),
+      cores: Object.fromEntries(comCor.map((x) => [x.id, x.cor])),
+    };
   }
 }

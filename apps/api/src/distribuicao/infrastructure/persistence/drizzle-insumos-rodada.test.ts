@@ -106,6 +106,21 @@ describe.skipIf(!url)('insumos da rodada (banco)', () => {
     expect(insumos.nomes[ids.mi ?? '']).toBe('MEDICINA INTERNA');
   });
 
+  it('cores das listas e os segmentos de cada especialidade, para a tela', async () => {
+    await db.update(schema.especialidades).set({ cor: '#7A5AB5' });
+    const seg = await primeiro(
+      db.insert(schema.subespecialidades).values({ nome: 'TORAX', cor: '#3E8E5E' }).returning(),
+    );
+    await db
+      .insert(schema.subespecialidadesEspecialidades)
+      .values({ subespecialidadeId: seg ?? '', especialidadeId: ids.mi ?? '' });
+    const { insumos } = await new DrizzleInsumosRodada(db, semEscala).carregar(agora);
+    expect(insumos.cores?.[ids.mi ?? '']).toBe('#7A5AB5');
+    expect(insumos.cores?.[ids.ct ?? '']).toBeNull();
+    expect(insumos.cores?.[seg ?? '']).toBe('#3E8E5E');
+    expect(insumos.segmentos?.[ids.mi ?? '']).toEqual([seg]);
+  });
+
   it('casa o texto da MobileMed com o catálogo pelas regras da ingestão', async () => {
     const { catalogo } = await new DrizzleInsumosRodada(db, semEscala).carregar(agora);
     expect(

@@ -249,34 +249,99 @@ export function funilDosMedicos(f: FunilMedicosDto): LinhaFunilMedicos[] {
   ];
 }
 
+/** Turno, frente ou segmento com a cor cadastrada (null = selo neutro). */
+export type ItemComCor = { id: string; nome: string; cor: string | null };
+
+export type FrenteEmTurno = ItemComCor & {
+  /** Os segmentos recortados na alocação; vazio = a frente inteira. */
+  recorte: ItemComCor[];
+};
+
 export type MedicoEmTurno = {
   medicoId: string;
   nome: string;
-  turnos: string[];
-  frentes: string[];
+  turnos: ItemComCor[];
+  frentes: FrenteEmTurno[];
+  /** Os segmentos que alguma frente dele cobre (o filtro de subespecialidade). */
+  segmentos: ItemComCor[];
   cargaEmMaos: number;
   /** O maior teto (produtividade) entre os períodos em andamento; null = desconhecido. */
   teto: number | null;
 };
 
+const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompare(b.nome, 'pt-BR');
+
+const juntarItem = (lista: ItemComCor[], item: ItemComCor) => {
+  if (!lista.some((x) => x.id === item.id)) lista.push(item);
+};
+
 /** Um por médico (ele pode ter vários períodos agora), em ordem de nome. */
 export function medicosEmTurno(lista: readonly MedicoEmTurnoDto[]): MedicoEmTurno[] {
   const porId = new Map<string, MedicoEmTurno>();
+  // Frente do médico com algum período sem recorte: vale a frente inteira.
+  const frenteInteira = new Set<string>();
   for (const o of lista) {
     const m = porId.get(o.medicoId) ?? {
       medicoId: o.medicoId,
       nome: o.nome,
       turnos: [],
       frentes: [],
+      segmentos: [],
       cargaEmMaos: o.cargaEmMaos,
       teto: null,
     };
-    if (!m.turnos.includes(o.turno)) m.turnos.push(o.turno);
-    if (!m.frentes.includes(o.frenteNome)) m.frentes.push(o.frenteNome);
+    juntarItem(m.turnos, { id: o.turnoId, nome: o.turno, cor: o.turnoCor });
+    const idFrente = o.frenteId ?? o.frenteNome;
+    let frente = m.frentes.find((f) => f.id === idFrente);
+    if (!frente) {
+      frente = { id: idFrente, nome: o.frenteNome, cor: o.frenteCor, recorte: [] };
+      m.frentes.push(frente);
+    }
+    const chave = `${o.medicoId}|${idFrente}`;
+    if (!o.segmentosRecortados) {
+      frenteInteira.add(chave);
+      frente.recorte = [];
+    } else if (!frenteInteira.has(chave)) {
+      for (const sg of o.segmentos) juntarItem(frente.recorte, sg);
+    }
+    for (const sg of o.segmentos) juntarItem(m.segmentos, sg);
     if (o.produtividade !== null) m.teto = Math.max(m.teto ?? 0, o.produtividade);
     porId.set(o.medicoId, m);
   }
-  return [...porId.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return [...porId.values()].sort(porNome);
+}
+
+export type OpcaoComCor = { valor: string; rotulo: string; cor: string | null };
+
+const opcoes = (itens: ItemComCor[]): OpcaoComCor[] => {
+  const unicos = new Map<string, ItemComCor>();
+  for (const i of itens) unicos.set(i.id, i);
+  return [...unicos.values()]
+    .sort(porNome)
+    .map((i) => ({ valor: i.id, rotulo: i.nome, cor: i.cor }));
+};
+
+/** As opções dos filtros saem de quem está em turno: turnos, frentes e os segmentos cobertos. */
+export function opcoesDosFiltros(medicos: readonly MedicoEmTurno[]) {
+  return {
+    turnos: opcoes(medicos.flatMap((m) => m.turnos)),
+    frentes: opcoes(medicos.flatMap((m) => m.frentes)),
+    segmentos: opcoes(medicos.flatMap((m) => m.segmentos)),
+  };
+}
+
+export type FiltrosEmTurno = { turnos: string[]; frentes: string[]; segmentos: string[] };
+
+/**
+ * Cada filtro marcado precisa casar (e entre eles): o médico com ao menos um turno ou frente
+ * escolhido, e com alguma frente que cubra o segmento escolhido.
+ */
+export function filtrarMedicosEmTurno(medicos: readonly MedicoEmTurno[], f: FiltrosEmTurno) {
+  const casa = (marcados: string[], itens: ItemComCor[]) =>
+    !marcados.length || itens.some((i) => marcados.includes(i.id));
+  return medicos.filter(
+    (m) => casa(f.turnos, m.turnos) && casa(f.frentes, m.frentes) && casa(f.segmentos, m.segmentos),
+  );
 }
 
 /** A carga do médico depois da rodada (o que já tem aberto + o proposto) contra o teto. */

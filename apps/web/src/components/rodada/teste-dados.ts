@@ -1,6 +1,13 @@
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
+import type { MedicoEmTurnoDto } from '../../gen/types/MedicoEmTurnoDto';
 
-export const medicoEmTurno = (medicoId: string, nome: string, carga: number, teto: number) => ({
+export const medicoEmTurno = (
+  medicoId: string,
+  nome: string,
+  carga: number,
+  teto: number,
+  p: Partial<MedicoEmTurnoDto> = {},
+): MedicoEmTurnoDto => ({
   medicoId,
   nome,
   alocacaoId: `a-${medicoId}`,
@@ -12,6 +19,12 @@ export const medicoEmTurno = (medicoId: string, nome: string, carga: number, tet
   cargaEmMaos: carga,
   turno: 'Manhã',
   frenteNome: 'NEURO',
+  frenteId: 'f1',
+  turnoCor: '#2F6FB2',
+  frenteCor: '#7A5AB5',
+  segmentos: [],
+  segmentosRecortados: false,
+  ...p,
 });
 
 export const FILA: FilaDoMomentoDto = {

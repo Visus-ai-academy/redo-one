@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { frenteRodadaDtoSchema } from './frenteRodadaDtoSchema'
+import { segmentoEmTurnoDtoSchema } from './segmentoEmTurnoDtoSchema'
 
 export const medicoEmTurnoDtoSchema = z.object({
   medicoId: z.uuid(),
@@ -18,6 +19,11 @@ export const medicoEmTurnoDtoSchema = z.object({
   cargaEmMaos: z.int().describe('Exames com ele ainda não laudados.'),
   turno: z.string().describe('Nome do turno.'),
   frenteNome: z.string().describe('Nome da frente (especialidade ou modalidade).'),
+  frenteId: z.uuid().nullable().describe('A frente da escala.'),
+  turnoCor: z.string().nullable(),
+  frenteCor: z.string().nullable(),
+  segmentos: z.array(segmentoEmTurnoDtoSchema).describe('Segmentos que a alocação cobre: sem recorte, todos os da especialidade da frente; com recorte, só os recortados; frente de modalidade, nenhum.'),
+  segmentosRecortados: z.boolean().describe('A alocação tem recorte de segmento.'),
 })
 
 export type MedicoEmTurnoDtoSchemaType = z.infer<typeof medicoEmTurnoDtoSchema>

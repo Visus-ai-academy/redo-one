@@ -12,6 +12,7 @@ export const turnoDaFilaDtoSchema = z.object({
   fim: z.iso.datetime(),
   medicos: z.int().describe('Médicos habilitados escalados.'),
   emAndamento: z.boolean(),
+  cor: z.string().nullable().describe('Cor cadastrada; null = sem cor.'),
 })
 
 export type TurnoDaFilaDtoSchemaType = z.infer<typeof turnoDaFilaDtoSchema>

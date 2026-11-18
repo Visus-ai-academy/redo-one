@@ -15649,6 +15649,11 @@
           },
           "emAndamento": {
             "type": "boolean"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cor cadastrada; null = sem cor."
           }
         },
         "required": [
@@ -15657,7 +15662,8 @@
           "inicio",
           "fim",
           "medicos",
-          "emAndamento"
+          "emAndamento",
+          "cor"
         ]
       },
       "ContagemEspecialidadeDto": {
@@ -15744,6 +15750,28 @@
           "modalidadeId"
         ]
       },
+      "SegmentoEmTurnoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cor cadastrada; null = sem cor."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor"
+        ]
+      },
       "MedicoEmTurnoDto": {
         "type": "object",
         "properties": {
@@ -15788,6 +15816,31 @@
           "frenteNome": {
             "type": "string",
             "description": "Nome da frente (especialidade ou modalidade)."
+          },
+          "frenteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "A frente da escala."
+          },
+          "turnoCor": {
+            "type": "string",
+            "nullable": true
+          },
+          "frenteCor": {
+            "type": "string",
+            "nullable": true
+          },
+          "segmentos": {
+            "description": "Segmentos que a alocação cobre: sem recorte, todos os da especialidade da frente; com recorte, só os recortados; frente de modalidade, nenhum.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SegmentoEmTurnoDto"
+            }
+          },
+          "segmentosRecortados": {
+            "type": "boolean",
+            "description": "A alocação tem recorte de segmento."
           }
         },
         "required": [
@@ -15801,7 +15854,12 @@
           "produtividade",
           "cargaEmMaos",
           "turno",
-          "frenteNome"
+          "frenteNome",
+          "frenteId",
+          "turnoCor",
+          "frenteCor",
+          "segmentos",
+          "segmentosRecortados"
         ]
       },
       "FilaDoMomentoDto": {

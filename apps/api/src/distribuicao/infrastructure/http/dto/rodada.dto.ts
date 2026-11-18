@@ -492,6 +492,13 @@ export class ContagemModalidadeDto {
   @ApiProperty({ type: 'integer' }) urgentes!: number;
 }
 
+export class SegmentoEmTurnoDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Cor cadastrada; null = sem cor.' })
+  cor!: string | null;
+}
+
 export class MedicoEmTurnoDto {
   @ApiProperty({ format: 'uuid' }) medicoId!: string;
   @ApiProperty() nome!: string;
@@ -506,6 +513,18 @@ export class MedicoEmTurnoDto {
   @ApiProperty({ description: 'Nome do turno.' }) turno!: string;
   @ApiProperty({ description: 'Nome da frente (especialidade ou modalidade).' })
   frenteNome!: string;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'A frente da escala.' })
+  frenteId!: string | null;
+  @ApiProperty({ type: String, nullable: true }) turnoCor!: string | null;
+  @ApiProperty({ type: String, nullable: true }) frenteCor!: string | null;
+  @ApiProperty({
+    type: [SegmentoEmTurnoDto],
+    description:
+      'Segmentos que a alocação cobre: sem recorte, todos os da especialidade da frente; com recorte, só os recortados; frente de modalidade, nenhum.',
+  })
+  segmentos!: SegmentoEmTurnoDto[];
+  @ApiProperty({ description: 'A alocação tem recorte de segmento.' })
+  segmentosRecortados!: boolean;
 }
 
 export class ContagemFrentePrioridadeDto {
@@ -539,6 +558,8 @@ export class TurnoDaFilaDto {
   @ApiProperty({ type: String, format: 'date-time' }) fim!: Date;
   @ApiProperty({ type: 'integer', description: 'Médicos habilitados escalados.' }) medicos!: number;
   @ApiProperty() emAndamento!: boolean;
+  @ApiProperty({ type: String, nullable: true, description: 'Cor cadastrada; null = sem cor.' })
+  cor!: string | null;
 }
 
 export class FilaDoMomentoDto {

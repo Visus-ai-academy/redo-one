@@ -29,4 +29,9 @@ export type TurnoDaFilaDto = {
    */
   medicos: number;
   emAndamento: boolean;
+  /**
+   * @description Cor cadastrada; null = sem cor.
+   * @type string
+   */
+  cor: string | null;
 };

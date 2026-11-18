@@ -118,6 +118,10 @@ export interface InsumosRodada {
   prioridadesCliente: PrioridadeCliente[];
   /** Id → nome, só para os textos (prioridades, clientes, frentes, segmentos). */
   nomes: Readonly<Record<string, string>>;
+  /** Id → cor cadastrada (turnos, especialidades, modalidades, segmentos), só para a tela. */
+  cores?: Readonly<Record<string, string | null>>;
+  /** Especialidade → os segmentos (subespecialidades) dela, só para a tela. */
+  segmentos?: Readonly<Record<string, readonly string[]>>;
 }
 
 /** O que as rodadas anteriores já entregaram. */

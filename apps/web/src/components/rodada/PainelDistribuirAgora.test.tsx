@@ -17,6 +17,7 @@ const fila: FilaDoMomentoDto = {
       fim: '2026-11-18T16:00:00Z',
       medicos: 12,
       emAndamento: true,
+      cor: null,
     },
     {
       turnoId: 't2',
@@ -25,6 +26,7 @@ const fila: FilaDoMomentoDto = {
       fim: '2026-11-18T22:00:00Z',
       medicos: 3,
       emAndamento: false,
+      cor: null,
     },
   ],
 };
