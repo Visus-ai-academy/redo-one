@@ -135,8 +135,11 @@ export function EditorPermissoes({
       {grupos.length === 0 ? (
         <p className="text-muted-foreground">Nenhuma tela com “{termo.trim()}”.</p>
       ) : (
-        // No celular a matriz rola na horizontal dentro do cartão, com o nome da tela fixo.
-        <div className="overflow-x-auto rounded-md border">
+        // No celular a matriz rola na horizontal dentro do cartão, com o nome da tela fixo. O
+        // `isolate` prende o z-index do nome dentro da matriz, para ele não passar por cima do
+        // rodapé fixo do cartão; o `relative` faz a rolagem cortar também os textos `sr-only`
+        // (absolutos), que senão alargam a página no celular.
+        <div className="relative isolate overflow-x-auto rounded-md border">
           <div className="min-w-[600px]">
             <table className="w-full table-fixed border-collapse text-[13px]">
               <Colunas />

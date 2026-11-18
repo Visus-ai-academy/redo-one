@@ -331,4 +331,18 @@ describe('EditarPapel', () => {
       expect(onSalvo).toHaveBeenCalledWith({ id: 'p-fin', sessoesEncerradas: 3, meuPapel: true }),
     );
   });
+
+  // O nome da tela fica fixo à esquerda (z-index) ao rolar a matriz na horizontal; o rodapé fixo
+  // embaixo tem de ficar por cima dele, senão as últimas linhas aparecem através do rodapé.
+  it('o rodapé fixo fica por cima da matriz e o cartão não passa da largura da tela', async () => {
+    montar();
+
+    const secao = await screen.findByRole('region', { name: 'Financeiro' });
+    const matriz = within(secao).getByRole('columnheader', { name: 'Tela' });
+    const rodape = within(secao).getByText('1 permissão em 1 tela').closest('.sticky');
+    // `relative` faz a rolagem horizontal cortar também os textos de leitor de tela (absolutos).
+    expect(matriz.closest('.overflow-x-auto')).toHaveClass('isolate', 'relative');
+    expect(rodape).toHaveClass('bottom-0', 'z-10', 'bg-card', 'border-t');
+    expect(secao).toHaveClass('w-full');
+  });
 });
