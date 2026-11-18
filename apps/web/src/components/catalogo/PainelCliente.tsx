@@ -39,6 +39,8 @@ export type PainelClienteProps = {
   onFechar: () => void;
   /** Conteúdo da aba Histórico; sem ele (ou criando), o painel fica sem abas. */
   historico?: ReactNode;
+  /** Conteúdo da aba Distribuição (prioridade na fila); sem ele (sem permissão), a aba não aparece. */
+  distribuicao?: ReactNode;
 };
 
 const TIPOS_APELIDO = {
@@ -88,6 +90,7 @@ export function PainelCliente({
   unificacao,
   onFechar,
   historico,
+  distribuicao,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
   const form = useAppForm({
@@ -150,6 +153,11 @@ export function PainelCliente({
     >
       <AbasComHistorico
         historico={cliente ? historico : undefined}
+        extras={
+          cliente && distribuicao
+            ? [{ valor: 'distribuicao', rotulo: 'Distribuição', conteudo: distribuicao }]
+            : undefined
+        }
         aria-label="Partes do cadastro do cliente"
       >
         {podeEditar ? (

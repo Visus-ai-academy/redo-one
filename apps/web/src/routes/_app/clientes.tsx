@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelCliente } from '../../components/catalogo/PainelCliente';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { AbaDistribuicaoCliente } from '../../components/distribuicao/AbaDistribuicaoCliente';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
@@ -234,6 +235,7 @@ function Painel({
 }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
+  const { sessao } = Route.useRouteContext();
   const consulta = useQuery({
     ...clientesControllerObterQueryOptions({ path: { id: id ?? '' } }),
     enabled: Boolean(id),
@@ -258,6 +260,15 @@ function Painel({
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
       historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
+      distribuicao={
+        id && pode(sessao, 'clientes.distribuicao.ver') ? (
+          <AbaDistribuicaoCliente
+            key={id}
+            clienteId={id}
+            podeEditar={pode(sessao, 'clientes.distribuicao.editar')}
+          />
+        ) : undefined
+      }
       onSalvar={async (body) => {
         let alvo = id;
         if (id) await clientesControllerAtualizar({ path: { id }, body }).unwrap();

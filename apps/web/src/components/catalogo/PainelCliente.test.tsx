@@ -125,6 +125,15 @@ describe('PainelCliente', () => {
     expect(screen.queryByRole('textbox', { name: 'Nome na MobileMed' })).not.toBeInTheDocument();
   });
 
+  it('com a distribuição, a aba fica entre o Cadastro e o Histórico', () => {
+    montar({ cliente, historico: <p>h</p>, distribuicao: <p>prioridade do cliente</p> });
+    expect(screen.getAllByRole('tab').map((aba) => aba.textContent)).toEqual([
+      'Cadastro',
+      'Distribuição',
+      'Histórico',
+    ]);
+  });
+
   it('criando, sem abas', () => {
     montar({ historico: <p>conteúdo do histórico</p> });
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
