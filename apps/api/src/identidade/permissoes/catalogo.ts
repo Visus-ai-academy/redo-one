@@ -113,6 +113,24 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Liberar a proposta para o robô atribuir os exames.',
         sensivel: true,
       },
+      {
+        chave: 'distribuicao.rodada.ajustar',
+        rotulo: 'Ajustar proposta',
+        descricao: 'Na conferência, tirar exames da proposta ou mandá-los para outro médico.',
+      },
+      {
+        chave: 'distribuicao.rodada.controlar',
+        rotulo: 'Controlar rodada',
+        descricao:
+          'Pausar, retomar, encerrar, cancelar, ler a fila de novo e trocar os médicos da rodada.',
+      },
+      // Dado de paciente (LGPD): cada leitura do nome é auditada.
+      {
+        chave: 'distribuicao.paciente.ver',
+        rotulo: 'Ver paciente',
+        descricao: 'Ver o nome do paciente na conferência da rodada (lido na MobileMed na hora).',
+        sensivel: true,
+      },
     ],
   },
   {

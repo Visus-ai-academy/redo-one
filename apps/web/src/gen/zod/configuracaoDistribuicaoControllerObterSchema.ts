@@ -4,9 +4,9 @@
 */
 
 import * as z from 'zod'
-import { configuracaoDistribuicaoDtoSchema } from './configuracaoDistribuicaoDtoSchema'
+import { configuracaoDistribuicaoRespostaDtoSchema } from './configuracaoDistribuicaoRespostaDtoSchema'
 
-export const configuracaoDistribuicaoControllerObterStatus200Schema = configuracaoDistribuicaoDtoSchema
+export const configuracaoDistribuicaoControllerObterStatus200Schema = configuracaoDistribuicaoRespostaDtoSchema
 
 export type ConfiguracaoDistribuicaoControllerObterStatus200SchemaType = z.infer<typeof configuracaoDistribuicaoControllerObterStatus200Schema>
 

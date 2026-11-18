@@ -7207,6 +7207,539 @@
         ]
       }
     },
+    "/distribuicao/rodadas/viva": {
+      "get": {
+        "operationId": "RodadasController_viva",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RodadaVivaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas": {
+      "get": {
+        "operationId": "RodadasController_historico",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Histórico, da mais nova à mais antiga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRodadasDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "post": {
+        "operationId": "RodadasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecortesRodadaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Robô desligado ou nenhum médico habilitado."
+          },
+          "403": {
+            "description": "Recorte fora do da gestora de escala."
+          },
+          "409": {
+            "description": "Já existe uma rodada em andamento."
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/fila": {
+      "get": {
+        "operationId": "RodadasController_fila",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A fila agora (antes de distribuir): contagens e quem está em turno.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilaDoMomentoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}": {
+      "get": {
+        "operationId": "RodadasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RodadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/situacao": {
+      "get": {
+        "operationId": "RodadasController_situacao",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leve: para o polling de 3–5 s.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituacaoRodadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/designacoes": {
+      "get": {
+        "operationId": "RodadasController_designacoes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/StatusDesignacao"
+              }
+            }
+          },
+          {
+            "name": "medicoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "prioridadeOperacaoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "especialidadeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "modalidadeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Trecho do estudo ou da unidade.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDesignacoesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/proposta": {
+      "patch": {
+        "operationId": "RodadasController_ajustarProposta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjustePropostaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Tira e move exames previstos (antes de aprovar)."
+          },
+          "400": {
+            "description": ""
+          },
+          "409": {
+            "description": "A rodada não aguarda aprovação."
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/aprovar": {
+      "post": {
+        "operationId": "RodadasController_aprovar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Aprovada: a execução foi enfileirada."
+          },
+          "409": {
+            "description": "Proposta expirada ou rodada em outro estado."
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/pausar": {
+      "post": {
+        "operationId": "RodadasController_pausar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/retomar": {
+      "post": {
+        "operationId": "RodadasController_retomar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "As falhas retentáveis voltam à fila junto."
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/encerrar": {
+      "post": {
+        "operationId": "RodadasController_encerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "O feito conta; o que falta fica para a próxima."
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/cancelar": {
+      "post": {
+        "operationId": "RodadasController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/reler": {
+      "post": {
+        "operationId": "RodadasController_reler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Lê a fila de novo (só sem nada atribuído)."
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/{id}/medicos": {
+      "put": {
+        "operationId": "RodadasController_medicos",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicosRodadaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Antes da leitura só grava; com a proposta pronta, lê a fila de novo."
+          },
+          "400": {
+            "description": ""
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/distribuicao/medicos/{medicoId}": {
       "get": {
         "operationId": "DistribuicaoMedicoController_obter",
@@ -7479,7 +8012,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfiguracaoDistribuicaoDto"
+                  "$ref": "#/components/schemas/ConfiguracaoDistribuicaoRespostaDto"
                 }
               }
             }
@@ -14449,6 +14982,913 @@
           "retencaoLinhasBrutasDias"
         ]
       },
+      "StatusRodada": {
+        "type": "string",
+        "enum": [
+          "solicitada",
+          "lendo",
+          "aguardando_aprovacao",
+          "aprovada",
+          "executando",
+          "pausada",
+          "parcial",
+          "concluida",
+          "expirada",
+          "cancelada",
+          "falhou"
+        ]
+      },
+      "EventoRodadaDto": {
+        "type": "object",
+        "properties": {
+          "em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "atual": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Com `total`: a barra."
+          },
+          "total": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "em",
+          "texto",
+          "atual",
+          "total"
+        ]
+      },
+      "ContagemDesignacoesDto": {
+        "type": "object",
+        "properties": {
+          "prevista": {
+            "type": "integer"
+          },
+          "executada": {
+            "type": "integer"
+          },
+          "pulada": {
+            "type": "integer"
+          },
+          "falhou": {
+            "type": "integer"
+          },
+          "recusada": {
+            "type": "integer"
+          },
+          "retentaveis": {
+            "type": "integer",
+            "description": "Puladas ou falhas que o \"Retomar\" tenta de novo."
+          }
+        },
+        "required": [
+          "prevista",
+          "executada",
+          "pulada",
+          "falhou",
+          "recusada",
+          "retentaveis"
+        ]
+      },
+      "RotuloRodadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "RecortesRodadaDto": {
+        "type": "object",
+        "properties": {
+          "turnoIds": {
+            "description": "Turnos da escala.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "frenteIds": {
+            "description": "Frentes da escala (`/escala/frentes`).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prioridadeOperacaoIds": {
+            "description": "Prioridades da operação (Configurações › Distribuição).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "clienteIds": {
+            "description": "Clientes: só os exames deles são distribuídos.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "medicosExcluidos": {
+            "description": "Médicos que ficam de fora da rodada.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "medicosIncluidos": {
+            "description": "Médicos que entram mesmo fora dos turnos e das frentes do recorte.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "turnoIds",
+          "frenteIds",
+          "prioridadeOperacaoIds",
+          "clienteIds",
+          "medicosExcluidos",
+          "medicosIncluidos"
+        ]
+      },
+      "RodadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusRodada"
+              }
+            ]
+          },
+          "expiraEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "erro": {
+            "type": "string",
+            "nullable": true
+          },
+          "progresso": {
+            "nullable": true,
+            "description": "Último evento com barra (execução); nulo fora dela.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EventoRodadaDto"
+              }
+            ]
+          },
+          "contagens": {
+            "$ref": "#/components/schemas/ContagemDesignacoesDto"
+          },
+          "solicitadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "aprovadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "aprovadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lidaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Instante da leitura da fila (o minuto da escala que valeu)."
+          },
+          "avisos": {
+            "description": "Avisos da proposta (catálogo, cliente, grafia sem de-para, teto, escala).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lidos": {
+            "type": "integer",
+            "description": "Exames lidos da fila sem médico."
+          },
+          "urgentes": {
+            "type": "integer",
+            "description": "Desses, os tratados como urgência."
+          },
+          "recortes": {
+            "$ref": "#/components/schemas/RecortesRodadaDto"
+          },
+          "eventos": {
+            "description": "O diário, do mais antigo ao mais novo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventoRodadaDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "expiraEm",
+          "erro",
+          "progresso",
+          "contagens",
+          "solicitadaPor",
+          "aprovadaPor",
+          "aprovadaEm",
+          "criadoEm",
+          "lidaEm",
+          "avisos",
+          "lidos",
+          "urgentes",
+          "recortes",
+          "eventos"
+        ]
+      },
+      "RodadaVivaDto": {
+        "type": "object",
+        "properties": {
+          "rodada": {
+            "nullable": true,
+            "description": "Nula = nenhuma rodada viva.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RodadaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rodada"
+        ]
+      },
+      "RodadaListadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusRodada"
+              }
+            ]
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "solicitadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "aprovadaPor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "aprovadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lidos": {
+            "type": "integer"
+          },
+          "executadas": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "criadoEm",
+          "solicitadaPor",
+          "aprovadaPor",
+          "aprovadaEm",
+          "lidos",
+          "executadas"
+        ]
+      },
+      "PaginaRodadasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RodadaListadaDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "ContagemPrioridadeDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "nome": {
+            "type": "string"
+          },
+          "exames": {
+            "type": "integer"
+          },
+          "urgentes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "prioridadeOperacaoId",
+          "nome",
+          "exames",
+          "urgentes"
+        ]
+      },
+      "ContagemEspecialidadeDto": {
+        "type": "object",
+        "properties": {
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "nome": {
+            "type": "string"
+          },
+          "exames": {
+            "type": "integer"
+          },
+          "urgentes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "especialidadeId",
+          "nome",
+          "exames",
+          "urgentes"
+        ]
+      },
+      "ContagemModalidadeDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "nome": {
+            "type": "string"
+          },
+          "exames": {
+            "type": "integer"
+          },
+          "urgentes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "nome",
+          "exames",
+          "urgentes"
+        ]
+      },
+      "TipoFrenteRodada": {
+        "type": "string",
+        "enum": [
+          "especialidade",
+          "modalidade"
+        ]
+      },
+      "FrenteRodadaDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoFrenteRodada"
+              }
+            ]
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "tipo",
+          "especialidadeId",
+          "modalidadeId"
+        ]
+      },
+      "MedicoEmTurnoDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "alocacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turnoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frente": {
+            "$ref": "#/components/schemas/FrenteRodadaDto"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fim": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "produtividade": {
+            "type": "integer",
+            "nullable": true
+          },
+          "cargaEmMaos": {
+            "type": "integer",
+            "description": "Exames com ele ainda não laudados."
+          }
+        },
+        "required": [
+          "medicoId",
+          "nome",
+          "alocacaoId",
+          "turnoId",
+          "frente",
+          "inicio",
+          "fim",
+          "produtividade",
+          "cargaEmMaos"
+        ]
+      },
+      "FilaDoMomentoDto": {
+        "type": "object",
+        "properties": {
+          "lidaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Exames NOVO sem médico."
+          },
+          "urgentes": {
+            "type": "integer"
+          },
+          "semCatalogo": {
+            "type": "integer"
+          },
+          "semCliente": {
+            "type": "integer"
+          },
+          "porPrioridade": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContagemPrioridadeDto"
+            }
+          },
+          "porEspecialidade": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContagemEspecialidadeDto"
+            }
+          },
+          "porModalidade": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContagemModalidadeDto"
+            }
+          },
+          "medicosEmTurno": {
+            "description": "Habilitados no robô em turno agora.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MedicoEmTurnoDto"
+            }
+          }
+        },
+        "required": [
+          "lidaEm",
+          "total",
+          "urgentes",
+          "semCatalogo",
+          "semCliente",
+          "porPrioridade",
+          "porEspecialidade",
+          "porModalidade",
+          "medicosEmTurno"
+        ]
+      },
+      "SituacaoRodadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusRodada"
+              }
+            ]
+          },
+          "expiraEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "erro": {
+            "type": "string",
+            "nullable": true
+          },
+          "progresso": {
+            "nullable": true,
+            "description": "Último evento com barra (execução); nulo fora dela.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EventoRodadaDto"
+              }
+            ]
+          },
+          "contagens": {
+            "$ref": "#/components/schemas/ContagemDesignacoesDto"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "expiraEm",
+          "erro",
+          "progresso",
+          "contagens"
+        ]
+      },
+      "StatusDesignacao": {
+        "type": "string",
+        "enum": [
+          "prevista",
+          "executada",
+          "pulada",
+          "falhou",
+          "recusada"
+        ]
+      },
+      "DesignacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ordem": {
+            "type": "integer",
+            "description": "Ordem da fila do motor na leitura."
+          },
+          "idExameMobilemed": {
+            "type": "string",
+            "description": "Id do exame na MobileMed."
+          },
+          "estudo": {
+            "type": "string",
+            "description": "Nome do estudo como veio da MobileMed."
+          },
+          "unidade": {
+            "type": "string",
+            "description": "Unidade (empresa) na MobileMed."
+          },
+          "cliente": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "prioridadeGrafia": {
+            "type": "string",
+            "nullable": true,
+            "description": "Grafia da prioridade na MobileMed."
+          },
+          "prioridadeOperacao": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "especialidade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "modalidade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "subespecialidade": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "laudos": {
+            "type": "integer"
+          },
+          "realizadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prazo": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "urgente": {
+            "type": "boolean",
+            "description": "A operação trata como urgência."
+          },
+          "medicoProposto": {
+            "nullable": true,
+            "description": "Quem o motor propôs (fica mesmo se a conferência mover ou tirar).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "medico": {
+            "nullable": true,
+            "description": "A quem vai ou foi.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "agrupadoCom": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id na MobileMed do exame com quem anda no pacote do paciente."
+          },
+          "gratificado": {
+            "type": "boolean"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusDesignacao"
+              }
+            ]
+          },
+          "motivo": {
+            "type": "string",
+            "nullable": true,
+            "description": "Código do motivo."
+          },
+          "detalhe": {
+            "type": "string",
+            "nullable": true,
+            "description": "O porquê, para a pessoa."
+          },
+          "executadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "nomePaciente": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nome do paciente, lido na MobileMed agora: só com `distribuicao.paciente.ver` (leitura auditada); nulo sem ela ou fora da fila."
+          }
+        },
+        "required": [
+          "id",
+          "ordem",
+          "idExameMobilemed",
+          "estudo",
+          "unidade",
+          "cliente",
+          "prioridadeGrafia",
+          "prioridadeOperacao",
+          "especialidade",
+          "modalidade",
+          "subespecialidade",
+          "laudos",
+          "realizadoEm",
+          "prazo",
+          "urgente",
+          "medicoProposto",
+          "medico",
+          "agrupadoCom",
+          "gratificado",
+          "status",
+          "motivo",
+          "detalhe",
+          "executadaEm",
+          "nomePaciente"
+        ]
+      },
+      "PaginaDesignacoesDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DesignacaoDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "MovimentoPropostaDto": {
+        "type": "object",
+        "properties": {
+          "designacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Médico ativo, com conta na MobileMed."
+          }
+        },
+        "required": [
+          "designacaoId",
+          "medicoId"
+        ]
+      },
+      "AjustePropostaDto": {
+        "type": "object",
+        "properties": {
+          "remover": {
+            "description": "Designações que saem da proposta.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "mover": {
+            "description": "Designações que mudam de médico.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimentoPropostaDto"
+            }
+          }
+        },
+        "required": [
+          "remover",
+          "mover"
+        ]
+      },
+      "MedicosRodadaDto": {
+        "type": "object",
+        "properties": {
+          "excluidos": {
+            "description": "Ficam de fora.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "incluidos": {
+            "description": "Entram mesmo fora dos turnos e das frentes.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "excluidos",
+          "incluidos"
+        ]
+      },
       "ModoVinculo": {
         "type": "string",
         "enum": [
@@ -14776,6 +16216,112 @@
           "cheiaEm"
         ]
       },
+      "ConfiguracaoDistribuicaoRespostaDto": {
+        "type": "object",
+        "properties": {
+          "ordemFila": {
+            "description": "Critérios da fila, na ordem em que desempatam.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdemFilaDto"
+            }
+          },
+          "agruparPorPaciente": {
+            "type": "boolean",
+            "description": "Exames do mesmo paciente e especialidade vão juntos para um médico."
+          },
+          "janelaPacienteHoras": {
+            "type": "number",
+            "description": "Distância máxima (horas) entre os exames do pacote; 0 = sem limite."
+          },
+          "toleranciaAcimaTeto": {
+            "type": "number",
+            "description": "Folga aceita acima do teto do médico, em carga."
+          },
+          "margemUrgenciaPct": {
+            "type": "number",
+            "description": "Margem (%) acima do teto só para urgência."
+          },
+          "folgaProporcaoPct": {
+            "type": "number",
+            "description": "Pontos percentuais que o pacote atrasado ou vencendo antes da próxima rodada pode passar da proporção por modalidade (100 = ignora)."
+          },
+          "prazoCriticoMin": {
+            "type": "number",
+            "description": "A menos disto (minutos) do prazo, a prioridade do cliente sobe na fila."
+          },
+          "antecedenciaPeriodoMin": {
+            "type": "number",
+            "description": "Antecedência (minutos) com que um turno que ainda não começou entra na rodada."
+          },
+          "cicloMinutos": {
+            "type": "number",
+            "description": "Intervalo entre rodadas (minutos)."
+          },
+          "marcadoresEquilibrio": {
+            "description": "Marcadores no nome do exame distribuídos por igual entre os elegíveis (ex.: ONCO).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "escalaRestringeEspecialidade": {
+            "type": "boolean",
+            "description": "A frente da escala limita o que o médico recebe no período."
+          },
+          "diasJaEntregue": {
+            "type": "number",
+            "description": "Exame entregue a um médico nos últimos N dias e de volta à fila não volta para ele."
+          },
+          "turnosPosteriores": {
+            "nullable": true,
+            "description": "Nulo = nenhum turno posterior (a Lista não guarda nada).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TurnosPosterioresDto"
+              }
+            ]
+          },
+          "recolhimentoAposTurnoMin": {
+            "type": "number",
+            "nullable": true,
+            "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
+          },
+          "roboAtivo": {
+            "type": "boolean",
+            "description": "Robô ligado: desligado, ninguém inicia rodada."
+          },
+          "expiracaoPropostaMin": {
+            "type": "number",
+            "description": "Minutos que a proposta vale sem aprovação; depois expira."
+          },
+          "tetoPorRodada": {
+            "type": "number",
+            "nullable": true,
+            "description": "Máximo de exames propostos por rodada; nulo = sem teto."
+          }
+        },
+        "required": [
+          "ordemFila",
+          "agruparPorPaciente",
+          "janelaPacienteHoras",
+          "toleranciaAcimaTeto",
+          "margemUrgenciaPct",
+          "folgaProporcaoPct",
+          "prazoCriticoMin",
+          "antecedenciaPeriodoMin",
+          "cicloMinutos",
+          "marcadoresEquilibrio",
+          "escalaRestringeEspecialidade",
+          "diasJaEntregue",
+          "turnosPosteriores",
+          "recolhimentoAposTurnoMin",
+          "roboAtivo",
+          "expiracaoPropostaMin",
+          "tetoPorRodada"
+        ]
+      },
       "ConfiguracaoDistribuicaoDto": {
         "type": "object",
         "properties": {
@@ -14847,6 +16393,19 @@
             "type": "number",
             "nullable": true,
             "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
+          },
+          "roboAtivo": {
+            "type": "boolean",
+            "description": "Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado."
+          },
+          "expiracaoPropostaMin": {
+            "type": "number",
+            "description": "Minutos que a proposta vale sem aprovação; depois expira. Ausente = mantém o gravado."
+          },
+          "tetoPorRodada": {
+            "type": "number",
+            "nullable": true,
+            "description": "Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado."
           }
         },
         "required": [

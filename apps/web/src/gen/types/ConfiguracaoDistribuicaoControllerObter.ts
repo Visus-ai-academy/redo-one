@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import type { ConfiguracaoDistribuicaoDto } from './ConfiguracaoDistribuicaoDto'
+import type { ConfiguracaoDistribuicaoRespostaDto } from './ConfiguracaoDistribuicaoRespostaDto'
 
-export type ConfiguracaoDistribuicaoControllerObterStatus200 = ConfiguracaoDistribuicaoDto;
+export type ConfiguracaoDistribuicaoControllerObterStatus200 = ConfiguracaoDistribuicaoRespostaDto;
 
 export type ConfiguracaoDistribuicaoControllerObterOptions = {
   body?: never;

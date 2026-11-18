@@ -77,4 +77,19 @@ export type ConfiguracaoDistribuicaoDto = {
    * @type number
    */
   recolhimentoAposTurnoMin: number | null;
+  /**
+   * @description Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado.
+   * @type boolean | undefined
+   */
+  roboAtivo?: boolean;
+  /**
+   * @description Minutos que a proposta vale sem aprovação; depois expira. Ausente = mantém o gravado.
+   * @type number | undefined
+   */
+  expiracaoPropostaMin?: number;
+  /**
+   * @description Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado.
+   * @type number | undefined
+   */
+  tetoPorRodada?: number | null;
 };

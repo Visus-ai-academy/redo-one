@@ -90,6 +90,9 @@ describe('catálogo de permissões', () => {
     expect(especiais('distribuicao')).toEqual([
       'distribuicao.rodada.iniciar',
       'distribuicao.rodada.aprovar',
+      'distribuicao.rodada.ajustar',
+      'distribuicao.rodada.controlar',
+      'distribuicao.paciente.ver',
     ]);
     expect(especiais('importacao')).toEqual([
       'importacao.arquivo.baixar',
@@ -127,7 +130,10 @@ describe('catálogo de permissões', () => {
     expect(especiais('chaves-robo')).toEqual(['chaves-robo.gerenciar']);
 
     expect(sensiveis('qualidade')).toEqual(['qualidade.radshield.ver']);
-    expect(sensiveis('distribuicao')).toEqual(['distribuicao.rodada.aprovar']);
+    expect(sensiveis('distribuicao')).toEqual([
+      'distribuicao.rodada.aprovar',
+      'distribuicao.paciente.ver',
+    ]);
     expect(sensiveis('distribuicao-config')).toEqual(['distribuicao-config.editar']);
     expect(sensiveis('ausencias')).toEqual(['ausencias.observacoes.ver']);
     expect(sensiveis('exames')).toEqual(['exames.editar', 'exames.excluir']);

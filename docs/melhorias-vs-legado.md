@@ -122,7 +122,7 @@
 | Médico recebia acima da capacidade do período (espaço livre medido pela pilha, não pelo recebido) | Capacidade descontando o que já recebeu; Lista a cada 30 min só para quem não completou a carga | Regra do legado | 12/11 · b36831d3 |
 | Rodadas próximas contavam a mesma vaga duas vezes (carga vinha do pipeline importado) | Carga inclui o que o robô acabou de atribuir | Ideia | 12/11 · 8616a9d9 |
 | Produtividade vazia na escala tratada como "sem teto" | Vazio não vira sem teto | Pendente | 16/11 · 69872d75 |
-| Robô redistribuía o exame ao médico de quem a operação o tinha tirado | Nunca redistribuir o mesmo exame ao mesmo médico; mostrar o bloqueio no funil e no simulador | Regra do legado | 16/11 · ef448618 |
+| Robô redistribuía o exame ao médico de quem a operação o tinha tirado | Nunca redistribuir o mesmo exame ao mesmo médico: a rodada lê das designações executadas nos últimos `diasJaEntregue` dias e o exame fica com o motivo `retirado_do_medico`; falta mostrar no funil e no simulador (passo 5) | Regra do legado / Feito na rodada | 16/11 · ef448618; 18/11 (passo 4) |
 | Robô passava adiante exame já aberto ou pré-laudado | Só distribui exame com status NOVO | Regra do legado | 09–10/11 · 4cf4fbf5, ea0c8b90 |
 | Recolhimento tirava exames de quem começa o turno na mesma rodada | Não recolher de quem tem turno começando na rodada atual | Ideia | 12/11 · 48d3b94c |
 | Exames da Manhã recolhidos às 14 h não achavam vaga na Tarde | Margem para o recolhimento, configurável por frente | Regra do legado | 12/11 · 3d86423d |
@@ -143,7 +143,9 @@
 | Parâmetros sem uso em produção: escape, pesos, lote, exceção do médico, listas de médicos por cliente/exame, categoria no arranjo | Não migrados | Decidido | 17/11 · 48d350b6 |
 | "RX 150 por dia": o motor ignorava o "dia" | Não migrado; o teto por médico fica disponível, vazio | Decidido | 17/11 · 48d350b6 |
 | Agenda das rodadas automáticas fixa no código | Sem rodadas automáticas por ora; agenda configurável anotada no TODO | Decidido | 17/11 · 48d350b6 |
-| Designação gravava o nome do paciente | Id do exame na MobileMed + HMAC do paciente; nome só na conferência, com permissão | Decidido | 17/11 · 48d350b6 |
+| Designação gravava o nome do paciente | Id do exame na MobileMed + HMAC do paciente; nome só na conferência, com `distribuicao.paciente.ver`, lido na porta da fila na hora (nunca do banco) e cada leitura auditada (`paciente_lido`). Retenção das designações a definir | Feito | 17/11 · 48d350b6; 18/11 (passo 4) |
+| A rodada era um registro com a fila lida pelo RPA na tela; a mesma ação (pausar, retomar, reler) tinha caminhos diferentes para tela e robô; travas de "uma viva por vez" só no código | Rodada no domínio (máquina de estados com testes: solicitada → lendo → aguardando_aprovacao → aprovada → executando → concluída; expirada, cancelada, falhou, pausada, parcial) e um caso de uso por ação, chamado igual pela tela e pelos jobs `distribuicao.ler-fila` e `distribuicao.executar-rodada` (fila `distribuicao`, enfileirados na mesma transação). Uma viva por vez garantida por índice único parcial. Tabelas `rodadas`, `designacoes` (todo exame lido, inclusive os recusados, com motivo) e `eventos_rodada`. Endpoints em `/distribuicao/rodadas` (permissões `distribuicao.rodada.iniciar/aprovar/ajustar/controlar` e `distribuicao.paciente.ver`), situação leve para o polling, auditoria `rodada_distribuicao`. Configuração global ganhou robô ligado, validade da proposta (45 min) e teto por rodada | Feito (API; telas a fazer) | 18/11 (passo 4) |
+| Recortes da rodada: turnos, frentes, prioridades (cruas da MobileMed), clínicas, médicos tirados e adicionados | Os mesmos recortes, com prioridade pela prioridade da operação (o pacote do paciente não se parte); frente = frente da escala (o exame de outra frente é recusado com motivo `fora_da_frente`; o período de modalidade entra quando a rodada marca especialidade). A gestora com recorte na escala só inicia, aprova e controla rodada dentro dele (todos os turnos ou todas as frentes da rodada são dela) e não inclui médico | Feito | 18/11 (passo 4) |
 
 ## 8. Robôs e integração com a MobileMed
 
@@ -153,6 +155,7 @@
 | MFA pedido à mão via SSH/tmux; robô para esperando o código | Reconexão automática com TOTP (otplib); aviso quando precisar de código | Pendente | 09/11 · 4524bc6b; 13/11 · 54a72938 |
 | Robôs dividem o mesmo usuário e derrubam a sessão um do outro; rodada falhada não é retomada | Sessão própria por integração; nova tentativa pela fila | Ideia | 16/11 · 4f812b24 |
 | Erro da MobileMed aparecia como erro do One | Mensagem dizendo de onde veio a falha | Regra do legado | 10/11 · 93c9f253 |
+| A leitura da fila e a atribuição eram cliques do RPA na tela (com o nome do paciente para achar a linha) | Portas `FilaExames` e `AtribuidorExames` na API, um item por vez, resultado executada, pulada ou falhou com "retentável" (o "Retomar" tenta de novo só esses). Até o mapeamento da API da MobileMed, adaptador fake: fila sintética determinística pela semente (exames e clientes do catálogo, pacientes fictícios, grafias reais na proporção da produção, prazos por prioridade, pacotes e casos de recusa; `DISTRIBUICAO_FAKE_TAMANHO`, `_SEMENTE`, `_FALHAS_PCT`) e atribuição que só registra na memória; nada sai do processo | Feito (fake); adaptador real pendente | 18/11 (passo 4) |
 
 ## 9. Escala
 

@@ -120,6 +120,7 @@ import {
   PrioridadesOperacaoController,
 } from './infrastructure/http/prioridades-operacao.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
+import { RodadasController } from './infrastructure/http/rodadas.controller';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
 import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzle-ajustes-dia.repository';
@@ -169,6 +170,7 @@ const CASOS_RODADA = [
 @Module({
   imports: [OcorrenciasModule],
   controllers: [
+    RodadasController,
     DistribuicaoMedicoController,
     DistribuicaoEquipeController,
     SugestaoAlocacaoController,
