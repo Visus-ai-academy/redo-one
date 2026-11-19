@@ -17802,6 +17802,10 @@
               }
             ]
           },
+          "furaGradeNaAlocacao": {
+            "type": "boolean",
+            "description": "Marcada na alocação, o exame urgente desta prioridade segue o SLA mesmo contra a célula da grade de recebimento."
+          },
           "padrao": {
             "type": "boolean",
             "description": "Vale para a grafia sem de-para (só uma prioridade)."
@@ -17828,6 +17832,7 @@
           "nome",
           "posicao",
           "urgencia",
+          "furaGradeNaAlocacao",
           "padrao",
           "grafias",
           "cor",
@@ -17853,6 +17858,10 @@
               }
             ]
           },
+          "furaGradeNaAlocacao": {
+            "type": "boolean",
+            "description": "Marcada na alocação, o exame urgente desta prioridade segue o SLA mesmo contra a célula da grade de recebimento."
+          },
           "padrao": {
             "type": "boolean",
             "description": "Vale para a grafia sem de-para (só uma prioridade)."
@@ -17875,6 +17884,7 @@
           "nome",
           "posicao",
           "urgencia",
+          "furaGradeNaAlocacao",
           "padrao",
           "grafias"
         ]

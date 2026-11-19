@@ -10,6 +10,7 @@ export const prioridadeOperacaoEdicaoDtoSchema = z.object({
   nome: z.string().meta({ examples: ['AMBULATÓRIO'] }),
   posicao: z.number().describe('Posição na fila: 1 = primeiro; empate permitido.'),
   urgencia: regraUrgenciaDtoSchema.describe('Quando a operação a trata como urgência.'),
+  furaGradeNaAlocacao: z.boolean().describe('Marcada na alocação, o exame urgente desta prioridade segue o SLA mesmo contra a célula da grade de recebimento.'),
   padrao: z.boolean().describe('Vale para a grafia sem de-para (só uma prioridade).'),
   grafias: z.array(z.string()).describe('Grafias da MobileMed que caem nesta prioridade (sem diferenciar acento e maiúsculas).'),
   cor: z.string().nullish().describe('Hex #RRGGBB da prioridade nas telas; sem cor, fica neutra.').meta({ examples: ['#5677B8'] }),

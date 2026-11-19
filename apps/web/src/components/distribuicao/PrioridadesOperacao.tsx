@@ -26,6 +26,7 @@ type Props = {
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
+const ROTULO_FURA_GRADE = 'Marcada na alocação, a urgência fura a grade';
 
 const schema = z
   .object({
@@ -33,6 +34,7 @@ const schema = z
     posicao: z.string().regex(/^\d{1,2}$/, 'Use um número inteiro de 1 a 99.'),
     urgencia: z.enum(['nunca', 'sempre', 'prazo']),
     horas: z.string(),
+    furaGradeNaAlocacao: z.boolean(),
     padrao: z.boolean(),
     grafias: z.string(),
     cor: z
@@ -74,6 +76,7 @@ function PainelPrioridade({
       posicao: String(prioridade?.posicao ?? ''),
       urgencia: prioridade?.urgencia.tipo ?? 'nunca',
       horas: prioridade?.urgencia.horas === null ? '' : String(prioridade?.urgencia.horas ?? ''),
+      furaGradeNaAlocacao: prioridade?.furaGradeNaAlocacao ?? false,
       padrao: prioridade?.padrao ?? false,
       grafias: (prioridade?.grafias ?? []).join('\n'),
       cor: prioridade?.cor ?? '',
@@ -89,6 +92,7 @@ function PainelPrioridade({
             value.urgencia === 'prazo'
               ? { tipo: 'prazo', horas: Number(value.horas) }
               : { tipo: value.urgencia, horas: null },
+          furaGradeNaAlocacao: value.furaGradeNaAlocacao,
           padrao: value.padrao,
           grafias: grafiasDoTexto(value.grafias),
           cor: value.cor.trim() || null,
@@ -125,6 +129,10 @@ function PainelPrioridade({
           <CampoSomenteLeitura
             label="Tratar como urgência"
             value={rotuloUrgencia(prioridade.urgencia)}
+          />
+          <CampoSomenteLeitura
+            label={ROTULO_FURA_GRADE}
+            value={prioridade.furaGradeNaAlocacao ? 'Sim' : 'Não'}
           />
           <CampoSomenteLeitura
             label="Vale para a grafia sem de-para"
@@ -180,8 +188,16 @@ function PainelPrioridade({
               label="Tratar como urgência"
               placeholder="Escolha"
               opcoes={OPCOES_URGENCIA}
-              description="A urgência passa na frente dentro da posição, usa a margem acima do teto e entra para quem tem URGÊNCIA marcada na escala."
+              description="A urgência passa na frente dentro da posição e usa a margem acima do teto."
               required
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="furaGradeNaAlocacao">
+          {(field) => (
+            <field.CheckboxField
+              label={ROTULO_FURA_GRADE}
+              description="Com a prioridade marcada na alocação, o exame urgente dela segue o SLA mesmo que a grade de recebimento do turno diga “não recebe” ou prazo mínimo. Desligada, vale a grade."
             />
           )}
         </form.AppField>
@@ -300,6 +316,7 @@ export function PrioridadesOperacao({
                   </span>
                   <span className="text-muted-foreground text-[13px]">
                     Urgência: {rotuloUrgencia(p.urgencia).toLowerCase()}
+                    {p.furaGradeNaAlocacao && ' · fura a grade pela alocação'}
                   </span>
                   <span className="text-subtle-foreground text-[13px] break-words">
                     {p.grafias.length ? p.grafias.join(', ') : 'Sem grafias'}

@@ -36,6 +36,7 @@ const ROTINA: PrioridadeOperacaoDto = {
   nome: 'ROTINA',
   posicao: 3,
   urgencia: { tipo: 'nunca', horas: null },
+  furaGradeNaAlocacao: false,
   padrao: true,
   grafias: [],
   cor: null,

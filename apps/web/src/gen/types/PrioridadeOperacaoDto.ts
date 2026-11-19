@@ -22,6 +22,11 @@ export type PrioridadeOperacaoDto = {
    */
   urgencia: RegraUrgenciaDto;
   /**
+   * @description Marcada na alocação, o exame urgente desta prioridade segue o SLA mesmo contra a célula da grade de recebimento.
+   * @type boolean
+   */
+  furaGradeNaAlocacao: boolean;
+  /**
    * @description Vale para a grafia sem de-para (só uma prioridade).
    * @type boolean
    */

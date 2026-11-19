@@ -11,6 +11,7 @@ const AMBULATORIO: PrioridadeOperacaoDto = {
   nome: 'AMBULATÓRIO',
   posicao: 2,
   urgencia: { tipo: 'prazo', horas: 24 },
+  furaGradeNaAlocacao: false,
   padrao: false,
   grafias: ['Ambulatório'],
   cor: '#5677B8',
@@ -20,6 +21,7 @@ const ROTINA: PrioridadeOperacaoDto = {
   nome: 'ROTINA',
   posicao: 3,
   urgencia: { tipo: 'nunca', horas: null },
+  furaGradeNaAlocacao: false,
   padrao: true,
   grafias: ['P4', 'Rotina'],
   cor: null,
@@ -63,11 +65,13 @@ describe('PrioridadesOperacao', () => {
     );
     await userEvent.type(screen.getByRole('textbox', { name: /Grafias/ }), 'P9{enter}p9.Teste');
     await userEvent.type(screen.getByRole('textbox', { name: /Cor/ }), ' #8A8A45 ');
+    await userEvent.click(screen.getByRole('checkbox', { name: /a urgência fura a grade/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar prioridade' }));
     expect(onCriar).toHaveBeenCalledWith({
       nome: 'TESTE',
       posicao: 4,
       urgencia: { tipo: 'prazo', horas: 6 },
+      furaGradeNaAlocacao: true,
       padrao: false,
       grafias: ['P9', 'p9.Teste'],
       cor: '#8A8A45',

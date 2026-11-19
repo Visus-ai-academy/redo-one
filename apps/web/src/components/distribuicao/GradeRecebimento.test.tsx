@@ -12,6 +12,7 @@ const prioridade = (id: string, nome: string, posicao: number): PrioridadeOperac
   nome,
   posicao,
   urgencia: { tipo: 'nunca', horas: null },
+  furaGradeNaAlocacao: false,
   padrao: false,
   grafias: [],
   cor: null,
