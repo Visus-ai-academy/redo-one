@@ -1,0 +1,2 @@
+ALTER TABLE "ajustes_dia_distribuicao" ADD COLUMN "laudos_extra" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "ajustes_dia_distribuicao" ADD CONSTRAINT "ajustes_dia_distribuicao_laudos_extra_check" CHECK ("ajustes_dia_distribuicao"."laudos_extra" between 0 and 500 and ("ajustes_dia_distribuicao"."laudos_extra" = 0 or "ajustes_dia_distribuicao"."cliente_id" is not null));

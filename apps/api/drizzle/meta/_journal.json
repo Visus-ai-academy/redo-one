@@ -225,6 +225,13 @@
       "when": 1795096119470,
       "tag": "0031_cloudy_iceman",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795097491156,
+      "tag": "0032_ajuste_dia_laudos_extra",
+      "breakpoints": true
     }
   ]
 }

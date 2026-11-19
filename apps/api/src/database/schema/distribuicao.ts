@@ -504,9 +504,9 @@ export const prioridadesCliente = pgTable(
 /**
  * Ajuste do dia da distribuição por alocação da escala e dia (a "exceção do robô" do
  * dashboards-one): prioridades liberadas e "segue o SLA neste dia" (o prazo mínimo da grade de
- * recebimento não vale), com recorte opcional por
- * cliente. O "+N laudos" é o `ajustes_produtividade` da escala, não fica aqui. A ação fica na tela
- * Escala; histórico em `eventos_auditoria` (entidade `ajuste_dia_distribuicao`).
+ * recebimento não vale), com recorte opcional por cliente, e o +N laudos só daquele cliente. O
+ * "+N laudos" de todos os exames é o `ajustes_produtividade` da escala, não fica aqui. A ação fica
+ * na tela Escala; histórico em `eventos_auditoria` (entidade `ajuste_dia_distribuicao`).
  */
 export const ajustesDiaDistribuicao = pgTable(
   'ajustes_dia_distribuicao',
@@ -519,12 +519,18 @@ export const ajustesDiaDistribuicao = pgTable(
     segueSla: boolean('segue_sla').notNull().default(false),
     /** Só os exames deste cliente; null = todos. */
     clienteId: uuid('cliente_id').references(() => clientes.id, { onDelete: 'cascade' }),
+    /** Laudos acima do teto só para os exames do cliente; exige `cliente_id`. */
+    laudosExtra: integer('laudos_extra').notNull().default(0),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [
     unique('ajustes_dia_distribuicao_alocacao_data_key').on(t.alocacaoId, t.data),
     index('ajustes_dia_distribuicao_data_idx').on(t.data),
+    check(
+      'ajustes_dia_distribuicao_laudos_extra_check',
+      sql`${t.laudosExtra} between 0 and 500 and (${t.laudosExtra} = 0 or ${t.clienteId} is not null)`,
+    ),
   ],
 );
 
