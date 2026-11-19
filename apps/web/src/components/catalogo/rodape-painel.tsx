@@ -18,13 +18,21 @@ type RodapePainelProps = {
   editando: boolean;
   excluir?: ExcluirPainel;
   onCancelar: () => void;
+  /** Falso quando nenhum campo obrigatório está na tela: aí a legenda do `*` não explica nada. */
+  legenda?: boolean;
 };
 
 /** Legenda do `*`, excluir à esquerda e cancelar/salvar à direita. Vai dentro de `form.AppForm`. */
-export function RodapePainel({ rotuloCriar, editando, excluir, onCancelar }: RodapePainelProps) {
+export function RodapePainel({
+  rotuloCriar,
+  editando,
+  excluir,
+  onCancelar,
+  legenda = true,
+}: RodapePainelProps) {
   return (
     <>
-      <RequiredLegend />
+      {legenda && <RequiredLegend />}
       <div className="flex flex-wrap items-center gap-2">
         {excluir && <ConfirmarAcao {...excluir} />}
         <span className="ml-auto flex gap-2">

@@ -139,14 +139,19 @@ function listar(nomes: string[]) {
   return nomes.length > MAX_NOMES ? `${primeiros} e mais ${nomes.length - MAX_NOMES}` : primeiros;
 }
 
-const nomesDe = (ids: string[], lista: RotuloDto[], ausente: string) =>
-  ids.map((id) => lista.find((item) => item.id === id)?.nome ?? ausente);
-
 /** Do catálogo: na ordem dele (a mesma do formulário), com os que saíram no fim. */
 const nomesNaOrdemDe = (ids: string[], catalogo: RotuloDto[], ausente: string) => [
   ...catalogo.filter((item) => ids.includes(item.id)).map((item) => item.nome),
   ...ids.filter((id) => !catalogo.some((item) => item.id === id)).map(() => ausente),
 ];
+
+/** Clientes e exames não têm catálogo no formulário: em ordem alfabética, com os que saíram no fim. */
+const nomesEmOrdemAlfabetica = (ids: string[], lista: RotuloDto[], ausente: string) =>
+  nomesNaOrdemDe(
+    ids,
+    [...lista].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+    ausente,
+  );
 
 function vinculo(modoAtual: ModoVinculoKey, nomes: string[]) {
   return modoAtual === 'apenas' ? `Só ${listar(nomes)}` : `Todos, exceto ${listar(nomes)}`;
@@ -183,19 +188,22 @@ export function resumoDoArranjo(
   if (a.modoClientes !== 'todos') {
     linhas.push({
       rotulo: 'Clientes',
-      valor: vinculo(a.modoClientes, nomesDe(a.clienteIds, nomes.clientes, 'Inativo')),
+      valor: vinculo(
+        a.modoClientes,
+        nomesEmOrdemAlfabetica(a.clienteIds, nomes.clientes, 'Inativo'),
+      ),
     });
   }
   if (a.modoExames !== 'todos') {
     linhas.push({
       rotulo: 'Exames',
-      valor: vinculo(a.modoExames, nomesDe(a.exameIds, nomes.exames, 'Inativo')),
+      valor: vinculo(a.modoExames, nomesEmOrdemAlfabetica(a.exameIds, nomes.exames, 'Inativo')),
     });
   }
   if (a.clientesExclusivosIds.length) {
     linhas.push({
       rotulo: 'Clínicas exclusivas',
-      valor: listar(nomesDe(a.clientesExclusivosIds, nomes.clientes, 'Inativo')),
+      valor: listar(nomesEmOrdemAlfabetica(a.clientesExclusivosIds, nomes.clientes, 'Inativo')),
     });
   }
   const especialidade = a.especialidadeId

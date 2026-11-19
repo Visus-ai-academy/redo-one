@@ -131,6 +131,17 @@ describe('ArranjosDistribuicao', () => {
     expect(onSalvar).not.toHaveBeenCalled();
   });
 
+  it('legenda do obrigatório só com campo obrigatório na tela', async () => {
+    montar({ arranjos: [] });
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    expect(screen.queryByText('Campo obrigatório')).not.toBeInTheDocument();
+    const exames = screen.getByRole('radiogroup', { name: 'Exames' });
+    await userEvent.click(within(exames).getByRole('radio', { name: 'Todos, exceto estes' }));
+    expect(screen.queryByText('Campo obrigatório')).not.toBeInTheDocument();
+    await userEvent.click(within(exames).getByRole('radio', { name: 'Só estes' }));
+    expect(screen.getByText('Campo obrigatório')).toBeInTheDocument();
+  });
+
   it('mostra o erro da API sem sair do formulário', async () => {
     const onSalvar = vi.fn(async () => {
       throw new Error('falhou');

@@ -224,6 +224,41 @@ describe('resumoDoArranjo', () => {
     ]);
   });
 
+  it('clientes, exames e exclusivas em ordem alfabética, com os inativos no fim', () => {
+    const clientes = [
+      { id: 'c-b', nome: 'BARRAPIRAI' },
+      { id: 'c-a', nome: 'ALIANCA' },
+      { id: 'c-c', nome: 'Clínica Central' },
+    ];
+    const exames = [
+      { id: 'x-t', nome: 'TC de tórax' },
+      { id: 'x-c', nome: 'TC de crânio' },
+    ];
+    const r = resumoDoArranjo(
+      arranjo({
+        modoClientes: 'apenas',
+        clienteIds: ['c-velho', 'c-c', 'c-a', 'c-b'],
+        clientesExclusivosIds: ['c-b', 'c-a'],
+        modoExames: 'exceto',
+        exameIds: ['x-t', 'x-c'],
+      }),
+      CATALOGO,
+      { clientes, exames },
+    );
+    expect(r.linhas).toContainEqual({
+      rotulo: 'Clientes',
+      valor: 'Só ALIANCA, BARRAPIRAI, Clínica Central e mais 1',
+    });
+    expect(r.linhas).toContainEqual({
+      rotulo: 'Exames',
+      valor: 'Todos, exceto TC de crânio, TC de tórax',
+    });
+    expect(r.linhas).toContainEqual({
+      rotulo: 'Clínicas exclusivas',
+      valor: 'ALIANCA, BARRAPIRAI',
+    });
+  });
+
   it('item que saiu do catálogo aparece como removido', () => {
     const r = resumoDoArranjo(arranjo({ modalidadeIds: ['m-velha'] }), CATALOGO, NOMES);
     expect(r.linhas[0]).toEqual({ rotulo: 'Modalidades', valor: 'Inativa' });

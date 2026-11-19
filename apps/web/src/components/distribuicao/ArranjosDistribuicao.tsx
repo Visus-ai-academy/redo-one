@@ -370,25 +370,35 @@ function FormArranjo({
           </form.Subscribe>
         )}
         <form.AppForm>
-          <RodapePainel
-            rotuloCriar="Criar arranjo"
-            editando={editando}
-            excluir={
-              editando
-                ? {
-                    acao: 'Excluir arranjo',
-                    titulo: 'Excluir este arranjo?',
-                    consequencia: `O robô deixa de entregar ${dono === 'medico' ? 'ao médico' : 'à equipe'} o que só este arranjo cobre. Os outros arranjos continuam.`,
-                    onConfirmar: () =>
-                      salvar(
-                        arranjos.filter((_, i) => i !== indice),
-                        'Arranjo excluído.',
-                      ),
-                  }
-                : undefined
+          <form.Subscribe
+            // Só a lista do "Só estes" é obrigatória.
+            selector={(estado) =>
+              estado.values.modoClientes === 'apenas' || estado.values.modoExames === 'apenas'
             }
-            onCancelar={onFechar}
-          />
+          >
+            {(temObrigatorio) => (
+              <RodapePainel
+                legenda={temObrigatorio}
+                rotuloCriar="Criar arranjo"
+                editando={editando}
+                excluir={
+                  editando
+                    ? {
+                        acao: 'Excluir arranjo',
+                        titulo: 'Excluir este arranjo?',
+                        consequencia: `O robô deixa de entregar ${dono === 'medico' ? 'ao médico' : 'à equipe'} o que só este arranjo cobre. Os outros arranjos continuam.`,
+                        onConfirmar: () =>
+                          salvar(
+                            arranjos.filter((_, i) => i !== indice),
+                            'Arranjo excluído.',
+                          ),
+                      }
+                    : undefined
+                }
+                onCancelar={onFechar}
+              />
+            )}
+          </form.Subscribe>
         </form.AppForm>
       </form>
     </section>
