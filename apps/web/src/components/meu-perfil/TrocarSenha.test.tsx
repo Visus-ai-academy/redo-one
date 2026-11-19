@@ -35,6 +35,14 @@ async function preencher(atual: string, nova: string, repetir: string) {
 }
 
 describe('TrocarSenha', () => {
+  // Enviado antes da hidratação, um form sem method faria GET e poria os campos na URL.
+  it('envia por POST mesmo antes do JavaScript carregar', async () => {
+    renderComRotas(<TrocarSenha senhaAlteradaEm={null} />);
+
+    const botao = await screen.findByRole('button', { name: /Trocar senha/ });
+    expect(botao.closest('form')).toHaveAttribute('method', 'post');
+  });
+
   beforeEach(() => {
     trocar.mockReset();
     responder(async () => ({ sessoesEncerradas: 2 }));

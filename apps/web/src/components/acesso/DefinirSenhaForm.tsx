@@ -48,6 +48,7 @@ export function DefinirSenhaForm({ token, link }: { token: string; link: InfoLin
 
   return (
     <form
+      method="post"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();

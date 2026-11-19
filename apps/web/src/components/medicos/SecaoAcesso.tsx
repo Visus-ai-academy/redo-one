@@ -143,6 +143,7 @@ function Convite({
 
   return (
     <form
+      method="post"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
@@ -208,6 +209,7 @@ function Ligar({
 
   return (
     <form
+      method="post"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();

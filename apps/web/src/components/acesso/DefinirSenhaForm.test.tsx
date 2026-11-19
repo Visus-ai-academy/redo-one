@@ -37,6 +37,14 @@ async function digitarSenhas(senha: string, confirmacao: string) {
 }
 
 describe('DefinirSenhaForm', () => {
+  // Enviado antes da hidratação, um form sem method faria GET e poria os campos na URL.
+  it('envia por POST mesmo antes do JavaScript carregar', async () => {
+    renderComRotas(<DefinirSenhaForm token="t" link={convite} />);
+
+    const botao = await screen.findByRole('button', { name: /Criar senha e entrar/ });
+    expect(botao.closest('form')).toHaveAttribute('method', 'post');
+  });
+
   beforeEach(() => {
     definir.mockReset();
     definir.mockReturnValue({ unwrap: async () => ({}) } as never);

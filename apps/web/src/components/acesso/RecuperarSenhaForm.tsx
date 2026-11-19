@@ -59,6 +59,7 @@ export function RecuperarSenhaForm() {
         </div>
       ) : (
         <form
+          method="post"
           noValidate
           onSubmit={(event) => {
             event.preventDefault();

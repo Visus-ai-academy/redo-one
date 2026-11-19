@@ -146,6 +146,7 @@ export function PainelContratado({
       onFechar={onFechar}
     >
       <form
+        method="post"
         noValidate
         onSubmit={(evento) => {
           evento.preventDefault();

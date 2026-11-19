@@ -59,6 +59,7 @@ export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | nul
       descricao={`${senhaAlteradaEm ? `Trocada pela última vez em ${dataDeBrasilia(senhaAlteradaEm)}. ` : ''}Ao trocar, suas outras sessões são encerradas.`}
     >
       <form
+        method="post"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();

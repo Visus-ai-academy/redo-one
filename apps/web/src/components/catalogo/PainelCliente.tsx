@@ -162,6 +162,7 @@ export function PainelCliente({
       >
         {podeEditar ? (
           <form
+            method="post"
             noValidate
             onSubmit={(e) => {
               e.preventDefault();
@@ -432,6 +433,7 @@ function Apelidos({
       )}
       {podeCriar && (
         <form
+          method="post"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();

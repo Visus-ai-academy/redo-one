@@ -38,6 +38,7 @@ export function LoginForm({ destino }: { destino: string }) {
 
   return (
     <form
+      method="post"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();

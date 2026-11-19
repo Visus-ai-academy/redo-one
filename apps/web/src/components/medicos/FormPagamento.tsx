@@ -131,6 +131,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
 
   return (
     <form
+      method="post"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();

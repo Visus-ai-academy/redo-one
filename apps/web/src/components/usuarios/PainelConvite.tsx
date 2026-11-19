@@ -61,6 +61,7 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
   return (
     <PainelLateral titulo="Convidar usuário" onFechar={onCancelar}>
       <form
+        method="post"
         noValidate
         onSubmit={(evento) => {
           evento.preventDefault();

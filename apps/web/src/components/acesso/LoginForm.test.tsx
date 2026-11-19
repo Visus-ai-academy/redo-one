@@ -33,6 +33,14 @@ async function preencherEEntrar() {
 }
 
 describe('LoginForm', () => {
+  // Enviado antes da hidratação, um form sem method faria GET e poria os campos na URL.
+  it('envia por POST mesmo antes do JavaScript carregar', async () => {
+    renderComRotas(<LoginForm destino="/" />);
+
+    const botao = await screen.findByRole('button', { name: /Entrar/ });
+    expect(botao.closest('form')).toHaveAttribute('method', 'post');
+  });
+
   beforeEach(() => entrar.mockReset());
 
   it('entra com e-mail e senha e vai para o destino pedido', async () => {
