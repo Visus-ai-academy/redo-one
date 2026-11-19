@@ -66,11 +66,15 @@ describe('configuração global da distribuição', () => {
   });
 
   it('sem os campos do robô no pedido, mantém os gravados (a tela antiga não os manda)', async () => {
-    await definir.executar(ator, producao({ roboAtivo: false, tetoPorRodada: 300 }));
+    await definir.executar(
+      ator,
+      producao({ roboAtivo: false, tetoPorRodada: 300, retratoFilaMin: null }),
+    );
     const {
       roboAtivo: _,
       expiracaoPropostaMin: __,
       tetoPorRodada: ___,
+      retratoFilaMin: ____,
       ...semRobo
     } = producao({
       cicloMinutos: 20,
@@ -80,8 +84,19 @@ describe('configuração global da distribuição', () => {
       roboAtivo: false,
       tetoPorRodada: 300,
       expiracaoPropostaMin: 45,
+      retratoFilaMin: null,
       cicloMinutos: 20,
     });
+  });
+
+  it('o intervalo da leitura da fila vai de 1 a 1440 min, ou desligado', async () => {
+    await definir.executar(ator, producao({ retratoFilaMin: 10 }));
+    expect((await obter.executar()).retratoFilaMin).toBe(10);
+    for (const retratoFilaMin of [0, 1441, 2.5]) {
+      await expect(definir.executar(ator, producao({ retratoFilaMin }))).rejects.toBeInstanceOf(
+        ConfiguracaoInvalidaError,
+      );
+    }
   });
 
   it('apara os marcadores antes de gravar', async () => {

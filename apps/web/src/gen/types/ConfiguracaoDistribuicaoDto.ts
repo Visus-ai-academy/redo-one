@@ -97,4 +97,9 @@ export type ConfiguracaoDistribuicaoDto = {
    * @type number | undefined
    */
   tetoPorRodada?: number | null;
+  /**
+   * @description Minutos entre as leituras da fila do momento (1 a 1440); nulo = leitura automática desligada. Ausente = mantém o gravado.
+   * @type number | undefined
+   */
+  retratoFilaMin?: number | null;
 };

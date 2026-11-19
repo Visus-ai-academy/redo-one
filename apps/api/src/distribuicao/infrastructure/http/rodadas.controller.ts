@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -25,6 +26,7 @@ import {
 import { IdCriadoDto } from '../../../catalogo/comum/dto';
 import { Permissao, PrincipalAtual } from '../../../identidade/acesso/decorators';
 import { type PrincipalUsuario, temPermissao } from '../../../identidade/principal';
+import { ConsultarRetratoFila, PedirLeituraFila } from '../../application/use-cases/retrato-fila';
 import {
   AjustarMedicosRodada,
   AjustarProposta,
@@ -32,7 +34,6 @@ import {
   type AtorRodada,
   BuscarMedicosDaRodada,
   CancelarRodada,
-  ConsultarFilaDoMomento,
   ConsultarResumo,
   ConsultarRodada,
   ConsultarSituacao,
@@ -52,7 +53,6 @@ import {
   DesignacoesQueryDto,
   ExplicacaoDto,
   ExplicacaoQueryDto,
-  FilaDoMomentoDto,
   HistoricoQueryDto,
   MedicoDaBuscaDto,
   MedicosRodadaDto,
@@ -61,6 +61,7 @@ import {
   RecolhimentoPrevistoDto,
   RecortesRodadaDto,
   ResumoRodadaDto,
+  RetratoFilaDto,
   RodadaDto,
   RodadaVivaDto,
   SituacaoRodadaDto,
@@ -113,7 +114,8 @@ export class RodadasController {
     private readonly consultarSituacao: ConsultarSituacao,
     private readonly consultar: ConsultarRodada,
     private readonly listarDesignacoes: ListarDesignacoes,
-    private readonly consultarFila: ConsultarFilaDoMomento,
+    private readonly consultarFila: ConsultarRetratoFila,
+    private readonly pedirLeitura: PedirLeituraFila,
     private readonly consultarResumo: ConsultarResumo,
     private readonly explicar: ExplicarDesignacao,
     private readonly buscarMedicos: BuscarMedicosDaRodada,
@@ -145,11 +147,20 @@ export class RodadasController {
   @Get('fila')
   @Permissao('distribuicao.ver')
   @ApiOkResponse({
-    type: FilaDoMomentoDto,
-    description: 'A fila agora (antes de distribuir): contagens e quem está em turno.',
+    type: RetratoFilaDto,
+    description:
+      'O último retrato da fila (contagens e quem está em turno), lido por job; não lê a MobileMed.',
   })
-  fila(): Promise<FilaDoMomentoDto> {
+  fila(): Promise<RetratoFilaDto> {
     return this.consultarFila.executar();
+  }
+
+  @Post('fila/leitura')
+  @Permissao('distribuicao.rodada.iniciar')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiAcceptedResponse({ description: 'Leitura única enfileirada (não distribui nada).' })
+  lerFila(): Promise<void> {
+    return this.pedirLeitura.executar();
   }
 
   @Get('recolhimento')

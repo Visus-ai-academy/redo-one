@@ -32,10 +32,16 @@ export interface ConfiguracaoGlobal extends ConfiguracaoDistribuicao {
   expiracaoPropostaMin: number;
   /** Máximo de exames propostos por rodada; null = sem teto (`roboTetoPorRodada`). */
   tetoPorRodada: number | null;
+  /**
+   * De quantos em quantos minutos um job lê a fila da MobileMed e grava o retrato que a fila do
+   * momento mostra (a tela não lê a MobileMed). Null = leitura automática desligada (só "Ler
+   * agora"). Não distribui nada: a rodada lê a fila ao vivo.
+   */
+  retratoFilaMin: number | null;
 }
 
 /** Os campos do robô: a tela de antes deles não os manda, e o PUT sem eles mantém os gravados. */
-export type CamposRobo = 'roboAtivo' | 'expiracaoPropostaMin' | 'tetoPorRodada';
+export type CamposRobo = 'roboAtivo' | 'expiracaoPropostaMin' | 'tetoPorRodada' | 'retratoFilaMin';
 export type EdicaoConfiguracaoGlobal = Omit<ConfiguracaoGlobal, CamposRobo> &
   Partial<Pick<ConfiguracaoGlobal, CamposRobo>>;
 
@@ -66,6 +72,7 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
+  retratoFilaMin: 5,
 };
 
 const CRITERIOS = new Set(['prioridade', 'prazo', 'antiguidade']);
@@ -109,6 +116,9 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
   inteiroEntre(c.expiracaoPropostaMin, 1, 1440, 'Validade da proposta (minutos)');
   if (c.tetoPorRodada !== null) {
     inteiroEntre(c.tetoPorRodada, 1, 100_000, 'Teto de exames por rodada');
+  }
+  if (c.retratoFilaMin !== null) {
+    inteiroEntre(c.retratoFilaMin, 1, 1440, 'Leitura da fila do momento (minutos)');
   }
 
   const marcadores = c.marcadoresEquilibrio.map((m) => m.trim());

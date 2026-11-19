@@ -27,6 +27,11 @@ import type {
 import type { PrioridadesClienteRepository } from '../application/ports/prioridades-cliente.repository';
 import type { PrioridadesOperacaoRepository } from '../application/ports/prioridades-operacao.repository';
 import type { RegrasFrenteRepository } from '../application/ports/regras-frente.repository';
+import type {
+  RetratoFilaGravado,
+  RetratoFilaRepository,
+} from '../application/ports/retrato-fila.repository';
+import type { FilaDoMomento } from '../application/use-cases/rodadas/consultas';
 import type { AjusteDiaDistribuicao } from '../domain/ajuste-dia';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
 import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
@@ -291,5 +296,28 @@ export class PrioridadesOperacaoEmMemoria implements PrioridadesOperacaoReposito
   async salvarGrade(celulas: readonly CelulaRecebimento[]) {
     this.gravacoes++;
     this.grade = structuredClone([...celulas]);
+  }
+}
+
+export class RetratoFilaEmMemoria implements RetratoFilaRepository {
+  atual: RetratoFilaGravado = { fila: null, pedidaEm: null, falhouEm: null, erro: null };
+  /** Leituras enfileiradas (o job único por chave fica a cargo da fila de verdade). */
+  pedidos = 0;
+
+  async obter() {
+    return structuredClone(this.atual);
+  }
+
+  async gravar(fila: FilaDoMomento) {
+    this.atual = { ...this.atual, fila: structuredClone(fila), falhouEm: null, erro: null };
+  }
+
+  async registrarFalha(em: Date, erro: string) {
+    this.atual = { ...this.atual, falhouEm: em, erro };
+  }
+
+  async pedirLeitura(em: Date) {
+    this.pedidos++;
+    this.atual = { ...this.atual, pedidaEm: em };
   }
 }

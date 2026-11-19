@@ -1,4 +1,4 @@
-import { Module, type OnModuleInit } from '@nestjs/common';
+import { Logger, Module, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
@@ -58,8 +58,17 @@ import {
   REGRAS_FRENTE_REPOSITORY,
   type RegrasFrenteRepository,
 } from './application/ports/regras-frente.repository';
+import {
+  RETRATO_FILA_REPOSITORY,
+  type RetratoFilaRepository,
+} from './application/ports/retrato-fila.repository';
 import { RODADAS_REPOSITORY, type RodadasRepository } from './application/ports/rodadas.repository';
-import { TAREFA_EXECUTAR_RODADA, TAREFA_LER_FILA } from './application/tarefas';
+import {
+  TAREFA_AGENDAR_RETRATO_FILA,
+  TAREFA_EXECUTAR_RODADA,
+  TAREFA_LER_FILA,
+  TAREFA_LER_RETRATO_FILA,
+} from './application/tarefas';
 import {
   DefinirAjusteDia,
   ListarAjustesDia,
@@ -87,6 +96,12 @@ import {
   ListarRegrasFrente,
   ObterRegrasFrente,
 } from './application/use-cases/regras-frente';
+import {
+  AgendarLeituraFila,
+  ConsultarRetratoFila,
+  LerRetratoFila,
+  PedirLeituraFila,
+} from './application/use-cases/retrato-fila';
 import { DefinirRoboMedico, ObterRoboMedico } from './application/use-cases/robo-medico';
 import {
   AjustarMedicosRodada,
@@ -146,6 +161,7 @@ import { DrizzleParametrosMedicoRepository } from './infrastructure/persistence/
 import { DrizzlePrioridadesClienteRepository } from './infrastructure/persistence/drizzle-prioridades-cliente.repository';
 import { DrizzlePrioridadesOperacaoRepository } from './infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from './infrastructure/persistence/drizzle-regras-frente.repository';
+import { DrizzleRetratoFilaRepository } from './infrastructure/persistence/drizzle-retrato-fila.repository';
 import { DrizzleRodadasRepository } from './infrastructure/persistence/drizzle-rodadas.repository';
 
 const agora = () => new Date();
@@ -304,6 +320,30 @@ const CASOS_RODADA = [
       inject: [DEPENDENCIAS_RODADA],
       useFactory: (d: DependenciasRodada) => new Caso(d),
     })),
+    { provide: RETRATO_FILA_REPOSITORY, useClass: DrizzleRetratoFilaRepository },
+    {
+      provide: LerRetratoFila,
+      inject: [ConsultarFilaDoMomento, RETRATO_FILA_REPOSITORY],
+      useFactory: (montar: ConsultarFilaDoMomento, repo: RetratoFilaRepository) =>
+        new LerRetratoFila(montar, repo, agora),
+    },
+    {
+      provide: PedirLeituraFila,
+      inject: [RETRATO_FILA_REPOSITORY],
+      useFactory: (repo: RetratoFilaRepository) => new PedirLeituraFila(repo, agora),
+    },
+    {
+      provide: AgendarLeituraFila,
+      inject: [CONFIGURACAO_DISTRIBUICAO_REPOSITORY, RETRATO_FILA_REPOSITORY],
+      useFactory: (configuracao: ConfiguracaoDistribuicaoRepository, repo: RetratoFilaRepository) =>
+        new AgendarLeituraFila(configuracao, repo, agora),
+    },
+    {
+      provide: ConsultarRetratoFila,
+      inject: [RETRATO_FILA_REPOSITORY, CONFIGURACAO_DISTRIBUICAO_REPOSITORY],
+      useFactory: (repo: RetratoFilaRepository, configuracao: ConfiguracaoDistribuicaoRepository) =>
+        new ConsultarRetratoFila(repo, configuracao),
+    },
     { provide: AJUSTES_DIA_REPOSITORY, useClass: DrizzleAjustesDiaRepository },
     { provide: ESCALA_DO_AJUSTE, useClass: EscalaDoAjusteAdapter },
     {
@@ -469,10 +509,14 @@ const CASOS_RODADA = [
   ],
 })
 export class DistribuicaoModule implements OnModuleInit {
+  private readonly logger = new Logger(DistribuicaoModule.name);
+
   constructor(
     private readonly registro: RegistroTarefas,
     private readonly lerFila: LerFila,
     private readonly executarRodada: ExecutarRodada,
+    private readonly lerRetrato: LerRetratoFila,
+    private readonly agendarRetrato: AgendarLeituraFila,
   ) {}
 
   onModuleInit() {
@@ -487,5 +531,15 @@ export class DistribuicaoModule implements OnModuleInit {
     this.registro.registrar(TAREFA_EXECUTAR_RODADA, (payload) =>
       this.executarRodada.executar(rodadaDo(TAREFA_EXECUTAR_RODADA, payload)),
     );
+    this.registro.registrar(TAREFA_LER_RETRATO_FILA, async () => {
+      const erro = await this.lerRetrato.executar();
+      // A mensagem das portas não traz dado de paciente.
+      if (erro) this.logger.warn(`Leitura do retrato da fila falhou: ${erro}`);
+    });
+    this.registro.registrar(TAREFA_AGENDAR_RETRATO_FILA, async () => {
+      await this.agendarRetrato.executar();
+    });
+    // A cada minuto; o intervalo de verdade vem de Configurações › Distribuição.
+    this.registro.agendar(TAREFA_AGENDAR_RETRATO_FILA, '* * * * *');
   }
 }

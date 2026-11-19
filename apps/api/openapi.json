@@ -7346,14 +7346,28 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "A fila agora (antes de distribuir): contagens e quem está em turno.",
+            "description": "O último retrato da fila (contagens e quem está em turno), lido por job; não lê a MobileMed.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilaDoMomentoDto"
+                  "$ref": "#/components/schemas/RetratoFilaDto"
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/rodadas/fila/leitura": {
+      "post": {
+        "operationId": "RodadasController_lerFila",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "Leitura única enfileirada (não distribui nada)."
           }
         },
         "tags": [
@@ -16113,6 +16127,69 @@
           "medicosEmTurno"
         ]
       },
+      "FalhaLeituraFilaDto": {
+        "type": "object",
+        "properties": {
+          "em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "erro": {
+            "type": "string",
+            "description": "Mensagem curta, sem dado de paciente."
+          }
+        },
+        "required": [
+          "em",
+          "erro"
+        ]
+      },
+      "RetratoFilaDto": {
+        "type": "object",
+        "properties": {
+          "fila": {
+            "nullable": true,
+            "description": "O último retrato lido (lidaEm = hora da leitura); null = a fila ainda não foi lida.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilaDoMomentoDto"
+              }
+            ]
+          },
+          "pedidaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lendo": {
+            "type": "boolean",
+            "description": "Há leitura pedida e ainda não terminada."
+          },
+          "falha": {
+            "nullable": true,
+            "description": "A última leitura falhou (o retrato é o da anterior); null = leu bem.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FalhaLeituraFilaDto"
+              }
+            ]
+          },
+          "intervaloMin": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Minutos entre as leituras automáticas; null = desligadas (só \"Ler agora\")."
+          }
+        },
+        "required": [
+          "fila",
+          "pedidaEm",
+          "lendo",
+          "falha",
+          "intervaloMin"
+        ]
+      },
       "RecolhimentoPrevistoDto": {
         "type": "object",
         "properties": {
@@ -17375,6 +17452,11 @@
             "type": "number",
             "nullable": true,
             "description": "Máximo de exames propostos por rodada; nulo = sem teto."
+          },
+          "retratoFilaMin": {
+            "type": "number",
+            "nullable": true,
+            "description": "Minutos entre as leituras da fila do momento; nulo = leitura automática desligada."
           }
         },
         "required": [
@@ -17395,7 +17477,8 @@
           "recolhimentoAposListaMin",
           "roboAtivo",
           "expiracaoPropostaMin",
-          "tetoPorRodada"
+          "tetoPorRodada",
+          "retratoFilaMin"
         ]
       },
       "ConfiguracaoDistribuicaoDto": {
@@ -17486,6 +17569,11 @@
             "type": "number",
             "nullable": true,
             "description": "Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado."
+          },
+          "retratoFilaMin": {
+            "type": "number",
+            "nullable": true,
+            "description": "Minutos entre as leituras da fila do momento (1 a 1440); nulo = leitura automática desligada. Ausente = mantém o gravado."
           }
         },
         "required": [

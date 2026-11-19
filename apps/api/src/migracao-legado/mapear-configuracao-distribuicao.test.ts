@@ -186,6 +186,7 @@ describe('mapearConfiguracaoDistribuicao', () => {
       roboAtivo: true,
       expiracaoPropostaMin: 45,
       tetoPorRodada: null,
+      retratoFilaMin: 5,
     });
     expect(avisos.filter((a) => a.tabela === 'configuracao_distribuicao')).toEqual([]);
   });

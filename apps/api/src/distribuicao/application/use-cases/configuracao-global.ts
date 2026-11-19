@@ -46,6 +46,8 @@ export class DefinirConfiguracaoGlobal {
         expiracaoPropostaMin: entrada.expiracaoPropostaMin ?? atual.expiracaoPropostaMin,
         tetoPorRodada:
           entrada.tetoPorRodada === undefined ? atual.tetoPorRodada : entrada.tetoPorRodada,
+        retratoFilaMin:
+          entrada.retratoFilaMin === undefined ? atual.retratoFilaMin : entrada.retratoFilaMin,
       }),
     );
     validarConfiguracaoGlobal(nova);

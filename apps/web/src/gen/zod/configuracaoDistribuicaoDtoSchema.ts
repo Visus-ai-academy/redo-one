@@ -26,6 +26,7 @@ export const configuracaoDistribuicaoDtoSchema = z.object({
   roboAtivo: z.boolean().optional().describe('Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado.'),
   expiracaoPropostaMin: z.number().optional().describe('Minutos que a proposta vale sem aprovação; depois expira. Ausente = mantém o gravado.'),
   tetoPorRodada: z.number().nullish().describe('Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado.'),
+  retratoFilaMin: z.number().nullish().describe('Minutos entre as leituras da fila do momento (1 a 1440); nulo = leitura automática desligada. Ausente = mantém o gravado.'),
 })
 
 export type ConfiguracaoDistribuicaoDtoSchemaType = z.infer<typeof configuracaoDistribuicaoDtoSchema>

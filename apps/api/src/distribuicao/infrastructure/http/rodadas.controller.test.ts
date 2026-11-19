@@ -35,7 +35,16 @@ const casos = () => {
       historico: vi.fn(async () => ({ itens: [], total: 0 })),
     },
     designacoes: { executar: vi.fn(async () => ({ itens: [], total: 0 })) },
-    filaDoMomento: fn(),
+    retratoFila: {
+      executar: vi.fn(async () => ({
+        fila: null,
+        pedidaEm: null,
+        lendo: false,
+        falha: null,
+        intervaloMin: 5,
+      })),
+    },
+    pedirLeitura: { executar: vi.fn(async () => undefined) },
     resumo: fn(),
     explicar: fn(),
     buscarMedicos: { executar: vi.fn(async () => []) },
@@ -59,7 +68,8 @@ const controller = (c: ReturnType<typeof casos>) =>
     c.situacao as never,
     c.consultar as never,
     c.designacoes as never,
-    c.filaDoMomento as never,
+    c.retratoFila as never,
+    c.pedirLeitura as never,
     c.resumo as never,
     c.explicar as never,
     c.buscarMedicos as never,
@@ -84,12 +94,21 @@ describe('controller das rodadas', () => {
     ]) {
       expect(exigidas(leitura)).toEqual(['distribuicao.ver']);
     }
-    expect(exigidas(p.criar)).toEqual(['distribuicao.rodada.iniciar']);
+    for (const iniciar of [p.criar, p.lerFila]) {
+      expect(exigidas(iniciar)).toEqual(['distribuicao.rodada.iniciar']);
+    }
     expect(exigidas(p.aprovar)).toEqual(['distribuicao.rodada.aprovar']);
     expect(exigidas(p.ajustarProposta)).toEqual(['distribuicao.rodada.ajustar']);
     for (const controle of [p.pausar, p.retomar, p.encerrar, p.cancelar, p.reler, p.medicos]) {
       expect(exigidas(controle)).toEqual(['distribuicao.rodada.controlar']);
     }
+  });
+
+  it('a fila vem do retrato; "Ler agora" só enfileira a leitura', async () => {
+    const c = casos();
+    expect(await controller(c).fila()).toMatchObject({ fila: null, intervaloMin: 5 });
+    await controller(c).lerFila();
+    expect(c.pedirLeitura.executar).toHaveBeenCalledOnce();
   });
 
   it('a prévia do recolhimento vem do caso de uso, sem rodada', async () => {

@@ -1,5 +1,8 @@
 import type { FrenteEscala } from '../distribuicao/domain/arranjo';
-import type { ConfiguracaoGlobal } from '../distribuicao/domain/configuracao-global';
+import {
+  CONFIGURACAO_INICIAL,
+  type ConfiguracaoGlobal,
+} from '../distribuicao/domain/configuracao-global';
 import {
   type CriterioFila,
   REGRAS_NEUTRAS,
@@ -211,6 +214,8 @@ export function mapearConfiguracaoDistribuicao(
       roboAtivo: cfg.roboAtivo,
       expiracaoPropostaMin: cfg.roboExpiracaoMin,
       tetoPorRodada: cfg.roboTetoPorRodada,
+      // Sem equivalente no dashboards-one (a tela lia a fila a cada atualização): o padrão.
+      retratoFilaMin: CONFIGURACAO_INICIAL.retratoFilaMin,
     };
     contar('configuracaoGlobal');
   }

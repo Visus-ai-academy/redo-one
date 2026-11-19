@@ -4,9 +4,9 @@
 */
 
 import * as z from 'zod'
-import { filaDoMomentoDtoSchema } from './filaDoMomentoDtoSchema'
+import { retratoFilaDtoSchema } from './retratoFilaDtoSchema'
 
-export const rodadasControllerFilaStatus200Schema = filaDoMomentoDtoSchema
+export const rodadasControllerFilaStatus200Schema = retratoFilaDtoSchema
 
 export type RodadasControllerFilaStatus200SchemaType = z.infer<typeof rodadasControllerFilaStatus200Schema>
 

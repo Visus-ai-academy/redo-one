@@ -97,4 +97,9 @@ export type ConfiguracaoDistribuicaoRespostaDto = {
    * @type number
    */
   tetoPorRodada: number | null;
+  /**
+   * @description Minutos entre as leituras da fila do momento; nulo = leitura automática desligada.
+   * @type number
+   */
+  retratoFilaMin: number | null;
 };

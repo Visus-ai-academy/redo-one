@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import type { FilaDoMomentoDto } from './FilaDoMomentoDto'
+import type { RetratoFilaDto } from './RetratoFilaDto'
 
-export type RodadasControllerFilaStatus200 = FilaDoMomentoDto;
+export type RodadasControllerFilaStatus200 = RetratoFilaDto;
 
 export type RodadasControllerFilaOptions = {
   body?: never;

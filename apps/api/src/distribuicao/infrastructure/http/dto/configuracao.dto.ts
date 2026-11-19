@@ -188,6 +188,18 @@ export class ConfiguracaoDistribuicaoDto {
   @ValidateIf((_, v) => v !== null)
   @IsInt()
   tetoPorRodada?: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    required: false,
+    description:
+      'Minutos entre as leituras da fila do momento (1 a 1440); nulo = leitura automática desligada. Ausente = mantém o gravado.',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  retratoFilaMin?: number | null;
 }
 
 /** A configuração como está gravada (os campos do robô sempre presentes). */
@@ -204,4 +216,12 @@ export class ConfiguracaoDistribuicaoRespostaDto extends ConfiguracaoDistribuica
     description: 'Máximo de exames propostos por rodada; nulo = sem teto.',
   })
   declare tetoPorRodada: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description:
+      'Minutos entre as leituras da fila do momento; nulo = leitura automática desligada.',
+  })
+  declare retratoFilaMin: number | null;
 }

@@ -250,7 +250,7 @@ const menor = (a: Date | null, b: Date | null) => (a && b ? (a < b ? a : b) : (a
 /**
  * A fila agora, para a tela antes de distribuir: contagens por prioridade da operação e frente
  * (a de especialidade também por segmento) e quem está em turno. Lê a porta da fila e as
- * tabelas, sem gravar nada.
+ * tabelas, sem gravar nada. Só o job do retrato a chama (`LerRetratoFila`): a tela lê o retrato.
  */
 export class ConsultarFilaDoMomento {
   constructor(private readonly d: DependenciasRodada) {}

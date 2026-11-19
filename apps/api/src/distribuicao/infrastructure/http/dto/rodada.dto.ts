@@ -724,6 +724,37 @@ export class FilaDoMomentoDto {
   medicosEmTurno!: MedicoEmTurnoDto[];
 }
 
+export class FalhaLeituraFilaDto {
+  @ApiProperty({ type: String, format: 'date-time' }) em!: Date;
+  @ApiProperty({ description: 'Mensagem curta, sem dado de paciente.' }) erro!: string;
+}
+
+export class RetratoFilaDto {
+  @ApiProperty({
+    type: FilaDoMomentoDto,
+    nullable: true,
+    description:
+      'O último retrato lido (lidaEm = hora da leitura); null = a fila ainda não foi lida.',
+  })
+  fila!: FilaDoMomentoDto | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  pedidaEm!: Date | null;
+  @ApiProperty({ description: 'Há leitura pedida e ainda não terminada.' })
+  lendo!: boolean;
+  @ApiProperty({
+    type: FalhaLeituraFilaDto,
+    nullable: true,
+    description: 'A última leitura falhou (o retrato é o da anterior); null = leu bem.',
+  })
+  falha!: FalhaLeituraFilaDto | null;
+  @ApiProperty({
+    type: 'integer',
+    nullable: true,
+    description: 'Minutos entre as leituras automáticas; null = desligadas (só "Ler agora").',
+  })
+  intervaloMin!: number | null;
+}
+
 export class BuscaMedicosQueryDto {
   @ApiPropertyOptional({ description: 'Parte do nome.' })
   @Transform(aparar)
