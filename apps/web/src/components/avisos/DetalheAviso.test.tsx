@@ -91,8 +91,11 @@ describe('DetalheAviso', () => {
 
   it('a grafia sem de-para da distribuição fala da rodada, não da importação', () => {
     const daRodada = { ...pendente, tipo: 'prioridade_operacao' as const, valor: 'Eletivo' };
-    const { unmount } = render(<DetalheAviso aviso={daRodada} podeTriar={false} />);
+    const { unmount } = render(
+      <DetalheAviso aviso={daRodada} podeTriar={false} procurar={<a href="/x">Abrir</a>} />,
+    );
     expect(screen.getByText('Exames na última rodada').nextSibling).toHaveTextContent('42');
+    expect(screen.getByText(/A próxima rodada resolve o aviso/)).toBeInTheDocument();
     unmount();
     render(<DetalheAviso aviso={{ ...daRodada, status: 'resolvido' }} podeTriar={false} />);
     expect(screen.getByRole('status')).toHaveTextContent(

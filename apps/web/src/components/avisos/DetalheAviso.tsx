@@ -91,8 +91,9 @@ export function DetalheAviso({
       {aviso.status === 'pendente' && procurar && (
         <div className="flex flex-col gap-2">
           <p className="text-muted-foreground text-[13px]">
-            Se o cadastro já existe com outra grafia, acrescente este nome como apelido ou variação.
-            A próxima importação resolve o aviso.
+            {daRodada
+              ? 'Acrescente esta grafia ao de-para de uma das prioridades da operação. A próxima rodada resolve o aviso.'
+              : 'Se o cadastro já existe com outra grafia, acrescente este nome como apelido ou variação. A próxima importação resolve o aviso.'}
           </p>
           <div>{procurar}</div>
         </div>
