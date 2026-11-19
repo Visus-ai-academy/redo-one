@@ -20,7 +20,13 @@ function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   );
 }
 
-const schema = z.object({ motivo: z.string().max(300, 'Use até 300 caracteres.') });
+const schema = z.object({
+  motivo: z
+    .string()
+    .trim()
+    .min(1, 'Informe por que o aviso vai ser ignorado.')
+    .max(300, 'Use até 300 caracteres.'),
+});
 
 /** Conteúdo do painel de um aviso de cadastro, com a triagem (ignorar ou reabrir). */
 export function DetalheAviso({
@@ -34,7 +40,7 @@ export function DetalheAviso({
   podeTriar: boolean;
   /** Atalho para o cadastro onde o nome deveria estar (link da tela certa, já com a busca). */
   procurar?: ReactNode;
-  onIgnorar?: (motivo: string | null) => Promise<void>;
+  onIgnorar?: (motivo: string) => Promise<void>;
   onReabrir?: () => Promise<void>;
 }) {
   const situacao = situacaoDoAviso(aviso.status);
@@ -45,7 +51,7 @@ export function DetalheAviso({
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
       tentar(
-        async () => onIgnorar?.(value.motivo.trim() || null),
+        async () => onIgnorar?.(value.motivo.trim()),
         'Não foi possível ignorar agora. Tente de novo.',
       ),
   });
@@ -102,8 +108,9 @@ export function DetalheAviso({
             {(field) => (
               <field.TextAreaField
                 label="Motivo"
+                required
                 placeholder="Ex.: cliente de teste da MobileMed"
-                description="Opcional. Fica registrado com quem ignorou."
+                description="Fica registrado com quem ignorou."
               />
             )}
           </form.AppField>

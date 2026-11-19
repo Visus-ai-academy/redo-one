@@ -273,10 +273,15 @@ export const avisosCadastro = pgTable(
     }),
     decididoPorId: uuid('decidido_por_id').references(() => usuarios.id),
     decididoEm: timestamp('decidido_em', { withTimezone: true }),
+    /** Obrigatório no aviso ignorado: quem ignora registra o porquê. */
     motivo: text('motivo'),
   },
   (t) => [
     unique('avisos_cadastro_tipo_chave_key').on(t.tipo, t.chave),
+    check(
+      'avisos_cadastro_ignorado_motivo_check',
+      sql`${t.status} <> 'ignorado' or btrim(coalesce(${t.motivo}, '')) <> ''`,
+    ),
     index('avisos_cadastro_status_idx').on(t.status, t.tipo),
   ],
 );

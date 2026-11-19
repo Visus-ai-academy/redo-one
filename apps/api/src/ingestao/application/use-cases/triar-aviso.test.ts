@@ -68,7 +68,7 @@ describe('TriarAviso', () => {
   });
 
   it('só ignora o pendente e só reabre o ignorado', async () => {
-    await expect(triar.ignorar('u1', 'r', null)).rejects.toThrow(
+    await expect(triar.ignorar('u1', 'r', 'teste')).rejects.toThrow(
       'Só um aviso pendente pode ser ignorado.',
     );
     await expect(triar.reabrir('u1', 'p')).rejects.toThrow(
@@ -78,6 +78,6 @@ describe('TriarAviso', () => {
   });
 
   it('aviso que não existe é erro de não encontrado', async () => {
-    await expect(triar.ignorar('u1', 'x', null)).rejects.toThrow(AvisoNaoEncontradoError);
+    await expect(triar.ignorar('u1', 'x', 'teste')).rejects.toThrow(AvisoNaoEncontradoError);
   });
 });

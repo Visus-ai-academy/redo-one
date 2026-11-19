@@ -229,7 +229,7 @@ function PainelDoAviso({ id, onFechar }: { id: string; onFechar: () => void }) {
         onIgnorar={async (motivo) => {
           await avisosControllerIgnorar({
             path: { id: aviso.id },
-            body: { motivo: motivo ?? undefined },
+            body: { motivo },
           }).unwrap();
           sucesso('Aviso ignorado.');
           await atualizar();

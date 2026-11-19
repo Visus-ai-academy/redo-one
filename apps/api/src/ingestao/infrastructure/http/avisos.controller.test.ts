@@ -1,3 +1,4 @@
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,6 +9,7 @@ import type { AtualizarParametros } from '../../application/use-cases/atualizar-
 import type { ListarAvisos, ObterParametros } from '../../application/use-cases/consultas-simples';
 import type { TriarAviso } from '../../application/use-cases/triar-aviso';
 import { AvisosController, ParametrosIngestaoController } from './avisos.controller';
+import { IgnorarAvisoDto } from './dto/aviso.dto';
 
 const ator = { tipo: 'usuario', usuarioId: 'u1' } as PrincipalUsuario;
 const reflector = new Reflector();
@@ -54,10 +56,27 @@ describe('AvisosController', () => {
     expect(await controller.obter('a1')).toEqual({ id: 'a1' });
     await controller.ignorar(ator, 'a1', { motivo: 'teste' });
     expect(triar.ignorar).toHaveBeenCalledWith('u1', 'a1', 'teste');
-    await controller.ignorar(ator, 'a1', {});
-    expect(triar.ignorar).toHaveBeenLastCalledWith('u1', 'a1', null);
     await controller.reabrir(ator, 'a1');
     expect(triar.reabrir).toHaveBeenCalledWith('u1', 'a1');
+  });
+});
+
+describe('IgnorarAvisoDto', () => {
+  it('exige o motivo: vazio ou só espaços é recusado', async () => {
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    });
+    const validar = (valor: unknown) =>
+      pipe.transform(valor, { type: 'body', metatype: IgnorarAvisoDto });
+
+    await expect(validar({ motivo: ' Cliente de teste ' })).resolves.toMatchObject({
+      motivo: 'Cliente de teste',
+    });
+    await expect(validar({})).rejects.toBeInstanceOf(BadRequestException);
+    await expect(validar({ motivo: '   ' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(validar({ motivo: 'x'.repeat(301) })).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 

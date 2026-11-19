@@ -7,7 +7,7 @@ export type IgnorarAvisoDto = {
   /**
    * @maxLength 300
    * @example Cliente de teste da MobileMed.
-   * @type string | undefined
+   * @type string
    */
-  motivo?: string;
+  motivo: string;
 };

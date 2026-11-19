@@ -78,7 +78,7 @@ export class AvisosController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corpo: IgnorarAvisoDto,
   ): Promise<void> {
-    return this.triar.ignorar(ator.usuarioId, id, corpo.motivo || null);
+    return this.triar.ignorar(ator.usuarioId, id, corpo.motivo);
   }
 
   @Post(':id/reabrir')

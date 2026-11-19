@@ -1,0 +1,1 @@
+ALTER TABLE "avisos_cadastro" ADD CONSTRAINT "avisos_cadastro_ignorado_motivo_check" CHECK ("avisos_cadastro"."status" <> 'ignorado' or btrim(coalesce("avisos_cadastro"."motivo", '')) <> '');

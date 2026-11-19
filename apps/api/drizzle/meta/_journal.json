@@ -232,6 +232,13 @@
       "when": 1795097491156,
       "tag": "0032_ajuste_dia_laudos_extra",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795097507402,
+      "tag": "0033_loud_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

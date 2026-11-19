@@ -26,11 +26,23 @@ describe('DetalheAviso', () => {
     expect(screen.queryByRole('button', { name: 'Ignorar aviso' })).not.toBeInTheDocument();
   });
 
-  it('ignora o pendente com o motivo opcional', async () => {
+  it('ignora o pendente só com o motivo, que é obrigatório', async () => {
     const onIgnorar = vi.fn(async () => undefined);
     render(<DetalheAviso aviso={pendente} podeTriar onIgnorar={onIgnorar} />);
 
-    await userEvent.type(screen.getByLabelText('Motivo'), 'Cliente de teste da MobileMed');
+    expect(screen.getByRole('textbox', { name: /Motivo/ })).toBeRequired();
+    await userEvent.type(screen.getByRole('textbox', { name: /Motivo/ }), '   ');
+    await userEvent.click(screen.getByRole('button', { name: 'Ignorar aviso' }));
+    expect(
+      await screen.findByText('Informe por que o aviso vai ser ignorado.'),
+    ).toBeInTheDocument();
+    expect(onIgnorar).not.toHaveBeenCalled();
+
+    await userEvent.clear(screen.getByRole('textbox', { name: /Motivo/ }));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /Motivo/ }),
+      'Cliente de teste da MobileMed',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Ignorar aviso' }));
 
     expect(onIgnorar).toHaveBeenCalledWith('Cliente de teste da MobileMed');
@@ -66,6 +78,7 @@ describe('DetalheAviso', () => {
         onIgnorar={vi.fn(async () => Promise.reject(new Error('x')))}
       />,
     );
+    await userEvent.type(screen.getByRole('textbox', { name: /Motivo/ }), 'Teste');
     await userEvent.click(screen.getByRole('button', { name: 'Ignorar aviso' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível ignorar agora.');
   });

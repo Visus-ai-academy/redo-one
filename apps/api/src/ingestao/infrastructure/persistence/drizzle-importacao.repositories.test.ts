@@ -272,7 +272,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
     it('o ignorado continua ignorado; o resolvido que volta a faltar reabre', async () => {
       const repo = new DrizzleAvisosCadastroRepository(db);
       await db.insert(schema.avisosCadastro).values([
-        { tipo: 'cliente', chave: 'a', valor: 'A', status: 'ignorado' },
+        { tipo: 'cliente', chave: 'a', valor: 'A', status: 'ignorado', motivo: 'teste' },
         { tipo: 'cliente', chave: 'b', valor: 'B', status: 'resolvido' },
       ]);
 
@@ -329,7 +329,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
     it('lista o visto por último primeiro, com filtro de status e tipo', async () => {
       await inserir([
         { valor: 'A' },
-        { valor: 'B', status: 'ignorado' },
+        { valor: 'B', status: 'ignorado', motivo: 'teste' },
         { valor: 'C', tipo: 'medico' },
       ]);
       const consulta = new DrizzleConsultaAvisos(db);
@@ -356,6 +356,23 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
       });
 
       expect(r.itens.map((a) => a.valor)).toEqual(['NOVA', 'CLINICA NOVA SUL']);
+    });
+
+    it('o banco recusa aviso ignorado sem motivo', async () => {
+      const usuarioId = await criarUsuario();
+      const [aviso] = await inserir([{ valor: 'A' }]);
+      const consulta = new DrizzleConsultaAvisos(db);
+      const ignorar = (motivo: string | null) =>
+        consulta.decidir(aviso?.id ?? '', {
+          status: 'ignorado',
+          decididoPorId: usuarioId,
+          motivo,
+          em: agora,
+        });
+
+      await expect(ignorar(null)).rejects.toThrow();
+      await expect(ignorar('  ')).rejects.toThrow();
+      expect(await consulta.obter(aviso?.id ?? '')).toMatchObject({ status: 'pendente' });
     });
 
     it('decide e devolve quem decidiu', async () => {

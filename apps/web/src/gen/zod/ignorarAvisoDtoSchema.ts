@@ -6,7 +6,7 @@
 import * as z from 'zod'
 
 export const ignorarAvisoDtoSchema = z.object({
-  motivo: z.string().max(300).optional().meta({ examples: ['Cliente de teste da MobileMed.'] }),
+  motivo: z.string().max(300).meta({ examples: ['Cliente de teste da MobileMed.'] }),
 })
 
 export type IgnorarAvisoDtoSchemaType = z.infer<typeof ignorarAvisoDtoSchema>

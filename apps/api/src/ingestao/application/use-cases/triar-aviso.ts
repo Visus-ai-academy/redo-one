@@ -13,7 +13,7 @@ export class TriarAviso {
     private readonly agora: () => Date,
   ) {}
 
-  ignorar(usuarioId: string, id: string, motivo: string | null) {
+  ignorar(usuarioId: string, id: string, motivo: string) {
     return this.decidir(
       usuarioId,
       id,

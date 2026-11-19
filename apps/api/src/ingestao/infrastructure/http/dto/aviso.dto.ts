@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
 import { PessoaResumoDto } from './importacao.dto';
@@ -49,12 +59,12 @@ export class PaginaAvisosDto {
 }
 
 export class IgnorarAvisoDto {
-  @ApiPropertyOptional({ maxLength: 300, example: 'Cliente de teste da MobileMed.' })
+  @ApiProperty({ maxLength: 300, example: 'Cliente de teste da MobileMed.' })
   @Transform(aparar)
-  @IsOptional()
   @IsString()
+  @IsNotEmpty({ message: 'Informe o motivo.' })
   @MaxLength(300)
-  motivo?: string;
+  motivo!: string;
 }
 
 export class ParametrosIngestaoDto {
