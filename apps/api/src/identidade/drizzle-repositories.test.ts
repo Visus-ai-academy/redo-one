@@ -49,6 +49,8 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     await db.execute(
       sql`truncate table chaves_robo, tokens_senha, tentativas_login, sessoes, usuarios, papeis_permissoes, papeis, medicos cascade`,
     );
+    // A fila de jobs não entra no truncate: os e-mails de execuções anteriores contariam no teste.
+    await db.execute(sql`delete from graphile_worker._private_jobs`);
     papelId = primeira(
       await db.insert(schema.papeis).values({ nome: 'Financeiro' }).returning(),
     ).id;
