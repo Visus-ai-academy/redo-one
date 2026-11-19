@@ -82,9 +82,21 @@ describe('FilaDoMomento', () => {
     expect(neuro).toHaveAttribute('aria-expanded', 'true');
     const subs = screen.getByRole('list', { name: 'Subespecialidades de NEURO' });
     const [cranio, sem] = within(subs).getAllByRole('listitem') as [HTMLElement, HTMLElement];
-    expect(cranio).toHaveTextContent('CRÂNIO3 urgentes18');
-    expect(sem).toHaveTextContent('Sem subespecialidade2 urgentes8');
-    expect(within(cranio).getByRole('img')).toHaveAccessibleName('Urgência: 3, Rotina: 15');
+    // Linha compacta: bolinha + nome (sem pílula), "N urg." e o total; "Sem" por último, apagado.
+    expect(cranio).toHaveTextContent('CRÂNIO3 urg.18');
+    expect(sem).toHaveTextContent('Sem subespecialidade2 urg.8');
+    expect(cranio.querySelector<HTMLElement>('[data-cor]')?.style.backgroundColor).toBe(
+      'rgb(62, 142, 94)',
+    );
+    expect(within(cranio).getByText('CRÂNIO')).not.toHaveClass('rounded-full');
+    expect(within(sem).getByText('Sem subespecialidade')).toHaveClass('text-muted-foreground');
+    // A barra preenche a parte da subespecialidade no total da frente (18 de 26), por prioridade.
+    const barra = within(cranio).getByRole('img');
+    expect(barra).toHaveAccessibleName('Urgência: 3, Rotina: 15');
+    expect([...barra.children].map((s) => (s as HTMLElement).style.width)).toEqual([
+      '11.5385%',
+      '57.6923%',
+    ]);
 
     // A subespecialidade tem o mesmo detalhe ao passar o mouse.
     await userEvent.hover(within(cranio).getByRole('button'));

@@ -9,7 +9,6 @@ import { num } from '../../lib/rodada';
 import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
-import { SeloCor } from '../selo-cor/SeloCor';
 import { Caixa, TituloSecao } from './comum';
 
 /** Prioridade sem cor cadastrada: tons de neutro na ordem da operação (a primeira, mais escura). */
@@ -133,20 +132,31 @@ function LinhaFrente({
       {linha}
       <Collapsible.Panel
         render={<ul aria-label={`Subespecialidades de ${f.nome}`} />}
-        className="border-t border-dashed"
+        className="grid grid-cols-[minmax(0,max-content)_minmax(64px,1fr)_auto_auto] gap-x-2 pb-2"
       >
         {f.porSegmento.map((s) => (
-          <li key={s.segmentoId ?? 'sem-segmento'}>
+          <li key={s.segmentoId ?? 'sem-segmento'} className="col-span-full grid grid-cols-subgrid">
             <LinhaComDetalhe
+              compacta
               titulo={`${f.nome} › ${s.nome}`}
               total={s.exames}
+              base={f.exames}
               urgentes={s.urgentes}
               contagens={s.porPrioridade}
               prioridades={prioridades}
-              className="py-1.5 pr-4 pl-[38px]"
+              className="py-1.5 pr-4 pl-9"
               nome={
-                <span className="flex min-w-0 flex-1">
-                  <SeloCor cor={s.cor}>{s.nome}</SeloCor>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <BolinhaCor cor={s.cor} />
+                  <span
+                    title={s.nome}
+                    className={cn(
+                      'truncate text-xs',
+                      s.segmentoId === null && 'text-muted-foreground',
+                    )}
+                  >
+                    {s.nome}
+                  </span>
                 </span>
               }
             />
@@ -161,25 +171,30 @@ function LinhaFrente({
  * A linha (frente ou subespecialidade) com o detalhe por prioridade num Tooltip do Base UI: abre
  * ao passar o mouse (rápido) e no foco pelo teclado. O Tooltip não abre no toque; lá, tocar na
  * barra abre e fecha o detalhe (sem expandir a frente). Na frente que expande, o mesmo botão é o
- * gatilho do Collapsible.
+ * gatilho do Collapsible. A `compacta` (subespecialidade) fica numa linha só, nas colunas da lista
+ * (subgrid), com a barra fina medida contra a `base` (o total da frente), para comparar as irmãs.
  */
 function LinhaComDetalhe({
   titulo,
   nome,
   total,
+  base = total,
   urgentes,
   contagens,
   prioridades,
   expansivel = false,
+  compacta = false,
   className,
 }: {
   titulo: string;
   nome: ReactNode;
   total: number;
+  base?: number;
   urgentes: number;
   contagens: Contagem[];
   prioridades: PrioridadeComCor[];
   expansivel?: boolean;
+  compacta?: boolean;
   className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -187,7 +202,19 @@ function LinhaComDetalhe({
   const daPrioridade = (id: string | null) =>
     contagens.find((c) => c.prioridadeOperacaoId === id)?.exames ?? 0;
   const comExame = prioridades.filter((p) => daPrioridade(p.prioridadeOperacaoId) > 0);
-  const base = Math.max(total, 1);
+  const barra = (
+    <BarraEmpilhada
+      separados
+      className={cn('w-full', compacta ? 'h-1' : 'h-2')}
+      rotulo={comExame
+        .map((p) => `${p.nome}: ${num(daPrioridade(p.prioridadeOperacaoId))}`)
+        .join(', ')}
+      segmentos={prioridades.map((p) => ({
+        pct: (daPrioridade(p.prioridadeOperacaoId) / Math.max(base, 1)) * 100,
+        cor: p.cor,
+      }))}
+    />
+  );
 
   return (
     <Tooltip.Root open={aberto} onOpenChange={setAberto}>
@@ -205,35 +232,41 @@ function LinhaComDetalhe({
           setAberto((a) => !a);
         }}
         className={cn(
-          'focus-visible:outline-ring flex w-full flex-col gap-1 text-left focus-visible:outline-2 focus-visible:-outline-offset-2',
+          'focus-visible:outline-ring w-full text-left focus-visible:outline-2 focus-visible:-outline-offset-2',
+          compacta ? 'col-span-full grid grid-cols-subgrid items-center' : 'flex flex-col gap-1',
           expansivel ? 'hover:bg-muted' : 'cursor-default',
           className,
         )}
       >
-        <span className="flex w-full items-baseline gap-2">
-          {nome}
-          {urgentes > 0 && (
-            <span className="text-destructive text-[13px] font-medium whitespace-nowrap tabular-nums">
-              {urgentesTexto(urgentes)}
+        {compacta ? (
+          <>
+            {nome}
+            <span data-barra="" className="flex items-center self-stretch">
+              {barra}
             </span>
-          )}
-          <span className="min-w-8 text-right text-base font-semibold tabular-nums">
-            {num(total)}
-          </span>
-        </span>
-        <span data-barra="" className="flex w-full py-1.5">
-          <BarraEmpilhada
-            separados
-            className="h-2 w-full"
-            rotulo={comExame
-              .map((p) => `${p.nome}: ${num(daPrioridade(p.prioridadeOperacaoId))}`)
-              .join(', ')}
-            segmentos={prioridades.map((p) => ({
-              pct: (daPrioridade(p.prioridadeOperacaoId) / base) * 100,
-              cor: p.cor,
-            }))}
-          />
-        </span>
+            <span className="text-destructive text-xs font-medium whitespace-nowrap tabular-nums">
+              {urgentes > 0 && `${num(urgentes)} urg.`}
+            </span>
+            <span className="text-right text-[13px] tabular-nums">{num(total)}</span>
+          </>
+        ) : (
+          <>
+            <span className="flex w-full items-baseline gap-2">
+              {nome}
+              {urgentes > 0 && (
+                <span className="text-destructive text-[13px] font-medium whitespace-nowrap tabular-nums">
+                  {urgentesTexto(urgentes)}
+                </span>
+              )}
+              <span className="min-w-8 text-right text-base font-semibold tabular-nums">
+                {num(total)}
+              </span>
+            </span>
+            <span data-barra="" className="flex w-full py-1.5">
+              {barra}
+            </span>
+          </>
+        )}
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Positioner side="top" align="start" sideOffset={4} className="z-50">
