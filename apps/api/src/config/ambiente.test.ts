@@ -17,6 +17,7 @@ describe('validarAmbiente', () => {
     ['PORT', 'abc'],
     ['JOBS_WORKER', 'sim'],
     ['APP_URL', 'localhost:5173'],
+    ['ALERTAS_EMAIL', 'ti@exemplo.com, ninguem'],
     ['DATABASE_URL', 'mysql://x'],
     ['S3_ENDPOINT', 'localhost:9000'],
     ['S3_FORCAR_PATH_STYLE', 'sim'],

@@ -20,9 +20,10 @@ export interface TokenMobileMed {
 export const TOKEN_MOBILEMED = Symbol('TOKEN_MOBILEMED');
 
 /** Token pelas variáveis `MOBILEMED_*`; sem as credenciais, recusa sem chamar a MobileMed. */
-export function criarTokenMobileMed(config: {
-  get(nome: string): string | undefined;
-}): TokenMobileMed {
+export function criarTokenMobileMed(
+  config: { get(nome: string): string | undefined },
+  aoParar?: () => Promise<void>,
+): TokenMobileMed {
   const usuario = config.get('MOBILEMED_USUARIO');
   const senha = config.get('MOBILEMED_SENHA');
   const totpSegredo = config.get('MOBILEMED_TOTP_SEGREDO');
@@ -43,6 +44,7 @@ export function criarTokenMobileMed(config: {
     senha,
     totpSegredo,
     timeoutMs: timeout ? Number(timeout) : 90_000,
+    aoParar,
   });
 }
 
@@ -105,6 +107,8 @@ export interface OpcoesTokenMobileMedLogin {
   fetch?: typeof fetch;
   agora?: () => number;
   esperar?: (ms: number) => Promise<void>;
+  /** Avisa (uma vez) que o login parou; uma falha do aviso só vai para o log. */
+  aoParar?: () => Promise<void>;
 }
 
 /**
@@ -115,7 +119,7 @@ export interface OpcoesTokenMobileMedLogin {
  * Guarda o access token até perto de vencer (ou até a API recusá-lo, `descartar`) e renova pelo
  * refresh token do gateway; se a renovação falha, refaz o login. Uma renovação por vez (o refresh
  * token gira a cada uso: duas ao mesmo tempo derrubam a sessão). Depois de `LIMITE_FALHAS`
- * falhas seguidas, para de tentar até a API reiniciar.
+ * falhas seguidas, avisa (`aoParar`) e para de tentar até a API reiniciar.
  */
 export class TokenMobileMedLogin implements TokenMobileMed {
   private readonly logger = new Logger('MobileMed');
@@ -177,6 +181,9 @@ export class TokenMobileMedLogin implements TokenMobileMed {
         this.logger.error(
           JSON.stringify({ evento: 'mobilemed_login_parado', falhasSeguidas: this.falhasSeguidas }),
         );
+        await this.o
+          .aoParar?.()
+          .catch(() => this.logger.error(JSON.stringify({ evento: 'mobilemed_alerta_falhou' })));
       }
       throw erro;
     }

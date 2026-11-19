@@ -27,7 +27,10 @@ const resposta = (corpo: unknown, status = 200) =>
   new Response(JSON.stringify(corpo), { status, headers: { 'content-type': 'application/json' } });
 
 /** MobileMed simulada (relógio, fetch e espera injetados). Nada sai do processo. */
-const criar = (respostas: ((init: RequestInit) => Response | Promise<Response>)[]) => {
+const criar = (
+  respostas: ((init: RequestInit) => Response | Promise<Response>)[],
+  aoParar?: () => Promise<void>,
+) => {
   let agora = INICIO;
   const chamadas: Chamada[] = [];
   const esperas: number[] = [];
@@ -55,6 +58,7 @@ const criar = (respostas: ((init: RequestInit) => Response | Promise<Response>)[
       esperas.push(ms);
       agora += ms;
     },
+    aoParar,
   });
   return {
     token,
@@ -408,6 +412,31 @@ describe('TokenMobileMedLogin', () => {
     await erroDe(m.token.accessToken()); // refresh e login falham: 1ª falha
     await erroDe(m.token.accessToken()); // 2ª
     expect(await m.token.accessToken()).toContain('h.');
+  });
+
+  it('ao parar, avisa uma vez só (não a cada pedido recusado depois)', async () => {
+    let avisos = 0;
+    const m = criar(
+      [() => resposta({}, 400), () => resposta({}, 400), () => resposta({}, 400)],
+      async () => {
+        avisos++;
+      },
+    );
+    for (let i = 0; i < 2; i++) await erroDe(m.token.accessToken());
+    expect(avisos).toBe(0);
+    for (let i = 0; i < 3; i++) await erroDe(m.token.accessToken());
+    expect(avisos).toBe(1);
+  });
+
+  it('um aviso que falha não muda o erro do login', async () => {
+    const m = criar(
+      [() => resposta({}, 400), () => resposta({}, 400), () => resposta({}, 400)],
+      async () => {
+        throw new Error('fila fora do ar');
+      },
+    );
+    for (let i = 0; i < 2; i++) await erroDe(m.token.accessToken());
+    expect((await erroDe(m.token.accessToken())).tipo).toBe('sessao');
   });
 
   it('descartar o token em uso renova pelo refresh antes do exp; outro token não é descartado', async () => {
