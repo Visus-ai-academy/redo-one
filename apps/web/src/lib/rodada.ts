@@ -55,6 +55,7 @@ const MOTIVOS: Record<string, string> = {
   fora_da_prioridade: 'Fora das prioridades da rodada',
   fora_da_clinica: 'Fora dos clientes da rodada',
   fora_da_frente: 'Fora das frentes da rodada',
+  fora_da_subespecialidade: 'Fora das subespecialidades da rodada',
   retirado_do_medico: 'Já entregue ou retirado de quem laudaria',
   guardado_para_posteriores: 'Guardado para os turnos posteriores',
   teto_da_rodada: 'Acima do teto de exames da rodada',
@@ -239,6 +240,16 @@ export function descreverRecortes(r: RecortesRodadaDto, nomes: ReadonlyMap<strin
     {
       rotulo: 'Prioridades',
       valor: resumirIds(r.prioridadeOperacaoIds, nomes, 'Todas', ['prioridade', 'prioridades']),
+    },
+    {
+      rotulo: 'Subespecialidades',
+      // O geral (exame sem subespecialidade) entra como o id vazio.
+      valor: resumirIds(
+        r.subespecialidadeGeral ? [...r.subespecialidadeIds, ''] : r.subespecialidadeIds,
+        new Map(nomes).set('', 'Sem subespecialidade'),
+        'Todas',
+        ['subespecialidade', 'subespecialidades'],
+      ),
     },
     {
       rotulo: 'Clientes',
@@ -452,6 +463,8 @@ export function recortesEmPoucasPalavras(r: RecortesRodadaDto) {
     r.turnoIds.length ? `${r.turnoIds.length} turno(s)` : 'Todos os turnos',
     r.frenteIds.length && `${r.frenteIds.length} frente(s)`,
     r.prioridadeOperacaoIds.length && `${r.prioridadeOperacaoIds.length} prioridade(s)`,
+    (r.subespecialidadeIds.length || r.subespecialidadeGeral) &&
+      `${r.subespecialidadeIds.length + Number(r.subespecialidadeGeral)} subespecialidade(s)`,
     r.clienteIds.length && `${r.clienteIds.length} cliente(s)`,
     r.medicosExcluidos.length && `sem ${r.medicosExcluidos.length} médico(s)`,
     r.medicosIncluidos.length && `com ${r.medicosIncluidos.length} fora de turno`,

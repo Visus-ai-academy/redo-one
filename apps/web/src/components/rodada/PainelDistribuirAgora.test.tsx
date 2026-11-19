@@ -35,10 +35,11 @@ const fila: FilaDoMomentoDto = {
 const abrir = (
   onDistribuir = vi.fn(async () => undefined),
   recolhimento: RecolhimentoPrevistoDto | undefined = undefined,
+  daFila: FilaDoMomentoDto = fila,
 ) => {
   renderComRotas(
     <PainelDistribuirAgora
-      fila={fila}
+      fila={daFila}
       recolhimento={recolhimento}
       onFechar={() => undefined}
       onDistribuir={onDistribuir}
@@ -60,6 +61,8 @@ describe('PainelDistribuirAgora', () => {
       turnoIds: ['t1'],
       frenteIds: [],
       prioridadeOperacaoIds: [],
+      subespecialidadeIds: [],
+      subespecialidadeGeral: false,
       clienteIds: [],
       medicosExcluidos: [],
       medicosIncluidos: [],
@@ -74,6 +77,48 @@ describe('PainelDistribuirAgora', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
     expect(onDistribuir).toHaveBeenCalledWith(
       expect.objectContaining({ turnoIds: [], prioridadeOperacaoIds: ['p-urg'] }),
+    );
+  });
+
+  it('recorte por subespecialidade: o "Sem subespecialidade" vai à parte', async () => {
+    const onDistribuir = abrir();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Sem subespecialidade/ }));
+    // A frente sem quebra por subespecialidade (RX) conta como sem subespecialidade.
+    expect(screen.getByText(/Cerca de 18 exames/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
+    expect(onDistribuir).toHaveBeenCalledWith(
+      expect.objectContaining({ subespecialidadeIds: ['s-cranio'], subespecialidadeGeral: false }),
+    );
+  });
+
+  it('subespecialidade de mesmo nome em frentes diferentes leva o nome da frente', async () => {
+    const outros = (frente: string, segmentoId: string) => ({
+      frenteId: frente,
+      nome: frente,
+      exames: 2,
+      urgentes: 0,
+      primeiroVencimento: null,
+      porPrioridade: [{ prioridadeOperacaoId: 'p-rot', exames: 2, urgentes: 0 }],
+      porSegmento: [
+        {
+          segmentoId,
+          nome: 'OUTROS',
+          cor: null,
+          exames: 2,
+          urgentes: 0,
+          porPrioridade: [{ prioridadeOperacaoId: 'p-rot', exames: 2, urgentes: 0 }],
+        },
+      ],
+    });
+    const onDistribuir = abrir(undefined, undefined, {
+      ...fila,
+      porFrente: [outros('MI', 's-mi'), outros('MSK', 's-msk')],
+    });
+    await userEvent.click(await screen.findByRole('checkbox', { name: /OUTROS \(MSK\)/ }));
+    expect(screen.getByRole('checkbox', { name: /OUTROS \(MI\)/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
+    expect(onDistribuir).toHaveBeenCalledWith(
+      expect.objectContaining({ subespecialidadeIds: ['s-mi'], subespecialidadeGeral: false }),
     );
   });
 

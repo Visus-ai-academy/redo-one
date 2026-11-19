@@ -256,7 +256,11 @@ function nomesDaFila(
   fila:
     | {
         turnos: { turnoId: string; nome: string }[];
-        porFrente: { frenteId: string | null; nome: string }[];
+        porFrente: {
+          frenteId: string | null;
+          nome: string;
+          porSegmento: { segmentoId: string | null; nome: string }[];
+        }[];
         prioridades: { prioridadeOperacaoId: string | null; nome: string }[];
         medicosEmTurno: { medicoId: string; nome: string }[];
       }
@@ -265,7 +269,10 @@ function nomesDaFila(
   const nomes = new Map<string, string>();
   if (!fila) return nomes;
   for (const t of fila.turnos) nomes.set(t.turnoId, t.nome);
-  for (const f of fila.porFrente) if (f.frenteId) nomes.set(f.frenteId, f.nome);
+  for (const f of fila.porFrente) {
+    if (f.frenteId) nomes.set(f.frenteId, f.nome);
+    for (const s of f.porSegmento) if (s.segmentoId) nomes.set(s.segmentoId, s.nome);
+  }
   for (const p of fila.prioridades)
     if (p.prioridadeOperacaoId) nomes.set(p.prioridadeOperacaoId, p.nome);
   for (const m of fila.medicosEmTurno) nomes.set(m.medicoId, m.nome);

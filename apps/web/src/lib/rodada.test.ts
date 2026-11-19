@@ -53,6 +53,7 @@ describe('rodada do robô na tela', () => {
   it('todo motivo tem rótulo legível, inclusive os que a execução e o controle gravam', () => {
     for (const m of [
       'fora_da_frente',
+      'fora_da_subespecialidade',
       'teto_da_rodada',
       'removido_na_conferencia',
       'encerrada_pelo_operador',
@@ -117,6 +118,8 @@ describe('rodada do robô na tela', () => {
       turnoIds: ['t1', 't2'],
       frenteIds: [],
       prioridadeOperacaoIds: ['p1'],
+      subespecialidadeIds: ['s1'],
+      subespecialidadeGeral: true,
       clienteIds: ['c1', 'c2', 'c3'],
       medicosExcluidos: ['m1'],
       medicosIncluidos: [],
@@ -125,12 +128,14 @@ describe('rodada do robô na tela', () => {
       ['t1', 'Manhã'],
       ['t2', 'Lista'],
       ['p1', 'Urgência'],
+      ['s1', 'CRÂNIO'],
       ['m1', 'Gustavo Vilela'],
     ]);
     expect(descreverRecortes(recortes, nomes)).toEqual([
       { rotulo: 'Turnos', valor: 'Manhã e Lista' },
       { rotulo: 'Frentes', valor: 'Todas' },
       { rotulo: 'Prioridades', valor: 'Urgência' },
+      { rotulo: 'Subespecialidades', valor: 'CRÂNIO e Sem subespecialidade' },
       { rotulo: 'Clientes', valor: '3 clientes' },
       { rotulo: 'Médicos', valor: 'Sem Gustavo Vilela' },
     ]);

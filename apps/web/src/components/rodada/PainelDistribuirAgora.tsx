@@ -6,6 +6,7 @@ import type { RecortesRodadaDto } from '../../gen/types/RecortesRodadaDto';
 import { horaDeBrasilia } from '../../lib/acesso';
 import { num, recolhimentoPrevistoEmTexto } from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
@@ -14,13 +15,14 @@ import { PainelLateral } from '../painel/PainelLateral';
 import {
   esquemaDistribuir,
   estimativa,
+  opcoesSubespecialidade,
   recortesDoFormulario,
   type ValoresDistribuir,
 } from './distribuir-agora';
 
 /**
  * "Distribuir agora": os recortes da rodada num painel lateral (a fila continua à vista). Vêm
- * marcados os turnos em andamento, todas as frentes e prioridades. Nada é atribuído antes da
+ * marcados os turnos em andamento, todas as frentes, prioridades e subespecialidades. Nada é atribuído antes da
  * aprovação: o robô lê a fila e monta a proposta.
  */
 export function PainelDistribuirAgora({
@@ -42,6 +44,7 @@ export function PainelDistribuirAgora({
   const { erro, tentar } = useErroDoPainel();
   const temTurnos = fila.turnos.length > 0;
   const comMedicos = new Set(fila.medicosEmTurno.map((m) => m.turnoId));
+  const subespecialidades = opcoesSubespecialidade(fila);
   const form = useAppForm({
     defaultValues: {
       turnoIds: fila.turnos.filter((t) => t.emAndamento && t.medicos > 0).map((t) => t.turnoId),
@@ -49,6 +52,7 @@ export function PainelDistribuirAgora({
       prioridadeIds: fila.prioridades.flatMap((p) =>
         p.prioridadeOperacaoId ? [p.prioridadeOperacaoId] : [],
       ),
+      subespecialidadeIds: subespecialidades.map((o) => o.valor),
       clientes: [],
       tirar: [],
       incluir: [],
@@ -139,6 +143,27 @@ export function PainelDistribuirAgora({
               />
             )}
           </form.AppField>
+          {subespecialidades.length > 0 && (
+            <form.AppField name="subespecialidadeIds">
+              {(field) => (
+                <field.CaixasComContagemField
+                  label="Subespecialidades"
+                  colunas={2}
+                  todos={{ rotulo: 'Todas as subespecialidades' }}
+                  opcoes={subespecialidades.map((o) => ({
+                    valor: o.valor,
+                    rotulo: (
+                      <span className="flex items-center gap-2">
+                        <BolinhaCor cor={o.cor} />
+                        {o.rotulo}
+                      </span>
+                    ),
+                    contagem: num(o.exames),
+                  }))}
+                />
+              )}
+            </form.AppField>
+          )}
           <form.AppField name="clientes">
             {(field) => (
               <field.EscolhidosField

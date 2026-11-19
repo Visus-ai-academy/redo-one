@@ -47,12 +47,15 @@ function Rodada() {
     refetchInterval: intervaloDaRodada(rodada.data?.status),
     refetchIntervalInBackground: false,
   });
-  // Nomes dos turnos, frentes e prioridades de hoje, para os recortes.
+  // Nomes dos turnos, frentes, subespecialidades e prioridades de hoje, para os recortes.
   const fila = useQuery({ ...rodadasControllerFilaQueryOptions(), staleTime: 60_000 });
   const nomes = useMemo(() => {
     const m = new Map<string, string>();
     for (const t of fila.data?.turnos ?? []) m.set(t.turnoId, t.nome);
-    for (const f of fila.data?.porFrente ?? []) if (f.frenteId) m.set(f.frenteId, f.nome);
+    for (const f of fila.data?.porFrente ?? []) {
+      if (f.frenteId) m.set(f.frenteId, f.nome);
+      for (const s of f.porSegmento) if (s.segmentoId) m.set(s.segmentoId, s.nome);
+    }
     for (const p of fila.data?.prioridades ?? [])
       if (p.prioridadeOperacaoId) m.set(p.prioridadeOperacaoId, p.nome);
     for (const x of resumo.data?.medicos ?? []) m.set(x.medicoId, x.nome);
