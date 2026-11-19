@@ -4,7 +4,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FormParametrosImportacao } from './FormParametrosImportacao';
 
-const atuais = { travaRemocaoMinimo: 500, travaRemocaoFator: 2, retencaoLinhasBrutasDias: 90 };
+const atuais = {
+  travaRemocaoMinimo: 500,
+  travaRemocaoFator: 2,
+  retencaoLinhasBrutasDias: 90,
+  mobilemedIntervaloMinutos: 30,
+  mobilemedMesesAnteriores: 1,
+  mobilemedJanelaDias: 7,
+  mobilemedTeto: 50_000,
+};
 
 describe('FormParametrosImportacao', () => {
   it('sem permissão de editar, só mostra os valores', () => {
@@ -14,6 +22,55 @@ describe('FormParametrosImportacao', () => {
     expect(screen.getByText('Retenção da linha da planilha').nextSibling).toHaveTextContent(
       '90 dias',
     );
+    expect(screen.getByText('Importação automática').nextSibling).toHaveTextContent(
+      'A cada 30 minutos',
+    );
+    expect(screen.getByText('Período').nextSibling).toHaveTextContent(
+      'Do dia 1º do mês anterior até hoje',
+    );
+  });
+
+  it('desmarcar a importação automática salva o intervalo vazio; marcar de novo pede o intervalo', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(<FormParametrosImportacao parametros={atuais} podeEditar onSalvar={onSalvar} />);
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Importar automaticamente' }));
+    expect(screen.queryByRole('textbox', { name: /Intervalo/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
+
+    expect(onSalvar).toHaveBeenCalledWith({ ...atuais, mobilemedIntervaloMinutos: null });
+  });
+
+  it('salva o período, a janela e o teto da MobileMed', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(<FormParametrosImportacao parametros={atuais} podeEditar onSalvar={onSalvar} />);
+
+    const meses = screen.getByRole('textbox', { name: /Meses anteriores/ });
+    await userEvent.clear(meses);
+    await userEvent.type(meses, '0');
+    const janela = screen.getByRole('textbox', { name: /Dias por consulta/ });
+    await userEvent.clear(janela);
+    await userEvent.type(janela, '3');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
+
+    expect(onSalvar).toHaveBeenCalledWith({
+      ...atuais,
+      mobilemedMesesAnteriores: 0,
+      mobilemedJanelaDias: 3,
+    });
+  });
+
+  it('desligada no ambiente, avisa que os valores só valem quando ligarem', () => {
+    render(
+      <FormParametrosImportacao
+        parametros={atuais}
+        podeEditar
+        mobilemedLigada={false}
+        onSalvar={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/desligada neste ambiente/)).toBeInTheDocument();
   });
 
   it('salva os três valores como números', async () => {

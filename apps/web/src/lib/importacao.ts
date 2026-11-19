@@ -24,6 +24,15 @@ const emAndamento = (status: StatusImportacaoKey) =>
 export const atualizarEnquantoRoda = (itens: { status: StatusImportacaoKey }[]) =>
   itens.some((i) => emAndamento(i.status)) ? 30_000 : (false as const);
 
+/** O que a importação leu: a planilha enviada ou o relatório da MobileMed. */
+export function origemDaImportacao(i: {
+  nomeArquivo: string | null;
+  formato: 'laudos' | 'compartilhamento' | null;
+}): string {
+  if (i.nomeArquivo) return i.nomeArquivo;
+  return i.formato === 'compartilhamento' ? 'MobileMed: compartilhamento' : 'MobileMed: laudos';
+}
+
 /** Dias do laudo cobertos pelo arquivo: "06/10/2026", "01/10 a 31/10/2026". */
 export function periodoDosLaudos(inicio: string | null, fim: string | null): string | null {
   if (!inicio || !fim) return null;

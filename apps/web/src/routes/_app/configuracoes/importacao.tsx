@@ -7,13 +7,17 @@ import { FormParametrosImportacao } from '../../../components/importacao/FormPar
 import { Painel } from '../../../components/painel/Painel';
 import { useAvisos } from '../../../components/toast/use-avisos';
 import { parametrosIngestaoControllerAtualizar } from '../../../gen/clients/parametrosIngestaoControllerAtualizar';
+import { importacaoMobileMedControllerSituacaoQueryOptions } from '../../../gen/hooks/useImportacaoMobileMedControllerSituacao';
 import { parametrosIngestaoControllerObterQueryOptions } from '../../../gen/hooks/useParametrosIngestaoControllerObter';
 import { pode } from '../../../lib/permissoes';
 
 export const Route = createFileRoute('/_app/configuracoes/importacao')({
   loader: async ({ context }) => {
     if (!pode(context.sessao, 'importacao.ver')) return;
-    await context.queryClient.ensureQueryData(parametrosIngestaoControllerObterQueryOptions());
+    await Promise.all([
+      context.queryClient.ensureQueryData(parametrosIngestaoControllerObterQueryOptions()),
+      context.queryClient.ensureQueryData(importacaoMobileMedControllerSituacaoQueryOptions()),
+    ]);
   },
   head: () => ({ meta: [{ title: 'Importação de laudos | Configurações | One' }] }),
   component: PaginaParametros,
@@ -38,6 +42,7 @@ function Parametros() {
   const { sucesso } = useAvisos();
   const opcoes = parametrosIngestaoControllerObterQueryOptions();
   const { data: parametros } = useSuspenseQuery(opcoes);
+  const { data: mobilemed } = useSuspenseQuery(importacaoMobileMedControllerSituacaoQueryOptions());
 
   return (
     <div className="flex max-w-[640px] flex-col gap-6">
@@ -46,6 +51,7 @@ function Parametros() {
         <FormParametrosImportacao
           parametros={parametros}
           podeEditar={pode(sessao, 'importacao.parametros.editar')}
+          mobilemedLigada={mobilemed.ligada}
           onSalvar={async (novos) => {
             await parametrosIngestaoControllerAtualizar({ body: novos }).unwrap();
             await queryClient.invalidateQueries({ queryKey: opcoes.queryKey });

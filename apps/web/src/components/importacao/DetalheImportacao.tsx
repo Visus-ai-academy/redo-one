@@ -48,6 +48,7 @@ export function DetalheImportacao({
   const erros = usePaginaLocal(i.errosLinhas, 5);
   const [baixando, setBaixando] = useState(false);
   const periodo = periodoDosLaudos(i.janelaInicio, i.janelaFim);
+  const mobilemed = i.origem === 'mobilemed';
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -57,8 +58,12 @@ export function DetalheImportacao({
         </span>
         {rodando && (
           <Alerta tom="info">
-            {i.status === 'na_fila' ? 'Na fila para importar.' : 'Processando a planilha.'} Esta
-            tela atualiza sozinha.
+            {i.status === 'na_fila'
+              ? 'Na fila para importar.'
+              : mobilemed
+                ? 'Lendo o relatório da MobileMed.'
+                : 'Processando a planilha.'}{' '}
+            Esta tela atualiza sozinha.
           </Alerta>
         )}
         {i.status === 'recusada' && <Alerta tom="atencao">{i.mensagem}</Alerta>}
@@ -66,16 +71,22 @@ export function DetalheImportacao({
       </div>
 
       <dl className="divide-y">
-        <Campo rotulo="Arquivo">
-          <span className="break-all">{i.nomeArquivo}</span>
-        </Campo>
+        {i.nomeArquivo ? (
+          <Campo rotulo="Arquivo">
+            <span className="break-all">{i.nomeArquivo}</span>
+          </Campo>
+        ) : (
+          <Campo rotulo="Origem">Relatório da MobileMed</Campo>
+        )}
         {i.formato && (
           <Campo rotulo="Relatório">
             {i.formato === 'compartilhamento' ? 'Compartilhamento de exames' : 'Laudos'}
           </Campo>
         )}
         {periodo && <Campo rotulo="Laudos de">{periodo}</Campo>}
-        <Campo rotulo="Enviada por">{i.enviadaPor?.nome ?? 'Robô da MobileMed'}</Campo>
+        <Campo rotulo={mobilemed ? 'Pedida por' : 'Enviada por'}>
+          {i.enviadaPor?.nome ?? (mobilemed ? 'Agendamento automático' : 'Robô da MobileMed')}
+        </Campo>
         <Campo rotulo="Enviada em">{dataHoraCurta(i.criadaEm)}</Campo>
         {i.concluidaEm && <Campo rotulo="Terminada em">{dataHoraCurta(i.concluidaEm)}</Campo>}
       </dl>
@@ -83,7 +94,9 @@ export function DetalheImportacao({
       {!rodando && i.linhasArquivo !== null && (
         <Secao titulo="Resultado">
           <dl className="divide-y">
-            <Campo rotulo="Linhas na planilha">{numero(i.linhasArquivo)}</Campo>
+            <Campo rotulo={mobilemed ? 'Linhas no relatório' : 'Linhas na planilha'}>
+              {numero(i.linhasArquivo)}
+            </Campo>
             <Campo rotulo="Laudos novos">{numero(i.inseridos)}</Campo>
             <Campo rotulo="Laudos alterados">{numero(i.atualizados)}</Campo>
             <Campo rotulo="Sem mudança">{numero(i.inalterados)}</Campo>
@@ -128,7 +141,7 @@ export function DetalheImportacao({
         </Secao>
       )}
 
-      {onBaixar && (
+      {onBaixar && i.nomeArquivo && (
         <div>
           <Button
             type="button"

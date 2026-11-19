@@ -84,4 +84,19 @@ describe('DetalheImportacao', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Baixar planilha' }));
     expect(onBaixar).toHaveBeenCalled();
   });
+
+  it('importação da MobileMed: mostra o relatório no lugar do arquivo e não oferece download', () => {
+    render(
+      <DetalheImportacao
+        importacao={{ ...base, origem: 'mobilemed', nomeArquivo: null, enviadaPor: null }}
+        onBaixar={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Relatório da MobileMed')).toBeInTheDocument();
+    expect(screen.queryByText('Arquivo')).not.toBeInTheDocument();
+    expect(screen.getByText('Agendamento automático')).toBeInTheDocument();
+    expect(screen.getByText('Linhas no relatório')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Baixar planilha' })).not.toBeInTheDocument();
+  });
 });

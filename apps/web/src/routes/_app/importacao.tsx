@@ -1,9 +1,13 @@
-import { FileArrowUp } from '@phosphor-icons/react';
+import { Button } from '@base-ui/react/button';
+import { ArrowsClockwise, FileArrowUp } from '@phosphor-icons/react';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
 
+import { Alerta } from '../../components/alerta/Alerta';
+import { mensagemDaApi } from '../../components/alerta/mensagem-da-api';
+import { buttonClassName } from '../../components/button/button-class';
 import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { EnvioDeArquivo } from '../../components/envio-arquivo/EnvioDeArquivo';
@@ -13,7 +17,9 @@ import { DetalheImportacao } from '../../components/importacao/DetalheImportacao
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { PainelLateral } from '../../components/painel/PainelLateral';
 import { useAvisos } from '../../components/toast/use-avisos';
+import { importacaoMobileMedControllerImportarAgora } from '../../gen/clients/importacaoMobileMedControllerImportarAgora';
 import { importacoesControllerBaixarArquivo } from '../../gen/clients/importacoesControllerBaixarArquivo';
+import { importacaoMobileMedControllerSituacaoQueryOptions } from '../../gen/hooks/useImportacaoMobileMedControllerSituacao';
 import {
   importacoesControllerListarQueryKey,
   importacoesControllerListarQueryOptions,
@@ -21,7 +27,12 @@ import {
 import { importacoesControllerObterQueryOptions } from '../../gen/hooks/useImportacoesControllerObter';
 import type { ImportacaoDto } from '../../gen/types/ImportacaoDto';
 import { dataHoraCurta } from '../../lib/datas';
-import { atualizarEnquantoRoda, enviarPlanilha, situacaoDaImportacao } from '../../lib/importacao';
+import {
+  atualizarEnquantoRoda,
+  enviarPlanilha,
+  origemDaImportacao,
+  situacaoDaImportacao,
+} from '../../lib/importacao';
 import { pode } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
@@ -44,9 +55,10 @@ export const Route = createFileRoute('/_app/importacao')({
       void context.queryClient.prefetchQuery(
         importacoesControllerObterQueryOptions({ path: { id: deps.id } }),
       );
-    await context.queryClient.ensureQueryData(
-      importacoesControllerListarQueryOptions(consulta(deps)),
-    );
+    await Promise.all([
+      context.queryClient.ensureQueryData(importacoesControllerListarQueryOptions(consulta(deps))),
+      context.queryClient.ensureQueryData(importacaoMobileMedControllerSituacaoQueryOptions()),
+    ]);
   },
   head: () => ({ meta: [{ title: 'Importação de laudos | One' }] }),
   component: PaginaImportacao,
@@ -72,6 +84,8 @@ function Importacao() {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
+  const { data: mobilemed } = useSuspenseQuery(importacaoMobileMedControllerSituacaoQueryOptions());
+  const [erroMobileMed, setErroMobileMed] = useState<string | null>(null);
   const { data: pagina } = useSuspenseQuery({
     ...importacoesControllerListarQueryOptions(consulta(busca)),
     refetchInterval: (q) => atualizarEnquantoRoda(q.state.data?.itens ?? []),
@@ -95,8 +109,9 @@ function Importacao() {
           </BotaoAbrir>
         ),
       }),
-      coluna.accessor('nomeArquivo', {
-        header: 'Arquivo',
+      coluna.accessor((i) => origemDaImportacao(i), {
+        id: 'origem',
+        header: 'Origem',
         cell: (info) => <span className="block max-w-64 truncate">{info.getValue()}</span>,
       }),
       coluna.accessor('status', {
@@ -129,10 +144,31 @@ function Importacao() {
     [abrir],
   );
 
+  const mobilemedEmCurso = pagina.itens.some(
+    (i) => i.origem === 'mobilemed' && (i.status === 'na_fila' || i.status === 'processando'),
+  );
+
   return (
     <ListaCadastro
       titulo="Importação de laudos"
       totalNoTitulo={false}
+      acoes={
+        podeEnviar && mobilemed.ligada ? (
+          <>
+            {erroMobileMed && <Alerta tom="erro">{erroMobileMed}</Alerta>}
+            <BotaoImportarAgora
+              emCurso={mobilemedEmCurso}
+              onErro={setErroMobileMed}
+              onImportada={async (id) => {
+                await queryClient.invalidateQueries({
+                  queryKey: importacoesControllerListarQueryKey(),
+                });
+                ir((a) => ({ ...a, novo: undefined, id, pagina: undefined }), true);
+              }}
+            />
+          </>
+        ) : undefined
+      }
       novo={
         podeEnviar
           ? {
@@ -177,6 +213,44 @@ function Importacao() {
         ) : undefined
       }
     />
+  );
+}
+
+/** "Importar agora": põe na fila a importação da MobileMed do período configurado. */
+function BotaoImportarAgora({
+  emCurso,
+  onErro,
+  onImportada,
+}: {
+  emCurso: boolean;
+  onErro: (mensagem: string | null) => void;
+  onImportada: (id: string) => Promise<void>;
+}) {
+  const { sucesso } = useAvisos();
+  const [enviando, setEnviando] = useState(false);
+  return (
+    <Button
+      type="button"
+      disabled={enviando || emCurso}
+      title={emCurso ? 'Já há uma importação da MobileMed na fila ou em andamento.' : undefined}
+      className={buttonClassName({ variant: 'secondary' })}
+      onClick={async () => {
+        setEnviando(true);
+        onErro(null);
+        try {
+          const { ids } = await importacaoMobileMedControllerImportarAgora().unwrap();
+          sucesso('Importação da MobileMed na fila.');
+          if (ids[0]) await onImportada(ids[0]);
+        } catch (erro) {
+          onErro(mensagemDaApi(erro, 'Não foi possível pôr a importação na fila. Tente de novo.'));
+        } finally {
+          setEnviando(false);
+        }
+      }}
+    >
+      <ArrowsClockwise size={16} aria-hidden />
+      {enviando ? 'Pondo na fila…' : emCurso ? 'Importando da MobileMed…' : 'Importar agora'}
+    </Button>
   );
 }
 

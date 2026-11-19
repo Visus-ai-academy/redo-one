@@ -20,6 +20,8 @@ type ListaCadastroProps<T extends RowData> = {
   abas?: ReactNode;
   /** Ação de criar; presente só para quem pode editar. `icone` troca o "+" (ex.: enviar arquivo). */
   novo?: { rotulo: string; onClick: () => void; icone?: Icon };
+  /** Outras ações da página, ao lado do "novo" (botões secundários). */
+  acoes?: ReactNode;
   /** Sem busca (ex.: histórico por data), a faixa acima da tabela só aparece com filtros. */
   busca?: { valor: string | undefined; rotulo: string; placeholder: string };
   /** Selects de filtro, na mesma faixa da busca. */
@@ -60,6 +62,7 @@ export function ListaCadastro<T extends RowData>({
   totalNoTitulo = true,
   abas,
   novo,
+  acoes,
   busca,
   filtros,
   temFiltro = false,
@@ -104,7 +107,12 @@ export function ListaCadastro<T extends RowData>({
             </>
           )}
         </h1>
-        {novo && !abas && <BotaoNovo {...novo} />}
+        {(acoes || (novo && !abas)) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {acoes}
+            {novo && !abas && <BotaoNovo {...novo} />}
+          </div>
+        )}
       </div>
 
       {abas}

@@ -11,13 +11,37 @@ const inteiro = (min: number, max: number, mensagem: string) =>
     .regex(/^\d+$/, mensagem)
     .refine((v) => Number(v) >= min && Number(v) <= max, mensagem);
 
-const schema = z.object({
-  travaRemocaoMinimo: inteiro(0, 1_000_000, 'Informe um número inteiro a partir de 0.'),
-  travaRemocaoFator: z
-    .string()
-    .refine((v) => Number(v) > 0 && Number(v) <= 1000, 'Informe um número maior que 0.'),
-  retencaoLinhasBrutasDias: inteiro(1, 3650, 'Use de 1 a 3650 dias.'),
-});
+const schema = z
+  .object({
+    travaRemocaoMinimo: inteiro(0, 1_000_000, 'Informe um número inteiro a partir de 0.'),
+    travaRemocaoFator: z
+      .string()
+      .refine((v) => Number(v) > 0 && Number(v) <= 1000, 'Informe um número maior que 0.'),
+    retencaoLinhasBrutasDias: inteiro(1, 3650, 'Use de 1 a 3650 dias.'),
+    mobilemedAutomatica: z.boolean(),
+    mobilemedIntervaloMinutos: z.string(),
+    mobilemedMesesAnteriores: inteiro(0, 12, 'Use de 0 a 12 meses.'),
+    mobilemedJanelaDias: inteiro(1, 31, 'Use de 1 a 31 dias.'),
+    mobilemedTeto: inteiro(1, 1_000_000, 'Informe um número inteiro a partir de 1.'),
+  })
+  .superRefine((v, ctx) => {
+    if (!v.mobilemedAutomatica) return;
+    const n = Number(v.mobilemedIntervaloMinutos);
+    if (!/^\d+$/.test(v.mobilemedIntervaloMinutos) || n < 5 || n > 1440) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['mobilemedIntervaloMinutos'],
+        message: 'Use de 5 a 1440 minutos.',
+      });
+    }
+  });
+
+/** "Do dia 1º do mês anterior até hoje", "Do dia 1º de 2 meses atrás até hoje". */
+function textoDoPeriodo(meses: number): string {
+  if (meses === 0) return 'Do dia 1º deste mês até hoje';
+  if (meses === 1) return 'Do dia 1º do mês anterior até hoje';
+  return `Do dia 1º de ${meses} meses atrás até hoje`;
+}
 
 function Valor({ rotulo, children }: { rotulo: string; children: string }) {
   return (
@@ -29,16 +53,20 @@ function Valor({ rotulo, children }: { rotulo: string; children: string }) {
 }
 
 /**
- * Parâmetros da importação de laudos: a trava contra arquivo incompleto e por quanto tempo a
- * linha crua da planilha (que tem dado de paciente) fica guardada.
+ * Parâmetros da importação de laudos: a trava contra arquivo incompleto, por quanto tempo a
+ * linha crua da planilha (que tem dado de paciente) fica guardada e a importação automática da
+ * MobileMed (intervalo, período e fatiamento das consultas).
  */
 export function FormParametrosImportacao({
   parametros,
   podeEditar,
+  mobilemedLigada = true,
   onSalvar,
 }: {
   parametros: ParametrosIngestaoDto;
   podeEditar: boolean;
+  /** `INGESTAO_MOBILEMED` ligada no ambiente da API. */
+  mobilemedLigada?: boolean;
   onSalvar: (parametros: ParametrosIngestaoDto) => Promise<void>;
 }) {
   const { erro, tentar } = useErroDoPainel();
@@ -47,6 +75,11 @@ export function FormParametrosImportacao({
       travaRemocaoMinimo: String(parametros.travaRemocaoMinimo),
       travaRemocaoFator: String(parametros.travaRemocaoFator),
       retencaoLinhasBrutasDias: String(parametros.retencaoLinhasBrutasDias),
+      mobilemedAutomatica: parametros.mobilemedIntervaloMinutos !== null,
+      mobilemedIntervaloMinutos: String(parametros.mobilemedIntervaloMinutos ?? 30),
+      mobilemedMesesAnteriores: String(parametros.mobilemedMesesAnteriores),
+      mobilemedJanelaDias: String(parametros.mobilemedJanelaDias),
+      mobilemedTeto: String(parametros.mobilemedTeto),
     },
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
@@ -55,9 +88,22 @@ export function FormParametrosImportacao({
           travaRemocaoMinimo: Number(value.travaRemocaoMinimo),
           travaRemocaoFator: Number(value.travaRemocaoFator),
           retencaoLinhasBrutasDias: Number(value.retencaoLinhasBrutasDias),
+          mobilemedIntervaloMinutos: value.mobilemedAutomatica
+            ? Number(value.mobilemedIntervaloMinutos)
+            : null,
+          mobilemedMesesAnteriores: Number(value.mobilemedMesesAnteriores),
+          mobilemedJanelaDias: Number(value.mobilemedJanelaDias),
+          mobilemedTeto: Number(value.mobilemedTeto),
         }),
       ),
   });
+
+  const avisoDesligada = !mobilemedLigada && (
+    <Alerta tom="info">
+      A importação da MobileMed está desligada neste ambiente (variável INGESTAO_MOBILEMED da API).
+      Estes valores passam a valer quando ela for ligada.
+    </Alerta>
+  );
 
   if (!podeEditar) {
     return (
@@ -71,6 +117,17 @@ export function FormParametrosImportacao({
         <Valor rotulo="Retenção da linha da planilha">
           {`${parametros.retencaoLinhasBrutasDias} dias`}
         </Valor>
+        <Valor rotulo="Importação automática">
+          {parametros.mobilemedIntervaloMinutos === null
+            ? 'Desligada'
+            : `A cada ${parametros.mobilemedIntervaloMinutos} minutos`}
+        </Valor>
+        <Valor rotulo="Período">{textoDoPeriodo(parametros.mobilemedMesesAnteriores)}</Valor>
+        <Valor rotulo="Dias por consulta">{`${parametros.mobilemedJanelaDias} dias`}</Valor>
+        <Valor rotulo="Teto por consulta">
+          {`${parametros.mobilemedTeto.toLocaleString('pt-BR')} laudos`}
+        </Valor>
+        {avisoDesligada && <div className="pt-3">{avisoDesligada}</div>}
       </dl>
     );
   }
@@ -125,6 +182,72 @@ export function FormParametrosImportacao({
           />
         )}
       </form.AppField>
+
+      <fieldset className="flex flex-col gap-4">
+        <legend className="mb-1 font-semibold">Importação automática da MobileMed</legend>
+        <p className="text-muted-foreground text-[13px]">
+          Busca os laudos no relatório da MobileMed (no padrão e fora do padrão, e o
+          compartilhamento) e importa como uma planilha do período.
+        </p>
+        {avisoDesligada}
+        <form.AppField name="mobilemedAutomatica">
+          {(field) => <field.CheckboxField label="Importar automaticamente" />}
+        </form.AppField>
+        <form.Subscribe selector={(estado) => estado.values.mobilemedAutomatica}>
+          {(automatica) =>
+            automatica && (
+              <form.AppField name="mobilemedIntervaloMinutos">
+                {(field) => (
+                  <field.NumberField
+                    label="Intervalo em minutos"
+                    placeholder="Ex.: 30"
+                    description={'O "Importar agora" da tela Importação não espera o intervalo.'}
+                    required
+                    min={5}
+                    max={1440}
+                  />
+                )}
+              </form.AppField>
+            )
+          }
+        </form.Subscribe>
+        <form.AppField name="mobilemedMesesAnteriores">
+          {(field) => (
+            <field.NumberField
+              label="Meses anteriores no período"
+              placeholder="Ex.: 1"
+              description="Com 1, em 19/11 busca de 01/10 até hoje. Competência fechada não muda."
+              required
+              min={0}
+              max={12}
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="mobilemedJanelaDias">
+          {(field) => (
+            <field.NumberField
+              label="Dias por consulta"
+              placeholder="Ex.: 7"
+              description="O período é pedido em pedaços deste tamanho."
+              required
+              min={1}
+              max={31}
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="mobilemedTeto">
+          {(field) => (
+            <field.NumberField
+              label="Teto de laudos por consulta"
+              placeholder="Ex.: 50000"
+              description="O limite da MobileMed (hoje 50.000): acima dele a lista vem cortada sem aviso, então a consulta que chega nele é refeita em metades."
+              required
+              min={1}
+              max={1_000_000}
+            />
+          )}
+        </form.AppField>
+      </fieldset>
 
       {erro && <Alerta tom="erro">{erro}</Alerta>}
 

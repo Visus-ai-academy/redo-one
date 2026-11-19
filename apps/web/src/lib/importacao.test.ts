@@ -6,6 +6,7 @@ import { enviarArquivo } from './envio-arquivo';
 import {
   atualizarEnquantoRoda,
   enviarPlanilha,
+  origemDaImportacao,
   periodoDosLaudos,
   situacaoDaImportacao,
   TIPO_XLSX,
@@ -22,6 +23,18 @@ describe('situacaoDaImportacao', () => {
     expect(situacaoDaImportacao('concluida')).toEqual({ texto: 'Concluída', tom: 'sucesso' });
     expect(situacaoDaImportacao('recusada')).toEqual({ texto: 'Recusada', tom: 'atencao' });
     expect(situacaoDaImportacao('erro')).toEqual({ texto: 'Erro', tom: 'erro' });
+  });
+});
+
+describe('origemDaImportacao', () => {
+  it('o nome da planilha no upload; o relatório na MobileMed', () => {
+    expect(origemDaImportacao({ nomeArquivo: 'laudos.xlsx', formato: 'laudos' })).toBe(
+      'laudos.xlsx',
+    );
+    expect(origemDaImportacao({ nomeArquivo: null, formato: 'laudos' })).toBe('MobileMed: laudos');
+    expect(origemDaImportacao({ nomeArquivo: null, formato: 'compartilhamento' })).toBe(
+      'MobileMed: compartilhamento',
+    );
   });
 });
 
