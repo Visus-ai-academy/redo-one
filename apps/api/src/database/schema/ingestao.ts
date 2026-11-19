@@ -58,18 +58,23 @@ export const importacoes = pgTable(
   'importacoes',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    arquivoId: uuid('arquivo_id')
-      .notNull()
-      .references(() => arquivos.id),
+    /** A planilha do upload; a importação da MobileMed não tem arquivo. */
+    arquivoId: uuid('arquivo_id').references(() => arquivos.id),
     origem: origemImportacao('origem').notNull(),
-    /** Descoberto na leitura (pela coluna COMPARTILHAMENTO_ENVIADO_PARA). */
+    /**
+     * No upload, descoberto na leitura (pela coluna COMPARTILHAMENTO_ENVIADO_PARA); na MobileMed,
+     * o relatório pedido.
+     */
     formato: formatoImportacao('formato'),
     status: statusImportacao('status').notNull().default('na_fila'),
     enviadaPorId: uuid('enviada_por_id').references(() => usuarios.id),
     criadaEm: criadoEm(),
     iniciadaEm: timestamp('iniciada_em', { withTimezone: true }),
     concluidaEm: timestamp('concluida_em', { withTimezone: true }),
-    /** Janela de data do laudo coberta pelo arquivo (dias inteiros, em horário de Brasília). */
+    /**
+     * Janela de data do laudo coberta (dias inteiros, em horário de Brasília): no upload, os dias
+     * do arquivo; na MobileMed, o período pedido, gravado ao criar.
+     */
     janelaInicio: date('janela_inicio'),
     janelaFim: date('janela_fim'),
     linhasArquivo: integer('linhas_arquivo'),
@@ -89,6 +94,12 @@ export const importacoes = pgTable(
   (t) => [
     index('importacoes_criada_idx').on(t.criadaEm),
     index('importacoes_status_idx').on(t.status),
+    // A última da MobileMed (intervalo do agendamento) e as em curso (uma por vez).
+    index('importacoes_origem_criada_idx').on(t.origem, t.criadaEm),
+    check(
+      'importacoes_fonte_check',
+      sql`(${t.origem} = 'upload_manual') = (${t.arquivoId} is not null)`,
+    ),
   ],
 );
 
@@ -310,6 +321,14 @@ export const parametrosIngestao = pgTable(
       .default(2),
     /** Dias que a linha crua da planilha fica guardada. */
     retencaoLinhasBrutasDias: integer('retencao_linhas_brutas_dias').notNull().default(90),
+    /** Minutos entre duas importações automáticas da MobileMed (o RPA antigo: 30); nulo = desligada. */
+    mobilemedIntervaloMinutos: integer('mobilemed_intervalo_minutos').default(30),
+    /** O período começa no dia 1º de tantos meses atrás: 1 = do mês anterior até hoje. */
+    mobilemedMesesAnteriores: integer('mobilemed_meses_anteriores').notNull().default(1),
+    /** Dias de cada chamada ao relatório (a que vier no teto é refeita em metades). */
+    mobilemedJanelaDias: integer('mobilemed_janela_dias').notNull().default(7),
+    /** Itens por chamada a partir dos quais a lista da MobileMed é tida como cortada. */
+    mobilemedTeto: integer('mobilemed_teto').notNull().default(50_000),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [check('parametros_ingestao_unica', sql`${t.id} = 1`)],
