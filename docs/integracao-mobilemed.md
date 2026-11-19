@@ -2,7 +2,7 @@
 
 Fase 1 do "plano B" (aprovado em 18/11/2026): a MobileMed não tem API oficial, e o uso das chamadas internas do portal está autorizado. Este documento mapeia as **rotas** (método, URL, corpo, resposta) que a distribuição precisa, para orientar os adaptadores reais das portas `FilaExames` e `AtribuidorExames` (`apps/api/src/distribuicao/application/ports`) e o de-para `medicos.id_mobilemed`.
 
-Feito **só lendo código**. Nenhuma requisição foi feita à MobileMed. O login (Cognito, token de 5 min, renovação, conta de serviço com TOTP) é outro trabalho, já planejado no `TODO.md` ("Integração com a MobileMed"); aqui só entra o que as chamadas exigem de cabeçalho.
+Feito **só lendo código**. Nenhuma requisição foi feita à MobileMed. O login (Cognito, token de 5 min, renovação, conta de serviço com TOTP) está na seção 1.4.
 
 **Legenda**
 
@@ -52,7 +52,18 @@ Comportamento de sessão observado pelo robô legado (para o desenho do login, n
 
 ### 1.3 Navegador × HTTP
 
-O robô legado faz tudo de dentro do navegador (chama os serviços do Angular por `page.evaluate`). Com o bundle, **todas as rotas da distribuição ficam conhecidas como HTTP comum** (JSON + `Authorization: Bearer`). O navegador só seria necessário para obter o token, e isso é o trabalho do login planejado no `TODO.md`.
+O robô legado faz tudo de dentro do navegador (chama os serviços do Angular por `page.evaluate`). Com o bundle, **todas as rotas da distribuição ficam conhecidas como HTTP comum** (JSON + `Authorization: Bearer`). O login também é HTTP comum (seção 1.4): nada exige navegador.
+
+### 1.4 Login (CONHECIDO pelos bundles; mapeado em 19/11/2026)
+
+Lido nos bundles públicos do portal (`laudos.mobilemed.com.br`, `app-*.min.js` e o oidc-client 1.x em `dependencies-*.min.js`) e da tela de login (`login.mobilemed.com.br`, React, `static/js/main.*.js`). O robô legado faz o mesmo pelo navegador (e-mail → Próximo → senha → campo `totp`).
+
+- **Provedor**: OIDC próprio da MobileMed sobre o Cognito. Descoberta em `https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej/mobilemed/.well-known/openid-configuration` (o tenant `mobilemed` vem de `GET {API_URL}/oauth/redirect/tenant`, pelo `Origin` do portal). `token_endpoint` = `{OAUTH}/token`; `authorization_endpoint` em `login.mobilemed.com.br`.
+- **client_id do portal**: `4himolqrop85htlpcl6k1ljmos` (`OAUTH2_CLIENT_ID`, público; sem client secret). A tela de login usa o `client_id` que vem na URL de autorização; sem ele, o dela (`3n01qfuhbl9362cj65q7ta3m84`).
+- **Passo 1**: `POST {OAUTH}/login/auth`, JSON `{ email, password, client_id }`. Resposta: os tokens (`access_token`, `refresh_token`, `id_token`) ou um desafio `{ challenge, challenge_session }` (`TOTP` ou `NEW_PASSWORD`).
+- **Passo 2 (TOTP)**: `POST {OAUTH}/login/challenge/totp`, JSON `{ client_id, challenge_session, code }` → os tokens. Erro no formato `{ message, details }` (`message` = código).
+- **Renovação**: `POST {OAUTH}/token`, form `grant_type=refresh_token&refresh_token=…&client_id=…` (o `exchangeRefreshToken` do oidc-client). O portal renova quando resta menos de 25% da vida do token, lida do `exp` do JWT.
+- A tela de login depois troca os tokens por um `authorization_code` (`PUT {OAUTH}/authorize`, cabeçalho `x-mobilemed-session`) para o portal. O One não passa por isso: usa direto o access token do passo 2 (PROVÁVEL que valha no `portal-api`; confirmar no primeiro teste ao vivo).
 
 ---
 
@@ -346,7 +357,7 @@ Sequência do 3.2. Resultados: `executada`; `pulada` (`saiu_da_fila`, `ja_tem_me
 | Se o caminho B basta num exame Novo com laudo criado (ou se o laudo precisa do `usuario_id`) | HAR das duas atribuições (janela e lista) |
 | Se `/usuario/lista/empresa` traz `crm` | HAR |
 | Que motivo o One manda nas unidades que exigem | Decisão da operação |
-| Token | Trabalho do login (`TODO.md`) |
+| Token | Login (seção 1.4) |
 
 ---
 
@@ -360,7 +371,7 @@ Sequência do 3.2. Resultados: `executada`; `pulada` (`saiu_da_fila`, `ja_tem_me
 | (b) Detalhe do exame | **Sim** (rota) / **Não** (campos) | `GET /exame/{id}` → `data.exame` | Campos completos |
 | (b) Médicos da unidade, com id | **Sim** | `POST /usuario/lista/empresa`, corpo e `data.lista {id, nome}` | Se traz `crm` |
 | (b) Trocar e retirar médico (recolhimento) | **Sim** | Mesmo `PUT /exame` com outro `usuario_id`, `null` (janela) ou `0` (lista); motivo quando a unidade exige | Qual dos dois "sem médico" o servidor prefere (`null` × `0`) |
-| (c) Autenticação: cabeçalhos | **Sim** | `Authorization: Bearer <access token>` + `Content-Type: application/json`; `traceparent` opcional; erros `invalid_token`, `410 x-force-logout` | Nada para as rotas (o login é outro trabalho) |
+| (c) Autenticação: cabeçalhos | **Sim** | `Authorization: Bearer <access token>` + `Content-Type: application/json`; `traceparent` opcional; erros `invalid_token`, `410 x-force-logout` | Nada para as rotas (login na seção 1.4) |
 | (d) Unidade que exige motivo | **Sim** | `empresa.exigir_motivo` vem na linha; `POST /motivo/busca` e `POST /motivo/` com corpos | Textos traduzidos (`motivoComentario`) e a resposta; decisão da operação |
 | Comentários `GET /exame/comentario/{id}` | **Sim** | Rota e resposta | — |
 | Relatório `descritivoEspecialidade` | **Sim** | Corpo, filtros, campos da resposta (com `id` do exame) | Se a paginação é respeitada; amostra real para casar com o XLSX |
@@ -427,20 +438,21 @@ Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo cont
 | Arquivo | O que faz |
 | --- | --- |
 | `cliente-mobilemed.ts` | HTTP do `portal-api`: `Content-Type: application/json` + `Authorization: Bearer`, prazo por chamada, chamadas simultâneas limitadas, validação da resposta (Zod), classificação dos erros (`sessao`, `indisponivel`, `resposta_inesperada`, `recusada`) e o freio. Logs JSON só com rota genérica (`GET /exame/{id}`), tipo e status HTTP; mensagens nunca copiam o texto do erro nem valores da resposta (só o `error_code` e os caminhos dos campos) |
-| `token-mobilemed.ts` | Porta `TokenMobileMed` e o único adaptador por ora, `TokenMobileMedDoAmbiente` (lê `MOBILEMED_ACCESS_TOKEN`; sem ele, falha dizendo qual variável definir) |
+| `token-mobilemed.ts` | Porta `TokenMobileMed` e o adaptador `TokenMobileMedLogin`: login da conta de serviço (seção 1.4) com o código de `totp.ts` (RFC 6238 com `node:crypto`, sem dependência) |
 | `esquemas-mobilemed.ts` | Esquemas Zod das respostas e os enums de `prioridade_id` e `status_id` (seção 2.1). Só os campos usados sobrevivem à validação |
 | `mobilemed-real.ts` | `MobileMedReal`: leitura, conferência, atribuição, troca, retirada, `medicosDaUnidade` e o porte de `definirFlagsResetSla` |
 
 ### 9.1 Como ligar
 
-1. No `apps/api/.env`: `DISTRIBUICAO_MOBILEMED=real` e `MOBILEMED_ACCESS_TOKEN=<token da conta de serviço>`. Sem `real`, vale o fake (padrão); com `real` e sem token, a API não sobe.
+1. No `apps/api/.env`: `DISTRIBUICAO_MOBILEMED=real`, `MOBILEMED_USUARIO`, `MOBILEMED_SENHA` e `MOBILEMED_TOTP_SEGREDO` (chave base32 do autenticador da conta de serviço). Sem `real`, vale o fake (padrão); com `real` e sem uma delas, a API não sobe.
 2. Reiniciar a API. **A partir daí, a rodada aprovada atribui exames de verdade.** Primeira vez só com aval da operação (seção 8).
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
 | `DISTRIBUICAO_MOBILEMED` | `fake` | `fake` ou `real` |
 | `MOBILEMED_PORTAL_API_URL` | `https://gateway-sa.mobilemed.com.br/portal-api` | Base das rotas (só `https://`) |
-| `MOBILEMED_ACCESS_TOKEN` | — | Access token (obrigatório com `real`) |
+| `MOBILEMED_USUARIO`, `MOBILEMED_SENHA` | — | E-mail e senha da conta de serviço (obrigatórios com `real`) |
+| `MOBILEMED_TOTP_SEGREDO` | — | Chave base32 do TOTP da conta (obrigatória com `real`) |
 | `MOBILEMED_PAGINA` | 1000 | `total_registros` por página da lista |
 | `MOBILEMED_MAXIMO_EXAMES` | 20000 | Lista com `paginacao.total` acima disso é recusada (filtro ignorado traria o histórico) |
 | `MOBILEMED_TIMEOUT_MS` | 90000 | Prazo de cada chamada |
@@ -454,12 +466,13 @@ Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo cont
 - **`nomesPacientes(ids)`** e **`intocados(exames)`**: um pedido por exame (`pesquisa_id_exame` e `GET /exame/{id}`). Se a conferência falha por erro da MobileMed, o exame segue para a atribuição, que reconfere e devolve a falha como retentável.
 - **`atribuir` (inclui a troca do recolhimento) e `tirar`**: `GET /exame/{id}` → já com o médico pedido = `executada`; assinado = `pulada/assinado`; já com médico (sem ser troca) = `ja_tem_medico`; troca com outro dono = `mudou_de_dono`; status ≠ NOVO = `exame_ja_aberto`; sumiu = `saiu_da_fila`; `empresa.exigir_motivo` = `unidade_exige_motivo` (decisão: a operação atribui à mão). Depois `PUT /exame` com o corpo mínimo (`usuario_id: 0` para tirar) e as flags de SLA do portal, e nova leitura: `usuario_id` gravado ≠ pedido = `falhou/nao_confirmado` (retentável).
 - **Erros**: sessão (401, 403, 410, `invalid_token`) = `sessao_caiu`, retentável; 429, 5xx, sem resposta ou tempo esgotado = `mobilemed_indisponivel`, retentável; corpo fora do formato = `resposta_inesperada`; outro 4xx = `recusada_mobilemed`.
+- **Login**: na primeira chamada, login com e-mail, senha e o código TOTP do instante (com menos de 5 s de vida, espera a próxima janela). O access token fica na memória até faltar 1 min para o `exp`; aí renova pelo refresh token (guardando o refresh novo, que gira a cada uso). Refresh recusado → novo login. Uma renovação por vez: pedidos simultâneos esperam a mesma. Depois de 3 falhas seguidas de renovação, para de tentar (log `mobilemed_login_parado`) até a API reiniciar, para não bloquear a conta. Logs só com rota, tipo e status; nunca usuário, senha, chave, código ou token.
 - **Freio**: depois de `MOBILEMED_LIMITE_ANOMALIAS` anomalias seguidas (429, 5xx, sem resposta, fora do formato), cada atribuição volta `falhou/freio_mobilemed` (retentável) sem chamar a MobileMed, até uma chamada dar certo (ex.: a conferência ao retomar).
 - **`medicosDaUnidade(empresaId)`**: `POST /usuario/lista/empresa` com `perfis: [3]`; devolve `{ id, nome }`. Base do futuro de-para de `medicos.id_mobilemed` (sem tela).
 
 ### 9.3 O que falta
 
-- **Login**: Cognito com TOTP, renovação pelo refresh token, nova tentativa após `invalid_token` (novo adaptador de `TokenMobileMed`). Até lá o token do ambiente vence em ~5 min.
+- **Login**: um 401/`invalid_token` no meio da vida do token (sessão derrubada por outra) não força renovação; a chamada falha como `sessao_caiu` e o token só é trocado quando chega perto do `exp` (até ~4 min). Limite absoluto da sessão (refresh token) desconhecido.
 - Especialidade (`subespecialidade_id`) e quantidade de laudos não são lidas (o catálogo decide pelo estudo; `laudos` = 1); formato de `modalidade` aceito como texto ou objeto. Conferir no HAR (5.4).
 - Conferir o médico na lista da unidade antes de atribuir (`medico_fora_da_unidade`, 3.2 passo 3) e o motivo nas unidades que exigem: não implementados.
 - A tela "fila do momento" e a prévia do recolhimento chamam `ler()` a cada consulta: com o real, cada consulta é uma leitura inteira da fila na MobileMed.

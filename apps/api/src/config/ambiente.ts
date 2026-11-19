@@ -41,8 +41,15 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('MOBILEMED_TIMEOUT_MS', inteiroEntre(1_000, 600_000), 'inteiro de 1000 a 600000');
   opcional('MOBILEMED_CONCORRENCIA', inteiroEntre(1, 10), 'inteiro de 1 a 10');
   opcional('MOBILEMED_LIMITE_ANOMALIAS', inteiroEntre(1, 100), 'inteiro de 1 a 100');
-  if (texto('DISTRIBUICAO_MOBILEMED') === 'real' && !texto('MOBILEMED_ACCESS_TOKEN')) {
-    erros.push('MOBILEMED_ACCESS_TOKEN: obrigatória com DISTRIBUICAO_MOBILEMED=real');
+  opcional(
+    'MOBILEMED_TOTP_SEGREDO',
+    (v) => /^[A-Z2-7]+=*$/i.test(v.replace(/\s/g, '')),
+    'chave base32 do autenticador (letras A-Z e dígitos 2-7)',
+  );
+  if (texto('DISTRIBUICAO_MOBILEMED') === 'real') {
+    for (const nome of ['MOBILEMED_USUARIO', 'MOBILEMED_SENHA', 'MOBILEMED_TOTP_SEGREDO']) {
+      if (!texto(nome)) erros.push(`${nome}: obrigatória com DISTRIBUICAO_MOBILEMED=real`);
+    }
   }
 
   if (erros.length) throw new Error(`Variáveis de ambiente inválidas:\n- ${erros.join('\n- ')}`);

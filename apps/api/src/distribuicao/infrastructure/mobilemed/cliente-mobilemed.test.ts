@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { ClienteMobileMed, ErroMobileMed } from './cliente-mobilemed';
-import { TokenMobileMedDoAmbiente } from './token-mobilemed';
+import type { TokenMobileMed } from './token-mobilemed';
 
 const BASE = 'http://mobilemed.teste/portal-api';
 const esquema = z.object({ ok: z.literal(true) });
@@ -31,11 +31,14 @@ const json =
       headers: { 'content-type': 'application/json' },
     });
 
-const criar = (respostas: (() => Response | Promise<Response>)[], token = 'tok-123') => {
+const criar = (
+  respostas: (() => Response | Promise<Response>)[],
+  token: TokenMobileMed = { accessToken: async () => 'tok-123' },
+) => {
   const f = fetchSimulado(respostas);
   const cliente = new ClienteMobileMed({
     baseUrl: BASE,
-    token: new TokenMobileMedDoAmbiente(token),
+    token,
     timeoutMs: 1_000,
     concorrencia: 1,
     limiteAnomalias: 2,
@@ -66,11 +69,15 @@ describe('ClienteMobileMed', () => {
     expect(chamadas[0]?.init.body).toBe('{"a":1}');
   });
 
-  it('sem token, falha claro antes de chamar', async () => {
-    const { cliente, chamadas } = criar([], '');
+  it('se o login falha, devolve o erro dele sem chamar a rota', async () => {
+    const { cliente, chamadas } = criar([], {
+      accessToken: async () => {
+        throw new ErroMobileMed('sessao', 'MobileMed: o login foi recusado.');
+      },
+    });
     const erro = await erroDe(cliente.chamar('GET', '/exame/1', esquema));
     expect(erro.tipo).toBe('sessao');
-    expect(erro.message).toContain('MOBILEMED_ACCESS_TOKEN');
+    expect(erro.message).toBe('MobileMed: o login foi recusado.');
     expect(chamadas).toHaveLength(0);
   });
 

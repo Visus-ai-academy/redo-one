@@ -131,7 +131,7 @@ import { ClienteMobileMed } from './infrastructure/mobilemed/cliente-mobilemed';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
 import { MobileMedReal } from './infrastructure/mobilemed/mobilemed-real';
-import { TokenMobileMedDoAmbiente } from './infrastructure/mobilemed/token-mobilemed';
+import { TokenMobileMedLogin } from './infrastructure/mobilemed/token-mobilemed';
 import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzle-ajustes-dia.repository';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
@@ -210,13 +210,19 @@ const CASOS_RODADA = [
       inject: [DrizzleAmostraCatalogo, ConfigService],
       useFactory: (amostra: DrizzleAmostraCatalogo, config: ConfigService) => {
         if (config.get<string>('DISTRIBUICAO_MOBILEMED') === 'real') {
+          const timeoutMs = inteiro(config, 'MOBILEMED_TIMEOUT_MS', 90_000);
           const cliente = new ClienteMobileMed({
             baseUrl: (
               config.get<string>('MOBILEMED_PORTAL_API_URL') ||
               'https://gateway-sa.mobilemed.com.br/portal-api'
             ).replace(/\/+$/, ''),
-            token: new TokenMobileMedDoAmbiente(config.get<string>('MOBILEMED_ACCESS_TOKEN')),
-            timeoutMs: inteiro(config, 'MOBILEMED_TIMEOUT_MS', 90_000),
+            token: new TokenMobileMedLogin({
+              usuario: config.getOrThrow<string>('MOBILEMED_USUARIO'),
+              senha: config.getOrThrow<string>('MOBILEMED_SENHA'),
+              totpSegredo: config.getOrThrow<string>('MOBILEMED_TOTP_SEGREDO'),
+              timeoutMs,
+            }),
+            timeoutMs,
             concorrencia: inteiro(config, 'MOBILEMED_CONCORRENCIA', 1),
             limiteAnomalias: inteiro(config, 'MOBILEMED_LIMITE_ANOMALIAS', 2),
           });

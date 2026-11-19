@@ -33,16 +33,32 @@ describe('validarAmbiente', () => {
     ['MOBILEMED_TIMEOUT_MS', '10'],
     ['MOBILEMED_CONCORRENCIA', '0'],
     ['MOBILEMED_LIMITE_ANOMALIAS', '0'],
+    ['MOBILEMED_TOTP_SEGREDO', 'chave-com-1-e-8'],
   ])('recusa %s=%s, dizendo qual variável está errada', (nome, valor) => {
     expect(() => validarAmbiente({ ...minimo, [nome]: valor })).toThrow(nome);
   });
 
-  it('a MobileMed real só sobe com o token de acesso', () => {
-    expect(() => validarAmbiente({ ...minimo, DISTRIBUICAO_MOBILEMED: 'real' })).toThrow(
-      'MOBILEMED_ACCESS_TOKEN',
+  it('a MobileMed real só sobe com usuário, senha e chave TOTP da conta de serviço', () => {
+    const login = {
+      MOBILEMED_USUARIO: 'robo@exemplo.com',
+      MOBILEMED_SENHA: 's',
+      MOBILEMED_TOTP_SEGREDO: 'JBSW Y3DP EHPK 3PXP',
+    };
+    for (const nome of Object.keys(login)) {
+      expect(() =>
+        validarAmbiente({ ...minimo, ...login, [nome]: '', DISTRIBUICAO_MOBILEMED: 'real' }),
+      ).toThrow(`${nome}: obrigatória com DISTRIBUICAO_MOBILEMED=real`);
+    }
+    expect(validarAmbiente({ ...minimo, ...login, DISTRIBUICAO_MOBILEMED: 'real' })).toMatchObject({
+      DISTRIBUICAO_MOBILEMED: 'real',
+    });
+    // Sem "real" (fila sintética), as credenciais não são exigidas.
+    expect(validarAmbiente({ ...minimo, DISTRIBUICAO_MOBILEMED: 'fake' })).toBeTruthy();
+  });
+
+  it('o erro da chave TOTP não repete o valor', () => {
+    expect(() => validarAmbiente({ ...minimo, MOBILEMED_TOTP_SEGREDO: 'segredo-errado' })).toThrow(
+      /^(?![\s\S]*segredo-errado)/,
     );
-    expect(
-      validarAmbiente({ ...minimo, DISTRIBUICAO_MOBILEMED: 'real', MOBILEMED_ACCESS_TOKEN: 't' }),
-    ).toMatchObject({ DISTRIBUICAO_MOBILEMED: 'real' });
   });
 });

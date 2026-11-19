@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { ClienteMobileMed } from './cliente-mobilemed';
 import { flagsResetSla, MobileMedReal } from './mobilemed-real';
-import { TokenMobileMedDoAmbiente } from './token-mobilemed';
 
 type Exame = Record<string, unknown> & { id: number; status_id: number; usuario_id: unknown };
 
@@ -89,7 +88,7 @@ const simulada = (exames: Exame[]) => {
   }) as unknown as typeof fetch;
   const cliente = new ClienteMobileMed({
     baseUrl: 'http://mm.teste/portal-api',
-    token: new TokenMobileMedDoAmbiente('tok'),
+    token: { accessToken: async () => 'tok' },
     timeoutMs: 1_000,
     concorrencia: 1,
     limiteAnomalias: 2,
