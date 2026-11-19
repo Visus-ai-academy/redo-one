@@ -19,21 +19,24 @@ describe.skipIf(!url)('DrizzleEscalaRecolhimento', () => {
   let pool: Pool;
   let db: Database;
   const pedidos: { de: string; ate: string }[] = [];
+  /** A frente das ocorrências do fake, criada no `beforeAll`. */
+  let frenteId = '';
+  let modalidadeId = '';
   const ocorrencias = {
     listar: async (de: string, ate: string) => {
       pedidos.push({ de, ate });
-      return {
-        conflitos: [],
-        ocorrencias: [
-          {
-            medicoId: 'm1',
-            inicio: '2026-11-18T10:00:00.000Z',
-            fim: '2026-11-18T16:00:00.000Z',
-            turnoTipo: 'lista',
-            ausente: false,
-          },
-        ],
+      const o = {
+        medicoId: 'm1',
+        inicio: '2026-11-18T10:00:00.000Z',
+        fim: '2026-11-18T16:00:00.000Z',
+        turnoTipo: 'lista',
+        ausente: false,
+        frenteId,
+        subespecialidadeIds: ['seg-1'],
+        subespecialidadeGeral: true,
       };
+      // A de frente que não existe mais fica de fora.
+      return { conflitos: [], ocorrencias: [o, { ...o, frenteId: crypto.randomUUID() }] };
     },
   } as unknown as ConsultaOcorrencias;
 
@@ -41,13 +44,23 @@ describe.skipIf(!url)('DrizzleEscalaRecolhimento', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../../drizzle') });
+    const [mod] = await db
+      .insert(schema.modalidades)
+      .values({ codigo: `RX-${Math.random().toString(36).slice(2)}` })
+      .returning();
+    modalidadeId = mod?.id ?? '';
+    const [frente] = await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'modalidade', modalidadeId })
+      .returning();
+    frenteId = frente?.id ?? '';
   });
 
   afterAll(async () => {
     await pool.end();
   });
 
-  it('períodos: da véspera da entrega até hoje, no teto da janela da escala', async () => {
+  it('períodos: do dia de `desde` até hoje, com a frente e o recorte, no teto da janela', async () => {
     const escala = new DrizzleEscalaRecolhimento(db, ocorrencias);
     expect(await escala.periodos(new Date('2026-11-10T12:00:00-03:00'), AGORA)).toEqual([
       {
@@ -56,6 +69,9 @@ describe.skipIf(!url)('DrizzleEscalaRecolhimento', () => {
         fim: new Date('2026-11-18T16:00:00.000Z'),
         lista: true,
         ausente: false,
+        frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId },
+        subespecialidadeIds: ['seg-1'],
+        subespecialidadeGeral: true,
       },
     ]);
     await escala.periodos(new Date('2020-01-01T12:00:00-03:00'), AGORA);

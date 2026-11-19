@@ -1,14 +1,16 @@
 import type { FrenteEscala } from '../arranjo';
+import { periodoCobreExame } from '../motor/elegibilidade';
 import type { EntregaAnterior } from '../motor/medicos-disponiveis';
 import { normalizarGrafia } from '../motor/prioridades-operacao';
 import type { ExameDaLeitura, ExameEmMaosDaLeitura } from './entrada';
 
 /**
- * RECOLHIMENTO: o exame que o robô entregou, que o médico não abriu e cujo turno já acabou (mais a
- * carência) volta para a rodada, para ir a outro médico. Fonte: dashboards-one
- * `services/distribuicao/recolher.ts` (`listarRecolhiveis`) e `distribuicao/recolhimento.ts`
- * (`protegidoPelaEscala`), sem banco. Diferença decidida em 18/11/2026: sem o limite de 3 dias
- * para trás (`DIAS_PARA_TRAS`); exame do robô não laudado volta por mais antigo que seja.
+ * RECOLHIMENTO: o exame que o robô entregou, que o médico não abriu e que nenhum turno em curso
+ * dele cobre mais (com a carência) volta para a rodada, para ir a outro médico. Fonte:
+ * dashboards-one `services/distribuicao/recolher.ts` (`listarRecolhiveis`) e
+ * `distribuicao/recolhimento.ts` (`protegidoPelaEscala`), sem banco. Diferenças decididas: sem o
+ * limite de 3 dias para trás (`DIAS_PARA_TRAS`), 18/11/2026; e vale a escala de agora que cobre o
+ * exame, não o turno da entrega (que fazia médicos em turno trocarem exames entre si), 19/11/2026.
  */
 
 /** Só o exame intocado (NOVO na MobileMed) sai do médico. */
@@ -23,6 +25,9 @@ export interface ExameComMedico {
   pacienteChave: string;
   especialidadeId: string | null;
   modalidadeId: string | null;
+  subespecialidadeId: string | null;
+  /** Especialidades a que o segmento do exame pertence (COLUNAS é de NEURO e de MSK). */
+  especialidadesDoSegmento: readonly string[];
 }
 
 /** A última entrega do robô (designação executada): quem é o dono pelo robô e desde quando. */
@@ -40,6 +45,10 @@ export interface PeriodoDoMedico {
   lista: boolean;
   /** Ocorrência com ausência: não protege ninguém. */
   ausente: boolean;
+  frente: FrenteEscala;
+  /** Recorte de segmento da alocação; vazio sem o geral = todos. */
+  subespecialidadeIds: readonly string[];
+  subespecialidadeGeral: boolean;
 }
 
 /** Ausência aprovada que cobre hoje (o dia inteiro). `frentes` vazio = todas. */
@@ -50,12 +59,14 @@ export interface AusenciaDoDia {
 
 /** Os números da configuração (Configurações › Distribuição). */
 export interface ParametrosRecolhimento {
-  /** Minutos depois do fim do turno da entrega. */
+  /** Minutos depois do fim do último turno que cobre o exame. */
   carenciaMin: number;
   /** Minutos depois do fim da Lista (no dashboards-one, 24 h). */
   carenciaListaMin: number;
-  /** A antecedência do período (o exame entregue nela é do turno que vai começar). */
+  /** A antecedência do período: o turno que vai começar já segura o exame. */
   antecedenciaMin: number;
+  /** A frente de especialidade recorta o exame (a mesma chave do motor). */
+  escalaRestringeEspecialidade: boolean;
 }
 
 export interface EntradaRecolhimento {
@@ -105,34 +116,26 @@ export interface Recolhimento {
 }
 
 const MIN = 60_000;
-const OFFSET_BRASILIA_MS = -3 * 60 * MIN;
-const diaBrasilia = (t: number) => Math.floor((t + OFFSET_BRASILIA_MS) / 86_400_000);
 
 /**
- * O turno da entrega ainda segura o exame com o médico? O turno que conta é o EM QUE O EXAME FOI
- * ENTREGUE (em curso, ou começando dentro da antecedência; antes dela, o próximo do mesmo dia), não
- * "algum turno agora" (com o "agora", a Lista de 24 h segurava a sobra para sempre). Sem período que
- * case com a entrega (rodada fora da escala), vale estar em turno agora. A Lista segura até a
- * carência dela depois do fim; o período com ausência não protege.
+ * Algum período do médico em curso agora cobre o exame? Em curso = da antecedência antes do início
+ * até a carência depois do fim (a da Lista, se for Lista); cobre = a frente (especialidade ou
+ * modalidade) e o recorte de segmento, como na elegibilidade do motor. O período com ausência não
+ * protege. Não importa em que turno o exame foi entregue.
  */
 export function protegidoPelaEscala(
   periodos: readonly PeriodoDoMedico[],
-  entregue: Date,
+  exame: ExameComMedico,
   agora: Date,
   p: ParametrosRecolhimento,
 ): boolean {
-  const e = entregue.getTime();
-  const janelas = periodos.filter((o) => !o.ausente);
-  const casam = janelas.filter(
-    (j) => j.inicio.getTime() - p.antecedenciaMin * MIN <= e && e < j.fim.getTime(),
-  );
-  const proximo = janelas
-    .filter((j) => j.inicio.getTime() > e && diaBrasilia(j.inicio.getTime()) === diaBrasilia(e))
-    .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())[0];
-  const daEntrega = casam.length ? casam : proximo ? [proximo] : [];
-  const valem = daEntrega.length ? daEntrega : janelas.filter((j) => j.inicio <= agora);
-  return valem.some(
-    (j) => agora.getTime() < j.fim.getTime() + (j.lista ? p.carenciaListaMin : p.carenciaMin) * MIN,
+  const t = agora.getTime();
+  return periodos.some(
+    (j) =>
+      !j.ausente &&
+      j.inicio.getTime() - p.antecedenciaMin * MIN <= t &&
+      t < j.fim.getTime() + (j.lista ? p.carenciaListaMin : p.carenciaMin) * MIN &&
+      periodoCobreExame(j, exame, p.escalaRestringeEspecialidade),
   );
 }
 
@@ -211,7 +214,7 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
     const ausente = ausenteNoExame(entrega.medicoId, e);
     if (
       !ausente &&
-      protegidoPelaEscala(periodosDe.get(entrega.medicoId) ?? [], entrega.em, entrada.agora, p)
+      protegidoPelaEscala(periodosDe.get(entrega.medicoId) ?? [], e, entrada.agora, p)
     ) {
       prender(pacote);
       continue;

@@ -55,9 +55,9 @@ export interface PseudonimizadorPaciente {
 export const ESCALA_RECOLHIMENTO = Symbol('ESCALA_RECOLHIMENTO');
 
 /**
- * A escala que o recolhimento lê: os períodos de todos os médicos desde a entrega mais antiga (o
- * turno que conta é o da entrega, por mais antiga que seja) e as ausências aprovadas de dia inteiro
- * que cobrem hoje.
+ * A escala que o recolhimento lê: os períodos de todos os médicos de `desde` até hoje, com a frente
+ * e o recorte de segmento (o exame fica enquanto algum período em curso o cobre), e as ausências
+ * aprovadas de dia inteiro que cobrem hoje.
  */
 export interface EscalaRecolhimento {
   periodos(desde: Date, agora: Date): Promise<PeriodoDoMedico[]>;

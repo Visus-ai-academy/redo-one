@@ -22,9 +22,25 @@ import type { EscalaRecolhimento } from '../../application/ports/insumos-rodada'
 import type { FrenteEscala } from '../../domain/arranjo';
 import type { AusenciaDoDia, PeriodoDoMedico } from '../../domain/rodada/recolhimento';
 
+/** A linha de `frentes_escala` como frente do catálogo; null = sem especialidade nem modalidade. */
+function frenteDaLinha(f: {
+  tipo: 'especialidade' | 'modalidade';
+  especialidadeId: string | null;
+  modalidadeId: string | null;
+}): FrenteEscala | null {
+  if (f.tipo === 'especialidade' && f.especialidadeId) {
+    return { tipo: 'especialidade', especialidadeId: f.especialidadeId, modalidadeId: null };
+  }
+  if (f.tipo === 'modalidade' && f.modalidadeId) {
+    return { tipo: 'modalidade', especialidadeId: null, modalidadeId: f.modalidadeId };
+  }
+  return null;
+}
+
 /**
- * A escala do recolhimento: as ocorrências (pela consulta da escala) desde a véspera da entrega mais
- * antiga e as ausências aprovadas de dia inteiro (sem turno) que cobrem hoje, com as frentes.
+ * A escala do recolhimento: as ocorrências (pela consulta da escala) desde o dia de `desde`, com a
+ * frente e o recorte de segmento, e as ausências aprovadas de dia inteiro (sem turno) que cobrem
+ * hoje, com as frentes.
  */
 @Injectable()
 export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
@@ -38,14 +54,27 @@ export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
     // A expansão da escala tem um teto técnico de janela; mais para trás, vale o turno de agora.
     const limite = adicionarDias(ate, -(JANELA_MAXIMA_DIAS - 1));
     const de = [diaEmBrasilia(desde), limite].sort()[1] ?? limite;
-    const { ocorrencias } = await this.ocorrencias.listar(de, ate);
-    return ocorrencias.map((o) => ({
-      medicoId: o.medicoId,
-      inicio: new Date(o.inicio),
-      fim: new Date(o.fim),
-      lista: o.turnoTipo === 'lista',
-      ausente: o.ausente,
-    }));
+    const [{ ocorrencias }, linhas] = await Promise.all([
+      this.ocorrencias.listar(de, ate),
+      this.db.select().from(frentesEscala),
+    ]);
+    const frentes = new Map(linhas.map((f) => [f.id, frenteDaLinha(f)]));
+    return ocorrencias.flatMap((o) => {
+      const frente = frentes.get(o.frenteId);
+      if (!frente) return [];
+      return [
+        {
+          medicoId: o.medicoId,
+          inicio: new Date(o.inicio),
+          fim: new Date(o.fim),
+          lista: o.turnoTipo === 'lista',
+          ausente: o.ausente,
+          frente,
+          subespecialidadeIds: o.subespecialidadeIds,
+          subespecialidadeGeral: o.subespecialidadeGeral,
+        },
+      ];
+    });
   }
 
   async ausenciasDoDia(agora: Date): Promise<AusenciaDoDia[]> {
@@ -86,15 +115,7 @@ export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
       );
     return linhas.map((l) => ({
       medicoId: l.medicoId,
-      frentes: frentes
-        .filter((f) => f.ausenciaId === l.id)
-        .flatMap((f): FrenteEscala[] =>
-          f.tipo === 'especialidade' && f.especialidadeId
-            ? [{ tipo: 'especialidade', especialidadeId: f.especialidadeId, modalidadeId: null }]
-            : f.tipo === 'modalidade' && f.modalidadeId
-              ? [{ tipo: 'modalidade', especialidadeId: null, modalidadeId: f.modalidadeId }]
-              : [],
-        ),
+      frentes: frentes.filter((f) => f.ausenciaId === l.id).flatMap((f) => frenteDaLinha(f) ?? []),
     }));
   }
 }

@@ -16,10 +16,16 @@ const h = (hora: string, dia = 18) =>
   new Date(`2026-11-${String(dia).padStart(2, '0')}T${hora}:00-03:00`);
 
 const AGORA = h('15:00');
-const PARAMETROS = { carenciaMin: 60, carenciaListaMin: 1440, antecedenciaMin: 180 };
+const PARAMETROS = {
+  carenciaMin: 60,
+  carenciaListaMin: 1440,
+  antecedenciaMin: 180,
+  escalaRestringeEspecialidade: true,
+};
 
 const NEURO: FrenteEscala = { tipo: 'especialidade', especialidadeId: 'neuro', modalidadeId: null };
 const RX: FrenteEscala = { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'rx' };
+const TC: FrenteEscala = { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'tc' };
 
 /** Médico → conta na MobileMed. */
 const CONTAS = new Map<string, number | null>([
@@ -33,7 +39,17 @@ const periodo = (
   inicio: Date,
   fim: Date,
   extra: Partial<PeriodoDoMedico> = {},
-): PeriodoDoMedico => ({ medicoId, inicio, fim, lista: false, ausente: false, ...extra });
+): PeriodoDoMedico => ({
+  medicoId,
+  inicio,
+  fim,
+  lista: false,
+  ausente: false,
+  frente: NEURO,
+  subespecialidadeIds: [],
+  subespecialidadeGeral: false,
+  ...extra,
+});
 
 const MANHA_ANA = periodo('ana', h('07:00'), h('13:00'));
 
@@ -44,6 +60,8 @@ const exame = (idExame: string, extra: Partial<ExameComMedico> = {}): ExameComMe
   pacienteChave: `p-${idExame}`,
   especialidadeId: 'neuro',
   modalidadeId: 'tc',
+  subespecialidadeId: null,
+  especialidadesDoSegmento: [],
   ...extra,
 });
 
@@ -97,7 +115,7 @@ describe('recolhimento: exame entregue pelo robô, não aberto, com o turno ence
     expect(ids(r)).toEqual(['e1']);
   });
 
-  it('o turno que conta é o da entrega, não o de agora (a Manhã de hoje não segura a de ontem)', () => {
+  it('vale a escala de agora, não o turno da entrega: a Manhã de hoje segura o entregue ontem', () => {
     const r = recolher(
       entrada({
         agora: h('10:00'),
@@ -105,7 +123,8 @@ describe('recolhimento: exame entregue pelo robô, não aberto, com o turno ence
         periodos: [periodo('ana', h('07:00', 17), h('13:00', 17)), MANHA_ANA],
       }),
     );
-    expect(ids(r)).toEqual(['e1']);
+    expect(r.recolhidos).toEqual([]);
+    expect(r.ficaram.turno_em_curso).toBe(1);
   });
 
   it('trocado à mão depois do robô: fica com quem trocou', () => {
@@ -124,6 +143,42 @@ describe('recolhimento: exame entregue pelo robô, não aberto, com o turno ence
     const r = recolher(entrada({ recolhe: (e) => e.especialidadeId !== 'neuro' }));
     expect(r.recolhidos).toEqual([]);
     expect(r.ficaram.frente_nao_recolhe).toBe(1);
+  });
+});
+
+describe('recolhimento: fica enquanto algum turno em curso do médico cobre o exame', () => {
+  // Entregue às 9h na Manhã NEURO (7h–13h); às 14h30 a Manhã passou da carência.
+  const tarde = (extra: Partial<PeriodoDoMedico> = {}) =>
+    periodo('ana', h('13:00'), h('19:00'), extra);
+  const naTarde = (extra: Partial<PeriodoDoMedico> = {}, exames = [exame('e1')]) =>
+    recolher(entrada({ agora: h('14:30'), exames, periodos: [MANHA_ANA, tarde(extra)] }));
+
+  it('na Tarde da mesma frente (NEURO): fica com ela, sem troca entre médicos em turno', () => {
+    const r = naTarde();
+    expect(r.recolhidos).toEqual([]);
+    expect(r.ficaram.turno_em_curso).toBe(1);
+  });
+
+  it('na Tarde de frente de modalidade que cobre o exame (TC): fica', () => {
+    expect(naTarde({ frente: TC }).recolhidos).toEqual([]);
+  });
+
+  it('na Tarde de outra frente, que não cobre o exame (RX): recolhe', () => {
+    expect(ids(naTarde({ frente: RX }))).toEqual(['e1']);
+  });
+
+  it('na Tarde NEURO com recorte de segmento que não cobre o exame: recolhe', () => {
+    const r = naTarde({ subespecialidadeIds: ['coluna'] }, [
+      exame('e1', { subespecialidadeId: 'cranio' }),
+    ]);
+    expect(ids(r)).toEqual(['e1']);
+  });
+
+  it('na Tarde NEURO com o recorte que inclui o segmento do exame: fica', () => {
+    const r = naTarde({ subespecialidadeIds: ['cranio'] }, [
+      exame('e1', { subespecialidadeId: 'cranio' }),
+    ]);
+    expect(r.recolhidos).toEqual([]);
   });
 });
 
@@ -155,12 +210,12 @@ describe('recolhimento: o pacote paciente × médico sai inteiro ou fica inteiro
   it('nada do pacote sai se algum exame dele ainda está protegido pela escala', () => {
     const r = recolher(
       entrada({
-        exames: pacote(),
+        exames: pacote({ especialidadeId: 'abdome', modalidadeId: 'rx' }),
         entregas: new Map([
           ['e1', { medicoId: 'ana', em: h('09:00') }],
           ['e2', { medicoId: 'ana', em: h('14:00') }],
         ]),
-        periodos: [MANHA_ANA, periodo('ana', h('13:00'), h('19:00'))],
+        periodos: [MANHA_ANA, periodo('ana', h('13:00'), h('19:00'), { frente: RX })],
       }),
     );
     expect(r.recolhidos).toEqual([]);
@@ -235,37 +290,45 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
   });
 });
 
-describe('protegidoPelaEscala (dashboards-one `protegidoPelaEscala`)', () => {
-  const proteje = (periodos: PeriodoDoMedico[], entregue: Date, agora: Date) =>
-    protegidoPelaEscala(periodos, entregue, agora, PARAMETROS);
+describe('protegidoPelaEscala: algum período em curso do médico cobre o exame', () => {
+  const proteje = (periodos: PeriodoDoMedico[], agora: Date, p = PARAMETROS) =>
+    protegidoPelaEscala(periodos, exame('e1'), agora, p);
 
   it('Lista: fica com o médico até a carência da Lista depois do fim dela', () => {
     const lista = [periodo('ana', h('07:00', 17), h('07:00'), { lista: true })];
-    expect(proteje(lista, h('08:00', 17), h('09:00'))).toBe(true);
-    expect(proteje(lista, h('08:00', 17), h('06:59', 19))).toBe(true);
-    expect(proteje(lista, h('08:00', 17), h('07:00', 19))).toBe(false);
+    expect(proteje(lista, h('09:00'))).toBe(true);
+    expect(proteje(lista, h('06:59', 19))).toBe(true);
+    expect(proteje(lista, h('07:00', 19))).toBe(false);
   });
 
-  it('entregue dentro da antecedência: o turno da entrega é o que vai começar', () => {
+  it('o período que vai começar protege dentro da antecedência, não antes', () => {
     const tarde = [periodo('ana', h('13:00'), h('19:00'))];
-    expect(proteje(tarde, h('11:00'), h('15:00'))).toBe(true);
+    expect(proteje(tarde, h('10:00'))).toBe(true);
+    expect(proteje(tarde, h('09:59'))).toBe(false);
   });
 
-  it('entregue antes da antecedência: vale o próximo turno do mesmo dia', () => {
-    const tarde = [periodo('ana', h('13:00'), h('19:00'))];
-    expect(proteje(tarde, h('08:00'), h('15:00'))).toBe(true);
-    expect(proteje(tarde, h('08:00'), h('20:01'))).toBe(false);
-  });
-
-  it('entregue fora de qualquer período: protegido só se estiver em turno agora', () => {
+  it('sem período em curso (com a carência), não protege', () => {
     const manha = [periodo('ana', h('07:00'), h('13:00'))];
-    expect(proteje(manha, h('03:00', 17), h('10:00'))).toBe(true);
-    expect(proteje(manha, h('03:00', 17), h('15:00'))).toBe(false);
+    expect(proteje(manha, h('13:59'))).toBe(true);
+    expect(proteje(manha, h('14:00'))).toBe(false);
   });
 
   it('o período com ausência não protege', () => {
     const manha = [periodo('ana', h('07:00'), h('13:00'), { ausente: true })];
-    expect(proteje(manha, h('09:00'), h('10:00'))).toBe(false);
+    expect(proteje(manha, h('10:00'))).toBe(false);
+  });
+
+  it('a frente de especialidade só recorta quando a escala restringe a especialidade', () => {
+    const abdome: FrenteEscala = {
+      tipo: 'especialidade',
+      especialidadeId: 'abdome',
+      modalidadeId: null,
+    };
+    const manha = [periodo('ana', h('07:00'), h('13:00'), { frente: abdome })];
+    expect(proteje(manha, h('10:00'))).toBe(false);
+    expect(proteje(manha, h('10:00'), { ...PARAMETROS, escalaRestringeEspecialidade: false })).toBe(
+      true,
+    );
   });
 });
 

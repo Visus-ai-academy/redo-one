@@ -28,8 +28,14 @@ export interface AlvoExame {
   restanteMin: number | null;
 }
 
+/** O que a frente e o recorte de segmento de um período olham do exame. */
+export type AlvoDaFrente = Pick<
+  AlvoExame,
+  'especialidadeId' | 'especialidadesDoSegmento' | 'modalidadeId' | 'subespecialidadeId'
+>;
+
 /** O exame é da especialidade: a dele ou uma alcançada pelo segmento. */
-function daEspecialidade(especialidadeId: string, alvo: AlvoExame): boolean {
+function daEspecialidade(especialidadeId: string, alvo: AlvoDaFrente): boolean {
   return (
     alvo.especialidadeId === especialidadeId ||
     alvo.especialidadesDoSegmento.includes(especialidadeId)
@@ -187,19 +193,45 @@ function urgenciaPelaAlocacao(p: PeriodoEscala, a: AlvoExame, ctx: ContextoPerio
   return a.urgente && p.prioridadeIds.some((id) => ctx.prioridadeIdsUrgenciaCatalogo.includes(id));
 }
 
+/** A frente do período alcança o exame? Null = alcança; senão, o porquê legível. */
+function porQueFrenteRecusa(
+  frente: FrenteEscala,
+  a: AlvoDaFrente,
+  escalaRestringeEspecialidade: boolean,
+): string | null {
+  if (frente.tipo === 'modalidade') {
+    return a.modalidadeId === frente.modalidadeId
+      ? null
+      : 'O período é de outra modalidade (frente de modalidade).';
+  }
+  return escalaRestringeEspecialidade && !daEspecialidade(frente.especialidadeId, a)
+    ? 'O período é de outra especialidade.'
+    : null;
+}
+
+/**
+ * O período cobre o exame pela frente (especialidade ou modalidade) e pelo recorte de segmento da
+ * alocação, sem olhar a grade de recebimento nem a prioridade (o recolhimento usa só isto).
+ */
+export function periodoCobreExame(
+  p: Pick<PeriodoEscala, 'frente' | 'subespecialidadeIds' | 'subespecialidadeGeral'>,
+  a: AlvoDaFrente,
+  escalaRestringeEspecialidade: boolean,
+): boolean {
+  return (
+    porQueFrenteRecusa(p.frente, a, escalaRestringeEspecialidade) === null &&
+    casaSegmento(p, a.subespecialidadeId)
+  );
+}
+
 /** O período aceita o exame? Null = aceita; senão, o porquê legível. */
 export function porQuePeriodoRecusa(
   p: PeriodoEscala,
   a: AlvoExame,
   ctx: ContextoPeriodo,
 ): string | null {
-  if (p.frente.tipo === 'modalidade') {
-    if (a.modalidadeId !== p.frente.modalidadeId) {
-      return 'O período é de outra modalidade (frente de modalidade).';
-    }
-  } else if (ctx.escalaRestringeEspecialidade && !daEspecialidade(p.frente.especialidadeId, a)) {
-    return 'O período é de outra especialidade.';
-  }
+  const frente = porQueFrenteRecusa(p.frente, a, ctx.escalaRestringeEspecialidade);
+  if (frente) return frente;
 
   const liberada = a.prioridadeId !== null && !!ctx.prioridadesLiberadas?.has(a.prioridadeId);
   if (!p.gratificado && !liberada) {

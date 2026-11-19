@@ -923,7 +923,13 @@ describe('rodada do robô (casos de uso)', () => {
   });
   describe('recolhimento', () => {
     const MANHA_A = { medicoId: 'A', inicio: br('2026-11-18T07:00'), fim: br('2026-11-18T13:00') };
-    const periodo = { lista: false, ausente: false };
+    const periodo = {
+      lista: false,
+      ausente: false,
+      frente: { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null } as const,
+      subespecialidadeIds: [],
+      subespecialidadeGeral: false,
+    };
     const tarde = (medicoId: string) =>
       oc(medicoId, {
         alocacaoId: `tarde-${medicoId}`,
@@ -1005,14 +1011,27 @@ describe('rodada do robô (casos de uso)', () => {
       expect(repo.insumosGravados.get(id)?.recolhimento?.naoRecolhidos.turno_em_curso).toBe(1);
     });
 
-    it('a escala é lida desde a véspera da entrega mais antiga (sem limite de dias para trás)', async () => {
+    it('a escala é lida desde a véspera do maior fim que ainda segura (a carência da Lista)', async () => {
       await entregarAoA('r1');
       agora = br('2026-11-28T14:30');
       await criarELer();
       expect(escalaRecolhimento.pedidos.at(-1)).toEqual({
-        desde: br('2026-11-17T09:00'),
+        desde: br('2026-11-26T14:30'),
         agora: br('2026-11-28T14:30'),
       });
+    });
+
+    it('a Dra. A na Tarde da mesma frente: o exame fica com ela, sem troca entre médicos em turno', async () => {
+      await entregarAoA('r1');
+      escalaRecolhimento.periodosGravados.push({
+        ...periodo,
+        medicoId: 'A',
+        inicio: br('2026-11-18T13:00'),
+        fim: br('2026-11-18T19:00'),
+      });
+      const id = await criarELer();
+      expect(daRodada(id, 'r1')).toBeUndefined();
+      expect(repo.insumosGravados.get(id)?.recolhimento?.naoRecolhidos.turno_em_curso).toBe(1);
     });
 
     it('sem ninguém para pegar, o recolhido fica com quem tem e fora da proposta', async () => {

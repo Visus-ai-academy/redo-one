@@ -4,12 +4,13 @@ import type { CatalogoDaFila, InsumosRodada, Leitura } from '../../../domain/rod
 import { type Recolhimento, recolher } from '../../../domain/rodada/recolhimento';
 import type { DependenciasRodada } from './comum';
 
-const DIA = 86_400_000;
+const MIN = 60_000;
+const DIA = 1440 * MIN;
 
 /**
  * O recolhimento no instante da leitura: a última entrega do robô de cada exame em mãos, a escala
- * desde a véspera da entrega mais antiga (sem limite de dias para trás), as ausências de hoje e as
- * contas dos médicos. Undefined = desligado (carência nula na configuração).
+ * que pode estar em curso agora (da véspera do maior fim ainda dentro da carência), as ausências de
+ * hoje e as contas dos médicos. Undefined = desligado (carência nula na configuração).
  */
 export async function lerRecolhimento(
   d: DependenciasRodada,
@@ -19,13 +20,10 @@ export async function lerRecolhimento(
   const { config } = insumos;
   if (config.recolhimentoAposTurnoMin === null) return undefined;
 
-  const entregas = await d.rodadas.ultimasEntregas(leitura.emMaos.map((e) => e.idExame));
-  const maisAntiga = Math.min(
-    agora.getTime(),
-    ...[...entregas.values()].map((e) => e.em.getTime()),
-  );
-  const [periodos, ausencias] = await Promise.all([
-    d.escalaRecolhimento.periodos(new Date(maisAntiga - DIA), agora),
+  const carencia = Math.max(config.recolhimentoAposTurnoMin, config.recolhimentoAposListaMin);
+  const [entregas, periodos, ausencias] = await Promise.all([
+    d.rodadas.ultimasEntregas(leitura.emMaos.map((e) => e.idExame)),
+    d.escalaRecolhimento.periodos(new Date(agora.getTime() - carencia * MIN - DIA), agora),
     d.escalaRecolhimento.ausenciasDoDia(agora),
   ]);
   const cadastro = await d.medicos.doCadastro([
@@ -41,6 +39,7 @@ export async function lerRecolhimento(
       carenciaMin: config.recolhimentoAposTurnoMin,
       carenciaListaMin: config.recolhimentoAposListaMin,
       antecedenciaMin: config.antecedenciaPeriodoMin,
+      escalaRestringeEspecialidade: config.escalaRestringeEspecialidade,
     },
     exames: leitura.emMaos.map((e) => {
       const c = catalogo.classificar(e);
@@ -53,6 +52,8 @@ export async function lerRecolhimento(
         ),
         especialidadeId: c.especialidadeId,
         modalidadeId: c.modalidadeId,
+        subespecialidadeId: c.subespecialidadeId,
+        especialidadesDoSegmento: c.especialidadesDoSegmento,
       };
     }),
     entregas,
