@@ -37,8 +37,8 @@ export class MedicosService {
   constructor(
     @Inject(MEDICOS_REPOSITORY) private readonly repo: MedicosRepository,
     @Inject(NIVEIS_MEDICO) private readonly niveis: Pick<ListaRepository, 'buscar'>,
-    @Inject(AUDITORIA) auditoria: Auditoria,
-    @Inject(CLOCK) clock: Clock,
+    @Inject(AUDITORIA) private readonly auditoria: Auditoria,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {
     this.registro = new RegistroAuditoria(ROTULO_MEDICO, auditoria, clock);
   }
@@ -65,6 +65,32 @@ export class MedicosService {
     const { chaveNormalizada, ...validos } = await this.validar(dados, id);
     await this.repo.atualizar(id, { ...validos, chaveNormalizada });
     await this.registro.alterado(ator, id, atual, validos);
+  }
+
+  /**
+   * Id da MobileMed gravado por um processo do sistema (ex.: o mapeamento pelo nome), com o
+   * motivo na auditoria. `false` quando o médico já tem id: nunca sobrescreve.
+   */
+  async definirIdMobilemed(id: string, idMobilemed: number, motivo: string): Promise<boolean> {
+    const atual = dadosDe(await this.obter(id));
+    if (atual.idMobilemed !== null) return false;
+    const dono = await this.repo.buscarPorIdMobilemed(idMobilemed);
+    if (dono) throw new IdMobilemedEmUsoError(dono.nome);
+    await this.repo.atualizar(id, {
+      ...atual,
+      idMobilemed,
+      chaveNormalizada: normalizarNomeMedico(atual.nome),
+    });
+    await this.auditoria.registrar({
+      ator: { tipo: 'sistema' },
+      entidade: ROTULO_MEDICO.entidade,
+      entidadeId: id,
+      acao: 'alterado',
+      antes: { idMobilemed: null },
+      depois: { idMobilemed, motivo },
+      em: this.clock.now(),
+    });
+    return true;
   }
 
   async excluir(ator: AtorCatalogo, id: string): Promise<void> {

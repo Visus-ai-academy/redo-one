@@ -155,6 +155,51 @@ describe('MedicosService', () => {
     );
   });
 
+  it('grava o id da MobileMed vindo do sistema, com o motivo na auditoria', async () => {
+    const id = await service.criar(ator, dados());
+    auditoria.eventos.length = 0;
+
+    expect(await service.definirIdMobilemed(id, 7968, 'mapeamento pelo nome na MobileMed')).toBe(
+      true,
+    );
+
+    expect(repo.medicos.get(id)).toMatchObject({
+      idMobilemed: 7968,
+      chaveNormalizada: 'augusto lima',
+    });
+    expect(auditoria.eventos).toEqual([
+      {
+        ator: { tipo: 'sistema' },
+        entidade: 'medico',
+        entidadeId: id,
+        acao: 'alterado',
+        antes: { idMobilemed: null },
+        depois: { idMobilemed: 7968, motivo: 'mapeamento pelo nome na MobileMed' },
+        em: AGORA,
+      },
+    ]);
+  });
+
+  it('não sobrescreve id da MobileMed já preenchido', async () => {
+    const id = await service.criar(ator, dados({ idMobilemed: 10 }));
+    auditoria.eventos.length = 0;
+
+    expect(await service.definirIdMobilemed(id, 7968, 'mapeamento')).toBe(false);
+
+    expect(repo.medicos.get(id)?.idMobilemed).toBe(10);
+    expect(auditoria.eventos).toEqual([]);
+  });
+
+  it('não grava id da MobileMed que já é de outro médico', async () => {
+    await service.criar(ator, dados({ nome: 'Dra. Rafaela Reis', idMobilemed: 7968 }));
+    const id = await service.criar(ator, dados());
+
+    await expect(service.definirIdMobilemed(id, 7968, 'mapeamento')).rejects.toThrow(
+      new IdMobilemedEmUsoError('Dra. Rafaela Reis'),
+    );
+    expect(repo.medicos.get(id)?.idMobilemed).toBeNull();
+  });
+
   it('lista paginado por nome, com busca por nome, CRM ou id da MobileMed', async () => {
     await service.criar(ator, dados({ nome: 'Dra. Carla Souza', crm: '999' }));
     await service.criar(ator, dados({ nome: 'Dr. Bruno Alves', idMobilemed: 42 }));

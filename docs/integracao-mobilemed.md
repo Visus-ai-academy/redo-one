@@ -160,6 +160,17 @@ Regras de leitura (legado, CONHECIDO): só `status_id = 0` **e** `usuario_id` va
 - Por unidade e filtrada pela habilitação (o legado confirmou com a operação em 11/09). Exame compartilhado: a janela usa a unidade de destino (`compartilhamentos[0].empresa_compartilhada_id`) quando o usuário não tem permissão na origem (`mobile.js:43062-43065`).
 - **CRM:** o objeto de usuário do portal tem `crm` e `crm_uf` (`usuarioModel.frontUsuario`, `mobile.js:72562-72604`; listas de usuários, `mobile.js:72834-72846`), e o laudo traz `usuario.crm`. Se **esta** lista traz `crm`: PROVÁVEL, a confirmar no HAR.
 
+**Busca por nome.** Toda rota com `textoPesquisa` (`/usuario/lista/empresa`, `/usuario/lista/medicos`, `/usuario/lista/empresa/permissao`) exige `empresa_id`: não há busca de usuário por nome em todas as unidades. O que existe são as listas de **todos os médicos das unidades da conta** (medido ao vivo em 19/11, 519 contas, todas ativas):
+
+| Rota | Corpo | Item | Uso no portal |
+| --- | --- | --- | --- |
+| `POST /usuario/medicos/lista/empresa/filtro` (`buscarListaMedicosNovo`) | nenhum | `id`, `nome`, `foto_path`, `is_ativo` (0/1) | Filtro "Médicos" da lista de exames |
+| `POST /usuario/medicos/lista/empresa` (`buscarlistaMedicos`) | nenhum | o usuário inteiro: `id`, `nome`, `crm` (número), `crm_uf` (id de `GET /estados/1`), `email_usuario`, `is_ativo`, `is_excluido`... | Preferências do usuário |
+
+Resposta `{ lista, paginacao: {}, status_code }`, sem paginação. **Cuidado:** a segunda devolve também `senha` (hash), tokens (`token`, `token_app`, `access_token_safeID`, `token_iara`...), CPF, telefone e aniversário de cada médico; o One valida só `id`, `nome`, `crm`, `crm_uf`, `email_usuario`, `is_ativo` e `is_excluido` (Zod descarta o resto) e nunca loga a resposta. `GET /estados/1` devolve `{ estados: [{ id, uf, nome }] }` (ex.: 26 = SP, 5 = BA).
+
+O mapeamento de `medicos.id_mobilemed` (seção 4.4) usa `POST /usuario/medicos/lista/empresa` e casa o nome localmente.
+
 Rotas vizinhas usadas pela janela (CONHECIDO):
 
 | Rota | Uso |
@@ -359,6 +370,16 @@ Casamento de nomes (`nomes.py`, espelho do `normalizeNomeMedico`): minúsculo, s
 4. Contas secundárias deixam de precisar de regra no código: o id escolhido no cadastro resolve (inclusive a exceção de hoje).
 
 ---
+
+### 4.4 Mapeamento pelo nome (`pnpm --filter @repo/api mobilemed:mapear-medicos`)
+
+Decidido em 19/11: preencher `id_mobilemed` dos médicos ativos sem id pelo nome. Na MobileMed, só leitura: `GET /estados/1` e `POST /usuario/medicos/lista/empresa` (2.3), com pausa entre as chamadas. Contas inativas ou excluídas ficam de fora.
+
+- Casa o nome e os apelidos do médico (`medicos_aliases`) com a regra do robô legado (`casaNomeMedico`, porte de `nomes.py::casa_nome`: mesmo primeiro nome, mesmo último sobrenome, meio em ordem, abreviação vale).
+- **Grava** (`MedicosService.definirIdMobilemed`, ator `sistema`, motivo "mapeamento pelo nome na MobileMed" na auditoria; nunca sobrescreve) só quando exatamente uma conta casa e ela não é secundária (`(E2)`, `(F)`), o CRM/UF não diverge (quando os dois lados têm) e a conta não é de outro médico.
+- O resto vai para `~/Downloads/mapeamento-medicos-mobilemed-<data>.csv` (UTF-8 com BOM, `;`): médico e CRM no One, situação (`sem resultado`, `N resultados`, `1 resultado, só conta secundária`, `1 resultado, CRM diferente`, conta já de outro médico) e, por candidato, id, nome, CRM/UF e e-mail na MobileMed. Em `sem resultado`, os candidatos são os nomes parecidos (dois nomes em comum), só para conferir.
+- Sem `--gravar`, só mostra o resumo e gera o CSV. Roda com `JOBS_WORKER=false` (não pega jobs).
+- Simulação de 19/11: 141 médicos ativos sem id; 124 com uma conta, 14 ambíguos (9 são a conta principal mais a secundária), 2 só com conta secundária e 1 sem resultado.
 
 ## 5. Mapeamento para as portas do redo-one
 
