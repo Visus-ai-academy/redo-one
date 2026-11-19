@@ -88,7 +88,7 @@ const simulada = (exames: Exame[]) => {
   }) as unknown as typeof fetch;
   const cliente = new ClienteMobileMed({
     baseUrl: 'http://mm.teste/portal-api',
-    token: { accessToken: async () => 'tok' },
+    token: { accessToken: async () => 'tok', descartar: () => {} },
     timeoutMs: 1_000,
     concorrencia: 1,
     limiteAnomalias: 2,
@@ -286,13 +286,19 @@ describe('MobileMedReal: atribuir, trocar e tirar', () => {
     expect(rotas).toHaveLength(chamadas);
   });
 
-  it('sessão recusada: falhou e retentável', async () => {
+  it('sessão recusada na escrita: falhou e retentável (não repete o PUT)', async () => {
     const { mm, falhas } = simulada([exame(1)]);
-    falhas['GET /exame/{id}'] = [401];
+    falhas['PUT /exame'] = [401];
     expect(await mm.atribuir(pedido('1', 101))).toMatchObject({
       motivo: 'sessao_caiu',
       retentavel: true,
     });
+  });
+
+  it('sessão recusada na leitura: renova e lê de novo', async () => {
+    const { mm, falhas } = simulada([exame(1)]);
+    falhas['GET /exame/{id}'] = [401];
+    expect(await mm.atribuir(pedido('1', 101))).toEqual({ status: 'executada' });
   });
 });
 

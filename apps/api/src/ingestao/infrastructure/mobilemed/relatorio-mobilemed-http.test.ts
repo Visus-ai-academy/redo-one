@@ -50,7 +50,7 @@ function criar(respostas: ((corpo: { filtro: Record<string, unknown> }) => unkno
   const relatorio = new RelatorioMobileMedHttp(
     new ClienteMobileMed({
       baseUrl: BASE,
-      token: { accessToken: async () => 'tok' },
+      token: { accessToken: async () => 'tok', descartar: () => {} },
       timeoutMs: 1_000,
       concorrencia: 1,
       limiteAnomalias: 2,
@@ -190,6 +190,7 @@ describe('RelatorioMobileMedHttp', () => {
           accessToken: async () => {
             throw new ErroMobileMed('sessao', 'MobileMed: o login foi recusado (HTTP 401).');
           },
+          descartar: () => {},
         },
         timeoutMs: 1_000,
         concorrencia: 1,

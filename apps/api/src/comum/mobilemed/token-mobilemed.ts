@@ -9,6 +9,8 @@ import { gerarTotp, PASSO_TOTP_MS } from './totp';
 /** Quem entrega o access token da MobileMed (`Authorization: Bearer`). */
 export interface TokenMobileMed {
   accessToken(): Promise<string>;
+  /** A API recusou este token antes do `exp` (sessão derrubada): o próximo pedido renova. */
+  descartar(token: string): void;
 }
 
 /**
@@ -32,6 +34,7 @@ export function criarTokenMobileMed(config: {
           'MobileMed: configure MOBILEMED_USUARIO, MOBILEMED_SENHA e MOBILEMED_TOTP_SEGREDO.',
         );
       },
+      descartar: () => {},
     };
   }
   const timeout = config.get('MOBILEMED_TIMEOUT_MS');
@@ -109,10 +112,10 @@ export interface OpcoesTokenMobileMedLogin {
  * (oidc-client do portal + tela de login.mobilemed.com.br): `/authorize` com PKCE, e-mail e
  * senha, o código TOTP, os tokens do Cognito guardados no `/storage` e, no fim, o código trocado
  * no `/token` pelo access token do GATEWAY (o único que o portal-api e o reports-api aceitam).
- * Guarda o access token até perto de vencer e renova pelo refresh token do gateway; se a
- * renovação falha, refaz o login. Uma renovação por
- * vez (o refresh token gira a cada uso: duas ao mesmo tempo derrubam a sessão). Depois de
- * `LIMITE_FALHAS` falhas seguidas, para de tentar até a API reiniciar.
+ * Guarda o access token até perto de vencer (ou até a API recusá-lo, `descartar`) e renova pelo
+ * refresh token do gateway; se a renovação falha, refaz o login. Uma renovação por vez (o refresh
+ * token gira a cada uso: duas ao mesmo tempo derrubam a sessão). Depois de `LIMITE_FALHAS`
+ * falhas seguidas, para de tentar até a API reiniciar.
  */
 export class TokenMobileMedLogin implements TokenMobileMed {
   private readonly logger = new Logger('MobileMed');
@@ -136,6 +139,11 @@ export class TokenMobileMedLogin implements TokenMobileMed {
       this.renovacao = null;
     });
     return this.renovacao;
+  }
+
+  descartar(token: string): void {
+    // Só o token recusado: se outro pedido já renovou, o novo fica.
+    if (this.access?.token === token) this.access = null;
   }
 
   private async renovar(): Promise<string> {

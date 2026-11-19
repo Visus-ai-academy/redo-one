@@ -409,4 +409,14 @@ describe('TokenMobileMedLogin', () => {
     await erroDe(m.token.accessToken()); // 2ª
     expect(await m.token.accessToken()).toContain('h.');
   });
+
+  it('descartar o token em uso renova pelo refresh antes do exp; outro token não é descartado', async () => {
+    const m = criar([...login('a1', 'r1'), tokens('a2', 'r2')]);
+    const primeiro = await m.token.accessToken();
+    m.token.descartar('token-antigo');
+    expect(await m.token.accessToken()).toBe(primeiro);
+    m.token.descartar(primeiro);
+    expect(await m.token.accessToken()).toBe(jwt('a2', Math.floor(INICIO / 1000) + 300));
+    expect(new URLSearchParams(m.chamadas[5]?.corpo).get('refresh_token')).toBe('r1');
+  });
 });

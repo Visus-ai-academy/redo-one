@@ -81,7 +81,7 @@ export class ClienteMobileMed {
     const rota = `${metodo} ${caminho.replace(/\/\d+/g, '/{id}')}`;
     await this.vaga();
     try {
-      const resposta = await this.enviar(metodo, caminho, rota, esquema, corpo);
+      const resposta = await this.enviar(metodo, caminho, rota, esquema, corpo, true);
       this.anomaliasSeguidas = 0;
       return resposta;
     } catch (erro) {
@@ -111,6 +111,7 @@ export class ClienteMobileMed {
     rota: string,
     esquema: z.ZodType<T>,
     corpo: unknown,
+    repetir: boolean,
   ): Promise<T> {
     const token = await this.o.token.accessToken();
     let texto: string;
@@ -145,6 +146,15 @@ export class ClienteMobileMed {
       json = undefined;
     }
     if (!ok) {
+      if (status === 401) {
+        // Token recusado antes do exp (outra sessão na conta): o próximo pedido renova. Escrita
+        // (PUT) não se repete às cegas: quem grava relê o exame na nova tentativa.
+        this.o.token.descartar(token);
+        if (repetir && metodo !== 'PUT') {
+          this.logger.warn(JSON.stringify({ evento: 'mobilemed_token_recusado', rota }));
+          return this.enviar(metodo, caminho, rota, esquema, corpo, false);
+        }
+      }
       const razao = (json as { error_reason?: unknown } | null)?.error_reason;
       if (status === 401 || status === 403 || status === 410 || razao === 'invalid_token') {
         throw new ErroMobileMed(

@@ -33,7 +33,7 @@ const json =
 
 const criar = (
   respostas: (() => Response | Promise<Response>)[],
-  token: TokenMobileMed = { accessToken: async () => 'tok-123' },
+  token: TokenMobileMed = { accessToken: async () => 'tok-123', descartar: () => {} },
 ) => {
   const f = fetchSimulado(respostas);
   const cliente = new ClienteMobileMed({
@@ -75,6 +75,7 @@ describe('ClienteMobileMed', () => {
       accessToken: async () => {
         throw new ErroMobileMed('sessao', 'MobileMed: o login foi recusado.');
       },
+      descartar: () => {},
     });
     const erro = await erroDe(cliente.chamar('GET', '/exame/1', esquema));
     expect(erro.tipo).toBe('sessao');
@@ -156,5 +157,59 @@ describe('ClienteMobileMed', () => {
     const { cliente } = criar([lenta(), lenta(), lenta()]);
     await Promise.all([1, 2, 3].map(() => cliente.chamar('GET', '/exame/1', esquema)));
     expect(maximo).toBe(1);
+  });
+
+  /** Token que entrega `tok-1`, `tok-2`... e anota o que foi descartado. */
+  const tokenRenovavel = () => {
+    let n = 1;
+    const descartados: string[] = [];
+    const token: TokenMobileMed = {
+      accessToken: async () => `tok-${n}`,
+      descartar: (t) => {
+        descartados.push(t);
+        if (t === `tok-${n}`) n++;
+      },
+    };
+    return { token, descartados };
+  };
+  const bearer = (c: Chamada) => (c.init.headers as Record<string, string>).Authorization;
+
+  it('leitura recusada com 401/invalid_token: descarta o token, renova e repete uma vez', async () => {
+    const t = tokenRenovavel();
+    const { cliente, chamadas } = criar(
+      [json({ error_reason: 'invalid_token' }, 401), json({ ok: true })],
+      t.token,
+    );
+    expect(await cliente.chamar('POST', '/exame/lista', esquema, {})).toEqual({ ok: true });
+    expect(t.descartados).toEqual(['tok-1']);
+    expect(chamadas.map(bearer)).toEqual(['Bearer tok-1', 'Bearer tok-2']);
+  });
+
+  it('repete uma vez só: a segunda recusa vira erro de sessão', async () => {
+    const t = tokenRenovavel();
+    const { cliente, chamadas } = criar(
+      [json({}, 401), json({ error_reason: 'invalid_token' }, 401)],
+      t.token,
+    );
+    expect((await erroDe(cliente.chamar('GET', '/exame/1', esquema))).tipo).toBe('sessao');
+    expect(chamadas).toHaveLength(2);
+  });
+
+  it('escrita (PUT) recusada não se repete: descarta o token e devolve o erro de sessão', async () => {
+    const t = tokenRenovavel();
+    const { cliente, chamadas } = criar([json({ error_reason: 'invalid_token' }, 401)], t.token);
+    const erro = await erroDe(cliente.chamar('PUT', '/exame', esquema, {}));
+    expect([erro.tipo, erro.status]).toEqual(['sessao', 401]);
+    expect(t.descartados).toEqual(['tok-1']);
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it('403 e 410 são sessão, mas não renovam o token', async () => {
+    const t = tokenRenovavel();
+    const { cliente, chamadas } = criar([json({}, 403), json({}, 410)], t.token);
+    expect((await erroDe(cliente.chamar('GET', '/exame/1', esquema))).tipo).toBe('sessao');
+    expect((await erroDe(cliente.chamar('GET', '/exame/1', esquema))).tipo).toBe('sessao');
+    expect(t.descartados).toEqual([]);
+    expect(chamadas).toHaveLength(2);
   });
 });
