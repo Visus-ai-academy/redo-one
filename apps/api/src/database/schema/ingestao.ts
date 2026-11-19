@@ -243,6 +243,8 @@ export const tipoAvisoCadastro = pgEnum('tipo_aviso_cadastro', [
   'modalidade',
   'especialidade',
   'prioridade',
+  /** Grafia sem de-para nas prioridades da operação, vista pela rodada da distribuição. */
+  'prioridade_operacao',
 ]);
 
 export const statusAvisoCadastro = pgEnum('status_aviso_cadastro', [
@@ -253,7 +255,10 @@ export const statusAvisoCadastro = pgEnum('status_aviso_cadastro', [
   'ignorado',
 ]);
 
-/** Pendência de cadastro encontrada na importação (cliente, médico, estudo... desconhecido). */
+/**
+ * Pendência de cadastro encontrada na importação (cliente, médico, estudo... desconhecido) ou na
+ * rodada da distribuição (grafia de prioridade sem de-para).
+ */
 export const avisosCadastro = pgTable(
   'avisos_cadastro',
   {
@@ -264,7 +269,7 @@ export const avisosCadastro = pgTable(
     /** Como chegou na última vez. */
     valor: text('valor').notNull(),
     status: statusAvisoCadastro('status').notNull().default('pendente'),
-    /** Laudos da última importação em que apareceu. */
+    /** Laudos da última importação (ou exames da última rodada) em que apareceu. */
     ocorrencias: integer('ocorrencias').notNull().default(0),
     primeiraVezEm: timestamp('primeira_vez_em', { withTimezone: true }).notNull().defaultNow(),
     ultimaVezEm: timestamp('ultima_vez_em', { withTimezone: true }).notNull().defaultNow(),

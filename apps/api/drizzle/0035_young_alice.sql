@@ -1,0 +1,1 @@
+ALTER TYPE "public"."tipo_aviso_cadastro" ADD VALUE 'prioridade_operacao';
