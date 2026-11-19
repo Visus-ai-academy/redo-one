@@ -14,6 +14,7 @@ import {
   type ArranjosRepository,
 } from './application/ports/arranjos.repository';
 import { ATRIBUIDOR_EXAMES, type AtribuidorExames } from './application/ports/atribuidor-exames';
+import { AVISOS_PRIORIDADE, type AvisosPrioridade } from './application/ports/avisos-prioridade';
 import {
   CADASTROS_DISTRIBUICAO,
   type CadastrosDistribuicao,
@@ -127,6 +128,7 @@ import {
 } from './infrastructure/http/prioridades-operacao.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { RodadasController } from './infrastructure/http/rodadas.controller';
+import { AvisosPrioridadeAdapter } from './infrastructure/ingestao/avisos-prioridade.adapter';
 import { ClienteMobileMed } from './infrastructure/mobilemed/cliente-mobilemed';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
@@ -203,6 +205,7 @@ const CASOS_RODADA = [
     { provide: ESCALA_RECOLHIMENTO, useClass: DrizzleEscalaRecolhimento },
     { provide: MEDICOS_RODADA, useClass: DrizzleMedicosRodada },
     { provide: ESCOPO_RODADA, useClass: EscopoRodadaAdapter },
+    { provide: AVISOS_PRIORIDADE, useClass: AvisosPrioridadeAdapter },
     DrizzleAmostraCatalogo,
     {
       // Fake (padrão) ou a MobileMed de verdade: só `DISTRIBUICAO_MOBILEMED=real` liga a integração.
@@ -262,6 +265,7 @@ const CASOS_RODADA = [
         CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
         PRIORIDADES_CLIENTE_REPOSITORY,
         PSEUDONIMIZADOR_PACIENTE,
+        AVISOS_PRIORIDADE,
         AUDITORIA,
       ],
       useFactory: (
@@ -276,6 +280,7 @@ const CASOS_RODADA = [
         configuracao: ConfiguracaoDistribuicaoRepository,
         prioridadesCliente: PrioridadesClienteRepository,
         pseudonimizador: PseudonimizadorPaciente,
+        avisosPrioridade: AvisosPrioridade,
         auditoria: Auditoria,
       ): DependenciasRodada => ({
         rodadas,
@@ -289,6 +294,7 @@ const CASOS_RODADA = [
         configuracao,
         prioridadesCliente,
         pseudonimizador,
+        avisosPrioridade,
         auditoria,
         agora,
       }),

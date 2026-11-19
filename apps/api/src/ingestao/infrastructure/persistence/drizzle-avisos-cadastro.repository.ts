@@ -13,7 +13,7 @@ export class DrizzleAvisosCadastroRepository implements AvisosCadastroRepository
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async registrar(
-    importacaoId: string,
+    importacaoId: string | null,
     pendencias: (PendenciaCadastro & { ocorrencias: number })[],
     conferidos: { tipo: TipoAviso; chave: string }[],
     agora: Date,

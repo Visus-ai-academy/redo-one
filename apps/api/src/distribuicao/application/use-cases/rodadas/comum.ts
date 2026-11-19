@@ -2,6 +2,7 @@ import type { Auditoria } from '../../../../auditoria/auditoria';
 import { CONFIGURACAO_INICIAL, type ConfiguracaoGlobal } from '../../../domain/configuracao-global';
 import { type RecorteForaDoEscopoError, rodadaNoEscopo } from '../../../domain/rodada/escopo';
 import type { AtribuidorExames } from '../../ports/atribuidor-exames';
+import type { AvisosPrioridade } from '../../ports/avisos-prioridade';
 import type { ConfiguracaoDistribuicaoRepository } from '../../ports/configuracao-distribuicao.repository';
 import type { ConsultaRodadas } from '../../ports/consulta-rodadas';
 import type { FilaExames } from '../../ports/fila-exames';
@@ -29,6 +30,8 @@ export interface DependenciasRodada {
   configuracao: ConfiguracaoDistribuicaoRepository;
   prioridadesCliente: PrioridadesClienteRepository;
   pseudonimizador: PseudonimizadorPaciente;
+  /** Grafia de prioridade sem de-para vira aviso em Operação › Avisos. */
+  avisosPrioridade: AvisosPrioridade;
   auditoria: Auditoria;
   agora: () => Date;
 }

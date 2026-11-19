@@ -15,7 +15,15 @@ import {
 import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
 import { PessoaResumoDto } from './importacao.dto';
 
-const TIPOS = ['cliente', 'medico', 'estudo', 'modalidade', 'especialidade', 'prioridade'] as const;
+const TIPOS = [
+  'cliente',
+  'medico',
+  'estudo',
+  'modalidade',
+  'especialidade',
+  'prioridade',
+  'prioridade_operacao',
+] as const;
 const STATUS = ['pendente', 'resolvido', 'ignorado'] as const;
 
 export class ListarAvisosDto extends PaginacaoDto {
@@ -40,9 +48,13 @@ export class ListarAvisosDto extends PaginacaoDto {
 export class AvisoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso' }) tipo!: (typeof TIPOS)[number];
-  @ApiProperty({ description: 'Como chegou da MobileMed na última importação.' }) valor!: string;
+  @ApiProperty({ description: 'Como chegou da MobileMed na última importação ou rodada.' })
+  valor!: string;
   @ApiProperty({ enum: STATUS, enumName: 'StatusAviso' }) status!: (typeof STATUS)[number];
-  @ApiProperty({ type: 'integer', description: 'Laudos da última importação em que apareceu.' })
+  @ApiProperty({
+    type: 'integer',
+    description: 'Laudos da última importação (ou exames da última rodada) em que apareceu.',
+  })
   ocorrencias!: number;
   @ApiProperty({ type: String, format: 'date-time' }) primeiraVezEm!: Date;
   @ApiProperty({ type: String, format: 'date-time' }) ultimaVezEm!: Date;

@@ -10,7 +10,9 @@ import { chaveEstudo } from './nome-estudo';
 
 export type OrigemLaudo = 'normal' | 'compartilhamento';
 
-export type TipoAviso = TipoPendencia | 'cliente' | 'medico' | 'prioridade';
+type TipoDaImportacao = TipoPendencia | 'cliente' | 'medico' | 'prioridade';
+/** `prioridade_operacao`: grafia sem de-para nas prioridades da operação, vista pela rodada. */
+export type TipoAviso = TipoDaImportacao | 'prioridade_operacao';
 
 /** Cadastro que faltou, com a chave normalizada que identifica o aviso. */
 export interface PendenciaCadastro {
@@ -63,7 +65,7 @@ export interface LaudoPreparado {
   pecas: { exameId: string; categoriaId: string | null }[];
 }
 
-const CHAVE_DO_AVISO: Record<TipoAviso, (valor: string) => string> = {
+const CHAVE_DO_AVISO: Record<TipoDaImportacao, (valor: string) => string> = {
   cliente: normalizarNome,
   medico: normalizarNomeMedico,
   estudo: chaveEstudo,
@@ -72,7 +74,7 @@ const CHAVE_DO_AVISO: Record<TipoAviso, (valor: string) => string> = {
   prioridade: normalizarNome,
 };
 
-const comChave = (tipo: TipoAviso, valor: string): PendenciaCadastro => ({
+const comChave = (tipo: TipoDaImportacao, valor: string): PendenciaCadastro => ({
   tipo,
   chave: CHAVE_DO_AVISO[tipo](valor),
   valor,
@@ -106,7 +108,7 @@ export function prepararLaudo(
 } {
   const pendencias: PendenciaCadastro[] = [];
   const conferidos: PendenciaCadastro[] = [];
-  const conferir = (tipo: TipoAviso, valor: string, id: string | null) => {
+  const conferir = (tipo: TipoDaImportacao, valor: string, id: string | null) => {
     (id ? conferidos : pendencias).push(comChave(tipo, valor));
     return id;
   };

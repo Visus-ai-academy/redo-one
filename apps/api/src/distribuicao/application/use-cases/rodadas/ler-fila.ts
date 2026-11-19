@@ -1,5 +1,6 @@
 import { rodarMotor } from '../../../domain/motor/rodada';
 import { escalaDosMedicos, montarEntrada } from '../../../domain/rodada/entrada';
+import { grafiasSemDePara } from '../../../domain/rodada/grafias-sem-de-para';
 import { iniciarLeitura, propor, STATUS_VIVOS } from '../../../domain/rodada/maquina';
 import { montarProposta } from '../../../domain/rodada/proposta';
 import { entregasComRecolhidos, leituraComRecolhidos } from '../../../domain/rodada/recolhimento';
@@ -92,6 +93,20 @@ export class LerFila {
         expiraEm,
       });
       if (!gravou) return;
+      const { pendentes, conferidas } = grafiasSemDePara(
+        leitura.semMedico.map((e) => e.prioridade),
+        insumos.prioridadesOperacao,
+      );
+      try {
+        await this.d.avisosPrioridade.registrar(pendentes, conferidas, agora);
+      } catch (erro) {
+        // O aviso não segura a proposta: a tela da rodada já mostra a grafia sem de-para.
+        await this.d.rodadas.registrarEvento(
+          rodadaId,
+          `Não foi possível registrar os avisos de prioridade: ${mensagemDo(erro)}`,
+          this.d.agora(),
+        );
+      }
       const previstas = proposta.designacoes.filter((d) => d.status === 'prevista');
       const medicos = new Set(previstas.map((d) => d.medicoId)).size;
       const naRodada = lida.semMedico.length + proposta.recolhidos;

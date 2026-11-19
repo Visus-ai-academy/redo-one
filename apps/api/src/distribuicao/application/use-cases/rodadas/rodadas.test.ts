@@ -16,6 +16,7 @@ import { RecorteForaDoEscopoError } from '../../../domain/rodada/escopo';
 import { RodadaEmEstadoInvalidoError } from '../../../domain/rodada/maquina';
 import { ConfiguracaoEmMemoria, PrioridadesClienteEmMemoria } from '../../../testing/fakes';
 import {
+  AvisosPrioridadeEmMemoria,
   EscalaRecolhimentoEmMemoria,
   EscopoEmMemoria,
   InsumosFixos,
@@ -164,6 +165,7 @@ describe('rodada do robô (casos de uso)', () => {
   let medicos: MedicosRodadaEmMemoria;
   let escopo: EscopoEmMemoria;
   let insumos: InsumosFixos;
+  let avisosPrioridade: AvisosPrioridadeEmMemoria;
   let escalaRecolhimento: EscalaRecolhimentoEmMemoria;
   let casos: ReturnType<typeof criarCasosDeUsoRodada>;
 
@@ -200,6 +202,7 @@ describe('rodada do robô (casos de uso)', () => {
     escopo = new EscopoEmMemoria();
     insumos = new InsumosFixos(insumosBase(), catalogo);
     escalaRecolhimento = new EscalaRecolhimentoEmMemoria();
+    avisosPrioridade = new AvisosPrioridadeEmMemoria();
     casos = criarCasosDeUsoRodada({
       rodadas: repo,
       consulta: repo,
@@ -212,6 +215,7 @@ describe('rodada do robô (casos de uso)', () => {
       configuracao,
       prioridadesCliente: new PrioridadesClienteEmMemoria(),
       pseudonimizador: { pseudonimo: (t) => `hmac(${t})` },
+      avisosPrioridade,
       auditoria,
       agora: () => agora,
     });
@@ -283,6 +287,35 @@ describe('rodada do robô (casos de uso)', () => {
       ]);
       expect(designacao('e3')?.motivo).toBeTruthy();
       expect(r?.avisos.some((a) => a.includes('fora do catálogo'))).toBe(true);
+    });
+
+    it('grafia de prioridade sem de-para vira aviso, um só por grafia, e o de-para o resolve', async () => {
+      mobilemed.leitura.semMedico.push(
+        exame({ idExame: 'e4', prioridade: 'Eletivo' }),
+        exame({ idExame: 'e5', prioridade: 'ELETIVO' }),
+      );
+      const id = await criarELer();
+      expect([...avisosPrioridade.avisos.values()]).toEqual([
+        { chave: 'ELETIVO', valor: 'Eletivo', exames: 2, status: 'pendente' },
+      ]);
+      expect(JSON.stringify([...avisosPrioridade.avisos.values()])).not.toMatch(/Fict/);
+      await casos.cancelar.executar(admin, id);
+      insumos.insumos = {
+        ...insumos.insumos,
+        prioridadesOperacao: [
+          ...insumos.insumos.prioridadesOperacao,
+          op('op-ele', 3, { tipo: 'nunca' }, 'Eletivo'),
+        ],
+      };
+      await criarELer();
+      expect(avisosPrioridade.avisos.get('ELETIVO')?.status).toBe('resolvido');
+    });
+
+    it('falha ao registrar o aviso não derruba a proposta', async () => {
+      avisosPrioridade.falha = new Error('banco fora');
+      mobilemed.leitura.semMedico.push(exame({ idExame: 'e4', prioridade: 'Eletivo' }));
+      const id = await criarELer();
+      expect(repo.rodadas.get(id)?.status).toBe('aguardando_aprovacao');
     });
 
     it('nunca grava o nome do paciente', async () => {

@@ -1,3 +1,4 @@
+import type { AvisosPrioridade } from '../application/ports/avisos-prioridade';
 import type {
   ConsultaRodadas,
   ContagemPorMedico,
@@ -29,6 +30,7 @@ import type {
 } from '../application/ports/rodadas.repository';
 import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
 import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
+import type { GrafiaSemDePara } from '../domain/rodada/grafias-sem-de-para';
 import { estaViva, type StatusRodada } from '../domain/rodada/maquina';
 import type { DesignacaoNova, InsumosGravados, StatusDesignacao } from '../domain/rodada/proposta';
 import type { AusenciaDoDia, PeriodoDoMedico } from '../domain/rodada/recolhimento';
@@ -579,5 +581,20 @@ export class EscalaRecolhimentoEmMemoria implements EscalaRecolhimento {
 
   async ausenciasDoDia() {
     return this.ausencias;
+  }
+}
+
+/** Os avisos de grafia sem de-para na memória, pela chave (como o upsert do banco). */
+export class AvisosPrioridadeEmMemoria implements AvisosPrioridade {
+  readonly avisos = new Map<string, GrafiaSemDePara & { status: 'pendente' | 'resolvido' }>();
+  falha: Error | null = null;
+
+  async registrar(pendentes: readonly GrafiaSemDePara[], conferidas: readonly string[]) {
+    if (this.falha) throw this.falha;
+    for (const p of pendentes) this.avisos.set(p.chave, { ...p, status: 'pendente' });
+    for (const c of conferidas) {
+      const a = this.avisos.get(c);
+      if (a) a.status = 'resolvido';
+    }
   }
 }
