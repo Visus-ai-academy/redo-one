@@ -16,6 +16,8 @@ export type OpcaoMarcar = {
   grupo?: string;
   /** Com a chave, mostra a bolinha da cor antes do nome (sem cor, só o contorno). */
   cor?: string | null;
+  /** Fica à vista, mas não se marca nem desmarca (ex.: papel que você não pode atribuir). */
+  desabilitada?: boolean;
 };
 
 type CheckboxListFieldProps = {
@@ -98,7 +100,7 @@ function item(opcao: OpcaoMarcar) {
   return (
     <Field.Item key={opcao.valor}>
       <Field.Label className="flex items-center gap-2">
-        <CaixaDeSelecao value={opcao.valor} />
+        <CaixaDeSelecao value={opcao.valor} disabled={opcao.desabilitada} />
         {'cor' in opcao && <BolinhaCor cor={opcao.cor ?? null} />}
         {opcao.rotulo}
       </Field.Label>

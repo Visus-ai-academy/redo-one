@@ -11,7 +11,7 @@ export const minhaContaDtoSchema = z.object({
   nome: z.string(),
   email: z.string(),
   cpfFinal: z.string().nullable().describe('Só os 2 últimos dígitos do CPF.'),
-  papel: papelDoUsuarioDtoSchema,
+  papeis: z.array(papelDoUsuarioDtoSchema).describe('Por nome.'),
   senhaAlteradaEm: z.iso.datetime().nullable(),
   sessoesAbertas: z.array(minhaSessaoDtoSchema),
 })

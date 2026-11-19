@@ -386,6 +386,7 @@
             "name": "papelId",
             "required": false,
             "in": "query",
+            "description": "Quem tem este papel (entre outros).",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -569,9 +570,9 @@
         ]
       }
     },
-    "/usuarios/{id}/papel": {
-      "patch": {
-        "operationId": "UsuariosController_trocarPapel",
+    "/usuarios/{id}/papeis": {
+      "put": {
+        "operationId": "UsuariosController_trocarPapeis",
         "parameters": [
           {
             "name": "id",
@@ -587,14 +588,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TrocarPapelDto"
+                "$ref": "#/components/schemas/TrocarPapeisDto"
               }
             }
           }
         },
         "responses": {
           "204": {
-            "description": "Papel trocado; as sessões da pessoa foram encerradas."
+            "description": "Papéis trocados; as sessões da pessoa foram encerradas."
+          },
+          "403": {
+            "description": "Papel posto ou tirado que quem troca não pode atribuir."
           }
         },
         "tags": [
@@ -9041,17 +9045,12 @@
           },
           "email": {
             "type": "string"
-          },
-          "papelId": {
-            "type": "string",
-            "format": "uuid"
           }
         },
         "required": [
           "id",
           "nome",
-          "email",
-          "papelId"
+          "email"
         ]
       },
       "SessaoDto": {
@@ -9100,20 +9099,38 @@
           "bloqueadoAte"
         ]
       },
+      "PapelDaSessaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
       "SessaoAtualDto": {
         "type": "object",
         "properties": {
           "usuario": {
             "$ref": "#/components/schemas/UsuarioSessaoDto"
           },
-          "papel": {
-            "type": "string",
-            "description": "Nome do papel do usuário.",
-            "example": "Financeiro"
+          "papeis": {
+            "description": "Papéis do usuário, por nome; as permissões são a união das deles.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PapelDaSessaoDto"
+            }
           },
           "acessoTotal": {
             "type": "boolean",
-            "description": "Papel Administrador: pode tudo, mesmo sem listar as permissões."
+            "description": "Tem o papel Administrador: pode tudo, mesmo sem listar as permissões."
           },
           "permissoes": {
             "example": [
@@ -9128,7 +9145,7 @@
         },
         "required": [
           "usuario",
-          "papel",
+          "papeis",
           "acessoTotal",
           "permissoes"
         ]
@@ -9527,8 +9544,12 @@
           "email": {
             "type": "string"
           },
-          "papel": {
-            "$ref": "#/components/schemas/PapelDoUsuarioDto"
+          "papeis": {
+            "description": "Por nome.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PapelDoUsuarioDto"
+            }
           },
           "situacao": {
             "type": "string",
@@ -9549,7 +9570,7 @@
           "id",
           "nome",
           "email",
-          "papel",
+          "papeis",
           "situacao",
           "ultimoAcessoEm"
         ]
@@ -9646,8 +9667,12 @@
           "email": {
             "type": "string"
           },
-          "papel": {
-            "$ref": "#/components/schemas/PapelDoUsuarioDto"
+          "papeis": {
+            "description": "Por nome.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PapelDoUsuarioDto"
+            }
           },
           "situacao": {
             "type": "string",
@@ -9688,7 +9713,7 @@
           "id",
           "nome",
           "email",
-          "papel",
+          "papeis",
           "situacao",
           "ultimoAcessoEm",
           "cpfFinal",
@@ -9714,9 +9739,13 @@
             "nullable": true,
             "example": "000.000.000-00"
           },
-          "papelId": {
-            "type": "string",
-            "format": "uuid"
+          "papelIds": {
+            "description": "Um ou mais; as permissões são a união das deles.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "medicoId": {
             "type": "string",
@@ -9728,7 +9757,7 @@
         "required": [
           "nome",
           "email",
-          "papelId"
+          "papelIds"
         ]
       },
       "UsuarioCriadoDto": {
@@ -9743,16 +9772,20 @@
           "id"
         ]
       },
-      "TrocarPapelDto": {
+      "TrocarPapeisDto": {
         "type": "object",
         "properties": {
-          "papelId": {
-            "type": "string",
-            "format": "uuid"
+          "papelIds": {
+            "description": "Todos os papéis que a pessoa passa a ter (um ou mais).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
-          "papelId"
+          "papelIds"
         ]
       },
       "VincularMedicoDto": {
@@ -9894,8 +9927,12 @@
             "nullable": true,
             "description": "Só os 2 últimos dígitos do CPF."
           },
-          "papel": {
-            "$ref": "#/components/schemas/PapelDoUsuarioDto"
+          "papeis": {
+            "description": "Por nome.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PapelDoUsuarioDto"
+            }
           },
           "senhaAlteradaEm": {
             "format": "date-time",
@@ -9913,7 +9950,7 @@
           "nome",
           "email",
           "cpfFinal",
-          "papel",
+          "papeis",
           "senhaAlteradaEm",
           "sessoesAbertas"
         ]

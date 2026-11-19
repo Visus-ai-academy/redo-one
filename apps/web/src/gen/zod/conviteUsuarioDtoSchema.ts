@@ -9,7 +9,7 @@ export const conviteUsuarioDtoSchema = z.object({
   nome: z.string().max(120).meta({ examples: ['Maria Souza'] }),
   email: z.string().meta({ examples: ['nome@empresa.com.br'] }),
   cpf: z.string().nullish().meta({ examples: ['000.000.000-00'] }),
-  papelId: z.uuid(),
+  papelIds: z.array(z.uuid()).describe('Um ou mais; as permissões são a união das deles.'),
   medicoId: z.uuid().nullish().describe('Médico desta conta (portal); um usuário por médico.'),
 })
 

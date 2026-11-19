@@ -2,7 +2,8 @@ import { Button } from '@base-ui/react/button';
 import { DeviceMobile, Monitor } from '@phosphor-icons/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import { z } from 'zod';
 import { useUsuariosControllerDesativar } from '../../gen/hooks/useUsuariosControllerDesativar';
 import { useUsuariosControllerDesbloquear } from '../../gen/hooks/useUsuariosControllerDesbloquear';
 import { useUsuariosControllerEncerrarSessao } from '../../gen/hooks/useUsuariosControllerEncerrarSessao';
@@ -11,7 +12,7 @@ import { useUsuariosControllerEnviarLinkSenha } from '../../gen/hooks/useUsuario
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
 import { useUsuariosControllerReativar } from '../../gen/hooks/useUsuariosControllerReativar';
 import { useUsuariosControllerReenviarConvite } from '../../gen/hooks/useUsuariosControllerReenviarConvite';
-import { useUsuariosControllerTrocarPapel } from '../../gen/hooks/useUsuariosControllerTrocarPapel';
+import { useUsuariosControllerTrocarPapeis } from '../../gen/hooks/useUsuariosControllerTrocarPapeis';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import type { UsuarioDetalheDto } from '../../gen/types/UsuarioDetalheDto';
 import { horaDeBrasilia } from '../../lib/acesso';
@@ -26,16 +27,16 @@ import { Avatar } from '../avatar/Avatar';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { PainelLateral } from '../painel/PainelLateral';
-import { Select } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
 import { RecorteEscala } from './RecorteEscala';
 
 export type PermissoesUsuarios = {
-  /** usuarios.editar: trocar papel, link de nova senha, encerrar sessões. */
+  /** usuarios.editar: trocar papéis, link de nova senha, encerrar sessões. */
   editar: boolean;
   desbloquear: boolean;
   /** usuarios.desativar: desativar e reativar. */
@@ -129,9 +130,12 @@ export function PainelUsuario({
         </dl>
 
         {permissoes.editar ? (
-          <TrocarPapel usuario={usuario} papeis={papeis} proprio={proprio} />
+          <TrocarPapeis usuario={usuario} papeis={papeis} proprio={proprio} />
         ) : (
-          <CampoSomenteLeitura label="Papel" value={usuario.papel.nome} />
+          <CampoSomenteLeitura
+            label="Papéis"
+            value={usuario.papeis.map((papel) => papel.nome).join(', ')}
+          />
         )}
 
         <SessoesDoUsuario
@@ -236,7 +240,15 @@ function Dado({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   );
 }
 
-function TrocarPapel({
+const schemaPapeis = z.object({
+  papelIds: z.array(z.string()).min(1, 'Escolha pelo menos um papel.'),
+});
+
+const mesmosPapeis = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((id) => b.includes(id));
+
+/** Papéis que quem está logado não pode atribuir ficam à vista, mas sem marcar nem desmarcar. */
+function TrocarPapeis({
   usuario,
   papeis,
   proprio,
@@ -246,77 +258,75 @@ function TrocarPapel({
   proprio: boolean;
 }) {
   const queryClient = useQueryClient();
-  const trocar = useUsuariosControllerTrocarPapel();
-  const [papelId, setPapelId] = useState(usuario.papel.id);
+  const trocar = useUsuariosControllerTrocarPapeis();
   const avisos = useAvisos();
-  const campoId = useId();
-  const ajudaId = useId();
+  const atuais = usuario.papeis.map((papel) => papel.id);
 
-  const enviar = async () => {
-    try {
-      await trocar.mutateAsync({ path: { id: usuario.id }, body: { papelId } });
-    } catch {
-      return; // A mensagem vem de `trocar.error`.
-    }
-    // A lista e o detalhe mostram o papel; as chaves são diferentes (/usuarios e /usuarios/:id).
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: [{ url: '/usuarios' }] }),
-      queryClient.invalidateQueries({
-        queryKey: usuariosControllerObterQueryKey({ path: { id: usuario.id } }),
-      }),
-    ]);
-    avisos.sucesso(`Papel trocado. As sessões abertas de ${usuario.nome} foram encerradas.`);
-  };
+  const form = useAppForm({
+    defaultValues: { papelIds: atuais },
+    validators: { onSubmit: schemaPapeis },
+    onSubmit: async ({ value }) => {
+      try {
+        await trocar.mutateAsync({ path: { id: usuario.id }, body: { papelIds: value.papelIds } });
+      } catch {
+        return; // A mensagem vem de `trocar.error`.
+      }
+      // A lista e o detalhe mostram os papéis; as chaves são diferentes (/usuarios e /usuarios/:id).
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [{ url: '/usuarios' }] }),
+        queryClient.invalidateQueries({
+          queryKey: usuariosControllerObterQueryKey({ path: { id: usuario.id } }),
+        }),
+      ]);
+      avisos.sucesso(`Papéis trocados. As sessões abertas de ${usuario.nome} foram encerradas.`);
+    },
+  });
 
   return (
     <form
+      noValidate
       onSubmit={(evento) => {
         evento.preventDefault();
-        void enviar();
+        void form.handleSubmit();
       }}
       className="flex flex-col gap-2"
     >
       {trocar.error && (
-        <Alerta tom="erro">Não foi possível trocar o papel agora. Tente de novo.</Alerta>
+        <Alerta tom="erro">Não foi possível trocar os papéis agora. Tente de novo.</Alerta>
       )}
-      <div className="flex items-baseline gap-1">
-        <label htmlFor={campoId} className="font-medium">
-          Papel
-        </label>
-        <span aria-hidden="true" className="text-destructive">
-          *
-        </span>
-      </div>
-      <div className="flex gap-2">
-        <Select
-          id={campoId}
-          required
-          disabled={proprio}
-          value={papelId}
-          onValueChange={setPapelId}
-          aria-describedby={ajudaId}
-          opcoes={papeis.map((papel) => ({
-            valor: papel.id,
-            rotulo: papel.nome,
-            desabilitada: !papel.atribuivel && papel.id !== usuario.papel.id,
-          }))}
-          className="flex-1"
-        />
-        {!proprio && (
-          <Button
-            type="submit"
-            disabled={papelId === usuario.papel.id || trocar.isPending}
-            className={buttonClassName({ variant: 'secondary' })}
-          >
-            Trocar papel
-          </Button>
+      <form.AppField name="papelIds">
+        {(field) => (
+          <field.CheckboxListField
+            label="Papéis"
+            required
+            description={
+              proprio
+                ? 'Você não pode trocar os próprios papéis.'
+                : 'A pessoa pode tudo o que algum dos papéis permite. Ao trocar os papéis, as sessões abertas desta pessoa são encerradas.'
+            }
+            opcoes={papeis.map((papel) => ({
+              valor: papel.id,
+              rotulo: papel.nome,
+              desabilitada: proprio || !papel.atribuivel,
+            }))}
+          />
         )}
-      </div>
-      <span id={ajudaId} className="text-muted-foreground text-[13px]">
-        {proprio
-          ? 'Você não pode trocar o próprio papel.'
-          : 'Ao trocar o papel, as sessões abertas desta pessoa são encerradas.'}
-      </span>
+      </form.AppField>
+      {!proprio && (
+        <form.Subscribe selector={(estado) => mesmosPapeis(estado.values.papelIds, atuais)}>
+          {(iguais) => (
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={iguais || trocar.isPending}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Salvar papéis
+              </Button>
+            </div>
+          )}
+        </form.Subscribe>
+      )}
     </form>
   );
 }

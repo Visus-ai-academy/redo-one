@@ -3,18 +3,18 @@
 * Do not edit manually.
 */
 
+import type { PapelDaSessaoDto } from './PapelDaSessaoDto'
 import type { UsuarioSessaoDto } from './UsuarioSessaoDto'
 
 export type SessaoAtualDto = {
   usuario: UsuarioSessaoDto;
   /**
-   * @description Nome do papel do usuário.
-   * @example Financeiro
-   * @type string
+   * @description Papéis do usuário, por nome; as permissões são a união das deles.
+   * @type array
    */
-  papel: string;
+  papeis: PapelDaSessaoDto[];
   /**
-   * @description Papel Administrador: pode tudo, mesmo sem listar as permissões.
+   * @description Tem o papel Administrador: pode tudo, mesmo sem listar as permissões.
    * @type boolean
    */
   acessoTotal: boolean;

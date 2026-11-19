@@ -69,7 +69,10 @@ export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
             description="Para trocar, fale com quem administra o One."
           />
           <CampoSomenteLeitura label="CPF" value={cpfMascarado(conta.cpfFinal)} />
-          <CampoSomenteLeitura label="Papel" value={conta.papel.nome} />
+          <CampoSomenteLeitura
+            label={conta.papeis.length > 1 ? 'Papéis' : 'Papel'}
+            value={conta.papeis.map((papel) => papel.nome).join(', ')}
+          />
         </div>
         <form.AppForm>
           <div className="flex flex-wrap items-center justify-between gap-3">

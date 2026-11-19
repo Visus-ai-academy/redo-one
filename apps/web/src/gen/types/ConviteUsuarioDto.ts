@@ -21,11 +21,10 @@ export type ConviteUsuarioDto = {
    */
   cpf?: string | null;
   /**
-   * @description
-   * Format: `uuid`
-   * @type string
+   * @description Um ou mais; as permissões são a união das deles.
+   * @type array
    */
-  papelId: string;
+  papelIds: string[];
   /**
    * @description Médico desta conta (portal); um usuário por médico.
    *

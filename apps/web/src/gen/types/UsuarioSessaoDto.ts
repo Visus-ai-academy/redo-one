@@ -12,10 +12,4 @@ export type UsuarioSessaoDto = {
   id: string;
   nome: string;
   email: string;
-  /**
-   * @description
-   * Format: `uuid`
-   * @type string
-   */
-  papelId: string;
 };

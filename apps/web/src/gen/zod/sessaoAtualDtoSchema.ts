@@ -4,12 +4,13 @@
 */
 
 import * as z from 'zod'
+import { papelDaSessaoDtoSchema } from './papelDaSessaoDtoSchema'
 import { usuarioSessaoDtoSchema } from './usuarioSessaoDtoSchema'
 
 export const sessaoAtualDtoSchema = z.object({
   usuario: usuarioSessaoDtoSchema,
-  papel: z.string().describe('Nome do papel do usuário.').meta({ examples: ['Financeiro'] }),
-  acessoTotal: z.boolean().describe('Papel Administrador: pode tudo, mesmo sem listar as permissões.'),
+  papeis: z.array(papelDaSessaoDtoSchema).describe('Papéis do usuário, por nome; as permissões são a união das deles.'),
+  acessoTotal: z.boolean().describe('Tem o papel Administrador: pode tudo, mesmo sem listar as permissões.'),
   permissoes: z.array(z.string()).meta({ examples: [["faturamento.ver","usuarios.ver"]] }),
 })
 

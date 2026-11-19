@@ -11,7 +11,7 @@ export const usuarioDetalheDtoSchema = z.object({
   id: z.uuid(),
   nome: z.string(),
   email: z.string(),
-  papel: papelDoUsuarioDtoSchema,
+  papeis: z.array(papelDoUsuarioDtoSchema).describe('Por nome.'),
   situacao: z.enum(['ativo', 'convite_pendente', 'bloqueado', 'desativado']),
   ultimoAcessoEm: z.iso.datetime().nullable(),
   cpfFinal: z.string().nullable().describe('Só os 2 últimos dígitos do CPF.'),

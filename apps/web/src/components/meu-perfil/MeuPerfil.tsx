@@ -20,7 +20,7 @@ export function MeuPerfil({
         <div className="flex flex-col gap-0.5">
           <h1 className="text-[22px] leading-snug font-semibold">Meu perfil</h1>
           <span className="text-muted-foreground">
-            {conta.nome}, {conta.papel.nome}
+            {conta.nome}, {conta.papeis.map((papel) => papel.nome).join(', ')}
           </span>
         </div>
       </div>

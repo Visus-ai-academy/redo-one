@@ -21,7 +21,8 @@ export type UsuariosControllerListarQuery = {
    */
   busca?: string;
   /**
-   * @description
+   * @description Quem tem este papel (entre outros).
+   *
    * Format: `uuid`
    * @type string | undefined
    */

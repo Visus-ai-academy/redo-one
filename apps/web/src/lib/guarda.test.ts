@@ -8,8 +8,8 @@ import { SESSAO_QUERY_KEY } from './sessao';
 vi.mock('../gen/clients/sessaoControllerAtual');
 
 const sessao = {
-  usuario: { id: '1', nome: 'Maria Souza', email: 'm@e.com', papelId: 'p' },
-  papel: 'Financeiro',
+  usuario: { id: '1', nome: 'Maria Souza', email: 'm@e.com' },
+  papeis: [{ id: 'p', nome: 'Financeiro' }],
   acessoTotal: false,
   permissoes: [],
 };

@@ -41,7 +41,8 @@ export type EditarPapelProps = {
   papeis?: { id: string; nome: string }[];
   /** Quem edita: só concede o que tem. */
   acesso: { acessoTotal: boolean; permissoes: readonly string[] };
-  meuPapelId: string;
+  /** Papéis de quem edita (avisa que a sessão dele também cai). */
+  meusPapeis: string[];
   /** `papeis.criar`: papel novo e duplicar. */
   podeCriar: boolean;
   /** `papeis.editar`: salvar um papel existente. */
@@ -61,7 +62,7 @@ export function EditarPapel({
   catalogo,
   papeis = [],
   acesso,
-  meuPapelId,
+  meusPapeis,
   podeCriar,
   podeEditar,
   podeExcluir,
@@ -87,7 +88,7 @@ export function EditarPapel({
   const somenteLeitura = novo ? !podeCriar : !podeEditar || Boolean(papel?.acessoTotal);
   const nomeFixo = Boolean(papel?.sistema);
   const mudouPermissoes = papel ? !mesmasPermissoes(papel.permissoes, marcadas) : false;
-  const meuPapel = papel?.id === meuPapelId;
+  const meuPapel = papel ? meusPapeis.includes(papel.id) : false;
   const aviso =
     papel && mudouPermissoes
       ? avisoAoSalvar({ totalUsuarios: papel.totalUsuarios, meuPapel })

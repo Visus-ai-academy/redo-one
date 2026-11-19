@@ -10,7 +10,7 @@ export const usuariosControllerListarQueryBuscaSchema = z.string().optional().de
 
 export type UsuariosControllerListarQueryBuscaSchemaType = z.infer<typeof usuariosControllerListarQueryBuscaSchema>
 
-export const usuariosControllerListarQueryPapelIdSchema = z.uuid().optional()
+export const usuariosControllerListarQueryPapelIdSchema = z.uuid().optional().describe('Quem tem este papel (entre outros).')
 
 export type UsuariosControllerListarQueryPapelIdSchemaType = z.infer<typeof usuariosControllerListarQueryPapelIdSchema>
 
@@ -40,7 +40,7 @@ export type UsuariosControllerListarResponseSchemaType = z.infer<typeof usuarios
 
 export const usuariosControllerListarQuerySchema = z.object({
   busca: z.string().optional().describe('Parte do nome ou do e-mail, ou o CPF.'),
-  papelId: z.uuid().optional(),
+  papelId: z.uuid().optional().describe('Quem tem este papel (entre outros).'),
   situacao: z.enum(['ativo', 'convite_pendente', 'bloqueado', 'desativado']).optional(),
   medicoId: z.uuid().optional().describe('Só a conta ligada a este médico.'),
   pagina: z.int().min(1).optional().default(1),

@@ -21,7 +21,7 @@ const schema = z.object({
       (cpf) => cpf.trim() === '' || soDigitos(cpf).length === 11,
       'O CPF precisa ter 11 dígitos.',
     ),
-  papelId: z.string().min(1, 'Escolha o papel.'),
+  papelIds: z.array(z.string()).min(1, 'Escolha pelo menos um papel.'),
 });
 
 type PainelConviteProps = {
@@ -36,7 +36,7 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
   const convidar = useUsuariosControllerConvidar();
 
   const form = useAppForm({
-    defaultValues: { nome: '', email: '', cpf: '', papelId: '' },
+    defaultValues: { nome: '', email: '', cpf: '', papelIds: [] as string[] },
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       const email = value.email.trim().toLowerCase();
@@ -47,7 +47,7 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
             nome: value.nome.trim(),
             email,
             cpf: value.cpf.trim() ? soDigitos(value.cpf) : null,
-            papelId: value.papelId,
+            papelIds: value.papelIds,
           },
         });
       } catch {
@@ -105,13 +105,12 @@ export function PainelConvite({ papeis, onConvidado, onCancelar }: PainelConvite
             />
           )}
         </form.AppField>
-        <form.AppField name="papelId">
+        <form.AppField name="papelIds">
           {(field) => (
-            <field.SelectField
-              label="Papel"
-              placeholder="Escolha um papel"
+            <field.CheckboxListField
+              label="Papéis"
               required
-              description="Aparecem só papéis com permissões que você também tem."
+              description="A pessoa pode tudo o que algum dos papéis permite. Aparecem só papéis com permissões que você também tem."
               opcoes={papeis
                 .filter((papel) => papel.atribuivel)
                 .map((papel) => ({ valor: papel.id, rotulo: papel.nome }))}

@@ -9,7 +9,6 @@ export const usuarioSessaoDtoSchema = z.object({
   id: z.uuid(),
   nome: z.string(),
   email: z.string(),
-  papelId: z.uuid(),
 })
 
 export type UsuarioSessaoDtoSchemaType = z.infer<typeof usuarioSessaoDtoSchema>

@@ -10,7 +10,7 @@ export const usuarioResumoDtoSchema = z.object({
   id: z.uuid(),
   nome: z.string(),
   email: z.string(),
-  papel: papelDoUsuarioDtoSchema,
+  papeis: z.array(papelDoUsuarioDtoSchema).describe('Por nome.'),
   situacao: z.enum(['ativo', 'convite_pendente', 'bloqueado', 'desativado']),
   ultimoAcessoEm: z.iso.datetime().nullable(),
 })

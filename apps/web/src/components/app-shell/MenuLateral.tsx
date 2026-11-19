@@ -34,6 +34,7 @@ export function MenuLateral({
 }: MenuLateralProps) {
   const permitidos = filtrarPorPermissao(grupos, sessao);
   const rodapePermitido = rodape.filter((item) => pode(sessao, item.permissao));
+  const nomesDosPapeis = sessao.papeis.map((papel) => papel.nome).join(', ');
   const destinos = [...permitidos.flatMap((g) => g.itens), ...rodapePermitido].map((i) => i.to);
 
   return (
@@ -89,7 +90,7 @@ export function MenuLateral({
             recolhido ? 'flex-col py-2' : 'h-12 pr-1 pl-1.5',
           )}
         >
-          <Dica rotulo={`${sessao.usuario.nome} (${sessao.papel})`} desativada={!recolhido}>
+          <Dica rotulo={`${sessao.usuario.nome} (${nomesDosPapeis})`} desativada={!recolhido}>
             <span className="flex">
               <Avatar
                 nome={sessao.usuario.nome}
@@ -103,7 +104,7 @@ export function MenuLateral({
               <span className="text-sidebar-primary truncate text-[13px] font-semibold">
                 {sessao.usuario.nome}
               </span>
-              <span className="text-sidebar-muted truncate text-xs">{sessao.papel}</span>
+              <span className="text-sidebar-muted truncate text-xs">{nomesDosPapeis}</span>
             </span>
           )}
           <Dica rotulo="Sair do One">

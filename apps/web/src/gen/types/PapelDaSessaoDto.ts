@@ -3,11 +3,12 @@
 * Do not edit manually.
 */
 
-export type TrocarPapelDto = {
+export type PapelDaSessaoDto = {
   /**
    * @description
    * Format: `uuid`
    * @type string
    */
-  papelId: string;
+  id: string;
+  nome: string;
 };

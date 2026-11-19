@@ -187,7 +187,7 @@ function PapelAberto({
     <EditarPapel
       papel={papel}
       acesso={sessao}
-      meuPapelId={sessao.usuario.papelId}
+      meusPapeis={sessao.papeis.map((papel) => papel.id)}
       podeCriar={podeCriar}
       podeEditar={podeEditar}
       podeExcluir={podeExcluir}
@@ -210,7 +210,7 @@ function PapelNovo({
   ) : (
     <EditarPapel
       acesso={sessao}
-      meuPapelId={sessao.usuario.papelId}
+      meusPapeis={sessao.papeis.map((papel) => papel.id)}
       podeCriar
       podeEditar={false}
       podeExcluir={false}
@@ -240,7 +240,7 @@ function Copia({
         permissoes: original.permissoes,
       }}
       acesso={sessao}
-      meuPapelId={sessao.usuario.papelId}
+      meusPapeis={sessao.papeis.map((papel) => papel.id)}
       podeCriar
       podeEditar={false}
       podeExcluir={false}

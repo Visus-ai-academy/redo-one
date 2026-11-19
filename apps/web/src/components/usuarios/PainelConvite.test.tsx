@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,7 +6,6 @@ import { ResponseError } from '../../gen/.kubb/client';
 import { usuariosControllerConvidar } from '../../gen/clients/usuariosControllerConvidar';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import { renderComRotas } from '../../test/render';
-import { escolherOpcao } from '../../test/select';
 import { PainelConvite } from './PainelConvite';
 
 vi.mock('../../gen/clients/usuariosControllerConvidar');
@@ -16,6 +15,7 @@ const convidar = vi.mocked(usuariosControllerConvidar);
 const papeis: PapelAtribuivelDto[] = [
   { id: 'p-admin', nome: 'Administrador', atribuivel: false },
   { id: 'p-fin', nome: 'Financeiro', atribuivel: true },
+  { id: 'p-sup', nome: 'Suporte', atribuivel: true },
 ];
 
 function montar() {
@@ -27,11 +27,17 @@ function montar() {
   return { ...resultado, onConvidado, onCancelar };
 }
 
-async function preencher({ cpf }: { cpf?: string } = {}) {
+async function preencher({
+  cpf,
+  papeis = ['Financeiro'],
+}: {
+  cpf?: string;
+  papeis?: string[];
+} = {}) {
   await userEvent.type(await screen.findByRole('textbox', { name: 'Nome' }), 'Maria Souza');
   await userEvent.type(screen.getByRole('textbox', { name: 'E-mail' }), 'maria@empresa.com.br');
   if (cpf) await userEvent.type(screen.getByRole('textbox', { name: 'CPF' }), cpf);
-  await escolherOpcao('Papel', 'Financeiro');
+  for (const papel of papeis) await userEvent.click(screen.getByRole('checkbox', { name: papel }));
   await userEvent.click(screen.getByRole('button', { name: 'Enviar convite' }));
 }
 
@@ -50,10 +56,35 @@ describe('PainelConvite', () => {
     expect(screen.getByRole('textbox', { name: 'CPF' })).toHaveAccessibleDescription(
       'Com o CPF, a pessoa também pode entrar digitando o CPF.',
     );
-    await userEvent.click(screen.getByRole('combobox', { name: 'Papel' }));
-    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
-      'Financeiro',
-    ]);
+    const grupo = screen.getByRole('group', { name: /Papéis/ });
+    expect(
+      within(grupo)
+        .getAllByRole('checkbox')
+        .map((caixa) => caixa.closest('label')?.textContent),
+    ).toEqual(['Financeiro', 'Suporte']);
+  });
+
+  it('convida com mais de um papel', async () => {
+    montar();
+
+    await preencher({ papeis: ['Financeiro', 'Suporte'] });
+
+    await waitFor(() =>
+      expect(convidar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({ papelIds: ['p-fin', 'p-sup'] }),
+        }),
+      ),
+    );
+  });
+
+  it('pede pelo menos um papel', async () => {
+    montar();
+
+    await preencher({ papeis: [] });
+
+    expect(await screen.findByText('Escolha pelo menos um papel.')).toBeInTheDocument();
+    expect(convidar).not.toHaveBeenCalled();
   });
 
   it('envia o convite e abre a pessoa nova', async () => {
@@ -69,7 +100,7 @@ describe('PainelConvite', () => {
             nome: 'Maria Souza',
             email: 'maria@empresa.com.br',
             cpf: '12345678901',
-            papelId: 'p-fin',
+            papelIds: ['p-fin'],
           },
         }),
       ),

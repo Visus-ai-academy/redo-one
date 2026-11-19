@@ -11,7 +11,7 @@ import { usuariosControllerEncerrarSessoes } from '../../gen/clients/usuariosCon
 import { usuariosControllerEnviarLinkSenha } from '../../gen/clients/usuariosControllerEnviarLinkSenha';
 import { usuariosControllerReativar } from '../../gen/clients/usuariosControllerReativar';
 import { usuariosControllerReenviarConvite } from '../../gen/clients/usuariosControllerReenviarConvite';
-import { usuariosControllerTrocarPapel } from '../../gen/clients/usuariosControllerTrocarPapel';
+import { usuariosControllerTrocarPapeis } from '../../gen/clients/usuariosControllerTrocarPapeis';
 import { usuariosControllerObterQueryKey } from '../../gen/hooks/useUsuariosControllerObter';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import type { UsuarioDetalheDto } from '../../gen/types/UsuarioDetalheDto';
@@ -19,7 +19,7 @@ import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { PainelUsuario, type PainelUsuarioProps } from './PainelUsuario';
 
-vi.mock('../../gen/clients/usuariosControllerTrocarPapel');
+vi.mock('../../gen/clients/usuariosControllerTrocarPapeis');
 vi.mock('../../gen/clients/sessaoControllerAtual');
 vi.mock('../../gen/clients/escopoApiControllerObter');
 vi.mock('../../gen/clients/usuariosControllerDesbloquear');
@@ -30,7 +30,7 @@ vi.mock('../../gen/clients/usuariosControllerEncerrarSessoes');
 vi.mock('../../gen/clients/usuariosControllerDesativar');
 vi.mock('../../gen/clients/usuariosControllerReativar');
 
-const trocarPapel = vi.mocked(usuariosControllerTrocarPapel);
+const trocarPapeis = vi.mocked(usuariosControllerTrocarPapeis);
 const desbloquear = vi.mocked(usuariosControllerDesbloquear);
 const enviarLink = vi.mocked(usuariosControllerEnviarLinkSenha);
 const reenviarConvite = vi.mocked(usuariosControllerReenviarConvite);
@@ -45,7 +45,8 @@ const obterEscopo = vi.mocked(escopoApiControllerObter);
 const logado = (permissoes: string[]) =>
   sessaoAtual.mockReturnValue({
     unwrap: async () => ({
-      usuario: { id: 'u-carlos', nome: 'Carlos', email: 'carlos@empresa.com.br', papelId: 'p' },
+      usuario: { id: 'u-carlos', nome: 'Carlos', email: 'carlos@empresa.com.br' },
+      papeis: [{ id: 'p', nome: 'Gestão' }],
       expiraEm: '2026-11-15T00:00:00.000Z',
       acessoTotal: false,
       permissoes,
@@ -60,7 +61,7 @@ const maria: UsuarioDetalheDto = {
   id: 'u-maria',
   nome: 'Maria Souza',
   email: 'maria@empresa.com.br',
-  papel: { id: 'p-fin', nome: 'Financeiro' },
+  papeis: [{ id: 'p-fin', nome: 'Financeiro' }],
   situacao: 'ativo',
   ultimoAcessoEm: '2026-11-14T00:40:00.000Z',
   cpfFinal: '41',
@@ -107,7 +108,7 @@ const valor = (painel: HTMLElement, rotulo: string) =>
 describe('PainelUsuario', () => {
   beforeEach(() => {
     for (const mock of [
-      trocarPapel,
+      trocarPapeis,
       desbloquear,
       enviarLink,
       reenviarConvite,
@@ -169,31 +170,34 @@ describe('PainelUsuario', () => {
     expect(onFechar).toHaveBeenCalled();
   });
 
-  it('troca o papel só pelos papéis que se pode atribuir, avisando que as sessões caem', async () => {
+  it('troca os papéis só pelos que se pode atribuir, avisando que as sessões caem', async () => {
     const { queryClient } = montar();
     const invalidar = vi.spyOn(queryClient, 'invalidateQueries');
 
-    const papel = await screen.findByRole('combobox', { name: 'Papel' });
-    expect(papel).toHaveAccessibleDescription(
-      'Ao trocar o papel, as sessões abertas desta pessoa são encerradas.',
+    const grupo = await screen.findByRole('group', { name: /Papéis/ });
+    expect(grupo).toHaveTextContent(
+      'Ao trocar os papéis, as sessões abertas desta pessoa são encerradas.',
     );
-    expect(screen.getByRole('button', { name: 'Trocar papel' })).toBeDisabled();
-
-    await userEvent.click(papel);
-    expect(await screen.findByRole('option', { name: 'Administrador' })).toHaveAttribute(
+    expect(within(grupo).getByRole('checkbox', { name: 'Financeiro' })).toBeChecked();
+    expect(within(grupo).getByRole('checkbox', { name: 'Administrador' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
-    await userEvent.click(screen.getByRole('option', { name: 'Coordenação' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Trocar papel' }));
+    expect(screen.getByRole('button', { name: 'Salvar papéis' })).toBeDisabled();
+
+    await userEvent.click(within(grupo).getByRole('checkbox', { name: 'Coordenação' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar papéis' }));
 
     await waitFor(() =>
-      expect(trocarPapel).toHaveBeenCalledWith(
-        expect.objectContaining({ path: { id: 'u-maria' }, body: { papelId: 'p-coord' } }),
+      expect(trocarPapeis).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: { id: 'u-maria' },
+          body: { papelIds: ['p-fin', 'p-coord'] },
+        }),
       ),
     );
     expect(await acharAviso()).toHaveTextContent(
-      'Papel trocado. As sessões abertas de Maria Souza foram encerradas.',
+      'Papéis trocados. As sessões abertas de Maria Souza foram encerradas.',
     );
     expect(invalidar).toHaveBeenCalledWith({ queryKey: [{ url: '/usuarios' }] });
     // O detalhe tem chave própria (/usuarios/:id): sem isto, o painel fica com o papel antigo.
@@ -202,18 +206,43 @@ describe('PainelUsuario', () => {
     });
   });
 
-  it('ninguém troca o próprio papel', async () => {
-    montar({ euId: 'u-maria' });
+  it('não deixa ficar sem papel', async () => {
+    montar();
 
-    expect(await screen.findByRole('combobox', { name: 'Papel' })).toBeDisabled();
-    expect(screen.getByText('Você não pode trocar o próprio papel.')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Financeiro' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar papéis' }));
+
+    expect(await screen.findByText('Escolha pelo menos um papel.')).toBeInTheDocument();
+    expect(trocarPapeis).not.toHaveBeenCalled();
   });
 
-  it('sem usuarios.editar, o papel é só leitura', async () => {
-    montar({ permissoes: { ...TODAS, editar: false } });
+  it('ninguém troca os próprios papéis', async () => {
+    montar({ euId: 'u-maria' });
 
-    expect(await screen.findByRole('textbox', { name: 'Papel' })).toHaveValue('Financeiro');
-    expect(screen.queryByRole('button', { name: 'Trocar papel' })).not.toBeInTheDocument();
+    const grupo = await screen.findByRole('group', { name: /Papéis/ });
+    for (const caixa of within(grupo).getAllByRole('checkbox')) {
+      expect(caixa).toHaveAttribute('aria-disabled', 'true');
+    }
+    expect(grupo).toHaveTextContent('Você não pode trocar os próprios papéis.');
+    expect(screen.queryByRole('button', { name: 'Salvar papéis' })).not.toBeInTheDocument();
+  });
+
+  it('sem usuarios.editar, os papéis são só leitura', async () => {
+    montar({
+      usuario: {
+        ...maria,
+        papeis: [
+          { id: 'p-coord', nome: 'Coordenação' },
+          { id: 'p-fin', nome: 'Financeiro' },
+        ],
+      },
+      permissoes: { ...TODAS, editar: false },
+    });
+
+    expect(await screen.findByRole('textbox', { name: 'Papéis' })).toHaveValue(
+      'Coordenação, Financeiro',
+    );
+    expect(screen.queryByRole('button', { name: 'Salvar papéis' })).not.toBeInTheDocument();
   });
 
   it('lista as sessões abertas da pessoa', async () => {

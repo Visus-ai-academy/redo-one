@@ -135,6 +135,7 @@ const CAMPOS: Record<string, string> = {
   valores: 'Valores',
   exameId: 'Exame',
   papelId: 'Papel',
+  papelIds: 'Papéis',
 };
 
 /** Só nestes campos o valor é um código. */

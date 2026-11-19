@@ -24,7 +24,7 @@ describe('sessaoQueryOptions', () => {
 
   it('devolve o usuário e as permissões da sessão', async () => {
     const sessao = {
-      usuario: { id: '1', nome: 'Maria Souza', email: 'm@e.com', papelId: 'p' },
+      usuario: { id: '1', nome: 'Maria Souza', email: 'm@e.com' },
       acessoTotal: false,
       permissoes: ['usuarios.ver'],
     };

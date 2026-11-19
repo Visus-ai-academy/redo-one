@@ -89,7 +89,10 @@ export function ListaUsuarios({
           );
         },
       }),
-      coluna.accessor((u) => u.papel.nome, { id: 'papel', header: 'Papel' }),
+      coluna.accessor((u) => u.papeis.map((papel) => papel.nome).join(', '), {
+        id: 'papel',
+        header: 'Papéis',
+      }),
       coluna.accessor('situacao', {
         header: 'Situação',
         cell: (info) => <EtiquetaSituacao situacao={info.getValue()} />,

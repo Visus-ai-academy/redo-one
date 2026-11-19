@@ -63,7 +63,10 @@ export function SecaoAcesso({
           <span className="text-muted-foreground">{conta.email}</span>
           <span className="flex flex-wrap items-center gap-2 pt-1">
             <EtiquetaSituacao situacao={conta.situacao} />
-            <span className="text-muted-foreground text-[13px]">Papel {conta.papel.nome}</span>
+            <span className="text-muted-foreground text-[13px]">
+              {conta.papeis.length > 1 ? 'Papéis' : 'Papel'}{' '}
+              {conta.papeis.map((papel) => papel.nome).join(', ')}
+            </span>
           </span>
         </div>
         <p className="text-muted-foreground text-[13px]">

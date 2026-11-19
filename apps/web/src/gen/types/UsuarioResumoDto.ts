@@ -23,7 +23,11 @@ export type UsuarioResumoDto = {
   id: string;
   nome: string;
   email: string;
-  papel: PapelDoUsuarioDto;
+  /**
+   * @description Por nome.
+   * @type array
+   */
+  papeis: PapelDoUsuarioDto[];
   situacao: UsuarioResumoDtoSituacaoEnumKey;
   /**
    * @description

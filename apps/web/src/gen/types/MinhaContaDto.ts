@@ -14,7 +14,11 @@ export type MinhaContaDto = {
    * @type string
    */
   cpfFinal: string | null;
-  papel: PapelDoUsuarioDto;
+  /**
+   * @description Por nome.
+   * @type array
+   */
+  papeis: PapelDoUsuarioDto[];
   /**
    * @description
    * Format: `date-time`

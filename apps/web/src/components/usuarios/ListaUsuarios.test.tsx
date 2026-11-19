@@ -16,7 +16,7 @@ const pagina: PaginaUsuariosDto = {
       id: 'u-carlos',
       nome: 'Carlos Andrade',
       email: 'carlos@empresa.com.br',
-      papel: { id: 'p-admin', nome: 'Administrador' },
+      papeis: [{ id: 'p-admin', nome: 'Administrador' }],
       situacao: 'ativo',
       ultimoAcessoEm: '2026-11-14T12:12:00.000Z',
     },
@@ -24,7 +24,10 @@ const pagina: PaginaUsuariosDto = {
       id: 'u-maria',
       nome: 'Maria Souza',
       email: 'maria@empresa.com.br',
-      papel: { id: 'p-fin', nome: 'Financeiro' },
+      papeis: [
+        { id: 'p-fin', nome: 'Financeiro' },
+        { id: 'p-sup', nome: 'Suporte' },
+      ],
       situacao: 'convite_pendente',
       ultimoAcessoEm: null,
     },
@@ -60,7 +63,7 @@ function montar(props: Partial<ListaUsuariosProps> = {}) {
 }
 
 describe('ListaUsuarios', () => {
-  it('mostra o total e cada pessoa com papel, situação e último acesso', async () => {
+  it('mostra o total e cada pessoa com os papéis, situação e último acesso', async () => {
     montar();
 
     expect(await screen.findByRole('heading', { name: 'Usuários 47' })).toBeInTheDocument();
@@ -68,7 +71,7 @@ describe('ListaUsuarios', () => {
     expect(carlos).toHaveTextContent('Carlos Andrade (você)');
     expect(carlos).toHaveTextContent('carlos@empresa.com.br');
     expect(carlos).toHaveTextContent('AdministradorAtivoHoje, 09:12');
-    expect(maria).toHaveTextContent('FinanceiroConvite pendenteNunca entrou');
+    expect(maria).toHaveTextContent('Financeiro, SuporteConvite pendenteNunca entrou');
     expect(screen.getByText('1–25 de 47')).toBeInTheDocument();
   });
 
@@ -123,7 +126,7 @@ describe('ListaUsuarios', () => {
       within(cabecalho as HTMLElement)
         .getAllByRole('columnheader')
         .map((c) => c.textContent),
-    ).toEqual(['Nome', 'Papel', 'Situação', 'Último acesso']);
+    ).toEqual(['Nome', 'Papéis', 'Situação', 'Último acesso']);
   });
 
   it('abre o detalhe pelo nome e marca a linha aberta, com o painel ao lado', async () => {
@@ -149,7 +152,7 @@ describe('ListaUsuarios', () => {
       within(cabecalho as HTMLElement)
         .getAllByRole('columnheader')
         .map((c) => c.textContent),
-    ).toEqual(['Nome', 'Papel', 'Situação', 'Último acesso']);
+    ).toEqual(['Nome', 'Papéis', 'Situação', 'Último acesso']);
   });
 
   it('quem pode convidar tem o botão no cabeçalho', async () => {

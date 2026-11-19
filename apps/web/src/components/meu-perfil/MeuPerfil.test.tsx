@@ -14,7 +14,7 @@ const conta: MinhaContaDto = {
   nome: 'Carlos Andrade',
   email: 'carlos@empresa.com.br',
   cpfFinal: null,
-  papel: { id: 'p', nome: 'Administrador' },
+  papeis: [{ id: 'p', nome: 'Administrador' }],
   senhaAlteradaEm: null,
   sessoesAbertas: [],
 };

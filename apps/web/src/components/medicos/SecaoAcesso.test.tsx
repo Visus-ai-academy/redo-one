@@ -16,7 +16,7 @@ const conta: UsuarioResumoDto = {
   id: 'u-1',
   nome: 'Augusto Lima',
   email: 'augusto@clinica.com',
-  papel: { id: 'p-med', nome: 'Médico' },
+  papeis: [{ id: 'p-med', nome: 'Médico' }],
   situacao: 'convite_pendente',
   ultimoAcessoEm: null,
 };

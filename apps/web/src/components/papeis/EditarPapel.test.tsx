@@ -70,7 +70,7 @@ function montar(props: Partial<EditarPapelProps> = {}) {
       papel={financeiro}
       catalogo={catalogo}
       acesso={ADMIN}
-      meuPapelId="p-admin"
+      meusPapeis={['p-admin']}
       podeCriar
       podeEditar
       podeExcluir
@@ -325,7 +325,7 @@ describe('EditarPapel', () => {
   });
 
   it('avisa quando o papel é o de quem edita', async () => {
-    const { onSalvo } = montar({ meuPapelId: 'p-fin' });
+    const { onSalvo } = montar({ meusPapeis: ['p-fin'] });
 
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Volumetria: Ver' }));
     expect(screen.getByText(/inclusive a sua/)).toBeInTheDocument();

@@ -14,8 +14,8 @@ vi.mock('../../gen/clients/sessaoControllerSair');
 const sair = vi.mocked(sessaoControllerSair);
 
 const maria: SessaoAtualDto = {
-  usuario: { id: '1', nome: 'Maria Souza', email: 'maria@empresa.com.br', papelId: 'p' },
-  papel: 'Financeiro',
+  usuario: { id: '1', nome: 'Maria Souza', email: 'maria@empresa.com.br' },
+  papeis: [{ id: 'p', nome: 'Financeiro' }],
   acessoTotal: false,
   permissoes: ['usuarios.ver'],
 };
