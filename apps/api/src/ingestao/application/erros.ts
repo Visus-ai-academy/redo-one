@@ -32,3 +32,7 @@ export class TriagemInvalidaError extends ErroDeDominio {
 export class ParametrosInvalidosError extends ErroDeDominio {
   readonly tipo = 'invalido';
 }
+
+export class ImportacaoMobileMedIndisponivelError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+}

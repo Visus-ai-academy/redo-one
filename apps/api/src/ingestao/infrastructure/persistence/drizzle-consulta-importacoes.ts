@@ -41,7 +41,7 @@ export class DrizzleConsultaImportacoes implements ConsultaImportacoes {
       this.db
         .select(colunas)
         .from(importacoes)
-        .innerJoin(arquivos, eq(arquivos.id, importacoes.arquivoId))
+        .leftJoin(arquivos, eq(arquivos.id, importacoes.arquivoId))
         .leftJoin(usuarios, eq(usuarios.id, importacoes.enviadaPorId))
         .orderBy(desc(importacoes.criadaEm), desc(importacoes.id))
         .limit(porPagina)
@@ -55,7 +55,7 @@ export class DrizzleConsultaImportacoes implements ConsultaImportacoes {
     const [linha] = await this.db
       .select({ ...colunas, errosLinhas: importacoes.errosLinhas, arquivoChave: arquivos.chave })
       .from(importacoes)
-      .innerJoin(arquivos, eq(arquivos.id, importacoes.arquivoId))
+      .leftJoin(arquivos, eq(arquivos.id, importacoes.arquivoId))
       .leftJoin(usuarios, eq(usuarios.id, importacoes.enviadaPorId))
       .where(eq(importacoes.id, id));
     return linha ? { ...linha, errosLinhas: linha.errosLinhas ?? [] } : null;

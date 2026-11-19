@@ -9,6 +9,10 @@ export const parametrosIngestaoDtoSchema = z.object({
   travaRemocaoMinimo: z.int().min(0).describe('Trava contra arquivo truncado: recusa se sumiriam mais laudos que isto...'),
   travaRemocaoFator: z.number().min(0).describe('...e mais que este múltiplo das linhas do arquivo.'),
   retencaoLinhasBrutasDias: z.int().min(1).max(3650).describe('Dias que a linha crua fica guardada.'),
+  mobilemedIntervaloMinutos: z.int().min(5).max(1440).nullable().describe('Minutos entre duas importações automáticas da MobileMed; vazio = desligada.'),
+  mobilemedMesesAnteriores: z.int().min(0).max(12).describe('O período começa no dia 1º de tantos meses atrás (1 = do mês anterior até hoje).'),
+  mobilemedJanelaDias: z.int().min(1).max(31).describe('Dias de cada chamada ao relatório da MobileMed (a que vier no teto é dividida).'),
+  mobilemedTeto: z.int().min(1).max(1000000).describe('Limite de itens por chamada da MobileMed (hoje 50.000); resposta no teto é refeita.'),
 })
 
 export type ParametrosIngestaoDtoSchemaType = z.infer<typeof parametrosIngestaoDtoSchema>

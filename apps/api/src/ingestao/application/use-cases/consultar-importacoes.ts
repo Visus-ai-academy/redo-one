@@ -27,6 +27,8 @@ export class ConsultarImportacoes {
   /** A planilha traz o nome do paciente: todo download é auditado. */
   async urlDoArquivo(usuarioId: string, id: string): Promise<string> {
     const d = await this.detalhe(id);
+    // A importação da MobileMed não tem planilha para baixar.
+    if (!d.arquivoChave || !d.nomeArquivo) throw new ImportacaoNaoEncontradaError();
     await this.auditoria.registrar({
       ator: { tipo: 'usuario', id: usuarioId },
       entidade: 'importacao',

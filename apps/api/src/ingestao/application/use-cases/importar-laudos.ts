@@ -11,20 +11,25 @@ import {
 import type { AvisosCadastroRepository } from '../ports/avisos-cadastro.repository';
 import type { LeitorCadastrosIngestao } from '../ports/cadastros-ingestao';
 import type { CompetenciasBloqueadas } from '../ports/competencias-bloqueadas';
-import type { ImportacoesRepository, ResultadoImportacao } from '../ports/importacoes.repository';
+import type {
+  ImportacaoParaProcessar,
+  ImportacoesRepository,
+  ResultadoImportacao,
+} from '../ports/importacoes.repository';
 import type { JanelaLaudos, LaudosRepository } from '../ports/laudos.repository';
 import { type LeitorPlanilha, PlanilhaInvalidaError } from '../ports/leitor-planilha';
 import type { ParametrosIngestaoRepository } from '../ports/parametros-ingestao.repository';
 import type { Pseudonimizador } from '../ports/pseudonimizador';
+import { type RelatorioMobileMed, RelatorioMobileMedError } from '../ports/relatorio-mobilemed';
 
 /** Quantos erros de linha ficam guardados na importação (o total vai em `invalidas`). */
 const MAXIMO_ERROS_GUARDADOS = 20;
 
 /**
- * Importa a planilha de laudos de uma importação (job `ingestao.importar`): lê o arquivo do
- * storage, prepara cada linha, compara com a janela que o arquivo cobre e grava inserções,
- * atualizações e remoções, os totais e os avisos de cadastro. Idempotente: rodar de novo o mesmo
- * arquivo não muda nada.
+ * Importa os laudos de uma importação (job `ingestao.importar`): lê a planilha do storage (upload)
+ * ou o relatório da MobileMed do período, prepara cada linha, compara com a janela coberta e grava
+ * inserções, atualizações e remoções, os totais e os avisos de cadastro. Idempotente: rodar de
+ * novo o mesmo arquivo (ou o mesmo relatório) não muda nada.
  */
 export class ImportarLaudos {
   constructor(
@@ -37,6 +42,7 @@ export class ImportarLaudos {
     private readonly avisos: AvisosCadastroRepository,
     private readonly parametros: ParametrosIngestaoRepository,
     private readonly pseudonimizador: Pseudonimizador,
+    private readonly relatorio: RelatorioMobileMed,
     private readonly agora: () => Date,
   ) {}
 
@@ -44,10 +50,11 @@ export class ImportarLaudos {
     const importacao = await this.importacoes.iniciar(importacaoId, this.agora());
     if (!importacao) return;
     try {
-      const resultado = await this.processar(importacaoId, importacao.arquivoChave);
+      const resultado = await this.processar(importacao);
       await this.importacoes.finalizar(importacaoId, resultado.status, resultado, this.agora());
     } catch (erro) {
-      const esperado = erro instanceof PlanilhaInvalidaError;
+      const esperado =
+        erro instanceof PlanilhaInvalidaError || erro instanceof RelatorioMobileMedError;
       // Erro inesperado: a mensagem crua pode trazer dado da planilha, então fica genérica.
       const mensagem = esperado
         ? (erro as Error).message
@@ -57,12 +64,19 @@ export class ImportarLaudos {
     }
   }
 
-  private async processar(importacaoId: string, arquivoChave: string) {
-    const planilha = await this.leitor.ler(await this.armazenamento.ler(arquivoChave));
-    const [cadastros, bloqueadas, parametros] = await Promise.all([
+  private async processar(importacao: ImportacaoParaProcessar) {
+    const importacaoId = importacao.id;
+    const parametros = await this.parametros.obter();
+    const planilha =
+      importacao.origem === 'mobilemed'
+        ? await this.relatorio.buscar(importacao.formato, importacao.periodo, {
+            janelaDias: parametros.mobilemedJanelaDias,
+            teto: parametros.mobilemedTeto,
+          })
+        : await this.leitor.ler(await this.armazenamento.ler(importacao.arquivoChave));
+    const [cadastros, bloqueadas] = await Promise.all([
       this.cadastros.carregar(),
       this.competencias.listar(),
-      this.parametros.obter(),
     ]);
     const competenciasBloqueadas = new Set(bloqueadas);
     const origem = planilha.formato === 'compartilhamento' ? 'compartilhamento' : 'normal';
@@ -109,18 +123,20 @@ export class ImportarLaudos {
       errosLinhas,
     };
     if (preparados.length === 0) {
-      return {
-        ...resultado,
-        status: 'erro' as const,
-        mensagem: 'Nenhuma linha válida na planilha.',
-      };
+      const mensagem =
+        importacao.origem === 'mobilemed' && planilha.linhas.length === 0
+          ? 'A MobileMed não trouxe nenhum laudo no período.'
+          : 'Nenhuma linha válida na planilha.';
+      return { ...resultado, status: 'erro' as const, mensagem };
     }
 
+    // A MobileMed cobre o período pedido inteiro; a planilha, os dias que ela traz.
     const dias = preparados.map((l) => l.diaLaudo).sort();
     const janela: JanelaLaudos = {
       origem,
-      inicio: dias[0] ?? '',
-      fim: dias[dias.length - 1] ?? '',
+      inicio: importacao.origem === 'mobilemed' ? importacao.periodo.inicio : (dias[0] ?? ''),
+      fim:
+        importacao.origem === 'mobilemed' ? importacao.periodo.fim : (dias[dias.length - 1] ?? ''),
       empresas:
         origem === 'compartilhamento'
           ? [...new Set(preparados.map((l) => l.empresaOrigem))]

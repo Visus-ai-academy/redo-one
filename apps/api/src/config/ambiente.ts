@@ -46,9 +46,16 @@ export function validarAmbiente(env: Ambiente): Ambiente {
     (v) => /^[A-Z2-7]+=*$/i.test(v.replace(/\s/g, '')),
     'chave base32 do autenticador (letras A-Z e dígitos 2-7)',
   );
-  if (texto('DISTRIBUICAO_MOBILEMED') === 'real') {
+  opcional('INGESTAO_MOBILEMED', (v) => v === 'fake' || v === 'real', 'use fake ou real');
+  opcional(
+    'MOBILEMED_REPORTS_API_URL',
+    (v) => /^https:\/\//.test(v),
+    'precisa começar com https://',
+  );
+  for (const chave of ['DISTRIBUICAO_MOBILEMED', 'INGESTAO_MOBILEMED']) {
+    if (texto(chave) !== 'real') continue;
     for (const nome of ['MOBILEMED_USUARIO', 'MOBILEMED_SENHA', 'MOBILEMED_TOTP_SEGREDO']) {
-      if (!texto(nome)) erros.push(`${nome}: obrigatória com DISTRIBUICAO_MOBILEMED=real`);
+      if (!texto(nome)) erros.push(`${nome}: obrigatória com ${chave}=real`);
     }
   }
 

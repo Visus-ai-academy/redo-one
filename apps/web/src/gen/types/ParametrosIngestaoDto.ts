@@ -23,4 +23,32 @@ export type ParametrosIngestaoDto = {
    * @type integer
    */
   retencaoLinhasBrutasDias: number;
+  /**
+   * @description Minutos entre duas importações automáticas da MobileMed; vazio = desligada.
+   * @minimum 5
+   * @maximum 1440
+   * @type integer
+   */
+  mobilemedIntervaloMinutos: number | null;
+  /**
+   * @description O período começa no dia 1º de tantos meses atrás (1 = do mês anterior até hoje).
+   * @minimum 0
+   * @maximum 12
+   * @type integer
+   */
+  mobilemedMesesAnteriores: number;
+  /**
+   * @description Dias de cada chamada ao relatório da MobileMed (a que vier no teto é dividida).
+   * @minimum 1
+   * @maximum 31
+   * @type integer
+   */
+  mobilemedJanelaDias: number;
+  /**
+   * @description Limite de itens por chamada da MobileMed (hoje 50.000); resposta no teto é refeita.
+   * @minimum 1
+   * @maximum 1000000
+   * @type integer
+   */
+  mobilemedTeto: number;
 };

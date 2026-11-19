@@ -1,11 +1,12 @@
+import type { PeriodoDias } from '../../domain/periodo-mobilemed';
 import type { FormatoPlanilha } from './leitor-planilha';
 
 export const IMPORTACOES_REPOSITORY = Symbol('IMPORTACOES_REPOSITORY');
 
-export interface ImportacaoParaProcessar {
-  id: string;
-  arquivoChave: string;
-}
+/** O upload traz a planilha no storage; a MobileMed, o relatório e o período a buscar. */
+export type ImportacaoParaProcessar =
+  | { id: string; origem: 'upload_manual'; arquivoChave: string }
+  | { id: string; origem: 'mobilemed'; formato: FormatoPlanilha; periodo: PeriodoDias };
 
 export type StatusFinal = 'concluida' | 'recusada' | 'erro';
 
@@ -30,6 +31,19 @@ export interface ImportacoesRepository {
    * transação. Devolve o id da importação.
    */
   criarNaFila(dados: { arquivoId: string; enviadaPorId: string; agora: Date }): Promise<string>;
+  /**
+   * Cria na fila uma importação da MobileMed por relatório (na ordem dada) e enfileira os jobs,
+   * na mesma transação. `null`, sem criar nada, se já há uma da MobileMed na fila ou rodando:
+   * nunca duas ao mesmo tempo.
+   */
+  criarMobileMed(dados: {
+    formatos: FormatoPlanilha[];
+    periodo: PeriodoDias;
+    enviadaPorId: string | null;
+    agora: Date;
+  }): Promise<string[] | null>;
+  /** Quando foi criada a última importação da MobileMed (para o intervalo do agendamento). */
+  ultimaMobileMedEm(): Promise<Date | null>;
   /**
    * Marca como "processando" a importação na fila (ou que ficou em processamento, numa
    * retentativa). `null` se ela já terminou: o job não faz nada (idempotente).

@@ -10,6 +10,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
@@ -105,4 +106,52 @@ export class ParametrosIngestaoDto {
   @Min(1)
   @Max(3650)
   retencaoLinhasBrutasDias!: number;
+
+  @ApiProperty({
+    type: 'integer',
+    nullable: true,
+    minimum: 5,
+    maximum: 1440,
+    description: 'Minutos entre duas importações automáticas da MobileMed; vazio = desligada.',
+  })
+  // Nulo desliga; ausente é recusado (um PUT sem o campo não pode desligar por engano).
+  @ValidateIf((_, valor) => valor !== null)
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  mobilemedIntervaloMinutos!: number | null;
+
+  @ApiProperty({
+    type: 'integer',
+    minimum: 0,
+    maximum: 12,
+    description: 'O período começa no dia 1º de tantos meses atrás (1 = do mês anterior até hoje).',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(12)
+  mobilemedMesesAnteriores!: number;
+
+  @ApiProperty({
+    type: 'integer',
+    minimum: 1,
+    maximum: 31,
+    description: 'Dias de cada chamada ao relatório da MobileMed (a que vier no teto é dividida).',
+  })
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  mobilemedJanelaDias!: number;
+
+  @ApiProperty({
+    type: 'integer',
+    minimum: 1,
+    maximum: 1_000_000,
+    description:
+      'Limite de itens por chamada da MobileMed (hoje 50.000); resposta no teto é refeita.',
+  })
+  @IsInt()
+  @Min(1)
+  @Max(1_000_000)
+  mobilemedTeto!: number;
 }

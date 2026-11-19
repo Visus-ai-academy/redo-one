@@ -7,15 +7,7 @@ import { z } from 'zod';
  * tipo derruba a chamada inteira.
  */
 
-/** `prioridade_id` → grafia da MobileMed (`prioridadeEnum` do portal). */
-export const PRIORIDADES_MOBILEMED: Readonly<Record<number, string>> = {
-  1: 'Rotina',
-  2: 'Ambulatório',
-  3: 'Urgência',
-  4: 'Emergência',
-  5: 'Plantão',
-  6: 'Internado',
-};
+export { PRIORIDADES_MOBILEMED } from '../../../comum/mobilemed/enums-mobilemed';
 
 /** `status_id` → texto (`statusEnum` do portal), na grafia que o contexto compara (`NOVO`). */
 export const STATUS_MOBILEMED: Readonly<Record<number, string>> = {

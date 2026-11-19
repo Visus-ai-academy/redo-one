@@ -1,6 +1,7 @@
 import type { ArquivoIngestao, ArquivosRepository } from '../application/ports/arquivos.repository';
 import type { AvisosCadastroRepository } from '../application/ports/avisos-cadastro.repository';
 import type {
+  ImportacaoParaProcessar,
   ImportacoesRepository,
   ResultadoImportacao,
   StatusFinal,
@@ -10,21 +11,37 @@ import type {
   JanelaLaudos,
   LaudosRepository,
 } from '../application/ports/laudos.repository';
+import type { FormatoPlanilha } from '../application/ports/leitor-planilha';
+import type { PeriodoDias } from '../domain/periodo-mobilemed';
 import type { LaudoExistente } from '../domain/planejar-importacao';
 import type { LaudoPreparado, PendenciaCadastro } from '../domain/preparar-laudo';
+
+/** `Omit` que preserva a união. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 type Status = 'na_fila' | 'processando' | StatusFinal;
 
 export class ImportacoesEmMemoria implements ImportacoesRepository {
   readonly itens = new Map<
     string,
-    { arquivoChave: string; status: Status; resultado?: ResultadoImportacao }
+    {
+      fonte: DistributiveOmit<ImportacaoParaProcessar, 'id'>;
+      status: Status;
+      criadaEm: Date;
+      enviadaPorId: string | null;
+      resultado?: ResultadoImportacao;
+    }
   >();
 
   constructor(private readonly arquivos?: ArquivosEmMemoria) {}
 
   criar(id: string, arquivoChave = `ingestao/${id}.xlsx`) {
-    this.itens.set(id, { arquivoChave, status: 'na_fila' });
+    this.itens.set(id, {
+      fonte: { origem: 'upload_manual', arquivoChave },
+      status: 'na_fila',
+      criadaEm: new Date(),
+      enviadaPorId: null,
+    });
   }
 
   async criarNaFila(dados: { arquivoId: string; enviadaPorId: string; agora: Date }) {
@@ -35,11 +52,41 @@ export class ImportacoesEmMemoria implements ImportacoesRepository {
     return id;
   }
 
-  async iniciar(id: string) {
+  async criarMobileMed(dados: {
+    formatos: FormatoPlanilha[];
+    periodo: PeriodoDias;
+    enviadaPorId: string | null;
+    agora: Date;
+  }) {
+    const emCurso = [...this.itens.values()].some(
+      (i) =>
+        i.fonte.origem === 'mobilemed' && (i.status === 'na_fila' || i.status === 'processando'),
+    );
+    if (emCurso) return null;
+    return dados.formatos.map((formato) => {
+      const id = crypto.randomUUID();
+      this.itens.set(id, {
+        fonte: { origem: 'mobilemed', formato, periodo: dados.periodo },
+        status: 'na_fila',
+        criadaEm: dados.agora,
+        enviadaPorId: dados.enviadaPorId,
+      });
+      return id;
+    });
+  }
+
+  async ultimaMobileMedEm() {
+    const datas = [...this.itens.values()]
+      .filter((i) => i.fonte.origem === 'mobilemed')
+      .map((i) => i.criadaEm.getTime());
+    return datas.length ? new Date(Math.max(...datas)) : null;
+  }
+
+  async iniciar(id: string): Promise<ImportacaoParaProcessar | null> {
     const item = this.itens.get(id);
     if (!item || (item.status !== 'na_fila' && item.status !== 'processando')) return null;
     item.status = 'processando';
-    return { id, arquivoChave: item.arquivoChave };
+    return { id, ...item.fonte };
   }
 
   async finalizar(id: string, status: StatusFinal, resultado: ResultadoImportacao) {

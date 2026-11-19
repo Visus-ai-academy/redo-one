@@ -11,6 +11,7 @@ import {
   type LeitorPlanilha,
   PlanilhaInvalidaError,
 } from '../ports/leitor-planilha';
+import { type RelatorioMobileMed, RelatorioMobileMedError } from '../ports/relatorio-mobilemed';
 import { ImportarLaudos } from './importar-laudos';
 
 const cadastros: CadastrosIngestao = {
@@ -72,14 +73,30 @@ describe('ImportarLaudos', () => {
     },
   };
 
-  const importar = async (
-    id: string,
-    registros: Record<string, Celula>[],
-    formato: FormatoPlanilha = 'laudos',
-  ) => {
-    planilha = { formato, registros };
-    importacoes.criar(id);
-    const casoDeUso = new ImportarLaudos(
+  const parametrosFake = {
+    obter: async () => ({
+      ...trava,
+      retencaoLinhasBrutasDias: 90,
+      mobilemedIntervaloMinutos: 30,
+      mobilemedMesesAnteriores: 1,
+      mobilemedJanelaDias: 7,
+      mobilemedTeto: 50_000,
+    }),
+    salvar: async () => undefined,
+  };
+  const relatorio: RelatorioMobileMed & { pedidos: unknown[] } = {
+    pedidos: [],
+    async buscar(formato, periodo, fatiamento) {
+      this.pedidos.push({ formato, periodo, fatiamento });
+      if (planilha instanceof Error) throw planilha;
+      return {
+        formato,
+        linhas: planilha.registros.map((r, i) => ({ numero: i + 1, registro: r })),
+      };
+    },
+  };
+  const novo = (pseudonimo: (t: string) => string = (t) => `hmac(${t})`) =>
+    new ImportarLaudos(
       importacoes,
       armazenamento,
       leitor,
@@ -87,14 +104,20 @@ describe('ImportarLaudos', () => {
       { listar: async () => bloqueadas },
       laudos,
       avisos,
-      {
-        obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }),
-        salvar: async () => undefined,
-      },
-      { pseudonimo: (t) => `hmac(${t})` },
+      parametrosFake,
+      { pseudonimo },
+      relatorio,
       () => new Date('2026-10-07T12:00:00Z'),
     );
-    await casoDeUso.executar(id);
+
+  const importar = async (
+    id: string,
+    registros: Record<string, Celula>[],
+    formato: FormatoPlanilha = 'laudos',
+  ) => {
+    planilha = { formato, registros };
+    importacoes.criar(id);
+    await novo().executar(id);
     return importacoes.itens.get(id);
   };
 
@@ -176,22 +199,7 @@ describe('ImportarLaudos', () => {
   it('planilha sem as colunas termina com erro e o motivo', async () => {
     planilha = new PlanilhaInvalidaError('Faltam colunas na planilha: VALORES.');
     importacoes.criar('i1');
-    const casoDeUso = new ImportarLaudos(
-      importacoes,
-      armazenamento,
-      leitor,
-      { carregar: async () => cadastros },
-      { listar: async () => [] },
-      laudos,
-      avisos,
-      {
-        obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }),
-        salvar: async () => undefined,
-      },
-      { pseudonimo: (t) => t },
-      () => new Date(),
-    );
-    await casoDeUso.executar('i1');
+    await novo((t) => t).executar('i1');
 
     expect(importacoes.itens.get('i1')).toMatchObject({
       status: 'erro',
@@ -226,21 +234,7 @@ describe('ImportarLaudos', () => {
     const antes = laudos.laudos.size;
     planilha = { formato: 'laudos', registros: [registro('9')] };
 
-    await new ImportarLaudos(
-      importacoes,
-      armazenamento,
-      leitor,
-      { carregar: async () => cadastros },
-      { listar: async () => [] },
-      laudos,
-      avisos,
-      {
-        obter: async () => ({ ...trava, retencaoLinhasBrutasDias: 90 }),
-        salvar: async () => undefined,
-      },
-      { pseudonimo: (t) => t },
-      () => new Date(),
-    ).executar('i1');
+    await novo((t) => t).executar('i1');
 
     expect(laudos.laudos.size).toBe(antes);
   });
@@ -272,5 +266,76 @@ describe('ImportarLaudos', () => {
       ocorrencias: 2,
     });
     expect(chamada?.conferidos).toContainEqual({ tipo: 'cliente', chave: 'clinica x' });
+  });
+
+  describe('pela MobileMed', () => {
+    const periodo = { inicio: '2026-10-01', fim: '2026-10-07' };
+    const importarMobileMed = async (
+      registros: Record<string, Celula>[] | Error,
+      formato: FormatoPlanilha = 'laudos',
+    ) => {
+      planilha = registros instanceof Error ? registros : { formato, registros };
+      const [id = ''] =
+        (await importacoes.criarMobileMed({
+          formatos: [formato],
+          periodo,
+          enviadaPorId: null,
+          agora: new Date(),
+        })) ?? [];
+      await novo().executar(id);
+      return importacoes.itens.get(id);
+    };
+
+    it('busca o relatório do período com o fatiamento dos parâmetros e importa', async () => {
+      const r = await importarMobileMed([registro('1'), registro('2')]);
+
+      expect(relatorio.pedidos).toEqual([
+        { formato: 'laudos', periodo, fatiamento: { janelaDias: 7, teto: 50_000 } },
+      ]);
+      expect(r?.status).toBe('concluida');
+      expect(r?.resultado).toMatchObject({ inseridos: 2, linhasArquivo: 2 });
+    });
+
+    it('a janela é o período pedido: remove o laudo de um dia que não trouxe nada', async () => {
+      await importar('i1', [
+        registro('1'),
+        registro('2', { DATA_LAUDO: '02/10/2026', DATA_REALIZACAO: '01/10/2026' }),
+      ]);
+
+      const r = await importarMobileMed([registro('1')]);
+
+      expect(r?.resultado).toMatchObject({
+        janelaInicio: '2026-10-01',
+        janelaFim: '2026-10-07',
+        inalterados: 1,
+        removidos: 1,
+      });
+    });
+
+    it('falha da MobileMed termina com erro e a mensagem, sem mexer nos laudos', async () => {
+      await importar('i1', [registro('1')]);
+
+      const r = await importarMobileMed(
+        new RelatorioMobileMedError('MobileMed: o relatório respondeu HTTP 503.'),
+      );
+
+      expect(r).toMatchObject({
+        status: 'erro',
+        resultado: { mensagem: 'MobileMed: o relatório respondeu HTTP 503.' },
+      });
+      expect(laudos.ativos()).toHaveLength(1);
+    });
+
+    it('sem nenhum laudo no período, termina com erro e não remove nada', async () => {
+      await importar('i1', [registro('1')]);
+
+      const r = await importarMobileMed([]);
+
+      expect(r).toMatchObject({
+        status: 'erro',
+        resultado: { mensagem: 'A MobileMed não trouxe nenhum laudo no período.' },
+      });
+      expect(laudos.ativos()).toHaveLength(1);
+    });
   });
 });

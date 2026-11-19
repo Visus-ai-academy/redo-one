@@ -14,7 +14,12 @@ const detalhe = {
 
 const consulta: ConsultaImportacoes = {
   listar: async () => ({ itens: [], total: 0 }),
-  obter: async (id) => (id === 'i1' ? detalhe : null),
+  obter: async (id) =>
+    id === 'i1'
+      ? detalhe
+      : id === 'mm'
+        ? ({ id: 'mm', nomeArquivo: null, arquivoChave: null } as ImportacaoDetalhe)
+        : null,
 };
 const armazenamento = {
   urlDeDownload: vi.fn(async () => 'https://storage/baixar'),
@@ -36,6 +41,10 @@ describe('ConsultarImportacoes', () => {
     await expect(consultar.urlDoArquivo('u1', 'nada')).rejects.toThrow(
       ImportacaoNaoEncontradaError,
     );
+  });
+
+  it('a importação da MobileMed não tem planilha para baixar', async () => {
+    await expect(consultar.urlDoArquivo('u1', 'mm')).rejects.toThrow(ImportacaoNaoEncontradaError);
   });
 
   it('a URL de download vale 5 minutos, baixa com o nome original e o acesso é auditado', async () => {

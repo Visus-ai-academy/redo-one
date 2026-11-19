@@ -7,6 +7,8 @@ import {
   type ArmazenamentoArquivos,
 } from '../comum/armazenamento/armazenamento-arquivos';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
+import { ClienteMobileMed } from '../comum/mobilemed/cliente-mobilemed';
+import { TOKEN_MOBILEMED, type TokenMobileMed } from '../comum/mobilemed/token-mobilemed';
 import {
   ARQUIVOS_REPOSITORY,
   type ArquivosRepository,
@@ -43,10 +45,19 @@ import {
   type ParametrosIngestaoRepository,
 } from './application/ports/parametros-ingestao.repository';
 import { PSEUDONIMIZADOR, type Pseudonimizador } from './application/ports/pseudonimizador';
-import { TAREFA_EXPURGAR_LINHAS_BRUTAS, TAREFA_IMPORTAR_LAUDOS } from './application/tarefas';
+import {
+  RELATORIO_MOBILEMED,
+  type RelatorioMobileMed,
+} from './application/ports/relatorio-mobilemed';
+import {
+  TAREFA_AGENDAR_MOBILEMED,
+  TAREFA_EXPURGAR_LINHAS_BRUTAS,
+  TAREFA_IMPORTAR_LAUDOS,
+} from './application/tarefas';
 import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
 import { ListarAvisos, ObterParametros } from './application/use-cases/consultas-simples';
+import { CriarImportacaoMobileMed } from './application/use-cases/criar-importacao-mobilemed';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
@@ -55,7 +66,13 @@ import {
   AvisosController,
   ParametrosIngestaoController,
 } from './infrastructure/http/avisos.controller';
+import { ImportacaoMobileMedController } from './infrastructure/http/importacao-mobilemed.controller';
 import { ImportacoesController } from './infrastructure/http/importacoes.controller';
+import {
+  RelatorioMobileMedDesligado,
+  RelatorioMobileMedFake,
+} from './infrastructure/mobilemed/relatorio-mobilemed-fake';
+import { RelatorioMobileMedHttp } from './infrastructure/mobilemed/relatorio-mobilemed-http';
 import { DrizzleArquivosRepository } from './infrastructure/persistence/drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './infrastructure/persistence/drizzle-avisos-cadastro.repository';
 import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-cadastros-ingestao';
@@ -69,9 +86,23 @@ import { SemCompetenciasBloqueadas } from './infrastructure/persistence/sem-comp
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
 import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
+/** `INGESTAO_MOBILEMED`: vazio = desligada; `fake` = relatório vazio; `real` = a MobileMed. */
+const modoMobileMed = (config: ConfigService) => config.get<string>('INGESTAO_MOBILEMED') || null;
+
+/** Inteiro da variável de ambiente (já validada na subida) ou o padrão. */
+const inteiro = (config: ConfigService, nome: string, padrao: number) => {
+  const v = config.get<string>(nome);
+  return v ? Number(v) : padrao;
+};
+
 /** Contexto `ingestao` (hexagonal): importação dos laudos da MobileMed. */
 @Module({
-  controllers: [ImportacoesController, AvisosController, ParametrosIngestaoController],
+  controllers: [
+    ImportacoesController,
+    ImportacaoMobileMedController,
+    AvisosController,
+    ParametrosIngestaoController,
+  ],
   providers: [
     { provide: CONSULTA_AVISOS, useClass: DrizzleConsultaAvisos },
     {
@@ -143,6 +174,44 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
         new HmacPseudonimizador(config.get<string>('PACIENTE_HMAC_SEGREDO') ?? ''),
     },
     {
+      provide: RELATORIO_MOBILEMED,
+      inject: [ConfigService, TOKEN_MOBILEMED],
+      useFactory: (config: ConfigService, token: TokenMobileMed): RelatorioMobileMed => {
+        const modo = modoMobileMed(config);
+        if (modo === 'fake') return new RelatorioMobileMedFake();
+        if (modo !== 'real') return new RelatorioMobileMedDesligado();
+        return new RelatorioMobileMedHttp(
+          new ClienteMobileMed({
+            baseUrl: (
+              config.get<string>('MOBILEMED_REPORTS_API_URL') ||
+              'https://gateway-sa.mobilemed.com.br/reports-api'
+            ).replace(/\/+$/, ''),
+            // O mesmo token da distribuição: um login só para o processo.
+            token,
+            timeoutMs: inteiro(config, 'MOBILEMED_TIMEOUT_MS', 90_000),
+            // Uma chamada por vez: o relatório é pesado para a MobileMed.
+            concorrencia: 1,
+            limiteAnomalias: inteiro(config, 'MOBILEMED_LIMITE_ANOMALIAS', 2),
+          }),
+        );
+      },
+    },
+    {
+      provide: CriarImportacaoMobileMed,
+      inject: [IMPORTACOES_REPOSITORY, PARAMETROS_INGESTAO_REPOSITORY, ConfigService],
+      useFactory: (
+        importacoes: ImportacoesRepository,
+        parametros: ParametrosIngestaoRepository,
+        config: ConfigService,
+      ) =>
+        new CriarImportacaoMobileMed(
+          importacoes,
+          parametros,
+          modoMobileMed(config) !== null,
+          () => new Date(),
+        ),
+    },
+    {
       provide: ImportarLaudos,
       inject: [
         IMPORTACOES_REPOSITORY,
@@ -154,6 +223,7 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
         AVISOS_CADASTRO_REPOSITORY,
         PARAMETROS_INGESTAO_REPOSITORY,
         PSEUDONIMIZADOR,
+        RELATORIO_MOBILEMED,
       ],
       useFactory: (
         importacoes: ImportacoesRepository,
@@ -165,6 +235,7 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
         avisos: AvisosCadastroRepository,
         parametros: ParametrosIngestaoRepository,
         pseudonimizador: Pseudonimizador,
+        relatorio: RelatorioMobileMed,
       ) =>
         new ImportarLaudos(
           importacoes,
@@ -176,6 +247,7 @@ import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
           avisos,
           parametros,
           pseudonimizador,
+          relatorio,
           () => new Date(),
         ),
     },
@@ -186,6 +258,7 @@ export class IngestaoModule implements OnModuleInit {
     private readonly registro: RegistroTarefas,
     private readonly importarLaudos: ImportarLaudos,
     private readonly expurgarLinhasBrutas: ExpurgarLinhasBrutas,
+    private readonly criarImportacaoMobileMed: CriarImportacaoMobileMed,
   ) {}
 
   onModuleInit() {
@@ -199,5 +272,10 @@ export class IngestaoModule implements OnModuleInit {
     });
     // Todo dia às 04:00 no fuso do servidor (em UTC, 01:00 em Brasília), fora do horário de uso.
     this.registro.agendar(TAREFA_EXPURGAR_LINHAS_BRUTAS, '0 4 * * *');
+    // A cada minuto confere o intervalo de `parametros_ingestao` (editável por tela, sem deploy).
+    this.registro.registrar(TAREFA_AGENDAR_MOBILEMED, async () => {
+      await this.criarImportacaoMobileMed.agendada();
+    });
+    this.registro.agendar(TAREFA_AGENDAR_MOBILEMED, '* * * * *');
   }
 }

@@ -86,7 +86,10 @@ describe('envio da planilha', () => {
 
       const id = await confirmar().executar({ usuarioId: 'u1', arquivoId });
 
-      expect(importacoes.itens.get(id)).toMatchObject({ status: 'na_fila', arquivoChave: chave });
+      expect(importacoes.itens.get(id)).toMatchObject({
+        status: 'na_fila',
+        fonte: { origem: 'upload_manual', arquivoChave: chave },
+      });
     });
 
     it('recusa se o arquivo não chegou ao storage ou chegou com outro tamanho', async () => {

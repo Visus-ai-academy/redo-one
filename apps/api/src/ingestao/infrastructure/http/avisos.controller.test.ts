@@ -96,7 +96,15 @@ describe('ParametrosIngestaoController', () => {
       {} as ObterParametros,
       atualizar as unknown as AtualizarParametros,
     );
-    const corpo = { travaRemocaoMinimo: 1, travaRemocaoFator: 2, retencaoLinhasBrutasDias: 3 };
+    const corpo = {
+      travaRemocaoMinimo: 1,
+      travaRemocaoFator: 2,
+      retencaoLinhasBrutasDias: 3,
+      mobilemedIntervaloMinutos: null,
+      mobilemedMesesAnteriores: 1,
+      mobilemedJanelaDias: 7,
+      mobilemedTeto: 50_000,
+    };
 
     await controller.atualizar(ator, corpo);
 

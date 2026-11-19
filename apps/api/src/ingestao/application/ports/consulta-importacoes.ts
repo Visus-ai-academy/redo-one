@@ -10,7 +10,8 @@ export interface ImportacaoResumo {
   status: StatusImportacao;
   origem: 'upload_manual' | 'mobilemed';
   formato: FormatoPlanilha | null;
-  nomeArquivo: string;
+  /** Nulo na importação da MobileMed (sem planilha). */
+  nomeArquivo: string | null;
   enviadaPor: { id: string; nome: string } | null;
   criadaEm: Date;
   iniciadaEm: Date | null;
@@ -29,8 +30,8 @@ export interface ImportacaoResumo {
 
 export interface ImportacaoDetalhe extends ImportacaoResumo {
   errosLinhas: { linha: number; mensagem: string }[];
-  /** Chave do arquivo no storage (para a URL de download). */
-  arquivoChave: string;
+  /** Chave do arquivo no storage (para a URL de download); nula na MobileMed. */
+  arquivoChave: string | null;
 }
 
 /** Leitura das importações para a tela (a mais nova primeiro). */

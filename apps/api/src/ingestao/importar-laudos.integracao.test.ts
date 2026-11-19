@@ -115,6 +115,7 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       new DrizzleAvisosCadastroRepository(db),
       new DrizzleParametrosIngestaoRepository(db),
       new HmacPseudonimizador('s'.repeat(64)),
+      { buscar: async () => Promise.reject(new Error('sem MobileMed neste teste')) },
       () => new Date(),
     ).executar(importacao?.id ?? '');
     const [resultado] = await db

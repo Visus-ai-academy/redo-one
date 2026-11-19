@@ -28,7 +28,7 @@ export class ErroMobileMed extends Error {
 }
 
 export interface OpcoesClienteMobileMed {
-  /** `MOBILEMED_PORTAL_API_URL`, sem barra no fim. */
+  /** `MOBILEMED_PORTAL_API_URL` (ou a do `reports-api`), sem barra no fim. */
   baseUrl: string;
   token: TokenMobileMed;
   /** Prazo de cada chamada (o `$http` do portal não tem nenhum). */
@@ -119,7 +119,11 @@ export class ClienteMobileMed {
     try {
       const resposta = await this.fetch(`${this.o.baseUrl}${caminho}`, {
         method: metodo,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: corpo === undefined ? undefined : JSON.stringify(corpo),
         signal: AbortSignal.timeout(this.o.timeoutMs),
       });

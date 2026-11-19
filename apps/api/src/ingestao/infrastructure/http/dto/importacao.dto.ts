@@ -19,7 +19,12 @@ export class ImportacaoDto {
     description: 'Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.',
   })
   formato!: 'laudos' | 'compartilhamento' | null;
-  @ApiProperty() nomeArquivo!: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Planilha enviada; vazio na importação da MobileMed.',
+  })
+  nomeArquivo!: string | null;
   @ApiProperty({ type: PessoaResumoDto, nullable: true }) enviadaPor!: PessoaResumoDto | null;
   @ApiProperty({ type: String, format: 'date-time' }) criadaEm!: Date;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) iniciadaEm!: Date | null;
@@ -28,7 +33,8 @@ export class ImportacaoDto {
     type: String,
     format: 'date',
     nullable: true,
-    description: 'Primeiro dia do laudo no arquivo (Brasília).',
+    description:
+      'Primeiro dia do laudo coberto (Brasília): o do arquivo, ou o período pedido à MobileMed.',
   })
   janelaInicio!: string | null;
   @ApiProperty({ type: String, format: 'date', nullable: true }) janelaFim!: string | null;

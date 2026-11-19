@@ -10,6 +10,10 @@ const padrao: ParametrosIngestao = {
   travaRemocaoMinimo: 500,
   travaRemocaoFator: 2,
   retencaoLinhasBrutasDias: 90,
+  mobilemedIntervaloMinutos: 30,
+  mobilemedMesesAnteriores: 1,
+  mobilemedJanelaDias: 7,
+  mobilemedTeto: 50_000,
 };
 
 function montar() {
@@ -48,6 +52,18 @@ describe('AtualizarParametros', () => {
     ]);
   });
 
+  it('o intervalo vazio desliga a importação automática (e é auditado)', async () => {
+    const { atualizar, auditoria, gravado } = montar();
+
+    await atualizar.executar('u1', { ...padrao, mobilemedIntervaloMinutos: null });
+
+    expect(gravado().mobilemedIntervaloMinutos).toBeNull();
+    expect(auditoria.eventos[0]).toMatchObject({
+      antes: { mobilemedIntervaloMinutos: 30 },
+      depois: { mobilemedIntervaloMinutos: null },
+    });
+  });
+
   it('sem mudança, não audita', async () => {
     const { atualizar, auditoria } = montar();
     await atualizar.executar('u1', padrao);
@@ -59,6 +75,10 @@ describe('AtualizarParametros', () => {
     [{ travaRemocaoFator: 0 }, 'O múltiplo da trava precisa ser maior que zero.'],
     [{ retencaoLinhasBrutasDias: 0 }, 'A retenção precisa ficar entre 1 e 3650 dias.'],
     [{ retencaoLinhasBrutasDias: 4000 }, 'A retenção precisa ficar entre 1 e 3650 dias.'],
+    [{ mobilemedIntervaloMinutos: 4 }, 'O intervalo precisa ficar entre 5 e 1440 minutos.'],
+    [{ mobilemedMesesAnteriores: 13 }, 'Os meses anteriores precisam ficar entre 0 e 12.'],
+    [{ mobilemedJanelaDias: 0 }, 'A janela precisa ficar entre 1 e 31 dias.'],
+    [{ mobilemedTeto: 0 }, 'O teto precisa ser um inteiro a partir de 1.'],
   ])('recusa %o', async (mudanca, mensagem) => {
     const { atualizar, gravado } = montar();
     await expect(atualizar.executar('u1', { ...padrao, ...mudanca })).rejects.toThrow(

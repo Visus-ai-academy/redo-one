@@ -22,7 +22,11 @@ export type ImportacaoDetalheDto = {
    * @description Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.
    */
   formato: FormatoImportacaoKey | null;
-  nomeArquivo: string;
+  /**
+   * @description Planilha enviada; vazio na importação da MobileMed.
+   * @type string
+   */
+  nomeArquivo: string | null;
   enviadaPor: PessoaResumoDto | null;
   /**
    * @description
@@ -43,7 +47,7 @@ export type ImportacaoDetalheDto = {
    */
   concluidaEm: string | null;
   /**
-   * @description Primeiro dia do laudo no arquivo (Brasília).
+   * @description Primeiro dia do laudo coberto (Brasília): o do arquivo, ou o período pedido à MobileMed.
    *
    * Format: `date`
    * @type string

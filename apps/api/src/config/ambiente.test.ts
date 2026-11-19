@@ -27,6 +27,8 @@ describe('validarAmbiente', () => {
     ['DISTRIBUICAO_FAKE_POR_FORA_PCT', '200'],
     ['DISTRIBUICAO_FAKE_ABERTOS_PCT', '101'],
     ['DISTRIBUICAO_MOBILEMED', 'producao'],
+    ['INGESTAO_MOBILEMED', 'sim'],
+    ['MOBILEMED_REPORTS_API_URL', 'http://gateway-sa.mobilemed.com.br/reports-api'],
     ['MOBILEMED_PORTAL_API_URL', 'http://gateway-sa.mobilemed.com.br/portal-api'],
     ['MOBILEMED_PAGINA', '0'],
     ['MOBILEMED_MAXIMO_EXAMES', 'muitos'],
@@ -54,6 +56,13 @@ describe('validarAmbiente', () => {
     });
     // Sem "real" (fila sintética), as credenciais não são exigidas.
     expect(validarAmbiente({ ...minimo, DISTRIBUICAO_MOBILEMED: 'fake' })).toBeTruthy();
+  });
+
+  it('a importação real da MobileMed também exige a conta de serviço', () => {
+    expect(() =>
+      validarAmbiente({ ...minimo, INGESTAO_MOBILEMED: 'real', MOBILEMED_USUARIO: 'robo@x' }),
+    ).toThrow('MOBILEMED_SENHA: obrigatória com INGESTAO_MOBILEMED=real');
+    expect(validarAmbiente({ ...minimo, INGESTAO_MOBILEMED: 'fake' })).toBeTruthy();
   });
 
   it('o erro da chave TOTP não repete o valor', () => {

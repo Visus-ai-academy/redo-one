@@ -4,6 +4,14 @@ export interface ParametrosIngestao {
   travaRemocaoMinimo: number;
   travaRemocaoFator: number;
   retencaoLinhasBrutasDias: number;
+  /** Minutos entre duas importações automáticas da MobileMed; `null` = desligada. */
+  mobilemedIntervaloMinutos: number | null;
+  /** O período começa no dia 1º de tantos meses atrás (1 = do mês anterior até hoje). */
+  mobilemedMesesAnteriores: number;
+  /** Tamanho inicial de cada chamada ao relatório. */
+  mobilemedJanelaDias: number;
+  /** Limite de itens por chamada da MobileMed: resposta com isso ou mais é tida como cortada. */
+  mobilemedTeto: number;
 }
 
 export interface ParametrosIngestaoRepository {

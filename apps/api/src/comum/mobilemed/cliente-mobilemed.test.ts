@@ -64,6 +64,7 @@ describe('ClienteMobileMed', () => {
     expect(chamadas[0]?.init.method).toBe('POST');
     expect(chamadas[0]?.init.headers).toEqual({
       'Content-Type': 'application/json',
+      Accept: 'application/json',
       Authorization: 'Bearer tok-123',
     });
     expect(chamadas[0]?.init.body).toBe('{"a":1}');

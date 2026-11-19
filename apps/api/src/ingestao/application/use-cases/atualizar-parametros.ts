@@ -16,6 +16,21 @@ function validar(p: ParametrosIngestao) {
   if (!Number.isInteger(dias) || dias < 1 || dias > 3650) {
     throw new ParametrosInvalidosError('A retenção precisa ficar entre 1 e 3650 dias.');
   }
+  const entre = (v: number, min: number, max: number) =>
+    Number.isInteger(v) && v >= min && v <= max;
+  const intervalo = p.mobilemedIntervaloMinutos;
+  if (intervalo !== null && !entre(intervalo, 5, 1440)) {
+    throw new ParametrosInvalidosError('O intervalo precisa ficar entre 5 e 1440 minutos.');
+  }
+  if (!entre(p.mobilemedMesesAnteriores, 0, 12)) {
+    throw new ParametrosInvalidosError('Os meses anteriores precisam ficar entre 0 e 12.');
+  }
+  if (!entre(p.mobilemedJanelaDias, 1, 31)) {
+    throw new ParametrosInvalidosError('A janela precisa ficar entre 1 e 31 dias.');
+  }
+  if (!entre(p.mobilemedTeto, 1, 1_000_000)) {
+    throw new ParametrosInvalidosError('O teto precisa ser um inteiro a partir de 1.');
+  }
 }
 
 /** Parâmetros da importação editados por tela (com auditoria dos campos que mudaram). */

@@ -147,11 +147,73 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
 
       expect(await repo.iniciar(importacaoId, agora)).toEqual({
         id: importacaoId,
+        origem: 'upload_manual',
         arquivoChave: 'ingestao/a.xlsx',
       });
       expect(await repo.iniciar(importacaoId, agora)).not.toBeNull();
       const [linha] = await db.select().from(schema.importacoes);
       expect(linha).toMatchObject({ status: 'processando', iniciadaEm: agora });
+    });
+
+    it('criarMobileMed cria uma por relatório com o período, enfileira e inicia sem arquivo', async () => {
+      const repo = new DrizzleImportacoesRepository(db);
+      const periodo = { inicio: '2026-10-01', fim: '2026-11-19' };
+
+      const ids = await repo.criarMobileMed({
+        formatos: ['laudos', 'compartilhamento'],
+        periodo,
+        enviadaPorId: null,
+        agora,
+      });
+
+      expect(ids).toHaveLength(2);
+      const linhas = await db
+        .select()
+        .from(schema.importacoes)
+        .where(eq(schema.importacoes.origem, 'mobilemed'));
+      expect(linhas.map((l) => [l.formato, l.status, l.arquivoId, l.janelaInicio])).toEqual(
+        expect.arrayContaining([
+          ['laudos', 'na_fila', null, '2026-10-01'],
+          ['compartilhamento', 'na_fila', null, '2026-10-01'],
+        ]),
+      );
+      const jobs = await db.execute(
+        sql`select 1 from graphile_worker.jobs where task_identifier = 'ingestao.importar' and queue_name = 'ingestao'`,
+      );
+      expect(jobs.rows).toHaveLength(2);
+      expect(await repo.iniciar(ids?.[0] ?? '', agora)).toEqual({
+        id: ids?.[0],
+        origem: 'mobilemed',
+        formato: 'laudos',
+        periodo,
+      });
+      expect(await repo.ultimaMobileMedEm()).toEqual(agora);
+    });
+
+    it('criarMobileMed não cria nada com uma da MobileMed em curso, nem em paralelo', async () => {
+      const repo = new DrizzleImportacoesRepository(db);
+      const dados = {
+        formatos: ['laudos' as const],
+        periodo: { inicio: '2026-10-01', fim: '2026-10-31' },
+        enviadaPorId: null,
+        agora,
+      };
+
+      const resultados = await Promise.all([
+        repo.criarMobileMed(dados),
+        repo.criarMobileMed(dados),
+      ]);
+
+      expect(resultados.filter((r) => r === null)).toHaveLength(1);
+      const [{ total } = { total: 0 }] = await db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(schema.importacoes)
+        .where(eq(schema.importacoes.origem, 'mobilemed'));
+      expect(total).toBe(1);
+    });
+
+    it('a MobileMed sem nenhuma importação: ultimaMobileMedEm é nulo', async () => {
+      expect(await new DrizzleImportacoesRepository(db).ultimaMobileMedEm()).toBeNull();
     });
 
     it('finaliza com o resultado e não inicia de novo', async () => {
@@ -233,6 +295,26 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         errosLinhas: [{ linha: 3, mensagem: 'STATUS: obrigatório' }],
       });
       expect(await consulta.obter('00000000-0000-0000-0000-000000000000')).toBeNull();
+    });
+
+    it('a importação da MobileMed aparece sem arquivo', async () => {
+      const [id] =
+        (await new DrizzleImportacoesRepository(db).criarMobileMed({
+          formatos: ['laudos'],
+          periodo: { inicio: '2026-10-01', fim: '2026-10-31' },
+          enviadaPorId: null,
+          agora,
+        })) ?? [];
+      const consulta = new DrizzleConsultaImportacoes(db);
+
+      expect(await consulta.obter(id ?? '')).toMatchObject({
+        origem: 'mobilemed',
+        formato: 'laudos',
+        nomeArquivo: null,
+        arquivoChave: null,
+        janelaInicio: '2026-10-01',
+      });
+      expect((await consulta.listar({ pagina: 1, porPagina: 10 })).total).toBe(2);
     });
   });
 
@@ -403,16 +485,28 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         travaRemocaoMinimo: 7,
         travaRemocaoFator: 1.5,
         retencaoLinhasBrutasDias: 30,
+        mobilemedIntervaloMinutos: null,
+        mobilemedMesesAnteriores: 2,
+        mobilemedJanelaDias: 3,
+        mobilemedTeto: 40_000,
       });
       await repo.salvar({
         travaRemocaoMinimo: 8,
         travaRemocaoFator: 1.5,
         retencaoLinhasBrutasDias: 30,
+        mobilemedIntervaloMinutos: null,
+        mobilemedMesesAnteriores: 2,
+        mobilemedJanelaDias: 3,
+        mobilemedTeto: 40_000,
       });
       expect(await repo.obter()).toEqual({
         travaRemocaoMinimo: 8,
         travaRemocaoFator: 1.5,
         retencaoLinhasBrutasDias: 30,
+        mobilemedIntervaloMinutos: null,
+        mobilemedMesesAnteriores: 2,
+        mobilemedJanelaDias: 3,
+        mobilemedTeto: 40_000,
       });
     });
 
@@ -421,6 +515,10 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         travaRemocaoMinimo: 500,
         travaRemocaoFator: 2,
         retencaoLinhasBrutasDias: 90,
+        mobilemedIntervaloMinutos: 30,
+        mobilemedMesesAnteriores: 1,
+        mobilemedJanelaDias: 7,
+        mobilemedTeto: 50_000,
       });
     });
 

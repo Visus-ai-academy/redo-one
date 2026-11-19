@@ -6992,6 +6992,51 @@
         ]
       }
     },
+    "/ingestao/mobilemed": {
+      "get": {
+        "operationId": "ImportacaoMobileMedController_situacao",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituacaoMobileMedDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/mobilemed/importacoes": {
+      "post": {
+        "operationId": "ImportacaoMobileMedController_importarAgora",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportacoesCriadasDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Desligada neste ambiente ou já há uma em curso."
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
     "/ingestao/avisos": {
       "get": {
         "operationId": "AvisosController_listar",
@@ -14711,7 +14756,9 @@
             ]
           },
           "nomeArquivo": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "Planilha enviada; vazio na importação da MobileMed."
           },
           "enviadaPor": {
             "nullable": true,
@@ -14740,7 +14787,7 @@
             "type": "string",
             "format": "date",
             "nullable": true,
-            "description": "Primeiro dia do laudo no arquivo (Brasília)."
+            "description": "Primeiro dia do laudo coberto (Brasília): o do arquivo, ou o período pedido à MobileMed."
           },
           "janelaFim": {
             "type": "string",
@@ -14877,7 +14924,9 @@
             ]
           },
           "nomeArquivo": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "Planilha enviada; vazio na importação da MobileMed."
           },
           "enviadaPor": {
             "nullable": true,
@@ -14906,7 +14955,7 @@
             "type": "string",
             "format": "date",
             "nullable": true,
-            "description": "Primeiro dia do laudo no arquivo (Brasília)."
+            "description": "Primeiro dia do laudo coberto (Brasília): o do arquivo, ou o período pedido à MobileMed."
           },
           "janelaFim": {
             "type": "string",
@@ -15047,6 +15096,34 @@
         },
         "required": [
           "arquivoId"
+        ]
+      },
+      "SituacaoMobileMedDto": {
+        "type": "object",
+        "properties": {
+          "ligada": {
+            "type": "boolean",
+            "description": "A importação da MobileMed está ligada neste ambiente."
+          }
+        },
+        "required": [
+          "ligada"
+        ]
+      },
+      "ImportacoesCriadasDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "Uma importação para os laudos e outra para o compartilhamento.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
         ]
       },
       "StatusAviso": {
@@ -15195,12 +15272,41 @@
             "minimum": 1,
             "maximum": 3650,
             "description": "Dias que a linha crua fica guardada."
+          },
+          "mobilemedIntervaloMinutos": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 5,
+            "maximum": 1440,
+            "description": "Minutos entre duas importações automáticas da MobileMed; vazio = desligada."
+          },
+          "mobilemedMesesAnteriores": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12,
+            "description": "O período começa no dia 1º de tantos meses atrás (1 = do mês anterior até hoje)."
+          },
+          "mobilemedJanelaDias": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "Dias de cada chamada ao relatório da MobileMed (a que vier no teto é dividida)."
+          },
+          "mobilemedTeto": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000,
+            "description": "Limite de itens por chamada da MobileMed (hoje 50.000); resposta no teto é refeita."
           }
         },
         "required": [
           "travaRemocaoMinimo",
           "travaRemocaoFator",
-          "retencaoLinhasBrutasDias"
+          "retencaoLinhasBrutasDias",
+          "mobilemedIntervaloMinutos",
+          "mobilemedMesesAnteriores",
+          "mobilemedJanelaDias",
+          "mobilemedTeto"
         ]
       },
       "StatusRodada": {
