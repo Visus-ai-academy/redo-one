@@ -70,8 +70,6 @@ export interface ExameFilaRodada {
 
 export interface FiltroRodada {
   turnoIds?: readonly string[];
-  /** Prioridades do catálogo. */
-  prioridadeIds?: readonly string[];
   /** Prioridades da operação (o recorte da tela da rodada); o pacote do paciente não se parte. */
   prioridadeOperacaoIds?: readonly string[];
   /** Segmentos do catálogo; o pacote do paciente não se parte. Vazio sem o geral = sem recorte. */
@@ -217,16 +215,18 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       marcador: marcadores.find((m) => nomeNormal.includes(m)) ?? null,
     };
   });
-  // A URGÊNCIA do catálogo, para a alocação que a marca: a das grafias tratadas sempre como
-  // urgência pela operação.
-  const prioridadeIdsUrgenciaCatalogo = [
-    ...new Set(
-      entrada.prioridadesOperacao
-        .filter((p) => p.urgencia.tipo === 'sempre')
-        .flatMap((p) => p.grafias.map((g) => entrada.traduzirPrioridade(g)))
-        .filter((id): id is string => id !== null),
-    ),
-  ];
+  // A URGÊNCIA do catálogo, para a alocação que a marca: a prioridade do catálogo cujas grafias
+  // são todas tratadas sempre como urgência pela operação (Internado é urgência, mas a ROTINA do
+  // catálogo, que também recebe Rotina e Ambulatório, não vira).
+  const sempreUrgente = new Map<string, boolean>();
+  for (const p of entrada.prioridadesOperacao) {
+    for (const g of p.grafias) {
+      const id = entrada.traduzirPrioridade(g);
+      if (id !== null)
+        sempreUrgente.set(id, (sempreUrgente.get(id) ?? true) && p.urgencia.tipo === 'sempre');
+    }
+  }
+  const prioridadeIdsUrgenciaCatalogo = [...sempreUrgente].filter(([, s]) => s).map(([id]) => id);
 
   // --- recusas antes do motor ---
   const recusas = new Map<string, ItemRodada>();
@@ -239,21 +239,6 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   }
   const filtro = entrada.filtro ?? {};
   const naoRecusados = () => lidos.filter((l) => !recusas.has(l.fila.id));
-  const prioridadeIds = filtro.prioridadeIds ?? [];
-  for (const id of recortarPrioridades(
-    naoRecusados().map((l) => ({ ...l.fila, prioridadeId: l.prioridadeId })),
-    prioridadeIds,
-    regras,
-  )) {
-    recusas.set(
-      id,
-      semItem(
-        id,
-        'fora_da_prioridade',
-        `A rodada distribui só ${prioridadeIds.map(nome).join(', ')}.`,
-      ),
-    );
-  }
   const prioridadeOperacaoIds = filtro.prioridadeOperacaoIds ?? [];
   for (const id of recortarPrioridades(
     naoRecusados().map((l) => ({ ...l.fila, prioridadeId: l.prioridadeOperacaoId })),

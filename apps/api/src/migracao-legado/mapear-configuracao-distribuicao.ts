@@ -57,8 +57,9 @@ const CHEIA_POSTERIORES = '10:50';
 const SEM_RECOLHIMENTO = ['CARDIO', 'MAMA'];
 /**
  * Prioridades da operação (decisão do usuário de 18/11/2026): posição, urgência e grafias da
- * MobileMed. ROTINA é a padrão (grafia sem de-para). Viram dado editável em Configurações ›
- * Distribuição; a carga só semeia.
+ * MobileMed. ROTINA é a padrão (grafia sem de-para). INTERNADO é urgência na distribuição (19/11,
+ * como o `prioridadesUrgentes` do dashboards-one), mas segue ROTINA no catálogo (preço). Viram
+ * dado editável em Configurações › Distribuição; a carga só semeia.
  */
 const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
   {
@@ -89,7 +90,7 @@ const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
   {
     nome: 'INTERNADO',
     posicao: 3,
-    urgencia: { tipo: 'nunca' },
+    urgencia: { tipo: 'sempre' },
     padrao: false,
     cor: null,
     grafias: ['Internado', 'P3', 'P3.Internado'],

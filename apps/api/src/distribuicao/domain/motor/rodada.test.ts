@@ -22,7 +22,7 @@ const VARIACOES: Record<string, string> = {
 };
 const traduzirPrioridade = (grafia: string) =>
   VARIACOES[grafia.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()] ?? null;
-/** As prioridades da operação dos valores iniciais (18/11/2026), resumidas. */
+/** As prioridades da operação dos valores iniciais (18 e 19/11/2026), resumidas. */
 const op = (
   id: string,
   posicao: number,
@@ -33,7 +33,7 @@ const op = (
 const PRIORIDADES_OPERACAO = [
   op('op-urgencia', 1, { tipo: 'sempre' }, ['Urgência', 'Emergência']),
   op('op-ambulatorio', 2, { tipo: 'prazo', horas: 24 }, ['Ambulatório']),
-  op('op-internado', 3, { tipo: 'nunca' }, ['Internado']),
+  op('op-internado', 3, { tipo: 'sempre' }, ['Internado']),
   op('op-rotina', 3, { tipo: 'nunca' }, ['Rotina'], true),
 ];
 
@@ -157,13 +157,48 @@ describe('rodarMotor', () => {
     expect(r.totais).toMatchObject({ exames: 1, distribuidos: 1, emAberto: 0 });
   });
 
-  it('Internado é variação de ROTINA: passa no recorte ROTINA da escala e do arranjo, sem ser urgente', () => {
+  it('Internado é urgência na operação e ROTINA no catálogo: urgente na fila e no recorte ROTINA da escala e do arranjo', () => {
+    const exames = [
+      exame({ id: 'rot', prazo: br('2026-11-17T09:00') }),
+      exame({ id: 'int', prioridade: 'INTERNADO' }),
+    ];
     const r = rodar({
-      exames: [exame({ id: 'int', prioridade: 'INTERNADO' })],
+      exames,
       medicos: [medico('A', [arranjo({ prioridadeIds: [ROTINA] })])],
-      ocorrencias: [oc('A', { prioridadeIds: [ROTINA] })],
+      ocorrencias: [oc('A', { prioridadeIds: [ROTINA], produtividade: 1 })],
     });
     expect(item(r, 'int')?.medicoId).toBe('A');
+    expect(item(r, 'rot')?.motivo).toBe('sem_espaco');
+  });
+
+  it('o Internado urgente não faz da ROTINA do catálogo uma urgência da alocação', () => {
+    const grade: CelulaRecebimento[] = [
+      {
+        prioridadeOperacaoId: 'op-internado',
+        turnoId: 'lista',
+        regra: { tipo: 'prazo_minimo', horas: 48 },
+      },
+    ];
+    const lista = (medicoId: string, prioridadeIds: string[]) =>
+      oc(medicoId, {
+        alocacaoId: `l-${medicoId}`,
+        turnoId: 'lista',
+        turnoTipo: 'lista',
+        fim: br('2026-11-18T07:00'),
+        prioridadeIds,
+      });
+    const soRotina = rodar({
+      exames: [exame({ id: 'int', prioridade: 'Internado' })],
+      ocorrencias: [lista('A', [ROTINA])],
+      gradeRecebimento: grade,
+    });
+    expect(item(soRotina, 'int')).toMatchObject({ medicoId: null, motivo: 'sem_medico_elegivel' });
+    const comUrgencia = rodar({
+      exames: [exame({ id: 'int', prioridade: 'Internado' })],
+      ocorrencias: [lista('A', [ROTINA, URGENCIA])],
+      gradeRecebimento: grade,
+    });
+    expect(item(comUrgencia, 'int')?.medicoId).toBe('A');
   });
 
   it('Emergência é URGÊNCIA: urgente na fila e com a margem de urgência', () => {
@@ -263,21 +298,13 @@ describe('rodarMotor', () => {
     expect(item(r, 'velho')).toMatchObject({ medicoId: null, motivo: 'nao_novo' });
   });
 
-  it('recortes da rodada de prioridade (pela tradução) e de clínica, com o motivo à vista', () => {
+  it('recorte da rodada de clínica, com o motivo à vista', () => {
     const r = rodar({
-      exames: [
-        exame({ id: 'u', prioridade: 'Urgência', clienteId: 'X' }),
-        exame({ id: 'r', clienteId: 'X' }),
-        exame({ id: 'y', prioridade: 'Urgência', clienteId: 'Y' }),
-      ],
-      filtro: { prioridadeIds: [URGENCIA], clienteIds: ['X'] },
-      nomes: { [URGENCIA]: 'URGÊNCIA', X: 'CLÍNICA X' },
+      exames: [exame({ id: 'x', clienteId: 'X' }), exame({ id: 'y', clienteId: 'Y' })],
+      filtro: { clienteIds: ['X'] },
+      nomes: { X: 'CLÍNICA X' },
     });
-    expect(item(r, 'u')?.medicoId).toBe('A');
-    expect(item(r, 'r')).toMatchObject({
-      motivo: 'fora_da_prioridade',
-      detalhe: 'A rodada distribui só URGÊNCIA.',
-    });
+    expect(item(r, 'x')?.medicoId).toBe('A');
     expect(item(r, 'y')).toMatchObject({
       motivo: 'fora_da_clinica',
       detalhe: 'A rodada distribui só CLÍNICA X.',

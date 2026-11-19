@@ -190,7 +190,7 @@ describe('mapearConfiguracaoDistribuicao', () => {
     expect(avisos.filter((a) => a.tabela === 'configuracao_distribuicao')).toEqual([]);
   });
 
-  it('prioridades da operação dos valores aprovados (18/11/2026), com o de-para sem repetir grafia', () => {
+  it('prioridades da operação dos valores aprovados (18 e 19/11/2026), com o de-para sem repetir grafia', () => {
     const { prioridadesOperacao } = mapear();
     expect(
       prioridadesOperacao.map((p) => [p.nome, p.posicao, p.urgencia, p.padrao, p.grafias]),
@@ -203,7 +203,7 @@ describe('mapearConfiguracaoDistribuicao', () => {
         ['Emergência', 'P1', 'P1.Imediato', 'P2', 'P2.Urgente', 'Urgência', 'Urgente'],
       ],
       ['AMBULATÓRIO', 2, { tipo: 'prazo', horas: 24 }, false, ['Ambulatório']],
-      ['INTERNADO', 3, { tipo: 'nunca' }, false, ['Internado', 'P3', 'P3.Internado']],
+      ['INTERNADO', 3, { tipo: 'sempre' }, false, ['Internado', 'P3', 'P3.Internado']],
       ['ROTINA', 3, { tipo: 'nunca' }, true, ['P4', 'P4.Rotina+', 'P5', 'P5.Rotina', 'Rotina']],
       ['PLANTÃO', 3, { tipo: 'nunca' }, false, ['Plantão']],
     ]);
