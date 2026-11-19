@@ -278,7 +278,7 @@ Datas sem fuso explícito são recusadas (seriam lidas no fuso do servidor).
 
 **Como a ingestão usa** (`INGESTAO_MOBILEMED=real`):
 
-- Período: do dia 1º de N meses atrás até hoje, em Brasília (N = 1 por padrão: em 19/11, de 01/10 a 19/11). O intervalo (30 min; vazio = desligada), N, o tamanho de cada consulta (7 dias) e o teto (50.000) ficam em Configurações › Importação de laudos (`parametros_ingestao`, com auditoria).
+- Período: do dia 1º de N meses atrás até hoje, em Brasília (N = 1 por padrão: em 19/11, de 01/10 a 19/11). O intervalo (padrão 15 min; vazio = desligada), N, o tamanho de cada consulta (7 dias) e o teto (50.000) ficam em Configurações › Importação de laudos (`parametros_ingestao`, com auditoria).
 - Fatiamento: o período vai em consultas do tamanho configurado, uma por vez; a que volta com teto ou mais itens é refeita em duas metades, até ficar abaixo (abaixo de 1 minuto ainda no teto, a importação para). Resposta no teto nunca é aceita como completa.
 - Cada ciclo cria **duas importações** (Operação › Importação, origem MobileMed): a dos laudos junta as rotas 1 e 2 (a remoção da janela compara com tudo o que veio; separadas, o "fora do padrão" sozinho removeria os "no padrão", ou a trava recusaria), e a do compartilhamento (rota 3), que só reconcilia as empresas que vieram nela, como o upload. A janela é o período pedido, não os dias que vieram.
 - Nunca duas da MobileMed ao mesmo tempo (lock no banco ao criar; o "Importar agora" com uma em curso dá 409) e a mesma fila das planilhas (`ingestao`, uma importação por vez). O agendador (`ingestao:agendar-mobilemed`) roda a cada minuto e cria o ciclo quando o intervalo desde a última passou.
@@ -490,7 +490,8 @@ Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo cont
 ### 9.1 Como ligar
 
 1. No `apps/api/.env`: `DISTRIBUICAO_MOBILEMED=real`, `MOBILEMED_USUARIO`, `MOBILEMED_SENHA` e `MOBILEMED_TOTP_SEGREDO` (chave base32 do autenticador da conta de serviço). Sem `real`, vale o fake (padrão); com `real` e sem uma delas, a API não sobe.
-2. Reiniciar a API. **A partir daí, a rodada aprovada atribui exames de verdade.** Primeira vez só com aval da operação (seção 8).
+2. Em produção, **uma conta da MobileMed só do robô**: o robô e uma pessoa na mesma conta derrubam a sessão um do outro (o refresh token gira e um login novo encerra a sessão anterior). A mesma conta não serve a dev e produção ao mesmo tempo.
+3. Reiniciar a API. **A partir daí, a rodada aprovada atribui exames de verdade.** Primeira vez só com aval da operação (seção 8).
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
@@ -503,6 +504,7 @@ Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo cont
 | `MOBILEMED_TIMEOUT_MS` | 90000 | Prazo de cada chamada |
 | `MOBILEMED_CONCORRENCIA` | 1 | Chamadas ao mesmo tempo |
 | `MOBILEMED_LIMITE_ANOMALIAS` | 2 | Anomalias seguidas que param a atribuição |
+| `ALERTAS_EMAIL` | — | E-mails (separados por vírgula) que recebem o alerta de login parado |
 
 ### 9.2 Comportamento
 
@@ -511,14 +513,14 @@ Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo cont
 - **`nomesPacientes(ids)`** e **`intocados(exames)`**: um pedido por exame (`pesquisa_id_exame` e `GET /exame/{id}`). Se a conferência falha por erro da MobileMed, o exame segue para a atribuição, que reconfere e devolve a falha como retentável.
 - **`atribuir` (inclui a troca do recolhimento) e `tirar`**: `GET /exame/{id}` → já com o médico pedido = `executada`; assinado = `pulada/assinado`; já com médico (sem ser troca) = `ja_tem_medico`; troca com outro dono = `mudou_de_dono`; status ≠ NOVO = `exame_ja_aberto`; sumiu = `saiu_da_fila`; `empresa.exigir_motivo` = `unidade_exige_motivo` (decisão: a operação atribui à mão). Depois `PUT /exame` com o corpo mínimo (`usuario_id: 0` para tirar) e as flags de SLA do portal, e nova leitura: `usuario_id` gravado ≠ pedido = `falhou/nao_confirmado` (retentável).
 - **Erros**: sessão (401, 403, 410, `invalid_token`) = `sessao_caiu`, retentável; 429, 499 ("Requisição cancelada pelo cliente", que ela devolve de vez em quando), 5xx, sem resposta ou tempo esgotado = `mobilemed_indisponivel`, retentável; corpo fora do formato = `resposta_inesperada`; outro 4xx = `recusada_mobilemed`.
-- **Login**: na primeira chamada, o fluxo da seção 1.4 (authorize com PKCE, e-mail e senha, o código TOTP do instante, com menos de 5 s de vida espera a próxima janela, storage e a troca do código no `/token`). O access token fica na memória até faltar 1 min para o `exp`; aí renova pelo refresh token (guardando o refresh novo, que gira a cada uso). Refresh recusado → novo login. Uma renovação por vez: pedidos simultâneos esperam a mesma. Depois de 3 falhas seguidas de renovação, para de tentar (log `mobilemed_login_parado`) até a API reiniciar, para não bloquear a conta. Logs só com rota, tipo e status; nunca usuário, senha, chave, código ou token.
+- **Login**: na primeira chamada, o fluxo da seção 1.4 (authorize com PKCE, e-mail e senha, o código TOTP do instante, com menos de 5 s de vida espera a próxima janela, storage e a troca do código no `/token`). O access token fica na memória até faltar 1 min para o `exp`; aí renova pelo refresh token (guardando o refresh novo, que gira a cada uso). Refresh recusado → novo login. Uma renovação por vez: pedidos simultâneos esperam a mesma. Um 401 da `portal-api` ou do `reports-api` no meio da vida do token (sessão derrubada por outra) descarta o token, renova do mesmo jeito e repete a chamada uma vez; a escrita (`PUT /exame`) não se repete: volta `sessao_caiu` e a nova tentativa da atribuição relê o exame antes de gravar (403, 410 e `invalid_token` com outro status ficam como sessão, sem renovar). Depois de 3 falhas seguidas de renovação, para de tentar (log `mobilemed_login_parado`) até a API reiniciar, para não bloquear a conta, e enfileira um e-mail de alerta (`email.enviar`, um por parada) para `ALERTAS_EMAIL` (vazio = só o log); a mensagem diz o que conferir, sem senha, token nem a conta. Logs só com rota, tipo e status; nunca usuário, senha, chave, código ou token.
 - **Quem chama `ler()`**: a rodada (job `distribuicao.ler-fila`, ao vivo), o job do retrato da fila do momento (`distribuicao:ler-retrato-fila`, no intervalo de Configurações › Distribuição, padrão 5 min, ou pelo "Ler agora"; uma leitura por vez, numa fila própria) e a prévia do recolhimento. A tela da fila do momento não chama a MobileMed: lê o retrato gravado (`retrato_fila_distribuicao`, só agregados) e mostra a hora da leitura. Falha na leitura do retrato: o anterior fica, a tela avisa a hora da falha e o log leva só a mensagem curta da porta.
 - **Freio**: depois de `MOBILEMED_LIMITE_ANOMALIAS` anomalias seguidas (429, 499, 5xx, sem resposta, fora do formato), cada atribuição volta `falhou/freio_mobilemed` (retentável) sem chamar a MobileMed, até uma chamada dar certo (ex.: a conferência ao retomar).
 - **`medicosDaUnidade(empresaId)`**: `POST /usuario/lista/empresa` com `perfis: [3]`; devolve `{ id, nome }`. Base do futuro de-para de `medicos.id_mobilemed` (sem tela).
 
 ### 9.3 O que falta
 
-- **Login**: um 401/`invalid_token` no meio da vida do token (sessão derrubada por outra) não força renovação; a chamada falha como `sessao_caiu` e o token só é trocado quando chega perto do `exp` (até ~4 min). Limite absoluto da sessão (refresh token) desconhecido.
+- **Login**: limite absoluto da sessão (refresh token) desconhecido. Ainda não há alerta de "voltou a funcionar": o login parado só volta com a API reiniciada.
 - Especialidade (`subespecialidade_id`) e quantidade de laudos não são lidas (o catálogo decide pelo estudo; `laudos` = 1); formato de `modalidade` aceito como texto ou objeto. Conferir no HAR (5.4).
 - Conferir o médico na lista da unidade antes de atribuir (`medico_fora_da_unidade`, 3.2 passo 3) e o motivo nas unidades que exigem: não implementados.
 - A prévia do recolhimento (painel "Distribuir agora" aberto) ainda chama `ler()` a cada abertura: com o real, é uma leitura inteira da fila.
