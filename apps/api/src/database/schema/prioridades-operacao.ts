@@ -38,6 +38,8 @@ export const prioridadesOperacao = pgTable(
     urgencia: tipoUrgencia('urgencia').notNull(),
     /** Só com urgência "prazo": urgente quando o prazo restante fica abaixo disto. */
     urgenciaHoras: integer('urgencia_horas'),
+    /** Marcada na alocação, o exame urgente desta prioridade segue o SLA contra a grade. */
+    furaGradeNaAlocacao: boolean('fura_grade_na_alocacao').notNull().default(false),
     /** Vale para a grafia sem de-para; no máximo uma. */
     padrao: boolean('padrao').notNull().default(false),
     /** Hex `#RRGGBB` nas telas (barra da fila do momento); nula = neutra. */

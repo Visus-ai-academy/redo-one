@@ -1,0 +1,1 @@
+ALTER TABLE "prioridades_operacao" ADD COLUMN "fura_grade_na_alocacao" boolean DEFAULT false NOT NULL;
