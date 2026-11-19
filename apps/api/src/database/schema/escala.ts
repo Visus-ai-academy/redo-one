@@ -15,9 +15,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { especialidades, modalidades, prioridades, subespecialidades } from './catalogo';
+import { especialidades, modalidades, subespecialidades } from './catalogo';
 import { usuarios } from './identidade';
 import { medicos } from './medicos';
+import { prioridadesOperacao } from './prioridades-operacao';
 
 // Contexto `escala`: frentes, turnos, alocações (vínculo do médico ao turno, com recorrência,
 // recortes e coberturas), ajustes de produtividade do dia, ausências e o recorte da gestora de
@@ -172,7 +173,11 @@ export const alocacoes = pgTable(
   ],
 );
 
-/** Recorte de prioridade da alocação. Nenhuma linha = sem recorte. */
+/**
+ * Recorte de prioridade da alocação, pelas prioridades da operação da distribuição (decisão de
+ * 19/11/2026: só recebe Internado quem marca Internado), não pelas do catálogo. Nenhuma linha =
+ * sem recorte. Sem cascata: excluir uma prioridade em uso alargaria o recorte calado.
+ */
 export const alocacoesPrioridades = pgTable(
   'alocacoes_prioridades',
   {
@@ -181,7 +186,7 @@ export const alocacoesPrioridades = pgTable(
       .references(() => alocacoes.id, { onDelete: 'cascade' }),
     prioridadeId: uuid('prioridade_id')
       .notNull()
-      .references(() => prioridades.id),
+      .references(() => prioridadesOperacao.id),
   },
   (t) => [primaryKey({ columns: [t.alocacaoId, t.prioridadeId] })],
 );

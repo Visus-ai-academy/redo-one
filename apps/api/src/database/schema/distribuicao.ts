@@ -27,6 +27,7 @@ import {
 import { alocacoes, turnos } from './escala';
 import { usuarios } from './identidade';
 import { equipes, medicos } from './medicos';
+import { prioridadesOperacao, tipoUrgencia } from './prioridades-operacao';
 
 // Contexto `distribuicao`: o que cada médico (ou equipe) lauda e os parâmetros do robô por
 // médico. Os arranjos são uma união: o médico pega o exame se QUALQUER arranjo dele casar por
@@ -99,14 +100,17 @@ export const arranjosSubespecialidades = pgTable(
   (t) => [primaryKey({ columns: [t.arranjoId, t.subespecialidadeId] })],
 );
 
-/** Prioridades do catálogo do arranjo. Nenhuma linha = todas. */
+/**
+ * Prioridades da operação do arranjo (não as do catálogo, decisão de 19/11/2026). Nenhuma linha =
+ * todas. Sem cascata: excluir uma prioridade em uso alargaria o recorte calado.
+ */
 export const arranjosPrioridades = pgTable(
   'arranjos_prioridades',
   {
     arranjoId: doArranjo(),
     prioridadeId: uuid('prioridade_id')
       .notNull()
-      .references(() => prioridades.id),
+      .references(() => prioridadesOperacao.id),
   },
   (t) => [primaryKey({ columns: [t.arranjoId, t.prioridadeId] })],
 );
@@ -248,48 +252,16 @@ export const configuracaoDistribuicaoTurnosPosteriores = pgTable(
 );
 
 // ---------------------------------------------------------------------------------------------
-// Prioridades da operação (Configurações › Distribuição, decisões de 18/11/2026): cadastro da
-// distribuição, separado das prioridades do catálogo (faturamento, escala e arranjo). Cada uma
-// tem posição na fila, regra de urgência e um de-para próprio de grafias da MobileMed. Histórico
-// em `eventos_auditoria` (entidade `prioridade_operacao`).
+// Prioridades da operação: o cadastro (`prioridades_operacao`) fica em `prioridades-operacao.ts`;
+// aqui, o de-para de grafias, a grade de recebimento e as sobrescritas das frentes.
 // ---------------------------------------------------------------------------------------------
 
-/** Quando a operação trata a prioridade como urgência. */
-export const tipoUrgencia = pgEnum('tipo_urgencia', ['nunca', 'sempre', 'prazo']);
 /** O que um turno recebe de uma prioridade da operação. */
 export const tipoRecebimento = pgEnum('tipo_recebimento', [
   'segue_sla',
   'prazo_minimo',
   'nao_recebe',
 ]);
-
-export const prioridadesOperacao = pgTable(
-  'prioridades_operacao',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    nome: text('nome').notNull(),
-    /** 1 = primeiro na fila; empate permitido. */
-    posicao: integer('posicao').notNull(),
-    urgencia: tipoUrgencia('urgencia').notNull(),
-    /** Só com urgência "prazo": urgente quando o prazo restante fica abaixo disto. */
-    urgenciaHoras: integer('urgencia_horas'),
-    /** Vale para a grafia sem de-para; no máximo uma. */
-    padrao: boolean('padrao').notNull().default(false),
-    /** Hex `#RRGGBB` nas telas (barra da fila do momento); nula = neutra. */
-    cor: text('cor'),
-    criadoEm: criadoEm(),
-    atualizadoEm: atualizadoEm(),
-  },
-  (t) => [
-    uniqueIndex('prioridades_operacao_nome_key').on(sql`upper(${t.nome})`),
-    uniqueIndex('prioridades_operacao_padrao_key').on(t.padrao).where(sql`${t.padrao}`),
-    check('prioridades_operacao_posicao_check', sql`${t.posicao} >= 1`),
-    check(
-      'prioridades_operacao_urgencia_check',
-      sql`(${t.urgencia} = 'prazo') = (${t.urgenciaHoras} is not null)`,
-    ),
-  ],
-);
 
 /** De-para de grafias da MobileMed: cada grafia (sem acento, maiúscula) cai em uma prioridade. */
 export const prioridadesOperacaoGrafias = pgTable(
@@ -558,7 +530,7 @@ export const ajustesDiaDistribuicao = pgTable(
   ],
 );
 
-/** Prioridades do catálogo liberadas no ajuste do dia. */
+/** Prioridades da operação liberadas no ajuste do dia. */
 export const ajustesDiaDistribuicaoPrioridades = pgTable(
   'ajustes_dia_distribuicao_prioridades',
   {
@@ -567,7 +539,7 @@ export const ajustesDiaDistribuicaoPrioridades = pgTable(
       .references(() => ajustesDiaDistribuicao.id, { onDelete: 'cascade' }),
     prioridadeId: uuid('prioridade_id')
       .notNull()
-      .references(() => prioridades.id, { onDelete: 'cascade' }),
+      .references(() => prioridadesOperacao.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.ajusteId, t.prioridadeId] })],
 );

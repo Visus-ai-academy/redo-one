@@ -7,3 +7,4 @@ export * from './escala';
 export * from './identidade';
 export * from './ingestao';
 export * from './medicos';
+export * from './prioridades-operacao';
