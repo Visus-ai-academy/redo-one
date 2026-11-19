@@ -102,6 +102,7 @@ export function DetalheAviso({
 
       {podeTriar && aviso.status === 'pendente' && (
         <form
+          noValidate
           className="flex flex-col gap-4 border-t pt-4"
           onSubmit={(evento) => {
             evento.preventDefault();
