@@ -40,7 +40,7 @@ export class ArranjoDto {
   @IsBoolean()
   subespecialidadeGeral!: boolean;
 
-  @ApiProperty(lista('Prioridades do catálogo; vazia = todas.'))
+  @ApiProperty(lista('Prioridades da operação (Configurações › Distribuição); vazia = todas.'))
   @IsArray()
   @ArrayMaxSize(20)
   @IsUUID('all', { each: true })
@@ -87,12 +87,25 @@ export class RotuloDto {
   @ApiProperty() nome!: string;
 }
 
+/** Prioridade da operação que o arranjo pode marcar. */
+export class PrioridadeDoArranjoDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Hex `#RRGGBB`; null = neutra.' })
+  cor!: string | null;
+}
+
 export class ArranjosDoDonoDto {
   @ApiProperty({ type: [ArranjoDto] }) arranjos!: ArranjoDto[];
   @ApiProperty({ type: [RotuloDto], description: 'Nomes dos clientes marcados.' })
   clientes!: RotuloDto[];
   @ApiProperty({ type: [RotuloDto], description: 'Nomes dos exames marcados.' })
   exames!: RotuloDto[];
+  @ApiProperty({
+    type: [PrioridadeDoArranjoDto],
+    description: 'Prioridades da operação (as do recorte), pela posição.',
+  })
+  prioridades!: PrioridadeDoArranjoDto[];
 }
 
 export class RoboMedicoDto {
@@ -130,7 +143,8 @@ export class SugestaoAlocacaoQueryDto {
 }
 
 export class SugestaoAlocacaoDto {
-  @ApiProperty({ type: [String], format: 'uuid' }) prioridadeIds!: string[];
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })
+  prioridadeIds!: string[];
   @ApiProperty({ type: [String], format: 'uuid' }) subespecialidadeIds!: string[];
   @ApiProperty() subespecialidadeGeral!: boolean;
 }

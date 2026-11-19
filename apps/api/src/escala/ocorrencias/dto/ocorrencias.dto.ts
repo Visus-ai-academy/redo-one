@@ -97,7 +97,8 @@ export class OcorrenciaDto {
   @ApiProperty() gratificado!: boolean;
   @ApiProperty({ format: 'date' }) dataInicio!: string;
   @ApiProperty({ type: String, format: 'date', nullable: true }) dataFim!: string | null;
-  @ApiProperty({ type: [String], format: 'uuid' }) prioridadeIds!: string[];
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })
+  prioridadeIds!: string[];
   @ApiProperty({ type: [String], format: 'uuid' }) subespecialidadeIds!: string[];
   @ApiProperty() subespecialidadeGeral!: boolean;
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) coberturaDeId!: string | null;

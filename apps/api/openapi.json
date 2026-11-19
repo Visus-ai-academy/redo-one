@@ -12506,6 +12506,7 @@
             "type": "boolean"
           },
           "prioridadeIds": {
+            "description": "Prioridades da operação.",
             "type": "array",
             "items": {
               "type": "string",
@@ -12620,7 +12621,7 @@
             "description": "Só em turno lista. Ausente: falso ao criar; na edição, mantém o atual."
           },
           "prioridadeIds": {
-            "description": "Vazio = sem recorte.",
+            "description": "Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.",
             "type": "array",
             "items": {
               "type": "string",
@@ -12957,6 +12958,7 @@
             "nullable": true
           },
           "prioridadeIds": {
+            "description": "Prioridades da operação.",
             "type": "array",
             "items": {
               "type": "string",
@@ -14172,14 +14174,16 @@
           "nome": {
             "type": "string"
           },
-          "ativo": {
-            "type": "boolean"
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hex `#RRGGBB`; null = neutra."
           }
         },
         "required": [
           "id",
           "nome",
-          "ativo"
+          "cor"
         ]
       },
       "SubespecialidadeEscalaDto": {
@@ -17075,7 +17079,7 @@
             "description": "O recorte de segmento inclui o exame sem segmento (geral)."
           },
           "prioridadeIds": {
-            "description": "Prioridades do catálogo; vazia = todas.",
+            "description": "Prioridades da operação (Configurações › Distribuição); vazia = todas.",
             "type": "array",
             "items": {
               "type": "string",
@@ -17150,6 +17154,28 @@
           "nome"
         ]
       },
+      "PrioridadeDoArranjoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hex `#RRGGBB`; null = neutra."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor"
+        ]
+      },
       "DistribuicaoMedicoDto": {
         "type": "object",
         "properties": {
@@ -17173,6 +17199,13 @@
               "$ref": "#/components/schemas/RotuloDto"
             }
           },
+          "prioridades": {
+            "description": "Prioridades da operação (as do recorte), pela posição.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrioridadeDoArranjoDto"
+            }
+          },
           "habilitadoRobo": {
             "type": "boolean"
           }
@@ -17181,6 +17214,7 @@
           "arranjos",
           "clientes",
           "exames",
+          "prioridades",
           "habilitadoRobo"
         ]
       },
@@ -17233,6 +17267,13 @@
               "$ref": "#/components/schemas/RotuloDto"
             }
           },
+          "prioridades": {
+            "description": "Prioridades da operação (as do recorte), pela posição.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrioridadeDoArranjoDto"
+            }
+          },
           "plantao": {
             "type": "boolean",
             "description": "Equipe de plantão: o robô não entrega o recorte dela."
@@ -17242,6 +17283,7 @@
           "arranjos",
           "clientes",
           "exames",
+          "prioridades",
           "plantao"
         ]
       },
@@ -17261,6 +17303,7 @@
         "type": "object",
         "properties": {
           "prioridadeIds": {
+            "description": "Prioridades da operação.",
             "type": "array",
             "items": {
               "type": "string",
@@ -18112,7 +18155,7 @@
         "type": "object",
         "properties": {
           "prioridadeIdsLiberadas": {
-            "description": "Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.",
+            "description": "Prioridades da operação liberadas no dia, além do arranjo e da alocação.",
             "type": "array",
             "items": {
               "type": "string",
@@ -18200,7 +18243,7 @@
         "type": "object",
         "properties": {
           "prioridadeIdsLiberadas": {
-            "description": "Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.",
+            "description": "Prioridades da operação liberadas no dia, além do arranjo e da alocação.",
             "type": "array",
             "items": {
               "type": "string",

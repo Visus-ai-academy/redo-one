@@ -42,8 +42,8 @@ const CATALOGO: ArranjosDistribuicaoProps['catalogo'] = {
   ],
   subespecialidades: [{ id: 's-cab', nome: 'Cabeça', especialidadeIds: ['e-neuro'] }],
   prioridades: [
-    { id: 'p-rot', nome: 'ROTINA' },
-    { id: 'p-urg', nome: 'URGÊNCIA' },
+    { id: 'p-rot', nome: 'ROTINA', cor: '#5A9A64' },
+    { id: 'p-urg', nome: 'URGÊNCIA', cor: null },
   ],
 };
 

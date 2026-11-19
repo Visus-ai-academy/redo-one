@@ -13,9 +13,11 @@ import type {
   turnosFrentes,
   usuariosEscoposEscala,
 } from '../database/schema';
+import type { PrioridadeOperacao } from '../distribuicao/domain/motor/prioridades-operacao';
 import { type Aviso, idDoLegado, texto } from './comum';
 import type { LegadoCatalogo, LegadoEscala } from './legado';
 import { type CatalogoMigrado, chaveCadastro } from './mapear-catalogo';
+import { prioridadeOperacaoDaGrafia } from './mapear-configuracao-distribuicao';
 import type { MedicosMigrados } from './mapear-medicos';
 
 /** O que a escala precisa do resto da carga e do banco do redo-one. */
@@ -25,6 +27,8 @@ export interface ContextoEscala {
   /** Catálogo e médicos como esta carga os grava. */
   catalogo: CatalogoMigrado['tabelas'];
   medicos: MedicosMigrados['tabelas'];
+  /** O recorte de prioridade da alocação é pelas prioridades da operação (19/11/2026). */
+  prioridadesOperacao: readonly Pick<PrioridadeOperacao, 'id' | 'nome' | 'grafias'>[];
   /** Usuários que já existem no redo-one (a carga não migra usuários). */
   usuarios: { id: string; email: string }[];
   /** Data da carga, "AAAA-MM-DD" no calendário de Brasília. */
@@ -369,14 +373,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   const rotuloAlocacao = (a: LegadoEscala['alocacoes'][number]) =>
     `${medicoPorId.get(idDoLegado('medicos', a.medicoId))?.nome ?? a.medicoId} · ${nomeTurnoLegado.get(a.turnoId) ?? a.turnoId} · ${nomeEspLegado.get(a.especialidadeId) ?? a.especialidadeId}`;
 
-  const prioridadeDaGrafia = new Map(
-    ctx.catalogo.prioridadesDePara
-      .filter((d) => d.ativo !== false)
-      .map((d) => [chaveCadastro(d.origem), d.prioridadeId]),
-  );
-  const prioridadePorNome = new Map(
-    ctx.catalogo.prioridades.map((p) => [chaveCadastro(p.nome), p.id as string]),
-  );
+  const prioridadeDaGrafia = prioridadeOperacaoDaGrafia(ctx.prioridadesOperacao);
   const subespecialidadePorNome = new Map(
     ctx.catalogo.subespecialidades.map((s) => [chaveCadastro(s.nome), s.id as string]),
   );
@@ -556,7 +553,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
     const prioridades = new Set<string>();
     for (const nome of a.prioridades) {
       const k = chaveCadastro(nome);
-      const id = prioridadeDaGrafia.get(k) ?? prioridadePorNome.get(k);
+      const id = prioridadeDaGrafia.get(k);
       if (id) prioridades.add(id);
       else {
         avisar(

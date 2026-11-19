@@ -1,6 +1,7 @@
 import type { Ator, Auditoria } from '../../../auditoria/auditoria';
 import { mensagemSegmentoFora, segmentoForaDaEspecialidade } from '../../../comum/segmentos';
 import { type Arranjo, ArranjoInvalidoError, validarArranjos } from '../../domain/arranjo';
+import type { PrioridadeOperacao } from '../../domain/motor/prioridades-operacao';
 import {
   ArranjosInvalidosError,
   EquipeNaoEncontradaError,
@@ -8,6 +9,8 @@ import {
 } from '../erros';
 import type { ArranjosRepository, Dono } from '../ports/arranjos.repository';
 import type { CadastrosDistribuicao, RotulosArranjos } from '../ports/cadastros-distribuicao';
+import type { PrioridadesOperacaoRepository } from '../ports/prioridades-operacao.repository';
+import { exigirReferencias } from '../referencias';
 
 async function exigirDono(cadastros: CadastrosDistribuicao, dono: Dono) {
   if (dono.tipo === 'medico') {
@@ -59,13 +62,19 @@ async function exigirSegmentosDaEspecialidade(
 
 export interface ArranjosDoDono extends RotulosArranjos {
   arranjos: Arranjo[];
+  /** As prioridades da operação (as do recorte), para o editor e o cartão do arranjo. */
+  prioridades: Pick<PrioridadeOperacao, 'id' | 'nome' | 'cor'>[];
 }
 
-/** Os arranjos de um médico ou de uma equipe, com os nomes dos clientes e exames marcados. */
+/**
+ * Os arranjos de um médico ou de uma equipe, com os nomes dos clientes e exames marcados e as
+ * prioridades da operação (quem edita arranjos não tem `distribuicao-config.ver`).
+ */
 export class ConsultarArranjos {
   constructor(
     private readonly arranjos: ArranjosRepository,
     private readonly cadastros: CadastrosDistribuicao,
+    private readonly prioridades: Pick<PrioridadesOperacaoRepository, 'listar'>,
   ) {}
 
   async executar(dono: Dono): Promise<ArranjosDoDono> {
@@ -76,7 +85,12 @@ export class ConsultarArranjos {
       clienteIds: unicos(arranjos.flatMap((a) => [...a.clienteIds, ...a.clientesExclusivosIds])),
       exameIds: unicos(arranjos.flatMap((a) => a.exameIds)),
     });
-    return { arranjos, ...rotulos };
+    const prioridades = (await this.prioridades.listar()).map(({ id, nome, cor }) => ({
+      id,
+      nome,
+      cor,
+    }));
+    return { arranjos, ...rotulos, prioridades };
   }
 }
 
@@ -100,6 +114,9 @@ export class SalvarArranjos {
     const atuais = await this.arranjos.listar(dono);
     if (canonico(atuais) === canonico(novos)) return;
     await exigirSegmentosDaEspecialidade(this.cadastros, atuais, novos);
+    await exigirReferencias(this.cadastros, {
+      prioridadeOperacao: novos.flatMap((a) => a.prioridadeIds),
+    });
     await this.arranjos.substituir(dono, novos);
     await this.auditoria.registrar({
       ator,

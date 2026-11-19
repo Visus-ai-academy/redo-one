@@ -94,6 +94,10 @@ export type OcorrenciaDto = {
    * @type string
    */
   dataFim: string | null;
+  /**
+   * @description Prioridades da operação.
+   * @type array
+   */
   prioridadeIds: string[];
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;

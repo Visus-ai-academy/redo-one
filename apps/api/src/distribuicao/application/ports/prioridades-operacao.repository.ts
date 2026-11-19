@@ -14,7 +14,10 @@ export interface PrioridadesOperacaoRepository {
   criar(edicao: EdicaoPrioridadeOperacao): Promise<string>;
   /** Troca a prioridade e o de-para inteiros; com `padrao`, tira a marca das outras. */
   salvar(prioridade: PrioridadeOperacao): Promise<void>;
-  /** Exclui com o de-para, as células e as sobrescritas das frentes. */
+  /**
+   * Exclui com o de-para, as células e as sobrescritas das frentes. Recusa
+   * (`PrioridadeOperacaoEmUsoError`) a marcada em alocações da escala ou em arranjos.
+   */
   excluir(id: string): Promise<void>;
   obterGrade(): Promise<CelulaRecebimento[]>;
   /** Troca a grade geral inteira. */

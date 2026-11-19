@@ -31,8 +31,8 @@ beforeEach(() => {
   listar.mockReturnValue({
     unwrap: async () => ({
       prioridades: [
-        { id: 'p-urg', nome: 'Urgente', ativo: true },
-        { id: 'p-velha', nome: 'Antiga', ativo: false },
+        { id: 'p-urg', nome: 'URGÊNCIA', cor: '#B5535A' },
+        { id: 'p-int', nome: 'INTERNADO', cor: null },
       ],
       subespecialidades: [{ id: 's-cab', nome: 'Cabeça', ativo: true, especialidadeIds: ['f-tc'] }],
     }),
@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('PaineisEscala', () => {
-  it('ao alocar, oferece prioridades e subespecialidades da escala, sem depender de catalogo.ver', async () => {
+  it('ao alocar, oferece as prioridades da operação e as subespecialidades da escala, sem depender de catalogo.ver', async () => {
     renderComRotas(
       <PaineisEscala
         painel={{ tipo: 'alocar', inicial: { frenteId: 'f-tc' } }}
@@ -55,8 +55,8 @@ describe('PaineisEscala', () => {
       />,
     );
 
-    expect(await screen.findByRole('checkbox', { name: 'Urgente' })).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'Antiga' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Cabeça' })).toBeInTheDocument();
     expect(screen.queryByText(/não vê o catálogo/)).not.toBeInTheDocument();
     expect(listar).toHaveBeenCalledTimes(1);

@@ -39,7 +39,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     await db.execute(
       sql`truncate table eventos_auditoria, ajustes_produtividade, alocacoes_prioridades,
         alocacoes_subespecialidades, alocacoes, turnos_frentes, turnos, frentes_escala,
-        especialidades, prioridades, subespecialidades, usuarios, papeis, medicos cascade`,
+        especialidades, prioridades_operacao, subespecialidades, usuarios, papeis, medicos cascade`,
     );
     const [manha] = await db
       .insert(schema.turnos)
@@ -60,7 +60,10 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
         { nome: 'Bruno Lima', chaveNormalizada: 'bruno lima' },
       ])
       .returning();
-    const [urgente] = await db.insert(schema.prioridades).values({ nome: 'URGENTE' }).returning();
+    const [urgente] = await db
+      .insert(schema.prioridadesOperacao)
+      .values({ nome: 'URGENTE', posicao: 1, urgencia: 'sempre' })
+      .returning();
     const [avc] = await db.insert(schema.subespecialidades).values({ nome: 'AVC' }).returning();
     await db
       .insert(schema.subespecialidadesEspecialidades)

@@ -103,6 +103,8 @@ const TABELAS_COM_NOME: Array<[tabela: string, coluna: string]> = [
   ['subespecialidades', 'nome'],
   ['categorias_exame', 'nome'],
   ['prioridades', 'nome'],
+  // Arranjos: prioridades da operação desde 19/11/2026 (antes, do catálogo).
+  ['prioridades_operacao', 'nome'],
 ];
 
 @Injectable()

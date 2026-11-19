@@ -8,7 +8,7 @@ import * as z from 'zod'
 export const prioridadeEscalaDtoSchema = z.object({
   id: z.uuid(),
   nome: z.string(),
-  ativo: z.boolean(),
+  cor: z.string().nullable().describe('Hex `#RRGGBB`; null = neutra.'),
 })
 
 export type PrioridadeEscalaDtoSchemaType = z.infer<typeof prioridadeEscalaDtoSchema>

@@ -8,9 +8,10 @@ import {
   REGRAS_NEUTRAS,
   type RegrasFrente,
 } from '../distribuicao/domain/motor/configuracao';
-import type {
-  CelulaRecebimento,
-  PrioridadeOperacao,
+import {
+  type CelulaRecebimento,
+  normalizarGrafia,
+  type PrioridadeOperacao,
 } from '../distribuicao/domain/motor/prioridades-operacao';
 import type { PrioridadeDaFrente } from '../distribuicao/domain/prioridade-cliente';
 import { normalizarPrioridade } from '../distribuicao/domain/prioridades-operacao';
@@ -115,6 +116,29 @@ const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
     grafias: ['Plantão', 'Plantao'],
   },
 ];
+/** As prioridades da operação que a carga semeia, com ids estáveis pelo nome. */
+export function prioridadesOperacaoDaCarga(): PrioridadeOperacao[] {
+  return PRIORIDADES_OPERACAO.map((p) => ({
+    id: idDoLegado('prioridades_operacao', p.nome),
+    ...normalizarPrioridade(p),
+  }));
+}
+
+/**
+ * Grafia do dashboards-one (sem acento e caixa) → id da prioridade da operação, pelo de-para dela
+ * e pelo nome. É como o legado comparava os recortes da escala e do arranjo: pela grafia, então
+ * Internado e Ambulatório não eram Rotina (decisão de 19/11/2026).
+ */
+export function prioridadeOperacaoDaGrafia(
+  prioridades: readonly Pick<PrioridadeOperacao, 'id' | 'nome' | 'grafias'>[],
+): Map<string, string> {
+  return new Map(
+    prioridades.flatMap((p) =>
+      [p.nome, ...p.grafias].map((g) => [normalizarGrafia(g), p.id] as const),
+    ),
+  );
+}
+
 /**
  * Grade geral (18/11/2026): os turnos fixos seguem o SLA em tudo (célula vazia); nos turnos do
  * tipo Lista, prazo mínimo de 24 h para AMBULATÓRIO, INTERNADO e ROTINA (o "ROTINA, SLA > 24 h"
@@ -221,10 +245,7 @@ export function mapearConfiguracaoDistribuicao(
   }
 
   // ---- Prioridades da operação e grade geral de recebimento ----
-  const prioridadesOperacao: PrioridadeOperacao[] = PRIORIDADES_OPERACAO.map((p) => ({
-    id: idDoLegado('prioridades_operacao', p.nome),
-    ...normalizarPrioridade(p),
-  }));
+  const prioridadesOperacao = prioridadesOperacaoDaCarga();
   const idOperacao = (nome: string) =>
     prioridadesOperacao.find((p) => p.nome === nome)?.id as string;
   const turnosLista = ctx.turnos

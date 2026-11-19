@@ -22,7 +22,7 @@ export class AjusteDiaEdicaoDto {
   @ApiProperty({
     type: [String],
     format: 'uuid',
-    description: 'Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.',
+    description: 'Prioridades da operação liberadas no dia, além do arranjo e da alocação.',
   })
   @IsArray()
   @ArrayMaxSize(20)

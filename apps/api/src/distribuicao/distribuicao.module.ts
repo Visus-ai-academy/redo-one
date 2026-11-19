@@ -457,9 +457,12 @@ const CASOS_RODADA = [
     { provide: CADASTROS_DISTRIBUICAO, useClass: DrizzleCadastrosDistribuicao },
     {
       provide: ConsultarArranjos,
-      inject: [ARRANJOS_REPOSITORY, CADASTROS_DISTRIBUICAO],
-      useFactory: (arranjos: ArranjosRepository, cadastros: CadastrosDistribuicao) =>
-        new ConsultarArranjos(arranjos, cadastros),
+      inject: [ARRANJOS_REPOSITORY, CADASTROS_DISTRIBUICAO, PRIORIDADES_OPERACAO_REPOSITORY],
+      useFactory: (
+        arranjos: ArranjosRepository,
+        cadastros: CadastrosDistribuicao,
+        prioridades: PrioridadesOperacaoRepository,
+      ) => new ConsultarArranjos(arranjos, cadastros, prioridades),
     },
     {
       provide: SalvarArranjos,

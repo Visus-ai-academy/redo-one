@@ -12,6 +12,7 @@ import {
   medicos,
   modalidades,
   prioridades,
+  prioridadesOperacao,
   subespecialidades,
   tiposAusencia,
   turnos,
@@ -182,6 +183,11 @@ export class DrizzleHistoricoEscalaRepository implements HistoricoEscalaReposito
         .select({ id: prioridades.id, nome: prioridades.nome })
         .from(prioridades)
         .where(inArray(prioridades.id, ids)),
+      // O recorte da alocação é pelas prioridades da operação desde 19/11/2026; antes, do catálogo.
+      this.db
+        .select({ id: prioridadesOperacao.id, nome: prioridadesOperacao.nome })
+        .from(prioridadesOperacao)
+        .where(inArray(prioridadesOperacao.id, ids)),
       this.db
         .select({ id: subespecialidades.id, nome: subespecialidades.nome })
         .from(subespecialidades)

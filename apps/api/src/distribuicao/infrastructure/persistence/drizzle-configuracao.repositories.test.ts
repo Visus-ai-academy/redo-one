@@ -265,6 +265,13 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
   });
 
   it('ajuste do dia: grava, troca pelas mesmas alocação e data, lista, remove; adaptador da escala', async () => {
+    // O ajuste do dia libera prioridades da operação (com a ROTINA do beforeEach).
+    ids.opInt = await primeiro(
+      db
+        .insert(schema.prioridadesOperacao)
+        .values({ nome: 'INTERNADO', posicao: 3, urgencia: 'sempre' })
+        .returning(),
+    );
     const medico = await primeiro(
       db.insert(schema.medicos).values({ nome: 'Ana', chaveNormalizada: 'ana' }).returning(),
     );
@@ -301,7 +308,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       id: '11111111-1111-4111-8111-111111111111',
       alocacaoId: alocacao,
       data: '2026-11-18',
-      prioridadeIdsLiberadas: [id('urg')],
+      prioridadeIdsLiberadas: [id('opInt')],
       segueSla: false,
       clienteId: null,
       laudosExtra: 0,
@@ -309,7 +316,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     await repo.salvar(base);
     await repo.salvar({
       ...base,
-      prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
+      prioridadeIdsLiberadas: [id('opRot'), id('opInt')].sort(),
       segueSla: true,
       clienteId: id('cli'),
       laudosExtra: 30,
@@ -317,7 +324,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     const lido = await repo.obter(alocacao, '2026-11-18');
     expect(lido).toEqual({
       ...base,
-      prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
+      prioridadeIdsLiberadas: [id('opRot'), id('opInt')].sort(),
       segueSla: true,
       clienteId: id('cli'),
       laudosExtra: 30,

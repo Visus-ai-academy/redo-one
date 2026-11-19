@@ -28,7 +28,13 @@ const salvarUso = vi.mocked(distribuicaoEquipeControllerSalvarUso);
 const obter = vi.mocked(distribuicaoEquipeControllerObter);
 const comPlantao = (plantao: boolean) =>
   obter.mockReturnValue({
-    unwrap: async () => ({ arranjos: [], clientes: [], exames: [], plantao }),
+    unwrap: async () => ({
+      arranjos: [],
+      clientes: [],
+      exames: [],
+      prioridades: [{ id: 'p-pla', nome: 'PLANTÃO', cor: null }],
+      plantao,
+    }),
   } as never);
 
 beforeEach(() => {
@@ -38,7 +44,7 @@ beforeEach(() => {
       especialidades: [{ id: 'e-neuro', nome: 'NEURO', cor: null }],
       subespecialidades: [],
       categoriasExame: [],
-      prioridades: [{ id: 'p-pla', nome: 'PLANTÃO', cor: null }],
+      prioridades: [],
       contratados: [],
     }),
   } as never);

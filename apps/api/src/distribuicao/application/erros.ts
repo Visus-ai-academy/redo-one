@@ -53,3 +53,13 @@ export class PrioridadeOperacaoNaoEncontradaError extends ErroDeDominio {
     super('Prioridade da operação não encontrada.');
   }
 }
+
+/** Marcada em alocações da escala ou em arranjos: excluir alargaria esses recortes calado. */
+export class PrioridadeOperacaoEmUsoError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor() {
+    super(
+      'A prioridade está marcada em alocações da escala ou em arranjos. Desmarque-a lá antes de excluir.',
+    );
+  }
+}

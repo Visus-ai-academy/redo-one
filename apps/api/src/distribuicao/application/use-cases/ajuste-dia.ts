@@ -142,7 +142,7 @@ export class DefinirAjusteDia {
       invalida(`${formatar(data)} não é dia de plantão deste vínculo. Escolha um dia da escala.`);
     }
     await exigirReferencias(this.cadastros, {
-      prioridade: edicao.prioridadeIdsLiberadas,
+      prioridadeOperacao: edicao.prioridadeIdsLiberadas,
       cliente: edicao.clienteId ? [edicao.clienteId] : [],
     });
     const novo: AjusteDiaDistribuicao = {

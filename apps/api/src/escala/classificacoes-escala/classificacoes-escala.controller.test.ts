@@ -20,7 +20,7 @@ describe('ClassificacoesEscalaController', () => {
 
   it('devolve as listas do service', async () => {
     const dados = {
-      prioridades: [{ id: 'p-urg', nome: 'Urgente', ativo: true }],
+      prioridades: [{ id: 'p-urg', nome: 'URGÊNCIA', cor: '#B5535A' }],
       subespecialidades: [{ id: 's-avc', nome: 'AVC', ativo: false, especialidadeIds: [] }],
     };
     const service = { listar: vi.fn(async () => dados) };

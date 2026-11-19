@@ -16,9 +16,9 @@ const com = (ajuste: AjusteDiaDto | null) =>
   obter.mockReturnValue({ unwrap: async () => ({ ajuste }) } as never);
 
 const PRIORIDADES = [
-  { id: 'p-rot', nome: 'ROTINA', ativo: true },
-  { id: 'p-urg', nome: 'URGÊNCIA', ativo: true },
-  { id: 'p-velha', nome: 'ANTIGA', ativo: false },
+  { id: 'p-rot', nome: 'ROTINA', cor: '#5A9A64' },
+  { id: 'p-urg', nome: 'URGÊNCIA', cor: '#B5535A' },
+  { id: 'p-int', nome: 'INTERNADO', cor: null },
 ];
 
 function montar() {
@@ -42,7 +42,7 @@ describe('AjusteDistribuicaoDia', () => {
   it('libera uma prioridade e a Lista pelo SLA', async () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
-    expect(screen.queryByRole('checkbox', { name: /ANTIGA/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).not.toBeChecked();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Segue o SLA neste dia' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({

@@ -1,12 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { asc, eq, ne } from 'drizzle-orm';
 
+import { violouChaveEstrangeira } from '../../../catalogo/comum/erros-do-banco';
 import { DATABASE, type Database } from '../../../database/database';
 import {
   prioridadesOperacao,
   prioridadesOperacaoGrafias,
   recebimentoGeral,
 } from '../../../database/schema';
+import { PrioridadeOperacaoEmUsoError } from '../../application/erros';
 import type { PrioridadesOperacaoRepository } from '../../application/ports/prioridades-operacao.repository';
 import {
   type CelulaRecebimento,
@@ -86,7 +88,12 @@ export class DrizzlePrioridadesOperacaoRepository implements PrioridadesOperacao
   }
 
   async excluir(id: string): Promise<void> {
-    await this.db.delete(prioridadesOperacao).where(eq(prioridadesOperacao.id, id));
+    try {
+      await this.db.delete(prioridadesOperacao).where(eq(prioridadesOperacao.id, id));
+    } catch (erro) {
+      if (violouChaveEstrangeira(erro)) throw new PrioridadeOperacaoEmUsoError();
+      throw erro;
+    }
   }
 
   async obterGrade(): Promise<CelulaRecebimento[]> {

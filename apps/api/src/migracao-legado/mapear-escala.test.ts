@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { idDoLegado } from './comum';
 import type { LegadoCatalogo, LegadoEscala, LegadoMedicos } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
+import { prioridadesOperacaoDaCarga } from './mapear-configuracao-distribuicao';
 import { type ContextoEscala, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
 
@@ -86,9 +87,11 @@ const contexto: ContextoEscala = {
     equipes: [],
     equipesMembros: [],
   }).tabelas,
+  prioridadesOperacao: prioridadesOperacaoDaCarga(),
   usuarios: [{ id: 'aaaaaaaa-0000-4000-8000-000000000001', email: 'gestora@tele.com' }],
   hoje: '2026-11-16',
 };
+const idOperacao = (nome: string) => idDoLegado('prioridades_operacao', nome);
 
 const turno = (
   id: string,
@@ -225,12 +228,12 @@ describe('mapearEscala: alocações', () => {
     expect(resumo.alocacoesListaAte24h).toBe(1);
   });
 
-  it('troca os nomes dos recortes pelos ids: prioridade pelo de-para, sem subespecialidade vira o geral', () => {
+  it('troca os nomes dos recortes pelos ids: prioridade pela da operação (a grafia do legado), sem subespecialidade vira o geral', () => {
     const { tabelas, avisos, resumo } = mapearEscala(
       escala({
         alocacoes: [
           alocacao('a1', {
-            prioridades: ['Rotina', 'Ambulatório', 'Internado', 'Emergência', 'Plantão'],
+            prioridades: ['Rotina', 'Ambulatório', 'Internado', 'Plantão', 'Sobreaviso'],
             subespecialidades: ['AVC', '(SEM SUBESPECIALIDADE)', 'Inexistente'],
           }),
         ],
@@ -250,8 +253,9 @@ describe('mapearEscala: alocações', () => {
         coberturaDeId: null,
       }),
     ]);
+    // Ambulatório e Internado separados da ROTINA: "só Rotina" no legado não recebia Internado.
     expect(tabelas.alocacoesPrioridades.map((p) => p.prioridadeId).sort()).toEqual(
-      [idDoLegado('prioridades', 'pr-rot'), idDoLegado('prioridades', 'pr-urg')].sort(),
+      ['ROTINA', 'AMBULATÓRIO', 'INTERNADO', 'PLANTÃO'].map(idOperacao).sort(),
     );
     expect(tabelas.alocacoesSubespecialidades).toEqual([
       {
@@ -260,7 +264,7 @@ describe('mapearEscala: alocações', () => {
       },
     ]);
     expect(resumo).toMatchObject({ prioridadesSemPar: 1, subespecialidadesSemPar: 1 });
-    expect(avisos).toContainEqual(expect.objectContaining({ item: 'Plantão' }));
+    expect(avisos).toContainEqual(expect.objectContaining({ item: 'Sobreaviso' }));
   });
 
   it('cobertura aponta o titular e não copia recortes', () => {

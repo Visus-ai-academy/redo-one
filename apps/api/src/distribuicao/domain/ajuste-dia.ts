@@ -7,7 +7,7 @@ import { invalida, semRepetidos } from './validacao';
  * +N de um cliente: estende o teto do médico só para os exames dele.
  */
 export interface AjusteDiaEdicao {
-  /** Prioridades do catálogo que o médico passa a receber além do arranjo e da Lista. */
+  /** Prioridades da operação que o médico passa a receber além do arranjo e da alocação. */
   prioridadeIdsLiberadas: string[];
   /** Segue o SLA neste dia: o prazo mínimo das células da grade de recebimento não vale. */
   segueSla: boolean;

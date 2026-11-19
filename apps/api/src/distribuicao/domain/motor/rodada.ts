@@ -49,10 +49,7 @@ export interface ExameFilaRodada {
   especialidadesDoSegmento: readonly string[];
   modalidadeId: string | null;
   subespecialidadeId: string | null;
-  /**
-   * Grafia que chega da MobileMed: vira prioridade do catálogo por `traduzirPrioridade` e
-   * prioridade da operação pelo de-para das `prioridadesOperacao`.
-   */
+  /** Grafia que chega da MobileMed: vira prioridade da operação pelo de-para das `prioridadesOperacao`. */
   prioridade: string | null;
   /** Nome do estudo, onde se procuram os marcadores de equilíbrio. */
   nome: string;
@@ -95,8 +92,6 @@ export interface EntradaRodada {
   ajustes: readonly AjusteDia[];
   regrasFrente: readonly RegrasFrente[];
   config: ConfiguracaoDistribuicao;
-  /** Grafia da MobileMed → prioridade do catálogo (pelas variações); null = sem tradução. */
-  traduzirPrioridade: (grafia: string) => string | null;
   /** Prioridades da operação, com o de-para de grafias (Configurações › Distribuição). */
   prioridadesOperacao: readonly PrioridadeOperacao[];
   /** Grade geral de recebimento prioridade da operação × turno; célula ausente = segue o SLA. */
@@ -195,11 +190,10 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   const nome = (id: string) => entrada.nomes?.[id] ?? id;
   const marcadores = config.marcadoresEquilibrio.map(normalizar).filter(Boolean);
 
-  // --- as duas prioridades e o resto do exame como o motor o lê ---
+  // --- a prioridade da operação e o resto do exame como o motor o lê ---
   const lerPrioridade = criarLeitorPrioridade(entrada.prioridadesOperacao);
   const grafiasSemDePara = new Set<string>();
   const lidos = entrada.exames.map((e) => {
-    const prioridadeId = e.prioridade === null ? null : entrada.traduzirPrioridade(e.prioridade);
     const leitura = lerPrioridade(e.prioridade);
     if (leitura.semDePara && e.prioridade?.trim()) grafiasSemDePara.add(e.prioridade.trim());
     const restanteMin = e.prazo === null ? null : (e.prazo.getTime() - agora.getTime()) / 60_000;
@@ -207,7 +201,6 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     const nomeNormal = normalizar(e.nome);
     return {
       fila: e,
-      prioridadeId,
       prioridadeOperacaoId: op?.id ?? null,
       posicao: op?.posicao ?? Number.MAX_SAFE_INTEGER,
       urgente: op !== null && urgente(urgenciaNaFrente(op, e, regras), restanteMin),
@@ -215,18 +208,10 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       marcador: marcadores.find((m) => nomeNormal.includes(m)) ?? null,
     };
   });
-  // A URGÊNCIA do catálogo, para a alocação que a marca: a prioridade do catálogo cujas grafias
-  // são todas tratadas sempre como urgência pela operação (Internado é urgência, mas a ROTINA do
-  // catálogo, que também recebe Rotina e Ambulatório, não vira).
-  const sempreUrgente = new Map<string, boolean>();
-  for (const p of entrada.prioridadesOperacao) {
-    for (const g of p.grafias) {
-      const id = entrada.traduzirPrioridade(g);
-      if (id !== null)
-        sempreUrgente.set(id, (sempreUrgente.get(id) ?? true) && p.urgencia.tipo === 'sempre');
-    }
-  }
-  const prioridadeIdsUrgenciaCatalogo = [...sempreUrgente].filter(([, s]) => s).map(([id]) => id);
+  // Marcada na alocação, faz o período receber as urgências (ver `urgenciaPelaAlocacao`).
+  const prioridadeIdsUrgentes = entrada.prioridadesOperacao
+    .filter((p) => p.urgencia.tipo === 'sempre')
+    .map((p) => p.id);
 
   // --- recusas antes do motor ---
   const recusas = new Map<string, ItemRodada>();
@@ -305,7 +290,6 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     especialidadesDoSegmento: l.fila.especialidadesDoSegmento,
     modalidadeId: l.fila.modalidadeId,
     subespecialidadeId: l.fila.subespecialidadeId,
-    prioridadeId: l.prioridadeId,
     prioridadeOperacaoId: l.prioridadeOperacaoId,
     urgente: l.urgente,
     exameId: l.fila.exameId,
@@ -323,7 +307,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     regras,
     config,
     grade: new GradeRecebimento(entrada.gradeRecebimento, regras),
-    prioridadeIdsUrgenciaCatalogo,
+    prioridadeIdsUrgentes,
     cotaEntregue: entrada.cotaEntregue,
     ...(filtro.turnoIds ? { filtroTurnoIds: filtro.turnoIds } : {}),
     ...(frentes.length ? { filtroFrentes: frentes } : {}),

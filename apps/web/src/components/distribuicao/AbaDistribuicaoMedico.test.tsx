@@ -52,6 +52,7 @@ beforeEach(() => {
       ],
       clientes: [],
       exames: [],
+      prioridades: [{ id: 'op-int', nome: 'INTERNADO', cor: '#8462A8' }],
     }),
   } as never);
   salvarRobo.mockReset();
@@ -59,6 +60,23 @@ beforeEach(() => {
 });
 
 describe('AbaDistribuicaoMedico', () => {
+  it('o editor de arranjo oferece as prioridades da operação, não as do catálogo', async () => {
+    vi.mocked(opcoesControllerListas).mockReturnValue({
+      unwrap: async () => ({
+        modalidades: [],
+        especialidades: [{ id: 'e-neuro', nome: 'NEURO', cor: null }],
+        subespecialidades: [],
+        categoriasExame: [],
+        prioridades: [{ id: 'p-rot', nome: 'ROTINA DO CATÁLOGO', cor: null }],
+        contratados: [],
+      }),
+    } as never);
+    renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'ROTINA DO CATÁLOGO' })).not.toBeInTheDocument();
+  });
+
   it('habilita o médico no robô na hora, com o aviso', async () => {
     renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar />);
     expect(await screen.findByText('NEURO')).toBeInTheDocument();

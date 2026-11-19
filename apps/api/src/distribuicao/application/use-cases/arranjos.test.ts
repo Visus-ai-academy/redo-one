@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { InMemoryAuditoria } from '../../../auditoria/testing';
-import { ArranjosEmMemoria, arranjoVazio, CadastrosEmMemoria } from '../../testing/fakes';
+import {
+  ArranjosEmMemoria,
+  arranjoVazio,
+  CadastrosEmMemoria,
+  PrioridadesOperacaoEmMemoria,
+} from '../../testing/fakes';
 import {
   ArranjosInvalidosError,
   EquipeNaoEncontradaError,
@@ -16,6 +21,7 @@ describe('arranjos', () => {
   let repo: ArranjosEmMemoria;
   let cadastros: CadastrosEmMemoria;
   let auditoria: InMemoryAuditoria;
+  let prioridades: PrioridadesOperacaoEmMemoria;
   let consultar: ConsultarArranjos;
   let salvar: SalvarArranjos;
 
@@ -25,11 +31,15 @@ describe('arranjos', () => {
     cadastros.medicos.add('m1');
     cadastros.equipes.add('e1');
     auditoria = new InMemoryAuditoria();
-    consultar = new ConsultarArranjos(repo, cadastros);
+    prioridades = new PrioridadesOperacaoEmMemoria();
+    consultar = new ConsultarArranjos(repo, cadastros, prioridades);
     salvar = new SalvarArranjos(repo, cadastros, auditoria, () => agora);
   });
 
-  it('consulta os arranjos do médico com os nomes dos clientes e exames marcados', async () => {
+  it('consulta os arranjos do médico com os nomes dos clientes e exames marcados e as prioridades da operação', async () => {
+    const base = { urgencia: { tipo: 'nunca' as const }, padrao: false, grafias: [] };
+    await prioridades.salvar({ id: 'op-rot', nome: 'ROTINA', posicao: 3, cor: '#5A9A64', ...base });
+    await prioridades.salvar({ id: 'op-urg', nome: 'URGÊNCIA', posicao: 1, cor: null, ...base });
     cadastros.nomes.set('c1', 'CLINIMAGEM');
     cadastros.nomes.set('x1', 'TC CRANIO');
     const lista = [
@@ -46,6 +56,10 @@ describe('arranjos', () => {
       arranjos: lista,
       clientes: [{ id: 'c1', nome: 'CLINIMAGEM' }],
       exames: [{ id: 'x1', nome: 'TC CRANIO' }],
+      prioridades: [
+        { id: 'op-urg', nome: 'URGÊNCIA', cor: null },
+        { id: 'op-rot', nome: 'ROTINA', cor: '#5A9A64' },
+      ],
     });
   });
 
@@ -73,6 +87,16 @@ describe('arranjos', () => {
         em: agora,
       },
     ]);
+  });
+
+  it('recusa prioridade que não é da operação (o recorte é pelas da operação, 19/11/2026)', async () => {
+    cadastros.existentes.set('prioridadeOperacao', new Set(['op-rotina']));
+    await expect(
+      salvar.executar(ator, { tipo: 'medico', id: 'm1' }, [
+        arranjoVazio({ prioridadeIds: ['pri-rotina-do-catalogo'] }),
+      ]),
+    ).rejects.toThrow(/Prioridade da operação não encontrada/);
+    expect(repo.porDono.get('medico:m1')).toBeUndefined();
   });
 
   it('na equipe, audita como arranjos_equipe', async () => {

@@ -3,6 +3,7 @@ import { Plus } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 
 import type { ArranjoDto } from '../../gen/types/ArranjoDto';
+import type { PrioridadeDoArranjoDto } from '../../gen/types/PrioridadeDoArranjoDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
@@ -32,12 +33,12 @@ export type ArranjosDistribuicaoProps = {
   arranjos: ArranjoDto[];
   /** Nomes dos clientes e exames marcados (vêm com os arranjos). */
   nomes: NomesDoArranjo;
-  /** Opções ativas do catálogo. */
+  /** Opções ativas do catálogo; as prioridades são as da operação (vêm com os arranjos). */
   catalogo: {
     especialidades: RotuloDto[];
     modalidades: RotuloDto[];
     subespecialidades: (RotuloDto & { especialidadeIds: string[] })[];
-    prioridades: RotuloDto[];
+    prioridades: PrioridadeDoArranjoDto[];
   };
   podeEditar: boolean;
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
@@ -324,7 +325,11 @@ function FormArranjo({
           {() => (
             <CaixasField
               label="Prioridades"
-              opcoes={catalogo.prioridades.map((p) => ({ valor: p.id, rotulo: p.nome }))}
+              opcoes={catalogo.prioridades.map((p) => ({
+                valor: p.id,
+                rotulo: p.nome,
+                cor: p.cor,
+              }))}
               description="Nada marcado: todas."
             />
           )}

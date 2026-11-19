@@ -50,8 +50,8 @@ function montar(props: Partial<PainelAlocacaoProps> = {}) {
         turnos={TURNOS}
         frentes={FRENTES}
         prioridades={[
-          { id: 'p-urg', nome: 'Urgente', ativo: true },
-          { id: 'p-velha', nome: 'Antiga', ativo: false },
+          { id: 'p-urg', nome: 'URGÊNCIA', cor: '#B5535A' },
+          { id: 'p-int', nome: 'INTERNADO', cor: null },
         ]}
         subespecialidades={[
           { id: 's-cab', nome: 'Cabeça', ativo: true, especialidadeIds: ['e-neuro'] },
@@ -104,7 +104,7 @@ describe('PainelAlocacao', () => {
     await escolherOpcao('Turno', 'Manhã');
     expect(screen.getByRole('textbox', { name: 'Horário início' })).toHaveValue('07:00');
     await userEvent.click(screen.getByRole('checkbox', { name: 'Segunda' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Urgente' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'URGÊNCIA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Alocar médico' }));
 
     expect(onSalvar).toHaveBeenCalledWith(
@@ -168,26 +168,26 @@ describe('PainelAlocacao', () => {
     expect(turno).toHaveTextContent('Nenhum turno tem essa frente');
   });
 
-  it('oferece só prioridades e subespecialidades ativas', () => {
+  it('oferece as prioridades da operação (Internado à parte) e só as subespecialidades ativas', () => {
     montar({ inicial: { frenteId: 'f-tc' } });
-    expect(screen.getByRole('checkbox', { name: 'Urgente' })).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'Antiga' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'URGÊNCIA' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Cabeça' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'AVC' })).not.toBeInTheDocument();
   });
 
-  it('na edição mantém marcada, com o nome, a inativa já gravada', async () => {
+  it('na edição mantém marcadas a prioridade e a subespecialidade inativa já gravadas', async () => {
     const { onSalvar } = montar({
-      alocacao: { ...ALOCACAO, prioridadeIds: ['p-velha'], subespecialidadeIds: ['s-avc'] },
+      alocacao: { ...ALOCACAO, prioridadeIds: ['p-int'], subespecialidadeIds: ['s-avc'] },
       medicoNome: 'Ana Souza',
     });
-    expect(screen.getByRole('checkbox', { name: 'Antiga' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'AVC' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Urgente' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'URGÊNCIA' })).not.toBeChecked();
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(onSalvar).toHaveBeenCalledWith(
-      expect.objectContaining({ prioridadeIds: ['p-velha'], subespecialidadeIds: ['s-avc'] }),
+      expect.objectContaining({ prioridadeIds: ['p-int'], subespecialidadeIds: ['s-avc'] }),
     );
   });
 
@@ -262,7 +262,7 @@ describe('PainelAlocacao', () => {
       await escolherOpcao('Frente', 'TC Neuro');
       expect(await screen.findByRole('checkbox', { name: 'Cabeça' })).toBeChecked();
       expect(buscarSugestao).toHaveBeenCalledWith('m1', 'f-tc');
-      expect(screen.getByRole('checkbox', { name: 'Urgente' })).toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
       const geral = screen.getByRole('checkbox', { name: 'Geral (sem segmento)' });
       expect(geral).toBeChecked();
       expect(screen.getAllByText(/Veio dos arranjos do médico/)).toHaveLength(2);
@@ -276,7 +276,7 @@ describe('PainelAlocacao', () => {
       montar({ buscarSugestao, inicial: { frenteId: 'f-tc' } });
       await userEvent.click(screen.getByRole('checkbox', { name: 'Geral (sem segmento)' }));
       await escolherMedico();
-      expect(await screen.findByRole('checkbox', { name: 'Urgente' })).toBeChecked();
+      expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
       expect(screen.getByRole('checkbox', { name: 'Cabeça' })).not.toBeChecked();
       expect(screen.getByRole('checkbox', { name: 'Geral (sem segmento)' })).toBeChecked();
     });
@@ -288,11 +288,11 @@ describe('PainelAlocacao', () => {
         .mockResolvedValueOnce(null);
       montar({ buscarSugestao, inicial: { frenteId: 'f-tc' } });
       await escolherMedico();
-      expect(await screen.findByRole('checkbox', { name: 'Urgente' })).toBeChecked();
+      expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
       await escolherOpcao('Frente', 'RM Geral');
       await escolherOpcao('Frente', 'TC Neuro');
       await vi.waitFor(() =>
-        expect(screen.getByRole('checkbox', { name: 'Urgente' })).not.toBeChecked(),
+        expect(screen.getByRole('checkbox', { name: 'URGÊNCIA' })).not.toBeChecked(),
       );
     });
 

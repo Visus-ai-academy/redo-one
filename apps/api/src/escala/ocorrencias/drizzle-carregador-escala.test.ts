@@ -33,7 +33,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     await db.execute(
       sql`truncate table ajustes_produtividade, alocacoes_prioridades, alocacoes_subespecialidades,
         alocacoes, ausencias_frentes, ausencias_turnos, ausencias, tipos_ausencia, turnos_frentes,
-        turnos, frentes_escala, especialidades, modalidades, prioridades, subespecialidades, usuarios, papeis,
+        turnos, frentes_escala, especialidades, modalidades, prioridades_operacao, subespecialidades, usuarios, papeis,
         medicos cascade`,
     );
     const [manha] = await db
@@ -53,7 +53,10 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
         { nome: 'Caio Inativo', chaveNormalizada: 'caio inativo', ativo: false },
       ])
       .returning();
-    const [urgente] = await db.insert(schema.prioridades).values({ nome: 'URGENTE' }).returning();
+    const [urgente] = await db
+      .insert(schema.prioridadesOperacao)
+      .values({ nome: 'URGENTE', posicao: 1, urgencia: 'sempre' })
+      .returning();
     const [avc] = await db.insert(schema.subespecialidades).values({ nome: 'AVC' }).returning();
     const [ferias] = await db
       .insert(schema.tiposAusencia)

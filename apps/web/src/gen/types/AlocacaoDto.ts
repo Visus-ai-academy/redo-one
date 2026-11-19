@@ -70,7 +70,7 @@ export type AlocacaoDto = {
    */
   gratificado?: boolean;
   /**
-   * @description Vazio = sem recorte.
+   * @description Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.
    * @type array | undefined
    */
   prioridadeIds?: string[];

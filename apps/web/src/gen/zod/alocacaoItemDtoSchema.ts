@@ -20,7 +20,7 @@ export const alocacaoItemDtoSchema = z.object({
   produtividade: z.number().nullable(),
   gratificado: z.boolean(),
   subespecialidadeGeral: z.boolean(),
-  prioridadeIds: z.array(z.uuid()),
+  prioridadeIds: z.array(z.uuid()).describe('Prioridades da operação.'),
   subespecialidadeIds: z.array(z.uuid()),
   coberturaDeId: z.uuid().nullable(),
   observacoes: z.string().nullable(),

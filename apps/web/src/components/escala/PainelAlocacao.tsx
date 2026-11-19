@@ -38,8 +38,9 @@ export type PainelAlocacaoProps = {
   /** Turnos e frentes que quem edita pode usar (o recorte, se houver). */
   turnos: TurnoItemDto[];
   frentes: FrenteItemDto[];
+  /** Prioridades da operação (o recorte da alocação é por elas). */
+  prioridades: { id: string; nome: string; cor: string | null }[];
   /** Inativas inclusive: o formulário oferece as ativas e as já marcadas na alocação. */
-  prioridades: { id: string; nome: string; ativo: boolean }[];
   subespecialidades: { id: string; nome: string; ativo: boolean; especialidadeIds: string[] }[];
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
   /**
@@ -84,7 +85,6 @@ export function PainelAlocacao({
   // Uma inativa já marcada continua à mostra (com o nome), para manter ou desmarcar.
   const oferecida = (marcadas: string[]) => (item: { id: string; ativo: boolean }) =>
     item.ativo || marcadas.includes(item.id);
-  const prioridadesOferecidas = prioridades.filter(oferecida(iniciais.prioridadeIds));
   const subespecialidadesOferecidas = subespecialidades.filter(
     oferecida(iniciais.subespecialidadeIds),
   );
@@ -118,9 +118,7 @@ export function PainelAlocacao({
     filtrar: (sugestao, frenteId) => {
       const subs = subsDaFrente(frentes.find((f) => f.id === frenteId));
       return {
-        prioridadeIds: sugestao.prioridadeIds.filter((id) =>
-          prioridadesOferecidas.some((p) => p.id === id),
-        ),
+        prioridadeIds: sugestao.prioridadeIds.filter((id) => prioridades.some((p) => p.id === id)),
         subespecialidadeIds: [
           ...sugestao.subespecialidadeIds.filter((id) => subs.some((s) => s.id === id)),
           ...(sugestao.subespecialidadeGeral && subs.length > 0 ? [GERAL] : []),
@@ -385,7 +383,7 @@ export function PainelAlocacao({
                   {() => (
                     <CaixasField
                       label="Prioridades"
-                      opcoes={prioridadesOferecidas.map((p) => ({ valor: p.id, rotulo: p.nome }))}
+                      opcoes={prioridades.map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor }))}
                       description={ajuda('prioridadeIds')}
                     />
                   )}

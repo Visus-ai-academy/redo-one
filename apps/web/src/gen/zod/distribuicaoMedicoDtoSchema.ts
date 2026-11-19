@@ -5,12 +5,14 @@
 
 import * as z from 'zod'
 import { arranjoDtoSchema } from './arranjoDtoSchema'
+import { prioridadeDoArranjoDtoSchema } from './prioridadeDoArranjoDtoSchema'
 import { rotuloDtoSchema } from './rotuloDtoSchema'
 
 export const distribuicaoMedicoDtoSchema = z.object({
   arranjos: z.array(arranjoDtoSchema),
   clientes: z.array(rotuloDtoSchema).describe('Nomes dos clientes marcados.'),
   exames: z.array(rotuloDtoSchema).describe('Nomes dos exames marcados.'),
+  prioridades: z.array(prioridadeDoArranjoDtoSchema).describe('Prioridades da operação (as do recorte), pela posição.'),
   habilitadoRobo: z.boolean(),
 })
 

@@ -29,7 +29,7 @@ export type ArranjoDto = {
    */
   subespecialidadeGeral: boolean;
   /**
-   * @description Prioridades do catálogo; vazia = todas.
+   * @description Prioridades da operação (Configurações › Distribuição); vazia = todas.
    * @type array
    */
   prioridadeIds: string[];

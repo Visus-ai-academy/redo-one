@@ -5,7 +5,7 @@
 
 export type AjusteDiaDto = {
   /**
-   * @description Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.
+   * @description Prioridades da operação liberadas no dia, além do arranjo e da alocação.
    * @type array
    */
   prioridadeIdsLiberadas: string[];

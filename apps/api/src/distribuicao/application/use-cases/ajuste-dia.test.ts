@@ -39,7 +39,7 @@ describe('ajuste do dia da distribuição', () => {
     escala.recortes.set('g1', new Set(['f-mama']));
     repo = new AjustesDiaEmMemoria(escala, new Map([['c1', 'CLINICA X']]));
     const cadastros = new CadastrosEmMemoria();
-    cadastros.existentes.set('prioridade', new Set(['urg', 'rot']));
+    cadastros.existentes.set('prioridadeOperacao', new Set(['urg', 'rot']));
     cadastros.existentes.set('cliente', new Set(['c1']));
     auditoria = new InMemoryAuditoria();
     obter = new ObterAjusteDia(repo, escala);
@@ -133,7 +133,7 @@ describe('ajuste do dia da distribuição', () => {
     );
     await expect(
       definir.executar(admin, 'a1', DIA, liberar({ prioridadeIdsLiberadas: ['x'] })),
-    ).rejects.toThrow(/Prioridade não encontrada/);
+    ).rejects.toThrow(/Prioridade da operação não encontrada/);
     await expect(definir.executar(admin, 'a1', DIA, liberar({ clienteId: 'x' }))).rejects.toThrow(
       /Cliente não encontrado/,
     );

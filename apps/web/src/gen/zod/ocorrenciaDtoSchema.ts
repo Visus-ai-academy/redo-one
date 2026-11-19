@@ -32,7 +32,7 @@ export const ocorrenciaDtoSchema = z.object({
   gratificado: z.boolean(),
   dataInicio: z.iso.date(),
   dataFim: z.iso.date().nullable(),
-  prioridadeIds: z.array(z.uuid()),
+  prioridadeIds: z.array(z.uuid()).describe('Prioridades da operação.'),
   subespecialidadeIds: z.array(z.uuid()),
   subespecialidadeGeral: z.boolean(),
   coberturaDeId: z.uuid().nullable(),

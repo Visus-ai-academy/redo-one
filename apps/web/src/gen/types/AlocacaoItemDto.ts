@@ -57,6 +57,10 @@ export type AlocacaoItemDto = {
   produtividade: number | null;
   gratificado: boolean;
   subespecialidadeGeral: boolean;
+  /**
+   * @description Prioridades da operação.
+   * @type array
+   */
   prioridadeIds: string[];
   subespecialidadeIds: string[];
   /**

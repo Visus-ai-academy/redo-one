@@ -3,7 +3,7 @@ import { asc } from 'drizzle-orm';
 
 import { especialidadeIds } from '../../catalogo/subespecialidades/drizzle-subespecialidades.repository';
 import { DATABASE, type Database } from '../../database/database';
-import { prioridades, subespecialidades } from '../../database/schema';
+import { prioridadesOperacao, subespecialidades } from '../../database/schema';
 import type { ClassificacoesEscalaRepository } from './classificacoes-escala.repository';
 
 @Injectable()
@@ -13,9 +13,13 @@ export class DrizzleClassificacoesEscalaRepository implements ClassificacoesEsca
   async listar() {
     const [listaPrioridades, listaSubespecialidades] = await Promise.all([
       this.db
-        .select({ id: prioridades.id, nome: prioridades.nome, ativo: prioridades.ativo })
-        .from(prioridades)
-        .orderBy(asc(prioridades.ordem), asc(prioridades.nome)),
+        .select({
+          id: prioridadesOperacao.id,
+          nome: prioridadesOperacao.nome,
+          cor: prioridadesOperacao.cor,
+        })
+        .from(prioridadesOperacao)
+        .orderBy(asc(prioridadesOperacao.posicao), asc(prioridadesOperacao.nome)),
       this.db
         .select({
           id: subespecialidades.id,

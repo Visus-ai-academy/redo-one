@@ -6,7 +6,7 @@
 import * as z from 'zod'
 
 export const sugestaoAlocacaoDtoSchema = z.object({
-  prioridadeIds: z.array(z.uuid()),
+  prioridadeIds: z.array(z.uuid()).describe('Prioridades da operação.'),
   subespecialidadeIds: z.array(z.uuid()),
   subespecialidadeGeral: z.boolean(),
 })

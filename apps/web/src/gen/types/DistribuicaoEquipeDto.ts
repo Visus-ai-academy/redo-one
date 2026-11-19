@@ -4,6 +4,7 @@
 */
 
 import type { ArranjoDto } from './ArranjoDto'
+import type { PrioridadeDoArranjoDto } from './PrioridadeDoArranjoDto'
 import type { RotuloDto } from './RotuloDto'
 
 export type DistribuicaoEquipeDto = {
@@ -18,6 +19,11 @@ export type DistribuicaoEquipeDto = {
    * @type array
    */
   exames: RotuloDto[];
+  /**
+   * @description Prioridades da operação (as do recorte), pela posição.
+   * @type array
+   */
+  prioridades: PrioridadeDoArranjoDto[];
   /**
    * @description Equipe de plantão: o robô não entrega o recorte dela.
    * @type boolean

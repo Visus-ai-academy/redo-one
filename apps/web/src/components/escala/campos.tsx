@@ -8,11 +8,13 @@ import { RadioGroup } from '@base-ui/react/radio-group';
 import type { ReactNode } from 'react';
 
 import { cn } from '../../lib/cn';
+import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { useFieldContext } from '../form/context';
 import { FieldError } from '../form/field-parts';
 
-type Opcao = { valor: string; rotulo: string };
+/** Com `cor` (mesmo nula), a opção leva a bolinha da cor (ex.: prioridades da operação). */
+type Opcao = { valor: string; rotulo: string; cor?: string | null };
 
 function useErros() {
   const field = useFieldContext<unknown>();
@@ -84,6 +86,7 @@ export function CaixasField({
             <Field.Item key={opcao.valor}>
               <Field.Label className="flex items-center gap-2">
                 <CaixaDeSelecao value={opcao.valor} />
+                {opcao.cor !== undefined && <BolinhaCor cor={opcao.cor} className="size-2.5" />}
                 {opcao.rotulo}
               </Field.Label>
             </Field.Item>

@@ -33,24 +33,32 @@ describe.skipIf(!url)('repositório de classificações da escala', () => {
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table subespecialidades, especialidades, prioridades cascade`);
+    await db.execute(
+      sql`truncate table subespecialidades, especialidades, prioridades_operacao cascade`,
+    );
     const especialidades = new DrizzleListaRepository(db, LISTAS.especialidades);
     neuro = await especialidades.criar({ ...base, nome: 'NEURO' });
     msk = await especialidades.criar({ ...base, nome: 'MSK' });
   });
 
-  it('lista todas as prioridades, inativas inclusive, por ordem e nome, só id, nome e situação', async () => {
-    const prioridades = new DrizzleListaRepository(db, LISTAS.prioridades);
-    const rotina = await prioridades.criar({ ...base, nome: 'Rotina', ordem: 2 });
-    const urgente = await prioridades.criar({ ...base, nome: 'Urgente', ordem: 1 });
-    const antiga = await prioridades.criar({ ...base, nome: 'Antiga', ordem: 2, ativo: false });
+  it('lista as prioridades da operação pela posição e nome, só id, nome e cor', async () => {
+    const criar = async (nome: string, posicao: number, cor: string | null) =>
+      (
+        await db
+          .insert(schema.prioridadesOperacao)
+          .values({ nome, posicao, urgencia: 'nunca', cor })
+          .returning()
+      )[0]?.id;
+    const rotina = await criar('ROTINA', 3, '#5A9A64');
+    const urgencia = await criar('URGÊNCIA', 1, null);
+    const internado = await criar('INTERNADO', 3, '#8462A8');
 
     const { prioridades: lista } = await repo.listar();
 
     expect(lista).toEqual([
-      { id: urgente, nome: 'Urgente', ativo: true },
-      { id: antiga, nome: 'Antiga', ativo: false },
-      { id: rotina, nome: 'Rotina', ativo: true },
+      { id: urgencia, nome: 'URGÊNCIA', cor: null },
+      { id: internado, nome: 'INTERNADO', cor: '#8462A8' },
+      { id: rotina, nome: 'ROTINA', cor: '#5A9A64' },
     ]);
   });
 

@@ -115,7 +115,7 @@ export function AbaDistribuicaoEquipe({
         dono="equipe"
         arranjos={dados.arranjos}
         nomes={dados}
-        catalogo={catalogo}
+        catalogo={{ ...catalogo, prioridades: dados.prioridades }}
         podeEditar={podeEditar}
         buscarClientes={buscarClientes}
         buscarExames={buscarExames}

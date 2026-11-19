@@ -202,6 +202,7 @@ const escala = mapearEscala(
     legadoCatalogo,
     catalogo: catalogo.tabelas,
     medicos: medicos.tabelas,
+    prioridadesOperacao: [],
     usuarios: [],
     hoje: '2026-11-16',
   },
@@ -219,7 +220,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
+      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
     );
   });
 
@@ -495,7 +496,12 @@ describe.skipIf(!url)('gravarMigracao', () => {
         arranjosEquipe: [{ ...arranjo, id: 'q1', equipeId: 'e1' }],
         habilitados: ['m1'],
       },
-      { legadoCatalogo, catalogo: catalogo.tabelas, medicos: medicos.tabelas },
+      {
+        legadoCatalogo,
+        catalogo: catalogo.tabelas,
+        medicos: medicos.tabelas,
+        prioridadesOperacao: [],
+      },
     );
     const contar = async () => {
       const r = await db.execute<{ t: string; n: number }>(sql`

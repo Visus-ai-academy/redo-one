@@ -107,7 +107,11 @@ export class AlocacaoDto {
   @IsBoolean()
   gratificado?: boolean;
 
-  @ApiPropertyOptional({ type: [String], format: 'uuid', description: 'Vazio = sem recorte.' })
+  @ApiPropertyOptional({
+    type: [String],
+    format: 'uuid',
+    description: 'Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)
@@ -224,7 +228,8 @@ export class AlocacaoItemDto {
   @ApiProperty({ type: Number, nullable: true }) produtividade!: number | null;
   @ApiProperty() gratificado!: boolean;
   @ApiProperty() subespecialidadeGeral!: boolean;
-  @ApiProperty({ type: [String], format: 'uuid' }) prioridadeIds!: string[];
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })
+  prioridadeIds!: string[];
   @ApiProperty({ type: [String], format: 'uuid' }) subespecialidadeIds!: string[];
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) coberturaDeId!: string | null;
   @ApiProperty({ type: String, nullable: true }) observacoes!: string | null;

@@ -5,7 +5,7 @@ import { CLASSIFICACOES_ESCALA_REPOSITORY } from './classificacoes-escala.reposi
 import { ClassificacoesEscalaService } from './classificacoes-escala.service';
 import { DrizzleClassificacoesEscalaRepository } from './drizzle-classificacoes-escala.repository';
 
-/** Prioridades e subespecialidades (id, nome, situação) para a alocação, com `escala.ver`. */
+/** Prioridades da operação e subespecialidades para a alocação, com `escala.ver`. */
 @Module({
   controllers: [ClassificacoesEscalaController],
   providers: [

@@ -10,18 +10,6 @@ const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 const MI = 'esp-mi';
 const CT = 'mod-ct';
 const CARDIO = 'esp-cardio';
-const ROTINA = 'pri-rotina';
-const URGENCIA = 'pri-urgencia';
-/** As variações do catálogo: Ambulatório e Internado → ROTINA, Emergência → URGÊNCIA. */
-const VARIACOES: Record<string, string> = {
-  ROTINA: ROTINA,
-  AMBULATORIO: ROTINA,
-  INTERNADO: ROTINA,
-  URGENCIA: URGENCIA,
-  EMERGENCIA: URGENCIA,
-};
-const traduzirPrioridade = (grafia: string) =>
-  VARIACOES[grafia.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()] ?? null;
 /** As prioridades da operação dos valores iniciais (18 e 19/11/2026), resumidas. */
 const op = (
   id: string,
@@ -134,7 +122,6 @@ const rodar = (p: Partial<EntradaRodada>) =>
     ajustes: [],
     regrasFrente: [],
     config: CONFIG,
-    traduzirPrioridade,
     prioridadesOperacao: PRIORIDADES_OPERACAO,
     gradeRecebimento: [],
     prioridadesCliente: [],
@@ -157,21 +144,32 @@ describe('rodarMotor', () => {
     expect(r.totais).toMatchObject({ exames: 1, distribuidos: 1, emAberto: 0 });
   });
 
-  it('Internado é urgência na operação e ROTINA no catálogo: urgente na fila e no recorte ROTINA da escala e do arranjo', () => {
+  it('Internado é urgência na operação, e só o recebe quem marca INTERNADO (19/11/2026)', () => {
     const exames = [
       exame({ id: 'rot', prazo: br('2026-11-17T09:00') }),
       exame({ id: 'int', prioridade: 'INTERNADO' }),
     ];
+    const comInternado = ['op-rotina', 'op-internado'];
     const r = rodar({
       exames,
-      medicos: [medico('A', [arranjo({ prioridadeIds: [ROTINA] })])],
-      ocorrencias: [oc('A', { prioridadeIds: [ROTINA], produtividade: 1 })],
+      medicos: [medico('A', [arranjo({ prioridadeIds: comInternado })])],
+      ocorrencias: [oc('A', { prioridadeIds: comInternado, produtividade: 1 })],
     });
     expect(item(r, 'int')?.medicoId).toBe('A');
     expect(item(r, 'rot')?.motivo).toBe('sem_espaco');
+    // "Só ROTINA" na alocação ou no arranjo: o Internado não vai (no legado, a grafia não casava).
+    for (const soRotina of [
+      { medicos: [medico('A', [arranjo({ prioridadeIds: ['op-rotina'] })])] },
+      { ocorrencias: [oc('A', { prioridadeIds: ['op-rotina'] })] },
+    ]) {
+      expect(item(rodar({ exames, ...soRotina }), 'int')).toMatchObject({
+        medicoId: null,
+        motivo: 'sem_medico_elegivel',
+      });
+    }
   });
 
-  it('o Internado urgente não faz da ROTINA do catálogo uma urgência da alocação', () => {
+  it('a alocação que marca INTERNADO (sempre urgente) recebe o Internado pelo SLA, contra a célula', () => {
     const grade: CelulaRecebimento[] = [
       {
         prioridadeOperacaoId: 'op-internado',
@@ -189,13 +187,13 @@ describe('rodarMotor', () => {
       });
     const soRotina = rodar({
       exames: [exame({ id: 'int', prioridade: 'Internado' })],
-      ocorrencias: [lista('A', [ROTINA])],
+      ocorrencias: [lista('A', ['op-rotina'])],
       gradeRecebimento: grade,
     });
     expect(item(soRotina, 'int')).toMatchObject({ medicoId: null, motivo: 'sem_medico_elegivel' });
     const comUrgencia = rodar({
       exames: [exame({ id: 'int', prioridade: 'Internado' })],
-      ocorrencias: [lista('A', [ROTINA, URGENCIA])],
+      ocorrencias: [lista('A', ['op-rotina', 'op-internado'])],
       gradeRecebimento: grade,
     });
     expect(item(comUrgencia, 'int')?.medicoId).toBe('A');
@@ -287,7 +285,7 @@ describe('rodarMotor', () => {
     const r = rodar({
       exames: [exame({ id: 'u', prioridade: 'Urgência' })],
       medicos: [medico('A'), medico('B')],
-      ocorrencias: [lista('A', [ROTINA]), lista('B', [ROTINA, URGENCIA])],
+      ocorrencias: [lista('A', ['op-rotina']), lista('B', ['op-rotina', 'op-urgencia'])],
       gradeRecebimento: grade,
     });
     expect(item(r, 'u')?.medicoId).toBe('B');

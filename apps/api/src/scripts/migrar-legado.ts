@@ -17,7 +17,10 @@ import type { Aviso } from '../migracao-legado/comum';
 import { gravarMigracao } from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
-import { mapearConfiguracaoDistribuicao } from '../migracao-legado/mapear-configuracao-distribuicao';
+import {
+  mapearConfiguracaoDistribuicao,
+  prioridadesOperacaoDaCarga,
+} from '../migracao-legado/mapear-configuracao-distribuicao';
 import { mapearDistribuicao } from '../migracao-legado/mapear-distribuicao';
 import { mapearEscala } from '../migracao-legado/mapear-escala';
 import { mapearMedicos } from '../migracao-legado/mapear-medicos';
@@ -44,10 +47,13 @@ async function migrarLegado() {
   const legado = await lerLegado(url);
   const catalogo = mapearCatalogo(legado.catalogo);
   const medicos = mapearMedicos(legado.medicos);
+  // Os recortes de prioridade da escala e do arranjo são pelas prioridades da operação.
+  const prioridadesOperacao = prioridadesOperacaoDaCarga();
   const distribuicao = mapearDistribuicao(legado.distribuicao, {
     legadoCatalogo: legado.catalogo,
     catalogo: catalogo.tabelas,
     medicos: medicos.tabelas,
+    prioridadesOperacao,
   });
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
@@ -57,6 +63,7 @@ async function migrarLegado() {
       legadoCatalogo: legado.catalogo,
       catalogo: catalogo.tabelas,
       medicos: medicos.tabelas,
+      prioridadesOperacao,
       usuarios: await db.select({ id: usuarios.id, email: usuarios.email }).from(usuarios),
       hoje: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()),
     });

@@ -210,7 +210,7 @@ export function agruparPorPaciente(
 }
 
 /**
- * Filtro de prioridade da rodada (ids do catálogo): devolve os exames que ficam de fora. O pacote
+ * Filtro de prioridade da rodada (ids das prioridades da operação): devolve os exames que ficam de fora. O pacote
  * do paciente não se parte: se um exame dele passa, os outros vão junto.
  */
 export function recortarPrioridades(

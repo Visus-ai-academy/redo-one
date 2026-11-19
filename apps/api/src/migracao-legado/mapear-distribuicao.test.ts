@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { idDoLegado } from './comum';
 import type { LegadoArranjo, LegadoCatalogo, LegadoDistribuicao, LegadoMedicos } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
+import { prioridadesOperacaoDaCarga } from './mapear-configuracao-distribuicao';
 import { type ContextoDistribuicao, mapearDistribuicao } from './mapear-distribuicao';
 import { mapearMedicos } from './mapear-medicos';
 
@@ -106,7 +107,9 @@ const contexto: ContextoDistribuicao = {
     equipes: [{ id: 'eq1', nome: 'Equipe 2', plantao: true, ...lista }],
     equipesMembros: [],
   }).tabelas,
+  prioridadesOperacao: prioridadesOperacaoDaCarga(),
 };
+const idOperacao = (nome: string) => idDoLegado('prioridades_operacao', nome);
 
 const id = {
   neuro: catalogo.especialidades.find((e) => e.nome === 'NEURO')?.id,
@@ -114,8 +117,6 @@ const id = {
   ct: catalogo.modalidades.find((m) => m.codigo === 'CT')?.id,
   rx: catalogo.modalidades.find((m) => m.codigo === 'RX')?.id,
   cranio: catalogo.subespecialidades.find((s) => s.nome === 'CRÂNIO')?.id,
-  rotina: catalogo.prioridades.find((p) => p.nome === 'ROTINA')?.id,
-  urgencia: catalogo.prioridades.find((p) => p.nome === 'URGÊNCIA')?.id,
   m1: idDoLegado('medicos', 'm1'),
   eq1: idDoLegado('equipes', 'eq1'),
   clA: idDoLegado('clientes', 'cl-A'),
@@ -185,8 +186,8 @@ describe('mapearDistribuicao', () => {
       { arranjoId: aid, subespecialidadeId: id.cranio },
     ]);
     expect(r.tabelas.arranjosPrioridades).toEqual([
-      { arranjoId: aid, prioridadeId: id.rotina },
-      { arranjoId: aid, prioridadeId: id.urgencia },
+      { arranjoId: aid, prioridadeId: idOperacao('ROTINA') },
+      { arranjoId: aid, prioridadeId: idOperacao('URGÊNCIA') },
     ]);
     expect(r.tabelas.arranjosClientes).toEqual([
       { arranjoId: aid, clienteId: id.clA },
@@ -197,16 +198,19 @@ describe('mapearDistribuicao', () => {
     expect(r.avisos).toEqual([]);
   });
 
-  it('grafias da MobileMed viram as prioridades do catálogo, sem repetir', () => {
+  it('grafias da MobileMed viram as prioridades da operação, sem repetir (Internado à parte da Rotina)', () => {
     const r = mapear({
       arranjosMedico: [
-        doMedico({ prioridades: ['Rotina', 'Ambulatório', 'Internado', 'Urgência', 'Emergência'] }),
+        doMedico({ prioridades: ['Rotina', 'Ambulatório', 'Internado', 'Urgência', 'Urgencia'] }),
+        doMedico({ id: 'r2', prioridades: ['Rotina'] }),
       ],
     });
-    expect(r.tabelas.arranjosPrioridades.map((p) => p.prioridadeId)).toEqual([
-      id.rotina,
-      id.urgencia,
-    ]);
+    const de = (arranjo: string) =>
+      r.tabelas.arranjosPrioridades
+        .filter((p) => p.arranjoId === idDoLegado('medico_regras_distribuicao', arranjo))
+        .map((p) => p.prioridadeId);
+    expect(de('r1')).toEqual(['ROTINA', 'AMBULATÓRIO', 'INTERNADO', 'URGÊNCIA'].map(idOperacao));
+    expect(de('r2')).toEqual([idOperacao('ROTINA')]);
   });
 
   it('MAMO vira MAMA; GERAL fica de fora com aviso (só casava exame GERAL, que não existe)', () => {

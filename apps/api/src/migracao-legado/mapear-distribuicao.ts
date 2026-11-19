@@ -8,9 +8,11 @@ import type {
   arranjosSubespecialidades,
   medicosDistribuicao,
 } from '../database/schema';
+import type { PrioridadeOperacao } from '../distribuicao/domain/motor/prioridades-operacao';
 import { type Aviso, idDoLegado, texto } from './comum';
 import type { LegadoArranjo, LegadoCatalogo, LegadoDistribuicao } from './legado';
 import { type CatalogoMigrado, chaveCadastro } from './mapear-catalogo';
+import { prioridadeOperacaoDaGrafia } from './mapear-configuracao-distribuicao';
 import type { MedicosMigrados } from './mapear-medicos';
 
 /** O que a distribuição precisa do resto da carga. */
@@ -18,6 +20,8 @@ export interface ContextoDistribuicao {
   legadoCatalogo: LegadoCatalogo;
   catalogo: CatalogoMigrado['tabelas'];
   medicos: MedicosMigrados['tabelas'];
+  /** O recorte de prioridade do arranjo é pelas prioridades da operação (19/11/2026). */
+  prioridadesOperacao: readonly Pick<PrioridadeOperacao, 'id' | 'nome' | 'grafias'>[];
 }
 
 type Linha<T extends { $inferInsert: unknown }> = T['$inferInsert'];
@@ -78,12 +82,8 @@ export function mapearDistribuicao(
   const subPorNome = new Map(
     c.subespecialidades.map((s) => [chaveCadastro(s.nome), s.id as string]),
   );
-  const prioridadePorGrafia = new Map([
-    ...c.prioridades.map((p) => [chaveCadastro(p.nome), p.id as string] as const),
-    ...c.prioridadesDePara
-      .filter((d) => d.ativo !== false)
-      .map((d) => [chaveCadastro(d.origem), d.prioridadeId] as const),
-  ]);
+  // A chave é a do de-para da operação; `chaveCadastro` também tira acento e caixa.
+  const prioridadePorGrafia = prioridadeOperacaoDaGrafia(ctx.prioridadesOperacao);
   const especialidadeLegada = new Map(ctx.legadoCatalogo.especialidades.map((e) => [e.id, e]));
   const clientesMigrados = new Set(c.clientes.map((x) => x.id));
   const examesMigrados = new Set(c.exames.map((x) => x.id as string));

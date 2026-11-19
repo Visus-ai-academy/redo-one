@@ -268,7 +268,6 @@ export function montarEntrada(p: {
     const exclusivo = reservadoPara(reservas, {
       ...c,
       clienteId,
-      prioridadeId: null,
       prioridadeOperacaoId: null,
       urgente: false,
       restanteMin: null,
@@ -365,7 +364,6 @@ export function montarEntrada(p: {
       ajustes: insumos.ajustes,
       regrasFrente: insumos.regrasFrente,
       config: configuracaoDoMotor(insumos.config),
-      traduzirPrioridade: catalogo.traduzirPrioridade,
       prioridadesOperacao: insumos.prioridadesOperacao,
       gradeRecebimento: insumos.gradeRecebimento,
       prioridadesCliente: insumos.prioridadesCliente,

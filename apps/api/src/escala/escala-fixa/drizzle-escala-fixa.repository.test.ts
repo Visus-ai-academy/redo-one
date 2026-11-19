@@ -44,7 +44,7 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
     await db.execute(
       sql`truncate table eventos_auditoria, ajustes_produtividade, alocacoes_prioridades,
         alocacoes_subespecialidades, alocacoes, turnos_frentes, turnos, frentes_escala,
-        especialidades, prioridades, usuarios, papeis, medicos, usuarios_escopos_escala cascade`,
+        especialidades, prioridades_operacao, usuarios, papeis, medicos, usuarios_escopos_escala cascade`,
     );
     const [lista, manha] = await db
       .insert(schema.turnos)
@@ -69,7 +69,10 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
         { nome: 'Bruno Lima', chaveNormalizada: 'bruno lima' },
       ])
       .returning();
-    const [urgente] = await db.insert(schema.prioridades).values({ nome: 'URGENTE' }).returning();
+    const [urgente] = await db
+      .insert(schema.prioridadesOperacao)
+      .values({ nome: 'URGENTE', posicao: 1, urgencia: 'sempre' })
+      .returning();
     const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão' }).returning();
     const [usuario, gestora] = await db
       .insert(schema.usuarios)

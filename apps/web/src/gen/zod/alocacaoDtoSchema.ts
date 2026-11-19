@@ -17,7 +17,7 @@ export const alocacaoDtoSchema = z.object({
   dataFim: z.iso.date().nullish().describe('Ausente ou nulo = escala fixa, sem fim.'),
   produtividade: z.int().min(0).nullish().describe('Registros por turno; nulo = não informado. No gratificado, a cota do período.'),
   gratificado: z.boolean().optional().describe('Só em turno lista. Ausente: falso ao criar; na edição, mantém o atual.'),
-  prioridadeIds: z.array(z.uuid()).optional().describe('Vazio = sem recorte.'),
+  prioridadeIds: z.array(z.uuid()).optional().describe('Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.'),
   subespecialidadeIds: z.array(z.uuid()).optional().describe('Vazio = sem recorte.'),
   subespecialidadeGeral: z.boolean().optional().describe('O recorte de subespecialidade inclui o geral.'),
   observacoes: z.string().max(500).nullish(),

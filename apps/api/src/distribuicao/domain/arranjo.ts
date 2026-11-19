@@ -11,7 +11,7 @@ export interface Arranjo {
   modalidadeIds: string[];
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
-  /** Prioridades do catálogo (PLANTÃO, ROTINA, URGÊNCIA); as grafias da MobileMed entram pelas variações. */
+  /** Prioridades da operação (Internado, Ambulatório etc. separados); a grafia entra pelo de-para delas. */
   prioridadeIds: string[];
   modoClientes: ModoVinculo;
   clienteIds: string[];

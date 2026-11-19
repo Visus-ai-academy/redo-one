@@ -11,7 +11,7 @@ export const arranjoDtoSchema = z.object({
   modalidadeIds: z.array(z.uuid()).describe('Modalidades; vazia = todas.'),
   subespecialidadeIds: z.array(z.uuid()).describe('Segmentos; vazia e sem o geral = todos.'),
   subespecialidadeGeral: z.boolean().describe('O recorte de segmento inclui o exame sem segmento (geral).'),
-  prioridadeIds: z.array(z.uuid()).describe('Prioridades do catálogo; vazia = todas.'),
+  prioridadeIds: z.array(z.uuid()).describe('Prioridades da operação (Configurações › Distribuição); vazia = todas.'),
   modoClientes: modoVinculoSchema,
   clienteIds: z.array(z.uuid()).describe('Clientes, lidos conforme o modo.'),
   modoExames: modoVinculoSchema,

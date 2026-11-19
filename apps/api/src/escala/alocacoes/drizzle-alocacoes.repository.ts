@@ -12,7 +12,7 @@ import {
   eventosAuditoria,
   frentesEscala,
   medicos,
-  prioridades,
+  prioridadesOperacao,
   turnos,
 } from '../../database/schema';
 import { lerSegmentos } from '../../database/segmentos';
@@ -108,9 +108,9 @@ export class DrizzleAlocacoesRepository implements AlocacoesRepository {
   async prioridadesExistentes(ids: string[]) {
     if (!ids.length) return [];
     const linhas = await this.db
-      .select({ id: prioridades.id })
-      .from(prioridades)
-      .where(inArray(prioridades.id, ids));
+      .select({ id: prioridadesOperacao.id })
+      .from(prioridadesOperacao)
+      .where(inArray(prioridadesOperacao.id, ids));
     return linhas.map((l) => l.id);
   }
 

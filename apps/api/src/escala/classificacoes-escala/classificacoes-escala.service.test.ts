@@ -18,8 +18,8 @@ describe('ClassificacoesEscalaService', () => {
   it('devolve prioridades e subespecialidades, inativas inclusive', async () => {
     const dados: ClassificacoesEscala = {
       prioridades: [
-        { id: 'p-urg', nome: 'Urgente', ativo: true },
-        { id: 'p-velha', nome: 'Antiga', ativo: false },
+        { id: 'p-urg', nome: 'URGÊNCIA', cor: '#B5535A' },
+        { id: 'p-int', nome: 'INTERNADO', cor: null },
       ],
       subespecialidades: [{ id: 's-avc', nome: 'AVC', ativo: true, especialidadeIds: ['e-neuro'] }],
     };

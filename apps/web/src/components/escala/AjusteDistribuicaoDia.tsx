@@ -15,7 +15,7 @@ type Props = {
   alocacaoId: string;
   /** Dia do plantão, AAAA-MM-DD. */
   data: string;
-  /** Prioridades do catálogo (`GET /escala/classificacoes`), inativas inclusive. */
+  /** Prioridades da operação (`GET /escala/classificacoes`). */
   prioridades: PrioridadeEscalaDto[];
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
   /** Grava o ajuste; vazio (nada liberado, a Lista como sempre e sem extra) tira o do dia. */
@@ -150,10 +150,7 @@ function FormAjuste({
         laudosExtra: Number(value.laudosExtra || 0),
       }),
   });
-  // Inativa só aparece se já estiver marcada.
-  const opcoes = prioridades
-    .filter((p) => p.ativo || inicial.prioridadeIdsLiberadas.includes(p.id))
-    .map((p) => ({ valor: p.id, rotulo: p.ativo ? p.nome : `${p.nome} (inativa)` }));
+  const opcoes = prioridades.map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor }));
 
   return (
     <form

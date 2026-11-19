@@ -20,8 +20,6 @@ const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 const MI = 'esp-mi';
 const MSK = 'esp-msk';
 const CT = 'mod-ct';
-const ROTINA = 'pri-rotina';
-const URGENCIA = 'pri-urgencia';
 const OP_ROTINA = 'op-rotina';
 const OP_URGENCIA = 'op-urgencia';
 /** A Lista: rotina só com mais de 24 h; urgência não entra. */
@@ -92,7 +90,6 @@ const exame = (id: string, p: Partial<ExameElegivel> = {}): ExameElegivel => ({
   especialidadesDoSegmento: [],
   modalidadeId: CT,
   subespecialidadeId: null,
-  prioridadeId: ROTINA,
   prioridadeOperacaoId: OP_ROTINA,
   urgente: false,
   exameId: null,
@@ -129,7 +126,7 @@ const montar = ({
     ajustes: [],
     config: CONFIG,
     grade: new GradeRecebimento(geral, regras),
-    prioridadeIdsUrgenciaCatalogo: [URGENCIA],
+    prioridadeIdsUrgentes: [OP_URGENCIA],
     cotaEntregue: {},
     ...p,
     regras,
@@ -252,7 +249,6 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
 
   it('a Lista com urgência marcada na alocação recebe a urgência curta pelo SLA', () => {
     const urgencia = exame('urg', {
-      prioridadeId: URGENCIA,
       prioridadeOperacaoId: OP_URGENCIA,
       urgente: true,
       restanteMin: 60,
@@ -267,13 +263,13 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
     const marcada = montar({
       geral: GRADE_LISTA,
       exames: [urgencia],
-      ocorrencias: [lista([ROTINA, URGENCIA])],
+      ocorrencias: [lista([OP_ROTINA, OP_URGENCIA])],
     });
     expect(doMedico(marcada, 'A')?.elegivelPara('urg')).toBe(true);
     const soRotina = montar({
       geral: GRADE_LISTA,
       exames: [urgencia],
-      ocorrencias: [lista([ROTINA])],
+      ocorrencias: [lista([OP_ROTINA])],
     });
     expect(doMedico(soRotina, 'A')?.elegivelPara('urg')).toBe(false);
   });
@@ -486,13 +482,13 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
 
   it('prioridade liberada fura o arranjo e o recorte do período', () => {
     const base = {
-      medicos: [medico('A', [arranjo({ prioridadeIds: [ROTINA] })])],
-      exames: [exame('u', { prioridadeId: URGENCIA })],
+      medicos: [medico('A', [arranjo({ prioridadeIds: [OP_ROTINA] })])],
+      exames: [exame('u', { prioridadeOperacaoId: OP_URGENCIA })],
     };
     expect(doMedico(montar(base), 'A')?.elegivelPara('u')).toBe(false);
     const r = montar({
       ...base,
-      ajustes: [ajuste({ laudosExtra: 0, prioridadeIdsLiberadas: [URGENCIA] })],
+      ajustes: [ajuste({ laudosExtra: 0, prioridadeIdsLiberadas: [OP_URGENCIA] })],
     });
     expect(doMedico(r, 'A')?.elegivelPara('u')).toBe(true);
   });

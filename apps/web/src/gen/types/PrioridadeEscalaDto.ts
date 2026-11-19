@@ -11,5 +11,9 @@ export type PrioridadeEscalaDto = {
    */
   id: string;
   nome: string;
-  ativo: boolean;
+  /**
+   * @description Hex `#RRGGBB`; null = neutra.
+   * @type string
+   */
+  cor: string | null;
 };

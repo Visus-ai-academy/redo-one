@@ -22,9 +22,13 @@ export async function buscarExames(termo: string): Promise<OpcaoBusca[]> {
   return exames.map((e) => ({ valor: e.id, rotulo: e.nome, detalhe: e.modalidade }));
 }
 
-/** Opções ativas do catálogo que o editor de arranjos oferece. */
+/**
+ * Opções ativas do catálogo que o editor de arranjos oferece. As prioridades não: o recorte é pelas
+ * da operação, que vêm com os arranjos do dono.
+ */
 export function useCatalogoDoArranjo() {
   const consulta = useQuery(opcoesControllerListasQueryOptions());
-  const catalogo: ArranjosDistribuicaoProps['catalogo'] | undefined = consulta.data;
+  const catalogo: Omit<ArranjosDistribuicaoProps['catalogo'], 'prioridades'> | undefined =
+    consulta.data;
   return { catalogo, erro: consulta.isError, tentarDeNovo: () => void consulta.refetch() };
 }

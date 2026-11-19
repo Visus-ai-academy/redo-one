@@ -60,7 +60,7 @@ export interface AlocacoesRepository {
   coberturasDe(titularId: string): Promise<AlocacaoGravada[]>;
   turno(id: string): Promise<TurnoParaAlocar | null>;
   medico(id: string): Promise<{ ativo: boolean } | null>;
-  /** Os ids pedidos que existem. */
+  /** Os ids pedidos que existem entre as prioridades da operação (o recorte é por elas). */
   prioridadesExistentes(ids: string[]): Promise<string[]>;
   /** Os segmentos pedidos que existem, com as especialidades em que existem. */
   segmentos(ids: string[]): Promise<Segmento[]>;
