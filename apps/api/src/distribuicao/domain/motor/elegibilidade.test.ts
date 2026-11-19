@@ -316,7 +316,7 @@ describe('porQuePeriodoRecusa', () => {
   const ctx = (p: Partial<ContextoPeriodo> = {}): ContextoPeriodo => ({
     escalaRestringeEspecialidade: true,
     grade: new GradeRecebimento(GERAL, regras),
-    prioridadeIdsUrgentes: [OP_URGENCIA],
+    prioridadeIdsQueFuramGrade: [OP_URGENCIA],
     ...p,
   });
   const periodo = (p: Partial<PeriodoEscala> = {}): PeriodoEscala => ({
@@ -478,7 +478,7 @@ describe('porQuePeriodoRecusa', () => {
     expect(porQuePeriodoRecusa(lista, exame({ restanteMin: 60 }), ctx())).toMatch(/mínimo de 24h/);
   });
 
-  it('alocação com URGÊNCIA marcada recebe pelo SLA o que a operação trata como urgência (HPRIMAVERA, RX)', () => {
+  it('alocação com URGÊNCIA marcada recebe a urgência pelo SLA (HPRIMAVERA, RX)', () => {
     const listaRx = periodo({
       turnoId: LISTA,
       lista: true,
@@ -488,44 +488,66 @@ describe('porQuePeriodoRecusa', () => {
     const urgRx = urgencia({ modalidadeId: RX, restanteMin: 60 });
     expect(porQuePeriodoRecusa(listaRx, urgRx, ctx())).toBeNull();
     expect(porQuePeriodoRecusa(listaRx, { ...urgRx, restanteMin: -30 }, ctx())).toBeNull();
-    // O AMBULATÓRIO perto do prazo é urgência da operação: entra também (marcado na alocação).
-    const ambulatorioUrgente = exame({
-      modalidadeId: RX,
-      prioridadeOperacaoId: OP_AMBULATORIO,
-      urgente: true,
-      restanteMin: 600,
-    });
-    expect(porQuePeriodoRecusa(listaRx, ambulatorioUrgente, ctx())).toBeNull();
     // Sem a URGÊNCIA marcada na alocação (ou sem recorte), vale a célula.
     expect(
-      porQuePeriodoRecusa(
-        { ...listaRx, prioridadeIds: [OP_ROTINA, OP_AMBULATORIO] },
-        ambulatorioUrgente,
-        ctx(),
-      ),
+      porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [OP_ROTINA] }, urgRx, ctx()),
     ).not.toBeNull();
     expect(porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [] }, urgRx, ctx())).not.toBeNull();
     // Só o que é urgência: a rotina curta continua barrada.
     expect(
       porQuePeriodoRecusa(listaRx, exame({ modalidadeId: RX, restanteMin: 60 }), ctx()),
     ).not.toBeNull();
-    // O recorte da alocação continua: a urgência marcada não abre a prioridade que ela não aceita.
+  });
+
+  it('só a prioridade do próprio exame fura (19/11): o AMBULATÓRIO perto do prazo segue a célula, a menos que tenha a marca', () => {
+    const listaRx = periodo({
+      turnoId: LISTA,
+      lista: true,
+      frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: RX },
+      prioridadeIds: [OP_ROTINA, OP_URGENCIA, OP_AMBULATORIO],
+    });
+    const ambulatorioUrgente = exame({
+      modalidadeId: RX,
+      prioridadeOperacaoId: OP_AMBULATORIO,
+      urgente: true,
+      restanteMin: 600,
+    });
+    expect(porQuePeriodoRecusa(listaRx, ambulatorioUrgente, ctx())).toMatch(/mínimo de 24h/);
+    const furaNoAmbulatorio = ctx({ prioridadeIdsQueFuramGrade: [OP_URGENCIA, OP_AMBULATORIO] });
+    expect(porQuePeriodoRecusa(listaRx, ambulatorioUrgente, furaNoAmbulatorio)).toBeNull();
+    // A marca vale só para o urgente: o Ambulatório longe do prazo segue a célula.
     expect(
-      porQuePeriodoRecusa({ ...listaRx, prioridadeIds: [OP_URGENCIA] }, ambulatorioUrgente, ctx()),
+      porQuePeriodoRecusa(
+        listaRx,
+        { ...ambulatorioUrgente, urgente: false, restanteMin: 20 * 60 },
+        furaNoAmbulatorio,
+      ),
+    ).not.toBeNull();
+    // A prioridade do exame precisa estar marcada na alocação.
+    expect(
+      porQuePeriodoRecusa(
+        { ...listaRx, prioridadeIds: [OP_URGENCIA] },
+        ambulatorioUrgente,
+        furaNoAmbulatorio,
+      ),
     ).not.toBeNull();
   });
 
-  it('a urgência pela alocação vale em qualquer turno e só para as prioridades da operação sempre urgentes', () => {
+  it('a marca vale em qualquer turno: a ROTINA urgente na frente de CARDIO segue a célula da Manhã sem ela', () => {
     const manhaCardio = periodo({
       frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null },
       prioridadeIds: [OP_ROTINA, OP_URGENCIA],
     });
     // Uma ROTINA tratada como urgência na frente (sobrescrita) com 30 h, na Manhã de CARDIO (48 h).
     const rotinaUrgente = exame({ especialidadeId: CARDIO, urgente: true, restanteMin: 30 * 60 });
-    expect(porQuePeriodoRecusa(manhaCardio, rotinaUrgente, ctx())).toBeNull();
+    expect(porQuePeriodoRecusa(manhaCardio, rotinaUrgente, ctx())).toMatch(/mínimo de 48h/);
     expect(
-      porQuePeriodoRecusa(manhaCardio, rotinaUrgente, ctx({ prioridadeIdsUrgentes: [] })),
-    ).not.toBeNull();
+      porQuePeriodoRecusa(
+        manhaCardio,
+        rotinaUrgente,
+        ctx({ prioridadeIdsQueFuramGrade: [OP_URGENCIA, OP_ROTINA] }),
+      ),
+    ).toBeNull();
     const listaMi = periodo({
       turnoId: LISTA,
       lista: true,
@@ -534,6 +556,66 @@ describe('porQuePeriodoRecusa', () => {
     expect(
       porQuePeriodoRecusa(listaMi, exame({ prioridadeOperacaoId: OP_PLANTAO }), ctx()),
     ).not.toBeNull();
+    expect(
+      porQuePeriodoRecusa(listaMi, urgencia(), ctx({ prioridadeIdsQueFuramGrade: [] })),
+    ).toMatch(/não recebe/);
+  });
+
+  describe('Internado na Lista (19/11/2026: "se não tiver configurado que o Internado segue o SLA, não deve")', () => {
+    // A Lista como no legado: marca as quatro; só a URGÊNCIA fura a grade pela alocação.
+    const listaInteira = periodo({
+      turnoId: LISTA,
+      lista: true,
+      prioridadeIds: [OP_ROTINA, OP_URGENCIA, OP_AMBULATORIO, OP_INTERNADO],
+    });
+    const internadoUrgente = exame({
+      prioridadeOperacaoId: OP_INTERNADO,
+      urgente: true,
+      restanteMin: 10 * 60,
+    });
+    const comCelulaInternado = (regra: CelulaRecebimento['regra']) =>
+      ctx({
+        grade: new GradeRecebimento(
+          [...GERAL, { prioridadeOperacaoId: OP_INTERNADO, turnoId: LISTA, regra }],
+          regras,
+        ),
+      });
+
+    it('célula "prazo mínimo 24 h": o Internado com prazo abaixo de 24 h fica de fora, mesmo com a URGÊNCIA marcada', () => {
+      const c = comCelulaInternado({ tipo: 'prazo_minimo', horas: 24 });
+      expect(porQuePeriodoRecusa(listaInteira, internadoUrgente, c)).toBe(
+        'Recebimento: o prazo (10h) não passa do mínimo de 24h deste turno. A urgência marcada na alocação só fura a grade nas prioridades com essa opção ligada.',
+      );
+      expect(
+        porQuePeriodoRecusa(listaInteira, { ...internadoUrgente, restanteMin: 30 * 60 }, c),
+      ).toBeNull();
+      expect(
+        porQuePeriodoRecusa(
+          { ...listaInteira, prioridadeIds: [OP_INTERNADO] },
+          internadoUrgente,
+          c,
+        ),
+      ).not.toBeNull();
+    });
+
+    it('célula "segue o SLA": o Internado entra com qualquer prazo', () => {
+      const c = comCelulaInternado({ tipo: 'segue_sla' });
+      expect(porQuePeriodoRecusa(listaInteira, internadoUrgente, c)).toBeNull();
+      expect(
+        porQuePeriodoRecusa(listaInteira, { ...internadoUrgente, restanteMin: -30 }, c),
+      ).toBeNull();
+    });
+
+    it('a URGÊNCIA marcada continua furando o "não recebe" da Lista; ligada no Internado, ele fura também', () => {
+      const c = comCelulaInternado({ tipo: 'prazo_minimo', horas: 24 });
+      expect(porQuePeriodoRecusa(listaInteira, urgencia({ restanteMin: 60 }), c)).toBeNull();
+      expect(
+        porQuePeriodoRecusa(listaInteira, internadoUrgente, {
+          ...c,
+          prioridadeIdsQueFuramGrade: [OP_URGENCIA, OP_INTERNADO],
+        }),
+      ).toBeNull();
+    });
   });
 
   describe('recorte de prioridade pela prioridade da operação (19/11/2026, como a grafia do legado)', () => {

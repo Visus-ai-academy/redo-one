@@ -23,6 +23,7 @@ const URGENCIA: PrioridadeOperacao = {
   nome: 'URGÊNCIA',
   posicao: 1,
   urgencia: { tipo: 'sempre' },
+  furaGradeNaAlocacao: true,
   padrao: false,
   cor: null,
   grafias: [
@@ -41,6 +42,7 @@ const AMBULATORIO: PrioridadeOperacao = {
   nome: 'AMBULATÓRIO',
   posicao: 2,
   urgencia: { tipo: 'prazo', horas: 24 },
+  furaGradeNaAlocacao: false,
   padrao: false,
   cor: null,
   grafias: ['Ambulatório', 'Ambulatorio'],
@@ -50,6 +52,7 @@ const ROTINA: PrioridadeOperacao = {
   nome: 'ROTINA',
   posicao: 3,
   urgencia: { tipo: 'nunca' },
+  furaGradeNaAlocacao: false,
   padrao: true,
   cor: null,
   grafias: ['Rotina', 'P4', 'P4.Rotina+', 'P5', 'P5.Rotina'],

@@ -37,7 +37,12 @@ describe('arranjos', () => {
   });
 
   it('consulta os arranjos do médico com os nomes dos clientes e exames marcados e as prioridades da operação', async () => {
-    const base = { urgencia: { tipo: 'nunca' as const }, padrao: false, grafias: [] };
+    const base = {
+      urgencia: { tipo: 'nunca' as const },
+      furaGradeNaAlocacao: false,
+      padrao: false,
+      grafias: [],
+    };
     await prioridades.salvar({ id: 'op-rot', nome: 'ROTINA', posicao: 3, cor: '#5A9A64', ...base });
     await prioridades.salvar({ id: 'op-urg', nome: 'URGÊNCIA', posicao: 1, cor: null, ...base });
     cadastros.nomes.set('c1', 'CLINIMAGEM');

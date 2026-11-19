@@ -8,6 +8,7 @@ const op = (id: string, grafias: string[], padrao = false): PrioridadeOperacao =
   nome: id,
   posicao: 1,
   urgencia: { tipo: 'nunca' },
+  furaGradeNaAlocacao: false,
   padrao,
   grafias,
   cor: null,

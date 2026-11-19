@@ -29,6 +29,11 @@ export interface PrioridadeOperacao {
   /** 1 = primeiro na fila; empate permitido. */
   posicao: number;
   urgencia: RegraUrgencia;
+  /**
+   * Marcada na alocação, o exame urgente desta prioridade segue o SLA mesmo contra a célula da
+   * grade (19/11/2026: ligada só na URGÊNCIA; o INTERNADO segue a célula).
+   */
+  furaGradeNaAlocacao: boolean;
   /** Vale para a grafia sem de-para (e para o exame sem prioridade). */
   padrao: boolean;
   /** Grafias da MobileMed que caem nesta prioridade. */

@@ -52,6 +52,7 @@ const op = (id: string, posicao: number, urg: PrioridadeOperacao['urgencia'], gr
     id,
     nome: id,
     posicao,
+    furaGradeNaAlocacao: false,
     urgencia: urg,
     padrao: id === 'op-rotina',
     grafias,

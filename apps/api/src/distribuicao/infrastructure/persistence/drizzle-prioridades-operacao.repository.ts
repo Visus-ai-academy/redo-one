@@ -49,6 +49,7 @@ export class DrizzlePrioridadesOperacaoRepository implements PrioridadesOperacao
       nome: l.nome,
       posicao: l.posicao,
       urgencia: urgenciaDa(l),
+      furaGradeNaAlocacao: l.furaGradeNaAlocacao,
       padrao: l.padrao,
       cor: l.cor,
       grafias: (grafiasDe.get(l.id) ?? []).sort((a, b) => a.localeCompare(b, 'pt-BR')),
@@ -126,6 +127,7 @@ export class DrizzlePrioridadesOperacaoRepository implements PrioridadesOperacao
     return {
       nome: p.nome,
       posicao: p.posicao,
+      furaGradeNaAlocacao: p.furaGradeNaAlocacao,
       padrao: p.padrao,
       cor: p.cor,
       ...linhaDaUrgencia(p.urgencia),

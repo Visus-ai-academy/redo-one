@@ -62,14 +62,16 @@ const SEM_RECOLHIMENTO = ['CARDIO', 'MAMA'];
 /**
  * Prioridades da operação (decisão do usuário de 18/11/2026): posição, urgência e grafias da
  * MobileMed. ROTINA é a padrão (grafia sem de-para). INTERNADO é urgência na distribuição (19/11,
- * como o `prioridadesUrgentes` do dashboards-one), mas segue ROTINA no catálogo (preço). Viram
- * dado editável em Configurações › Distribuição; a carga só semeia.
+ * como o `prioridadesUrgentes` do dashboards-one), mas segue ROTINA no catálogo (preço). Só a
+ * URGÊNCIA fura a grade pela alocação (19/11, como `checar-casa-arranjo.ts`: "só URGENCIA fura o
+ * prazo mínimo"). Viram dado editável em Configurações › Distribuição; a carga só semeia.
  */
 const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
   {
     nome: 'URGÊNCIA',
     posicao: 1,
     urgencia: { tipo: 'sempre' },
+    furaGradeNaAlocacao: true,
     padrao: false,
     cor: null,
     grafias: [
@@ -87,6 +89,7 @@ const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
     nome: 'AMBULATÓRIO',
     posicao: 2,
     urgencia: { tipo: 'prazo', horas: 24 },
+    furaGradeNaAlocacao: false,
     padrao: false,
     cor: null,
     grafias: ['Ambulatório', 'Ambulatorio'],
@@ -95,6 +98,7 @@ const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
     nome: 'INTERNADO',
     posicao: 3,
     urgencia: { tipo: 'sempre' },
+    furaGradeNaAlocacao: false,
     padrao: false,
     cor: null,
     grafias: ['Internado', 'P3', 'P3.Internado'],
@@ -103,6 +107,7 @@ const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
     nome: 'ROTINA',
     posicao: 3,
     urgencia: { tipo: 'nunca' },
+    furaGradeNaAlocacao: false,
     padrao: true,
     cor: null,
     grafias: ['Rotina', 'P4', 'P4.Rotina+', 'P5', 'P5.Rotina'],
@@ -111,6 +116,7 @@ const PRIORIDADES_OPERACAO: Omit<PrioridadeOperacao, 'id'>[] = [
     nome: 'PLANTÃO',
     posicao: 3,
     urgencia: { tipo: 'nunca' },
+    furaGradeNaAlocacao: false,
     padrao: false,
     cor: null,
     grafias: ['Plantão', 'Plantao'],

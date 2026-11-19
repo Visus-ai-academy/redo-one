@@ -126,7 +126,7 @@ const montar = ({
     ajustes: [],
     config: CONFIG,
     grade: new GradeRecebimento(geral, regras),
-    prioridadeIdsUrgentes: [OP_URGENCIA],
+    prioridadeIdsQueFuramGrade: [OP_URGENCIA],
     cotaEntregue: {},
     ...p,
     regras,

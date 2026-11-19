@@ -208,9 +208,9 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       marcador: marcadores.find((m) => nomeNormal.includes(m)) ?? null,
     };
   });
-  // Marcada na alocação, faz o período receber as urgências (ver `urgenciaPelaAlocacao`).
-  const prioridadeIdsUrgentes = entrada.prioridadesOperacao
-    .filter((p) => p.urgencia.tipo === 'sempre')
+  // Marcada na alocação, o urgente dela segue o SLA contra a grade (ver `furaPelaAlocacao`).
+  const prioridadeIdsQueFuramGrade = entrada.prioridadesOperacao
+    .filter((p) => p.furaGradeNaAlocacao)
     .map((p) => p.id);
 
   // --- recusas antes do motor ---
@@ -307,7 +307,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     regras,
     config,
     grade: new GradeRecebimento(entrada.gradeRecebimento, regras),
-    prioridadeIdsUrgentes,
+    prioridadeIdsQueFuramGrade,
     cotaEntregue: entrada.cotaEntregue,
     ...(filtro.turnoIds ? { filtroTurnoIds: filtro.turnoIds } : {}),
     ...(frentes.length ? { filtroFrentes: frentes } : {}),

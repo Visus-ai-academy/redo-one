@@ -22,6 +22,7 @@ const AMBULATORIO = {
   nome: 'AMBULATÓRIO',
   posicao: 2,
   urgencia: { tipo: 'prazo' as const, horas: 24 },
+  furaGradeNaAlocacao: true,
   padrao: false,
   grafias: ['Ambulatório'],
   cor: '#5677B8',

@@ -21,6 +21,7 @@ const edicao = (p: Partial<EdicaoPrioridadeOperacao> = {}): EdicaoPrioridadeOper
   nome: 'AMBULATÓRIO',
   posicao: 2,
   urgencia: { tipo: 'prazo', horas: 24 },
+  furaGradeNaAlocacao: false,
   padrao: false,
   grafias: ['Ambulatório', 'P6'],
   cor: null,

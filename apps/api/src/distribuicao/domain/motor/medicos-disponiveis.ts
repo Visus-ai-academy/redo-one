@@ -137,7 +137,7 @@ export interface EntradaMedicos {
   /** Grade de recebimento prioridade da operação × turno (com as sobrescritas das frentes). */
   grade: GradeRecebimento;
   /** Prioridades da operação que marcam urgência na alocação (ver `ContextoPeriodo`). */
-  prioridadeIdsUrgentes: readonly string[];
+  prioridadeIdsQueFuramGrade: readonly string[];
   /** Alocação gratificada → o que já foi executado por ela (abate a cota). */
   cotaEntregue: Readonly<Record<string, number>>;
   /** Turnos que a rodada atende; vazio ou ausente = todos. */
@@ -445,7 +445,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
       const ctx = {
         escalaRestringeEspecialidade: config.escalaRestringeEspecialidade,
         grade: entrada.grade,
-        prioridadeIdsUrgentes: entrada.prioridadeIdsUrgentes,
+        prioridadeIdsQueFuramGrade: entrada.prioridadeIdsQueFuramGrade,
         prioridadesLiberadas,
         segueSlaNoDia: ajustes.some((a) => a.segueSla),
       };

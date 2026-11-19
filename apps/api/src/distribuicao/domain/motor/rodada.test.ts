@@ -17,7 +17,16 @@ const op = (
   urgencia: PrioridadeOperacao['urgencia'],
   grafias: string[],
   padrao = false,
-): PrioridadeOperacao => ({ id, nome: id, posicao, urgencia, padrao, grafias, cor: null });
+): PrioridadeOperacao => ({
+  id,
+  nome: id,
+  posicao,
+  urgencia,
+  furaGradeNaAlocacao: id === 'op-urgencia',
+  padrao,
+  grafias,
+  cor: null,
+});
 const PRIORIDADES_OPERACAO = [
   op('op-urgencia', 1, { tipo: 'sempre' }, ['Urgência', 'Emergência']),
   op('op-ambulatorio', 2, { tipo: 'prazo', horas: 24 }, ['Ambulatório']),
@@ -169,7 +178,7 @@ describe('rodarMotor', () => {
     }
   });
 
-  it('a alocação que marca INTERNADO (sempre urgente) recebe o Internado pelo SLA, contra a célula', () => {
+  it('o Internado segue a célula na Lista que marca URGÊNCIA e INTERNADO; só fura com a marca ligada nele (19/11)', () => {
     const grade: CelulaRecebimento[] = [
       {
         prioridadeOperacaoId: 'op-internado',
@@ -177,26 +186,28 @@ describe('rodarMotor', () => {
         regra: { tipo: 'prazo_minimo', horas: 48 },
       },
     ];
-    const lista = (medicoId: string, prioridadeIds: string[]) =>
-      oc(medicoId, {
-        alocacaoId: `l-${medicoId}`,
-        turnoId: 'lista',
-        turnoTipo: 'lista',
-        fim: br('2026-11-18T07:00'),
-        prioridadeIds,
-      });
-    const soRotina = rodar({
-      exames: [exame({ id: 'int', prioridade: 'Internado' })],
-      ocorrencias: [lista('A', ['op-rotina'])],
-      gradeRecebimento: grade,
+    const lista = oc('A', {
+      alocacaoId: 'l-A',
+      turnoId: 'lista',
+      turnoTipo: 'lista',
+      fim: br('2026-11-18T07:00'),
+      prioridadeIds: ['op-rotina', 'op-urgencia', 'op-internado'],
     });
-    expect(item(soRotina, 'int')).toMatchObject({ medicoId: null, motivo: 'sem_medico_elegivel' });
-    const comUrgencia = rodar({
+    const entrada = {
       exames: [exame({ id: 'int', prioridade: 'Internado' })],
-      ocorrencias: [lista('A', ['op-rotina', 'op-internado'])],
+      ocorrencias: [lista],
       gradeRecebimento: grade,
+    };
+    expect(item(rodar(entrada), 'int')).toMatchObject({
+      medicoId: null,
+      motivo: 'sem_medico_elegivel',
     });
-    expect(item(comUrgencia, 'int')?.medicoId).toBe('A');
+    const furaNoInternado = PRIORIDADES_OPERACAO.map((p) =>
+      p.id === 'op-internado' ? { ...p, furaGradeNaAlocacao: true } : p,
+    );
+    expect(item(rodar({ ...entrada, prioridadesOperacao: furaNoInternado }), 'int')?.medicoId).toBe(
+      'A',
+    );
   });
 
   it('Emergência é URGÊNCIA: urgente na fila e com a margem de urgência', () => {

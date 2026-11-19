@@ -97,6 +97,13 @@ export class PrioridadeOperacaoEdicaoDto {
   @Type(() => RegraUrgenciaDto)
   urgencia!: RegraUrgenciaDto;
 
+  @ApiProperty({
+    description:
+      'Marcada na alocação, o exame urgente desta prioridade segue o SLA mesmo contra a célula da grade de recebimento.',
+  })
+  @IsBoolean()
+  furaGradeNaAlocacao!: boolean;
+
   @ApiProperty({ description: 'Vale para a grafia sem de-para (só uma prioridade).' })
   @IsBoolean()
   padrao!: boolean;

@@ -541,6 +541,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
           nome: 'ROTINA',
           posicao: 3,
           urgencia: { tipo: 'nunca' },
+          furaGradeNaAlocacao: false,
           padrao: true,
           grafias: ['P4', 'Rotina'],
           cor: null,

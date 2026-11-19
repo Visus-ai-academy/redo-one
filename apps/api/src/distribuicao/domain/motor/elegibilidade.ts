@@ -7,8 +7,8 @@ import type { GradeRecebimento } from './prioridades-operacao';
  * `src/lib/services/distribuicao/arranjo.ts`. Diferenças de propósito: tudo por id (o legado
  * comparava nomes normalizados), a prioridade pela da operação (19/11/2026: o legado comparava a
  * grafia, então só recebe Internado quem marca Internado), o recebimento é a grade prioridade da
- * operação × turno (a Lista deixou de ser especial) e a urgência pela alocação vale em qualquer
- * turno.
+ * operação × turno (a Lista deixou de ser especial) e o furo da grade pela alocação vale em
+ * qualquer turno, para as prioridades marcadas para isso (no legado, só a URGENCIA).
  */
 
 /** O exame como a elegibilidade o vê, já resolvido contra o catálogo. */
@@ -173,10 +173,9 @@ export interface ContextoPeriodo {
   /** Grade de recebimento prioridade da operação × turno, com as sobrescritas das frentes. */
   grade: GradeRecebimento;
   /**
-   * Prioridades da operação que, marcadas na alocação, a fazem receber as urgências: as tratadas
-   * sempre como urgência (URGÊNCIA, INTERNADO).
+   * Prioridades da operação com "fura a grade pela alocação" ligado (19/11/2026: só a URGÊNCIA).
    */
-  prioridadeIdsUrgentes: readonly string[];
+  prioridadeIdsQueFuramGrade: readonly string[];
   /** Prioridades da operação liberadas pelo ajuste do dia do médico. */
   prioridadesLiberadas?: ReadonlySet<string>;
   /** Ajuste do dia "segue o SLA neste dia": o prazo mínimo das células não vale. */
@@ -189,13 +188,20 @@ const horas = (min: number) => Math.round(min / 60);
 
 /**
  * "Se na escala do médico tem Lista e urgência, ele precisa receber as urgências" (17/11/2026):
- * a alocação que marca uma prioridade da operação sempre urgente recebe o que a operação trata
- * como urgência pelo SLA, mesmo que a célula diga "não recebe" ou prazo mínimo. Vale em qualquer
- * turno (18/11: a Lista deixou de ser especial). Alocação sem recorte não marca nada; o recorte
- * de prioridade da alocação continua valendo depois.
+ * o exame urgente cuja prioridade da operação está marcada na alocação e tem "fura a grade pela
+ * alocação" ligado segue o SLA, mesmo que a célula diga "não recebe" ou prazo mínimo. Vale em
+ * qualquer turno (18/11: a Lista deixou de ser especial). Só a prioridade do próprio exame conta
+ * (19/11: o Internado segue a célula mesmo na Lista que marca a URGÊNCIA, como no legado, onde
+ * só a URGENCIA furava). Alocação sem recorte não marca nada.
  */
-function urgenciaPelaAlocacao(p: PeriodoEscala, a: AlvoExame, ctx: ContextoPeriodo): boolean {
-  return a.urgente && p.prioridadeIds.some((id) => ctx.prioridadeIdsUrgentes.includes(id));
+function furaPelaAlocacao(p: PeriodoEscala, a: AlvoExame, ctx: ContextoPeriodo): boolean {
+  const id = a.prioridadeOperacaoId;
+  return (
+    a.urgente &&
+    id !== null &&
+    p.prioridadeIds.includes(id) &&
+    ctx.prioridadeIdsQueFuramGrade.includes(id)
+  );
 }
 
 /** A frente do período alcança o exame? Null = alcança; senão, o porquê legível. */
@@ -242,12 +248,17 @@ export function porQuePeriodoRecusa(
     a.prioridadeOperacaoId !== null && !!ctx.prioridadesLiberadas?.has(a.prioridadeOperacaoId);
   if (!p.gratificado && !liberada) {
     const regra = ctx.grade.regra(a.prioridadeOperacaoId, p.turnoId, p.frente);
-    if (regra.tipo !== 'segue_sla' && !urgenciaPelaAlocacao(p, a, ctx)) {
+    if (regra.tipo !== 'segue_sla' && !furaPelaAlocacao(p, a, ctx)) {
+      // O urgente numa alocação que marca uma prioridade que fura: diz por que ele não furou.
+      const porQueNaoFurou =
+        a.urgente && p.prioridadeIds.some((id) => ctx.prioridadeIdsQueFuramGrade.includes(id))
+          ? ' A urgência marcada na alocação só fura a grade nas prioridades com essa opção ligada.'
+          : '';
       if (regra.tipo === 'nao_recebe') {
-        return 'Recebimento: este turno não recebe a prioridade do exame.';
+        return `Recebimento: este turno não recebe a prioridade do exame.${porQueNaoFurou}`;
       }
       if (!ctx.segueSlaNoDia && (a.restanteMin ?? -1) <= regra.horas * 60) {
-        return `Recebimento: o prazo ${a.restanteMin === null ? 'ilegível' : `(${horas(a.restanteMin)}h)`} não passa do mínimo de ${regra.horas}h deste turno.`;
+        return `Recebimento: o prazo ${a.restanteMin === null ? 'ilegível' : `(${horas(a.restanteMin)}h)`} não passa do mínimo de ${regra.horas}h deste turno.${porQueNaoFurou}`;
       }
     }
     if (p.lista && ctx.segueSlaNoDia && ctx.cortePosteriores) {

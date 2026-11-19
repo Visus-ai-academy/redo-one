@@ -112,6 +112,7 @@ const op = (id: string, posicao: number, urgencia: PrioridadeOperacao['urgencia'
     id,
     nome: id,
     posicao,
+    furaGradeNaAlocacao: false,
     urgencia,
     padrao: id === 'op-rot',
     grafias: [g],

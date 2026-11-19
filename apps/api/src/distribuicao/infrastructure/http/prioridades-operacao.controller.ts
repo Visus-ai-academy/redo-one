@@ -54,6 +54,7 @@ const edicaoDoDto = (d: PrioridadeOperacaoEdicaoDto): EdicaoPrioridadeOperacao =
   nome: d.nome,
   posicao: d.posicao,
   urgencia: urgenciaDoDto(d.urgencia),
+  furaGradeNaAlocacao: d.furaGradeNaAlocacao,
   padrao: d.padrao,
   grafias: d.grafias,
   cor: d.cor ?? null,
