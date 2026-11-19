@@ -22,7 +22,7 @@ export class DrizzleParametrosIngestaoRepository implements ParametrosIngestaoRe
       travaRemocaoMinimo: linha?.travaRemocaoMinimo ?? 500,
       travaRemocaoFator: linha?.travaRemocaoFator ?? 2,
       retencaoLinhasBrutasDias: linha?.retencaoLinhasBrutasDias ?? 90,
-      mobilemedIntervaloMinutos: linha ? linha.mobilemedIntervaloMinutos : 30,
+      mobilemedIntervaloMinutos: linha ? linha.mobilemedIntervaloMinutos : 15,
       mobilemedMesesAnteriores: linha?.mobilemedMesesAnteriores ?? 1,
       mobilemedJanelaDias: linha?.mobilemedJanelaDias ?? 7,
       mobilemedTeto: linha?.mobilemedTeto ?? 50_000,

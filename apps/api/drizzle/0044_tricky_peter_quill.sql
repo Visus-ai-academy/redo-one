@@ -1,0 +1,1 @@
+ALTER TABLE "parametros_ingestao" ALTER COLUMN "mobilemed_intervalo_minutos" SET DEFAULT 15;

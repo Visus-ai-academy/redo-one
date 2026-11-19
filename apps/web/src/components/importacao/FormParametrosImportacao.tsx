@@ -84,7 +84,7 @@ export function FormParametrosImportacao({
       travaRemocaoFator: String(parametros.travaRemocaoFator),
       retencaoLinhasBrutasDias: String(parametros.retencaoLinhasBrutasDias),
       mobilemedAutomatica: parametros.mobilemedIntervaloMinutos !== null,
-      mobilemedIntervaloMinutos: String(parametros.mobilemedIntervaloMinutos ?? 30),
+      mobilemedIntervaloMinutos: String(parametros.mobilemedIntervaloMinutos ?? 15),
       mobilemedMesesAnteriores: String(parametros.mobilemedMesesAnteriores),
       mobilemedJanelaDias: String(parametros.mobilemedJanelaDias),
       mobilemedTeto: String(parametros.mobilemedTeto),
@@ -213,7 +213,7 @@ export function FormParametrosImportacao({
                 {(field) => (
                   <field.NumberField
                     label="Intervalo em minutos"
-                    placeholder="Ex.: 30"
+                    placeholder="Ex.: 15"
                     description={'O "Importar agora" da tela Importação não espera o intervalo.'}
                     required
                     min={5}

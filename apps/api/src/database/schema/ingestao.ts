@@ -322,7 +322,7 @@ export const parametrosIngestao = pgTable(
     /** Dias que a linha crua da planilha fica guardada. */
     retencaoLinhasBrutasDias: integer('retencao_linhas_brutas_dias').notNull().default(90),
     /** Minutos entre duas importações automáticas da MobileMed (o RPA antigo: 30); nulo = desligada. */
-    mobilemedIntervaloMinutos: integer('mobilemed_intervalo_minutos').default(30),
+    mobilemedIntervaloMinutos: integer('mobilemed_intervalo_minutos').default(15),
     /** O período começa no dia 1º de tantos meses atrás: 1 = do mês anterior até hoje. */
     mobilemedMesesAnteriores: integer('mobilemed_meses_anteriores').notNull().default(1),
     /** Dias de cada chamada ao relatório (a que vier no teto é refeita em metades). */
