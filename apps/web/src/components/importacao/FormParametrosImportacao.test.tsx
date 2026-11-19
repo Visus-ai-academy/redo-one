@@ -12,6 +12,7 @@ const atuais = {
   mobilemedMesesAnteriores: 1,
   mobilemedJanelaDias: 7,
   mobilemedTeto: 50_000,
+  mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
 };
 
 describe('FormParametrosImportacao', () => {
@@ -28,6 +29,7 @@ describe('FormParametrosImportacao', () => {
     expect(screen.getByText('Período').nextSibling).toHaveTextContent(
       'Do dia 1º do mês anterior até hoje',
     );
+    expect(screen.getByText('Compartilhamento de').nextSibling).toHaveTextContent('CRD_APOIO');
   });
 
   it('desmarcar a importação automática salva o intervalo vazio; marcar de novo pede o intervalo', async () => {
@@ -58,6 +60,25 @@ describe('FormParametrosImportacao', () => {
       mobilemedMesesAnteriores: 0,
       mobilemedJanelaDias: 3,
     });
+  });
+
+  it('as unidades do compartilhamento vão separadas por vírgula; vazio não traz nenhuma', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(<FormParametrosImportacao parametros={atuais} podeEditar onSalvar={onSalvar} />);
+
+    const unidades = screen.getByRole('textbox', { name: /Unidades do compartilhamento/ });
+    expect(unidades).toHaveValue('CRD_APOIO');
+    await userEvent.clear(unidades);
+    await userEvent.type(unidades, 'CRD_APOIO, OUTRA ,');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
+    expect(onSalvar).toHaveBeenLastCalledWith({
+      ...atuais,
+      mobilemedCompartilhamentoUnidades: ['CRD_APOIO', 'OUTRA'],
+    });
+
+    await userEvent.clear(unidades);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
+    expect(onSalvar).toHaveBeenLastCalledWith({ ...atuais, mobilemedCompartilhamentoUnidades: [] });
   });
 
   it('desligada no ambiente, avisa que os valores só valem quando ligarem', () => {

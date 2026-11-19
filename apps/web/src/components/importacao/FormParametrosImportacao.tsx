@@ -23,6 +23,7 @@ const schema = z
     mobilemedMesesAnteriores: inteiro(0, 12, 'Use de 0 a 12 meses.'),
     mobilemedJanelaDias: inteiro(1, 31, 'Use de 1 a 31 dias.'),
     mobilemedTeto: inteiro(1, 1_000_000, 'Informe um número inteiro a partir de 1.'),
+    mobilemedCompartilhamentoUnidades: z.string().max(2_000),
   })
   .superRefine((v, ctx) => {
     if (!v.mobilemedAutomatica) return;
@@ -35,6 +36,13 @@ const schema = z
       });
     }
   });
+
+/** "CRD_APOIO, OUTRA" → ["CRD_APOIO", "OUTRA"], sem vazios. */
+const unidades = (texto: string) =>
+  texto
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
 
 /** "Do dia 1º do mês anterior até hoje", "Do dia 1º de 2 meses atrás até hoje". */
 function textoDoPeriodo(meses: number): string {
@@ -80,6 +88,7 @@ export function FormParametrosImportacao({
       mobilemedMesesAnteriores: String(parametros.mobilemedMesesAnteriores),
       mobilemedJanelaDias: String(parametros.mobilemedJanelaDias),
       mobilemedTeto: String(parametros.mobilemedTeto),
+      mobilemedCompartilhamentoUnidades: parametros.mobilemedCompartilhamentoUnidades.join(', '),
     },
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
@@ -94,6 +103,7 @@ export function FormParametrosImportacao({
           mobilemedMesesAnteriores: Number(value.mobilemedMesesAnteriores),
           mobilemedJanelaDias: Number(value.mobilemedJanelaDias),
           mobilemedTeto: Number(value.mobilemedTeto),
+          mobilemedCompartilhamentoUnidades: unidades(value.mobilemedCompartilhamentoUnidades),
         }),
       ),
   });
@@ -124,6 +134,9 @@ export function FormParametrosImportacao({
         </Valor>
         <Valor rotulo="Período">{textoDoPeriodo(parametros.mobilemedMesesAnteriores)}</Valor>
         <Valor rotulo="Dias por consulta">{`${parametros.mobilemedJanelaDias} dias`}</Valor>
+        <Valor rotulo="Compartilhamento de">
+          {parametros.mobilemedCompartilhamentoUnidades.join(', ') || 'Nenhuma unidade'}
+        </Valor>
         <Valor rotulo="Teto por consulta">
           {`${parametros.mobilemedTeto.toLocaleString('pt-BR')} laudos`}
         </Valor>
@@ -223,6 +236,15 @@ export function FormParametrosImportacao({
             />
           )}
         </form.AppField>
+        <form.AppField name="mobilemedCompartilhamentoUnidades">
+          {(field) => (
+            <field.TextField
+              label="Unidades do compartilhamento"
+              placeholder="Ex.: CRD_APOIO"
+              description="Unidades de destino, separadas por vírgula, cujos exames compartilhados entram. Vazio: o compartilhamento não é importado."
+            />
+          )}
+        </form.AppField>
         <form.AppField name="mobilemedJanelaDias">
           {(field) => (
             <field.NumberField
@@ -251,8 +273,9 @@ export function FormParametrosImportacao({
 
       {erro && <Alerta tom="erro">{erro}</Alerta>}
 
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-2">
         <form.AppForm>
+          <form.RequiredLegend />
           <form.SubmitButton pendingLabel="Salvando…">Salvar parâmetros</form.SubmitButton>
         </form.AppForm>
       </div>
