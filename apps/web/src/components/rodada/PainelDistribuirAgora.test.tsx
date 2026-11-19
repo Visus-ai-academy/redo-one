@@ -51,6 +51,13 @@ const abrir = (
 };
 
 describe('PainelDistribuirAgora', () => {
+  it('as contagens são do retrato da fila e dizem a hora da leitura', async () => {
+    abrir();
+    expect(
+      await screen.findByText(/As contagens abaixo são da leitura das 10:29\./),
+    ).toBeInTheDocument();
+  });
+
   it('vem com os turnos em andamento, todas as frentes e prioridades (sem recorte)', async () => {
     const onDistribuir = abrir();
     expect(await screen.findByRole('checkbox', { name: /Manhã/ })).toBeChecked();

@@ -65,7 +65,7 @@ export function PainelDistribuirAgora({
   return (
     <PainelLateral
       titulo="Distribuir agora"
-      subtitulo="O robô lê a fila com estes recortes e monta uma proposta."
+      subtitulo={`O robô lê a fila de novo com estes recortes e monta uma proposta. As contagens abaixo são da leitura das ${horaDeBrasilia(fila.lidaEm)}.`}
       onFechar={onFechar}
     >
       <form

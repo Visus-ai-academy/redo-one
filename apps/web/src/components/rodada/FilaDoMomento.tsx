@@ -106,24 +106,45 @@ const COLUNAS = [
   }),
 ];
 
+/** "Ler agora": pede a leitura única da fila (desabilitado enquanto ela anda). */
+export function BotaoLerAgora({ lendo, onLerAgora }: { lendo: boolean; onLerAgora: () => void }) {
+  return (
+    <Button
+      type="button"
+      disabled={lendo}
+      focusableWhenDisabled
+      onClick={onLerAgora}
+      className={buttonClassName({ variant: 'secondary', className: 'h-8 px-3' })}
+    >
+      <ArrowClockwise size={16} aria-hidden className={cn(lendo && 'animate-spin')} />
+      {lendo ? 'Lendo…' : 'Ler agora'}
+    </Button>
+  );
+}
+
 /**
- * A fila agora, antes de distribuir: os números do momento, os exames por frente × prioridade da
- * operação e quem está em turno com a carga. Atualiza sozinha (quem chama faz o polling).
+ * A fila do último retrato, antes de distribuir: os números, os exames por frente × prioridade da
+ * operação e quem está em turno com a carga. Um job lê a fila de tempos em tempos; a tela só mostra
+ * a hora da leitura (quem chama faz o polling do retrato).
  */
 export function FilaDoMomento({
   fila,
-  intervalo,
-  erro,
-  onTentarDeNovo,
+  intervaloMin,
+  lendo = false,
+  falha,
+  onLerAgora,
   ultimaRodada,
   irParaEscala,
 }: {
   fila: FilaDoMomentoDto;
-  /** "1 min": o texto do polling. */
-  intervalo: string;
+  /** Minutos entre as leituras automáticas; null = desligadas; ausente = não diz. */
+  intervaloMin?: number | null;
+  /** Há leitura pedida e ainda não terminada. */
+  lendo?: boolean;
   /** A última leitura falhou: os números são da anterior. */
-  erro?: boolean;
-  onTentarDeNovo?: () => void;
+  falha?: { em: string } | null;
+  /** Sem isso (sem permissão), não há "Ler agora". */
+  onLerAgora?: () => void;
   /** Linha sob a fila vazia ("Última rodada: hoje às 09:02…"). */
   ultimaRodada?: ReactNode;
   /** Link para a escala de hoje (o estado vazio dos médicos). */
@@ -137,32 +158,29 @@ export function FilaDoMomento({
     <div className="flex flex-col gap-6">
       <section aria-labelledby="titulo-fila" className="flex flex-col gap-3">
         <TituloSecao titulo="Fila do momento" id="titulo-fila">
-          <span className="text-subtle-foreground flex items-center gap-1 text-[13px] tabular-nums">
-            {erro && <Clock size={14} aria-hidden />}
-            {erro
-              ? `Sem atualizar desde ${horaDeBrasilia(fila.lidaEm)}`
-              : `Atualizada às ${horaDeBrasilia(fila.lidaEm)}, a cada ${intervalo}`}
+          <span className="flex flex-wrap items-center gap-3">
+            <span
+              aria-live="polite"
+              className="text-subtle-foreground flex items-center gap-1 text-[13px] tabular-nums"
+            >
+              {falha && <Clock size={14} aria-hidden />}
+              Lida às {horaDeBrasilia(fila.lidaEm)}
+              {intervaloMin === undefined
+                ? ''
+                : intervaloMin === null
+                  ? ', leitura automática desligada'
+                  : `, a cada ${intervaloMin} min`}
+            </span>
+            {onLerAgora && <BotaoLerAgora lendo={lendo} onLerAgora={onLerAgora} />}
           </span>
         </TituloSecao>
-        {erro && (
+        {falha && (
           <Alerta tom="erro">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span>
-                <strong className="block font-semibold">Não foi possível ler a fila agora</strong>
-                Os números abaixo são da última leitura, às {horaDeBrasilia(fila.lidaEm)}. Tentamos
-                de novo a cada {intervalo}.
-              </span>
-              {onTentarDeNovo && (
-                <Button
-                  type="button"
-                  onClick={onTentarDeNovo}
-                  className={buttonClassName({ variant: 'secondary', className: 'h-8 px-3' })}
-                >
-                  <ArrowClockwise size={16} aria-hidden />
-                  Tentar agora
-                </Button>
-              )}
-            </div>
+            <strong className="block font-semibold">
+              A leitura das {horaDeBrasilia(falha.em)} falhou
+            </strong>
+            Os números abaixo são da leitura das {horaDeBrasilia(fila.lidaEm)}.
+            {intervaloMin ? ` Tentamos de novo a cada ${intervaloMin} min.` : ''}
           </Alerta>
         )}
         {fila.total === 0 ? (

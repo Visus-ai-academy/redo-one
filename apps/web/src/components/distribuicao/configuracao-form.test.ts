@@ -32,6 +32,7 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
+  retratoFilaMin: 5,
 };
 
 const erros = (v: ValoresConfiguracao) => {
@@ -88,6 +89,21 @@ describe('configuração global no formulário', () => {
     ]);
   });
 
+  it('leitura da fila do momento: a cada N min (1 a 1440) ou desligada (nulo)', () => {
+    const v = valoresDaConfiguracao({ ...PRODUCAO, retratoFilaMin: 10 });
+    expect(v).toMatchObject({ lerFila: true, retratoFilaMin: '10' });
+    expect(configuracaoParaApi(v)).toMatchObject({ retratoFilaMin: 10 });
+    expect(configuracaoParaApi({ ...v, lerFila: false })).toMatchObject({ retratoFilaMin: null });
+    expect(valoresDaConfiguracao({ ...PRODUCAO, retratoFilaMin: null })).toMatchObject({
+      lerFila: false,
+      retratoFilaMin: '5',
+    });
+    expect(erros({ ...v, retratoFilaMin: '0' })).toEqual([
+      'retratoFilaMin: Use um número inteiro de 1 a 1440.',
+    ]);
+    expect(erros({ ...v, lerFila: false, retratoFilaMin: '0' })).toEqual([]);
+  });
+
   it('valida faixas, turnos posteriores e marcadores repetidos', () => {
     const v: ValoresConfiguracao = {
       ...valoresDaConfiguracao(PRODUCAO),
@@ -129,5 +145,6 @@ describe('resumo da configuração (só leitura)', () => {
     expect(tudo['Robô › Robô']).toBe('Ligado');
     expect(tudo['Robô › Validade da proposta']).toBe('45 min');
     expect(tudo['Robô › Teto de exames por rodada']).toBe('Sem teto');
+    expect(tudo['Robô › Leitura da fila do momento']).toBe('A cada 5 min');
   });
 });

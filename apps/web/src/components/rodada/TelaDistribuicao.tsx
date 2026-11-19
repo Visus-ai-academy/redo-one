@@ -23,7 +23,7 @@ import { rodadasControllerResumoQueryOptions } from '../../gen/hooks/useRodadasC
 import { rodadasControllerSituacaoQueryOptions } from '../../gen/hooks/useRodadasControllerSituacao';
 import { rodadasControllerVivaQueryOptions } from '../../gen/hooks/useRodadasControllerViva';
 import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
-import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
+import type { RetratoFilaDto } from '../../gen/types/RetratoFilaDto';
 import type { RodadaDto } from '../../gen/types/RodadaDto';
 import type { StatusRodadaKey } from '../../gen/types/StatusRodada';
 import { horaDeBrasilia } from '../../lib/acesso';
@@ -43,7 +43,8 @@ import { Execucao, LendoFila, Parcial } from './Andamento';
 import { type AcoesRodada, invalidarRodadas, useAcoesRodada } from './acoes';
 import { buscarClientes, buscarMedicos } from './buscas';
 import { CartaoRodada } from './CartaoRodada';
-import { FilaCarregando, FilaDoMomento } from './FilaDoMomento';
+import { Vazio } from './comum';
+import { BotaoLerAgora, FilaCarregando, FilaDoMomento } from './FilaDoMomento';
 import { Historico } from './Historico';
 import { PainelDistribuirAgora } from './PainelDistribuirAgora';
 import { PainelMedico } from './PainelMedico';
@@ -62,8 +63,13 @@ export type BuscaDistribuicao = {
   pagina?: number;
 };
 
-/** Sem rodada, a fila do momento atualiza a cada minuto (regra dos painéis: 1–5 min). */
+/**
+ * Sem rodada, o retrato da fila é consultado a cada minuto (regra dos painéis: 1–5 min); a leitura
+ * na MobileMed é de um job, no intervalo de Configurações › Distribuição.
+ */
 const FILA_A_CADA_MS = 60_000;
+/** Com leitura pedida, de 3 em 3 s até ela terminar. */
+const LENDO_A_CADA_MS = 3_000;
 const DIA = 86_400_000;
 
 /** O relógio da tela, para "expira em 38 min" andar sozinho. */
@@ -122,13 +128,15 @@ export function TelaDistribuicao({
     if (antes !== null && antes !== marca) void invalidarRodadas(queryClient);
   }, [marca, queryClient]);
 
-  const fila = useQuery({
+  const retrato = useQuery({
     ...rodadasControllerFilaQueryOptions(),
-    refetchInterval: rodada ? false : FILA_A_CADA_MS,
+    refetchInterval: (q) =>
+      rodada ? false : q.state.data?.lendo ? LENDO_A_CADA_MS : FILA_A_CADA_MS,
     refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
   });
-  const robo = fila.data?.roboAtivo;
+  const fila = retrato.data?.fila ?? undefined;
+  const robo = fila?.roboAtivo;
 
   // Prévia do recolhimento: só com o "Distribuir agora" aberto (lê a fila e a escala).
   const recolhimento = useQuery({
@@ -159,13 +167,13 @@ export function TelaDistribuicao({
           <span className="text-subtle-foreground text-[13px]">
             {robo === false
               ? 'Ligue o robô para distribuir'
-              : fila.data?.total === 0
+              : fila?.total === 0
                 ? 'Nada para distribuir'
                 : 'Nenhuma rodada em andamento'}
           </span>
           <Button
             type="button"
-            disabled={!fila.data || robo === false || fila.data.total === 0}
+            disabled={!fila || robo === false || fila.total === 0}
             focusableWhenDisabled
             aria-expanded={Boolean(busca.distribuir)}
             onClick={() => onBusca((a) => ({ ...a, aba: undefined, distribuir: 1 }))}
@@ -211,22 +219,22 @@ export function TelaDistribuicao({
             onBusca={onBusca}
             abrirMedico={abrirMedico}
             fecharPainel={fecharPainel}
-            nomesExtras={nomesDaFila(fila.data)}
+            nomesExtras={nomesDaFila(fila)}
             onAbrirRodada={onAbrirRodada}
           />
         ) : (
           <SemRodada
             sessao={sessao}
-            fila={fila}
+            retrato={retrato}
             ultima={historicoUltima.data?.itens[0]}
             acoes={acoes}
             onAbrirRodada={onAbrirRodada}
           />
         )}
       </Abas>
-      {busca.distribuir && podeIniciar && !rodada && fila.data && (
+      {busca.distribuir && podeIniciar && !rodada && fila && (
         <PainelDistribuirAgora
-          fila={fila.data}
+          fila={fila}
           recolhimento={recolhimento.data}
           onFechar={fecharPainel}
           buscarClientes={buscarClientes}
@@ -281,13 +289,13 @@ function nomesDaFila(
 
 function SemRodada({
   sessao,
-  fila,
+  retrato,
   ultima,
   acoes,
   onAbrirRodada,
 }: {
   sessao: Sessao;
-  fila: UseQueryResult<FilaDoMomentoDto>;
+  retrato: UseQueryResult<RetratoFilaDto>;
   ultima:
     | {
         id: string;
@@ -302,19 +310,38 @@ function SemRodada({
   onAbrirRodada: (id: string) => void;
 }) {
   const { sucesso } = useAvisos();
-  const dados = fila.data;
+  const dados = retrato.data?.fila;
   const recente = ultima && Date.now() - new Date(ultima.atualizadoEm).getTime() < DIA;
   const problema = recente && (ultima.status === 'expirada' || ultima.status === 'falhou');
+  const lendo = retrato.data?.lendo ?? false;
+  const lerAgora = pode(sessao, 'distribuicao.rodada.iniciar')
+    ? () => void acoes.lerFila()
+    : undefined;
   if (!dados) {
-    return fila.isError ? (
-      <Alerta tom="erro">
-        Não foi possível ler a fila agora.{' '}
-        <button type="button" className="underline" onClick={() => void fila.refetch()}>
-          Tentar de novo
-        </button>
-      </Alerta>
-    ) : (
-      <FilaCarregando />
+    if (retrato.isError) {
+      return (
+        <Alerta tom="erro">
+          Não foi possível carregar a fila agora.{' '}
+          <button type="button" className="underline" onClick={() => void retrato.refetch()}>
+            Tentar de novo
+          </button>
+        </Alerta>
+      );
+    }
+    if (!retrato.data || lendo) return <FilaCarregando />;
+    return (
+      <Vazio
+        icone={<Clock size={28} />}
+        titulo="A fila ainda não foi lida"
+        acao={lerAgora && <BotaoLerAgora lendo={false} onLerAgora={lerAgora} />}
+      >
+        {retrato.data.falha
+          ? `A leitura das ${horaDeBrasilia(retrato.data.falha.em)} falhou. `
+          : ''}
+        {retrato.data.intervaloMin
+          ? `A fila é lida a cada ${retrato.data.intervaloMin} min.`
+          : 'A leitura automática está desligada em Configurações › Distribuição.'}
+      </Vazio>
     );
   }
   const emTurno = new Set(dados.medicosEmTurno.map((m) => m.medicoId)).size;
@@ -385,9 +412,10 @@ function SemRodada({
       )}
       <FilaDoMomento
         fila={dados}
-        intervalo="1 min"
-        erro={fila.isError}
-        onTentarDeNovo={() => void fila.refetch()}
+        intervaloMin={retrato.data?.intervaloMin ?? null}
+        lendo={lendo}
+        falha={retrato.data?.falha}
+        onLerAgora={lerAgora}
         ultimaRodada={
           ultima && ultima.status === 'concluida' ? (
             <>

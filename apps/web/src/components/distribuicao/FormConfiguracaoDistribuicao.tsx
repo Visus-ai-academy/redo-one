@@ -149,7 +149,7 @@ export function FormConfiguracaoDistribuicao({
     >
       <Painel
         titulo="Robô"
-        descricao="Se dá para pedir rodada e quanto tempo a proposta espera a aprovação."
+        descricao="Se dá para pedir rodada, quanto tempo a proposta espera a aprovação e de quanto em quanto tempo a fila do momento é lida."
       >
         <div className="flex flex-col gap-4">
           <form.AppField name="roboAtivo">
@@ -190,6 +190,31 @@ export function FormConfiguracaoDistribuicao({
                       placeholder="Ex.: 1500"
                       min={1}
                       max={100000}
+                      required
+                    />
+                  )}
+                </form.AppField>
+              )
+            }
+          </form.Subscribe>
+          <form.AppField name="lerFila">
+            {(field) => (
+              <field.CheckboxField
+                label="Ler a fila do momento sozinho"
+                description="A tela Operação › Distribuição mostra a última leitura da fila da MobileMed. Não distribui nada: a rodada sempre lê a fila de novo."
+              />
+            )}
+          </form.AppField>
+          <form.Subscribe selector={(s) => s.values.lerFila}>
+            {(lerFila) =>
+              lerFila && (
+                <form.AppField name="retratoFilaMin">
+                  {(field) => (
+                    <field.NumberField
+                      label="Ler a cada (minutos)"
+                      placeholder="Ex.: 5"
+                      min={1}
+                      max={1440}
                       required
                     />
                   )}

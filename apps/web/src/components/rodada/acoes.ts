@@ -6,6 +6,7 @@ import { rodadasControllerAprovar } from '../../gen/clients/rodadasControllerApr
 import { rodadasControllerCancelar } from '../../gen/clients/rodadasControllerCancelar';
 import { rodadasControllerCriar } from '../../gen/clients/rodadasControllerCriar';
 import { rodadasControllerEncerrar } from '../../gen/clients/rodadasControllerEncerrar';
+import { rodadasControllerLerFila } from '../../gen/clients/rodadasControllerLerFila';
 import { rodadasControllerPausar } from '../../gen/clients/rodadasControllerPausar';
 import { rodadasControllerReler } from '../../gen/clients/rodadasControllerReler';
 import { rodadasControllerRetomar } from '../../gen/clients/rodadasControllerRetomar';
@@ -69,6 +70,12 @@ export function useAcoesRodada() {
       await invalidarRodadas(queryClient);
       return id;
     },
+    /** "Ler agora": a leitura única do retrato da fila (não distribui nada). */
+    lerFila: () =>
+      rodar('ler-fila', async () => {
+        await rodadasControllerLerFila().unwrap();
+        return true;
+      }),
     aprovar: naRodada('aprovar', rodadasControllerAprovar),
     pausar: naRodada('pausar', rodadasControllerPausar),
     retomar: naRodada('retomar', rodadasControllerRetomar),

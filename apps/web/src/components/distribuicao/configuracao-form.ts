@@ -62,6 +62,9 @@ export type ValoresConfiguracao = {
   expiracaoPropostaMin: string;
   temTeto: boolean;
   tetoPorRodada: string;
+  /** Leitura automática da fila do momento ligada. */
+  lerFila: boolean;
+  retratoFilaMin: string;
 };
 
 export function valoresDaConfiguracao(
@@ -93,6 +96,9 @@ export function valoresDaConfiguracao(
     expiracaoPropostaMin: String(c.expiracaoPropostaMin ?? 45),
     temTeto: c.tetoPorRodada != null,
     tetoPorRodada: c.tetoPorRodada == null ? '' : String(c.tetoPorRodada),
+    lerFila: c.retratoFilaMin !== null,
+    // Desligada, religar sugere os 5 min de padrão.
+    retratoFilaMin: String(c.retratoFilaMin ?? 5),
   };
 }
 
@@ -129,6 +135,7 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
     roboAtivo: v.roboAtivo,
     expiracaoPropostaMin: Number(v.expiracaoPropostaMin),
     tetoPorRodada: v.temTeto ? Number(v.tetoPorRodada) : null,
+    retratoFilaMin: v.lerFila ? Number(v.retratoFilaMin) : null,
   };
 }
 
@@ -169,6 +176,8 @@ const valoresSchema = z.object({
   expiracaoPropostaMin: z.string(),
   temTeto: z.boolean(),
   tetoPorRodada: z.string(),
+  lerFila: z.boolean(),
+  retratoFilaMin: z.string(),
 });
 
 /** As faixas do domínio (`configuracao-global.ts` da API), na ordem dos campos. */
@@ -192,6 +201,7 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
 
   faixa('expiracaoPropostaMin', 1, 1440);
   if (v.temTeto) faixa('tetoPorRodada', 1, 100_000);
+  if (v.lerFila) faixa('retratoFilaMin', 1, 1440);
   if (v.ordemFila.length === 0) erro('ordemFila', 'A fila precisa de ao menos um critério.');
   for (const [campo, min, max] of FAIXAS) faixa(campo, min, max);
   faixa('cicloMinutos', 1, 1440);
@@ -234,6 +244,11 @@ export function resumoConfiguracao(
         {
           rotulo: 'Teto de exames por rodada',
           valor: c.tetoPorRodada == null ? 'Sem teto' : `${c.tetoPorRodada} exames`,
+        },
+        {
+          rotulo: 'Leitura da fila do momento',
+          valor:
+            c.retratoFilaMin == null ? 'Só pelo "Ler agora"' : `A cada ${c.retratoFilaMin} min`,
         },
       ],
     },

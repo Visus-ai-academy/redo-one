@@ -28,6 +28,7 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
+  retratoFilaMin: 5,
 };
 
 const ROTINA: PrioridadeOperacaoDto = {
