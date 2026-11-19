@@ -18037,6 +18037,12 @@
             "nullable": true,
             "description": "Só os exames deste cliente; nulo = todos."
           },
+          "laudosExtra": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500,
+            "description": "Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -18070,6 +18076,7 @@
           "prioridadeIdsLiberadas",
           "segueSla",
           "clienteId",
+          "laudosExtra",
           "id",
           "alocacaoId",
           "data",
@@ -18117,12 +18124,19 @@
             "format": "uuid",
             "nullable": true,
             "description": "Só os exames deste cliente; nulo = todos."
+          },
+          "laudosExtra": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500,
+            "description": "Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum."
           }
         },
         "required": [
           "prioridadeIdsLiberadas",
           "segueSla",
-          "clienteId"
+          "clienteId",
+          "laudosExtra"
         ]
       },
       "ItemHistoricoCadastroDto": {

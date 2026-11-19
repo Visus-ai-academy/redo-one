@@ -18,6 +18,7 @@ const liberar = (parcial = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
   segueSla: false,
   clienteId: null,
+  laudosExtra: 0,
   ...parcial,
 });
 
@@ -74,6 +75,7 @@ describe('ajuste do dia da distribuição', () => {
           prioridadeIdsLiberadas: ['urg'],
           segueSla: true,
           clienteId: 'c1',
+          laudosExtra: 0,
           medicoId: 'm1',
           turnoId: 't1',
           frenteId: 'f-mama',
@@ -95,6 +97,18 @@ describe('ajuste do dia da distribuição', () => {
       entidadeId: id,
       antes: { segueSla: false },
       depois: { segueSla: true, medicoId: 'm1', data: DIA },
+    });
+  });
+
+  it('+N laudos de um cliente grava e audita a troca', async () => {
+    const extra = liberar({ prioridadeIdsLiberadas: [], clienteId: 'c1', laudosExtra: 30 });
+    await definir.executar(admin, 'a1', DIA, extra);
+    expect(await obter.executar(admin, 'a1', DIA)).toMatchObject({ laudosExtra: 30 });
+    await definir.executar(admin, 'a1', DIA, { ...extra, laudosExtra: 10 });
+    expect(auditoria.eventos[1]).toMatchObject({
+      acao: 'alterado',
+      antes: { laudosExtra: 30 },
+      depois: { laudosExtra: 10 },
     });
   });
 

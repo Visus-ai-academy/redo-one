@@ -36,6 +36,7 @@ const foto = (a: AjusteDiaDistribuicao, aloc: AlocacaoDoAjuste): Record<string, 
   prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
   segueSla: a.segueSla,
   clienteId: a.clienteId,
+  laudosExtra: a.laudosExtra,
   medicoId: aloc.medicoId,
   turnoId: aloc.turnoId,
   frenteId: aloc.frenteId,
@@ -110,6 +111,7 @@ export class DefinirAjusteDia {
       prioridadeIdsLiberadas: lido.prioridadeIdsLiberadas,
       segueSla: lido.segueSla,
       clienteId: lido.clienteId,
+      laudosExtra: lido.laudosExtra,
     };
     const registrar = (
       acao: string,
@@ -150,6 +152,7 @@ export class DefinirAjusteDia {
       prioridadeIdsLiberadas: edicao.prioridadeIdsLiberadas,
       segueSla: edicao.segueSla,
       clienteId: edicao.clienteId,
+      laudosExtra: edicao.laudosExtra,
     };
     if (!existente) {
       await this.repo.salvar(novo);

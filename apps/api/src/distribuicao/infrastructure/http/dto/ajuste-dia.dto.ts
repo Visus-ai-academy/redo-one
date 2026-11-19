@@ -3,16 +3,20 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
   ValidateIf,
 } from 'class-validator';
 
 /**
- * O que o ajuste do dia muda na distribuição. Nada liberado e a Lista como sempre = remove o
- * ajuste. O "+N laudos" é o ajuste de produtividade da escala (`PUT /escala/alocacoes/:id/ajustes/:data`).
+ * O que o ajuste do dia muda na distribuição. Nada liberado, a Lista como sempre e sem extra =
+ * remove o ajuste. O "+N laudos" de todos os exames é o ajuste de produtividade da escala
+ * (`PUT /escala/alocacoes/:id/ajustes/:data`); aqui, só o de um cliente.
  */
 export class AjusteDiaEdicaoDto {
   @ApiProperty({
@@ -40,6 +44,16 @@ export class AjusteDiaEdicaoDto {
   @ValidateIf((_, v) => v !== null)
   @IsUUID()
   clienteId!: string | null;
+
+  @ApiProperty({
+    minimum: 0,
+    maximum: 500,
+    description: 'Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum.',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  laudosExtra!: number;
 }
 
 export class AjusteDiaDto extends AjusteDiaEdicaoDto {

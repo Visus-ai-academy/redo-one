@@ -204,6 +204,22 @@ describe('teto, tolerância, margem de urgência, teto por médico e ajuste do d
     expect(r.designacoes).toHaveLength(30);
   });
 
+  it('+N de um cliente (o +30 de HCLONDRINA do dashboards-one): estende o teto só para ele', () => {
+    const hcl = varios(15, { clienteId: 'HCL' });
+    const doCliente = new Set(hcl.map((e) => e.id));
+    const extraPara = (e: string) => (doCliente.has(e) ? 3 : 0);
+    // Teto cheio: dos outros clientes nada; do cliente, até +3.
+    let r = rodar({
+      exames: [...varios(5, { clienteId: 'OUTRO' }), ...hcl],
+      medicos: [medico('A', { cargaInicial: 10, extraPara })],
+    });
+    expect(ids(r).every((e) => doCliente.has(e))).toBe(true);
+    expect(de(r, 'A')).toHaveLength(3);
+    // Não é cota à parte: o que é do cliente também ocupa o teto (10 + 3).
+    r = rodar({ exames: hcl, medicos: [medico('A', { extraPara })] });
+    expect(de(r, 'A')).toHaveLength(13);
+  });
+
   it('o motivo de quem ficou sem espaço diz quem estava cheio', () => {
     const r = rodar({ exames: varios(3), medicos: [medico('Ana', { capacidade: 2 })] });
     expect(r.naoDistribuidos[0]).toMatchObject({ motivo: 'sem_espaco' });

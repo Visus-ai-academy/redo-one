@@ -304,6 +304,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       prioridadeIdsLiberadas: [id('urg')],
       segueSla: false,
       clienteId: null,
+      laudosExtra: 0,
     };
     await repo.salvar(base);
     await repo.salvar({
@@ -311,6 +312,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
       segueSla: true,
       clienteId: id('cli'),
+      laudosExtra: 30,
     });
     const lido = await repo.obter(alocacao, '2026-11-18');
     expect(lido).toEqual({
@@ -318,6 +320,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       prioridadeIdsLiberadas: [id('rot'), id('urg')].sort(),
       segueSla: true,
       clienteId: id('cli'),
+      laudosExtra: 30,
       clienteNome: 'CLINICA X',
       medicoId: medico,
       turnoId: id('tarde'),

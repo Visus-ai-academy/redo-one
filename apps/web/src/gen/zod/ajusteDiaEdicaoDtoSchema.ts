@@ -9,6 +9,7 @@ export const ajusteDiaEdicaoDtoSchema = z.object({
   prioridadeIdsLiberadas: z.array(z.uuid()).describe('Prioridades do catálogo liberadas no dia, além do arranjo e da Lista.'),
   segueSla: z.boolean().describe('Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele.'),
   clienteId: z.uuid().nullable().describe('Só os exames deste cliente; nulo = todos.'),
+  laudosExtra: z.number().min(0).max(500).describe('Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum.'),
 })
 
 export type AjusteDiaEdicaoDtoSchemaType = z.infer<typeof ajusteDiaEdicaoDtoSchema>

@@ -29,6 +29,7 @@ export class DrizzleAjustesDiaRepository implements AjustesDiaRepository {
         data: a.data,
         segueSla: a.segueSla,
         clienteId: a.clienteId,
+        laudosExtra: a.laudosExtra,
         clienteNome: clientes.nome,
         medicoId: alocacoes.medicoId,
         turnoId: alocacoes.turnoId,
@@ -71,7 +72,11 @@ export class DrizzleAjustesDiaRepository implements AjustesDiaRepository {
         .values(linha)
         .onConflictDoUpdate({
           target: [a.alocacaoId, a.data],
-          set: { segueSla: linha.segueSla, clienteId: linha.clienteId },
+          set: {
+            segueSla: linha.segueSla,
+            clienteId: linha.clienteId,
+            laudosExtra: linha.laudosExtra,
+          },
         });
       const [gravado] = await tx
         .select({ id: a.id })

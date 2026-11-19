@@ -203,14 +203,15 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       ];
     });
     const plantao = new Map(escala.ocorrencias.map((o) => [`${o.alocacaoId}|${o.data}`, o]));
-    // O "+N laudos" é o ajuste de produtividade da escala, já na produtividade do dia.
+    // O "+N laudos" de todos os exames é o ajuste de produtividade, já na produtividade do dia;
+    // aqui só o de um cliente.
     const ajustes: AjusteDia[] = ajustesLidos.flatMap((a) => {
       const o = plantao.get(`${a.alocacaoId}|${a.data}`);
       if (!o) return [];
       return [
         {
           medicoId: a.medicoId,
-          laudosExtra: 0,
+          laudosExtra: a.laudosExtra,
           prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
           segueSla: a.segueSla,
           recorte: {

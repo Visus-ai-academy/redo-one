@@ -6,6 +6,7 @@ const ajuste = (parcial = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
   segueSla: false,
   clienteId: null,
+  laudosExtra: 0,
   ...parcial,
 });
 
@@ -29,6 +30,16 @@ describe('ajuste do dia da distribuição', () => {
     expect(() => validarAjusteDia(ajuste({ prioridadeIdsLiberadas: [], clienteId: 'c1' }))).toThrow(
       /cliente só recorta/,
     );
+  });
+
+  it('+N laudos só de um cliente (o de todos é a produtividade do dia), inteiro de 0 a 500', () => {
+    const extra = ajuste({ prioridadeIdsLiberadas: [], clienteId: 'c1', laudosExtra: 30 });
+    expect(() => validarAjusteDia(extra)).not.toThrow();
+    expect(ajusteVazio(extra)).toBe(false);
+    expect(() => validarAjusteDia(ajuste({ laudosExtra: 30 }))).toThrow(/produtividade do dia/);
+    for (const laudosExtra of [-1, 1.5, 501]) {
+      expect(() => validarAjusteDia(ajuste({ clienteId: 'c1', laudosExtra }))).toThrow(/0 e 500/);
+    }
   });
 
   it('canônico: prioridades ordenadas', () => {

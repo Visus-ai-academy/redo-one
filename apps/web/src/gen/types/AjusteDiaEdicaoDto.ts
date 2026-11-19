@@ -21,4 +21,11 @@ export type AjusteDiaEdicaoDto = {
    * @type string
    */
   clienteId: string | null;
+  /**
+   * @description Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum.
+   * @minimum 0
+   * @maximum 500
+   * @type number
+   */
+  laudosExtra: number;
 };

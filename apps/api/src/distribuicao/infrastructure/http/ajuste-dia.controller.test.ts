@@ -36,7 +36,12 @@ describe('controller do ajuste do dia da distribuição', () => {
     const ator = { usuarioId: 'g1', acessoTotal: false };
     expect(await c.obter(principal, 'a1', '2026-11-18')).toEqual({ ajuste: null });
     expect(obter.executar).toHaveBeenCalledWith(ator, 'a1', '2026-11-18');
-    const corpo = { prioridadeIdsLiberadas: ['u'], segueSla: true, clienteId: null };
+    const corpo = {
+      prioridadeIdsLiberadas: ['u'],
+      segueSla: true,
+      clienteId: null,
+      laudosExtra: 0,
+    };
     await c.salvar(principal, 'a1', '2026-11-18', corpo);
     expect(definir.executar).toHaveBeenCalledWith(ator, 'a1', '2026-11-18', corpo);
     await c.listar(principal, { de: '2026-11-16', ate: '2026-11-22' });
