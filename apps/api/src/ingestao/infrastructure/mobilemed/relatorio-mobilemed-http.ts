@@ -1,4 +1,10 @@
-import { type ClienteMobileMed, ErroMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
+import { Logger } from '@nestjs/common';
+
+import {
+  type ClienteMobileMed,
+  ErroMobileMed,
+  type TipoErroMobileMed,
+} from '../../../comum/mobilemed/cliente-mobilemed';
 import type { FormatoPlanilha, PlanilhaLida } from '../../application/ports/leitor-planilha';
 import {
   type FatiamentoRelatorio,
@@ -12,6 +18,17 @@ import { type ItemRelatorio, itemParaRegistro, respostaRelatorio } from './esque
 const DIA_MS = 24 * 60 * 60 * 1000;
 /** Tentativas por janela: a MobileMed às vezes cancela uma consulta (499) que passa na seguinte. */
 const TENTATIVAS = 3;
+
+/** O que a tela mostra; a rota, o status e os campos ficam no log. */
+const MENSAGENS: Record<TipoErroMobileMed, string> = {
+  indisponivel: `A MobileMed não respondeu à consulta do relatório, nem depois de ${TENTATIVAS} tentativas. Nada foi importado nem removido. Tente de novo em alguns minutos.`,
+  sessao:
+    'O One não conseguiu entrar na MobileMed. Nada foi importado nem removido. Peça ao suporte técnico para conferir o acesso do One à MobileMed.',
+  resposta_inesperada:
+    'A MobileMed devolveu o relatório num formato que o One não reconhece. Nada foi importado nem removido. Avise o suporte técnico: ela pode ter mudado o relatório.',
+  recusada:
+    'A MobileMed recusou a consulta do relatório. Nada foi importado nem removido. Avise o suporte técnico.',
+};
 
 async function comTentativas<T>(chamar: () => Promise<T>): Promise<T> {
   for (let tentativa = 1; ; tentativa++) {
@@ -89,6 +106,8 @@ const CONSULTAS: Record<FormatoPlanilha, Consulta[]> = {
  * não usa (CPF, identidade, convênio...).
  */
 export class RelatorioMobileMedHttp implements RelatorioMobileMed {
+  private readonly logger = new Logger('RelatorioMobileMed');
+
   constructor(private readonly cliente: ClienteMobileMed) {}
 
   async buscar(
@@ -119,8 +138,13 @@ export class RelatorioMobileMedHttp implements RelatorioMobileMed {
         );
       }
     } catch (erro) {
-      // As mensagens do cliente nunca trazem dado de paciente (só rota, status e campos).
-      if (erro instanceof ErroMobileMed) throw new RelatorioMobileMedError(erro.message);
+      if (erro instanceof ErroMobileMed) {
+        // A mensagem do cliente nunca traz dado de paciente (só rota, status e campos).
+        this.logger.warn(
+          JSON.stringify({ evento: 'relatorio_mobilemed_falhou', formato, detalhe: erro.message }),
+        );
+        throw new RelatorioMobileMedError(MENSAGENS[erro.tipo]);
+      }
       throw erro;
     }
     return {

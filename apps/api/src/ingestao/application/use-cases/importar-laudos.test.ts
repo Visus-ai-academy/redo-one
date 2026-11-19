@@ -344,7 +344,9 @@ describe('ImportarLaudos', () => {
 
       expect(r).toMatchObject({
         status: 'erro',
-        resultado: { mensagem: 'A MobileMed não trouxe nenhum laudo no período.' },
+        resultado: {
+          mensagem: 'A MobileMed não trouxe nenhum laudo no período. Nada foi removido.',
+        },
       });
       expect(laudos.ativos()).toHaveLength(1);
     });

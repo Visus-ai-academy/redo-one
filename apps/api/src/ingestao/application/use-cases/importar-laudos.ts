@@ -148,7 +148,7 @@ export class ImportarLaudos {
     if (preparados.length === 0) {
       const mensagem =
         importacao.origem === 'mobilemed' && planilha.linhas.length === 0
-          ? 'A MobileMed não trouxe nenhum laudo no período.'
+          ? 'A MobileMed não trouxe nenhum laudo no período. Nada foi removido.'
           : 'Nenhuma linha válida na planilha.';
       return { ...resultado, status: 'erro' as const, mensagem };
     }

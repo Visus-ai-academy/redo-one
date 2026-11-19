@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ClienteMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
+import { ClienteMobileMed, ErroMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
 import { RelatorioMobileMedError } from '../../application/ports/relatorio-mobilemed';
 import { converterLinha } from '../../domain/linha-planilha';
 import { RelatorioMobileMedHttp } from './relatorio-mobilemed-http';
@@ -176,8 +176,44 @@ describe('RelatorioMobileMedHttp', () => {
     const erro = await relatorio.buscar('compartilhamento', periodo, fatiamento).catch((e) => e);
 
     expect(erro).toBeInstanceOf(RelatorioMobileMedError);
-    expect((erro as Error).message).toContain('HTTP 499');
+    expect((erro as Error).message).toBe(
+      'A MobileMed não respondeu à consulta do relatório, nem depois de 3 tentativas. Nada foi importado nem removido. Tente de novo em alguns minutos.',
+    );
     expect(chamadas).toHaveLength(3);
+  });
+
+  it('login recusado diz que é o acesso do One à MobileMed', async () => {
+    const relatorio = new RelatorioMobileMedHttp(
+      new ClienteMobileMed({
+        baseUrl: BASE,
+        token: {
+          accessToken: async () => {
+            throw new ErroMobileMed('sessao', 'MobileMed: o login foi recusado (HTTP 401).');
+          },
+        },
+        timeoutMs: 1_000,
+        concorrencia: 1,
+        limiteAnomalias: 2,
+      }),
+    );
+
+    const erro = await relatorio.buscar('laudos', periodo, fatiamento).catch((e: unknown) => e);
+
+    expect((erro as Error).message).toBe(
+      'O One não conseguiu entrar na MobileMed. Nada foi importado nem removido. Peça ao suporte técnico para conferir o acesso do One à MobileMed.',
+    );
+  });
+
+  it('consulta recusada não mostra rota nem código HTTP', async () => {
+    const { relatorio } = criar([
+      () => new Response(JSON.stringify({ error_code: 'E42' }), { status: 422 }),
+    ]);
+
+    const erro = await relatorio.buscar('laudos', periodo, fatiamento).catch((e: unknown) => e);
+
+    expect((erro as Error).message).toBe(
+      'A MobileMed recusou a consulta do relatório. Nada foi importado nem removido. Avise o suporte técnico.',
+    );
   });
 
   it('resposta fora do formato derruba a leitura inteira, sem dado de paciente na mensagem', async () => {
@@ -186,8 +222,9 @@ describe('RelatorioMobileMedHttp', () => {
     const erro = await relatorio.buscar('laudos', periodo, fatiamento).catch((e: unknown) => e);
 
     expect(erro).toBeInstanceOf(RelatorioMobileMedError);
-    expect((erro as Error).message).toContain('resposta fora do formato');
-    expect((erro as Error).message).toContain('lista.1.data_laudo');
+    expect((erro as Error).message).toBe(
+      'A MobileMed devolveu o relatório num formato que o One não reconhece. Nada foi importado nem removido. Avise o suporte técnico: ela pode ter mudado o relatório.',
+    );
     expect((erro as Error).message).not.toContain('PACIENTE');
   });
 
