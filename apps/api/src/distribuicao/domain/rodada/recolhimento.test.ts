@@ -127,6 +127,20 @@ describe('recolhimento: exame entregue pelo robô, não aberto, com o turno ence
     expect(r.ficaram.turno_em_curso).toBe(1);
   });
 
+  it('Lista: recebe na terça para laudar até quarta; na quinta volta, mesmo com a Lista de quinta', () => {
+    const listas = [17, 18, 19].map((d) =>
+      periodo('ana', h('00:00', d), h('23:59', d), { lista: true }),
+    );
+    const r = recolher(
+      entrada({
+        agora: h('10:00', 19),
+        entregas: new Map([['e1', { medicoId: 'ana', em: h('09:00', 17) }]]),
+        periodos: listas,
+      }),
+    );
+    expect(ids(r)).toEqual(['e1']);
+  });
+
   it('trocado à mão depois do robô: fica com quem trocou', () => {
     const r = recolher(entrada({ exames: [exame('e1', { medicoIdMobilemed: 2 })] }));
     expect(r.recolhidos).toEqual([]);
@@ -291,14 +305,35 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
 });
 
 describe('protegidoPelaEscala: algum período em curso do médico cobre o exame', () => {
-  const proteje = (periodos: PeriodoDoMedico[], agora: Date, p = PARAMETROS) =>
-    protegidoPelaEscala(periodos, exame('e1'), agora, p);
+  const proteje = (
+    periodos: PeriodoDoMedico[],
+    agora: Date,
+    p = PARAMETROS,
+    entregue = h('09:00', 17),
+  ) => protegidoPelaEscala(periodos, exame('e1'), entregue, agora, p);
 
   it('Lista: fica com o médico até a carência da Lista depois do fim dela', () => {
     const lista = [periodo('ana', h('07:00', 17), h('07:00'), { lista: true })];
     expect(proteje(lista, h('09:00'))).toBe(true);
     expect(proteje(lista, h('06:59', 19))).toBe(true);
     expect(proteje(lista, h('07:00', 19))).toBe(false);
+  });
+
+  it('Lista todo dia: conta a Lista da entrega, e a de hoje não segura o entregue anteontem', () => {
+    const listas = [17, 18, 19].map((d) =>
+      periodo('ana', h('07:00', d), h('07:00', d + 1), { lista: true }),
+    );
+    expect(proteje(listas, h('06:59', 19))).toBe(true);
+    expect(proteje(listas, h('08:00', 19))).toBe(false);
+  });
+
+  it('Lista não segura o exame entregue fora dela (num turno comum)', () => {
+    const turnos = [
+      periodo('ana', h('07:00', 17), h('13:00', 17)),
+      periodo('ana', h('13:00', 17), h('13:00'), { lista: true }),
+    ];
+    expect(proteje(turnos, h('15:00', 17))).toBe(false);
+    expect(proteje(turnos, h('15:00', 17), PARAMETROS, h('14:00', 17))).toBe(true);
   });
 
   it('o período que vai começar protege dentro da antecedência, não antes', () => {

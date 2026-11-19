@@ -6,7 +6,8 @@ import type { ExameDaLeitura, ExameEmMaosDaLeitura } from './entrada';
 
 /**
  * RECOLHIMENTO: o exame que o robô entregou, que o médico não abriu e que nenhum turno em curso
- * dele cobre mais (com a carência) volta para a rodada, para ir a outro médico. Fonte:
+ * dele cobre mais (com a carência; a Lista, só a da entrega) volta para a rodada, para ir a outro
+ * médico. Fonte:
  * dashboards-one `services/distribuicao/recolher.ts` (`listarRecolhiveis`) e
  * `distribuicao/recolhimento.ts` (`protegidoPelaEscala`), sem banco. Diferenças decididas: sem o
  * limite de 3 dias para trás (`DIAS_PARA_TRAS`), 18/11/2026; e vale a escala de agora que cobre o
@@ -121,20 +122,25 @@ const MIN = 60_000;
  * Algum período do médico em curso agora cobre o exame? Em curso = da antecedência antes do início
  * até a carência depois do fim (a da Lista, se for Lista); cobre = a frente (especialidade ou
  * modalidade) e o recorte de segmento, como na elegibilidade do motor. O período com ausência não
- * protege. Não importa em que turno o exame foi entregue.
+ * protege. No turno comum não importa em que turno o exame foi entregue; a Lista só segura o que
+ * foi entregue nela (recebe na terça para laudar até quarta, volta na quinta), senão a Lista de
+ * todo dia segurava a sobra para sempre (dashboards-one, 23/10 e 03/11; usuário, 19/11/2026).
  */
 export function protegidoPelaEscala(
   periodos: readonly PeriodoDoMedico[],
   exame: ExameComMedico,
+  entregueEm: Date,
   agora: Date,
   p: ParametrosRecolhimento,
 ): boolean {
   const t = agora.getTime();
+  const e = entregueEm.getTime();
   return periodos.some(
     (j) =>
       !j.ausente &&
       j.inicio.getTime() - p.antecedenciaMin * MIN <= t &&
       t < j.fim.getTime() + (j.lista ? p.carenciaListaMin : p.carenciaMin) * MIN &&
+      (!j.lista || (j.inicio.getTime() - p.antecedenciaMin * MIN <= e && e < j.fim.getTime())) &&
       periodoCobreExame(j, exame, p.escalaRestringeEspecialidade),
   );
 }
@@ -214,7 +220,7 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
     const ausente = ausenteNoExame(entrega.medicoId, e);
     if (
       !ausente &&
-      protegidoPelaEscala(periodosDe.get(entrega.medicoId) ?? [], e, entrada.agora, p)
+      protegidoPelaEscala(periodosDe.get(entrega.medicoId) ?? [], e, entrega.em, entrada.agora, p)
     ) {
       prender(pacote);
       continue;
