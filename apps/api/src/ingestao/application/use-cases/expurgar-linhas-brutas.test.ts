@@ -15,6 +15,7 @@ describe('ExpurgarLinhasBrutas', () => {
           mobilemedMesesAnteriores: 1,
           mobilemedJanelaDias: 7,
           mobilemedTeto: 50_000,
+          mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
         }),
         salvar: async () => undefined,
       },

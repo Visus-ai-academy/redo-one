@@ -14,6 +14,7 @@ const padrao: ParametrosIngestao = {
   mobilemedMesesAnteriores: 1,
   mobilemedJanelaDias: 7,
   mobilemedTeto: 50_000,
+  mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
 };
 
 function montar() {
@@ -64,6 +65,23 @@ describe('AtualizarParametros', () => {
     });
   });
 
+  it('as unidades do compartilhamento: aparadas, sem repetir, e auditadas só se mudaram', async () => {
+    const { atualizar, auditoria, gravado } = montar();
+
+    await atualizar.executar('u1', { ...padrao, mobilemedCompartilhamentoUnidades: ['CRD_APOIO'] });
+    expect(auditoria.eventos).toEqual([]);
+
+    await atualizar.executar('u1', {
+      ...padrao,
+      mobilemedCompartilhamentoUnidades: [' CRD_APOIO ', 'OUTRA', 'OUTRA'],
+    });
+    expect(gravado().mobilemedCompartilhamentoUnidades).toEqual(['CRD_APOIO', 'OUTRA']);
+    expect(auditoria.eventos[0]).toMatchObject({
+      antes: { mobilemedCompartilhamentoUnidades: ['CRD_APOIO'] },
+      depois: { mobilemedCompartilhamentoUnidades: ['CRD_APOIO', 'OUTRA'] },
+    });
+  });
+
   it('sem mudança, não audita', async () => {
     const { atualizar, auditoria } = montar();
     await atualizar.executar('u1', padrao);
@@ -79,6 +97,7 @@ describe('AtualizarParametros', () => {
     [{ mobilemedMesesAnteriores: 13 }, 'Os meses anteriores precisam ficar entre 0 e 12.'],
     [{ mobilemedJanelaDias: 0 }, 'A janela precisa ficar entre 1 e 31 dias.'],
     [{ mobilemedTeto: 0 }, 'O teto precisa ser um inteiro a partir de 1.'],
+    [{ mobilemedCompartilhamentoUnidades: [''] }, 'Informe o nome de cada unidade.'],
   ])('recusa %o', async (mudanca, mensagem) => {
     const { atualizar, gravado } = montar();
     await expect(atualizar.executar('u1', { ...padrao, ...mudanca })).rejects.toThrow(

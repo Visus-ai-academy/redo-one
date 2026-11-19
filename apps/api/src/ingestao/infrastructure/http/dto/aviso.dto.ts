@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -154,4 +156,16 @@ export class ParametrosIngestaoDto {
   @Min(1)
   @Max(1_000_000)
   mobilemedTeto!: number;
+
+  @ApiProperty({
+    type: [String],
+    maxItems: 20,
+    description:
+      'Unidades de destino cujo compartilhamento a importação da MobileMed traz (vazia: nenhum).',
+  })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(100, { each: true })
+  mobilemedCompartilhamentoUnidades!: string[];
 }

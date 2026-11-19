@@ -104,6 +104,7 @@ describe('ParametrosIngestaoController', () => {
       mobilemedMesesAnteriores: 1,
       mobilemedJanelaDias: 7,
       mobilemedTeto: 50_000,
+      mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
     };
 
     await controller.atualizar(ator, corpo);

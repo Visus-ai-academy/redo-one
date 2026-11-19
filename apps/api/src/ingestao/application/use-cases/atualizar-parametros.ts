@@ -31,7 +31,17 @@ function validar(p: ParametrosIngestao) {
   if (!entre(p.mobilemedTeto, 1, 1_000_000)) {
     throw new ParametrosInvalidosError('O teto precisa ser um inteiro a partir de 1.');
   }
+  if (p.mobilemedCompartilhamentoUnidades.some((u) => !u)) {
+    throw new ParametrosInvalidosError('Informe o nome de cada unidade.');
+  }
 }
+
+const normalizar = (p: ParametrosIngestao): ParametrosIngestao => ({
+  ...p,
+  mobilemedCompartilhamentoUnidades: [
+    ...new Set(p.mobilemedCompartilhamentoUnidades.map((u) => u.trim())),
+  ],
+});
 
 /** Parâmetros da importação editados por tela (com auditoria dos campos que mudaram). */
 export class AtualizarParametros {
@@ -41,11 +51,12 @@ export class AtualizarParametros {
     private readonly agora: () => Date,
   ) {}
 
-  async executar(usuarioId: string, novos: ParametrosIngestao) {
+  async executar(usuarioId: string, pedido: ParametrosIngestao) {
+    const novos = normalizar(pedido);
     validar(novos);
     const atuais = await this.parametros.obter();
     const mudou = (Object.keys(novos) as (keyof ParametrosIngestao)[]).filter(
-      (campo) => atuais[campo] !== novos[campo],
+      (campo) => JSON.stringify(atuais[campo]) !== JSON.stringify(novos[campo]),
     );
     if (!mudou.length) return;
     await this.parametros.salvar(novos);

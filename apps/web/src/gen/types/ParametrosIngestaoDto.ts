@@ -51,4 +51,9 @@ export type ParametrosIngestaoDto = {
    * @type integer
    */
   mobilemedTeto: number;
+  /**
+   * @description Unidades de destino cujo compartilhamento a importação da MobileMed traz (vazia: nenhum).
+   * @type array
+   */
+  mobilemedCompartilhamentoUnidades: string[];
 };

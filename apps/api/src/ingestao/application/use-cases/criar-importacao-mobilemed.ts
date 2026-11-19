@@ -53,7 +53,10 @@ export class CriarImportacaoMobileMed {
 
   private criar(parametros: ParametrosIngestao, enviadaPorId: string | null) {
     return this.importacoes.criarMobileMed({
-      formatos: ['laudos', 'compartilhamento'],
+      // Sem unidades de destino, o compartilhamento fica de fora (como o RPA sem unidade).
+      formatos: parametros.mobilemedCompartilhamentoUnidades.length
+        ? ['laudos', 'compartilhamento']
+        : ['laudos'],
       periodo: periodoMobileMed(this.agora(), parametros.mobilemedMesesAnteriores),
       enviadaPorId,
       agora: this.agora(),

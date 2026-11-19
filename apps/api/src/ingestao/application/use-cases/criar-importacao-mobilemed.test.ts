@@ -34,6 +34,7 @@ describe('CriarImportacaoMobileMed', () => {
       mobilemedMesesAnteriores: 1,
       mobilemedJanelaDias: 7,
       mobilemedTeto: 50_000,
+      mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
     };
     agora = new Date('2026-11-19T15:00:00Z');
   });
@@ -54,6 +55,15 @@ describe('CriarImportacaoMobileMed', () => {
       },
     ]);
     expect(mobilemed().every((i) => i.enviadaPorId === null)).toBe(true);
+  });
+
+  it('sem unidades de compartilhamento, cria só a dos laudos (etapa pulada, como o RPA)', async () => {
+    parametros.mobilemedCompartilhamentoUnidades = [];
+    await caso().agendada();
+
+    expect(mobilemed().map((i) => i.fonte.origem === 'mobilemed' && i.fonte.formato)).toEqual([
+      'laudos',
+    ]);
   });
 
   it('respeita o intervalo desde a última (com folga do minuto do agendador)', async () => {

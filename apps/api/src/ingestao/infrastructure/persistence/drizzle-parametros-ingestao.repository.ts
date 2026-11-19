@@ -26,6 +26,7 @@ export class DrizzleParametrosIngestaoRepository implements ParametrosIngestaoRe
       mobilemedMesesAnteriores: linha?.mobilemedMesesAnteriores ?? 1,
       mobilemedJanelaDias: linha?.mobilemedJanelaDias ?? 7,
       mobilemedTeto: linha?.mobilemedTeto ?? 50_000,
+      mobilemedCompartilhamentoUnidades: linha?.mobilemedCompartilhamentoUnidades ?? ['CRD_APOIO'],
     };
   }
 

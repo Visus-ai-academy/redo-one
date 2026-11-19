@@ -12,6 +12,11 @@ export interface ParametrosIngestao {
   mobilemedJanelaDias: number;
   /** Limite de itens por chamada da MobileMed: resposta com isso ou mais é tida como cortada. */
   mobilemedTeto: number;
+  /**
+   * Unidades de destino cujo compartilhamento entra (o RPA: `RPA_COMPARTILHAMENTO_UNIDADES`,
+   * CRD_APOIO). Vazia, o compartilhamento não é importado.
+   */
+  mobilemedCompartilhamentoUnidades: string[];
 }
 
 export interface ParametrosIngestaoRepository {

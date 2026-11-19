@@ -81,6 +81,7 @@ describe('ImportarLaudos', () => {
       mobilemedMesesAnteriores: 1,
       mobilemedJanelaDias: 7,
       mobilemedTeto: 50_000,
+      mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
     }),
     salvar: async () => undefined,
   };
@@ -310,6 +311,16 @@ describe('ImportarLaudos', () => {
         inalterados: 1,
         removidos: 1,
       });
+    });
+
+    it('compartilhamento: só entram as unidades de destino configuradas', async () => {
+      const r = await importarMobileMed(
+        [registro('1', { EMPRESA: 'CRD_APOIO' }), registro('2', { EMPRESA: 'OUTRA UNIDADE' })],
+        'compartilhamento',
+      );
+
+      expect(r?.resultado).toMatchObject({ linhasArquivo: 1, inseridos: 1 });
+      expect(laudos.ativos().map((l) => l.empresaOrigem)).toEqual(['CRD_APOIO']);
     });
 
     it('falha da MobileMed termina com erro e a mensagem, sem mexer nos laudos', async () => {

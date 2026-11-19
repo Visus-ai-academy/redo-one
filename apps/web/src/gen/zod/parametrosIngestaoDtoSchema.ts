@@ -13,6 +13,7 @@ export const parametrosIngestaoDtoSchema = z.object({
   mobilemedMesesAnteriores: z.int().min(0).max(12).describe('O período começa no dia 1º de tantos meses atrás (1 = do mês anterior até hoje).'),
   mobilemedJanelaDias: z.int().min(1).max(31).describe('Dias de cada chamada ao relatório da MobileMed (a que vier no teto é dividida).'),
   mobilemedTeto: z.int().min(1).max(1000000).describe('Limite de itens por chamada da MobileMed (hoje 50.000); resposta no teto é refeita.'),
+  mobilemedCompartilhamentoUnidades: z.array(z.string()).max(20).describe('Unidades de destino cujo compartilhamento a importação da MobileMed traz (vazia: nenhum).'),
 })
 
 export type ParametrosIngestaoDtoSchemaType = z.infer<typeof parametrosIngestaoDtoSchema>

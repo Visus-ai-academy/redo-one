@@ -15297,6 +15297,14 @@
             "minimum": 1,
             "maximum": 1000000,
             "description": "Limite de itens por chamada da MobileMed (hoje 50.000); resposta no teto é refeita."
+          },
+          "mobilemedCompartilhamentoUnidades": {
+            "maxItems": 20,
+            "description": "Unidades de destino cujo compartilhamento a importação da MobileMed traz (vazia: nenhum).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -15306,7 +15314,8 @@
           "mobilemedIntervaloMinutos",
           "mobilemedMesesAnteriores",
           "mobilemedJanelaDias",
-          "mobilemedTeto"
+          "mobilemedTeto",
+          "mobilemedCompartilhamentoUnidades"
         ]
       },
       "StatusRodada": {

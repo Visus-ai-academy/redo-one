@@ -1,5 +1,6 @@
+import { normalizarNome } from '../../../catalogo/comum/nomes';
 import type { ArmazenamentoArquivos } from '../../../comum/armazenamento/armazenamento-arquivos';
-import type { Celula } from '../../domain/celulas';
+import { type Celula, texto } from '../../domain/celulas';
 import { converterLinha } from '../../domain/linha-planilha';
 import { planejarImportacao } from '../../domain/planejar-importacao';
 import {
@@ -17,10 +18,29 @@ import type {
   ResultadoImportacao,
 } from '../ports/importacoes.repository';
 import type { JanelaLaudos, LaudosRepository } from '../ports/laudos.repository';
-import { type LeitorPlanilha, PlanilhaInvalidaError } from '../ports/leitor-planilha';
+import {
+  type LeitorPlanilha,
+  PlanilhaInvalidaError,
+  type PlanilhaLida,
+} from '../ports/leitor-planilha';
 import type { ParametrosIngestaoRepository } from '../ports/parametros-ingestao.repository';
 import type { Pseudonimizador } from '../ports/pseudonimizador';
 import { type RelatorioMobileMed, RelatorioMobileMedError } from '../ports/relatorio-mobilemed';
+
+/**
+ * No compartilhamento da MobileMed, só as unidades de destino configuradas (o RPA marcava
+ * CRD_APOIO na tela); o relatório traz todas.
+ */
+function soUnidadesAceitas(planilha: PlanilhaLida, unidades: string[]): PlanilhaLida {
+  if (planilha.formato !== 'compartilhamento') return planilha;
+  const aceitas = new Set(unidades.map(normalizarNome));
+  return {
+    ...planilha,
+    linhas: planilha.linhas.filter((l) =>
+      aceitas.has(normalizarNome(texto(l.registro.EMPRESA) ?? '')),
+    ),
+  };
+}
 
 /** Quantos erros de linha ficam guardados na importação (o total vai em `invalidas`). */
 const MAXIMO_ERROS_GUARDADOS = 20;
@@ -69,10 +89,13 @@ export class ImportarLaudos {
     const parametros = await this.parametros.obter();
     const planilha =
       importacao.origem === 'mobilemed'
-        ? await this.relatorio.buscar(importacao.formato, importacao.periodo, {
-            janelaDias: parametros.mobilemedJanelaDias,
-            teto: parametros.mobilemedTeto,
-          })
+        ? soUnidadesAceitas(
+            await this.relatorio.buscar(importacao.formato, importacao.periodo, {
+              janelaDias: parametros.mobilemedJanelaDias,
+              teto: parametros.mobilemedTeto,
+            }),
+            parametros.mobilemedCompartilhamentoUnidades,
+          )
         : await this.leitor.ler(await this.armazenamento.ler(importacao.arquivoChave));
     const [cadastros, bloqueadas] = await Promise.all([
       this.cadastros.carregar(),

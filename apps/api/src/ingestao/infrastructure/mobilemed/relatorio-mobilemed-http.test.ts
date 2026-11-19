@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ClienteMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
 import { RelatorioMobileMedError } from '../../application/ports/relatorio-mobilemed';
-import { dataHoraBrasilia } from '../../domain/celulas';
+import { converterLinha } from '../../domain/linha-planilha';
 import { RelatorioMobileMedHttp } from './relatorio-mobilemed-http';
 
 const BASE = 'https://reports.teste';
@@ -19,14 +19,16 @@ const item = (campos: Record<string, unknown> = {}) => ({
   convenio: 'PLANO',
   estudo_descricao: 'TC TORAX',
   pacs_accession_no: 'A1',
-  modalidade_id: 1,
+  modalidade_id: 3,
   prioridade_id: 1,
   status_id: 1,
-  valores: 1,
+  valor: '1.00',
+  valores: null,
   especialidade: 'MEDICINA INTERNA',
   medico: 'Dra. Ana',
   is_duplicado: false,
   is_complementar: 0,
+  is_anterior: 0,
   data_realizacao: '2026-10-05T11:00:00.000Z',
   data_criacao: '2026-10-05T11:30:00.000Z',
   data_laudo: '2026-10-06T13:15:42.512Z',
@@ -103,7 +105,7 @@ describe('RelatorioMobileMedHttp', () => {
       compartilhamento: 'todos',
       isRelatorioExamesCompartilhados: true,
     });
-    expect(lida.linhas[0]?.registro).toMatchObject({ EMPRESA: 'CRD_APOIO', ESPECIALIDADE: null });
+    expect(lida.linhas[0]?.registro).toMatchObject({ EMPRESA: 'CRD_APOIO' });
   });
 
   it('monta a linha com as colunas da planilha e sem o que a ingestão não usa', async () => {
@@ -130,12 +132,10 @@ describe('RelatorioMobileMedHttp', () => {
     for (const descartado of ['000.000.000-00', 'RG-FICTICIO', 'CARTEIRINHA', 'PLANO']) {
       expect(texto).not.toContain(descartado);
     }
-    expect(dataHoraBrasilia(registro.DATA_LAUDO, registro.HORA_LAUDO)).toEqual(
-      new Date('2026-10-06T13:15:42.000Z'),
-    );
-    // Sem a tabela de modalidades da MobileMed, a linha fica sem MODALIDADE e é recusada na
-    // conversão: a importação termina sem linha válida, sem mexer em nada.
-    expect(registro.MODALIDADE).toBeNull();
+    expect(converterLinha(registro)).toMatchObject({
+      modalidade: 'CR',
+      dataLaudo: new Date('2026-10-06T13:15:42.000Z'),
+    });
   });
 
   it('refaz em metades a janela que voltou no teto', async () => {

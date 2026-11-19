@@ -489,6 +489,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         mobilemedMesesAnteriores: 2,
         mobilemedJanelaDias: 3,
         mobilemedTeto: 40_000,
+        mobilemedCompartilhamentoUnidades: ['CRD_APOIO', 'OUTRA'],
       });
       await repo.salvar({
         travaRemocaoMinimo: 8,
@@ -498,6 +499,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         mobilemedMesesAnteriores: 2,
         mobilemedJanelaDias: 3,
         mobilemedTeto: 40_000,
+        mobilemedCompartilhamentoUnidades: ['CRD_APOIO', 'OUTRA'],
       });
       expect(await repo.obter()).toEqual({
         travaRemocaoMinimo: 8,
@@ -507,6 +509,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         mobilemedMesesAnteriores: 2,
         mobilemedJanelaDias: 3,
         mobilemedTeto: 40_000,
+        mobilemedCompartilhamentoUnidades: ['CRD_APOIO', 'OUTRA'],
       });
     });
 
@@ -519,6 +522,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         mobilemedMesesAnteriores: 1,
         mobilemedJanelaDias: 7,
         mobilemedTeto: 50_000,
+        mobilemedCompartilhamentoUnidades: ['CRD_APOIO'],
       });
     });
 
