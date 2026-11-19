@@ -60,10 +60,17 @@ Lido nos bundles públicos do portal (`laudos.mobilemed.com.br`, `app-*.min.js` 
 
 - **Provedor**: OIDC próprio da MobileMed sobre o Cognito. Descoberta em `https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej/mobilemed/.well-known/openid-configuration` (o tenant `mobilemed` vem de `GET {API_URL}/oauth/redirect/tenant`, pelo `Origin` do portal). `token_endpoint` = `{OAUTH}/token`; `authorization_endpoint` em `login.mobilemed.com.br`.
 - **client_id do portal**: `4himolqrop85htlpcl6k1ljmos` (`OAUTH2_CLIENT_ID`, público; sem client secret). A tela de login usa o `client_id` que vem na URL de autorização; sem ele, o dela (`3n01qfuhbl9362cj65q7ta3m84`).
-- **Passo 1**: `POST {OAUTH}/login/auth`, JSON `{ email, password, client_id }`. Resposta: os tokens (`access_token`, `refresh_token`, `id_token`) ou um desafio `{ challenge, challenge_session }` (`TOTP` ou `NEW_PASSWORD`).
-- **Passo 2 (TOTP)**: `POST {OAUTH}/login/challenge/totp`, JSON `{ client_id, challenge_session, code }` → os tokens. Erro no formato `{ message, details }` (`message` = código).
-- **Renovação**: `POST {OAUTH}/token`, form `grant_type=refresh_token&refresh_token=…&client_id=…` (o `exchangeRefreshToken` do oidc-client). O portal renova quando resta menos de 25% da vida do token, lida do `exp` do JWT.
-- A tela de login depois troca os tokens por um `authorization_code` (`PUT {OAUTH}/authorize`, cabeçalho `x-mobilemed-session`) para o portal. O One não passa por isso: usa direto o access token do passo 2 (PROVÁVEL que valha no `portal-api`; confirmar no primeiro teste ao vivo).
+**Fluxo que funciona (testado ao vivo em 19/11/2026)**: o do navegador (oidc-client do portal + tela de login). Em todas as chamadas de `{OAUTH}` vão `Origin: https://login.mobilemed.com.br` (sem ele, o firewall do gateway devolve 403 em `/login/*`; o User-Agent não importa) e `Accept: application/json, text/plain, */*`.
+
+1. PKCE: `code_verifier` = 32 bytes aleatórios em base64url; `code_challenge` = base64url(sha256(verifier)); `state` aleatório.
+2. `PUT {OAUTH}/authorize`, JSON `{ client_id, redirect_uri: "https://laudos.mobilemed.com.br/oauth/callback", response_type: "code", scope: "openid", state, code_challenge, code_challenge_method: "S256", prompt: "login" }` → `{ client_id, redirect_uri, authorization_code, state }`.
+3. `POST {OAUTH}/login/auth`, JSON `{ email, password, client_id }` → `{ challenge: "TOTP", challenge_name, challenge_session, challenge_parameters }` (ou os tokens; `NEW_PASSWORD` o One não responde).
+4. `POST {OAUTH}/login/challenge/totp`, JSON `{ client_id, challenge_session, code }` → `{ access_token, id_token, refresh_token, expires_in, token_type, email }`. **Tokens do Cognito** (`iss=cognito-idp…`): o `reports-api` os recusa (401 `invalid_token`) e o `/token` do gateway não aceita esse refresh (500).
+5. `PUT {OAUTH}/storage`, JSON `{ ...tokens do passo 4, authorization_code }` → `{ success, session }`.
+6. `POST {OAUTH}/token`, form `grant_type=authorization_code&code=…&redirect_uri=…&client_id=…&code_verifier=…` → `{ access_token, id_token, refresh_token, token_type, expires_in }`. **Este** access token é do gateway (`iss=https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej/mobilemed`), vale 300 s e é o que vai no `Authorization: Bearer` do `portal-api` e do `reports-api`.
+7. Renovação: `POST {OAUTH}/token`, form `grant_type=refresh_token&refresh_token=<do passo 6>&client_id=…` → tokens novos, com o refresh girado.
+
+Ao vivo: o `descritivoEspecialidade` "no padrão" de 18/11 devolveu HTTP 200 com 1.420 laudos.
 
 ---
 
@@ -245,22 +252,27 @@ Capturado no navegador em 19/11/2026 (telas de `laudos.mobilemed.com.br/relatori
 
 **Campos do item** (os dois relatórios): `id`, `nome_fantasia`, `codigo_paciente`, `identidade_paciente`, `usuario_id`, `cpf_paciente`, `nome_paciente`, `estudo_descricao`, `descricao_subespecialidade`, `pacs_accession_no`, `valores`, `modalidade_id`, `prioridade_id`, `status_id`, `empresa_id`, `is_complementar`, `is_anterior`, `medico`, `cod_interno`, `segunda_assinatura_laudo`, `segunda_assinatura_laudo_id`, `digitador`, (`residente`, `residente_id` no compartilhamento), `digitador_id`, `is_duplicado`, `is_excluido`, `is_compartilhamento_enviado_para`, `data_realizacao`, `data_laudo`, `primeira_data_laudo`, `count_key_image`, `count_captured_imgs`, `valor`, `especialidade`, `data_criacao`, `sla_expiration_date`, `convenio`, `identidade_convenio`, `medico_primeiro_laudo`, `medico_primeiro_laudo_id`.
 
-**Item → coluna da planilha** (`apps/api/src/ingestao/infrastructure/mobilemed/esquemas-relatorio.ts`). O adaptador monta a mesma linha que o upload do XLSX lê, para a identidade e o hash do laudo saírem iguais. Os laudos do banco de dev (só agregados) mostram que `HORA_*` tem segundos e nunca milissegundos, e que STATUS é Assinado, Reassinado ou Não Assinado (os Reassinados são exatamente os que têm DATA_REASSINATURA). O que não vira coluna (CPF, identidade, convênio, `usuario_id`...) é descartado na validação.
+**Item → coluna da planilha** (`apps/api/src/ingestao/infrastructure/mobilemed/esquemas-relatorio.ts`). A planilha é montada no navegador pelo `app.js` do portal (`frontRelatorioDescritivoEspecialidade` e `frontRelatorioDescritivoListagem` pré-processam cada item; `exportar` monta a linha). O adaptador reproduz essa transformação para a identidade e o hash do laudo saírem iguais aos do upload da mesma planilha (CONHECIDO pelo bundle de 19/11; formatos conferidos, mascarados, no XLSX de 19/11).
 
-| Coluna | Campo do item | Status |
+| Coluna | Especialidades (laudos) | Compartilhamento |
 | --- | --- | --- |
-| EMPRESA | `nome_fantasia`; no compartilhamento, `is_compartilhamento_enviado_para` | PROVÁVEL |
-| NOME_PACIENTE, CODIGO_PACIENTE | `nome_paciente`, `codigo_paciente` (só para o pseudônimo e a linha crua, como no upload) | PROVÁVEL |
-| ESTUDO_DESCRICAO, ACCESSION_NUMBER | `estudo_descricao`, `pacs_accession_no` | PROVÁVEL |
-| MODALIDADE | `modalidade_id` → sigla (MR, CT, CR, DX, MG, OT) | DESCONHECIDO: falta a tabela |
-| PRIORIDADE | `prioridade_id` (enum da seção 2.1, mesma grafia da planilha) | CONHECIDO |
-| STATUS | `status_id`: 1 Assinado, 5 Reassinado, o resto Não Assinado | PROVÁVEL |
-| DATA/HORA_REALIZACAO, _TRANSFERENCIA, _PRAZO | `data_realizacao`, `data_criacao`, `sla_expiration_date`, em Brasília, truncados no segundo | PROVÁVEL |
-| DATA/HORA_LAUDO, MEDICO | `data_laudo`, `medico`; no Reassinado, `primeira_data_laudo`, `medico_primeiro_laudo` | PROVÁVEL (afeta a identidade de ~4% dos laudos) |
-| DATA/HORA_REASSINATURA, MEDICO_REASSINATURA | No Reassinado, `data_laudo`, `medico` | PROVÁVEL |
-| VALORES, ESPECIALIDADE | `valores`, `especialidade` (vazia no compartilhamento) | PROVÁVEL |
-| DUPLICADO, COMPLEMENTAR, POSSUI_IMAGENS_CHAVE | `is_duplicado`, `is_complementar`, `count_key_image > 0` como Sim/Não | PROVÁVEL |
-| IMAGENS_CHAVES, IMAGENS_CAPTURADAS, CODIGO_INTERNO, DIGITADOR, SEGUNDA_ASSINATURA | `count_key_image`, `count_captured_imgs`, `cod_interno`, `digitador`, `segunda_assinatura_laudo` | PROVÁVEL (só na linha crua) |
+| EMPRESA | `nome_fantasia` | `is_compartilhamento_enviado_para` (texto: a unidade de destino); `nome_fantasia` vai em UNIDADE_ORIGEM |
+| ESTUDO_DESCRICAO | `estudo_descricao` | `descricao_subespecialidade` ou `estudo_descricao` |
+| ACCESSION_NUMBER, CODIGO_PACIENTE, NOME_PACIENTE | `pacs_accession_no`, `codigo_paciente`, `nome_paciente` | iguais (accession vazio vira "") |
+| MODALIDADE | `modalidade_id` pelo `modalidadeEnum` do portal: 1 MR, 2 CT, 3 CR, 4 DX, 5 US, 6 MG, 7 OT, 8 XA, 9 CP, 10 NM, 11 ES, 12 EEG, 13 ECG, 14 BMD (fora disso, a linha é recusada) | igual |
+| PRIORIDADE | `prioridade_id` (seção 2.1) | igual |
+| VALORES | `valor` (texto; vazio vira 0). `valores` vem nulo | `valores` (vazio vira 0) com duas casas |
+| ESPECIALIDADE | `especialidade` | não existe |
+| STATUS | `status_id` 1 Assinado, 5 Reassinado, o resto Não Assinado | igual |
+| DATA/HORA_LAUDO, MEDICO | Assinado: `data_laudo` e `medico`; senão `primeira_data_laudo` e `medico_primeiro_laudo` | igual |
+| DATA/HORA_REASSINATURA, MEDICO_REASSINATURA | Reassinado: `data_laudo` e `medico` | igual |
+| DATA/HORA_REALIZACAO, _TRANSFERENCIA, _PRAZO | `data_realizacao`, `data_criacao`, `sla_expiration_date` | igual |
+| DUPLICADO | `is_duplicado` (0/1) como Sim/Não | igual |
+| COMPLEMENTAR | **`is_anterior`** = 1 como Sim/Não (a linha do portal põe o `is_anterior` nessa coluna) | COMPLEMENTO = `is_complementar` |
+| POSSUI_IMAGENS_CHAVE, IMAGENS_CHAVES, IMAGENS_CAPTURADAS | SIM/NAO se há `count_key_image` ou `count_captured_imgs`; os dois contadores | igual |
+| SEGUNDA_ASSINATURA, CODIGO_INTERNO, DIGITADOR | `segunda_assinatura_laudo`, `cod_interno`, `digitador` | igual, mais RESIDENTE e ANTERIOR; IDENTIDADE e CONVENIO ficam de fora (LGPD) |
+
+As datas vêm em ISO UTC com milissegundos e `Z`; o portal formata com `moment` no fuso do navegador (Brasília). O adaptador converte para Brasília e trunca no segundo (`DD/MM/YYYY` e `HH:mm:ss`).
 
 Datas sem fuso explícito são recusadas (seriam lidas no fuso do servidor).
 
@@ -272,6 +284,7 @@ Datas sem fuso explícito são recusadas (seriam lidas no fuso do servidor).
 - Nunca duas da MobileMed ao mesmo tempo (lock no banco ao criar; o "Importar agora" com uma em curso dá 409) e a mesma fila das planilhas (`ingestao`, uma importação por vez). O agendador (`ingestao:agendar-mobilemed`) roda a cada minuto e cria o ciclo quando o intervalo desde a última passou.
 - Falha da MobileMed (fora do ar, sessão, resposta fora do formato) = importação com erro e mensagem curta, nada alterado. Relatório vazio no período também é erro, sem remover nada.
 - Respeita as competências fechadas, como o upload.
+- Compartilhamento: só as unidades de destino de Configurações › Importação de laudos (padrão CRD_APOIO, com auditoria; decidido em 19/11, o mesmo comportamento do `RPA_COMPARTILHAMENTO_UNIDADES` do RPA antigo, agora editável). Sem nenhuma unidade, o ciclo cria só a importação dos laudos.
 - `INGESTAO_MOBILEMED=fake` (dev): agenda e botão funcionam, o relatório volta vazio (a importação termina com erro). Vazio: desligada.
 
 ---
@@ -497,7 +510,7 @@ Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo cont
 - **`nomesPacientes(ids)`** e **`intocados(exames)`**: um pedido por exame (`pesquisa_id_exame` e `GET /exame/{id}`). Se a conferência falha por erro da MobileMed, o exame segue para a atribuição, que reconfere e devolve a falha como retentável.
 - **`atribuir` (inclui a troca do recolhimento) e `tirar`**: `GET /exame/{id}` → já com o médico pedido = `executada`; assinado = `pulada/assinado`; já com médico (sem ser troca) = `ja_tem_medico`; troca com outro dono = `mudou_de_dono`; status ≠ NOVO = `exame_ja_aberto`; sumiu = `saiu_da_fila`; `empresa.exigir_motivo` = `unidade_exige_motivo` (decisão: a operação atribui à mão). Depois `PUT /exame` com o corpo mínimo (`usuario_id: 0` para tirar) e as flags de SLA do portal, e nova leitura: `usuario_id` gravado ≠ pedido = `falhou/nao_confirmado` (retentável).
 - **Erros**: sessão (401, 403, 410, `invalid_token`) = `sessao_caiu`, retentável; 429, 5xx, sem resposta ou tempo esgotado = `mobilemed_indisponivel`, retentável; corpo fora do formato = `resposta_inesperada`; outro 4xx = `recusada_mobilemed`.
-- **Login**: na primeira chamada, login com e-mail, senha e o código TOTP do instante (com menos de 5 s de vida, espera a próxima janela). O access token fica na memória até faltar 1 min para o `exp`; aí renova pelo refresh token (guardando o refresh novo, que gira a cada uso). Refresh recusado → novo login. Uma renovação por vez: pedidos simultâneos esperam a mesma. Depois de 3 falhas seguidas de renovação, para de tentar (log `mobilemed_login_parado`) até a API reiniciar, para não bloquear a conta. Logs só com rota, tipo e status; nunca usuário, senha, chave, código ou token.
+- **Login**: na primeira chamada, o fluxo da seção 1.4 (authorize com PKCE, e-mail e senha, o código TOTP do instante, com menos de 5 s de vida espera a próxima janela, storage e a troca do código no `/token`). O access token fica na memória até faltar 1 min para o `exp`; aí renova pelo refresh token (guardando o refresh novo, que gira a cada uso). Refresh recusado → novo login. Uma renovação por vez: pedidos simultâneos esperam a mesma. Depois de 3 falhas seguidas de renovação, para de tentar (log `mobilemed_login_parado`) até a API reiniciar, para não bloquear a conta. Logs só com rota, tipo e status; nunca usuário, senha, chave, código ou token.
 - **Quem chama `ler()`**: a rodada (job `distribuicao.ler-fila`, ao vivo), o job do retrato da fila do momento (`distribuicao:ler-retrato-fila`, no intervalo de Configurações › Distribuição, padrão 5 min, ou pelo "Ler agora"; uma leitura por vez, numa fila própria) e a prévia do recolhimento. A tela da fila do momento não chama a MobileMed: lê o retrato gravado (`retrato_fila_distribuicao`, só agregados) e mostra a hora da leitura. Falha na leitura do retrato: o anterior fica, a tela avisa a hora da falha e o log leva só a mensagem curta da porta.
 - **Freio**: depois de `MOBILEMED_LIMITE_ANOMALIAS` anomalias seguidas (429, 5xx, sem resposta, fora do formato), cada atribuição volta `falhou/freio_mobilemed` (retentável) sem chamar a MobileMed, até uma chamada dar certo (ex.: a conferência ao retomar).
 - **`medicosDaUnidade(empresaId)`**: `POST /usuario/lista/empresa` com `perfis: [3]`; devolve `{ id, nome }`. Base do futuro de-para de `medicos.id_mobilemed` (sem tela).
