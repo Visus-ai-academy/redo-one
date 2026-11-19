@@ -161,7 +161,8 @@ function PlantaoAberto({
                   path: { alocacaoId: o.alocacaoId, data: o.data },
                   body: ajuste,
                 }).unwrap();
-                const vazio = !ajuste.prioridadeIdsLiberadas.length && !ajuste.segueSla;
+                const vazio =
+                  !ajuste.prioridadeIdsLiberadas.length && !ajuste.segueSla && !ajuste.laudosExtra;
                 await depois(vazio ? 'Ajuste do robô tirado.' : 'Ajuste do robô salvo.');
               },
             }

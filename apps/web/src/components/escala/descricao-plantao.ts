@@ -14,6 +14,7 @@ export type ContextoDescricao = {
     prioridadeIdsLiberadas: readonly string[];
     segueSla: boolean;
     clienteNome: string | null;
+    laudosExtra: number;
   };
 };
 
@@ -116,7 +117,9 @@ export function descreverPlantao(o: OcorrenciaDto, contexto: ContextoDescricao):
     if (liberadas.length > 0) partes.push(`Aceita também ${emLista(liberadas)}`);
     if (ajuste.segueSla)
       partes.push(partes.length ? 'segue o SLA neste dia' : 'Segue o SLA neste dia');
-    if (ajuste.clienteNome) partes.push(`só para ${ajuste.clienteNome}`);
+    if (ajuste.clienteNome && partes.length) partes.push(`só para ${ajuste.clienteNome}`);
+    if (ajuste.laudosExtra > 0)
+      partes.push(`+${ajuste.laudosExtra} laudos de ${ajuste.clienteNome ?? 'um cliente'}`);
     if (partes.length > 0) itens.push({ rotulo: 'Robô neste dia', valor: partes.join('; ') });
   }
 

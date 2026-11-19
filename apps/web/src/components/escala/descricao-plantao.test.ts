@@ -135,11 +135,26 @@ describe('descreverPlantao', () => {
         prioridadeIdsLiberadas: ['p-urg'],
         segueSla: true,
         clienteNome: 'HCLONDRINA',
+        laudosExtra: 0,
       },
     });
     expect(linha(itens, 'Robô neste dia')).toBe(
       'Aceita também URGÊNCIA; segue o SLA neste dia; só para HCLONDRINA',
     );
+  });
+
+  it('+N laudos de um cliente no ajuste do dia', () => {
+    const itens = descreverPlantao(ocorrencia(), {
+      ...vazio,
+      conflitos: [],
+      ajusteDistribuicao: {
+        prioridadeIdsLiberadas: [],
+        segueSla: false,
+        clienteNome: 'HCLONDRINA',
+        laudosExtra: 30,
+      },
+    });
+    expect(linha(itens, 'Robô neste dia')).toBe('+30 laudos de HCLONDRINA');
   });
 
   it('sem ajuste do dia, nada sobre o robô', () => {

@@ -18,7 +18,7 @@ type Props = {
   /** Prioridades do catálogo (`GET /escala/classificacoes`), inativas inclusive. */
   prioridades: PrioridadeEscalaDto[];
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
-  /** Grava o ajuste; vazio (nada liberado e a Lista como sempre) tira o do dia. */
+  /** Grava o ajuste; vazio (nada liberado, a Lista como sempre e sem extra) tira o do dia. */
   onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
 };
 
@@ -26,6 +26,8 @@ type Valores = {
   prioridadeIdsLiberadas: string[];
   segueSla: boolean;
   cliente: OpcaoBusca | null;
+  /** Texto do NumberField ("" = 0). */
+  laudosExtra: string;
 };
 
 const esquema = z
@@ -33,14 +35,23 @@ const esquema = z
     prioridadeIdsLiberadas: z.array(z.string()),
     segueSla: z.boolean(),
     cliente: z.custom<OpcaoBusca | null>(),
+    laudosExtra: z.string(),
   })
   .superRefine((v, ctx) => {
-    const nada = v.prioridadeIdsLiberadas.length === 0 && !v.segueSla;
-    if (nada && v.cliente) {
+    const extra = Number(v.laudosExtra || 0);
+    const nada = v.prioridadeIdsLiberadas.length === 0 && !v.segueSla && extra === 0;
+    if (extra > 0 && !v.cliente) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['laudosExtra'],
+        message: 'Escolha o cliente. O +N de todos os exames é a produtividade do dia.',
+      });
+    } else if (nada && v.cliente) {
       ctx.addIssue({
         code: 'custom',
         path: ['cliente'],
-        message: 'O cliente só recorta as prioridades aceitas ou "segue o SLA neste dia".',
+        message:
+          'O cliente só recorta as prioridades aceitas, "segue o SLA neste dia" ou laudos a mais.',
       });
     } else if (nada) {
       ctx.addIssue({
@@ -53,8 +64,8 @@ const esquema = z
 
 /**
  * O que muda no robô para este plantão só neste dia (a "exceção do robô" do dashboards-one):
- * prioridades que ele aceita além do arranjo, "segue o SLA neste dia" e, opcionalmente, só um cliente.
- * O "+N laudos" é a produtividade do dia, logo acima.
+ * prioridades que ele aceita além do arranjo, "segue o SLA neste dia" e, opcionalmente, só um cliente,
+ * com laudos a mais só dele. O "+N laudos" de todos os exames é a produtividade do dia, logo acima.
  */
 export function AjusteDistribuicaoDia({
   alocacaoId,
@@ -101,6 +112,9 @@ export function AjusteDistribuicaoDia({
                   rotulo: consulta.data.ajuste.clienteNome ?? 'Cliente',
                 }
               : null,
+            laudosExtra: consulta.data.ajuste?.laudosExtra
+              ? String(consulta.data.ajuste.laudosExtra)
+              : '',
           }}
           temAjuste={Boolean(consulta.data.ajuste)}
           prioridades={prioridades}
@@ -133,6 +147,7 @@ function FormAjuste({
         prioridadeIdsLiberadas: value.prioridadeIdsLiberadas,
         segueSla: value.segueSla,
         clienteId: value.cliente?.valor ?? null,
+        laudosExtra: Number(value.laudosExtra || 0),
       }),
   });
   // Inativa só aparece se já estiver marcada.
@@ -177,12 +192,28 @@ function FormAjuste({
           />
         )}
       </form.AppField>
+      <form.AppField name="laudosExtra">
+        {(field) => (
+          <field.NumberField
+            label="Laudos a mais deste cliente"
+            placeholder="Ex.: 30"
+            description="Passa do teto só com exames do cliente escolhido. Os dele também contam no teto."
+            min={0}
+            max={500}
+          />
+        )}
+      </form.AppField>
       <div className="flex flex-wrap justify-end gap-2">
         {temAjuste && (
           <Button
             type="button"
             onClick={() =>
-              void onSalvar({ prioridadeIdsLiberadas: [], segueSla: false, clienteId: null })
+              void onSalvar({
+                prioridadeIdsLiberadas: [],
+                segueSla: false,
+                clienteId: null,
+                laudosExtra: 0,
+              })
             }
             className={buttonClassName({ variant: 'secondary' })}
           >

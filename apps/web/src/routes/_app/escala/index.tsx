@@ -171,6 +171,7 @@ function Escala() {
             prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
             segueSla: a.segueSla,
             clienteNome: a.clienteNome,
+            laudosExtra: a.laudosExtra,
           },
         ]),
       ),

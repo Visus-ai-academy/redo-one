@@ -134,6 +134,7 @@ const CAMPOS: Record<string, string> = {
   listaSegueSla: 'A Lista segue o SLA',
   segueSla: 'Segue o SLA neste dia',
   clienteId: 'Só para o cliente',
+  laudosExtra: 'Laudos a mais deste cliente',
 };
 
 const VALORES: Record<string, string> = {

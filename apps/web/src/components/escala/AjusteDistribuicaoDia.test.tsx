@@ -49,6 +49,7 @@ describe('AjusteDistribuicaoDia', () => {
       prioridadeIdsLiberadas: ['p-urg'],
       segueSla: true,
       clienteId: null,
+      laudosExtra: 0,
     });
     expect(screen.queryByRole('button', { name: 'Tirar ajuste' })).not.toBeInTheDocument();
   });
@@ -74,15 +75,33 @@ describe('AjusteDistribuicaoDia', () => {
       segueSla: false,
       clienteId: 'c-hc',
       clienteNome: 'HCLONDRINA',
+      laudosExtra: 30,
     });
     const { onSalvar } = montar();
     expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
     expect(screen.getByRole('combobox', { name: 'Só para o cliente' })).toHaveValue('HCLONDRINA');
+    expect(screen.getByRole('textbox', { name: 'Laudos a mais deste cliente' })).toHaveValue('30');
     await userEvent.click(screen.getByRole('button', { name: 'Tirar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: [],
       segueSla: false,
       clienteId: null,
+      laudosExtra: 0,
     });
+  });
+
+  it('+N laudos só de um cliente: sem o cliente, aponta a produtividade do dia', async () => {
+    const { onSalvar } = montar();
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Laudos a mais deste cliente' }),
+      '30',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
+    expect(
+      await screen.findByText(
+        'Escolha o cliente. O +N de todos os exames é a produtividade do dia.',
+      ),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
   });
 });
