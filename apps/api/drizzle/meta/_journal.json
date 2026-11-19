@@ -239,6 +239,13 @@
       "when": 1795097507402,
       "tag": "0033_loud_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795097903547,
+      "tag": "0034_condemned_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }

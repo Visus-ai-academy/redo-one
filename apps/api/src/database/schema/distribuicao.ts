@@ -208,9 +208,33 @@ export const configuracaoDistribuicao = pgTable(
     expiracaoPropostaMin: integer('expiracao_proposta_min').notNull().default(45),
     /** Máximo de exames propostos por rodada; null = sem teto. */
     tetoPorRodada: integer('teto_por_rodada'),
+    /** Minutos entre as leituras do retrato da fila do momento; null = só pelo "Ler agora". */
+    retratoFilaMin: integer('retrato_fila_min').default(5),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [check('configuracao_distribuicao_unica', sql`${t.id} = 1`)],
+);
+
+/**
+ * O retrato da fila do momento (uma linha só, substituída a cada leitura): o que a tela mostra,
+ * lido da MobileMed por job no intervalo da configuração. Só agregados e os médicos em turno com a
+ * carga; nada de paciente. A rodada nunca o usa: lê a fila ao vivo.
+ */
+export const retratoFilaDistribuicao = pgTable(
+  'retrato_fila_distribuicao',
+  {
+    id: integer('id').primaryKey().default(1),
+    /** `FilaDoMomento` da última leitura boa; null = nunca lida. */
+    fila: jsonb('fila'),
+    lidaEm: timestamp('lida_em', { withTimezone: true }),
+    pedidaEm: timestamp('pedida_em', { withTimezone: true }),
+    /** A última leitura falhou (o retrato é o da anterior); null = leu bem. */
+    falhouEm: timestamp('falhou_em', { withTimezone: true }),
+    /** Mensagem curta da falha, sem dado de paciente. */
+    erro: text('erro'),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [check('retrato_fila_distribuicao_unico', sql`${t.id} = 1`)],
 );
 
 /** Turnos que só recebem numa rodada posterior do dia (no dashboards-one, a Tarde). */
