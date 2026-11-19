@@ -216,32 +216,63 @@ Outras rotas de equipe que existem e **não** são usadas na atribuição: `PUT 
 
 - `comentarioHttpServices.buscarComentarios` (`mobile.js:76844-76853`). Resposta `data.lista` com `nome_usuario`/`nome`, `data_criacao`, `descricao` (pelo legado). CONHECIDO.
 
-### 2.8 Relatório descritivo: `POST {API_URL_REPORTS}/exame/relatorio/descritivoEspecialidade`
+### 2.8 Relatório de laudos (`reports-api`): a importação automática da `ingestao`
 
-- `relatorioHttpService.buscarRelatorioDescritivoEspecialidades` (`mobile.js:7321-7331`). Da `ingestao`, registrado aqui porque o `TODO.md` o lista.
-- Corpo de `relatorioModel` `r(...)` (`mobile.js:70038-70110`):
+Capturado no navegador em 19/11/2026 (telas de `laudos.mobilemed.com.br/relatorio/exames`). A planilha XLSX que a tela exporta é montada **no navegador** a partir desta mesma resposta (exportar não faz requisição). Base `https://gateway-sa.mobilemed.com.br/reports-api` (`MOBILEMED_REPORTS_API_URL`).
+
+- Cabeçalhos: `Authorization: Bearer <access token>` (o mesmo login da seção 1.4), `Content-Type: application/json`, `Accept: application/json`.
+- Corpo: `{ filtro, paginacao: { pagina: 1, total_registros: 50 } }`. A `paginacao` é ignorada.
+- Resposta: `{ status_code, lista: [...] }`, com 39 campos por item e **sem paginação**: vem tudo até o teto de **50.000 itens por chamada** ("Máx. 50.000 reg." na tela); acima disso a lista é **cortada em silêncio**. (Em 19/11, um XLSX de 01/10 a 19/11 veio com exatamente 50.000 linhas: cortado.)
+- `data_laudo`: o dia de Brasília das 00:00 às 23:59:59.xxx, em UTC (`"2026-10-01T03:00:00.000Z"` a `"2026-11-20T02:59:59.142Z"`).
+
+**Rotas**
+
+| # | Relatório | Rota | Filtro |
+| --- | --- | --- | --- |
+| 1 | Laudos "no padrão" (Descritivo Especialidades) | `POST /exame/relatorio/descritivoEspecialidade` | O de baixo |
+| 2 | Laudos "fora do padrão" (estudo renomeado depois; só aparecem aqui). 01/10–19/11: 159 itens | A mesma | O mesmo, com `"exibirNaoTratados": "1"` (string) |
+| 3 | Compartilhamento de exames (apoio, hoje CRD_APOIO). 01/10–19/11: 113 itens | `POST /exame/relatorio/examesCompartilhados` | O de baixo com `"tipoAssinatura": 1`, `"isEspecialidades": false`, `"tipoAcao": {"id": null, "descricao": "TODOS"}`, `"compartilhamento": "todos"`, `"isRelatorioExamesCompartilhados": true` |
 
 ```json
-{
-  "filtro": {
-    "data_realizacao": { "data_inicial": "", "data_final": "" },
-    "data_laudo": { "data_inicial": "ISO UTC", "data_final": "ISO UTC (23:59:59)" },
-    "data_criacao": { "data_inicial": "", "data_final": "" },
-    "tipoAssinatura": 1, "residente_id": 0, "empresa_id": 0, "gruposEmpresas_id": 0,
-    "is_concluido": null, "prioridade_id": [], "modalidades": [],
-    "isEspecialidades": true, "isDescritivo": false, "exibirNaoTratados": false,
-    "isResidentes": false, "isDigitadores": false, "isJustificado": false, "tipoAcao": false,
-    "status_empresa": null, "is_complementar": null, "usuario_id": 0,
-    "perfis": [1, 2, 9]
-  },
-  "paginacao": { "pagina": 1, "total_registros": 50 }
-}
+{"data_realizacao":{"data_inicial":"","data_final":""},
+ "data_laudo":{"data_inicial":"2026-10-01T03:00:00.000Z","data_final":"2026-11-20T02:59:59.142Z"},
+ "data_criacao":{"data_inicial":"","data_final":""},
+ "tipoAssinatura":null,"residente_id":0,"empresa_id":[],"gruposEmpresas_id":0,"is_concluido":null,
+ "prioridade_id":[],"modalidades":[],"isEspecialidades":true,"isDescritivo":false,
+ "exibirNaoTratados":false,"isResidentes":false,"isDigitadores":false,"isJustificado":false,
+ "tipoAcao":false,"status_empresa":null,"is_complementar":null,"usuario_id":0,"perfis":[1,2,9]}
 ```
 
-  A tela "Especialidades" põe `isEspecialidades: true` e `perfis: [1, 2, 9]` (+5 com residentes, `[3]` em "meus exames") (`mobile.js:55111-55130`). `empresa_id` é 0 (todas) ou lista de ids.
-- Resposta: `data.lista`; a tela usa `lista.length` como total e **pagina no navegador** (`mobile.js:55130-55135`), o que sugere que a resposta vem inteira e a `paginacao` do corpo é ignorada (PROVÁVEL; o `TODO.md` supunha 50 por página).
-- Campos (`frontRelatorioDescritivoEspecialidade`, `mobile.js:72110+`): `id`, `prioridade_id`, `modalidade_id`, `nome_fantasia`, `codigo_paciente`, `nome_paciente`, `estudo_descricao`, `data_realizacao`, `data_criacao` (transferência), `pacs_accession_no`, `is_duplicado`, `especialidade`, `valor`, `cod_interno`, `sla_expiration_date`, `digitador`, `residente`, `is_anterior`, `is_complementar`, `identidade_paciente`, `segunda_assinatura_laudo`. **Traz o `id` do exame**, que pode virar a chave natural do laudo na ingestão.
-- Vizinhos: `POST /exame/relatorio/examesCompartilhados` (compartilhamento) e `POST /exame/relatorio/csv` (o CSV da lista de exames, com o filtro de 2.1; `mobile.js:7196-7206`).
+**Campos do item** (os dois relatórios): `id`, `nome_fantasia`, `codigo_paciente`, `identidade_paciente`, `usuario_id`, `cpf_paciente`, `nome_paciente`, `estudo_descricao`, `descricao_subespecialidade`, `pacs_accession_no`, `valores`, `modalidade_id`, `prioridade_id`, `status_id`, `empresa_id`, `is_complementar`, `is_anterior`, `medico`, `cod_interno`, `segunda_assinatura_laudo`, `segunda_assinatura_laudo_id`, `digitador`, (`residente`, `residente_id` no compartilhamento), `digitador_id`, `is_duplicado`, `is_excluido`, `is_compartilhamento_enviado_para`, `data_realizacao`, `data_laudo`, `primeira_data_laudo`, `count_key_image`, `count_captured_imgs`, `valor`, `especialidade`, `data_criacao`, `sla_expiration_date`, `convenio`, `identidade_convenio`, `medico_primeiro_laudo`, `medico_primeiro_laudo_id`.
+
+**Item → coluna da planilha** (`apps/api/src/ingestao/infrastructure/mobilemed/esquemas-relatorio.ts`). O adaptador monta a mesma linha que o upload do XLSX lê, para a identidade e o hash do laudo saírem iguais. Os laudos do banco de dev (só agregados) mostram que `HORA_*` tem segundos e nunca milissegundos, e que STATUS é Assinado, Reassinado ou Não Assinado (os Reassinados são exatamente os que têm DATA_REASSINATURA). O que não vira coluna (CPF, identidade, convênio, `usuario_id`...) é descartado na validação.
+
+| Coluna | Campo do item | Status |
+| --- | --- | --- |
+| EMPRESA | `nome_fantasia`; no compartilhamento, `is_compartilhamento_enviado_para` | PROVÁVEL |
+| NOME_PACIENTE, CODIGO_PACIENTE | `nome_paciente`, `codigo_paciente` (só para o pseudônimo e a linha crua, como no upload) | PROVÁVEL |
+| ESTUDO_DESCRICAO, ACCESSION_NUMBER | `estudo_descricao`, `pacs_accession_no` | PROVÁVEL |
+| MODALIDADE | `modalidade_id` → sigla (MR, CT, CR, DX, MG, OT) | DESCONHECIDO: falta a tabela |
+| PRIORIDADE | `prioridade_id` (enum da seção 2.1, mesma grafia da planilha) | CONHECIDO |
+| STATUS | `status_id`: 1 Assinado, 5 Reassinado, o resto Não Assinado | PROVÁVEL |
+| DATA/HORA_REALIZACAO, _TRANSFERENCIA, _PRAZO | `data_realizacao`, `data_criacao`, `sla_expiration_date`, em Brasília, truncados no segundo | PROVÁVEL |
+| DATA/HORA_LAUDO, MEDICO | `data_laudo`, `medico`; no Reassinado, `primeira_data_laudo`, `medico_primeiro_laudo` | PROVÁVEL (afeta a identidade de ~4% dos laudos) |
+| DATA/HORA_REASSINATURA, MEDICO_REASSINATURA | No Reassinado, `data_laudo`, `medico` | PROVÁVEL |
+| VALORES, ESPECIALIDADE | `valores`, `especialidade` (vazia no compartilhamento) | PROVÁVEL |
+| DUPLICADO, COMPLEMENTAR, POSSUI_IMAGENS_CHAVE | `is_duplicado`, `is_complementar`, `count_key_image > 0` como Sim/Não | PROVÁVEL |
+| IMAGENS_CHAVES, IMAGENS_CAPTURADAS, CODIGO_INTERNO, DIGITADOR, SEGUNDA_ASSINATURA | `count_key_image`, `count_captured_imgs`, `cod_interno`, `digitador`, `segunda_assinatura_laudo` | PROVÁVEL (só na linha crua) |
+
+Datas sem fuso explícito são recusadas (seriam lidas no fuso do servidor).
+
+**Como a ingestão usa** (`INGESTAO_MOBILEMED=real`):
+
+- Período: do dia 1º de N meses atrás até hoje, em Brasília (N = 1 por padrão: em 19/11, de 01/10 a 19/11). O intervalo (30 min; vazio = desligada), N, o tamanho de cada consulta (7 dias) e o teto (50.000) ficam em Configurações › Importação de laudos (`parametros_ingestao`, com auditoria).
+- Fatiamento: o período vai em consultas do tamanho configurado, uma por vez; a que volta com teto ou mais itens é refeita em duas metades, até ficar abaixo (abaixo de 1 minuto ainda no teto, a importação para). Resposta no teto nunca é aceita como completa.
+- Cada ciclo cria **duas importações** (Operação › Importação, origem MobileMed): a dos laudos junta as rotas 1 e 2 (a remoção da janela compara com tudo o que veio; separadas, o "fora do padrão" sozinho removeria os "no padrão", ou a trava recusaria), e a do compartilhamento (rota 3), que só reconcilia as empresas que vieram nela, como o upload. A janela é o período pedido, não os dias que vieram.
+- Nunca duas da MobileMed ao mesmo tempo (lock no banco ao criar; o "Importar agora" com uma em curso dá 409) e a mesma fila das planilhas (`ingestao`, uma importação por vez). O agendador (`ingestao:agendar-mobilemed`) roda a cada minuto e cria o ciclo quando o intervalo desde a última passou.
+- Falha da MobileMed (fora do ar, sessão, resposta fora do formato) = importação com erro e mensagem curta, nada alterado. Relatório vazio no período também é erro, sem remover nada.
+- Respeita as competências fechadas, como o upload.
+- `INGESTAO_MOBILEMED=fake` (dev): agenda e botão funcionam, o relatório volta vazio (a importação termina com erro). Vazio: desligada.
 
 ---
 
@@ -431,14 +462,14 @@ Agora o objetivo é **confirmar** o que o bundle diz, com atribuições que a op
 
 ---
 
-## 9. Adaptador real (`apps/api/src/distribuicao/infrastructure/mobilemed`)
+## 9. Adaptador real (`apps/api/src/distribuicao/infrastructure/mobilemed` e `apps/api/src/comum/mobilemed`)
 
 Implementa `FilaExames` e `AtribuidorExames` pelas rotas acima, com o mesmo contrato do fake (`mobilemed-fake.ts`). Testado só com HTTP simulado (fetch injetado); **nenhuma requisição foi feita à MobileMed** para construí-lo.
 
 | Arquivo | O que faz |
 | --- | --- |
-| `cliente-mobilemed.ts` | HTTP do `portal-api`: `Content-Type: application/json` + `Authorization: Bearer`, prazo por chamada, chamadas simultâneas limitadas, validação da resposta (Zod), classificação dos erros (`sessao`, `indisponivel`, `resposta_inesperada`, `recusada`) e o freio. Logs JSON só com rota genérica (`GET /exame/{id}`), tipo e status HTTP; mensagens nunca copiam o texto do erro nem valores da resposta (só o `error_code` e os caminhos dos campos) |
-| `token-mobilemed.ts` | Porta `TokenMobileMed` e o adaptador `TokenMobileMedLogin`: login da conta de serviço (seção 1.4) com o código de `totp.ts` (RFC 6238 com `node:crypto`, sem dependência) |
+| `comum/mobilemed/cliente-mobilemed.ts` | HTTP do `portal-api` (e do `reports-api`, na ingestão): `Content-Type` e `Accept: application/json` + `Authorization: Bearer`, prazo por chamada, chamadas simultâneas limitadas, validação da resposta (Zod), classificação dos erros (`sessao`, `indisponivel`, `resposta_inesperada`, `recusada`) e o freio. Logs JSON só com rota genérica (`GET /exame/{id}`), tipo e status HTTP; mensagens nunca copiam o texto do erro nem valores da resposta (só o `error_code` e os caminhos dos campos) |
+| `comum/mobilemed/token-mobilemed.ts` | Porta `TokenMobileMed` e o adaptador `TokenMobileMedLogin`: login da conta de serviço (seção 1.4) com o código de `totp.ts` (RFC 6238 com `node:crypto`, sem dependência). **Uma instância só no processo** (`TOKEN_MOBILEMED`, provida pelo `ComumModule`), dividida pela distribuição e pela ingestão: dois logins da mesma conta derrubam um ao outro |
 | `esquemas-mobilemed.ts` | Esquemas Zod das respostas e os enums de `prioridade_id` e `status_id` (seção 2.1). Só os campos usados sobrevivem à validação |
 | `mobilemed-real.ts` | `MobileMedReal`: leitura, conferência, atribuição, troca, retirada, `medicosDaUnidade` e o porte de `definirFlagsResetSla` |
 
