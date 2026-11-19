@@ -9,17 +9,27 @@ import { hashDoToken } from './abrir-sessao';
 import { SessaoAutenticador } from './sessao-autenticador';
 import type { SessaoAutenticavel, SessoesAutenticacaoRepository } from './sessoes.repository';
 
-/** Junta a sessão em memória com o acesso do papel, como a consulta única do repositório real. */
+/** Junta a sessão em memória com o acesso dos papéis, como a consulta única do repositório real. */
 class SessoesAutenticacaoEmMemoria implements SessoesAutenticacaoRepository {
   constructor(
     private readonly sessoes: InMemorySessoesRepository,
+    private readonly usuarios: InMemoryUsuariosRepository,
     private readonly papeis: InMemoryPapeisRepository,
   ) {}
 
   async buscarParaAutenticar(tokenHash: string): Promise<SessaoAutenticavel | null> {
     const sessao = await this.sessoes.buscarPorTokenHash(tokenHash);
     if (!sessao) return null;
-    return { ...sessao, acesso: await this.papeis.acessoDoPapel(sessao.usuario.papelId) };
+    const { papelIds } = this.usuarios.porId(sessao.usuarioId);
+    const acessos = await Promise.all(papelIds.map((id) => this.papeis.acessoDoPapel(id)));
+    return {
+      ...sessao,
+      acesso: {
+        papeis: papelIds.map((id, i) => ({ id, nome: acessos[i]?.papel ?? '' })),
+        acessoTotal: acessos.some((a) => a.acessoTotal),
+        permissoes: [...new Set(acessos.flatMap((a) => a.permissoes))],
+      },
+    };
   }
 
   renovar(id: string, expiraEm: Date, ultimoUsoEm: Date): Promise<void> {
@@ -45,7 +55,7 @@ describe('SessaoAutenticador.autenticar', () => {
         id: 'u-maria',
         nome: 'Maria Souza',
         email: 'maria@empresa.com.br',
-        papelId: 'p-financeiro',
+        papelIds: ['p-financeiro'],
         senhaHash: 'hash:x',
         ativo: true,
         tentativasFalhas: 0,
@@ -60,7 +70,7 @@ describe('SessaoAutenticador.autenticar', () => {
       },
     });
     sessoes = new InMemorySessoesRepository(usuarios);
-    repositorio = new SessoesAutenticacaoEmMemoria(sessoes, papeis);
+    repositorio = new SessoesAutenticacaoEmMemoria(sessoes, usuarios, papeis);
     relogio = new FixedClock(LOGIN);
     autenticador = new SessaoAutenticador(repositorio, relogio);
     await sessoes.criar({
@@ -83,8 +93,7 @@ describe('SessaoAutenticador.autenticar', () => {
       sessaoId: 's-1',
       nome: 'Maria Souza',
       email: 'maria@empresa.com.br',
-      papelId: 'p-financeiro',
-      papel: 'Financeiro',
+      papeis: [{ id: 'p-financeiro', nome: 'Financeiro' }],
       acessoTotal: false,
     });
     expect([...(principal?.permissoes ?? [])]).toEqual(['faturamento.ver', 'repasse.ver']);

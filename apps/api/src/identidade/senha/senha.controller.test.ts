@@ -17,7 +17,7 @@ function montar() {
     definirSenha: vi.fn(async () => ({
       token: 'token-novo',
       expiraEm: EXPIRA,
-      usuario: { id: 'u-1', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
+      usuario: { id: 'u-1', nome: 'Maria', email: 'maria@empresa.com.br' },
     })),
   };
   const resposta = { cookie: vi.fn() };
@@ -58,7 +58,7 @@ describe('SenhaController', () => {
       expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'lax', expires: EXPIRA }),
     );
     expect(resultado).toEqual({
-      usuario: { id: 'u-1', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
+      usuario: { id: 'u-1', nome: 'Maria', email: 'maria@empresa.com.br' },
       expiraEm: EXPIRA,
     });
   });

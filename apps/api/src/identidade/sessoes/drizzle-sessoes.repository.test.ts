@@ -35,7 +35,7 @@ describe.skipIf(!url)('DrizzleSessoesRepository.buscarParaAutenticar', () => {
     await db.execute(sql`truncate table sessoes, usuarios, papeis_permissoes, papeis cascade`);
   });
 
-  async function sessaoDe(papel: { nome: string; acessoTotal?: boolean }, permissoes: string[]) {
+  async function criarPapel(papel: { nome: string; acessoTotal?: boolean }, permissoes: string[]) {
     const [p] = await db.insert(schema.papeis).values(papel).returning();
     if (!p) throw new Error('papel não criado');
     if (permissoes.length) {
@@ -43,11 +43,23 @@ describe.skipIf(!url)('DrizzleSessoesRepository.buscarParaAutenticar', () => {
         .insert(schema.papeisPermissoes)
         .values(permissoes.map((permissao) => ({ papelId: p.id, permissao })));
     }
+    return p;
+  }
+
+  async function sessaoDe(
+    papel: { nome: string; acessoTotal?: boolean },
+    permissoes: string[],
+    outros: { id: string }[] = [],
+  ) {
+    const p = await criarPapel(papel, permissoes);
     const [u] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Maria Souza', email: `${papel.nome}@empresa.com.br`, papelId: p.id })
+      .values({ nome: 'Maria Souza', email: `${papel.nome}@empresa.com.br` })
       .returning();
     if (!u) throw new Error('usuário não criado');
+    await db
+      .insert(schema.usuariosPapeis)
+      .values([p, ...outros].map(({ id }) => ({ usuarioId: u.id, papelId: id })));
     const tokenHash = `hash-${papel.nome}`;
     await repo.criar({
       usuarioId: u.id,
@@ -75,10 +87,46 @@ describe.skipIf(!url)('DrizzleSessoesRepository.buscarParaAutenticar', () => {
       expiraAbsolutoEm: new Date('2026-12-13T12:00:00Z'),
       ultimoUsoEm: CRIADA,
       encerradaEm: null,
-      usuario: { nome: 'Maria Souza', email: 'Financeiro@empresa.com.br', papelId, ativo: true },
-      acesso: { papel: 'Financeiro', acessoTotal: false },
+      usuario: { nome: 'Maria Souza', email: 'Financeiro@empresa.com.br', ativo: true },
+      acesso: { papeis: [{ id: papelId, nome: 'Financeiro' }], acessoTotal: false },
     });
     expect(sessao?.acesso.permissoes.sort()).toEqual(['faturamento.ver', 'repasse.ver']);
+  });
+
+  it('com mais de um papel, as permissões são a união (sem repetir) e os papéis vêm por nome', async () => {
+    const escala = await criarPapel({ nome: 'Gestão de escala médica' }, [
+      'escala.ver',
+      'ausencias.ver',
+    ]);
+    const { papelId, tokenHash } = await sessaoDe(
+      { nome: 'Operacional' },
+      ['escala.ver', 'distribuicao.ver'],
+      [escala],
+    );
+
+    const sessao = await repo.buscarParaAutenticar(tokenHash);
+
+    expect(sessao?.acesso).toMatchObject({
+      papeis: [
+        { id: escala.id, nome: 'Gestão de escala médica' },
+        { id: papelId, nome: 'Operacional' },
+      ],
+      acessoTotal: false,
+    });
+    expect(sessao?.acesso.permissoes.sort()).toEqual([
+      'ausencias.ver',
+      'distribuicao.ver',
+      'escala.ver',
+    ]);
+  });
+
+  it('se um dos papéis é de acesso total, vale o acesso total', async () => {
+    const admin = await criarPapel({ nome: 'Administrador', acessoTotal: true }, []);
+    const { tokenHash } = await sessaoDe({ nome: 'Leitor' }, ['sla.ver'], [admin]);
+
+    await expect(repo.buscarParaAutenticar(tokenHash)).resolves.toMatchObject({
+      acesso: { acessoTotal: true, permissoes: [] },
+    });
   });
 
   it('papel de acesso total vem sem lista de permissões', async () => {
@@ -87,7 +135,11 @@ describe.skipIf(!url)('DrizzleSessoesRepository.buscarParaAutenticar', () => {
     ]);
 
     await expect(repo.buscarParaAutenticar(tokenHash)).resolves.toMatchObject({
-      acesso: { papel: 'Administrador', acessoTotal: true, permissoes: [] },
+      acesso: {
+        papeis: [{ nome: 'Administrador' }],
+        acessoTotal: true,
+        permissoes: [],
+      },
     });
   });
 
@@ -95,7 +147,7 @@ describe.skipIf(!url)('DrizzleSessoesRepository.buscarParaAutenticar', () => {
     const { tokenHash } = await sessaoDe({ nome: 'Leitor' }, []);
 
     await expect(repo.buscarParaAutenticar(tokenHash)).resolves.toMatchObject({
-      acesso: { papel: 'Leitor', acessoTotal: false, permissoes: [] },
+      acesso: { papeis: [{ nome: 'Leitor' }], acessoTotal: false, permissoes: [] },
     });
   });
 

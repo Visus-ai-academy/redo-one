@@ -40,10 +40,9 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
     await db.execute(
       sql`truncate table eventos_auditoria, clientes, alocacoes, tipos_ausencia, prioridades, subespecialidades, medicos, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
     );
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [u] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br', papelId: papel?.id ?? '' })
+      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br' })
       .returning();
     carla = u?.id ?? '';
     const medicos = await db

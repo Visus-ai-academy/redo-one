@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import type { Email } from '../../comum/email/envio-email';
 import { adicionarJob } from '../../comum/jobs/adicionar-job';
 import { TAREFA_ENVIAR_EMAIL } from '../../comum/jobs/tarefa-enviar-email';
 import { DATABASE, type Database } from '../../database/database';
-import { papeis, tokensSenha, usuarios } from '../../database/schema';
+import { papeis, tokensSenha, usuarios, usuariosPapeis } from '../../database/schema';
 import type {
   NovoTokenSenha,
   TipoTokenSenha,
@@ -55,15 +55,16 @@ export class DrizzleTokensSenhaRepository implements TokensSenhaRepository {
         usuario: {
           nome: usuarios.nome,
           email: usuarios.email,
-          papelId: usuarios.papelId,
-          papelNome: papeis.nome,
+          papeis: sql<string[]>`array(
+            select p.nome from ${usuariosPapeis} up join ${papeis} p on p.id = up.papel_id
+            where up.usuario_id = ${usuarios.id} order by p.nome
+          )`,
           ativo: usuarios.ativo,
         },
         convidadoPorNome: convidadoPor.nome,
       })
       .from(tokensSenha)
       .innerJoin(usuarios, eq(usuarios.id, tokensSenha.usuarioId))
-      .innerJoin(papeis, eq(papeis.id, usuarios.papelId))
       .leftJoin(convidadoPor, eq(convidadoPor.id, tokensSenha.criadoPorId))
       .where(eq(tokensSenha.tokenHash, tokenHash))
       .limit(1);

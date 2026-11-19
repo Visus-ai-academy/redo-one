@@ -35,7 +35,7 @@ function montar() {
       return { administradorId: 'p-admin' };
     },
     async existeAdministrador() {
-      return usuarios.usuarios.some((u) => u.papelId === 'p-admin');
+      return usuarios.usuarios.some((u) => u.papelIds.includes('p-admin'));
     },
   };
   const senha = new SenhaService(
@@ -65,7 +65,7 @@ describe('PrimeiroAcessoService', () => {
 
     expect(papeis.papeis.map((p) => p.nome)).toEqual(['Administrador']);
     expect(usuarios.usuarios).toMatchObject([
-      { email: 'carlos@empresa.com.br', papelId: 'p-admin', senhaHash: null },
+      { email: 'carlos@empresa.com.br', papelIds: ['p-admin'], senhaHash: null },
     ]);
     expect(link).toMatch(/^https:\/\/one\.app\/definir-senha\?token=/);
     expect(tokens.emails[0]?.texto).toContain(link);

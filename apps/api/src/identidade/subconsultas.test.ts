@@ -14,7 +14,7 @@ const sqlDe = (consulta: unknown) => (consulta as { toSQL(): { sql: string } }).
 describe('subconsultas correlacionadas', () => {
   it('os totais dos papéis comparam com "papeis"."id"', () => {
     const sql = sqlDe(new DrizzleGestaoPapeisRepository(db).listar());
-    expect(sql).toContain('"usuarios"."papel_id" = "papeis"."id"');
+    expect(sql).toContain('"usuarios_papeis"."papel_id" = "papeis"."id"');
     expect(sql).toContain('"papeis_permissoes"."papel_id" = "papeis"."id"');
   });
 });

@@ -22,7 +22,7 @@ function usuario(dados: Partial<UsuarioLogin & { cpf: string | null }> = {}) {
     nome: 'Maria Souza',
     email: 'maria@empresa.com.br',
     cpf: '12345678901',
-    papelId: 'p-financeiro',
+    papelIds: ['p-financeiro'],
     senhaHash: 'hash:cafe2026',
     ativo: true,
     tentativasFalhas: 0,
@@ -88,7 +88,6 @@ describe('AutenticacaoService.entrar', () => {
       id: 'u-maria',
       nome: 'Maria Souza',
       email: 'maria@empresa.com.br',
-      papelId: 'p-financeiro',
     });
     expect(resultado.token.length).toBeGreaterThanOrEqual(43);
     expect(resultado.expiraEm).toEqual(new Date(AGORA.getTime() + 7 * DIA));

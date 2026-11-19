@@ -38,8 +38,7 @@ const maria: PrincipalUsuario = {
   sessaoId: 's-1',
   nome: 'Maria',
   email: 'maria@empresa.com.br',
-  papelId: 'p-1',
-  papel: 'Administrador',
+  papeis: [{ id: 'p-1', nome: 'Administrador' }],
   acessoTotal: false,
   permissoes: new Set(['faturamento.ver']),
 };

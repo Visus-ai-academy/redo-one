@@ -269,10 +269,9 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
 
   it('editar mantém a frente tirada do turno que está numa ausência ou no recorte de uma gestora', async () => {
     const { id } = await criar(turno({ especialidadeIds: [eNeuro], modalidadeIds: [mCt] }));
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [usuario] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br', papelId: papel?.id ?? '' })
+      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br' })
       .returning();
     await db
       .insert(schema.usuariosEscoposEscala)
@@ -307,10 +306,9 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
 
   it('não exclui turno do recorte de uma gestora', async () => {
     const { id } = await criar(turno());
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [usuario] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br', papelId: papel?.id ?? '' })
+      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br' })
       .returning();
     await db
       .insert(schema.usuariosEscoposEscala)

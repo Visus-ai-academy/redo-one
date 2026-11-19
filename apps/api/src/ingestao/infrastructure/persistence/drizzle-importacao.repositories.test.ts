@@ -32,13 +32,9 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
   });
 
   const criarUsuario = async () => {
-    const [papel] = await db
-      .insert(schema.papeis)
-      .values({ nome: `Teste ${Math.random()}` })
-      .returning();
     const [usuario] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Maria', email: `maria${Math.random()}@teste.com`, papelId: papel?.id ?? '' })
+      .values({ nome: 'Maria', email: `maria${Math.random()}@teste.com` })
       .returning();
     return usuario?.id ?? '';
   };
@@ -518,7 +514,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
         travaRemocaoMinimo: 500,
         travaRemocaoFator: 2,
         retencaoLinhasBrutasDias: 90,
-        mobilemedIntervaloMinutos: 30,
+        mobilemedIntervaloMinutos: 15,
         mobilemedMesesAnteriores: 1,
         mobilemedJanelaDias: 7,
         mobilemedTeto: 50_000,

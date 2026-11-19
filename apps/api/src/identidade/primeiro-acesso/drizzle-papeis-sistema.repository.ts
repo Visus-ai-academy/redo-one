@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../database/database';
-import { papeis, usuarios } from '../../database/schema';
+import { papeis, usuariosPapeis } from '../../database/schema';
 import type { PapeisSistemaRepository } from './papeis-sistema.repository';
 
 const ADMINISTRADOR = 'Administrador';
@@ -34,9 +34,9 @@ export class DrizzlePapeisSistemaRepository implements PapeisSistemaRepository {
 
   async existeAdministrador() {
     const [linha] = await this.db
-      .select({ id: usuarios.id })
-      .from(usuarios)
-      .innerJoin(papeis, eq(papeis.id, usuarios.papelId))
+      .select({ id: usuariosPapeis.usuarioId })
+      .from(usuariosPapeis)
+      .innerJoin(papeis, eq(papeis.id, usuariosPapeis.papelId))
       .where(eq(papeis.acessoTotal, true))
       .limit(1);
     return !!linha;

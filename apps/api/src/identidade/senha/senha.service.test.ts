@@ -35,7 +35,7 @@ describe('SenhaService', () => {
         id: 'u-maria',
         nome: 'Maria Souza',
         email: 'maria@empresa.com.br',
-        papelId: 'p-fin',
+        papelIds: ['p-fin'],
         senhaHash: 'hash:antiga123',
         ativo: true,
         tentativasFalhas: 3,

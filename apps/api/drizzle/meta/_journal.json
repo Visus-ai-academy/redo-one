@@ -281,6 +281,34 @@
       "when": 1795115984739,
       "tag": "0039_purple_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795116010289,
+      "tag": "0040_confused_inhumans",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795116020231,
+      "tag": "0041_usuarios_papeis_dados",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795116032185,
+      "tag": "0042_papeis_suporte_operacional_escala",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795116076209,
+      "tag": "0043_early_onslaught",
+      "breakpoints": true
     }
   ]
 }

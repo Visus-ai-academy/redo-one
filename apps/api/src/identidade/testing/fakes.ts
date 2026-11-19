@@ -68,8 +68,11 @@ export class FixedClock implements Clock {
   }
 }
 
+/** Usuário guardado no fake: o do login mais CPF e papéis. */
+export type UsuarioFake = UsuarioLogin & { cpf?: string | null; papelIds: string[] };
+
 export class InMemoryUsuariosRepository implements UsuariosRepository {
-  constructor(public readonly usuarios: (UsuarioLogin & { cpf?: string | null })[] = []) {}
+  constructor(public readonly usuarios: UsuarioFake[] = []) {}
 
   async buscarParaLogin(identificador: IdentificadorLogin) {
     const achado = this.usuarios.find((u) =>
@@ -122,7 +125,7 @@ export class InMemorySessoesRepository implements SessoesRepository {
   async buscarPorTokenHash(tokenHash: string): Promise<SessaoComUsuario | null> {
     const sessao = this.sessoes.find((s) => s.tokenHash === tokenHash);
     if (!sessao || !this.usuarios) return null;
-    const { nome, email, papelId, ativo } = this.usuarios.porId(sessao.usuarioId);
+    const { nome, email, ativo } = this.usuarios.porId(sessao.usuarioId);
     return {
       id: sessao.id,
       usuarioId: sessao.usuarioId,
@@ -130,7 +133,7 @@ export class InMemorySessoesRepository implements SessoesRepository {
       expiraAbsolutoEm: sessao.expiraAbsolutoEm,
       ultimoUsoEm: sessao.ultimoUsoEm,
       encerradaEm: sessao.encerradaEm,
-      usuario: { nome, email, papelId, ativo },
+      usuario: { nome, email, ativo },
     };
   }
 
@@ -145,7 +148,7 @@ export class InMemorySessoesRepository implements SessoesRepository {
 
   async encerrarDoPapel(papelId: string, em: Date) {
     const abertas = this.sessoes.filter(
-      (s) => !s.encerradaEm && this.usuarios?.porId(s.usuarioId).papelId === papelId,
+      (s) => !s.encerradaEm && this.usuarios?.porId(s.usuarioId).papelIds.includes(papelId),
     );
     for (const sessao of abertas) sessao.encerradaEm = em;
     return abertas.length;
@@ -219,7 +222,7 @@ export class InMemoryGestaoPapeisRepository implements GestaoPapeisRepository {
   }
 
   private totalUsuarios(papelId: string) {
-    return this.usuarios?.usuarios.filter((u) => u.papelId === papelId).length ?? 0;
+    return this.usuarios?.usuarios.filter((u) => u.papelIds.includes(papelId)).length ?? 0;
   }
 }
 
@@ -272,8 +275,7 @@ export class InMemoryTokensSenhaRepository implements TokensSenhaRepository {
       usuario: {
         nome: usuario.nome,
         email: usuario.email,
-        papelId: usuario.papelId,
-        papelNome: this.nomesDosPapeis[usuario.papelId] ?? usuario.papelId,
+        papeis: usuario.papelIds.map((id) => this.nomesDosPapeis[id] ?? id).sort(),
         ativo: usuario.ativo,
       },
       convidadoPorNome: token.criadoPorId ? this.usuarios.porId(token.criadoPorId).nome : null,
@@ -320,7 +322,7 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
       .filter(
         (u) =>
           (!busca || u.nome.toLowerCase().includes(busca) || u.email.includes(busca)) &&
-          (!filtro.papelId || u.papel.id === filtro.papelId) &&
+          (!filtro.papelId || u.papeis.some((p) => p.id === filtro.papelId)) &&
           (!filtro.situacao || u.situacao === filtro.situacao) &&
           (!filtro.medicoId || this.medicoDoUsuarioMap.get(u.id) === filtro.medicoId),
       )
@@ -377,8 +379,8 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
     return id;
   }
 
-  async trocarPapel(id: string, papelId: string) {
-    this.usuarios.porId(id).papelId = papelId;
+  async trocarPapeis(id: string, papelIds: string[]) {
+    this.usuarios.porId(id).papelIds = papelIds;
   }
 
   async definirAtivo(id: string, ativo: boolean) {
@@ -408,7 +410,7 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
     else this.medicoDoUsuarioMap.delete(usuarioId);
   }
 
-  private resumo(u: UsuarioLogin, agora: Date): UsuarioResumo {
+  private resumo(u: UsuarioFake, agora: Date): UsuarioResumo {
     const situacao: SituacaoUsuario = !u.ativo
       ? 'desativado'
       : !u.senhaHash
@@ -423,10 +425,9 @@ export class InMemoryGestaoUsuariosRepository implements GestaoUsuariosRepositor
       id: u.id,
       nome: u.nome,
       email: u.email,
-      papel: {
-        id: u.papelId,
-        nome: this.papeis.papeis.find((p) => p.id === u.papelId)?.nome ?? '',
-      },
+      papeis: u.papelIds
+        .map((id) => ({ id, nome: this.papeis.papeis.find((p) => p.id === id)?.nome ?? '' }))
+        .sort((a, b) => a.nome.localeCompare(b.nome)),
       situacao,
       ultimoAcessoEm: usos.length ? new Date(Math.max(...usos)) : null,
     };

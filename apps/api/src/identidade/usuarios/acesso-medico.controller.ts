@@ -97,7 +97,14 @@ export class AcessoMedicoController {
     @MedicoId() medicoId: string,
     @Body() corpo: ConviteMedicoDto,
   ): Promise<UsuarioCriadoDto> {
-    return { id: await this.usuarios.convidar(ator, { ...corpo, cpf: null, medicoId }) };
+    const { papelId, ...dados } = corpo;
+    const id = await this.usuarios.convidar(ator, {
+      ...dados,
+      papelIds: [papelId],
+      cpf: null,
+      medicoId,
+    });
+    return { id };
   }
 
   @Put()

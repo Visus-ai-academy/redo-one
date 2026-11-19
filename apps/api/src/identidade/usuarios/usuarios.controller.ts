@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
   Put,
   Query,
@@ -29,7 +28,7 @@ import {
   ListarUsuariosDto,
   PaginaUsuariosDto,
   PapelAtribuivelDto,
-  TrocarPapelDto,
+  TrocarPapeisDto,
   UsuarioCriadoDto,
   UsuarioDetalheDto,
   VincularMedicoDto,
@@ -98,16 +97,17 @@ export class UsuariosController {
     return this.usuarios.reenviarConvite(ator, id);
   }
 
-  @Patch(':id/papel')
+  @Put(':id/papeis')
   @Permissao('usuarios.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse({ description: 'Papel trocado; as sessões da pessoa foram encerradas.' })
-  trocarPapel(
+  @ApiNoContentResponse({ description: 'Papéis trocados; as sessões da pessoa foram encerradas.' })
+  @ApiForbiddenResponse({ description: 'Papel posto ou tirado que quem troca não pode atribuir.' })
+  trocarPapeis(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Id() id: string,
-    @Body() corpo: TrocarPapelDto,
+    @Body() corpo: TrocarPapeisDto,
   ): Promise<void> {
-    return this.usuarios.trocarPapel(ator, id, corpo.papelId);
+    return this.usuarios.trocarPapeis(ator, id, corpo.papelIds);
   }
 
   @Put(':id/medico')

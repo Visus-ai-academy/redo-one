@@ -5,7 +5,6 @@ export interface UsuarioLogin {
   id: string;
   nome: string;
   email: string;
-  papelId: string;
   /** Nulo enquanto o convite não foi aceito. */
   senhaHash: string | null;
   ativo: boolean;

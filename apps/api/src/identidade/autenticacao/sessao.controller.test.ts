@@ -27,8 +27,7 @@ const maria: PrincipalUsuario = {
   sessaoId: 's-1',
   nome: 'Maria',
   email: 'maria@empresa.com.br',
-  papelId: 'p-1',
-  papel: 'Financeiro',
+  papeis: [{ id: 'p-1', nome: 'Financeiro' }],
   acessoTotal: false,
   permissoes: new Set(['repasse.ver', 'faturamento.ver']),
 };
@@ -48,8 +47,8 @@ describe('SessaoController.atual', () => {
     const { controller } = montar();
 
     expect(controller.atual(maria)).toEqual({
-      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
-      papel: 'Financeiro',
+      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br' },
+      papeis: [{ id: 'p-1', nome: 'Financeiro' }],
       acessoTotal: false,
       permissoes: ['faturamento.ver', 'repasse.ver'],
     });
@@ -86,7 +85,7 @@ describe('SessaoController.entrar', () => {
     const { controller, service, resposta } = montar(async () => ({
       token: 'token-secreto',
       expiraEm: EXPIRA,
-      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
+      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br' },
     }));
 
     const resultado = await controller.entrar(corpo, '177.32.0.1', 'Chrome', resposta);
@@ -105,7 +104,7 @@ describe('SessaoController.entrar', () => {
       expires: EXPIRA,
     });
     expect(resultado).toEqual({
-      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' },
+      usuario: { id: 'u-maria', nome: 'Maria', email: 'maria@empresa.com.br' },
       expiraEm: EXPIRA,
     });
     expect(JSON.stringify(resultado)).not.toContain('token-secreto');

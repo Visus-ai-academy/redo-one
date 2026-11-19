@@ -21,7 +21,7 @@ describe('UsuariosController', () => {
     expect(exigidas('obter')).toEqual(['usuarios.ver']);
     expect(exigidas('convidar')).toEqual(['usuarios.criar']);
     expect(exigidas('reenviarConvite')).toEqual(['usuarios.criar']);
-    expect(exigidas('trocarPapel')).toEqual(['usuarios.editar']);
+    expect(exigidas('trocarPapeis')).toEqual(['usuarios.editar']);
     expect(exigidas('encerrarSessoes')).toEqual(['usuarios.editar']);
     expect(exigidas('encerrarSessao')).toEqual(['usuarios.editar']);
     expect(exigidas('enviarLinkSenha')).toEqual(['usuarios.editar']);
@@ -78,7 +78,7 @@ describe('UsuariosController', () => {
   it('convida em nome de quem está logado', async () => {
     const service = { convidar: vi.fn(async () => 'u-novo') };
     const controller = new UsuariosController(service as unknown as UsuariosService);
-    const corpo = { nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' };
+    const corpo = { nome: 'Maria', email: 'maria@empresa.com.br', papelIds: ['p-1'] };
 
     await expect(controller.convidar(admin, corpo)).resolves.toEqual({ id: 'u-novo' });
     expect(service.convidar).toHaveBeenCalledWith(admin, { ...corpo, cpf: null });
@@ -111,13 +111,18 @@ describe('DTOs de usuários', () => {
     const papelId = '6d1f8a52-0f7c-4a3e-9d55-1f2b3c4d5e6f';
 
     await expect(
-      validar({ nome: 'Maria', email: 'maria@empresa.com.br', papelId }),
+      validar({ nome: 'Maria', email: 'maria@empresa.com.br', papelIds: [papelId] }),
     ).resolves.toBeDefined();
-    await expect(validar({ nome: 'Maria', email: 'maria', papelId })).rejects.toMatchObject({
+    await expect(
+      validar({ nome: 'Maria', email: 'maria', papelIds: [papelId] }),
+    ).rejects.toMatchObject({
       status: HttpStatus.BAD_REQUEST,
     });
     await expect(
-      validar({ nome: 'Maria', email: 'maria@empresa.com.br', papelId: 'p-1' }),
+      validar({ nome: 'Maria', email: 'maria@empresa.com.br', papelIds: ['p-1'] }),
+    ).rejects.toMatchObject({ status: HttpStatus.BAD_REQUEST });
+    await expect(
+      validar({ nome: 'Maria', email: 'maria@empresa.com.br', papelIds: [] }),
     ).rejects.toMatchObject({ status: HttpStatus.BAD_REQUEST });
   });
 });

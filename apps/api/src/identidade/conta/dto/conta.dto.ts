@@ -40,7 +40,8 @@ export class MinhaContaDto {
   @ApiProperty({ type: String, nullable: true, description: 'Só os 2 últimos dígitos do CPF.' })
   cpfFinal!: string | null;
 
-  @ApiProperty({ type: PapelDoUsuarioDto }) papel!: PapelDoUsuarioDto;
+  @ApiProperty({ type: [PapelDoUsuarioDto], description: 'Por nome.' })
+  papeis!: PapelDoUsuarioDto[];
   @ApiProperty({ type: Date, nullable: true }) senhaAlteradaEm!: Date | null;
   @ApiProperty({ type: [MinhaSessaoDto] }) sessoesAbertas!: MinhaSessaoDto[];
 }

@@ -76,12 +76,11 @@ describe.skipIf(!url)('DrizzleAusenciasRepository', () => {
         { nome: 'Bia Lima', chaveNormalizada: 'bia lima' },
       ])
       .returning();
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestor' }).returning();
     const [gestor, medicoUsuario] = await db
       .insert(schema.usuarios)
       .values([
-        { nome: 'Gestor', email: 'g@x.com', papelId: papel?.id ?? '' },
-        { nome: 'Ana', email: 'a@x.com', papelId: papel?.id ?? '', medicoId: ana?.id ?? null },
+        { nome: 'Gestor', email: 'g@x.com' },
+        { nome: 'Ana', email: 'a@x.com', medicoId: ana?.id ?? null },
       ])
       .returning();
     const [ferias] = await db

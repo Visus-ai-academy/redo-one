@@ -22,7 +22,8 @@ export interface TokenSenhaEncontrado {
   tipo: TipoTokenSenha;
   expiraEm: Date;
   usadoEm: Date | null;
-  usuario: { nome: string; email: string; papelId: string; papelNome: string; ativo: boolean };
+  /** `papeis`: nomes, em ordem alfabética. */
+  usuario: { nome: string; email: string; papeis: string[]; ativo: boolean };
   convidadoPorNome: string | null;
 }
 

@@ -438,13 +438,9 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   it('recorte da gestora é trocado inteiro: a linha antiga que a carga não traz mais sai', async () => {
     await db.execute(sql`truncate table usuarios, papeis cascade`);
-    const [papel] = await db
-      .insert(schema.papeis)
-      .values({ nome: 'Gestão de escala' })
-      .returning({ id: schema.papeis.id });
     const [usuaria] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Gestora', email: 'gestora@tele.com', papelId: papel?.id as string })
+      .values({ nome: 'Gestora', email: 'gestora@tele.com' })
       .returning({ id: schema.usuarios.id });
     const usuarioId = usuaria?.id as string;
     const turnoId = escala.tabelas.turnos[0]?.id as string;

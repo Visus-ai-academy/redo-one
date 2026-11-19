@@ -14,7 +14,7 @@ const conta = {
   id: 'u-joao',
   nome: 'João',
   email: 'joao@clinica.com',
-  papel: { id: 'p-med', nome: 'Médico' },
+  papeis: [{ id: 'p-med', nome: 'Médico' }],
   situacao: 'ativo' as const,
   ultimoAcessoEm: null,
 };
@@ -53,7 +53,13 @@ describe('AcessoMedicoController', () => {
     const corpo = { nome: 'Augusto', email: 'augusto@clinica.com', papelId: 'p-med' };
 
     await expect(montar(service).convidar(ator, 'm-1', corpo)).resolves.toEqual({ id: 'u-novo' });
-    expect(service.convidar).toHaveBeenCalledWith(ator, { ...corpo, cpf: null, medicoId: 'm-1' });
+    expect(service.convidar).toHaveBeenCalledWith(ator, {
+      nome: 'Augusto',
+      email: 'augusto@clinica.com',
+      papelIds: ['p-med'],
+      cpf: null,
+      medicoId: 'm-1',
+    });
   });
 
   it('liga uma conta existente e desliga a conta do médico', async () => {

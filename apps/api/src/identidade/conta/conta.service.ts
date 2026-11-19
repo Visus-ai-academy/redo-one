@@ -22,7 +22,7 @@ export interface MinhaConta {
   nome: string;
   email: string;
   cpfFinal: string | null;
-  papel: { id: string; nome: string };
+  papeis: { id: string; nome: string }[];
   senhaAlteradaEm: Date | null;
   sessoesAbertas: (SessaoAbertaResumo & { atual: boolean })[];
 }
@@ -50,7 +50,7 @@ export class ContaService {
       nome: usuario.nome,
       email: usuario.email,
       cpfFinal: usuario.cpfFinal,
-      papel: usuario.papel,
+      papeis: usuario.papeis,
       senhaAlteradaEm: alteradaEm,
       sessoesAbertas,
     };

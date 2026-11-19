@@ -68,10 +68,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     await db
       .insert(schema.subespecialidadesEspecialidades)
       .values({ subespecialidadeId: avc?.id ?? '', especialidadeId: esp?.id ?? '' });
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão' }).returning();
     const [usuario] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Gestora', email: 'gestora@x.com.br', papelId: papel?.id ?? '' })
+      .values({ nome: 'Gestora', email: 'gestora@x.com.br' })
       .returning();
     ids = {
       manha: manha?.id ?? '',

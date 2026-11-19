@@ -113,16 +113,11 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
   beforeEach(async () => {
     await db.execute(sql`truncate table rodadas cascade`);
     await db.execute(sql`delete from graphile_worker._private_jobs`);
-    const [papel] = await db
-      .insert(schema.papeis)
-      .values({ nome: `Teste ${Math.random()}` })
-      .returning();
     const [usuario] = await db
       .insert(schema.usuarios)
       .values({
         nome: 'Maria Operação',
         email: `m${Math.random()}@t.com`,
-        papelId: papel?.id ?? '',
       })
       .returning();
     usuarioId = usuario?.id ?? '';

@@ -31,10 +31,9 @@ describe.skipIf(!url)('cadastros consultados pelo recorte da escala', () => {
     await db.execute(
       sql`truncate table eventos_auditoria, usuarios_escopos_escala, turnos, frentes_escala, especialidades, usuarios, papeis cascade`,
     );
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão de escala' }).returning();
     const [usuario] = await db
       .insert(schema.usuarios)
-      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br', papelId: papel?.id ?? '' })
+      .values({ nome: 'Carla Lima', email: 'carla@empresa.com.br' })
       .returning();
     usuarioId = usuario?.id ?? '';
     const [t, m] = await db

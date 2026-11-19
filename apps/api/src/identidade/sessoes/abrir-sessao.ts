@@ -7,7 +7,7 @@ export interface SessaoAberta {
   /** Vai para o cookie; o banco guarda só o hash. */
   token: string;
   expiraEm: Date;
-  usuario: { id: string; nome: string; email: string; papelId: string };
+  usuario: { id: string; nome: string; email: string };
 }
 
 export function hashDoToken(token: string): string {
@@ -32,6 +32,6 @@ export async function abrirSessao(
     ip: contexto.ip,
     userAgent: contexto.userAgent,
   });
-  const { id, nome, email, papelId } = usuario;
-  return { token, expiraEm, usuario: { id, nome, email, papelId } };
+  const { id, nome, email } = usuario;
+  return { token, expiraEm, usuario: { id, nome, email } };
 }

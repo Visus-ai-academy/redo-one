@@ -32,6 +32,7 @@ import {
   MedicoJaTemAcessoError,
   MedicoNaoEncontradoError,
   PapelNaoAtribuivelError,
+  SemPapelError,
   SessaoNaoEncontradaError,
   UsuarioNaoEncontradoError,
 } from './usuarios.errors';
@@ -41,7 +42,8 @@ export interface ConviteUsuario {
   email: string;
   /** Com ou sem pontuação; opcional (permite entrar pelo CPF). */
   cpf: string | null;
-  papelId: string;
+  /** Um ou mais; as permissões da pessoa são a união das deles. */
+  papelIds: string[];
   /** Liga a conta ao médico (portal); só um usuário por médico. */
   medicoId?: string | null;
 }
@@ -77,25 +79,26 @@ export class UsuariosService {
     if (cpf !== null && cpf.length !== 11) throw new CpfInvalidoError();
     if (await this.usuarios.existeEmail(email)) throw new EmailEmUsoError();
     if (cpf && (await this.usuarios.existeCpf(cpf))) throw new CpfEmUsoError();
-    const papel = await this.papelAtribuivel(ator, dados.papelId);
+    const papeis = await this.papeisAtribuiveis(ator, normalizar(dados.papelIds));
+    const papelIds = papeis.map((p) => p.id);
     const medicoId = dados.medicoId ?? null;
     if (medicoId) await this.garantirMedicoLivre(medicoId, null);
 
     const convite = this.senha.prepararConvite({
       nome,
       email,
-      papel: papel.nome,
+      papel: nomesDosPapeis(papeis),
       convidadoPor: { id: ator.usuarioId, nome: ator.nome },
     });
     const id = await this.usuarios.convidar(
-      { nome, email, cpf, papelId: papel.id, medicoId },
+      { nome, email, cpf, papelIds, medicoId },
       convite.token,
       () => convite.email,
     );
     await this.auditar(ator, id, 'convidado', undefined, {
       nome,
       email,
-      papelId: papel.id,
+      papelIds,
       ...(medicoId ? { medicoId } : {}),
     });
     return id;
@@ -107,21 +110,34 @@ export class UsuariosService {
     const convite = this.senha.prepararConvite({
       nome: usuario.nome,
       email: usuario.email,
-      papel: usuario.papel.nome,
+      papel: nomesDosPapeis(usuario.papeis),
       convidadoPor: { id: ator.usuarioId, nome: ator.nome },
     });
     await this.tokens.emitir({ ...convite.token, usuarioId: id }, convite.email);
     await this.auditar(ator, id, 'convite_reenviado');
   }
 
-  /** Troca o papel e encerra as sessões da pessoa: o acesso novo vale na hora. */
-  async trocarPapel(ator: PrincipalUsuario, id: string, papelId: string): Promise<void> {
+  /**
+   * Troca os papéis e encerra as sessões da pessoa: o acesso novo vale na hora. Quem troca só põe
+   * ou tira papel que poderia atribuir; os que ficam como estão não contam.
+   */
+  async trocarPapeis(ator: PrincipalUsuario, id: string, papelIds: string[]): Promise<void> {
     if (id === ator.usuarioId) throw new AcaoSobreSiMesmoError();
     const usuario = await this.obter(id);
-    const papel = await this.papelAtribuivel(ator, papelId);
-    await this.usuarios.trocarPapel(id, papel.id);
+    const antes = normalizar(
+      usuario.papeis.map((p) => p.id),
+      false,
+    );
+    const depois = normalizar(papelIds);
+    const mexidos = [
+      ...depois.filter((p) => !antes.includes(p)),
+      ...antes.filter((p) => !depois.includes(p)),
+    ];
+    if (mexidos.length === 0) return;
+    await this.papeisAtribuiveis(ator, mexidos);
+    await this.usuarios.trocarPapeis(id, depois);
     await this.sessoes.encerrarDoUsuario(id, this.clock.now());
-    await this.auditar(ator, id, 'papel_trocado', { papelId: usuario.papel.id }, { papelId });
+    await this.auditar(ator, id, 'papel_trocado', { papelIds: antes }, { papelIds: depois });
   }
 
   /**
@@ -221,11 +237,16 @@ export class UsuariosService {
     if (dono && dono.id !== usuarioId) throw new MedicoJaTemAcessoError(dono.nome);
   }
 
-  private async papelAtribuivel(ator: PrincipalUsuario, papelId: string): Promise<PapelDetalhe> {
-    const papel = await this.papeis.buscar(papelId);
-    if (!papel) throw new PapelNaoEncontradoError();
-    if (!podeAtribuir(ator, papel)) throw new PapelNaoAtribuivelError();
-    return papel;
+  private async papeisAtribuiveis(
+    ator: PrincipalUsuario,
+    papelIds: string[],
+  ): Promise<PapelDetalhe[]> {
+    const papeis = await Promise.all(papelIds.map((id) => this.papeis.buscar(id)));
+    return papeis.map((papel) => {
+      if (!papel) throw new PapelNaoEncontradoError();
+      if (!podeAtribuir(ator, papel)) throw new PapelNaoAtribuivelError();
+      return papel;
+    });
   }
 
   private auditar(
@@ -245,6 +266,21 @@ export class UsuariosService {
       em: this.clock.now(),
     });
   }
+}
+
+/** Sem repetição e em ordem estável (para comparar e auditar). Vazio é recusado. */
+function normalizar(papelIds: string[], exigir = true): string[] {
+  const unicos = [...new Set(papelIds)].sort();
+  if (exigir && unicos.length === 0) throw new SemPapelError();
+  return unicos;
+}
+
+/** Para o e-mail e a tela do convite: "Coordenação, Financeiro". */
+function nomesDosPapeis(papeis: { nome: string }[]): string {
+  return papeis
+    .map((p) => p.nome)
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ');
 }
 
 /** Só atribui um papel quem tem todas as permissões dele; papel de acesso total, só o Administrador. */

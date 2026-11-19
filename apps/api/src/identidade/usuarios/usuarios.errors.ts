@@ -89,3 +89,11 @@ export class MedicoJaTemAcessoError extends ErroDeDominio {
     super(`Este médico já tem acesso pela conta de ${nomeDaConta}.`);
   }
 }
+
+export class SemPapelError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor() {
+    super('Escolha pelo menos um papel.');
+  }
+}

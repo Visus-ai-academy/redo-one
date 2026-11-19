@@ -29,8 +29,7 @@ const admin: PrincipalUsuario = {
   sessaoId: 's-admin',
   nome: 'Carlos',
   email: 'carlos@empresa.com.br',
-  papelId: 'p-admin',
-  papel: 'Administrador',
+  papeis: [{ id: 'p-admin', nome: 'Administrador' }],
   acessoTotal: true,
   permissoes: new Set(),
 };
@@ -38,7 +37,7 @@ const admin: PrincipalUsuario = {
 const coordenadora: PrincipalUsuario = {
   ...admin,
   usuarioId: 'u-ana',
-  papelId: 'p-coord',
+  papeis: [{ id: 'p-coord', nome: 'Coordenação' }],
   acessoTotal: false,
   permissoes: new Set([
     'papeis.ver',
@@ -62,7 +61,7 @@ describe('PapeisService', () => {
       id,
       nome: id,
       email: `${id}@empresa.com.br`,
-      papelId,
+      papelIds: [papelId],
       senhaHash: null,
       ativo: true,
       tentativasFalhas: 0,

@@ -36,7 +36,7 @@ describe('ContaService (Meu perfil)', () => {
         nome: 'Carlos Andrade',
         email: 'carlos@empresa.com.br',
         cpf: '12345678941',
-        papelId: 'p-admin',
+        papelIds: ['p-admin'],
         senhaHash: 'hash:atual2026',
         ativo: true,
         tentativasFalhas: 0,
@@ -92,8 +92,7 @@ describe('ContaService (Meu perfil)', () => {
       sessaoId: 's-1',
       nome: 'Carlos Andrade',
       email: 'carlos@empresa.com.br',
-      papelId: 'p-admin',
-      papel: 'Administrador',
+      papeis: [{ id: 'p-admin', nome: 'Administrador' }],
       acessoTotal: true,
       permissoes: new Set(),
     };
@@ -106,7 +105,7 @@ describe('ContaService (Meu perfil)', () => {
       nome: 'Carlos Andrade',
       email: 'carlos@empresa.com.br',
       cpfFinal: '41',
-      papel: { nome: 'Administrador' },
+      papeis: [{ nome: 'Administrador' }],
       senhaAlteradaEm: null,
     });
     expect(dados.sessoesAbertas.map((s) => [s.userAgent, s.atual])).toEqual([

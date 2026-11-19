@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../database/database';
-import { papeis, papeisPermissoes, sessoes, usuarios } from '../../database/schema';
+import { papeis, papeisPermissoes, sessoes, usuarios, usuariosPapeis } from '../../database/schema';
 import type {
   NovaSessao,
   SessaoAutenticavel,
@@ -38,12 +38,7 @@ export class DrizzleSessoesRepository implements SessoesRepository, SessoesAuten
         expiraAbsolutoEm: sessoes.expiraAbsolutoEm,
         ultimoUsoEm: sessoes.ultimoUsoEm,
         encerradaEm: sessoes.encerradaEm,
-        usuario: {
-          nome: usuarios.nome,
-          email: usuarios.email,
-          papelId: usuarios.papelId,
-          ativo: usuarios.ativo,
-        },
+        usuario: { nome: usuarios.nome, email: usuarios.email, ativo: usuarios.ativo },
       })
       .from(sessoes)
       .innerJoin(usuarios, eq(usuarios.id, sessoes.usuarioId))
@@ -53,7 +48,8 @@ export class DrizzleSessoesRepository implements SessoesRepository, SessoesAuten
   }
 
   // Roda em toda requisição: uma ida só ao banco (índice único de token_hash + chaves primárias).
-  // As permissões vêm agregadas num array; papel de acesso total não precisa delas.
+  // Papéis e permissões vêm agregados em arrays (a união dos papéis); com acesso total, não
+  // precisa das permissões.
   async buscarParaAutenticar(tokenHash: string): Promise<SessaoAutenticavel | null> {
     const [linha] = await this.db
       .select({
@@ -63,27 +59,36 @@ export class DrizzleSessoesRepository implements SessoesRepository, SessoesAuten
         expiraAbsolutoEm: sessoes.expiraAbsolutoEm,
         ultimoUsoEm: sessoes.ultimoUsoEm,
         encerradaEm: sessoes.encerradaEm,
-        usuario: {
-          nome: usuarios.nome,
-          email: usuarios.email,
-          papelId: usuarios.papelId,
-          ativo: usuarios.ativo,
-        },
-        papel: sql<string>`coalesce(${papeis.nome}, '')`,
-        acessoTotal: sql<boolean>`coalesce(${papeis.acessoTotal}, false)`,
-        permissoes: sql<string[]>`case when ${papeis.acessoTotal} then '{}'::text[] else array(
-          select ${papeisPermissoes.permissao} from ${papeisPermissoes}
-          where ${papeisPermissoes.papelId} = ${usuarios.papelId}
-        ) end`,
+        usuario: { nome: usuarios.nome, email: usuarios.email, ativo: usuarios.ativo },
+        papeis: sql<{ id: string; nome: string }[]>`coalesce((
+          select json_agg(json_build_object('id', p.id, 'nome', p.nome) order by p.nome)
+          from ${usuariosPapeis} up join ${papeis} p on p.id = up.papel_id
+          where up.usuario_id = ${usuarios.id}
+        ), '[]'::json)`,
+        acessoTotal: sql<boolean>`exists(
+          select 1 from ${usuariosPapeis} up join ${papeis} p on p.id = up.papel_id
+          where up.usuario_id = ${usuarios.id} and p.acesso_total
+        )`,
+        permissoes: sql<string[]>`array(
+          select distinct pp.permissao
+          from ${usuariosPapeis} up join ${papeisPermissoes} pp on pp.papel_id = up.papel_id
+          where up.usuario_id = ${usuarios.id}
+        )`,
       })
       .from(sessoes)
       .innerJoin(usuarios, eq(usuarios.id, sessoes.usuarioId))
-      .leftJoin(papeis, eq(papeis.id, usuarios.papelId))
       .where(eq(sessoes.tokenHash, tokenHash))
       .limit(1);
     if (!linha) return null;
-    const { papel, acessoTotal, permissoes, ...sessao } = linha;
-    return { ...sessao, acesso: { papel, acessoTotal, permissoes: permissoes ?? [] } };
+    const { papeis: dosPapeis, acessoTotal, permissoes, ...sessao } = linha;
+    return {
+      ...sessao,
+      acesso: {
+        papeis: dosPapeis,
+        acessoTotal,
+        permissoes: acessoTotal ? [] : (permissoes ?? []),
+      },
+    };
   }
 
   async renovar(id: string, expiraEm: Date, ultimoUsoEm: Date) {
@@ -103,7 +108,10 @@ export class DrizzleSessoesRepository implements SessoesRepository, SessoesAuten
           isNull(sessoes.encerradaEm),
           inArray(
             sessoes.usuarioId,
-            this.db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.papelId, papelId)),
+            this.db
+              .select({ id: usuariosPapeis.usuarioId })
+              .from(usuariosPapeis)
+              .where(eq(usuariosPapeis.papelId, papelId)),
           ),
         ),
       )

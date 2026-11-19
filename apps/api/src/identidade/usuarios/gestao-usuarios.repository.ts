@@ -9,6 +9,7 @@ export type SituacaoUsuario = 'ativo' | 'convite_pendente' | 'bloqueado' | 'desa
 export interface FiltroUsuarios {
   /** Parte do nome, do e-mail ou o CPF (só dígitos). */
   busca?: string;
+  /** Quem tem este papel (entre outros). */
   papelId?: string;
   situacao?: SituacaoUsuario;
   /** Só a conta ligada a este médico. */
@@ -25,7 +26,8 @@ export interface UsuarioResumo {
   id: string;
   nome: string;
   email: string;
-  papel: { id: string; nome: string };
+  /** Por nome. */
+  papeis: { id: string; nome: string }[];
   situacao: SituacaoUsuario;
   /** Último uso de sessão; nulo para quem nunca entrou. */
   ultimoAcessoEm: Date | null;
@@ -51,7 +53,7 @@ export interface NovoUsuario {
   nome: string;
   email: string;
   cpf: string | null;
-  papelId: string;
+  papelIds: string[];
   /** Médico desta conta (portal). */
   medicoId: string | null;
 }
@@ -67,7 +69,8 @@ export interface GestaoUsuariosRepository {
     token: Omit<NovoTokenSenha, 'usuarioId'>,
     email: (usuarioId: string) => Email,
   ): Promise<string>;
-  trocarPapel(id: string, papelId: string): Promise<void>;
+  /** Substitui todos os papéis do usuário pelos da lista. */
+  trocarPapeis(id: string, papelIds: string[]): Promise<void>;
   definirAtivo(id: string, ativo: boolean): Promise<void>;
   desbloquear(id: string): Promise<void>;
   /** O médico do cadastro (contexto `medicos`), para ligar à conta. */

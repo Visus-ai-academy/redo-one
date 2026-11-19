@@ -60,10 +60,10 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
           email: 'maria@empresa.com.br',
           cpf: '12345678901',
           senhaHash: 'hash',
-          papelId,
         })
         .returning(),
     ).id;
+    await db.insert(schema.usuariosPapeis).values({ usuarioId, papelId });
   });
 
   it('busca o usuário pelo e-mail e pelo CPF', async () => {
@@ -71,7 +71,6 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
 
     await expect(repo.buscarParaLogin({ email: 'maria@empresa.com.br' })).resolves.toMatchObject({
       id: usuarioId,
-      papelId,
       senhaHash: 'hash',
       ativo: true,
       tentativasFalhas: 0,
@@ -133,7 +132,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     expect(sessao).toMatchObject({
       usuarioId,
       encerradaEm: null,
-      usuario: { nome: 'Maria Souza', email: 'maria@empresa.com.br', papelId, ativo: true },
+      usuario: { nome: 'Maria Souza', email: 'maria@empresa.com.br', ativo: true },
     });
     await expect(repo.buscarPorTokenHash('outro')).resolves.toBeNull();
 
@@ -234,7 +233,7 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     expect(segundo).toMatchObject({
       tipo: 'recuperacao',
       usadoEm: null,
-      usuario: { nome: 'Maria Souza', papelNome: 'Financeiro', ativo: true },
+      usuario: { nome: 'Maria Souza', papeis: ['Financeiro'], ativo: true },
       convidadoPorNome: null,
     });
     await expect(repo.ultimaEmissao(usuarioId, 'recuperacao')).resolves.toEqual(base.criadoEm);
@@ -261,7 +260,13 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     const agora = new Date('2026-11-13T12:00:00Z');
 
     const id = await repo.convidar(
-      { nome: 'Ana Lima', email: 'ana@empresa.com.br', cpf: null, papelId, medicoId: null },
+      {
+        nome: 'Ana Lima',
+        email: 'ana@empresa.com.br',
+        cpf: null,
+        papelIds: [papelId],
+        medicoId: null,
+      },
       {
         tipo: 'convite',
         tokenHash: 'convite-ana',
@@ -293,7 +298,38 @@ describe.skipIf(!url)('repositórios Drizzle do contexto identidade', () => {
     await expect(repo.buscar(usuarioId, agora)).resolves.toMatchObject({
       situacao: 'desativado',
       cpfFinal: '01',
-      papel: { id: papelId, nome: 'Financeiro' },
+      papeis: [{ id: papelId, nome: 'Financeiro' }],
+    });
+  });
+
+  it('gestão de usuários: vários papéis por nome, troca inteira e filtro por qualquer um deles', async () => {
+    const repo = new DrizzleGestaoUsuariosRepository(db);
+    const agora = new Date('2026-11-13T12:00:00Z');
+    const suporte = primeira(
+      await db.insert(schema.papeis).values({ nome: 'Suporte' }).returning(),
+    ).id;
+    const auditor = primeira(
+      await db.insert(schema.papeis).values({ nome: 'Auditoria' }).returning(),
+    ).id;
+
+    await repo.trocarPapeis(usuarioId, [suporte, papelId]);
+
+    await expect(repo.buscar(usuarioId, agora)).resolves.toMatchObject({
+      papeis: [
+        { id: papelId, nome: 'Financeiro' },
+        { id: suporte, nome: 'Suporte' },
+      ],
+    });
+    const comSuporte = await repo.listar({ papelId: suporte, pagina: 1, porPagina: 25, agora });
+    expect(comSuporte).toMatchObject({ total: 1, itens: [{ id: usuarioId }] });
+    const comAuditoria = await repo.listar({ papelId: auditor, pagina: 1, porPagina: 25, agora });
+    expect(comAuditoria.total).toBe(0);
+    const papeis = await new DrizzleGestaoPapeisRepository(db).listar();
+    expect(papeis.find((p) => p.id === suporte)).toMatchObject({ totalUsuarios: 1 });
+
+    await repo.trocarPapeis(usuarioId, [auditor]);
+    await expect(repo.buscar(usuarioId, agora)).resolves.toMatchObject({
+      papeis: [{ id: auditor, nome: 'Auditoria' }],
     });
   });
 

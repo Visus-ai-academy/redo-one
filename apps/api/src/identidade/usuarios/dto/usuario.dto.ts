@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsEmail,
   IsIn,
   IsInt,
@@ -27,7 +30,7 @@ export class ListarUsuariosDto {
   @MaxLength(100)
   busca?: string;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid', description: 'Quem tem este papel (entre outros).' })
   @IsOptional()
   @IsUUID()
   papelId?: string;
@@ -75,9 +78,16 @@ export class ConviteUsuarioDto {
   @MaxLength(14)
   cpf?: string | null;
 
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  papelId!: string;
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description: 'Um ou mais; as permissões são a união das deles.',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  papelIds!: string[];
 
   @ApiPropertyOptional({
     type: String,
@@ -97,10 +107,17 @@ export class VincularMedicoDto {
   medicoId!: string | null;
 }
 
-export class TrocarPapelDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  papelId!: string;
+export class TrocarPapeisDto {
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description: 'Todos os papéis que a pessoa passa a ter (um ou mais).',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  papelIds!: string[];
 }
 
 export class PapelDoUsuarioDto {
@@ -122,7 +139,8 @@ export class UsuarioResumoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;
   @ApiProperty() email!: string;
-  @ApiProperty({ type: PapelDoUsuarioDto }) papel!: PapelDoUsuarioDto;
+  @ApiProperty({ type: [PapelDoUsuarioDto], description: 'Por nome.' })
+  papeis!: PapelDoUsuarioDto[];
   @ApiProperty({ enum: SITUACOES }) situacao!: SituacaoUsuario;
   @ApiProperty({ type: Date, nullable: true }) ultimoAcessoEm!: Date | null;
 }

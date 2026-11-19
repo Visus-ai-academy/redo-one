@@ -288,12 +288,11 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
   });
 
   it('acha o médico vinculado à conta', async () => {
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Médico' }).returning();
     const [comMedico, semMedico] = await db
       .insert(schema.usuarios)
       .values([
-        { nome: 'Ana', email: 'ana@x.com.br', papelId: papel?.id ?? '', medicoId: ids.ana },
-        { nome: 'Gestor', email: 'gestor@x.com.br', papelId: papel?.id ?? '' },
+        { nome: 'Ana', email: 'ana@x.com.br', medicoId: ids.ana },
+        { nome: 'Gestor', email: 'gestor@x.com.br' },
       ])
       .returning();
     const repo = new DrizzleMedicoDoUsuarioRepository(db);

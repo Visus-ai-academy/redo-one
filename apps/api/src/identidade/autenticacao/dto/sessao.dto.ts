@@ -9,9 +9,11 @@ export class UsuarioSessaoDto {
 
   @ApiProperty()
   email!: string;
+}
 
-  @ApiProperty({ format: 'uuid' })
-  papelId!: string;
+export class PapelDaSessaoDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
 }
 
 export class SessaoDto {
@@ -26,10 +28,15 @@ export class SessaoAtualDto {
   @ApiProperty({ type: UsuarioSessaoDto })
   usuario!: UsuarioSessaoDto;
 
-  @ApiProperty({ description: 'Nome do papel do usuário.', example: 'Financeiro' })
-  papel!: string;
+  @ApiProperty({
+    type: [PapelDaSessaoDto],
+    description: 'Papéis do usuário, por nome; as permissões são a união das deles.',
+  })
+  papeis!: PapelDaSessaoDto[];
 
-  @ApiProperty({ description: 'Papel Administrador: pode tudo, mesmo sem listar as permissões.' })
+  @ApiProperty({
+    description: 'Tem o papel Administrador: pode tudo, mesmo sem listar as permissões.',
+  })
   acessoTotal!: boolean;
 
   @ApiProperty({ type: [String], example: ['faturamento.ver', 'usuarios.ver'] })

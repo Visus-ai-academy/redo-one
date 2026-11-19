@@ -73,12 +73,11 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
       .insert(schema.prioridadesOperacao)
       .values({ nome: 'URGENTE', posicao: 1, urgencia: 'sempre' })
       .returning();
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Gestão' }).returning();
     const [usuario, gestora] = await db
       .insert(schema.usuarios)
       .values([
-        { nome: 'Gestor', email: 'gestor@x.com.br', papelId: papel?.id ?? '' },
-        { nome: 'Gestora', email: 'gestora@x.com.br', papelId: papel?.id ?? '' },
+        { nome: 'Gestor', email: 'gestor@x.com.br' },
+        { nome: 'Gestora', email: 'gestora@x.com.br' },
       ])
       .returning();
     ids = {

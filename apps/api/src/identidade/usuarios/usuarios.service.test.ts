@@ -22,6 +22,7 @@ import {
   MedicoJaTemAcessoError,
   MedicoNaoEncontradoError,
   PapelNaoAtribuivelError,
+  SemPapelError,
   SessaoNaoEncontradaError,
 } from './usuarios.errors';
 import { UsuariosService } from './usuarios.service';
@@ -35,8 +36,7 @@ const ator = (dados: Partial<PrincipalUsuario>): PrincipalUsuario => ({
   sessaoId: 's-x',
   nome: 'Carlos Andrade',
   email: 'carlos@empresa.com.br',
-  papelId: 'p-admin',
-  papel: 'Administrador',
+  papeis: [{ id: 'p-admin', nome: 'Administrador' }],
   acessoTotal: true,
   permissoes: new Set(),
   ...dados,
@@ -45,7 +45,7 @@ const admin = ator({});
 const coordenadora = ator({
   usuarioId: 'u-ana',
   nome: 'Ana',
-  papelId: 'p-coord',
+  papeis: [{ id: 'p-coord', nome: 'Coordenação' }],
   acessoTotal: false,
   permissoes: new Set(['usuarios.ver', 'usuarios.criar', 'escala.ver']),
 });
@@ -65,7 +65,7 @@ describe('UsuariosService', () => {
     nome,
     email: `${id.slice(2)}@empresa.com.br`,
     cpf: null as string | null,
-    papelId,
+    papelIds: [papelId],
     senhaHash: 'hash:x',
     ativo: true,
     tentativasFalhas: 0,
@@ -139,14 +139,14 @@ describe('UsuariosService', () => {
         nome: 'Maria Souza',
         email: ' Maria@Empresa.com.br ',
         cpf: '987.654.321-00',
-        papelId: 'p-fin',
+        papelIds: ['p-fin'],
       });
 
       expect(usuarios.porId(id)).toMatchObject({
         email: 'maria@empresa.com.br',
         cpf: '98765432100',
         senhaHash: null,
-        papelId: 'p-fin',
+        papelIds: ['p-fin'],
       });
       expect(tokens.tokens).toEqual([
         expect.objectContaining({
@@ -164,13 +164,28 @@ describe('UsuariosService', () => {
           entidade: 'usuario',
           entidadeId: id,
           acao: 'convidado',
-          depois: { nome: 'Maria Souza', email: 'maria@empresa.com.br', papelId: 'p-fin' },
+          depois: { nome: 'Maria Souza', email: 'maria@empresa.com.br', papelIds: ['p-fin'] },
         }),
       ]);
     });
 
+    it('convida com mais de um papel, sem repetir', async () => {
+      const id = await service.convidar(admin, {
+        nome: 'Maria',
+        email: 'maria@empresa.com.br',
+        cpf: null,
+        papelIds: ['p-fin', 'p-coord', 'p-fin'],
+      });
+
+      expect(usuarios.porId(id).papelIds).toEqual(['p-coord', 'p-fin']);
+      expect(tokens.emails[0]?.texto).toContain('com o papel Coordenação, Financeiro.');
+      await expect(
+        service.convidar(admin, { nome: 'X', email: 'x@empresa.com.br', cpf: null, papelIds: [] }),
+      ).rejects.toThrow(SemPapelError);
+    });
+
     it('recusa e-mail ou CPF já cadastrados e CPF com tamanho errado', async () => {
-      const base = { nome: 'X', papelId: 'p-fin', cpf: null };
+      const base = { nome: 'X', papelIds: ['p-fin'], cpf: null };
 
       await expect(
         service.convidar(admin, { ...base, email: 'JOAO@empresa.com.br' }),
@@ -186,17 +201,17 @@ describe('UsuariosService', () => {
     it('só atribui papel cujas permissões quem convida também tem', async () => {
       const dados = { nome: 'X', email: 'x@empresa.com.br', cpf: null };
 
-      await expect(service.convidar(coordenadora, { ...dados, papelId: 'p-fin' })).rejects.toThrow(
-        PapelNaoAtribuivelError,
-      );
       await expect(
-        service.convidar(coordenadora, { ...dados, papelId: 'p-admin' }),
+        service.convidar(coordenadora, { ...dados, papelIds: ['p-fin'] }),
       ).rejects.toThrow(PapelNaoAtribuivelError);
       await expect(
-        service.convidar(coordenadora, { ...dados, papelId: 'p-coord' }),
+        service.convidar(coordenadora, { ...dados, papelIds: ['p-coord', 'p-admin'] }),
+      ).rejects.toThrow(PapelNaoAtribuivelError);
+      await expect(
+        service.convidar(coordenadora, { ...dados, papelIds: ['p-coord'] }),
       ).resolves.toBeDefined();
       await expect(
-        service.convidar(admin, { ...dados, email: 'y@empresa.com.br', papelId: 'p-nada' }),
+        service.convidar(admin, { ...dados, email: 'y@empresa.com.br', papelIds: ['p-nada'] }),
       ).rejects.toThrow(PapelNaoEncontradoError);
     });
   });
@@ -222,7 +237,7 @@ describe('UsuariosService', () => {
         nome: 'Maria',
         email: 'maria@empresa.com.br',
         cpf: null,
-        papelId: 'p-fin',
+        papelIds: ['p-fin'],
       });
       relogio.avancar(DIA);
 
@@ -238,28 +253,50 @@ describe('UsuariosService', () => {
     });
   });
 
-  describe('trocarPapel', () => {
+  describe('trocarPapeis', () => {
     it('troca, encerra as sessões da pessoa e audita o antes e o depois', async () => {
       await abrirSessao('u-joao', 'a');
 
-      await service.trocarPapel(admin, 'u-joao', 'p-coord');
+      await service.trocarPapeis(admin, 'u-joao', ['p-fin', 'p-coord']);
 
-      expect(usuarios.porId('u-joao').papelId).toBe('p-coord');
+      expect(usuarios.porId('u-joao').papelIds).toEqual(['p-coord', 'p-fin']);
       expect(sessoes.porId('s-1').encerradaEm).toEqual(AGORA);
       expect(auditoria.eventos).toEqual([
         expect.objectContaining({
           entidadeId: 'u-joao',
           acao: 'papel_trocado',
-          antes: { papelId: 'p-fin' },
-          depois: { papelId: 'p-coord' },
+          antes: { papelIds: ['p-fin'] },
+          depois: { papelIds: ['p-coord', 'p-fin'] },
         }),
       ]);
     });
 
-    it('ninguém troca o próprio papel', async () => {
-      await expect(service.trocarPapel(admin, 'u-admin', 'p-fin')).rejects.toThrow(
+    it('os mesmos papéis em outra ordem não mudam nada', async () => {
+      await abrirSessao('u-joao', 'a');
+
+      await service.trocarPapeis(admin, 'u-joao', ['p-fin']);
+
+      expect(sessoes.porId('s-1').encerradaEm).toBeNull();
+      expect(auditoria.eventos).toEqual([]);
+    });
+
+    it('ninguém troca os próprios papéis, nem fica sem papel', async () => {
+      await expect(service.trocarPapeis(admin, 'u-admin', ['p-fin'])).rejects.toThrow(
         AcaoSobreSiMesmoError,
       );
+      await expect(service.trocarPapeis(admin, 'u-joao', [])).rejects.toThrow(SemPapelError);
+    });
+
+    it('só põe ou tira papel que quem troca poderia atribuir; os que ficam não contam', async () => {
+      // Ana (Coordenação) não tem as permissões do Financeiro de João.
+      await expect(service.trocarPapeis(coordenadora, 'u-joao', ['p-coord'])).rejects.toThrow(
+        PapelNaoAtribuivelError,
+      );
+      await expect(
+        service.trocarPapeis(coordenadora, 'u-joao', ['p-fin', 'p-admin']),
+      ).rejects.toThrow(PapelNaoAtribuivelError);
+      await service.trocarPapeis(coordenadora, 'u-joao', ['p-fin', 'p-coord']);
+      expect(usuarios.porId('u-joao').papelIds).toEqual(['p-coord', 'p-fin']);
     });
   });
 
@@ -335,12 +372,23 @@ describe('UsuariosService', () => {
     expect(pagina2.total).toBe(4);
     expect(pagina2.itens.map((u) => u.nome)).toEqual(['Paula']);
   });
+
+  it('o filtro de papel acha quem tem o papel entre outros', async () => {
+    await service.trocarPapeis(admin, 'u-joao', ['p-fin', 'p-coord']);
+
+    const coordenacao = await service.listar({ papelId: 'p-coord', pagina: 1, porPagina: 25 });
+
+    expect(coordenacao.itens.map((u) => [u.nome, u.papeis.map((p) => p.nome)])).toEqual([
+      ['Ana', ['Coordenação']],
+      ['João', ['Coordenação', 'Financeiro']],
+    ]);
+  });
   describe('médico do portal', () => {
     const convite = {
       nome: 'Augusto Lima',
       email: 'augusto@clinica.com',
       cpf: null,
-      papelId: 'p-fin',
+      papelIds: ['p-fin'],
     };
 
     it('convida já ligado ao médico e registra o médico na auditoria', async () => {

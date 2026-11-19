@@ -354,12 +354,8 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     });
     expect(await escala.ehDiaDePlantao(alocacao, '2026-11-18')).toBe(true);
     expect(await escala.ehDiaDePlantao(alocacao, '2026-11-19')).toBe(false);
-    const papel = await primeiro(db.insert(schema.papeis).values({ nome: 'Gestora' }).returning());
     const gestora = await primeiro(
-      db
-        .insert(schema.usuarios)
-        .values({ nome: 'G', email: 'g@x.com', papelId: papel })
-        .returning(),
+      db.insert(schema.usuarios).values({ nome: 'G', email: 'g@x.com' }).returning(),
     );
     await db
       .insert(schema.usuariosEscoposEscala)

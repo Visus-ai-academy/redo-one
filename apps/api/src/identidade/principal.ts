@@ -5,9 +5,8 @@ export interface PrincipalUsuario {
   sessaoId: string;
   nome: string;
   email: string;
-  papelId: string;
-  /** Nome do papel. */
-  papel: string;
+  /** Papéis do usuário, por nome; as permissões são a união das deles. */
+  papeis: { id: string; nome: string }[];
   /** Papel Administrador: todas as permissões, inclusive as que ainda vão existir. */
   acessoTotal: boolean;
   permissoes: ReadonlySet<string>;

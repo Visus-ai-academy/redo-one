@@ -6,7 +6,14 @@ import { adicionarJob } from '../../comum/jobs/adicionar-job';
 import { TAREFA_ENVIAR_EMAIL } from '../../comum/jobs/tarefa-enviar-email';
 import { contem, relevancia } from '../../database/busca';
 import { DATABASE, type Database } from '../../database/database';
-import { medicos, papeis, sessoes, tokensSenha, usuarios } from '../../database/schema';
+import {
+  medicos,
+  papeis,
+  sessoes,
+  tokensSenha,
+  usuarios,
+  usuariosPapeis,
+} from '../../database/schema';
 import type { NovoTokenSenha } from '../senha/tokens-senha.repository';
 import type {
   FiltroUsuarios,
@@ -26,6 +33,15 @@ function situacao(agora: Date): SQL<SituacaoUsuario> {
     else 'ativo' end`;
 }
 
+// Consulta de uma tabela só: o Drizzle escreveria `usuarios.id` como "id", que dentro da
+// subconsulta o Postgres resolveria em `papeis`. Por isso os nomes vão com tabela ou apelido.
+const idDoUsuario = sql`${usuarios}.${sql.identifier(usuarios.id.name)}`;
+const papeisDoUsuario = sql<{ id: string; nome: string }[]>`coalesce((
+  select json_agg(json_build_object('id', p.id, 'nome', p.nome) order by p.nome)
+  from ${usuariosPapeis} up join ${papeis} p on p.id = up.papel_id
+  where up.usuario_id = ${idDoUsuario}
+), '[]'::json)`;
+
 const ultimoAcessoEm = sql<Date | null>`(select max(${sessoes.ultimoUsoEm}) from ${sessoes}
   where ${sessoes.usuarioId} = ${usuarios.id})`.mapWith(sessoes.ultimoUsoEm);
 
@@ -38,7 +54,7 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
       id: usuarios.id,
       nome: usuarios.nome,
       email: usuarios.email,
-      papel: { id: papeis.id, nome: papeis.nome },
+      papeis: papeisDoUsuario,
       situacao: situacao(agora),
       ultimoAcessoEm,
     };
@@ -56,7 +72,12 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
         ),
       );
     }
-    if (filtro.papelId) condicoes.push(eq(usuarios.papelId, filtro.papelId));
+    if (filtro.papelId) {
+      condicoes.push(
+        sql`exists (select 1 from ${usuariosPapeis} up
+          where up.usuario_id = ${idDoUsuario} and up.papel_id = ${filtro.papelId})`,
+      );
+    }
     if (filtro.situacao) condicoes.push(sql`(${situacao(filtro.agora)}) = ${filtro.situacao}`);
     if (filtro.medicoId) condicoes.push(eq(usuarios.medicoId, filtro.medicoId));
     if (filtro.semMedico) condicoes.push(isNull(usuarios.medicoId));
@@ -66,7 +87,6 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
       this.db
         .select(this.colunas(filtro.agora))
         .from(usuarios)
-        .innerJoin(papeis, eq(papeis.id, usuarios.papelId))
         .where(onde)
         .orderBy(
           ...(filtro.busca ? relevancia(usuarios.nome, filtro.busca) : []),
@@ -88,7 +108,6 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
         criadoEm: usuarios.criadoEm,
       })
       .from(usuarios)
-      .innerJoin(papeis, eq(papeis.id, usuarios.papelId))
       .where(eq(usuarios.id, id))
       .limit(1);
     if (!usuario) return null;
@@ -139,16 +158,25 @@ export class DrizzleGestaoUsuariosRepository implements GestaoUsuariosRepository
     email: (usuarioId: string) => Email,
   ): Promise<string> {
     return this.db.transaction(async (tx) => {
-      const [criado] = await tx.insert(usuarios).values(novo).returning({ id: usuarios.id });
+      const { papelIds, ...dados } = novo;
+      const [criado] = await tx.insert(usuarios).values(dados).returning({ id: usuarios.id });
       if (!criado) throw new Error('insert de usuário não devolveu o id');
+      await tx
+        .insert(usuariosPapeis)
+        .values(papelIds.map((papelId) => ({ usuarioId: criado.id, papelId })));
       await tx.insert(tokensSenha).values({ ...token, usuarioId: criado.id });
       await adicionarJob(tx, TAREFA_ENVIAR_EMAIL, email(criado.id));
       return criado.id;
     });
   }
 
-  async trocarPapel(id: string, papelId: string) {
-    await this.db.update(usuarios).set({ papelId }).where(eq(usuarios.id, id));
+  async trocarPapeis(id: string, papelIds: string[]) {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(usuariosPapeis).where(eq(usuariosPapeis.usuarioId, id));
+      await tx
+        .insert(usuariosPapeis)
+        .values(papelIds.map((papelId) => ({ usuarioId: id, papelId })));
+    });
   }
 
   async definirAtivo(id: string, ativo: boolean) {

@@ -48,9 +48,6 @@ export const usuarios = pgTable('usuarios', {
   /** Nulo enquanto o convite não foi aceito. */
   senhaHash: text('senha_hash'),
   senhaAlteradaEm: timestamp('senha_alterada_em', { withTimezone: true }),
-  papelId: uuid('papel_id')
-    .notNull()
-    .references(() => papeis.id),
   ativo: boolean('ativo').notNull().default(true),
   /** Médico desta conta (portal): ele só vê os próprios dados. Um usuário por médico. */
   medicoId: uuid('medico_id')
@@ -61,6 +58,23 @@ export const usuarios = pgTable('usuarios', {
   bloqueadoAte: timestamp('bloqueado_ate', { withTimezone: true }),
   criadoEm: criadoEm(),
 });
+
+/** Papéis do usuário (um ou mais): as permissões efetivas são a união das dos papéis. */
+export const usuariosPapeis = pgTable(
+  'usuarios_papeis',
+  {
+    usuarioId: uuid('usuario_id')
+      .notNull()
+      .references(() => usuarios.id, { onDelete: 'cascade' }),
+    papelId: uuid('papel_id')
+      .notNull()
+      .references(() => papeis.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.usuarioId, t.papelId] }),
+    index('usuarios_papeis_papel_id_idx').on(t.papelId),
+  ],
+);
 
 export const sessoes = pgTable(
   'sessoes',

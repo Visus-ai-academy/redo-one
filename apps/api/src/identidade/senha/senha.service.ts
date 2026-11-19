@@ -116,7 +116,7 @@ export class SenhaService {
       tipo: encontrado.tipo,
       nome: encontrado.usuario.nome,
       email: encontrado.usuario.email,
-      papel: encontrado.usuario.papelNome,
+      papel: encontrado.usuario.papeis.join(', '),
       convidadoPor: encontrado.convidadoPorNome,
     };
   }

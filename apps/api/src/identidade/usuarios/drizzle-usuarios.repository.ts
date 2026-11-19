@@ -19,7 +19,6 @@ export class DrizzleUsuariosRepository implements UsuariosRepository {
         id: usuarios.id,
         nome: usuarios.nome,
         email: usuarios.email,
-        papelId: usuarios.papelId,
         senhaHash: usuarios.senhaHash,
         ativo: usuarios.ativo,
         tentativasFalhas: usuarios.tentativasFalhas,

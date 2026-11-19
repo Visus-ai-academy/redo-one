@@ -1,5 +1,3 @@
-import type { AcessoDoPapel } from '../papeis/papeis.repository';
-
 export const SESSOES_REPOSITORY = Symbol('SESSOES_REPOSITORY');
 
 export interface NovaSessao {
@@ -21,13 +19,22 @@ export interface SessaoComUsuario {
   expiraAbsolutoEm: Date;
   ultimoUsoEm: Date;
   encerradaEm: Date | null;
-  usuario: { nome: string; email: string; papelId: string; ativo: boolean };
+  usuario: { nome: string; email: string; ativo: boolean };
 }
 
-/** Sessão com o acesso do papel do dono: tudo o que o guard precisa, numa ida só ao banco. */
+/** O que os papéis do dono concedem juntos: a união das permissões. */
+export interface AcessoDoUsuario {
+  /** Por nome. */
+  papeis: { id: string; nome: string }[];
+  /** Algum papel é de acesso total (Administrador). */
+  acessoTotal: boolean;
+  permissoes: string[];
+}
+
+/** Sessão com o acesso dos papéis do dono: tudo o que o guard precisa, numa ida só ao banco. */
 export interface SessaoAutenticavel extends SessaoComUsuario {
-  /** O que o papel do dono concede (Administrador: `acessoTotal` e lista vazia). */
-  acesso: AcessoDoPapel;
+  /** Administrador: `acessoTotal` e lista vazia. */
+  acesso: AcessoDoUsuario;
 }
 
 /**
@@ -35,7 +42,7 @@ export interface SessaoAutenticavel extends SessaoComUsuario {
  * `SESSOES_REPOSITORY`.
  */
 export interface SessoesAutenticacaoRepository {
-  /** Sessão + usuário + papel + permissões numa consulta só. */
+  /** Sessão + usuário + papéis + permissões numa consulta só. */
   buscarParaAutenticar(tokenHash: string): Promise<SessaoAutenticavel | null>;
   renovar(id: string, expiraEm: Date, ultimoUsoEm: Date): Promise<void>;
 }

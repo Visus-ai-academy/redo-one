@@ -89,12 +89,11 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
     );
     minuto = 0;
     for (const k of Object.keys(ev)) delete ev[k];
-    const [papel] = await db.insert(schema.papeis).values({ nome: 'Operação' }).returning();
     const usuarios = await db
       .insert(schema.usuarios)
       .values([
-        { nome: 'Carla Lima', email: 'carla@empresa.com.br', papelId: papel?.id ?? '' },
-        { nome: 'Dr. Ana (portal)', email: 'ana@clinica.com.br', papelId: papel?.id ?? '' },
+        { nome: 'Carla Lima', email: 'carla@empresa.com.br' },
+        { nome: 'Dr. Ana (portal)', email: 'ana@clinica.com.br' },
       ])
       .returning();
     carla = usuarios[0]?.id ?? '';
