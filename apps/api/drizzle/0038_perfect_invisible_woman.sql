@@ -1,0 +1,1 @@
+ALTER TABLE "parametros_ingestao" ADD COLUMN "mobilemed_compartilhamento_unidades" text[] DEFAULT ARRAY['CRD_APOIO']::text[] NOT NULL;

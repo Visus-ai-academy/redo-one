@@ -329,6 +329,14 @@ export const parametrosIngestao = pgTable(
     mobilemedJanelaDias: integer('mobilemed_janela_dias').notNull().default(7),
     /** Itens por chamada a partir dos quais a lista da MobileMed é tida como cortada. */
     mobilemedTeto: integer('mobilemed_teto').notNull().default(50_000),
+    /**
+     * Unidades de destino cujo compartilhamento entra (o RPA só baixava CRD_APOIO); vazia, o
+     * compartilhamento não é importado.
+     */
+    mobilemedCompartilhamentoUnidades: text('mobilemed_compartilhamento_unidades')
+      .array()
+      .notNull()
+      .default(sql`ARRAY['CRD_APOIO']::text[]`),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [check('parametros_ingestao_unica', sql`${t.id} = 1`)],
