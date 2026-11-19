@@ -56,6 +56,8 @@ export function DetalheAviso({
       ),
   });
   const decisao = aviso.status === 'ignorado' ? 'Ignorado' : 'Resolvido';
+  // A grafia sem de-para da distribuição vem da rodada, não da importação.
+  const daRodada = aviso.tipo === 'prioridade_operacao';
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -65,14 +67,16 @@ export function DetalheAviso({
         </span>
         {aviso.status === 'resolvido' && (
           <Alerta tom="sucesso" role="status">
-            Uma importação achou o cadastro deste nome. O aviso saiu da lista de pendentes.
+            {daRodada
+              ? 'A grafia entrou no de-para das prioridades da operação. O aviso saiu da lista de pendentes.'
+              : 'Uma importação achou o cadastro deste nome. O aviso saiu da lista de pendentes.'}
           </Alerta>
         )}
       </div>
 
       <dl className="divide-y">
         <Campo rotulo={tipoDoAviso(aviso.tipo)}>{aviso.valor}</Campo>
-        <Campo rotulo="Laudos na última importação">
+        <Campo rotulo={daRodada ? 'Exames na última rodada' : 'Laudos na última importação'}>
           {aviso.ocorrencias.toLocaleString('pt-BR')}
         </Campo>
         <Campo rotulo="Apareceu em">{dataHoraCurta(aviso.primeiraVezEm)}</Campo>

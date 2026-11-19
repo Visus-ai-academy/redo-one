@@ -12,6 +12,7 @@ const TIPOS: Record<TipoAvisoKey, string> = {
   modalidade: 'Modalidade',
   especialidade: 'Especialidade',
   prioridade: 'Prioridade',
+  prioridade_operacao: 'Prioridade da operação',
 };
 
 export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
@@ -50,6 +51,14 @@ export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: strin
         to: '/exames' as const,
         search: { busca: valor.replace(/(?:\s+X\d+)+\s*$/i, '') },
         permissao: 'exames.ver',
+      };
+    case 'prioridade_operacao':
+      // A grafia entra no de-para de uma das prioridades da operação (a tela tem poucas).
+      return {
+        rotulo: 'Abrir as prioridades da operação',
+        to: '/configuracoes/distribuicao' as const,
+        search: {},
+        permissao: 'distribuicao-config.ver',
       };
     default:
       return {

@@ -15047,7 +15047,8 @@
           "estudo",
           "modalidade",
           "especialidade",
-          "prioridade"
+          "prioridade",
+          "prioridade_operacao"
         ]
       },
       "AvisoDto": {
@@ -15066,7 +15067,7 @@
           },
           "valor": {
             "type": "string",
-            "description": "Como chegou da MobileMed na última importação."
+            "description": "Como chegou da MobileMed na última importação ou rodada."
           },
           "status": {
             "allOf": [
@@ -15077,7 +15078,7 @@
           },
           "ocorrencias": {
             "type": "integer",
-            "description": "Laudos da última importação em que apareceu."
+            "description": "Laudos da última importação (ou exames da última rodada) em que apareceu."
           },
           "primeiraVezEm": {
             "type": "string",

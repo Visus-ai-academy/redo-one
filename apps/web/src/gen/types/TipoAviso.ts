@@ -10,6 +10,7 @@ export const tipoAviso = {
   modalidade: 'modalidade',
   especialidade: 'especialidade',
   prioridade: 'prioridade',
+  prioridade_operacao: 'prioridade_operacao',
 } as const;
 
 export type TipoAvisoKey = (typeof tipoAviso)[keyof typeof tipoAviso];

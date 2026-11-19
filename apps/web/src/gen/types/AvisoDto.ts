@@ -16,13 +16,13 @@ export type AvisoDto = {
   id: string;
   tipo: TipoAvisoKey;
   /**
-   * @description Como chegou da MobileMed na última importação.
+   * @description Como chegou da MobileMed na última importação ou rodada.
    * @type string
    */
   valor: string;
   status: StatusAvisoKey;
   /**
-   * @description Laudos da última importação em que apareceu.
+   * @description Laudos da última importação (ou exames da última rodada) em que apareceu.
    * @type integer
    */
   ocorrencias: number;

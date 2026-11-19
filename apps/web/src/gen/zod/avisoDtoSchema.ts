@@ -11,9 +11,9 @@ import { tipoAvisoSchema } from './tipoAvisoSchema'
 export const avisoDtoSchema = z.object({
   id: z.uuid(),
   tipo: tipoAvisoSchema,
-  valor: z.string().describe('Como chegou da MobileMed na última importação.'),
+  valor: z.string().describe('Como chegou da MobileMed na última importação ou rodada.'),
   status: statusAvisoSchema,
-  ocorrencias: z.int().describe('Laudos da última importação em que apareceu.'),
+  ocorrencias: z.int().describe('Laudos da última importação (ou exames da última rodada) em que apareceu.'),
   primeiraVezEm: z.iso.datetime(),
   ultimaVezEm: z.iso.datetime(),
   decididoPor: pessoaResumoDtoSchema.nullable(),

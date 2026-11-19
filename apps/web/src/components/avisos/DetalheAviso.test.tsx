@@ -88,4 +88,15 @@ describe('DetalheAviso', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Uma importação achou o cadastro');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
+
+  it('a grafia sem de-para da distribuição fala da rodada, não da importação', () => {
+    const daRodada = { ...pendente, tipo: 'prioridade_operacao' as const, valor: 'Eletivo' };
+    const { unmount } = render(<DetalheAviso aviso={daRodada} podeTriar={false} />);
+    expect(screen.getByText('Exames na última rodada').nextSibling).toHaveTextContent('42');
+    unmount();
+    render(<DetalheAviso aviso={{ ...daRodada, status: 'resolvido' }} podeTriar={false} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'A grafia entrou no de-para das prioridades da operação',
+    );
+  });
 });

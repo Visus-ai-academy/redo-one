@@ -5,6 +5,6 @@
 
 import * as z from 'zod'
 
-export const tipoAvisoSchema = z.enum(['cliente', 'medico', 'estudo', 'modalidade', 'especialidade', 'prioridade'])
+export const tipoAvisoSchema = z.enum(['cliente', 'medico', 'estudo', 'modalidade', 'especialidade', 'prioridade', 'prioridade_operacao'])
 
 export type TipoAvisoSchemaType = z.infer<typeof tipoAvisoSchema>

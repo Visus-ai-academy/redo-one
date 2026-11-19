@@ -10,6 +10,7 @@ describe('tipoDoAviso', () => {
     expect(tipoDoAviso('modalidade')).toBe('Modalidade');
     expect(tipoDoAviso('especialidade')).toBe('Especialidade');
     expect(tipoDoAviso('prioridade')).toBe('Prioridade');
+    expect(tipoDoAviso('prioridade_operacao')).toBe('Prioridade da operação');
   });
 });
 
@@ -44,6 +45,12 @@ describe('ondeProcurar', () => {
       to: '/configuracoes/catalogo',
       search: { aba: 'especialidades', busca: 'PEDIATRIA' },
       permissao: 'catalogo.ver',
+    });
+    expect(ondeProcurar({ tipo: 'prioridade_operacao', valor: 'Eletivo' })).toEqual({
+      rotulo: 'Abrir as prioridades da operação',
+      to: '/configuracoes/distribuicao',
+      search: {},
+      permissao: 'distribuicao-config.ver',
     });
   });
 });
