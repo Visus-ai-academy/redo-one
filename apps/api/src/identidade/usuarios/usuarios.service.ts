@@ -225,7 +225,11 @@ export class UsuariosService {
   ): Promise<{ id: string; nome: string; atribuivel: boolean }[]> {
     const resumos = await this.papeis.listar();
     // Poucos papéis (dezenas no máximo): buscar cada um traz as permissões sem uma consulta nova.
-    const detalhes = await Promise.all(resumos.map((p) => this.papeis.buscar(p.id)));
+    // Um por vez: em paralelo, cada um pede uma conexão, e o pooler do banco (limite de sessões)
+    // recusa as que passam do que ele tem livre.
+    // shortcut: N idas ao banco; se os papéis passarem de dezenas, trazer as permissões no listar.
+    const detalhes: (PapelDetalhe | null)[] = [];
+    for (const resumo of resumos) detalhes.push(await this.papeis.buscar(resumo.id));
     return detalhes
       .filter((papel): papel is PapelDetalhe => papel !== null)
       .map((papel) => ({ id: papel.id, nome: papel.nome, atribuivel: podeAtribuir(ator, papel) }));
