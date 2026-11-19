@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ClienteMobileMed } from './cliente-mobilemed';
+import { ClienteMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
 import { flagsResetSla, MobileMedReal } from './mobilemed-real';
 
 type Exame = Record<string, unknown> & { id: number; status_id: number; usuario_id: unknown };

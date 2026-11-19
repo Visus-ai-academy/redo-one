@@ -1,3 +1,4 @@
+import { type ClienteMobileMed, ErroMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
 import type {
   AtribuidorExames,
   PedidoAtribuicao,
@@ -10,7 +11,6 @@ import type {
   FilaExames,
   LeituraFila,
 } from '../../application/ports/fila-exames';
-import { type ClienteMobileMed, ErroMobileMed } from './cliente-mobilemed';
 import {
   type ExameMobileMed,
   type ItemListaMobileMed,

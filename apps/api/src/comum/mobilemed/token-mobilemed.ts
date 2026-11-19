@@ -9,6 +9,38 @@ export interface TokenMobileMed {
   accessToken(): Promise<string>;
 }
 
+/**
+ * Uma instância só no processo, dividida pela distribuição e pela ingestão: dois logins da mesma
+ * conta derrubam um ao outro (o refresh token gira a cada uso).
+ */
+export const TOKEN_MOBILEMED = Symbol('TOKEN_MOBILEMED');
+
+/** Token pelas variáveis `MOBILEMED_*`; sem as credenciais, recusa sem chamar a MobileMed. */
+export function criarTokenMobileMed(config: {
+  get(nome: string): string | undefined;
+}): TokenMobileMed {
+  const usuario = config.get('MOBILEMED_USUARIO');
+  const senha = config.get('MOBILEMED_SENHA');
+  const totpSegredo = config.get('MOBILEMED_TOTP_SEGREDO');
+  if (!usuario || !senha || !totpSegredo) {
+    return {
+      accessToken: async () => {
+        throw new ErroMobileMed(
+          'sessao',
+          'MobileMed: configure MOBILEMED_USUARIO, MOBILEMED_SENHA e MOBILEMED_TOTP_SEGREDO.',
+        );
+      },
+    };
+  }
+  const timeout = config.get('MOBILEMED_TIMEOUT_MS');
+  return new TokenMobileMedLogin({
+    usuario,
+    senha,
+    totpSegredo,
+    timeoutMs: timeout ? Number(timeout) : 90_000,
+  });
+}
+
 /** Provedor OIDC da MobileMed (pool Cognito `us-east-1_6Ey29vkej`, tenant `mobilemed`). */
 const OAUTH_URL = 'https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej/mobilemed';
 /** `OAUTH2_CLIENT_ID` do portal laudos.mobilemed.com.br (público, está no bundle). */

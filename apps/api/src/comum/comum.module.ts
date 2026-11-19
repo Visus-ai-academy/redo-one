@@ -10,8 +10,12 @@ import { FilaJobs } from './jobs/fila-jobs';
 import { RegistroTarefas } from './jobs/registro-tarefas';
 import { TAREFA_ENVIAR_EMAIL, tarefaEnviarEmail } from './jobs/tarefa-enviar-email';
 import { TrabalhadorJobs } from './jobs/trabalhador-jobs';
+import { criarTokenMobileMed, TOKEN_MOBILEMED } from './mobilemed/token-mobilemed';
 
-/** Infraestrutura compartilhada pelos contextos: fila de jobs, envio de e-mail e storage. */
+/**
+ * Infraestrutura compartilhada pelos contextos: fila de jobs, envio de e-mail, storage e o token
+ * da MobileMed.
+ */
 @Global()
 @Module({
   providers: [
@@ -34,8 +38,14 @@ import { TrabalhadorJobs } from './jobs/trabalhador-jobs';
       // O cliente S3 não conecta na criação: a API sobe mesmo com o storage fora do ar.
       useFactory: (config: ConfigService) => criarArmazenamento(config),
     },
+    {
+      provide: TOKEN_MOBILEMED,
+      inject: [ConfigService],
+      // Não faz login na criação: só na primeira chamada de um adaptador real.
+      useFactory: (config: ConfigService) => criarTokenMobileMed(config),
+    },
   ],
-  exports: [RegistroTarefas, FilaJobs, ARMAZENAMENTO_ARQUIVOS],
+  exports: [RegistroTarefas, FilaJobs, ARMAZENAMENTO_ARQUIVOS, TOKEN_MOBILEMED],
 })
 export class ComumModule implements OnModuleInit {
   constructor(

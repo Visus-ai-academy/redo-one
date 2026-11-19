@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
+import { ClienteMobileMed } from '../comum/mobilemed/cliente-mobilemed';
+import { TOKEN_MOBILEMED, type TokenMobileMed } from '../comum/mobilemed/token-mobilemed';
 import { OcorrenciasModule } from '../escala/ocorrencias/ocorrencias.module';
 import { HmacPseudonimizador } from '../ingestao/infrastructure/seguranca/hmac-pseudonimizador';
 import {
@@ -144,11 +146,9 @@ import {
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { RodadasController } from './infrastructure/http/rodadas.controller';
 import { AvisosPrioridadeAdapter } from './infrastructure/ingestao/avisos-prioridade.adapter';
-import { ClienteMobileMed } from './infrastructure/mobilemed/cliente-mobilemed';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
 import { MobileMedReal } from './infrastructure/mobilemed/mobilemed-real';
-import { TokenMobileMedLogin } from './infrastructure/mobilemed/token-mobilemed';
 import { DrizzleAjustesDiaRepository } from './infrastructure/persistence/drizzle-ajustes-dia.repository';
 import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-arranjos.repository';
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
@@ -226,8 +226,12 @@ const CASOS_RODADA = [
     {
       // Fake (padrão) ou a MobileMed de verdade: só `DISTRIBUICAO_MOBILEMED=real` liga a integração.
       provide: MOBILEMED,
-      inject: [DrizzleAmostraCatalogo, ConfigService],
-      useFactory: (amostra: DrizzleAmostraCatalogo, config: ConfigService) => {
+      inject: [DrizzleAmostraCatalogo, ConfigService, TOKEN_MOBILEMED],
+      useFactory: (
+        amostra: DrizzleAmostraCatalogo,
+        config: ConfigService,
+        token: TokenMobileMed,
+      ) => {
         if (config.get<string>('DISTRIBUICAO_MOBILEMED') === 'real') {
           const timeoutMs = inteiro(config, 'MOBILEMED_TIMEOUT_MS', 90_000);
           const cliente = new ClienteMobileMed({
@@ -235,12 +239,7 @@ const CASOS_RODADA = [
               config.get<string>('MOBILEMED_PORTAL_API_URL') ||
               'https://gateway-sa.mobilemed.com.br/portal-api'
             ).replace(/\/+$/, ''),
-            token: new TokenMobileMedLogin({
-              usuario: config.getOrThrow<string>('MOBILEMED_USUARIO'),
-              senha: config.getOrThrow<string>('MOBILEMED_SENHA'),
-              totpSegredo: config.getOrThrow<string>('MOBILEMED_TOTP_SEGREDO'),
-              timeoutMs,
-            }),
+            token,
             timeoutMs,
             concorrencia: inteiro(config, 'MOBILEMED_CONCORRENCIA', 1),
             limiteAnomalias: inteiro(config, 'MOBILEMED_LIMITE_ANOMALIAS', 2),

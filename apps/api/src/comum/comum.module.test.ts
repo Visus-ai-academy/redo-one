@@ -11,6 +11,7 @@ import { SmtpEnvioEmail } from './email/smtp-envio-email';
 import { FilaJobs } from './jobs/fila-jobs';
 import { RegistroTarefas } from './jobs/registro-tarefas';
 import { TrabalhadorJobs } from './jobs/trabalhador-jobs';
+import { TOKEN_MOBILEMED, TokenMobileMedLogin } from './mobilemed/token-mobilemed';
 
 async function montar(env: Record<string, string>) {
   const modulo = await Test.createTestingModule({
@@ -43,6 +44,29 @@ describe('ComumModule', () => {
     });
 
     expect(modulo.get(ARMAZENAMENTO_ARQUIVOS)).toBeInstanceOf(S3ArmazenamentoArquivos);
+
+    await modulo.close();
+  });
+
+  it('tem um token só da MobileMed (dois logins da mesma conta derrubam um ao outro)', async () => {
+    const modulo = await montar({
+      MOBILEMED_USUARIO: 'robo@one',
+      MOBILEMED_SENHA: 'x',
+      MOBILEMED_TOTP_SEGREDO: 'JBSWY3DPEHPK3PXP',
+    });
+
+    expect(modulo.get(TOKEN_MOBILEMED)).toBeInstanceOf(TokenMobileMedLogin);
+    expect(modulo.get(TOKEN_MOBILEMED)).toBe(modulo.get(TOKEN_MOBILEMED));
+
+    await modulo.close();
+  });
+
+  it('sem as credenciais da MobileMed, o token recusa sem chamar ninguém', async () => {
+    const modulo = await montar({});
+
+    await expect(modulo.get(TOKEN_MOBILEMED).accessToken()).rejects.toMatchObject({
+      tipo: 'sessao',
+    });
 
     await modulo.close();
   });
