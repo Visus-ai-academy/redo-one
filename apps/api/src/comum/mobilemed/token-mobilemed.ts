@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from 'node:crypto';
+
 import { Logger } from '@nestjs/common';
 import { z } from 'zod';
 
@@ -45,6 +47,13 @@ export function criarTokenMobileMed(config: {
 const OAUTH_URL = 'https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej/mobilemed';
 /** `OAUTH2_CLIENT_ID` do portal laudos.mobilemed.com.br (público, está no bundle). */
 const CLIENT_ID = '4himolqrop85htlpcl6k1ljmos';
+/** Para onde o portal manda o código (o `/token` confere). */
+const REDIRECT_URI = 'https://laudos.mobilemed.com.br/oauth/callback';
+/** Sem esta origem, o firewall do gateway devolve 403 em `/login/*`. */
+const CABECALHOS = {
+  Origin: 'https://login.mobilemed.com.br',
+  Accept: 'application/json, text/plain, */*',
+};
 /** Renova quando falta menos que isso para o access token (5 min de vida) vencer. */
 const MARGEM_MS = 60_000;
 /** Código TOTP com menos que isso de vida: espera a próxima janela. */
@@ -56,10 +65,17 @@ const respostaTokens = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1).optional(),
 });
+/** Tokens do Cognito (não valem na API): vão inteiros para o `/storage`. */
+const tokensCognito = z.looseObject({ access_token: z.string().min(1) });
 const respostaLogin = z.union([
-  respostaTokens,
+  tokensCognito,
   z.object({ challenge: z.string(), challenge_session: z.string().min(1) }),
 ]);
+const respostaAuthorize = z.object({
+  authorization_code: z.string().min(1),
+  state: z.string(),
+});
+const respostaQualquer = z.unknown();
 type Tokens = z.infer<typeof respostaTokens>;
 
 /** Só códigos curtos e sem `@` (nunca o texto livre, que pode trazer o e-mail). */
@@ -89,9 +105,12 @@ export interface OpcoesTokenMobileMedLogin {
 }
 
 /**
- * Login da conta de serviço do One na MobileMed só por HTTP, as mesmas chamadas da tela de login
- * (login.mobilemed.com.br): e-mail e senha, depois o código TOTP. Guarda o access token até perto
- * de vencer e renova pelo refresh token; se a renovação falha, refaz o login. Uma renovação por
+ * Login da conta de serviço do One na MobileMed só por HTTP, as mesmas chamadas do navegador
+ * (oidc-client do portal + tela de login.mobilemed.com.br): `/authorize` com PKCE, e-mail e
+ * senha, o código TOTP, os tokens do Cognito guardados no `/storage` e, no fim, o código trocado
+ * no `/token` pelo access token do GATEWAY (o único que o portal-api e o reports-api aceitam).
+ * Guarda o access token até perto de vencer e renova pelo refresh token do gateway; se a
+ * renovação falha, refaz o login. Uma renovação por
  * vez (o refresh token gira a cada uso: duas ao mesmo tempo derrubam a sessão). Depois de
  * `LIMITE_FALHAS` falhas seguidas, para de tentar até a API reiniciar.
  */
@@ -161,25 +180,50 @@ export class TokenMobileMedLogin implements TokenMobileMed {
       refresh_token: refresh,
       client_id: CLIENT_ID,
     });
-    const tokens = await this.postar('/token', respostaTokens, corpo.toString(), 'form');
+    const tokens = await this.chamar('POST', '/token', respostaTokens, corpo.toString(), 'form');
     this.logger.log(JSON.stringify({ evento: 'mobilemed_token_renovado', modo: 'refresh' }));
     return tokens;
   }
 
   private async login(): Promise<Tokens> {
-    const inicio = await this.postar(
+    const verificador = randomBytes(32).toString('base64url');
+    const state = randomBytes(16).toString('base64url');
+    const autorizacao = await this.chamar(
+      'PUT',
+      '/authorize',
+      respostaAuthorize,
+      JSON.stringify({
+        client_id: CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+        response_type: 'code',
+        scope: 'openid',
+        state,
+        code_challenge: createHash('sha256').update(verificador).digest('base64url'),
+        code_challenge_method: 'S256',
+        prompt: 'login',
+      }),
+    );
+    if (autorizacao.state !== state) {
+      throw new ErroMobileMed(
+        'resposta_inesperada',
+        'MobileMed: o /authorize devolveu outro state.',
+      );
+    }
+    const inicio = await this.chamar(
+      'POST',
       '/login/auth',
       respostaLogin,
       JSON.stringify({ email: this.o.usuario, password: this.o.senha, client_id: CLIENT_ID }),
     );
-    let tokens: Tokens;
-    if ('access_token' in inicio) tokens = inicio;
+    let cognito: z.infer<typeof tokensCognito>;
+    if ('access_token' in inicio) cognito = inicio;
     else if (inicio.challenge === 'TOTP') {
       const resta = PASSO_TOTP_MS - (this.agora() % PASSO_TOTP_MS);
       if (resta < FOLGA_TOTP_MS) await this.esperar(resta + 1_000);
-      tokens = await this.postar(
+      cognito = await this.chamar(
+        'POST',
         '/login/challenge/totp',
-        respostaTokens,
+        tokensCognito,
         JSON.stringify({
           client_id: CLIENT_ID,
           challenge_session: inicio.challenge_session,
@@ -192,19 +236,34 @@ export class TokenMobileMedLogin implements TokenMobileMed {
         `MobileMed: o login pediu o desafio ${codigoSeguro(inicio.challenge) ?? '(desconhecido)'}, que o One não responde. Resolva entrando com a conta no portal.`,
       );
     }
+    await this.chamar(
+      'PUT',
+      '/storage',
+      respostaQualquer,
+      JSON.stringify({ ...cognito, authorization_code: autorizacao.authorization_code }),
+    );
+    const corpo = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: autorizacao.authorization_code,
+      redirect_uri: REDIRECT_URI,
+      client_id: CLIENT_ID,
+      code_verifier: verificador,
+    });
+    const tokens = await this.chamar('POST', '/token', respostaTokens, corpo.toString(), 'form');
     this.logger.log(JSON.stringify({ evento: 'mobilemed_token_renovado', modo: 'login' }));
     return tokens;
   }
 
-  private async postar<T>(
+  private async chamar<T>(
+    metodo: 'POST' | 'PUT',
     caminho: string,
     esquema: z.ZodType<T>,
     corpo: string,
     formato: 'json' | 'form' = 'json',
   ): Promise<T> {
-    const rota = `POST ${caminho}`;
+    const rota = `${metodo} ${caminho}`;
     try {
-      return await this.enviar(rota, caminho, esquema, corpo, formato);
+      return await this.enviar(metodo, rota, caminho, esquema, corpo, formato);
     } catch (erro) {
       if (erro instanceof ErroMobileMed) {
         this.logger.warn(
@@ -221,6 +280,7 @@ export class TokenMobileMedLogin implements TokenMobileMed {
   }
 
   private async enviar<T>(
+    metodo: 'POST' | 'PUT',
     rota: string,
     caminho: string,
     esquema: z.ZodType<T>,
@@ -231,8 +291,9 @@ export class TokenMobileMedLogin implements TokenMobileMed {
     let texto: string;
     try {
       resposta = await this.fetch(`${OAUTH_URL}${caminho}`, {
-        method: 'POST',
+        method: metodo,
         headers: {
+          ...CABECALHOS,
           'Content-Type':
             formato === 'json' ? 'application/json' : 'application/x-www-form-urlencoded',
         },
