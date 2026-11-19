@@ -114,6 +114,8 @@ export type TelaEscalaProps = {
   /** `escala.criar` (alocar), `escala.editar` (montar escala). */
   permissoes: PodeNaTela;
   podeVerHistorico: boolean;
+  /** `ausencias.ver`: sem ela, a visão Ausências não aparece. */
+  podeVerAusencias: boolean;
   /** Conflitos que a última alocação ou cobertura salva criou. */
   avisos: AvisoConflitoDto[];
   onDispensarAvisos: () => void;
@@ -152,6 +154,7 @@ export function TelaEscala({
   buscarMedicos,
   permissoes,
   podeVerHistorico,
+  podeVerAusencias,
   avisos,
   ausencias,
   erroAusencias = false,
@@ -234,7 +237,7 @@ export function TelaEscala({
         <div className="flex flex-wrap gap-2 md:ml-auto">
           <EscolhaSegmentada
             aria-label="Visão"
-            opcoes={MODOS}
+            opcoes={podeVerAusencias ? MODOS : MODOS.filter((m) => m.valor !== 'ausencias')}
             valor={modo}
             onMudar={(novo) => onMudar({ modo: novo })}
           />

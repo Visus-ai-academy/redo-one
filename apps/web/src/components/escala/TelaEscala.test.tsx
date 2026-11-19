@@ -58,6 +58,7 @@ async function montar(props: Partial<TelaEscalaProps> = {}) {
       buscarMedicos={async () => []}
       permissoes={{ criar: true, editar: true, excluir: true }}
       podeVerHistorico
+      podeVerAusencias
       avisos={[]}
       {...acoes}
       {...props}
@@ -68,6 +69,14 @@ async function montar(props: Partial<TelaEscalaProps> = {}) {
 }
 
 describe('TelaEscala', () => {
+  it('sem ausencias.ver, a visão Ausências não aparece', async () => {
+    await montar({ podeVerAusencias: false });
+
+    const visao = screen.getByRole('group', { name: 'Visão' });
+    expect(within(visao).queryByRole('button', { name: 'Ausências' })).not.toBeInTheDocument();
+    expect(within(visao).getByRole('button', { name: 'Semana' })).toBeInTheDocument();
+  });
+
   it('cabeçalho: período, navegação, modo, histórico e alocar', async () => {
     const acoes = await montar();
     expect(screen.getByText('16/11 a 22/11/2026')).toBeInTheDocument();

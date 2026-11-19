@@ -70,11 +70,18 @@ function consulta(busca: Busca, hoje: string) {
   };
 }
 
+/** Sem `ausencias.ver`, o modo Ausências (de um link) vira a semana. */
+function semModoProibido<T extends Pick<Busca, 'modo'>>(busca: T, podeVerAusencias: boolean): T {
+  return busca.modo === 'ausencias' && !podeVerAusencias ? { ...busca, modo: undefined } : busca;
+}
+
 /**
  * As ausências aprovadas da semana: a página da lista no modo Ausências; na semana, até 100 delas,
- * para o cartão do plantão dizer o período da ausência. Nos outros modos, nada.
+ * para o cartão do plantão dizer o período da ausência. Nos outros modos ou sem `ausencias.ver`,
+ * nada (a API recusaria).
  */
-function consultaAusencias(busca: Busca, hoje: string) {
+function consultaAusencias(busca: Busca, hoje: string, podeVerAusencias: boolean) {
+  if (!podeVerAusencias) return null;
   const modo: ModoEscala = busca.modo ?? 'semana';
   const semana = { ...janelaDoModo(modo, busca.data ?? hoje), situacao: 'aprovada' as const };
   if (modo === 'ausencias') {
@@ -95,15 +102,18 @@ export const Route = createFileRoute('/_app/escala/')({
   validateSearch: buscaSchema,
   // A busca por nome e o agrupamento só mudam a tela, não a consulta.
   loaderDeps: ({ search: { busca: _busca, agrupar: _agrupar, ...resto } }) => resto,
-  loader: async ({ context, deps, cause }) => {
+  loader: async ({ context, deps: pedido, cause }) => {
     if (!pode(context.sessao, 'escala.ver')) return;
     const { queryClient } = context;
+    const podeVerAusencias = pode(context.sessao, 'ausencias.ver');
+    const deps = semModoProibido(pedido, podeVerAusencias);
     const ocorrencias = consulta(deps, hojeEmBrasilia());
     // Na própria tela (outra semana, outro filtro), a tela busca sozinha e mostra os dados de antes
     // enquanto isso. Esperar aqui seguraria a tela no estado velho até a API responder, e um segundo
     // clique (outra frente no filtro, ▶ de novo) partiria dele e desfaria o primeiro.
     const esperarOcorrencias = Boolean(ocorrencias) && cause !== 'stay';
-    const ausencias = deps.modo === 'ausencias' && consultaAusencias(deps, hojeEmBrasilia());
+    const ausencias =
+      deps.modo === 'ausencias' && consultaAusencias(deps, hojeEmBrasilia(), podeVerAusencias);
     await Promise.all([
       queryClient.ensureQueryData(turnosControllerListarQueryOptions(ATIVOS)),
       queryClient.ensureQueryData(frentesControllerListarQueryOptions(ATIVOS)),
@@ -127,7 +137,8 @@ function Pagina() {
 
 function Escala() {
   const { sessao } = Route.useRouteContext();
-  const busca = Route.useSearch();
+  const podeVerAusencias = pode(sessao, 'ausencias.ver');
+  const busca = semModoProibido(Route.useSearch(), podeVerAusencias);
   const navigate = Route.useNavigate();
   const [hoje] = useState(() => hojeEmBrasilia());
   const [painel, setPainel] = useState<PainelAberto | null>(null);
@@ -188,7 +199,7 @@ function Escala() {
   });
   const nomeMedico = nomeNosPlantoes ?? cadastro.data?.nome;
 
-  const opcoesAusencias = consultaAusencias(busca, hoje);
+  const opcoesAusencias = consultaAusencias(busca, hoje, podeVerAusencias);
   const ausencias = useQuery({
     ...ausenciasControllerListarQueryOptions(opcoesAusencias ?? undefined),
     enabled: Boolean(opcoesAusencias),
@@ -264,6 +275,7 @@ function Escala() {
         buscarMedicos={buscarMedicosDaEscala}
         permissoes={permissoes}
         podeVerHistorico={pode(sessao, 'escala-historico.ver')}
+        podeVerAusencias={podeVerAusencias}
         avisos={avisos}
         onDispensarAvisos={() => setAvisos([])}
         onMudar={mudar}
