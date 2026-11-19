@@ -54,6 +54,19 @@ export class RecortesRodadaDto {
   @IsUUID('all', { each: true })
   prioridadeOperacaoIds!: string[];
 
+  @ids('Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.')
+  @IsArray()
+  @ArrayMaxSize(500)
+  @IsUUID('all', { each: true })
+  subespecialidadeIds!: string[];
+
+  @ApiProperty({
+    description:
+      'O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte.',
+  })
+  @IsBoolean()
+  subespecialidadeGeral!: boolean;
+
   @ids('Clientes: só os exames deles são distribuídos.')
   @IsArray()
   @ArrayMaxSize(500)

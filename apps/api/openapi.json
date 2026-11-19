@@ -15299,6 +15299,18 @@
               "format": "uuid"
             }
           },
+          "subespecialidadeIds": {
+            "description": "Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subespecialidadeGeral": {
+            "type": "boolean",
+            "description": "O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte."
+          },
           "clienteIds": {
             "description": "Clientes: só os exames deles são distribuídos.",
             "type": "array",
@@ -15328,6 +15340,8 @@
           "turnoIds",
           "frenteIds",
           "prioridadeOperacaoIds",
+          "subespecialidadeIds",
+          "subespecialidadeGeral",
           "clienteIds",
           "medicosExcluidos",
           "medicosIncluidos"

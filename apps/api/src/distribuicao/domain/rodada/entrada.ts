@@ -145,6 +145,9 @@ export interface RecortesRodada {
   /** Frentes da escala (`frentes_escala.id`). */
   frenteIds: string[];
   prioridadeOperacaoIds: string[];
+  /** Segmentos do catálogo; com `subespecialidadeGeral`, o exame sem segmento também passa. */
+  subespecialidadeIds: string[];
+  subespecialidadeGeral: boolean;
   clienteIds: string[];
   medicosExcluidos: string[];
   medicosIncluidos: string[];
@@ -154,6 +157,8 @@ export const RECORTES_VAZIOS: RecortesRodada = {
   turnoIds: [],
   frenteIds: [],
   prioridadeOperacaoIds: [],
+  subespecialidadeIds: [],
+  subespecialidadeGeral: false,
   clienteIds: [],
   medicosExcluidos: [],
   medicosIncluidos: [],
@@ -342,6 +347,10 @@ export function montarEntrada(p: {
   if (frentes.length) filtro.frentes = frentes;
   if (recortes.prioridadeOperacaoIds.length) {
     filtro.prioridadeOperacaoIds = recortes.prioridadeOperacaoIds;
+  }
+  if (recortes.subespecialidadeIds.length || recortes.subespecialidadeGeral) {
+    filtro.subespecialidadeIds = recortes.subespecialidadeIds;
+    filtro.subespecialidadeGeral = recortes.subespecialidadeGeral;
   }
   if (recortes.clienteIds.length) filtro.clienteIds = recortes.clienteIds;
   if (recortes.medicosIncluidos.length) filtro.medicosIncluidos = recortes.medicosIncluidos;

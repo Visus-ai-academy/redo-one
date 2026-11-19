@@ -16,6 +16,8 @@ function descricao(r: RecortesRodada): string {
     r.turnoIds.length && `${r.turnoIds.length} turno(s)`,
     r.frenteIds.length && `${r.frenteIds.length} frente(s)`,
     r.prioridadeOperacaoIds.length && `${r.prioridadeOperacaoIds.length} prioridade(s)`,
+    (r.subespecialidadeIds.length || r.subespecialidadeGeral) &&
+      `${r.subespecialidadeIds.length + Number(r.subespecialidadeGeral)} subespecialidade(s)`,
     r.clienteIds.length && `${r.clienteIds.length} cliente(s)`,
     r.medicosExcluidos.length && `sem ${r.medicosExcluidos.length} médico(s)`,
     r.medicosIncluidos.length && `com ${r.medicosIncluidos.length} médico(s) a mais`,
@@ -51,6 +53,8 @@ export class CriarRodada {
       turnoIds: unicos(pedido.turnoIds),
       frenteIds: unicos(pedido.frenteIds),
       prioridadeOperacaoIds: unicos(pedido.prioridadeOperacaoIds),
+      subespecialidadeIds: unicos(pedido.subespecialidadeIds),
+      subespecialidadeGeral: pedido.subespecialidadeGeral,
       clienteIds: unicos(pedido.clienteIds),
       medicosExcluidos: excluidos,
       // Quem foi tirado não fica incluído.

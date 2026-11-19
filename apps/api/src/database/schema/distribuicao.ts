@@ -583,6 +583,9 @@ export const rodadas = pgTable(
     /** Frentes da escala (`frentes_escala`). */
     frenteIds: uuid('frente_ids').array().notNull().default(sql`'{}'`),
     prioridadeOperacaoIds: uuid('prioridade_operacao_ids').array().notNull().default(sql`'{}'`),
+    /** Segmentos do catálogo; com o geral, o exame sem segmento também passa. */
+    subespecialidadeIds: uuid('subespecialidade_ids').array().notNull().default(sql`'{}'`),
+    subespecialidadeGeral: boolean('subespecialidade_geral').notNull().default(false),
     clienteIds: uuid('cliente_ids').array().notNull().default(sql`'{}'`),
     medicosExcluidos: uuid('medicos_excluidos').array().notNull().default(sql`'{}'`),
     /** Entram mesmo fora dos turnos e das frentes do recorte. */

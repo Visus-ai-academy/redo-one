@@ -9,6 +9,8 @@ export const recortesRodadaDtoSchema = z.object({
   turnoIds: z.array(z.uuid()).describe('Turnos da escala.'),
   frenteIds: z.array(z.uuid()).describe('Frentes da escala (`/escala/frentes`).'),
   prioridadeOperacaoIds: z.array(z.uuid()).describe('Prioridades da operação (Configurações › Distribuição).'),
+  subespecialidadeIds: z.array(z.uuid()).describe('Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.'),
+  subespecialidadeGeral: z.boolean().describe('O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte.'),
   clienteIds: z.array(z.uuid()).describe('Clientes: só os exames deles são distribuídos.'),
   medicosExcluidos: z.array(z.uuid()).describe('Médicos que ficam de fora da rodada.'),
   medicosIncluidos: z.array(z.uuid()).describe('Médicos que entram mesmo fora dos turnos e das frentes do recorte.'),

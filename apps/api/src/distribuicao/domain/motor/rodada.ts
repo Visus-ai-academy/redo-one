@@ -6,6 +6,7 @@ import {
   normalizar,
   type PrioridadeCliente,
   recortarClinicas,
+  recortarPacotes,
   recortarPrioridades,
 } from './fila';
 import {
@@ -73,6 +74,10 @@ export interface FiltroRodada {
   prioridadeIds?: readonly string[];
   /** Prioridades da operação (o recorte da tela da rodada); o pacote do paciente não se parte. */
   prioridadeOperacaoIds?: readonly string[];
+  /** Segmentos do catálogo; o pacote do paciente não se parte. Vazio sem o geral = sem recorte. */
+  subespecialidadeIds?: readonly string[];
+  /** O recorte de segmento inclui o exame sem segmento. */
+  subespecialidadeGeral?: boolean;
   clienteIds?: readonly string[];
   /**
    * Frentes da escala: o exame de fora delas é recusado, e o médico entra só pelos períodos delas
@@ -112,6 +117,7 @@ export type MotivoRodada =
   | 'fora_da_prioridade'
   | 'fora_da_clinica'
   | 'fora_da_frente'
+  | 'fora_da_subespecialidade'
   | 'retirado_do_medico'
   | 'guardado_para_posteriores';
 
@@ -262,6 +268,24 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
         `A rodada distribui só ${prioridadeOperacaoIds.map(nome).join(', ')}.`,
       ),
     );
+  }
+  const subespecialidadeIds = filtro.subespecialidadeIds ?? [];
+  if (subespecialidadeIds.length || filtro.subespecialidadeGeral) {
+    const detalhe = `A rodada distribui só ${[
+      ...subespecialidadeIds.map(nome),
+      ...(filtro.subespecialidadeGeral ? ['Sem subespecialidade'] : []),
+    ].join(', ')}.`;
+    const fora = recortarPacotes(
+      naoRecusados().map((l) => l.fila),
+      (e) =>
+        e.subespecialidadeId === null
+          ? !!filtro.subespecialidadeGeral
+          : subespecialidadeIds.includes(e.subespecialidadeId),
+      regras,
+    );
+    for (const id of fora) {
+      recusas.set(id, semItem(id, 'fora_da_subespecialidade', detalhe));
+    }
   }
   const frentes = filtro.frentes ?? [];
   if (frentes.length) {

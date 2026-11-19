@@ -617,6 +617,7 @@ const ANTES_DOS_MEDICOS = new Set([
   'fora_da_prioridade',
   'fora_da_clinica',
   'fora_da_frente',
+  'fora_da_subespecialidade',
   'horario_sem_robo',
   'frente_manual',
 ]);

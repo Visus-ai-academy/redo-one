@@ -268,12 +268,14 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
     expect(entrada.cotaEntregue).toEqual({ g1: 4 });
   });
 
-  it('aplica os recortes: médicos excluídos saem; turnos, frentes, prioridades, clientes e incluídos vão ao filtro', () => {
+  it('aplica os recortes: médicos excluídos saem; turnos, frentes, prioridades, subespecialidades, clientes e incluídos vão ao filtro', () => {
     const { entrada } = montar({
       recortes: {
         turnoIds: ['manha'],
         frenteIds: ['f-mi', 'f-inexistente'],
         prioridadeOperacaoIds: ['op-urg'],
+        subespecialidadeIds: ['seg-neuro'],
+        subespecialidadeGeral: true,
         clienteIds: ['cli-a'],
         medicosExcluidos: ['B'],
         medicosIncluidos: ['A'],
@@ -284,6 +286,8 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
       turnoIds: ['manha'],
       frentes: [{ tipo: 'especialidade', especialidadeId: MI, modalidadeId: null }],
       prioridadeOperacaoIds: ['op-urg'],
+      subespecialidadeIds: ['seg-neuro'],
+      subespecialidadeGeral: true,
       clienteIds: ['cli-a'],
       medicosIncluidos: ['A'],
     });

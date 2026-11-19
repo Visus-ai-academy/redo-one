@@ -224,11 +224,18 @@ export function recortarPrioridades(
   regras: RegrasPorFrente,
 ): Set<string> {
   if (!prioridadeIds.length) return new Set();
-  const passa = new Set(
-    exames
-      .filter((e) => e.prioridadeId !== null && prioridadeIds.includes(e.prioridadeId))
-      .map((e) => chavePacote(e, regras)),
+  return recortarPacotes(
+    exames,
+    (e) => e.prioridadeId !== null && prioridadeIds.includes(e.prioridadeId),
+    regras,
   );
+}
+
+/** Devolve os exames de fora do recorte; o pacote do paciente com algum exame dentro passa inteiro. */
+export function recortarPacotes<
+  E extends Pick<ExameMotor, 'id' | 'paciente' | 'especialidadeId' | 'subespecialidadeId'>,
+>(exames: readonly E[], dentro: (e: E) => boolean, regras: RegrasPorFrente): Set<string> {
+  const passa = new Set(exames.filter(dentro).map((e) => chavePacote(e, regras)));
   return new Set(exames.filter((e) => !passa.has(chavePacote(e, regras))).map((e) => e.id));
 }
 

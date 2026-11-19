@@ -107,6 +107,8 @@ describe('controller das rodadas', () => {
       turnoIds: [],
       frenteIds: [],
       prioridadeOperacaoIds: [],
+      subespecialidadeIds: [],
+      subespecialidadeGeral: false,
       clienteIds: [],
       medicosExcluidos: [],
       medicosIncluidos: [],

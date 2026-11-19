@@ -302,6 +302,39 @@ describe('rodarMotor', () => {
     });
   });
 
+  it('recorte de subespecialidades: o exame de fora é recusado, sem partir o pacote do paciente', () => {
+    const r = rodar({
+      exames: [
+        exame({ id: 'neuro', subespecialidadeId: 'seg-neuro', paciente: 'P1' }),
+        exame({ id: 'mesmo-pacote', paciente: 'P1' }),
+        exame({ id: 'sem-seg', paciente: 'P2' }),
+        exame({ id: 'outro', subespecialidadeId: 'seg-msk', paciente: 'P3' }),
+      ],
+      filtro: { subespecialidadeIds: ['seg-neuro'] },
+      nomes: { 'seg-neuro': 'NEURO' },
+    });
+    expect(item(r, 'neuro')?.medicoId).toBe('A');
+    expect(item(r, 'mesmo-pacote')?.medicoId).toBe('A');
+    for (const id of ['sem-seg', 'outro']) {
+      expect(item(r, id)).toMatchObject({
+        motivo: 'fora_da_subespecialidade',
+        detalhe: 'A rodada distribui só NEURO.',
+      });
+    }
+  });
+
+  it('recorte de subespecialidades com o "sem subespecialidade": o exame sem segmento passa', () => {
+    const r = rodar({
+      exames: [exame({ id: 'sem-seg' }), exame({ id: 'outro', subespecialidadeId: 'seg-msk' })],
+      filtro: { subespecialidadeIds: [], subespecialidadeGeral: true },
+    });
+    expect(item(r, 'sem-seg')?.medicoId).toBe('A');
+    expect(item(r, 'outro')).toMatchObject({
+      motivo: 'fora_da_subespecialidade',
+      detalhe: 'A rodada distribui só Sem subespecialidade.',
+    });
+  });
+
   it('recorte de frentes: o exame de outra frente fica de fora, e o médico só entra pelo período da frente', () => {
     const NEURO = 'esp-neuro';
     const RX = 'mod-rx';

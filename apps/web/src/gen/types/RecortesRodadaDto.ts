@@ -20,6 +20,16 @@ export type RecortesRodadaDto = {
    */
   prioridadeOperacaoIds: string[];
   /**
+   * @description Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.
+   * @type array
+   */
+  subespecialidadeIds: string[];
+  /**
+   * @description O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte.
+   * @type boolean
+   */
+  subespecialidadeGeral: boolean;
+  /**
    * @description Clientes: só os exames deles são distribuídos.
    * @type array
    */
