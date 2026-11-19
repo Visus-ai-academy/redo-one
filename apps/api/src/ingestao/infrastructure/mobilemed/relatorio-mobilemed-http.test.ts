@@ -42,7 +42,10 @@ function criar(respostas: ((corpo: { filtro: Record<string, unknown> }) => unkno
     const corpo = JSON.parse(String(init.body));
     chamadas.push({ url, corpo });
     const responder = respostas.shift() ?? (() => ({ status_code: 200, lista: [] }));
-    return new Response(JSON.stringify(responder(corpo)), { status: 200 });
+    const resposta = responder(corpo);
+    return resposta instanceof Response
+      ? resposta
+      : new Response(JSON.stringify(resposta), { status: 200 });
   }) as unknown as typeof globalThis.fetch;
   const relatorio = new RelatorioMobileMedHttp(
     new ClienteMobileMed({
@@ -151,6 +154,30 @@ describe('RelatorioMobileMedHttp', () => {
     expect(
       chamadas.map((c) => (c.corpo.filtro.data_laudo as { data_inicial: string }).data_inicial),
     ).toEqual(['2026-10-01T03:00:00.000Z', '2026-10-01T03:00:00.000Z', '2026-10-04T15:00:00.000Z']);
+  });
+
+  it('refaz a janela em que a MobileMed cancelou a consulta (499) e segue', async () => {
+    const cancelada = () =>
+      new Response(JSON.stringify({ error_code: 499, error_msg: 'Requisição cancelada' }), {
+        status: 499,
+      });
+    const { relatorio, chamadas } = criar([cancelada, () => ({ lista: [item()] })]);
+
+    const lida = await relatorio.buscar('compartilhamento', periodo, fatiamento);
+
+    expect(chamadas).toHaveLength(2);
+    expect(lida.linhas).toHaveLength(1);
+  });
+
+  it('desiste depois de 3 tentativas na mesma janela', async () => {
+    const cancelada = () => new Response(JSON.stringify({ error_code: 499 }), { status: 499 });
+    const { relatorio, chamadas } = criar([cancelada, cancelada, cancelada, cancelada]);
+
+    const erro = await relatorio.buscar('compartilhamento', periodo, fatiamento).catch((e) => e);
+
+    expect(erro).toBeInstanceOf(RelatorioMobileMedError);
+    expect((erro as Error).message).toContain('HTTP 499');
+    expect(chamadas).toHaveLength(3);
   });
 
   it('resposta fora do formato derruba a leitura inteira, sem dado de paciente na mensagem', async () => {

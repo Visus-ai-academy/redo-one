@@ -5,7 +5,7 @@ import type { TokenMobileMed } from './token-mobilemed';
 
 /**
  * `sessao`: token ausente, vencido ou recusado (401, 403, 410, `invalid_token`); `indisponivel`:
- * sem resposta, tempo esgotado, 429 ou 5xx; `resposta_inesperada`: corpo fora do formato;
+ * sem resposta, tempo esgotado, 429, 499 ou 5xx; `resposta_inesperada`: corpo fora do formato;
  * `recusada`: outro 4xx.
  */
 export type TipoErroMobileMed = 'sessao' | 'indisponivel' | 'resposta_inesperada' | 'recusada';
@@ -153,7 +153,8 @@ export class ClienteMobileMed {
           status,
         );
       }
-      if (status === 429 || status >= 500) {
+      // 499: o gateway dela cancela a consulta de vez em quando ("Requisição cancelada pelo cliente").
+      if (status === 429 || status === 499 || status >= 500) {
         throw new ErroMobileMed(
           'indisponivel',
           `MobileMed: ${rota} respondeu HTTP ${status}.`,

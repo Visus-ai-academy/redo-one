@@ -10,6 +10,19 @@ import { buscarFatiado } from './buscar-fatiado';
 import { type ItemRelatorio, itemParaRegistro, respostaRelatorio } from './esquemas-relatorio';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
+/** Tentativas por janela: a MobileMed às vezes cancela uma consulta (499) que passa na seguinte. */
+const TENTATIVAS = 3;
+
+async function comTentativas<T>(chamar: () => Promise<T>): Promise<T> {
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      return await chamar();
+    } catch (erro) {
+      const passageiro = erro instanceof ErroMobileMed && erro.tipo === 'indisponivel';
+      if (!passageiro || tentativa >= TENTATIVAS) throw erro;
+    }
+  }
+}
 
 /** Filtro da tela "Descritivo Especialidades" (`laudos.mobilemed.com.br/relatorio/exames`). */
 const filtroDescritivo = (de: Date, ate: Date) => ({
@@ -95,10 +108,12 @@ export class RelatorioMobileMedHttp implements RelatorioMobileMed {
             fatiamento.teto,
             async (a, b) =>
               (
-                await this.cliente.chamar('POST', caminho, respostaRelatorio, {
-                  filtro: filtro(a, b),
-                  paginacao: { pagina: 1, total_registros: 50 },
-                })
+                await comTentativas(() =>
+                  this.cliente.chamar('POST', caminho, respostaRelatorio, {
+                    filtro: filtro(a, b),
+                    paginacao: { pagina: 1, total_registros: 50 },
+                  }),
+                )
               ).lista,
           )),
         );

@@ -98,6 +98,14 @@ describe('ClienteMobileMed', () => {
     expect(recusa.message).not.toContain('Fulano');
   });
 
+  it('499 ("Requisição cancelada pelo cliente", que ela devolve de vez em quando) é indisponível', async () => {
+    const { cliente } = criar([
+      json({ error_code: 499, error_msg: 'Requisição cancelada pelo cliente' }, 499),
+    ]);
+    const erro = await erroDe(cliente.chamar('POST', '/exame/relatorio/x', esquema, {}));
+    expect([erro.tipo, erro.status]).toEqual(['indisponivel', 499]);
+  });
+
   it('resposta fora do formato diz só o campo, nunca o valor', async () => {
     const { cliente } = criar([json({ ok: 'Maria da Silva' }), () => new Response('<html>')]);
     const erro = await erroDe(cliente.chamar('GET', '/exame/7', esquema));
