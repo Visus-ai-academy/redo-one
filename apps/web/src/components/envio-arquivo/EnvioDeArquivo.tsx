@@ -1,7 +1,7 @@
 import { Button } from '@base-ui/react/button';
 import { Progress } from '@base-ui/react/progress';
 import { FileArrowUp, FileXls } from '@phosphor-icons/react';
-import { type DragEvent, type ReactNode, useId, useRef, useState } from 'react';
+import { type DragEvent, type ReactNode, useId, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { Alerta } from '../alerta/Alerta';
@@ -25,7 +25,7 @@ const tamanhoLegivel = (bytes: number) =>
     : `${(bytes / (1024 * 1024)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`;
 
 /**
- * Escolher (ou arrastar) um arquivo e enviá-lo, com a barra de progresso. O arquivo vai direto ao
+ * Selecionar (clicando na área ou arrastando) um arquivo e enviá-lo, com a barra de progresso. O arquivo vai direto ao
  * storage: quem usa faz o pedido da URL, o envio e a confirmação em `onEnviar`.
  */
 export function EnvioDeArquivo({
@@ -36,7 +36,6 @@ export function EnvioDeArquivo({
   ajuda,
 }: EnvioDeArquivoProps) {
   const idEntrada = useId();
-  const entrada = useRef<HTMLInputElement>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [progresso, setProgresso] = useState<number | null>(null);
@@ -78,8 +77,9 @@ export function EnvioDeArquivo({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: soltar o arquivo é atalho; o botão "Escolher arquivo" faz o mesmo pelo teclado. */}
-      <div
+      {/* A área inteira é o rótulo da entrada: clicar ou dar Enter nela abre a escolha do arquivo. */}
+      <label
+        htmlFor={idEntrada}
         onDragOver={(evento) => {
           evento.preventDefault();
           if (!enviando) setArrastando(true);
@@ -87,8 +87,10 @@ export function EnvioDeArquivo({
         onDragLeave={() => setArrastando(false)}
         onDrop={soltar}
         className={cn(
-          'border-input flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center',
+          'border-input hover:bg-accent flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center',
+          'has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
           arrastando && 'border-primary bg-accent',
+          enviando && 'pointer-events-none opacity-60',
         )}
       >
         {arquivo ? (
@@ -104,31 +106,22 @@ export function EnvioDeArquivo({
         ) : (
           <>
             <FileArrowUp size={28} aria-hidden className="text-subtle-foreground" />
-            <p className="text-muted-foreground">Arraste a planilha {extensao} para cá</p>
+            <span className="text-muted-foreground">Selecionar arquivo</span>
           </>
         )}
-        <Button
-          type="button"
-          disabled={enviando}
-          onClick={() => entrada.current?.click()}
-          className={buttonClassName({ variant: 'secondary' })}
-        >
-          {arquivo ? 'Trocar arquivo' : 'Escolher arquivo'}
-        </Button>
         <input
-          ref={entrada}
           id={idEntrada}
           type="file"
           accept={extensao}
-          aria-label="Escolher arquivo"
+          aria-label="Selecionar arquivo"
+          disabled={enviando}
           className="sr-only"
-          tabIndex={-1}
           onChange={(evento) => {
             escolher(evento.target.files?.[0]);
             evento.target.value = '';
           }}
         />
-      </div>
+      </label>
 
       {ajuda && <p className="text-muted-foreground text-[13px]">{ajuda}</p>}
 

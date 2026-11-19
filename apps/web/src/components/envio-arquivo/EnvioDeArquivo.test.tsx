@@ -20,14 +20,20 @@ function montar(onEnviar: Enviar = vi.fn(async () => undefined)) {
       onEnviar={onEnviar}
     />,
   );
-  return { onEnviar, entrada: screen.getByLabelText('Escolher arquivo') };
+  return { onEnviar, entrada: screen.getByLabelText('Selecionar arquivo') };
 }
 
 describe('EnvioDeArquivo', () => {
-  it('sem arquivo, convida a arrastar ou escolher, e o envio fica desabilitado', () => {
-    montar();
-    expect(screen.getByText('Arraste a planilha .xlsx para cá')).toBeInTheDocument();
+  it('sem arquivo, a área toda seleciona o arquivo, sem botão à parte, e o envio fica desabilitado', async () => {
+    const { entrada } = montar();
+    expect(screen.getByText('Selecionar arquivo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /escolher arquivo|trocar arquivo/i })).toBeNull();
     expect(screen.getByRole('button', { name: 'Enviar planilha' })).toBeDisabled();
+
+    const clique = vi.fn();
+    entrada.addEventListener('click', clique);
+    await userEvent.click(screen.getByText('Selecionar arquivo'));
+    expect(clique).toHaveBeenCalled();
   });
 
   it('mostra o arquivo escolhido com o tamanho e envia, mostrando o progresso', async () => {
