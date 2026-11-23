@@ -202,6 +202,8 @@ export class PacoteDto {
   @ApiProperty({ description: 'Estável na rodada (agrupa os exames do mesmo paciente).' })
   id!: string;
   @ApiProperty({ type: 'integer' }) exames!: number;
+  @ApiProperty({ type: 'integer', description: 'Soma dos laudos dos exames do pacote.' })
+  laudos!: number;
 }
 
 export class FrenteDaDesignacaoDto {
@@ -463,13 +465,26 @@ export class MedicoDaRodadaDto {
   aComecar!: TurnoAComecarDto[];
   @ApiProperty({ type: 'integer', nullable: true, description: 'Teto da escala na leitura.' })
   capacidade!: number | null;
-  @ApiProperty({ type: 'integer', description: 'Já aberto na MobileMed na leitura.' })
+  @ApiProperty({
+    type: 'integer',
+    description: 'Já aberto na MobileMed na leitura, na unidade do teto dele.',
+  })
   cargaEmMaos!: number;
+  @ApiProperty({
+    enum: ['exames', 'laudos'],
+    enumName: 'UnidadeTeto',
+    nullable: true,
+    description:
+      'Em que o teto e a carga dele são contados; null = mandado na conferência sem estar na rodada.',
+  })
+  unidadeTeto!: 'exames' | 'laudos' | null;
   @ApiProperty({ type: 'integer' }) propostos!: number;
   @ApiProperty({ type: 'integer' }) urgencias!: number;
   @ApiProperty({ type: 'integer', description: 'Pacientes com mais de um exame com ele.' })
   pacotes!: number;
   @ApiProperty({ type: 'integer' }) previstas!: number;
+  @ApiProperty({ type: 'integer', description: 'Laudos das previstas.' })
+  laudosPrevistos!: number;
   @ApiProperty({ type: 'integer' }) executadas!: number;
   @ApiProperty({ type: 'integer' }) puladas!: number;
   @ApiProperty({ type: 'integer' }) falharam!: number;
@@ -664,8 +679,17 @@ export class MedicoEmTurnoDto {
   @ApiProperty({ type: String, format: 'date-time' }) inicio!: Date;
   @ApiProperty({ type: String, format: 'date-time' }) fim!: Date;
   @ApiProperty({ type: 'integer', nullable: true }) produtividade!: number | null;
-  @ApiProperty({ type: 'integer', description: 'Exames com ele ainda não laudados.' })
+  @ApiProperty({
+    type: 'integer',
+    description: 'Exames com ele ainda não laudados, na unidade do teto dele.',
+  })
   cargaEmMaos!: number;
+  @ApiPropertyOptional({
+    enum: ['exames', 'laudos'],
+    enumName: 'UnidadeTeto',
+    description: 'Em que o teto e a carga dele são contados (ausente nos retratos antigos).',
+  })
+  unidadeTeto?: 'exames' | 'laudos';
   @ApiProperty({ description: 'Nome do turno.' }) turno!: string;
   @ApiProperty({ description: 'Nome da frente (especialidade ou modalidade).' })
   frenteNome!: string;

@@ -211,7 +211,7 @@ describe('entregasDoLegado', () => {
 });
 
 describe('cotaEntregueDoLegado', () => {
-  it('soma os laudos executados por alocação gratificada desde o início do plantão', () => {
+  it('conta os exames e soma os laudos executados por alocação gratificada desde o início do plantão', () => {
     const alocacao = idDoLegado('alocacoes_medico', 'a1');
     const cota = cotaEntregueDoLegado(
       [
@@ -231,7 +231,7 @@ describe('cotaEntregueDoLegado', () => {
       [{ alocacaoId: alocacao, desde: new Date('2026-11-23T10:00:00.000Z') }],
       new Date('2026-11-23T19:00:00.000Z'),
     );
-    expect(cota).toEqual({ [alocacao]: 2 });
+    expect(cota).toEqual({ [alocacao]: { exames: 1, laudos: 2 } });
   });
 });
 

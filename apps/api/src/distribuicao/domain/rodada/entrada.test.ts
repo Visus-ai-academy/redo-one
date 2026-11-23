@@ -93,8 +93,8 @@ const oc = (medicoId: string, p: Partial<OcorrenciaRodada> = {}): OcorrenciaRoda
 const insumos = (p: Partial<InsumosRodada> = {}): InsumosRodada => ({
   config: CONFIGURACAO_INICIAL,
   medicos: [
-    { id: 'A', nome: 'Dra. A', idMobilemed: 101, arranjos: [arranjo()] },
-    { id: 'B', nome: 'Dr. B', idMobilemed: 102, arranjos: [arranjo()] },
+    { id: 'A', nome: 'Dra. A', idMobilemed: 101, arranjos: [arranjo()], unidadeTeto: 'exames' },
+    { id: 'B', nome: 'Dr. B', idMobilemed: 102, arranjos: [arranjo()], unidadeTeto: 'laudos' },
   ],
   equipes: [],
   ocorrencias: [oc('A'), oc('B')],
@@ -237,6 +237,7 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
             nome: 'Dra. A',
             idMobilemed: 101,
             arranjos: [arranjo({ clientesExclusivosIds: ['cli-a'] })],
+            unidadeTeto: 'exames',
           },
         ],
       }),
@@ -263,10 +264,69 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
   it('já entregue e cota gratificada vêm do histórico das designações', () => {
     const em = br('2026-11-17T10:00');
     const { entrada } = montar({
-      entregas: { porExame: new Map([['e1', [{ medicoId: 'A', em }]]]), cotaEntregue: { g1: 4 } },
+      insumos: insumos({
+        ocorrencias: [
+          oc('A', { alocacaoId: 'gA', gratificado: true }),
+          oc('B', { alocacaoId: 'gB', gratificado: true }),
+        ],
+      }),
+      entregas: {
+        porExame: new Map([['e1', [{ medicoId: 'A', em }]]]),
+        cotaEntregue: { gA: { exames: 2, laudos: 5 }, gB: { exames: 2, laudos: 5 } },
+      },
     });
     expect(entrada.exames[0]?.entregues).toEqual([{ medicoId: 'A', em }]);
-    expect(entrada.cotaEntregue).toEqual({ g1: 4 });
+    // A conta o teto por exames; B, por laudos: a cota abate na unidade de cada um.
+    expect(entrada.cotaEntregue).toEqual({ gA: 2, gB: 5 });
+  });
+
+  it('a carga em mãos (e a exclusiva) conta na unidade do teto de cada médico', () => {
+    const emMaos = (idExame: string, medicoIdMobilemed: number) => ({
+      idExame,
+      medicoIdMobilemed,
+      ...EM_MAOS,
+      estudo: 'TC TORAX',
+      unidade: 'HOSPITAL A',
+      modalidade: 'CT',
+      especialidade: null,
+      laudos: 3,
+      paciente: { codigo: idExame, nome: 'X' },
+    });
+    const { entrada } = montar({
+      insumos: insumos({
+        medicos: [
+          {
+            id: 'A',
+            nome: 'Dra. A',
+            idMobilemed: 101,
+            arranjos: [arranjo({ clientesExclusivosIds: ['cli-a'] })],
+            unidadeTeto: 'exames',
+          },
+          {
+            id: 'B',
+            nome: 'Dr. B',
+            idMobilemed: 102,
+            arranjos: [arranjo({ clientesExclusivosIds: ['cli-a'] })],
+            unidadeTeto: 'laudos',
+          },
+        ],
+      }),
+      leitura: { semMedico: [], emMaos: [emMaos('m1', 101), emMaos('m2', 102)] },
+    });
+    expect(entrada.medicos).toEqual([
+      expect.objectContaining({
+        id: 'A',
+        unidadeTeto: 'exames',
+        cargaEmMaos: 1,
+        cargaReservadaEmMaos: 1,
+      }),
+      expect.objectContaining({
+        id: 'B',
+        unidadeTeto: 'laudos',
+        cargaEmMaos: 3,
+        cargaReservadaEmMaos: 3,
+      }),
+    ]);
   });
 
   it('aplica os recortes: médicos excluídos saem; turnos, frentes, prioridades, subespecialidades, clientes e incluídos vão ao filtro', () => {

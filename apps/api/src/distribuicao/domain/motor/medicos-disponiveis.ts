@@ -1,5 +1,5 @@
 import type { Arranjo, FrenteEscala } from '../arranjo';
-import { capacidadeNoInstante, juntarPeriodos } from './capacidade';
+import { capacidadeNoInstante, juntarPeriodos, type UnidadeTeto } from './capacidade';
 import {
   type ConfiguracaoDistribuicao,
   dataEmBrasilia,
@@ -56,7 +56,9 @@ export interface MedicoRodada {
   nome: string;
   /** Os arranjos do próprio médico (os da equipe vêm em `equipes`). */
   arranjos: readonly Arranjo[];
-  /** Carga em mãos (atribuído e não laudado), na unidade da carga, inclusive a exclusiva. */
+  /** Em que o teto dele é contado; a carga em mãos já vem nessa unidade. */
+  unidadeTeto: UnidadeTeto;
+  /** Carga em mãos (atribuído e não laudado), na unidade do teto dele, inclusive a exclusiva. */
   cargaEmMaos: number;
   /** Dessa carga, a do recorte de clínica exclusiva (fica fora do teto). */
   cargaReservadaEmMaos: number;
@@ -174,6 +176,8 @@ export interface MedicoDisponivel {
   segmentoUnico: string | null;
   /** Laudos acima do teto que o ajuste do dia dá a ele para este exame. */
   extraPara: (exameId: string) => number;
+  /** Em que o teto, a carga e a cota dele são contados. */
+  unidadeTeto: UnidadeTeto;
 }
 
 /** Onde a elegibilidade de um exame zerou (o primeiro portão sem nenhum médico). */
@@ -674,6 +678,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         cargaReservada,
         segmentoUnico: segmentoUnico(m.arranjos) ?? segmentoUnico(escalado.periodos),
         extraPara: (exameId: string) => extras.get(par(m.id, exameId)) ?? 0,
+        unidadeTeto: m.unidadeTeto,
       };
     });
 

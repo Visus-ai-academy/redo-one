@@ -125,8 +125,8 @@ const op = (id: string, posicao: number, urgencia: PrioridadeOperacao['urgencia'
 const insumosBase = (): InsumosRodada => ({
   config: CONFIGURACAO_INICIAL,
   medicos: [
-    { id: 'A', nome: 'Dra. A', idMobilemed: 101, arranjos: [arranjo] },
-    { id: 'B', nome: 'Dr. B', idMobilemed: 102, arranjos: [arranjo] },
+    { id: 'A', nome: 'Dra. A', idMobilemed: 101, arranjos: [arranjo], unidadeTeto: 'exames' },
+    { id: 'B', nome: 'Dr. B', idMobilemed: 102, arranjos: [arranjo], unidadeTeto: 'exames' },
   ],
   equipes: [],
   ocorrencias: [oc('A'), oc('B')],
@@ -751,6 +751,8 @@ describe('rodada do robô (casos de uso)', () => {
         turnos: ['manha'],
         capacidade: expect.any(Number),
         cargaEmMaos: 0,
+        unidadeTeto: 'exames',
+        laudosPrevistos: expect.any(Number),
       });
       expect(r.motivos).toEqual(
         expect.arrayContaining([
@@ -836,6 +838,7 @@ describe('rodada do robô (casos de uso)', () => {
             nome: 'Dr. B',
             idMobilemed: 102,
             arranjos: [{ ...arranjo, especialidadeId: 'outra' }],
+            unidadeTeto: 'exames',
           },
         ],
       };
@@ -857,7 +860,7 @@ describe('rodada do robô (casos de uso)', () => {
         ...insumosBase(),
         medicos: [
           insumosBase().medicos[0] as never,
-          { id: 'B', nome: 'Dr. B', idMobilemed: null, arranjos: [arranjo] },
+          { id: 'B', nome: 'Dr. B', idMobilemed: null, arranjos: [arranjo], unidadeTeto: 'exames' },
         ],
       };
       const id = await criarELer();
@@ -874,7 +877,9 @@ describe('rodada do robô (casos de uso)', () => {
     it('só médico sem conta na MobileMed em turno: o exame sai explicado e com aviso', async () => {
       insumos.insumos = {
         ...insumosBase(),
-        medicos: [{ id: 'B', nome: 'Dr. B', idMobilemed: null, arranjos: [arranjo] }],
+        medicos: [
+          { id: 'B', nome: 'Dr. B', idMobilemed: null, arranjos: [arranjo], unidadeTeto: 'exames' },
+        ],
       };
       const id = await criarELer();
       expect(designacao('e1')).toMatchObject({ status: 'recusada', motivo: 'sem_medico_elegivel' });

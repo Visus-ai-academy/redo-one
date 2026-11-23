@@ -7,6 +7,17 @@ import { dataEmBrasilia } from './configuracao';
  * de ontem, que é a que está em curso, ficava de fora.
  */
 
+/**
+ * Em que o teto do médico é contado (parâmetro do médico na distribuição): `exames` = cada exame
+ * vale 1, como a `unidadeCarga = registros` do dashboards-one (o padrão); `laudos` = soma os laudos
+ * do exame (o X3 vale 3). A carga em mãos, a da rodada e a cota gratificada seguem a mesma unidade.
+ */
+export type UnidadeTeto = 'exames' | 'laudos';
+
+/** Quanto um exame ocupa do teto de um médico. */
+export const pesoNoTeto = (unidade: UnidadeTeto, laudos: number): number =>
+  unidade === 'laudos' ? laudos : 1;
+
 export interface TurnoNoInstante {
   inicio: Date;
   fim: Date;

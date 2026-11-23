@@ -1,4 +1,5 @@
 import type { ConfiguracaoGlobal } from '../configuracao-global';
+import type { UnidadeTeto } from '../motor/capacidade';
 import {
   criarNivelDoExame,
   type ExameMotor,
@@ -66,7 +67,10 @@ export interface EscalaDoMedico {
 }
 
 /** O médico da rodada como a tela da proposta o mostra (teto, carga em mãos, turno). */
-export interface MedicoGravado extends MedicoNaRodada, EscalaDoMedico {}
+export interface MedicoGravado extends Omit<MedicoNaRodada, 'unidadeTeto'>, EscalaDoMedico {
+  /** Ausente nas gravadas antes da unidade por médico (23/11), quando o motor somava os laudos. */
+  unidadeTeto?: UnidadeTeto;
+}
 
 /** O que o motor viu, guardado para o "por que este médico não pegou" (passo 5). */
 export interface InsumosGravados {

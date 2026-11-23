@@ -93,7 +93,12 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       this.ocorrencias.listar(hoje, amanha),
       db.select().from(frentesEscala),
       db
-        .select({ id: medicos.id, nome: medicos.nome, idMobilemed: medicos.idMobilemed })
+        .select({
+          id: medicos.id,
+          nome: medicos.nome,
+          idMobilemed: medicos.idMobilemed,
+          unidadeTeto: medicosDistribuicao.unidadeTeto,
+        })
         .from(medicos)
         .innerJoin(medicosDistribuicao, eq(medicosDistribuicao.medicoId, medicos.id))
         .where(and(eq(medicos.ativo, true), eq(medicosDistribuicao.habilitadoRobo, true)))

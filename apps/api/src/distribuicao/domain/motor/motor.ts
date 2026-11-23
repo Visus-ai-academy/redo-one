@@ -1,3 +1,4 @@
+import { pesoNoTeto } from './capacidade';
 import {
   type ConfiguracaoDistribuicao,
   type FatiaMistura,
@@ -86,17 +87,19 @@ export interface TrilhaMotor {
 export interface ResultadoDistribuicao {
   designacoes: Designacao[];
   naoDistribuidos: NaoDistribuido[];
-  cargaPorMedico: { medicoId: string; laudos: number; exames: number }[];
+  /** Carga final de quem recebeu, na unidade do teto de cada um (em mãos + rodada). */
+  cargaPorMedico: { medicoId: string; carga: number; exames: number }[];
   totais: { exames: number; laudos: number; distribuidos: number; emAberto: number };
   trilha: TrilhaMotor;
 }
 
+/** Tudo na unidade do teto do médico (exames ou laudos), menos as contagens em EXAMES. */
 interface EstadoMedico {
   medico: MedicoDisponivel;
-  laudos: number;
-  /** Laudos desta rodada que abateram a cota gratificada (fora do teto comum). */
+  carga: number;
+  /** Carga desta rodada que abateu a cota gratificada (fora do teto comum). */
   gratificados: number;
-  /** Laudos desta rodada que entraram pela exclusividade (fora do teto comum). */
+  /** Carga desta rodada que entrou pela exclusividade (fora do teto comum). */
   reservados: number;
   exames: number;
   porSegmento: Map<string, number>;
@@ -185,7 +188,14 @@ function cabeNaProporcao(
 }
 
 /** A carga que ocupa o teto da escala: sem a cota gratificada e sem os exclusivos. */
-const cargaComum = (st: EstadoMedico) => st.laudos - st.gratificados - st.reservados;
+const cargaComum = (st: EstadoMedico) => st.carga - st.gratificados - st.reservados;
+
+/** Quanto o exame ocupa do teto DESTE médico (a unidade é dele). */
+const pesoPara = (st: EstadoMedico, e: ExameMotor) => pesoNoTeto(st.medico.unidadeTeto, e.laudos);
+
+/** Quanto o pacote ocupa do teto deste médico. */
+const cargaDoGrupo = (st: EstadoMedico, g: GrupoExames) =>
+  g.exames.reduce((s, e) => s + pesoPara(st, e), 0);
 
 /** Teto de carga do médico: o menor entre o da escala e o da frente, mais margem e tolerância. */
 function tetoDe(
@@ -210,8 +220,8 @@ const pelaCota = (st: EstadoMedico, g: GrupoExames) =>
   st.gratificados < st.medico.cotaGratificada &&
   g.exames.every((e) => st.medico.gratificadoPara(e.id));
 
-const laudosReservados = (st: EstadoMedico, g: GrupoExames) =>
-  g.exames.reduce((s, e) => s + (st.medico.reservadoPara(e.id) ? e.laudos : 0), 0);
+const cargaReservadaDoGrupo = (st: EstadoMedico, g: GrupoExames) =>
+  g.exames.reduce((s, e) => s + (st.medico.reservadoPara(e.id) ? pesoPara(st, e) : 0), 0);
 
 const pelaReserva = (st: EstadoMedico, g: GrupoExames) =>
   g.exames.every((e) => st.medico.reservadoPara(e.id));
@@ -287,7 +297,7 @@ export function distribuirNaOrdem(
       m.id,
       {
         medico: m,
-        laudos: m.cargaInicial,
+        carga: m.cargaInicial,
         gratificados: 0,
         reservados: 0,
         exames: 0,
@@ -477,7 +487,7 @@ export function distribuirNaOrdem(
     ultimoQueRecebeu = st;
     const gratificado = pelaCota(st, g);
     // O exclusivo não se soma à cota: o que saiu pela cota não sai de novo da conta comum.
-    const reservados = gratificado ? 0 : laudosReservados(st, g);
+    const reservados = gratificado ? 0 : cargaReservadaDoGrupo(st, g);
     for (const e of g.exames) {
       designacoes.push({
         exameId: e.id,
@@ -504,8 +514,9 @@ export function distribuirNaOrdem(
         );
       }
     }
-    st.laudos += g.laudos;
-    if (gratificado) st.gratificados += g.laudos;
+    const carga = cargaDoGrupo(st, g);
+    st.carga += carga;
+    if (gratificado) st.gratificados += carga;
     st.reservados += reservados;
     st.exames += g.exames.length;
   };
@@ -554,7 +565,7 @@ export function distribuirNaOrdem(
       // A cota gratificada não cede a teto nenhum.
       if (pelaCota(st, g)) return true;
       // O teto mede só a carga comum; no pacote misto, só a parte que não é exclusiva pesa.
-      const noTeto = g.laudos - laudosReservados(st, g);
+      const noTeto = cargaDoGrupo(st, g) - cargaReservadaDoGrupo(st, g);
       if (noTeto === 0) return true;
       const teto = tetoDe(st, regrasDo(st, g), config.toleranciaAcimaTeto, margem);
       return teto === null || cargaComum(st) + noTeto <= teto + extraDoGrupo(st, g);
@@ -757,8 +768,8 @@ export function distribuirNaOrdem(
 
   const cargaPorMedico = [...estados.values()]
     .filter((st) => st.exames > 0)
-    .map((st) => ({ medicoId: st.medico.id, laudos: st.laudos, exames: st.exames }))
-    .sort((a, b) => b.laudos - a.laudos);
+    .map((st) => ({ medicoId: st.medico.id, carga: st.carga, exames: st.exames }))
+    .sort((a, b) => b.carga - a.carga);
 
   return {
     designacoes,

@@ -1,6 +1,7 @@
 import { textoDoPaciente } from '../../../ingestao/domain/preparar-laudo';
 import type { Arranjo, FrenteEscala } from '../arranjo';
 import type { ConfiguracaoGlobal } from '../configuracao-global';
+import { pesoNoTeto, type UnidadeTeto } from '../motor/capacidade';
 import {
   type ConfiguracaoDistribuicao,
   type RegrasFrente,
@@ -105,6 +106,8 @@ export interface MedicoDaRodada {
   /** Conta na MobileMed; sem ela, o médico não recebe (não há como atribuir). */
   idMobilemed: number | null;
   arranjos: Arranjo[];
+  /** Em que o teto dele é contado (parâmetro do médico na distribuição). */
+  unidadeTeto: UnidadeTeto;
 }
 
 /** O que a rodada lê das tabelas e da escala no instante da leitura. */
@@ -137,8 +140,11 @@ export interface Entregas {
    * últimos `diasJaEntregue` dias.
    */
   porExame: ReadonlyMap<string, readonly EntregaAnterior[]>;
-  /** Alocação gratificada → o já executado por ela. */
-  cotaEntregue: Readonly<Record<string, number>>;
+  /**
+   * Alocação gratificada → o já executado por ela, em exames e em laudos: a cota abate na unidade
+   * do teto do médico da alocação.
+   */
+  cotaEntregue: Readonly<Record<string, { exames: number; laudos: number }>>;
 }
 
 export interface RecortesRodada {
@@ -243,6 +249,22 @@ export function configuracaoDoMotor(c: ConfiguracaoGlobal): ConfiguracaoDistribu
   return motor;
 }
 
+/** O já entregue de cada cota gratificada, na unidade do teto do médico da alocação. */
+function cotaNaUnidade(
+  entregue: Entregas['cotaEntregue'],
+  insumos: Pick<InsumosRodada, 'medicos' | 'ocorrencias'>,
+): Record<string, number> {
+  const unidade = new Map(insumos.medicos.map((m) => [m.id, m.unidadeTeto]));
+  const medicoDa = new Map(insumos.ocorrencias.map((o) => [o.alocacaoId, o.medicoId]));
+  return Object.fromEntries(
+    Object.entries(entregue).map(([alocacaoId, { exames, laudos }]) => {
+      const medicoId = medicoDa.get(alocacaoId);
+      const u = (medicoId && unidade.get(medicoId)) || 'exames';
+      return [alocacaoId, u === 'laudos' ? laudos : exames];
+    }),
+  );
+}
+
 export function montarEntrada(p: {
   agora: Date;
   leitura: Leitura;
@@ -277,6 +299,8 @@ export function montarEntrada(p: {
   );
 
   // --- em mãos: carga, carga exclusiva e aderência (paciente + especialidade → médico) ---
+  // Tudo na unidade do teto de quem está com o exame.
+  const unidadeDe = new Map(insumos.medicos.map((m) => [m.id, m.unidadeTeto]));
   const carga = new Map<string, number>();
   const cargaReservada = new Map<string, number>();
   const aderente = new Map<string, string>();
@@ -284,7 +308,7 @@ export function montarEntrada(p: {
     const medicoId = porConta.get(e.medicoIdMobilemed);
     if (!medicoId) continue;
     const c = catalogo.classificar(e);
-    const laudos = e.laudos ?? 1;
+    const laudos = pesoNoTeto(unidadeDe.get(medicoId) ?? 'exames', e.laudos ?? 1);
     carga.set(medicoId, (carga.get(medicoId) ?? 0) + laudos);
     const clienteId = catalogo.cliente(e.unidade);
     const exclusivo = reservadoPara(reservas, {
@@ -354,6 +378,7 @@ export function montarEntrada(p: {
     id: m.id,
     nome: m.nome,
     arranjos: m.arranjos,
+    unidadeTeto: m.unidadeTeto,
     cargaEmMaos: carga.get(m.id) ?? 0,
     cargaReservadaEmMaos: cargaReservada.get(m.id) ?? 0,
     semContaMobilemed: m.idMobilemed === null,
@@ -389,7 +414,7 @@ export function montarEntrada(p: {
       prioridadesOperacao: insumos.prioridadesOperacao,
       gradeRecebimento: insumos.gradeRecebimento,
       prioridadesCliente: insumos.prioridadesCliente,
-      cotaEntregue: p.entregas.cotaEntregue,
+      cotaEntregue: cotaNaUnidade(p.entregas.cotaEntregue, insumos),
       filtro,
       nomes: insumos.nomes,
     },

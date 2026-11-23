@@ -1,4 +1,5 @@
 import type { FrenteEscala } from '../arranjo';
+import type { UnidadeTeto } from './capacidade';
 import { type ConfiguracaoDistribuicao, type RegrasFrente, RegrasPorFrente } from './configuracao';
 import type { DirecaoEquipe } from './elegibilidade';
 import {
@@ -212,6 +213,8 @@ export interface MedicoNaRodada {
   /** Carga em mãos que ocupa o teto (sem a exclusiva). */
   cargaEmMaos: number;
   cotaGratificada: number;
+  /** Em que o teto, a carga e a cota dele são contados. */
+  unidadeTeto: UnidadeTeto;
 }
 
 const semItem = (exameId: string, motivo: MotivoRodada, detalhe: string): ItemRodada => ({
@@ -468,6 +471,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       capacidade: m.capacidade,
       cargaEmMaos: m.cargaInicial,
       cotaGratificada: m.cotaGratificada,
+      unidadeTeto: m.unidadeTeto,
     })),
     foraDaRodada: entrada.medicos
       .flatMap((m) => {

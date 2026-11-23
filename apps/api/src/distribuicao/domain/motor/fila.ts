@@ -11,7 +11,7 @@ import type { ConfiguracaoDistribuicao, ItemOrdemFila, RegrasPorFrente } from '.
 /** O exame como o motor o lê (já resolvido contra o catálogo e com a urgência decidida). */
 export interface ExameMotor {
   id: string;
-  /** Carga do exame na unidade da configuração (registros ou laudos). */
+  /** Laudos do exame (o X3 vale 3). Quanto ele ocupa do teto depende da unidade de cada médico. */
   laudos: number;
   especialidadeId: string | null;
   modalidadeId: string | null;
@@ -149,7 +149,8 @@ export interface GrupoExames {
 /**
  * Junta os exames do mesmo pacote num lote indivisível, que herda a posição do seu exame mais bem
  * colocado. Na mesma posição, mesmo prazo, mesma urgência e mesmo nível de cliente, o pacote maior vem antes: o
- * teto é tudo ou nada, e os avulsos enchiam as vagas antes dele (15/10).
+ * teto é tudo ou nada, e os avulsos enchiam as vagas antes dele (15/10). Maior em exames (a unidade
+ * do teto de quase todos os médicos); os laudos só desempatam.
  */
 export function agruparPorPaciente(
   fila: readonly ExameMotor[],
@@ -202,7 +203,9 @@ export function agruparPorPaciente(
       fim++;
     const trecho = grupos
       .slice(i, fim)
-      .sort((a, b) => b.laudos - a.laudos || a.posicao - b.posicao);
+      .sort(
+        (a, b) => b.exames.length - a.exames.length || b.laudos - a.laudos || a.posicao - b.posicao,
+      );
     grupos.splice(i, trecho.length, ...trecho);
     i = fim;
   }

@@ -19,6 +19,7 @@ import {
 
 import { Permissao, PrincipalAtual } from '../../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../../identidade/principal';
+import type { ParametrosMedico } from '../../application/ports/parametros-medico.repository';
 import { ConsultarArranjos, SalvarArranjos } from '../../application/use-cases/arranjos';
 import { DefinirRoboMedico, ObterRoboMedico } from '../../application/use-cases/robo-medico';
 import { SugerirAlocacao } from '../../application/use-cases/sugerir-alocacao';
@@ -83,9 +84,10 @@ export class DistribuicaoMedicoController {
     @Param('medicoId', ParseUUIDPipe) medicoId: string,
     @Body() corpo: RoboMedicoDto,
   ): Promise<void> {
-    return this.definirRobo.executar(usuario(ator), medicoId, {
-      habilitadoRobo: corpo.habilitadoRobo,
-    });
+    const mudancas: Partial<ParametrosMedico> = {};
+    if (corpo.habilitadoRobo !== undefined) mudancas.habilitadoRobo = corpo.habilitadoRobo;
+    if (corpo.unidadeTeto !== undefined) mudancas.unidadeTeto = corpo.unidadeTeto;
+    return this.definirRobo.executar(usuario(ator), medicoId, mudancas);
   }
 }
 

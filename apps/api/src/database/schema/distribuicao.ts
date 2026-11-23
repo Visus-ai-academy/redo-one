@@ -157,6 +157,12 @@ export const arranjosClientesExclusivos = pgTable(
   ],
 );
 
+/**
+ * Em que o teto do médico é contado: `exames` (cada exame vale 1, o padrão, como a
+ * `unidadeCarga = registros` do dashboards-one) ou `laudos` (soma os laudos do exame).
+ */
+export const unidadeTeto = pgEnum('unidade_teto', ['exames', 'laudos']);
+
 /** Parâmetros do robô por médico. Sem linha = não habilitado. */
 export const medicosDistribuicao = pgTable(
   'medicos_distribuicao',
@@ -166,6 +172,8 @@ export const medicosDistribuicao = pgTable(
       .references(() => medicos.id, { onDelete: 'cascade' }),
     /** O robô pode entregar exames a ele. */
     habilitadoRobo: boolean('habilitado_robo').notNull().default(false),
+    /** Em que o teto, a carga em mãos e a cota gratificada dele são contados. */
+    unidadeTeto: unidadeTeto('unidade_teto').notNull().default('exames'),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [index('medicos_distribuicao_habilitado_idx').on(t.habilitadoRobo)],

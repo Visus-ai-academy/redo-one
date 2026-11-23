@@ -325,7 +325,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
 
   it('manda na mão a recusada, com o pacote do paciente e as contagens por médico e motivo', async () => {
     const id = await criarComProposta([
-      designacao('p1', { pacienteChave: 'pac', urgente: true }),
+      designacao('p1', { pacienteChave: 'pac', urgente: true, laudos: 3 }),
       designacao('p2', { ordem: 1, pacienteChave: 'pac' }),
       designacao('r1', {
         ordem: 2,
@@ -354,7 +354,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       expect.objectContaining({ idExameMobilemed: 'r1', status: 'prevista', naMao: true }),
     ]);
     const pacote = (await repo.designacoes(id, { pagina: 1, porPagina: 10 })).itens[0]?.pacote;
-    expect(pacote).toEqual({ id: expect.any(String), exames: 2 });
+    expect(pacote).toEqual({ id: expect.any(String), exames: 2, laudos: 4 });
     expect(await repo.porMedico(id)).toEqual([
       expect.objectContaining({
         medicoId,
@@ -363,6 +363,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
         urgencias: 1,
         pacotes: 1,
         previstas: 3,
+        laudosPrevistos: 5,
         naMao: 1,
       }),
     ]);

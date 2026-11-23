@@ -371,7 +371,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   }
 
   async cotaEntregue(plantoes: readonly { alocacaoId: string; desde: Date }[]) {
-    const cota: Record<string, number> = {};
+    const cota: Record<string, { exames: number; laudos: number }> = {};
     for (const p of plantoes) {
       const feitos = this.designacoesGravadas.filter(
         (d) =>
@@ -379,7 +379,12 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
           d.alocacaoGratificadaId === p.alocacaoId &&
           (d.executadaEm ?? new Date(0)) >= p.desde,
       );
-      if (feitos.length) cota[p.alocacaoId] = feitos.reduce((s, d) => s + d.laudos, 0);
+      if (feitos.length) {
+        cota[p.alocacaoId] = {
+          exames: feitos.length,
+          laudos: feitos.reduce((s, d) => s + d.laudos, 0),
+        };
+      }
     }
     return cota;
   }
@@ -430,7 +435,13 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       medicoProposto: rotulo(d.medicoPropostoId),
       medico: rotulo(d.medicoId),
       pacote:
-        doPaciente.length > 1 ? { id: doPaciente[0]?.id ?? d.id, exames: doPaciente.length } : null,
+        doPaciente.length > 1
+          ? {
+              id: doPaciente[0]?.id ?? d.id,
+              exames: doPaciente.length,
+              laudos: doPaciente.reduce((s, x) => s + x.laudos, 0),
+            }
+          : null,
       gratificado: d.gratificado,
       naMao: d.naMao,
       elegiveis: d.elegiveis,
@@ -476,6 +487,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
         urgencias: 0,
         pacotes: 0,
         previstas: 0,
+        laudosPrevistos: 0,
         executadas: 0,
         puladas: 0,
         falharam: 0,
@@ -483,7 +495,10 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       };
       c.propostos++;
       if (d.urgente) c.urgencias++;
-      if (d.status === 'prevista') c.previstas++;
+      if (d.status === 'prevista') {
+        c.previstas++;
+        c.laudosPrevistos += d.laudos;
+      }
       if (d.status === 'executada') c.executadas++;
       if (d.status === 'pulada') c.puladas++;
       if (d.status === 'falhou') c.falharam++;

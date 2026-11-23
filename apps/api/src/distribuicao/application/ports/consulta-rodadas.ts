@@ -44,7 +44,7 @@ export interface DesignacaoDetalhada {
   medicoProposto: RotuloRodada | null;
   medico: RotuloRodada | null;
   /** Os exames do mesmo paciente na rodada; null = só este. `id` é estável na rodada. */
-  pacote: { id: string; exames: number } | null;
+  pacote: { id: string; exames: number; laudos: number } | null;
   gratificado: boolean;
   /** Mandado a um médico na conferência depois que o motor o deixou de fora. */
   naMao: boolean;
@@ -108,6 +108,8 @@ export interface ContagemPorMedico {
   /** Pacientes com mais de um exame com ele. */
   pacotes: number;
   previstas: number;
+  /** Laudos das previstas (a carga proposta de quem conta o teto por laudos). */
+  laudosPrevistos: number;
   executadas: number;
   puladas: number;
   falharam: number;

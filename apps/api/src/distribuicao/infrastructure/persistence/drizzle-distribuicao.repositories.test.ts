@@ -129,11 +129,17 @@ describe.skipIf(!url)('repositórios da distribuição (banco)', () => {
 
   it('parâmetros do médico: padrão sem linha, depois grava e atualiza', async () => {
     const repo = new DrizzleParametrosMedicoRepository(db);
-    expect(await repo.obter(id('medico'))).toEqual({ habilitadoRobo: false });
-    await repo.salvar(id('medico'), { habilitadoRobo: true });
-    expect(await repo.obter(id('medico'))).toEqual({ habilitadoRobo: true });
-    await repo.salvar(id('medico'), { habilitadoRobo: false });
-    expect(await repo.obter(id('medico'))).toEqual({ habilitadoRobo: false });
+    expect(await repo.obter(id('medico'))).toEqual({
+      habilitadoRobo: false,
+      unidadeTeto: 'exames',
+    });
+    await repo.salvar(id('medico'), { habilitadoRobo: true, unidadeTeto: 'laudos' });
+    expect(await repo.obter(id('medico'))).toEqual({ habilitadoRobo: true, unidadeTeto: 'laudos' });
+    await repo.salvar(id('medico'), { habilitadoRobo: false, unidadeTeto: 'exames' });
+    expect(await repo.obter(id('medico'))).toEqual({
+      habilitadoRobo: false,
+      unidadeTeto: 'exames',
+    });
   });
 
   it('uso da equipe: lê e grava o plantão da equipe; equipe inexistente dá null', async () => {

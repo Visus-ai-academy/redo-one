@@ -1,16 +1,20 @@
-import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, type ApiPropertyOptions } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsIn,
+  IsOptional,
   IsUUID,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
 const MODOS = ['todos', 'apenas', 'exceto'] as const;
+const UNIDADES_TETO = ['exames', 'laudos'] as const;
+const DESCRICAO_UNIDADE_TETO =
+  'Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.';
 const lista = (descricao: string): ApiPropertyOptions => ({
   type: [String],
   format: 'uuid',
@@ -108,14 +112,31 @@ export class ArranjosDoDonoDto {
   prioridades!: PrioridadeDoArranjoDto[];
 }
 
+/** Só os campos enviados mudam. */
 export class RoboMedicoDto {
-  @ApiProperty({ description: 'O robô pode entregar exames a ele.' })
+  @ApiPropertyOptional({ description: 'O robô pode entregar exames a ele.' })
+  @IsOptional()
   @IsBoolean()
-  habilitadoRobo!: boolean;
+  habilitadoRobo?: boolean;
+
+  @ApiPropertyOptional({
+    enum: UNIDADES_TETO,
+    enumName: 'UnidadeTeto',
+    description: DESCRICAO_UNIDADE_TETO,
+  })
+  @IsOptional()
+  @IsIn(UNIDADES_TETO)
+  unidadeTeto?: (typeof UNIDADES_TETO)[number];
 }
 
 export class DistribuicaoMedicoDto extends ArranjosDoDonoDto {
   @ApiProperty() habilitadoRobo!: boolean;
+  @ApiProperty({
+    enum: UNIDADES_TETO,
+    enumName: 'UnidadeTeto',
+    description: DESCRICAO_UNIDADE_TETO,
+  })
+  unidadeTeto!: (typeof UNIDADES_TETO)[number];
 }
 
 export class UsoEquipeDto {

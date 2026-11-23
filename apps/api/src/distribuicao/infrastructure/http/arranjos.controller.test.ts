@@ -40,7 +40,9 @@ describe('controllers dos arranjos', () => {
       executar: vi.fn(async () => ({ arranjos: [arranjoVazio()], clientes: [], exames: [] })),
     };
     const salvar = { executar: vi.fn(async () => undefined) };
-    const obterRobo = { executar: vi.fn(async () => ({ habilitadoRobo: true })) };
+    const obterRobo = {
+      executar: vi.fn(async () => ({ habilitadoRobo: true, unidadeTeto: 'laudos' as const })),
+    };
     const definirRobo = { executar: vi.fn(async () => undefined) };
     const c = new DistribuicaoMedicoController(
       consultar as unknown as ConsultarArranjos,
@@ -54,6 +56,7 @@ describe('controllers dos arranjos', () => {
       clientes: [],
       exames: [],
       habilitadoRobo: true,
+      unidadeTeto: 'laudos',
     });
     expect(consultar.executar).toHaveBeenCalledWith({ tipo: 'medico', id: 'm1' });
     await c.salvarArranjos(ator, 'm1', { arranjos: [arranjoVazio()] });
@@ -65,6 +68,11 @@ describe('controllers dos arranjos', () => {
     await c.salvarRobo(ator, 'm1', { habilitadoRobo: false });
     expect(definirRobo.executar).toHaveBeenCalledWith({ tipo: 'usuario', id: 'u1' }, 'm1', {
       habilitadoRobo: false,
+    });
+    // Cada campo é opcional: só o que veio muda.
+    await c.salvarRobo(ator, 'm1', { unidadeTeto: 'laudos' });
+    expect(definirRobo.executar).toHaveBeenLastCalledWith({ tipo: 'usuario', id: 'u1' }, 'm1', {
+      unidadeTeto: 'laudos',
     });
   });
 

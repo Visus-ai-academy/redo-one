@@ -24,12 +24,12 @@ describe('robô do médico', () => {
   });
 
   it('médico sem parâmetros não está habilitado', async () => {
-    expect(await obter.executar('m1')).toEqual({ habilitadoRobo: false });
+    expect(await obter.executar('m1')).toEqual({ habilitadoRobo: false, unidadeTeto: 'exames' });
   });
 
   it('habilita e audita a mudança', async () => {
     await definir.executar(ator, 'm1', { habilitadoRobo: true });
-    expect(await obter.executar('m1')).toEqual({ habilitadoRobo: true });
+    expect(await obter.executar('m1')).toEqual({ habilitadoRobo: true, unidadeTeto: 'exames' });
     expect(auditoria.eventos).toEqual([
       {
         ator,
@@ -41,6 +41,16 @@ describe('robô do médico', () => {
         em: agora,
       },
     ]);
+  });
+
+  it('troca a unidade do teto sem mexer na habilitação e audita só o que mudou', async () => {
+    await definir.executar(ator, 'm1', { habilitadoRobo: true });
+    await definir.executar(ator, 'm1', { unidadeTeto: 'laudos' });
+    expect(await obter.executar('m1')).toEqual({ habilitadoRobo: true, unidadeTeto: 'laudos' });
+    const ultimo = auditoria.eventos.at(-1);
+    expect(ultimo?.entidade).toBe('medico_distribuicao');
+    expect(ultimo?.antes).toEqual({ unidadeTeto: 'exames' });
+    expect(ultimo?.depois).toEqual({ unidadeTeto: 'laudos' });
   });
 
   it('sem mudança, não audita', async () => {

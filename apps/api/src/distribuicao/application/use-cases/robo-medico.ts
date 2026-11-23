@@ -6,7 +6,7 @@ import type {
   ParametrosMedicoRepository,
 } from '../ports/parametros-medico.repository';
 
-/** Parâmetros do robô de um médico (hoje, só se ele está habilitado). */
+/** Parâmetros do robô de um médico: se está habilitado e em que o teto dele é contado. */
 export class ObterRoboMedico {
   constructor(
     private readonly parametros: ParametrosMedicoRepository,
@@ -27,18 +27,27 @@ export class DefinirRoboMedico {
     private readonly agora: () => Date,
   ) {}
 
-  async executar(ator: Ator, medicoId: string, novos: ParametrosMedico): Promise<void> {
+  /** Só os campos informados mudam; a auditoria guarda só o que mudou. */
+  async executar(ator: Ator, medicoId: string, mudancas: Partial<ParametrosMedico>): Promise<void> {
     if (!(await this.cadastros.medicoExiste(medicoId))) throw new MedicoNaoEncontradoError();
     const atuais = await this.parametros.obter(medicoId);
-    if (atuais.habilitadoRobo === novos.habilitadoRobo) return;
-    await this.parametros.salvar(medicoId, novos);
+    const antes: Partial<Record<keyof ParametrosMedico, unknown>> = {};
+    const depois: Partial<Record<keyof ParametrosMedico, unknown>> = {};
+    for (const campo of Object.keys(mudancas) as (keyof ParametrosMedico)[]) {
+      const novo = mudancas[campo];
+      if (novo === undefined || novo === atuais[campo]) continue;
+      antes[campo] = atuais[campo];
+      depois[campo] = novo;
+    }
+    if (!Object.keys(depois).length) return;
+    await this.parametros.salvar(medicoId, { ...atuais, ...depois } as ParametrosMedico);
     await this.auditoria.registrar({
       ator,
       entidade: 'medico_distribuicao',
       entidadeId: medicoId,
       acao: 'alterado',
-      antes: { habilitadoRobo: atuais.habilitadoRobo },
-      depois: { habilitadoRobo: novos.habilitadoRobo },
+      antes,
+      depois,
       em: this.agora(),
     });
   }

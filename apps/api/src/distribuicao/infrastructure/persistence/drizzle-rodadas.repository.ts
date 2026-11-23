@@ -654,7 +654,11 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
   async cotaEntregue(plantoes: readonly { alocacaoId: string; desde: Date }[]) {
     if (!plantoes.length) return {};
     const linhas = await this.db
-      .select({ alocacaoId: designacoes.alocacaoGratificadaId, laudos: sum(designacoes.laudos) })
+      .select({
+        alocacaoId: designacoes.alocacaoGratificadaId,
+        exames: count(),
+        laudos: sum(designacoes.laudos),
+      })
       .from(designacoes)
       .where(
         and(
@@ -671,7 +675,11 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
       )
       .groupBy(designacoes.alocacaoGratificadaId);
     return Object.fromEntries(
-      linhas.flatMap((l) => (l.alocacaoId ? [[l.alocacaoId, Number(l.laudos ?? 0)]] : [])),
+      linhas.flatMap((l) =>
+        l.alocacaoId
+          ? [[l.alocacaoId, { exames: Number(l.exames), laudos: Number(l.laudos ?? 0) }]]
+          : [],
+      ),
     );
   }
 
@@ -703,6 +711,10 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
           Number,
         ),
         pacoteId: sql<string>`(select min(o.id::text) from designacoes o where ${doPaciente})`,
+        pacoteLaudos:
+          sql<number>`(select sum(o.laudos) from designacoes o where ${doPaciente})`.mapWith(
+            Number,
+          ),
       })
       .from(designacoes)
       .innerJoin(rodadas, eq(rodadas.id, designacoes.rodadaId))
@@ -830,6 +842,10 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
           propostos: count(),
           urgencias: conta(sql`${designacoes.urgente}`),
           previstas: conta(sql`${designacoes.status} = 'prevista'`),
+          laudosPrevistos:
+            sql<number>`coalesce(sum(${designacoes.laudos}) filter (where ${designacoes.status} = 'prevista'), 0)`.mapWith(
+              Number,
+            ),
           executadas: conta(sql`${designacoes.status} = 'executada'`),
           puladas: conta(sql`${designacoes.status} = 'pulada'`),
           falharam: conta(sql`${designacoes.status} = 'falhou'`),
@@ -922,6 +938,7 @@ type LinhaDetalhada = {
   recolhido: string | null;
   pacoteExames: number;
   pacoteId: string;
+  pacoteLaudos: number;
 };
 
 const rotulo = (id: string | null, nome: string | null) => (id ? { id, nome: nome ?? '' } : null);
@@ -956,7 +973,10 @@ function comoDetalhada({ d, ...n }: LinhaDetalhada): DesignacaoDetalhada {
     urgente: d.urgente,
     medicoProposto: rotulo(d.medicoPropostoId, n.proposto),
     medico: rotulo(d.medicoId, n.medico),
-    pacote: n.pacoteExames > 1 ? { id: n.pacoteId, exames: n.pacoteExames } : null,
+    pacote:
+      n.pacoteExames > 1
+        ? { id: n.pacoteId, exames: n.pacoteExames, laudos: n.pacoteLaudos }
+        : null,
     gratificado: d.gratificado,
     naMao: d.naMao,
     elegiveis: d.elegiveis,

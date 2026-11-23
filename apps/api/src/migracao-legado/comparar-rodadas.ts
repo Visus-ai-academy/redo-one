@@ -207,15 +207,16 @@ export function cotaEntregueDoLegado(
   executadas: readonly LegadoDesignacaoRodada[],
   plantoes: readonly { alocacaoId: string; desde: Date }[],
   agora: Date,
-): Record<string, number> {
+): Record<string, { exames: number; laudos: number }> {
   const desdeDe = new Map(plantoes.map((p) => [p.alocacaoId, p.desde]));
-  const cota: Record<string, number> = {};
+  const cota: Record<string, { exames: number; laudos: number }> = {};
   for (const d of executadas) {
     if (!d.alocacaoGratificadaId) continue;
     const alocacaoId = idDoLegado('alocacoes_medico', d.alocacaoGratificadaId);
     const desde = desdeDe.get(alocacaoId);
     if (!desde || !executadaAntes(d, desde, agora)) continue;
-    cota[alocacaoId] = (cota[alocacaoId] ?? 0) + d.laudos;
+    const atual = cota[alocacaoId] ?? { exames: 0, laudos: 0 };
+    cota[alocacaoId] = { exames: atual.exames + 1, laudos: atual.laudos + d.laudos };
   }
   return cota;
 }

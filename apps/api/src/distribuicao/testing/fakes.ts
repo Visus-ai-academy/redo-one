@@ -20,9 +20,10 @@ import type {
   ParametrosEquipe,
   ParametrosEquipeRepository,
 } from '../application/ports/parametros-equipe.repository';
-import type {
-  ParametrosMedico,
-  ParametrosMedicoRepository,
+import {
+  PARAMETROS_MEDICO_PADRAO,
+  type ParametrosMedico,
+  type ParametrosMedicoRepository,
 } from '../application/ports/parametros-medico.repository';
 import type { PrioridadesClienteRepository } from '../application/ports/prioridades-cliente.repository';
 import type { PrioridadesOperacaoRepository } from '../application/ports/prioridades-operacao.repository';
@@ -58,7 +59,7 @@ export class ParametrosMedicoEmMemoria implements ParametrosMedicoRepository {
   readonly itens = new Map<string, ParametrosMedico>();
 
   async obter(medicoId: string) {
-    return this.itens.get(medicoId) ?? { habilitadoRobo: false };
+    return this.itens.get(medicoId) ?? { ...PARAMETROS_MEDICO_PADRAO };
   }
 
   async salvar(medicoId: string, parametros: ParametrosMedico) {

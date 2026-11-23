@@ -77,6 +77,7 @@ const medico = (id: string, p: Partial<MedicoDisponivel> = {}): MedicoDisponivel
   cargaReservada: 0,
   segmentoUnico: null,
   extraPara: () => 0,
+  unidadeTeto: 'exames',
   ...p,
 });
 
@@ -224,6 +225,91 @@ describe('teto, tolerância, margem de urgência, teto por médico e ajuste do d
     const r = rodar({ exames: varios(3), medicos: [medico('Ana', { capacidade: 2 })] });
     expect(r.naoDistribuidos[0]).toMatchObject({ motivo: 'sem_espaco' });
     expect(r.naoDistribuidos[0]?.detalhe).toContain('Ana 2/2');
+  });
+});
+
+describe('unidade do teto: cada médico conta em exames ou em laudos', () => {
+  it('quem conta por exames: o exame de 3 laudos ocupa 1 do teto', () => {
+    const r = rodar({
+      exames: [exame({ laudos: 3 }), exame({ laudos: 1 })],
+      medicos: [medico('A', { capacidade: 2, unidadeTeto: 'exames' })],
+    });
+    expect(de(r, 'A')).toHaveLength(2);
+    expect(r.cargaPorMedico).toEqual([{ medicoId: 'A', carga: 2, exames: 2 }]);
+  });
+
+  it('quem conta por laudos: o exame de 3 laudos ocupa 3 do teto', () => {
+    const r = rodar({
+      exames: [exame({ id: 'X3', laudos: 3 }), exame({ id: 'X1', laudos: 1 })],
+      medicos: [medico('A', { capacidade: 3, unidadeTeto: 'laudos' })],
+    });
+    expect(ids(r)).toEqual(['X3']);
+    expect(r.naoDistribuidos).toEqual([
+      expect.objectContaining({ exameId: 'X1', motivo: 'sem_espaco' }),
+    ]);
+    expect(r.cargaPorMedico).toEqual([{ medicoId: 'A', carga: 3, exames: 1 }]);
+  });
+
+  it('a carga em mãos já vem na unidade do médico e soma com a da rodada', () => {
+    const r = rodar({
+      exames: [exame({ id: 'X3', laudos: 3 })],
+      medicos: [
+        medico('L', { capacidade: 4, cargaInicial: 2, unidadeTeto: 'laudos' }),
+        medico('E', { capacidade: 4, cargaInicial: 3, unidadeTeto: 'exames' }),
+      ],
+    });
+    // L: 2 + 3 = 5 > 4; E: 3 + 1 = 4.
+    expect(de(r, 'E')).toHaveLength(1);
+    expect(de(r, 'L')).toHaveLength(0);
+  });
+
+  it('a ocupação compara cada um na própria unidade', () => {
+    const r = rodar({
+      exames: [exame({ laudos: 2 })],
+      medicos: [
+        // L: 4/10 laudos (40%); E: 3/10 exames (30%).
+        medico('L', { capacidade: 10, cargaInicial: 4, unidadeTeto: 'laudos' }),
+        medico('E', { capacidade: 10, cargaInicial: 3, unidadeTeto: 'exames' }),
+      ],
+    });
+    expect(de(r, 'E')).toHaveLength(1);
+  });
+
+  it('a cota gratificada abate na unidade do médico', () => {
+    const grat = { capacidade: 0, cotaGratificada: 2, gratificadoPara: () => true };
+    const fila = () => [exame({ laudos: 3 }), exame({ laudos: 3 })];
+    expect(
+      de(
+        rodar({ exames: fila(), medicos: [medico('G', { ...grat, unidadeTeto: 'exames' })] }),
+        'G',
+      ),
+    ).toHaveLength(2);
+    expect(
+      de(
+        rodar({ exames: fila(), medicos: [medico('G', { ...grat, unidadeTeto: 'laudos' })] }),
+        'G',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('o exclusivo em pacote misto tira do teto a parte dele na unidade do médico', () => {
+    const daCli = (id: string) => id.startsWith('CLI');
+    const r = rodar({
+      exames: [
+        exame({ id: 'CLI-1', laudos: 3, paciente: 'PZ' }),
+        exame({ id: 'OUT-1', laudos: 2, paciente: 'PZ' }),
+      ],
+      medicos: [
+        medico('B', {
+          capacidade: 4,
+          cargaInicial: 2,
+          reservadoPara: daCli,
+          unidadeTeto: 'laudos',
+        }),
+      ],
+    });
+    // Só os 2 laudos comuns pesam: 2 + 2 = 4.
+    expect(de(r, 'B')).toHaveLength(2);
   });
 });
 
@@ -721,7 +807,7 @@ describe('o que o robô não distribui', () => {
   it('os totais fecham', () => {
     const r = rodar({ exames: varios(5), medicos: [medico('A', { capacidade: 3 })] });
     expect(r.totais).toEqual({ exames: 5, laudos: 5, distribuidos: 3, emAberto: 2 });
-    expect(r.cargaPorMedico).toEqual([{ medicoId: 'A', laudos: 3, exames: 3 }]);
+    expect(r.cargaPorMedico).toEqual([{ medicoId: 'A', carga: 3, exames: 3 }]);
   });
 });
 

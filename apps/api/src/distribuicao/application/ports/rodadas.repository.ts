@@ -206,8 +206,11 @@ export interface RodadasRepository {
    * O recolhimento parte daqui (sem limite de dias para trás).
    */
   ultimasEntregas(idsExame: readonly string[]): Promise<Map<string, UltimaEntrega>>;
-  /** Alocação gratificada → laudos já executados por ela desde o início do plantão em curso. */
+  /**
+   * Alocação gratificada → exames e laudos já executados por ela desde o início do plantão em
+   * curso (a cota abate na unidade do teto do médico).
+   */
   cotaEntregue(
     plantoes: readonly { alocacaoId: string; desde: Date }[],
-  ): Promise<Record<string, number>>;
+  ): Promise<Record<string, { exames: number; laudos: number }>>;
 }

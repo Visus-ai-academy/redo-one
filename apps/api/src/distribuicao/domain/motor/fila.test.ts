@@ -212,6 +212,15 @@ describe('agruparPorPaciente', () => {
     expect(grupos(fila)).toEqual(['PACOTE:4', 'A:1', 'B:1', 'C:1']);
   });
 
+  it('maior em exames: o pacote de 2 passa o avulso de 3 laudos; os laudos só desempatam', () => {
+    const fila = [
+      doPaciente('X3', 170, { laudos: 3 }),
+      doPaciente('X1', 170),
+      ...[1, 2].map(() => doPaciente('PAR', 170)),
+    ];
+    expect(grupos(fila)).toEqual(['PAR:2', 'X3:1', 'X1:1']);
+  });
+
   it('prazo diferente: o avulso mais curto continua na frente; a urgência segue acima', () => {
     expect(
       grupos([doPaciente('CURTO', 60), ...[1, 2, 3].map(() => doPaciente('P3', 170))]),

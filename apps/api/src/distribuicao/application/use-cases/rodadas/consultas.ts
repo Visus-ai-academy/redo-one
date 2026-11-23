@@ -1,4 +1,5 @@
 import type { FrenteEscala } from '../../../domain/arranjo';
+import type { UnidadeTeto } from '../../../domain/motor/capacidade';
 import type { Barreira, MotivoForaDaRodada } from '../../../domain/motor/medicos-disponiveis';
 import { exameNaFrente } from '../../../domain/motor/rodada';
 import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
@@ -285,7 +286,10 @@ export interface FilaDoMomento {
     inicio: Date;
     fim: Date;
     produtividade: number | null;
+    /** Na unidade do teto dele. */
     cargaEmMaos: number;
+    /** Em que o teto e a carga dele são contados. Ausente nos retratos gravados antes de 23/11. */
+    unidadeTeto?: UnidadeTeto;
     turno: string;
     frenteNome: string;
     /** A frente da escala (`frentes_escala.id`); null = sem cadastro. */
@@ -349,6 +353,7 @@ export class ConsultarFilaDoMomento {
       return [...mapa].map(([id, c]) => ({ id, ...c }));
     };
     const carga = new Map(entrada.medicos.map((m) => [m.id, m.cargaEmMaos]));
+    const unidade = new Map(entrada.medicos.map((m) => [m.id, m.unidadeTeto]));
     const cor = (id: string | null) => (id ? (insumos.cores?.[id] ?? null) : null);
     const segmento = (id: string): SegmentoEmTurno => ({ id, nome: nome(id, ''), cor: cor(id) });
     const frenteIdDe = (f: FrenteEscala) =>
@@ -544,6 +549,7 @@ export class ConsultarFilaDoMomento {
             fim: o.fim,
             produtividade: o.produtividade,
             cargaEmMaos: carga.get(o.medicoId) ?? 0,
+            unidadeTeto: unidade.get(o.medicoId) ?? 'exames',
             turno: nome(o.turnoId, ''),
             frenteNome: nome(o.frente.especialidadeId ?? o.frente.modalidadeId, ''),
             frenteId: frenteIdDe(o.frente),
@@ -571,12 +577,15 @@ export interface MedicoDoResumo {
   aComecar: { turno: string; inicio: string }[];
   /** Teto da escala comum na leitura; null = sem teto conhecido. */
   capacidade: number | null;
-  /** Carga em mãos na leitura (já aberta na MobileMed). */
+  /** Carga em mãos na leitura (já aberta na MobileMed), na unidade do teto dele. */
   cargaEmMaos: number;
+  /** Em que o teto e a carga são contados; null = fora do retrato (mandado na conferência). */
+  unidadeTeto: UnidadeTeto | null;
   propostos: number;
   urgencias: number;
   pacotes: number;
   previstas: number;
+  laudosPrevistos: number;
   executadas: number;
   puladas: number;
   falharam: number;
@@ -631,6 +640,7 @@ const ZERO = {
   urgencias: 0,
   pacotes: 0,
   previstas: 0,
+  laudosPrevistos: 0,
   executadas: 0,
   puladas: 0,
   falharam: 0,
@@ -665,6 +675,8 @@ export class ConsultarResumo {
         aComecar: m.aComecar ?? [],
         capacidade: m.capacidade,
         cargaEmMaos: m.cargaEmMaos,
+        // Gravada antes da unidade por médico (23/11): o motor somava os laudos.
+        unidadeTeto: m.unidadeTeto ?? 'laudos',
         ...c,
       };
     });
@@ -679,6 +691,7 @@ export class ConsultarResumo {
         aComecar: [],
         capacidade: null,
         cargaEmMaos: 0,
+        unidadeTeto: null,
       });
     }
     medicos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
