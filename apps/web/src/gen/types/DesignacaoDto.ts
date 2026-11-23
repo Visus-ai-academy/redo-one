@@ -47,7 +47,7 @@ export type DesignacaoDto = {
   modalidade: RotuloRodadaDto | null;
   subespecialidade: RotuloRodadaDto | null;
   /**
-   * @description Frente da escala que recebe o exame (a da especialidade antes da da modalidade); nula se nenhuma casa.
+   * @description Frente da escala que recebe o exame, de preferência uma marcada na rodada (entre elas, a da especialidade antes da da modalidade); nula se nenhuma casa.
    * @type object
    */
   frente: FrenteDaDesignacaoDto | null;

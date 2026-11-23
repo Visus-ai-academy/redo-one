@@ -63,7 +63,11 @@ import { RodadaVivaError } from '../../application/use-cases/rodadas/erros';
 import type { Barreira } from '../../domain/motor/medicos-disponiveis';
 import type { RecortesRodada } from '../../domain/rodada/entrada';
 import { STATUS_VIVOS, type StatusRodada } from '../../domain/rodada/maquina';
-import type { DesignacaoNova, InsumosGravados } from '../../domain/rodada/proposta';
+import {
+  type DesignacaoNova,
+  frenteNaRodada,
+  type InsumosGravados,
+} from '../../domain/rodada/proposta';
 
 const TAREFA: Readonly<Record<TarefaRodada, string>> = {
   ler: TAREFA_LER_FILA,
@@ -687,6 +691,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
         modalidade: modalidades.codigo,
         frenteEspecialidade: frenteDaEspecialidade.id,
         frenteModalidade: frenteDaModalidade.id,
+        frentesDaRodada: rodadas.frenteIds,
         corEspecialidade: especialidades.cor,
         corModalidade: modalidades.cor,
         subespecialidade: subespecialidades.nome,
@@ -700,6 +705,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
         pacoteId: sql<string>`(select min(o.id::text) from designacoes o where ${doPaciente})`,
       })
       .from(designacoes)
+      .innerJoin(rodadas, eq(rodadas.id, designacoes.rodadaId))
       .leftJoin(clientes, eq(clientes.id, designacoes.clienteId))
       .leftJoin(prioridadesOperacao, eq(prioridadesOperacao.id, designacoes.prioridadeOperacaoId))
       .leftJoin(especialidades, eq(especialidades.id, designacoes.especialidadeId))
@@ -906,6 +912,7 @@ type LinhaDetalhada = {
   modalidade: string | null;
   frenteEspecialidade: string | null;
   frenteModalidade: string | null;
+  frentesDaRodada: string[];
   corEspecialidade: string | null;
   corModalidade: string | null;
   subespecialidade: string | null;
@@ -932,12 +939,17 @@ function comoDetalhada({ d, ...n }: LinhaDetalhada): DesignacaoDetalhada {
     especialidade: rotulo(d.especialidadeId, n.especialidade),
     modalidade: rotulo(d.modalidadeId, n.modalidade),
     subespecialidade: rotulo(d.subespecialidadeId, n.subespecialidade),
-    // Como o retrato da fila: a frente da especialidade antes da da modalidade.
-    frente: n.frenteEspecialidade
-      ? { id: n.frenteEspecialidade, nome: n.especialidade ?? '', cor: n.corEspecialidade }
-      : n.frenteModalidade
-        ? { id: n.frenteModalidade, nome: n.modalidade ?? '', cor: n.corModalidade }
-        : null,
+    frente: frenteNaRodada(
+      [
+        n.frenteEspecialidade
+          ? { id: n.frenteEspecialidade, nome: n.especialidade ?? '', cor: n.corEspecialidade }
+          : null,
+        n.frenteModalidade
+          ? { id: n.frenteModalidade, nome: n.modalidade ?? '', cor: n.corModalidade }
+          : null,
+      ],
+      n.frentesDaRodada,
+    ),
     laudos: d.laudos,
     realizadoEm: d.realizadoEm,
     prazo: d.prazo,

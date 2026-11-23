@@ -684,6 +684,18 @@ describe('rodada do robô (casos de uso)', () => {
       expect(auditoria.eventos.some((e) => e.acao === 'paciente_lido')).toBe(false);
     });
 
+    it('na proposta, o exame fica numa frente marcada na rodada (só a de modalidade: nela)', async () => {
+      repo.frentesDaEscala = [
+        { id: 'f-mi', especialidadeId: MI, modalidadeId: null, cor: '#5B7DB1' },
+        { id: 'f-ct', especialidadeId: null, modalidadeId: CT, cor: '#8A6FB0' },
+      ];
+      const id = await criarELer();
+      const r = repo.rodadas.get(id);
+      if (r) r.recortes = { ...r.recortes, frenteIds: ['f-ct'] };
+      const { itens } = await casos.designacoes.proposta(id);
+      expect(itens[0]?.frente).toEqual({ id: 'f-ct', nome: CT, cor: '#8A6FB0' });
+    });
+
     it('resumo da proposta: por médico (teto, carga, propostos, urgências), motivos e ajustes', async () => {
       const id = await criarELer();
       const e1 = designacao('e1');

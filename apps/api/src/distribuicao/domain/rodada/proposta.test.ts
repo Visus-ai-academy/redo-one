@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CONFIGURACAO_INICIAL } from '../configuracao-global';
 import type { ItemRodada, ResultadoRodada } from '../motor/rodada';
 import type { ExameLido } from './entrada';
-import { montarProposta, ordemDeExecucao } from './proposta';
+import { frenteNaRodada, montarProposta, ordemDeExecucao } from './proposta';
 
 const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 const agora = br('2026-11-18T09:00');
@@ -288,5 +288,31 @@ describe('proposta com os recolhidos', () => {
     expect(p.recolhidos).toBe(0);
     expect(p.insumos.recolhimento).toBeUndefined();
     expect(p.designacoes.every((d) => d.recolhidoDeId === null)).toBe(true);
+  });
+});
+
+describe('a frente do exame na proposta', () => {
+  const neuro = { id: 'f-neuro' };
+  const rx = { id: 'f-rx' };
+
+  it('só a frente de modalidade marcada: o exame fica nela', () => {
+    expect(frenteNaRodada([neuro, rx], ['f-rx'])).toBe(rx);
+  });
+
+  it('as duas marcadas: a de especialidade antes da de modalidade', () => {
+    expect(frenteNaRodada([neuro, rx], ['f-rx', 'f-neuro'])).toBe(neuro);
+  });
+
+  it('nenhuma frente marcada (rodada sem recorte de frente): a de especialidade antes', () => {
+    expect(frenteNaRodada([neuro, rx], [])).toBe(neuro);
+    expect(frenteNaRodada([null, rx], [])).toBe(rx);
+  });
+
+  it('nenhuma das frentes do exame marcada: a primeira que casa, como sem recorte', () => {
+    expect(frenteNaRodada([neuro, rx], ['f-outra'])).toBe(neuro);
+  });
+
+  it('sem frente que case com o exame: null', () => {
+    expect(frenteNaRodada([null, null], ['f-rx'])).toBeNull();
   });
 });

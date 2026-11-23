@@ -11,7 +11,10 @@ export interface RotuloRodada {
   nome: string;
 }
 
-/** A frente da escala do exame (a da especialidade antes da da modalidade), com a cor do catálogo. */
+/**
+ * A frente da escala do exame, de preferência uma marcada na rodada (entre elas, a da especialidade
+ * antes da da modalidade; ver `frenteNaRodada`), com a cor do catálogo.
+ */
 export interface FrenteDaDesignacao {
   /** `frentes_escala.id`. */
   id: string;

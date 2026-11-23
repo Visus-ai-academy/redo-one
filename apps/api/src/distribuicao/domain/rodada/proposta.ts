@@ -267,3 +267,17 @@ export function montarProposta(p: {
     },
   };
 }
+
+/**
+ * A frente em que a proposta mostra o exame, entre as que casam com ele (em ordem de preferência:
+ * a de especialidade antes da de modalidade; null = não casa). Fica numa frente marcada na rodada:
+ * se só a de modalidade estiver marcada, vai para ela. Sem frente marcada (ou nenhuma das do exame
+ * marcada), a primeira que casa.
+ */
+export function frenteNaRodada<F extends { id: string }>(
+  candidatas: readonly (F | null)[],
+  marcadas: readonly string[],
+): F | null {
+  const casam = candidatas.filter((f): f is F => f !== null);
+  return casam.find((f) => marcadas.includes(f.id)) ?? casam[0] ?? null;
+}

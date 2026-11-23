@@ -78,10 +78,10 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     ...p,
   });
 
-  const criarComProposta = async (lista: DesignacaoNova[]) => {
+  const criarComProposta = async (lista: DesignacaoNova[], recortes = RECORTES_VAZIOS) => {
     const id = await repo.criar({
       solicitadaPorId: usuarioId,
-      recortes: RECORTES_VAZIOS,
+      recortes,
       evento: 'Rodada pedida.',
       agora,
     });
@@ -296,6 +296,31 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       ['c1', { id: fCt?.id, nome: `CT${sufixo}`, cor: '#8A6FB0' }],
       ['x1', null],
     ]);
+  });
+
+  it('a frente da designação é uma das marcadas na rodada: só a de modalidade, vai para ela', async () => {
+    const sufixo = Math.random().toString(36).slice(2, 8);
+    const [neuro] = await db
+      .insert(schema.especialidades)
+      .values({ nome: `NEURO ${sufixo}` })
+      .returning();
+    const [rx] = await db
+      .insert(schema.modalidades)
+      .values({ codigo: `RX${sufixo}`, cor: '#8A6FB0' })
+      .returning();
+    await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'especialidade', especialidadeId: neuro?.id });
+    const [fRx] = await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'modalidade', modalidadeId: rx?.id })
+      .returning();
+    const id = await criarComProposta(
+      [designacao('r1', { especialidadeId: neuro?.id, modalidadeId: rx?.id })],
+      { ...RECORTES_VAZIOS, frenteIds: [fRx?.id ?? ''] },
+    );
+    const { itens } = await repo.designacoes(id, { pagina: 1, porPagina: 10 });
+    expect(itens[0]?.frente).toEqual({ id: fRx?.id, nome: `RX${sufixo}`, cor: '#8A6FB0' });
   });
 
   it('manda na mão a recusada, com o pacote do paciente e as contagens por médico e motivo', async () => {

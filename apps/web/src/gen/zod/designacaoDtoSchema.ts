@@ -22,7 +22,7 @@ export const designacaoDtoSchema = z.object({
   especialidade: rotuloRodadaDtoSchema.nullable(),
   modalidade: rotuloRodadaDtoSchema.nullable(),
   subespecialidade: rotuloRodadaDtoSchema.nullable(),
-  frente: frenteDaDesignacaoDtoSchema.nullable().describe('Frente da escala que recebe o exame (a da especialidade antes da da modalidade); nula se nenhuma casa.'),
+  frente: frenteDaDesignacaoDtoSchema.nullable().describe('Frente da escala que recebe o exame, de preferência uma marcada na rodada (entre elas, a da especialidade antes da da modalidade); nula se nenhuma casa.'),
   laudos: z.int(),
   realizadoEm: z.iso.datetime(),
   prazo: z.iso.datetime().nullable(),

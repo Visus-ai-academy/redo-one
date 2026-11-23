@@ -232,7 +232,7 @@ export class DesignacaoDto {
     type: FrenteDaDesignacaoDto,
     nullable: true,
     description:
-      'Frente da escala que recebe o exame (a da especialidade antes da da modalidade); nula se nenhuma casa.',
+      'Frente da escala que recebe o exame, de preferência uma marcada na rodada (entre elas, a da especialidade antes da da modalidade); nula se nenhuma casa.',
   })
   frente!: FrenteDaDesignacaoDto | null;
   @ApiProperty({ type: 'integer' }) laudos!: number;

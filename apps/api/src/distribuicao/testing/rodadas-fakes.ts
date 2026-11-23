@@ -32,7 +32,12 @@ import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
 import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
 import type { GrafiaSemDePara } from '../domain/rodada/grafias-sem-de-para';
 import { estaViva, type StatusRodada } from '../domain/rodada/maquina';
-import type { DesignacaoNova, InsumosGravados, StatusDesignacao } from '../domain/rodada/proposta';
+import {
+  type DesignacaoNova,
+  frenteNaRodada,
+  type InsumosGravados,
+  type StatusDesignacao,
+} from '../domain/rodada/proposta';
 import type { AusenciaDoDia, PeriodoDoMedico } from '../domain/rodada/recolhimento';
 
 export interface DesignacaoGravada extends Omit<DesignacaoNova, 'status'> {
@@ -388,10 +393,16 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   }[] = [];
 
   private frenteDe(d: DesignacaoGravada) {
-    const f =
-      this.frentesDaEscala.find(
-        (x) => x.especialidadeId && x.especialidadeId === d.especialidadeId,
-      ) ?? this.frentesDaEscala.find((x) => x.modalidadeId && x.modalidadeId === d.modalidadeId);
+    const f = frenteNaRodada(
+      [
+        this.frentesDaEscala.find(
+          (x) => x.especialidadeId && x.especialidadeId === d.especialidadeId,
+        ) ?? null,
+        this.frentesDaEscala.find((x) => x.modalidadeId && x.modalidadeId === d.modalidadeId) ??
+          null,
+      ],
+      this.rodadas.get(d.rodadaId)?.recortes.frenteIds ?? [],
+    );
     return f ? { id: f.id, nome: f.especialidadeId ?? f.modalidadeId ?? '', cor: f.cor } : null;
   }
 
