@@ -44,6 +44,41 @@ const ANDAM_SOZINHAS: readonly StatusRodadaKey[] = [
 export const intervaloDaRodada = (status: StatusRodadaKey | undefined) =>
   status && ANDAM_SOZINHAS.includes(status) ? 4000 : (false as const);
 
+const LENDO_A_CADA_MS = 3_000;
+/** Depois da hora prevista da leitura do job: dá tempo de ela terminar antes de consultar. */
+const FOLGA_LEITURA_MS = 30_000;
+/** A leitura atrasou (ou nunca houve): tenta de minuto em minuto até o retrato novo chegar. */
+const ATRASADA_A_CADA_MS = 60_000;
+/** Leitura automática desligada: a fila só muda por leitura pedida (regra dos painéis, 1–5 min). */
+const SEM_LEITURA_AUTOMATICA_MS = 5 * 60_000;
+
+/**
+ * Polling da fila do momento, casado com a leitura do job: em vez de consultar num intervalo fixo,
+ * espera a próxima leitura (a última leitura, falha ou pedido mais o intervalo de Configurações ›
+ * Distribuição, com folga). Com rodada viva, não consulta; com leitura pedida, de 3 em 3 s.
+ */
+export function intervaloDoRetrato(
+  r: {
+    rodadaViva: boolean;
+    lendo: boolean;
+    intervaloMin: number | null;
+    lidaEm: string | null;
+    falhaEm: string | null;
+    pedidaEm: string | null;
+  },
+  agora: number,
+): number | false {
+  if (r.rodadaViva) return false;
+  if (r.lendo) return LENDO_A_CADA_MS;
+  if (r.intervaloMin === null) return SEM_LEITURA_AUTOMATICA_MS;
+  const ultima = Math.max(
+    ...[r.lidaEm, r.falhaEm, r.pedidaEm].map((x) => (x ? new Date(x).getTime() : 0)),
+  );
+  if (!ultima) return ATRASADA_A_CADA_MS;
+  const espera = ultima + r.intervaloMin * 60_000 + FOLGA_LEITURA_MS - agora;
+  return espera > 0 ? espera : ATRASADA_A_CADA_MS;
+}
+
 /** Rótulo de cada motivo gravado pelo motor, pela conferência, pela execução e pelo controle. */
 const MOTIVOS: Record<string, string> = {
   horario_sem_robo: 'Horário sem robô na frente',

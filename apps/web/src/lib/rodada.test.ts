@@ -11,6 +11,7 @@ import {
   funilDosExames,
   funilDosMedicos,
   intervaloDaRodada,
+  intervaloDoRetrato,
   juntarNomes,
   medicosEmTurno,
   opcoesDosFiltros,
@@ -365,5 +366,40 @@ describe('recolhimento na tela', () => {
 
   it('motivo da execução do recolhido que mudou de mão', () => {
     expect(rotuloMotivo('mudou_de_dono')).toBe('Aberto ou trocado de médico desde o recolhimento');
+  });
+});
+
+describe('intervaloDoRetrato', () => {
+  const lida = '2026-11-23T12:00:00Z';
+  const t = (iso: string) => new Date(iso).getTime();
+  const base = {
+    rodadaViva: false,
+    lendo: false,
+    intervaloMin: 5,
+    lidaEm: lida,
+    falhaEm: null,
+    pedidaEm: null,
+  };
+
+  it('com rodada viva, não consulta; com leitura pedida, de 3 em 3 s', () => {
+    expect(intervaloDoRetrato({ ...base, rodadaViva: true }, t(lida))).toBe(false);
+    expect(intervaloDoRetrato({ ...base, lendo: true }, t(lida))).toBe(3000);
+  });
+
+  it('espera a próxima leitura do job (a última mais o intervalo, com folga)', () => {
+    expect(intervaloDoRetrato(base, t('2026-11-23T12:00:10Z'))).toBe(5 * 60_000 + 30_000 - 10_000);
+    // A falha e o pedido também contam como a última leitura (o job conta igual).
+    expect(
+      intervaloDoRetrato({ ...base, falhaEm: '2026-11-23T12:02:00Z' }, t('2026-11-23T12:02:00Z')),
+    ).toBe(5 * 60_000 + 30_000);
+  });
+
+  it('a leitura atrasou: tenta de minuto em minuto', () => {
+    expect(intervaloDoRetrato(base, t('2026-11-23T12:06:00Z'))).toBe(60_000);
+    expect(intervaloDoRetrato({ ...base, lidaEm: null }, t(lida))).toBe(60_000);
+  });
+
+  it('leitura automática desligada: a cada 5 min (só a leitura pedida muda a fila)', () => {
+    expect(intervaloDoRetrato({ ...base, intervaloMin: null }, t(lida))).toBe(5 * 60_000);
   });
 });

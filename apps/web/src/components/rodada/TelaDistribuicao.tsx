@@ -30,7 +30,7 @@ import { horaDeBrasilia } from '../../lib/acesso';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
 import { pode } from '../../lib/permissoes';
-import { intervaloDaRodada, num, type Periodo } from '../../lib/rodada';
+import { intervaloDaRodada, intervaloDoRetrato, num, type Periodo } from '../../lib/rodada';
 import { Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
@@ -61,13 +61,8 @@ export type BuscaDistribuicao = {
   pagina?: number;
 };
 
-/**
- * Sem rodada, o retrato da fila é consultado a cada minuto (regra dos painéis: 1–5 min); a leitura
- * na MobileMed é de um job, no intervalo de Configurações › Distribuição.
- */
-const FILA_A_CADA_MS = 60_000;
-/** Com leitura pedida, de 3 em 3 s até ela terminar. */
-const LENDO_A_CADA_MS = 3_000;
+/** Sem rodada, procura a rodada que o robô ou outra pessoa pedir (regra dos painéis: 1–5 min). */
+const VIVA_A_CADA_MS = 60_000;
 const DIA = 86_400_000;
 
 /** O relógio da tela, para "expira em 38 min" andar sozinho. */
@@ -103,7 +98,7 @@ export function TelaDistribuicao({
 
   const viva = useQuery({
     ...rodadasControllerVivaQueryOptions(),
-    refetchInterval: (q) => (q.state.data?.rodada ? false : FILA_A_CADA_MS),
+    refetchInterval: (q) => (q.state.data?.rodada ? false : VIVA_A_CADA_MS),
     refetchIntervalInBackground: false,
   });
   const rodada = viva.data?.rodada ?? null;
@@ -128,8 +123,19 @@ export function TelaDistribuicao({
 
   const retrato = useQuery({
     ...rodadasControllerFilaQueryOptions(),
+    // A fila muda só quando o job a lê: consulta na hora da próxima leitura, não num ritmo fixo.
     refetchInterval: (q) =>
-      rodada ? false : q.state.data?.lendo ? LENDO_A_CADA_MS : FILA_A_CADA_MS,
+      intervaloDoRetrato(
+        {
+          rodadaViva: Boolean(rodada),
+          lendo: q.state.data?.lendo ?? false,
+          intervaloMin: q.state.data?.intervaloMin ?? null,
+          lidaEm: q.state.data?.fila?.lidaEm ?? null,
+          falhaEm: q.state.data?.falha?.em ?? null,
+          pedidaEm: q.state.data?.pedidaEm ?? null,
+        },
+        Date.now(),
+      ),
     refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
   });
