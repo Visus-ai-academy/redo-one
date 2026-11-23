@@ -277,6 +277,7 @@ Capturado no navegador em 19/11/2026 (telas de `laudos.mobilemed.com.br/relatori
 | STATUS | `status_id` 1 Assinado, 5 Reassinado, o resto Não Assinado | igual |
 | DATA/HORA_LAUDO, MEDICO | Assinado: `data_laudo` e `medico`; senão `primeira_data_laudo` e `medico_primeiro_laudo` | igual |
 | DATA/HORA_REASSINATURA, MEDICO_REASSINATURA | Reassinado: `data_laudo` e `medico` | igual |
+| MEDICO_ID, MEDICO_REASSINATURA_ID (fora da planilha, só a API) | Assinado: `usuario_id`; senão `medico_primeiro_laudo_id` (quase sempre vazio). Reassinado: `usuario_id` na reassinatura. Só inteiro positivo; o resto vira vazio. Mesmo contrato do dashboards-one | igual |
 | DATA/HORA_REALIZACAO, _TRANSFERENCIA, _PRAZO | `data_realizacao`, `data_criacao`, `sla_expiration_date` | igual |
 | DUPLICADO | `is_duplicado` (0/1) como Sim/Não | igual |
 | COMPLEMENTAR | **`is_anterior`** = 1 como Sim/Não (a linha do portal põe o `is_anterior` nessa coluna) | COMPLEMENTO = `is_complementar` |
@@ -296,6 +297,7 @@ Datas sem fuso explícito são recusadas (seriam lidas no fuso do servidor).
 - Consulta que a MobileMed cancela (499) ou que fica sem resposta, 429 ou 5xx é refeita até 3 vezes na mesma janela (o 499 aparece de vez em quando, numa janela qualquer, e passa na seguinte).
 - Falha da MobileMed (fora do ar, sessão, resposta fora do formato) = importação com erro e mensagem curta, nada alterado. Relatório vazio no período também é erro, sem remover nada.
 - Respeita as competências fechadas, como o upload.
+- Médico do laudo: o id da conta (MEDICO_ID) vem primeiro; cadastrado em `medicos.id_mobilemed`, vale aquele médico, mesmo com o nome diferente do cadastro. Sem id ou com id desconhecido, vale o nome (cadastro e apelidos), como no upload. O laudo guarda a conta (`medico_id_mobilemed`, `medico_reassinatura_id_mobilemed`) fora da identidade e do hash do conteúdo: o mesmo laudo dá a mesma identidade e o mesmo hash pelo upload e pela API; quando o id liga o laudo a outro médico, o `medico_id` muda o hash e a reimportação regrava o laudo. Médico não achado gera o aviso pelo nome; com a conta sem cadastro, o valor do aviso termina em "(ID MobileMed N sem cadastro)".
 - Compartilhamento: só as unidades de destino de Configurações › Importação de laudos (padrão CRD_APOIO, com auditoria; decidido em 19/11, o mesmo comportamento do `RPA_COMPARTILHAMENTO_UNIDADES` do RPA antigo, agora editável). Sem nenhuma unidade, o ciclo cria só a importação dos laudos.
 - `INGESTAO_MOBILEMED=fake` (dev): agenda e botão funcionam, o relatório volta vazio (a importação termina com erro). Vazio: desligada.
 
