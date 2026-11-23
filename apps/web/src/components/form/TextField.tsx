@@ -84,7 +84,7 @@ export function TextField({
         // preencher com os dados de quem está usando (as telas de acesso passam `autoComplete`).
         autoComplete={autoComplete ?? (semCorretor ? 'off' : undefined)}
         spellCheck={spellCheck ?? (semCorretor ? false : undefined)}
-        autoCapitalize={semCorretor ? 'none' : undefined}
+        autoCapitalize={semCorretor || spellCheck === false ? 'none' : undefined}
         value={mascara ? aplicarMascara(mascara, field.state.value ?? '') : field.state.value}
         onValueChange={mudar}
         onBlur={aoSair}

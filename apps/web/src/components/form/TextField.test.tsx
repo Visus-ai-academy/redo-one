@@ -104,6 +104,14 @@ describe('TextField: teclado e preenchimento', () => {
     render(<SoCampo spellCheck={false} />);
     expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveAttribute('spellcheck', 'false');
   });
+
+  it('sem corretor, também sem maiúscula automática no celular (ex.: e-mail ou CPF)', () => {
+    render(<SoCampo spellCheck={false} />);
+    expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveAttribute(
+      'autocapitalize',
+      'none',
+    );
+  });
 });
 
 describe('TextField', () => {
