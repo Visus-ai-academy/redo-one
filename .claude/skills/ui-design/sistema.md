@@ -79,6 +79,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 | Lista suspensa (Select, Combobox, Menu, Popover) | Esmaece e cresce de 95%, a partir do gatilho (`origin-(--transform-origin)`) | 150ms, ease-out |
 | Dica (Tooltip) | Só esmaece | 150ms, ease-out |
 | Menu lateral recolhendo | Largura | 200ms, ease-out |
+| Robô trabalhando (`RoboTrabalhando`, rodada lendo ou atribuindo) | Ícone `Robot` num anel fino de 40px: sem progresso conhecido, um arco gira; com progresso, o anel enche na proporção real; pausada, parado. Substitui o palco de tela cheia do dashboards-one (aprovado em 23/11/2026) | giro de 1,6s linear; enchimento 300ms, ease-out; nada gira com movimento reduzido |
 
 - **No Tailwind 4, `scale-*` e `translate-*` são propriedades CSS próprias**, não `transform`: a transição lista o que muda (`transition-[opacity,scale]`). Com `transition-[opacity,transform]` o `scale-95` pula sem animar.
 - O painel lateral sai deslizando antes de avisar a tela (`onFechar` só depois da saída); trocar de linha troca o conteúdo no lugar, sem deslizar de novo.

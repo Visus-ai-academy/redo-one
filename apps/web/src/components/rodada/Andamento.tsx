@@ -21,27 +21,22 @@ import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Skeleton } from '../skeleton/Skeleton';
 import { Caixa, TituloSecao } from './comum';
+import { RoboTrabalhando } from './RoboTrabalhando';
 
 /** Lendo a fila: o que está acontecendo e o formato do que vem (sem números inventados). */
 export function LendoFila({ rodada }: { rodada: RodadaDto }) {
   const desde = rodada.eventos.find((e) => e.texto.startsWith('Lendo'))?.em ?? rodada.criadoEm;
+  const titulo = rodada.status === 'solicitada' ? 'Na fila para ler' : 'Lendo a fila da MobileMed';
   return (
     <>
-      <section aria-live="polite" className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <strong className="font-semibold">
-          {rodada.status === 'solicitada' ? 'Na fila para ler' : 'Lendo a fila da MobileMed'}
-        </strong>
-        <span
-          role="progressbar"
-          aria-label="Lendo a fila"
-          aria-valuetext="Em andamento"
-          className="bg-muted relative block h-1.5 overflow-hidden rounded-full"
-        >
-          <span className="bg-primary/60 absolute inset-y-0 left-0 w-1/3 animate-pulse rounded-full motion-reduce:animate-none" />
-        </span>
-        <span className="text-muted-foreground text-[13px] tabular-nums">
-          Começou às {horaDeBrasilia(desde)}. Pode sair desta tela: a leitura continua e a proposta
-          fica esperando aqui.
+      <section aria-live="polite" className="bg-card flex items-center gap-3 rounded-lg border p-4">
+        <RoboTrabalhando rotulo={titulo} />
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <strong className="font-semibold">{titulo}</strong>
+          <span className="text-muted-foreground text-[13px] tabular-nums">
+            Começou às {horaDeBrasilia(desde)}. Pode sair desta tela: a leitura continua e a
+            proposta fica esperando aqui.
+          </span>
         </span>
       </section>
       <div aria-hidden className="flex flex-col gap-3">
@@ -109,14 +104,20 @@ export function Execucao({ rodada, resumo }: { rodada: RodadaDto; resumo: Resumo
   const pct = (n: number) => (total ? (n / total) * 100 : 0);
   const comExames = resumo.medicos.filter((m) => m.propostos > 0);
   const pagina = usePaginaLocal(comExames, 10);
+  const titulo = rodada.status === 'pausada' ? 'Pausada' : 'Atribuindo na MobileMed';
 
   return (
     <>
       <section aria-live="polite" className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <strong className="font-semibold">
-            {rodada.status === 'pausada' ? 'Pausada' : 'Atribuindo na MobileMed'}
-          </strong>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="flex items-center gap-3">
+            <RoboTrabalhando
+              rotulo={titulo}
+              progresso={total ? feitos / total : 0}
+              parado={rodada.status === 'pausada'}
+            />
+            <strong className="font-semibold">{titulo}</strong>
+          </span>
           <span className="text-muted-foreground tabular-nums">
             <strong className="text-foreground font-semibold">{num(feitos)}</strong> de {num(total)}{' '}
             exames
