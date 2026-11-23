@@ -9,9 +9,10 @@ import { type ReactNode, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { Abas } from '../../../components/abas/Abas';
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { LinkDaLinha } from '../../../components/data-table/link-da-linha';
 import { rotuloDe, TIPOS_TURNO } from '../../../components/escala-config/comum';
 import { formatarDuracao, formatarHorario } from '../../../components/escala-config/horario';
 import { PainelTipoAusencia } from '../../../components/escala-config/PainelTipoAusencia';
@@ -20,6 +21,7 @@ import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../../components/toast/use-avisos';
 import { tiposAusenciaControllerAtualizar } from '../../../gen/clients/tiposAusenciaControllerAtualizar';
 import { tiposAusenciaControllerCriar } from '../../../gen/clients/tiposAusenciaControllerCriar';
@@ -190,9 +192,16 @@ function Escala({ permissoes }: { permissoes: PodeNaTela }) {
       header: 'Situação',
       cell: (info: { getValue: () => boolean }) => situacao(info.getValue(), feminino),
     });
+    // O nome é link de verdade (com o `?id=`): Ctrl/⌘+clique abre o item em outra aba.
     const abrirNome = (id: string, texto: string, cor: string | null) => (
       <ComCor cor={cor}>
-        <BotaoAbrir onAbrir={() => abrir(id)}>{texto}</BotaoAbrir>
+        <LinkDaLinha
+          from="/configuracoes/escala"
+          to="/configuracoes/escala"
+          search={(a) => ({ ...a, id, novo: undefined })}
+        >
+          {texto}
+        </LinkDaLinha>
       </ComCor>
     );
     if (aba === 'turnos')
@@ -256,7 +265,7 @@ function Escala({ permissoes }: { permissoes: PodeNaTela }) {
       }),
       colTipo.accessor('ativo', ativo()),
     ];
-  }, [aba, abrir]);
+  }, [aba]);
 
   return (
     <ListaCadastro
@@ -370,13 +379,16 @@ function PainelDoItem({
     await invalidarEscala(queryClient);
   };
 
-  const item = id ? consulta.data : undefined;
   const faltaOpcoes = editar && aba === 'turnos' && !opcoes.data;
-  if ((id && !item) || faltaOpcoes)
+  const erro = consulta.isError || opcoes.isError;
+  // O skeleton só aparece após ~200ms e, se apareceu, fica ~400ms: resposta rápida não pisca.
+  const fase = useFaseDoCarregamento(((Boolean(id) && !consulta.data) || faltaOpcoes) && !erro);
+  const item = id && fase === 'conteudo' ? consulta.data : undefined;
+  if ((id && !item) || faltaOpcoes || fase !== 'conteudo')
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError || opcoes.isError}
+        erro={erro}
         onTentarDeNovo={() => {
           void consulta.refetch();
           if (opcoes.isError) void opcoes.refetch();

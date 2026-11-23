@@ -27,6 +27,7 @@ import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { PainelLateral } from '../../../components/painel/PainelLateral';
 import { Select } from '../../../components/select/Select';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../../components/toast/use-avisos';
 import { ausenciasControllerAprovar } from '../../../gen/clients/ausenciasControllerAprovar';
 import { ausenciasControllerAtualizar } from '../../../gen/clients/ausenciasControllerAtualizar';
@@ -119,9 +120,10 @@ function Pagina() {
 }
 
 /** Médicos ativos que casam com o termo, para lançar ausência. */
-async function buscarMedicos(termo: string) {
+async function buscarMedicos(termo: string, sinal?: AbortSignal) {
   const { itens } = await medicosEscalaControllerListar({
     query: { busca: termo, ativo: true, porPagina: 20 },
+    signal: sinal,
   }).unwrap();
   return itens.map((m) => ({ valor: m.id, rotulo: m.nome }));
 }
@@ -193,9 +195,7 @@ function Ausencias() {
       coluna.accessor((a) => a.medico.nome, {
         id: 'medico',
         header: 'Médico',
-        cell: (info) => (
-          <CelulaMedico ausencia={info.row.original} onAbrir={() => abrir(info.row.original.id)} />
-        ),
+        cell: (info) => <CelulaMedico ausencia={info.row.original} />,
       }),
       coluna.accessor((a) => a.tipo.nome, {
         id: 'tipo',
@@ -224,7 +224,7 @@ function Ausencias() {
           ),
       }),
     ],
-    [abrir, hoje],
+    [hoje],
   );
 
   // A busca mora entre os filtros (e não no `busca` da lista) para encolher e caber numa linha.
@@ -314,7 +314,7 @@ function Ausencias() {
       porPagina={pagina.porPagina}
       total={pagina.total}
       vazio={{
-        titulo: 'Nenhuma ausência neste período.',
+        titulo: 'Nenhuma ausência lançada.',
         texto: podeCriar
           ? 'Lance férias, congressos e folgas para a escala saber quem não está disponível.'
           : 'Quem gere a escala lança as ausências; os pedidos do portal também aparecem aqui.',
@@ -436,7 +436,8 @@ function PainelEdicao({ id, onFechar }: { id: string; onFechar: () => void }) {
   const atualizar = useAtualizarAusencias();
   const opcoes = useOpcoesDoFormulario();
   const consulta = useQuery(ausenciasControllerObterQueryOptions({ path: { id } }));
-  const ausencia = consulta.data;
+  const fase = useFaseDoCarregamento(!consulta.data && !consulta.isError);
+  const ausencia = fase === 'conteudo' ? consulta.data : undefined;
   if (!ausencia)
     return (
       <PainelCarregando
@@ -475,7 +476,8 @@ function PainelDaAusencia({
   const atualizar = useAtualizarAusencias();
   const consulta = useQuery(ausenciasControllerObterQueryOptions({ path: { id } }));
   const [alterado, setAlterado] = useState(false);
-  const ausencia = consulta.data;
+  const fase = useFaseDoCarregamento(!consulta.data && !consulta.isError);
+  const ausencia = fase === 'conteudo' ? consulta.data : undefined;
   if (!ausencia)
     return (
       <PainelCarregando

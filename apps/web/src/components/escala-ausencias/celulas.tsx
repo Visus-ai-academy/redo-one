@@ -1,19 +1,13 @@
 import type { AusenciaItemDto } from '../../gen/types/AusenciaItemDto';
-import { BotaoAbrir } from '../cadastro/ListaCadastro';
+import { LinkDaLinha } from '../data-table/link-da-linha';
 import { periodoDaAusencia, recorteDaAusencia } from './ausencias';
 
 /**
- * Nome do médico na lista, com a faixa lateral de 3px na cor do tipo da ausência. A cor é dado
+ * Nome do médico na lista (o link que abre a ausência), com a faixa lateral de 3px na cor do tipo da ausência. A cor é dado
  * (vem do tipo), por isso vai em `style`. A faixa desce até a borda esquerda da linha: a célula
  * desfaz o espaço interno da `td` (px-4, py-2) e ocupa a altura toda dela.
  */
-export function CelulaMedico({
-  ausencia,
-  onAbrir,
-}: {
-  ausencia: AusenciaItemDto;
-  onAbrir: () => void;
-}) {
+export function CelulaMedico({ ausencia }: { ausencia: AusenciaItemDto }) {
   const cor = ausencia.tipo.cor;
   return (
     <span className="relative -my-2 -ml-4 flex h-[calc(100%+1rem)] min-h-11 items-center py-2 pl-4">
@@ -25,7 +19,21 @@ export function CelulaMedico({
           style={{ backgroundColor: cor }}
         />
       )}
-      <BotaoAbrir onAbrir={onAbrir}>{ausencia.medico.nome}</BotaoAbrir>
+      {/* Link de verdade (com o `?id=`): Ctrl/⌘+clique abre a ausência em outra aba. */}
+      <LinkDaLinha
+        from="/escala/ausencias"
+        to="/escala/ausencias"
+        search={(atual) => ({
+          ...atual,
+          id: ausencia.id,
+          novo: undefined,
+          editar: undefined,
+          medicoId: undefined,
+          turnoId: undefined,
+        })}
+      >
+        {ausencia.medico.nome}
+      </LinkDaLinha>
     </span>
   );
 }

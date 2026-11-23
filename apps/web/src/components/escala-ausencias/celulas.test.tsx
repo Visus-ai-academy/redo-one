@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { AusenciaItemDto } from '../../gen/types/AusenciaItemDto';
+import { renderComRotas } from '../../test/render';
 import { CelulaMedico, CelulaPeriodo } from './celulas';
 
 const AUSENCIA: AusenciaItemDto = {
@@ -26,25 +26,22 @@ const AUSENCIA: AusenciaItemDto = {
 };
 
 describe('CelulaMedico', () => {
-  it('abre a ausência pelo nome e pinta a faixa lateral com a cor do tipo', async () => {
-    const onAbrir = vi.fn();
-    const { container } = render(<CelulaMedico ausencia={AUSENCIA} onAbrir={onAbrir} />);
+  it('o nome é um link para a ausência (Ctrl+clique abre em outra aba) e a faixa tem a cor do tipo', async () => {
+    const { container } = renderComRotas(<CelulaMedico ausencia={AUSENCIA} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ana Reis' }));
-    expect(onAbrir).toHaveBeenCalled();
+    const link = await screen.findByRole('link', { name: 'Ana Reis' });
+    expect(link.getAttribute('href')).toContain('id=a-1');
 
     const faixa = container.querySelector('[data-faixa-tipo]');
     expect(faixa).toHaveAttribute('aria-hidden', 'true');
     expect(faixa).toHaveStyle({ backgroundColor: '#7C3AED' });
   });
 
-  it('tipo sem cor: sem faixa', () => {
-    const { container } = render(
-      <CelulaMedico
-        ausencia={{ ...AUSENCIA, tipo: { ...AUSENCIA.tipo, cor: null } }}
-        onAbrir={vi.fn()}
-      />,
+  it('tipo sem cor: sem faixa', async () => {
+    const { container } = renderComRotas(
+      <CelulaMedico ausencia={{ ...AUSENCIA, tipo: { ...AUSENCIA.tipo, cor: null } }} />,
     );
+    await screen.findByRole('link', { name: 'Ana Reis' });
     expect(container.querySelector('[data-faixa-tipo]')).toBeNull();
   });
 });
