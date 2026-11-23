@@ -1,8 +1,10 @@
 import { Button } from '@base-ui/react/button';
+import type { ComponentProps } from 'react';
 
 import { cn } from '../../lib/cn';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
+import { EstadoDoErro } from '../estado/EstadoDoErro';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useFaseDoCarregamento } from '../skeleton/use-fase-do-carregamento';
@@ -10,8 +12,15 @@ import { PainelLateral } from './PainelLateral';
 
 type PainelCarregandoProps = {
   onFechar: () => void;
-  /** A busca do item falhou. */
-  erro?: boolean;
+  /**
+   * A busca do item falhou: o erro da API (o `error` do `useQuery`), que escolhe o estado pelo
+   * código HTTP (`EstadoDoErro`), ou só `true` para a mensagem genérica.
+   */
+  erro?: unknown;
+  /** O que não carregou, com artigo ("o médico"), para o texto do erro. */
+  oQue?: string;
+  /** Caminho de volta para a lista no 404. */
+  voltar?: ComponentProps<typeof EstadoDoErro>['voltar'];
   onTentarDeNovo?: () => void;
 };
 
@@ -22,7 +31,9 @@ type PainelCarregandoProps = {
  */
 export function PainelCarregando({
   onFechar,
-  erro = false,
+  erro,
+  oQue = 'os dados',
+  voltar,
   onTentarDeNovo,
 }: PainelCarregandoProps) {
   // O painel abre na hora; as formas só aparecem depois de ~200ms (o lugar já fica reservado).
@@ -49,7 +60,9 @@ export function PainelCarregando({
       ocupado={!erro}
       onFechar={onFechar}
     >
-      {erro ? (
+      {erro && erro !== true ? (
+        <EstadoDoErro erro={erro} oQue={oQue} onTentarDeNovo={onTentarDeNovo} voltar={voltar} />
+      ) : erro ? (
         <div className="flex flex-col items-start gap-3 p-4">
           <Alerta tom="erro">
             Não foi possível carregar os dados. Confira a conexão e tente de novo.

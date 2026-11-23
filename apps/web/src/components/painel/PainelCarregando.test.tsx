@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ResponseError } from '../../gen/.kubb/client';
+import { renderComRotas } from '../../test/render';
 import { PainelCarregando } from './PainelCarregando';
 
 describe('PainelCarregando', () => {
@@ -24,6 +26,27 @@ describe('PainelCarregando', () => {
     expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-busy', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(tentar).toHaveBeenCalled();
+  });
+
+  it('com o erro da API, mostra o estado do código HTTP (ex.: 404 com o caminho de volta)', async () => {
+    const erro = new ResponseError({
+      data: {},
+      status: 404,
+      statusText: '',
+      request: new Request('http://api.test/x'),
+      response: new Response(),
+    });
+    renderComRotas(
+      <PainelCarregando
+        onFechar={vi.fn()}
+        erro={erro}
+        oQue="o médico"
+        voltar={{ to: '/', rotulo: 'Voltar para Médicos' }}
+      />,
+    );
+
+    expect(await screen.findByText('Não encontramos o médico')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Voltar para Médicos' })).toBeInTheDocument();
   });
 
   it('as formas do carregamento só aparecem depois de 200ms (resposta rápida não pisca)', async () => {
