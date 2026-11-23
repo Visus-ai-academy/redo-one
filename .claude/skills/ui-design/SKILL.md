@@ -111,14 +111,30 @@ Exemplos de quando cada um costuma servir:
 | --- | --- | --- |
 | No lugar (edição na linha, alternar, campo que salva sozinho) | Ajuste rápido e frequente de um valor | A mudança tem consequência que precisa de explicação |
 | Popover / menu suspenso | Ação rara de um item (menu "⋯"), filtro, escolha curta | O conteúdo tem formulário ou passa de poucas linhas |
-| Painel lateral (drawer) | Ver ou editar um item sem perder a lista; convite, detalhe | A tarefa é longa ou é o trabalho principal da tela |
-| Diálogo (modal) | Confirmar ação destrutiva, decisão que bloqueia, tarefa curta e atômica | É só para mostrar detalhe, ou o conteúdo tem rolagem longa |
+| Painel lateral (drawer) | Ver ou editar um item de uma lista, alternando entre itens; detalhe com abas ou histórico | A tarefa é curta e atômica (diálogo), longa (página) ou é o trabalho principal da tela |
+| Diálogo (modal) | Confirmar ação destrutiva, decisão que bloqueia, tarefa curta e atômica (criar algo simples, convidar, informar um motivo) | É só para mostrar detalhe, ou o conteúdo tem rolagem longa |
 | Linha que expande / acordeão | Detalhe secundário de itens de uma lista | O detalhe tem ações ou formulário próprios |
 | Aba | Subtelas do mesmo assunto (ex.: Volumetria › Mensal) | As partes são independentes e mereciam item no menu |
 | Página / rota nova | Trabalho principal, fluxo longo, conteúdo que merece link | Um painel ou a própria lista resolveriam sem trocar de contexto |
 | Toast / aviso no fluxo | Confirmar que algo foi feito; aviso no fluxo para erro que exige ação | A mensagem é a única fonte de informação essencial |
 
 O visual de cada padrão segue as regras desta skill (sombra só no que flutua, raio de 12px no modal, foco preso em diálogo e gaveta via Base UI).
+
+**Painel lateral, diálogo ou outro: como decidir**
+
+Responda na ordem; a primeira resposta "sim" decide.
+
+1. **Cabe em 1–2 campos ou numa escolha, presa a um item?** (trocar a situação, renomear, escolher o médico de uma célula) → **no lugar** ou **popover** ancorado no item.
+2. **Bloqueia ou é irreversível?** (excluir, fechar competência, descartar alterações) → **diálogo de confirmação** (`ConfirmarAcao`).
+3. **É tarefa curta e atômica, que não depende de olhar a tela atrás?** Até ~6 campos, sem abas nem listas dentro, termina num clique (criar nível, criar equipe, convidar usuário, renomear, motivo de uma ação) → **diálogo** (`Dialogo` do kit), 480px, rodapé com "Cancelar" e a ação.
+4. **É ver ou editar um item de uma lista, alternando entre itens?** (painel do médico, do cliente, do usuário, do aviso) → **painel lateral**. Ele pode ter abas, histórico e listas.
+5. **É fluxo longo, com várias seções ou etapas, ou é o trabalho principal?** → **página** (rota própria).
+
+**O painel lateral empurra a tela ou fica por cima?**
+
+- **Empurra (encolhe a tela ao lado, `RESERVA_DO_PAINEL`)** só em tela que é uma lista ou tabela que sabe perder colunas (cadastros, usuários, avisos): a pessoa troca de linha com o painel aberto e precisa ver a lista inteira.
+- **Fica por cima** (sem encolher nada, sem escurecer o fundo, a tela continua clicável) em todo o resto: grade, calendário, quadro com várias colunas, painel de números, formulário. Encolher esses layouts quebra a grade; é melhor cobrir a faixa da direita do que espremer tudo. Se o item clicado fica embaixo do painel, a tela rola até ele.
+- Nunca as duas coisas na mesma tela: escolha pela tela, não pelo painel.
 
 **Estados**
 - Todo controle: padrão, hover, foco visível (anel de 2px na cor do acento), ativo, desabilitado.
