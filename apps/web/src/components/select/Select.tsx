@@ -18,7 +18,7 @@ import {
 const LIMITE_SEM_BUSCA = 7;
 
 const classeGatilho = cn(
-  'border-input bg-card text-foreground flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left',
+  'border-input bg-card text-foreground flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base sm:text-sm',
   'hover:border-subtle-foreground focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2',
   'aria-invalid:border-destructive data-[popup-open]:border-ring data-[disabled]:bg-muted data-[disabled]:text-muted-foreground data-[disabled]:cursor-not-allowed',
 );
@@ -230,7 +230,9 @@ function SelectComBusca({
               <Combobox.Input
                 aria-label="Buscar na lista"
                 placeholder="Digite para buscar"
-                className="placeholder:text-subtle-foreground h-9 w-full rounded-md pr-2 pl-8 outline-none"
+                autoComplete="off"
+                spellCheck={false}
+                className="placeholder:text-subtle-foreground h-9 w-full rounded-md pr-2 pl-8 text-base outline-none sm:text-sm"
               />
             </div>
             <Combobox.Empty className="text-muted-foreground px-3 py-2 text-[13px] empty:hidden">

@@ -82,6 +82,8 @@ export function BuscaSelecao({
           placeholder={placeholder}
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
+          autoComplete="off"
+          spellCheck={false}
           className={controlClassName('app', 'aria-invalid:border-destructive pr-9')}
         />
         {valor && (

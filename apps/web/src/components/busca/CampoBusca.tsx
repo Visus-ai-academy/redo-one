@@ -33,6 +33,8 @@ export function CampoBusca({ rotulo, placeholder, valor, onMudar, className }: C
         ref={campo}
         type="search"
         aria-label={rotulo}
+        autoComplete="off"
+        spellCheck={false}
         value={valor}
         onValueChange={(texto) => onMudar(texto)}
         placeholder={placeholder}
