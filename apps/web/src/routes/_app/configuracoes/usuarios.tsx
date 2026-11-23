@@ -9,8 +9,8 @@ import { SemPermissao } from '../../../components/estado/estados';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../../components/toast/use-avisos';
-import { DialogoConvite } from '../../../components/usuarios/DialogoConvite';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
+import { PainelConvite } from '../../../components/usuarios/PainelConvite';
 import {
   PainelUsuario,
   type PainelUsuarioProps,
@@ -171,19 +171,20 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
   }
 
   return (
-    <>
-      <ListaUsuarios
-        pagina={lista.data ?? PAGINA_VAZIA}
-        recarregando={lista.isPlaceholderData || !lista.data}
-        filtros={filtros}
-        papeis={papeis}
-        euId={euId}
-        onFiltrar={filtrar}
-        onIrPara={irPara}
-        selecionadoId={filtros.id}
-        onConvidar={permissoes.convidar ? abrirConvite : undefined}
-        painel={
-          !convidando &&
+    <ListaUsuarios
+      pagina={lista.data ?? PAGINA_VAZIA}
+      recarregando={lista.isPlaceholderData || !lista.data}
+      filtros={filtros}
+      papeis={papeis}
+      euId={euId}
+      onFiltrar={filtrar}
+      onIrPara={irPara}
+      selecionadoId={filtros.id}
+      onConvidar={permissoes.convidar ? abrirConvite : undefined}
+      painel={
+        convidando ? (
+          <PainelConvite papeis={papeis} onConvidado={convidado} onCancelar={fechar} />
+        ) : (
           filtros.id && (
             <Detalhe
               id={filtros.id}
@@ -193,10 +194,9 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
               onFechar={fechar}
             />
           )
-        }
-      />
-      {convidando && <DialogoConvite papeis={papeis} onConvidado={convidado} onCancelar={fechar} />}
-    </>
+        )
+      }
+    />
   );
 }
 

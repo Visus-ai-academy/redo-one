@@ -6,7 +6,7 @@ import { ResponseError } from '../../gen/.kubb/client';
 import { usuariosControllerConvidar } from '../../gen/clients/usuariosControllerConvidar';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import { renderComRotas } from '../../test/render';
-import { DialogoConvite } from './DialogoConvite';
+import { PainelConvite } from './PainelConvite';
 
 vi.mock('../../gen/clients/usuariosControllerConvidar');
 
@@ -22,7 +22,7 @@ function montar() {
   const onConvidado = vi.fn();
   const onCancelar = vi.fn();
   const resultado = renderComRotas(
-    <DialogoConvite papeis={papeis} onConvidado={onConvidado} onCancelar={onCancelar} />,
+    <PainelConvite papeis={papeis} onConvidado={onConvidado} onCancelar={onCancelar} />,
   );
   return { ...resultado, onConvidado, onCancelar };
 }
@@ -41,7 +41,7 @@ async function preencher({
   await userEvent.click(screen.getByRole('button', { name: 'Enviar convite' }));
 }
 
-describe('DialogoConvite', () => {
+describe('PainelConvite', () => {
   beforeEach(() => {
     convidar.mockReset();
     convidar.mockReturnValue({ unwrap: async () => ({ id: 'u-nova' }) } as never);
@@ -152,12 +152,11 @@ describe('DialogoConvite', () => {
     );
   });
 
-  it('abre num diálogo (tarefa curta), não no painel lateral', async () => {
+  it('abre no painel lateral, como todo cadastro', async () => {
     montar();
 
-    const dialogo = await screen.findByRole('dialog', { name: 'Convidar usuário' });
-    expect(dialogo).not.toHaveAttribute('data-painel-lateral');
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveFocus());
+    const painel = await screen.findByRole('dialog', { name: 'Convidar usuário' });
+    expect(painel).toHaveAttribute('data-painel-lateral');
   });
 
   it('cancela', async () => {
