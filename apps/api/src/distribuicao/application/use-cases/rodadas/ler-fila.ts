@@ -93,6 +93,17 @@ export class LerFila {
         expiraEm,
       });
       if (!gravou) return;
+      // O nome do paciente que a leitura já trouxe fica só em memória, para a conferência.
+      this.d.nomesPacientes.limpar(rodadaId);
+      this.d.nomesPacientes.guardar(
+        rodadaId,
+        new Map(
+          leitura.semMedico
+            .filter((e) => e.paciente.nome?.trim())
+            .map((e) => [e.idExame, e.paciente.nome as string]),
+        ),
+        agora,
+      );
       const { pendentes, conferidas } = grafiasSemDePara(
         leitura.semMedico.map((e) => e.prioridade),
         insumos.prioridadesOperacao,

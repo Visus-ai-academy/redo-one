@@ -7,14 +7,11 @@ import {
   ArrowsOutLineVertical,
   CaretRight,
   DotsThree,
-  IdentificationCard,
   MinusCircle,
   Package,
 } from '@phosphor-icons/react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { rodadasControllerDesignacoes } from '../../gen/clients/rodadasControllerDesignacoes';
 import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import { cn } from '../../lib/cn';
@@ -41,7 +38,6 @@ export type AcoesDoExame = {
 };
 
 export type PropostaPorFrenteProps = {
-  rodadaId: string;
   /** As previstas da rodada (a proposta inteira, na ordem da fila). */
   itens: readonly DesignacaoDto[];
   medicos: readonly MedicoDaRodadaDto[];
@@ -151,7 +147,7 @@ export function PropostaPorFrente(p: PropostaPorFrenteProps) {
         Cada exame aparece uma vez, na frente dele; quem atende mais de uma frente aparece em cada
         uma com os exames dela.
         {p.verPaciente
-          ? ' O nome do paciente aparece em "Ver pacientes", médico a médico (a leitura é registrada).'
+          ? ' O nome do paciente vem da leitura da fila (cada consulta é registrada).'
           : ' Os exames do mesmo paciente aparecem pelo pacote.'}
       </p>
     </>
@@ -225,13 +221,6 @@ function MedicoDaFrente({
   aberto: boolean;
   onAbrir: (aberto: boolean) => void;
 }) {
-  const [verNomes, setVerNomes] = useState(false);
-  const nomes = useNomesDosPacientes(
-    p.rodadaId,
-    m.medico.medicoId,
-    m.exames.map((d) => d.id),
-    p.verPaciente && verNomes,
-  );
   const qtd = m.exames.length;
   const pct = f.maior > 0 ? Math.round((qtd / f.maior) * 100) : 0;
   return (
@@ -284,25 +273,16 @@ function MedicoDaFrente({
             propostos={m.medico.previstas || qtd}
             capacidade={m.medico.capacidade}
           />
-          {p.verPaciente && (
-            <Button
-              type="button"
-              aria-pressed={verNomes}
-              onClick={() => setVerNomes((v) => !v)}
-              className={buttonClassName({
-                variant: 'ghost',
-                className: 'aria-pressed:bg-accent h-7 px-2 text-xs',
-              })}
-            >
-              <IdentificationCard size={16} aria-hidden />
-              {verNomes ? 'Ocultar pacientes' : 'Ver pacientes'}
-            </Button>
-          )}
         </span>
       </div>
       <Collapsible.Panel render={<ul aria-label={`Exames de ${m.medico.nome}`} />}>
         {m.exames.map((d) => (
-          <LinhaDoExame key={d.id} d={d} paciente={nomes.get(d.id)} {...p} />
+          <LinhaDoExame
+            key={d.id}
+            d={d}
+            paciente={p.verPaciente ? (d.nomePaciente ?? undefined) : undefined}
+            {...p}
+          />
         ))}
       </Collapsible.Panel>
     </Collapsible.Root>
@@ -398,35 +378,4 @@ function LinhaDoExame({
       )}
     </li>
   );
-}
-
-/**
- * Os nomes dos pacientes dos exames propostos a um médico, só quando a pessoa pede (cada página é
- * uma leitura na MobileMed, registrada na auditoria). Chave: id da designação.
- */
-function useNomesDosPacientes(
-  rodadaId: string,
-  medicoId: string,
-  ids: readonly string[],
-  ligado: boolean,
-) {
-  const consulta = useQuery({
-    // Os exames dele na chave: mover ou tirar refaz a leitura com a lista nova.
-    queryKey: ['rodada-pacientes', rodadaId, medicoId, ids.join(',')],
-    placeholderData: keepPreviousData,
-    enabled: ligado,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const nomes = new Map<string, string>();
-      for (let pagina = 1; ; pagina++) {
-        const r = await rodadasControllerDesignacoes({
-          path: { id: rodadaId },
-          query: { medicoId, status: ['prevista'], pagina, porPagina: 100 },
-        }).unwrap();
-        for (const d of r.itens) if (d.nomePaciente) nomes.set(d.id, d.nomePaciente);
-        if (pagina * r.porPagina >= r.total) return nomes;
-      }
-    },
-  });
-  return ligado && consulta.data ? consulta.data : new Map<string, string>();
 }

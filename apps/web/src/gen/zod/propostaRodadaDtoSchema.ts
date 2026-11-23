@@ -7,7 +7,7 @@ import * as z from 'zod'
 import { designacaoDtoSchema } from './designacaoDtoSchema'
 
 export const propostaRodadaDtoSchema = z.object({
-  itens: z.array(designacaoDtoSchema).describe('As previstas, na ordem da fila; sem o nome do paciente.'),
+  itens: z.array(designacaoDtoSchema).describe('As previstas, na ordem da fila; o nome do paciente só com `distribuicao.paciente.ver` e a rodada viva.'),
 })
 
 export type PropostaRodadaDtoSchemaType = z.infer<typeof propostaRodadaDtoSchema>

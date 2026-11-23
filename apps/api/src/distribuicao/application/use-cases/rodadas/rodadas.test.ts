@@ -21,6 +21,7 @@ import {
   EscopoEmMemoria,
   InsumosFixos,
   MedicosRodadaEmMemoria,
+  NomesPacientesDeTeste,
   RodadasEmMemoria,
 } from '../../../testing/rodadas-fakes';
 import type {
@@ -48,7 +49,10 @@ class MobileMedDeTeste implements FilaExames, AtribuidorExames {
     if (this.falhaNaLeitura) throw this.falhaNaLeitura;
     return this.leitura;
   }
+  /** Cada pedido de nomes à MobileMed (os ids pedidos). */
+  pedidosDeNomes: string[][] = [];
   async nomesPacientes(ids: readonly string[]) {
+    this.pedidosDeNomes.push([...ids]);
     return new Map(
       this.leitura.semMedico
         .filter((e) => ids.includes(e.idExame))
@@ -168,6 +172,7 @@ describe('rodada do robô (casos de uso)', () => {
   let insumos: InsumosFixos;
   let avisosPrioridade: AvisosPrioridadeEmMemoria;
   let escalaRecolhimento: EscalaRecolhimentoEmMemoria;
+  let nomesPacientes: NomesPacientesDeTeste;
   let casos: ReturnType<typeof criarCasosDeUsoRodada>;
 
   const configurar = async (parcial: Partial<ConfiguracaoGlobal>) =>
@@ -204,6 +209,7 @@ describe('rodada do robô (casos de uso)', () => {
     insumos = new InsumosFixos(insumosBase(), catalogo);
     escalaRecolhimento = new EscalaRecolhimentoEmMemoria();
     avisosPrioridade = new AvisosPrioridadeEmMemoria();
+    nomesPacientes = new NomesPacientesDeTeste();
     casos = criarCasosDeUsoRodada({
       rodadas: repo,
       consulta: repo,
@@ -217,6 +223,7 @@ describe('rodada do robô (casos de uso)', () => {
       prioridadesCliente: new PrioridadesClienteEmMemoria(),
       pseudonimizador: { pseudonimo: (t) => `hmac(${t})` },
       avisosPrioridade,
+      nomesPacientes,
       auditoria,
       agora: () => agora,
     });
@@ -669,12 +676,12 @@ describe('rodada do robô (casos de uso)', () => {
       expect(JSON.stringify(auditoria.eventos)).not.toMatch(/Fict/);
     });
 
-    it('a proposta inteira: só as previstas, na ordem, com a frente e sem o nome do paciente', async () => {
+    it('a proposta inteira: só as previstas, na ordem, com a frente; sem a permissão, sem o nome', async () => {
       repo.frentesDaEscala = [
         { id: 'f-mi', especialidadeId: MI, modalidadeId: null, cor: '#5B7DB1' },
       ];
       const id = await criarELer();
-      const { itens } = await casos.designacoes.proposta(id);
+      const { itens } = await casos.designacoes.proposta(admin, id, false);
       expect(itens.length).toBe(2);
       expect(itens.every((d) => d.status === 'prevista' && d.nomePaciente === null)).toBe(true);
       expect(itens.map((d) => d.ordem)).toEqual(
@@ -682,6 +689,42 @@ describe('rodada do robô (casos de uso)', () => {
       );
       expect(itens[0]?.frente).toEqual({ id: 'f-mi', nome: MI, cor: '#5B7DB1' });
       expect(auditoria.eventos.some((e) => e.acao === 'paciente_lido')).toBe(false);
+    });
+
+    it('a leitura da rodada guarda os nomes dos pacientes só em memória', async () => {
+      const id = await criarELer();
+      expect([...nomesPacientes.ler(id).keys()].sort()).toEqual(['e1', 'e2', 'e3']);
+      expect(JSON.stringify([...repo.designacoesGravadas])).not.toMatch(/Fict/);
+    });
+
+    it('com a permissão, a proposta traz o nome guardado na leitura, sem ler a fila de novo, e audita', async () => {
+      const id = await criarELer();
+      const { itens } = await casos.designacoes.proposta(admin, id, true);
+      expect(itens.every((d) => d.nomePaciente?.match(/Fict/))).toBe(true);
+      expect(mobilemed.pedidosDeNomes).toEqual([]);
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        acao: 'paciente_lido',
+        depois: { exames: 2 },
+      });
+      expect(JSON.stringify(auditoria.eventos)).not.toMatch(/Fict/);
+    });
+
+    it('o que não está em memória (a API reiniciou) vem da MobileMed, só esses exames', async () => {
+      const id = await criarELer();
+      nomesPacientes.porRodada.get(id)?.delete('e2');
+      const { itens } = await casos.designacoes.proposta(admin, id, true);
+      expect(itens.every((d) => d.nomePaciente?.match(/Fict/))).toBe(true);
+      expect(mobilemed.pedidosDeNomes).toEqual([['e2']]);
+      expect(nomesPacientes.ler(id).has('e2')).toBe(true);
+    });
+
+    it('cancelada, os nomes saem da memória e a proposta não os traz mais', async () => {
+      const id = await criarELer();
+      await casos.cancelar.executar(admin, id);
+      expect(nomesPacientes.porRodada.has(id)).toBe(false);
+      const { itens } = await casos.designacoes.proposta(admin, id, true);
+      expect(itens.every((d) => d.nomePaciente === null)).toBe(true);
+      expect(mobilemed.pedidosDeNomes).toEqual([]);
     });
 
     it('na proposta, o exame fica numa frente marcada na rodada (só a de modalidade: nela)', async () => {
@@ -692,7 +735,7 @@ describe('rodada do robô (casos de uso)', () => {
       const id = await criarELer();
       const r = repo.rodadas.get(id);
       if (r) r.recortes = { ...r.recortes, frenteIds: ['f-ct'] };
-      const { itens } = await casos.designacoes.proposta(id);
+      const { itens } = await casos.designacoes.proposta(admin, id, false);
       expect(itens[0]?.frente).toEqual({ id: 'f-ct', nome: CT, cor: '#8A6FB0' });
     });
 

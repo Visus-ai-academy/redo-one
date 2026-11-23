@@ -108,11 +108,17 @@ describe('controller das rodadas', () => {
     }
   });
 
-  it('a proposta inteira vem do caso de uso, sem o nome do paciente', async () => {
+  it('a proposta inteira vem do caso de uso; o nome do paciente só com distribuicao.paciente.ver', async () => {
     const c = casos();
     const id = '00000000-0000-4000-8000-000000000001';
-    expect(await controller(c).proposta(id)).toEqual({ itens: [] });
-    expect(c.designacoes.proposta).toHaveBeenCalledWith(id);
+    expect(await controller(c).proposta(principal(), id)).toEqual({ itens: [] });
+    expect(c.designacoes.proposta).toHaveBeenLastCalledWith(
+      { usuarioId: 'u1', acessoTotal: false },
+      id,
+      false,
+    );
+    await controller(c).proposta(principal(['distribuicao.paciente.ver']), id);
+    expect(c.designacoes.proposta).toHaveBeenLastCalledWith(expect.anything(), id, true);
   });
 
   it('a fila vem do retrato; "Ler agora" só enfileira a leitura', async () => {

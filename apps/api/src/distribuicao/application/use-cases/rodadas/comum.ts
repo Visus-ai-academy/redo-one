@@ -13,6 +13,7 @@ import type {
   MedicosRodada,
   PseudonimizadorPaciente,
 } from '../../ports/insumos-rodada';
+import type { NomesPacientesRodada } from '../../ports/nomes-pacientes-rodada';
 import type { PrioridadesClienteRepository } from '../../ports/prioridades-cliente.repository';
 import type { Rodada, RodadasRepository } from '../../ports/rodadas.repository';
 import { RodadaNaoEncontradaError } from './erros';
@@ -32,6 +33,8 @@ export interface DependenciasRodada {
   pseudonimizador: PseudonimizadorPaciente;
   /** Grafia de prioridade sem de-para vira aviso em Operação › Avisos. */
   avisosPrioridade: AvisosPrioridade;
+  /** Nomes dos pacientes da leitura, só em memória, para a conferência. */
+  nomesPacientes: NomesPacientesRodada;
   auditoria: Auditoria;
   agora: () => Date;
 }

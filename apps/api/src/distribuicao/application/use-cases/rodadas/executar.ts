@@ -115,6 +115,7 @@ export class ExecutarRodada {
     } catch (erro) {
       const mensagem = mensagemDo(erro);
       await this.d.rodadas.mudar(rodadaId, STATUS_VIVOS, { status: 'falhou', erro: mensagem });
+      this.d.nomesPacientes.limpar(rodadaId);
       await this.d.rodadas.registrarEvento(
         rodadaId,
         `A execução falhou: ${mensagem}`,
@@ -139,6 +140,7 @@ export class ExecutarRodada {
     if (status !== atual.status) {
       await this.d.rodadas.mudar(rodadaId, [atual.status], { status, erro });
     }
+    if (!STATUS_VIVOS.includes(status)) this.d.nomesPacientes.limpar(rodadaId);
     const texto: Partial<Record<StatusRodada, string>> = {
       concluida: `Concluída: ${c.executada} exame(s) atribuído(s)${c.falhou ? `, ${c.falhou} falha(s)` : ''}.`,
       parcial: `${c.executada} atribuído(s); ${c.prevista + c.retentaveis} podem ser tentados de novo.`,

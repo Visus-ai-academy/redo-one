@@ -186,6 +186,7 @@ export class EncerrarRodada extends AcaoNaRodada {
       'Encerrada por quem acompanha: fica para a próxima rodada.',
     );
     await this.d.rodadas.mudar(id, STATUS_VIVOS, { status });
+    this.d.nomesPacientes.limpar(id);
     const { executada } = await this.d.rodadas.contar(id);
     await this.evento(
       id,
@@ -205,6 +206,7 @@ export class CancelarRodada extends AcaoNaRodada {
       'A rodada foi cancelada antes de atribuir este exame.',
     );
     await this.d.rodadas.mudar(id, STATUS_VIVOS, { status });
+    this.d.nomesPacientes.limpar(id);
     await this.evento(id, 'Rodada cancelada.');
     await auditar(this.d, ator, id, 'cancelada', { deixados });
   }

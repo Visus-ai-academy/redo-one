@@ -2,7 +2,7 @@ import type { FrenteEscala } from '../../../domain/arranjo';
 import type { Barreira, MotivoForaDaRodada } from '../../../domain/motor/medicos-disponiveis';
 import { exameNaFrente } from '../../../domain/motor/rodada';
 import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
-import type { StatusRodada } from '../../../domain/rodada/maquina';
+import { STATUS_VIVOS, type StatusRodada } from '../../../domain/rodada/maquina';
 import type { InsumosGravados, RecolhimentoGravado } from '../../../domain/rodada/proposta';
 import type {
   AjustesConferencia,
@@ -142,16 +142,36 @@ export class ListarDesignacoes {
 
   /**
    * A proposta inteira (as previstas, na ordem da fila), para a conferência agrupar por frente e
-   * médico. Sem o nome do paciente: lê-lo é uma consulta à MobileMed por exame.
+   * médico. Com a permissão e a rodada viva, cada exame vem com o nome do paciente guardado em
+   * memória na leitura; o que faltar (a API reiniciou) é lido na fila, só esses. Auditado.
    */
-  async proposta(rodadaId: string): Promise<{ itens: DesignacaoComPaciente[] }> {
-    await rodadaOuErro(this.d, rodadaId);
+  async proposta(
+    ator: AtorRodada,
+    rodadaId: string,
+    comPaciente: boolean,
+  ): Promise<{ itens: DesignacaoComPaciente[] }> {
+    const r = await rodadaOuErro(this.d, rodadaId);
     const { itens } = await this.d.consulta.designacoes(rodadaId, {
       status: ['prevista'],
       pagina: 1,
       porPagina: LIMITE_DA_PROPOSTA,
     });
-    return { itens: itens.map((i) => ({ ...i, nomePaciente: null })) };
+    if (!comPaciente || !itens.length || !STATUS_VIVOS.includes(r.status)) {
+      return { itens: itens.map((i) => ({ ...i, nomePaciente: null })) };
+    }
+    const agora = this.d.agora();
+    const ids = itens.map((i) => i.idExameMobilemed);
+    const guardados = this.d.nomesPacientes.ler(rodadaId, agora);
+    const faltam = ids.filter((id) => !guardados.has(id));
+    const lidos = faltam.length ? await this.d.fila.nomesPacientes(faltam) : new Map();
+    if (lidos.size) this.d.nomesPacientes.guardar(rodadaId, lidos, agora);
+    await auditar(this.d, ator, rodadaId, 'paciente_lido', { exames: ids.length, idsExame: ids });
+    return {
+      itens: itens.map((i) => ({
+        ...i,
+        nomePaciente: guardados.get(i.idExameMobilemed) ?? lidos.get(i.idExameMobilemed) ?? null,
+      })),
+    };
   }
 }
 

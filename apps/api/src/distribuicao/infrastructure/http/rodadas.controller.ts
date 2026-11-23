@@ -238,11 +238,18 @@ export class RodadasController {
   @ApiOkResponse({
     type: PropostaRodadaDto,
     description:
-      'A proposta inteira (as previstas, com a frente de cada exame), para a conferência por frente e médico.',
+      'A proposta inteira (as previstas, com a frente de cada exame), para a conferência por frente e médico. Com `distribuicao.paciente.ver` e a rodada viva, com o nome do paciente (auditado).',
   })
   @ApiNotFoundResponse()
-  proposta(@Param('id', ID) id: string): Promise<PropostaRodadaDto> {
-    return this.listarDesignacoes.proposta(id);
+  proposta(
+    @PrincipalAtual() principal: PrincipalUsuario,
+    @Param('id', ID) id: string,
+  ): Promise<PropostaRodadaDto> {
+    return this.listarDesignacoes.proposta(
+      atorDe(principal),
+      id,
+      temPermissao(principal, 'distribuicao.paciente.ver'),
+    );
   }
 
   @Get(':id/resumo')

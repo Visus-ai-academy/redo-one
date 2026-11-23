@@ -301,7 +301,8 @@ export class DesignacaoDto {
 export class PropostaRodadaDto {
   @ApiProperty({
     type: [DesignacaoDto],
-    description: 'As previstas, na ordem da fila; sem o nome do paciente.',
+    description:
+      'As previstas, na ordem da fila; o nome do paciente só com `distribuicao.paciente.ver` e a rodada viva.',
   })
   itens!: DesignacaoDto[];
 }

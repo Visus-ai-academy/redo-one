@@ -15,6 +15,7 @@ import type {
   MedicoDaConta,
   MedicosRodada,
 } from '../application/ports/insumos-rodada';
+import type { NomesPacientesRodada } from '../application/ports/nomes-pacientes-rodada';
 import type {
   ContagemDesignacoes,
   Designacao,
@@ -624,5 +625,22 @@ export class AvisosPrioridadeEmMemoria implements AvisosPrioridade {
       const a = this.avisos.get(c);
       if (a) a.status = 'resolvido';
     }
+  }
+}
+
+/** Os nomes dos pacientes da rodada, sem prazo: o teste vê e mexe no que ficou guardado. */
+export class NomesPacientesDeTeste implements NomesPacientesRodada {
+  readonly porRodada = new Map<string, Map<string, string>>();
+
+  guardar(rodadaId: string, nomes: ReadonlyMap<string, string>) {
+    const atual = this.porRodada.get(rodadaId) ?? new Map<string, string>();
+    for (const [id, nome] of nomes) atual.set(id, nome);
+    this.porRodada.set(rodadaId, atual);
+  }
+  ler(rodadaId: string) {
+    return new Map(this.porRodada.get(rodadaId) ?? []);
+  }
+  limpar(rodadaId: string) {
+    this.porRodada.delete(rodadaId);
   }
 }

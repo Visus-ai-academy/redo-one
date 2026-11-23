@@ -201,7 +201,6 @@ function PorFrente({
   }
   return (
     <PropostaPorFrente
-      rodadaId={rodada.id}
       itens={consulta.data.itens}
       medicos={resumo.medicos}
       incluidos={rodada.recortes.medicosIncluidos}

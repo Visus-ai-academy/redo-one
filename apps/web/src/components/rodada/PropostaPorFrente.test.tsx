@@ -15,6 +15,7 @@ const itens = [
     id: 'd1',
     estudo: 'RM CRANIO',
     medico: { id: 'ana', nome: 'Ana' },
+    nomePaciente: 'Maria Souza',
     frente: NEURO,
     prioridadeOperacao: URG,
     urgente: true,
@@ -49,15 +50,14 @@ const medicos = [
   medicoDaRodada('caio', 'Caio', { previstas: 0 }),
 ];
 
-const montar = (acoes?: AcoesDoExame) =>
+const montar = (acoes?: AcoesDoExame, verPaciente = false) =>
   renderComRotas(
     <PropostaPorFrente
-      rodadaId="r1"
       itens={itens}
       medicos={medicos}
       incluidos={[]}
       coresPrioridade={new Map([['p-urg', '#B5535A']])}
-      verPaciente={false}
+      verPaciente={verPaciente}
       buscarMedicos={async () => []}
       acoes={acoes}
     />,
@@ -115,5 +115,18 @@ describe('PropostaPorFrente', () => {
     montar();
     await screen.findByRole('list', { name: 'Exames de Ana' });
     expect(screen.queryByRole('button', { name: 'Mover' })).not.toBeInTheDocument();
+  });
+
+  it('com a permissão, o nome do paciente aparece direto em cada exame, sem botão', async () => {
+    montar(undefined, true);
+    const exames = await screen.findByRole('list', { name: 'Exames de Ana' });
+    expect(within(exames).getByText('Maria Souza')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /pacientes/ })).not.toBeInTheDocument();
+  });
+
+  it('sem a permissão, nenhum nome de paciente', async () => {
+    montar();
+    await screen.findByRole('list', { name: 'Exames de Ana' });
+    expect(screen.queryByText('Maria Souza')).not.toBeInTheDocument();
   });
 });

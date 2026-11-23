@@ -41,6 +41,10 @@ import {
   type PseudonimizadorPaciente,
 } from './application/ports/insumos-rodada';
 import {
+  NOMES_PACIENTES_RODADA,
+  type NomesPacientesRodada,
+} from './application/ports/nomes-pacientes-rodada';
+import {
   PARAMETROS_EQUIPE_REPOSITORY,
   type ParametrosEquipeRepository,
 } from './application/ports/parametros-equipe.repository';
@@ -146,6 +150,7 @@ import {
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { RodadasController } from './infrastructure/http/rodadas.controller';
 import { AvisosPrioridadeAdapter } from './infrastructure/ingestao/avisos-prioridade.adapter';
+import { NomesPacientesEmMemoria } from './infrastructure/memoria/nomes-pacientes-em-memoria';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
 import { MobileMedReal } from './infrastructure/mobilemed/mobilemed-real';
@@ -266,6 +271,8 @@ const CASOS_RODADA = [
       useFactory: (config: ConfigService) =>
         new HmacPseudonimizador(config.get<string>('PACIENTE_HMAC_SEGREDO') ?? ''),
     },
+    // Um só por processo: os nomes vivem na memória da API (singleton do módulo).
+    { provide: NOMES_PACIENTES_RODADA, useValue: new NomesPacientesEmMemoria() },
     {
       provide: DEPENDENCIAS_RODADA,
       inject: [
@@ -281,6 +288,7 @@ const CASOS_RODADA = [
         PRIORIDADES_CLIENTE_REPOSITORY,
         PSEUDONIMIZADOR_PACIENTE,
         AVISOS_PRIORIDADE,
+        NOMES_PACIENTES_RODADA,
         AUDITORIA,
       ],
       useFactory: (
@@ -296,6 +304,7 @@ const CASOS_RODADA = [
         prioridadesCliente: PrioridadesClienteRepository,
         pseudonimizador: PseudonimizadorPaciente,
         avisosPrioridade: AvisosPrioridade,
+        nomesPacientes: NomesPacientesRodada,
         auditoria: Auditoria,
       ): DependenciasRodada => ({
         rodadas,
@@ -310,6 +319,7 @@ const CASOS_RODADA = [
         prioridadesCliente,
         pseudonimizador,
         avisosPrioridade,
+        nomesPacientes,
         auditoria,
         agora,
       }),
