@@ -23,7 +23,7 @@ export type SecaoAcessoProps = {
   podeConvidar: boolean;
   /** `medicos.acesso.editar`: ligar e desligar uma conta. */
   podeLigar: boolean;
-  buscarUsuarios: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarUsuarios: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   onConvidar: (dados: { nome: string; email: string; papelId: string }) => Promise<void>;
   onLigar: (usuarioId: string) => Promise<void>;
   onDesligar: () => Promise<void>;

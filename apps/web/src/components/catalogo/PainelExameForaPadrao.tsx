@@ -16,7 +16,7 @@ export type PainelExameForaPadraoProps = {
   item?: DeParaValorItemDto;
   podeEditar: boolean;
   /** Busca os exames padronizados (o vínculo é opcional). */
-  buscarExames: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarExames: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   onSalvar: (dados: DeParaValorDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onFechar: () => void;

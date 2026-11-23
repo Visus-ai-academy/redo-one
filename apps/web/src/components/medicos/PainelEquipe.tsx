@@ -18,7 +18,7 @@ export type PainelEquipeProps = {
   equipe?: EquipeItemDto;
   /** Membros atuais, já com o nome. */
   membros: OpcaoBusca[];
-  buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   podeEditar: boolean;
   onSalvar: (dados: EquipeDto) => Promise<void>;
   onExcluir?: () => Promise<void>;

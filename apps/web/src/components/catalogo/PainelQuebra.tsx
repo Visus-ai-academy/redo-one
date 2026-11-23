@@ -25,7 +25,7 @@ export type PainelQuebraProps = {
   /** Sem quebra, o painel cria uma nova (os exames entram depois de criada). */
   quebra?: QuebraDetalheDto;
   categorias: { id: string; nome: string }[];
-  buscarExames: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarExames: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** Salvar a quebra: editar (aberta) ou criar (nova). */
   podeEditar: boolean;
   /** Peças: adicionar (POST), ativar (PUT) e remover (DELETE). */
@@ -159,7 +159,7 @@ function PecasQuebra({
 }: {
   pecas: QuebraDetalheDto['pecas'];
   categorias: { id: string; nome: string }[];
-  buscarExames: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarExames: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   podeCriar: boolean;
   podeEditar: boolean;
   podeExcluir: boolean;

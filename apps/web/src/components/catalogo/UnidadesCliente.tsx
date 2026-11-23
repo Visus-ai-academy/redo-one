@@ -19,7 +19,7 @@ export type UnidadesClienteProps = {
   unificadoEm: ClienteRefDto | null;
   unidades: ClienteRefDto[];
   /** Busca clientes para unificar (sem o próprio). */
-  buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** Unificar (POST). */
   podeCriar: boolean;
   /** Desfazer a unificação (DELETE). */
