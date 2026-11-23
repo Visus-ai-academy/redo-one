@@ -7,10 +7,7 @@ import type { DeParaEspecialidadeItemDto } from '../../gen/types/DeParaEspeciali
 import type { SufixoDto } from '../../gen/types/SufixoDto';
 import type { SufixoItemDto } from '../../gen/types/SufixoItemDto';
 import { Alerta } from '../alerta/Alerta';
-import { Dialogo } from '../dialogo/Dialogo';
 import { useAppForm } from '../form/form';
-import { RequiredLegend } from '../form/RequiredLegend';
-import { SubmitButton } from '../form/SubmitButton';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { type ExcluirPainel, RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
@@ -29,9 +26,7 @@ const textoObrigatorio = (mensagem: string) => z.string().trim().min(1, mensagem
 const opcional = (texto: string) => texto.trim() || null;
 const ativoAjuda = 'Inativo não vale na importação, mas fica guardado.';
 
-/**
- * Criar um de-para é tarefa curta (diálogo); ver e editar um existente, no painel ao lado da lista.
- */
+/** Criar, ver e editar um de-para, no painel lateral. */
 function MolduraDePara({
   titulo,
   explicacao,
@@ -60,22 +55,6 @@ function MolduraDePara({
   formulario: (conteudo: ReactNode) => ReactNode;
   children: ReactNode;
 }) {
-  if (criando) {
-    return (
-      <Dialogo
-        titulo={titulo}
-        descricao={explicacao}
-        alterado={alterado}
-        onFechar={onFechar}
-        onEnviar={onEnviar}
-        acao={formulario(<SubmitButton pendingLabel="Salvando…">{rotuloCriar}</SubmitButton>)}
-      >
-        {erro && <Alerta tom="erro">{erro}</Alerta>}
-        {children}
-        {formulario(<RequiredLegend />)}
-      </Dialogo>
-    );
-  }
   return (
     <PainelLateral titulo={titulo} alterado={alterado} onFechar={onFechar}>
       <form
@@ -95,7 +74,7 @@ function MolduraDePara({
           formulario(
             <RodapePainel
               rotuloCriar={rotuloCriar}
-              editando
+              editando={!criando}
               excluir={excluir}
               onCancelar={onFechar}
             />,

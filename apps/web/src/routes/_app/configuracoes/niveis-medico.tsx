@@ -137,7 +137,7 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
     [abrir],
   );
 
-  // Ver e editar abrem no painel ao lado da lista; criar abre num diálogo, fora dele.
+  // Criar, ver e editar abrem no painel lateral.
   const nivel =
     busca.id || (busca.novo && permissoes.criar) ? (
       <PainelNivel
@@ -157,52 +157,49 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
     ) : undefined;
 
   return (
-    <>
-      <ListaCadastro
-        titulo="Níveis dos médicos"
-        novo={
-          permissoes.criar
-            ? { rotulo: 'Novo nível', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
-            : undefined
-        }
-        busca={{ valor: busca.busca, rotulo: 'Buscar níveis', placeholder: 'Nome ou descrição' }}
-        temFiltro={busca.situacao !== undefined}
-        filtros={
-          <Select
-            aria-label="Filtrar por situação"
-            value={busca.situacao ?? ''}
-            onValueChange={(valor) =>
-              filtrar({ situacao: (valor || undefined) as Busca['situacao'] })
-            }
-            opcoes={[
-              { valor: '', rotulo: 'Todas as situações' },
-              { valor: 'ativos', rotulo: 'Ativos' },
-              { valor: 'inativos', rotulo: 'Inativos' },
-            ]}
-            className="flex-[1_1_180px] md:flex-[0_1_200px]"
-          />
-        }
-        colunas={colunas}
-        itens={pagina.itens}
-        getRowId={(item) => item.id}
-        selecionadoId={busca.id}
-        onAbrir={abrir}
-        pagina={pagina.pagina}
-        porPagina={pagina.porPagina}
-        total={pagina.total}
-        vazio={{
-          titulo: 'Nenhum nível cadastrado.',
-          texto: permissoes.criar
-            ? 'Cadastre os níveis (Nível 0 a 6, 1.1…) para escolher no cadastro do médico.'
-            : 'Quem administra os médicos cadastra os níveis.',
-        }}
-        onFiltrar={filtrar}
-        onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
-        onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
-        painel={busca.id ? nivel : undefined}
-      />
-      {!busca.id && nivel}
-    </>
+    <ListaCadastro
+      titulo="Níveis dos médicos"
+      novo={
+        permissoes.criar
+          ? { rotulo: 'Novo nível', onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })) }
+          : undefined
+      }
+      busca={{ valor: busca.busca, rotulo: 'Buscar níveis', placeholder: 'Nome ou descrição' }}
+      temFiltro={busca.situacao !== undefined}
+      filtros={
+        <Select
+          aria-label="Filtrar por situação"
+          value={busca.situacao ?? ''}
+          onValueChange={(valor) =>
+            filtrar({ situacao: (valor || undefined) as Busca['situacao'] })
+          }
+          opcoes={[
+            { valor: '', rotulo: 'Todas as situações' },
+            { valor: 'ativos', rotulo: 'Ativos' },
+            { valor: 'inativos', rotulo: 'Inativos' },
+          ]}
+          className="flex-[1_1_180px] md:flex-[0_1_200px]"
+        />
+      }
+      colunas={colunas}
+      itens={pagina.itens}
+      getRowId={(item) => item.id}
+      selecionadoId={busca.id}
+      onAbrir={abrir}
+      pagina={pagina.pagina}
+      porPagina={pagina.porPagina}
+      total={pagina.total}
+      vazio={{
+        titulo: 'Nenhum nível cadastrado.',
+        texto: permissoes.criar
+          ? 'Cadastre os níveis (Nível 0 a 6, 1.1…) para escolher no cadastro do médico.'
+          : 'Quem administra os médicos cadastra os níveis.',
+      }}
+      onFiltrar={filtrar}
+      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
+      onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
+      painel={nivel}
+    />
   );
 }
 

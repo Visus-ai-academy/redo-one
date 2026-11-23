@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -50,12 +50,13 @@ describe('PainelItemLista', () => {
     });
   });
 
-  it('criar é tarefa curta: abre num diálogo, não no painel lateral', async () => {
+  it('criar é cadastro: abre no painel lateral, com Cancelar e a ação no rodapé', async () => {
     montar();
 
-    const dialogo = await screen.findByRole('dialog', { name: 'Nova modalidade' });
-    expect(dialogo).not.toHaveAttribute('data-painel-lateral');
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Código' })).toHaveFocus());
+    const painel = await screen.findByRole('dialog', { name: 'Nova modalidade' });
+    expect(painel).toHaveAttribute('data-painel-lateral');
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Criar modalidade' })).toBeInTheDocument();
   });
 
   it('criando, cancelar com algo digitado pergunta antes de descartar', async () => {

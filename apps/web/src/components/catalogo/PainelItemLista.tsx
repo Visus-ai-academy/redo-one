@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
-import { Dialogo } from '../dialogo/Dialogo';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { type AbaExtra, AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
@@ -73,10 +72,7 @@ function schema(rotulos: RotulosLista, variante: VarianteLista) {
   });
 }
 
-/**
- * Item de uma lista do catálogo: criar é tarefa curta e abre num `Dialogo`; ver e editar ficam no
- * painel ao lado da lista (com abas e histórico).
- */
+/** Criar, ver e editar um item de uma lista do catálogo, no painel lateral (com abas e histórico). */
 export function PainelItemLista({
   rotulos,
   variante,
@@ -251,30 +247,12 @@ export function PainelItemLista({
     </>
   );
 
-  if (!item) {
-    return (
-      <Dialogo
-        titulo={titulo}
-        alterado={alterado}
-        onFechar={onFechar}
-        onEnviar={() => void form.handleSubmit()}
-        acao={
-          <form.AppForm>
-            <form.SubmitButton pendingLabel="Salvando…">{`Criar ${rotulos.singular}`}</form.SubmitButton>
-          </form.AppForm>
-        }
-      >
-        {campos}
-        <form.AppForm>
-          <form.RequiredLegend />
-        </form.AppForm>
-      </Dialogo>
-    );
-  }
-
   return (
     <PainelLateral titulo={titulo} alterado={alterado} onFechar={onFechar}>
-      <AbasComHistorico extras={abas} aria-label={`Partes d${artigo} ${rotulos.singular}`}>
+      <AbasComHistorico
+        extras={item ? abas : undefined}
+        aria-label={`Partes d${artigo} ${rotulos.singular}`}
+      >
         <form
           noValidate
           onSubmit={(evento) => {
@@ -285,7 +263,12 @@ export function PainelItemLista({
         >
           {campos}
           <form.AppForm>
-            <RodapePainel rotuloCriar="" editando excluir={excluir} onCancelar={onFechar} />
+            <RodapePainel
+              rotuloCriar={`Criar ${rotulos.singular}`}
+              editando={Boolean(item)}
+              excluir={excluir}
+              onCancelar={onFechar}
+            />
           </form.AppForm>
         </form>
         {children}

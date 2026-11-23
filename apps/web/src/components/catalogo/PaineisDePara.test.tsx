@@ -38,9 +38,9 @@ describe('painéis dos de-paras', () => {
     expect(onSalvar).toHaveBeenCalledWith({ sufixo: '_RMX', ativo: true, observacoes: null });
   });
 
-  it('criar abre num diálogo; editar fica no painel lateral', async () => {
+  it('criar e editar ficam no painel lateral', async () => {
     const { unmount } = comConsultas(<PainelSufixo {...base} onSalvar={vi.fn()} />);
-    expect(await screen.findByRole('dialog', { name: 'Novo sufixo' })).not.toHaveAttribute(
+    expect(await screen.findByRole('dialog', { name: 'Novo sufixo' })).toHaveAttribute(
       'data-painel-lateral',
     );
     unmount();
