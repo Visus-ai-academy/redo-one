@@ -1,11 +1,18 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
-import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { AbaDistribuicaoMedico } from '../../components/distribuicao/AbaDistribuicaoMedico';
+import { EstadoDoErro } from '../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
@@ -16,6 +23,9 @@ import { SecaoAcesso } from '../../components/medicos/SecaoAcesso';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
 import { CamposCarregando } from '../../components/skeleton/CamposCarregando';
+import { ComEsqueleto } from '../../components/skeleton/ComEsqueleto';
+import { useFaseDoCarregamento } from '../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../components/toast/use-avisos';
 import { acessoMedicoControllerBuscarContas } from '../../gen/clients/acessoMedicoControllerBuscarContas';
 import { acessoMedicoControllerConvidar } from '../../gen/clients/acessoMedicoControllerConvidar';
 import { acessoMedicoControllerDesligar } from '../../gen/clients/acessoMedicoControllerDesligar';
@@ -34,6 +44,7 @@ import { medicosControllerObterPagamentoQueryOptions } from '../../gen/hooks/use
 import { niveisMedicoControllerListarQueryOptions } from '../../gen/hooks/useNiveisMedicoControllerListar';
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import type { MedicoResumoDto } from '../../gen/types/MedicoResumoDto';
+import { numero } from '../../lib/formato';
 import { abasDoMedico, invalidarMedicos } from '../../lib/medicos';
 import { pode } from '../../lib/permissoes';
 
@@ -65,19 +76,22 @@ const niveisAtivos = () =>
 export const Route = createFileRoute('/_app/medicos')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'medicos.ver')) return;
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id)
       void context.queryClient.prefetchQuery(
         medicosControllerObterQueryOptions({ path: { id: deps.id } }),
       );
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
     await Promise.all([
-      context.queryClient.ensureQueryData(medicosControllerListarQueryOptions(consulta(deps))),
+      cause !== 'stay' &&
+        context.queryClient.ensureQueryData(medicosControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(niveisAtivos()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Médicos | One' }] }),
+  head: () => ({ meta: [{ title: 'Médicos · One' }] }),
   component: PaginaMedicos,
 });
 
@@ -93,7 +107,12 @@ function Medicos() {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
-  const { data: pagina } = useSuspenseQuery(medicosControllerListarQueryOptions(consulta(busca)));
+  const avisos = useAvisos();
+  const lista = useQuery({
+    ...medicosControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
   const { data: niveis } = useSuspenseQuery(niveisAtivos());
 
   const ir = useCallback(
@@ -104,7 +123,6 @@ function Medicos() {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
   const fechar = () => ir((a) => ({ ...a, id: undefined, novo: undefined }));
 
   const colunas = useMemo(
@@ -112,7 +130,11 @@ function Medicos() {
       coluna.accessor('nome', {
         header: 'Médico',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+          >
             <span className="flex flex-col leading-snug">
               <span>{info.getValue()}</span>
               {info.row.original.crm && (
@@ -121,7 +143,7 @@ function Medicos() {
                 </span>
               )}
             </span>
-          </BotaoAbrir>
+          </LinkDaLinha>
         ),
       }),
       coluna.accessor((m) => m.nivel?.nome ?? '—', { id: 'nivel', header: 'Nível' }),
@@ -131,7 +153,7 @@ function Medicos() {
       }),
       coluna.accessor('totalAliases', {
         header: () => <span className="block text-right">Apelidos</span>,
-        cell: (info) => <span className="block text-right">{info.getValue()}</span>,
+        cell: (info) => <span className="block text-right">{numero(info.getValue())}</span>,
       }),
       coluna.accessor('ativo', {
         header: 'Situação',
@@ -149,7 +171,7 @@ function Medicos() {
         ),
       }),
     ],
-    [abrir],
+    [],
   );
 
   return (
@@ -197,7 +219,12 @@ function Medicos() {
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'os médicos', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -219,10 +246,12 @@ function Medicos() {
             onFechar={fechar}
             onSalvo={async (id) => {
               await invalidarMedicos(queryClient);
+              avisos.sucesso(busca.id ? 'Médico salvo.' : 'Médico criado.');
               ir((a) => ({ ...a, novo: undefined, id }), true);
             }}
             onExcluido={async () => {
               fechar();
+              avisos.sucesso('Médico excluído.');
               await invalidarMedicos(queryClient);
             }}
           />
@@ -252,11 +281,15 @@ function PainelDoMedico({
     enabled: Boolean(id),
   });
   const medico = consulta.data;
-  if (id && !medico)
+  const avisos = useAvisos();
+  const fase = useFaseDoCarregamento(Boolean(id) && !medico);
+  if (id && (!medico || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={onFechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o médico"
+        voltar={{ to: '/medicos', rotulo: 'Voltar para Médicos' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -292,11 +325,25 @@ function PainelDoMedico({
         if (!id) return;
         await medicosControllerCriarAlias({ path: { id }, body: dados }).unwrap();
         await atualizar();
+        avisos.sucesso('Apelido adicionado.');
       }}
       onExcluirApelido={async (aliasId) => {
         if (!id) return;
+        const apelido = medico?.aliases.find((a) => a.id === aliasId);
         await medicosControllerExcluirAlias({ path: { id, aliasId } }).unwrap();
         await atualizar();
+        avisos.sucesso('Apelido removido.', {
+          acao: apelido && {
+            rotulo: 'Desfazer',
+            onClick: async () => {
+              await medicosControllerCriarAlias({
+                path: { id },
+                body: { nomeOrigem: apelido.nomeOrigem, observacoes: apelido.observacoes },
+              }).unwrap();
+              await atualizar();
+            },
+          },
+        });
       }}
       pagamento={
         id && pode(sessao, 'medicos.pagamento.ver') ? (
@@ -324,24 +371,36 @@ function AbaPagamento({ medicoId, podeEditar }: { medicoId: string; podeEditar: 
   const queryClient = useQueryClient();
   const opcoes = medicosControllerObterPagamentoQueryOptions({ path: { id: medicoId } });
   // Dado pessoal: não fica no cache depois que a aba fecha.
-  const { data, isError } = useQuery({ ...opcoes, gcTime: 0 });
-  if (isError) {
+  const avisos = useAvisos();
+  const { data, error, refetch } = useQuery({ ...opcoes, gcTime: 0 });
+  if (error && !data) {
     return (
-      <p className="text-muted-foreground p-4">
-        Não foi possível abrir os dados de pagamento agora. Tente de novo.
-      </p>
+      <EstadoDoErro
+        erro={error}
+        oQue="os dados de pagamento"
+        onTentarDeNovo={() => void refetch()}
+      />
     );
   }
-  if (!data) return <CamposCarregando quantidade={8} />;
   return (
-    <FormPagamento
-      dados={data}
-      podeEditar={podeEditar}
-      onSalvar={async (dados) => {
-        await medicosControllerSalvarPagamento({ path: { id: medicoId }, body: dados }).unwrap();
-        await queryClient.invalidateQueries({ queryKey: opcoes.queryKey });
-      }}
-    />
+    <ComEsqueleto carregando={!data} esqueleto={<CamposCarregando quantidade={8} />}>
+      {() =>
+        data && (
+          <FormPagamento
+            dados={data}
+            podeEditar={podeEditar}
+            onSalvar={async (dados) => {
+              await medicosControllerSalvarPagamento({
+                path: { id: medicoId },
+                body: dados,
+              }).unwrap();
+              await queryClient.invalidateQueries({ queryKey: opcoes.queryKey });
+              avisos.sucesso('Dados de pagamento salvos.');
+            }}
+          />
+        )
+      }
+    </ComEsqueleto>
   );
 }
 
@@ -349,11 +408,17 @@ function AbaPagamento({ medicoId, podeEditar }: { medicoId: string; podeEditar: 
 function AbaAcesso({ medico, podeEditar }: { medico: MedicoDetalheDto; podeEditar: boolean }) {
   const queryClient = useQueryClient();
   const path = { medicoId: medico.id };
-  const { data: acesso } = useQuery(acessoMedicoControllerObterQueryOptions({ path }));
+  const {
+    data: acesso,
+    error,
+    refetch,
+  } = useQuery(acessoMedicoControllerObterQueryOptions({ path }));
   const { data: papeis = [] } = useQuery({
     ...acessoMedicoControllerPapeisQueryOptions({ path }),
     enabled: podeEditar,
   });
+  if (error && !acesso)
+    return <EstadoDoErro erro={error} oQue="o acesso" onTentarDeNovo={() => void refetch()} />;
   if (!acesso) return <CamposCarregando quantidade={2} />;
 
   return (
@@ -363,10 +428,11 @@ function AbaAcesso({ medico, podeEditar }: { medico: MedicoDetalheDto; podeEdita
       papeis={papeis}
       podeConvidar={podeEditar}
       podeLigar={podeEditar}
-      buscarUsuarios={async (termo) => {
+      buscarUsuarios={async (termo, sinal) => {
         const contas = await acessoMedicoControllerBuscarContas({
           path,
           query: { busca: termo },
+          signal: sinal,
         }).unwrap();
         return contas.map((u) => ({ valor: u.id, rotulo: u.nome, detalhe: u.email }));
       }}
