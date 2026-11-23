@@ -117,4 +117,21 @@ describe('FormParametrosImportacao', () => {
     expect(retencao).toBeInvalid();
     expect(onSalvar).not.toHaveBeenCalled();
   });
+
+  it('avisa quem usa quando há valor mudado e não salvo (a página pergunta antes de sair)', async () => {
+    const onAlterado = vi.fn();
+    render(
+      <FormParametrosImportacao
+        parametros={atuais}
+        podeEditar
+        onSalvar={vi.fn()}
+        onAlterado={onAlterado}
+      />,
+    );
+    expect(onAlterado).toHaveBeenLastCalledWith(false);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /Dias por consulta/ }), '1');
+
+    expect(onAlterado).toHaveBeenLastCalledWith(true);
+  });
 });

@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 import type { ParametrosIngestaoDto } from '../../gen/types/ParametrosIngestaoDto';
+import { comUnidade, numero } from '../../lib/formato';
 import { Alerta } from '../alerta/Alerta';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 
 const inteiro = (min: number, max: number, mensagem: string) =>
   z
@@ -60,6 +63,18 @@ function Valor({ rotulo, children }: { rotulo: string; children: string }) {
   );
 }
 
+const valoresDoForm = (parametros: ParametrosIngestaoDto) => ({
+  travaRemocaoMinimo: String(parametros.travaRemocaoMinimo),
+  travaRemocaoFator: String(parametros.travaRemocaoFator),
+  retencaoLinhasBrutasDias: String(parametros.retencaoLinhasBrutasDias),
+  mobilemedAutomatica: parametros.mobilemedIntervaloMinutos !== null,
+  mobilemedIntervaloMinutos: String(parametros.mobilemedIntervaloMinutos ?? 15),
+  mobilemedMesesAnteriores: String(parametros.mobilemedMesesAnteriores),
+  mobilemedJanelaDias: String(parametros.mobilemedJanelaDias),
+  mobilemedTeto: String(parametros.mobilemedTeto),
+  mobilemedCompartilhamentoUnidades: parametros.mobilemedCompartilhamentoUnidades.join(', '),
+});
+
 /**
  * Parâmetros da importação de laudos: a trava contra arquivo incompleto, por quanto tempo a
  * linha crua da planilha (que tem dado de paciente) fica guardada e a importação automática da
@@ -70,26 +85,20 @@ export function FormParametrosImportacao({
   podeEditar,
   mobilemedLigada = true,
   onSalvar,
+  onAlterado,
 }: {
   parametros: ParametrosIngestaoDto;
   podeEditar: boolean;
   /** `INGESTAO_MOBILEMED` ligada no ambiente da API. */
   mobilemedLigada?: boolean;
   onSalvar: (parametros: ParametrosIngestaoDto) => Promise<void>;
+  /** Algum valor mudou e não foi salvo (a página pergunta antes de sair). */
+  onAlterado?: (alterado: boolean) => void;
 }) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = valoresDoForm(parametros);
   const form = useAppForm({
-    defaultValues: {
-      travaRemocaoMinimo: String(parametros.travaRemocaoMinimo),
-      travaRemocaoFator: String(parametros.travaRemocaoFator),
-      retencaoLinhasBrutasDias: String(parametros.retencaoLinhasBrutasDias),
-      mobilemedAutomatica: parametros.mobilemedIntervaloMinutos !== null,
-      mobilemedIntervaloMinutos: String(parametros.mobilemedIntervaloMinutos ?? 15),
-      mobilemedMesesAnteriores: String(parametros.mobilemedMesesAnteriores),
-      mobilemedJanelaDias: String(parametros.mobilemedJanelaDias),
-      mobilemedTeto: String(parametros.mobilemedTeto),
-      mobilemedCompartilhamentoUnidades: parametros.mobilemedCompartilhamentoUnidades.join(', '),
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
       tentar(() =>
@@ -108,6 +117,10 @@ export function FormParametrosImportacao({
       ),
   });
 
+  // Comparado com os parâmetros de agora: salvou e eles voltaram da API, deixa de estar alterado.
+  const alterado = useAlterado(form, iniciais);
+  useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
+
   const avisoDesligada = !mobilemedLigada && (
     <Alerta tom="info">
       A importação da MobileMed está desligada neste ambiente (variável INGESTAO_MOBILEMED da API).
@@ -119,13 +132,13 @@ export function FormParametrosImportacao({
     return (
       <dl className="divide-y">
         <Valor rotulo="Recusar se sumirem mais de">
-          {`${parametros.travaRemocaoMinimo.toLocaleString('pt-BR')} laudos`}
+          {comUnidade(parametros.travaRemocaoMinimo, 'laudos')}
         </Valor>
         <Valor rotulo="E mais que">
-          {`${parametros.travaRemocaoFator.toLocaleString('pt-BR')} × as linhas do arquivo`}
+          {`${numero(parametros.travaRemocaoFator, Number.isInteger(parametros.travaRemocaoFator) ? 0 : 2)} × as linhas do arquivo`}
         </Valor>
         <Valor rotulo="Retenção da linha da planilha">
-          {`${parametros.retencaoLinhasBrutasDias} dias`}
+          {comUnidade(parametros.retencaoLinhasBrutasDias, 'dias')}
         </Valor>
         <Valor rotulo="Importação automática">
           {parametros.mobilemedIntervaloMinutos === null
@@ -133,13 +146,13 @@ export function FormParametrosImportacao({
             : `A cada ${parametros.mobilemedIntervaloMinutos} minutos`}
         </Valor>
         <Valor rotulo="Período">{textoDoPeriodo(parametros.mobilemedMesesAnteriores)}</Valor>
-        <Valor rotulo="Dias por consulta">{`${parametros.mobilemedJanelaDias} dias`}</Valor>
+        <Valor rotulo="Dias por consulta">
+          {comUnidade(parametros.mobilemedJanelaDias, 'dias')}
+        </Valor>
         <Valor rotulo="Compartilhamento de">
           {parametros.mobilemedCompartilhamentoUnidades.join(', ') || 'Nenhuma unidade'}
         </Valor>
-        <Valor rotulo="Teto por consulta">
-          {`${parametros.mobilemedTeto.toLocaleString('pt-BR')} laudos`}
-        </Valor>
+        <Valor rotulo="Teto por consulta">{comUnidade(parametros.mobilemedTeto, 'laudos')}</Valor>
         {avisoDesligada && <div className="pt-3">{avisoDesligada}</div>}
       </dl>
     );
@@ -147,6 +160,7 @@ export function FormParametrosImportacao({
 
   return (
     <form
+      noValidate
       className="flex flex-col gap-5"
       onSubmit={(evento) => {
         evento.preventDefault();
