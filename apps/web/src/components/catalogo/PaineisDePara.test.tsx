@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -36,6 +36,36 @@ describe('painéis dos de-paras', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Criar sufixo' }));
 
     expect(onSalvar).toHaveBeenCalledWith({ sufixo: '_RMX', ativo: true, observacoes: null });
+  });
+
+  it('criar abre num diálogo; editar fica no painel lateral', async () => {
+    const { unmount } = comConsultas(<PainelSufixo {...base} onSalvar={vi.fn()} />);
+    expect(await screen.findByRole('dialog', { name: 'Novo sufixo' })).not.toHaveAttribute(
+      'data-painel-lateral',
+    );
+    unmount();
+
+    comConsultas(
+      <PainelSufixo
+        {...base}
+        item={{ id: 's1', sufixo: '_RMX', ativo: true, observacoes: null } as never}
+        onSalvar={vi.fn()}
+      />,
+    );
+    expect(await screen.findByRole('dialog', { name: '_RMX' })).toHaveAttribute(
+      'data-painel-lateral',
+    );
+  });
+
+  it('criando, cancelar com algo digitado pergunta antes de descartar', async () => {
+    const onFechar = vi.fn();
+    comConsultas(<PainelNaoEspecialidade {...base} onFechar={onFechar} onSalvar={vi.fn()} />);
+
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Valor que chega' }), 'CT');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
   });
 
   it('sem permissão de editar, os campos ficam desabilitados', () => {

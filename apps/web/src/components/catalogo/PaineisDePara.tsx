@@ -1,4 +1,5 @@
 import { Fieldset } from '@base-ui/react/fieldset';
+import type { ReactNode } from 'react';
 import { z } from 'zod';
 
 import type { DeParaEspecialidadeDto } from '../../gen/types/DeParaEspecialidadeDto';
@@ -6,9 +7,13 @@ import type { DeParaEspecialidadeItemDto } from '../../gen/types/DeParaEspeciali
 import type { SufixoDto } from '../../gen/types/SufixoDto';
 import type { SufixoItemDto } from '../../gen/types/SufixoItemDto';
 import { Alerta } from '../alerta/Alerta';
+import { Dialogo } from '../dialogo/Dialogo';
 import { useAppForm } from '../form/form';
+import { RequiredLegend } from '../form/RequiredLegend';
+import { SubmitButton } from '../form/SubmitButton';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
+import { type ExcluirPainel, RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
 
 type Base<Item, Dados> = {
@@ -23,6 +28,85 @@ type Base<Item, Dados> = {
 const textoObrigatorio = (mensagem: string) => z.string().trim().min(1, mensagem);
 const opcional = (texto: string) => texto.trim() || null;
 const ativoAjuda = 'Inativo não vale na importação, mas fica guardado.';
+
+/**
+ * Criar um de-para é tarefa curta (diálogo); ver e editar um existente, no painel ao lado da lista.
+ */
+function MolduraDePara({
+  titulo,
+  explicacao,
+  criando,
+  rotuloCriar,
+  podeEditar,
+  erro,
+  excluir,
+  onFechar,
+  alterado,
+  onEnviar,
+  formulario,
+  children,
+}: {
+  titulo: string;
+  explicacao: ReactNode;
+  criando: boolean;
+  rotuloCriar: string;
+  podeEditar: boolean;
+  erro?: string;
+  excluir?: ExcluirPainel;
+  onFechar: () => void;
+  alterado: boolean;
+  onEnviar: () => void;
+  /** `form.AppForm` do formulário: o botão de enviar e a legenda precisam do contexto dele. */
+  formulario: (conteudo: ReactNode) => ReactNode;
+  children: ReactNode;
+}) {
+  if (criando) {
+    return (
+      <Dialogo
+        titulo={titulo}
+        descricao={explicacao}
+        alterado={alterado}
+        onFechar={onFechar}
+        onEnviar={onEnviar}
+        acao={formulario(<SubmitButton pendingLabel="Salvando…">{rotuloCriar}</SubmitButton>)}
+      >
+        {erro && <Alerta tom="erro">{erro}</Alerta>}
+        {children}
+        {formulario(<RequiredLegend />)}
+      </Dialogo>
+    );
+  }
+  return (
+    <PainelLateral titulo={titulo} alterado={alterado} onFechar={onFechar}>
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          onEnviar();
+        }}
+        className="flex flex-col gap-4 p-4"
+      >
+        <p className="text-muted-foreground">{explicacao}</p>
+        {erro && <Alerta tom="erro">{erro}</Alerta>}
+        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
+          {children}
+        </Fieldset.Root>
+        {podeEditar ? (
+          formulario(
+            <RodapePainel
+              rotuloCriar={rotuloCriar}
+              editando
+              excluir={excluir}
+              onCancelar={onFechar}
+            />,
+          )
+        ) : (
+          <RodapeSomenteLeitura excluir={excluir} />
+        )}
+      </form>
+    </PainelLateral>
+  );
+}
 
 function excluirDePara(
   nome: string,
@@ -53,12 +137,13 @@ export function PainelNaoEspecialidade({
   onFechar,
 }: Base<DeParaEspecialidadeItemDto, DeParaEspecialidadeDto>) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    origem: item?.origem ?? '',
+    ativo: item?.ativo ?? true,
+    observacoes: item?.observacoes ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      origem: item?.origem ?? '',
-      ativo: item?.ativo ?? true,
-      observacoes: item?.observacoes ?? '',
-    },
+    defaultValues: iniciais,
     validators: {
       onSubmit: z.object({
         origem: textoObrigatorio('Informe o valor como chega da MobileMed.'),
@@ -77,65 +162,42 @@ export function PainelNaoEspecialidade({
         }),
       ),
   });
-
-  const excluir = item ? excluirDePara(item.origem, onExcluir, tentar) : undefined;
+  const alterado = useAlterado(form, iniciais);
 
   return (
-    <PainelLateral
+    <MolduraDePara
       titulo={item ? item.origem : 'Novo valor que não é especialidade'}
+      explicacao="Chega no campo especialidade mas não é especialidade: a importação ignora e usa a especialidade do exame."
+      criando={!item}
+      rotuloCriar="Criar"
+      podeEditar={podeEditar}
+      erro={erro}
+      excluir={item ? excluirDePara(item.origem, onExcluir, tentar) : undefined}
       onFechar={onFechar}
+      alterado={alterado}
+      onEnviar={() => void form.handleSubmit()}
+      formulario={(conteudo) => <form.AppForm>{conteudo}</form.AppForm>}
     >
-      <form
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        className="flex flex-col gap-4 p-4"
-      >
-        <p className="text-muted-foreground">
-          Chega no campo especialidade mas não é especialidade: a importação ignora e usa a
-          especialidade do exame.
-        </p>
-        {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
-          <form.AppField name="origem">
-            {(field) => (
-              <field.TextField
-                label="Valor que chega"
-                placeholder="Ex.: CT"
-                description="Comparado em maiúsculas."
-                autoComplete="off"
-                required
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="observacoes">
-            {(field) => (
-              <field.TextAreaField
-                label="Observações"
-                placeholder="Ex.: por que essa regra existe"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="ativo">
-            {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
-          </form.AppField>
-        </Fieldset.Root>
-        {podeEditar ? (
-          <form.AppForm>
-            <RodapePainel
-              rotuloCriar="Criar"
-              editando={Boolean(item)}
-              excluir={excluir}
-              onCancelar={onFechar}
-            />
-          </form.AppForm>
-        ) : (
-          <RodapeSomenteLeitura excluir={excluir} />
+      <form.AppField name="origem">
+        {(field) => (
+          <field.TextField
+            label="Valor que chega"
+            placeholder="Ex.: CT"
+            description="Comparado em maiúsculas."
+            autoComplete="off"
+            required
+          />
         )}
-      </form>
-    </PainelLateral>
+      </form.AppField>
+      <form.AppField name="observacoes">
+        {(field) => (
+          <field.TextAreaField label="Observações" placeholder="Ex.: por que essa regra existe" />
+        )}
+      </form.AppField>
+      <form.AppField name="ativo">
+        {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
+      </form.AppField>
+    </MolduraDePara>
   );
 }
 
@@ -147,12 +209,13 @@ export function PainelSufixo({
   onFechar,
 }: Base<SufixoItemDto, SufixoDto>) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    sufixo: item?.sufixo ?? '',
+    ativo: item?.ativo ?? true,
+    observacoes: item?.observacoes ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      sufixo: item?.sufixo ?? '',
-      ativo: item?.ativo ?? true,
-      observacoes: item?.observacoes ?? '',
-    },
+    defaultValues: iniciais,
     validators: {
       onSubmit: z.object({
         sufixo: textoObrigatorio('Informe o sufixo.'),
@@ -169,6 +232,7 @@ export function PainelSufixo({
         }),
       ),
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir =
     item && onExcluir
@@ -182,53 +246,32 @@ export function PainelSufixo({
       : undefined;
 
   return (
-    <PainelLateral titulo={item ? item.sufixo : 'Novo sufixo'} onFechar={onFechar}>
-      <form
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        className="flex flex-col gap-4 p-4"
-      >
-        <p className="text-muted-foreground">
-          Cortado do fim do nome do cliente antes de achar o cadastro (ex.: “CLINICA-CT” vira
-          “CLINICA”).
-        </p>
-        {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <Fieldset.Root disabled={!podeEditar} className="flex flex-col gap-4">
-          <form.AppField name="sufixo">
-            {(field) => (
-              <field.TextField
-                label="Sufixo"
-                placeholder="Ex.: _PLANTÃO"
-                autoComplete="off"
-                required
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="observacoes">
-            {(field) => (
-              <field.TextAreaField label="Observações" placeholder="Ex.: unidades de plantão" />
-            )}
-          </form.AppField>
-          <form.AppField name="ativo">
-            {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
-          </form.AppField>
-        </Fieldset.Root>
-        {podeEditar ? (
-          <form.AppForm>
-            <RodapePainel
-              rotuloCriar="Criar sufixo"
-              editando={Boolean(item)}
-              excluir={excluir}
-              onCancelar={onFechar}
-            />
-          </form.AppForm>
-        ) : (
-          <RodapeSomenteLeitura excluir={excluir} />
+    <MolduraDePara
+      titulo={item ? item.sufixo : 'Novo sufixo'}
+      explicacao="Cortado do fim do nome do cliente antes de achar o cadastro (ex.: “CLINICA-CT” vira “CLINICA”)."
+      criando={!item}
+      rotuloCriar="Criar sufixo"
+      podeEditar={podeEditar}
+      erro={erro}
+      excluir={excluir}
+      onFechar={onFechar}
+      alterado={alterado}
+      onEnviar={() => void form.handleSubmit()}
+      formulario={(conteudo) => <form.AppForm>{conteudo}</form.AppForm>}
+    >
+      <form.AppField name="sufixo">
+        {(field) => (
+          <field.TextField label="Sufixo" placeholder="Ex.: _PLANTÃO" autoComplete="off" required />
         )}
-      </form>
-    </PainelLateral>
+      </form.AppField>
+      <form.AppField name="observacoes">
+        {(field) => (
+          <field.TextAreaField label="Observações" placeholder="Ex.: unidades de plantão" />
+        )}
+      </form.AppField>
+      <form.AppField name="ativo">
+        {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
+      </form.AppField>
+    </MolduraDePara>
   );
 }

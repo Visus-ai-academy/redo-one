@@ -164,74 +164,78 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
   }, [aba, abrir]);
 
   const sufixos = aba === 'sufixos';
+  // Ver e editar abrem no painel ao lado da lista; criar abre num diálogo, fora dele.
+  const item =
+    busca.id || (busca.novo && permissoes.criar) ? (
+      <Painel
+        key={`${aba}:${busca.id ?? 'novo'}`}
+        aba={aba}
+        id={busca.id}
+        itens={pagina.itens}
+        permissoes={permissoes}
+      />
+    ) : undefined;
   return (
-    <ListaCadastro
-      titulo="De-paras"
-      totalNoTitulo={false}
-      abas={
-        <Abas
-          aria-label="De-paras"
-          valor={aba}
-          onMudar={(v) => ir(() => ({ aba: v as Aba }))}
-          abas={[...ABAS]}
-        />
-      }
-      novo={
-        permissoes.criar
-          ? {
-              rotulo: sufixos ? 'Novo sufixo' : 'Novo valor',
-              onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
-            }
-          : undefined
-      }
-      busca={{
-        valor: busca.busca,
-        rotulo: 'Buscar de-paras',
-        placeholder: sufixos ? 'Sufixo' : 'Valor que chega',
-      }}
-      temFiltro={busca.situacao !== undefined}
-      filtros={
-        <Select
-          aria-label="Filtrar por situação"
-          value={busca.situacao ?? ''}
-          onValueChange={(v) => filtrar({ situacao: (v || undefined) as Busca['situacao'] })}
-          opcoes={[
-            { valor: '', rotulo: 'Todas as situações' },
-            { valor: 'ativos', rotulo: 'Ativos' },
-            { valor: 'inativos', rotulo: 'Inativos' },
-          ]}
-          className="flex-[1_1_180px] md:flex-[0_1_200px]"
-        />
-      }
-      // biome-ignore lint/suspicious/noExplicitAny: cada aba tem o tipo de linha dela.
-      colunas={colunas as any}
-      ocultarComPainel={['observacoes']}
-      itens={pagina.itens}
-      getRowId={(i) => i.id}
-      selecionadoId={busca.id}
-      onAbrir={abrir}
-      pagina={pagina.pagina}
-      porPagina={pagina.porPagina}
-      total={pagina.total}
-      vazio={{
-        titulo: sufixos ? 'Nenhum sufixo cadastrado.' : 'Nenhum valor cadastrado.',
-        texto: 'A importação usa estes cadastros para traduzir o que chega da MobileMed.',
-      }}
-      onFiltrar={filtrar}
-      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
-      onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
-      painel={
-        busca.id || (busca.novo && permissoes.criar) ? (
-          <Painel
-            key={`${aba}:${busca.id ?? 'novo'}`}
-            aba={aba}
-            id={busca.id}
-            itens={pagina.itens}
-            permissoes={permissoes}
+    <>
+      <ListaCadastro
+        titulo="De-paras"
+        totalNoTitulo={false}
+        abas={
+          <Abas
+            aria-label="De-paras"
+            valor={aba}
+            onMudar={(v) => ir(() => ({ aba: v as Aba }))}
+            abas={[...ABAS]}
           />
-        ) : undefined
-      }
-    />
+        }
+        novo={
+          permissoes.criar
+            ? {
+                rotulo: sufixos ? 'Novo sufixo' : 'Novo valor',
+                onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
+              }
+            : undefined
+        }
+        busca={{
+          valor: busca.busca,
+          rotulo: 'Buscar de-paras',
+          placeholder: sufixos ? 'Sufixo' : 'Valor que chega',
+        }}
+        temFiltro={busca.situacao !== undefined}
+        filtros={
+          <Select
+            aria-label="Filtrar por situação"
+            value={busca.situacao ?? ''}
+            onValueChange={(v) => filtrar({ situacao: (v || undefined) as Busca['situacao'] })}
+            opcoes={[
+              { valor: '', rotulo: 'Todas as situações' },
+              { valor: 'ativos', rotulo: 'Ativos' },
+              { valor: 'inativos', rotulo: 'Inativos' },
+            ]}
+            className="flex-[1_1_180px] md:flex-[0_1_200px]"
+          />
+        }
+        // biome-ignore lint/suspicious/noExplicitAny: cada aba tem o tipo de linha dela.
+        colunas={colunas as any}
+        ocultarComPainel={['observacoes']}
+        itens={pagina.itens}
+        getRowId={(i) => i.id}
+        selecionadoId={busca.id}
+        onAbrir={abrir}
+        pagina={pagina.pagina}
+        porPagina={pagina.porPagina}
+        total={pagina.total}
+        vazio={{
+          titulo: sufixos ? 'Nenhum sufixo cadastrado.' : 'Nenhum valor cadastrado.',
+          texto: 'A importação usa estes cadastros para traduzir o que chega da MobileMed.',
+        }}
+        onFiltrar={filtrar}
+        onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
+        onIrPara={(n) => ir((a) => ({ ...a, pagina: n }))}
+        painel={busca.id ? item : undefined}
+      />
+      {!busca.id && item}
+    </>
   );
 }
 
