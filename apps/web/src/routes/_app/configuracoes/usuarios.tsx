@@ -7,8 +7,8 @@ import { ConfiguracoesLayout } from '../../../components/configuracoes/Configura
 import { SemPermissao } from '../../../components/estado/estados';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { useAvisos } from '../../../components/toast/use-avisos';
+import { DialogoConvite } from '../../../components/usuarios/DialogoConvite';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
-import { PainelConvite } from '../../../components/usuarios/PainelConvite';
 import {
   PainelUsuario,
   type PainelUsuarioProps,
@@ -132,21 +132,22 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
     [navigate],
   );
 
+  const convidando = Boolean(filtros.convidar && permissoes.convidar);
+
   return (
-    <ListaUsuarios
-      pagina={pagina}
-      filtros={filtros}
-      papeis={papeis}
-      euId={euId}
-      onFiltrar={filtrar}
-      onIrPara={irPara}
-      onAbrir={abrir}
-      selecionadoId={filtros.id}
-      onConvidar={permissoes.convidar ? abrirConvite : undefined}
-      painel={
-        filtros.convidar && permissoes.convidar ? (
-          <PainelConvite papeis={papeis} onConvidado={convidado} onCancelar={fechar} />
-        ) : (
+    <>
+      <ListaUsuarios
+        pagina={pagina}
+        filtros={filtros}
+        papeis={papeis}
+        euId={euId}
+        onFiltrar={filtrar}
+        onIrPara={irPara}
+        onAbrir={abrir}
+        selecionadoId={filtros.id}
+        onConvidar={permissoes.convidar ? abrirConvite : undefined}
+        painel={
+          !convidando &&
           filtros.id && (
             <Detalhe
               id={filtros.id}
@@ -156,9 +157,10 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
               onFechar={fechar}
             />
           )
-        )
-      }
-    />
+        }
+      />
+      {convidando && <DialogoConvite papeis={papeis} onConvidado={convidado} onCancelar={fechar} />}
+    </>
   );
 }
 

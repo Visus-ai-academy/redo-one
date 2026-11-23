@@ -6,7 +6,7 @@ import { ResponseError } from '../../gen/.kubb/client';
 import { usuariosControllerConvidar } from '../../gen/clients/usuariosControllerConvidar';
 import type { PapelAtribuivelDto } from '../../gen/types/PapelAtribuivelDto';
 import { renderComRotas } from '../../test/render';
-import { PainelConvite } from './PainelConvite';
+import { DialogoConvite } from './DialogoConvite';
 
 vi.mock('../../gen/clients/usuariosControllerConvidar');
 
@@ -22,7 +22,7 @@ function montar() {
   const onConvidado = vi.fn();
   const onCancelar = vi.fn();
   const resultado = renderComRotas(
-    <PainelConvite papeis={papeis} onConvidado={onConvidado} onCancelar={onCancelar} />,
+    <DialogoConvite papeis={papeis} onConvidado={onConvidado} onCancelar={onCancelar} />,
   );
   return { ...resultado, onConvidado, onCancelar };
 }
@@ -41,7 +41,7 @@ async function preencher({
   await userEvent.click(screen.getByRole('button', { name: 'Enviar convite' }));
 }
 
-describe('PainelConvite', () => {
+describe('DialogoConvite', () => {
   beforeEach(() => {
     convidar.mockReset();
     convidar.mockReturnValue({ unwrap: async () => ({ id: 'u-nova' }) } as never);
@@ -152,11 +152,31 @@ describe('PainelConvite', () => {
     );
   });
 
+  it('abre num diálogo (tarefa curta), não no painel lateral', async () => {
+    montar();
+
+    const dialogo = await screen.findByRole('dialog', { name: 'Convidar usuário' });
+    expect(dialogo).not.toHaveAttribute('data-painel-lateral');
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveFocus());
+  });
+
   it('cancela', async () => {
     const { onCancelar } = montar();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
 
-    expect(onCancelar).toHaveBeenCalled();
+    await waitFor(() => expect(onCancelar).toHaveBeenCalled());
+  });
+
+  it('com algo digitado, cancelar pergunta antes de descartar', async () => {
+    const { onCancelar } = montar();
+
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Nome' }), 'Maria');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(onCancelar).not.toHaveBeenCalled();
   });
 });
