@@ -16,8 +16,11 @@ export type OpcaoBusca = {
 type BuscaSelecaoProps = {
   /** Identifica a consulta no cache (ex.: `exames`). */
   chave: string;
-  /** Resultados para o termo digitado (a API devolve poucos, já filtrados). */
-  buscar: (termo: string) => Promise<OpcaoBusca[]>;
+  /**
+   * Resultados para o termo digitado (a API devolve poucos, já filtrados). Repasse o `sinal` à
+   * chamada da API: a busca anterior é cancelada quando a pessoa digita mais.
+   */
+  buscar: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   valor: OpcaoBusca | null;
   onMudar: (opcao: OpcaoBusca | null) => void;
   placeholder: string;
@@ -28,7 +31,7 @@ type BuscaSelecaoProps = {
   className?: string;
 };
 
-const ESPERA_MS = 250;
+const ESPERA_MS = 300;
 
 /**
  * Escolha de um item numa lista grande (ex.: ~1.100 exames): a pessoa digita e a API devolve os
@@ -57,7 +60,8 @@ export function BuscaSelecao({
   const procurando = termo !== '' && termo !== valor?.rotulo;
   const { data: resultados = [], isFetching } = useQuery({
     queryKey: ['busca-selecao', chave, termo],
-    queryFn: () => buscar(termo),
+    // Termo novo é outra chave: resposta de busca velha nunca aparece no lugar da nova.
+    queryFn: ({ signal }) => buscar(termo, signal),
     enabled: procurando,
     placeholderData: keepPreviousData,
   });

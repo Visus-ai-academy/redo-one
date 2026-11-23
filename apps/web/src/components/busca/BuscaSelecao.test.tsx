@@ -58,4 +58,44 @@ describe('BuscaSelecao', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('nenhum');
   });
+
+  it('espera ~300ms depois da última tecla e cancela a busca anterior', async () => {
+    const sinais: AbortSignal[] = [];
+    const termos: string[] = [];
+    const buscar = vi.fn(
+      (termo: string, sinal?: AbortSignal) =>
+        new Promise<OpcaoBusca[]>((resolve) => {
+          termos.push(termo);
+          if (sinal) sinais.push(sinal);
+          setTimeout(
+            () => resolve(EXAMES.filter((e) => e.rotulo.includes(termo.toUpperCase()))),
+            400,
+          );
+        }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <label htmlFor="exame">Exame</label>
+        <BuscaSelecao
+          id="exame"
+          chave="exames"
+          buscar={buscar}
+          valor={null}
+          onMudar={vi.fn()}
+          placeholder=""
+        />
+      </QueryClientProvider>,
+    );
+    const campo = screen.getByRole('combobox', { name: 'Exame' });
+
+    await userEvent.type(campo, 'cr');
+    await new Promise((r) => setTimeout(r, 260));
+    expect(buscar).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(termos).toEqual(['cr']));
+
+    await userEvent.type(campo, 'a');
+    await vi.waitFor(() => expect(termos).toEqual(['cr', 'cra']));
+    expect(sinais[0]?.aborted).toBe(true);
+    expect(await screen.findByRole('option', { name: /RM CRANIO/ })).toBeInTheDocument();
+  });
 });
