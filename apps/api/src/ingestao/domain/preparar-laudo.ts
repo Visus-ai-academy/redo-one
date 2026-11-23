@@ -26,7 +26,8 @@ export interface CadastrosIngestao {
   /** `normalizarNome` do nome da prioridade ou da variação → id. */
   prioridades: ReadonlyMap<string, string>;
   resolverCliente: (empresa: string) => string | null;
-  resolverMedico: (nome: string) => string | null;
+  /** Pelo id da conta MobileMed primeiro; sem id, ou com id desconhecido, pelo nome. */
+  resolverMedico: (nome: string | null, idMobilemed: number | null) => string | null;
 }
 
 export interface LaudoPreparado {
@@ -50,6 +51,9 @@ export interface LaudoPreparado {
   medicoId: string | null;
   medicoReassinaturaOrigem: string | null;
   medicoReassinaturaId: string | null;
+  /** Conta MobileMed de quem assinou (só a importação pela API traz); fora do hash. */
+  medicoIdMobilemed: number | null;
+  medicoReassinaturaIdMobilemed: number | null;
   valores: number | null;
   volume: number;
   status: string;
@@ -95,6 +99,7 @@ export function textoDoPaciente(p: {
 /**
  * Prepara o laudo de uma linha lida: resolve os cadastros, classifica o estudo e calcula volume,
  * dia, competência, identidade e o hash do conteúdo (que diz se uma reimportação mudou o laudo).
+ * O id da conta MobileMed dos médicos fica fora do hash (ver o fim da função).
  */
 export function prepararLaudo(
   l: LinhaLaudo,
@@ -123,12 +128,27 @@ export function prepararLaudo(
     l.prioridade,
     cadastros.prioridades.get(normalizarNome(l.prioridade)) ?? null,
   );
-  const medicoId = l.medico
-    ? conferir('medico', l.medico, cadastros.resolverMedico(l.medico))
-    : null;
-  const medicoReassinaturaId = l.medicoReassinatura
-    ? conferir('medico', l.medicoReassinatura, cadastros.resolverMedico(l.medicoReassinatura))
-    : null;
+  // O aviso é pelo nome (o mesmo médico pelo upload e pela API é um aviso só); o valor diz
+  // quando a conta MobileMed veio e não está em nenhum cadastro.
+  const resolverMedico = (nome: string | null, idMobilemed: number | null) => {
+    const id = cadastros.resolverMedico(nome, idMobilemed);
+    if (!nome) return id;
+    const aviso = comChave('medico', nome);
+    if (id) conferidos.push(aviso);
+    else {
+      pendencias.push(
+        idMobilemed
+          ? { ...aviso, valor: `${nome} (ID MobileMed ${idMobilemed} sem cadastro)` }
+          : aviso,
+      );
+    }
+    return id;
+  };
+  const medicoId = resolverMedico(l.medico, l.medicoIdMobilemed);
+  const medicoReassinaturaId = resolverMedico(
+    l.medicoReassinatura,
+    l.medicoReassinaturaIdMobilemed,
+  );
 
   const pacienteChave = pseudonimo(textoDoPaciente(l));
   const conteudo = {
@@ -177,6 +197,10 @@ export function prepararLaudo(
       }),
       hashConteudo: createHash('sha256').update(JSON.stringify(conteudo)).digest('hex'),
       ...conteudo,
+      // Fora do hash: o upload não traz o id, e o mesmo laudo tem de dar o mesmo hash pelos dois
+      // caminhos. Quando o id muda o médico resolvido, o medicoId (no hash) já muda o hash.
+      medicoIdMobilemed: l.medicoIdMobilemed,
+      medicoReassinaturaIdMobilemed: l.medicoReassinaturaIdMobilemed,
     },
     pendencias,
     conferidos: conferidos.map(({ tipo, chave }) => ({ tipo, chave })),

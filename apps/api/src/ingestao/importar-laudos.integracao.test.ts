@@ -11,7 +11,9 @@ import writeXlsxFile from 'write-excel-file/node';
 import type { ArmazenamentoArquivos } from '../comum/armazenamento/armazenamento-arquivos';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
+import type { PlanilhaLida } from './application/ports/leitor-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
+import { itemParaRegistro, itemRelatorio } from './infrastructure/mobilemed/esquemas-relatorio';
 import { DrizzleAvisosCadastroRepository } from './infrastructure/persistence/drizzle-avisos-cadastro.repository';
 import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-cadastros-ingestao';
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
@@ -52,7 +54,7 @@ const CABECALHO = [
   'COMPLEMENTAR',
 ];
 
-const linha = (codigo: string, estudo: string, valores: number) => [
+const linha = (codigo: string, estudo: string, valores: number, medico = 'Dr. Desconhecido') => [
   'CLINICA X',
   'Paciente Teste',
   codigo,
@@ -62,7 +64,7 @@ const linha = (codigo: string, estudo: string, valores: number) => [
   'Rotina',
   valores,
   'MEDICINA INTERNA',
-  'Dr. Desconhecido',
+  medico,
   'Não',
   '05/10/2026',
   '08:00',
@@ -88,6 +90,9 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
     ler: async () => Readable.from(arquivo),
   } as unknown as ArmazenamentoArquivos;
 
+  /** O que o relatório da MobileMed devolve na importação pela API. */
+  let relatorio: PlanilhaLida = { formato: 'laudos', linhas: [] };
+
   const importar = async (linhas: (string | number | null)[][]) => {
     arquivo = await writeXlsxFile(
       [CABECALHO, ...linhas].map((l) => l.map((value) => (value === null ? null : { value }))),
@@ -105,6 +110,30 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       .insert(schema.importacoes)
       .values({ arquivoId: a?.id ?? '', origem: 'upload_manual' })
       .returning();
+    return processar(importacao?.id ?? '');
+  };
+
+  const importarDaMobileMed = async (itens: Record<string, unknown>[]) => {
+    relatorio = {
+      formato: 'laudos',
+      linhas: itens.map((item, i) => ({
+        numero: i + 1,
+        registro: itemParaRegistro(itemRelatorio.parse(item), 'laudos'),
+      })),
+    };
+    const [importacao] = await db
+      .insert(schema.importacoes)
+      .values({
+        origem: 'mobilemed',
+        formato: 'laudos',
+        janelaInicio: '2026-10-06',
+        janelaFim: '2026-10-06',
+      })
+      .returning();
+    return processar(importacao?.id ?? '');
+  };
+
+  const processar = async (importacaoId: string) => {
     await new ImportarLaudos(
       new DrizzleImportacoesRepository(db),
       armazenamento,
@@ -115,13 +144,13 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       new DrizzleAvisosCadastroRepository(db),
       new DrizzleParametrosIngestaoRepository(db),
       new HmacPseudonimizador('s'.repeat(64)),
-      { buscar: async () => Promise.reject(new Error('sem MobileMed neste teste')) },
+      { buscar: async () => relatorio },
       () => new Date(),
-    ).executar(importacao?.id ?? '');
+    ).executar(importacaoId);
     const [resultado] = await db
       .select()
       .from(schema.importacoes)
-      .where(sql`${schema.importacoes.id} = ${importacao?.id}`);
+      .where(sql`${schema.importacoes.id} = ${importacaoId}`);
     return resultado;
   };
 
@@ -182,5 +211,55 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
     expect(terceira).toMatchObject({ removidos: 1, inalterados: 2 });
     const [totalDepois] = await db.select().from(schema.totaisLaudosDia);
     expect(totalDepois).toMatchObject({ quantidade: 2, volume: 3 });
+  });
+
+  it('a MobileMed liga pelo id da conta o laudo que o nome deixou sem médico, sem duplicar', async () => {
+    const [ana] = await db
+      .insert(schema.medicos)
+      .values({ nome: 'Ana Souza', chaveNormalizada: 'ana souza', idMobilemed: 45 })
+      .returning();
+    // O nome na MobileMed tem um sobrenome a mais que o cadastro.
+    const doUpload = await importar([linha('1', 'TC TORAX', 1, 'Dra. Ana Souza Prado')]);
+    expect(doUpload).toMatchObject({ status: 'concluida', inseridos: 1 });
+    expect((await db.select().from(schema.laudos))[0]?.medicoId).toBeNull();
+
+    // O mesmo laudo pela API (05/10 08:00 e 06/10 10:00 em Brasília), agora com a conta.
+    const daApi = await importarDaMobileMed([
+      {
+        nome_fantasia: 'CLINICA X',
+        nome_paciente: 'Paciente Teste',
+        codigo_paciente: '1',
+        estudo_descricao: 'TC TORAX',
+        pacs_accession_no: 'ACC1',
+        modalidade_id: 2,
+        prioridade_id: 1,
+        status_id: 1,
+        valor: '1',
+        especialidade: 'MEDICINA INTERNA',
+        medico: 'Dra. Ana Souza Prado',
+        usuario_id: 45,
+        medico_primeiro_laudo: null,
+        medico_primeiro_laudo_id: null,
+        is_duplicado: 0,
+        is_anterior: 0,
+        data_realizacao: '2026-10-05T11:00:00.000Z',
+        data_laudo: '2026-10-06T13:00:00.000Z',
+        sla_expiration_date: '2026-10-06T12:00:00.000Z',
+      },
+    ]);
+
+    expect(daApi).toMatchObject({
+      status: 'concluida',
+      inseridos: 0,
+      atualizados: 1,
+      removidos: 0,
+    });
+    const laudos = await db.select().from(schema.laudos);
+    expect(laudos).toHaveLength(1);
+    expect(laudos[0]).toMatchObject({ medicoId: ana?.id, medicoIdMobilemed: 45 });
+    const [total] = await db.select().from(schema.totaisLaudosDia);
+    expect(total?.medicoId).toBe(ana?.id);
+    const [aviso] = await db.select().from(schema.avisosCadastro);
+    expect(aviso).toMatchObject({ tipo: 'medico', chave: 'ana souza prado', status: 'resolvido' });
   });
 });

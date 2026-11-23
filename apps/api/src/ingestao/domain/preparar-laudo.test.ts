@@ -22,7 +22,9 @@ const cadastros: CadastrosIngestao = {
   catalogo,
   prioridades: new Map([['rotina', 'pri-rotina']]),
   resolverCliente: (empresa) => (empresa === 'CLINICA X' ? 'c-x' : null),
-  resolverMedico: (nome) => (nome === 'Dr. Ana Souza' ? 'm-ana' : null),
+  // Ana tem a conta 45 na MobileMed; Bia, a 46.
+  resolverMedico: (nome, idMobilemed) =>
+    ({ 45: 'm-ana', 46: 'm-bia' })[idMobilemed ?? 0] ?? (nome === 'Dr. Ana Souza' ? 'm-ana' : null),
 };
 
 const pseudonimo = (texto: string) => `hmac(${texto})`;
@@ -47,6 +49,8 @@ const linha = (campos: Partial<LinhaLaudo> = {}): LinhaLaudo => ({
   dataPrazo: null,
   dataReassinatura: null,
   medicoReassinatura: null,
+  medicoIdMobilemed: null,
+  medicoReassinaturaIdMobilemed: null,
   ...campos,
 });
 
@@ -141,5 +145,110 @@ describe('prepararLaudo', () => {
         { tipo: 'prioridade', chave: 'rotina' },
       ]),
     );
+  });
+
+  it('pelo id da conta MobileMed acha o médico cujo nome chegou diferente do cadastro', () => {
+    const { laudo, pendencias, conferidos } = prepararLaudo(
+      linha({ medico: 'Dra. Ana Souza Prado', medicoIdMobilemed: 45 }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    );
+
+    expect(laudo).toMatchObject({
+      medicoOrigem: 'Dra. Ana Souza Prado',
+      medicoId: 'm-ana',
+      medicoIdMobilemed: 45,
+    });
+    expect(pendencias).toEqual([]);
+    // Resolve o aviso que o nome tinha aberto quando só o nome contava.
+    expect(conferidos).toContainEqual({ tipo: 'medico', chave: 'ana souza prado' });
+  });
+
+  it('a reassinatura também é resolvida pelo id primeiro', () => {
+    const { laudo } = prepararLaudo(
+      linha({
+        status: 'Reassinado',
+        medicoReassinatura: 'Dra. Bia L.',
+        medicoReassinaturaIdMobilemed: 46,
+      }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    );
+    expect(laudo).toMatchObject({
+      medicoReassinaturaId: 'm-bia',
+      medicoReassinaturaIdMobilemed: 46,
+    });
+  });
+
+  it('id desconhecido cai no nome, como sem id', () => {
+    const { laudo, pendencias } = prepararLaudo(
+      linha({ medicoIdMobilemed: 999 }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    );
+    expect(laudo).toMatchObject({ medicoId: 'm-ana', medicoIdMobilemed: 999 });
+    expect(pendencias).toEqual([]);
+  });
+
+  it('o aviso do médico pendente diz quando o id da conta veio e não está no cadastro', () => {
+    const comId = prepararLaudo(
+      linha({ medico: 'Dr. Pedro Alves', medicoIdMobilemed: 999 }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    );
+    const semId = prepararLaudo(
+      linha({ medico: 'Dr. Pedro Alves' }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    );
+
+    // A chave continua a do nome: o mesmo médico pelo upload e pela API é um aviso só.
+    expect(comId.pendencias).toEqual([
+      {
+        tipo: 'medico',
+        chave: 'pedro alves',
+        valor: 'Dr. Pedro Alves (ID MobileMed 999 sem cadastro)',
+      },
+    ]);
+    expect(semId.pendencias).toEqual([
+      { tipo: 'medico', chave: 'pedro alves', valor: 'Dr. Pedro Alves' },
+    ]);
+  });
+
+  it('o id da conta não muda a identidade nem o hash quando o médico é o mesmo (upload = API)', () => {
+    const doUpload = prepararLaudo(linha(), 'normal', cadastros, pseudonimo).laudo;
+    const daApi = prepararLaudo(
+      linha({ medicoIdMobilemed: 45 }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    ).laudo;
+
+    expect(daApi.identidade).toBe(doUpload.identidade);
+    expect(daApi.hashConteudo).toBe(doUpload.hashConteudo);
+  });
+
+  it('o laudo que o id liga a um médico muda de hash, para a reimportação gravar o médico', () => {
+    const soNome = prepararLaudo(
+      linha({ medico: 'Dra. Ana Souza Prado' }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    ).laudo;
+    const comId = prepararLaudo(
+      linha({ medico: 'Dra. Ana Souza Prado', medicoIdMobilemed: 45 }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    ).laudo;
+
+    expect(soNome.medicoId).toBeNull();
+    expect(comId.identidade).toBe(soNome.identidade);
+    expect(comId.hashConteudo).not.toBe(soNome.hashConteudo);
   });
 });

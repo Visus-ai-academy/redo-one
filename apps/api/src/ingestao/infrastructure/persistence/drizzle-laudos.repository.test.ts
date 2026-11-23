@@ -37,6 +37,8 @@ const laudo = (identidade: string, campos: Partial<LaudoPreparado> = {}): LaudoP
   medicoId: null,
   medicoReassinaturaOrigem: null,
   medicoReassinaturaId: null,
+  medicoIdMobilemed: null,
+  medicoReassinaturaIdMobilemed: null,
   valores: 1,
   volume: 1,
   status: 'Assinado',
@@ -74,7 +76,9 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table laudos, totais_laudos_dia, importacoes, arquivos cascade`);
+    await db.execute(
+      sql`truncate table laudos, totais_laudos_dia, importacoes, arquivos, medicos cascade`,
+    );
     const [arquivo] = await db
       .insert(schema.arquivos)
       .values({ chave: 'a.xlsx', nomeOriginal: 'a.xlsx', tipoConteudo: 'x', contexto: 'ingestao' })
@@ -164,6 +168,43 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     const [gravado] = await db.select().from(schema.laudos);
     expect(gravado?.status).toBe('Reassinado');
     expect(await db.select().from(schema.laudosPecasQuebra)).toHaveLength(1);
+  });
+
+  it('grava o id da conta MobileMed dos médicos e o atualiza junto com o médico', async () => {
+    const [ana] = await db
+      .insert(schema.medicos)
+      .values({ nome: 'Ana Souza', chaveNormalizada: 'ana souza', idMobilemed: 45 })
+      .returning();
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, inserir: [laudo('a', { medicoOrigem: 'Dra. Ana Souza Prado' })] },
+      agora,
+    );
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      {
+        ...vazio,
+        atualizar: [
+          laudo('a', {
+            hashConteudo: 'com-medico',
+            medicoOrigem: 'Dra. Ana Souza Prado',
+            medicoId: ana?.id ?? '',
+            medicoIdMobilemed: 45,
+            medicoReassinaturaIdMobilemed: 46,
+          }),
+        ],
+      },
+      agora,
+    );
+
+    const [gravado] = await db.select().from(schema.laudos);
+    expect(gravado).toMatchObject({
+      medicoId: ana?.id,
+      medicoIdMobilemed: 45,
+      medicoReassinaturaIdMobilemed: 46,
+    });
   });
 
   it('recalcula os totais dos dias da janela, sem os removidos', async () => {

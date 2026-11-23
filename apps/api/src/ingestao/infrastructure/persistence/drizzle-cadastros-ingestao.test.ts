@@ -94,7 +94,7 @@ describe.skipIf(!url)('DrizzleCadastrosIngestao', () => {
     ids.ana = await id(
       db
         .insert(schema.medicos)
-        .values({ nome: 'Ana Souza', chaveNormalizada: 'ana souza' })
+        .values({ nome: 'Ana Souza', chaveNormalizada: 'ana souza', idMobilemed: 45 })
         .returning(),
     );
     await db
@@ -134,6 +134,9 @@ describe.skipIf(!url)('DrizzleCadastrosIngestao', () => {
 
     expect(cadastros.resolverCliente('PRN-A')).toBe(ids.prn);
     expect(cadastros.resolverCliente('PRN-CT')).toBe(ids.prn);
-    expect(cadastros.resolverMedico('Dra. A. Souza')).toBe(ids.ana);
+    expect(cadastros.resolverMedico('Dra. A. Souza', null)).toBe(ids.ana);
+    // Pelo id da conta MobileMed, mesmo com um nome que o cadastro não conhece.
+    expect(cadastros.resolverMedico('Dra. Ana Souza Prado', 45)).toBe(ids.ana);
+    expect(cadastros.resolverMedico('Dra. Ana Souza Prado', 999)).toBeNull();
   });
 });

@@ -85,7 +85,13 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
       db.select().from(clientes),
       db.select().from(clientesAliases),
       db.select().from(sufixosNomeCliente).where(eq(sufixosNomeCliente.ativo, true)),
-      db.select({ id: medicos.id, chaveNormalizada: medicos.chaveNormalizada }).from(medicos),
+      db
+        .select({
+          id: medicos.id,
+          chaveNormalizada: medicos.chaveNormalizada,
+          idMobilemed: medicos.idMobilemed,
+        })
+        .from(medicos),
       db
         .select({
           medicoId: medicosAliases.medicoId,

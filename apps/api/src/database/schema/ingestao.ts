@@ -136,6 +136,12 @@ export const laudos = pgTable(
     medicoId: uuid('medico_id').references(() => medicos.id),
     medicoReassinaturaOrigem: text('medico_reassinatura_origem'),
     medicoReassinaturaId: uuid('medico_reassinatura_id').references(() => medicos.id),
+    /**
+     * Conta MobileMed de quem assinou e de quem reassinou (só a importação pela API traz). Resolve
+     * o médico antes do nome; fica fora do hash do conteúdo.
+     */
+    medicoIdMobilemed: integer('medico_id_mobilemed'),
+    medicoReassinaturaIdMobilemed: integer('medico_reassinatura_id_mobilemed'),
     /** VALORES como chegou. */
     valores: numeric('valores', { precision: 12, scale: 2, mode: 'number' }),
     /** Quantas unidades o laudo vale (`volumeDoLaudo`); os painéis somam isto. */
