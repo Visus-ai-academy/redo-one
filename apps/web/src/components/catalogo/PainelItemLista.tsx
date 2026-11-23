@@ -131,7 +131,7 @@ export function PainelItemLista({
       ? {
           acao: `Excluir ${rotulos.singular}`,
           titulo: `Excluir ${item.nome}?`,
-          consequencia: `${item.nome} sai do catálogo. Se algum cadastro usa est${artigo} ${rotulos.singular}, a exclusão é recusada: desative em vez de excluir.`,
+          consequencia: `${item.nome} sai do catálogo. Se algum cadastro usa ${rotulos.genero === 'f' ? 'esta' : 'este'} ${rotulos.singular}, a exclusão é recusada: desative em vez de excluir.`,
           onConfirmar: async () => {
             setErro(undefined);
             try {

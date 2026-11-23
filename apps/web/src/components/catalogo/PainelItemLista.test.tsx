@@ -161,6 +161,17 @@ describe('PainelItemLista', () => {
     );
   });
 
+  it('no masculino, a confirmação diz "este" (ex.: este nível)', async () => {
+    montar({
+      rotulos: { ...MODALIDADE, singular: 'nível', genero: 'm' },
+      item: { id: 'n-1', nome: 'Nível 2', descricao: null, cor: null, ordem: 0, ativo: true },
+      onExcluir: vi.fn(async () => undefined),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir nível' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('usa este nível');
+  });
+
   it('exclui com confirmação que diz a consequência', async () => {
     const onExcluir = vi.fn(async () => undefined);
     montar({
