@@ -27,8 +27,9 @@ export const situacaoDoAviso = (status: StatusAvisoKey) => SITUACOES[status];
 
 /**
  * Onde conferir o cadastro do aviso: muitas vezes basta um apelido num cadastro que já existe.
- * A busca vai limpa (sem "Dr." no médico, sem o " X2" do fim no estudo). Quem vê o aviso vê a
- * tela de destino: a API só mostra o tipo de aviso a quem tem o `ver` dela.
+ * A busca vai limpa (sem "Dr." nem o id da conta MobileMed no médico, sem o " X2" do fim no
+ * estudo). Quem vê o aviso vê a tela de destino: a API só mostra o tipo de aviso a quem tem o
+ * `ver` dela.
  */
 export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: string }) {
   switch (tipo) {
@@ -42,7 +43,12 @@ export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: strin
       return {
         rotulo: 'Procurar em Médicos',
         to: '/medicos' as const,
-        search: { busca: valor.replace(/^dra?\.?\s+/i, '') },
+        // Sem o "(ID MobileMed … sem cadastro)" que a importação pela API acrescenta.
+        search: {
+          busca: valor
+            .replace(/\s*\(ID MobileMed \d+ sem cadastro\)\s*$/, '')
+            .replace(/^dra?\.?\s+/i, ''),
+        },
       };
     case 'estudo':
       return {

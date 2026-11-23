@@ -33,6 +33,10 @@ describe('ondeProcurar', () => {
       to: '/medicos',
       search: { busca: 'Ana Souza' },
     });
+    // O id da conta MobileMed sem cadastro vai no valor do aviso, mas não na busca.
+    expect(
+      ondeProcurar({ tipo: 'medico', valor: 'Dra. Ana Souza (ID MobileMed 999 sem cadastro)' }),
+    ).toMatchObject({ search: { busca: 'Ana Souza' } });
     expect(ondeProcurar({ tipo: 'estudo', valor: 'RM CRANIO X1 X6' })).toMatchObject({
       rotulo: 'Procurar em Exames',
       to: '/exames',
