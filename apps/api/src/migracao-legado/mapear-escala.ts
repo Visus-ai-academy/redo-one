@@ -58,9 +58,10 @@ export interface EscalaMigrada {
   resumo: Record<string, number>;
   /**
    * O que existe hoje no dashboards-one, mesmo o que a carga descarta: a alocação que veio de lá e
-   * não está mais nesta lista foi apagada lá, e a gravação a encerra em `ontem` (Brasília).
+   * não está mais nesta lista foi apagada lá, e a gravação a encerra em `ontem` (Brasília); a
+   * ausência, a gravação recusa.
    */
-  legado: { alocacaoIds: string[]; ontem: string };
+  legado: { alocacaoIds: string[]; ausenciaIds: string[]; ontem: string };
 }
 
 /**
@@ -914,6 +915,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
     resumo,
     legado: {
       alocacaoIds: legado.alocacoes.map((a) => idDoLegado('alocacoes_medico', a.id)),
+      ausenciaIds: legado.ausencias.map((a) => idDoLegado('ausencias_medico', a.id)),
       ontem,
     },
   };

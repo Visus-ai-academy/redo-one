@@ -216,6 +216,7 @@ describe('mapearEscala: o que existe no dashboards-one', () => {
       idDoLegado('alocacoes_medico', 'sem-dia'),
     ]);
     expect(legado.ontem).toBe('2026-11-15');
+    expect(legado.ausenciaIds).toEqual([]);
   });
 });
 

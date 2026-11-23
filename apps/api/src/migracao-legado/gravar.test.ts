@@ -14,7 +14,7 @@ import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastruct
 import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import { idDoLegado } from './comum';
-import { alocacoesSumidasDoLegado, gravarMigracao } from './gravar';
+import { alocacoesSumidasDoLegado, ausenciasSumidasDoLegado, gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
@@ -357,6 +357,60 @@ describe.skipIf(!url)('gravarMigracao', () => {
     ]);
 
     // Rodar de novo não encerra de novo nem duplica o evento.
+    await gravarMigracao(db, catalogo, medicos, escala);
+    expect(
+      (await db.execute(sql`select 1 from eventos_auditoria where entidade_id = ${sumiu}`)).rows,
+    ).toHaveLength(1);
+  });
+
+  it('ausência que veio do dashboards-one e sumiu de lá é recusada, com auditoria; a criada no redo-one fica', async () => {
+    await gravarMigracao(db, catalogo, medicos, escala);
+    const original = idDoLegado('ausencias_medico', 'au1');
+    const copia = async (id: string) =>
+      db.execute(sql`
+        insert into ausencias (id, medico_id, tipo_id, data_inicio, data_fim, situacao, origem)
+        select ${id}::uuid, medico_id, tipo_id, data_inicio, data_fim, situacao, origem
+        from ausencias where id = ${original}`);
+    const sumiu = idDoLegado('ausencias_medico', 'sumiu');
+    const daTela = '6c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f';
+    await copia(sumiu);
+    await copia(daTela);
+
+    const previa = await ausenciasSumidasDoLegado(db, escala);
+    expect(previa.map((a) => a.id)).toEqual([sumiu]);
+
+    await gravarMigracao(db, catalogo, medicos, escala);
+
+    const situacao = async (id: string) =>
+      (
+        await db.execute<{ situacao: string; motivo_recusa: string | null }>(
+          sql`select situacao, motivo_recusa from ausencias where id = ${id}`,
+        )
+      ).rows[0];
+    expect(await situacao(sumiu)).toEqual({
+      situacao: 'recusada',
+      motivo_recusa: 'Apagada no dashboards-one: recusada pela carga.',
+    });
+    expect((await situacao(daTela))?.situacao).toBe('aprovada');
+    expect((await situacao(original))?.situacao).toBe('aprovada');
+    const eventos = await db.execute<{ ator_tipo: string; acao: string; depois: unknown }>(
+      sql`select ator_tipo, acao, depois from eventos_auditoria
+        where entidade = 'ausencia' and entidade_id = ${sumiu}`,
+    );
+    expect(eventos.rows).toEqual([
+      {
+        ator_tipo: 'sistema',
+        acao: 'recusada',
+        depois: {
+          medicoId: expect.any(String),
+          frenteIds: [],
+          turnoIds: [],
+          situacao: 'recusada',
+          motivoRecusaAlterado: true,
+        },
+      },
+    ]);
+
     await gravarMigracao(db, catalogo, medicos, escala);
     expect(
       (await db.execute(sql`select 1 from eventos_auditoria where entidade_id = ${sumiu}`)).rows,

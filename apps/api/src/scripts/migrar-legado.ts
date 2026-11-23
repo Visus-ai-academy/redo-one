@@ -6,7 +6,8 @@
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api migrar:legado --gravar
 // Pode rodar de novo: as linhas têm id estável e são atualizadas, não duplicadas. A única coisa
 // que depende do dia da carga é o fim (ontem, em Brasília) das alocações de médico inativo e das
-// que vieram do dashboards-one e foram apagadas lá (listadas antes de gravar). Roda com
+// que vieram do dashboards-one e foram apagadas lá; as ausências apagadas lá são recusadas (tudo
+// listado antes de gravar). Roda com
 // JOBS_WORKER=false: este processo não pega jobs da fila.
 import { parseArgs } from 'node:util';
 
@@ -16,7 +17,11 @@ import { AppModule } from '../app.module';
 import { DATABASE, type Database } from '../database/database';
 import { medicos as tabMedicos, turnos as tabTurnos, usuarios } from '../database/schema';
 import type { Aviso } from '../migracao-legado/comum';
-import { alocacoesSumidasDoLegado, gravarMigracao } from '../migracao-legado/gravar';
+import {
+  alocacoesSumidasDoLegado,
+  ausenciasSumidasDoLegado,
+  gravarMigracao,
+} from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
 import {
@@ -134,6 +139,14 @@ async function migrarLegado() {
       );
       for (const a of sumidas.futuras) console.log(linha(a));
     }
+    const ausenciasSumidas = await ausenciasSumidasDoLegado(db, escala);
+    console.log(
+      `\nAusências apagadas no dashboards-one que a gravação recusa (${ausenciasSumidas.length}):`,
+    );
+    for (const a of ausenciasSumidas)
+      console.log(
+        `    - ${nomeMedico.get(a.medicoId) ?? a.medicoId} · ${a.situacao} · ${a.dataInicio} → ${a.dataFim}`,
+      );
     const avisos = [
       ...catalogo.avisos,
       ...medicos.avisos,

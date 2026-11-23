@@ -379,6 +379,7 @@ async function gravarEscala(tx: Transacao, escala: EscalaMigrada) {
   );
   await upsert(tx, schema.eventosAuditoria, e.eventosAuditoria);
   await encerrarSumidas(tx, escala);
+  await recusarSumidas(tx, escala);
 }
 
 /** Uma alocação que veio do dashboards-one e não existe mais lá. */
@@ -457,6 +458,87 @@ async function encerrarSumidas(tx: Transacao, escala: EscalaMigrada) {
         motivo: 'Apagada no dashboards-one: encerrada pela carga.',
       },
     })),
+  );
+}
+
+/** Uma ausência que veio do dashboards-one e não existe mais lá. */
+export interface AusenciaSumida {
+  id: string;
+  medicoId: string;
+  situacao: 'pendente' | 'aprovada' | 'recusada';
+  dataInicio: string;
+  dataFim: string;
+}
+
+const MOTIVO_RECUSA_SUMIDA = 'Apagada no dashboards-one: recusada pela carga.';
+
+/**
+ * As ausências que vieram do dashboards-one (UUID versão 5) e não existem mais lá, ainda não
+ * recusadas. Apagar tiraria do histórico; encerrar não cabe (a ausência pode nem ter começado):
+ * a carga as recusa. Só leitura.
+ */
+export async function ausenciasSumidasDoLegado(
+  db: Pick<Database, 'select'>,
+  { legado }: Pick<EscalaMigrada, 'legado'>,
+): Promise<AusenciaSumida[]> {
+  const a = schema.ausencias;
+  return db
+    .select({
+      id: a.id,
+      medicoId: a.medicoId,
+      situacao: a.situacao,
+      dataInicio: a.dataInicio,
+      dataFim: a.dataFim,
+    })
+    .from(a)
+    .where(
+      and(
+        sql`substring(${a.id}::text, 15, 1) = '5'`,
+        legado.ausenciaIds.length ? notInArray(a.id, legado.ausenciaIds) : undefined,
+        sql`${a.situacao} <> 'recusada'`,
+      ),
+    )
+    .orderBy(a.dataInicio, a.id);
+}
+
+/** Recusa as ausências que sumiram do dashboards-one, com o evento de auditoria do sistema. */
+async function recusarSumidas(tx: Transacao, escala: EscalaMigrada) {
+  const sumidas = await ausenciasSumidasDoLegado(tx as unknown as Database, escala);
+  if (!sumidas.length) return;
+  const ids = sumidas.map((a) => a.id);
+  const em = new Date();
+  const recorte = async (tabela: typeof schema.ausenciasFrentes | typeof schema.ausenciasTurnos) =>
+    tx.select().from(tabela).where(inArray(tabela.ausenciaId, ids));
+  const frentes = (await recorte(schema.ausenciasFrentes)) as {
+    ausenciaId: string;
+    frenteId: string;
+  }[];
+  const turnos = (await recorte(schema.ausenciasTurnos)) as {
+    ausenciaId: string;
+    turnoId: string;
+  }[];
+  await tx
+    .update(schema.ausencias)
+    .set({ situacao: 'recusada', motivoRecusa: MOTIVO_RECUSA_SUMIDA, revisadaEm: em })
+    .where(inArray(schema.ausencias.id, ids));
+  await tx.insert(schema.eventosAuditoria).values(
+    sumidas.map((a) => {
+      const contexto = {
+        medicoId: a.medicoId,
+        frenteIds: frentes.filter((f) => f.ausenciaId === a.id).map((f) => f.frenteId),
+        turnoIds: turnos.filter((t) => t.ausenciaId === a.id).map((t) => t.turnoId),
+      };
+      return {
+        ocorridoEm: em,
+        atorTipo: 'sistema',
+        atorId: null,
+        entidade: 'ausencia',
+        entidadeId: a.id,
+        acao: 'recusada',
+        antes: { ...contexto, situacao: a.situacao },
+        depois: { ...contexto, situacao: 'recusada', motivoRecusaAlterado: true },
+      };
+    }),
   );
 }
 
