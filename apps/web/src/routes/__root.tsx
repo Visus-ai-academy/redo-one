@@ -13,7 +13,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // Sistema interno, todo atrás de login: nenhuma página deve ser indexada.
       { name: 'robots', content: 'noindex, nofollow' },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [
+      { rel: 'stylesheet', href: appCss },
+      // Anéis com mira das telas de acesso sobre o verde do menu.
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+    ],
   }),
   component: RootComponent,
   notFoundComponent: NaoEncontrada,
