@@ -169,7 +169,7 @@ Regras de leitura (legado, CONHECIDO): só `status_id = 0` **e** `usuario_id` va
 
 Resposta `{ lista, paginacao: {}, status_code }`, sem paginação. **Cuidado:** a segunda devolve também `senha` (hash), tokens (`token`, `token_app`, `access_token_safeID`, `token_iara`...), CPF, telefone e aniversário de cada médico; o One valida só `id`, `nome`, `crm`, `crm_uf`, `email_usuario`, `is_ativo` e `is_excluido` (Zod descarta o resto) e nunca loga a resposta. `GET /estados/1` devolve `{ estados: [{ id, uf, nome }] }` (ex.: 26 = SP, 5 = BA).
 
-O mapeamento de `medicos.id_mobilemed` (seção 4.4) usa `POST /usuario/medicos/lista/empresa` e casa o nome localmente.
+O mapeamento de `medicos.id_mobilemed` (seção 4.4) usa `POST /usuario/medicos/lista/empresa`, casa o nome localmente e confere com quem assinou os exames que o robô antigo entregou.
 
 Rotas vizinhas usadas pela janela (CONHECIDO):
 
@@ -371,15 +371,16 @@ Casamento de nomes (`nomes.py`, espelho do `normalizeNomeMedico`): minúsculo, s
 
 ---
 
-### 4.4 Mapeamento pelo nome (`pnpm --filter @repo/api mobilemed:mapear-medicos`)
+### 4.4 Mapeamento pelo nome e pela evidência (`pnpm --filter @repo/api mobilemed:mapear-medicos`)
 
-Decidido em 19/11: preencher `id_mobilemed` dos médicos ativos sem id pelo nome. Na MobileMed, só leitura: `GET /estados/1` e `POST /usuario/medicos/lista/empresa` (2.3), com pausa entre as chamadas. Contas inativas ou excluídas ficam de fora.
+Decidido em 19/11 (pelo nome) e em 22/11 (com a evidência do robô antigo: "se tiver em dúvida qual id é de qual médico, deixe em branco"): preencher `id_mobilemed` dos médicos ativos sem id. Na MobileMed, só leitura e uma chamada por vez, com pausa: `GET /estados/1`, `POST /usuario/medicos/lista/empresa` (2.3) e o relatório "Descritivo Especialidades" (2.8, os dois recortes, janelas de 7 dias). No dashboards-one (`LEGADO_DATABASE_URL`), uma transação `READ ONLY`. Contas inativas ou excluídas ficam de fora.
 
-- Casa o nome e os apelidos do médico (`medicos_aliases`) com a regra do robô legado (`casaNomeMedico`, porte de `nomes.py::casa_nome`: mesmo primeiro nome, mesmo último sobrenome, meio em ordem, abreviação vale).
-- **Grava** (`MedicosService.definirIdMobilemed`, ator `sistema`, motivo "mapeamento pelo nome na MobileMed" na auditoria; nunca sobrescreve) só quando exatamente uma conta casa e ela não é secundária (`(E2)`, `(F)`), o CRM/UF não diverge (quando os dois lados têm) e a conta não é de outro médico.
-- O resto vai para `~/Downloads/mapeamento-medicos-mobilemed-<data>.csv` (UTF-8 com BOM, `;`): médico e CRM no One, situação (`sem resultado`, `N resultados`, `1 resultado, só conta secundária`, `1 resultado, CRM diferente`, conta já de outro médico) e, por candidato, id, nome, CRM/UF e e-mail na MobileMed. Em `sem resultado`, os candidatos são os nomes parecidos (dois nomes em comum), só para conferir.
+- **Nome:** casa o nome e os apelidos do médico (`medicos_aliases`) com a regra do robô legado (`casaNomeMedico`, porte de `nomes.py::casa_nome`: mesmo primeiro nome, mesmo último sobrenome, meio em ordem, abreviação vale). Uma conta só, não secundária (`(E2)`, `(F)`), CRM/UF sem divergência (quando os dois lados têm) e que não é de outro médico.
+- **Evidência:** de `designacoes_distribuicao` (`status = 'executada'`, o último dono de cada `idExameMobilemed`, para o recolhimento não contar duas vezes), quem assinou cada exame no relatório (`usuario_id`; o `medico_primeiro_laudo_id` vem quase sempre vazio, só para conferir). O `id` do relatório é o mesmo id de exame da fila: em 22/11, 31.402 das 32.072 entregas (06/10 a 21/11) estavam no relatório, e os dois médicos que já tinham id assinam com ele 77% e 84% (o resto são exames trocados de médico depois da entrega). O médico do legado vira o do One pelo id de origem (`idDoLegado('medicos', id)`, o mesmo do `migrar:legado`).
+- **Grava** (`MedicosService.definirIdMobilemed`, ator `sistema`, o motivo na auditoria; nunca sobrescreve): (a) o casamento pelo nome, se a evidência não contradiz (com 10 exames ou mais, a conta do nome assina menos da metade); (b) o ambíguo ou só com conta secundária, se uma conta que casa pelo nome assina **≥ 90% de ≥ 10 exames** do médico, não é de outro médico nem dominante para outro. A mesma conta nunca vai para dois médicos.
+- **Em branco:** o resto, em `~/Downloads/mapeamento-medicos-mobilemed-<data>.csv` (UTF-8 com BOM, `;`): médico e CRM no One, situação, por candidato o id, nome, CRM/UF e e-mail na MobileMed, e a evidência (`n=…; assinou: <id> <%>…; 1º laudo: …`). Em `sem resultado`, os candidatos são os nomes parecidos (dois nomes em comum), só para conferir.
 - Sem `--gravar`, só mostra o resumo e gera o CSV. Roda com `JOBS_WORKER=false` (não pega jobs).
-- Simulação de 19/11: 141 médicos ativos sem id; 124 com uma conta, 14 ambíguos (9 são a conta principal mais a secundária), 2 só com conta secundária e 1 sem resultado.
+- Rodada de 22/11 (141 médicos ativos sem id): 118 pelo nome (92 com a evidência a favor, 26 sem evidência), 7 pela evidência (ambíguos e uma conta "(E2)"), 16 em branco: 6 em que a conta do nome assina menos da metade (nenhuma outra conta domina), 8 ambíguos sem evidência suficiente, 1 só com conta secundária, 1 sem resultado.
 
 ## 5. Mapeamento para as portas do redo-one
 

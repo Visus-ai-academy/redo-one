@@ -42,7 +42,7 @@ async function comTentativas<T>(chamar: () => Promise<T>): Promise<T> {
 }
 
 /** Filtro da tela "Descritivo Especialidades" (`laudos.mobilemed.com.br/relatorio/exames`). */
-const filtroDescritivo = (de: Date, ate: Date) => ({
+export const filtroDescritivo = (de: Date, ate: Date) => ({
   data_realizacao: { data_inicial: '', data_final: '' },
   // Fim inclusivo, como a tela manda (23:59:59.xxx do último dia).
   data_laudo: {
