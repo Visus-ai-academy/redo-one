@@ -1,9 +1,11 @@
 import { Button } from '@base-ui/react/button';
 
+import { cn } from '../../lib/cn';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { Skeleton } from '../skeleton/Skeleton';
+import { useFaseDoCarregamento } from '../skeleton/use-fase-do-carregamento';
 import { PainelLateral } from './PainelLateral';
 
 type PainelCarregandoProps = {
@@ -23,6 +25,10 @@ export function PainelCarregando({
   erro = false,
   onTentarDeNovo,
 }: PainelCarregandoProps) {
+  // O painel abre na hora; as formas só aparecem depois de ~200ms (o lugar já fica reservado).
+  // Para o mínimo de ~400ms à vista, a tela troca para o painel de verdade pelo
+  // `useFaseDoCarregamento(!dados)`, não só por `dados`.
+  const escondido = useFaseDoCarregamento(true) === 'reservado';
   return (
     <PainelLateral
       titulo={
@@ -31,11 +37,15 @@ export function PainelCarregando({
         ) : (
           <>
             <span className="sr-only">Carregando…</span>
-            <Skeleton className="h-5 w-44" />
+            <Skeleton className={cn('h-5 w-44', escondido && 'invisible')} />
           </>
         )
       }
-      subtitulo={erro ? undefined : <Skeleton className="mt-1.5 h-3.5 w-28" />}
+      subtitulo={
+        erro ? undefined : (
+          <Skeleton className={cn('mt-1.5 h-3.5 w-28', escondido && 'invisible')} />
+        )
+      }
       ocupado={!erro}
       onFechar={onFechar}
     >
@@ -55,7 +65,9 @@ export function PainelCarregando({
           )}
         </div>
       ) : (
-        <CamposCarregando anunciar={false} />
+        <div data-testid="formas-carregando" className={cn(escondido && 'invisible')}>
+          <CamposCarregando anunciar={false} />
+        </div>
       )}
     </PainelLateral>
   );

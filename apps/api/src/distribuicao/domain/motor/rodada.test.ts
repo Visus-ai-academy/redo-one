@@ -116,6 +116,7 @@ const medico = (
   id,
   nome: id,
   arranjos,
+  unidadeTeto: 'exames' as const,
   cargaEmMaos: 0,
   cargaReservadaEmMaos: 0,
   ...extra,

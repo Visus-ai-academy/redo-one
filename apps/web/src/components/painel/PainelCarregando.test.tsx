@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -24,5 +24,16 @@ describe('PainelCarregando', () => {
     expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-busy', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(tentar).toHaveBeenCalled();
+  });
+
+  it('as formas do carregamento só aparecem depois de 200ms (resposta rápida não pisca)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<PainelCarregando onFechar={vi.fn()} />);
+
+    const formas = screen.getByTestId('formas-carregando');
+    expect(formas).toHaveClass('invisible');
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    expect(screen.getByTestId('formas-carregando')).not.toHaveClass('invisible');
+    vi.useRealTimers();
   });
 });
