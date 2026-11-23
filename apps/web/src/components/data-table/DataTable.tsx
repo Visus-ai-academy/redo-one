@@ -1,5 +1,4 @@
 import { type ColumnDef, type RowData, useTable } from '@tanstack/react-table';
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 import { cn } from '../../lib/cn';
 import { type DataTableFeatures, dataTableFeatures } from './columns';
@@ -20,16 +19,6 @@ type DataTableProps<TData extends RowData> = {
    * Prefira o nome como `LinkDaLinha` (link com o `?id=`): sem `onRowClick`, a linha segue o link.
    */
   onRowClick?: (row: TData) => void;
-  /**
-   * Ids das colunas que podem sair quando a tabela não cabe (ex.: com o painel aberto), na ordem
-   * em que saem. Só saem as que precisam: com espaço, todas ficam.
-   */
-  ocultaveis?: string[];
-  /**
-   * Mantém o layout ajustável (o mesmo de quando há colunas ocultáveis) mas sem tirar nenhuma:
-   * a lista com o painel fechado. Assim fechar o painel não muda as larguras num salto no fim.
-   */
-  semOcultar?: boolean;
   /** Coluna pela qual a lista está ordenada: o cabeçalho ganha `aria-sort`. */
   ordenacao?: { coluna: string; direcao: 'asc' | 'desc' };
   /**
@@ -40,10 +29,6 @@ type DataTableProps<TData extends RowData> = {
   /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
   className?: string;
 };
-
-/** Esmaecido de entrada da coluna que volta a caber (ver `ajustar`). */
-const REVELAR =
-  'data-[revelada]:animate-in data-[revelada]:fade-in data-[revelada]:duration-200 data-[revelada]:ease-out motion-reduce:data-[revelada]:animate-none';
 
 /** Clique que já é de um controle dentro da linha (botão, link, campo, caixa de marcar). */
 const CONTROLES = 'a, button, input, select, textarea, label, [role="button"], [role="checkbox"]';
@@ -56,62 +41,10 @@ export function DataTable<TData extends RowData>({
   getRowId,
   selectedRowId,
   onRowClick,
-  ocultaveis,
-  semOcultar = false,
   ordenacao,
   recarregando = false,
   className,
 }: DataTableProps<TData>) {
-  const caixa = useRef<HTMLDivElement>(null);
-  const ajusta = Boolean(ocultaveis?.length);
-  const chaveOcultaveis = ocultaveis?.join('|') ?? '';
-
-  // Medição direta, antes de pintar: mostra todas, depois esconde na ordem enquanto o conteúdo
-  // estoura a caixa. Sem colunas ocultáveis (painel fechado), todas voltam.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a lista entra pela chave.
-  const ajustar = useCallback(() => {
-    const el = caixa.current;
-    if (!el) return;
-    const escondidasAntes = new Set(
-      [...el.querySelectorAll<HTMLElement>('th[data-coluna][hidden]')].map(
-        (th) => th.dataset.coluna,
-      ),
-    );
-    delete el.dataset.apertado;
-    for (const celula of el.querySelectorAll<HTMLElement>('[data-coluna][hidden]')) {
-      celula.hidden = false;
-    }
-    for (const id of semOcultar ? [] : (ocultaveis ?? [])) {
-      if (el.scrollWidth <= el.clientWidth) break;
-      for (const celula of el.querySelectorAll<HTMLElement>(`[data-coluna="${CSS.escape(id)}"]`)) {
-        celula.hidden = true;
-      }
-    }
-    // Sem mais coluna para tirar e ainda sem caber: o texto volta a quebrar linha.
-    if (el.scrollWidth > el.clientWidth) el.dataset.apertado = '';
-    // A coluna que voltou (a lista cresceu, ex.: o painel fechando) entra esmaecendo, em vez de
-    // surgir de uma vez; as que já estavam na tela não animam.
-    for (const id of escondidasAntes) {
-      if (!id) continue;
-      for (const celula of el.querySelectorAll<HTMLElement>(`[data-coluna="${CSS.escape(id)}"]`)) {
-        if (celula.hidden) continue;
-        celula.dataset.revelada = '';
-        celula.addEventListener('animationend', () => delete celula.dataset.revelada, {
-          once: true,
-        });
-      }
-    }
-  }, [chaveOcultaveis, semOcultar]);
-  // A cada renderização (dados e colunas novos) e quando a caixa muda de largura (painel, janela).
-  useLayoutEffect(ajustar);
-  useEffect(() => {
-    const el = caixa.current;
-    if (!el || !ajusta || typeof ResizeObserver === 'undefined') return;
-    const observador = new ResizeObserver(() => ajustar());
-    observador.observe(el);
-    return () => observador.disconnect();
-  }, [ajusta, ajustar]);
-
   const table = useTable({
     features: dataTableFeatures,
     columns,
@@ -126,22 +59,17 @@ export function DataTable<TData extends RowData>({
     // menos a borda): o clipe da rolagem corta o fundo do cabeçalho no canto, sem overflow-hidden
     // no painel (a rolagem, o cabeçalho fixo e os popovers, que vão para um portal, continuam).
     <div
-      ref={caixa}
       aria-busy={recarregando || undefined}
-      className={cn(
-        'group/tabela w-full overflow-x-auto rounded-t-[calc(var(--radius-lg)-1px)]',
-        className,
-      )}
+      className={cn('w-full overflow-x-auto rounded-t-[calc(var(--radius-lg)-1px)]', className)}
     >
       <table className="w-full caption-bottom tabular-nums">
         {caption && <caption className="text-muted-foreground mt-4 text-[13px]">{caption}</caption>}
         <thead>
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id}>
-              {group.headers.map((header, i) => (
+              {group.headers.map((header) => (
                 <th
                   key={header.id}
-                  data-coluna={header.column.id}
                   colSpan={header.colSpan}
                   scope="col"
                   aria-sort={
@@ -152,14 +80,7 @@ export function DataTable<TData extends RowData>({
                       : undefined
                   }
                   // Fixo no topo quando a tabela rola por dentro do contêiner.
-                  className={cn(
-                    'bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]',
-                    REVELAR,
-                    ajusta &&
-                      (i === 0
-                        ? 'min-w-48'
-                        : 'whitespace-nowrap group-data-[apertado]/tabela:whitespace-normal'),
-                  )}
+                  className="bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]"
                 >
                   {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </th>
@@ -201,20 +122,8 @@ export function DataTable<TData extends RowData>({
                   onRowClick ? 'cursor-pointer' : 'has-[a[data-abre-linha]]:cursor-pointer',
                 )}
               >
-                {row.getAllCells().map((cell, i) => (
-                  <td
-                    key={cell.id}
-                    data-coluna={cell.column.id}
-                    // Medindo o que cabe: o nome quebra linha (com largura mínima); o resto não.
-                    className={cn(
-                      'h-11 px-4 py-2 align-middle',
-                      REVELAR,
-                      ajusta &&
-                        (i === 0
-                          ? 'min-w-48'
-                          : 'whitespace-nowrap group-data-[apertado]/tabela:whitespace-normal'),
-                    )}
-                  >
+                {row.getAllCells().map((cell) => (
+                  <td key={cell.id} className="h-11 px-4 py-2 align-middle">
                     <table.FlexRender cell={cell} />
                   </td>
                 ))}
