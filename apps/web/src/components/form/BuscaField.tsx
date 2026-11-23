@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn';
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { useFieldContext } from './context';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 type BuscaFieldProps = {
   label: string;
@@ -26,13 +27,11 @@ export function BuscaField({
   className,
 }: BuscaFieldProps) {
   const field = useFieldContext<OpcaoBusca | null>();
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros: errors, invalido: invalid, aoSair, ref } = useCampo(field);
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
@@ -45,7 +44,7 @@ export function BuscaField({
         valor={field.state.value}
         onMudar={(opcao) => {
           field.handleChange(opcao);
-          field.handleBlur();
+          aoSair();
         }}
         placeholder={placeholder}
       />

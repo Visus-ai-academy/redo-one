@@ -6,6 +6,7 @@ import { aplicarMascara, type Mascara, posicaoAposDigitos } from '../../lib/masc
 import { useFieldContext } from './context';
 import { controlClassName } from './control-class';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 type TextFieldProps = {
   label: string;
@@ -19,6 +20,8 @@ type TextFieldProps = {
   size?: 'app' | 'acesso';
   /** Formato fixo (CPF, CNPJ, CEP, telefone): ajusta enquanto digita; teclado numérico. */
   mascara?: Mascara;
+  /** `false` em códigos, chaves e identificadores (e-mail, busca e máscara já desligam). */
+  spellCheck?: boolean;
   className?: string;
 };
 
@@ -31,6 +34,7 @@ export function TextField({
   autoComplete,
   size = 'app',
   mascara,
+  spellCheck,
   className,
 }: TextFieldProps) {
   const field = useFieldContext<string>();
@@ -58,15 +62,14 @@ export function TextField({
     cursorPendente.current = posicaoAposDigitos(formatado, digitosAntes);
     field.handleChange(formatado);
   };
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros, invalido, aoSair, ref } = useCampo(field, { aparar: true });
+  const semCorretor = Boolean(mascara) || type === 'email' || type === 'search' || type === 'url';
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
-      invalid={invalid}
+      invalid={invalido}
       touched={field.state.meta.isTouched}
       className={cn('flex flex-col gap-2', className)}
     >
@@ -74,13 +77,17 @@ export function TextField({
       <Field.Control
         ref={entrada}
         type={mascara === 'telefone' ? 'tel' : type}
-        inputMode={mascara ? 'numeric' : undefined}
+        inputMode={mascara ? 'numeric' : type === 'tel' ? 'tel' : undefined}
         required={required}
         placeholder={placeholder}
-        autoComplete={autoComplete}
+        // E-mail, busca e documento: sem corretor, sem maiúscula automática e sem o navegador
+        // preencher com os dados de quem está usando (as telas de acesso passam `autoComplete`).
+        autoComplete={autoComplete ?? (semCorretor ? 'off' : undefined)}
+        spellCheck={spellCheck ?? (semCorretor ? false : undefined)}
+        autoCapitalize={semCorretor ? 'none' : undefined}
         value={mascara ? aplicarMascara(mascara, field.state.value ?? '') : field.state.value}
         onValueChange={mudar}
-        onBlur={field.handleBlur}
+        onBlur={aoSair}
         className={controlClassName(size)}
       />
       {description && (
@@ -88,7 +95,7 @@ export function TextField({
           {description}
         </Field.Description>
       )}
-      <FieldError invalid={invalid}>{errors.join(', ')}</FieldError>
+      <FieldError invalid={invalido}>{erros.join(', ')}</FieldError>
     </Field.Root>
   );
 }

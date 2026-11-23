@@ -10,6 +10,7 @@ import { buttonClassName } from '../button/button-class';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useFieldContext } from './context';
+import { useCampo } from './use-campo';
 
 /** Num painel lateral, 5 por página (regra das listas dentro de painel). */
 const POR_PAGINA = 5;
@@ -47,20 +48,20 @@ export function EscolhaMultiplaField({
   className,
 }: EscolhaMultiplaFieldProps) {
   const field = useFieldContext<OpcaoBusca[]>();
-  const erros = field.state.meta.errors.map((erro) =>
-    typeof erro === 'string' ? erro : (erro as { message?: string } | undefined)?.message,
-  );
+  const { erros, aoSair, ref } = useCampo(field);
   const tituloId = useId();
   // Remonta a busca depois de cada escolha: o campo volta vazio para a próxima.
   const [rodada, setRodada] = useState(0);
   const escolhidos = field.state.value;
   const pagina = usePaginaLocal(escolhidos, POR_PAGINA);
 
-  const remover = (valor: string) =>
+  const remover = (valor: string) => {
     field.handleChange(escolhidos.filter((item) => item.valor !== valor));
+    aoSair();
+  };
 
   return (
-    <Fieldset.Root className={cn('flex flex-col gap-2', className)}>
+    <Fieldset.Root ref={ref} className={cn('flex flex-col gap-2', className)}>
       <Fieldset.Legend id={tituloId} className="text-foreground font-medium">
         {label}
         {required && (
@@ -115,6 +116,7 @@ export function EscolhaMultiplaField({
               if (!escolhidos.some((item) => item.valor === opcao.valor)) {
                 field.handleChange([...escolhidos, opcao]);
               }
+              aoSair();
               setRodada((n) => n + 1);
             }}
             placeholder={placeholder}

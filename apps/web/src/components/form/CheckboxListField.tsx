@@ -8,6 +8,7 @@ import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { agruparOpcoes, temGrupos } from '../select/grupos';
 import { useFieldContext } from './context';
 import { FieldError } from './field-parts';
+import { useCampo } from './use-campo';
 
 export type OpcaoMarcar = {
   valor: string;
@@ -41,13 +42,11 @@ export function CheckboxListField({
   className,
 }: CheckboxListFieldProps) {
   const field = useFieldContext<string[]>();
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros: errors, invalido: invalid, aoSair, ref } = useCampo(field);
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
@@ -59,7 +58,7 @@ export function CheckboxListField({
             value={field.state.value}
             onValueChange={(valores) => {
               field.handleChange(valores);
-              field.handleBlur();
+              aoSair();
             }}
           />
         }

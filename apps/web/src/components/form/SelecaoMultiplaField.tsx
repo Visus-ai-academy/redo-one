@@ -16,13 +16,14 @@ import {
 import { CampoSomenteLeitura } from './CampoSomenteLeitura';
 import { useFieldContext } from './context';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 /** Acima disso a lista ganha um campo de busca no topo, como no `Select` do kit. */
 const LIMITE_SEM_BUSCA = 7;
 
 // Mesmo visual do `Select` do kit (gatilho, lista flutuante e itens com o visto à esquerda).
 const classeGatilho = cn(
-  'border-input bg-card text-foreground flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left',
+  'border-input bg-card text-foreground flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base sm:text-sm',
   'hover:border-subtle-foreground focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2',
   'aria-invalid:border-destructive data-[popup-open]:border-ring data-[readonly]:bg-muted data-[readonly]:hover:border-input',
 );
@@ -86,10 +87,7 @@ export function SelecaoMultiplaField({
   className,
 }: SelecaoMultiplaFieldProps) {
   const field = useFieldContext<string[]>();
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros: errors, invalido: invalid, aoSair, ref } = useCampo(field);
   const marcados = field.state.value;
   // Inativa só entra na lista se já estiver marcada.
   const visiveis = opcoes.filter((o) => !o.inativa || marcados.includes(o.valor));
@@ -99,7 +97,7 @@ export function SelecaoMultiplaField({
   const resumoNoGatilho = <ResumoComCor marcadas={marcadas} placeholder={placeholder} />;
   const mudar = (valores: string[]) => {
     field.handleChange(valores);
-    field.handleBlur();
+    aoSair();
   };
 
   // Só leitura não abre lista nenhuma (o Select do Base UI abre mesmo com `readOnly`).
@@ -115,6 +113,7 @@ export function SelecaoMultiplaField({
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
@@ -279,7 +278,9 @@ function ComBusca({
                 // Dentro do Field, o campo de busca herdaria o rótulo do campo; ele tem o próprio.
                 aria-labelledby={idBusca}
                 placeholder="Digite para buscar"
-                className="placeholder:text-subtle-foreground h-9 w-full rounded-md pr-2 pl-8 outline-none"
+                autoComplete="off"
+                spellCheck={false}
+                className="placeholder:text-subtle-foreground h-9 w-full rounded-md pr-2 pl-8 text-base outline-none sm:text-sm"
               />
             </div>
             <Combobox.Empty className="text-muted-foreground px-3 py-2 text-[13px] empty:hidden">

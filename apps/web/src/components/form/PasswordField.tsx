@@ -7,6 +7,7 @@ import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
 import { controlClassName } from './control-class';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 type PasswordFieldProps = {
   label: string;
@@ -32,16 +33,14 @@ export function PasswordField({
   const field = useFieldContext<string>();
   const [visivel, setVisivel] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros: errors, invalido: invalid, aoSair, ref } = useCampo(field);
 
   const verificarCapsLock = (event: KeyboardEvent<HTMLInputElement>) =>
     setCapsLock(event.getModifierState('CapsLock'));
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
@@ -58,7 +57,7 @@ export function PasswordField({
           autoComplete={autoComplete}
           value={field.state.value}
           onValueChange={(value) => field.handleChange(value)}
-          onBlur={field.handleBlur}
+          onBlur={aoSair}
           onKeyUp={verificarCapsLock}
           onKeyDown={verificarCapsLock}
           className={controlClassName(size, size === 'acesso' ? 'pr-12' : 'pr-10')}

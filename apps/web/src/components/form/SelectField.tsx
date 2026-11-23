@@ -5,6 +5,7 @@ import { cn } from '../../lib/cn';
 import { type OpcaoSelect, Select } from '../select/Select';
 import { useFieldContext } from './context';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 type SelectFieldProps = {
   label: string;
@@ -29,13 +30,11 @@ export function SelectField({
   className,
 }: SelectFieldProps) {
   const field = useFieldContext<string>();
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros: errors, invalido: invalid, aoSair, ref } = useCampo(field);
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalid}
       disabled={disabled}
@@ -47,7 +46,7 @@ export function SelectField({
         value={field.state.value}
         onValueChange={(valor) => {
           field.handleChange(valor);
-          field.handleBlur();
+          aoSair();
         }}
         opcoes={opcoes}
         placeholder={placeholder}

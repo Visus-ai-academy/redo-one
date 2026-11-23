@@ -7,6 +7,7 @@ import { cn } from '../../lib/cn';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { useFieldContext } from './context';
 import { FieldError } from './field-parts';
+import { useCampo } from './use-campo';
 
 export type OpcaoComContagem = {
   valor: string;
@@ -41,20 +42,18 @@ export function CaixasComContagemField({
   className?: string;
 }) {
   const field = useFieldContext<string[]>();
-  const erros = field.state.meta.errors.map((erro) =>
-    typeof erro === 'string' ? erro : (erro as { message?: string } | undefined)?.message,
-  );
-  const invalido = erros.length > 0;
+  const { erros, invalido, aoSair, ref } = useCampo(field);
   const marcados = field.state.value;
   const marcaveis = opcoes.filter((o) => !o.desabilitada).map((o) => o.valor);
   const mudar = (valores: string[]) => {
     field.handleChange(valores);
-    field.handleBlur();
+    aoSair();
   };
   const linha = 'flex min-h-8 items-center gap-2';
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalido}
       touched={field.state.meta.isTouched}

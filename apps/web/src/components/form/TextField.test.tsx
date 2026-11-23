@@ -44,6 +44,68 @@ function ComMascara({ mascara, inicial = '' }: { mascara: Mascara; inicial?: str
   );
 }
 
+function SoCampo({
+  type,
+  mascara,
+  autoComplete,
+  spellCheck,
+}: {
+  type?: 'text' | 'email' | 'search' | 'tel';
+  mascara?: Mascara;
+  autoComplete?: string;
+  spellCheck?: boolean;
+}) {
+  const form = useAppForm({ defaultValues: { v: '' } });
+  return (
+    <form.AppField name="v">
+      {(field) => (
+        <field.TextField
+          label="Campo"
+          placeholder=""
+          type={type}
+          mascara={mascara}
+          autoComplete={autoComplete}
+          spellCheck={spellCheck}
+        />
+      )}
+    </form.AppField>
+  );
+}
+
+describe('TextField: teclado e preenchimento', () => {
+  it('e-mail: sem corretor, sem maiúscula automática e sem preencher sozinho', () => {
+    render(<SoCampo type="email" />);
+    const campo = screen.getByRole('textbox', { name: 'Campo' });
+    expect(campo).toHaveAttribute('type', 'email');
+    expect(campo).toHaveAttribute('spellcheck', 'false');
+    expect(campo).toHaveAttribute('autocapitalize', 'none');
+    expect(campo).toHaveAttribute('autocomplete', 'off');
+  });
+
+  it('respeita o autoComplete das telas de acesso', () => {
+    render(<SoCampo type="email" autoComplete="email" />);
+    expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveAttribute('autocomplete', 'email');
+  });
+
+  it('documento com máscara: teclado numérico, sem corretor e sem preencher sozinho', () => {
+    render(<SoCampo mascara="cpf" />);
+    const campo = screen.getByRole('textbox', { name: 'Campo' });
+    expect(campo).toHaveAttribute('inputmode', 'numeric');
+    expect(campo).toHaveAttribute('spellcheck', 'false');
+    expect(campo).toHaveAttribute('autocomplete', 'off');
+  });
+
+  it('telefone sem máscara abre o teclado de telefone', () => {
+    render(<SoCampo type="tel" />);
+    expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveAttribute('inputmode', 'tel');
+  });
+
+  it('código ou chave: spellCheck desligado por prop', () => {
+    render(<SoCampo spellCheck={false} />);
+    expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveAttribute('spellcheck', 'false');
+  });
+});
+
 describe('TextField', () => {
   describe('com máscara', () => {
     it('ajusta enquanto digita, e abre o teclado numérico', async () => {

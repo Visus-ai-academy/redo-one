@@ -1,9 +1,11 @@
 import { Field } from '@base-ui/react/field';
+import type { KeyboardEvent } from 'react';
 
 import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
 import { controlClassName } from './control-class';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 type TextAreaFieldProps = {
   label: string;
@@ -25,15 +27,22 @@ export function TextAreaField({
   className,
 }: TextAreaFieldProps) {
   const field = useFieldContext<string>();
-  const errors = field.state.meta.errors.map((error) =>
-    typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-  );
-  const invalid = errors.length > 0;
+  const { erros, invalido, aoSair, ref } = useCampo(field, { aparar: true });
+
+  // Enter quebra a linha; Ctrl/⌘+Enter envia o formulário (passa pelo `onSubmit` da tela).
+  const enviarComAtalho = (evento: KeyboardEvent<HTMLElement>) => {
+    if (evento.key !== 'Enter' || !(evento.ctrlKey || evento.metaKey)) return;
+    evento.preventDefault();
+    const formulario = (evento.target as HTMLTextAreaElement).form;
+    if (formulario) formulario.requestSubmit();
+    else void field.form.handleSubmit();
+  };
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
-      invalid={invalid}
+      invalid={invalido}
       touched={field.state.meta.isTouched}
       className={cn('flex flex-col gap-2', className)}
     >
@@ -44,7 +53,8 @@ export function TextAreaField({
         placeholder={placeholder}
         value={field.state.value}
         onValueChange={(value) => field.handleChange(value)}
-        onBlur={field.handleBlur}
+        onBlur={aoSair}
+        onKeyDown={enviarComAtalho}
         className={controlClassName('app', 'h-auto resize-y py-2')}
       />
       {description && (
@@ -52,7 +62,7 @@ export function TextAreaField({
           {description}
         </Field.Description>
       )}
-      <FieldError invalid={invalid}>{errors.join(', ')}</FieldError>
+      <FieldError invalid={invalido}>{erros.join(', ')}</FieldError>
     </Field.Root>
   );
 }

@@ -5,8 +5,10 @@ import { useEffect } from 'react';
 import { cn } from '../../lib/cn';
 import { useFieldContext } from './context';
 import { controlClassName } from './control-class';
+import { ehErroDoServidor } from './erros-do-servidor';
 import { erroDeFaixa } from './faixa-numero';
 import { FieldError, FieldLabel } from './field-parts';
+import { useCampo } from './use-campo';
 
 type NumberFieldProps = {
   label: string;
@@ -44,7 +46,8 @@ export function NumberField({
   const foraDaFaixa = erroDeFaixa(field.state.value, min, max);
   const registrado = field.state.meta.errorMap.onServer;
   useEffect(() => {
-    if (registrado === foraDaFaixa) return;
+    // Erro que a API devolveu para o campo fica até a pessoa mudar o valor (`useCampo`).
+    if (registrado === foraDaFaixa || (ehErroDoServidor(registrado) && !foraDaFaixa)) return;
     field.setMeta((meta) => ({
       ...meta,
       errorMap: { ...meta.errorMap, onServer: foraDaFaixa },
@@ -52,15 +55,14 @@ export function NumberField({
   }, [field, registrado, foraDaFaixa]);
 
   // Fora da faixa, só esse erro: o do schema costuma repetir a faixa com outras palavras.
-  const errors = foraDaFaixa
-    ? [foraDaFaixa]
-    : field.state.meta.errors.map((error) =>
-        typeof error === 'string' ? error : (error as { message?: string } | undefined)?.message,
-      );
+  const campo = useCampo(field);
+  const errors = foraDaFaixa ? [foraDaFaixa] : campo.erros;
   const invalid = errors.length > 0;
+  const { aoSair, ref } = campo;
 
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalid}
       touched={field.state.meta.isTouched}
@@ -81,7 +83,7 @@ export function NumberField({
       >
         <BaseNumberField.Input
           placeholder={placeholder}
-          onBlur={field.handleBlur}
+          onBlur={aoSair}
           className={controlClassName('app', 'tabular-nums')}
         />
       </BaseNumberField.Root>
