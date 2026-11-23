@@ -85,4 +85,12 @@ describe('ConfiguracoesLayout', () => {
       'aria-current',
     );
   });
+
+  it('no computador, o submenu fica fixo e rola por dentro; só o conteúdo rola com a página', async () => {
+    montar();
+
+    const submenu = await screen.findByRole('navigation', { name: 'Configurações' });
+    expect(submenu).toHaveClass('lg:sticky', 'lg:top-8', 'lg:overflow-y-auto', 'lg:self-start');
+    expect(submenu.className).toMatch(/lg:max-h-\[calc\(100dvh-4rem\)\]/);
+  });
 });

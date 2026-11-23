@@ -20,10 +20,12 @@ export function ConfiguracoesLayout({
   const permitidos = filtrarPorPermissao(grupos, acesso);
 
   return (
-    <div className="flex flex-wrap content-start gap-8">
+    // No computador, o submenu fica fixo ao lado (com rolagem própria, se for mais alto que a
+    // janela) e só o conteúdo rola com a página. Abaixo de `lg`, ele vai acima do conteúdo.
+    <div className="flex flex-wrap content-start gap-8 lg:flex-nowrap">
       <nav
         aria-label="Configurações"
-        className="flex max-w-full flex-[1_1_184px] flex-col gap-4 lg:max-w-[220px]"
+        className="flex max-w-full flex-[1_1_184px] flex-col gap-4 lg:sticky lg:top-8 lg:-mx-1 lg:max-h-[calc(100dvh-4rem)] lg:w-[220px] lg:flex-none lg:self-start lg:overflow-y-auto lg:px-1 lg:py-0.5"
       >
         <Link
           to="/configuracoes"
@@ -51,7 +53,7 @@ export function ConfiguracoesLayout({
           </div>
         ))}
       </nav>
-      <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5">{children}</div>
+      <div className="flex min-w-0 flex-[999_1_640px] flex-col gap-5 lg:flex-1">{children}</div>
     </div>
   );
 }
