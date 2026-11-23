@@ -16,6 +16,11 @@ export function loginAposSessaoExpirada(status: number, url: string, local: stri
   const caminho = new URL(url, 'http://api').pathname;
   if (CHAMADAS_DE_ACESSO.some((c) => caminho === c || caminho.startsWith(c))) return null;
   if (TELAS_DE_ACESSO.some((t) => local === t || local.startsWith(`${t}?`))) return null;
+  return enderecoDoLogin(local);
+}
+
+/** O login que, depois de entrar, volta para `local` (caminho + busca da tela atual). */
+export function enderecoDoLogin(local: string) {
   return local === '/' ? '/login' : `/login?redirect=${encodeURIComponent(local)}`;
 }
 

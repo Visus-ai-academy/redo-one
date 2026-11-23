@@ -21,7 +21,9 @@ describe('ErroInesperado', () => {
     const tentarDeNovo = vi.fn();
     renderComRotas(<ErroInesperado onTentarDeNovo={tentarDeNovo} />);
 
-    expect(await screen.findByRole('heading', { name: 'Algo deu errado' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Não foi possível carregar esta página' }),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(tentarDeNovo).toHaveBeenCalled();
   });

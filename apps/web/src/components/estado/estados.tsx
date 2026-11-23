@@ -69,8 +69,8 @@ export function ErroInesperado({ onTentarDeNovo }: { onTentarDeNovo: () => void 
   return (
     <Estado
       icone={<WarningCircle size={24} aria-hidden />}
-      titulo="Algo deu errado"
-      texto="Não foi possível carregar esta página. Confira sua conexão e tente de novo; se continuar, avise quem administra o One."
+      titulo="Não foi possível carregar esta página"
+      texto="O servidor não respondeu ou falhou ao montar a tela. Confira sua conexão e tente de novo; se continuar, avise quem administra o One."
       acao={
         <Button
           type="button"
