@@ -36,7 +36,9 @@ export function AbasComHistorico({
       ]}
       className="gap-0 pt-2"
     >
-      {aba === 'historico' && historico ? historico : extra ? extra.conteudo : children}
+      {/* O cadastro fica montado (escondido) nas outras abas: voltar a ele não perde o digitado. */}
+      <div hidden={aba !== 'cadastro'}>{children}</div>
+      {aba === 'historico' && historico ? historico : extra?.conteudo}
     </Abas>
   );
 }

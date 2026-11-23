@@ -110,7 +110,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         .where(eq(equipes.ativo, true)),
       db.select().from(equipesMembros),
       this.nomesECores(),
-      new DrizzleCadastrosIngestao(db).carregar(),
+      new DrizzleCadastrosIngestao(db).carregarComUnidades(),
       db
         .select({ id: exames.id, subespecialidadeId: exames.subespecialidadeId })
         .from(exames)
@@ -261,6 +261,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         };
       },
       cliente: (unidade) => cadastros.resolverCliente(unidade),
+      unidade: (unidade) => cadastros.resolverUnidadeCliente(unidade),
       traduzirPrioridade: (grafia) => cadastros.prioridades.get(normalizarNome(grafia)) ?? null,
     };
 

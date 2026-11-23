@@ -28,7 +28,7 @@ describe('AbasComHistorico', () => {
     ]);
     await userEvent.click(screen.getByRole('tab', { name: 'Distribuição' }));
     expect(screen.getByText('as regras')).toBeInTheDocument();
-    expect(screen.queryByText('cadastro')).not.toBeInTheDocument();
+    expect(screen.getByText('cadastro')).not.toBeVisible();
   });
 
   it('com outra aba e sem histórico, mostra as abas sem o Histórico', () => {
@@ -44,5 +44,19 @@ describe('AbasComHistorico', () => {
       'Cadastro',
       'Distribuição',
     ]);
+  });
+
+  it('trocar de aba não perde o que se digitou no cadastro', async () => {
+    render(
+      <AbasComHistorico aria-label="Partes" historico="o histórico">
+        <input aria-label="Nome" />
+      </AbasComHistorico>,
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), 'Ana');
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    expect(screen.queryByRole('textbox', { name: 'Nome' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Cadastro' }));
+
+    expect(screen.getByRole('textbox', { name: 'Nome' })).toHaveValue('Ana');
   });
 });

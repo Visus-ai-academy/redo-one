@@ -28,7 +28,11 @@ import type {
 } from '../../domain/classificar-estudo';
 import { chaveEstudo, chaveEstudoLimpo } from '../../domain/nome-estudo';
 import type { CadastrosIngestao } from '../../domain/preparar-laudo';
-import { montarResolvedorCliente } from '../../domain/resolver-cliente';
+import {
+  type CadastroClientes,
+  montarResolvedorCliente,
+  montarResolvedorUnidadeCliente,
+} from '../../domain/resolver-cliente';
 import { montarResolvedorMedico } from '../../domain/resolver-medico';
 
 /** Primeira ocorrência vence, como os resolvedores do dashboards-one. */
@@ -44,6 +48,16 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async carregar(): Promise<CadastrosIngestao> {
+    return this.carregarComUnidades();
+  }
+
+  /**
+   * O mesmo retrato, com o resolvedor que para na unidade do cliente unificado (a distribuição casa
+   * arranjos e vínculos pela unidade).
+   */
+  async carregarComUnidades(): Promise<
+    CadastrosIngestao & { resolverUnidadeCliente: (empresa: string) => string | null }
+  > {
     const db = this.db;
     const [
       listaExames,
@@ -121,6 +135,11 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
       quebras.set(chave, [...(quebras.get(chave) ?? []), peca]);
     }
 
+    const cadastroClientes: CadastroClientes = {
+      clientes: listaClientes,
+      aliases,
+      sufixos: sufixos.map((s) => s.sufixo),
+    };
     return {
       catalogo: {
         exames: indice(
@@ -161,11 +180,8 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
           v.prioridadeId,
         ]),
       ]),
-      resolverCliente: montarResolvedorCliente({
-        clientes: listaClientes,
-        aliases,
-        sufixos: sufixos.map((s) => s.sufixo),
-      }),
+      resolverCliente: montarResolvedorCliente(cadastroClientes),
+      resolverUnidadeCliente: montarResolvedorUnidadeCliente(cadastroClientes),
       resolverMedico: montarResolvedorMedico({ medicos: listaMedicos, aliases: aliasesMedico }),
     };
   }
