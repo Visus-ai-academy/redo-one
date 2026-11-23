@@ -1,15 +1,17 @@
 import { Button } from '@base-ui/react/button';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import type { AvisoDto } from '../../gen/types/AvisoDto';
 import { situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
 import { dataHoraCurta } from '../../lib/datas';
+import { numero } from '../../lib/formato';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 
 function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
@@ -35,6 +37,7 @@ export function DetalheAviso({
   procurar,
   onIgnorar,
   onReabrir,
+  onAlterado,
 }: {
   aviso: AvisoDto;
   podeTriar: boolean;
@@ -42,6 +45,8 @@ export function DetalheAviso({
   procurar?: ReactNode;
   onIgnorar?: (motivo: string) => Promise<void>;
   onReabrir?: () => Promise<void>;
+  /** Motivo digitado e não enviado: o painel pergunta antes de fechar. */
+  onAlterado?: (alterado: boolean) => void;
 }) {
   const situacao = situacaoDoAviso(aviso.status);
   const { erro, tentar } = useErroDoPainel();
@@ -52,9 +57,14 @@ export function DetalheAviso({
     onSubmit: ({ value }) =>
       tentar(
         async () => onIgnorar?.(value.motivo.trim()),
-        'Não foi possível ignorar agora. Tente de novo.',
+        'Não foi possível ignorar o aviso. Confira sua conexão e tente de novo.',
       ),
   });
+  const alterado = useAlterado(form, { motivo: '' });
+  useEffect(() => {
+    onAlterado?.(alterado);
+    return () => onAlterado?.(false);
+  }, [alterado, onAlterado]);
   const decisao = aviso.status === 'ignorado' ? 'Ignorado' : 'Resolvido';
   // A grafia sem de-para da distribuição vem da rodada, não da importação.
   const daRodada = aviso.tipo === 'prioridade_operacao';
@@ -77,7 +87,7 @@ export function DetalheAviso({
       <dl className="divide-y">
         <Campo rotulo={tipoDoAviso(aviso.tipo)}>{aviso.valor}</Campo>
         <Campo rotulo={daRodada ? 'Exames na última rodada' : 'Laudos na última importação'}>
-          {aviso.ocorrencias.toLocaleString('pt-BR')}
+          {numero(aviso.ocorrencias)}
         </Campo>
         <Campo rotulo="Apareceu em">{dataHoraCurta(aviso.primeiraVezEm)}</Campo>
         <Campo rotulo="Visto por último em">{dataHoraCurta(aviso.ultimaVezEm)}</Campo>
@@ -139,7 +149,7 @@ export function DetalheAviso({
               setReabrindo(true);
               await tentar(
                 async () => onReabrir?.(),
-                'Não foi possível reabrir agora. Tente de novo.',
+                'Não foi possível reabrir o aviso. Confira sua conexão e tente de novo.',
               );
               setReabrindo(false);
             }}

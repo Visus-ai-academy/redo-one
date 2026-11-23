@@ -80,7 +80,7 @@ describe('DetalheAviso', () => {
     );
     await userEvent.type(screen.getByRole('textbox', { name: /Motivo/ }), 'Teste');
     await userEvent.click(screen.getByRole('button', { name: 'Ignorar aviso' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível ignorar agora.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível ignorar o aviso.');
   });
 
   it('o resolvido explica que o cadastro foi feito, sem ações', () => {
@@ -101,5 +101,14 @@ describe('DetalheAviso', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'A grafia entrou no de-para das prioridades da operação',
     );
+  });
+
+  it('com o motivo digitado e não enviado, avisa quem usa (o painel pergunta antes de fechar)', async () => {
+    const onAlterado = vi.fn();
+    render(<DetalheAviso aviso={pendente} podeTriar onIgnorar={vi.fn()} onAlterado={onAlterado} />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /Motivo/ }), 'teste');
+
+    expect(onAlterado).toHaveBeenLastCalledWith(true);
   });
 });

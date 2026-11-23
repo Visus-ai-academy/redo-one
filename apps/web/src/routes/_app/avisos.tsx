@@ -1,17 +1,19 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { DetalheAviso } from '../../components/avisos/DetalheAviso';
 import { buttonClassName } from '../../components/button/button-class';
-import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { PainelLateral } from '../../components/painel/PainelLateral';
 import { Select } from '../../components/select/Select';
+import { useFaseDoCarregamento } from '../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../components/toast/use-avisos';
 import { avisosControllerIgnorar } from '../../gen/clients/avisosControllerIgnorar';
 import { avisosControllerReabrir } from '../../gen/clients/avisosControllerReabrir';
@@ -24,6 +26,7 @@ import type { AvisoDto } from '../../gen/types/AvisoDto';
 import { tipoAviso } from '../../gen/types/TipoAviso';
 import { ondeProcurar, situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
 import { dataHoraCurta } from '../../lib/datas';
+import { numero } from '../../lib/formato';
 import { pode } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
@@ -52,13 +55,16 @@ const consulta = (b: Busca) => ({
 export const Route = createFileRoute('/_app/avisos')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'avisos.ver')) return;
     if (deps.id)
       void context.queryClient.prefetchQuery(
         avisosControllerObterQueryOptions({ path: { id: deps.id } }),
       );
-    await context.queryClient.ensureQueryData(avisosControllerListarQueryOptions(consulta(deps)));
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
+    if (cause !== 'stay')
+      await context.queryClient.ensureQueryData(avisosControllerListarQueryOptions(consulta(deps)));
   },
   head: () => ({ meta: [{ title: 'Avisos de cadastro · One' }] }),
   component: PaginaAvisos,
@@ -70,10 +76,15 @@ function PaginaAvisos() {
 }
 
 const coluna = createDataTableColumnHelper<AvisoDto>();
+const PAGINA_VAZIA = { itens: [], tipos: [], total: 0, pagina: 1, porPagina: POR_PAGINA };
 function Avisos() {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(avisosControllerListarQueryOptions(consulta(busca)));
+  const lista = useQuery({
+    ...avisosControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? PAGINA_VAZIA;
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -83,23 +94,26 @@ function Avisos() {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id })), [ir]);
 
   const colunas = useMemo(
     () => [
       coluna.accessor('valor', {
         header: 'Como chegou',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>{info.getValue()}</BotaoAbrir>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: info.row.original.id })}
+          >
+            {info.getValue()}
+          </LinkDaLinha>
         ),
       }),
       coluna.accessor('tipo', { header: 'Tipo', cell: (info) => tipoDoAviso(info.getValue()) }),
       coluna.accessor('ocorrencias', {
         header: () => <span className="block text-right">Laudos</span>,
         cell: (info) => (
-          <span className="block text-right tabular-nums">
-            {info.getValue().toLocaleString('pt-BR')}
-          </span>
+          <span className="block text-right tabular-nums">{numero(info.getValue())}</span>
         ),
       }),
       coluna.accessor('ultimaVezEm', {
@@ -116,7 +130,7 @@ function Avisos() {
         },
       }),
     ],
-    [abrir],
+    [],
   );
 
   return (
@@ -161,7 +175,12 @@ function Avisos() {
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData || !lista.data}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'os avisos', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -192,11 +211,14 @@ function PainelDoAviso({ id, onFechar }: { id: string; onFechar: () => void }) {
   const opcoes = avisosControllerObterQueryOptions({ path: { id } });
   const consulta = useQuery(opcoes);
   const aviso = consulta.data;
-  if (!aviso)
+  const [alterado, setAlterado] = useState(false);
+  const fase = useFaseDoCarregamento(!aviso);
+  if (!aviso || fase !== 'conteudo')
     return (
       <PainelCarregando
         onFechar={onFechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o aviso"
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -209,10 +231,16 @@ function PainelDoAviso({ id, onFechar }: { id: string; onFechar: () => void }) {
     ]);
 
   return (
-    <PainelLateral titulo={aviso.valor} subtitulo={tipoDoAviso(aviso.tipo)} onFechar={onFechar}>
+    <PainelLateral
+      titulo={aviso.valor}
+      subtitulo={tipoDoAviso(aviso.tipo)}
+      alterado={alterado}
+      onFechar={onFechar}
+    >
       <DetalheAviso
         aviso={aviso}
         podeTriar={pode(sessao, 'avisos.triar')}
+        onAlterado={setAlterado}
         procurar={
           <Link
             to={destino.to}
@@ -227,8 +255,17 @@ function PainelDoAviso({ id, onFechar }: { id: string; onFechar: () => void }) {
             path: { id: aviso.id },
             body: { motivo },
           }).unwrap();
-          sucesso('Aviso ignorado.');
           await atualizar();
+          // Ignorar é comum e a API sabe reabrir: em vez de confirmar antes, o aviso desfaz.
+          sucesso('Aviso ignorado.', {
+            acao: {
+              rotulo: 'Desfazer',
+              onClick: () =>
+                void avisosControllerReabrir({ path: { id: aviso.id } })
+                  .unwrap()
+                  .then(atualizar, () => undefined),
+            },
+          });
         }}
         onReabrir={async () => {
           await avisosControllerReabrir({ path: { id: aviso.id } }).unwrap();
