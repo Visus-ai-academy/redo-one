@@ -6,6 +6,7 @@ import {
 } from '../../../comum/mobilemed/enums-mobilemed';
 import type { FormatoPlanilha } from '../../application/ports/leitor-planilha';
 import type { Celula } from '../../domain/celulas';
+import { idMobilemed } from '../../domain/linha-planilha';
 
 /**
  * Formato da resposta do relatório (`reports-api`, ver `docs/integracao-mobilemed.md` 2.8). Só os
@@ -43,6 +44,10 @@ export const itemRelatorio = z.object({
   especialidade: texto,
   medico: texto,
   medico_primeiro_laudo: texto,
+  /** Conta MobileMed de quem está em `medico`. */
+  usuario_id: textoOuNumero,
+  /** Conta de `medico_primeiro_laudo` (quase sempre vazio). */
+  medico_primeiro_laudo_id: textoOuNumero,
   residente: texto,
   digitador: texto,
   is_duplicado: flag,
@@ -83,6 +88,10 @@ const verdadeiro = (v: unknown) => v === 1 || v === '1' || v === true;
  * `frontRelatorioDescritivoListagem`) e a montagem da linha em `exportar` (`app.js`), inclusive o
  * que parece engano dele: no relatório de especialidades, a coluna COMPLEMENTAR recebe
  * `is_anterior`.
+ *
+ * Fora da planilha, MEDICO_ID e MEDICO_REASSINATURA_ID levam a conta MobileMed dos mesmos médicos
+ * de MEDICO e MEDICO_REASSINATURA (o mesmo contrato do dashboards-one). O upload não as traz: a
+ * identidade e o hash do laudo não dependem delas.
  */
 export function itemParaRegistro(
   item: ItemRelatorio,
@@ -116,6 +125,8 @@ export function itemParaRegistro(
     DATA_REASSINATURA: dataReassinatura,
     HORA_REASSINATURA: horaReassinatura,
     MEDICO_REASSINATURA: reassinado ? (item.medico ?? null) : null,
+    MEDICO_ID: idMobilemed(assinado ? item.usuario_id : item.medico_primeiro_laudo_id),
+    MEDICO_REASSINATURA_ID: reassinado ? idMobilemed(item.usuario_id) : null,
     SEGUNDA_ASSINATURA: item.segunda_assinatura_laudo || null,
     POSSUI_IMAGENS_CHAVE: item.count_key_image || item.count_captured_imgs ? 'SIM' : 'NAO',
     IMAGENS_CHAVES: item.count_key_image ?? null,

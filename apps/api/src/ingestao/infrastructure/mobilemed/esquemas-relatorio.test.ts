@@ -37,6 +37,9 @@ const CABECALHO_ESPECIALIDADES = [
   'COMPLEMENTAR',
 ];
 
+/** Chaves fora da planilha que só a API traz: o id da conta MobileMed de quem assinou. */
+const IDS_DOS_MEDICOS = ['MEDICO_ID', 'MEDICO_REASSINATURA_ID'];
+
 /** Item como a MobileMed devolve (paciente fictício), já validado. */
 const item = (campos: Record<string, unknown> = {}): ItemRelatorio =>
   itemRelatorio.parse({
@@ -57,6 +60,8 @@ const item = (campos: Record<string, unknown> = {}): ItemRelatorio =>
     is_duplicado: 0,
     medico: 'Dra. Ana',
     medico_primeiro_laudo: 'Dr. Antigo',
+    usuario_id: 101,
+    medico_primeiro_laudo_id: null,
     especialidade: 'MEDICINA INTERNA',
     data_realizacao: '2026-10-05T11:00:00.000Z',
     data_criacao: '2026-10-05T11:30:00.000Z',
@@ -75,10 +80,10 @@ describe('itemParaRegistro (laudos)', () => {
   it('traz exatamente as colunas da planilha, com os tipos que o leitor do XLSX entrega', () => {
     const r = itemParaRegistro(item(), 'laudos');
 
-    expect(Object.keys(r).sort()).toEqual([...CABECALHO_ESPECIALIDADES].sort());
+    expect(Object.keys(r).sort()).toEqual([...CABECALHO_ESPECIALIDADES, ...IDS_DOS_MEDICOS].sort());
     // Na planilha real tudo é texto, menos IMAGENS_CHAVES e IMAGENS_CAPTURADAS.
     for (const [coluna, valor] of Object.entries(r)) {
-      if (valor === null) continue;
+      if (valor === null || IDS_DOS_MEDICOS.includes(coluna)) continue;
       expect([coluna, typeof valor]).toEqual([
         coluna,
         coluna.startsWith('IMAGENS_') ? 'number' : 'string',
@@ -95,6 +100,8 @@ describe('itemParaRegistro (laudos)', () => {
       DATA_LAUDO: '06/10/2026',
       HORA_LAUDO: '10:15:42',
       MEDICO: 'Dra. Ana',
+      MEDICO_ID: 101,
+      MEDICO_REASSINATURA_ID: null,
       DATA_TRANSFERENCIA: '05/10/2026',
       HORA_TRANSFERENCIA: '08:30:00',
       DATA_PRAZO: '07/10/2026',
@@ -107,7 +114,7 @@ describe('itemParaRegistro (laudos)', () => {
   });
 
   it('reassinado: o laudo e o médico são os primeiros; a reassinatura é o data_laudo', () => {
-    const r = itemParaRegistro(item({ status_id: 5 }), 'laudos');
+    const r = itemParaRegistro(item({ status_id: 5, medico_primeiro_laudo_id: 202 }), 'laudos');
 
     expect(r).toMatchObject({
       STATUS: 'Reassinado',
@@ -117,9 +124,13 @@ describe('itemParaRegistro (laudos)', () => {
       DATA_REASSINATURA: '06/10/2026',
       HORA_REASSINATURA: '10:15:42',
       MEDICO_REASSINATURA: 'Dra. Ana',
+      MEDICO_ID: 202,
+      MEDICO_REASSINATURA_ID: 101,
     });
     expect(converterLinha(r)).toMatchObject({
       status: 'Reassinado',
+      medicoIdMobilemed: 202,
+      medicoReassinaturaIdMobilemed: 101,
       dataLaudo: new Date('2026-10-06T12:00:00.000Z'),
       dataReassinatura: new Date('2026-10-06T13:15:42.000Z'),
     });
@@ -130,7 +141,17 @@ describe('itemParaRegistro (laudos)', () => {
       STATUS: 'Não Assinado',
       HORA_LAUDO: '09:00:00',
       MEDICO: 'Dr. Antigo',
+      // O medico_primeiro_laudo_id vem quase sempre vazio.
+      MEDICO_ID: null,
+      MEDICO_REASSINATURA_ID: null,
     });
+  });
+
+  it('aceita o id da conta como texto e descarta o que não é id (0, vazio, não numérico)', () => {
+    expect(itemParaRegistro(item({ usuario_id: '45' }), 'laudos').MEDICO_ID).toBe(45);
+    for (const usuario_id of [0, '', 'abc', -3, 1.5, undefined]) {
+      expect(itemParaRegistro(item({ usuario_id }), 'laudos').MEDICO_ID).toBeNull();
+    }
   });
 
   it('COMPLEMENTAR recebe is_anterior, como a planilha da tela; DUPLICADO aceita 0/1', () => {
@@ -193,6 +214,11 @@ describe('itemParaRegistro (compartilhamento)', () => {
     expect(r).not.toHaveProperty('ESPECIALIDADE');
     expect(r).not.toHaveProperty('IDENTIDADE');
     expect(r).not.toHaveProperty('CONVENIO');
-    expect(converterLinha(r)).toMatchObject({ empresa: 'CRD_APOIO', especialidade: '' });
+    expect(r).toMatchObject({ MEDICO_ID: 101, MEDICO_REASSINATURA_ID: null });
+    expect(converterLinha(r)).toMatchObject({
+      empresa: 'CRD_APOIO',
+      especialidade: '',
+      medicoIdMobilemed: 101,
+    });
   });
 });

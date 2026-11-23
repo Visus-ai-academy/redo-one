@@ -53,7 +53,21 @@ describe('converterLinha', () => {
       dataPrazo: new Date('2026-10-06T11:00:00Z'),
       dataReassinatura: null,
       medicoReassinatura: null,
+      // A planilha do upload não traz o id da conta MobileMed: só a API.
+      medicoIdMobilemed: null,
+      medicoReassinaturaIdMobilemed: null,
     });
+  });
+
+  it('lê o id da conta MobileMed dos médicos quando a linha traz (importação pela API)', () => {
+    const linha = converterLinha(registro({ MEDICO_ID: 45, MEDICO_REASSINATURA_ID: '46' }));
+    expect(linha).toMatchObject({ medicoIdMobilemed: 45, medicoReassinaturaIdMobilemed: 46 });
+  });
+
+  it('id da conta que não é inteiro positivo vira null, sem recusar a linha', () => {
+    for (const MEDICO_ID of [0, '', 'abc', -1, 2.5, null, undefined]) {
+      expect(converterLinha(registro({ MEDICO_ID })).medicoIdMobilemed).toBeNull();
+    }
   });
 
   it('especialidade e médico podem faltar (a planilha de compartilhamento não traz especialidade)', () => {

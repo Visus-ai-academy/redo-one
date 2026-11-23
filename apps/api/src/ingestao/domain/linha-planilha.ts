@@ -23,6 +23,15 @@ export interface LinhaLaudo {
   dataPrazo: Date | null;
   dataReassinatura: Date | null;
   medicoReassinatura: string | null;
+  /** Conta MobileMed de quem está em `medico`; só a importação pela API traz. */
+  medicoIdMobilemed: number | null;
+  medicoReassinaturaIdMobilemed: number | null;
+}
+
+/** Id de conta da MobileMed: inteiro positivo; o resto (vazio, 0, texto) é "sem id". */
+export function idMobilemed(c: Celula): number | null {
+  const n = typeof c === 'string' && c.trim() !== '' ? Number(c) : c;
+  return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : null;
 }
 
 /** Erro de leitura de uma coluna; a mensagem começa pelo nome dela. */
@@ -68,5 +77,7 @@ export function converterLinha(r: Record<string, Celula>): LinhaLaudo {
     dataPrazo: data('PRAZO'),
     dataReassinatura: data('REASSINATURA'),
     medicoReassinatura: t('MEDICO_REASSINATURA'),
+    medicoIdMobilemed: idMobilemed(r.MEDICO_ID),
+    medicoReassinaturaIdMobilemed: idMobilemed(r.MEDICO_REASSINATURA_ID),
   };
 }
