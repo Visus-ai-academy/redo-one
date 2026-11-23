@@ -13,6 +13,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import {
   esquemaAlocacao,
@@ -109,6 +110,7 @@ export function PainelAlocacao({
     },
   });
 
+  const alterado = useAlterado(form, iniciais);
   const opcoesFrentes = opcoesDeFrentes(frentes);
   const sugerido = useSugestaoDoMedico({
     form,
@@ -132,7 +134,11 @@ export function PainelAlocacao({
       : AJUDA_RESTRICAO;
 
   return (
-    <PainelLateral titulo={editando ? 'Editar alocação' : 'Alocar médico'} onFechar={onFechar}>
+    <PainelLateral
+      titulo={editando ? 'Editar alocação' : 'Alocar médico'}
+      alterado={alterado}
+      onFechar={onFechar}
+    >
       <form
         noValidate
         onSubmit={(evento) => {

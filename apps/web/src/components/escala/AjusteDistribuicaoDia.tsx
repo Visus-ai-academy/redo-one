@@ -10,6 +10,7 @@ import { buttonClassName } from '../button/button-class';
 import { useAppForm } from '../form/form';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { CaixasField } from './campos';
+import { useAvisarAlterado } from './use-avisar-alterado';
 
 type Props = {
   alocacaoId: string;
@@ -20,6 +21,8 @@ type Props = {
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
   /** Grava o ajuste; vazio (nada liberado, a Lista como sempre e sem extra) tira o do dia. */
   onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
+  /** Há alteração não salva (o painel pergunta antes de fechar). */
+  onAlterado?: (alterado: boolean) => void;
 };
 
 type Valores = {
@@ -73,6 +76,7 @@ export function AjusteDistribuicaoDia({
   prioridades,
   buscarClientes,
   onSalvar,
+  onAlterado,
 }: Props) {
   const consulta = useQuery(ajustesDiaControllerObterQueryOptions({ path: { alocacaoId, data } }));
 
@@ -120,6 +124,7 @@ export function AjusteDistribuicaoDia({
           prioridades={prioridades}
           buscarClientes={buscarClientes}
           onSalvar={onSalvar}
+          onAlterado={onAlterado}
         />
       )}
     </section>
@@ -132,12 +137,14 @@ function FormAjuste({
   prioridades,
   buscarClientes,
   onSalvar,
+  onAlterado,
 }: {
   inicial: Valores;
   temAjuste: boolean;
   prioridades: PrioridadeEscalaDto[];
   buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
   onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
+  onAlterado?: (alterado: boolean) => void;
 }) {
   const form = useAppForm({
     defaultValues: inicial,
@@ -150,6 +157,7 @@ function FormAjuste({
         laudosExtra: Number(value.laudosExtra || 0),
       }),
   });
+  useAvisarAlterado(form, inicial, onAlterado);
   const opcoes = prioridades.map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor }));
 
   return (

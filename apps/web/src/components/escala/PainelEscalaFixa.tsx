@@ -1,6 +1,7 @@
 import { Button } from '@base-ui/react/button';
 import { NumberField } from '@base-ui/react/number-field';
 import { Copy } from '@phosphor-icons/react';
+import { useStore } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { z } from 'zod';
@@ -133,6 +134,12 @@ export function PainelEscalaFixa({
     },
   });
 
+  // Escolher a frente só mostra a grade dela; mudar a grade ou a data é que pede para descartar.
+  const aPartirDe = useStore(form.store, (estado) => estado.values.aPartirDe);
+  const alterado =
+    aPartirDe !== hoje ||
+    (edicao?.frenteId === frenteId &&
+      JSON.stringify(celulasDaGrade(edicao.grade)) !== JSON.stringify(celulasDaGrade(gradeSalva)));
   const opcoesFrentes = opcoesDeFrentes(frentesComTurno(frentes, turnos));
   const linhas = frenteId ? turnosDaFrente(turnos, frenteId) : [];
 
@@ -159,6 +166,7 @@ export function PainelEscalaFixa({
       titulo="Montar escala"
       subtitulo={medico.rotulo}
       largura="larga"
+      alterado={alterado}
       onFechar={onFechar}
     >
       <form

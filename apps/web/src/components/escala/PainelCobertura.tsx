@@ -7,6 +7,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { OPCOES_DIAS } from './alocacao-form';
 import { dataCurta } from './calendario';
@@ -40,8 +41,9 @@ export function PainelCobertura({
   onFechar,
 }: PainelCoberturaProps) {
   const [erro, setErro] = useState<string>();
+  const iniciais = valoresCobertura({ titular, dia, atual });
   const form = useAppForm({
-    defaultValues: valoresCobertura({ titular, dia, atual }),
+    defaultValues: iniciais,
     validators: { onSubmit: esquemaCobertura(titular) },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -52,6 +54,7 @@ export function PainelCobertura({
       }
     },
   });
+  const alterado = useAlterado(form, iniciais);
   const vigencia = titular.dataFim
     ? `de ${dataCurta(titular.dataInicio)} a ${dataCurta(titular.dataFim)}`
     : `desde ${dataCurta(titular.dataInicio)}`;
@@ -60,6 +63,7 @@ export function PainelCobertura({
     <PainelLateral
       titulo={`Cobertura de ${titular.medicoNome}`}
       subtitulo={titular.local}
+      alterado={alterado}
       onFechar={onFechar}
     >
       <form

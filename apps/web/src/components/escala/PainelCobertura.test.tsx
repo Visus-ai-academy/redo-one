@@ -91,4 +91,16 @@ describe('PainelCobertura', () => {
       expect.objectContaining({ medicoId: 'm2', dataFim: '2026-11-30', diasSemana: [1] }),
     );
   });
+
+  it('fechar com o formulário alterado pergunta antes de descartar', async () => {
+    const onFechar = vi.fn();
+    montar({ onFechar });
+    const campo = screen.getByRole('textbox', { name: /Produtividade/ });
+    await userEvent.type(campo, '5');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(onFechar).not.toHaveBeenCalled();
+  });
 });

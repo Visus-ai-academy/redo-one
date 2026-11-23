@@ -220,4 +220,16 @@ describe('PainelEscalaFixa', () => {
       within(esp).getByRole('option', { name: 'TC Neuro' }).querySelector('[data-cor]'),
     ).toHaveStyle({ backgroundColor: FRENTE_TC.cor });
   });
+
+  it('fechar com a grade alterada pergunta antes de descartar; sem mudança, fecha direto', async () => {
+    const acoes = montar();
+    await userEvent.click(screen.getByRole('combobox', { name: /Frente/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'TC Neuro' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Lista, terça' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(acoes.onFechar).not.toHaveBeenCalled();
+  });
 });

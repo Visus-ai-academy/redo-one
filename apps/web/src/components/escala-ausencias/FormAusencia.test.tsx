@@ -220,4 +220,15 @@ describe('FormAusencia', () => {
     const mod = screen.getByRole('group', { name: 'Modalidades' });
     expect(within(mod).getByRole('checkbox', { name: 'TC' })).toBeInTheDocument();
   });
+
+  it('fechar com o formulário alterado pergunta antes de descartar', async () => {
+    const onFechar = vi.fn();
+    montar({ onFechar });
+    data('Início', '2026-12-10');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(onFechar).not.toHaveBeenCalled();
+  });
 });

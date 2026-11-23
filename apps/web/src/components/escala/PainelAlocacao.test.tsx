@@ -303,4 +303,15 @@ describe('PainelAlocacao', () => {
       expect(buscarSugestao).not.toHaveBeenCalled();
     });
   });
+
+  it('fechar com o formulário alterado pergunta antes de descartar', async () => {
+    const onFechar = vi.fn();
+    montar({ onFechar });
+    await userEvent.type(screen.getByRole('textbox', { name: /Produtividade/ }), '5');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(onFechar).not.toHaveBeenCalled();
+  });
 });

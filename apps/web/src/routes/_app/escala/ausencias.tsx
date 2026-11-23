@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { type ReactNode, useCallback, useMemo } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { CampoBusca } from '../../../components/busca/CampoBusca';
@@ -474,6 +474,7 @@ function PainelDaAusencia({
   const { sucesso } = useAvisos();
   const atualizar = useAtualizarAusencias();
   const consulta = useQuery(ausenciasControllerObterQueryOptions({ path: { id } }));
+  const [alterado, setAlterado] = useState(false);
   const ausencia = consulta.data;
   if (!ausencia)
     return (
@@ -487,6 +488,7 @@ function PainelDaAusencia({
     <PainelLateral
       titulo={ausencia.medico.nome}
       subtitulo={`${ausencia.tipo.nome}, ${periodoCompleto(ausencia)}`}
+      alterado={alterado}
       onFechar={onFechar}
     >
       <DetalheAusencia
@@ -495,6 +497,7 @@ function PainelDaAusencia({
         podeExcluir={pode(sessao, 'ausencias.excluir')}
         podeAprovar={pode(sessao, 'ausencias.aprovar')}
         onEditar={onEditar}
+        onAlterado={setAlterado}
         onAprovar={async () => {
           await ausenciasControllerAprovar({ path: { id } }).unwrap();
           sucesso('Ausência aprovada. Já vale na escala.');

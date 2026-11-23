@@ -10,6 +10,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import type { OpcaoMarcar } from '../form/CheckboxListField';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { CampoDiasSemana, CampoMedicos } from './campos';
 
@@ -89,21 +90,22 @@ export function FormAusencia({
     ausencia && ausencia.observacoes == null && ausencia.temObservacoes,
   );
 
+  const iniciais = {
+    medicos: ausencia
+      ? [{ valor: ausencia.medico.id, rotulo: ausencia.medico.nome }]
+      : inicial.medico
+        ? [inicial.medico]
+        : ([] as OpcaoBusca[]),
+    tipoId: ausencia?.tipo.id ?? '',
+    dataInicio: ausencia?.dataInicio ?? inicial.de ?? '',
+    dataFim: ausencia?.dataFim ?? inicial.de ?? '',
+    frenteIds: ausencia?.frentes.map((f) => f.id) ?? inicial.frenteIds ?? [],
+    turnoIds: ausencia?.turnos.map((t) => t.id) ?? inicial.turnoIds ?? [],
+    diasSemana: ausencia?.diasSemana.map(String) ?? ([] as string[]),
+    observacoes: ausencia?.observacoes ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      medicos: ausencia
-        ? [{ valor: ausencia.medico.id, rotulo: ausencia.medico.nome }]
-        : inicial.medico
-          ? [inicial.medico]
-          : ([] as OpcaoBusca[]),
-      tipoId: ausencia?.tipo.id ?? '',
-      dataInicio: ausencia?.dataInicio ?? inicial.de ?? '',
-      dataFim: ausencia?.dataFim ?? inicial.de ?? '',
-      frenteIds: ausencia?.frentes.map((f) => f.id) ?? inicial.frenteIds ?? [],
-      turnoIds: ausencia?.turnos.map((t) => t.id) ?? inicial.turnoIds ?? [],
-      diasSemana: ausencia?.diasSemana.map(String) ?? ([] as string[]),
-      observacoes: ausencia?.observacoes ?? '',
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -124,10 +126,13 @@ export function FormAusencia({
     },
   });
 
+  const alterado = useAlterado(form, iniciais);
+
   return (
     <PainelLateral
       titulo={ausencia ? 'Editar ausência' : 'Nova ausência'}
       subtitulo={ausencia?.medico.nome}
+      alterado={alterado}
       onFechar={onFechar}
     >
       <form

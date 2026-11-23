@@ -166,4 +166,16 @@ describe('PainelPlantao', () => {
     });
     expect(screen.getByRole('alert')).toHaveTextContent('RM Geral, Tarde (12:00–18:00)');
   });
+
+  it('fechar com a produtividade do dia alterada pergunta antes de descartar', async () => {
+    const acoes = await montar(ocorrencia());
+    const campo = screen.getByRole('textbox', { name: 'Registros neste dia' });
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '25');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(acoes.onFechar).not.toHaveBeenCalled();
+  });
 });

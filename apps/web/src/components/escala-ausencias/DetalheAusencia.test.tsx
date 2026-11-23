@@ -166,4 +166,12 @@ describe('DetalheAusencia', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível aprovar agora');
   });
+
+  it('avisa quando o motivo da recusa foi escrito e não enviado', async () => {
+    const onAlterado = vi.fn();
+    montar({ onAlterado });
+    await userEvent.click(screen.getByRole('button', { name: 'Recusar' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Motivo da recusa' }), 'Cheia');
+    expect(onAlterado).toHaveBeenLastCalledWith(true);
+  });
 });

@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Link } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { z } from 'zod';
 import type { AjusteDiaEdicaoDto } from '../../gen/types/AjusteDiaEdicaoDto';
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
@@ -17,6 +17,7 @@ import { PainelLateral } from '../painel/PainelLateral';
 import { AjusteDistribuicaoDia } from './AjusteDistribuicaoDia';
 import { dataCurta, diaDaSemana, NOMES_DIAS_LONGOS } from './calendario';
 import { ComCor } from './LinhaMedico';
+import { useAvisarAlterado } from './use-avisar-alterado';
 
 export type PainelPlantaoProps = {
   ocorrencia: OcorrenciaDto;
@@ -83,6 +84,16 @@ export function PainelPlantao({
   onFechar,
 }: PainelPlantaoProps) {
   const { erro, tentar } = useErroDoPainel();
+  // As seções de ajuste avisam se têm alteração não salva: fechar pergunta antes de descartar.
+  const [alterados, setAlterados] = useState({ produtividade: false, distribuicao: false });
+  const alterouProdutividade = useCallback(
+    (produtividade: boolean) => setAlterados((a) => ({ ...a, produtividade })),
+    [],
+  );
+  const alterouDistribuicao = useCallback(
+    (distribuicao: boolean) => setAlterados((a) => ({ ...a, distribuicao })),
+    [],
+  );
   const ehCobertura = Boolean(o.coberturaDe);
   // Nova cobertura cria (POST); a cobertura aberta se edita.
   const podeCobertura = ehCobertura ? permissoes.editar : permissoes.criar;
@@ -96,7 +107,12 @@ export function PainelPlantao({
   const local = `${o.frenteRotulo}, ${o.turnoNome}`;
 
   return (
-    <PainelLateral titulo={o.medicoNome} subtitulo={dia} onFechar={onFechar}>
+    <PainelLateral
+      titulo={o.medicoNome}
+      subtitulo={dia}
+      alterado={alterados.produtividade || alterados.distribuicao}
+      onFechar={onFechar}
+    >
       <div className="flex flex-col gap-4 p-4">
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         {doPlantao.length > 0 && (
@@ -193,7 +209,13 @@ export function PainelPlantao({
         )}
 
         {permissoes.editar && !o.gratificado && (
-          <AjusteDoDia ocorrencia={o} onAjustar={(p, obs) => tentar(() => onAjustar(p, obs))} />
+          <AjusteDoDia
+            // Depois de salvar, o formulário parte do que ficou gravado.
+            key={`${o.produtividade}|${o.ajustada}`}
+            ocorrencia={o}
+            onAjustar={(p, obs) => tentar(() => onAjustar(p, obs))}
+            onAlterado={alterouProdutividade}
+          />
         )}
         {permissoes.editar && distribuicao && (
           <AjusteDistribuicaoDia
@@ -202,6 +224,7 @@ export function PainelPlantao({
             prioridades={distribuicao.prioridades}
             buscarClientes={distribuicao.buscarClientes}
             onSalvar={(ajuste) => tentar(() => distribuicao.onSalvar(ajuste))}
+            onAlterado={alterouDistribuicao}
           />
         )}
       </div>
@@ -217,19 +240,23 @@ const esquemaAjuste = z.object({
 function AjusteDoDia({
   ocorrencia: o,
   onAjustar,
+  onAlterado,
 }: {
   ocorrencia: OcorrenciaDto;
   onAjustar: (produtividade: number | null, observacoes: string | null) => Promise<void>;
+  onAlterado: (alterado: boolean) => void;
 }) {
+  const iniciais = {
+    produtividade: o.produtividade === null ? '' : String(o.produtividade),
+    observacoes: '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      produtividade: o.produtividade === null ? '' : String(o.produtividade),
-      observacoes: '',
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: esquemaAjuste },
     onSubmit: ({ value }) =>
       onAjustar(Number(value.produtividade), value.observacoes.trim() || null),
   });
+  useAvisarAlterado(form, iniciais, onAlterado);
 
   return (
     <section aria-labelledby="ajuste-do-dia" className="flex flex-col gap-3 border-t pt-4">

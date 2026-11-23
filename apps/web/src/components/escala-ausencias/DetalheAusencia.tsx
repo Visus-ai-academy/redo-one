@@ -8,6 +8,7 @@ import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
+import { useAvisarAlterado } from '../escala/use-avisar-alterado';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
 import { diasDaSemana, diasRecortados, periodoCompleto, situacaoDaAusencia } from './ausencias';
@@ -37,7 +38,11 @@ export type DetalheAusenciaProps = {
   onRecusar: (motivo: string) => Promise<void>;
   onEditar: () => void;
   onExcluir: () => Promise<void>;
+  /** O motivo da recusa foi escrito e não enviado (o painel pergunta antes de fechar). */
+  onAlterado?: (alterado: boolean) => void;
 };
+
+const SEM_MOTIVO = { motivo: '' };
 
 /** Sem `ausencias.observacoes.ver`, a API não manda o texto (dado de saúde), só se ele existe. */
 function textoDasObservacoes(ausencia: AusenciaItemDto) {
@@ -55,6 +60,7 @@ export function DetalheAusencia({
   onRecusar,
   onEditar,
   onExcluir,
+  onAlterado,
 }: DetalheAusenciaProps) {
   const situacao = situacaoDaAusencia(ausencia.situacao);
   const { erro, tentar } = useErroDoPainel();
@@ -66,7 +72,7 @@ export function DetalheAusencia({
   const nomes = (lista: { nome: string }[]) => lista.map((item) => item.nome).join(', ');
 
   const form = useAppForm({
-    defaultValues: { motivo: '' },
+    defaultValues: SEM_MOTIVO,
     validators: { onSubmit: schemaRecusa },
     onSubmit: ({ value }) =>
       tentar(
@@ -74,6 +80,7 @@ export function DetalheAusencia({
         'Não foi possível recusar agora. Tente de novo.',
       ),
   });
+  useAvisarAlterado(form, SEM_MOTIVO, onAlterado);
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -189,7 +196,10 @@ export function DetalheAusencia({
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
-              onClick={() => setRecusando(false)}
+              onClick={() => {
+                form.reset();
+                setRecusando(false);
+              }}
               className={buttonClassName({ variant: 'secondary' })}
             >
               Cancelar
