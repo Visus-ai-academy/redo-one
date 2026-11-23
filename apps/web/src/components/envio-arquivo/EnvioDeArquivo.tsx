@@ -63,7 +63,10 @@ export function EnvioDeArquivo({
   };
 
   const enviar = async () => {
-    if (!arquivo) return;
+    if (!arquivo) {
+      setErro(`Escolha o arquivo ${extensao} antes de enviar.`);
+      return;
+    }
     setErro(null);
     setProgresso(0);
     try {
@@ -146,7 +149,8 @@ export function EnvioDeArquivo({
       <div className="flex justify-end">
         <Button
           type="button"
-          disabled={!arquivo || enviando}
+          // Só desabilita durante o envio; sem arquivo, o clique diz o que falta.
+          disabled={enviando}
           onClick={() => void enviar()}
           className={buttonClassName()}
         >

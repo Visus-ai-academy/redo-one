@@ -24,11 +24,10 @@ function montar(onEnviar: Enviar = vi.fn(async () => undefined)) {
 }
 
 describe('EnvioDeArquivo', () => {
-  it('sem arquivo, a área toda seleciona o arquivo, sem botão à parte, e o envio fica desabilitado', async () => {
+  it('sem arquivo, a área toda seleciona o arquivo, sem botão à parte', async () => {
     const { entrada } = montar();
     expect(screen.getByText('Selecionar arquivo')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /escolher arquivo|trocar arquivo/i })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Enviar planilha' })).toBeDisabled();
 
     const clique = vi.fn();
     entrada.addEventListener('click', clique);
@@ -63,12 +62,22 @@ describe('EnvioDeArquivo', () => {
     terminar();
   });
 
+  it('enviar sem arquivo não fica mudo: diz o que falta, sem chamar o envio', async () => {
+    const { onEnviar } = montar();
+
+    const enviar = screen.getByRole('button', { name: 'Enviar planilha' });
+    expect(enviar).toBeEnabled();
+    await userEvent.click(enviar);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Escolha o arquivo .xlsx antes de enviar.');
+    expect(onEnviar).not.toHaveBeenCalled();
+  });
+
   it('recusa arquivo de outro formato ou grande demais, dizendo o porquê', async () => {
     const { entrada } = montar();
 
     await userEvent.upload(entrada, xlsx('laudos.csv'), { applyAccept: false });
     expect(screen.getByRole('alert')).toHaveTextContent('Escolha um arquivo .xlsx.');
-    expect(screen.getByRole('button', { name: 'Enviar planilha' })).toBeDisabled();
 
     await userEvent.upload(entrada, xlsx('grande.xlsx', 2 * 1024 * 1024));
     expect(screen.getByRole('alert')).toHaveTextContent('O arquivo passa de 1 MB.');
