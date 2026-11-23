@@ -44,7 +44,7 @@ export const Route = createFileRoute('/_app/configuracoes/papeis')({
       );
     }
   },
-  head: () => ({ meta: [{ title: 'Papéis | One' }] }),
+  head: () => ({ meta: [{ title: 'Papéis · One' }] }),
   component: PaginaPapeis,
 });
 

@@ -15,7 +15,7 @@ export const Route = createFileRoute('/definir-senha')({
     context.queryClient.ensureQueryData(linkSenhaQueryOptions(deps.token)),
   head: () => ({
     // O token vai na URL do e-mail: não deixar que ele vaze no Referer de links externos.
-    meta: [{ title: 'Definir senha | One' }, { name: 'referrer', content: 'no-referrer' }],
+    meta: [{ title: 'Definir senha · One' }, { name: 'referrer', content: 'no-referrer' }],
   }),
   component: DefinirSenha,
   pendingComponent: Carregando,

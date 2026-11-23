@@ -60,7 +60,7 @@ export const Route = createFileRoute('/_app/avisos')({
       );
     await context.queryClient.ensureQueryData(avisosControllerListarQueryOptions(consulta(deps)));
   },
-  head: () => ({ meta: [{ title: 'Avisos de cadastro | One' }] }),
+  head: () => ({ meta: [{ title: 'Avisos de cadastro · One' }] }),
   component: PaginaAvisos,
 });
 

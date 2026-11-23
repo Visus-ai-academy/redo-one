@@ -11,7 +11,7 @@ export const Route = createFileRoute('/login')({
   // Quem já tem sessão não vê o login: segue para onde ia.
   beforeLoad: ({ context, search }) =>
     redirecionarSeLogado(context.queryClient, destinoSeguro(search.redirect)),
-  head: () => ({ meta: [{ title: 'Entrar | One' }] }),
+  head: () => ({ meta: [{ title: 'Entrar · One' }] }),
   component: Login,
 });
 

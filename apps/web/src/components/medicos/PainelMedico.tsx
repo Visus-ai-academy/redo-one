@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Trash } from '@phosphor-icons/react';
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useEffect, useId, useState } from 'react';
 import { z } from 'zod';
 
 import type { AliasMedicoDto } from '../../gen/types/AliasMedicoDto';
@@ -16,6 +16,7 @@ import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 
 export type PainelMedicoProps = {
@@ -99,6 +100,7 @@ export function PainelMedico({
   historico,
 }: PainelMedicoProps) {
   const [aba, setAba] = useState('cadastro');
+  const [alterado, setAlterado] = useState(false);
   const abas = medico
     ? [
         { valor: 'cadastro', rotulo: 'Cadastro' },
@@ -119,6 +121,7 @@ export function PainelMedico({
           onSalvar={onSalvar}
           onExcluir={onExcluir}
           onFechar={onFechar}
+          onAlterado={setAlterado}
         />
       ) : (
         medico && <CadastroSomenteLeitura medico={medico} onExcluir={onExcluir} />
@@ -140,6 +143,7 @@ export function PainelMedico({
       titulo={medico?.nome ?? 'Novo médico'}
       subtitulo={medico?.crm ? `CRM ${medico.crm}` : undefined}
       onFechar={onFechar}
+      alterado={alterado}
     >
       {abas.length > 1 ? (
         <Abas
@@ -149,6 +153,8 @@ export function PainelMedico({
           abas={abas}
           className="gap-0 pt-2"
         >
+          {/* O cadastro fica montado (escondido) nas outras abas: voltar a ele não perde o digitado. */}
+          <div hidden={aba !== 'cadastro'}>{cadastro}</div>
           {aba === 'pagamento'
             ? pagamento
             : aba === 'acesso'
@@ -159,7 +165,7 @@ export function PainelMedico({
                   ? distribuicao
                   : aba === 'historico'
                     ? historico
-                    : cadastro}
+                    : null}
         </Abas>
       ) : (
         cadastro
@@ -190,24 +196,28 @@ function FormCadastro({
   onSalvar,
   onExcluir,
   onFechar,
-}: Pick<PainelMedicoProps, 'medico' | 'niveis' | 'onSalvar' | 'onExcluir' | 'onFechar'>) {
+  onAlterado,
+}: Pick<PainelMedicoProps, 'medico' | 'niveis' | 'onSalvar' | 'onExcluir' | 'onFechar'> & {
+  onAlterado: (alterado: boolean) => void;
+}) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    nome: medico?.nome ?? '',
+    crm: medico?.crm ?? '',
+    idMobilemed: medico?.idMobilemed != null ? String(medico.idMobilemed) : '',
+    email: medico?.email ?? '',
+    telefone: medico?.telefone ?? '',
+    nivelId: medico?.nivel?.id ?? '',
+    funcao: medico?.funcao ?? '',
+    dataInicioVinculo: medico?.dataInicioVinculo ?? '',
+    senior: medico?.senior ?? false,
+    fellowship: medico?.fellowship ?? false,
+    ocultoDashboards: medico?.ocultoDashboards ?? false,
+    ativo: medico?.ativo ?? true,
+    observacoes: medico?.observacoes ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      nome: medico?.nome ?? '',
-      crm: medico?.crm ?? '',
-      idMobilemed: medico?.idMobilemed != null ? String(medico.idMobilemed) : '',
-      email: medico?.email ?? '',
-      telefone: medico?.telefone ?? '',
-      nivelId: medico?.nivel?.id ?? '',
-      funcao: medico?.funcao ?? '',
-      dataInicioVinculo: medico?.dataInicioVinculo ?? '',
-      senior: medico?.senior ?? false,
-      fellowship: medico?.fellowship ?? false,
-      ocultoDashboards: medico?.ocultoDashboards ?? false,
-      ativo: medico?.ativo ?? true,
-      observacoes: medico?.observacoes ?? '',
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
       tentar(() =>
@@ -228,6 +238,8 @@ function FormCadastro({
         }),
       ),
   });
+  const alterado = useAlterado(form, iniciais);
+  useEffect(() => onAlterado(alterado), [alterado, onAlterado]);
 
   // Nível inativo que o médico já tem continua na lista, para não sumir da tela.
   const opcoesNivel = [

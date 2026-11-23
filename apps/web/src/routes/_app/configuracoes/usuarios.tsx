@@ -64,7 +64,7 @@ export const Route = createFileRoute('/_app/configuracoes/usuarios')({
       context.queryClient.ensureQueryData(usuariosControllerPapeisQueryOptions()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Usuários | One' }] }),
+  head: () => ({ meta: [{ title: 'Usuários · One' }] }),
   component: PaginaUsuarios,
 });
 

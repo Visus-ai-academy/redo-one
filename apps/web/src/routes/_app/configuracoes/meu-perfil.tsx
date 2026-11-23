@@ -12,7 +12,7 @@ export const Route = createFileRoute('/_app/configuracoes/meu-perfil')({
       context.queryClient.ensureQueryData(contaControllerObterQueryOptions()),
       context.queryClient.ensureQueryData(contaControllerAcessosQueryOptions()),
     ]),
-  head: () => ({ meta: [{ title: 'Meu perfil | One' }] }),
+  head: () => ({ meta: [{ title: 'Meu perfil · One' }] }),
   component: PaginaMeuPerfil,
 });
 

@@ -4,7 +4,7 @@ import { AcessoLayout } from '../components/acesso/AcessoLayout';
 import { RecuperarSenhaForm } from '../components/acesso/RecuperarSenhaForm';
 
 export const Route = createFileRoute('/recuperar-senha')({
-  head: () => ({ meta: [{ title: 'Recuperar senha | One' }] }),
+  head: () => ({ meta: [{ title: 'Recuperar senha · One' }] }),
   component: RecuperarSenha,
 });
 

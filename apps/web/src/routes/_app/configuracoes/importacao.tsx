@@ -19,7 +19,7 @@ export const Route = createFileRoute('/_app/configuracoes/importacao')({
       context.queryClient.ensureQueryData(importacaoMobileMedControllerSituacaoQueryOptions()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Importação de laudos | Configurações | One' }] }),
+  head: () => ({ meta: [{ title: 'Importação de laudos · Configurações · One' }] }),
   component: PaginaParametros,
 });
 
