@@ -1,8 +1,7 @@
-import { Button } from '@base-ui/react/button';
-import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { RequiredLegend } from '../form/RequiredLegend';
 import { SubmitButton } from '../form/SubmitButton';
+import { BotaoCancelar } from '../painel/BotaoCancelar';
 
 /** Botão Excluir do painel, com a confirmação que diz a consequência. */
 export type ExcluirPainel = {
@@ -36,13 +35,8 @@ export function RodapePainel({
       <div className="flex flex-wrap items-center gap-2">
         {excluir && <ConfirmarAcao {...excluir} />}
         <span className="ml-auto flex gap-2">
-          <Button
-            type="button"
-            onClick={onCancelar}
-            className={buttonClassName({ variant: 'secondary' })}
-          >
-            Cancelar
-          </Button>
+          {/* Dentro do painel, fecha como o X: deslizando e perguntando se há alteração. */}
+          <BotaoCancelar onCancelar={onCancelar} />
           <SubmitButton pendingLabel="Salvando…">{editando ? 'Salvar' : rotuloCriar}</SubmitButton>
         </span>
       </div>
