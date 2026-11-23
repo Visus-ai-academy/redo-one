@@ -77,4 +77,12 @@ describe('ConfirmarAcao', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Descartar' }));
     expect(onConfirmar).toHaveBeenCalledTimes(1);
   });
+
+  it('fica acima de painel lateral e diálogo (que estão em z-40 e z-50)', async () => {
+    montar();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Desativar usuário' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveClass('z-50');
+  });
 });
