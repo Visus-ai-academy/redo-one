@@ -77,6 +77,15 @@ describe('TelaEscala', () => {
     expect(within(visao).getByRole('button', { name: 'Semana' })).toBeInTheDocument();
   });
 
+  it('o painel fica por cima da grade: a tela não encolhe para ele', async () => {
+    await montar();
+
+    const tela = (await screen.findByRole('heading', { name: 'Escala', level: 1 })).closest(
+      'div',
+    )?.parentElement;
+    expect(tela?.className).not.toContain('data-painel-lateral');
+  });
+
   it('cabeçalho: período, navegação, modo, histórico e alocar', async () => {
     const acoes = await montar();
     expect(screen.getByText('16/11 a 22/11/2026')).toBeInTheDocument();

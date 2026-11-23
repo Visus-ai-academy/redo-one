@@ -27,7 +27,6 @@ import type { RetratoFilaDto } from '../../gen/types/RetratoFilaDto';
 import type { RodadaDto } from '../../gen/types/RodadaDto';
 import type { StatusRodadaKey } from '../../gen/types/StatusRodada';
 import { horaDeBrasilia } from '../../lib/acesso';
-import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
 import { pode } from '../../lib/permissoes';
 import { intervaloDaRodada, intervaloDoRetrato, num, type Periodo } from '../../lib/rodada';
@@ -36,7 +35,6 @@ import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
-import { RESERVA_DO_PAINEL } from '../painel/reserva';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useAvisos } from '../toast/use-avisos';
 import { Execucao, LendoFila, Parcial } from './Andamento';
@@ -191,7 +189,7 @@ export function TelaDistribuicao({
   );
 
   return (
-    <div className={cn('flex flex-col gap-6', RESERVA_DO_PAINEL)}>
+    <div className="flex flex-col gap-6">
       {cabecalho}
       <Abas
         aria-label="Distribuição"

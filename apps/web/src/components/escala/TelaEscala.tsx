@@ -21,7 +21,6 @@ import { CampoBusca } from '../busca/CampoBusca';
 import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import { Dica } from '../dica/Dica';
-import { RESERVA_DO_PAINEL } from '../painel/reserva';
 import { Skeleton } from '../skeleton/Skeleton';
 import { AgendaMedico } from './AgendaMedico';
 import { AusenciasDaSemana } from './AusenciasDaSemana';
@@ -182,7 +181,7 @@ export function TelaEscala({
   const temFiltro = Boolean(filtros.frenteIds?.length || filtros.turnoIds?.length || filtros.busca);
 
   return (
-    <div className={cn('flex flex-col gap-5', RESERVA_DO_PAINEL)}>
+    <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">Escala</h1>
         <div className="flex flex-wrap gap-2">

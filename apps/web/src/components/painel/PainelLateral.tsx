@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
 import { PedirFechamento, useDescartarAlteracoes } from './fechamento';
+import { revelarSobOPainel } from './revelar';
 
 type PainelLateralProps = {
   titulo: ReactNode;
@@ -62,7 +63,12 @@ export function PainelLateral({
       setAberto(false);
     });
 
+  // Quem abriu o painel (a célula clicada), para rolar até ela se ficar embaixo dele.
+  const origem = useRef<Element | null>(null);
+  const popup = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    origem.current = document.activeElement;
     montados += 1;
     setAberto(true);
     return () => {
@@ -80,7 +86,8 @@ export function PainelLateral({
         fechar();
       }}
       onOpenChangeComplete={(abriu) => {
-        if (!abriu && fechando.current) onFechar();
+        if (abriu) revelarSobOPainel(origem.current, popup.current);
+        else if (fechando.current) onFechar();
       }}
       modal={false}
       disablePointerDismissal
@@ -89,6 +96,7 @@ export function PainelLateral({
       <Drawer.Portal>
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
           <Drawer.Popup
+            ref={popup}
             data-painel-lateral={largura}
             aria-busy={ocupado || undefined}
             className={cn(
