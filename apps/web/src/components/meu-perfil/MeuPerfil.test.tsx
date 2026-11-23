@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
 import type { MinhaContaDto } from '../../gen/types/MinhaContaDto';
 import { renderComRotas } from '../../test/render';
 import { MeuPerfil } from './MeuPerfil';
@@ -32,5 +32,16 @@ describe('MeuPerfil', () => {
     expect(screen.getByRole('region', { name: 'Senha' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /Sessões abertas/ })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Acessos recentes' })).toBeInTheDocument();
+  });
+
+  it('com o nome ou a senha mudados e não salvos, sair da página pergunta antes', async () => {
+    const { router } = renderComRotas(<MeuPerfil conta={conta} acessos={[]} />);
+
+    await userEvent.type(await screen.findByLabelText(/Senha atual/), 'abc');
+    void router.navigate({ to: '/', search: { sair: 1 } as never });
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
   });
 });

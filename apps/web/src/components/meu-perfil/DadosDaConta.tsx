@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 import { useContaControllerAtualizar } from '../../gen/hooks/useContaControllerAtualizar';
@@ -9,12 +10,20 @@ import { SESSAO_QUERY_KEY } from '../../lib/sessao';
 import { Alerta } from '../alerta/Alerta';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { Painel } from '../painel/Painel';
 import { useAvisos } from '../toast/use-avisos';
 
 const schema = z.object({ nome: z.string().trim().min(1, 'Informe o nome.') });
 
-export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
+export function DadosDaConta({
+  conta,
+  onAlterado,
+}: {
+  conta: MinhaContaDto;
+  /** Nome mudado e não salvo (a página pergunta antes de sair). */
+  onAlterado?: (alterado: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const atualizar = useContaControllerAtualizar();
   const avisos = useAvisos();
@@ -37,6 +46,9 @@ export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
     },
   });
 
+  const alterado = useAlterado(form, { nome: conta.nome });
+  useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
+
   return (
     <Painel titulo="Dados da conta">
       <form
@@ -49,7 +61,7 @@ export function DadosDaConta({ conta }: { conta: MinhaContaDto }) {
       >
         {atualizar.error && (
           <Alerta tom="erro">
-            Não foi possível salvar agora. Confira sua conexão e tente de novo.
+            Não foi possível salvar os dados da conta. Confira sua conexão e tente de novo.
           </Alerta>
         )}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4">

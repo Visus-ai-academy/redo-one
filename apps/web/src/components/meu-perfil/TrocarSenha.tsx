@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 import { ResponseError } from '../../gen/.kubb/client';
@@ -8,6 +9,7 @@ import { dataDeBrasilia } from '../../lib/datas';
 import { ERRO_CONFIRMACAO, regraNovaSenha, senhasIguais } from '../../lib/senha';
 import { Alerta } from '../alerta/Alerta';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { Painel } from '../painel/Painel';
 import { RequisitosSenha } from '../senha/RequisitosSenha';
 import { useAvisos } from '../toast/use-avisos';
@@ -20,6 +22,8 @@ const schema = z
   })
   .refine(senhasIguais, ERRO_CONFIRMACAO);
 
+const VAZIO = { senhaAtual: '', senha: '', confirmacao: '' };
+
 function avisoDeTroca(sessoesEncerradas: number) {
   if (sessoesEncerradas === 0) return 'Senha trocada.';
   if (sessoesEncerradas === 1) return 'Senha trocada. A outra sessão foi encerrada.';
@@ -27,13 +31,20 @@ function avisoDeTroca(sessoesEncerradas: number) {
 }
 
 /** Seção Senha de Meu perfil; é o destino de "Segurança" na central (âncora #seguranca). */
-export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | null }) {
+export function TrocarSenha({
+  senhaAlteradaEm,
+  onAlterado,
+}: {
+  senhaAlteradaEm: string | null;
+  /** Algo digitado e não enviado (a página pergunta antes de sair). */
+  onAlterado?: (alterado: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const trocar = useContaControllerTrocarSenha();
   const avisos = useAvisos();
 
   const form = useAppForm({
-    defaultValues: { senhaAtual: '', senha: '', confirmacao: '' },
+    defaultValues: VAZIO,
     validators: { onSubmit: schema },
     onSubmit: async ({ value, formApi }) => {
       let resultado: { sessoesEncerradas: number };
@@ -51,6 +62,9 @@ export function TrocarSenha({ senhaAlteradaEm }: { senhaAlteradaEm: string | nul
       avisos.sucesso(avisoDeTroca(resultado.sessoesEncerradas));
     },
   });
+
+  const alterado = useAlterado(form, VAZIO);
+  useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
 
   return (
     <Painel
