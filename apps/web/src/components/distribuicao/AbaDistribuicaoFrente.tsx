@@ -394,6 +394,7 @@ function FormRegras({
                                         opcoes={catalogo.modalidades.map((m) => ({
                                           valor: m.id,
                                           rotulo: m.nome,
+                                          cor: m.cor,
                                         }))}
                                         className="flex-[2_1_140px]"
                                       />
@@ -609,6 +610,7 @@ function FormRegras({
                                   ...catalogo.especialidades.map((e) => ({
                                     valor: e.id,
                                     rotulo: e.nome,
+                                    cor: e.cor,
                                   })),
                                 ]}
                                 className="flex-[1_1_140px]"

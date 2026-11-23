@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { OpcaoComCorDto } from '../../gen/types/OpcaoComCorDto';
 import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
@@ -20,8 +21,8 @@ export type TipoFrente = 'especialidade' | 'modalidade';
 
 /** Opções ativas do catálogo que a aba oferece (`GET /catalogo/opcoes`). */
 export type CatalogoRegras = {
-  especialidades: RotuloDto[];
-  modalidades: RotuloDto[];
+  especialidades: OpcaoComCorDto[];
+  modalidades: OpcaoComCorDto[];
   subespecialidades: (RotuloDto & { especialidadeIds: string[] })[];
   prioridades: RotuloDto[];
 };

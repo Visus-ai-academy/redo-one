@@ -83,6 +83,31 @@ describe('PainelExame', () => {
     expect(screen.queryByRole('region', { name: 'Quebra' })).not.toBeInTheDocument();
   });
 
+  it('modalidade e especialidade com a cor do catálogo; "Sem …" e categoria sem bolinha', async () => {
+    montar({
+      exame,
+      opcoes: {
+        ...opcoes,
+        modalidades: [{ id: 'm-ct', nome: 'CT', cor: '#8A4A4A' }],
+        especialidades: [{ id: 'e-neuro', nome: 'NEURO', cor: '#4E8C88' }],
+      },
+    });
+    const modalidade = screen.getByRole('combobox', { name: 'Modalidade' });
+    expect(modalidade.querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#8A4A4A' });
+    await userEvent.click(screen.getByRole('combobox', { name: 'Especialidade' }));
+    expect(
+      (await screen.findByRole('option', { name: 'NEURO' })).querySelector('[data-cor]'),
+    ).toHaveStyle({ backgroundColor: '#4E8C88' });
+    expect(
+      screen.getByRole('option', { name: 'Sem especialidade' }).querySelector('[data-cor]'),
+    ).toBeNull();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }));
+    expect(
+      (await screen.findByRole('option', { name: 'ANGIO' })).querySelector('[data-cor]'),
+    ).toBeNull();
+  });
+
   it('editando, aponta a quebra do estudo com o mesmo nome', async () => {
     const { onAbrirQuebra } = montar({ exame });
 

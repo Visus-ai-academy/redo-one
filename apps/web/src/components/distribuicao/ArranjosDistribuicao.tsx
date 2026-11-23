@@ -3,6 +3,7 @@ import { Plus } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 
 import type { ArranjoDto } from '../../gen/types/ArranjoDto';
+import type { OpcaoComCorDto } from '../../gen/types/OpcaoComCorDto';
 import type { PrioridadeDoArranjoDto } from '../../gen/types/PrioridadeDoArranjoDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import { Alerta } from '../alerta/Alerta';
@@ -35,8 +36,8 @@ export type ArranjosDistribuicaoProps = {
   nomes: NomesDoArranjo;
   /** Opções ativas do catálogo; as prioridades são as da operação (vêm com os arranjos). */
   catalogo: {
-    especialidades: RotuloDto[];
-    modalidades: RotuloDto[];
+    especialidades: OpcaoComCorDto[];
+    modalidades: OpcaoComCorDto[];
     subespecialidades: (RotuloDto & { especialidadeIds: string[] })[];
     prioridades: PrioridadeDoArranjoDto[];
   };
@@ -286,7 +287,11 @@ function FormArranjo({
               placeholder="Todas"
               opcoes={[
                 { valor: '', rotulo: 'Todas' },
-                ...catalogo.especialidades.map((e) => ({ valor: e.id, rotulo: e.nome })),
+                ...catalogo.especialidades.map((e) => ({
+                  valor: e.id,
+                  rotulo: e.nome,
+                  cor: e.cor,
+                })),
               ]}
             />
           )}
@@ -296,7 +301,11 @@ function FormArranjo({
             <field.SelecaoMultiplaField
               label="Modalidades"
               placeholder="Todas"
-              opcoes={catalogo.modalidades.map((m) => ({ valor: m.id, rotulo: m.nome }))}
+              opcoes={catalogo.modalidades.map((m) => ({
+                valor: m.id,
+                rotulo: m.nome,
+                cor: m.cor,
+              }))}
             />
           )}
         </form.AppField>

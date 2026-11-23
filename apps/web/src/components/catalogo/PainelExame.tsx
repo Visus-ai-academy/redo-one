@@ -43,6 +43,9 @@ const opcional = (texto: string) => texto.trim() || null;
 const nenhum = (rotulo: string) => ({ valor: '', rotulo });
 const comoOpcoes = (itens: { id: string; nome: string }[]) =>
   itens.map((i) => ({ valor: i.id, rotulo: i.nome }));
+/** Modalidade e especialidade: com a bolinha da cor do catálogo. */
+const comoOpcoesComCor = (itens: { id: string; nome: string; cor: string | null }[]) =>
+  itens.map((i) => ({ valor: i.id, rotulo: i.nome, cor: i.cor }));
 const nomeDe = (itens: { id: string; nome: string }[], id: string | null | undefined) =>
   itens.find((i) => i.id === id)?.nome ?? '—';
 
@@ -166,7 +169,7 @@ export function PainelExame({
                   <field.SelectField
                     label="Modalidade"
                     placeholder="Sem modalidade"
-                    opcoes={[nenhum('Sem modalidade'), ...comoOpcoes(opcoes.modalidades)]}
+                    opcoes={[nenhum('Sem modalidade'), ...comoOpcoesComCor(opcoes.modalidades)]}
                     className="flex-[1_1_140px]"
                   />
                 )}
@@ -193,7 +196,10 @@ export function PainelExame({
                       <field.SelectField
                         label="Especialidade"
                         placeholder="Sem especialidade"
-                        opcoes={[nenhum('Sem especialidade'), ...comoOpcoes(opcoes.especialidades)]}
+                        opcoes={[
+                          nenhum('Sem especialidade'),
+                          ...comoOpcoesComCor(opcoes.especialidades),
+                        ]}
                       />
                     )}
                   </form.AppField>

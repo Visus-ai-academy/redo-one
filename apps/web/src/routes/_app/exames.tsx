@@ -247,7 +247,7 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
             onValueChange={(v) => filtrar({ modalidadeId: v || undefined })}
             opcoes={[
               { valor: '', rotulo: 'Todas as modalidades' },
-              ...opcoes.modalidades.map((m) => ({ valor: m.id, rotulo: m.nome })),
+              ...opcoes.modalidades.map((m) => ({ valor: m.id, rotulo: m.nome, cor: m.cor })),
             ]}
             className="flex-[1_1_160px] md:flex-[0_1_200px]"
           />
@@ -266,7 +266,7 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
             }
             opcoes={[
               { valor: '', rotulo: 'Todas as especialidades' },
-              ...opcoes.especialidades.map((e) => ({ valor: e.id, rotulo: e.nome })),
+              ...opcoes.especialidades.map((e) => ({ valor: e.id, rotulo: e.nome, cor: e.cor })),
             ]}
             className="flex-[1_1_160px] md:flex-[0_1_220px]"
           />

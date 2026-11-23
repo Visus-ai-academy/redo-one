@@ -8,12 +8,12 @@ import { escolherOpcao } from '../../test/select';
 import { PainelTurno, type PainelTurnoProps } from './PainelTurno';
 
 const ESPECIALIDADES = [
-  { id: 'e-msk', nome: 'MSK' },
-  { id: 'e-neuro', nome: 'NEURO' },
+  { id: 'e-msk', nome: 'MSK', cor: null },
+  { id: 'e-neuro', nome: 'NEURO', cor: null },
 ];
 const MODALIDADES = [
-  { id: 'm-mr', nome: 'MR' },
-  { id: 'm-ct', nome: 'CT' },
+  { id: 'm-mr', nome: 'MR', cor: null },
+  { id: 'm-ct', nome: 'CT', cor: null },
 ];
 
 const MANHA: TurnoItemDto = {

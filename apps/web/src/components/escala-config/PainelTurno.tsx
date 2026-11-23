@@ -33,7 +33,7 @@ const schema = z.object({
   modalidadeIds: z.array(z.string()),
 });
 
-type Opcao = { id: string; nome: string };
+type Opcao = { id: string; nome: string; cor: string | null };
 
 export type PainelTurnoProps = {
   /** Sem turno, o painel cria um novo. */
@@ -64,7 +64,7 @@ export function PainelTurno({
 
   // Item inativo no catálogo que o turno já tem continua marcável, para não sumir ao salvar.
   const opcoesCom = (ativas: Opcao[], marcados: string[] = []) => [
-    ...ativas.map((o) => ({ valor: o.id, rotulo: o.nome })),
+    ...ativas.map((o) => ({ valor: o.id, rotulo: o.nome, cor: o.cor })),
     ...marcados
       .filter((id) => !ativas.some((o) => o.id === id))
       .map((id) => ({

@@ -41,7 +41,7 @@ export type PainelItemListaProps = {
   /** Sem item, o painel cria um novo. */
   item?: DadosItemLista & { id: string };
   /** Opções da subespecialidade. */
-  especialidades?: { id: string; nome: string }[];
+  especialidades?: { id: string; nome: string; cor: string | null }[];
   podeEditar: boolean;
   onSalvar: (dados: DadosItemLista) => Promise<void>;
   onExcluir?: () => Promise<void>;
@@ -210,7 +210,7 @@ export function PainelItemLista({
                   label="Especialidades"
                   required
                   description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
-                  opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome }))}
+                  opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome, cor: e.cor }))}
                 />
               )}
             </form.AppField>

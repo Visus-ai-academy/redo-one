@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prioridadesClienteControllerSalvar } from '../../gen/clients/prioridadesClienteControllerSalvar';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
 import { prioridadesClienteControllerObterQueryOptions } from '../../gen/hooks/usePrioridadesClienteControllerObter';
+import type { OpcaoComCorDto } from '../../gen/types/OpcaoComCorDto';
 import type { PrioridadeClienteDto } from '../../gen/types/PrioridadeClienteDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import { Alerta } from '../alerta/Alerta';
@@ -13,6 +14,7 @@ import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
+import type { OpcaoSelect } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
 import { AbaCarregando, AbaComErro } from './estados';
 import { AcoesDaLinha, ItemDaLista, Secao } from './partes-form';
@@ -140,21 +142,23 @@ function FormPrioridades({
 }: {
   clienteId: string;
   prioridades: PrioridadeClienteDto[];
-  catalogo: { especialidades: RotuloDto[]; modalidades: RotuloDto[] };
+  catalogo: { especialidades: OpcaoComCorDto[]; modalidades: OpcaoComCorDto[] };
   queryKey: readonly unknown[];
 }) {
   const queryClient = useQueryClient();
   const avisos = useAvisos();
   const { erro, tentar } = useErroDoPainel();
-  const opcoesFrente = [
+  const opcoesFrente: OpcaoSelect[] = [
     ...catalogo.especialidades.map((e) => ({
       valor: `E:${e.id}`,
       rotulo: e.nome,
+      cor: e.cor,
       grupo: 'Especialidades',
     })),
     ...catalogo.modalidades.map((m) => ({
       valor: `M:${m.id}`,
       rotulo: m.nome,
+      cor: m.cor,
       grupo: 'Modalidades',
     })),
   ];

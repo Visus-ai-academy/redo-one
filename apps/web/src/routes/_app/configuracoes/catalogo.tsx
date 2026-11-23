@@ -286,7 +286,7 @@ function ConteudoDoPainel({
   id?: string;
   lista: (typeof LISTAS)[AbaLista];
   permissoes: PodeNaTela;
-  especialidades: { id: string; nome: string }[];
+  especialidades: { id: string; nome: string; cor: string | null }[];
   onFechar: () => void;
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;

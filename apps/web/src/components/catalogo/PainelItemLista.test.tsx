@@ -90,8 +90,8 @@ describe('PainelItemLista', () => {
       variante: 'subespecialidade',
       rotulos: { ...MODALIDADE, singular: 'subespecialidade', campoNome: 'Nome' },
       especialidades: [
-        { id: 'e-neuro', nome: 'NEURO' },
-        { id: 'e-msk', nome: 'MUSCULO ESQUELETICO' },
+        { id: 'e-neuro', nome: 'NEURO', cor: null },
+        { id: 'e-msk', nome: 'MUSCULO ESQUELETICO', cor: null },
       ],
     });
     await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), 'COLUNAS');

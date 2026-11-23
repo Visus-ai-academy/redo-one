@@ -25,12 +25,12 @@ const NEUTRAS: RegrasFrenteDto = {
 
 const CATALOGO = {
   especialidades: [
-    { id: 'e-neuro', nome: 'NEURO' },
-    { id: 'e-msk', nome: 'MSK' },
+    { id: 'e-neuro', nome: 'NEURO', cor: null },
+    { id: 'e-msk', nome: 'MSK', cor: null },
   ],
   modalidades: [
-    { id: 'm-mr', nome: 'MR' },
-    { id: 'm-ct', nome: 'CT' },
+    { id: 'm-mr', nome: 'MR', cor: null },
+    { id: 'm-ct', nome: 'CT', cor: null },
   ],
   subespecialidades: [
     { id: 's-col', nome: 'COLUNAS', especialidadeIds: ['e-neuro', 'e-msk'] },

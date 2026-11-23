@@ -33,12 +33,12 @@ const NEURO = arranjo({
 
 const CATALOGO: ArranjosDistribuicaoProps['catalogo'] = {
   especialidades: [
-    { id: 'e-neuro', nome: 'NEURO' },
-    { id: 'e-mama', nome: 'MAMA' },
+    { id: 'e-neuro', nome: 'NEURO', cor: '#4E8C88' },
+    { id: 'e-mama', nome: 'MAMA', cor: null },
   ],
   modalidades: [
-    { id: 'm-tc', nome: 'TC' },
-    { id: 'm-rm', nome: 'RM' },
+    { id: 'm-tc', nome: 'TC', cor: '#8A4A4A' },
+    { id: 'm-rm', nome: 'RM', cor: null },
   ],
   subespecialidades: [{ id: 's-cab', nome: 'Cabeça', especialidadeIds: ['e-neuro'] }],
   prioridades: [
@@ -99,6 +99,23 @@ describe('ArranjosDistribuicao', () => {
     ]);
     expect(await acharAviso()).toHaveTextContent('Arranjo criado.');
     expect(await screen.findByRole('button', { name: 'Novo arranjo' })).toBeInTheDocument();
+  });
+
+  it('especialidade e modalidades com a cor do catálogo; "Todas" sem bolinha', async () => {
+    montar();
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    const especialidade = screen.getByRole('combobox', { name: 'Especialidade' });
+    expect(especialidade.querySelector('[data-cor]')).not.toBeInTheDocument();
+    await userEvent.click(especialidade);
+    expect(
+      (await screen.findByRole('option', { name: 'NEURO' })).querySelector('[data-cor]'),
+    ).toHaveStyle({ backgroundColor: '#4E8C88' });
+    expect(screen.getByRole('option', { name: 'Todas' }).querySelector('[data-cor]')).toBeNull();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Modalidades' }));
+    expect(
+      (await screen.findByRole('option', { name: 'TC' })).querySelector('[data-cor]'),
+    ).toHaveStyle({ backgroundColor: '#8A4A4A' });
   });
 
   it('edita o arranjo aberto, mantendo os outros', async () => {
