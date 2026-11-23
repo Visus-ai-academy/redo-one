@@ -22,7 +22,8 @@ type EscolhaMultiplaFieldProps = {
   rotuloAdicionar: string;
   placeholder: string;
   chave: string;
-  buscar: (termo: string) => Promise<OpcaoBusca[]>;
+  /** Repasse o `sinal` ao cliente da API: a busca anterior é cancelada. */
+  buscar: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** O que dizer com a lista vazia. */
   vazio: string;
   description?: string;
