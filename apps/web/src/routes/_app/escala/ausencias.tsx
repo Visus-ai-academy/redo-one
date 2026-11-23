@@ -110,7 +110,7 @@ export const Route = createFileRoute('/_app/escala/ausencias')({
       queryClient.ensureQueryData(turnosControllerListarQueryOptions(TODOS)),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Ausências | One' }] }),
+  head: () => ({ meta: [{ title: 'Ausências · One' }] }),
   component: Pagina,
 });
 

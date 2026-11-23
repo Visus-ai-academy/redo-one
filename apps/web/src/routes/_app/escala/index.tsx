@@ -135,7 +135,7 @@ export const Route = createFileRoute('/_app/escala/')({
         queryClient.ensureQueryData(ausenciasControllerListarQueryOptions(ausencias)),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Escala | One' }] }),
+  head: () => ({ meta: [{ title: 'Escala · One' }] }),
   component: Pagina,
 });
 

@@ -105,7 +105,7 @@ export const Route = createFileRoute('/_app/configuracoes/escala')({
         : []),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Escala | Configurações | One' }] }),
+  head: () => ({ meta: [{ title: 'Escala · Configurações · One' }] }),
   component: Pagina,
 });
 

@@ -41,7 +41,7 @@ export const Route = createFileRoute('/_app/escala/historico')({
       historicoEscalaControllerListarQueryOptions(consulta(deps)),
     );
   },
-  head: () => ({ meta: [{ title: 'Histórico da escala | One' }] }),
+  head: () => ({ meta: [{ title: 'Histórico da escala · One' }] }),
   component: Pagina,
 });
 
