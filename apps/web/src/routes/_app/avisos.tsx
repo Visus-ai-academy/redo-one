@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, Link, useRouter } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
 
@@ -8,6 +8,7 @@ import { buttonClassName } from '../../components/button/button-class';
 import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { LinkDaLinha } from '../../components/data-table/link-da-linha';
+import { EstadoDoErro } from '../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
@@ -68,7 +69,24 @@ export const Route = createFileRoute('/_app/avisos')({
   },
   head: () => ({ meta: [{ title: 'Avisos de cadastro · One' }] }),
   component: PaginaAvisos,
+  errorComponent: ErroDaTela,
 });
+
+/** Não abriu (sem permissão na API, servidor fora): o estado do erro pelo código HTTP. */
+function ErroDaTela({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  return (
+    <div className="flex flex-col gap-5">
+      <h1 className="text-[22px] leading-snug font-semibold">Avisos de cadastro</h1>
+      <EstadoDoErro
+        erro={error}
+        oQue="os avisos"
+        onTentarDeNovo={() => void router.invalidate()}
+        className="p-0"
+      />
+    </div>
+  );
+}
 
 function PaginaAvisos() {
   const { sessao } = Route.useRouteContext();

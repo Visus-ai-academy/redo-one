@@ -1,8 +1,9 @@
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
+import { EstadoDoErro } from '../../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../../components/estado/estados';
 import { FormParametrosImportacao } from '../../../components/importacao/FormParametrosImportacao';
 import { Painel } from '../../../components/painel/Painel';
@@ -23,7 +24,25 @@ export const Route = createFileRoute('/_app/configuracoes/importacao')({
   },
   head: () => ({ meta: [{ title: 'Importação de laudos · Configurações · One' }] }),
   component: PaginaParametros,
+  errorComponent: ErroDaTela,
 });
+
+/** Não abriu (sem permissão na API, servidor fora): o estado do erro pelo código HTTP. */
+function ErroDaTela({ error }: ErrorComponentProps) {
+  const { sessao } = Route.useRouteContext();
+  const router = useRouter();
+  return (
+    <ConfiguracoesLayout acesso={sessao}>
+      <h1 className="text-[22px] leading-snug font-semibold">Importação de laudos</h1>
+      <EstadoDoErro
+        erro={error}
+        oQue="os parâmetros da importação"
+        onTentarDeNovo={() => void router.invalidate()}
+        className="p-0"
+      />
+    </ConfiguracoesLayout>
+  );
+}
 
 function PaginaParametros() {
   const { sessao } = Route.useRouteContext();

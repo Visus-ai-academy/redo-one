@@ -1,11 +1,12 @@
 import { Button } from '@base-ui/react/button';
 import { Plus } from '@phosphor-icons/react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, useRouter } from '@tanstack/react-router';
 import { z } from 'zod';
 
 import { buttonClassName } from '../../../components/button/button-class';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
+import { EstadoDoErro } from '../../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../../components/estado/estados';
 import { EditarPapel, type PapelSalvo } from '../../../components/papeis/EditarPapel';
 import { ListaPapeis } from '../../../components/papeis/ListaPapeis';
@@ -46,7 +47,25 @@ export const Route = createFileRoute('/_app/configuracoes/papeis')({
   },
   head: () => ({ meta: [{ title: 'Papéis · One' }] }),
   component: PaginaPapeis,
+  errorComponent: ErroDaTela,
 });
+
+/** Não abriu (sem permissão na API, servidor fora): o estado do erro pelo código HTTP. */
+function ErroDaTela({ error }: ErrorComponentProps) {
+  const { sessao } = Route.useRouteContext();
+  const router = useRouter();
+  return (
+    <ConfiguracoesLayout acesso={sessao}>
+      <h1 className="text-[22px] leading-snug font-semibold">Papéis</h1>
+      <EstadoDoErro
+        erro={error}
+        oQue="os papéis"
+        onTentarDeNovo={() => void router.invalidate()}
+        className="p-0"
+      />
+    </ConfiguracoesLayout>
+  );
+}
 
 function PaginaPapeis() {
   const { sessao } = Route.useRouteContext();

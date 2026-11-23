@@ -6,7 +6,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, useRouter } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
@@ -17,6 +17,7 @@ import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { EnvioDeArquivo } from '../../components/envio-arquivo/EnvioDeArquivo';
+import { EstadoDoErro } from '../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { DetalheImportacao } from '../../components/importacao/DetalheImportacao';
@@ -76,7 +77,24 @@ export const Route = createFileRoute('/_app/importacao')({
   },
   head: () => ({ meta: [{ title: 'Importação de laudos · One' }] }),
   component: PaginaImportacao,
+  errorComponent: ErroDaTela,
 });
+
+/** Não abriu (sem permissão na API, servidor fora): o estado do erro pelo código HTTP. */
+function ErroDaTela({ error }: ErrorComponentProps) {
+  const router = useRouter();
+  return (
+    <div className="flex flex-col gap-5">
+      <h1 className="text-[22px] leading-snug font-semibold">Importação de laudos</h1>
+      <EstadoDoErro
+        erro={error}
+        oQue="as importações"
+        onTentarDeNovo={() => void router.invalidate()}
+        className="p-0"
+      />
+    </div>
+  );
+}
 
 function PaginaImportacao() {
   const { sessao } = Route.useRouteContext();
