@@ -110,8 +110,8 @@ Exemplos de quando cada um costuma servir:
 | --- | --- | --- |
 | No lugar (edição na linha, alternar, campo que salva sozinho) | Ajuste rápido e frequente de um valor | A mudança tem consequência que precisa de explicação |
 | Popover / menu suspenso | Ação rara de um item (menu "⋯"), filtro, escolha curta | O conteúdo tem formulário ou passa de poucas linhas |
-| Painel lateral (drawer) | Ver ou editar um item de uma lista, alternando entre itens; detalhe com abas ou histórico | A tarefa é curta e atômica (diálogo), longa (página) ou é o trabalho principal da tela |
-| Diálogo (modal) | Confirmar ação destrutiva, decisão que bloqueia, tarefa curta e atômica (criar algo simples, convidar, informar um motivo) | É só para mostrar detalhe, ou o conteúdo tem rolagem longa |
+| Painel lateral (drawer) | Criar, ver ou editar um item de cadastro ou de uma lista, com qualquer número de campos; detalhe com abas ou histórico | A tarefa é longa com etapas (página) ou é o trabalho principal da tela |
+| Diálogo (modal) | Confirmar ação destrutiva, decisão que bloqueia, ação pontual que não é cadastro (informar um motivo) | É só para mostrar detalhe, ou o conteúdo tem rolagem longa |
 | Linha que expande / acordeão | Detalhe secundário de itens de uma lista | O detalhe tem ações ou formulário próprios |
 | Aba | Subtelas do mesmo assunto (ex.: Volumetria › Mensal) | As partes são independentes e mereciam item no menu |
 | Página / rota nova | Trabalho principal, fluxo longo, conteúdo que merece link | Um painel ou a própria lista resolveriam sem trocar de contexto |
@@ -125,8 +125,8 @@ Responda na ordem; a primeira resposta "sim" decide.
 
 1. **Cabe em 1–2 campos ou numa escolha, presa a um item?** (trocar a situação, renomear, escolher o médico de uma célula) → **no lugar** ou **popover** ancorado no item.
 2. **Bloqueia ou é irreversível?** (excluir, fechar competência, descartar alterações) → **diálogo de confirmação** (`ConfirmarAcao`).
-3. **É tarefa curta e atômica, que não depende de olhar a tela atrás?** Até ~6 campos, sem abas nem listas dentro, termina num clique (criar nível, criar equipe, convidar usuário, renomear, motivo de uma ação) → **diálogo** (`Dialogo` do kit), 480px, rodapé com "Cancelar" e a ação.
-4. **É ver ou editar um item de uma lista, alternando entre itens?** (painel do médico, do cliente, do usuário, do aviso) → **painel lateral**. Ele pode ter abas, histórico e listas.
+3. **É criar, ver ou editar um item de cadastro ou de uma lista?** (médico, cliente, nível, equipe, turno, usuário, convite, de-para) → **sempre painel lateral**, para criar e para editar, com qualquer número de campos. O mesmo tipo de item abre sempre no mesmo lugar, em todas as telas.
+4. **É uma ação pontual que não é cadastro, curta e que termina num clique?** (informar o motivo de ignorar um aviso, renomear no lugar não cabe, escolher uma opção antes de executar) → **diálogo** (`Dialogo` do kit), 480px, rodapé com "Cancelar" e a ação.
 5. **É fluxo longo, com várias seções ou etapas, ou é o trabalho principal?** → **página** (rota própria).
 
 **O painel lateral sempre fica por cima** (decidido em 23/11/2026)

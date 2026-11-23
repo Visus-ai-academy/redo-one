@@ -2,7 +2,7 @@ import { Button } from '@base-ui/react/button';
 import { DeviceMobile, Monitor } from '@phosphor-icons/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useUsuariosControllerDesativar } from '../../gen/hooks/useUsuariosControllerDesativar';
 import { useUsuariosControllerDesbloquear } from '../../gen/hooks/useUsuariosControllerDesbloquear';
@@ -23,6 +23,7 @@ import { dataDeBrasilia, dataHoraCurta } from '../../lib/datas';
 import { pode } from '../../lib/permissoes';
 import { sessaoQueryOptions } from '../../lib/sessao';
 import { Alerta } from '../alerta/Alerta';
+import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { Avatar } from '../avatar/Avatar';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
@@ -30,6 +31,7 @@ import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { useAvisos } from '../toast/use-avisos';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
@@ -80,20 +82,24 @@ export function PainelUsuario({
   const podeDesativar = permissoes.desativar && !proprio;
   // Bloqueio vale pela data, não pela situação: quem tem convite pendente também pode ser bloqueado.
   const bloqueado = usuario.bloqueadoAte !== null && new Date(usuario.bloqueadoAte) > referencia;
+  // Papéis ou recorte mudados e não salvos: fechar o painel pergunta antes de descartar.
+  const [alterados, setAlterados] = useState<Record<string, boolean>>({});
+  const marcarAlterado = useCallback(
+    (parte: string, alterado: boolean) =>
+      setAlterados((atual) => (atual[parte] === alterado ? atual : { ...atual, [parte]: alterado })),
+    [],
+  );
 
   return (
     <PainelLateral
       titulo={usuario.nome}
       subtitulo={usuario.email}
       inicio={<Avatar nome={usuario.nome} tamanho="md" />}
+      alterado={Object.values(alterados).some(Boolean)}
       onFechar={onFechar}
     >
       <div className="flex flex-col gap-5 p-4">
-        {acao.falhou && (
-          <Alerta tom="erro">
-            Não foi possível concluir agora. Confira sua conexão e tente de novo.
-          </Alerta>
-        )}
+        {acao.falha && <Alerta tom="erro">{acao.falha}</Alerta>}
 
         {bloqueado && usuario.bloqueadoAte && (
           <Alerta tom="bloqueio" role="note">
@@ -105,7 +111,11 @@ export function PainelUsuario({
                   type="button"
                   disabled={acao.ocupado}
                   onClick={() =>
-                    acao.executar(() => desbloquear.mutateAsync(caminho), 'Acesso liberado.')
+                    acao.executar(
+                      () => desbloquear.mutateAsync(caminho),
+                      'Acesso liberado.',
+                      'desbloquear o acesso',
+                    )
                   }
                   className={buttonClassName({ variant: 'secondary' })}
                 >
@@ -130,7 +140,12 @@ export function PainelUsuario({
         </dl>
 
         {permissoes.editar ? (
-          <TrocarPapeis usuario={usuario} papeis={papeis} proprio={proprio} />
+          <TrocarPapeis
+            usuario={usuario}
+            papeis={papeis}
+            proprio={proprio}
+            onAlterado={(alterado) => marcarAlterado('papeis', alterado)}
+          />
         ) : (
           <CampoSomenteLeitura
             label="Papéis"
@@ -145,7 +160,11 @@ export function PainelUsuario({
           proprio={proprio}
         />
 
-        <RecorteDaPessoa usuarioId={usuario.id} proprio={proprio} />
+        <RecorteDaPessoa
+          usuarioId={usuario.id}
+          proprio={proprio}
+          onAlterado={(alterado) => marcarAlterado('recorte', alterado)}
+        />
 
         {(podeConviteOuLink || podeDesativar) && (
           <div className="flex flex-wrap gap-2 border-t pt-4">
@@ -158,6 +177,7 @@ export function PainelUsuario({
                     acao.executar(
                       () => reenviarConvite.mutateAsync(caminho),
                       `Convite reenviado para ${usuario.email}. Ele vale por 7 dias; o anterior deixa de valer.`,
+                      'reenviar o convite',
                     )
                   }
                   className={buttonClassName({ variant: 'secondary' })}
@@ -172,6 +192,7 @@ export function PainelUsuario({
                     acao.executar(
                       () => enviarLink.mutateAsync(caminho),
                       `Link enviado para ${usuario.email}. Ele vale por 1 hora.`,
+                      'enviar o link de nova senha',
                     )
                   }
                   className={buttonClassName({ variant: 'secondary' })}
@@ -188,6 +209,7 @@ export function PainelUsuario({
                     acao.executar(
                       () => reativar.mutateAsync(caminho),
                       'Usuário reativado. A pessoa já pode entrar de novo.',
+                      'reativar o usuário',
                     )
                   }
                   className={buttonClassName({ variant: 'secondary' })}
@@ -201,7 +223,11 @@ export function PainelUsuario({
                   consequencia={consequenciaDeDesativar(usuario.sessoesAbertas.length)}
                   desabilitado={acao.ocupado}
                   onConfirmar={() =>
-                    acao.executar(() => desativar.mutateAsync(caminho), 'Usuário desativado.')
+                    acao.executar(
+                      () => desativar.mutateAsync(caminho),
+                      'Usuário desativado.',
+                      'desativar o usuário',
+                    )
                   }
                 />
               ))}
@@ -216,7 +242,15 @@ export function PainelUsuario({
  * O recorte da escala da pessoa. As permissões da escala vêm da sessão (já em cache pelo layout),
  * não de `permissoes`: são de outro contexto e só esta seção as usa.
  */
-function RecorteDaPessoa({ usuarioId, proprio }: { usuarioId: string; proprio: boolean }) {
+function RecorteDaPessoa({
+  usuarioId,
+  proprio,
+  onAlterado,
+}: {
+  usuarioId: string;
+  proprio: boolean;
+  onAlterado: (alterado: boolean) => void;
+}) {
   const { data: sessao } = useQuery(sessaoQueryOptions());
   if (!sessao) return null;
   return (
@@ -226,6 +260,7 @@ function RecorteDaPessoa({ usuarioId, proprio }: { usuarioId: string; proprio: b
         proprio={proprio}
         podeEditar={pode(sessao, 'usuarios.escopo-escala.editar')}
         podeVerCadastros={pode(sessao, 'escala.ver')}
+        onAlterado={onAlterado}
       />
     </div>
   );
@@ -252,10 +287,12 @@ function TrocarPapeis({
   usuario,
   papeis,
   proprio,
+  onAlterado,
 }: {
   usuario: UsuarioDetalheDto;
   papeis: PapelAtribuivelDto[];
   proprio: boolean;
+  onAlterado: (alterado: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const trocar = useUsuariosControllerTrocarPapeis();
@@ -281,6 +318,9 @@ function TrocarPapeis({
       avisos.sucesso(`Papéis trocados. As sessões abertas de ${usuario.nome} foram encerradas.`);
     },
   });
+  // Comparado com os papéis de agora: salvou e o detalhe voltou da API, deixa de estar alterado.
+  const alterado = useAlterado(form, { papelIds: atuais });
+  useEffect(() => onAlterado(alterado), [alterado, onAlterado]);
 
   return (
     <form
@@ -292,7 +332,12 @@ function TrocarPapeis({
       className="flex flex-col gap-2"
     >
       {trocar.error && (
-        <Alerta tom="erro">Não foi possível trocar os papéis agora. Tente de novo.</Alerta>
+        <Alerta tom="erro">
+          {mensagemDaApi(
+            trocar.error,
+            'Não foi possível trocar os papéis. Confira sua conexão e tente de novo.',
+          )}
+        </Alerta>
       )}
       <form.AppField name="papelIds">
         {(field) => (
@@ -366,6 +411,7 @@ function SessoesDoUsuario({
               acao.executar(
                 () => encerrarSessoes.mutateAsync({ path: { id: usuario.id } }),
                 `Todas as sessões de ${usuario.nome} foram encerradas.`,
+                'encerrar as sessões',
               )
             }
             className={buttonClassName({ variant: 'secondary' })}
@@ -408,6 +454,7 @@ function SessoesDoUsuario({
                               path: { id: usuario.id, sessaoId: sessao.id },
                             }),
                           'Sessão encerrada.',
+                          'encerrar a sessão',
                         )
                       }
                       className={buttonClassName({ variant: 'secondary' })}
@@ -452,11 +499,12 @@ type AcaoNoUsuario = ReturnType<typeof useAcaoNoUsuario>;
 function useAcaoNoUsuario(id: string) {
   const queryClient = useQueryClient();
   const avisos = useAvisos();
-  const [falhou, setFalhou] = useState(false);
+  const [falha, setFalha] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
-  const executar = async (chamada: () => Promise<unknown>, sucesso: string) => {
-    setFalhou(false);
+  /** `oQue`: a ação no infinitivo, para o erro ("enviar o link de nova senha"). */
+  const executar = async (chamada: () => Promise<unknown>, sucesso: string, oQue: string) => {
+    setFalha(null);
     setOcupado(true);
     try {
       await chamada();
@@ -467,16 +515,19 @@ function useAcaoNoUsuario(id: string) {
         }),
       ]);
       avisos.sucesso(sucesso);
-    } catch {
-      setFalhou(true);
+    } catch (erro) {
+      setFalha(
+        mensagemDaApi(erro, `Não foi possível ${oQue}. Confira sua conexão e tente de novo.`),
+      );
     } finally {
       setOcupado(false);
     }
   };
 
   return {
-    executar: (chamada: () => Promise<unknown>, sucesso: string) => void executar(chamada, sucesso),
-    falhou,
+    executar: (chamada: () => Promise<unknown>, sucesso: string, oQue: string) =>
+      void executar(chamada, sucesso, oQue),
+    falha,
     ocupado,
   };
 }
