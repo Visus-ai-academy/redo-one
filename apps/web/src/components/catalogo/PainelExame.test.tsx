@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -241,5 +241,15 @@ describe('PainelExame', () => {
       expect(screen.getByRole('textbox', { name: 'Nome' })).toBeInTheDocument();
       expect(screen.getByRole('combobox', { name: 'Especialidade' })).toBeInTheDocument();
     });
+  });
+
+  it('editando, fechar com algo alterado pergunta antes de descartar', async () => {
+    const { onFechar } = montar({ exame });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), '9');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
   });
 });

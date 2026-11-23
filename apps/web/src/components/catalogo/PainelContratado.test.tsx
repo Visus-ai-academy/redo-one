@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -100,5 +100,35 @@ describe('PainelContratado', () => {
     );
 
     expect(onExcluir).toHaveBeenCalled();
+  });
+
+  it('editando, cancelar com algo alterado pergunta antes de descartar', async () => {
+    const onFechar = vi.fn();
+    render(
+      <PainelContratado
+        contratado={{
+          id: 'c-9',
+          razaoSocial: '009 TESTE LTDA',
+          cnpj: null,
+          endereco: null,
+          cidade: null,
+          uf: null,
+          cep: null,
+          contratadoRepasseId: null,
+          contratadoRepasseNome: null,
+          ativo: true,
+        }}
+        contratados={outros}
+        podeEditar
+        onSalvar={vi.fn()}
+        onFechar={onFechar}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Cidade' }), 'Recife');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
   });
 });

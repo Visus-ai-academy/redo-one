@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -175,5 +175,25 @@ describe('PainelMedico', () => {
     );
 
     expect(onExcluir).toHaveBeenCalled();
+  });
+
+  it('editando, fechar com algo alterado pergunta antes de descartar', async () => {
+    const { onFechar } = montar({ medico });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Telefone' }), '9');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
+  });
+
+  it('trocar de aba não perde o que se digitou no cadastro', async () => {
+    montar({ medico, historico: <p>o histórico</p> });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Telefone' }), '9');
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Cadastro' }));
+
+    expect(screen.getByRole('textbox', { name: 'Telefone' })).toHaveValue('(9');
   });
 });

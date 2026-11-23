@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -125,5 +125,18 @@ describe('PainelQuebra', () => {
     );
 
     expect(onExcluir).toHaveBeenCalled();
+  });
+
+  it('criando, cancelar com algo digitado pergunta antes de descartar', async () => {
+    const { onFechar } = montar();
+
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Estudo como chega da MobileMed' }),
+      'TC X',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
   });
 });

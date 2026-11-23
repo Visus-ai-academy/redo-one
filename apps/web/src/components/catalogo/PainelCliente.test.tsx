@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -150,5 +150,15 @@ describe('PainelCliente', () => {
     );
 
     expect(onExcluir).toHaveBeenCalled();
+  });
+
+  it('editando, fechar com algo alterado pergunta antes de descartar', async () => {
+    const { onFechar } = montar({ cliente });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nome fantasia' }), ' SP');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
   });
 });

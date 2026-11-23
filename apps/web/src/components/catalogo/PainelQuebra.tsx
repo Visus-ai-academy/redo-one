@@ -16,6 +16,7 @@ import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
@@ -59,8 +60,9 @@ export function PainelQuebra({
   onFechar,
 }: PainelQuebraProps) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = { estudoOrigem: quebra?.estudoOrigem ?? '' };
   const form = useAppForm({
-    defaultValues: { estudoOrigem: quebra?.estudoOrigem ?? '' },
+    defaultValues: iniciais,
     validators: {
       onSubmit: z.object({
         estudoOrigem: z.string().trim().min(1, 'Informe o estudo como chega da MobileMed.'),
@@ -68,6 +70,7 @@ export function PainelQuebra({
     },
     onSubmit: ({ value }) => tentar(() => onSalvar({ estudoOrigem: value.estudoOrigem.trim() })),
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir =
     quebra && onExcluir
@@ -81,7 +84,11 @@ export function PainelQuebra({
       : undefined;
 
   return (
-    <PainelLateral titulo={quebra ? quebra.estudoOrigem : 'Nova quebra'} onFechar={onFechar}>
+    <PainelLateral
+      titulo={quebra ? quebra.estudoOrigem : 'Nova quebra'}
+      onFechar={onFechar}
+      alterado={alterado}
+    >
       <form
         noValidate
         onSubmit={(e) => {

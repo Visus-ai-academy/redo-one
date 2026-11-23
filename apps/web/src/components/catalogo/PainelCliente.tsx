@@ -15,6 +15,7 @@ import { useAppForm } from '../form/form';
 import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { UnidadesCliente, type UnidadesClienteProps } from './UnidadesCliente';
@@ -93,19 +94,20 @@ export function PainelCliente({
   distribuicao,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    nome: cliente?.nome ?? '',
+    nomeFantasia: cliente?.nomeFantasia ?? '',
+    razaoSocial: cliente?.razaoSocial ?? '',
+    tipoPessoa: (cliente?.tipoPessoa ?? 'PJ') as 'PJ' | 'PF',
+    cnpj: cliente?.cnpj ? formatarCnpj(cliente.cnpj) : '',
+    cpf: cliente?.cpf ? formatarCpf(cliente.cpf) : '',
+    contratadoId: cliente?.contratado?.id ?? '',
+    ativo: cliente?.ativo ?? true,
+    ocultoDashboards: cliente?.ocultoDashboards ?? false,
+    observacoes: cliente?.observacoes ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      nome: cliente?.nome ?? '',
-      nomeFantasia: cliente?.nomeFantasia ?? '',
-      razaoSocial: cliente?.razaoSocial ?? '',
-      tipoPessoa: (cliente?.tipoPessoa ?? 'PJ') as 'PJ' | 'PF',
-      cnpj: cliente?.cnpj ? formatarCnpj(cliente.cnpj) : '',
-      cpf: cliente?.cpf ? formatarCpf(cliente.cpf) : '',
-      contratadoId: cliente?.contratado?.id ?? '',
-      ativo: cliente?.ativo ?? true,
-      ocultoDashboards: cliente?.ocultoDashboards ?? false,
-      observacoes: cliente?.observacoes ?? '',
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: ({ value }) => {
       const pf = value.tipoPessoa === 'PF';
@@ -125,6 +127,7 @@ export function PainelCliente({
       );
     },
   });
+  const alterado = useAlterado(form, iniciais);
 
   // Contratado inativo que o cliente já usa continua na lista, para não sumir da tela.
   const opcoesContratado = [
@@ -150,6 +153,7 @@ export function PainelCliente({
       titulo={cliente?.nome ?? 'Novo cliente'}
       subtitulo={cliente?.nomeFantasia ?? undefined}
       onFechar={onFechar}
+      alterado={alterado}
     >
       <AbasComHistorico
         historico={cliente ? historico : undefined}

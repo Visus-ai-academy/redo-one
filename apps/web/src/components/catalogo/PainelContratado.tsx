@@ -1,4 +1,3 @@
-import { Button } from '@base-ui/react/button';
 import { useState } from 'react';
 import { z } from 'zod';
 
@@ -7,12 +6,11 @@ import type { ContratadoItemDto } from '../../gen/types/ContratadoItemDto';
 import { formatarCep, formatarCnpj, soDigitos } from '../../lib/documentos';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
-import { buttonClassName } from '../button/button-class';
-import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapeSomenteLeitura } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 
 const tamanho = (n: number, mensagem: string) =>
   z.string().refine((v) => v.trim() === '' || soDigitos(v).length === n, mensagem);
@@ -55,17 +53,18 @@ export function PainelContratado({
   const [erro, setErro] = useState<string>();
   const titulo = contratado?.razaoSocial ?? 'Novo contratado';
 
+  const iniciais = {
+    razaoSocial: contratado?.razaoSocial ?? '',
+    cnpj: contratado?.cnpj ? formatarCnpj(contratado.cnpj) : '',
+    endereco: contratado?.endereco ?? '',
+    cidade: contratado?.cidade ?? '',
+    uf: contratado?.uf ?? '',
+    cep: contratado?.cep ? formatarCep(contratado.cep) : '',
+    contratadoRepasseId: contratado?.contratadoRepasseId ?? '',
+    ativo: contratado?.ativo ?? true,
+  };
   const form = useAppForm({
-    defaultValues: {
-      razaoSocial: contratado?.razaoSocial ?? '',
-      cnpj: contratado?.cnpj ? formatarCnpj(contratado.cnpj) : '',
-      endereco: contratado?.endereco ?? '',
-      cidade: contratado?.cidade ?? '',
-      uf: contratado?.uf ?? '',
-      cep: contratado?.cep ? formatarCep(contratado.cep) : '',
-      contratadoRepasseId: contratado?.contratadoRepasseId ?? '',
-      ativo: contratado?.ativo ?? true,
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -90,6 +89,7 @@ export function PainelContratado({
       }
     },
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir =
     contratado && onExcluir
@@ -144,6 +144,7 @@ export function PainelContratado({
       titulo={titulo}
       subtitulo={contratado?.cnpj ? formatarCnpj(contratado.cnpj) : undefined}
       onFechar={onFechar}
+      alterado={alterado}
     >
       <form
         method="post"
@@ -241,22 +242,12 @@ export function PainelContratado({
           )}
         </form.AppField>
         <form.AppForm>
-          <form.RequiredLegend />
-          <div className="flex flex-wrap items-center gap-2">
-            {excluir && <ConfirmarAcao {...excluir} />}
-            <span className="ml-auto flex gap-2">
-              <Button
-                type="button"
-                onClick={onFechar}
-                className={buttonClassName({ variant: 'secondary' })}
-              >
-                Cancelar
-              </Button>
-              <form.SubmitButton pendingLabel="Salvando…">
-                {contratado ? 'Salvar' : 'Criar contratado'}
-              </form.SubmitButton>
-            </span>
-          </div>
+          <RodapePainel
+            rotuloCriar="Criar contratado"
+            editando={Boolean(contratado)}
+            excluir={excluir}
+            onCancelar={onFechar}
+          />
         </form.AppForm>
       </form>
     </PainelLateral>

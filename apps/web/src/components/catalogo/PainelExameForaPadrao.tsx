@@ -6,6 +6,7 @@ import type { DeParaValorItemDto } from '../../gen/types/DeParaValorItemDto';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
@@ -54,15 +55,16 @@ export function PainelExameForaPadrao({
   onFechar,
 }: PainelExameForaPadraoProps) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    estudoDescricao: item?.estudoDescricao ?? '',
+    valores: item ? String(item.valores) : '',
+    exame: (item?.exameId
+      ? { valor: item.exameId, rotulo: item.destinoNome ?? '' }
+      : null) as OpcaoBusca | null,
+    ativo: item?.ativo ?? true,
+  };
   const form = useAppForm({
-    defaultValues: {
-      estudoDescricao: item?.estudoDescricao ?? '',
-      valores: item ? String(item.valores) : '',
-      exame: (item?.exameId
-        ? { valor: item.exameId, rotulo: item.destinoNome ?? '' }
-        : null) as OpcaoBusca | null,
-      ativo: item?.ativo ?? true,
-    },
+    defaultValues: iniciais,
     validators: {
       onSubmit: z.object({
         estudoDescricao: textoObrigatorio('Informe a descrição do estudo como chega da MobileMed.'),
@@ -86,6 +88,7 @@ export function PainelExameForaPadrao({
         }),
       ),
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir = item ? excluirForaPadrao(item.estudoDescricao, onExcluir, tentar) : undefined;
 
@@ -93,6 +96,7 @@ export function PainelExameForaPadrao({
     <PainelLateral
       titulo={item ? item.estudoDescricao : 'Novo exame fora do padrão'}
       onFechar={onFechar}
+      alterado={alterado}
     >
       <form
         noValidate

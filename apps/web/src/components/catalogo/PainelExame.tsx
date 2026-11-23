@@ -1,5 +1,5 @@
 import { Button } from '@base-ui/react/button';
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useEffect, useId, useState } from 'react';
 import { z } from 'zod';
 
 import type { ExameDetalheDto } from '../../gen/types/ExameDetalheDto';
@@ -11,6 +11,8 @@ import { buttonClassName } from '../button/button-class';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
+import { BotaoCancelar } from '../painel/BotaoCancelar';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { useErroDoPainel } from './use-erro-do-painel';
@@ -64,20 +66,23 @@ export function PainelExame({
   historico,
 }: PainelExameProps) {
   const { erro, tentar } = useErroDoPainel();
+  // Quem só muda a subespecialidade também é perguntado antes de descartar.
+  const [subAlterada, setSubAlterada] = useState(false);
+  const iniciais = {
+    nome: exame?.nome ?? '',
+    codigo: exame?.codigo ?? '',
+    descricao: exame?.descricao ?? '',
+    modalidadeId: exame?.modalidadeId ?? '',
+    especialidadeId: exame?.especialidadeId ?? '',
+    subespecialidadeId: exame?.subespecialidadeId ?? '',
+    categoriaId: exame?.categoriaId ?? '',
+    prioridadeId: exame?.prioridadeId ?? '',
+    permiteQuebra: exame?.permiteQuebra ?? false,
+    exigeRevisaoManual: exame?.exigeRevisaoManual ?? false,
+    ativo: exame?.ativo ?? true,
+  };
   const form = useAppForm({
-    defaultValues: {
-      nome: exame?.nome ?? '',
-      codigo: exame?.codigo ?? '',
-      descricao: exame?.descricao ?? '',
-      modalidadeId: exame?.modalidadeId ?? '',
-      especialidadeId: exame?.especialidadeId ?? '',
-      subespecialidadeId: exame?.subespecialidadeId ?? '',
-      categoriaId: exame?.categoriaId ?? '',
-      prioridadeId: exame?.prioridadeId ?? '',
-      permiteQuebra: exame?.permiteQuebra ?? false,
-      exigeRevisaoManual: exame?.exigeRevisaoManual ?? false,
-      ativo: exame?.ativo ?? true,
-    },
+    defaultValues: iniciais,
     validators: {
       onSubmit: z.object({
         nome: z.string().trim().min(1, 'Informe o nome do exame.'),
@@ -110,6 +115,7 @@ export function PainelExame({
         }),
       ),
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir =
     exame && onExcluir
@@ -127,6 +133,7 @@ export function PainelExame({
       titulo={exame?.nome ?? 'Novo exame'}
       subtitulo={exame?.codigo ?? undefined}
       onFechar={onFechar}
+      alterado={alterado || subAlterada}
     >
       <AbasComHistorico
         historico={exame ? historico : undefined}
@@ -296,6 +303,7 @@ export function PainelExame({
                     tentar(() => onSalvarSubespecialidade(subespecialidadeId))
                   }
                   onCancelar={onFechar}
+                  onAlterado={setSubAlterada}
                 />
               ) : (
                 <CampoSomenteLeitura
@@ -335,17 +343,22 @@ function FormSubespecialidade({
   opcoes,
   onSalvar,
   onCancelar,
+  onAlterado,
 }: {
   exame: ExameDetalheDto;
   opcoes: OpcoesCatalogoDto;
   onSalvar: (subespecialidadeId: string | null) => Promise<void>;
   onCancelar: () => void;
+  onAlterado: (alterado: boolean) => void;
 }) {
+  const iniciais = { subespecialidadeId: exame.subespecialidadeId ?? '' };
   const form = useAppForm({
-    defaultValues: { subespecialidadeId: exame.subespecialidadeId ?? '' },
+    defaultValues: iniciais,
     validators: { onSubmit: z.object({ subespecialidadeId: z.string() }) },
     onSubmit: ({ value }) => onSalvar(value.subespecialidadeId || null),
   });
+  const alterado = useAlterado(form, iniciais);
+  useEffect(() => onAlterado(alterado), [alterado, onAlterado]);
   const daEspecialidade = opcoes.subespecialidades.filter(
     (s) =>
       !exame.especialidadeId ||
@@ -373,13 +386,8 @@ function FormSubespecialidade({
         )}
       </form.AppField>
       <span className="flex justify-end gap-2">
-        <Button
-          type="button"
-          onClick={onCancelar}
-          className={buttonClassName({ variant: 'secondary' })}
-        >
-          Cancelar
-        </Button>
+        {/* Dentro do painel, fecha como o X: deslizando e perguntando se há alteração. */}
+        <BotaoCancelar onCancelar={onCancelar} />
         <form.AppForm>
           <form.SubmitButton pendingLabel="Salvando…">Salvar</form.SubmitButton>
         </form.AppForm>
