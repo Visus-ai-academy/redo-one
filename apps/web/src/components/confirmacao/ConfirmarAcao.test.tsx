@@ -49,4 +49,32 @@ describe('ConfirmarAcao', () => {
     expect(onConfirmar).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
   });
+
+  it('controlado e sem botão próprio: abre pelo `aberto`, com os rótulos do caso', async () => {
+    const onConfirmar = vi.fn();
+    const onAbertoChange = vi.fn();
+    render(
+      <ConfirmarAcao
+        acao="Descartar"
+        rotuloCancelar="Continuar editando"
+        titulo="Descartar as alterações?"
+        consequencia="O que você mudou neste formulário se perde."
+        onConfirmar={onConfirmar}
+        aberto
+        onAbertoChange={onAbertoChange}
+      />,
+    );
+
+    const dialogo = await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' });
+    expect(dialogo).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Continuar editando' })).toHaveFocus(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
+    expect(onAbertoChange).toHaveBeenCalledWith(false);
+    expect(onConfirmar).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(onConfirmar).toHaveBeenCalledTimes(1);
+  });
 });

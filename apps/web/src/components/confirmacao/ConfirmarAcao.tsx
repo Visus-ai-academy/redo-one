@@ -12,27 +12,49 @@ type ConfirmarAcaoProps = {
   consequencia: string;
   onConfirmar: () => Promise<void> | void;
   desabilitado?: boolean;
+  /** Texto do botão que desiste ("Continuar editando"); padrão "Cancelar". */
+  rotuloCancelar?: string;
+  /**
+   * Controlado e sem botão próprio: quem usa abre a confirmação (ex.: "Descartar as alterações?"
+   * ao fechar um painel alterado). Desistir chama `onAbertoChange(false)`.
+   */
+  aberto?: boolean;
+  onAbertoChange?: (aberto: boolean) => void;
 };
 
-/** Botão de ação destrutiva com confirmação que diz a consequência; o foco abre no Cancelar. */
+/**
+ * Confirmação de ação destrutiva que diz a consequência; o foco abre no Cancelar. Por padrão traz o
+ * botão que a abre; com `aberto`, é controlada por quem usa e não desenha botão.
+ */
 export function ConfirmarAcao({
   acao,
   titulo,
   consequencia,
   onConfirmar,
   desabilitado,
+  rotuloCancelar = 'Cancelar',
+  aberto: abertoDeFora,
+  onAbertoChange,
 }: ConfirmarAcaoProps) {
-  const [aberto, setAberto] = useState(false);
+  const [abertoAqui, setAbertoAqui] = useState(false);
+  const controlado = abertoDeFora !== undefined;
+  const aberto = controlado ? abertoDeFora : abertoAqui;
+  const setAberto = (abrir: boolean) => {
+    if (!controlado) setAbertoAqui(abrir);
+    onAbertoChange?.(abrir);
+  };
   const cancelar = useRef<HTMLButtonElement>(null);
 
   return (
     <AlertDialog.Root open={aberto} onOpenChange={setAberto}>
-      <AlertDialog.Trigger
-        disabled={desabilitado}
-        className={buttonClassName({ variant: 'secondary', className: 'text-destructive' })}
-      >
-        {acao}
-      </AlertDialog.Trigger>
+      {!controlado && (
+        <AlertDialog.Trigger
+          disabled={desabilitado}
+          className={buttonClassName({ variant: 'secondary', className: 'text-destructive' })}
+        >
+          {acao}
+        </AlertDialog.Trigger>
+      )}
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className="bg-foreground/40 fixed inset-0 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
         <AlertDialog.Popup
@@ -47,7 +69,7 @@ export function ConfirmarAcao({
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             <AlertDialog.Close ref={cancelar} className={buttonClassName({ variant: 'secondary' })}>
-              Cancelar
+              {rotuloCancelar}
             </AlertDialog.Close>
             <Button
               type="button"
