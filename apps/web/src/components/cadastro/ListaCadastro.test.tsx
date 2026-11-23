@@ -2,6 +2,8 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ResponseError } from '../../gen/.kubb/client';
+import { renderComRotas } from '../../test/render';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { BotaoAbrir, ListaCadastro } from './ListaCadastro';
 
@@ -78,6 +80,43 @@ describe('ListaCadastro', () => {
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'laudos.xlsx' })).toBeInTheDocument();
+  });
+
+  it('total grande no título com separador de milhar', () => {
+    render(<ListaCadastro {...props} itens={[{ id: 'c-1', nome: 'A' }]} total={1234} />);
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Contratados 1.234');
+  });
+
+  it('recarregando (filtro, página), mantém as linhas à vista e marca a tabela como ocupada', () => {
+    render(<ListaCadastro {...props} itens={[{ id: 'c-1', nome: 'A' }]} total={1} recarregando />);
+
+    expect(screen.getByRole('table').parentElement).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'A' })).toBeInTheDocument();
+  });
+
+  it('se a lista falhar, mostra o estado do erro no lugar da tabela, com tentar de novo', async () => {
+    const tentar = vi.fn();
+    const erro = new ResponseError({
+      data: {},
+      status: 500,
+      statusText: '',
+      request: new Request('http://api.test/x'),
+      response: new Response(),
+    });
+    renderComRotas(
+      <ListaCadastro
+        {...props}
+        itens={[]}
+        total={0}
+        erro={{ erro, oQue: 'os contratados', onTentarDeNovo: tentar }}
+      />,
+    );
+
+    expect(await screen.findByText('Não foi possível carregar os contratados')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum contratado ainda.')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(tentar).toHaveBeenCalled();
   });
 
   it('sem nenhum item, diz o que fazer', () => {

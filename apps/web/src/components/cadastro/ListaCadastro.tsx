@@ -3,11 +3,13 @@ import { type Icon, Plus } from '@phosphor-icons/react';
 import type { ColumnDef, RowData } from '@tanstack/react-table';
 import { type ReactNode, useCallback } from 'react';
 import { cn } from '../../lib/cn';
+import { numero } from '../../lib/formato';
 import { CampoBusca } from '../busca/CampoBusca';
 import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import type { DataTableFeatures } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
+import { EstadoDoErro } from '../estado/EstadoDoErro';
 import { Paginacao } from '../paginacao/Paginacao';
 
 type ListaCadastroProps<T extends RowData> = {
@@ -33,8 +35,15 @@ type ListaCadastroProps<T extends RowData> = {
   getRowId: (item: T) => string;
   /** Item aberto no painel. */
   selecionadoId?: string;
-  /** Abre o item ao clicar em qualquer ponto da linha. */
+  /**
+   * Abre o item ao clicar em qualquer ponto da linha. Prefira o nome como `LinkDaLinha` (com o
+   * `?id=`): sem `onAbrir`, a linha segue o link.
+   */
   onAbrir?: (id: string) => void;
+  /** Buscando de novo (filtro, página): as linhas de antes ficam à vista, esmaecidas. */
+  recarregando?: boolean;
+  /** A lista não carregou: o estado do erro (pelo código HTTP) no lugar da tabela. */
+  erro?: { erro: unknown; oQue: string; onTentarDeNovo: () => void };
   pagina: number;
   porPagina: number;
   total: number;
@@ -65,6 +74,8 @@ export function ListaCadastro<T extends RowData>({
   getRowId,
   selecionadoId,
   onAbrir,
+  recarregando = false,
+  erro,
   pagina,
   porPagina,
   total,
@@ -90,7 +101,9 @@ export function ListaCadastro<T extends RowData>({
           {totalNoTitulo && (
             <>
               {' '}
-              <span className="text-subtle-foreground font-normal tabular-nums">{total}</span>
+              <span className="text-subtle-foreground font-normal tabular-nums">
+                {numero(total)}
+              </span>
             </>
           )}
         </h1>
@@ -131,7 +144,14 @@ export function ListaCadastro<T extends RowData>({
             </div>
           )}
 
-          {itens.length === 0 ? (
+          {erro ? (
+            <EstadoDoErro
+              erro={erro.erro}
+              oQue={erro.oQue}
+              onTentarDeNovo={erro.onTentarDeNovo}
+              className="p-6"
+            />
+          ) : itens.length === 0 ? (
             <div className="flex flex-col items-start gap-3 p-6">
               <div className="flex flex-col gap-1">
                 <p className="font-medium">
@@ -164,6 +184,7 @@ export function ListaCadastro<T extends RowData>({
               getRowId={getRowId}
               selectedRowId={selecionadoId}
               onRowClick={onAbrir && ((item: T) => onAbrir(getRowId(item)))}
+              recarregando={recarregando}
               className="md:min-h-0 md:flex-1 md:overflow-y-auto"
             />
           )}
