@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Select } from '../select/Select';
@@ -20,6 +21,23 @@ function montar() {
     </>,
   );
   return { onFechar, naLista };
+}
+
+/** Tela com o botão que abre o painel, para conferir para onde o foco volta. */
+function Tela() {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setAberto(true)}>
+        Abrir Ana
+      </button>
+      {aberto && (
+        <PainelLateral titulo="Ana Reis" onFechar={() => setAberto(false)}>
+          <input aria-label="Nome" />
+        </PainelLateral>
+      )}
+    </>
+  );
 }
 
 describe('PainelLateral', () => {
@@ -75,14 +93,63 @@ describe('PainelLateral', () => {
     );
   });
 
-  it('não bloqueia a lista: clicar fora não fecha e a lista responde', async () => {
-    const { onFechar, naLista } = montar();
+  it('fica por cima com um fundo desfocado, sem escurecer, que não deixa clicar atrás', async () => {
+    const { naLista } = montar();
     await screen.findByRole('dialog', { name: 'Ana Reis' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Linha da lista' }));
+    const fundo = document.querySelector('[data-fundo-painel]');
+    expect(fundo).toHaveClass('backdrop-blur-[2px]', 'transition-opacity', 'duration-200');
+    expect(fundo?.className).not.toMatch(/transition-\[|transition-all|bg-foreground\/[1-9]/);
+    await userEvent.click(fundo as HTMLElement);
+    expect(naLista).not.toHaveBeenCalled();
+  });
 
-    expect(naLista).toHaveBeenCalled();
+  it('clicar fora fecha', async () => {
+    const { onFechar } = montar();
+    await screen.findByRole('dialog', { name: 'Ana Reis' });
+
+    await userEvent.click(document.querySelector('[data-fundo-painel]') as HTMLElement);
+
+    await waitFor(() => expect(onFechar).toHaveBeenCalledTimes(1));
+  });
+
+  it('clicar no aviso (toast), que fica por cima do fundo, não fecha o painel', async () => {
+    const onFechar = vi.fn();
+    const fecharAviso = vi.fn();
+    render(
+      <>
+        <div className="faixa-avisos">
+          <button type="button" onClick={fecharAviso}>
+            Fechar aviso
+          </button>
+        </div>
+        <PainelLateral titulo="Ana Reis" onFechar={onFechar}>
+          conteúdo
+        </PainelLateral>
+      </>,
+    );
+    await screen.findByRole('dialog', { name: 'Ana Reis' });
+
+    await userEvent.click(screen.getByText('Fechar aviso'));
+
+    expect(fecharAviso).toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 300));
     expect(onFechar).not.toHaveBeenCalled();
+  });
+
+  it('modal: o foco fica no painel e volta para quem abriu ao fechar', async () => {
+    render(<Tela />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir Ana' }));
+    const painel = await screen.findByRole('dialog', { name: 'Ana Reis' });
+    await waitFor(() => expect(painel).toContainElement(document.activeElement as HTMLElement));
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(painel).toContainElement(document.activeElement as HTMLElement);
+
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Abrir Ana' })).toHaveFocus());
   });
 
   it('o Esc numa lista de opções aberta dentro do painel fecha só a lista', async () => {
@@ -118,7 +185,7 @@ describe('PainelLateral', () => {
     );
     const largo = await screen.findByRole('dialog', { name: 'Grade' });
     expect(largo).toHaveClass('w-full', 'lg:w-[720px]');
-    // A página reserva a faixa pela largura do painel aberto (`RESERVA_DO_PAINEL`).
+    // A faixa dos avisos (toast) se posiciona pela largura do painel aberto.
     expect(largo).toHaveAttribute('data-painel-lateral', 'larga');
     expect(largo).not.toHaveClass('lg:w-[400px]');
     unmount();
@@ -152,6 +219,16 @@ describe('PainelLateral', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
       await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
       expect(screen.getByRole('dialog', { name: 'Ana Reis' })).toBeInTheDocument();
+      expect(onFechar).not.toHaveBeenCalled();
+    });
+
+    it('clicar fora também pergunta', async () => {
+      const onFechar = montarAlterado();
+      await screen.findByRole('dialog', { name: 'Ana Reis' });
+
+      await userEvent.click(document.querySelector('[data-fundo-painel]') as HTMLElement);
+
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
       expect(onFechar).not.toHaveBeenCalled();
     });
 

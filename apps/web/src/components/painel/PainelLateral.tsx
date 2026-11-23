@@ -5,7 +5,6 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
 import { PedirFechamento, useDescartarAlteracoes } from './fechamento';
-import { revelarSobOPainel } from './revelar';
 
 type PainelLateralProps = {
   titulo: ReactNode;
@@ -31,17 +30,17 @@ type PainelLateralProps = {
 let montados = 0;
 
 /**
- * Painel ao lado de uma lista (detalhe, convite, edição), sobre o Drawer do Base UI. Não modal:
- * a lista continua à vista e clicável (abrir outra linha troca o painel), e clicar fora não fecha.
- * Fecha pelo X, pelo Esc, arrastando para a direita ou pelo `BotaoCancelar` do formulário; com
+ * Painel de ver ou editar um item (detalhe, edição), sobre o Drawer do Base UI. Sempre por cima:
+ * nunca encolhe a tela; o resto ganha um fundo com desfoque discreto (sem escurecer) que não deixa
+ * clicar atrás. Modal: o foco fica preso no painel e volta para quem abriu ao fechar. Fecha pelo X,
+ * pelo Esc, arrastando para a direita, clicando fora ou pelo `BotaoCancelar` do formulário; com
  * `alterado`, pergunta antes de descartar. No computador ocupa 400px à direita (720px no largo);
  * abaixo de `lg`, a tela inteira. Entra e sai deslizando; quem usa só fica sabendo do fechamento
- * (`onFechar`) depois que ele saiu.
+ * (`onFechar`) depois que ele saiu. Os avisos (toast) ficam por cima do fundo e clicáveis.
  *
- * Painel ou diálogo: o painel é para ver ou editar um item de uma lista, alternando entre itens
- * (pode ter abas, histórico, listas). Tarefa curta e atômica (criar algo simples, convidar,
- * informar um motivo) vai no `Dialogo`. Lista ou tabela que perde colunas reserva a faixa do painel
- * (`RESERVA_DO_PAINEL`); grade, calendário, quadro e formulário deixam o painel por cima.
+ * Painel ou diálogo: o painel é para ver ou editar um item de uma lista (pode ter abas, histórico,
+ * listas). Tarefa curta e atômica (criar algo simples, convidar, informar um motivo) vai no
+ * `Dialogo`.
  */
 export function PainelLateral({
   titulo,
@@ -63,12 +62,7 @@ export function PainelLateral({
       setAberto(false);
     });
 
-  // Quem abriu o painel (a célula clicada), para rolar até ela se ficar embaixo dele.
-  const origem = useRef<Element | null>(null);
-  const popup = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    origem.current = document.activeElement;
     montados += 1;
     setAberto(true);
     return () => {
@@ -81,22 +75,32 @@ export function PainelLateral({
       open={aberto}
       onOpenChange={(abrir, detalhes) => {
         if (abrir) return;
+        // O aviso (toast) fica por cima do fundo: fechar o aviso não fecha o painel.
+        if (
+          detalhes.reason === 'outside-press' &&
+          detalhes.event.target instanceof Element &&
+          detalhes.event.target.closest('.faixa-avisos')
+        ) {
+          detalhes.cancel();
+          return;
+        }
         // Controlado: quem fecha é o `fechar`, que antes pergunta se há alteração.
         detalhes.cancel();
         fechar();
       }}
       onOpenChangeComplete={(abriu) => {
-        if (abriu) revelarSobOPainel(origem.current, popup.current);
-        else if (fechando.current) onFechar();
+        if (!abriu && fechando.current) onFechar();
       }}
-      modal={false}
-      disablePointerDismissal
       swipeDirection="right"
     >
       <Drawer.Portal>
+        {/* Desfoque discreto, sem escurecer; só a opacidade anima (o blur nunca). */}
+        <Drawer.Backdrop
+          data-fundo-painel
+          className="fixed inset-0 z-40 bg-transparent backdrop-blur-[2px] transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
+        />
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
           <Drawer.Popup
-            ref={popup}
             data-painel-lateral={largura}
             aria-busy={ocupado || undefined}
             className={cn(
