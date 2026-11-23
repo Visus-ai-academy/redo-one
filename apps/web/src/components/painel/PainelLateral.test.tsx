@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Select } from '../select/Select';
+import { BotaoCancelar } from './BotaoCancelar';
 import { PainelLateral } from './PainelLateral';
 
 function montar() {
@@ -126,5 +127,67 @@ describe('PainelLateral', () => {
     const padrao = await screen.findByRole('dialog', { name: 'Ana Reis' });
     expect(padrao).toHaveClass('lg:w-[400px]');
     expect(padrao).toHaveAttribute('data-painel-lateral', 'padrao');
+  });
+
+  describe('com alterações não salvas', () => {
+    function montarAlterado() {
+      const onFechar = vi.fn();
+      render(
+        <PainelLateral titulo="Ana Reis" alterado onFechar={onFechar}>
+          <input aria-label="Nome" />
+          <BotaoCancelar onCancelar={vi.fn()} />
+        </PainelLateral>,
+      );
+      return onFechar;
+    }
+
+    it('fechar pelo X pede para descartar; "Continuar editando" mantém o painel', async () => {
+      const onFechar = montarAlterado();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Fechar painel' }));
+
+      expect(
+        await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+      ).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(screen.getByRole('dialog', { name: 'Ana Reis' })).toBeInTheDocument();
+      expect(onFechar).not.toHaveBeenCalled();
+    });
+
+    it('"Descartar" fecha o painel', async () => {
+      const onFechar = montarAlterado();
+
+      await userEvent.click(await screen.findByRole('textbox', { name: 'Nome' }));
+      await userEvent.keyboard('{Escape}');
+      await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+
+      await waitFor(() => expect(onFechar).toHaveBeenCalledTimes(1));
+    });
+
+    it('o Cancelar do formulário também pede, em vez de fechar direto', async () => {
+      const onFechar = montarAlterado();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+      expect(onFechar).not.toHaveBeenCalled();
+    });
+  });
+
+  it('sem alteração, o Cancelar do formulário fecha direto, deslizando', async () => {
+    const onFechar = vi.fn();
+    const onCancelar = vi.fn();
+    render(
+      <PainelLateral titulo="Ana Reis" onFechar={onFechar}>
+        <BotaoCancelar onCancelar={onCancelar} />
+      </PainelLateral>,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(onFechar).toHaveBeenCalledTimes(1));
+    expect(onCancelar).not.toHaveBeenCalled();
   });
 });

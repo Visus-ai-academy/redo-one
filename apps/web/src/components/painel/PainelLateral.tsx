@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
+import { PedirFechamento, useDescartarAlteracoes } from './fechamento';
 
 type PainelLateralProps = {
   titulo: ReactNode;
@@ -16,6 +17,11 @@ type PainelLateralProps = {
   ocupado?: boolean;
   /** `larga` (720px no computador) para conteúdo em grade; no celular, sempre a tela inteira. */
   largura?: 'padrao' | 'larga';
+  /**
+   * Formulário com alterações não salvas (`useAlterado(form)`): fechar pelo X, Esc, arrastar ou
+   * pelo `BotaoCancelar` pergunta antes "Descartar as alterações?".
+   */
+  alterado?: boolean;
   children: ReactNode;
 };
 
@@ -26,9 +32,15 @@ let montados = 0;
 /**
  * Painel ao lado de uma lista (detalhe, convite, edição), sobre o Drawer do Base UI. Não modal:
  * a lista continua à vista e clicável (abrir outra linha troca o painel), e clicar fora não fecha.
- * Fecha pelo X, pelo Esc ou arrastando para a direita. No computador ocupa 400px à direita (a
- * `ListaCadastro` reserva o espaço); abaixo disso, a tela inteira. Entra e sai deslizando; quem usa
- * só fica sabendo do fechamento (`onFechar`) depois que ele saiu.
+ * Fecha pelo X, pelo Esc, arrastando para a direita ou pelo `BotaoCancelar` do formulário; com
+ * `alterado`, pergunta antes de descartar. No computador ocupa 400px à direita (720px no largo);
+ * abaixo de `lg`, a tela inteira. Entra e sai deslizando; quem usa só fica sabendo do fechamento
+ * (`onFechar`) depois que ele saiu.
+ *
+ * Painel ou diálogo: o painel é para ver ou editar um item de uma lista, alternando entre itens
+ * (pode ter abas, histórico, listas). Tarefa curta e atômica (criar algo simples, convidar,
+ * informar um motivo) vai no `Dialogo`. Lista ou tabela que perde colunas reserva a faixa do painel
+ * (`RESERVA_DO_PAINEL`); grade, calendário, quadro e formulário deixam o painel por cima.
  */
 export function PainelLateral({
   titulo,
@@ -37,11 +49,18 @@ export function PainelLateral({
   onFechar,
   ocupado,
   largura = 'padrao',
+  alterado = false,
   children,
 }: PainelLateralProps) {
   // Monta fechado e abre em seguida: o Base UI só anima a entrada quando `open` muda.
   const [aberto, setAberto] = useState(() => montados > 0);
   const fechando = useRef(false);
+  const { pedir, confirmacao } = useDescartarAlteracoes();
+  const fechar = () =>
+    pedir(alterado, () => {
+      fechando.current = true;
+      setAberto(false);
+    });
 
   useEffect(() => {
     montados += 1;
@@ -54,10 +73,11 @@ export function PainelLateral({
   return (
     <Drawer.Root
       open={aberto}
-      onOpenChange={(abrir) => {
+      onOpenChange={(abrir, detalhes) => {
         if (abrir) return;
-        fechando.current = true;
-        setAberto(false);
+        // Controlado: quem fecha é o `fechar`, que antes pergunta se há alteração.
+        detalhes.cancel();
+        fechar();
       }}
       onOpenChangeComplete={(abriu) => {
         if (!abriu && fechando.current) onFechar();
@@ -96,7 +116,10 @@ export function PainelLateral({
                 <X size={18} aria-hidden />
               </Drawer.Close>
             </div>
-            <Drawer.Content className="flex flex-col">{children}</Drawer.Content>
+            <Drawer.Content className="flex flex-col">
+              <PedirFechamento value={fechar}>{children}</PedirFechamento>
+            </Drawer.Content>
+            {confirmacao}
           </Drawer.Popup>
         </Drawer.Viewport>
       </Drawer.Portal>
