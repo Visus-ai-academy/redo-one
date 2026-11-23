@@ -12,16 +12,16 @@ import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { useFieldContext } from '../form/context';
 import { FieldError } from '../form/field-parts';
+import { useCampo } from '../form/use-campo';
 
 /** Com `cor` (mesmo nula), a opção leva a bolinha da cor (ex.: prioridades da operação). */
 type Opcao = { valor: string; rotulo: string; cor?: string | null };
 
+/** Como os campos do kit: o erro aparece ao sair (aqui, ao marcar) ou ao enviar, e o envio com
+ * erro põe o foco no campo. */
 function useErros() {
   const field = useFieldContext<unknown>();
-  const erros = field.state.meta.errors.map((erro) =>
-    typeof erro === 'string' ? erro : (erro as { message?: string } | undefined)?.message,
-  );
-  return { field, erros, invalido: erros.length > 0 };
+  return { field, ...useCampo(field) };
 }
 
 function Legenda({ required, children }: { required: boolean; children: ReactNode }) {
@@ -54,10 +54,11 @@ export function CaixasField({
   description?: ReactNode;
   className?: string;
 }) {
-  const { field, erros, invalido } = useErros();
+  const { field, erros, invalido, aoSair, ref } = useErros();
   const valor = field.state.value as string[];
   return (
     <Field.Root
+      ref={ref}
       name={field.name}
       invalid={invalido}
       touched={field.state.meta.isTouched}
@@ -69,7 +70,7 @@ export function CaixasField({
             value={valor}
             onValueChange={(novos) => {
               field.handleChange(novos);
-              field.handleBlur();
+              aoSair();
             }}
           />
         }
@@ -110,16 +111,16 @@ export function OpcoesField({
   description?: ReactNode;
   className?: string;
 }) {
-  const { field } = useErros();
+  const { field, aoSair, ref } = useErros();
   return (
-    <Field.Root name={field.name} className={cn('flex flex-col gap-2', className)}>
+    <Field.Root ref={ref} name={field.name} className={cn('flex flex-col gap-2', className)}>
       <Fieldset.Root
         render={
           <RadioGroup
             value={field.state.value as string}
             onValueChange={(novo) => {
               field.handleChange(novo);
-              field.handleBlur();
+              aoSair();
             }}
           />
         }

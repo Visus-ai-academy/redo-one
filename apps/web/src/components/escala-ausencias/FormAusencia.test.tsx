@@ -155,6 +155,8 @@ describe('FormAusencia', () => {
     expect(screen.getByText('Escolha o tipo.')).toBeInTheDocument();
     expect(screen.getByText('O fim não pode ser antes do início.')).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
+    // O foco vai para o primeiro campo errado: a busca do médico.
+    expect(screen.getByRole('combobox', { name: 'Adicionar médico' })).toHaveFocus();
   });
 
   it('na edição o médico fica travado e o tipo inativo continua escolhido', async () => {

@@ -10,15 +10,10 @@ import { buttonClassName } from '../button/button-class';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { useFieldContext } from '../form/context';
 import { FieldError } from '../form/field-parts';
+import { useCampo } from '../form/use-campo';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { DIAS_DA_SEMANA } from './ausencias';
-
-const errosDo = (erros: unknown[]) =>
-  erros
-    .map((e) => (typeof e === 'string' ? e : (e as { message?: string } | undefined)?.message))
-    .filter(Boolean)
-    .join(', ');
 
 function Legenda({ children, required }: { children: string; required?: boolean }) {
   return (
@@ -42,7 +37,9 @@ export function CampoMedicos({ buscar }: { buscar: (termo: string) => Promise<Op
   const [rodada, setRodada] = useState(0);
   const escolhidos = field.state.value;
   const pagina = usePaginaLocal(escolhidos, 5);
-  const erro = errosDo(field.state.meta.errors);
+  // Como os campos do kit: erro ao sair ou ao enviar, e o envio com erro foca a busca.
+  const { erros, aoSair, ref } = useCampo(field);
+  const erro = erros.join(', ');
 
   return (
     <Fieldset.Root className="flex flex-col gap-2">
@@ -55,7 +52,10 @@ export function CampoMedicos({ buscar }: { buscar: (termo: string) => Promise<Op
               <Button
                 type="button"
                 aria-label={`Remover ${item.rotulo}`}
-                onClick={() => field.handleChange(escolhidos.filter((m) => m.valor !== item.valor))}
+                onClick={() => {
+                  field.handleChange(escolhidos.filter((m) => m.valor !== item.valor));
+                  aoSair();
+                }}
                 className={buttonClassName({
                   variant: 'ghost',
                   className: 'text-muted-foreground size-8 flex-none px-0',
@@ -75,7 +75,12 @@ export function CampoMedicos({ buscar }: { buscar: (termo: string) => Promise<Op
           onIrPara={pagina.irPara}
         />
       )}
-      <Field.Root name={field.name} invalid={Boolean(erro)} className="flex flex-col gap-2">
+      <Field.Root
+        ref={ref}
+        name={field.name}
+        invalid={Boolean(erro)}
+        className="flex flex-col gap-2"
+      >
         <Field.Label className="text-muted-foreground text-[13px]">Adicionar médico</Field.Label>
         <BuscaSelecao
           key={rodada}
@@ -88,7 +93,7 @@ export function CampoMedicos({ buscar }: { buscar: (termo: string) => Promise<Op
             if (!escolhidos.some((m) => m.valor === opcao.valor)) {
               field.handleChange([...escolhidos, opcao]);
             }
-            field.handleBlur();
+            aoSair();
             setRodada((n) => n + 1);
           }}
           placeholder="Digite o nome do médico"
@@ -105,12 +110,17 @@ export function CampoMedicos({ buscar }: { buscar: (termo: string) => Promise<Op
 /** Dias da semana numa linha (seg a dom), sobre o CheckboxGroup do Base UI. Valor: "0".."6". */
 export function CampoDiasSemana() {
   const field = useFieldContext<string[]>();
+  const { aoSair, ref } = useCampo(field);
   return (
     <Fieldset.Root
+      ref={ref}
       render={
         <CheckboxGroup
           value={field.state.value}
-          onValueChange={(valores) => field.handleChange(valores)}
+          onValueChange={(valores) => {
+            field.handleChange(valores);
+            aoSair();
+          }}
         />
       }
       className="flex flex-col gap-2"
