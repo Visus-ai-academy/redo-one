@@ -50,7 +50,14 @@ export function montarResolvedorUnidadeCliente(cadastro: CadastroClientes) {
   for (const a of cadastro.aliases) if (a.tipo === 'normalizado') registrar(a.chave, a.clienteId);
   for (const c of cadastro.clientes) registrar(normalizarNome(c.nomeFantasia ?? ''), c.id);
 
-  const doCadastro = (id: string | undefined) => id ?? null;
+  // Unidade pelo nome do próprio cadastro: o apelido costuma levar direto ao principal.
+  const unidadePorNome = new Map(
+    cadastro.clientes.flatMap((c) =>
+      c.unificadoEmId
+        ? [[c.chaveNormalizada, { id: c.id, principal: c.unificadoEmId }] as const]
+        : [],
+    ),
+  );
 
   const cortarSufixos = (nome: string) => {
     let limpo = nome;
@@ -61,18 +68,28 @@ export function montarResolvedorUnidadeCliente(cadastro: CadastroClientes) {
   };
 
   return (empresa: string): string | null => {
+    const id = casar(empresa);
+    if (id === null) return null;
+    const unidade =
+      unidadePorNome.get(normalizarNome(cortarSufixos(empresa.trim()))) ??
+      unidadePorNome.get(normalizarNome(empresa));
+    return unidade && unidade.principal === id ? unidade.id : id;
+  };
+
+  function casar(empresa: string): string | null {
     const maiusculo = empresa.trim().toUpperCase();
     const semEspacoNoSublinhado = maiusculo.replace(/\s*_\s*/g, '_').replace(/\s+/g, ' ');
     const formas = [maiusculo, semEspacoNoSublinhado];
 
     const exato = exatos.find((a) => formas.includes(a.chave));
-    if (exato) return doCadastro(exato.clienteId);
+    if (exato) return exato.clienteId;
     const prefixo = prefixos.find((a) => formas.some((f) => f.startsWith(a.chave)));
-    if (prefixo) return doCadastro(prefixo.clienteId);
+    if (prefixo) return prefixo.clienteId;
 
-    return doCadastro(
+    return (
       porChave.get(normalizarNome(cortarSufixos(empresa.trim()))) ??
-        porChave.get(normalizarNome(empresa)),
+      porChave.get(normalizarNome(empresa)) ??
+      null
     );
-  };
+  }
 }

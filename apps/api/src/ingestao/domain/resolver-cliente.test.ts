@@ -88,6 +88,20 @@ describe('montarResolvedorCliente', () => {
     expect(unidade('NINGUEM')).toBeNull();
   });
 
+  it('o apelido que leva ao principal ainda acha a unidade com o mesmo nome', () => {
+    const unidade = montarResolvedorUnidadeCliente({
+      ...cadastro,
+      aliases: [{ tipo: 'exato', chave: 'PRN TELE_A', clienteId: 'c-prn' }],
+    });
+    expect(unidade('PRN TELE_A')).toBe('c-prn-a');
+    // O nome que é de outro cliente (não unidade do resolvido) não muda o resultado.
+    const outro = montarResolvedorUnidadeCliente({
+      ...cadastro,
+      aliases: [{ tipo: 'exato', chave: 'PRN TELE_A', clienteId: 'c-cedi' }],
+    });
+    expect(outro('PRN TELE_A')).toBe('c-cedi');
+  });
+
   it('se o nome cortado não acha, tenta o nome como chegou', () => {
     const r = montarResolvedorCliente({
       ...cadastro,
