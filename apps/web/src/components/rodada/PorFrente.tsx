@@ -9,6 +9,7 @@ import { num } from '../../lib/rodada';
 import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
+import { PAINEL_ANIMADO } from './animacao';
 import { Caixa, TituloSecao } from './comum';
 
 /** Prioridade sem cor cadastrada: tons de neutro na ordem da operação (a primeira, mais escura). */
@@ -133,7 +134,10 @@ function LinhaFrente({
       {linha}
       <Collapsible.Panel
         render={<ul aria-label={`Subespecialidades de ${f.nome}`} />}
-        className="grid grid-cols-[minmax(0,max-content)_minmax(64px,1fr)_auto_auto] gap-x-2 pb-2"
+        className={cn(
+          'grid grid-cols-[minmax(0,max-content)_minmax(64px,1fr)_auto_auto] gap-x-2 [&>li:last-child]:mb-2',
+          PAINEL_ANIMADO,
+        )}
       >
         {f.porSegmento.map((s) => (
           <li key={s.segmentoId ?? 'sem-segmento'} className="col-span-full grid grid-cols-subgrid">

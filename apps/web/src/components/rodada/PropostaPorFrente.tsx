@@ -29,6 +29,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { Etiqueta } from '../etiqueta/Etiqueta';
+import { PAINEL_ANIMADO } from './animacao';
 import { Caixa, CargaDoMedico } from './comum';
 import { MoverExame } from './MoverExame';
 
@@ -192,7 +193,10 @@ function Frente({
             </span>
           </span>
         </Collapsible.Trigger>
-        <Collapsible.Panel render={<ul aria-label={`Médicos de ${f.nome}`} />} className="border-t">
+        <Collapsible.Panel
+          render={<ul aria-label={`Médicos de ${f.nome}`} />}
+          className={cn('border-t', PAINEL_ANIMADO)}
+        >
           {f.medicos.map((m) => (
             <MedicoDaFrente
               key={m.medico.medicoId}
@@ -275,7 +279,10 @@ function MedicoDaFrente({
           />
         </span>
       </div>
-      <Collapsible.Panel render={<ul aria-label={`Exames de ${m.medico.nome}`} />}>
+      <Collapsible.Panel
+        render={<ul aria-label={`Exames de ${m.medico.nome}`} />}
+        className={PAINEL_ANIMADO}
+      >
         {m.exames.map((d) => (
           <LinhaDoExame
             key={d.id}
