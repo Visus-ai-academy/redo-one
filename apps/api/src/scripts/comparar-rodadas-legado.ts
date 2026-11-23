@@ -6,6 +6,7 @@
 //     --desde 2026-11-16 --ate 2026-11-24 --csv /caminho/comparacao.csv [--todas] [--com-orfas]
 // --rodada <id> (repetível) compara só essas. --ignorar-conta trata o médico sem conta MobileMed
 // no redo-one como se tivesse. --csv-medicos grava também o teto e a carga por médico e rodada.
+// --carga-por-registro conta cada exame como 1 na carga (a unidade do legado).
 // --todas inclui as rodadas manuais (padrão: só as automáticas). --com-orfas mantém na escala do
 // redo-one as alocações que não existem mais no dashboards-one (padrão: tiradas da simulação).
 // O CSV não tem nome de paciente; o id do exame sai pseudonimizado.
@@ -28,6 +29,7 @@ import { escalaDosMedicos, montarEntrada } from '../distribuicao/domain/rodada/e
 import { montarProposta } from '../distribuicao/domain/rodada/proposta';
 import {
   type ComparacaoExame,
+  cargaDosRecolhidos,
   compararExames,
   cotaEntregueDoLegado,
   entregasDoLegado,
@@ -152,6 +154,7 @@ async function comparar() {
       'com-orfas': { type: 'boolean', default: false },
       'ignorar-conta': { type: 'boolean', default: false },
       rodada: { type: 'string', multiple: true },
+      'carga-por-registro': { type: 'boolean', default: false },
     },
   });
   const url = process.env.LEGADO_DATABASE_URL;
@@ -269,7 +272,13 @@ async function comparar() {
       for (const n of mapeado.naoMapeados) naoMapeados.set(n, (naoMapeados.get(n) ?? 0) + 1);
       const montada = montarEntrada({
         agora,
-        leitura: leituraDaRodada(designacoes),
+        // --carga-por-registro: cada exame vale 1 na carga, como a `unidadeCarga = registros` do
+        // legado (o redo-one soma os laudos do exame).
+        leitura: leituraDaRodada(
+          values['carga-por-registro']
+            ? designacoes.map((d) => ({ ...d, laudos: 1 }))
+            : designacoes,
+        ),
         catalogo,
         insumos,
         entregas: {
@@ -287,6 +296,8 @@ async function comparar() {
       });
       // A carga é a que o motor do legado viu (em mãos + laudado no período, sem a exclusiva).
       const carga = new Map(r.cargas.map((c) => [idDoLegado('medicos', c.medicoId), c]));
+      // O recolhido que o legado deu a um médico ocupa o teto dele (o redo-one não o simula).
+      const recolhidos = cargaDosRecolhidos(designacoes);
       const entrada = {
         ...montada.entrada,
         medicos: montada.entrada.medicos.map((m) => {
@@ -294,13 +305,14 @@ async function comparar() {
           // --ignorar-conta: o médico sem conta MobileMed no redo-one entra como se tivesse (isola
           // o motor da falta do mapeamento).
           const conta = values['ignorar-conta'] ? { ...m, semContaMobilemed: false } : m;
+          const extra = recolhidos.get(m.id) ?? 0;
           return c
             ? {
                 ...conta,
-                cargaEmMaos: c.cargaInicial + c.cargaReservada,
+                cargaEmMaos: c.cargaInicial + c.cargaReservada + extra,
                 cargaReservadaEmMaos: c.cargaReservada,
               }
-            : conta;
+            : { ...conta, cargaEmMaos: conta.cargaEmMaos + extra };
         }),
       };
       const resultado = rodarMotor(entrada);

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { PrioridadeOperacao } from '../distribuicao/domain/motor/prioridades-operacao';
 import {
   type ComparacaoExame,
+  cargaDosRecolhidos,
   compararExames,
   cotaEntregueDoLegado,
   entregasDoLegado,
@@ -231,6 +232,18 @@ describe('cotaEntregueDoLegado', () => {
       new Date('2026-11-23T19:00:00.000Z'),
     );
     expect(cota).toEqual({ [alocacao]: 2 });
+  });
+});
+
+describe('cargaDosRecolhidos', () => {
+  it('soma os laudos dos recolhidos que o legado propôs a cada médico (o redo-one não os simula)', () => {
+    const carga = cargaDosRecolhidos([
+      designacao({ recolhidoDeId: 'mx', medicoId: 'm1', laudos: 2 }),
+      designacao({ recolhidoDeId: 'mx', medicoId: 'm1', laudos: 1 }),
+      designacao({ recolhidoDeId: 'mx', medicoId: null }),
+      designacao({ medicoId: 'm2' }),
+    ]);
+    expect([...carga]).toEqual([[idDoLegado('medicos', 'm1'), 3]]);
   });
 });
 

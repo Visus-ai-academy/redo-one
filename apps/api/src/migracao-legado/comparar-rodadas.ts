@@ -220,6 +220,22 @@ export function cotaEntregueDoLegado(
   return cota;
 }
 
+/**
+ * Os recolhidos que o legado propôs ocupam o teto de quem os recebeu. Como o redo-one não simula o
+ * recolhimento (falta a fila em mãos), essa carga entra antes do motor, para o teto ficar igual.
+ */
+export function cargaDosRecolhidos(
+  designacoes: readonly LegadoDesignacaoRodada[],
+): Map<string, number> {
+  const carga = new Map<string, number>();
+  for (const d of designacoes) {
+    if (d.recolhidoDeId === null || d.medicoId === null) continue;
+    const id = idDoLegado('medicos', d.medicoId);
+    carga.set(id, (carga.get(id) ?? 0) + d.laudos);
+  }
+  return carga;
+}
+
 export type CategoriaComparacao =
   | 'mesmo_medico'
   | 'medico_diferente'
