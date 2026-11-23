@@ -5,6 +5,7 @@
 
 import type { FrenteRodadaDto } from './FrenteRodadaDto'
 import type { SegmentoEmTurnoDto } from './SegmentoEmTurnoDto'
+import type { UnidadeTetoKey } from './UnidadeTeto'
 
 export type MedicoEmTurnoDto = {
   /**
@@ -41,10 +42,15 @@ export type MedicoEmTurnoDto = {
   fim: string;
   produtividade: number | null;
   /**
-   * @description Exames com ele ainda não laudados.
+   * @description Exames com ele ainda não laudados, na unidade do teto dele.
    * @type integer
    */
   cargaEmMaos: number;
+  /**
+   * @description Em que o teto e a carga dele são contados (ausente nos retratos antigos).
+   * @type string | undefined
+   */
+  unidadeTeto?: UnidadeTetoKey;
   /**
    * @description Nome do turno.
    * @type string

@@ -101,6 +101,7 @@ const COLUNAS = [
         cargaEmMaos={row.original.cargaEmMaos}
         propostos={0}
         capacidade={row.original.teto}
+        unidade={row.original.unidadeTeto}
       />
     ),
   }),

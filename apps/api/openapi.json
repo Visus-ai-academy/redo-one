@@ -16151,6 +16151,14 @@
           "modalidadeId"
         ]
       },
+      "UnidadeTeto": {
+        "type": "string",
+        "enum": [
+          "exames",
+          "laudos"
+        ],
+        "description": "Em que o teto e a carga dele são contados (ausente nos retratos antigos)."
+      },
       "SegmentoEmTurnoDto": {
         "type": "object",
         "properties": {
@@ -16208,7 +16216,15 @@
           },
           "cargaEmMaos": {
             "type": "integer",
-            "description": "Exames com ele ainda não laudados."
+            "description": "Exames com ele ainda não laudados, na unidade do teto dele."
+          },
+          "unidadeTeto": {
+            "description": "Em que o teto e a carga dele são contados (ausente nos retratos antigos).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UnidadeTeto"
+              }
+            ]
           },
           "turno": {
             "type": "string",
@@ -16582,11 +16598,16 @@
           },
           "exames": {
             "type": "integer"
+          },
+          "laudos": {
+            "type": "integer",
+            "description": "Soma dos laudos dos exames do pacote."
           }
         },
         "required": [
           "id",
-          "exames"
+          "exames",
+          "laudos"
         ]
       },
       "MotivoRecolhimento": {
@@ -16931,7 +16952,16 @@
           },
           "cargaEmMaos": {
             "type": "integer",
-            "description": "Já aberto na MobileMed na leitura."
+            "description": "Já aberto na MobileMed na leitura, na unidade do teto dele."
+          },
+          "unidadeTeto": {
+            "nullable": true,
+            "description": "Em que o teto e a carga dele são contados; null = mandado na conferência sem estar na rodada.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UnidadeTeto"
+              }
+            ]
           },
           "propostos": {
             "type": "integer"
@@ -16945,6 +16975,10 @@
           },
           "previstas": {
             "type": "integer"
+          },
+          "laudosPrevistos": {
+            "type": "integer",
+            "description": "Laudos das previstas."
           },
           "executadas": {
             "type": "integer"
@@ -16967,10 +17001,12 @@
           "aComecar",
           "capacidade",
           "cargaEmMaos",
+          "unidadeTeto",
           "propostos",
           "urgencias",
           "pacotes",
           "previstas",
+          "laudosPrevistos",
           "executadas",
           "puladas",
           "falharam",
@@ -17589,6 +17625,14 @@
           },
           "habilitadoRobo": {
             "type": "boolean"
+          },
+          "unidadeTeto": {
+            "description": "Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UnidadeTeto"
+              }
+            ]
           }
         },
         "required": [
@@ -17596,7 +17640,8 @@
           "clientes",
           "exames",
           "prioridades",
-          "habilitadoRobo"
+          "habilitadoRobo",
+          "unidadeTeto"
         ]
       },
       "SalvarArranjosDto": {
@@ -17619,11 +17664,16 @@
           "habilitadoRobo": {
             "type": "boolean",
             "description": "O robô pode entregar exames a ele."
+          },
+          "unidadeTeto": {
+            "description": "Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UnidadeTeto"
+              }
+            ]
           }
-        },
-        "required": [
-          "habilitadoRobo"
-        ]
+        }
       },
       "DistribuicaoEquipeDto": {
         "type": "object",

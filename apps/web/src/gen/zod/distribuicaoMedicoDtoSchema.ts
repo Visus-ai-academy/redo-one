@@ -7,6 +7,7 @@ import * as z from 'zod'
 import { arranjoDtoSchema } from './arranjoDtoSchema'
 import { prioridadeDoArranjoDtoSchema } from './prioridadeDoArranjoDtoSchema'
 import { rotuloDtoSchema } from './rotuloDtoSchema'
+import { unidadeTetoSchema } from './unidadeTetoSchema'
 
 export const distribuicaoMedicoDtoSchema = z.object({
   arranjos: z.array(arranjoDtoSchema),
@@ -14,6 +15,7 @@ export const distribuicaoMedicoDtoSchema = z.object({
   exames: z.array(rotuloDtoSchema).describe('Nomes dos exames marcados.'),
   prioridades: z.array(prioridadeDoArranjoDtoSchema).describe('Prioridades da operação (as do recorte), pela posição.'),
   habilitadoRobo: z.boolean(),
+  unidadeTeto: unidadeTetoSchema.describe('Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.'),
 })
 
 export type DistribuicaoMedicoDtoSchemaType = z.infer<typeof distribuicaoMedicoDtoSchema>

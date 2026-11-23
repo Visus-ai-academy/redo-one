@@ -19,10 +19,12 @@ const medico = (
   aComecar: [],
   capacidade: 10,
   cargaEmMaos: 2,
+  unidadeTeto: 'exames',
   propostos: 3,
   urgencias: 0,
   pacotes: 0,
   previstas: 3,
+  laudosPrevistos: 3,
   executadas: 0,
   puladas: 0,
   falharam: 0,
@@ -49,7 +51,7 @@ const designacao = (p: Partial<DesignacaoDto> = {}): DesignacaoDto => ({
   urgente: false,
   medicoProposto: { id: 'A', nome: 'Ana' },
   medico: { id: 'A', nome: 'Ana' },
-  pacote: { id: 'd1', exames: 3 },
+  pacote: { id: 'd1', exames: 3, laudos: 3 },
   gratificado: false,
   naMao: false,
   elegiveis: ['A', 'B', 'C'],
@@ -89,10 +91,27 @@ describe('MoverExame', () => {
     ).toBeChecked();
     expect(screen.queryByText('Davi')).not.toBeInTheDocument();
     expect(screen.queryByText('Ana')).not.toBeInTheDocument();
-    expect(screen.getByText('fica com 8 de 10')).toBeInTheDocument();
+    expect(screen.getByText('fica com 8 de 10 exames')).toBeInTheDocument();
     expect(screen.getByText('Acima do teto')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Bruno/ }));
     expect(onEscolher).toHaveBeenCalledWith('B', true);
+  });
+
+  it('quem conta o teto por laudos: a carga depois da troca soma os laudos do pacote', async () => {
+    renderComRotas(
+      <MoverExame
+        designacao={designacao({ pacote: { id: 'd1', exames: 3, laudos: 5 } })}
+        medicos={[
+          medico('A', 'Ana'),
+          medico('B', 'Bruno', { unidadeTeto: 'laudos', previstas: 2, laudosPrevistos: 4 }),
+        ]}
+        buscarMedicos={async () => []}
+        onEscolher={vi.fn(async () => undefined)}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
+    // 2 em mãos + 4 laudos previstos + 5 do pacote.
+    expect(screen.getByText('fica com 11 de 10 laudos')).toBeInTheDocument();
   });
 
   it('o recolhido não volta para quem o tinha: ele nem aparece na lista nem na busca', async () => {

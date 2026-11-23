@@ -6,9 +6,10 @@ import { useState } from 'react';
 
 import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
+import type { UnidadeTetoKey } from '../../gen/types/UnidadeTeto';
 import { cn } from '../../lib/cn';
 import { turnoDoMedico } from '../../lib/proposta';
-import { num } from '../../lib/rodada';
+import { cargaNaUnidade, num } from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { CampoBusca } from '../busca/CampoBusca';
@@ -30,6 +31,8 @@ type Candidato = {
   /** Carga depois da troca e o teto; null = fora da rodada (sem retrato da carga). */
   depois: number | null;
   teto: number | null;
+  /** Em que o teto dele é contado (a carga e o teto estão nela). */
+  unidade?: UnidadeTetoKey | null;
 };
 
 /**
@@ -73,8 +76,17 @@ export function MoverExame({
       nome: m.nome,
       detalhe: [turnoDoMedico(m, []), m.frentes.join(', ')].filter(Boolean).join(': '),
       elegivel: designacao.elegiveis.includes(m.medicoId),
-      depois: m.cargaEmMaos + m.previstas + leva,
+      // Na unidade do teto dele: quem conta por laudos leva os laudos do exame (ou do pacote).
+      depois:
+        m.cargaEmMaos +
+        cargaNaUnidade(m) +
+        (m.unidadeTeto === 'laudos'
+          ? leva > 1
+            ? (designacao.pacote?.laudos ?? leva)
+            : designacao.laudos
+          : leva),
       teto: m.capacidade,
+      unidade: m.unidadeTeto,
     }));
   const visiveis = (
     termo
@@ -187,6 +199,7 @@ export function MoverExame({
                           >
                             fica com {num(c.depois)}
                             {c.teto !== null && ` de ${num(c.teto)}`}
+                            {c.unidade && ` ${c.unidade}`}
                           </span>
                         )}
                       </Button>

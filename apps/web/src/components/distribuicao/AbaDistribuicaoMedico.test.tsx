@@ -36,6 +36,7 @@ beforeEach(() => {
   obter.mockReturnValue({
     unwrap: async () => ({
       habilitadoRobo: false,
+      unidadeTeto: 'exames',
       arranjos: [
         {
           especialidadeId: 'e-neuro',
@@ -87,11 +88,24 @@ describe('AbaDistribuicaoMedico', () => {
     expect(await acharAviso()).toHaveTextContent('Médico habilitado no robô.');
   });
 
+  it('troca a unidade do teto na hora, com o aviso', async () => {
+    renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar />);
+    const campo = await screen.findByRole('combobox', { name: 'Conta o teto por' });
+    expect(campo).toHaveTextContent('Exames');
+    await userEvent.click(campo);
+    await userEvent.click(await screen.findByRole('option', { name: 'Laudos' }));
+    expect(salvarRobo).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { medicoId: 'm1' }, body: { unidadeTeto: 'laudos' } }),
+    );
+    expect(await acharAviso()).toHaveTextContent('O teto passa a contar laudos.');
+  });
+
   it('sem permissão de editar, a chave e os arranjos ficam só para leitura', async () => {
     renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar={false} />);
     expect(await screen.findByText('NEURO')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Habilitado no robô' }));
     expect(salvarRobo).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: 'Conta o teto por' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Novo arranjo' })).not.toBeInTheDocument();
   });
 });

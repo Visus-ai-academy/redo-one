@@ -4,6 +4,7 @@
 */
 
 import type { TurnoAComecarDto } from './TurnoAComecarDto'
+import type { UnidadeTetoKey } from './UnidadeTeto'
 
 export type MedicoDaRodadaDto = {
   /**
@@ -34,10 +35,14 @@ export type MedicoDaRodadaDto = {
    */
   capacidade: number | null;
   /**
-   * @description Já aberto na MobileMed na leitura.
+   * @description Já aberto na MobileMed na leitura, na unidade do teto dele.
    * @type integer
    */
   cargaEmMaos: number;
+  /**
+   * @description Em que o teto e a carga dele são contados; null = mandado na conferência sem estar na rodada.
+   */
+  unidadeTeto: UnidadeTetoKey | null;
   propostos: number;
   urgencias: number;
   /**
@@ -46,6 +51,11 @@ export type MedicoDaRodadaDto = {
    */
   pacotes: number;
   previstas: number;
+  /**
+   * @description Laudos das previstas.
+   * @type integer
+   */
+  laudosPrevistos: number;
   executadas: number;
   puladas: number;
   falharam: number;

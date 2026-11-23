@@ -115,6 +115,7 @@ const CAMPOS: Record<string, string> = {
   optanteSimples: 'Optante do Simples',
   omieCodigoFornecedor: 'Fornecedor no Omie',
   habilitadoRobo: 'Habilitado no robô',
+  unidadeTeto: 'Conta o teto por',
   nomeFantasia: 'Nome fantasia',
   tipoPessoa: 'Tipo de pessoa',
   contratadoId: 'Empresa que fatura',
@@ -142,6 +143,7 @@ const CAMPOS: Record<string, string> = {
 const VALORES: Record<string, Record<string, string>> = {
   funcao: { STAFF: 'Staff', FELLOW: 'Fellow (em formação)' },
   tipoPessoa: { PJ: 'Pessoa jurídica', PF: 'Pessoa física' },
+  unidadeTeto: { exames: 'Exames', laudos: 'Laudos' },
   tipo: { exato: 'Igual a', prefixo: 'Começa com', normalizado: 'Igual sem acento e pontuação' },
   tipoChavePix: {
     CPF: 'CPF',

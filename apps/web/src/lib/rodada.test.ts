@@ -5,6 +5,7 @@ import type { MedicoEmTurnoDto } from '../gen/types/MedicoEmTurnoDto';
 
 import {
   cargaDoMedico,
+  cargaNaUnidade,
   descreverRecortes,
   etapasDaRodada,
   filtrarMedicosEmTurno,
@@ -20,6 +21,7 @@ import {
   rotuloMotivo,
   rotuloRecolhido,
   situacaoDaRodada,
+  textoDaCarga,
   tituloDaRodada,
 } from './rodada';
 
@@ -274,6 +276,24 @@ describe('rodada do robô na tela', () => {
       teto: null,
       noTeto: false,
     });
+  });
+});
+
+describe('unidade do teto do médico', () => {
+  it('a carga prevista sai em exames ou em laudos, conforme o médico', () => {
+    const m = { previstas: 2, laudosPrevistos: 5 };
+    expect(cargaNaUnidade({ ...m, unidadeTeto: 'exames' })).toBe(2);
+    expect(cargaNaUnidade({ ...m, unidadeTeto: 'laudos' })).toBe(5);
+    // Fora do retrato (mandado na conferência): conta em exames.
+    expect(cargaNaUnidade({ ...m, unidadeTeto: null })).toBe(2);
+  });
+
+  it('o texto da carga diz a unidade junto do teto', () => {
+    expect(textoDaCarga({ depois: 12, teto: 20 }, 'exames')).toBe('12 de 20 exames');
+    expect(textoDaCarga({ depois: 12, teto: 20 }, 'laudos')).toBe('12 de 20 laudos');
+    expect(textoDaCarga({ depois: 3, teto: null }, 'laudos')).toBe('3 laudos, sem teto');
+    // Retrato antigo, sem a unidade: só os números.
+    expect(textoDaCarga({ depois: 12, teto: 20 }, undefined)).toBe('12 de 20');
   });
 });
 

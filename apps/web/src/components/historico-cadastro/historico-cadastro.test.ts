@@ -90,6 +90,20 @@ describe('alteracoesDoCadastro', () => {
     ]);
   });
 
+  it('unidade do teto do médico na distribuição', () => {
+    expect(
+      alteracoesDoCadastro(
+        evento(
+          'medico_distribuicao',
+          'alterado',
+          { unidadeTeto: 'exames' },
+          { unidadeTeto: 'laudos' },
+        ),
+        nomes,
+      ),
+    ).toEqual([{ rotulo: 'Conta o teto por', antes: 'Exames', depois: 'Laudos' }]);
+  });
+
   it('valor sensível gravado mascarado continua mascarado', () => {
     expect(
       alteracoesDoCadastro(

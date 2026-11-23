@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-
+import type { UnidadeTetoKey } from '../../gen/types/UnidadeTeto';
 import { cn } from '../../lib/cn';
-import { cargaDoMedico, num } from '../../lib/rodada';
+import { cargaDoMedico, num, textoDaCarga } from '../../lib/rodada';
 import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 
@@ -40,19 +40,24 @@ export function Caixa({ children, className }: { children: ReactNode; className?
   );
 }
 
-/** A carga do médico depois da rodada: barra (aberto + proposto) e "82 de 90", com "No teto". */
+/**
+ * A carga do médico depois da rodada: barra (aberto + proposto) e "82 de 90 exames", com "No teto".
+ * Tudo na unidade do teto dele (exames ou laudos).
+ */
 export function CargaDoMedico({
   cargaEmMaos,
   propostos,
   capacidade,
+  unidade,
 }: {
   cargaEmMaos: number;
   propostos: number;
   capacidade: number | null;
+  /** Em que o teto dele é contado; sem ela (retrato antigo), só os números. */
+  unidade?: UnidadeTetoKey | null;
 }) {
   const c = cargaDoMedico({ cargaEmMaos, propostos, capacidade });
-  const texto =
-    c.teto === null ? `${num(c.depois)}, sem teto` : `${num(c.depois)} de ${num(c.teto)}`;
+  const texto = textoDaCarga(c, unidade);
   return (
     <span className="flex min-w-36 items-center gap-2">
       <BarraEmpilhada

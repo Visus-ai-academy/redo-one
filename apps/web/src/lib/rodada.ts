@@ -10,6 +10,7 @@ import type { RecolhimentoRodadaDto } from '../gen/types/RecolhimentoRodadaDto';
 import type { RecortesRodadaDto } from '../gen/types/RecortesRodadaDto';
 import type { StatusDesignacaoKey } from '../gen/types/StatusDesignacao';
 import type { StatusRodadaKey } from '../gen/types/StatusRodada';
+import type { UnidadeTetoKey as UnidadeTeto } from '../gen/types/UnidadeTeto';
 import { horaDeBrasilia } from './acesso';
 import { dataHoraCurta } from './datas';
 
@@ -382,7 +383,10 @@ export type MedicoEmTurno = {
   frentes: FrenteEmTurno[];
   /** Os segmentos que alguma frente dele cobre (o filtro de subespecialidade). */
   segmentos: ItemComCor[];
+  /** Na unidade do teto dele. */
   cargaEmMaos: number;
+  /** Em que o teto dele é contado; ausente nos retratos antigos. */
+  unidadeTeto?: UnidadeTeto;
   /** O maior teto (produtividade) entre os períodos em andamento; null = desconhecido. */
   teto: number | null;
 };
@@ -406,6 +410,7 @@ export function medicosEmTurno(lista: readonly MedicoEmTurnoDto[]): MedicoEmTurn
       frentes: [],
       segmentos: [],
       cargaEmMaos: o.cargaEmMaos,
+      unidadeTeto: o.unidadeTeto,
       teto: null,
     };
     juntarItem(m.turnos, { id: o.turnoId, nome: o.turno, cor: o.turnoCor });
@@ -479,6 +484,27 @@ export function cargaDoMedico(m: {
     pctAberto: pct(m.cargaEmMaos),
     pctProposto: Math.min(100 - pct(m.cargaEmMaos), pct(m.propostos)),
   };
+}
+
+/**
+ * A carga prevista do médico na unidade do teto dele: as previstas em exames, ou a soma dos
+ * laudos delas para quem conta por laudos. Sem unidade (fora do retrato), em exames.
+ */
+export const cargaNaUnidade = (m: {
+  unidadeTeto: UnidadeTeto | null;
+  previstas: number;
+  laudosPrevistos: number;
+}) => (m.unidadeTeto === 'laudos' ? m.laudosPrevistos : m.previstas);
+
+/** "12 de 20 exames", "3 laudos, sem teto"; sem unidade (retrato antigo), só os números. */
+export function textoDaCarga(
+  c: { depois: number; teto: number | null },
+  unidade: UnidadeTeto | null | undefined,
+) {
+  const u = unidade ? ` ${unidade}` : '';
+  return c.teto === null
+    ? `${num(c.depois)}${u}, sem teto`
+    : `${num(c.depois)} de ${num(c.teto)}${u}`;
 }
 
 /** Tom da prioridade: urgência em vermelho; o resto neutro (a cor não é o único sinal). */

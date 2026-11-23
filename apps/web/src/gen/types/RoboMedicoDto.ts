@@ -3,10 +3,17 @@
 * Do not edit manually.
 */
 
+import type { UnidadeTetoKey } from './UnidadeTeto'
+
 export type RoboMedicoDto = {
   /**
    * @description O robô pode entregar exames a ele.
-   * @type boolean
+   * @type boolean | undefined
    */
-  habilitadoRobo: boolean;
+  habilitadoRobo?: boolean;
+  /**
+   * @description Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.
+   * @type string | undefined
+   */
+  unidadeTeto?: UnidadeTetoKey;
 };

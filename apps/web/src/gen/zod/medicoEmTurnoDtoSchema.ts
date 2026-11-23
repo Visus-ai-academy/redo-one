@@ -6,6 +6,7 @@
 import * as z from 'zod'
 import { frenteRodadaDtoSchema } from './frenteRodadaDtoSchema'
 import { segmentoEmTurnoDtoSchema } from './segmentoEmTurnoDtoSchema'
+import { unidadeTetoSchema } from './unidadeTetoSchema'
 
 export const medicoEmTurnoDtoSchema = z.object({
   medicoId: z.uuid(),
@@ -16,7 +17,8 @@ export const medicoEmTurnoDtoSchema = z.object({
   inicio: z.iso.datetime(),
   fim: z.iso.datetime(),
   produtividade: z.int().nullable(),
-  cargaEmMaos: z.int().describe('Exames com ele ainda não laudados.'),
+  cargaEmMaos: z.int().describe('Exames com ele ainda não laudados, na unidade do teto dele.'),
+  unidadeTeto: unidadeTetoSchema.optional().describe('Em que o teto e a carga dele são contados (ausente nos retratos antigos).'),
   turno: z.string().describe('Nome do turno.'),
   frenteNome: z.string().describe('Nome da frente (especialidade ou modalidade).'),
   frenteId: z.uuid().nullable().describe('A frente da escala.'),

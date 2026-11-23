@@ -8,6 +8,7 @@ import * as z from 'zod'
 export const pacoteDtoSchema = z.object({
   id: z.string().describe('Estável na rodada (agrupa os exames do mesmo paciente).'),
   exames: z.int(),
+  laudos: z.int().describe('Soma dos laudos dos exames do pacote.'),
 })
 
 export type PacoteDtoSchemaType = z.infer<typeof pacoteDtoSchema>

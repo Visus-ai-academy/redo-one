@@ -4,9 +4,11 @@
 */
 
 import * as z from 'zod'
+import { unidadeTetoSchema } from './unidadeTetoSchema'
 
 export const roboMedicoDtoSchema = z.object({
-  habilitadoRobo: z.boolean().describe('O robô pode entregar exames a ele.'),
+  habilitadoRobo: z.boolean().optional().describe('O robô pode entregar exames a ele.'),
+  unidadeTeto: unidadeTetoSchema.optional().describe('Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.'),
 })
 
 export type RoboMedicoDtoSchemaType = z.infer<typeof roboMedicoDtoSchema>

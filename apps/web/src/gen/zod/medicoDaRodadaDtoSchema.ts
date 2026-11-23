@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { turnoAComecarDtoSchema } from './turnoAComecarDtoSchema'
+import { unidadeTetoSchema } from './unidadeTetoSchema'
 
 export const medicoDaRodadaDtoSchema = z.object({
   medicoId: z.uuid(),
@@ -13,11 +14,13 @@ export const medicoDaRodadaDtoSchema = z.object({
   frentes: z.array(z.string()).describe('Frentes dos turnos em andamento e a começar.'),
   aComecar: z.array(turnoAComecarDtoSchema).describe('Turnos que começavam depois da leitura, mas já entravam na rodada (dentro da antecedência ou turno escolhido).'),
   capacidade: z.int().nullable().describe('Teto da escala na leitura.'),
-  cargaEmMaos: z.int().describe('Já aberto na MobileMed na leitura.'),
+  cargaEmMaos: z.int().describe('Já aberto na MobileMed na leitura, na unidade do teto dele.'),
+  unidadeTeto: z.union([unidadeTetoSchema, z.null()]).describe('Em que o teto e a carga dele são contados; null = mandado na conferência sem estar na rodada.'),
   propostos: z.int(),
   urgencias: z.int(),
   pacotes: z.int().describe('Pacientes com mais de um exame com ele.'),
   previstas: z.int(),
+  laudosPrevistos: z.int().describe('Laudos das previstas.'),
   executadas: z.int(),
   puladas: z.int(),
   falharam: z.int(),

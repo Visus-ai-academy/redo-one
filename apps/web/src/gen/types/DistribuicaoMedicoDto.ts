@@ -6,6 +6,7 @@
 import type { ArranjoDto } from './ArranjoDto'
 import type { PrioridadeDoArranjoDto } from './PrioridadeDoArranjoDto'
 import type { RotuloDto } from './RotuloDto'
+import type { UnidadeTetoKey } from './UnidadeTeto'
 
 export type DistribuicaoMedicoDto = {
   arranjos: ArranjoDto[];
@@ -25,4 +26,9 @@ export type DistribuicaoMedicoDto = {
    */
   prioridades: PrioridadeDoArranjoDto[];
   habilitadoRobo: boolean;
+  /**
+   * @description Em que o teto do médico é contado: exames (cada exame vale 1) ou laudos (soma os laudos do exame). Vale também para a carga em mãos e a cota gratificada.
+   * @type string
+   */
+  unidadeTeto: UnidadeTetoKey;
 };

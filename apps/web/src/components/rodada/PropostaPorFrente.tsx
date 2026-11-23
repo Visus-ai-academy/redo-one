@@ -22,7 +22,7 @@ import {
   type MedicoNaFrente,
   turnoDoMedico,
 } from '../../lib/proposta';
-import { num, rotuloRecolhido, tomDaPrioridade } from '../../lib/rodada';
+import { cargaNaUnidade, num, rotuloRecolhido, tomDaPrioridade } from '../../lib/rodada';
 import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
@@ -274,8 +274,12 @@ function MedicoDaFrente({
         <span className="flex items-center gap-2">
           <CargaDoMedico
             cargaEmMaos={m.medico.cargaEmMaos}
-            propostos={m.medico.previstas || qtd}
+            propostos={
+              cargaNaUnidade(m.medico) ||
+              (m.medico.unidadeTeto === 'laudos' ? m.exames.reduce((s, d) => s + d.laudos, 0) : qtd)
+            }
             capacidade={m.medico.capacidade}
+            unidade={m.medico.unidadeTeto}
           />
         </span>
       </div>

@@ -10,4 +10,9 @@ export type PacoteDto = {
    */
   id: string;
   exames: number;
+  /**
+   * @description Soma dos laudos dos exames do pacote.
+   * @type integer
+   */
+  laudos: number;
 };
