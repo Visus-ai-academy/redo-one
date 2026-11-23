@@ -168,6 +168,47 @@ describe('montarMedicosDisponiveis: quem está na rodada', () => {
     expect(doMedico(r, 'D')?.capacidade).toBe(20);
   });
 
+  it('turno marcado de AMANHÃ não entra: só a Tarde de hoje (desmarcada) não leva exame (23/11)', () => {
+    // Rodada de segunda 10:44 com Manhã e Lista marcadas; o médico tem a Tarde de segunda e a
+    // Manhã de terça. A escala vem com hoje e amanhã: a Manhã de terça não é "o turno de hoje".
+    const r = montar({
+      agora: br('2026-11-23T10:44'),
+      medicos: [medico('A'), medico('M')],
+      ocorrencias: [
+        oc('A', { inicio: br('2026-11-23T07:00'), fim: br('2026-11-23T13:00') }),
+        oc('M', { turnoId: 'tarde', inicio: br('2026-11-23T13:00'), fim: br('2026-11-23T19:00') }),
+        oc('M', { inicio: br('2026-11-24T07:00'), fim: br('2026-11-24T13:00') }),
+        oc('M', {
+          turnoId: 'lista',
+          turnoTipo: 'lista',
+          inicio: br('2026-11-24T07:00'),
+          fim: br('2026-11-25T07:00'),
+        }),
+      ],
+      filtroTurnoIds: ['manha', 'lista'],
+    });
+    expect(r.medicos.map((m) => m.id)).toEqual(['A']);
+    expect(r.explicacao('e1').elegiveis).toEqual(['A']);
+  });
+
+  it('o turno marcado de amanhã não arrasta a Lista de hoje junto', () => {
+    const r = montar({
+      agora: br('2026-11-23T10:44'),
+      medicos: [medico('M')],
+      ocorrencias: [
+        oc('M', {
+          turnoId: 'lista',
+          turnoTipo: 'lista',
+          inicio: br('2026-11-23T07:00'),
+          fim: br('2026-11-24T07:00'),
+        }),
+        oc('M', { turnoId: 'tarde', inicio: br('2026-11-24T13:00'), fim: br('2026-11-24T19:00') }),
+      ],
+      filtroTurnoIds: ['tarde'],
+    });
+    expect(r.medicos).toEqual([]);
+  });
+
   it('a Lista de quem está num turno marcado entra junto e soma (Jainy)', () => {
     const r = montar({
       ocorrencias: [

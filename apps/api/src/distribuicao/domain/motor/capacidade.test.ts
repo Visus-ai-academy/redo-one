@@ -48,6 +48,23 @@ describe('capacidadeNoInstante', () => {
     );
   });
 
+  it('turno marcado no filtro só entra sem antecedência se for de hoje (o de amanhã, não)', () => {
+    // Segunda 10:44: a Manhã de terça está marcada, mas é do dia seguinte (23/11).
+    expect(cap('2026-11-24T07:00', '2026-11-24T13:00', 25, '2026-11-23T10:44', true).entra).toBe(
+      false,
+    );
+    expect(cap('2026-11-24T07:00', '2026-11-25T07:00', 30, '2026-11-23T10:44', true).entra).toBe(
+      false,
+    );
+    // Dentro da antecedência, o de amanhã entra como sempre (rodada das 23:00 para a 01:00).
+    expect(cap('2026-11-24T01:00', '2026-11-24T07:00', 25, '2026-11-23T23:00', true).entra).toBe(
+      true,
+    );
+    expect(cap('2026-11-23T23:00', '2026-11-24T07:00', 25, '2026-11-23T05:00', true).entra).toBe(
+      true,
+    );
+  });
+
   it('Lista de 24h: o turno de ontem segue em curso e o de hoje começa em breve; os dois cheios', () => {
     expect(cap('2026-10-26T07:00', '2026-10-27T07:00', 8, '2026-10-27T06:30').capacidade).toBe(8);
     expect(cap('2026-10-27T07:00', '2026-10-28T07:00', 8, '2026-10-27T06:30').capacidade).toBe(8);

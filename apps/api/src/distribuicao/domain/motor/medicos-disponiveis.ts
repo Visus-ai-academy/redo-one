@@ -273,8 +273,18 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     noTurno: new Set<string>(),
     noHorario: new Set<string>(),
   };
+  // Só o turno marcado que está na rodada agora (não o de amanhã, que a escala traz junto).
   const noTurnoMarcado = new Set(
-    vigentes.filter((o) => filtroTurnos.includes(o.turnoId)).map((o) => o.medicoId),
+    vigentes
+      .filter(
+        (o) =>
+          filtroTurnos.includes(o.turnoId) &&
+          capacidadeNoInstante(o, agora, {
+            antecedenciaMin: config.antecedenciaPeriodoMin,
+            turnoEscolhido: true,
+          }).entra,
+      )
+      .map((o) => o.medicoId),
   );
   const naEscala = new Map<string, Escalado>();
   const cotas = new Map<string, { medicoId: string; restante: number }>();

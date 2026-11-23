@@ -1,3 +1,5 @@
+import { dataEmBrasilia } from './configuracao';
+
 /**
  * Quanto cabe num médico na rodada. Fonte: dashboards-one `capacidade.ts`. Diferença de propósito:
  * o turno chega com início e fim em INSTANTES (a escala já expande o plantão que vira a meia-noite),
@@ -15,7 +17,11 @@ export interface TurnoNoInstante {
 export interface OpcoesCapacidade {
   /** Com quanta antecedência o turno que ainda não começou entra (configuração global). */
   antecedenciaMin: number;
-  /** O turno foi marcado no filtro da rodada: o de hoje entra cheio sem esperar a antecedência. */
+  /**
+   * O turno foi marcado no filtro da rodada: o de HOJE (início no dia de Brasília da rodada) entra
+   * cheio sem esperar a antecedência. O de amanhã, que vem na escala por causa da antecedência,
+   * não: a Manhã marcada na segunda não traz a Manhã de terça (23/11).
+   */
   turnoEscolhido: boolean;
 }
 
@@ -32,7 +38,8 @@ export function capacidadeNoInstante(
   const t = agora.getTime();
   if (t >= turno.fim.getTime()) return fora;
   const faltaMin = (turno.inicio.getTime() - t) / 60_000;
-  if (faltaMin > opcoes.antecedenciaMin && !opcoes.turnoEscolhido) return fora;
+  const deHoje = dataEmBrasilia(turno.inicio) === dataEmBrasilia(agora);
+  if (faltaMin > opcoes.antecedenciaMin && !(opcoes.turnoEscolhido && deHoje)) return fora;
   return { capacidade: turno.produtividade, entra: true };
 }
 

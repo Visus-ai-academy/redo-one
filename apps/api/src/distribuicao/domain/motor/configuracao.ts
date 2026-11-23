@@ -180,6 +180,10 @@ export const minutosEmBrasilia = (instante: Date): number => {
   return b.getUTCHours() * 60 + b.getUTCMinutes();
 };
 
+/** A data (AAAA-MM-DD) no calendário de Brasília. */
+export const dataEmBrasilia = (instante: Date): string =>
+  emBrasilia(instante).toISOString().slice(0, 10);
+
 /** 0 = domingo … 6 = sábado, no calendário de Brasília. */
 export const diaSemanaEmBrasilia = (instante: Date): number => emBrasilia(instante).getUTCDay();
 
