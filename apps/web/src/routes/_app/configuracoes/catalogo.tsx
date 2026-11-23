@@ -159,77 +159,82 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
     [lista, abrir, aba],
   );
 
+  // Ver e editar abrem no painel ao lado da lista; criar abre num diálogo, fora dele.
+  const item =
+    busca.id || (busca.novo && permissoes.criar) ? (
+      <PainelDoItem
+        key={`${aba}:${busca.id ?? 'novo'}`}
+        aba={aba}
+        id={busca.id}
+        permissoes={permissoes}
+      />
+    ) : undefined;
+
   return (
-    <ListaCadastro
-      titulo="Classificação dos exames"
-      totalNoTitulo={false}
-      abas={
-        <Abas
-          aria-label="Listas do catálogo"
-          valor={aba}
-          onMudar={(valor) => ir(() => ({ aba: valor as AbaLista }))}
-          abas={ABAS_LISTAS.map((valor) => ({ valor, rotulo: LISTAS[valor].rotuloAba }))}
-        />
-      }
-      novo={
-        permissoes.criar
-          ? {
-              rotulo: `${lista.rotulos.genero === 'f' ? 'Nova' : 'Novo'} ${lista.rotulos.singular}`,
-              onClick: () => ir((atual) => ({ ...atual, id: undefined, novo: 1 })),
-            }
-          : undefined
-      }
-      busca={{
-        valor: busca.busca,
-        rotulo: `Buscar ${lista.plural}`,
-        placeholder: 'Nome ou descrição',
-      }}
-      temFiltro={busca.situacao !== undefined}
-      filtros={
-        <Select
-          aria-label="Filtrar por situação"
-          value={busca.situacao ?? ''}
-          onValueChange={(valor) =>
-            filtrar({ situacao: (valor || undefined) as Busca['situacao'] })
-          }
-          opcoes={[
-            { valor: '', rotulo: 'Todas as situações' },
-            { valor: 'ativos', rotulo: 'Ativos' },
-            { valor: 'inativos', rotulo: 'Inativos' },
-          ]}
-          className="flex-[1_1_180px] md:flex-[0_1_200px]"
-        />
-      }
-      colunas={colunas}
-      ocultarComPainel={['descricao', 'ordem', 'variacoes']}
-      itens={pagina.itens}
-      getRowId={(item) => item.id}
-      selecionadoId={busca.id}
-      onAbrir={abrir}
-      pagina={pagina.pagina}
-      porPagina={pagina.porPagina}
-      total={pagina.total}
-      vazio={{
-        titulo: `Nenhum${lista.rotulos.genero === 'f' ? 'a' : ''} ${lista.rotulos.singular} cadastrad${lista.rotulos.genero === 'f' ? 'a' : 'o'}.`,
-        texto: permissoes.criar
-          ? `Cadastre ${lista.rotulos.genero === 'f' ? 'a primeira' : 'o primeiro'} para usar nos exames e na importação.`
-          : 'Quem administra o catálogo cadastra os itens.',
-      }}
-      onFiltrar={filtrar}
-      onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
-      onIrPara={(numero) => ir((atual) => ({ ...atual, pagina: numero }))}
-      painel={
-        // Só com um painel aberto: no celular, a lista some quando há painel.
-        busca.id || (busca.novo && permissoes.criar) ? (
-          <PainelDoItem
-            key={`${aba}:${busca.id ?? 'novo'}`}
-            aba={aba}
-            id={busca.id}
-            permissoes={permissoes}
+    <>
+      <ListaCadastro
+        titulo="Classificação dos exames"
+        totalNoTitulo={false}
+        abas={
+          <Abas
+            aria-label="Listas do catálogo"
+            valor={aba}
+            onMudar={(valor) => ir(() => ({ aba: valor as AbaLista }))}
+            abas={ABAS_LISTAS.map((valor) => ({ valor, rotulo: LISTAS[valor].rotuloAba }))}
           />
-        ) : undefined
-      }
-    />
+        }
+        novo={
+          permissoes.criar
+            ? {
+                rotulo: `${lista.rotulos.genero === 'f' ? 'Nova' : 'Novo'} ${lista.rotulos.singular}`,
+                onClick: () => ir((atual) => ({ ...atual, id: undefined, novo: 1 })),
+              }
+            : undefined
+        }
+        busca={{
+          valor: busca.busca,
+          rotulo: `Buscar ${lista.plural}`,
+          placeholder: 'Nome ou descrição',
+        }}
+        temFiltro={busca.situacao !== undefined}
+        filtros={
+          <Select
+            aria-label="Filtrar por situação"
+            value={busca.situacao ?? ''}
+            onValueChange={(valor) =>
+              filtrar({ situacao: (valor || undefined) as Busca['situacao'] })
+            }
+            opcoes={[
+              { valor: '', rotulo: 'Todas as situações' },
+              { valor: 'ativos', rotulo: 'Ativos' },
+              { valor: 'inativos', rotulo: 'Inativos' },
+            ]}
+            className="flex-[1_1_180px] md:flex-[0_1_200px]"
+          />
+        }
+        colunas={colunas}
+        ocultarComPainel={['descricao', 'ordem', 'variacoes']}
+        itens={pagina.itens}
+        getRowId={(item) => item.id}
+        selecionadoId={busca.id}
+        onAbrir={abrir}
+        pagina={pagina.pagina}
+        porPagina={pagina.porPagina}
+        total={pagina.total}
+        vazio={{
+          titulo: `Nenhum${lista.rotulos.genero === 'f' ? 'a' : ''} ${lista.rotulos.singular} cadastrad${lista.rotulos.genero === 'f' ? 'a' : 'o'}.`,
+          texto: permissoes.criar
+            ? `Cadastre ${lista.rotulos.genero === 'f' ? 'a primeira' : 'o primeiro'} para usar nos exames e na importação.`
+            : 'Quem administra o catálogo cadastra os itens.',
+        }}
+        onFiltrar={filtrar}
+        onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
+        onIrPara={(numero) => ir((atual) => ({ ...atual, pagina: numero }))}
+        // Só com um painel aberto: no celular, a lista some quando há painel.
+        painel={busca.id ? item : undefined}
+      />
+      {!busca.id && item}
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -48,6 +48,39 @@ describe('PainelItemLista', () => {
       ordem: 2,
       ativo: true,
     });
+  });
+
+  it('criar é tarefa curta: abre num diálogo, não no painel lateral', async () => {
+    montar();
+
+    const dialogo = await screen.findByRole('dialog', { name: 'Nova modalidade' });
+    expect(dialogo).not.toHaveAttribute('data-painel-lateral');
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Código' })).toHaveFocus());
+  });
+
+  it('criando, cancelar com algo digitado pergunta antes de descartar', async () => {
+    const { onFechar } = montar();
+
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Código' }), 'MR');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    expect(onFechar).not.toHaveBeenCalled();
+  });
+
+  it('editar continua no painel lateral, e fechar alterado pergunta', async () => {
+    const { onFechar } = montar({
+      item: { id: 'i1', nome: 'MR', descricao: null, cor: null, ordem: 0, ativo: true },
+    });
+
+    expect(await screen.findByRole('dialog', { name: 'MR' })).toHaveAttribute(
+      'data-painel-lateral',
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Ressonância');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    expect(onFechar).not.toHaveBeenCalled();
   });
 
   it('valida nome e cor antes de enviar', async () => {

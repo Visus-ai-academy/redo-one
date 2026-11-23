@@ -1,16 +1,15 @@
-import { Button } from '@base-ui/react/button';
 import { type ReactNode, useState } from 'react';
 import { z } from 'zod';
 
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
-import { buttonClassName } from '../button/button-class';
-import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
+import { Dialogo } from '../dialogo/Dialogo';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { type AbaExtra, AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
-import { RodapeSomenteLeitura } from './rodape-painel';
+import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 
 /** Campos comuns às listas do catálogo; a prioridade tem `urgente` e a subespecialidade as especialidades. */
 export type DadosItemLista = {
@@ -74,7 +73,10 @@ function schema(rotulos: RotulosLista, variante: VarianteLista) {
   });
 }
 
-/** Criar, ver e editar um item de uma lista do catálogo, no painel ao lado da lista. */
+/**
+ * Item de uma lista do catálogo: criar é tarefa curta e abre num `Dialogo`; ver e editar ficam no
+ * painel ao lado da lista (com abas e histórico).
+ */
 export function PainelItemLista({
   rotulos,
   variante,
@@ -91,16 +93,17 @@ export function PainelItemLista({
   const novo = rotulos.genero === 'f' ? 'Nova' : 'Novo';
   const titulo = item ? item.nome : `${novo} ${rotulos.singular}`;
 
+  const iniciais = {
+    nome: item?.nome ?? '',
+    descricao: item?.descricao ?? '',
+    cor: item?.cor ?? '',
+    ordem: String(item?.ordem ?? 0),
+    ativo: item?.ativo ?? true,
+    urgente: item?.urgente ?? false,
+    especialidadeIds: item?.especialidadeIds ?? [],
+  };
   const form = useAppForm({
-    defaultValues: {
-      nome: item?.nome ?? '',
-      descricao: item?.descricao ?? '',
-      cor: item?.cor ?? '',
-      ordem: String(item?.ordem ?? 0),
-      ativo: item?.ativo ?? true,
-      urgente: item?.urgente ?? false,
-      especialidadeIds: item?.especialidadeIds ?? [],
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema(rotulos, variante) },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -125,6 +128,7 @@ export function PainelItemLista({
     },
   });
 
+  const alterado = useAlterado(form, iniciais);
   const artigo = rotulos.genero === 'f' ? 'a' : 'o';
   const excluir =
     item && onExcluir
@@ -169,12 +173,108 @@ export function PainelItemLista({
     );
   }
 
-  return (
-    <PainelLateral titulo={titulo} onFechar={onFechar}>
-      <AbasComHistorico
-        extras={item ? abas : undefined}
-        aria-label={`Partes d${artigo} ${rotulos.singular}`}
+  const campos = (
+    <>
+      {erro && <Alerta tom="erro">{erro}</Alerta>}
+      <form.AppField name="nome">
+        {(field) => (
+          <field.TextField
+            label={rotulos.campoNome}
+            placeholder={rotulos.exemploNome}
+            autoComplete="off"
+            required
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="descricao">
+        {(field) => (
+          <field.TextField
+            label="Descrição"
+            placeholder={rotulos.exemploDescricao}
+            autoComplete="off"
+          />
+        )}
+      </form.AppField>
+      {variante === 'subespecialidade' && (
+        <form.AppField name="especialidadeIds">
+          {(field) => (
+            <field.CheckboxListField
+              label="Especialidades"
+              required
+              description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
+              opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome, cor: e.cor }))}
+            />
+          )}
+        </form.AppField>
+      )}
+      <div className="flex flex-wrap gap-4">
+        <form.AppField name="cor">
+          {(field) => (
+            <field.TextField
+              label="Cor"
+              placeholder="#1F7A4D"
+              autoComplete="off"
+              description="Cor do selo nas telas."
+              className="flex-[1_1_160px]"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="ordem">
+          {(field) => (
+            <field.NumberField
+              label="Ordem"
+              placeholder="0"
+              min={0}
+              max={9999}
+              required
+              description="Menor aparece primeiro."
+              className="flex-[1_1_120px]"
+            />
+          )}
+        </form.AppField>
+      </div>
+      {variante === 'prioridade' && (
+        <form.AppField name="urgente">
+          {(field) => (
+            <field.CheckboxField label="Urgente" description="A distribuição trata como urgente." />
+          )}
+        </form.AppField>
+      )}
+      <form.AppField name="ativo">
+        {(field) => (
+          <field.CheckboxField
+            label="Ativo"
+            description={`Inativ${artigo} some das listas de escolha, mas continua nos cadastros que já usam.`}
+          />
+        )}
+      </form.AppField>
+    </>
+  );
+
+  if (!item) {
+    return (
+      <Dialogo
+        titulo={titulo}
+        alterado={alterado}
+        onFechar={onFechar}
+        onEnviar={() => void form.handleSubmit()}
+        acao={
+          <form.AppForm>
+            <form.SubmitButton pendingLabel="Salvando…">{`Criar ${rotulos.singular}`}</form.SubmitButton>
+          </form.AppForm>
+        }
       >
+        {campos}
+        <form.AppForm>
+          <form.RequiredLegend />
+        </form.AppForm>
+      </Dialogo>
+    );
+  }
+
+  return (
+    <PainelLateral titulo={titulo} alterado={alterado} onFechar={onFechar}>
+      <AbasComHistorico extras={abas} aria-label={`Partes d${artigo} ${rotulos.singular}`}>
         <form
           noValidate
           onSubmit={(evento) => {
@@ -183,99 +283,9 @@ export function PainelItemLista({
           }}
           className="flex flex-col gap-4 p-4"
         >
-          {erro && <Alerta tom="erro">{erro}</Alerta>}
-          <form.AppField name="nome">
-            {(field) => (
-              <field.TextField
-                label={rotulos.campoNome}
-                placeholder={rotulos.exemploNome}
-                autoComplete="off"
-                required
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="descricao">
-            {(field) => (
-              <field.TextField
-                label="Descrição"
-                placeholder={rotulos.exemploDescricao}
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          {variante === 'subespecialidade' && (
-            <form.AppField name="especialidadeIds">
-              {(field) => (
-                <field.CheckboxListField
-                  label="Especialidades"
-                  required
-                  description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
-                  opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome, cor: e.cor }))}
-                />
-              )}
-            </form.AppField>
-          )}
-          <div className="flex flex-wrap gap-4">
-            <form.AppField name="cor">
-              {(field) => (
-                <field.TextField
-                  label="Cor"
-                  placeholder="#1F7A4D"
-                  autoComplete="off"
-                  description="Cor do selo nas telas."
-                  className="flex-[1_1_160px]"
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="ordem">
-              {(field) => (
-                <field.NumberField
-                  label="Ordem"
-                  placeholder="0"
-                  min={0}
-                  max={9999}
-                  required
-                  description="Menor aparece primeiro."
-                  className="flex-[1_1_120px]"
-                />
-              )}
-            </form.AppField>
-          </div>
-          {variante === 'prioridade' && (
-            <form.AppField name="urgente">
-              {(field) => (
-                <field.CheckboxField
-                  label="Urgente"
-                  description="A distribuição trata como urgente."
-                />
-              )}
-            </form.AppField>
-          )}
-          <form.AppField name="ativo">
-            {(field) => (
-              <field.CheckboxField
-                label="Ativo"
-                description={`Inativ${artigo} some das listas de escolha, mas continua nos cadastros que já usam.`}
-              />
-            )}
-          </form.AppField>
+          {campos}
           <form.AppForm>
-            <form.RequiredLegend />
-            <div className="flex flex-wrap items-center gap-2">
-              {excluir && <ConfirmarAcao {...excluir} />}
-              <span className="ml-auto flex gap-2">
-                <Button
-                  type="button"
-                  onClick={onFechar}
-                  className={buttonClassName({ variant: 'secondary' })}
-                >
-                  Cancelar
-                </Button>
-                <form.SubmitButton pendingLabel="Salvando…">
-                  {item ? 'Salvar' : `Criar ${rotulos.singular}`}
-                </form.SubmitButton>
-              </span>
-            </div>
+            <RodapePainel rotuloCriar="" editando excluir={excluir} onCancelar={onFechar} />
           </form.AppForm>
         </form>
         {children}
