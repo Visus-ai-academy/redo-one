@@ -40,6 +40,8 @@ export function AbaDistribuicaoMedico({
   const { catalogo, erro: erroCatalogo, tentarDeNovo } = useCatalogoDoArranjo();
   const [salvandoRobo, setSalvandoRobo] = useState(false);
   const [erroRobo, setErroRobo] = useState<string>();
+  // A unidade escolhida fica à vista enquanto salva (sem voltar à antiga até a resposta).
+  const [unidadeSalvando, setUnidadeSalvando] = useState<UnidadeTetoKey>();
 
   if (consulta.isError || erroCatalogo) {
     return (
@@ -67,6 +69,7 @@ export function AbaDistribuicaoMedico({
       setErroRobo(mensagemDaApi(falha, 'Não foi possível salvar agora. Tente de novo.'));
     } finally {
       setSalvandoRobo(false);
+      setUnidadeSalvando(undefined);
     }
   };
 
@@ -102,11 +105,12 @@ export function AbaDistribuicaoMedico({
             id={`unidade-teto-${medicoId}`}
             aria-describedby={`unidade-teto-${medicoId}-ajuda`}
             className="w-full max-w-60"
-            value={dados.unidadeTeto}
+            value={unidadeSalvando ?? dados.unidadeTeto}
             opcoes={UNIDADES_TETO}
             disabled={!podeEditar || salvandoRobo}
             onValueChange={(valor) => {
               if (valor === dados.unidadeTeto) return;
+              setUnidadeSalvando(valor as UnidadeTetoKey);
               void salvarRobo(
                 { unidadeTeto: valor as UnidadeTetoKey },
                 valor === 'laudos'
