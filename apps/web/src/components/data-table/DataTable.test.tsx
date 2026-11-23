@@ -1,9 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import { renderComRotas } from '../../test/render';
 import { createDataTableColumnHelper } from './columns';
 import { DataTable } from './DataTable';
+import { LinkDaLinha } from './link-da-linha';
 
 type User = { name: string; email: string };
 
@@ -175,5 +176,62 @@ describe('DataTable', () => {
         'data-revelada',
       );
     });
+  });
+});
+
+describe('DataTable: link na linha, ordenação e recarga', () => {
+  const pessoas: User[] = [
+    { name: 'Ada', email: 'ada@example.com' },
+    { name: 'Alan', email: 'alan@example.com' },
+  ];
+  const comLink = helper.columns([
+    helper.accessor('name', {
+      header: 'Nome',
+      cell: (c) => (
+        <LinkDaLinha to="/" search={{ id: c.row.original.email }}>
+          {c.getValue()}
+        </LinkDaLinha>
+      ),
+    }),
+    helper.accessor('email', { header: 'E-mail' }),
+  ]);
+
+  it('o nome é um link de verdade (com o ?id=), que abre em outra aba com Ctrl/⌘+clique', async () => {
+    renderComRotas(<DataTable columns={comLink} data={pessoas} />);
+
+    const link = await screen.findByRole('link', { name: 'Alan' });
+    expect(link).toHaveAttribute('href', '/?id=alan%40example.com');
+  });
+
+  it('sem onRowClick, clicar em qualquer ponto da linha segue o link do nome', async () => {
+    const { router } = renderComRotas(<DataTable columns={comLink} data={pessoas} />);
+
+    await userEvent.click(await screen.findByRole('cell', { name: 'alan@example.com' }));
+
+    expect(router.state.location.search).toEqual({ id: 'alan@example.com' });
+    expect(screen.getByRole('cell', { name: 'alan@example.com' }).closest('tr')).toHaveClass(
+      'has-[a[data-abre-linha]]:cursor-pointer',
+    );
+  });
+
+  it('marca a coluna ordenada com aria-sort', () => {
+    render(
+      <DataTable columns={columns} data={pessoas} ordenacao={{ coluna: 'name', direcao: 'asc' }} />,
+    );
+
+    expect(screen.getByRole('columnheader', { name: 'Nome' })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
+    expect(screen.getByRole('columnheader', { name: 'E-mail' })).not.toHaveAttribute('aria-sort');
+  });
+
+  it('recarregando, mantém as linhas à vista, esmaecidas e com aria-busy', () => {
+    render(<DataTable caption="Usuários" columns={columns} data={pessoas} recarregando />);
+
+    const tabela = screen.getByRole('table', { name: 'Usuários' });
+    expect(tabela.parentElement).toHaveAttribute('aria-busy', 'true');
+    expect(within(tabela).getByRole('cell', { name: 'Ada' })).toBeInTheDocument();
+    expect(tabela.querySelector('tbody')).toHaveClass('opacity-60');
   });
 });

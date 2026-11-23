@@ -17,6 +17,7 @@ type DataTableProps<TData extends RowData> = {
   /**
    * Abre o registro ao clicar em qualquer ponto da linha (com cursor de clique). O teclado continua
    * pelo controle da própria linha (ex.: o nome é um botão), que não dispara a linha de novo.
+   * Prefira o nome como `LinkDaLinha` (link com o `?id=`): sem `onRowClick`, a linha segue o link.
    */
   onRowClick?: (row: TData) => void;
   /**
@@ -29,6 +30,13 @@ type DataTableProps<TData extends RowData> = {
    * a lista com o painel fechado. Assim fechar o painel não muda as larguras num salto no fim.
    */
   semOcultar?: boolean;
+  /** Coluna pela qual a lista está ordenada: o cabeçalho ganha `aria-sort`. */
+  ordenacao?: { coluna: string; direcao: 'asc' | 'desc' };
+  /**
+   * Buscando de novo (filtro, página): as linhas antigas ficam à vista, esmaecidas, com
+   * `aria-busy`, até os dados novos chegarem (`placeholderData: keepPreviousData` + `isFetching`).
+   */
+  recarregando?: boolean;
   /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
   className?: string;
 };
@@ -50,6 +58,8 @@ export function DataTable<TData extends RowData>({
   onRowClick,
   ocultaveis,
   semOcultar = false,
+  ordenacao,
+  recarregando = false,
   className,
 }: DataTableProps<TData>) {
   const caixa = useRef<HTMLDivElement>(null);
@@ -117,6 +127,7 @@ export function DataTable<TData extends RowData>({
     // no painel (a rolagem, o cabeçalho fixo e os popovers, que vão para um portal, continuam).
     <div
       ref={caixa}
+      aria-busy={recarregando || undefined}
       className={cn(
         'group/tabela w-full overflow-x-auto rounded-t-[calc(var(--radius-lg)-1px)]',
         className,
@@ -133,6 +144,13 @@ export function DataTable<TData extends RowData>({
                   data-coluna={header.column.id}
                   colSpan={header.colSpan}
                   scope="col"
+                  aria-sort={
+                    ordenacao?.coluna === header.column.id
+                      ? ordenacao.direcao === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : undefined
+                  }
                   // Fixo no topo quando a tabela rola por dentro do contêiner.
                   className={cn(
                     'bg-card text-subtle-foreground sticky top-0 z-10 h-10 px-4 text-left align-middle text-xs font-medium shadow-[inset_0_-1px_0_var(--border)]',
@@ -149,7 +167,12 @@ export function DataTable<TData extends RowData>({
             </tr>
           ))}
         </thead>
-        <tbody>
+        <tbody
+          className={cn(
+            'transition-opacity duration-150 motion-reduce:transition-none',
+            recarregando && 'opacity-60',
+          )}
+        >
           {rows.length === 0 ? (
             <tr>
               <td
@@ -164,20 +187,18 @@ export function DataTable<TData extends RowData>({
               <tr
                 key={row.id}
                 aria-selected={row.id === selectedRowId || undefined}
-                onClick={
-                  onRowClick
-                    ? (e) => {
-                        const alvo = e.target as HTMLElement;
-                        if (alvo.closest(CONTROLES) !== null) return;
-                        // Quem está selecionando texto da linha não quer abrir o registro.
-                        if (window.getSelection()?.toString()) return;
-                        onRowClick(row.original);
-                      }
-                    : undefined
-                }
+                onClick={(e) => {
+                  const alvo = e.target as HTMLElement;
+                  if (alvo.closest(CONTROLES) !== null) return;
+                  // Quem está selecionando texto da linha não quer abrir o registro.
+                  if (window.getSelection()?.toString()) return;
+                  if (onRowClick) return onRowClick(row.original);
+                  // Sem `onRowClick`, a linha segue o `LinkDaLinha` do nome.
+                  e.currentTarget.querySelector<HTMLAnchorElement>('a[data-abre-linha]')?.click();
+                }}
                 className={cn(
                   'hover:bg-muted aria-selected:bg-accent border-t',
-                  onRowClick && 'cursor-pointer',
+                  onRowClick ? 'cursor-pointer' : 'has-[a[data-abre-linha]]:cursor-pointer',
                 )}
               >
                 {row.getAllCells().map((cell, i) => (
