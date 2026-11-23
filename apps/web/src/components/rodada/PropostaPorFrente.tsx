@@ -16,6 +16,7 @@ import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
+import { numero, plural } from '../../lib/formato';
 import {
   agruparProposta,
   type FrenteDaProposta,
@@ -185,11 +186,15 @@ function Frente({
           <h3 className="min-w-0 flex-1 basis-40 truncate text-base font-semibold">{f.nome}</h3>
           <span className="text-muted-foreground ml-auto flex flex-wrap items-center gap-x-3 pl-6 text-[13px] tabular-nums sm:pl-0">
             {f.urgentes > 0 && (
-              <span className="text-destructive font-medium">{num(f.urgentes)} urgente(s)</span>
+              <span className="text-destructive font-medium">
+                {plural(f.urgentes, { um: 'urgente', varios: 'urgentes' })}
+              </span>
             )}
             <span>
-              <strong className="text-foreground font-semibold">{num(f.exames)}</strong> exame(s)
-              para {num(f.medicos.length)} médico(s)
+              <strong className="text-foreground font-semibold">
+                {plural(f.exames, { um: 'exame', varios: 'exames' })}
+              </strong>{' '}
+              para {plural(f.medicos.length, { um: 'médico', varios: 'médicos' })}
             </span>
           </span>
         </Collapsible.Trigger>
@@ -252,26 +257,36 @@ function MedicoDaFrente({
             </span>
           </span>
         </Collapsible.Trigger>
-        <span className="flex items-center gap-2">
-          <span className="w-24 sm:w-32">
-            <BarraEmpilhada
-              rotulo={`${num(qtd)} de ${num(f.maior)}, o maior da frente`}
-              segmentos={[{ pct, tom: 'forte' }]}
-            />
-          </span>
-          <span className="w-24 text-[13px] whitespace-nowrap tabular-nums">
-            <strong className="font-semibold">{num(qtd)}</strong> exame(s)
+        {/* Colunas de largura fixa e números à direita: as linhas ficam alinhadas entre si. */}
+        <span className="ml-auto flex flex-none items-center gap-4">
+          <BarraEmpilhada
+            className="w-24 flex-none sm:w-32"
+            rotulo={`${num(qtd)} de ${num(f.maior)}, o maior da frente`}
+            segmentos={[{ pct, tom: 'forte' }]}
+          />
+          <span
+            data-testid="coluna-exames"
+            className="w-20 flex-none text-right text-[13px] whitespace-nowrap tabular-nums"
+          >
+            <strong className="font-semibold">{numero(qtd)}</strong>{' '}
+            {qtd === 1 ? 'exame' : 'exames'}
           </span>
           <span
+            data-testid="coluna-urgentes"
             className={cn(
-              'w-20 text-xs whitespace-nowrap tabular-nums',
+              'w-24 flex-none text-right text-[13px] whitespace-nowrap tabular-nums',
               m.urgentes > 0 ? 'text-destructive font-medium' : 'text-subtle-foreground',
             )}
           >
-            {num(m.urgentes)} urgente(s)
+            {m.urgentes > 0 ? (
+              plural(m.urgentes, { um: 'urgente', varios: 'urgentes' })
+            ) : (
+              <>
+                <span aria-hidden>—</span>
+                <span className="sr-only">nenhum urgente</span>
+              </>
+            )}
           </span>
-        </span>
-        <span className="flex items-center gap-2">
           <CargaDoMedico
             cargaEmMaos={m.medico.cargaEmMaos}
             propostos={

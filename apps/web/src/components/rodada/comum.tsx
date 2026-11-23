@@ -59,7 +59,8 @@ export function CargaDoMedico({
   const c = cargaDoMedico({ cargaEmMaos, propostos, capacidade });
   const texto = textoDaCarga(c, unidade);
   return (
-    <span className="flex min-w-36 items-center gap-2">
+    // Larguras fixas (barra, texto à direita e o lugar do selo, mesmo sem ele): alinha as linhas.
+    <span className="flex flex-none items-center gap-2">
       <BarraEmpilhada
         className="w-16 flex-none"
         rotulo={`${num(cargaEmMaos)} já abertos e ${num(propostos)} propostos: ${texto}`}
@@ -68,8 +69,12 @@ export function CargaDoMedico({
           { pct: c.pctProposto, tom: c.noTeto ? 'atencao' : 'suave' },
         ]}
       />
-      <span className="text-[13px] whitespace-nowrap tabular-nums">{texto}</span>
-      {c.noTeto && <Etiqueta tom="atencao">No teto</Etiqueta>}
+      <span className="w-36 flex-none text-right text-[13px] whitespace-nowrap tabular-nums">
+        {texto}
+      </span>
+      <span data-testid="coluna-teto" className="flex w-16 flex-none justify-end">
+        {c.noTeto && <Etiqueta tom="atencao">No teto</Etiqueta>}
+      </span>
     </span>
   );
 }

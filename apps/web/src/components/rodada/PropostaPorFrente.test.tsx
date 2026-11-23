@@ -77,6 +77,26 @@ describe('PropostaPorFrente', () => {
     expect(screen.getByRole('list', { name: 'Exames de Bia' })).toHaveTextContent('RX TORAX');
   });
 
+  it('números no plural certo e nas mesmas colunas em toda linha, com ou sem o selo de teto', async () => {
+    montar();
+    const neuro = await screen.findByRole('list', { name: 'Médicos de NEURO' });
+    expect(screen.getByRole('button', { name: /NEURO/ })).toHaveTextContent(
+      '1 urgente2 exames para 1 médico',
+    );
+    const ana = within(neuro).getByRole('listitem', { name: 'Ana' });
+    expect(within(ana).getByTestId('coluna-exames')).toHaveTextContent('2 exames');
+    expect(within(ana).getByTestId('coluna-urgentes')).toHaveTextContent('1 urgente');
+
+    const bia = screen.getByRole('listitem', { name: 'Bia' });
+    expect(within(bia).getByTestId('coluna-exames')).toHaveTextContent('1 exame');
+    // Sem urgente, a coluna fica com um traço (e o leitor de tela ouve "nenhum urgente").
+    expect(within(bia).getByTestId('coluna-urgentes')).toHaveTextContent('—');
+    expect(within(bia).getByText('nenhum urgente')).toHaveClass('sr-only');
+    // O lugar do selo "No teto" existe mesmo quando o médico não está no teto.
+    expect(within(bia).getByTestId('coluna-teto')).toBeInTheDocument();
+    expect(screen.queryByText(/\(s\)/)).not.toBeInTheDocument();
+  });
+
   it('médico sem exame proposto não aparece', async () => {
     montar();
     await screen.findByRole('list', { name: 'Médicos de NEURO' });
