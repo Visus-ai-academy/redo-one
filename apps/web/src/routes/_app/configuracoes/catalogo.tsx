@@ -1,10 +1,15 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { Abas } from '../../../components/abas/Abas';
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import {
   ABAS_LISTAS,
   type AbaLista,
@@ -17,12 +22,16 @@ import { PainelItemLista } from '../../../components/catalogo/PainelItemLista';
 import { type Variacao, VariacoesForma } from '../../../components/catalogo/VariacoesForma';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { LinkDaLinha } from '../../../components/data-table/link-da-linha';
 import { AbaDistribuicaoFrente } from '../../../components/distribuicao/AbaDistribuicaoFrente';
+import { EstadoDoErro } from '../../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
 import { CamposCarregando } from '../../../components/skeleton/CamposCarregando';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { deParaEspecialidadesControllerCriar } from '../../../gen/clients/deParaEspecialidadesControllerCriar';
 import { deParaEspecialidadesControllerExcluir } from '../../../gen/clients/deParaEspecialidadesControllerExcluir';
 import { deParaModalidadesControllerCriar } from '../../../gen/clients/deParaModalidadesControllerCriar';
@@ -63,17 +72,19 @@ const consulta = (busca: Busca): ConsultaLista => ({
 export const Route = createFileRoute('/_app/configuracoes/catalogo')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'catalogo.ver')) return;
     const lista = LISTAS[deps.aba ?? 'modalidades'];
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id) void context.queryClient.prefetchQuery(lista.obter(deps.id));
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
     await Promise.all([
-      context.queryClient.ensureQueryData(lista.listar(consulta(deps))),
+      cause !== 'stay' && context.queryClient.ensureQueryData(lista.listar(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Classificação dos exames | One' }] }),
+  head: () => ({ meta: [{ title: 'Classificação dos exames · One' }] }),
   component: PaginaCatalogo,
 });
 
@@ -97,8 +108,16 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
   const navigate = Route.useNavigate();
   const aba = busca.aba ?? 'modalidades';
   const lista = LISTAS[aba];
-  const { data } = useSuspenseQuery(lista.listar(consulta(busca)));
-  const pagina = data as PaginaDaLista;
+  const resultado = useQuery({
+    ...lista.listar(consulta(busca)),
+    placeholderData: keepPreviousData,
+  } as ReturnType<typeof lista.listar>);
+  const pagina = (resultado.data ?? {
+    itens: [],
+    pagina: 1,
+    porPagina: POR_PAGINA,
+    total: 0,
+  }) as PaginaDaLista;
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -106,10 +125,6 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
   );
   const filtrar = useCallback(
     (novos: Partial<Busca>) => ir((atual) => ({ ...atual, ...novos, pagina: undefined }), true),
-    [ir],
-  );
-  const abrir = useCallback(
-    (id: string) => ir((atual) => ({ ...atual, id, novo: undefined })),
     [ir],
   );
 
@@ -125,7 +140,13 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
               // Cor cadastrada pelo usuário: é dado, não token do tema.
               style={info.row.original.cor ? { backgroundColor: info.row.original.cor } : undefined}
             />
-            <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>{info.getValue()}</BotaoAbrir>
+            <LinkDaLinha
+              from={Route.fullPath}
+              to="."
+              search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+            >
+              {info.getValue()}
+            </LinkDaLinha>
           </span>
         ),
       }),
@@ -156,7 +177,7 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
           ),
       }),
     ],
-    [lista, abrir, aba],
+    [lista, aba],
   );
 
   // Criar, ver e editar abrem no painel lateral.
@@ -215,7 +236,16 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={resultado.isPlaceholderData}
+      erro={
+        resultado.isError && !resultado.data
+          ? {
+              erro: resultado.error,
+              oQue: lista.plural,
+              onTentarDeNovo: () => void resultado.refetch(),
+            }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -228,7 +258,6 @@ function Listas({ permissoes }: { permissoes: PodeNaTela }) {
       onFiltrar={filtrar}
       onLimparFiltros={() => filtrar({ busca: undefined, situacao: undefined })}
       onIrPara={(numero) => ir((atual) => ({ ...atual, pagina: numero }))}
-      // Só com um painel aberto: no celular, a lista some quando há painel.
       painel={item}
     />
   );
@@ -247,6 +276,10 @@ function PainelDoItem({
   const queryClient = useQueryClient();
   const lista = LISTAS[aba];
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
+  const { sucesso } = useAvisos();
+  const artigo = lista.rotulos.genero === 'f' ? 'a' : 'o';
+  const singular = lista.rotulos.singular;
+  const Singular = singular.charAt(0).toUpperCase() + singular.slice(1);
   const fechar = () =>
     void navigate({ search: (atual) => ({ ...atual, id: undefined, novo: undefined }) });
 
@@ -259,6 +292,7 @@ function PainelDoItem({
       onFechar={fechar}
       onSalvo={async (novoId) => {
         await invalidarCatalogo(queryClient);
+        sucesso(`${Singular} ${id ? 'salv' : 'criad'}${artigo}.`);
         void navigate({
           search: (atual) => ({ ...atual, novo: undefined, id: novoId }),
           replace: true,
@@ -266,6 +300,7 @@ function PainelDoItem({
       }}
       onExcluido={async () => {
         fechar();
+        sucesso(`${Singular} excluíd${artigo}.`);
         await invalidarCatalogo(queryClient);
       }}
       lista={lista}
@@ -296,6 +331,7 @@ function ConteudoDoPainel({
     typeof lista.obter
   >);
   const item = id ? (consulta.data as unknown as ItemDaLista | undefined) : undefined;
+  const fase = useFaseDoCarregamento(Boolean(id) && !item);
   const { sessao } = Route.useRouteContext();
   // Especialidade e modalidade são frentes da distribuição: a aba mostra as regras do robô.
   const frente =
@@ -317,11 +353,13 @@ function ConteudoDoPainel({
           },
         ]
       : undefined;
-  if (id && !item)
+  if (id && (!item || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={onFechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue={`${lista.rotulos.genero === 'f' ? 'a' : 'o'} ${lista.rotulos.singular}`}
+        voltar={{ to: '/configuracoes/catalogo', rotulo: 'Voltar para a lista' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -385,6 +423,7 @@ function VariacoesDoItem({
 }) {
   const { sessao } = Route.useRouteContext();
   const queryClient = useQueryClient();
+  const { sucesso } = useAvisos();
   const prioridade = aba === 'prioridades';
   const modalidade = aba === 'modalidades';
   const consulta = useQuery({
@@ -402,38 +441,50 @@ function VariacoesDoItem({
     enabled: pode(sessao, 'de-para.ver'),
   });
   if (!pode(sessao, 'de-para.ver')) return null;
+  if (consulta.error && !consulta.data)
+    return (
+      <EstadoDoErro
+        erro={consulta.error}
+        oQue="as variações"
+        onTentarDeNovo={() => void consulta.refetch()}
+        className="border-t"
+      />
+    );
   if (!consulta.data) return <CamposCarregando quantidade={2} />;
+  const variacoes = consulta.data.itens as unknown as Variacao[];
+  const adicionar = async ({ origem, tipo }: { origem: string; tipo?: string }) => {
+    if (prioridade) {
+      await deParaPrioridadesControllerCriar({
+        body: { origem, prioridadeId: id, ativo: true },
+      }).unwrap();
+    } else if (modalidade) {
+      await deParaModalidadesControllerCriar({
+        body: { origem, modalidadeId: id, ativo: true },
+      }).unwrap();
+    } else {
+      await deParaEspecialidadesControllerCriar({
+        body: {
+          tipo: (tipo ?? 'normalizacao') as 'normalizacao' | 'regiao_anatomica',
+          origem,
+          especialidadeId: id,
+          ativo: true,
+          observacoes: null,
+        },
+      }).unwrap();
+    }
+    await invalidarCatalogo(queryClient);
+  };
 
   return (
     <VariacoesForma
       forma={forma}
-      variacoes={consulta.data.itens as unknown as Variacao[]}
+      variacoes={variacoes}
       tipos={aba === 'especialidades' ? TIPOS_VARIACAO_ESPECIALIDADE : undefined}
       podeCriar={pode(sessao, 'de-para.criar')}
       podeExcluir={pode(sessao, 'de-para.excluir')}
-      onAdicionar={async ({ origem, tipo }) => {
-        if (prioridade) {
-          await deParaPrioridadesControllerCriar({
-            body: { origem, prioridadeId: id, ativo: true },
-          }).unwrap();
-        } else if (modalidade) {
-          await deParaModalidadesControllerCriar({
-            body: { origem, modalidadeId: id, ativo: true },
-          }).unwrap();
-        } else {
-          await deParaEspecialidadesControllerCriar({
-            body: {
-              tipo: (tipo ?? 'normalizacao') as 'normalizacao' | 'regiao_anatomica',
-              origem,
-              especialidadeId: id,
-              ativo: true,
-              observacoes: null,
-            },
-          }).unwrap();
-        }
-        await invalidarCatalogo(queryClient);
-      }}
+      onAdicionar={adicionar}
       onRemover={async (variacaoId) => {
+        const removida = variacoes.find((v) => v.id === variacaoId);
         if (prioridade) {
           await deParaPrioridadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
         } else if (modalidade) {
@@ -442,6 +493,16 @@ function VariacoesDoItem({
           await deParaEspecialidadesControllerExcluir({ path: { id: variacaoId } }).unwrap();
         }
         await invalidarCatalogo(queryClient);
+        // Removida ativa volta igual pelo criar; inativa não (voltaria ativa).
+        sucesso('Variação removida.', {
+          acao:
+            removida?.ativo === true && pode(sessao, 'de-para.criar')
+              ? {
+                  rotulo: 'Desfazer',
+                  onClick: () => void adicionar({ origem: removida.origem, tipo: removida.tipo }),
+                }
+              : undefined,
+        });
       }}
     />
   );
