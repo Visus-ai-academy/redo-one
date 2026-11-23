@@ -27,7 +27,8 @@ export const situacaoDoAviso = (status: StatusAvisoKey) => SITUACOES[status];
 
 /**
  * Onde conferir o cadastro do aviso: muitas vezes basta um apelido num cadastro que já existe.
- * A busca vai limpa (sem "Dr." no médico, sem o " X2" do fim no estudo).
+ * A busca vai limpa (sem "Dr." no médico, sem o " X2" do fim no estudo). Quem vê o aviso vê a
+ * tela de destino: a API só mostra o tipo de aviso a quem tem o `ver` dela.
  */
 export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: string }) {
   switch (tipo) {
@@ -36,21 +37,18 @@ export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: strin
         rotulo: 'Procurar em Clientes',
         to: '/clientes' as const,
         search: { busca: valor },
-        permissao: 'clientes.ver',
       };
     case 'medico':
       return {
         rotulo: 'Procurar em Médicos',
         to: '/medicos' as const,
         search: { busca: valor.replace(/^dra?\.?\s+/i, '') },
-        permissao: 'medicos.ver',
       };
     case 'estudo':
       return {
         rotulo: 'Procurar em Exames',
         to: '/exames' as const,
         search: { busca: valor.replace(/(?:\s+X\d+)+\s*$/i, '') },
-        permissao: 'exames.ver',
       };
     case 'prioridade_operacao':
       // A grafia entra no de-para de uma das prioridades da operação (a tela tem poucas).
@@ -58,14 +56,12 @@ export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: strin
         rotulo: 'Abrir as prioridades da operação',
         to: '/configuracoes/distribuicao' as const,
         search: {},
-        permissao: 'distribuicao-config.ver',
       };
     default:
       return {
         rotulo: 'Procurar na classificação dos exames',
         to: '/configuracoes/catalogo' as const,
         search: { aba: `${tipo}s` as const, busca: valor },
-        permissao: 'catalogo.ver',
       };
   }
 }

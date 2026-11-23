@@ -136,9 +136,10 @@ function Avisos() {
             aria-label="Filtrar por tipo"
             value={busca.tipo ?? ''}
             onValueChange={(valor) => filtrar({ tipo: (valor || undefined) as Busca['tipo'] })}
+            // Só os tipos que o usuário vê (os da tela onde cada um se resolve), vindos da API.
             opcoes={[
               { valor: '', rotulo: 'Todos os tipos' },
-              ...TIPOS.map((t) => ({ valor: t, rotulo: tipoDoAviso(t) })),
+              ...pagina.tipos.map((t) => ({ valor: t, rotulo: tipoDoAviso(t) })),
             ]}
             className="flex-[1_1_180px] md:flex-[0_1_200px]"
           />
@@ -216,15 +217,13 @@ function PainelDoAviso({ id, onFechar }: { id: string; onFechar: () => void }) {
         aviso={aviso}
         podeTriar={pode(sessao, 'avisos.triar')}
         procurar={
-          pode(sessao, destino.permissao) ? (
-            <Link
-              to={destino.to}
-              search={destino.search as never}
-              className={buttonClassName({ variant: 'secondary' })}
-            >
-              {destino.rotulo}
-            </Link>
-          ) : undefined
+          <Link
+            to={destino.to}
+            search={destino.search as never}
+            className={buttonClassName({ variant: 'secondary' })}
+          >
+            {destino.rotulo}
+          </Link>
         }
         onIgnorar={async (motivo) => {
           await avisosControllerIgnorar({

@@ -23,12 +23,11 @@ describe('situacaoDoAviso', () => {
 });
 
 describe('ondeProcurar', () => {
-  it('leva ao cadastro certo com a busca já preenchida e a permissão de ver a tela', () => {
+  it('leva ao cadastro certo com a busca já preenchida', () => {
     expect(ondeProcurar({ tipo: 'cliente', valor: 'CLINICA NOVA' })).toEqual({
       rotulo: 'Procurar em Clientes',
       to: '/clientes',
       search: { busca: 'CLINICA NOVA' },
-      permissao: 'clientes.ver',
     });
     expect(ondeProcurar({ tipo: 'medico', valor: 'Dra. Ana Souza' })).toMatchObject({
       to: '/medicos',
@@ -38,19 +37,16 @@ describe('ondeProcurar', () => {
       rotulo: 'Procurar em Exames',
       to: '/exames',
       search: { busca: 'RM CRANIO' },
-      permissao: 'exames.ver',
     });
     expect(ondeProcurar({ tipo: 'especialidade', valor: 'PEDIATRIA' })).toEqual({
       rotulo: 'Procurar na classificação dos exames',
       to: '/configuracoes/catalogo',
       search: { aba: 'especialidades', busca: 'PEDIATRIA' },
-      permissao: 'catalogo.ver',
     });
     expect(ondeProcurar({ tipo: 'prioridade_operacao', valor: 'Eletivo' })).toEqual({
       rotulo: 'Abrir as prioridades da operação',
       to: '/configuracoes/distribuicao',
       search: {},
-      permissao: 'distribuicao-config.ver',
     });
   });
 });
