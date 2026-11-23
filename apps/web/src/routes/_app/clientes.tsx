@@ -343,9 +343,10 @@ function Painel({
       unificacao={
         id && cliente
           ? {
-              buscarClientes: async (termo) => {
+              buscarClientes: async (termo, sinal) => {
                 const { itens } = await clientesControllerListar({
                   query: { busca: termo, porPagina: 10 },
+                  signal: sinal,
                 }).unwrap();
                 return itens
                   .filter((c) => c.id !== id)
