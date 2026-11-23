@@ -6,7 +6,7 @@ import {
   type PrioridadeCliente,
 } from '../motor/fila';
 import type { Barreira } from '../motor/medicos-disponiveis';
-import type { MedicoNaRodada, ResultadoRodada } from '../motor/rodada';
+import type { MedicoForaDaRodada, MedicoNaRodada, ResultadoRodada } from '../motor/rodada';
 import type { ExameLido } from './entrada';
 import type { MotivoFica, MotivoRecolhimento, Recolhimento } from './recolhimento';
 
@@ -78,6 +78,8 @@ export interface InsumosGravados {
   habilitados: string[];
   /** Os médicos que entraram na rodada. */
   medicos: MedicoGravado[];
+  /** Os da escala que ficaram de fora, com o motivo. Ausente nas leituras gravadas antes dele. */
+  foraDaRodada?: MedicoForaDaRodada[];
   /** Ausente nas leituras gravadas antes do recolhimento (ou com ele desligado). */
   recolhimento?: RecolhimentoGravado;
 }
@@ -253,6 +255,7 @@ export function montarProposta(p: {
         frentes: p.escalaDosMedicos[m.id]?.frentes ?? [],
         aComecar: p.escalaDosMedicos[m.id]?.aComecar ?? [],
       })),
+      foraDaRodada: p.resultado.foraDaRodada,
       ...(r
         ? {
             recolhimento: {

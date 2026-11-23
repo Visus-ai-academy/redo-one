@@ -15,8 +15,10 @@ import {
   type EntregaAnterior,
   type EtapaElegibilidade,
   type ExameElegivel,
+  type ForaDaRodada,
   type MedicoRodada,
   type MedicosMontados,
+  type MotivoForaDaRodada,
   montarMedicosDisponiveis,
   type OcorrenciaRodada,
 } from './medicos-disponiveis';
@@ -159,6 +161,47 @@ export interface ResultadoRodada {
   grafiasSemDePara: string[];
   /** Os médicos que entraram na rodada (em turno, no recorte), como o motor os leu. */
   medicos: MedicoNaRodada[];
+  /** Médicos da escala que ficaram fora da rodada (ou sem poder receber), por nome. */
+  foraDaRodada: MedicoForaDaRodada[];
+}
+
+export interface MedicoForaDaRodada {
+  id: string;
+  nome: string;
+  motivo: MotivoForaDaRodada;
+  /** O porquê legível, com o turno ("Turno Tarde não marcado na rodada."). */
+  detalhe: string;
+}
+
+const emBrasilia = (d: Date) => new Date(d.getTime() - 3 * 3_600_000).toISOString();
+
+/** O texto do motivo de o médico ficar fora da rodada. Descreve o mecanismo, não é regra. */
+export function porQueForaDaRodada(
+  f: ForaDaRodada,
+  agora: Date,
+  nome: (id: string) => string,
+): string {
+  const turno = nome(f.turnoId);
+  switch (f.motivo) {
+    case 'ausente':
+      return `Ausente na escala (${turno}).`;
+    case 'turno_nao_marcado':
+      return `Turno ${turno} não marcado na rodada.`;
+    case 'frente_nao_marcada':
+      return `Frente ${nome(f.frente.especialidadeId ?? f.frente.modalidadeId ?? '')} (${turno}) não marcada na rodada.`;
+    case 'turno_encerrado':
+      return `Turno ${turno} já tinha terminado na leitura.`;
+    case 'turno_a_comecar': {
+      const inicio = emBrasilia(f.inicio);
+      const dia =
+        inicio.slice(0, 10) === emBrasilia(agora).slice(0, 10)
+          ? ''
+          : `em ${inicio.slice(8, 10)}/${inicio.slice(5, 7)} `;
+      return `Turno ${turno} só começa ${dia}às ${inicio.slice(11, 16)}, fora da antecedência.`;
+    }
+    case 'sem_conta_mobilemed':
+      return `Em turno (${turno}), mas sem o id da MobileMed no cadastro: o robô não tem como atribuir a ele.`;
+  }
 }
 
 export interface MedicoNaRodada {
@@ -426,5 +469,20 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       cargaEmMaos: m.cargaInicial,
       cotaGratificada: m.cotaGratificada,
     })),
+    foraDaRodada: entrada.medicos
+      .flatMap((m) => {
+        const f = montados.foraDaRodada[m.id];
+        return f
+          ? [
+              {
+                id: m.id,
+                nome: m.nome,
+                motivo: f.motivo,
+                detalhe: porQueForaDaRodada(f, agora, nome),
+              },
+            ]
+          : [];
+      })
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
   };
 }

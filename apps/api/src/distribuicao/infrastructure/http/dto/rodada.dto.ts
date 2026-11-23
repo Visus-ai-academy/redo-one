@@ -553,8 +553,32 @@ export class RecolhimentoPrevistoDto {
   porAusencia!: number;
 }
 
+const MOTIVOS_FORA_DA_RODADA = [
+  'ausente',
+  'turno_nao_marcado',
+  'frente_nao_marcada',
+  'turno_encerrado',
+  'turno_a_comecar',
+  'sem_conta_mobilemed',
+  'tirado_da_rodada',
+] as const;
+
+export class MedicoForaDaRodadaDto {
+  @ApiProperty({ format: 'uuid' }) medicoId!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({ enum: MOTIVOS_FORA_DA_RODADA, enumName: 'MotivoForaDaRodada' })
+  motivo!: (typeof MOTIVOS_FORA_DA_RODADA)[number];
+  @ApiProperty({ description: 'O porquê legível, com o turno.' }) detalhe!: string;
+}
+
 export class ResumoRodadaDto {
   @ApiProperty({ type: [MedicoDaRodadaDto] }) medicos!: MedicoDaRodadaDto[];
+  @ApiProperty({
+    type: [MedicoForaDaRodadaDto],
+    description:
+      'Médicos da escala que ficaram fora da rodada (ou sem poder receber), com o motivo. Vazio nas leituras anteriores a ele.',
+  })
+  foraDaRodada!: MedicoForaDaRodadaDto[];
   @ApiProperty({ type: [ContagemMotivoDto] }) motivos!: ContagemMotivoDto[];
   @ApiProperty({ type: AjustesConferenciaDto }) ajustes!: AjustesConferenciaDto;
   @ApiProperty({ type: FunilExamesDto, nullable: true }) funilExames!: FunilExamesDto | null;

@@ -16977,6 +16977,47 @@
           "naMao"
         ]
       },
+      "MotivoForaDaRodada": {
+        "type": "string",
+        "enum": [
+          "ausente",
+          "turno_nao_marcado",
+          "frente_nao_marcada",
+          "turno_encerrado",
+          "turno_a_comecar",
+          "sem_conta_mobilemed",
+          "tirado_da_rodada"
+        ]
+      },
+      "MedicoForaDaRodadaDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "motivo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MotivoForaDaRodada"
+              }
+            ]
+          },
+          "detalhe": {
+            "type": "string",
+            "description": "O porquê legível, com o turno."
+          }
+        },
+        "required": [
+          "medicoId",
+          "nome",
+          "motivo",
+          "detalhe"
+        ]
+      },
       "ContagemMotivoDto": {
         "type": "object",
         "properties": {
@@ -17188,6 +17229,13 @@
               "$ref": "#/components/schemas/MedicoDaRodadaDto"
             }
           },
+          "foraDaRodada": {
+            "description": "Médicos da escala que ficaram fora da rodada (ou sem poder receber), com o motivo. Vazio nas leituras anteriores a ele.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MedicoForaDaRodadaDto"
+            }
+          },
           "motivos": {
             "type": "array",
             "items": {
@@ -17237,6 +17285,7 @@
         },
         "required": [
           "medicos",
+          "foraDaRodada",
           "motivos",
           "ajustes",
           "funilExames",

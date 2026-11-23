@@ -1,5 +1,5 @@
 import type { FrenteEscala } from '../../../domain/arranjo';
-import type { Barreira } from '../../../domain/motor/medicos-disponiveis';
+import type { Barreira, MotivoForaDaRodada } from '../../../domain/motor/medicos-disponiveis';
 import { exameNaFrente } from '../../../domain/motor/rodada';
 import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
 import type { StatusRodada } from '../../../domain/rodada/maquina';
@@ -563,8 +563,18 @@ export interface MedicoDoResumo {
   naMao: number;
 }
 
+/** Médico da escala que ficou fora da rodada (ou sem poder receber), com o porquê. */
+export interface MedicoForaDoResumo {
+  medicoId: string;
+  nome: string;
+  motivo: MotivoForaDaRodada | 'tirado_da_rodada';
+  detalhe: string;
+}
+
 export interface ResumoRodada {
   medicos: MedicoDoResumo[];
+  /** Vazio nas leituras gravadas antes dele (e antes da leitura). */
+  foraDaRodada: MedicoForaDoResumo[];
   motivos: ContagemPorMotivo[];
   ajustes: AjustesConferencia;
   funilExames: InsumosGravados['funil']['exames'] | null;
@@ -652,8 +662,22 @@ export class ConsultarResumo {
       });
     }
     medicos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const excluidos = r.recortes.medicosExcluidos;
+    const nomesTirados = excluidos.length
+      ? await this.d.consulta.nomesMedicos(excluidos)
+      : new Map<string, string>();
+    const foraDaRodada: MedicoForaDoResumo[] = [
+      ...(insumos?.foraDaRodada ?? []).map(({ id: medicoId, ...f }) => ({ medicoId, ...f })),
+      ...excluidos.map((medicoId) => ({
+        medicoId,
+        nome: nomesTirados.get(medicoId) ?? '',
+        motivo: 'tirado_da_rodada' as const,
+        detalhe: 'Tirado da rodada ao pedir a distribuição.',
+      })),
+    ].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     return {
       medicos,
+      foraDaRodada,
       motivos,
       ajustes,
       funilExames: insumos?.funil.exames ?? null,

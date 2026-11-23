@@ -29,10 +29,11 @@ import { Paginacao } from '../paginacao/Paginacao';
 import { Select } from '../select/Select';
 import { Skeleton } from '../skeleton/Skeleton';
 import { Caixa } from './comum';
+import { MedicosForaDaRodada } from './MedicosForaDaRodada';
 import { MoverExame } from './MoverExame';
 import { PropostaPorFrente } from './PropostaPorFrente';
 
-export type VisaoProposta = 'medicos' | 'fora';
+export type VisaoProposta = 'medicos' | 'fora' | 'medicos-fora';
 
 export type ConferenciaProps = {
   rodada: RodadaDto;
@@ -148,11 +149,17 @@ export function Conferencia(p: ConferenciaProps) {
           opcoes={[
             { valor: 'medicos', rotulo: `Por frente e médico (${num(comExames.length)})` },
             { valor: 'fora', rotulo: `Ficaram de fora (${num(totalDeFora)})` },
+            {
+              valor: 'medicos-fora',
+              rotulo: `Médicos fora da rodada (${num(resumo.foraDaRodada.length)})`,
+            },
           ]}
           className="self-start"
         />
         {p.visao === 'medicos' ? (
           <PorFrente {...p} />
+        ) : p.visao === 'medicos-fora' ? (
+          <MedicosForaDaRodada medicos={resumo.foraDaRodada} />
         ) : (
           <FicaramDeFora {...p} motivos={deFora.map((m) => m.motivo)} />
         )}

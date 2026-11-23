@@ -8,11 +8,17 @@ import type { ContagemMotivoDto } from './ContagemMotivoDto'
 import type { FunilExamesDto } from './FunilExamesDto'
 import type { FunilMedicosDto } from './FunilMedicosDto'
 import type { MedicoDaRodadaDto } from './MedicoDaRodadaDto'
+import type { MedicoForaDaRodadaDto } from './MedicoForaDaRodadaDto'
 import type { RecolhimentoRodadaDto } from './RecolhimentoRodadaDto'
 import type { TrilhaRodadaDto } from './TrilhaRodadaDto'
 
 export type ResumoRodadaDto = {
   medicos: MedicoDaRodadaDto[];
+  /**
+   * @description Médicos da escala que ficaram fora da rodada (ou sem poder receber), com o motivo. Vazio nas leituras anteriores a ele.
+   * @type array
+   */
+  foraDaRodada: MedicoForaDaRodadaDto[];
   motivos: ContagemMotivoDto[];
   ajustes: AjustesConferenciaDto;
   funilExames: FunilExamesDto | null;

@@ -33,6 +33,7 @@ import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useAvisos } from '../toast/use-avisos';
 import { Caixa, TituloSecao } from './comum';
+import { MedicosForaDaRodada } from './MedicosForaDaRodada';
 
 const semAcento = (t: string) =>
   t
@@ -152,6 +153,12 @@ export function DetalheRodada({
           <FunilExames rodada={rodada} resumo={resumo} onPorQue={setExame} />
           <div className="flex flex-col gap-6">
             <FunilMedicos resumo={resumo} />
+            {resumo.funilMedicos && (
+              <section aria-labelledby="titulo-medicos-fora" className="flex flex-col gap-3">
+                <TituloSecao titulo="Médicos fora da rodada" id="titulo-medicos-fora" />
+                <MedicosForaDaRodada medicos={resumo.foraDaRodada} />
+              </section>
+            )}
             {resumo.trilha && (
               <section aria-labelledby="titulo-trilha" className="flex flex-col gap-3">
                 <TituloSecao titulo="Como o robô montou a proposta" id="titulo-trilha" />

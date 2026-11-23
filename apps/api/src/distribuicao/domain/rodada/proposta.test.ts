@@ -62,6 +62,7 @@ const resultado = (itens: ItemRodada[], p: Partial<ResultadoRodada> = {}): Resul
     { id: 'A', nome: 'Ana', capacidade: 20, cargaEmMaos: 5, cotaGratificada: 0 },
     { id: 'B', nome: 'Bia', capacidade: null, cargaEmMaos: 0, cotaGratificada: 0 },
   ],
+  foraDaRodada: [],
   ...p,
 });
 const propor = (p: Partial<Parameters<typeof montarProposta>[0]> = {}) =>
@@ -92,6 +93,19 @@ describe('proposta da rodada', () => {
       barrados: { C: 'arranjo' },
       naMao: false,
     });
+  });
+
+  it('os insumos guardam os médicos que ficaram fora da rodada, com o motivo', () => {
+    const fora = [
+      {
+        id: 'C',
+        nome: 'Caio',
+        motivo: 'turno_nao_marcado' as const,
+        detalhe: 'Turno Tarde não marcado na rodada.',
+      },
+    ];
+    const { insumos } = propor({ resultado: resultado([], { foraDaRodada: fora }) });
+    expect(insumos.foraDaRodada).toEqual(fora);
   });
 
   it('os insumos guardam os médicos da rodada com turno, frentes, teto e carga', () => {

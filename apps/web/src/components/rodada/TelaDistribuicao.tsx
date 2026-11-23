@@ -47,14 +47,14 @@ import { Vazio } from './comum';
 import { BotaoLerAgora, FilaCarregando, FilaDoMomento } from './FilaDoMomento';
 import { Historico } from './Historico';
 import { PainelDistribuirAgora } from './PainelDistribuirAgora';
-import { Conferencia, type VisaoProposta } from './Proposta';
+import { Conferencia } from './Proposta';
 
 type Sessao = { acessoTotal: boolean; permissoes: readonly string[] };
 
 export type BuscaDistribuicao = {
   aba?: 'historico';
   distribuir?: 1;
-  visao?: 'fora';
+  visao?: 'fora' | 'medicos-fora';
   motivo?: string;
   status?: StatusRodadaKey;
   periodo?: Periodo;
@@ -626,11 +626,11 @@ function RodadaViva({
           <Conferencia
             rodada={rodada}
             resumo={r}
-            visao={(busca.visao ?? 'medicos') as VisaoProposta}
+            visao={busca.visao ?? 'medicos'}
             onVisao={(v) =>
               onBusca((a) => ({
                 ...a,
-                visao: v === 'fora' ? 'fora' : undefined,
+                visao: v === 'medicos' ? undefined : v,
                 motivo: undefined,
               }))
             }

@@ -9,11 +9,13 @@ import { contagemMotivoDtoSchema } from './contagemMotivoDtoSchema'
 import { funilExamesDtoSchema } from './funilExamesDtoSchema'
 import { funilMedicosDtoSchema } from './funilMedicosDtoSchema'
 import { medicoDaRodadaDtoSchema } from './medicoDaRodadaDtoSchema'
+import { medicoForaDaRodadaDtoSchema } from './medicoForaDaRodadaDtoSchema'
 import { recolhimentoRodadaDtoSchema } from './recolhimentoRodadaDtoSchema'
 import { trilhaRodadaDtoSchema } from './trilhaRodadaDtoSchema'
 
 export const resumoRodadaDtoSchema = z.object({
   medicos: z.array(medicoDaRodadaDtoSchema),
+  foraDaRodada: z.array(medicoForaDaRodadaDtoSchema).describe('Médicos da escala que ficaram fora da rodada (ou sem poder receber), com o motivo. Vazio nas leituras anteriores a ele.'),
   motivos: z.array(contagemMotivoDtoSchema),
   ajustes: ajustesConferenciaDtoSchema,
   funilExames: funilExamesDtoSchema.nullable(),

@@ -2,6 +2,7 @@ import type { Arranjo, FrenteEscala } from '../arranjo';
 import { capacidadeNoInstante, juntarPeriodos } from './capacidade';
 import {
   type ConfiguracaoDistribuicao,
+  dataEmBrasilia,
   horarioSemRoboVigente,
   minutosEmBrasilia,
   naFaixa,
@@ -185,8 +186,34 @@ export type EtapaElegibilidade =
   | 'reservado'
   | 'retirado';
 
+/**
+ * Por que um médico da escala ficou fora da rodada (ou entrou sem poder receber): `ausente`
+ * (ausência no dia), `turno_nao_marcado` / `frente_nao_marcada` (recorte da rodada),
+ * `turno_encerrado`, `turno_a_comecar` (fora da antecedência) e `sem_conta_mobilemed`.
+ */
+export type MotivoForaDaRodada =
+  | 'ausente'
+  | 'turno_nao_marcado'
+  | 'frente_nao_marcada'
+  | 'turno_encerrado'
+  | 'turno_a_comecar'
+  | 'sem_conta_mobilemed';
+
+export interface ForaDaRodada {
+  motivo: MotivoForaDaRodada;
+  /** O turno da ocorrência que melhor explica a saída. */
+  turnoId: string;
+  frente: FrenteEscala;
+  inicio: Date;
+}
+
 export interface MedicosMontados {
   medicos: MedicoDisponivel[];
+  /**
+   * Médico da escala (habilitado) que não entrou na rodada → o motivo, pela ocorrência que melhor
+   * o explica. Quem entrou por alguma ocorrência não aparece, salvo sem conta na MobileMed.
+   */
+  foraDaRodada: Record<string, ForaDaRodada>;
   etapaElegibilidade: Map<string, EtapaElegibilidade>;
   /** Exames que a Lista levaria sem o corte dos turnos posteriores. */
   guardadosParaPosteriores: Set<string>;
@@ -231,6 +258,27 @@ interface Escalado {
     capacidade: number | null;
   }[];
   comum: boolean;
+}
+
+/**
+ * Qual ocorrência explica melhor por que o médico ficou de fora (a mais alta vence): a que entraria
+ * se marcada, a ausência no turno em curso, o turno de hoje ainda longe, o turno encerrado, a
+ * ausência em outro turno e, por último, o turno de outro dia.
+ */
+function pesoFora(o: OcorrenciaRodada, motivo: MotivoForaDaRodada, agora: Date): number {
+  switch (motivo) {
+    case 'sem_conta_mobilemed':
+      return 6;
+    case 'turno_nao_marcado':
+    case 'frente_nao_marcada':
+      return 5;
+    case 'ausente':
+      return o.inicio <= agora && agora < o.fim ? 4 : 1;
+    case 'turno_a_comecar':
+      return dataEmBrasilia(o.inicio) === dataEmBrasilia(agora) ? 3 : 0;
+    case 'turno_encerrado':
+      return 2;
+  }
 }
 
 const chaveFrente = (f: FrenteEscala) => f.especialidadeId ?? f.modalidadeId;
@@ -290,11 +338,28 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
   const cotas = new Map<string, { medicoId: string; restante: number }>();
   let posterioresNaRodada = false;
   const posteriores = new Set(config.turnosPosteriores?.turnoIds ?? []);
+  // A ocorrência que melhor explica a saída decide o motivo (ver `pesoFora`).
+  const candidatos = new Map<string, ForaDaRodada & { peso: number }>();
+  const fora = (o: OcorrenciaRodada, motivo: MotivoForaDaRodada) => {
+    const peso = pesoFora(o, motivo, agora);
+    const atual = candidatos.get(o.medicoId);
+    if (atual && atual.peso >= peso) return;
+    candidatos.set(o.medicoId, {
+      motivo,
+      turnoId: o.turnoId,
+      frente: o.frente,
+      inicio: o.inicio,
+      peso,
+    });
+  };
 
   for (const o of entrada.ocorrencias) {
     if (!medicosPorId.has(o.medicoId)) continue;
     funilMedicos.escalados.add(o.medicoId);
-    if (o.ausente) continue;
+    if (o.ausente) {
+      fora(o, 'ausente');
+      continue;
+    }
     funilMedicos.disponiveis.add(o.medicoId);
     // A Lista de quem está num turno marcado entra junto e soma (30/10, Jainy).
     const foraDoFiltro =
@@ -303,14 +368,34 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         !filtroTurnos.includes(o.turnoId) &&
         !(o.turnoTipo === 'lista' && noTurnoMarcado.has(o.medicoId))) ||
         !naFrenteDoFiltro(o));
-    if (foraDoFiltro) continue;
+    if (foraDoFiltro) {
+      // Nem marcado entraria (encerrado, ou de outro dia além da antecedência): o motivo é o horário.
+      const marcado = capacidadeNoInstante(o, agora, {
+        antecedenciaMin: config.antecedenciaPeriodoMin,
+        turnoEscolhido: true,
+      });
+      fora(
+        o,
+        !marcado.entra
+          ? agora >= o.fim
+            ? 'turno_encerrado'
+            : 'turno_a_comecar'
+          : naFrenteDoFiltro(o)
+            ? 'turno_nao_marcado'
+            : 'frente_nao_marcada',
+      );
+      continue;
+    }
     funilMedicos.noTurno.add(o.medicoId);
     const cap = capacidadeNoInstante(o, agora, {
       antecedenciaMin: config.antecedenciaPeriodoMin,
       turnoEscolhido:
         filtroTurnos.length > 0 || filtroFrentes.length > 0 || incluidos.has(o.medicoId),
     });
-    if (!cap.entra) continue;
+    if (!cap.entra) {
+      fora(o, agora >= o.fim ? 'turno_encerrado' : 'turno_a_comecar');
+      continue;
+    }
     funilMedicos.noHorario.add(o.medicoId);
     if (posteriores.has(o.turnoId)) posterioresNaRodada = true;
 
@@ -592,8 +677,25 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
       };
     });
 
+  const foraDaRodada: Record<string, ForaDaRodada> = {};
+  for (const [medicoId, { peso: _, ...c }] of candidatos) {
+    if (!naEscala.has(medicoId)) foraDaRodada[medicoId] = c;
+  }
+  for (const [medicoId, escalado] of naEscala) {
+    const [p] = escalado.periodos;
+    if (p && medicosPorId.get(medicoId)?.semContaMobilemed) {
+      foraDaRodada[medicoId] = {
+        motivo: 'sem_conta_mobilemed',
+        turnoId: p.turnoId,
+        frente: p.frente,
+        inicio: p.inicio,
+      };
+    }
+  }
+
   return {
     medicos,
+    foraDaRodada,
     etapaElegibilidade,
     guardadosParaPosteriores,
     explicacao: (exameId) => ({

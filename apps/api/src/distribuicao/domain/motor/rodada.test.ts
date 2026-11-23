@@ -487,3 +487,114 @@ describe('rodarMotor', () => {
     expect(r.trilha.pacotes).toBe(1);
   });
 });
+
+describe('rodarMotor: médicos fora da rodada', () => {
+  it('diz, por médico, por que ele ficou de fora (com o nome do turno e a hora)', () => {
+    const r = rodar({
+      medicos: [
+        medico('A'),
+        { ...medico('Bruna'), nome: 'Bruna' },
+        { ...medico('Caio'), nome: 'Caio' },
+        { ...medico('Dora'), nome: 'Dora' },
+        { ...medico('Eva'), nome: 'Eva' },
+      ],
+      ocorrencias: [
+        oc('A'),
+        oc('Bruna', {
+          turnoId: 'tarde',
+          inicio: br('2026-11-17T13:00'),
+          fim: br('2026-11-17T19:00'),
+        }),
+        oc('Caio', { ausente: true }),
+        oc('Dora', {
+          turnoId: 'noite',
+          inicio: br('2026-11-18T19:00'),
+          fim: br('2026-11-19T07:00'),
+        }),
+        oc('Eva', { inicio: br('2026-11-17T01:00'), fim: br('2026-11-17T07:00') }),
+      ],
+      filtro: { turnoIds: ['manha', 'noite'] },
+      config: { ...CONFIG, antecedenciaPeriodoMin: 60 },
+      agora: br('2026-11-17T08:00'),
+      nomes: { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' },
+    });
+    expect(r.foraDaRodada).toEqual([
+      {
+        id: 'Bruna',
+        nome: 'Bruna',
+        motivo: 'turno_nao_marcado',
+        detalhe: 'Turno Tarde não marcado na rodada.',
+      },
+      {
+        id: 'Caio',
+        nome: 'Caio',
+        motivo: 'ausente',
+        detalhe: 'Ausente na escala (Manhã).',
+      },
+      {
+        id: 'Dora',
+        nome: 'Dora',
+        motivo: 'turno_a_comecar',
+        detalhe: 'Turno Noite só começa em 18/11 às 19:00, fora da antecedência.',
+      },
+      {
+        id: 'Eva',
+        nome: 'Eva',
+        motivo: 'turno_encerrado',
+        detalhe: 'Turno Manhã já tinha terminado na leitura.',
+      },
+    ]);
+  });
+
+  it('turno de hoje que começa depois da antecedência', () => {
+    const r = rodar({
+      medicos: [medico('A'), { ...medico('G'), nome: 'Gil' }],
+      ocorrencias: [
+        oc('A'),
+        oc('G', { turnoId: 'tarde', inicio: br('2026-11-17T13:00'), fim: br('2026-11-17T19:00') }),
+      ],
+      nomes: { tarde: 'Tarde' },
+    });
+    expect(r.foraDaRodada).toEqual([
+      {
+        id: 'G',
+        nome: 'Gil',
+        motivo: 'turno_a_comecar',
+        detalhe: 'Turno Tarde só começa às 13:00, fora da antecedência.',
+      },
+    ]);
+  });
+
+  it('frente desmarcada e sem conta na MobileMed', () => {
+    const r = rodar({
+      medicos: [
+        medico('A'),
+        { ...medico('F'), nome: 'Fábio' },
+        { ...medico('H'), nome: 'Hugo', semContaMobilemed: true },
+      ],
+      ocorrencias: [
+        oc('A'),
+        oc('F', { frente: { tipo: 'especialidade', especialidadeId: CARDIO, modalidadeId: null } }),
+        oc('H'),
+      ],
+      exames: [exame({ especialidadeId: MI })],
+      filtro: { frentes: [{ tipo: 'especialidade', especialidadeId: MI, modalidadeId: null }] },
+      nomes: { manha: 'Manhã', tarde: 'Tarde', [CARDIO]: 'Cardio' },
+    });
+    expect(r.foraDaRodada).toEqual([
+      {
+        id: 'F',
+        nome: 'Fábio',
+        motivo: 'frente_nao_marcada',
+        detalhe: 'Frente Cardio (Manhã) não marcada na rodada.',
+      },
+      {
+        id: 'H',
+        nome: 'Hugo',
+        motivo: 'sem_conta_mobilemed',
+        detalhe:
+          'Em turno (Manhã), mas sem o id da MobileMed no cadastro: o robô não tem como atribuir a ele.',
+      },
+    ]);
+  });
+});

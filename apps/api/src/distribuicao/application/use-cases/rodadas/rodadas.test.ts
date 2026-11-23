@@ -719,6 +719,41 @@ describe('rodada do robô (casos de uso)', () => {
       expect(r.funilMedicos).toMatchObject({ habilitados: 2, noHorario: 2, receberam: 1 });
     });
 
+    it('resumo: os médicos fora da rodada, com o motivo (turno desmarcado e tirado ao pedir)', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        ocorrencias: [
+          oc('A'),
+          oc('B', {
+            alocacaoId: 'tarde-B',
+            turnoId: 'tarde',
+            inicio: br('2026-11-18T13:00'),
+            fim: br('2026-11-18T19:00'),
+          }),
+        ],
+      };
+      const id = await criarELer({ ...RECORTES_VAZIOS, turnoIds: ['manha'] });
+      expect((await casos.resumo.executar(id)).foraDaRodada).toEqual([
+        {
+          medicoId: 'B',
+          nome: expect.any(String),
+          motivo: 'turno_nao_marcado',
+          detalhe: 'Turno tarde não marcado na rodada.',
+        },
+      ]);
+
+      await casos.cancelar.executar(admin, id);
+      const tirada = await criarELer({ ...RECORTES_VAZIOS, medicosExcluidos: ['B'] });
+      expect((await casos.resumo.executar(tirada)).foraDaRodada).toEqual([
+        {
+          medicoId: 'B',
+          nome: 'B',
+          motivo: 'tirado_da_rodada',
+          detalhe: 'Tirado da rodada ao pedir a distribuição.',
+        },
+      ]);
+    });
+
     it('o turno que ainda vai começar hoje aparece "a começar" no resumo e no "por quê"', async () => {
       // Às 09:00, a Tarde de B começa às 11:00 (dentro da antecedência: ele recebe).
       insumos.insumos = {

@@ -255,6 +255,114 @@ describe('montarMedicosDisponiveis: quem está na rodada', () => {
   });
 });
 
+describe('montarMedicosDisponiveis: por que o médico ficou fora da rodada', () => {
+  it('ausente, turno encerrado e turno que ainda não começou, com o turno de cada um', () => {
+    const r = montar({
+      medicos: [medico('A'), medico('B'), medico('C'), medico('D')],
+      ocorrencias: [
+        oc('A'),
+        oc('B', { ausente: true }),
+        oc('C', {
+          turnoId: 'madrugada',
+          inicio: br('2026-11-17T01:00'),
+          fim: br('2026-11-17T07:00'),
+        }),
+        oc('D', { turnoId: 'tarde', inicio: br('2026-11-17T13:00'), fim: br('2026-11-17T19:00') }),
+      ],
+    });
+    expect(r.foraDaRodada).toMatchObject({
+      B: { motivo: 'ausente', turnoId: 'manha', inicio: br('2026-11-17T07:00') },
+      C: { motivo: 'turno_encerrado', turnoId: 'madrugada', inicio: br('2026-11-17T01:00') },
+      D: { motivo: 'turno_a_comecar', turnoId: 'tarde', inicio: br('2026-11-17T13:00') },
+    });
+  });
+
+  it('turno e frente desmarcados no recorte da rodada', () => {
+    const r = montar({
+      medicos: [medico('A'), medico('B'), medico('C')],
+      ocorrencias: [
+        oc('A'),
+        oc('B', { turnoId: 'tarde', inicio: br('2026-11-17T13:00'), fim: br('2026-11-17T19:00') }),
+        oc('C', { frente: FRENTE_MSK }),
+      ],
+      filtroTurnoIds: ['manha'],
+      filtroFrentes: [FRENTE_MI],
+    });
+    expect(r.foraDaRodada).toMatchObject({
+      B: { motivo: 'turno_nao_marcado', turnoId: 'tarde', inicio: br('2026-11-17T13:00') },
+      C: { motivo: 'frente_nao_marcada', turnoId: 'manha', frente: FRENTE_MSK },
+    });
+    expect(Object.keys(r.foraDaRodada).sort()).toEqual(['B', 'C']);
+  });
+
+  it('quem entrou por qualquer ocorrência não aparece', () => {
+    const r = montar({
+      medicos: [medico('A'), medico('B')],
+      ocorrencias: [
+        oc('A'),
+        oc('A', { turnoId: 'tarde', inicio: br('2026-11-17T13:00'), fim: br('2026-11-17T19:00') }),
+        oc('B', { ausente: true }),
+        oc('B', { turnoId: 'tarde', inicio: br('2026-11-17T13:00'), fim: br('2026-11-17T19:00') }),
+      ],
+      filtroTurnoIds: ['manha', 'tarde'],
+      config: { ...CONFIG, antecedenciaPeriodoMin: 0 },
+      agora: br('2026-11-17T06:00'),
+    });
+    expect(r.foraDaRodada.A).toBeUndefined();
+    expect(r.foraDaRodada.B).toBeUndefined();
+  });
+
+  it('o turno em curso desmarcado explica melhor que o turno encerrado', () => {
+    const r = montar({
+      agora: br('2026-11-17T14:05'),
+      medicos: [medico('M')],
+      ocorrencias: [
+        oc('M'),
+        oc('M', { turnoId: 'tarde', inicio: br('2026-11-17T13:00'), fim: br('2026-11-17T19:00') }),
+      ],
+      filtroTurnoIds: ['lista'],
+    });
+    expect(r.foraDaRodada.M).toMatchObject({ motivo: 'turno_nao_marcado', turnoId: 'tarde' });
+  });
+
+  it('o turno marcado de amanhã não esconde o turno de hoje desmarcado (23/11)', () => {
+    const r = montar({
+      agora: br('2026-11-23T10:44'),
+      medicos: [medico('M')],
+      ocorrencias: [
+        oc('M', { turnoId: 'tarde', inicio: br('2026-11-23T13:00'), fim: br('2026-11-23T19:00') }),
+        oc('M', { inicio: br('2026-11-24T07:00'), fim: br('2026-11-24T13:00') }),
+      ],
+      filtroTurnoIds: ['manha'],
+    });
+    expect(r.foraDaRodada.M).toMatchObject({
+      motivo: 'turno_nao_marcado',
+      turnoId: 'tarde',
+      inicio: br('2026-11-23T13:00'),
+    });
+  });
+
+  it('turno de outro dia fora da antecedência: "a começar", mesmo desmarcado', () => {
+    const r = montar({
+      agora: br('2026-11-23T14:05'),
+      medicos: [medico('M')],
+      ocorrencias: [oc('M', { inicio: br('2026-11-24T07:00'), fim: br('2026-11-24T13:00') })],
+      filtroTurnoIds: ['lista'],
+    });
+    expect(r.foraDaRodada.M).toMatchObject({ motivo: 'turno_a_comecar', turnoId: 'manha' });
+  });
+
+  it('em turno sem conta na MobileMed entra na lista; sem escala, não', () => {
+    const r = montar({
+      medicos: [medico('A'), medico('B', [arranjo()], { semContaMobilemed: true }), medico('Z')],
+      ocorrencias: [oc('A'), oc('B')],
+    });
+    expect(r.foraDaRodada).toMatchObject({
+      B: { motivo: 'sem_conta_mobilemed', turnoId: 'manha', inicio: br('2026-11-17T07:00') },
+    });
+  });
+});
+
 describe('montarMedicosDisponiveis: escala gratificada', () => {
   it('a cota é a produtividade menos o já executado; só gratificado tem capacidade comum zero', () => {
     const grat = oc('A', { gratificado: true, produtividade: 8, alocacaoId: 'g1' });

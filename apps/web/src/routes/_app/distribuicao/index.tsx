@@ -27,7 +27,7 @@ const STATUS = [
 const buscaSchema = z.object({
   aba: z.literal('historico').optional().catch(undefined),
   distribuir: z.literal(1).optional().catch(undefined),
-  visao: z.literal('fora').optional().catch(undefined),
+  visao: z.enum(['fora', 'medicos-fora']).optional().catch(undefined),
   motivo: z.string().max(60).optional().catch(undefined),
   status: z.enum(STATUS).optional().catch(undefined),
   periodo: z.enum(['7', '30', 'todas']).optional().catch(undefined),
