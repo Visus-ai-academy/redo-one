@@ -1,5 +1,5 @@
 import { CaretRight } from '@phosphor-icons/react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { useId, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { filtrarPorPermissao } from '../../lib/permissoes';
@@ -12,7 +12,18 @@ type CentralProps = {
 };
 
 export function CentralConfiguracoes({ acesso, grupos = GRUPOS_CONFIGURACOES }: CentralProps) {
-  const [termo, setTermo] = useState('');
+  // A busca fica na URL (`?busca=`): voltar, recarregar ou mandar o link devolve a mesma lista.
+  const { busca } = useSearch({ strict: false }) as { busca?: unknown };
+  const navigate = useNavigate();
+  const [termo, setTermoLocal] = useState(typeof busca === 'string' ? busca : '');
+  const setTermo = (texto: string) => {
+    setTermoLocal(texto);
+    void navigate({
+      to: '.',
+      search: (atual: Record<string, unknown>) => ({ ...atual, busca: texto.trim() || undefined }),
+      replace: true,
+    } as never);
+  };
   const prefixo = useId();
   const visiveis = buscarConfiguracoes(filtrarPorPermissao(grupos, acesso), termo);
 

@@ -1,5 +1,5 @@
 import { Key, UserCircle, Users } from '@phosphor-icons/react';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
@@ -71,5 +71,22 @@ describe('CentralConfiguracoes', () => {
     await userEvent.type(await screen.findByLabelText('Buscar configuração'), 'xyz');
 
     expect(screen.getByText('Nenhuma configuração encontrada para “xyz”.')).toBeInTheDocument();
+  });
+
+  it('a busca fica na URL: voltar ou mandar o link devolve a mesma lista', async () => {
+    const { router } = renderComRotas(<CentralConfiguracoes acesso={financeiro} grupos={grupos} />);
+
+    await userEvent.type(await screen.findByLabelText('Buscar configuração'), 'cpf');
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ busca: 'cpf' }));
+  });
+
+  it('abre já filtrada pela busca do link', async () => {
+    renderComRotas(<CentralConfiguracoes acesso={financeiro} grupos={grupos} />, {
+      caminho: '/?busca=cpf',
+    });
+
+    expect(await screen.findByLabelText('Buscar configuração')).toHaveValue('cpf');
+    expect(screen.queryByRole('link', { name: /Usuários/ })).not.toBeInTheDocument();
   });
 });
