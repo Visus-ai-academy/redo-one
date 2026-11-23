@@ -14,6 +14,8 @@ import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
+import { useGuardaDeSaida } from '../painel/use-guarda-de-saida';
 import { EditorPermissoes } from './EditorPermissoes';
 import type { CatalogoMatriz } from './matriz-permissoes';
 import { avisoAoSalvar, mesmasPermissoes, resumoDasPermissoes } from './permissoes-papel';
@@ -125,9 +127,20 @@ export function EditarPapel({
         return;
       }
       await invalidarPapeis(queryClient);
+      // A tela vai para o papel salvo antes de os dados novos chegarem: essa navegação passa.
+      liberar();
       onSalvo(salvo);
     },
   });
+
+  // Nome, descrição ou permissões mudados e não salvos: sair da página ou trocar de papel pergunta.
+  const formAlterado = useAlterado(form, {
+    nome: inicial?.nome ?? '',
+    descricao: inicial?.descricao ?? '',
+  });
+  const alterado =
+    !somenteLeitura && (formAlterado || !mesmasPermissoes(inicial?.permissoes ?? [], marcadas));
+  const { confirmacao, liberar } = useGuardaDeSaida(alterado);
 
   const excluirPapel = async () => {
     if (!papel) return;
@@ -139,6 +152,7 @@ export function EditarPapel({
       return;
     }
     await invalidarPapeis(queryClient, { detalhe: false });
+    liberar();
     onExcluido();
   };
 
@@ -287,6 +301,7 @@ export function EditarPapel({
           </Rodape>
         )}
       </form>
+      {confirmacao}
     </section>
   );
 }

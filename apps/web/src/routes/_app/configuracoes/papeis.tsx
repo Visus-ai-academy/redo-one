@@ -118,7 +118,6 @@ function Papeis({ sessao }: { sessao: SessaoAtualDto }) {
             key={selecionadoId}
             papeis={papeis}
             selecionadoId={selecionadoId}
-            onEscolher={abrir}
           />
         </div>
         <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-4">

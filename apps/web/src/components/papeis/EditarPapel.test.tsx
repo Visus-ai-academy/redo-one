@@ -65,7 +65,7 @@ function montar(props: Partial<EditarPapelProps> = {}) {
     onExcluido: vi.fn(),
     onCancelar: vi.fn(),
   };
-  const { queryClient } = renderComRotas(
+  const { queryClient, router } = renderComRotas(
     <EditarPapel
       papel={financeiro}
       catalogo={catalogo}
@@ -78,7 +78,7 @@ function montar(props: Partial<EditarPapelProps> = {}) {
       {...props}
     />,
   );
-  return { ...callbacks, queryClient };
+  return { ...callbacks, queryClient, router };
 }
 
 const conflito = (message: string) =>
@@ -348,5 +348,27 @@ describe('EditarPapel', () => {
     expect(matriz.closest('.overflow-x-auto')).toHaveClass('isolate', 'relative');
     expect(rodape).toHaveClass('bottom-0', 'z-10', 'bg-card', 'border-t');
     expect(secao).toHaveClass('w-full');
+  });
+
+  it('com alterações não salvas, sair ou trocar de papel pela URL pergunta antes', async () => {
+    const { router } = montar();
+
+    const nome = await screen.findByRole('textbox', { name: /Nome/ });
+    await userEvent.type(nome, ' 2');
+    void router.navigate({ to: '/', search: { id: 'outro' } as never });
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('sem alteração, trocar de papel não pergunta', async () => {
+    const { router } = montar();
+
+    await screen.findByRole('textbox', { name: /Nome/ });
+    await router.navigate({ to: '/', search: { id: 'outro' } as never });
+
+    expect(router.state.location.search).toEqual({ id: 'outro' });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });

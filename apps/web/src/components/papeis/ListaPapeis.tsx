@@ -1,5 +1,5 @@
-import { Button } from '@base-ui/react/button';
 import { Lock } from '@phosphor-icons/react';
+import { Link } from '@tanstack/react-router';
 
 import type { PapelResumoDto } from '../../gen/types/PapelResumoDto';
 import { cn } from '../../lib/cn';
@@ -14,11 +14,13 @@ const usuarios = (total: number) =>
 type ListaPapeisProps = {
   papeis: PapelResumoDto[];
   selecionadoId?: string;
-  onEscolher: (id: string) => void;
 };
 
-/** Lista estreita ao lado do editor: escolher um papel abre as permissões dele. */
-export function ListaPapeis({ papeis, selecionadoId, onEscolher }: ListaPapeisProps) {
+/**
+ * Lista estreita ao lado do editor: cada papel é um link (`?id=`) que abre as permissões dele;
+ * Ctrl/⌘+clique abre em outra aba.
+ */
+export function ListaPapeis({ papeis, selecionadoId }: ListaPapeisProps) {
   const indice = papeis.findIndex((papel) => papel.id === selecionadoId);
   const paginacao = usePaginaLocal(
     papeis,
@@ -33,10 +35,10 @@ export function ListaPapeis({ papeis, selecionadoId, onEscolher }: ListaPapeisPr
           const atual = papel.id === selecionadoId;
           return (
             <li key={papel.id} className={cn(posicao > 0 && 'border-t')}>
-              <Button
-                type="button"
-                aria-current={atual ? 'true' : undefined}
-                onClick={() => onEscolher(papel.id)}
+              <Link
+                to="."
+                search={{ id: papel.id } as never}
+                aria-current={atual ? 'page' : undefined}
                 className={cn(
                   'focus-visible:outline-ring flex min-h-13 w-full items-center gap-2 py-2 pr-3 pl-4 text-left focus-visible:outline-2 focus-visible:-outline-offset-2',
                   atual ? 'bg-accent' : 'hover:bg-muted',
@@ -58,7 +60,7 @@ export function ListaPapeis({ papeis, selecionadoId, onEscolher }: ListaPapeisPr
                     className="text-subtle-foreground flex-none"
                   />
                 )}
-              </Button>
+              </Link>
             </li>
           );
         })}
