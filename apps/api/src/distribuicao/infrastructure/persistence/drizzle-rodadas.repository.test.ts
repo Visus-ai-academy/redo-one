@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
@@ -24,6 +24,14 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
   let repo: DrizzleRodadasRepository;
   let usuarioId: string;
   let medicoId: string;
+  // Médicos e usuários não são truncados entre execuções: o teste apaga os que cria (um
+  // `idMobilemed` fixo repetiria na execução seguinte).
+  let criados: { medicos: string[]; usuarios: string[] };
+  const novoMedico = async (valores: typeof schema.medicos.$inferInsert) => {
+    const [medico] = await db.insert(schema.medicos).values(valores).returning();
+    criados.medicos.push(medico?.id ?? '');
+    return medico;
+  };
 
   const jobs = async () =>
     (
@@ -113,6 +121,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
   beforeEach(async () => {
     await db.execute(sql`truncate table rodadas cascade`);
     await db.execute(sql`delete from graphile_worker._private_jobs`);
+    criados = { medicos: [], usuarios: [] };
     const [usuario] = await db
       .insert(schema.usuarios)
       .values({
@@ -121,11 +130,21 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       })
       .returning();
     usuarioId = usuario?.id ?? '';
-    const [medico] = await db
-      .insert(schema.medicos)
-      .values({ nome: 'Dra. Ana', chaveNormalizada: `ana ${Math.random()}`, idMobilemed: null })
-      .returning();
+    criados.usuarios.push(usuarioId);
+    const medico = await novoMedico({
+      nome: 'Dra. Ana',
+      chaveNormalizada: `ana ${Math.random()}`,
+      idMobilemed: null,
+    });
     medicoId = medico?.id ?? '';
+  });
+
+  afterEach(async () => {
+    await db.execute(sql`truncate table rodadas cascade`);
+    if (criados.medicos.length)
+      await db.execute(sql`delete from medicos where id in ${criados.medicos}`);
+    if (criados.usuarios.length)
+      await db.execute(sql`delete from usuarios where id in ${criados.usuarios}`);
   });
 
   it('cria a rodada com o evento e enfileira a leitura na fila da distribuição', async () => {
@@ -211,10 +230,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
   it('tira e move na proposta', async () => {
     const id = await criarComProposta([designacao('e1'), designacao('e2', { ordem: 1 })]);
     const [a, b] = await repo.previstas(id);
-    const [outro] = await db
-      .insert(schema.medicos)
-      .values({ nome: 'Dr. Beto', chaveNormalizada: `beto ${Math.random()}` })
-      .returning();
+    const outro = await novoMedico({ nome: 'Dr. Beto', chaveNormalizada: `beto ${Math.random()}` });
     expect(await repo.removerDaProposta(id, [a?.id ?? ''], minutos(2))).toBe(1);
     expect(
       await repo.moverNaProposta(id, [
@@ -361,10 +377,11 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
   });
 
   it('recolhido: marca de quem sai, bloqueia a volta a ele e a última entrega é do novo dono', async () => {
-    const [outro] = await db
-      .insert(schema.medicos)
-      .values({ nome: 'Dr. Bruno', chaveNormalizada: `bruno ${Math.random()}`, idMobilemed: 7 })
-      .returning();
+    const outro = await novoMedico({
+      nome: 'Dr. Bruno',
+      chaveNormalizada: `bruno ${Math.random()}`,
+      idMobilemed: 7,
+    });
     const deId = outro?.id ?? '';
     const id = await criarComProposta([
       designacao('e1', { recolhidoDeId: deId, motivoRecolhimento: 'turno_encerrado' }),

@@ -13,9 +13,13 @@ describe.skipIf(!url)('adicionarJob', () => {
   let pool: Pool;
   let db: ReturnType<typeof drizzle>;
 
+  // A view `graphile_worker.jobs` não expõe o payload: lê das tabelas privadas.
   const jobs = async () => {
     const resultado = await db.execute<{ task_identifier: string; payload: unknown }>(
-      sql`select task_identifier, payload from graphile_worker.jobs`,
+      sql`select t.identifier as task_identifier, j.payload
+          from graphile_worker._private_jobs j
+          join graphile_worker._private_tasks t on t.id = j.task_id
+          order by j.id`,
     );
     return resultado.rows;
   };
