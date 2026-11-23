@@ -13,7 +13,8 @@ import { DrizzleConfiguracaoDistribuicaoRepository } from '../distribuicao/infra
 import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-cliente.repository';
 import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
-import { gravarMigracao } from './gravar';
+import { idDoLegado } from './comum';
+import { alocacoesSumidasDoLegado, gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
@@ -310,6 +311,56 @@ describe.skipIf(!url)('gravarMigracao', () => {
       { nome: 'Folga', cor: '#0E7490' },
       { nome: 'Licença', cor: '#000000' },
     ]);
+  });
+
+  it('alocação que veio do dashboards-one e sumiu de lá é encerrada ontem, com auditoria; a criada no redo-one fica', async () => {
+    await gravarMigracao(db, catalogo, medicos, escala);
+    const titular = idDoLegado('alocacoes_medico', 'a1');
+    const copia = async (id: string, dataInicio: string, dataFim: string | null) =>
+      db.execute(sql`
+        insert into alocacoes (id, medico_id, turno_id, frente_id, dias_semana, horario_inicio,
+          horario_fim, data_inicio, data_fim)
+        select ${id}::uuid, medico_id, turno_id, frente_id, dias_semana, horario_inicio,
+          horario_fim, ${dataInicio}::date, ${dataFim}::date from alocacoes where id = ${titular}`);
+    const sumiu = idDoLegado('alocacoes_medico', 'sumiu');
+    const antiga = idDoLegado('alocacoes_medico', 'antiga');
+    const futura = idDoLegado('alocacoes_medico', 'futura');
+    const daTela = '0b4a1f3e-2c7d-4e8a-9f61-3d5c7b9e1a20';
+    await copia(sumiu, '2026-01-01', null);
+    await copia(antiga, '2026-01-01', '2026-03-01');
+    await copia(futura, '2026-12-01', null);
+    await copia(daTela, '2026-01-01', null);
+
+    const previa = await alocacoesSumidasDoLegado(db, escala);
+    expect(previa.encerrar.map((a) => a.id)).toEqual([sumiu]);
+    expect(previa.futuras.map((a) => a.id)).toEqual([futura]);
+
+    await gravarMigracao(db, catalogo, medicos, escala);
+
+    const fim = async (id: string) =>
+      (
+        await db.execute<{ data_fim: string | null }>(
+          sql`select to_char(data_fim, 'YYYY-MM-DD') data_fim from alocacoes where id = ${id}`,
+        )
+      ).rows[0]?.data_fim;
+    expect(await fim(sumiu)).toBe('2026-11-15');
+    expect(await fim(antiga)).toBe('2026-03-01');
+    expect(await fim(futura)).toBeNull();
+    expect(await fim(daTela)).toBeNull();
+    expect(await fim(titular)).toBeNull();
+    const eventos = await db.execute<{ ator_tipo: string; acao: string; antes: unknown }>(
+      sql`select ator_tipo, acao, antes from eventos_auditoria
+        where entidade = 'alocacao' and entidade_id = ${sumiu}`,
+    );
+    expect(eventos.rows).toEqual([
+      { ator_tipo: 'sistema', acao: 'encerrado', antes: { dataFim: null } },
+    ]);
+
+    // Rodar de novo não encerra de novo nem duplica o evento.
+    await gravarMigracao(db, catalogo, medicos, escala);
+    expect(
+      (await db.execute(sql`select 1 from eventos_auditoria where entidade_id = ${sumiu}`)).rows,
+    ).toHaveLength(1);
   });
 
   it('frente já criada pela tela (id aleatório) é reaproveitada, e rodar duas vezes não duplica', async () => {

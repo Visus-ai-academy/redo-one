@@ -205,6 +205,20 @@ const idAlocacao = (legadoId: string) => idDoLegado('alocacoes_medico', legadoId
 const frenteNeuro = () =>
   idDoLegado('frentes_escala', `especialidade:${idEspecialidade('es-neuro')}`);
 
+describe('mapearEscala: o que existe no dashboards-one', () => {
+  it('lista os ids de todas as alocações de lá, inclusive as que a carga descarta, e o dia de ontem', () => {
+    const { legado } = mapearEscala(
+      escala({ alocacoes: [alocacao('vale'), alocacao('sem-dia', { diasSemana: [] })] }),
+      contexto,
+    );
+    expect(legado.alocacaoIds).toEqual([
+      idDoLegado('alocacoes_medico', 'vale'),
+      idDoLegado('alocacoes_medico', 'sem-dia'),
+    ]);
+    expect(legado.ontem).toBe('2026-11-15');
+  });
+});
+
 describe('mapearEscala: alocações', () => {
   it('na Lista de 24 h, o fim às 00:00 vira o fim do turno (07:00 do dia seguinte); fora dela, fica', () => {
     const { tabelas, resumo } = mapearEscala(

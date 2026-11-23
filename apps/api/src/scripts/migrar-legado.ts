@@ -5,16 +5,18 @@
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api migrar:legado
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api migrar:legado --gravar
 // Pode rodar de novo: as linhas têm id estável e são atualizadas, não duplicadas. A única coisa
-// que depende do dia da carga é o fim das alocações de médico inativo (ontem, em Brasília).
+// que depende do dia da carga é o fim (ontem, em Brasília) das alocações de médico inativo e das
+// que vieram do dashboards-one e foram apagadas lá (listadas antes de gravar). Roda com
+// JOBS_WORKER=false: este processo não pega jobs da fila.
 import { parseArgs } from 'node:util';
 
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';
 import { DATABASE, type Database } from '../database/database';
-import { usuarios } from '../database/schema';
+import { medicos as tabMedicos, turnos as tabTurnos, usuarios } from '../database/schema';
 import type { Aviso } from '../migracao-legado/comum';
-import { gravarMigracao } from '../migracao-legado/gravar';
+import { alocacoesSumidasDoLegado, gravarMigracao } from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
 import {
@@ -106,6 +108,32 @@ async function migrarLegado() {
     for (const r of configuracaoDistribuicao.regrasFrente) console.log(`  ${JSON.stringify(r)}`);
     for (const p of configuracaoDistribuicao.prioridadesCliente)
       console.log(`  prioridade ${p.clienteId}: ${JSON.stringify(p.itens)}`);
+    // Alocações que vieram do dashboards-one e foram apagadas lá: a gravação as encerra em ontem.
+    const sumidas = await alocacoesSumidasDoLegado(db, escala);
+    const nomeMedico = new Map(
+      (await db.select({ id: tabMedicos.id, nome: tabMedicos.nome }).from(tabMedicos)).map((m) => [
+        m.id,
+        m.nome,
+      ]),
+    );
+    const nomeTurno = new Map(
+      (await db.select({ id: tabTurnos.id, nome: tabTurnos.nome }).from(tabTurnos)).map((t) => [
+        t.id,
+        t.nome,
+      ]),
+    );
+    const linha = (a: (typeof sumidas.encerrar)[number]) =>
+      `    - ${nomeMedico.get(a.medicoId) ?? a.medicoId} · ${nomeTurno.get(a.turnoId) ?? a.turnoId} · ${a.dataInicio} → ${a.dataFim ?? 'sem fim'}`;
+    console.log(
+      `\nAlocações apagadas no dashboards-one que a gravação encerra em ${escala.legado.ontem} (${sumidas.encerrar.length}):`,
+    );
+    for (const a of sumidas.encerrar) console.log(linha(a));
+    if (sumidas.futuras.length) {
+      console.log(
+        `\nApagadas lá, mas começam depois de ontem: ficam como estão (${sumidas.futuras.length}):`,
+      );
+      for (const a of sumidas.futuras) console.log(linha(a));
+    }
     const avisos = [
       ...catalogo.avisos,
       ...medicos.avisos,

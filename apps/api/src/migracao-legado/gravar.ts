@@ -274,7 +274,8 @@ async function gravarDistribuicao(tx: Transacao, { tabelas: d }: DistribuicaoMig
  * turnos da ausência, escopo da gestora) são trocados inteiros para os registros que a carga
  * traz: o dashboards-one é a fonte da verdade, e assim rodar de novo dá o mesmo resultado.
  */
-async function gravarEscala(tx: Transacao, { tabelas: migradas }: EscalaMigrada) {
+async function gravarEscala(tx: Transacao, escala: EscalaMigrada) {
+  const { tabelas: migradas } = escala;
   const e = remapearFrentes(migradas, await gravarFrentes(tx, migradas.frentesEscala));
   const trocar = async <T extends PgTable>(
     tabela: T,
@@ -377,6 +378,86 @@ async function gravarEscala(tx: Transacao, { tabelas: migradas }: EscalaMigrada)
     ['id'],
   );
   await upsert(tx, schema.eventosAuditoria, e.eventosAuditoria);
+  await encerrarSumidas(tx, escala);
+}
+
+/** Uma alocação que veio do dashboards-one e não existe mais lá. */
+export interface AlocacaoSumida {
+  id: string;
+  medicoId: string;
+  turnoId: string;
+  frenteId: string;
+  dataInicio: string;
+  dataFim: string | null;
+}
+
+/**
+ * As alocações que vieram do dashboards-one (id derivado do de lá: UUID versão 5; a tela cria
+ * versão 4) e não existem mais lá, ainda vigentes depois de ontem. `encerrar` são as que a carga
+ * fecha em ontem; `futuras` começariam depois de ontem, então não há como encerrá-las sem apagar:
+ * ficam como estão, para a pessoa decidir. Só leitura.
+ */
+export async function alocacoesSumidasDoLegado(
+  db: Pick<Database, 'select'>,
+  { legado }: Pick<EscalaMigrada, 'legado'>,
+): Promise<{ encerrar: AlocacaoSumida[]; futuras: AlocacaoSumida[] }> {
+  const a = schema.alocacoes;
+  const linhas = await db
+    .select({
+      id: a.id,
+      medicoId: a.medicoId,
+      turnoId: a.turnoId,
+      frenteId: a.frenteId,
+      dataInicio: a.dataInicio,
+      dataFim: a.dataFim,
+    })
+    .from(a)
+    .where(
+      and(
+        sql`substring(${a.id}::text, 15, 1) = '5'`,
+        legado.alocacaoIds.length ? notInArray(a.id, legado.alocacaoIds) : undefined,
+        or(isNull(a.dataFim), sql`${a.dataFim} > ${legado.ontem}::date`),
+      ),
+    )
+    .orderBy(a.dataInicio, a.id);
+  return {
+    encerrar: linhas.filter((l) => l.dataInicio <= legado.ontem),
+    futuras: linhas.filter((l) => l.dataInicio > legado.ontem),
+  };
+}
+
+/** Encerra em ontem as alocações que sumiram do dashboards-one, com o evento de auditoria. */
+async function encerrarSumidas(tx: Transacao, escala: EscalaMigrada) {
+  const { encerrar } = await alocacoesSumidasDoLegado(tx as unknown as Database, escala);
+  if (!encerrar.length) return;
+  const { ontem } = escala.legado;
+  await tx
+    .update(schema.alocacoes)
+    .set({ dataFim: ontem })
+    .where(
+      inArray(
+        schema.alocacoes.id,
+        encerrar.map((a) => a.id),
+      ),
+    );
+  await tx.insert(schema.eventosAuditoria).values(
+    encerrar.map((a) => ({
+      ocorridoEm: new Date(),
+      atorTipo: 'sistema',
+      atorId: null,
+      entidade: 'alocacao',
+      entidadeId: a.id,
+      acao: 'encerrado',
+      antes: { dataFim: a.dataFim },
+      depois: {
+        dataFim: ontem,
+        medicoId: a.medicoId,
+        turnoId: a.turnoId,
+        frenteId: a.frenteId,
+        motivo: 'Apagada no dashboards-one: encerrada pela carga.',
+      },
+    })),
+  );
 }
 
 type Frentes = EscalaMigrada['tabelas']['frentesEscala'];
