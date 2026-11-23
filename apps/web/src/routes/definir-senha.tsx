@@ -7,6 +7,7 @@ import { AcessoLayout } from '../components/acesso/AcessoLayout';
 import { DefinirSenhaForm, LinkExpirado } from '../components/acesso/DefinirSenhaForm';
 import { linkSenhaQueryOptions } from '../components/acesso/link-senha';
 import { Alerta } from '../components/alerta/Alerta';
+import { Skeleton } from '../components/skeleton/Skeleton';
 
 export const Route = createFileRoute('/definir-senha')({
   validateSearch: z.object({ token: z.string().optional() }),
@@ -38,10 +39,10 @@ function Carregando() {
     <AcessoLayout>
       <div role="status" aria-busy="true" className="flex flex-col gap-5">
         <span className="sr-only">Carregando</span>
-        <div className="bg-muted h-9 w-3/4 animate-pulse rounded-md" />
-        <div className="bg-muted h-11 animate-pulse rounded-md" />
-        <div className="bg-muted h-11 animate-pulse rounded-md" />
-        <div className="bg-muted h-11 animate-pulse rounded-md" />
+        <Skeleton className="h-9 w-3/4" />
+        <Skeleton className="h-11" />
+        <Skeleton className="h-11" />
+        <Skeleton className="h-11" />
       </div>
     </AcessoLayout>
   );
@@ -53,7 +54,9 @@ function Erro() {
   return (
     <AcessoLayout>
       <div className="flex flex-col gap-4">
-        <Alerta tom="erro">Não foi possível abrir o link agora. Confira sua conexão.</Alerta>
+        <Alerta tom="erro">
+          Não foi possível abrir o link agora. Confira sua conexão e tente de novo.
+        </Alerta>
         <Button
           type="button"
           onClick={() => void router.invalidate()}

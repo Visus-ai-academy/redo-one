@@ -43,6 +43,18 @@ describe('LoginForm', () => {
 
   beforeEach(() => entrar.mockReset());
 
+  it('preenchimento automático certo, sem corretor no e-mail e colar liberado', async () => {
+    renderComRotas(<LoginForm destino="/" />);
+
+    const identificador = await screen.findByRole('textbox', { name: /E-mail ou CPF/ });
+    expect(identificador).toHaveAttribute('autocomplete', 'username');
+    expect(identificador).toHaveAttribute('spellcheck', 'false');
+    expect(identificador).toHaveAttribute('autocapitalize', 'none');
+    const senha = screen.getByLabelText(/^Senha/);
+    expect(senha).toHaveAttribute('autocomplete', 'current-password');
+    expect(senha).not.toHaveAttribute('onpaste');
+  });
+
   it('entra com e-mail e senha e vai para o destino pedido', async () => {
     responder(async () => ({}));
     const { router } = renderComRotas(<LoginForm destino="/configuracoes/usuarios" />);

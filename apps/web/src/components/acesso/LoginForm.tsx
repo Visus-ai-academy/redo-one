@@ -59,6 +59,7 @@ export function LoginForm({ destino }: { destino: string }) {
             label="E-mail ou CPF"
             placeholder="nome@empresa.com.br ou 000.000.000-00"
             autoComplete="username"
+            spellCheck={false}
             size="acesso"
             required
           />
