@@ -323,13 +323,27 @@ describe('PainelUsuario', () => {
     );
   });
 
-  it('avisa quando a ação falha', async () => {
+  it('avisa qual ação falhou e o que fazer', async () => {
     enviarLink.mockReturnValue({ unwrap: () => Promise.reject(new Error('rede')) } as never);
     montar();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Enviar link de nova senha' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível concluir');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível enviar o link de nova senha. Confira sua conexão e tente de novo.',
+    );
+  });
+
+  it('com os papéis mudados e não salvos, fechar pergunta antes de descartar', async () => {
+    const { onFechar } = montar();
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Coordenação' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+    ).toBeInTheDocument();
+    expect(onFechar).not.toHaveBeenCalled();
   });
 
   it('encerra uma sessão da pessoa', async () => {

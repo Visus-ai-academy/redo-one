@@ -3,7 +3,7 @@ import { CheckboxGroup } from '@base-ui/react/checkbox-group';
 import { Field } from '@base-ui/react/field';
 import { Fieldset } from '@base-ui/react/fieldset';
 import { useQueryClient } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 import { useEscopoApiControllerDefinir } from '../../gen/hooks/useEscopoApiControllerDefinir';
 import {
@@ -28,6 +28,8 @@ export type RecorteEscalaProps = {
   podeEditar: boolean;
   /** escala.ver: sem ela não dá para listar os turnos e as frentes para marcar. */
   podeVerCadastros: boolean;
+  /** Turnos ou frentes marcados e não salvos (o painel pergunta antes de fechar). */
+  onAlterado?: (alterado: boolean) => void;
 };
 
 const AJUDA =
@@ -42,6 +44,7 @@ export function RecorteEscala({
   proprio,
   podeEditar,
   podeVerCadastros,
+  onAlterado,
 }: RecorteEscalaProps) {
   const consulta = useEscopoApiControllerObter({ path: { usuarioId } });
   const tituloId = useId();
@@ -72,7 +75,7 @@ export function RecorteEscala({
           <Skeleton className="h-5 w-64" />
         </div>
       ) : editavel ? (
-        <EditorRecorte usuarioId={usuarioId} escopo={escopo} />
+        <EditorRecorte usuarioId={usuarioId} escopo={escopo} onAlterado={onAlterado} />
       ) : (
         <>
           <LeituraRecorte escopo={escopo} />
@@ -133,7 +136,15 @@ function opcoesCom(ativas: { id: string; nome: string }[], doRecorte: Referencia
 const mesmoConjunto = (a: string[], b: string[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-function EditorRecorte({ usuarioId, escopo }: { usuarioId: string; escopo: EscopoDto }) {
+function EditorRecorte({
+  usuarioId,
+  escopo,
+  onAlterado,
+}: {
+  usuarioId: string;
+  escopo: EscopoDto;
+  onAlterado?: (alterado: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const avisos = useAvisos();
   const ajudaId = useId();
@@ -146,6 +157,10 @@ function EditorRecorte({ usuarioId, escopo }: { usuarioId: string; escopo: Escop
 
   const mudou =
     !mesmoConjunto(turnoIds, escopo.turnoIds) || !mesmoConjunto(frenteIds, escopo.frenteIds);
+  useEffect(() => {
+    onAlterado?.(mudou);
+    return () => onAlterado?.(false);
+  }, [mudou, onAlterado]);
 
   const salvar = async () => {
     setFalhou(false);
@@ -174,7 +189,9 @@ function EditorRecorte({ usuarioId, escopo }: { usuarioId: string; escopo: Escop
         {AJUDA}
       </p>
       {falhou && (
-        <Alerta tom="erro">Não foi possível salvar o recorte agora. Tente de novo.</Alerta>
+        <Alerta tom="erro">
+          Não foi possível salvar o recorte da escala. Confira sua conexão e tente de novo.
+        </Alerta>
       )}
       {(turnos.isError || frentes.isError) && (
         <Alerta tom="erro">

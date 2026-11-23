@@ -145,6 +145,15 @@ describe('RecorteEscala', () => {
     expect(await acharAviso()).toHaveTextContent('Recorte da escala salvo.');
   });
 
+  it('avisa quem usa quando há marcação não salva (o painel pergunta antes de fechar)', async () => {
+    const onAlterado = vi.fn();
+    montar(COM_RECORTE, { onAlterado });
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Tarde' }));
+
+    await waitFor(() => expect(onAlterado).toHaveBeenLastCalledWith(true));
+  });
+
   it('mantém marcado o turno do recorte que foi desativado', async () => {
     montar({
       ...COM_RECORTE,
@@ -167,7 +176,7 @@ describe('RecorteEscala', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar recorte' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Não foi possível salvar o recorte agora. Tente de novo.',
+      'Não foi possível salvar o recorte da escala. Confira sua conexão e tente de novo.',
     );
   });
 });

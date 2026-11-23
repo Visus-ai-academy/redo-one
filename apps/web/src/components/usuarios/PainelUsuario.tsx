@@ -86,8 +86,18 @@ export function PainelUsuario({
   const [alterados, setAlterados] = useState<Record<string, boolean>>({});
   const marcarAlterado = useCallback(
     (parte: string, alterado: boolean) =>
-      setAlterados((atual) => (atual[parte] === alterado ? atual : { ...atual, [parte]: alterado })),
+      setAlterados((atual) =>
+        atual[parte] === alterado ? atual : { ...atual, [parte]: alterado },
+      ),
     [],
+  );
+  const papeisAlterados = useCallback(
+    (v: boolean) => marcarAlterado('papeis', v),
+    [marcarAlterado],
+  );
+  const recorteAlterado = useCallback(
+    (v: boolean) => marcarAlterado('recorte', v),
+    [marcarAlterado],
   );
 
   return (
@@ -144,7 +154,7 @@ export function PainelUsuario({
             usuario={usuario}
             papeis={papeis}
             proprio={proprio}
-            onAlterado={(alterado) => marcarAlterado('papeis', alterado)}
+            onAlterado={papeisAlterados}
           />
         ) : (
           <CampoSomenteLeitura
@@ -160,11 +170,7 @@ export function PainelUsuario({
           proprio={proprio}
         />
 
-        <RecorteDaPessoa
-          usuarioId={usuario.id}
-          proprio={proprio}
-          onAlterado={(alterado) => marcarAlterado('recorte', alterado)}
-        />
+        <RecorteDaPessoa usuarioId={usuario.id} proprio={proprio} onAlterado={recorteAlterado} />
 
         {(podeConviteOuLink || podeDesativar) && (
           <div className="flex flex-wrap gap-2 border-t pt-4">

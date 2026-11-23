@@ -45,8 +45,7 @@ const papeis: PapelAtribuivelDto[] = [
 function montar(props: Partial<ListaUsuariosProps> = {}) {
   const onFiltrar = vi.fn();
   const onIrPara = vi.fn();
-  const onAbrir = vi.fn();
-  renderComRotas(
+  const resultado = renderComRotas(
     <ListaUsuarios
       pagina={pagina}
       filtros={{}}
@@ -55,11 +54,10 @@ function montar(props: Partial<ListaUsuariosProps> = {}) {
       agora={AGORA}
       onFiltrar={onFiltrar}
       onIrPara={onIrPara}
-      onAbrir={onAbrir}
       {...props}
     />,
   );
-  return { onFiltrar, onIrPara, onAbrir };
+  return { onFiltrar, onIrPara, router: resultado.router };
 }
 
 describe('ListaUsuarios', () => {
@@ -129,19 +127,34 @@ describe('ListaUsuarios', () => {
     ).toEqual(['Nome', 'Papéis', 'Situação', 'Último acesso']);
   });
 
-  it('abre o detalhe pelo nome e marca a linha aberta, com o painel ao lado', async () => {
-    const { onAbrir } = montar({
+  it('o nome é um link para o detalhe (com o ?id=), e a linha aberta fica marcada', async () => {
+    montar({
       selecionadoId: 'u-maria',
       painel: <aside aria-label="Painel de teste" />,
     });
 
-    await userEvent.click(await screen.findByRole('button', { name: /Carlos Andrade/ }));
-
-    expect(onAbrir).toHaveBeenCalledWith('u-carlos');
+    const link = await screen.findByRole('link', { name: /Carlos Andrade/ });
+    expect(link).toHaveAttribute('href', '/?id=u-carlos');
     const [, carlos, maria] = screen.getAllByRole('row');
     expect(maria).toHaveAttribute('aria-selected', 'true');
     expect(carlos).not.toHaveAttribute('aria-selected');
     expect(screen.getByRole('complementary', { name: 'Painel de teste' })).toBeInTheDocument();
+  });
+
+  it('clicar em qualquer ponto da linha abre o detalhe', async () => {
+    const { router } = montar();
+
+    await userEvent.click(await screen.findByText('Financeiro, Suporte'));
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ id: 'u-maria' }));
+  });
+
+  it('recarregando (filtro, página), as linhas antigas ficam à vista e a lista avisa que busca', async () => {
+    montar({ recarregando: true });
+
+    const lista = await screen.findByRole('region', { name: 'Lista de usuários' });
+    expect(within(lista).getByRole('table').parentElement).toHaveAttribute('aria-busy', 'true');
+    expect(within(lista).getByRole('link', { name: /Carlos Andrade/ })).toBeInTheDocument();
   });
 
   it('o painel fica por cima: com ele aberto, a lista continua igual, com todas as colunas', async () => {

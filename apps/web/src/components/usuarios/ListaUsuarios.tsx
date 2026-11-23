@@ -12,6 +12,7 @@ import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
+import { LinkDaLinha } from '../data-table/link-da-linha';
 import { Paginacao } from '../paginacao/Paginacao';
 import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
@@ -27,8 +28,8 @@ export type ListaUsuariosProps = {
   agora?: Date;
   onFiltrar: (filtros: Partial<FiltrosUsuarios>) => void;
   onIrPara: (pagina: number) => void;
-  /** Abre o detalhe da pessoa (o nome vira botão). */
-  onAbrir?: (id: string) => void;
+  /** Buscando a página ou o filtro novo: as linhas antigas ficam à vista, esmaecidas. */
+  recarregando?: boolean;
   /** Linha aberta no painel. */
   selecionadoId?: string;
   /** Painel de detalhe, ao lado da lista (no celular, no lugar dela). */
@@ -47,7 +48,7 @@ export function ListaUsuarios({
   agora,
   onFiltrar,
   onIrPara,
-  onAbrir,
+  recarregando = false,
   selecionadoId,
   painel,
   onConvidar,
@@ -64,27 +65,23 @@ export function ListaUsuarios({
         header: 'Nome',
         cell: (info) => {
           const usuario = info.row.original;
-          const conteudo = (
-            <span className="flex items-center gap-3">
+          // O nome é o link do painel (`?id=`): Ctrl/⌘+clique abre em outra aba; clicar em
+          // qualquer ponto da linha segue este link.
+          return (
+            <LinkDaLinha
+              to="."
+              search={(atual: Record<string, unknown>) => ({ ...atual, id: usuario.id }) as never}
+              className="group flex items-center gap-3 font-normal hover:no-underline"
+            >
               <Avatar nome={usuario.nome} tamanho="sm" />
               <span className="flex min-w-0 flex-col leading-snug">
-                <span className="font-medium">
+                <span className="font-medium group-hover:underline">
                   {usuario.nome}
                   {usuario.id === euId && ' (você)'}
                 </span>
                 <span className="text-muted-foreground text-[13px]">{usuario.email}</span>
               </span>
-            </span>
-          );
-          if (!onAbrir) return conteudo;
-          return (
-            <Button
-              type="button"
-              onClick={() => onAbrir(usuario.id)}
-              className="focus-visible:outline-ring -mx-1 rounded-md px-1 text-left focus-visible:outline-2"
-            >
-              {conteudo}
-            </Button>
+            </LinkDaLinha>
           );
         },
       }),
@@ -109,7 +106,7 @@ export function ListaUsuarios({
         },
       }),
     ],
-    [euId, referencia, onAbrir],
+    [euId, referencia],
   );
 
   const temFiltro = Boolean(filtros.busca || filtros.papelId || filtros.situacao);
@@ -199,7 +196,7 @@ export function ListaUsuarios({
               data={pagina.itens}
               getRowId={(usuario) => usuario.id}
               selectedRowId={selecionadoId}
-              onRowClick={onAbrir && ((usuario) => onAbrir(usuario.id))}
+              recarregando={recarregando}
               className="md:min-h-0 md:flex-1 md:overflow-y-auto"
             />
           )}

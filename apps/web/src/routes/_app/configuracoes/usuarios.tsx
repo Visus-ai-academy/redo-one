@@ -1,11 +1,13 @@
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { keepPreviousData, useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute, type ErrorComponentProps, useRouter } from '@tanstack/react-router';
 import { useCallback } from 'react';
 import { z } from 'zod';
 
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
+import { EstadoDoErro } from '../../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../../components/estado/estados';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../../components/toast/use-avisos';
 import { DialogoConvite } from '../../../components/usuarios/DialogoConvite';
 import { type FiltrosUsuarios, ListaUsuarios } from '../../../components/usuarios/ListaUsuarios';
@@ -20,6 +22,7 @@ import { usuariosControllerPapeisQueryOptions } from '../../../gen/hooks/useUsua
 import { pode } from '../../../lib/permissoes';
 
 const POR_PAGINA = 25;
+const PAGINA_VAZIA = { itens: [], total: 0, pagina: 1, porPagina: POR_PAGINA };
 
 // Filtros e página ficam na URL: dá para voltar, recarregar e mandar o link. Valor inválido vira
 // "sem filtro" em vez de erro.
@@ -49,7 +52,7 @@ const consultaDaLista = ({
 export const Route = createFileRoute('/_app/configuracoes/usuarios')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'usuarios.ver')) return;
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id) {
@@ -57,16 +60,37 @@ export const Route = createFileRoute('/_app/configuracoes/usuarios')({
         usuariosControllerObterQueryOptions({ path: { id: deps.id } }),
       );
     }
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
     await Promise.all([
-      context.queryClient.ensureQueryData(
-        usuariosControllerListarQueryOptions(consultaDaLista(deps)),
-      ),
+      cause !== 'stay' &&
+        context.queryClient.ensureQueryData(
+          usuariosControllerListarQueryOptions(consultaDaLista(deps)),
+        ),
       context.queryClient.ensureQueryData(usuariosControllerPapeisQueryOptions()),
     ]);
   },
   head: () => ({ meta: [{ title: 'Usuários · One' }] }),
   component: PaginaUsuarios,
+  errorComponent: ErroUsuarios,
 });
+
+/** A lista não abriu (sem permissão na API, servidor fora): o estado do erro, com o submenu de pé. */
+function ErroUsuarios({ error }: ErrorComponentProps) {
+  const { sessao } = Route.useRouteContext();
+  const router = useRouter();
+  return (
+    <ConfiguracoesLayout acesso={sessao}>
+      <h1 className="text-[22px] leading-snug font-semibold">Usuários</h1>
+      <EstadoDoErro
+        erro={error}
+        oQue="os usuários"
+        onTentarDeNovo={() => void router.invalidate()}
+        className="p-0"
+      />
+    </ConfiguracoesLayout>
+  );
+}
 
 function PaginaUsuarios() {
   const { sessao } = Route.useRouteContext();
@@ -93,9 +117,10 @@ function PaginaUsuarios() {
 function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUsuarios }) {
   const filtros = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(
-    usuariosControllerListarQueryOptions(consultaDaLista(filtros)),
-  );
+  const lista = useQuery({
+    ...usuariosControllerListarQueryOptions(consultaDaLista(filtros)),
+    placeholderData: keepPreviousData,
+  });
   const { data: papeis } = useSuspenseQuery(usuariosControllerPapeisQueryOptions());
 
   // Filtro novo volta para a página 1.
@@ -105,10 +130,6 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
         search: (atual) => ({ ...atual, ...novos, pagina: undefined }),
         replace: true,
       }),
-    [navigate],
-  );
-  const abrir = useCallback(
-    (id: string) => void navigate({ search: (atual) => ({ ...atual, id }) }),
     [navigate],
   );
   const fechar = useCallback(
@@ -134,16 +155,31 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
 
   const convidando = Boolean(filtros.convidar && permissoes.convidar);
 
+  if (!lista.data && lista.isError) {
+    // Só chega aqui se a busca de outra página ou filtro falhou (a primeira o loader já trouxe).
+    return (
+      <>
+        <h1 className="text-[22px] leading-snug font-semibold">Usuários</h1>
+        <EstadoDoErro
+          erro={lista.error}
+          oQue="os usuários"
+          onTentarDeNovo={() => void lista.refetch()}
+          className="p-0"
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <ListaUsuarios
-        pagina={pagina}
+        pagina={lista.data ?? PAGINA_VAZIA}
+        recarregando={lista.isPlaceholderData || !lista.data}
         filtros={filtros}
         papeis={papeis}
         euId={euId}
         onFiltrar={filtrar}
         onIrPara={irPara}
-        onAbrir={abrir}
         selecionadoId={filtros.id}
         onConvidar={permissoes.convidar ? abrirConvite : undefined}
         painel={
@@ -167,11 +203,13 @@ function Usuarios({ euId, permissoes }: { euId: string; permissoes: PermissoesUs
 function Detalhe({ id, ...props }: { id: string } & Omit<PainelUsuarioProps, 'usuario'>) {
   const consulta = useQuery(usuariosControllerObterQueryOptions({ path: { id } }));
   const usuario = consulta.data;
-  if (!usuario)
+  const fase = useFaseDoCarregamento(!usuario);
+  if (!usuario || fase !== 'conteudo')
     return (
       <PainelCarregando
         onFechar={props.onFechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o usuário"
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
