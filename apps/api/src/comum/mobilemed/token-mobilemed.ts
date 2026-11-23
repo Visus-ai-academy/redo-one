@@ -19,10 +19,16 @@ export interface TokenMobileMed {
  */
 export const TOKEN_MOBILEMED = Symbol('TOKEN_MOBILEMED');
 
+/** Avisos de que o login parou e de que voltou a funcionar (ex.: e-mail para `ALERTAS_EMAIL`). */
+export interface AvisosLoginMobileMed {
+  aoParar?: () => Promise<void>;
+  aoVoltar?: () => Promise<void>;
+}
+
 /** Token pelas variáveis `MOBILEMED_*`; sem as credenciais, recusa sem chamar a MobileMed. */
 export function criarTokenMobileMed(
   config: { get(nome: string): string | undefined },
-  aoParar?: () => Promise<void>,
+  avisos: AvisosLoginMobileMed = {},
 ): TokenMobileMed {
   const usuario = config.get('MOBILEMED_USUARIO');
   const senha = config.get('MOBILEMED_SENHA');
@@ -38,13 +44,18 @@ export function criarTokenMobileMed(
       descartar: () => {},
     };
   }
-  const timeout = config.get('MOBILEMED_TIMEOUT_MS');
+  const numero = (nome: string, padrao: number) => {
+    const valor = config.get(nome);
+    return valor ? Number(valor) : padrao;
+  };
   return new TokenMobileMedLogin({
     usuario,
     senha,
     totpSegredo,
-    timeoutMs: timeout ? Number(timeout) : 90_000,
-    aoParar,
+    timeoutMs: numero('MOBILEMED_TIMEOUT_MS', 90_000),
+    pausaInicialMs: numero('MOBILEMED_LOGIN_PAUSA_MS', PAUSA_INICIAL_MS),
+    pausaMaximaMs: numero('MOBILEMED_LOGIN_PAUSA_MAXIMA_MS', PAUSA_MAXIMA_MS),
+    ...avisos,
   });
 }
 
@@ -63,8 +74,12 @@ const CABECALHOS = {
 const MARGEM_MS = 60_000;
 /** Código TOTP com menos que isso de vida: espera a próxima janela. */
 const FOLGA_TOTP_MS = 5_000;
-/** Falhas seguidas de renovação que param o login até a API reiniciar (evita bloquear a conta). */
+/** Falhas seguidas de renovação que param o login (evita bloquear a conta por excesso de login). */
 const LIMITE_FALHAS = 3;
+/** Parado, espera isso para tentar um login de novo; a pausa dobra a cada tentativa que falha. */
+const PAUSA_INICIAL_MS = 5 * 60_000;
+/** Teto da pausa: parado, no máximo um login por hora. */
+const PAUSA_MAXIMA_MS = 60 * 60_000;
 
 const respostaTokens = z.object({
   access_token: z.string().min(1),
@@ -107,8 +122,14 @@ export interface OpcoesTokenMobileMedLogin {
   fetch?: typeof fetch;
   agora?: () => number;
   esperar?: (ms: number) => Promise<void>;
-  /** Avisa (uma vez) que o login parou; uma falha do aviso só vai para o log. */
+  /** Parado, espera para tentar de novo (`MOBILEMED_LOGIN_PAUSA_MS`, padrão 5 min); dobra a cada falha. */
+  pausaInicialMs?: number;
+  /** Teto da pausa (`MOBILEMED_LOGIN_PAUSA_MAXIMA_MS`, padrão 1 h). */
+  pausaMaximaMs?: number;
+  /** Avisa (uma vez por parada) que o login parou; uma falha do aviso só vai para o log. */
   aoParar?: () => Promise<void>;
+  /** Avisa que o login voltou a funcionar depois de parado; uma falha do aviso só vai para o log. */
+  aoVoltar?: () => Promise<void>;
 }
 
 /**
@@ -119,7 +140,9 @@ export interface OpcoesTokenMobileMedLogin {
  * Guarda o access token até perto de vencer (ou até a API recusá-lo, `descartar`) e renova pelo
  * refresh token do gateway; se a renovação falha, refaz o login. Uma renovação por vez (o refresh
  * token gira a cada uso: duas ao mesmo tempo derrubam a sessão). Depois de `LIMITE_FALHAS`
- * falhas seguidas, avisa (`aoParar`) e para de tentar até a API reiniciar.
+ * falhas seguidas, avisa (`aoParar`) e para: os pedidos são recusados sem chamar a MobileMed até
+ * passar a pausa; aí o próximo pedido tenta um login só, e cada tentativa que falha dobra a pausa
+ * (até o teto). Quando volta, registra no log e avisa (`aoVoltar`).
  */
 export class TokenMobileMedLogin implements TokenMobileMed {
   private readonly logger = new Logger('MobileMed');
@@ -130,6 +153,10 @@ export class TokenMobileMedLogin implements TokenMobileMed {
   private refresh: string | null = null;
   private renovacao: Promise<string> | null = null;
   private falhasSeguidas = 0;
+  /** Parado: a próxima tentativa só a partir de `ate`; `pausaMs` é a pausa em curso. */
+  private parado: { ate: number; pausaMs: number } | null = null;
+  /** Quando o último login (não refresh) deu certo: mede a vida da sessão no log. */
+  private loginEm: number | null = null;
 
   constructor(private readonly o: OpcoesTokenMobileMedLogin) {
     this.fetch = o.fetch ?? globalThis.fetch;
@@ -151,17 +178,17 @@ export class TokenMobileMedLogin implements TokenMobileMed {
   }
 
   private async renovar(): Promise<string> {
-    if (this.falhasSeguidas >= LIMITE_FALHAS) {
+    if (this.parado && this.agora() < this.parado.ate) {
+      const minutos = Math.ceil((this.parado.ate - this.agora()) / 60_000);
       throw new ErroMobileMed(
         'sessao',
-        `MobileMed: login parado depois de ${LIMITE_FALHAS} falhas seguidas. Confira MOBILEMED_USUARIO, MOBILEMED_SENHA e MOBILEMED_TOTP_SEGREDO e reinicie a API.`,
+        `MobileMed: login parado depois de ${LIMITE_FALHAS} falhas seguidas; nova tentativa em ${minutos} min. Confira MOBILEMED_USUARIO, MOBILEMED_SENHA e MOBILEMED_TOTP_SEGREDO.`,
       );
     }
     try {
       // Refresh recusado ou vencido ("Refresh token not found"): refaz o login.
       const tokens =
-        (this.refresh && (await this.renovarPeloRefresh(this.refresh).catch(() => null))) ||
-        (await this.login());
+        (this.refresh && (await this.tentarRefresh(this.refresh))) || (await this.login());
       const validade = expiraEm(tokens.access_token);
       if (validade === null) {
         throw new ErroMobileMed(
@@ -172,20 +199,65 @@ export class TokenMobileMedLogin implements TokenMobileMed {
       this.access = { token: tokens.access_token, expiraEm: validade };
       this.refresh = tokens.refresh_token ?? this.refresh;
       this.falhasSeguidas = 0;
+      if (this.parado) {
+        this.parado = null;
+        this.logger.log(JSON.stringify({ evento: 'mobilemed_login_voltou' }));
+        await this.avisar(this.o.aoVoltar);
+      }
       return tokens.access_token;
     } catch (erro) {
       this.access = null;
       this.refresh = null;
       this.falhasSeguidas++;
-      if (this.falhasSeguidas >= LIMITE_FALHAS) {
+      if (this.parado) {
+        const pausaMs = Math.min(this.parado.pausaMs * 2, this.pausaMaximaMs());
+        this.parado = { ate: this.agora() + pausaMs, pausaMs };
         this.logger.error(
-          JSON.stringify({ evento: 'mobilemed_login_parado', falhasSeguidas: this.falhasSeguidas }),
+          JSON.stringify({
+            evento: 'mobilemed_login_parado',
+            falhasSeguidas: this.falhasSeguidas,
+            proximaTentativaEmMin: Math.round(pausaMs / 60_000),
+          }),
         );
-        await this.o
-          .aoParar?.()
-          .catch(() => this.logger.error(JSON.stringify({ evento: 'mobilemed_alerta_falhou' })));
+      } else if (this.falhasSeguidas >= LIMITE_FALHAS) {
+        const pausaMs = Math.min(this.o.pausaInicialMs ?? PAUSA_INICIAL_MS, this.pausaMaximaMs());
+        this.parado = { ate: this.agora() + pausaMs, pausaMs };
+        this.logger.error(
+          JSON.stringify({
+            evento: 'mobilemed_login_parado',
+            falhasSeguidas: this.falhasSeguidas,
+            proximaTentativaEmMin: Math.round(pausaMs / 60_000),
+          }),
+        );
+        await this.avisar(this.o.aoParar);
       }
       throw erro;
+    }
+  }
+
+  private pausaMaximaMs(): number {
+    return this.o.pausaMaximaMs ?? PAUSA_MAXIMA_MS;
+  }
+
+  private async avisar(aviso: (() => Promise<void>) | undefined): Promise<void> {
+    await aviso?.().catch(() =>
+      this.logger.error(JSON.stringify({ evento: 'mobilemed_alerta_falhou' })),
+    );
+  }
+
+  /** Refresh recusado vira null (refaz o login); o log diz há quanto tempo foi o login. */
+  private async tentarRefresh(refresh: string): Promise<Tokens | null> {
+    try {
+      return await this.renovarPeloRefresh(refresh);
+    } catch {
+      this.logger.warn(
+        JSON.stringify({
+          evento: 'mobilemed_refresh_recusado',
+          minutosDesdeLogin:
+            this.loginEm === null ? null : Math.round((this.agora() - this.loginEm) / 60_000),
+        }),
+      );
+      return null;
     }
   }
 
@@ -265,6 +337,7 @@ export class TokenMobileMedLogin implements TokenMobileMed {
       code_verifier: verificador,
     });
     const tokens = await this.chamar('POST', '/token', respostaTokens, corpo.toString(), 'form');
+    this.loginEm = this.agora();
     this.logger.log(JSON.stringify({ evento: 'mobilemed_token_renovado', modo: 'login' }));
     return tokens;
   }

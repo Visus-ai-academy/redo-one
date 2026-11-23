@@ -36,6 +36,8 @@ describe('validarAmbiente', () => {
     ['MOBILEMED_TIMEOUT_MS', '10'],
     ['MOBILEMED_CONCORRENCIA', '0'],
     ['MOBILEMED_LIMITE_ANOMALIAS', '0'],
+    ['MOBILEMED_LOGIN_PAUSA_MS', '1000'],
+    ['MOBILEMED_LOGIN_PAUSA_MAXIMA_MS', 'uma-hora'],
     ['MOBILEMED_TOTP_SEGREDO', 'chave-com-1-e-8'],
   ])('recusa %s=%s, dizendo qual variável está errada', (nome, valor) => {
     expect(() => validarAmbiente({ ...minimo, [nome]: valor })).toThrow(nome);

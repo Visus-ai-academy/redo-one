@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import type { ErroMobileMed } from './cliente-mobilemed';
-import { TokenMobileMedLogin } from './token-mobilemed';
+import { type OpcoesTokenMobileMedLogin, TokenMobileMedLogin } from './token-mobilemed';
 import { gerarTotp } from './totp';
 
 const OAUTH = 'https://gateway-sa.mobilemed.com.br/oauth/us-east-1_6Ey29vkej/mobilemed';
@@ -29,7 +29,7 @@ const resposta = (corpo: unknown, status = 200) =>
 /** MobileMed simulada (relógio, fetch e espera injetados). Nada sai do processo. */
 const criar = (
   respostas: ((init: RequestInit) => Response | Promise<Response>)[],
-  aoParar?: () => Promise<void>,
+  extras: Partial<OpcoesTokenMobileMedLogin> = {},
 ) => {
   let agora = INICIO;
   const chamadas: Chamada[] = [];
@@ -58,7 +58,7 @@ const criar = (
       esperas.push(ms);
       agora += ms;
     },
-    aoParar,
+    ...extras,
   });
   return {
     token,
@@ -416,12 +416,11 @@ describe('TokenMobileMedLogin', () => {
 
   it('ao parar, avisa uma vez só (não a cada pedido recusado depois)', async () => {
     let avisos = 0;
-    const m = criar(
-      [() => resposta({}, 400), () => resposta({}, 400), () => resposta({}, 400)],
-      async () => {
+    const m = criar([() => resposta({}, 400), () => resposta({}, 400), () => resposta({}, 400)], {
+      aoParar: async () => {
         avisos++;
       },
-    );
+    });
     for (let i = 0; i < 2; i++) await erroDe(m.token.accessToken());
     expect(avisos).toBe(0);
     for (let i = 0; i < 3; i++) await erroDe(m.token.accessToken());
@@ -429,12 +428,11 @@ describe('TokenMobileMedLogin', () => {
   });
 
   it('um aviso que falha não muda o erro do login', async () => {
-    const m = criar(
-      [() => resposta({}, 400), () => resposta({}, 400), () => resposta({}, 400)],
-      async () => {
+    const m = criar([() => resposta({}, 400), () => resposta({}, 400), () => resposta({}, 400)], {
+      aoParar: async () => {
         throw new Error('fila fora do ar');
       },
-    );
+    });
     for (let i = 0; i < 2; i++) await erroDe(m.token.accessToken());
     expect((await erroDe(m.token.accessToken())).tipo).toBe('sessao');
   });
@@ -447,5 +445,149 @@ describe('TokenMobileMedLogin', () => {
     m.token.descartar(primeiro);
     expect(await m.token.accessToken()).toBe(jwt('a2', Math.floor(INICIO / 1000) + 300));
     expect(new URLSearchParams(m.chamadas[5]?.corpo).get('refresh_token')).toBe('r1');
+  });
+  describe('depois de parado', () => {
+    const tresFalhas = () => [
+      () => resposta({}, 400),
+      () => resposta({}, 400),
+      () => resposta({}, 400),
+    ];
+    const parar = async (m: ReturnType<typeof criar>) => {
+      for (let i = 0; i < 3; i++) await erroDe(m.token.accessToken());
+    };
+
+    it('não chama a MobileMed antes da pausa e diz quando tenta de novo', async () => {
+      const m = criar(tresFalhas(), { pausaInicialMs: 5 * 60_000 });
+      await parar(m);
+      m.avancar(5 * 60_000 - 1);
+      const parado = await erroDe(m.token.accessToken());
+      expect(parado.tipo).toBe('sessao');
+      expect(parado.message).toContain('nova tentativa em 1 min');
+      expect(m.chamadas).toHaveLength(3);
+    });
+
+    it('passada a pausa, tenta um login só; ao voltar, avisa e registra no log', async () => {
+      const logs: string[] = [];
+      const { Logger } = await import('@nestjs/common');
+      const original = Logger.prototype.log;
+      Logger.prototype.log = (mensagem: unknown) => {
+        logs.push(String(mensagem));
+      };
+      let voltou = 0;
+      let parou = 0;
+      try {
+        const m = criar([...tresFalhas(), ...login('a1', 'r1', 3600)], {
+          pausaInicialMs: 5 * 60_000,
+          aoParar: async () => {
+            parou++;
+          },
+          aoVoltar: async () => {
+            voltou++;
+          },
+        });
+        await parar(m);
+        m.avancar(5 * 60_000);
+        expect(await m.token.accessToken()).toContain('h.');
+        expect(m.chamadas.slice(3).map((c) => c.url.replace(OAUTH, ''))).toEqual(LOGIN);
+        expect(parou).toBe(1);
+        expect(voltou).toBe(1);
+        expect(logs.some((l) => l.includes('mobilemed_login_voltou'))).toBe(true);
+        // De volta ao normal: o token fica guardado, nada de aviso novo.
+        await m.token.accessToken();
+        expect(voltou).toBe(1);
+      } finally {
+        Logger.prototype.log = original;
+      }
+    });
+
+    it('cada tentativa que falha dobra a pausa, até o teto', async () => {
+      const m = criar(
+        [
+          ...tresFalhas(),
+          () => resposta({}, 400), // depois de 5 min
+          () => resposta({}, 400), // depois de 10 min
+          () => resposta({}, 400), // depois de 20 min (teto)
+          () => resposta({}, 400), // depois de 20 min de novo
+        ],
+        { pausaInicialMs: 5 * 60_000, pausaMaximaMs: 20 * 60_000 },
+      );
+      await parar(m);
+      for (const pausa of [5, 10, 20, 20]) {
+        m.avancar(pausa * 60_000 - 1);
+        await erroDe(m.token.accessToken());
+        const antes = m.chamadas.length;
+        m.avancar(1);
+        await erroDe(m.token.accessToken());
+        expect(m.chamadas.length).toBe(antes + 1);
+      }
+      expect(m.chamadas).toHaveLength(7);
+    });
+
+    it('uma tentativa que falha não manda outro alerta de parado', async () => {
+      let parou = 0;
+      const m = criar([...tresFalhas(), () => resposta({}, 400)], {
+        pausaInicialMs: 60_000,
+        aoParar: async () => {
+          parou++;
+        },
+      });
+      await parar(m);
+      m.avancar(60_000);
+      await erroDe(m.token.accessToken());
+      expect(parou).toBe(1);
+    });
+
+    it('um aviso de volta que falha não derruba o token', async () => {
+      const m = criar([...tresFalhas(), ...login('a1')], {
+        pausaInicialMs: 60_000,
+        aoVoltar: async () => {
+          throw new Error('fila fora do ar');
+        },
+      });
+      await parar(m);
+      m.avancar(60_000);
+      expect(await m.token.accessToken()).toContain('h.');
+    });
+
+    it('sem pausa configurada, espera 5 min na primeira e no máximo 1 h', async () => {
+      const m = criar([
+        ...tresFalhas(),
+        ...Array.from({ length: 6 }, () => () => resposta({}, 400)),
+      ]);
+      await parar(m);
+      const pausas: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        let esperou = 0;
+        const antes = m.chamadas.length;
+        while (m.chamadas.length === antes && esperou < 120) {
+          m.avancar(60_000);
+          esperou += 1;
+          await erroDe(m.token.accessToken());
+        }
+        pausas.push(esperou);
+      }
+      expect(pausas).toEqual([5, 10, 20, 40, 60, 60]);
+    });
+  });
+
+  it('refresh recusado registra há quantos minutos foi o login (para achar o limite da sessão)', async () => {
+    const logs: string[] = [];
+    const { Logger } = await import('@nestjs/common');
+    const original = Logger.prototype.warn;
+    Logger.prototype.warn = (mensagem: unknown) => {
+      logs.push(String(mensagem));
+    };
+    try {
+      const m = criar([...login('a1', 'r1'), () => resposta({}, 500), ...login('a2')]);
+      await m.token.accessToken();
+      m.avancar(125 * 60_000);
+      await m.token.accessToken();
+    } finally {
+      Logger.prototype.warn = original;
+    }
+    const evento = logs
+      .map((l) => JSON.parse(l))
+      .find((l) => l.evento === 'mobilemed_refresh_recusado');
+    expect(evento).toEqual({ evento: 'mobilemed_refresh_recusado', minutosDesdeLogin: 125 });
   });
 });

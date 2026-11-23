@@ -10,7 +10,7 @@ import { FilaJobs } from './jobs/fila-jobs';
 import { RegistroTarefas } from './jobs/registro-tarefas';
 import { TAREFA_ENVIAR_EMAIL, tarefaEnviarEmail } from './jobs/tarefa-enviar-email';
 import { TrabalhadorJobs } from './jobs/trabalhador-jobs';
-import { alertaLoginParado } from './mobilemed/alerta-login-mobilemed';
+import { alertaLoginParado, alertaLoginVoltou } from './mobilemed/alerta-login-mobilemed';
 import { criarTokenMobileMed, TOKEN_MOBILEMED } from './mobilemed/token-mobilemed';
 
 /**
@@ -43,8 +43,13 @@ import { criarTokenMobileMed, TOKEN_MOBILEMED } from './mobilemed/token-mobileme
       provide: TOKEN_MOBILEMED,
       inject: [ConfigService, FilaJobs],
       // Não faz login na criação: só na primeira chamada de um adaptador real.
-      useFactory: (config: ConfigService, fila: FilaJobs) =>
-        criarTokenMobileMed(config, alertaLoginParado(fila, config.get<string>('ALERTAS_EMAIL'))),
+      useFactory: (config: ConfigService, fila: FilaJobs) => {
+        const para = config.get<string>('ALERTAS_EMAIL');
+        return criarTokenMobileMed(config, {
+          aoParar: alertaLoginParado(fila, para),
+          aoVoltar: alertaLoginVoltou(fila, para),
+        });
+      },
     },
   ],
   exports: [RegistroTarefas, FilaJobs, ARMAZENAMENTO_ARQUIVOS, TOKEN_MOBILEMED],

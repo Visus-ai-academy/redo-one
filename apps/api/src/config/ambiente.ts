@@ -46,6 +46,10 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('MOBILEMED_TIMEOUT_MS', inteiroEntre(1_000, 600_000), 'inteiro de 1000 a 600000');
   opcional('MOBILEMED_CONCORRENCIA', inteiroEntre(1, 10), 'inteiro de 1 a 10');
   opcional('MOBILEMED_LIMITE_ANOMALIAS', inteiroEntre(1, 100), 'inteiro de 1 a 100');
+  // Pausas do login parado: no mínimo 1 min, para não bloquear a conta por excesso de login.
+  for (const nome of ['MOBILEMED_LOGIN_PAUSA_MS', 'MOBILEMED_LOGIN_PAUSA_MAXIMA_MS']) {
+    opcional(nome, inteiroEntre(60_000, 86_400_000), 'inteiro de 60000 (1 min) a 86400000 (24 h)');
+  }
   opcional(
     'MOBILEMED_TOTP_SEGREDO',
     (v) => /^[A-Z2-7]+=*$/i.test(v.replace(/\s/g, '')),
