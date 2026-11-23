@@ -388,6 +388,22 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(linhas.rows).toEqual([{ descricao: 'Tomografia Computadorizada' }]);
   });
 
+  it('a conta MobileMed mapeada no redo-one fica; vazia, vem a do dashboards-one', async () => {
+    await gravarMigracao(db, catalogo, medicos);
+    await db.execute(sql`update medicos set id_mobilemed = 99`);
+
+    await gravarMigracao(db, catalogo, medicos);
+    expect((await db.execute(sql`select id_mobilemed from medicos`)).rows).toEqual([
+      { id_mobilemed: 99 },
+    ]);
+
+    await db.execute(sql`update medicos set id_mobilemed = null`);
+    await gravarMigracao(db, catalogo, medicos);
+    expect((await db.execute(sql`select id_mobilemed from medicos`)).rows).toEqual([
+      { id_mobilemed: 7 },
+    ]);
+  });
+
   it('cor vazia no dashboards-one não apaga a escolhida no redo-one', async () => {
     await gravarMigracao(db, catalogo, medicos);
     await db.execute(sql`update modalidades set cor = '#F58231'`);

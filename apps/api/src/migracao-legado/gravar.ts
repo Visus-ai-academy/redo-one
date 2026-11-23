@@ -31,9 +31,18 @@ const LOTE = 300;
 type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /**
+ * Colunas que o redo-one mantém e a carga só preenche quando estão vazias: a conta MobileMed do
+ * médico é mapeada aqui (`mobilemed:mapear-medicos`, com auditoria) e o nível vem do catálogo de
+ * níveis do redo-one; o dashboards-one não as conhece (ou tem só algumas), e regravar apagaria o
+ * mapeamento (aconteceu em 23/11/2026: 122 contas voltaram a nulo).
+ */
+const MANTIDAS_NO_REDO = new Set(['idMobilemed', 'nivelId']);
+
+/**
  * `coluna = excluded.coluna` para todas as colunas menos as da chave. A descrição é complemento:
  * vazia no dashboards-one, fica a que alguém preencheu no redo-one. A cor escolhida no redo-one
- * vale mais que a de lá (as cores foram refeitas aqui); a de lá só preenche a vazia.
+ * vale mais que a de lá (as cores foram refeitas aqui); a de lá só preenche a vazia. O mesmo vale
+ * para as colunas de `MANTIDAS_NO_REDO`.
  */
 function atualizarTudo(tabela: PgTable, chave: string[]): Record<string, SQL> {
   const set: Record<string, SQL> = {};
@@ -41,7 +50,7 @@ function atualizarTudo(tabela: PgTable, chave: string[]): Record<string, SQL> {
     if (chave.includes(prop) || prop === 'criadoEm') continue;
     const atual = `"${getTableName(tabela)}"."${coluna.name}"`;
     set[prop] =
-      prop === 'cor'
+      prop === 'cor' || MANTIDAS_NO_REDO.has(prop)
         ? sql.raw(`coalesce(${atual}, excluded."${coluna.name}")`)
         : prop === 'descricao'
           ? sql.raw(`coalesce(excluded."${coluna.name}", ${atual})`)
