@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ResponseError } from '../../gen/.kubb/client';
 import { renderComRotas } from '../../test/render';
 import { TelaEscala, type TelaEscalaProps } from './TelaEscala';
 import { FRENTE_RM, FRENTE_TC, ocorrencia, turno } from './teste-dados';
@@ -326,5 +327,57 @@ describe('TelaEscala', () => {
     const acoes = await montar({ dados: undefined, erro: true });
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(acoes.onTentarDeNovo).toHaveBeenCalled();
+  });
+
+  it('sem permissão para ver a escala, diz isso no lugar da grade', async () => {
+    const erro = new ResponseError({
+      status: 403,
+      data: {},
+      statusText: '',
+      request: new Request('http://x'),
+      response: new Response(),
+    });
+    await montar({ dados: undefined, erro });
+    expect(screen.getByText('Sem permissão para ver a escala')).toBeInTheDocument();
+  });
+
+  it('carregando a primeira vez, reserva o lugar sem piscar o skeleton', async () => {
+    await montar({ dados: undefined });
+    const reservado = screen.getByText('Carregando a escala…').closest('[aria-busy]');
+    expect(reservado).toHaveClass('invisible');
+  });
+
+  it('filtro sem ninguém na semana diz isso e oferece limpar os filtros', async () => {
+    const acoes = await montar({
+      dados: { ocorrencias: [], conflitos: [] },
+      filtros: { modo: 'semana', agrupar: 'frente', data: '2026-11-18', turnoIds: ['t-manha'] },
+    });
+    expect(
+      screen.getByText('Ninguém escalado nesta semana com esses filtros.'),
+    ).toBeInTheDocument();
+    const limpar = screen.getAllByRole('button', { name: 'Limpar filtros' }).at(-1) as HTMLElement;
+    await userEvent.click(limpar);
+    expect(acoes.onMudar).toHaveBeenCalledWith({
+      frenteIds: undefined,
+      turnoIds: undefined,
+      busca: undefined,
+    });
+  });
+
+  it('o plantão na grade diz, pelo nome, o médico, o turno, a frente e o dia', async () => {
+    await montar();
+    const nome = /^Ana Souza, Manhã, TC Neuro, segunda 16\/11, 40 registros$/;
+    expect(screen.getAllByRole('button', { name: nome }).length).toBeGreaterThan(0);
+  });
+
+  it('ausências da semana sem ninguém com a busca dizem isso e oferecem limpar', async () => {
+    const acoes = await montar({
+      filtros: { modo: 'ausencias', agrupar: 'frente', data: '2026-11-18', busca: 'zeca' },
+      ausencias: { itens: [], total: 0, pagina: 1, porPagina: 20 },
+    });
+    expect(screen.getByText('Ninguém com “zeca” ausente nesta semana.')).toBeInTheDocument();
+    const limpar = screen.getAllByRole('button', { name: 'Limpar filtros' }).at(-1) as HTMLElement;
+    await userEvent.click(limpar);
+    expect(acoes.onMudar).toHaveBeenLastCalledWith({ busca: undefined });
   });
 });

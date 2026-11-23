@@ -6,6 +6,7 @@ import type { AjusteDiaEdicaoDto } from '../../gen/types/AjusteDiaEdicaoDto';
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { PrioridadeEscalaDto } from '../../gen/types/PrioridadeEscalaDto';
+import { plural } from '../../lib/formato';
 import type { PodeNaTela } from '../../lib/permissoes';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
@@ -43,7 +44,7 @@ export type PainelPlantaoProps = {
 };
 
 const hora = (iso: string) => iso.slice(11, 16);
-const registros = (n: number) => `${n} ${n === 1 ? 'registro' : 'registros'}`;
+const registros = (n: number) => plural(n, { um: 'registro', varios: 'registros' });
 
 function vigencia(o: OcorrenciaDto) {
   if (o.coberturaDe) return `Cobrindo ${o.coberturaDe.medicoNome}`;

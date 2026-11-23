@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import { cn } from '../../lib/cn';
+import { plural } from '../../lib/formato';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { chavePlantao } from './agrupar';
 import { NOMES_DIAS, rotuloDia } from './calendario';
@@ -124,8 +125,6 @@ export function MesDoMedico({
   );
 }
 
-const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
-
 /**
  * O topo do Por médico: quantos plantões no mês e, em linha, cada frente, turno e horário com os
  * dias da semana e quantos plantões.
@@ -141,7 +140,9 @@ export function ResumoDoMes({
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
       <span className="text-sm font-semibold tabular-nums">
-        {total === 0 ? 'Nenhum plantão no mês' : `${plural(total, 'plantão', 'plantões')} no mês`}
+        {total === 0
+          ? 'Nenhum plantão no mês'
+          : `${plural(total, { um: 'plantão', varios: 'plantões' })} no mês`}
       </span>
       {linhas.length > 0 && (
         <ul aria-label="Plantões do mês" className="flex flex-wrap gap-x-4 gap-y-1">
@@ -152,7 +153,7 @@ export function ResumoDoMes({
               <BolinhaCor cor={l.turnoCor} className="ml-1" />
               <span className="font-medium">{l.turno}</span>
               <span className="text-muted-foreground tabular-nums">
-                {`${l.dias}, ${l.horario} · ${plural(l.plantoes, 'plantão', 'plantões')}`}
+                {`${l.dias}, ${l.horario} · ${plural(l.plantoes, { um: 'plantão', varios: 'plantões' })}`}
               </span>
             </li>
           ))}

@@ -1,6 +1,8 @@
+import { Button } from '@base-ui/react/button';
 import { Link } from '@tanstack/react-router';
 
 import { cn } from '../../lib/cn';
+import { buttonClassName } from '../button/button-class';
 import { Paginacao } from '../paginacao/Paginacao';
 import type { LinhaDeAusencia } from './agrupar';
 import { rotuloDia } from './calendario';
@@ -14,6 +16,9 @@ type AusenciasDaSemanaProps = {
   porPagina: number;
   total: number;
   onIrPara: (pagina: number) => void;
+  /** A busca por nome: sem ninguém, o vazio diz que é a busca e oferece limpar. */
+  busca?: string;
+  onLimparBusca?: () => void;
 };
 
 const diaMes = (data: string) => `${data.slice(8, 10)}/${data.slice(5, 7)}`;
@@ -34,6 +39,8 @@ export function AusenciasDaSemana({
   porPagina,
   total,
   onIrPara,
+  busca,
+  onLimparBusca,
 }: AusenciasDaSemanaProps) {
   return (
     <section aria-label="Ausências da semana" className="bg-card rounded-lg border">
@@ -58,7 +65,22 @@ export function AusenciasDaSemana({
             })}
           </div>
           {linhas.length === 0 ? (
-            <p className="text-muted-foreground p-4">Ninguém ausente nesta semana.</p>
+            <div className="flex flex-col items-start gap-3 p-4">
+              <p className="text-muted-foreground">
+                {busca
+                  ? `Ninguém com “${busca}” ausente nesta semana.`
+                  : 'Ninguém ausente nesta semana.'}
+              </p>
+              {busca && onLimparBusca && (
+                <Button
+                  type="button"
+                  onClick={onLimparBusca}
+                  className={buttonClassName({ variant: 'secondary' })}
+                >
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
           ) : (
             <ul className="divide-y">
               {linhas.map((linha) => (

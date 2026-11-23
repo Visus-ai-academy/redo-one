@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import { cn } from '../../lib/cn';
+import { plural } from '../../lib/formato';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { Dica } from '../dica/Dica';
@@ -62,8 +63,6 @@ function Bolinha({ cor }: { cor: string | null }) {
   );
 }
 
-const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
-
 function useCartao(): CartaoDoPlantao {
   const [cartao] = useState(() => PreviewCard.createHandle<OcorrenciaDto>());
   return cartao;
@@ -100,8 +99,8 @@ function Contagem({ calendario }: { calendario: CalendarioDaSemana }) {
   }
   return (
     <span className="text-muted-foreground text-[13px] tabular-nums">
-      {plural(calendario.medicos, 'médico', 'médicos')},{' '}
-      {plural(calendario.plantoes, 'plantão', 'plantões')}
+      {plural(calendario.medicos, { um: 'médico', varios: 'médicos' })},{' '}
+      {plural(calendario.plantoes, { um: 'plantão', varios: 'plantões' })}
     </span>
   );
 }

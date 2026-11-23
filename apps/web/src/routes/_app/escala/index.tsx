@@ -263,9 +263,9 @@ function Escala() {
         hoje={hoje}
         dados={opcoes ? ocorrencias.data : undefined}
         atualizando={modoAusencias ? ausencias.isPlaceholderData : ocorrencias.isPlaceholderData}
-        erro={ocorrencias.isError}
+        erro={opcoes ? ocorrencias.error : null}
         ausencias={opcoesAusencias ? ausencias.data : undefined}
-        erroAusencias={ausencias.isError}
+        erroAusencias={opcoesAusencias ? ausencias.error : null}
         catalogo={catalogo}
         ajustesDistribuicao={ajustesDistribuicao}
         onTentarDeNovo={() => void (modoAusencias ? ausencias.refetch() : ocorrencias.refetch())}

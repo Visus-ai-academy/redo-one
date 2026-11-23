@@ -21,7 +21,9 @@ import { CampoBusca } from '../busca/CampoBusca';
 import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import { Dica } from '../dica/Dica';
+import { EstadoDoErro } from '../estado/EstadoDoErro';
 import { Skeleton } from '../skeleton/Skeleton';
+import { useFaseDoCarregamento } from '../skeleton/use-fase-do-carregamento';
 import { AgendaMedico } from './AgendaMedico';
 import { AusenciasDaSemana } from './AusenciasDaSemana';
 import {
@@ -93,7 +95,8 @@ export type TelaEscalaProps = {
   dados?: OcorrenciasDto;
   /** Buscando outro período ou filtro com os dados antigos à vista. */
   atualizando: boolean;
-  erro: boolean;
+  /** A falha da busca das ocorrências (o `error` do `useQuery`); sem falha, nada. */
+  erro?: unknown;
   onTentarDeNovo: () => void;
   /** Turnos e frentes que a pessoa vê (o recorte dela, se houver). */
   turnos: TurnoDaGrade[];
@@ -103,7 +106,7 @@ export type TelaEscalaProps = {
    * ausência no cartão do plantão. Sem elas, carregando.
    */
   ausencias?: PaginaAusencias;
-  erroAusencias?: boolean;
+  erroAusencias?: unknown;
   catalogo?: NomesDoCatalogo;
   /** Ajustes do dia da distribuição no período, por `chaveDoPlantao` (o cartão do plantão diz). */
   ajustesDistribuicao?: ReadonlyMap<string, AjusteDoPlantao>;
@@ -156,7 +159,7 @@ export function TelaEscala({
   podeVerAusencias,
   avisos,
   ausencias,
-  erroAusencias = false,
+  erroAusencias,
   catalogo = SEM_NOMES,
   ajustesDistribuicao,
   onDispensarAvisos,
@@ -424,8 +427,14 @@ function Conteudo({
   | 'onAbrirPlantao'
   | 'onAlocar'
   | 'ajustesDistribuicao'
-> & { erroAusencias: boolean; catalogo: NomesDoCatalogo }) {
+> & { erroAusencias: unknown; catalogo: NomesDoCatalogo }) {
   const { modo, data } = filtros;
+  // Skeleton só depois de ~200ms sem dados e, se apareceu, por ~400ms: resposta rápida não pisca.
+  const semDados =
+    modo === 'ausencias'
+      ? !ausencias && !erroAusencias
+      : !(modo === 'medico' && !filtros.medicoId) && !dados && !erro;
+  const fase = useFaseDoCarregamento(semDados);
   const ocorrencias = useMemo(
     () =>
       filtrarPorMedico(
@@ -493,9 +502,12 @@ function Conteudo({
   );
 
   if (modo === 'ausencias') {
-    if (!ausencias) {
-      return erroAusencias ? <ErroAoCarregar onTentarDeNovo={onTentarDeNovo} /> : <Carregando />;
+    if (!ausencias && erroAusencias) {
+      return (
+        <EstadoDoErro erro={erroAusencias} oQue="as ausências" onTentarDeNovo={onTentarDeNovo} />
+      );
     }
+    if (!ausencias || fase !== 'conteudo') return <Carregando escondido={fase === 'reservado'} />;
     // Sáb e dom só aparecem se alguém está ausente neles.
     const semanaInteira = diasDaSemana(data);
     const barrasDaSemana = barrasDeAusencia(ausencias.itens, semanaInteira);
@@ -520,6 +532,8 @@ function Conteudo({
           porPagina={ausencias.porPagina}
           total={ausencias.total}
           onIrPara={(pagina) => onMudar({ pagina })}
+          busca={filtros.busca}
+          onLimparBusca={() => onMudar({ busca: undefined })}
         />
       </div>
     );
@@ -531,9 +545,10 @@ function Conteudo({
       </p>
     );
   }
-  if (!dados) {
-    return erro ? <ErroAoCarregar onTentarDeNovo={onTentarDeNovo} /> : <Carregando />;
+  if (!dados && erro) {
+    return <EstadoDoErro erro={erro} oQue="a escala" onTentarDeNovo={onTentarDeNovo} />;
   }
+  if (!dados || fase !== 'conteudo') return <Carregando escondido={fase === 'reservado'} />;
 
   const aoAlocar = permissoes.criar ? onAlocar : undefined;
   const propsSemana = {
@@ -563,11 +578,7 @@ function Conteudo({
     >
       {modo === 'semana' &&
         (semana.calendarios.length === 0 ? (
-          <p className="bg-card text-muted-foreground rounded-lg border p-4">
-            {filtros.busca
-              ? `Ninguém com “${filtros.busca}” nesta semana.`
-              : `Ninguém escalado nesta semana.${aoAlocar ? ' Para escalar, use “Alocar médico”.' : ''}`}
-          </p>
+          <SemanaVazia filtros={filtros} podeAlocar={Boolean(aoAlocar)} onMudar={onMudar} />
         ) : (
           <>
             <div className="hidden md:block">
@@ -619,26 +630,45 @@ function Conteudo({
   );
 }
 
-function ErroAoCarregar({ onTentarDeNovo }: { onTentarDeNovo: () => void }) {
+/** Semana sem ninguém: diz se é a semana vazia ou o filtro, e oferece limpar o filtro. */
+function SemanaVazia({
+  filtros,
+  podeAlocar,
+  onMudar,
+}: {
+  filtros: FiltrosEscala;
+  podeAlocar: boolean;
+  onMudar: (novos: Partial<FiltrosEscala>) => void;
+}) {
+  const filtrando = Boolean(filtros.frenteIds?.length || filtros.turnoIds?.length);
+  const texto = filtros.busca
+    ? `Ninguém com “${filtros.busca}” nesta semana.`
+    : filtrando
+      ? 'Ninguém escalado nesta semana com esses filtros.'
+      : `Ninguém escalado nesta semana.${podeAlocar ? ' Para escalar, use “Alocar médico”.' : ''}`;
   return (
     <div className="bg-card flex flex-col items-start gap-3 rounded-lg border p-4">
-      <Alerta tom="erro">
-        Não foi possível carregar a escala. Confira a conexão e tente de novo.
-      </Alerta>
-      <Button
-        type="button"
-        onClick={onTentarDeNovo}
-        className={buttonClassName({ variant: 'secondary' })}
-      >
-        Tentar de novo
-      </Button>
+      <p className="text-muted-foreground">{texto}</p>
+      {(filtros.busca || filtrando) && (
+        <Button
+          type="button"
+          onClick={() => onMudar({ frenteIds: undefined, turnoIds: undefined, busca: undefined })}
+          className={buttonClassName({ variant: 'secondary' })}
+        >
+          Limpar filtros
+        </Button>
+      )}
     </div>
   );
 }
 
-function Carregando() {
+/** A grade ainda sem dados: o lugar fica reservado (`escondido`) até o skeleton poder aparecer. */
+function Carregando({ escondido }: { escondido: boolean }) {
   return (
-    <div aria-busy className="bg-card flex flex-col gap-3 rounded-lg border p-4">
+    <div
+      aria-busy
+      className={cn('bg-card flex flex-col gap-3 rounded-lg border p-4', escondido && 'invisible')}
+    >
       <span className="sr-only">Carregando a escala…</span>
       <Skeleton className="h-5 w-40" />
       {[0, 1, 2].map((i) => (

@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import { cn } from '../../lib/cn';
+import { plural } from '../../lib/formato';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { SeloCor } from '../selo-cor/SeloCor';
@@ -38,6 +39,8 @@ function sairDaLinha(cartao: CartaoDoPlantao, o: OcorrenciaDto) {
   }, 80);
 }
 
+const REGISTROS = { um: 'registro', varios: 'registros' };
+
 type LinhaMedicoProps = {
   ocorrencia: OcorrenciaDto;
   /** "07:00–13:00": o horário do plantão só aparece quando é outro. */
@@ -65,6 +68,7 @@ export function LinhaMedico({
   onAbrir,
 }: LinhaMedicoProps) {
   const horario = `${o.horarioInicio}–${o.horarioFim}`;
+
   const mostrarHorario = local || horario !== horarioDoTurno;
   const selos = [
     emConflito && (
@@ -93,6 +97,23 @@ export function LinhaMedico({
       </Etiqueta>
     ),
   ].filter(Boolean);
+  // O nome do botão diz o plantão inteiro: na grade, o turno e o dia só se veem pela posição.
+  const nome = [
+    local ? `${o.frenteRotulo} · ${o.turnoNome}` : o.medicoNome,
+    local ? o.medicoNome : `${o.turnoNome}, ${o.frenteRotulo}`,
+    `${NOMES_DIAS_LONGOS[diaDaSemana(o.data)]?.toLowerCase()} ${dataCurta(o.data).slice(0, 5)}`,
+    mostrarHorario && horario,
+    o.produtividade !== null &&
+      (o.gratificado ? `cota ${o.produtividade}` : plural(o.produtividade, REGISTROS)) +
+        (o.ajustada ? ' (ajustada neste dia)' : ''),
+    emConflito && 'em conflito',
+    o.ausente && (o.tipoAusenciaNome ?? 'ausente'),
+    o.cobertoPor && `coberto por ${o.cobertoPor.medicoNome}`,
+    o.coberturaDe && `cobrindo ${o.coberturaDe.medicoNome}`,
+    o.gratificado && 'gratificado',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <PreviewCard.Trigger
@@ -101,6 +122,7 @@ export function LinhaMedico({
       delay={400}
       closeDelay={50}
       render={<Button type="button" />}
+      aria-label={nome}
       onClick={() => onAbrir(o)}
       onPointerEnter={(evento) => {
         if (evento.pointerType === 'mouse') mouseSobre(cartao).linha = o;
@@ -134,6 +156,7 @@ export function LinhaMedico({
           {o.medicoNome}
         </span>
       )}
+
       {(mostrarHorario || o.produtividade !== null) && (
         <span className="text-muted-foreground flex max-w-full flex-wrap gap-x-2 text-xs tabular-nums">
           {mostrarHorario && <span>{horario}</span>}
