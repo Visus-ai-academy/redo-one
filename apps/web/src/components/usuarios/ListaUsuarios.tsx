@@ -13,7 +13,6 @@ import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Paginacao } from '../paginacao/Paginacao';
-import { RESERVA_DO_PAINEL } from '../painel/reserva';
 import { Select } from '../select/Select';
 import { EtiquetaSituacao } from './EtiquetaSituacao';
 import { SITUACOES, type Situacao } from './situacoes';
@@ -116,13 +115,7 @@ export function ListaUsuarios({
   const temFiltro = Boolean(filtros.busca || filtros.papelId || filtros.situacao);
 
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-5',
-        // O painel é um drawer de 400px à direita: a lista abre espaço junto com o deslize dele.
-        RESERVA_DO_PAINEL,
-      )}
-    >
+    <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">
           Usuários{' '}
@@ -144,8 +137,6 @@ export function ListaUsuarios({
             // No computador a lista cabe na tela: a tabela rola por dentro e a paginação fica à
             // vista (8rem = respiro do main e o título acima).
             'md:flex md:max-h-[calc(100dvh-8rem)] md:flex-col',
-            // Abaixo do computador o painel ocupa a tela; "Fechar" volta para a lista.
-            painel && 'max-lg:hidden!',
           )}
         >
           <div className="flex flex-none flex-wrap gap-2 border-b p-3">
@@ -205,8 +196,6 @@ export function ListaUsuarios({
           ) : (
             <DataTable
               columns={colunas}
-              // Com o painel aberto, saem se não couberem (o painel já mostra os três).
-              ocultaveis={painel ? ['ultimoAcessoEm', 'situacao', 'papel'] : undefined}
               data={pagina.itens}
               getRowId={(usuario) => usuario.id}
               selectedRowId={selecionadoId}

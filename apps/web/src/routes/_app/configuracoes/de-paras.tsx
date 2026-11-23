@@ -217,7 +217,6 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
         }
         // biome-ignore lint/suspicious/noExplicitAny: cada aba tem o tipo de linha dela.
         colunas={colunas as any}
-        ocultarComPainel={['observacoes']}
         itens={pagina.itens}
         getRowId={(i) => i.id}
         selecionadoId={busca.id}

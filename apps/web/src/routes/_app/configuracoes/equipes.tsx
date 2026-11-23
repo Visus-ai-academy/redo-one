@@ -160,7 +160,6 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
         />
       }
       colunas={colunas}
-      ocultarComPainel={['membros', 'plantao']}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

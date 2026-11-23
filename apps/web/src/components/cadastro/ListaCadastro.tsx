@@ -9,7 +9,6 @@ import { buttonClassName } from '../button/button-class';
 import type { DataTableFeatures } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Paginacao } from '../paginacao/Paginacao';
-import { RESERVA_DO_PAINEL } from '../painel/reserva';
 
 type ListaCadastroProps<T extends RowData> = {
   /** Título da página (h1). */
@@ -30,11 +29,6 @@ type ListaCadastroProps<T extends RowData> = {
   temFiltro?: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: o TValue de cada coluna varia; o helper garante a tipagem por coluna.
   colunas: ColumnDef<DataTableFeatures, T, any>[];
-  /**
-   * Com o painel aberto a lista estreita: colunas que saem primeiro se não couberem (depois saem
-   * as outras, da direita para a esquerda). Com espaço, ficam todas.
-   */
-  ocultarComPainel?: string[];
   itens: T[];
   getRowId: (item: T) => string;
   /** Item aberto no painel. */
@@ -49,7 +43,7 @@ type ListaCadastroProps<T extends RowData> = {
   onFiltrar: (filtros: { busca: string | undefined }) => void;
   onLimparFiltros: () => void;
   onIrPara: (pagina: number) => void;
-  /** Painel de detalhe ou edição (`PainelLateral`): drawer à direita da lista (no celular, a tela toda). */
+  /** Painel de detalhe ou edição (`PainelLateral`): fica por cima da lista, sem mexer nela. */
   painel?: ReactNode;
 };
 
@@ -67,7 +61,6 @@ export function ListaCadastro<T extends RowData>({
   filtros,
   temFiltro = false,
   colunas,
-  ocultarComPainel = [],
   itens,
   getRowId,
   selecionadoId,
@@ -90,13 +83,7 @@ export function ListaCadastro<T extends RowData>({
   const temFaixa = Boolean(busca || filtros || (novo && abas));
 
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-5',
-        // O painel é um drawer de 400px à direita: a lista abre espaço junto com o deslize dele.
-        RESERVA_DO_PAINEL,
-      )}
-    >
+    <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">
           {titulo}
@@ -126,8 +113,6 @@ export function ListaCadastro<T extends RowData>({
             abas
               ? 'md:flex md:max-h-[calc(100dvh-12rem)] md:flex-col'
               : 'md:flex md:max-h-[calc(100dvh-8rem)] md:flex-col',
-            // Abaixo do computador o painel ocupa a tela; "Fechar" volta para a lista.
-            painel && 'max-lg:hidden!',
           )}
         >
           {temFaixa && (
@@ -175,10 +160,6 @@ export function ListaCadastro<T extends RowData>({
           ) : (
             <DataTable
               columns={colunas}
-              // Mesmo layout com o painel aberto ou fechado: só tirar coluna depende dele. Assim,
-              // ao fechar, as colunas voltam durante o deslize e nada muda de largura no fim.
-              ocultaveis={ordemDeSaida(colunas, ocultarComPainel)}
-              semOcultar={!painel}
               data={itens}
               getRowId={getRowId}
               selectedRowId={selecionadoId}
@@ -196,8 +177,6 @@ export function ListaCadastro<T extends RowData>({
     </div>
   );
 }
-
-/** Coluna criada por chave (`accessor('cnpj')`) não tem `id` próprio: vale a chave. */
 
 function BotaoNovo({
   rotulo,
@@ -227,18 +206,4 @@ export function BotaoAbrir({ onAbrir, children }: { onAbrir: () => void; childre
       {children}
     </Button>
   );
-}
-
-/**
- * Com o painel aberto, a ordem em que as colunas saem se não couberem: primeiro as que a tela
- * escolheu, depois as outras da direita para a esquerda. A primeira (o nome) nunca sai: é o que
- * identifica a linha, e o resto está no painel.
- */
-function ordemDeSaida(colunas: { id?: string }[], primeiro: string[]) {
-  const ids = colunas.map((c) => c.id ?? (c as { accessorKey?: string }).accessorKey ?? '');
-  const resto = ids
-    .slice(1)
-    .filter((id) => id && !primeiro.includes(id))
-    .reverse();
-  return [...primeiro, ...resto];
 }

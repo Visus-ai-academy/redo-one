@@ -159,7 +159,6 @@ function AbasExames({ aba }: { aba: Aba }) {
 }
 
 const coluna = createDataTableColumnHelper<ExameResumoDto>();
-const OCULTAR_COM_PAINEL = ['subespecialidade', 'categoria'];
 const nome = (ref: { nome: string } | null) => ref?.nome ?? '—';
 
 function Exames({ permissoes }: { permissoes: PodeNaTela }) {
@@ -297,7 +296,6 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
         </>
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(e) => e.id}
       selecionadoId={busca.id}
@@ -495,7 +493,6 @@ function ForaDoPadrao({ permissoes }: { permissoes: PodeNaTela }) {
         />
       }
       colunas={colunas}
-      ocultarComPainel={['destinoNome']}
       itens={pagina.itens}
       getRowId={(i) => i.id}
       selecionadoId={busca.id}
@@ -655,7 +652,6 @@ function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
       }}
       temFiltro={false}
       colunas={colunas}
-      ocultarComPainel={['total']}
       itens={pagina.itens}
       getRowId={(q) => q.id}
       selecionadoId={busca.id}

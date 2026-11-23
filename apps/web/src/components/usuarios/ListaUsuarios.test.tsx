@@ -144,8 +144,12 @@ describe('ListaUsuarios', () => {
     expect(screen.getByRole('complementary', { name: 'Painel de teste' })).toBeInTheDocument();
   });
 
-  it('com o painel aberto e espaço sobrando, o último acesso continua na lista', async () => {
+  it('o painel fica por cima: com ele aberto, a lista continua igual, com todas as colunas', async () => {
     montar({ selecionadoId: 'u-maria', painel: <aside aria-label="Painel de teste" /> });
+
+    const lista = await screen.findByRole('region', { name: 'Lista de usuários' });
+    expect(lista.className).not.toMatch(/hidden/);
+    expect(lista.parentElement?.parentElement?.className).not.toMatch(/painel-lateral/);
 
     const [cabecalho] = await screen.findAllByRole('row');
     expect(

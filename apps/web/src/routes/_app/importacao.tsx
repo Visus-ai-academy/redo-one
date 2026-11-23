@@ -74,7 +74,6 @@ function PaginaImportacao() {
 }
 
 const coluna = createDataTableColumnHelper<ImportacaoDto>();
-const OCULTAR_COM_PAINEL = ['enviadaPor', 'removidos', 'atualizados', 'inseridos'];
 const numero = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'));
 const aDireita = (texto: string) => () => <span className="block text-right">{texto}</span>;
 
@@ -179,7 +178,6 @@ function Importacao() {
           : undefined
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

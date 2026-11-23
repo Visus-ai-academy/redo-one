@@ -87,8 +87,6 @@ function PaginaMedicos() {
 }
 
 const coluna = createDataTableColumnHelper<MedicoResumoDto>();
-const OCULTAR_COM_PAINEL = ['idMobilemed', 'totalAliases'];
-
 function Medicos() {
   const { sessao } = Route.useRouteContext();
   const podeCriar = pode(sessao, 'medicos.criar');
@@ -196,7 +194,6 @@ function Medicos() {
         </>
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

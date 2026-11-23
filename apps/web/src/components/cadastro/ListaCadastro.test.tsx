@@ -50,41 +50,25 @@ describe('ListaCadastro', () => {
     expect(screen.getByText('1 de 1')).toBeInTheDocument();
   });
 
-  it('com o painel aberto e espaço sobrando, as colunas secundárias ficam', () => {
-    const colunasDuas = [
-      ...colunas,
-      coluna.accessor('id', { id: 'codigo', header: 'Código' }),
-      // Coluna criada por chave: o helper não dá `id`, só `accessorKey`.
-      coluna.accessor('cnpj', { header: 'CNPJ' }),
-    ];
-    render(
-      <ListaCadastro
-        {...props}
-        colunas={colunasDuas}
-        ocultarComPainel={['codigo', 'cnpj']}
-        itens={[{ id: 'c-1', nome: 'A' }]}
-        total={1}
-        painel={<aside>painel</aside>}
-      />,
-    );
-
-    // Com espaço, nenhuma sai (a tabela só tira as que não cabem; ver DataTable).
-    for (const nome of ['Nome', 'Código', 'CNPJ']) {
-      expect(screen.getByRole('columnheader', { name: nome, hidden: true })).toBeInTheDocument();
-    }
-  });
-
-  it('sem painel, a tabela tem o mesmo layout de quando ele está aberto (fechar não dá salto)', () => {
+  it('o painel fica por cima: com ele aberto, a lista não muda nada (classes, colunas)', () => {
     const duas = [...colunas, coluna.accessor('cnpj', { header: 'CNPJ' })];
     const item = [{ id: 'c-1', nome: 'A', cnpj: '1' }];
-    const { rerender } = render(
-      <ListaCadastro {...props} colunas={duas} itens={item} total={1} painel={<aside />} />,
+    const { container, rerender } = render(
+      <ListaCadastro {...props} colunas={duas} itens={item} total={1} />,
     );
-    const comPainel = screen.getByRole('columnheader', { name: 'Nome' }).className;
+    const classes = () =>
+      [container.firstElementChild, screen.getByRole('region', { name: 'Contratados' })].map(
+        (el) => el?.className,
+      );
+    const sem = classes();
 
-    rerender(<ListaCadastro {...props} colunas={duas} itens={item} total={1} />);
+    rerender(<ListaCadastro {...props} colunas={duas} itens={item} total={1} painel={<aside />} />);
 
-    expect(screen.getByRole('columnheader', { name: 'Nome' }).className).toBe(comPainel);
+    expect(classes()).toEqual(sem);
+    expect(sem.join(' ')).not.toMatch(/painel-lateral|hidden/);
+    for (const nome of ['Nome', 'CNPJ']) {
+      expect(screen.getByRole('columnheader', { name: nome })).toBeVisible();
+    }
   });
 
   it('sem busca (lista por data), não mostra campo de busca nem a faixa vazia', () => {

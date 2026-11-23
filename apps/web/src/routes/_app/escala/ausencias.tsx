@@ -140,8 +140,6 @@ function ComCor({ cor, children }: { cor: string | null; children: ReactNode }) 
 }
 
 const coluna = createDataTableColumnHelper<AusenciaItemDto>();
-const OCULTAR_COM_PAINEL = ['origem', 'tipo'];
-
 /** Mantém o painel aberto atualizado, a lista e o contador de pendentes do menu. */
 function useAtualizarAusencias() {
   const queryClient = useQueryClient();
@@ -308,7 +306,6 @@ function Ausencias() {
         </>
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

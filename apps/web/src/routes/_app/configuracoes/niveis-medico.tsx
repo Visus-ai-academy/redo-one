@@ -183,7 +183,6 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
           />
         }
         colunas={colunas}
-        ocultarComPainel={['descricao', 'ordem', 'variacoes']}
         itens={pagina.itens}
         getRowId={(item) => item.id}
         selecionadoId={busca.id}

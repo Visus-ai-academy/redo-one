@@ -75,8 +75,6 @@ function PaginaContratados() {
 }
 
 const coluna = createDataTableColumnHelper<ContratadoItemDto>();
-const OCULTAR_COM_PAINEL = ['cidade', 'contratadoRepasseNome', 'cnpj'];
-
 function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -165,7 +163,6 @@ function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
         />
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(c) => c.id}
       selecionadoId={busca.id}

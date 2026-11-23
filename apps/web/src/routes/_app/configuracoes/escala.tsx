@@ -297,7 +297,6 @@ function Escala({ permissoes }: { permissoes: PodeNaTela }) {
       }
       // biome-ignore lint/suspicious/noExplicitAny: as colunas mudam de tipo conforme a aba.
       colunas={colunas as any}
-      ocultarComPainel={['frentes', 'soGestor', 'contaComoFalta', 'tipo']}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

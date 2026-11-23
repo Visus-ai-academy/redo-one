@@ -70,8 +70,6 @@ function PaginaAvisos() {
 }
 
 const coluna = createDataTableColumnHelper<AvisoDto>();
-const OCULTAR_COM_PAINEL = ['ultimaVezEm', 'ocorrencias'];
-
 function Avisos() {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -160,7 +158,6 @@ function Avisos() {
         </>
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}

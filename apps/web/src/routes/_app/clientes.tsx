@@ -79,8 +79,6 @@ function PaginaClientes() {
 }
 
 const coluna = createDataTableColumnHelper<ClienteResumoDto>();
-const OCULTAR_COM_PAINEL = ['cnpj', 'totalAliases'];
-
 function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -191,7 +189,6 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
         </>
       }
       colunas={colunas}
-      ocultarComPainel={OCULTAR_COM_PAINEL}
       itens={pagina.itens}
       getRowId={(c) => c.id}
       selecionadoId={busca.id}
