@@ -2,7 +2,7 @@ import { Drawer } from '@base-ui/react/drawer';
 import { List } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { useSessaoControllerSair } from '../../gen/hooks/useSessaoControllerSair';
 import type { SessaoAtualDto } from '../../gen/types/SessaoAtualDto';
@@ -39,6 +39,7 @@ export function AppShell({
   const [gavetaAberta, setGavetaAberta] = useState(false);
   // Troca de tela, filtro ou página: o loader da rota está buscando os dados novos.
   const carregando = useRouterState({ select: (estado) => estado.status === 'pending' });
+  useFocoNoTituloAoTrocarDeTela();
 
   // Preferência por navegador; lida depois da hidratação para o SSR e o cliente renderizarem igual.
   useEffect(() => {
@@ -133,4 +134,23 @@ export function AppShell({
       </div>
     </Avisos>
   );
+}
+
+/**
+ * Trocou de tela (o caminho, não só a busca da URL): o foco vai para o título da página, para o
+ * teclado e o leitor de tela começarem pela tela nova em vez de ficarem no item do menu.
+ */
+function useFocoNoTituloAoTrocarDeTela() {
+  const caminho = useRouterState({ select: (estado) => estado.resolvedLocation?.pathname });
+  const anterior = useRef(caminho);
+  useEffect(() => {
+    if (anterior.current === caminho) return;
+    const primeira = anterior.current === undefined;
+    anterior.current = caminho;
+    if (primeira) return;
+    const titulo = document.querySelector<HTMLElement>('main h1');
+    if (!titulo) return;
+    if (!titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1');
+    titulo.focus({ preventScroll: true });
+  }, [caminho]);
 }

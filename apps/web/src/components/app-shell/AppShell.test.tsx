@@ -194,4 +194,34 @@ describe('AppShell', () => {
     const gaveta = await screen.findByRole('dialog', { name: 'Menu' });
     expect(within(gaveta).getByRole('link', { name: 'Usuários' })).toBeInTheDocument();
   });
+
+  it('ao trocar de tela, o foco vai para o título da página', async () => {
+    const { router } = renderComRotas(
+      <AppShell sessao={maria} grupos={grupos} rodape={rodape}>
+        <h1>Usuários</h1>
+      </AppShell>,
+      { caminho: '/configuracoes' },
+    );
+    const titulo = await screen.findByRole('heading', { name: 'Usuários' });
+    expect(titulo).not.toHaveFocus();
+
+    await router.navigate({ to: '/recuperar-senha' });
+
+    await waitFor(() => expect(titulo).toHaveFocus());
+  });
+
+  it('só mudar a busca da URL (filtro, painel) não tira o foco de onde está', async () => {
+    const { router } = renderComRotas(
+      <AppShell sessao={maria} grupos={grupos} rodape={rodape}>
+        <h1>Usuários</h1>
+      </AppShell>,
+      { caminho: '/configuracoes' },
+    );
+    const titulo = await screen.findByRole('heading', { name: 'Usuários' });
+
+    await router.navigate({ to: '/configuracoes', search: { id: '7' } as never });
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ id: '7' }));
+    expect(titulo).not.toHaveFocus();
+  });
 });
