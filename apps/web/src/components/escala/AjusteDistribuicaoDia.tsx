@@ -18,7 +18,7 @@ type Props = {
   data: string;
   /** Prioridades da operação (`GET /escala/classificacoes`). */
   prioridades: PrioridadeEscalaDto[];
-  buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** Grava o ajuste; vazio (nada liberado, a Lista como sempre e sem extra) tira o do dia. */
   onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
   /** Há alteração não salva (o painel pergunta antes de fechar). */
@@ -142,7 +142,7 @@ function FormAjuste({
   inicial: Valores;
   temAjuste: boolean;
   prioridades: PrioridadeEscalaDto[];
-  buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
   onAlterado?: (alterado: boolean) => void;
 }) {

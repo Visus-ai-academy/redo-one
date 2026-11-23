@@ -59,7 +59,7 @@ export type FormAusenciaProps = {
   /** Com `grupo` (especialidades e modalidades) e `cor`: `opcoesDeFrentes`. */
   frentes: OpcaoMarcar[];
   turnos: OpcaoComCor[];
-  buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** Na edição, `medicoIds` traz só o médico da ausência. */
   onSalvar: (dados: CriarAusenciasDto) => Promise<void>;
   onFechar: () => void;

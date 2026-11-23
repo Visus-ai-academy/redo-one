@@ -43,7 +43,7 @@ export type PainelAlocacaoProps = {
   prioridades: { id: string; nome: string; cor: string | null }[];
   /** Inativas inclusive: o formulário oferece as ativas e as já marcadas na alocação. */
   subespecialidades: { id: string; nome: string; ativo: boolean; especialidadeIds: string[] }[];
-  buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /**
    * Em alocação nova: prioridades e subespecialidades sugeridas pelos arranjos do médico na
    * frente (null = nenhum arranjo dela). Sem a função, nada é sugerido.

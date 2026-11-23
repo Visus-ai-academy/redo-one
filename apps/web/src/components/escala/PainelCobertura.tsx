@@ -26,7 +26,7 @@ export type PainelCoberturaProps = {
   dia: string;
   /** Cobertura existente (editar). */
   atual?: CoberturaAtual;
-  buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   onSalvar: (dados: CoberturaDto) => Promise<void>;
   onFechar: () => void;
 };

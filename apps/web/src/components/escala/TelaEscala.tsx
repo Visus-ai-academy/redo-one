@@ -112,7 +112,7 @@ export type TelaEscalaProps = {
   ajustesDistribuicao?: ReadonlyMap<string, AjusteDoPlantao>;
   /** O médico do modo Por médico, com o nome. */
   medico: OpcaoBusca | null;
-  buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** `escala.criar` (alocar), `escala.editar` (montar escala). */
   permissoes: PodeNaTela;
   podeVerHistorico: boolean;

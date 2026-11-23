@@ -37,7 +37,7 @@ export type PainelPlantaoProps = {
   /** Ajuste do dia da distribuição (`escala.editar`); sem ele, a seção não aparece. */
   distribuicao?: {
     prioridades: PrioridadeEscalaDto[];
-    buscarClientes: (termo: string) => Promise<OpcaoBusca[]>;
+    buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
     onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
   };
   onFechar: () => void;

@@ -34,7 +34,7 @@ export type HistoricoEscalaProps = {
   /** O médico do filtro, com o nome (para o campo de busca). */
   medico: OpcaoBusca | null;
   /** Busca de médicos pelo nome; ausente (sem `medicos.ver`), o filtro de médico não aparece. */
-  buscarMedicos?: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos?: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   onFiltrar: (novos: Partial<FiltrosHistorico>) => void;
   onLimparFiltros: () => void;
   onIrPara: (pagina: number) => void;

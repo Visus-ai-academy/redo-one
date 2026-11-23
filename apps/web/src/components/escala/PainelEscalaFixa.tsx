@@ -57,7 +57,7 @@ export type PainelEscalaFixaProps = {
   /** A grade atual de um médico numa frente. */
   buscarGrade: (medicoId: string, frenteId: string) => Promise<EscalaFixaDto>;
   /** Médicos para copiar a grade. */
-  buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
+  buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   onSalvar: (dados: DefinirEscalaFixaDto) => Promise<void>;
   onFechar: () => void;
 };

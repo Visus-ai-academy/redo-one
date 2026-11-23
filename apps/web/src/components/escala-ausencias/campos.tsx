@@ -32,7 +32,11 @@ function Legenda({ children, required }: { children: string; required?: boolean 
  * Médicos da ausência (obrigatório): busca para adicionar e a lista dos escolhidos, 5 por página.
  * Como o `EscolhaMultiplaField` do kit, mas com `*` e mensagem de erro.
  */
-export function CampoMedicos({ buscar }: { buscar: (termo: string) => Promise<OpcaoBusca[]> }) {
+export function CampoMedicos({
+  buscar,
+}: {
+  buscar: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
+}) {
   const field = useFieldContext<OpcaoBusca[]>();
   const [rodada, setRodada] = useState(0);
   const escolhidos = field.state.value;

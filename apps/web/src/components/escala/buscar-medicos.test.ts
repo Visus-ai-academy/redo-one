@@ -38,4 +38,13 @@ describe('busca de médicos da escala', () => {
       { valor: 'm2', rotulo: 'Bruno Lima', detalhe: 'Inativo' },
     ]);
   });
+
+  it('repassa o sinal para cancelar a busca anterior', async () => {
+    const sinal = new AbortController().signal;
+    await buscarMedicosAtivos('an', sinal);
+    expect(listar).toHaveBeenCalledWith({
+      query: { busca: 'an', ativo: true, porPagina: 20 },
+      signal: sinal,
+    });
+  });
 });
