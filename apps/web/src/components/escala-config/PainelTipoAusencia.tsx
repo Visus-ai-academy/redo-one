@@ -8,6 +8,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import {
   comunsParaApi,
@@ -49,14 +50,15 @@ export function PainelTipoAusencia({
   const [erro, setErro] = useState<string>();
   const titulo = tipo?.nome ?? 'Novo tipo de ausência';
 
+  const iniciais = {
+    ...valoresComuns(tipo),
+    nome: tipo?.nome ?? '',
+    gravidade: String(tipo?.gravidade ?? 0),
+    soGestor: tipo?.soGestor ?? false,
+    contaComoFalta: tipo?.contaComoFalta ?? false,
+  };
   const form = useAppForm({
-    defaultValues: {
-      ...valoresComuns(tipo),
-      nome: tipo?.nome ?? '',
-      gravidade: String(tipo?.gravidade ?? 0),
-      soGestor: tipo?.soGestor ?? false,
-      contaComoFalta: tipo?.contaComoFalta ?? false,
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -73,6 +75,7 @@ export function PainelTipoAusencia({
       }
     },
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir =
     tipo && onExcluir
@@ -112,7 +115,7 @@ export function PainelTipoAusencia({
   }
 
   return (
-    <PainelLateral titulo={titulo} onFechar={onFechar}>
+    <PainelLateral alterado={alterado} titulo={titulo} onFechar={onFechar}>
       <form
         noValidate
         onSubmit={(evento) => {

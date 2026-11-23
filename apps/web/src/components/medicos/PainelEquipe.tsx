@@ -10,6 +10,7 @@ import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 
 export type PainelEquipeProps = {
@@ -55,15 +56,16 @@ export function PainelEquipe({
 }: PainelEquipeProps) {
   const [aba, setAba] = useState('cadastro');
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    nome: equipe?.nome ?? '',
+    descricao: equipe?.descricao ?? '',
+    cor: equipe?.cor ?? '',
+    ordem: String(equipe?.ordem ?? 0),
+    ativo: equipe?.ativo ?? true,
+    membros,
+  };
   const form = useAppForm({
-    defaultValues: {
-      nome: equipe?.nome ?? '',
-      descricao: equipe?.descricao ?? '',
-      cor: equipe?.cor ?? '',
-      ordem: String(equipe?.ordem ?? 0),
-      ativo: equipe?.ativo ?? true,
-      membros,
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
       tentar(() =>
@@ -77,6 +79,7 @@ export function PainelEquipe({
         }),
       ),
   });
+  const alterado = useAlterado(form, iniciais);
 
   const campoMembros = (somenteLeitura: boolean) => (
     <form.AppField name="membros">
@@ -184,7 +187,7 @@ export function PainelEquipe({
     );
 
   return (
-    <PainelLateral titulo={equipe?.nome ?? 'Nova equipe'} onFechar={onFechar}>
+    <PainelLateral alterado={alterado} titulo={equipe?.nome ?? 'Nova equipe'} onFechar={onFechar}>
       {equipe && distribuicao ? (
         <Abas
           aria-label="Partes da equipe"

@@ -97,4 +97,22 @@ describe('PainelTipoAusencia', () => {
 
     expect(onExcluir).toHaveBeenCalled();
   });
+
+  it('editando, fechar com alteração pergunta antes de descartar', async () => {
+    const onFechar = vi.fn();
+    render(
+      <PainelTipoAusencia
+        tipo={FERIAS}
+        podeEditar
+        onSalvar={vi.fn(async () => undefined)}
+        onFechar={onFechar}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), ' coletivas');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    expect(onFechar).not.toHaveBeenCalled();
+  });
 });

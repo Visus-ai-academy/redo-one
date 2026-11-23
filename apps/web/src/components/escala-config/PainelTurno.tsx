@@ -9,6 +9,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import {
   comunsParaApi,
@@ -78,16 +79,17 @@ export function PainelTurno({
   const opcoesEspecialidades = opcoesCom(especialidades, turno?.especialidadeIds);
   const opcoesModalidades = opcoesCom(modalidades, turno?.modalidadeIds);
 
+  const iniciais = {
+    ...valoresComuns(turno),
+    nome: turno?.nome ?? '',
+    tipo: (turno?.tipo ?? 'fixo') as string,
+    horarioInicio: turno?.horarioInicio ?? '',
+    horarioFim: turno?.horarioFim ?? '',
+    especialidadeIds: turno?.especialidadeIds ?? [],
+    modalidadeIds: turno?.modalidadeIds ?? [],
+  };
   const form = useAppForm({
-    defaultValues: {
-      ...valoresComuns(turno),
-      nome: turno?.nome ?? '',
-      tipo: (turno?.tipo ?? 'fixo') as string,
-      horarioInicio: turno?.horarioInicio ?? '',
-      horarioFim: turno?.horarioFim ?? '',
-      especialidadeIds: turno?.especialidadeIds ?? [],
-      modalidadeIds: turno?.modalidadeIds ?? [],
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       setErro(undefined);
@@ -108,6 +110,7 @@ export function PainelTurno({
       }
     },
   });
+  const alterado = useAlterado(form, iniciais);
 
   const excluir =
     turno && onExcluir
@@ -150,6 +153,7 @@ export function PainelTurno({
 
   return (
     <PainelLateral
+      alterado={alterado}
       titulo={titulo}
       subtitulo={
         turno
