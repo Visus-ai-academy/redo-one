@@ -92,4 +92,41 @@ describe('Avisos', () => {
       expect(screen.queryByText('Exame tirado da proposta.')).not.toBeInTheDocument(),
     );
   });
+
+  it('aviso com "Desfazer" fica 8 s, anunciado ao leitor de tela', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(
+      <Avisos>
+        <Tirar />
+      </Avisos>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar' }));
+    expect(await screen.findByText('Exame tirado da proposta.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Avisos' })).toHaveTextContent(
+      'Exame tirado da proposta.',
+    );
+
+    await act(() => vi.advanceTimersByTimeAsync(7000));
+    expect(screen.getByText('Exame tirado da proposta.')).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    expect(screen.queryByText('Exame tirado da proposta.')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('com o mouse em cima, o aviso não some', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(
+      <Avisos>
+        <Tirar />
+      </Avisos>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar' }));
+    const aviso = await screen.findByText('Exame tirado da proposta.');
+
+    await userEvent.hover(aviso);
+    await act(() => vi.advanceTimersByTimeAsync(12000));
+
+    expect(screen.getByText('Exame tirado da proposta.')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
 });
