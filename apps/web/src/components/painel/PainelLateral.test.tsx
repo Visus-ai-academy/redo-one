@@ -93,13 +93,14 @@ describe('PainelLateral', () => {
     );
   });
 
-  it('fica por cima com um fundo pouco desfocado e levemente escuro, que não deixa clicar atrás', async () => {
+  it('fica por cima com um fundo levemente escuro, sem desfoque, que não deixa clicar atrás', async () => {
     const { naLista } = montar();
     await screen.findByRole('dialog', { name: 'Ana Reis' });
 
     const fundo = document.querySelector('[data-fundo-painel]');
-    expect(fundo).toHaveClass('backdrop-blur-[0.5px]', 'transition-opacity', 'duration-200');
-    // Só a opacidade anima; a cor (token, bem leve) e o desfoque não.
+    expect(fundo).toHaveClass('transition-opacity', 'duration-200');
+    expect(fundo?.className).not.toMatch(/backdrop-blur/);
+    // Só a opacidade anima; a cor (token, bem leve) não.
     expect(fundo?.className).toMatch(/bg-foreground\/\[0\.0\d\]/);
     expect(fundo?.className).not.toMatch(/transition-\[|transition-all/);
     await userEvent.click(fundo as HTMLElement);

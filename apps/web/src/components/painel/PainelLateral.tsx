@@ -94,10 +94,10 @@ export function PainelLateral({
       swipeDirection="right"
     >
       <Drawer.Portal>
-        {/* Desfoque mínimo e véu de 4% do texto: só a opacidade anima (a cor e o blur nunca). */}
+        {/* Véu de 4% do texto, sem desfoque: só a opacidade anima, a cor não. */}
         <Drawer.Backdrop
           data-fundo-painel
-          className="bg-foreground/[0.04] fixed inset-0 z-40 backdrop-blur-[0.5px] transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
+          className="bg-foreground/[0.04] fixed inset-0 z-40 transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         />
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
           <Drawer.Popup
