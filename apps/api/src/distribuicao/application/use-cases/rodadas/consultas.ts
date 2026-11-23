@@ -138,7 +138,27 @@ export class ListarDesignacoes {
       })),
     };
   }
+
+  /**
+   * A proposta inteira (as previstas, na ordem da fila), para a conferência agrupar por frente e
+   * médico. Sem o nome do paciente: lê-lo é uma consulta à MobileMed por exame.
+   */
+  async proposta(rodadaId: string): Promise<{ itens: DesignacaoComPaciente[] }> {
+    await rodadaOuErro(this.d, rodadaId);
+    const { itens } = await this.d.consulta.designacoes(rodadaId, {
+      status: ['prevista'],
+      pagina: 1,
+      porPagina: LIMITE_DA_PROPOSTA,
+    });
+    return { itens: itens.map((i) => ({ ...i, nomePaciente: null })) };
+  }
 }
+
+/**
+ * Teto da proposta inteira numa resposta: a fila pendente fica na casa dos ~2 mil exames, e a
+ * proposta é parte dela.
+ */
+export const LIMITE_DA_PROPOSTA = 5_000;
 
 export interface ContagemFila {
   exames: number;
@@ -483,8 +503,11 @@ export class ConsultarFilaDoMomento {
 export interface MedicoDoResumo {
   medicoId: string;
   nome: string;
+  /** Turnos em andamento na leitura. */
   turnos: string[];
   frentes: string[];
+  /** Turnos que começavam depois da leitura, mas já entravam na rodada (antecedência). */
+  aComecar: { turno: string; inicio: string }[];
   /** Teto da escala comum na leitura; null = sem teto conhecido. */
   capacidade: number | null;
   /** Carga em mãos na leitura (já aberta na MobileMed). */
@@ -519,6 +542,18 @@ export interface ResumoRodada {
   /** Null = recolhimento desligado na leitura (ou leitura gravada antes dele). */
   recolhimento: RecolhimentoGravado | null;
 }
+
+const horaBrasilia = (iso: string) =>
+  new Date(new Date(iso).getTime() - 3 * 3_600_000).toISOString().slice(11, 16);
+
+/** Os turnos do médico na leitura, com os que ainda iam começar ("Tarde (começa 13:00)"). */
+const turnosDoRetrato = (m: {
+  turnos: string[];
+  aComecar?: { turno: string; inicio: string }[];
+}) => [
+  ...m.turnos,
+  ...(m.aComecar ?? []).map((a) => `${a.turno} (começa ${horaBrasilia(a.inicio)})`),
+];
 
 const ZERO = {
   propostos: 0,
@@ -556,6 +591,7 @@ export class ConsultarResumo {
         nome: m.nome,
         turnos: m.turnos,
         frentes: m.frentes,
+        aComecar: m.aComecar ?? [],
         capacidade: m.capacidade,
         cargaEmMaos: m.cargaEmMaos,
         ...c,
@@ -565,7 +601,14 @@ export class ConsultarResumo {
     for (const c of contagens) {
       if (noRetrato.has(c.medicoId)) continue;
       // Mandado na conferência a quem não estava na rodada.
-      medicos.push({ ...c, turnos: [], frentes: [], capacidade: null, cargaEmMaos: 0 });
+      medicos.push({
+        ...c,
+        turnos: [],
+        frentes: [],
+        aComecar: [],
+        capacidade: null,
+        cargaEmMaos: 0,
+      });
     }
     medicos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     return {
@@ -742,7 +785,7 @@ export class ExplicarDesignacao {
       !!retrato,
       'Em turno na rodada',
       retrato
-        ? `${retrato.turnos.join(' e ')}${retrato.frentes.length ? `: ${retrato.frentes.join(', ')}` : ''}`
+        ? `${turnosDoRetrato(retrato).join(' e ')}${retrato.frentes.length ? `: ${retrato.frentes.join(', ')}` : ''}`
         : 'Sem período em andamento nos turnos e frentes da rodada (ou com ausência no dia)',
     );
     if (!retrato) return fim(false, 'Não pegou porque não estava em turno na rodada.');

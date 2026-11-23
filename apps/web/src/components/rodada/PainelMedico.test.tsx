@@ -17,6 +17,7 @@ const designacao = (p: Partial<DesignacaoDto> = {}): DesignacaoDto => ({
   especialidade: null,
   modalidade: null,
   subespecialidade: null,
+  frente: null,
   laudos: 1,
   realizadoEm: '2026-11-18T10:00:00Z',
   prazo: null,

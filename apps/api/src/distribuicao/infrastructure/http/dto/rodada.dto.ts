@@ -204,6 +204,14 @@ export class PacoteDto {
   @ApiProperty({ type: 'integer' }) exames!: number;
 }
 
+export class FrenteDaDesignacaoDto {
+  @ApiProperty({ format: 'uuid', description: 'Frente da escala (`frentes_escala.id`).' })
+  id!: string;
+  @ApiProperty({ description: 'Nome da especialidade ou código da modalidade.' }) nome!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Cor do catálogo (`#RRGGBB`).' })
+  cor!: string | null;
+}
+
 export class DesignacaoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ type: 'integer', description: 'Ordem da fila do motor na leitura.' })
@@ -220,6 +228,13 @@ export class DesignacaoDto {
   @ApiProperty({ type: RotuloRodadaDto, nullable: true }) modalidade!: RotuloRodadaDto | null;
   @ApiProperty({ type: RotuloRodadaDto, nullable: true })
   subespecialidade!: RotuloRodadaDto | null;
+  @ApiProperty({
+    type: FrenteDaDesignacaoDto,
+    nullable: true,
+    description:
+      'Frente da escala que recebe o exame (a da especialidade antes da da modalidade); nula se nenhuma casa.',
+  })
+  frente!: FrenteDaDesignacaoDto | null;
   @ApiProperty({ type: 'integer' }) laudos!: number;
   @ApiProperty({ type: String, format: 'date-time' }) realizadoEm!: Date;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) prazo!: Date | null;
@@ -281,6 +296,14 @@ export class DesignacaoDto {
       'Nome do paciente, lido na MobileMed agora: só com `distribuicao.paciente.ver` (leitura auditada); nulo sem ela ou fora da fila.',
   })
   nomePaciente!: string | null;
+}
+
+export class PropostaRodadaDto {
+  @ApiProperty({
+    type: [DesignacaoDto],
+    description: 'As previstas, na ordem da fila; sem o nome do paciente.',
+  })
+  itens!: DesignacaoDto[];
 }
 
 export class PaginaDesignacoesDto {
@@ -419,11 +442,24 @@ export class ExplicacaoDto {
   checks!: CheckExplicacaoDto[];
 }
 
+export class TurnoAComecarDto {
+  @ApiProperty() turno!: string;
+  @ApiProperty({ format: 'date-time' }) inicio!: string;
+}
+
 export class MedicoDaRodadaDto {
   @ApiProperty({ format: 'uuid' }) medicoId!: string;
   @ApiProperty() nome!: string;
-  @ApiProperty({ type: [String] }) turnos!: string[];
-  @ApiProperty({ type: [String] }) frentes!: string[];
+  @ApiProperty({ type: [String], description: 'Turnos em andamento na leitura.' })
+  turnos!: string[];
+  @ApiProperty({ type: [String], description: 'Frentes dos turnos em andamento e a começar.' })
+  frentes!: string[];
+  @ApiProperty({
+    type: [TurnoAComecarDto],
+    description:
+      'Turnos que começavam depois da leitura, mas já entravam na rodada (dentro da antecedência ou turno escolhido).',
+  })
+  aComecar!: TurnoAComecarDto[];
   @ApiProperty({ type: 'integer', nullable: true, description: 'Teto da escala na leitura.' })
   capacidade!: number | null;
   @ApiProperty({ type: 'integer', description: 'Já aberto na MobileMed na leitura.' })

@@ -669,6 +669,21 @@ describe('rodada do robô (casos de uso)', () => {
       expect(JSON.stringify(auditoria.eventos)).not.toMatch(/Fict/);
     });
 
+    it('a proposta inteira: só as previstas, na ordem, com a frente e sem o nome do paciente', async () => {
+      repo.frentesDaEscala = [
+        { id: 'f-mi', especialidadeId: MI, modalidadeId: null, cor: '#5B7DB1' },
+      ];
+      const id = await criarELer();
+      const { itens } = await casos.designacoes.proposta(id);
+      expect(itens.length).toBe(2);
+      expect(itens.every((d) => d.status === 'prevista' && d.nomePaciente === null)).toBe(true);
+      expect(itens.map((d) => d.ordem)).toEqual(
+        [...itens.map((d) => d.ordem)].sort((a, b) => a - b),
+      );
+      expect(itens[0]?.frente).toEqual({ id: 'f-mi', nome: MI, cor: '#5B7DB1' });
+      expect(auditoria.eventos.some((e) => e.acao === 'paciente_lido')).toBe(false);
+    });
+
     it('resumo da proposta: por médico (teto, carga, propostos, urgências), motivos e ajustes', async () => {
       const id = await criarELer();
       const e1 = designacao('e1');
@@ -690,6 +705,35 @@ describe('rodada do robô (casos de uso)', () => {
       );
       expect(r.ajustes).toEqual({ tirados: 1, movidos: 0, naMao: 0 });
       expect(r.funilMedicos).toMatchObject({ habilitados: 2, noHorario: 2, receberam: 1 });
+    });
+
+    it('o turno que ainda vai começar hoje aparece "a começar" no resumo e no "por quê"', async () => {
+      // Às 09:00, a Tarde de B começa às 11:00 (dentro da antecedência: ele recebe).
+      insumos.insumos = {
+        ...insumosBase(),
+        ocorrencias: [
+          oc('A'),
+          oc('B', {
+            alocacaoId: 'tarde-B',
+            turnoId: 'tarde',
+            inicio: br('2026-11-18T11:00'),
+            fim: br('2026-11-18T19:00'),
+          }),
+        ],
+      };
+      const id = await criarELer();
+      const r = await casos.resumo.executar(id);
+      expect(r.medicos.find((m) => m.medicoId === 'B')).toMatchObject({
+        turnos: [],
+        frentes: [expect.any(String)],
+        aComecar: [{ turno: 'tarde', inicio: br('2026-11-18T11:00').toISOString() }],
+      });
+      expect(r.medicos.find((m) => m.medicoId === 'A')).toMatchObject({ aComecar: [] });
+      const b = await casos.explicar.executar(id, designacao('e1')?.id ?? '', 'B');
+      expect(b.checks.find((c) => c.titulo === 'Em turno na rodada')).toMatchObject({
+        ok: true,
+        detalhe: expect.stringMatching(/^tarde \(começa 11:00\)/),
+      });
     });
 
     it('por que este médico não pegou: os portões do médico diante do exame', async () => {

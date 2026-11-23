@@ -106,6 +106,7 @@ describe('proposta da rodada', () => {
         cotaGratificada: 0,
         turnos: ['Manhã'],
         frentes: ['MEDICINA INTERNA'],
+        aComecar: [],
       },
       {
         id: 'B',
@@ -115,6 +116,7 @@ describe('proposta da rodada', () => {
         cotaGratificada: 0,
         turnos: [],
         frentes: [],
+        aComecar: [],
       },
     ]);
   });

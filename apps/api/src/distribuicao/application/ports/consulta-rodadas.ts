@@ -11,6 +11,14 @@ export interface RotuloRodada {
   nome: string;
 }
 
+/** A frente da escala do exame (a da especialidade antes da da modalidade), com a cor do catálogo. */
+export interface FrenteDaDesignacao {
+  /** `frentes_escala.id`. */
+  id: string;
+  nome: string;
+  cor: string | null;
+}
+
 /** A designação com os nomes do cadastro, para a conferência (sem o nome do paciente). */
 export interface DesignacaoDetalhada {
   id: string;
@@ -24,6 +32,8 @@ export interface DesignacaoDetalhada {
   especialidade: RotuloRodada | null;
   modalidade: RotuloRodada | null;
   subespecialidade: RotuloRodada | null;
+  /** A frente da escala que recebe o exame; null = nenhuma frente casa com ele. */
+  frente: FrenteDaDesignacao | null;
   laudos: number;
   realizadoEm: Date;
   prazo: Date | null;

@@ -1,4 +1,6 @@
+import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
+import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import type { MedicoEmTurnoDto } from '../../gen/types/MedicoEmTurnoDto';
 
 export const medicoEmTurno = (
@@ -97,3 +99,63 @@ export const FILA: FilaDoMomentoDto = {
     medicoEmTurno(`m${i}`, `Médico ${String(i).padStart(2, '0')}`, i === 0 ? 60 : 10, 60),
   ),
 };
+
+/** Um médico da proposta (resumo da rodada). */
+export const medicoDaRodada = (
+  medicoId: string,
+  nome: string,
+  p: Partial<MedicoDaRodadaDto> = {},
+): MedicoDaRodadaDto => ({
+  medicoId,
+  nome,
+  turnos: ['Manhã'],
+  frentes: ['NEURO'],
+  aComecar: [],
+  capacidade: 10,
+  cargaEmMaos: 2,
+  propostos: 3,
+  urgencias: 0,
+  pacotes: 0,
+  previstas: 3,
+  executadas: 0,
+  puladas: 0,
+  falharam: 0,
+  naMao: 0,
+  ...p,
+});
+
+/** Um exame da proposta. */
+export const designacaoDeTeste = (p: Partial<DesignacaoDto> = {}): DesignacaoDto => ({
+  id: 'd1',
+  ordem: 0,
+  idExameMobilemed: 'MM-1',
+  estudo: 'RM CRANIO',
+  unidade: 'HOSPITAL A',
+  cliente: null,
+  prioridadeGrafia: 'Rotina',
+  prioridadeOperacao: null,
+  especialidade: null,
+  modalidade: null,
+  subespecialidade: null,
+  frente: null,
+  laudos: 1,
+  realizadoEm: '2026-11-18T10:00:00Z',
+  prazo: null,
+  urgente: false,
+  medicoProposto: { id: 'A', nome: 'Ana' },
+  medico: { id: 'A', nome: 'Ana' },
+  pacote: { id: 'd1', exames: 3 },
+  gratificado: false,
+  naMao: false,
+  elegiveis: ['A', 'B', 'C'],
+  retiradoDe: null,
+  retiradaEm: null,
+  recolhidoDe: null,
+  motivoRecolhimento: null,
+  status: 'prevista',
+  motivo: null,
+  detalhe: null,
+  executadaEm: null,
+  nomePaciente: null,
+  ...p,
+});

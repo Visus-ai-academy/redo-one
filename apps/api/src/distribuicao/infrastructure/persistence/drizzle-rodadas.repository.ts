@@ -25,6 +25,7 @@ import {
   designacoes,
   especialidades,
   eventosRodada,
+  frentesEscala,
   medicos,
   modalidades,
   prioridadesOperacao,
@@ -94,6 +95,8 @@ const medicoRecolhido = alias(medicos, 'medico_recolhido');
 const outra = alias(designacoes, 'outra');
 const solicitante = alias(usuarios, 'solicitante');
 const aprovador = alias(usuarios, 'aprovador');
+const frenteDaEspecialidade = alias(frentesEscala, 'frente_da_especialidade');
+const frenteDaModalidade = alias(frentesEscala, 'frente_da_modalidade');
 
 type LinhaRodada = typeof rodadas.$inferSelect;
 type LinhaDesignacao = typeof designacoes.$inferSelect;
@@ -682,6 +685,10 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
         prioridade: prioridadesOperacao.nome,
         especialidade: especialidades.nome,
         modalidade: modalidades.codigo,
+        frenteEspecialidade: frenteDaEspecialidade.id,
+        frenteModalidade: frenteDaModalidade.id,
+        corEspecialidade: especialidades.cor,
+        corModalidade: modalidades.cor,
         subespecialidade: subespecialidades.nome,
         medico: medicos.nome,
         proposto: medicoProposto.nome,
@@ -698,6 +705,11 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
       .leftJoin(especialidades, eq(especialidades.id, designacoes.especialidadeId))
       .leftJoin(modalidades, eq(modalidades.id, designacoes.modalidadeId))
       .leftJoin(subespecialidades, eq(subespecialidades.id, designacoes.subespecialidadeId))
+      .leftJoin(
+        frenteDaEspecialidade,
+        eq(frenteDaEspecialidade.especialidadeId, designacoes.especialidadeId),
+      )
+      .leftJoin(frenteDaModalidade, eq(frenteDaModalidade.modalidadeId, designacoes.modalidadeId))
       .leftJoin(medicos, eq(medicos.id, designacoes.medicoId))
       .leftJoin(medicoProposto, eq(medicoProposto.id, designacoes.medicoPropostoId))
       .leftJoin(medicoRetirado, eq(medicoRetirado.id, designacoes.retiradoDeId))
@@ -892,6 +904,10 @@ type LinhaDetalhada = {
   prioridade: string | null;
   especialidade: string | null;
   modalidade: string | null;
+  frenteEspecialidade: string | null;
+  frenteModalidade: string | null;
+  corEspecialidade: string | null;
+  corModalidade: string | null;
   subespecialidade: string | null;
   medico: string | null;
   proposto: string | null;
@@ -916,6 +932,12 @@ function comoDetalhada({ d, ...n }: LinhaDetalhada): DesignacaoDetalhada {
     especialidade: rotulo(d.especialidadeId, n.especialidade),
     modalidade: rotulo(d.modalidadeId, n.modalidade),
     subespecialidade: rotulo(d.subespecialidadeId, n.subespecialidade),
+    // Como o retrato da fila: a frente da especialidade antes da da modalidade.
+    frente: n.frenteEspecialidade
+      ? { id: n.frenteEspecialidade, nome: n.especialidade ?? '', cor: n.corEspecialidade }
+      : n.frenteModalidade
+        ? { id: n.frenteModalidade, nome: n.modalidade ?? '', cor: n.corModalidade }
+        : null,
     laudos: d.laudos,
     realizadoEm: d.realizadoEm,
     prazo: d.prazo,

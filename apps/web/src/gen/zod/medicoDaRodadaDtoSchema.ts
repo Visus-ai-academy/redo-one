@@ -4,12 +4,14 @@
 */
 
 import * as z from 'zod'
+import { turnoAComecarDtoSchema } from './turnoAComecarDtoSchema'
 
 export const medicoDaRodadaDtoSchema = z.object({
   medicoId: z.uuid(),
   nome: z.string(),
-  turnos: z.array(z.string()),
-  frentes: z.array(z.string()),
+  turnos: z.array(z.string()).describe('Turnos em andamento na leitura.'),
+  frentes: z.array(z.string()).describe('Frentes dos turnos em andamento e a começar.'),
+  aComecar: z.array(turnoAComecarDtoSchema).describe('Turnos que começavam depois da leitura, mas já entravam na rodada (dentro da antecedência ou turno escolhido).'),
   capacidade: z.int().nullable().describe('Teto da escala na leitura.'),
   cargaEmMaos: z.int().describe('Já aberto na MobileMed na leitura.'),
   propostos: z.int(),

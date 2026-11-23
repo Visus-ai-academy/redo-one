@@ -379,6 +379,22 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   }
 
   // --- consulta ---
+  /** As frentes da escala (o nome é o id da especialidade ou da modalidade, como os rótulos). */
+  frentesDaEscala: {
+    id: string;
+    especialidadeId: string | null;
+    modalidadeId: string | null;
+    cor: string | null;
+  }[] = [];
+
+  private frenteDe(d: DesignacaoGravada) {
+    const f =
+      this.frentesDaEscala.find(
+        (x) => x.especialidadeId && x.especialidadeId === d.especialidadeId,
+      ) ?? this.frentesDaEscala.find((x) => x.modalidadeId && x.modalidadeId === d.modalidadeId);
+    return f ? { id: f.id, nome: f.especialidadeId ?? f.modalidadeId ?? '', cor: f.cor } : null;
+  }
+
   private detalhada = (d: DesignacaoGravada): DesignacaoDetalhada => {
     const rotulo = (id: string | null) => (id ? { id, nome: id } : null);
     const doPaciente = this.daRodada(d.rodadaId).filter((x) => x.pacienteChave === d.pacienteChave);
@@ -394,6 +410,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
       especialidade: rotulo(d.especialidadeId),
       modalidade: rotulo(d.modalidadeId),
       subespecialidade: rotulo(d.subespecialidadeId),
+      frente: this.frenteDe(d),
       laudos: d.laudos,
       realizadoEm: d.realizadoEm,
       prazo: d.prazo,

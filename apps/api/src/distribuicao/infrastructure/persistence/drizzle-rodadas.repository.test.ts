@@ -243,6 +243,45 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     expect(await repo.entregues(['e1'], agora)).toEqual(new Map());
   });
 
+  it('cada designação vem com a frente da escala: a da especialidade antes da da modalidade', async () => {
+    const sufixo = Math.random().toString(36).slice(2, 8);
+    const [neuro] = await db
+      .insert(schema.especialidades)
+      .values({ nome: `NEURO ${sufixo}`, cor: '#5B7DB1' })
+      .returning();
+    const [semFrente] = await db
+      .insert(schema.especialidades)
+      .values({ nome: `MAMA ${sufixo}` })
+      .returning();
+    const [ct] = await db
+      .insert(schema.modalidades)
+      .values({ codigo: `CT${sufixo}`, cor: '#8A6FB0' })
+      .returning();
+    const [rx] = await db
+      .insert(schema.modalidades)
+      .values({ codigo: `RX${sufixo}` })
+      .returning();
+    const [fNeuro] = await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'especialidade', especialidadeId: neuro?.id })
+      .returning();
+    const [fCt] = await db
+      .insert(schema.frentesEscala)
+      .values({ tipo: 'modalidade', modalidadeId: ct?.id })
+      .returning();
+    const id = await criarComProposta([
+      designacao('n1', { especialidadeId: neuro?.id, modalidadeId: ct?.id }),
+      designacao('c1', { ordem: 1, especialidadeId: semFrente?.id, modalidadeId: ct?.id }),
+      designacao('x1', { ordem: 2, especialidadeId: semFrente?.id, modalidadeId: rx?.id }),
+    ]);
+    const { itens } = await repo.designacoes(id, { pagina: 1, porPagina: 10 });
+    expect(itens.map((d) => [d.idExameMobilemed, d.frente])).toEqual([
+      ['n1', { id: fNeuro?.id, nome: `NEURO ${sufixo}`, cor: '#5B7DB1' }],
+      ['c1', { id: fCt?.id, nome: `CT${sufixo}`, cor: '#8A6FB0' }],
+      ['x1', null],
+    ]);
+  });
+
   it('manda na mão a recusada, com o pacote do paciente e as contagens por médico e motivo', async () => {
     const id = await criarComProposta([
       designacao('p1', { pacienteChave: 'pac', urgente: true }),

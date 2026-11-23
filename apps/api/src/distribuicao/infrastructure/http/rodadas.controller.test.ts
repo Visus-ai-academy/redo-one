@@ -34,7 +34,10 @@ const casos = () => {
       porId: vi.fn(async () => ({})),
       historico: vi.fn(async () => ({ itens: [], total: 0 })),
     },
-    designacoes: { executar: vi.fn(async () => ({ itens: [], total: 0 })) },
+    designacoes: {
+      executar: vi.fn(async () => ({ itens: [], total: 0 })),
+      proposta: vi.fn(async () => ({ itens: [] })),
+    },
     retratoFila: {
       executar: vi.fn(async () => ({
         fila: null,
@@ -87,6 +90,7 @@ describe('controller das rodadas', () => {
       p.obter,
       p.situacao,
       p.designacoes,
+      p.proposta,
       p.resumo,
       p.explicacao,
       p.medicosDaBusca,
@@ -102,6 +106,13 @@ describe('controller das rodadas', () => {
     for (const controle of [p.pausar, p.retomar, p.encerrar, p.cancelar, p.reler, p.medicos]) {
       expect(exigidas(controle)).toEqual(['distribuicao.rodada.controlar']);
     }
+  });
+
+  it('a proposta inteira vem do caso de uso, sem o nome do paciente', async () => {
+    const c = casos();
+    const id = '00000000-0000-4000-8000-000000000001';
+    expect(await controller(c).proposta(id)).toEqual({ itens: [] });
+    expect(c.designacoes.proposta).toHaveBeenCalledWith(id);
   });
 
   it('a fila vem do retrato; "Ler agora" só enfileira a leitura', async () => {

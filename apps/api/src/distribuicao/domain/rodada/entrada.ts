@@ -23,6 +23,7 @@ import {
   urgente,
 } from '../motor/prioridades-operacao';
 import type { EntradaRodada, FiltroRodada } from '../motor/rodada';
+import type { EscalaDoMedico } from './proposta';
 
 /**
  * Ponte entre a leitura da fila da MobileMed (texto cru) e o motor (ids do cadastro). Fonte:
@@ -190,21 +191,42 @@ export interface EntradaMontada {
   semCliente: number;
 }
 
-/** Turnos e frentes em andamento de cada médico no instante (nomes, sem repetir). */
+/** O dia (AAAA-MM-DD) em Brasília. */
+const diaEmBrasilia = (d: Date) => new Date(d.getTime() - 3 * 3_600_000).toISOString().slice(0, 10);
+
+/**
+ * Os turnos de cada médico no dia da leitura (nomes, sem repetir), para a tela mostrar a que turno
+ * ele pertence: em andamento em `turnos`; os que ainda vão começar hoje (em Brasília) em
+ * `aComecar`, com o início. As frentes juntam os dois. Encerrado e ausente ficam de fora. Só
+ * descreve a escala: quem entra na rodada continua sendo decisão do motor.
+ */
 export function escalaDosMedicos(
   insumos: Pick<InsumosRodada, 'ocorrencias' | 'nomes'>,
   agora: Date,
-): Record<string, { turnos: string[]; frentes: string[] }> {
+): Record<string, EscalaDoMedico> {
   const nome = (id: string) => insumos.nomes[id] ?? id;
-  const r: Record<string, { turnos: string[]; frentes: string[] }> = {};
+  const hoje = diaEmBrasilia(agora);
+  const r: Record<string, EscalaDoMedico> = {};
   for (const o of insumos.ocorrencias) {
-    if (o.ausente || o.inicio > agora || agora >= o.fim) continue;
-    const m = r[o.medicoId] ?? { turnos: [], frentes: [] };
+    if (o.ausente || agora >= o.fim) continue;
+    const emAndamento = o.inicio <= agora;
+    if (!emAndamento && diaEmBrasilia(o.inicio) !== hoje) continue;
+    const m = r[o.medicoId] ?? { turnos: [], frentes: [], aComecar: [] };
     r[o.medicoId] = m;
     const turno = nome(o.turnoId);
     const frente = nome(o.frente.especialidadeId ?? o.frente.modalidadeId);
-    if (!m.turnos.includes(turno)) m.turnos.push(turno);
+    if (emAndamento) {
+      if (!m.turnos.includes(turno)) m.turnos.push(turno);
+    } else if (!m.aComecar?.some((x) => x.turno === turno)) {
+      m.aComecar?.push({ turno, inicio: o.inicio.toISOString() });
+    }
     if (!m.frentes.includes(frente)) m.frentes.push(frente);
+  }
+  for (const m of Object.values(r)) {
+    // O turno já em andamento por outra ocorrência não aparece de novo como "a começar".
+    m.aComecar = (m.aComecar ?? [])
+      .filter((x) => !m.turnos.includes(x.turno))
+      .sort((x, y) => x.inicio.localeCompare(y.inicio));
   }
   return r;
 }

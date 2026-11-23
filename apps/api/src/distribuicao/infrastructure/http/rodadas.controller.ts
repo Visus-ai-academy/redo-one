@@ -58,6 +58,7 @@ import {
   MedicosRodadaDto,
   PaginaDesignacoesDto,
   PaginaRodadasDto,
+  PropostaRodadaDto,
   RecolhimentoPrevistoDto,
   RecortesRodadaDto,
   ResumoRodadaDto,
@@ -230,6 +231,18 @@ export class RodadasController {
       temPermissao(principal, 'distribuicao.paciente.ver'),
     );
     return { itens, total, pagina: q.pagina, porPagina: q.porPagina };
+  }
+
+  @Get(':id/proposta')
+  @Permissao('distribuicao.ver')
+  @ApiOkResponse({
+    type: PropostaRodadaDto,
+    description:
+      'A proposta inteira (as previstas, com a frente de cada exame), para a conferência por frente e médico.',
+  })
+  @ApiNotFoundResponse()
+  proposta(@Param('id', ID) id: string): Promise<PropostaRodadaDto> {
+    return this.listarDesignacoes.proposta(id);
   }
 
   @Get(':id/resumo')

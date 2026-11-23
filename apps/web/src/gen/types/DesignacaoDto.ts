@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { FrenteDaDesignacaoDto } from './FrenteDaDesignacaoDto'
 import type { MotivoRecolhimentoKey } from './MotivoRecolhimento'
 import type { PacoteDto } from './PacoteDto'
 import type { RotuloRodadaDto } from './RotuloRodadaDto'
@@ -45,6 +46,11 @@ export type DesignacaoDto = {
   especialidade: RotuloRodadaDto | null;
   modalidade: RotuloRodadaDto | null;
   subespecialidade: RotuloRodadaDto | null;
+  /**
+   * @description Frente da escala que recebe o exame (a da especialidade antes da da modalidade); nula se nenhuma casa.
+   * @type object
+   */
+  frente: FrenteDaDesignacaoDto | null;
   laudos: number;
   /**
    * @description

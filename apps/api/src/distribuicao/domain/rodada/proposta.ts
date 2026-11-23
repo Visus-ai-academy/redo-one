@@ -55,8 +55,14 @@ export interface RecolhimentoGravado {
 
 /** Turnos e frentes em que o médico estava na escala no instante da leitura (só os nomes). */
 export interface EscalaDoMedico {
+  /** Turnos em andamento na leitura. */
   turnos: string[];
   frentes: string[];
+  /**
+   * Turnos que ainda não tinham começado, mas já entravam na rodada (antecedência ou turno
+   * escolhido), com o início (ISO). Ausente nas leituras gravadas antes dele.
+   */
+  aComecar?: { turno: string; inicio: string }[];
 }
 
 /** O médico da rodada como a tela da proposta o mostra (teto, carga em mãos, turno). */
@@ -245,6 +251,7 @@ export function montarProposta(p: {
         ...m,
         turnos: p.escalaDosMedicos[m.id]?.turnos ?? [],
         frentes: p.escalaDosMedicos[m.id]?.frentes ?? [],
+        aComecar: p.escalaDosMedicos[m.id]?.aComecar ?? [],
       })),
       ...(r
         ? {

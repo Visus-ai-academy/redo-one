@@ -7685,6 +7685,76 @@
         ]
       }
     },
+    "/distribuicao/rodadas/{id}/proposta": {
+      "get": {
+        "operationId": "RodadasController_proposta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A proposta inteira (as previstas, com a frente de cada exame), para a conferência por frente e médico.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropostaRodadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "patch": {
+        "operationId": "RodadasController_ajustarProposta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjustePropostaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Tira (e desfaz), move exames previstos, com ou sem o pacote, e manda na mão os de fora (antes de aprovar)."
+          },
+          "400": {
+            "description": ""
+          },
+          "409": {
+            "description": "A rodada não aguarda aprovação."
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/distribuicao/rodadas/{id}/resumo": {
       "get": {
         "operationId": "RodadasController_resumo",
@@ -7761,45 +7831,6 @@
           },
           "404": {
             "description": ""
-          }
-        },
-        "tags": [
-          "distribuicao"
-        ]
-      }
-    },
-    "/distribuicao/rodadas/{id}/proposta": {
-      "patch": {
-        "operationId": "RodadasController_ajustarProposta",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AjustePropostaDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Tira (e desfaz), move exames previstos, com ou sem o pacote, e manda na mão os de fora (antes de aprovar)."
-          },
-          "400": {
-            "description": ""
-          },
-          "409": {
-            "description": "A rodada não aguarda aprovação."
           }
         },
         "tags": [
@@ -16445,6 +16476,30 @@
           "recusada"
         ]
       },
+      "FrenteDaDesignacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Frente da escala (`frentes_escala.id`)."
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome da especialidade ou código da modalidade."
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cor do catálogo (`#RRGGBB`)."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor"
+        ]
+      },
       "PacoteDto": {
         "type": "object",
         "properties": {
@@ -16539,6 +16594,16 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/RotuloRodadaDto"
+              }
+            ]
+          },
+          "frente": {
+            "nullable": true,
+            "description": "Frente da escala que recebe o exame (a da especialidade antes da da modalidade); nula se nenhuma casa.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FrenteDaDesignacaoDto"
               }
             ]
           },
@@ -16676,6 +16741,7 @@
           "especialidade",
           "modalidade",
           "subespecialidade",
+          "frente",
           "laudos",
           "realizadoEm",
           "prazo",
@@ -16723,6 +16789,37 @@
           "porPagina"
         ]
       },
+      "PropostaRodadaDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "description": "As previstas, na ordem da fila; sem o nome do paciente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DesignacaoDto"
+            }
+          }
+        },
+        "required": [
+          "itens"
+        ]
+      },
+      "TurnoAComecarDto": {
+        "type": "object",
+        "properties": {
+          "turno": {
+            "type": "string"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "turno",
+          "inicio"
+        ]
+      },
       "MedicoDaRodadaDto": {
         "type": "object",
         "properties": {
@@ -16734,15 +16831,24 @@
             "type": "string"
           },
           "turnos": {
+            "description": "Turnos em andamento na leitura.",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "frentes": {
+            "description": "Frentes dos turnos em andamento e a começar.",
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "aComecar": {
+            "description": "Turnos que começavam depois da leitura, mas já entravam na rodada (dentro da antecedência ou turno escolhido).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TurnoAComecarDto"
             }
           },
           "capacidade": {
@@ -16785,6 +16891,7 @@
           "nome",
           "turnos",
           "frentes",
+          "aComecar",
           "capacidade",
           "cargaEmMaos",
           "propostos",

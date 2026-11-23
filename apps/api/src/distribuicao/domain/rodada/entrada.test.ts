@@ -322,6 +322,49 @@ describe('escala dos médicos no instante da leitura', () => {
       }),
       agora,
     );
-    expect(r).toEqual({ A: { turnos: ['Manhã', 'Lista'], frentes: ['MEDICINA INTERNA', 'CT'] } });
+    expect(r).toEqual({
+      A: {
+        turnos: ['Manhã', 'Lista'],
+        frentes: ['MEDICINA INTERNA', 'CT'],
+        aComecar: [{ turno: 'noite', inicio: br('2026-11-18T19:00').toISOString() }],
+      },
+    });
+  });
+
+  it('o turno que ainda vai começar hoje entra "a começar", com a frente; o de amanhã, não', () => {
+    const r = escalaDosMedicos(
+      insumos({
+        ocorrencias: [
+          oc('C', {
+            turnoId: 'tarde',
+            inicio: br('2026-11-18T13:00'),
+            fim: br('2026-11-18T19:00'),
+            frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: CT },
+          }),
+          oc('C', {
+            turnoId: 'noite',
+            inicio: br('2026-11-18T19:00'),
+            fim: br('2026-11-19T07:00'),
+          }),
+          oc('D', {
+            turnoId: 'manha',
+            inicio: br('2026-11-19T07:00'),
+            fim: br('2026-11-19T13:00'),
+          }),
+        ],
+        nomes: { tarde: 'Tarde', noite: 'Noite', [CT]: 'CT', [MI]: 'MEDICINA INTERNA' },
+      }),
+      agora,
+    );
+    expect(r).toEqual({
+      C: {
+        turnos: [],
+        frentes: ['CT', 'MEDICINA INTERNA'],
+        aComecar: [
+          { turno: 'Tarde', inicio: br('2026-11-18T13:00').toISOString() },
+          { turno: 'Noite', inicio: br('2026-11-18T19:00').toISOString() },
+        ],
+      },
+    });
   });
 });

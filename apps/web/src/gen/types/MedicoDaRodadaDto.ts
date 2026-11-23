@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { TurnoAComecarDto } from './TurnoAComecarDto'
+
 export type MedicoDaRodadaDto = {
   /**
    * @description
@@ -11,8 +13,21 @@ export type MedicoDaRodadaDto = {
    */
   medicoId: string;
   nome: string;
+  /**
+   * @description Turnos em andamento na leitura.
+   * @type array
+   */
   turnos: string[];
+  /**
+   * @description Frentes dos turnos em andamento e a começar.
+   * @type array
+   */
   frentes: string[];
+  /**
+   * @description Turnos que começavam depois da leitura, mas já entravam na rodada (dentro da antecedência ou turno escolhido).
+   * @type array
+   */
+  aComecar: TurnoAComecarDto[];
   /**
    * @description Teto da escala na leitura.
    * @type integer
