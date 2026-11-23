@@ -7,6 +7,7 @@ import type { ContagemEspecialidadeDto } from './ContagemEspecialidadeDto'
 import type { ContagemModalidadeDto } from './ContagemModalidadeDto'
 import type { ContagemPrioridadeDto } from './ContagemPrioridadeDto'
 import type { FrenteDaFilaDto } from './FrenteDaFilaDto'
+import type { GrupoDaFilaDto } from './GrupoDaFilaDto'
 import type { MedicoEmTurnoDto } from './MedicoEmTurnoDto'
 import type { PrioridadeDaFilaDto } from './PrioridadeDaFilaDto'
 import type { TurnoDaFilaDto } from './TurnoDaFilaDto'
@@ -65,7 +66,16 @@ export type FilaDoMomentoDto = {
    * @type array
    */
   prioridades: PrioridadeDaFilaDto[];
+  /**
+   * @description Especialidades, depois modalidades, e "Sem frente" por último. Somar as linhas pode passar do total (um exame conta em cada frente que o pega).
+   * @type array
+   */
   porFrente: FrenteDaFilaDto[];
+  /**
+   * @description Os exames pelos eixos do recorte (frentes, segmento, prioridade), cada um uma vez: para estimar a rodada sem contar duas vezes.
+   * @type array
+   */
+  grupos: GrupoDaFilaDto[];
   /**
    * @description Turnos de hoje que não acabaram.
    * @type array

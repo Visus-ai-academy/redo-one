@@ -6,11 +6,14 @@
 import * as z from 'zod'
 import { contagemFrentePrioridadeDtoSchema } from './contagemFrentePrioridadeDtoSchema'
 import { segmentoDaFilaDtoSchema } from './segmentoDaFilaDtoSchema'
+import { tipoFrenteDaFilaSchema } from './tipoFrenteDaFilaSchema'
 
 export const frenteDaFilaDtoSchema = z.object({
   frenteId: z.uuid().nullable().describe('Frente da escala; nula = o exame não casa com nenhuma.'),
+  tipo: z.union([tipoFrenteDaFilaSchema, z.null()]).describe('Nulo = "Sem frente".'),
   nome: z.string(),
-  exames: z.int(),
+  cor: z.string().nullable().describe('Cor cadastrada da especialidade ou modalidade; nula = sem cor.'),
+  exames: z.int().describe('Exames que o recorte pegaria marcando só esta frente; um exame pode contar numa frente de especialidade e numa de modalidade.'),
   urgentes: z.int(),
   primeiroVencimento: z.iso.datetime().nullable(),
   porPrioridade: z.array(contagemFrentePrioridadeDtoSchema),

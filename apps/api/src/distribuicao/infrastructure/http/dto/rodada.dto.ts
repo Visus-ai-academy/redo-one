@@ -682,6 +682,18 @@ export class SegmentoDaFilaDto {
   porPrioridade!: ContagemFrentePrioridadeDto[];
 }
 
+export class GrupoDaFilaDto {
+  @ApiProperty({
+    type: [String],
+    description: 'As frentes que pegam o exame; vazio = sem frente.',
+  })
+  frenteIds!: string[];
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) segmentoId!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  prioridadeOperacaoId!: string | null;
+  @ApiProperty({ type: 'integer' }) exames!: number;
+}
+
 export class FrenteDaFilaDto {
   @ApiProperty({
     type: String,
@@ -690,8 +702,26 @@ export class FrenteDaFilaDto {
     description: 'Frente da escala; nula = o exame não casa com nenhuma.',
   })
   frenteId!: string | null;
+  @ApiProperty({
+    enum: ['especialidade', 'modalidade'],
+    enumName: 'TipoFrenteDaFila',
+    nullable: true,
+    description: 'Nulo = "Sem frente".',
+  })
+  tipo!: 'especialidade' | 'modalidade' | null;
   @ApiProperty() nome!: string;
-  @ApiProperty({ type: 'integer' }) exames!: number;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Cor cadastrada da especialidade ou modalidade; nula = sem cor.',
+  })
+  cor!: string | null;
+  @ApiProperty({
+    type: 'integer',
+    description:
+      'Exames que o recorte pegaria marcando só esta frente; um exame pode contar numa frente de especialidade e numa de modalidade.',
+  })
+  exames!: number;
   @ApiProperty({ type: 'integer' }) urgentes!: number;
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   primeiroVencimento!: Date | null;
@@ -749,7 +779,18 @@ export class FilaDoMomentoDto {
   roboAtivo!: boolean;
   @ApiProperty({ type: [PrioridadeDaFilaDto], description: 'Na ordem da operação.' })
   prioridades!: PrioridadeDaFilaDto[];
-  @ApiProperty({ type: [FrenteDaFilaDto] }) porFrente!: FrenteDaFilaDto[];
+  @ApiProperty({
+    type: [FrenteDaFilaDto],
+    description:
+      'Especialidades, depois modalidades, e "Sem frente" por último. Somar as linhas pode passar do total (um exame conta em cada frente que o pega).',
+  })
+  porFrente!: FrenteDaFilaDto[];
+  @ApiProperty({
+    type: [GrupoDaFilaDto],
+    description:
+      'Os exames pelos eixos do recorte (frentes, segmento, prioridade), cada um uma vez: para estimar a rodada sem contar duas vezes.',
+  })
+  grupos!: GrupoDaFilaDto[];
   @ApiProperty({ type: [TurnoDaFilaDto], description: 'Turnos de hoje que não acabaram.' })
   turnos!: TurnoDaFilaDto[];
   @ApiProperty({ type: [ContagemPrioridadeDto] }) porPrioridade!: ContagemPrioridadeDto[];

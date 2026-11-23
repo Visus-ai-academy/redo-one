@@ -5,6 +5,7 @@
 
 import type { ContagemFrentePrioridadeDto } from './ContagemFrentePrioridadeDto'
 import type { SegmentoDaFilaDto } from './SegmentoDaFilaDto'
+import type { TipoFrenteDaFilaKey } from './TipoFrenteDaFila'
 
 export type FrenteDaFilaDto = {
   /**
@@ -14,7 +15,20 @@ export type FrenteDaFilaDto = {
    * @type string
    */
   frenteId: string | null;
+  /**
+   * @description Nulo = "Sem frente".
+   */
+  tipo: TipoFrenteDaFilaKey | null;
   nome: string;
+  /**
+   * @description Cor cadastrada da especialidade ou modalidade; nula = sem cor.
+   * @type string
+   */
+  cor: string | null;
+  /**
+   * @description Exames que o recorte pegaria marcando só esta frente; um exame pode contar numa frente de especialidade e numa de modalidade.
+   * @type integer
+   */
   exames: number;
   urgentes: number;
   /**

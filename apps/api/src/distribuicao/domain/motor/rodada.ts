@@ -184,6 +184,20 @@ const semItem = (exameId: string, motivo: MotivoRodada, detalhe: string): ItemRo
   barrados: {},
 });
 
+/**
+ * O recorte de frente da rodada pega o exame? A de especialidade pela especialidade do exame; a de
+ * modalidade pela modalidade. Um exame pode casar com duas frentes (uma de cada tipo): marcar
+ * qualquer uma delas já o leva. A fila do momento conta as frentes por aqui.
+ */
+export function exameNaFrente(
+  frente: FrenteEscala,
+  exame: { especialidadeId: string | null; modalidadeId: string | null },
+): boolean {
+  return frente.tipo === 'modalidade'
+    ? frente.modalidadeId !== null && frente.modalidadeId === exame.modalidadeId
+    : frente.especialidadeId !== null && frente.especialidadeId === exame.especialidadeId;
+}
+
 export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   const { agora, config } = entrada;
   const regras = new RegrasPorFrente(entrada.regrasFrente);
@@ -259,16 +273,12 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   }
   const frentes = filtro.frentes ?? [];
   if (frentes.length) {
-    const esp = new Set(frentes.flatMap((f) => (f.especialidadeId ? [f.especialidadeId] : [])));
-    const mod = new Set(frentes.flatMap((f) => (f.modalidadeId ? [f.modalidadeId] : [])));
     const detalhe = `A rodada distribui só ${frentes
       .map((f) => nome(f.especialidadeId ?? f.modalidadeId ?? ''))
       .join(', ')}.`;
     for (const l of naoRecusados()) {
-      const dentro =
-        (l.fila.especialidadeId !== null && esp.has(l.fila.especialidadeId)) ||
-        (l.fila.modalidadeId !== null && mod.has(l.fila.modalidadeId));
-      if (!dentro) recusas.set(l.fila.id, semItem(l.fila.id, 'fora_da_frente', detalhe));
+      if (!frentes.some((f) => exameNaFrente(f, l.fila)))
+        recusas.set(l.fila.id, semItem(l.fila.id, 'fora_da_frente', detalhe));
     }
   }
   const clienteIds = filtro.clienteIds ?? [];

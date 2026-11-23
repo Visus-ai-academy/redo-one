@@ -25,6 +25,7 @@ const filaLida = (lidaEm: Date, total = 3): FilaDoMomento => ({
   roboAtivo: true,
   prioridades: [],
   porFrente: [],
+  grupos: [],
   turnos: [],
   semCatalogo: 0,
   semCliente: 0,

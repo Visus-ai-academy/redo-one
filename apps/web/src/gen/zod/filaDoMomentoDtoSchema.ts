@@ -8,6 +8,7 @@ import { contagemEspecialidadeDtoSchema } from './contagemEspecialidadeDtoSchema
 import { contagemModalidadeDtoSchema } from './contagemModalidadeDtoSchema'
 import { contagemPrioridadeDtoSchema } from './contagemPrioridadeDtoSchema'
 import { frenteDaFilaDtoSchema } from './frenteDaFilaDtoSchema'
+import { grupoDaFilaDtoSchema } from './grupoDaFilaDtoSchema'
 import { medicoEmTurnoDtoSchema } from './medicoEmTurnoDtoSchema'
 import { prioridadeDaFilaDtoSchema } from './prioridadeDaFilaDtoSchema'
 import { turnoDaFilaDtoSchema } from './turnoDaFilaDtoSchema'
@@ -25,7 +26,8 @@ export const filaDoMomentoDtoSchema = z.object({
   habilitados: z.int().describe('Ativos e habilitados no robô.'),
   roboAtivo: z.boolean().describe('Robô ligado em Configurações › Distribuição.'),
   prioridades: z.array(prioridadeDaFilaDtoSchema).describe('Na ordem da operação.'),
-  porFrente: z.array(frenteDaFilaDtoSchema),
+  porFrente: z.array(frenteDaFilaDtoSchema).describe('Especialidades, depois modalidades, e "Sem frente" por último. Somar as linhas pode passar do total (um exame conta em cada frente que o pega).'),
+  grupos: z.array(grupoDaFilaDtoSchema).describe('Os exames pelos eixos do recorte (frentes, segmento, prioridade), cada um uma vez: para estimar a rodada sem contar duas vezes.'),
   turnos: z.array(turnoDaFilaDtoSchema).describe('Turnos de hoje que não acabaram.'),
   porPrioridade: z.array(contagemPrioridadeDtoSchema),
   porEspecialidade: z.array(contagemEspecialidadeDtoSchema),

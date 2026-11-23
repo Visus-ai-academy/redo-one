@@ -15830,6 +15830,14 @@
           "cor"
         ]
       },
+      "TipoFrenteDaFila": {
+        "type": "string",
+        "enum": [
+          "especialidade",
+          "modalidade"
+        ],
+        "description": "Nulo = \"Sem frente\"."
+      },
       "ContagemFrentePrioridadeDto": {
         "type": "object",
         "properties": {
@@ -15899,11 +15907,26 @@
             "nullable": true,
             "description": "Frente da escala; nula = o exame não casa com nenhuma."
           },
+          "tipo": {
+            "nullable": true,
+            "description": "Nulo = \"Sem frente\".",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoFrenteDaFila"
+              }
+            ]
+          },
           "nome": {
             "type": "string"
           },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cor cadastrada da especialidade ou modalidade; nula = sem cor."
+          },
           "exames": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Exames que o recorte pegaria marcando só esta frente; um exame pode contar numa frente de especialidade e numa de modalidade."
           },
           "urgentes": {
             "type": "integer"
@@ -15929,12 +15952,45 @@
         },
         "required": [
           "frenteId",
+          "tipo",
           "nome",
+          "cor",
           "exames",
           "urgentes",
           "primeiroVencimento",
           "porPrioridade",
           "porSegmento"
+        ]
+      },
+      "GrupoDaFilaDto": {
+        "type": "object",
+        "properties": {
+          "frenteIds": {
+            "description": "As frentes que pegam o exame; vazio = sem frente.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "segmentoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "exames": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frenteIds",
+          "segmentoId",
+          "prioridadeOperacaoId",
+          "exames"
         ]
       },
       "TurnoDaFilaDto": {
@@ -16255,9 +16311,17 @@
             }
           },
           "porFrente": {
+            "description": "Especialidades, depois modalidades, e \"Sem frente\" por último. Somar as linhas pode passar do total (um exame conta em cada frente que o pega).",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FrenteDaFilaDto"
+            }
+          },
+          "grupos": {
+            "description": "Os exames pelos eixos do recorte (frentes, segmento, prioridade), cada um uma vez: para estimar a rodada sem contar duas vezes.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrupoDaFilaDto"
             }
           },
           "turnos": {
@@ -16307,6 +16371,7 @@
           "roboAtivo",
           "prioridades",
           "porFrente",
+          "grupos",
           "turnos",
           "porPrioridade",
           "porEspecialidade",

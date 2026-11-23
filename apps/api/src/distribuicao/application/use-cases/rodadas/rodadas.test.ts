@@ -910,6 +910,82 @@ describe('rodada do robô (casos de uso)', () => {
       expect(f.porFrente.find((x) => x.frenteId === 'f-mr')?.porSegmento).toEqual([]);
     });
 
+    it('fila do momento: frente de modalidade conta pela modalidade, como o recorte da rodada', async () => {
+      // TC TORAX → MI + CT; TC CRANIO → sem especialidade, CT; RX → MI + RX; o resto sem catálogo.
+      insumos.catalogo = {
+        ...catalogo,
+        classificar: (e) => ({
+          ...catalogo.classificar(e),
+          ...(e.estudo === 'TC CRANIO' && {
+            exameId: 'ex',
+            especialidadeId: null,
+            modalidadeId: CT,
+          }),
+          ...(e.estudo === 'RX TORAX' && {
+            exameId: 'ex',
+            especialidadeId: MI,
+            modalidadeId: 'mod-rx',
+          }),
+        }),
+      };
+      mobilemed.leitura = {
+        semMedico: [
+          exame({ idExame: 'm1' }),
+          exame({ idExame: 'm2', prioridade: 'Urgência' }),
+          exame({ idExame: 'm3', estudo: 'TC CRANIO' }),
+          exame({ idExame: 'm4', estudo: 'RX TORAX', modalidade: 'CR' }),
+          exame({ idExame: 'm5', estudo: 'ESTUDO SEM CADASTRO' }),
+        ],
+        emMaos: [],
+      };
+      insumos.insumos = {
+        ...insumosBase(),
+        frentes: {
+          'f-mi': { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null },
+          'f-ct': { tipo: 'modalidade', especialidadeId: null, modalidadeId: CT },
+          'f-rx': { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'mod-rx' },
+        },
+        nomes: { [MI]: 'MEDICINA INTERNA', [CT]: 'TC', 'mod-rx': 'RX' },
+        cores: { [MI]: '#3E8E5E', [CT]: '#5A7FB5' },
+      };
+      const f = await casos.filaDoMomento.executar();
+      // O exame de MI em TC conta nas duas frentes (marcar só uma delas já o leva); o total não
+      // soma duas vezes.
+      expect(f.total).toBe(5);
+      expect(f.porFrente.map((x) => [x.frenteId, x.tipo, x.nome, x.cor, x.exames])).toEqual([
+        ['f-mi', 'especialidade', 'MEDICINA INTERNA', '#3E8E5E', 3],
+        ['f-ct', 'modalidade', 'TC', '#5A7FB5', 3],
+        ['f-rx', 'modalidade', 'RX', null, 1],
+        [null, null, 'Sem frente', null, 1],
+      ]);
+      // Os grupos pelos eixos do recorte: cada exame uma vez, com todas as frentes que o pegam.
+      expect(f.grupos).toEqual(
+        expect.arrayContaining([
+          {
+            frenteIds: ['f-ct', 'f-mi'],
+            segmentoId: null,
+            prioridadeOperacaoId: 'op-rot',
+            exames: 1,
+          },
+          {
+            frenteIds: ['f-ct', 'f-mi'],
+            segmentoId: null,
+            prioridadeOperacaoId: 'op-urg',
+            exames: 1,
+          },
+          { frenteIds: ['f-ct'], segmentoId: null, prioridadeOperacaoId: 'op-rot', exames: 1 },
+          {
+            frenteIds: ['f-mi', 'f-rx'],
+            segmentoId: null,
+            prioridadeOperacaoId: 'op-rot',
+            exames: 1,
+          },
+          { frenteIds: [], segmentoId: null, prioridadeOperacaoId: 'op-rot', exames: 1 },
+        ]),
+      );
+      expect(f.grupos.reduce((s, g) => s + g.exames, 0)).toBe(f.total);
+    });
+
     it('fila do momento: vencidos separados dos que vencem na próxima hora', async () => {
       mobilemed.leitura = {
         semMedico: [

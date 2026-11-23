@@ -1,5 +1,6 @@
 import type { FrenteEscala } from '../../../domain/arranjo';
 import type { Barreira } from '../../../domain/motor/medicos-disponiveis';
+import { exameNaFrente } from '../../../domain/motor/rodada';
 import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
 import type { StatusRodada } from '../../../domain/rodada/maquina';
 import type { InsumosGravados, RecolhimentoGravado } from '../../../domain/rodada/proposta';
@@ -178,7 +179,11 @@ export interface SegmentoDaFila extends ContagemFila {
 export interface FrenteDaFila extends ContagemFila {
   /** Frente da escala (`frentes_escala.id`); null = o exame não casa com nenhuma. */
   frenteId: string | null;
+  /** Especialidade ou modalidade; null = "Sem frente". */
+  tipo: FrenteEscala['tipo'] | null;
   nome: string;
+  /** A cor cadastrada da especialidade ou modalidade; null = sem cor. */
+  cor: string | null;
   primeiroVencimento: Date | null;
   porPrioridade: ContagemPorPrioridade[];
   /**
@@ -186,6 +191,14 @@ export interface FrenteDaFila extends ContagemFila {
    * maior para o menor, e os sem segmento por último). Frente de modalidade e "Sem frente": vazio.
    */
   porSegmento: SegmentoDaFila[];
+}
+
+export interface GrupoDaFila {
+  /** As frentes que pegam o exame, em ordem; vazio = sem frente. */
+  frenteIds: string[];
+  segmentoId: string | null;
+  prioridadeOperacaoId: string | null;
+  exames: number;
 }
 
 export interface TurnoDaFila {
@@ -224,7 +237,18 @@ export interface FilaDoMomento {
     /** A cor cadastrada; null = neutra. */
     cor: string | null;
   } & ContagemFila)[];
+  /**
+   * Cada frente com os exames que o recorte de frente da rodada pegaria marcando só ela
+   * (`exameNaFrente`): a de especialidade pela especialidade, a de modalidade pela modalidade. Um
+   * exame pode contar em duas frentes (ex.: MEDICINA INTERNA e TC); somar as linhas passa do total.
+   * "Sem frente" por último, com os que não casam com nenhuma.
+   */
   porFrente: FrenteDaFila[];
+  /**
+   * Os exames agrupados pelos eixos do recorte (as frentes que o pegam, o segmento e a prioridade
+   * da operação), cada exame uma vez: a tela estima a rodada somando estes, sem contar duas vezes.
+   */
+  grupos: GrupoDaFila[];
   /** Turnos de hoje que ainda não acabaram. */
   turnos: TurnoDaFila[];
   semCatalogo: number;
@@ -330,9 +354,8 @@ export class ConsultarFilaDoMomento {
 
     // --- por frente da escala × prioridade da operação ---
     const frentes = Object.entries(insumos.frentes);
-    const frenteDo = (l: (typeof fila)[number]) =>
-      (frentes.find(([, f]) => f.especialidadeId && f.especialidadeId === l.especialidadeId) ??
-        frentes.find(([, f]) => f.modalidadeId && f.modalidadeId === l.modalidadeId))?.[0] ?? null;
+    const frentesDo = (l: (typeof fila)[number]) =>
+      frentes.filter(([, f]) => exameNaFrente(f, l)).map(([id]) => id);
     const somar = (
       c: ContagemFila & { porPrioridade: ContagemPorPrioridade[] },
       l: (typeof fila)[number],
@@ -348,38 +371,52 @@ export class ConsultarFilaDoMomento {
       if (l.urgente) p.urgentes++;
     };
     const porFrente = new Map<string | null, FrenteDaFila>();
+    const grupos = new Map<string, GrupoDaFila>();
     for (const l of fila) {
-      const id = frenteDo(l);
-      const f = insumos.frentes[id ?? ''];
-      const linha = porFrente.get(id) ?? {
-        frenteId: id,
-        nome: f ? nome(f.especialidadeId ?? f.modalidadeId, '') : 'Sem frente',
+      const ids = frentesDo(l).sort();
+      const chaveGrupo = JSON.stringify([ids, l.subespecialidadeId, l.prioridadeOperacaoId]);
+      const grupo = grupos.get(chaveGrupo) ?? {
+        frenteIds: ids,
+        segmentoId: l.subespecialidadeId,
+        prioridadeOperacaoId: l.prioridadeOperacaoId,
         exames: 0,
-        urgentes: 0,
-        primeiroVencimento: null,
-        porPrioridade: [],
-        porSegmento: [],
       };
-      somar(linha, l);
-      linha.primeiroVencimento = menor(linha.primeiroVencimento, l.prazo);
-      // Só a frente de especialidade se quebra por segmento (o da classificação do exame).
-      if (f?.tipo === 'especialidade') {
-        const segId = l.subespecialidadeId;
-        let sg = linha.porSegmento.find((x) => x.segmentoId === segId);
-        if (!sg) {
-          sg = {
-            segmentoId: segId,
-            nome: nome(segId, 'Sem subespecialidade'),
-            cor: cor(segId),
-            exames: 0,
-            urgentes: 0,
-            porPrioridade: [],
-          };
-          linha.porSegmento.push(sg);
+      grupo.exames++;
+      grupos.set(chaveGrupo, grupo);
+      for (const id of ids.length ? ids : [null]) {
+        const f = id ? insumos.frentes[id] : undefined;
+        const linha = porFrente.get(id) ?? {
+          frenteId: id,
+          tipo: f?.tipo ?? null,
+          nome: f ? nome(f.especialidadeId ?? f.modalidadeId, '') : 'Sem frente',
+          cor: f ? cor(f.especialidadeId ?? f.modalidadeId) : null,
+          exames: 0,
+          urgentes: 0,
+          primeiroVencimento: null,
+          porPrioridade: [],
+          porSegmento: [],
+        };
+        somar(linha, l);
+        linha.primeiroVencimento = menor(linha.primeiroVencimento, l.prazo);
+        // Só a frente de especialidade se quebra por segmento (o da classificação do exame).
+        if (f?.tipo === 'especialidade') {
+          const segId = l.subespecialidadeId;
+          let sg = linha.porSegmento.find((x) => x.segmentoId === segId);
+          if (!sg) {
+            sg = {
+              segmentoId: segId,
+              nome: nome(segId, 'Sem subespecialidade'),
+              cor: cor(segId),
+              exames: 0,
+              urgentes: 0,
+              porPrioridade: [],
+            };
+            linha.porSegmento.push(sg);
+          }
+          somar(sg, l);
         }
-        somar(sg, l);
+        porFrente.set(id, linha);
       }
-      porFrente.set(id, linha);
     }
     for (const linha of porFrente.values()) {
       linha.porSegmento.sort(
@@ -445,8 +482,12 @@ export class ConsultarFilaDoMomento {
       roboAtivo: insumos.config.roboAtivo,
       prioridades,
       porFrente: [...porFrente.values()].sort(
-        (a, b) => Number(a.frenteId === null) - Number(b.frenteId === null) || b.exames - a.exames,
+        (a, b) =>
+          Number(a.frenteId === null) - Number(b.frenteId === null) ||
+          Number(a.tipo === 'modalidade') - Number(b.tipo === 'modalidade') ||
+          b.exames - a.exames,
       ),
+      grupos: [...grupos.values()],
       turnos: [...turnos.values()]
         .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
         .map(({ ids: _, ...t }) => t),
