@@ -7,7 +7,8 @@ import { useState } from 'react';
 import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
 import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import { cn } from '../../lib/cn';
-import { juntarNomes, num } from '../../lib/rodada';
+import { turnoDoMedico } from '../../lib/proposta';
+import { num } from '../../lib/rodada';
 import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { CampoBusca } from '../busca/CampoBusca';
@@ -44,12 +45,15 @@ export function MoverExame({
   buscarMedicos,
   onEscolher,
   desabilitado,
+  className,
 }: {
   designacao: DesignacaoDto;
   medicos: readonly MedicoDaRodadaDto[];
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
   onEscolher: (medicoId: string, levarPacote: boolean) => Promise<unknown>;
   desabilitado?: boolean;
+  /** Classes do botão que abre (ex.: `h-7` na linha compacta da proposta). */
+  className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState('');
@@ -67,7 +71,7 @@ export function MoverExame({
     .map((m) => ({
       id: m.medicoId,
       nome: m.nome,
-      detalhe: [juntarNomes(m.turnos), m.frentes.join(', ')].filter(Boolean).join(': '),
+      detalhe: [turnoDoMedico(m, []), m.frentes.join(', ')].filter(Boolean).join(': '),
       elegivel: designacao.elegiveis.includes(m.medicoId),
       depois: m.cargaEmMaos + m.previstas + leva,
       teto: m.capacidade,
@@ -122,7 +126,10 @@ export function MoverExame({
     >
       <Popover.Trigger
         disabled={desabilitado}
-        className={buttonClassName({ variant: 'ghost', className: 'h-8 px-2 text-[13px]' })}
+        className={buttonClassName({
+          variant: 'ghost',
+          className: cn('h-8 px-2 text-[13px]', className),
+        })}
       >
         {naMao ? <UserPlus size={16} aria-hidden /> : <ArrowsLeftRight size={16} aria-hidden />}
         {naMao ? 'Mandar a um médico' : 'Mover'}

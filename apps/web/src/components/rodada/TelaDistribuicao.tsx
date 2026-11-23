@@ -47,7 +47,6 @@ import { Vazio } from './comum';
 import { BotaoLerAgora, FilaCarregando, FilaDoMomento } from './FilaDoMomento';
 import { Historico } from './Historico';
 import { PainelDistribuirAgora } from './PainelDistribuirAgora';
-import { PainelMedico } from './PainelMedico';
 import { Conferencia, type VisaoProposta } from './Proposta';
 
 type Sessao = { acessoTotal: boolean; permissoes: readonly string[] };
@@ -55,7 +54,6 @@ type Sessao = { acessoTotal: boolean; permissoes: readonly string[] };
 export type BuscaDistribuicao = {
   aba?: 'historico';
   distribuir?: 1;
-  medico?: string;
   visao?: 'fora';
   motivo?: string;
   status?: StatusRodadaKey;
@@ -149,8 +147,7 @@ export function TelaDistribuicao({
     enabled: !rodada && viva.isSuccess,
   });
 
-  const abrirMedico = (id: string) => onBusca((a) => ({ ...a, medico: id }));
-  const fecharPainel = () => onBusca((a) => ({ ...a, medico: undefined, distribuir: undefined }));
+  const fecharPainel = () => onBusca((a) => ({ ...a, distribuir: undefined }));
 
   const cabecalho = (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -217,9 +214,8 @@ export function TelaDistribuicao({
             acoes={acoes}
             busca={busca}
             onBusca={onBusca}
-            abrirMedico={abrirMedico}
-            fecharPainel={fecharPainel}
             nomesExtras={nomesDaFila(fila)}
+            coresPrioridade={coresDasPrioridades(fila)}
             onAbrirRodada={onAbrirRodada}
           />
         ) : (
@@ -258,6 +254,14 @@ function Carregando() {
       <Skeleton className="h-72 w-full" />
     </div>
   );
+}
+
+/** A cor de cada prioridade da operação, do retrato da fila (a bolinha na linha do exame). */
+function coresDasPrioridades(fila: RetratoFilaDto['fila'] | undefined) {
+  const cores = new Map<string, string | null>();
+  for (const p of fila?.prioridades ?? [])
+    if (p.prioridadeOperacaoId) cores.set(p.prioridadeOperacaoId, p.cor);
+  return cores;
 }
 
 function nomesDaFila(
@@ -449,9 +453,8 @@ function RodadaViva({
   acoes,
   busca,
   onBusca,
-  abrirMedico,
-  fecharPainel,
   nomesExtras,
+  coresPrioridade,
   onAbrirRodada,
 }: {
   rodada: RodadaDto;
@@ -459,9 +462,8 @@ function RodadaViva({
   acoes: AcoesRodada;
   busca: BuscaDistribuicao;
   onBusca: (mudar: (atual: BuscaDistribuicao) => BuscaDistribuicao, replace?: boolean) => void;
-  abrirMedico: (id: string) => void;
-  fecharPainel: () => void;
   nomesExtras: Map<string, string>;
+  coresPrioridade: ReadonlyMap<string, string | null>;
   onAbrirRodada: (id: string) => void;
 }) {
   const { sucesso } = useAvisos();
@@ -610,56 +612,38 @@ function RodadaViva({
             },
           }
         : undefined;
-      corpo = resumoOuCarregando((r) => {
-        const medicoAberto = busca.medico
-          ? r.medicos.find((m) => m.medicoId === busca.medico)
-          : undefined;
-        return (
-          <>
-            {rodada.avisos.length > 0 && (
-              <div className="flex flex-col gap-2">
-                {rodada.avisos.map((a) => (
-                  <Alerta key={a} tom="info" role="note">
-                    {a}
-                  </Alerta>
-                ))}
-              </div>
-            )}
-            <Conferencia
-              rodada={rodada}
-              resumo={r}
-              visao={(busca.visao ?? 'medicos') as VisaoProposta}
-              onVisao={(v) =>
-                onBusca((a) => ({
-                  ...a,
-                  visao: v === 'fora' ? 'fora' : undefined,
-                  motivo: undefined,
-                }))
-              }
-              motivo={busca.motivo}
-              onMotivo={(m) => onBusca((a) => ({ ...a, motivo: m }))}
-              medicoAberto={busca.medico}
-              onAbrirMedico={abrirMedico}
-              buscarMedicos={buscarMedicos}
-              ajustes={ajustes}
-              ocupado={ocupado}
-            />
-            {medicoAberto && (
-              <PainelMedico
-                key={medicoAberto.medicoId}
-                rodadaId={rodada.id}
-                medico={medicoAberto}
-                medicos={r.medicos}
-                verPaciente={verPaciente}
-                buscarMedicos={buscarMedicos}
-                acoes={ajustes}
-                ocupado={ocupado}
-                onFechar={fecharPainel}
-              />
-            )}
-          </>
-        );
-      });
+      corpo = resumoOuCarregando((r) => (
+        <>
+          {rodada.avisos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {rodada.avisos.map((a) => (
+                <Alerta key={a} tom="info" role="note">
+                  {a}
+                </Alerta>
+              ))}
+            </div>
+          )}
+          <Conferencia
+            rodada={rodada}
+            resumo={r}
+            visao={(busca.visao ?? 'medicos') as VisaoProposta}
+            onVisao={(v) =>
+              onBusca((a) => ({
+                ...a,
+                visao: v === 'fora' ? 'fora' : undefined,
+                motivo: undefined,
+              }))
+            }
+            motivo={busca.motivo}
+            onMotivo={(m) => onBusca((a) => ({ ...a, motivo: m }))}
+            verPaciente={verPaciente}
+            coresPrioridade={coresPrioridade}
+            buscarMedicos={buscarMedicos}
+            ajustes={ajustes}
+            ocupado={ocupado}
+          />
+        </>
+      ));
       break;
     }
     case 'aprovada':

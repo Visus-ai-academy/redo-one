@@ -1,11 +1,11 @@
 import { Button } from '@base-ui/react/button';
-import { ArrowCounterClockwise, CaretRight } from '@phosphor-icons/react';
+import { ArrowCounterClockwise } from '@phosphor-icons/react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { rodadasControllerDesignacoesQueryOptions } from '../../gen/hooks/useRodadasControllerDesignacoes';
+import { rodadasControllerPropostaQueryOptions } from '../../gen/hooks/useRodadasControllerProposta';
 import type { DesignacaoDto } from '../../gen/types/DesignacaoDto';
-import type { MedicoDaRodadaDto } from '../../gen/types/MedicoDaRodadaDto';
 import type { ResumoRodadaDto } from '../../gen/types/ResumoRodadaDto';
 import type { RodadaDto } from '../../gen/types/RodadaDto';
 import { dataHoraCurta } from '../../lib/datas';
@@ -26,16 +26,11 @@ import { DataTable } from '../data-table/DataTable';
 import { EscolhaSegmentada } from '../escala/EscolhaSegmentada';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
-import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Select } from '../select/Select';
-import { Caixa, CargaDoMedico } from './comum';
+import { Skeleton } from '../skeleton/Skeleton';
+import { Caixa } from './comum';
 import { MoverExame } from './MoverExame';
-
-const semAcento = (t: string) =>
-  t
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
+import { PropostaPorFrente } from './PropostaPorFrente';
 
 export type VisaoProposta = 'medicos' | 'fora';
 
@@ -46,22 +41,24 @@ export type ConferenciaProps = {
   onVisao: (v: VisaoProposta) => void;
   motivo: string | undefined;
   onMotivo: (m: string | undefined) => void;
-  medicoAberto: string | undefined;
-  onAbrirMedico: (id: string) => void;
+  /** Pode ver o nome do paciente (`distribuicao.paciente.ver`). */
+  verPaciente: boolean;
+  /** Cor de cada prioridade da operação (do retrato da fila). */
+  coresPrioridade: ReadonlyMap<string, string | null>;
   buscarMedicos: (termo: string) => Promise<OpcaoBusca[]>;
   /** Tirar, mover, mandar na mão e devolver (sem: quem só acompanha). */
   ajustes?: {
+    tirar: (d: DesignacaoDto) => Promise<unknown>;
     mover: (d: DesignacaoDto, medicoId: string, levarPacote: boolean) => Promise<unknown>;
     devolver: (d: DesignacaoDto) => Promise<unknown>;
   };
   ocupado?: boolean;
 };
 
-const coluna = createDataTableColumnHelper<MedicoDaRodadaDto>();
-
 /**
- * A conferência da proposta: os números, por que os outros ficaram de fora, a tabela por médico
- * (abre o painel do médico) e a lista dos que ficaram de fora (dá para mandar na mão).
+ * A conferência da proposta: os números, por que os outros ficaram de fora, a proposta por frente
+ * e médico com os exames de cada um à vista (mover e tirar na linha) e a lista dos que ficaram de
+ * fora (dá para mandar na mão e devolver).
  */
 export function Conferencia(p: ConferenciaProps) {
   const { rodada, resumo } = p;
@@ -149,13 +146,13 @@ export function Conferencia(p: ConferenciaProps) {
           valor={p.visao}
           onMudar={p.onVisao}
           opcoes={[
-            { valor: 'medicos', rotulo: `Por médico (${num(resumo.medicos.length)})` },
+            { valor: 'medicos', rotulo: `Por frente e médico (${num(comExames.length)})` },
             { valor: 'fora', rotulo: `Ficaram de fora (${num(totalDeFora)})` },
           ]}
           className="self-start"
         />
         {p.visao === 'medicos' ? (
-          <PorMedico {...p} />
+          <PorFrente {...p} />
         ) : (
           <FicaramDeFora {...p} motivos={deFora.map((m) => m.motivo)} />
         )}
@@ -164,125 +161,50 @@ export function Conferencia(p: ConferenciaProps) {
   );
 }
 
-function PorMedico({ resumo, medicoAberto, onAbrirMedico }: ConferenciaProps) {
-  const [busca, setBusca] = useState('');
-  const termo = semAcento(busca.trim());
-  const lista = termo
-    ? resumo.medicos.filter((m) => semAcento(m.nome).includes(termo))
-    : resumo.medicos;
-  const pagina = usePaginaLocal(lista, 10);
-  const colunas = useMemo(
-    () => [
-      coluna.accessor('nome', {
-        header: 'Médico',
-        cell: (i) => (
-          <button
-            type="button"
-            onClick={() => onAbrirMedico(i.row.original.medicoId)}
-            className="focus-visible:outline-ring -mx-1 rounded-md px-1 text-left font-medium focus-visible:outline-2"
-          >
-            {i.getValue()}
-          </button>
-        ),
-      }),
-      coluna.accessor((m) => juntarNomes(m.turnos) || 'Fora de turno', {
-        id: 'turno',
-        header: 'Turno',
-        cell: (i) => <span className="text-muted-foreground">{i.getValue()}</span>,
-      }),
-      coluna.accessor((m) => m.frentes.join(', '), {
-        id: 'frentes',
-        header: 'Frentes',
-        cell: (i) => <span className="text-muted-foreground text-[13px]">{i.getValue()}</span>,
-      }),
-      coluna.accessor('previstas', {
-        header: () => <span className="block text-right">Propostos</span>,
-        cell: (i) => <span className="block text-right">{num(i.getValue())}</span>,
-      }),
-      coluna.accessor('urgencias', {
-        header: () => <span className="block text-right">Urgências</span>,
-        cell: (i) => (
-          <span
-            className={
-              i.getValue() > 0
-                ? 'text-destructive block text-right font-semibold'
-                : 'text-subtle-foreground block text-right'
-            }
-          >
-            {num(i.getValue())}
-          </span>
-        ),
-      }),
-      coluna.accessor('pacotes', {
-        header: () => <span className="block text-right">Pacotes</span>,
-        cell: (i) => (
-          <span className="text-muted-foreground block text-right">{num(i.getValue())}</span>
-        ),
-      }),
-      coluna.display({
-        id: 'carga',
-        header: 'Carga depois da rodada',
-        cell: ({ row }) => (
-          <CargaDoMedico
-            cargaEmMaos={row.original.cargaEmMaos}
-            propostos={row.original.previstas}
-            capacidade={row.original.capacidade}
-          />
-        ),
-      }),
-      coluna.display({
-        id: 'abrir',
-        header: () => <span className="sr-only">Abrir</span>,
-        cell: () => <CaretRight size={16} aria-hidden className="text-subtle-foreground" />,
-      }),
-    ],
-    [onAbrirMedico],
-  );
+/** A proposta inteira, agrupada por frente e médico (os exames de cada um já à vista). */
+function PorFrente({
+  rodada,
+  resumo,
+  verPaciente,
+  coresPrioridade,
+  buscarMedicos,
+  ajustes,
+  ocupado,
+}: ConferenciaProps) {
+  const consulta = useQuery({
+    ...rodadasControllerPropostaQueryOptions({ path: { id: rodada.id } }),
+    placeholderData: keepPreviousData,
+  });
+  if (!consulta.data) {
+    return consulta.isError ? (
+      <Alerta tom="erro">
+        Não foi possível carregar a proposta.{' '}
+        <button type="button" className="underline" onClick={() => void consulta.refetch()}>
+          Tentar de novo
+        </button>
+      </Alerta>
+    ) : (
+      <div className="flex flex-col gap-3" aria-busy>
+        <Skeleton className="h-9 w-72" />
+        {[0, 1].map((i) => (
+          <Skeleton key={i} className="h-40 w-full" />
+        ))}
+      </div>
+    );
+  }
   return (
-    <>
-      <CampoBusca
-        rotulo="Buscar médico"
-        placeholder="Buscar médico"
-        valor={busca}
-        onMudar={(v) => {
-          setBusca(v);
-          pagina.irPara(1);
-        }}
-        className="w-full sm:w-64"
-      />
-      <Caixa>
-        <DataTable
-          columns={colunas}
-          data={pagina.itensDaPagina}
-          getRowId={(m) => m.medicoId}
-          selectedRowId={medicoAberto}
-          onRowClick={(m) => onAbrirMedico(m.medicoId)}
-          ocultaveis={medicoAberto ? ['pacotes', 'frentes', 'turno', 'urgencias'] : undefined}
-          semOcultar={!medicoAberto}
-          emptyMessage="Nenhum médico com esse nome nesta rodada."
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t">
-          <span className="text-muted-foreground flex items-center gap-3 px-4 text-xs">
-            <span className="flex items-center gap-1">
-              <span aria-hidden className="bg-muted-foreground inline-block size-2 rounded-full" />
-              Já aberto
-            </span>
-            <span className="flex items-center gap-1">
-              <span aria-hidden className="bg-primary/35 inline-block size-2 rounded-full" />
-              Proposto
-            </span>
-          </span>
-          <div className="flex-1 [&>div]:border-t-0">
-            <Paginacao
-              pagina={pagina.pagina}
-              porPagina={pagina.porPagina}
-              total={pagina.total}
-              onIrPara={pagina.irPara}
-            />
-          </div>
-        </div>
-      </Caixa>
-    </>
+    <PropostaPorFrente
+      rodadaId={rodada.id}
+      itens={consulta.data.itens}
+      medicos={resumo.medicos}
+      incluidos={rodada.recortes.medicosIncluidos}
+      coresPrioridade={coresPrioridade}
+      verPaciente={verPaciente}
+      buscarMedicos={buscarMedicos}
+      acoes={ajustes}
+      ocupado={ocupado}
+      recarregando={consulta.isPlaceholderData || consulta.isFetching}
+    />
   );
 }
 
