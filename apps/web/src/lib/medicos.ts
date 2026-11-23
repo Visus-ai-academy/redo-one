@@ -19,9 +19,10 @@ export function invalidarMedicos(queryClient: QueryClient) {
 }
 
 /** Médicos ativos que casam com o termo, para os campos de busca (ex.: membros da equipe). */
-export async function buscarMedicos(termo: string) {
+export async function buscarMedicos(termo: string, sinal?: AbortSignal) {
   const { itens } = await medicosControllerListar({
     query: { busca: termo, ativo: true, porPagina: 20 },
+    signal: sinal,
   }).unwrap();
   return itens.map((m) => ({
     valor: m.id,

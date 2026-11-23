@@ -1,17 +1,20 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { Abas } from '../../../components/abas/Abas';
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { PainelNaoEspecialidade, PainelSufixo } from '../../../components/catalogo/PaineisDePara';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { LinkDaLinha } from '../../../components/data-table/link-da-linha';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { deParaEspecialidadesControllerAtualizar } from '../../../gen/clients/deParaEspecialidadesControllerAtualizar';
 import { deParaEspecialidadesControllerCriar } from '../../../gen/clients/deParaEspecialidadesControllerCriar';
 import { deParaEspecialidadesControllerExcluir } from '../../../gen/clients/deParaEspecialidadesControllerExcluir';
@@ -72,13 +75,16 @@ const consultas = {
 export const Route = createFileRoute('/_app/configuracoes/de-paras')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'de-para.ver')) return;
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
+    if (cause === 'stay') return;
     await context.queryClient.ensureQueryData(
       consultas[deps.aba ?? 'nao-especialidade'](deps) as never,
     );
   },
-  head: () => ({ meta: [{ title: 'De-paras | One' }] }),
+  head: () => ({ meta: [{ title: 'De-paras · One' }] }),
   component: PaginaDeParas,
 });
 
@@ -110,10 +116,16 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const aba: Aba = busca.aba ?? 'nao-especialidade';
-  const { data } = useSuspenseQuery(
-    consultas[aba](busca) as ReturnType<(typeof consultas)['nao-especialidade']>,
-  );
-  const pagina = data as unknown as {
+  const lista = useQuery({
+    ...(consultas[aba](busca) as ReturnType<(typeof consultas)['nao-especialidade']>),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = (lista.data ?? {
+    itens: [],
+    pagina: 1,
+    porPagina: POR_PAGINA,
+    total: 0,
+  }) as unknown as {
     itens: Item[];
     total: number;
     pagina: number;
@@ -128,7 +140,6 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
 
   const colunas = useMemo(() => {
     switch (aba) {
@@ -137,7 +148,13 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
           cEsp.accessor('origem', {
             header: 'Valor que chega',
             cell: (i) => (
-              <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
+              <LinkDaLinha
+                from={Route.fullPath}
+                to="."
+                search={(a: Busca) => ({ ...a, id: i.row.original.id, novo: undefined })}
+              >
+                {i.getValue()}
+              </LinkDaLinha>
             ),
           }),
           cEsp.accessor('observacoes', {
@@ -151,7 +168,13 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
           cSuf.accessor('sufixo', {
             header: 'Sufixo',
             cell: (i) => (
-              <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
+              <LinkDaLinha
+                from={Route.fullPath}
+                to="."
+                search={(a: Busca) => ({ ...a, id: i.row.original.id, novo: undefined })}
+              >
+                {i.getValue()}
+              </LinkDaLinha>
             ),
           }),
           cSuf.accessor('observacoes', {
@@ -161,7 +184,7 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
           cSuf.accessor('ativo', { header: 'Situação', cell: (i) => situacao(i.getValue()) }),
         ];
     }
-  }, [aba, abrir]);
+  }, [aba]);
 
   const sufixos = aba === 'sufixos';
   // Criar, ver e editar abrem no painel lateral.
@@ -219,7 +242,12 @@ function DeParas({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(i) => i.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'os de-paras', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -277,22 +305,28 @@ function Painel({
     enabled: Boolean(id) && !daPagina,
   });
   const item = (daPagina ?? consulta.data) as Item | undefined;
+  const fase = useFaseDoCarregamento(Boolean(id) && !item);
+  const { sucesso } = useAvisos();
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  if (id && !item)
+  if (id && (!item || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o de-para"
+        voltar={{ to: '/configuracoes/de-paras', rotulo: 'Voltar para De-paras' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
 
   const salvo = async (alvo: string) => {
     await invalidarCatalogo(queryClient);
+    sucesso(id ? 'De-para salvo.' : 'De-para criado.');
     void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
   };
   const excluido = async () => {
     fechar();
+    sucesso('De-para excluído.');
     await invalidarCatalogo(queryClient);
   };
   const comum = {

@@ -1,16 +1,24 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { PainelContratado } from '../../../components/catalogo/PainelContratado';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { LinkDaLinha } from '../../../components/data-table/link-da-linha';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { contratadosControllerAtualizar } from '../../../gen/clients/contratadosControllerAtualizar';
 import { contratadosControllerCriar } from '../../../gen/clients/contratadosControllerCriar';
 import { contratadosControllerExcluir } from '../../../gen/clients/contratadosControllerExcluir';
@@ -45,7 +53,7 @@ const consulta = (busca: Busca) => ({
 export const Route = createFileRoute('/_app/configuracoes/contratados')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'catalogo.ver')) return;
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id)
@@ -53,11 +61,16 @@ export const Route = createFileRoute('/_app/configuracoes/contratados')({
         contratadosControllerObterQueryOptions({ path: { id: deps.id } }),
       );
     await Promise.all([
-      context.queryClient.ensureQueryData(contratadosControllerListarQueryOptions(consulta(deps))),
+      // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à
+      // vista, esmaecida, enquanto isso.
+      cause !== 'stay' &&
+        context.queryClient.ensureQueryData(
+          contratadosControllerListarQueryOptions(consulta(deps)),
+        ),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Contratados | One' }] }),
+  head: () => ({ meta: [{ title: 'Contratados · One' }] }),
   component: PaginaContratados,
 });
 
@@ -78,9 +91,11 @@ const coluna = createDataTableColumnHelper<ContratadoItemDto>();
 function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(
-    contratadosControllerListarQueryOptions(consulta(busca)),
-  );
+  const lista = useQuery({
+    ...contratadosControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -90,17 +105,19 @@ function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((atual) => ({ ...atual, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback(
-    (id: string) => ir((atual) => ({ ...atual, id, novo: undefined })),
-    [ir],
-  );
 
   const colunas = useMemo(
     () => [
       coluna.accessor('razaoSocial', {
         header: 'Razão social',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>{info.getValue()}</BotaoAbrir>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+          >
+            {info.getValue()}
+          </LinkDaLinha>
         ),
       }),
       coluna.accessor('cnpj', {
@@ -127,7 +144,7 @@ function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
           ),
       }),
     ],
-    [abrir],
+    [],
   );
 
   return (
@@ -166,7 +183,16 @@ function Contratados({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(c) => c.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? {
+              erro: lista.error,
+              oQue: 'os contratados',
+              onTentarDeNovo: () => void lista.refetch(),
+            }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -197,12 +223,16 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
     enabled: Boolean(id),
   });
   const contratado = consulta.data;
+  const { sucesso } = useAvisos();
+  const fase = useFaseDoCarregamento(Boolean(id) && !contratado);
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  if (id && !contratado)
+  if (id && (!contratado || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o contratado"
+        voltar={{ to: '/configuracoes/contratados', rotulo: 'Voltar para Contratados' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -218,6 +248,7 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
         if (id) await contratadosControllerAtualizar({ path: { id }, body: dados }).unwrap();
         else alvo = (await contratadosControllerCriar({ body: dados }).unwrap()).id;
         await invalidarCatalogo(queryClient);
+        sucesso(id ? 'Contratado salvo.' : 'Contratado criado.');
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
@@ -225,6 +256,7 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
           ? async () => {
               await contratadosControllerExcluir({ path: { id } }).unwrap();
               fechar();
+              sucesso('Contratado excluído.');
               await invalidarCatalogo(queryClient);
             }
           : undefined

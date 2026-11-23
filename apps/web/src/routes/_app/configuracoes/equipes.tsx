@@ -1,17 +1,20 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { LinkDaLinha } from '../../../components/data-table/link-da-linha';
 import { AbaDistribuicaoEquipe } from '../../../components/distribuicao/AbaDistribuicaoEquipe';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelEquipe } from '../../../components/medicos/PainelEquipe';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { equipesControllerAtualizar } from '../../../gen/clients/equipesControllerAtualizar';
 import { equipesControllerCriar } from '../../../gen/clients/equipesControllerCriar';
 import { equipesControllerExcluir } from '../../../gen/clients/equipesControllerExcluir';
@@ -49,7 +52,7 @@ const membrosDa = (equipeId: string) =>
 export const Route = createFileRoute('/_app/configuracoes/equipes')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'medicos.ver')) return;
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id) {
@@ -58,9 +61,14 @@ export const Route = createFileRoute('/_app/configuracoes/equipes')({
       );
       void context.queryClient.prefetchQuery(membrosDa(deps.id));
     }
-    await context.queryClient.ensureQueryData(equipesControllerListarQueryOptions(consulta(deps)));
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
+    if (cause !== 'stay')
+      await context.queryClient.ensureQueryData(
+        equipesControllerListarQueryOptions(consulta(deps)),
+      );
   },
-  head: () => ({ meta: [{ title: 'Equipes médicas | One' }] }),
+  head: () => ({ meta: [{ title: 'Equipes médicas · One' }] }),
   component: PaginaEquipes,
 });
 
@@ -83,7 +91,12 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
-  const { data: pagina } = useSuspenseQuery(equipesControllerListarQueryOptions(consulta(busca)));
+  const lista = useQuery({
+    ...equipesControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
+  const { sucesso } = useAvisos();
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -93,7 +106,6 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
   const fechar = () => ir((a) => ({ ...a, id: undefined, novo: undefined }));
 
   const colunas = useMemo(
@@ -108,7 +120,13 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
               // Cor cadastrada pelo usuário: é dado, não token do tema.
               style={info.row.original.cor ? { backgroundColor: info.row.original.cor } : undefined}
             />
-            <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>{info.getValue()}</BotaoAbrir>
+            <LinkDaLinha
+              from={Route.fullPath}
+              to="."
+              search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+            >
+              {info.getValue()}
+            </LinkDaLinha>
           </span>
         ),
       }),
@@ -131,7 +149,7 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
           ),
       }),
     ],
-    [abrir],
+    [],
   );
 
   return (
@@ -163,7 +181,12 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'as equipes', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -185,10 +208,12 @@ function Equipes({ permissoes }: { permissoes: PodeNaTela }) {
             onFechar={fechar}
             onSalvo={async (id) => {
               await invalidarMedicos(queryClient);
+              sucesso(busca.id ? 'Equipe salva.' : 'Equipe criada.');
               ir((a) => ({ ...a, novo: undefined, id }), true);
             }}
             onExcluido={async () => {
               fechar();
+              sucesso('Equipe excluída.');
               await invalidarMedicos(queryClient);
             }}
           />
@@ -220,11 +245,14 @@ function PainelDaEquipe({
   const consultaMembros = useQuery({ ...membrosDa(id ?? ''), enabled: Boolean(id) });
   const equipe = consultaEquipe.data;
   const membros = consultaMembros.data;
-  if (id && (!equipe || !membros))
+  const fase = useFaseDoCarregamento(Boolean(id) && (!equipe || !membros));
+  if (id && (!equipe || !membros || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={onFechar}
-        erro={consultaEquipe.isError || consultaMembros.isError}
+        erro={consultaEquipe.error ?? consultaMembros.error ?? undefined}
+        oQue="a equipe"
+        voltar={{ to: '/configuracoes/equipes', rotulo: 'Voltar para Equipes' }}
         onTentarDeNovo={() => {
           void consultaEquipe.refetch();
           void consultaMembros.refetch();

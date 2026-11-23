@@ -1,16 +1,19 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
-import { BotaoAbrir, ListaCadastro } from '../../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../../components/cadastro/ListaCadastro';
 import { PainelItemLista, type RotulosLista } from '../../../components/catalogo/PainelItemLista';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { createDataTableColumnHelper } from '../../../components/data-table/columns';
+import { LinkDaLinha } from '../../../components/data-table/link-da-linha';
 import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { Select } from '../../../components/select/Select';
+import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../../components/toast/use-avisos';
 import { niveisMedicoControllerAtualizar } from '../../../gen/clients/niveisMedicoControllerAtualizar';
 import { niveisMedicoControllerCriar } from '../../../gen/clients/niveisMedicoControllerCriar';
 import { niveisMedicoControllerExcluir } from '../../../gen/clients/niveisMedicoControllerExcluir';
@@ -51,7 +54,7 @@ const consulta = (b: Busca) => ({
 export const Route = createFileRoute('/_app/configuracoes/niveis-medico')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'medicos.ver')) return;
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id)
@@ -59,10 +62,15 @@ export const Route = createFileRoute('/_app/configuracoes/niveis-medico')({
         niveisMedicoControllerObterQueryOptions({ path: { id: deps.id } }),
       );
     await Promise.all([
-      context.queryClient.ensureQueryData(niveisMedicoControllerListarQueryOptions(consulta(deps))),
+      // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à
+      // vista, esmaecida, enquanto isso.
+      cause !== 'stay' &&
+        context.queryClient.ensureQueryData(
+          niveisMedicoControllerListarQueryOptions(consulta(deps)),
+        ),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Níveis dos médicos | One' }] }),
+  head: () => ({ meta: [{ title: 'Níveis dos médicos · One' }] }),
   component: PaginaNiveis,
 });
 
@@ -85,9 +93,12 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
-  const { data: pagina } = useSuspenseQuery(
-    niveisMedicoControllerListarQueryOptions(consulta(busca)),
-  );
+  const lista = useQuery({
+    ...niveisMedicoControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
+  const { sucesso } = useAvisos();
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -97,7 +108,6 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
   const fechar = () => ir((a) => ({ ...a, id: undefined, novo: undefined }));
 
   const colunas = useMemo(
@@ -112,7 +122,13 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
               // Cor cadastrada pelo usuário: é dado, não token do tema.
               style={info.row.original.cor ? { backgroundColor: info.row.original.cor } : undefined}
             />
-            <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>{info.getValue()}</BotaoAbrir>
+            <LinkDaLinha
+              from={Route.fullPath}
+              to="."
+              search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+            >
+              {info.getValue()}
+            </LinkDaLinha>
           </span>
         ),
       }),
@@ -134,7 +150,7 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
           ),
       }),
     ],
-    [abrir],
+    [],
   );
 
   // Criar, ver e editar abrem no painel lateral.
@@ -147,10 +163,12 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
         onFechar={fechar}
         onSalvo={async (id) => {
           await invalidarMedicos(queryClient);
+          sucesso(busca.id ? 'Nível salvo.' : 'Nível criado.');
           ir((a) => ({ ...a, novo: undefined, id }), true);
         }}
         onExcluido={async () => {
           fechar();
+          sucesso('Nível excluído.');
           await invalidarMedicos(queryClient);
         }}
       />
@@ -185,7 +203,12 @@ function Niveis({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(item) => item.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'os níveis', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -221,11 +244,14 @@ function PainelNivel({
     enabled: Boolean(id),
   });
   const item = consulta.data;
-  if (id && !item)
+  const fase = useFaseDoCarregamento(Boolean(id) && !item);
+  if (id && (!item || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={onFechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o nível"
+        voltar={{ to: '/configuracoes/niveis-medico', rotulo: 'Voltar para Níveis' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
