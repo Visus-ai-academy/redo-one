@@ -1,17 +1,25 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
-import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelCliente } from '../../components/catalogo/PainelCliente';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { AbaDistribuicaoCliente } from '../../components/distribuicao/AbaDistribuicaoCliente';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
+import { useFaseDoCarregamento } from '../../components/skeleton/use-fase-do-carregamento';
+import { useAvisos } from '../../components/toast/use-avisos';
 import { clientesControllerAdicionarUnidade } from '../../gen/clients/clientesControllerAdicionarUnidade';
 import { clientesControllerAtualizar } from '../../gen/clients/clientesControllerAtualizar';
 import { clientesControllerCriar } from '../../gen/clients/clientesControllerCriar';
@@ -26,6 +34,7 @@ import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesCon
 import type { ClienteResumoDto } from '../../gen/types/ClienteResumoDto';
 import { invalidarCatalogo } from '../../lib/catalogo';
 import { formatarCnpj } from '../../lib/documentos';
+import { numero } from '../../lib/formato';
 import { type PodeNaTela, pode, podeNaTela } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
@@ -53,19 +62,22 @@ const consulta = (b: Busca) => ({
 export const Route = createFileRoute('/_app/clientes')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'clientes.ver')) return;
     // O item vem depois: o painel abre na hora, com o skeleton, enquanto ele carrega.
     if (deps.id)
       void context.queryClient.prefetchQuery(
         clientesControllerObterQueryOptions({ path: { id: deps.id } }),
       );
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
     await Promise.all([
-      context.queryClient.ensureQueryData(clientesControllerListarQueryOptions(consulta(deps))),
+      cause !== 'stay' &&
+        context.queryClient.ensureQueryData(clientesControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Clientes | One' }] }),
+  head: () => ({ meta: [{ title: 'Clientes · One' }] }),
   component: PaginaClientes,
 });
 
@@ -82,7 +94,11 @@ const coluna = createDataTableColumnHelper<ClienteResumoDto>();
 function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(clientesControllerListarQueryOptions(consulta(busca)));
+  const lista = useQuery({
+    ...clientesControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
 
   const ir = useCallback(
@@ -93,14 +109,17 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
 
   const colunas = useMemo(
     () => [
       coluna.accessor('nome', {
         header: 'Cliente',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+          >
             <span className="flex flex-col leading-snug">
               <span>{info.getValue()}</span>
               {info.row.original.unificadoEm ? (
@@ -115,7 +134,7 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
                 )
               )}
             </span>
-          </BotaoAbrir>
+          </LinkDaLinha>
         ),
       }),
       coluna.accessor('cnpj', {
@@ -128,7 +147,7 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
       }),
       coluna.accessor('totalAliases', {
         header: () => <span className="block text-right">Apelidos</span>,
-        cell: (info) => <span className="block text-right">{info.getValue()}</span>,
+        cell: (info) => <span className="block text-right">{numero(info.getValue())}</span>,
       }),
       coluna.accessor('ativo', {
         header: 'Situação',
@@ -146,7 +165,7 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
         ),
       }),
     ],
-    [abrir],
+    [],
   );
 
   return (
@@ -192,7 +211,12 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(c) => c.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'os clientes', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -238,12 +262,16 @@ function Painel({
     enabled: Boolean(id),
   });
   const cliente = consulta.data;
+  const avisos = useAvisos();
+  const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  if (id && !cliente)
+  if (id && (!cliente || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o cliente"
+        voltar={{ to: '/clientes', rotulo: 'Voltar para Clientes' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -271,6 +299,7 @@ function Painel({
         if (id) await clientesControllerAtualizar({ path: { id }, body }).unwrap();
         else alvo = (await clientesControllerCriar({ body }).unwrap()).id;
         await invalidarCatalogo(queryClient);
+        avisos.sucesso(id ? 'Cliente salvo.' : 'Cliente criado.');
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
@@ -278,6 +307,7 @@ function Painel({
           ? async () => {
               await clientesControllerExcluir({ path: { id } }).unwrap();
               fechar();
+              avisos.sucesso('Cliente excluído.');
               await invalidarCatalogo(queryClient);
             }
           : undefined
@@ -286,11 +316,29 @@ function Painel({
         if (!id) return;
         await clientesControllerCriarAlias({ path: { id }, body }).unwrap();
         await invalidarCatalogo(queryClient);
+        avisos.sucesso('Apelido adicionado.');
       }}
       onExcluirApelido={async (aliasId) => {
         if (!id) return;
+        const apelido = cliente?.aliases.find((a) => a.id === aliasId);
         await clientesControllerExcluirAlias({ path: { id, aliasId } }).unwrap();
         await invalidarCatalogo(queryClient);
+        avisos.sucesso('Apelido removido.', {
+          acao: apelido && {
+            rotulo: 'Desfazer',
+            onClick: async () => {
+              await clientesControllerCriarAlias({
+                path: { id },
+                body: {
+                  tipo: apelido.tipo,
+                  padrao: apelido.padrao,
+                  observacoes: apelido.observacoes,
+                },
+              }).unwrap();
+              await invalidarCatalogo(queryClient);
+            },
+          },
+        });
       }}
       unificacao={
         id && cliente
