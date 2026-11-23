@@ -109,8 +109,18 @@ function SelectSimples({
         className={cn(classeGatilho, className)}
       >
         <BaseSelect.Value
-          className={cn('truncate', mostrandoPlaceholder && 'text-subtle-foreground')}
-        />
+          className={cn(
+            'flex min-w-0 items-center gap-2',
+            mostrandoPlaceholder && 'text-subtle-foreground',
+          )}
+        >
+          {(valor: string | null) => (
+            <RotuloComCor
+              opcao={opcoes.find((opcao) => opcao.valor === valor)}
+              rotulo={rotulos[valor ?? ''] ?? ''}
+            />
+          )}
+        </BaseSelect.Value>
         <BaseSelect.Icon className="text-muted-foreground flex flex-none">
           <CaretDown size={16} aria-hidden />
         </BaseSelect.Icon>
@@ -189,11 +199,15 @@ function SelectComBusca({
         className={cn(classeGatilho, className)}
       >
         <Combobox.Value>
-          {(opcao: OpcaoSelect | null) => (
-            <span className={cn('truncate', !opcao && 'text-subtle-foreground')}>
-              {opcao?.rotulo ?? placeholder}
-            </span>
-          )}
+          {(opcao: OpcaoSelect | null) =>
+            opcao ? (
+              <span className="flex min-w-0 items-center gap-2">
+                <RotuloComCor opcao={opcao} rotulo={opcao.rotulo} />
+              </span>
+            ) : (
+              <span className="text-subtle-foreground truncate">{placeholder}</span>
+            )
+          }
         </Combobox.Value>
         <Combobox.Icon className="text-muted-foreground flex flex-none">
           <CaretDown size={16} aria-hidden />
@@ -244,6 +258,16 @@ function SelectComBusca({
         </Combobox.Positioner>
       </Combobox.Portal>
     </Combobox.Root>
+  );
+}
+
+/** No gatilho: a bolinha da cor (se a opção tem a chave) e o nome. */
+function RotuloComCor({ opcao, rotulo }: { opcao: OpcaoSelect | undefined; rotulo: string }) {
+  return (
+    <>
+      {opcao && 'cor' in opcao && <BolinhaCor cor={opcao.cor ?? null} />}
+      <span className="truncate">{rotulo}</span>
+    </>
   );
 }
 

@@ -2,7 +2,7 @@ import { Combobox } from '@base-ui/react/combobox';
 import { Field } from '@base-ui/react/field';
 import { Select } from '@base-ui/react/select';
 import { CaretDown, Check, MagnifyingGlass } from '@phosphor-icons/react';
-import { type ReactNode, useId, useState } from 'react';
+import { Fragment, type ReactNode, useId, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
@@ -94,10 +94,9 @@ export function SelecaoMultiplaField({
   // Inativa só entra na lista se já estiver marcada.
   const visiveis = opcoes.filter((o) => !o.inativa || marcados.includes(o.valor));
   // Na ordem da lista, não na dos ids salvos (a API devolve em ordem própria).
-  const resumo = resumir(
-    visiveis.filter((o) => marcados.includes(o.valor)).map(nomeDa),
-    placeholder,
-  );
+  const marcadas = visiveis.filter((o) => marcados.includes(o.valor));
+  const resumo = resumir(marcadas.map(nomeDa), placeholder);
+  const resumoNoGatilho = <ResumoComCor marcadas={marcadas} placeholder={placeholder} />;
   const mudar = (valores: string[]) => {
     field.handleChange(valores);
     field.handleBlur();
@@ -126,7 +125,7 @@ export function SelecaoMultiplaField({
         <ComBusca
           opcoes={visiveis}
           marcados={marcados}
-          resumo={resumo}
+          resumo={resumoNoGatilho}
           vazio={marcados.length === 0}
           invalid={invalid}
           required={required}
@@ -137,7 +136,7 @@ export function SelecaoMultiplaField({
         <Simples
           opcoes={visiveis}
           marcados={marcados}
-          resumo={resumo}
+          resumo={resumoNoGatilho}
           vazio={marcados.length === 0}
           invalid={invalid}
           required={required}
@@ -158,7 +157,7 @@ export function SelecaoMultiplaField({
 type ListaProps = {
   opcoes: OpcaoMultipla[];
   marcados: string[];
-  resumo: string;
+  resumo: ReactNode;
   vazio: boolean;
   invalid: boolean;
   required: boolean;
@@ -308,6 +307,32 @@ function ComBusca({
         </Combobox.Positioner>
       </Combobox.Portal>
     </Combobox.Root>
+  );
+}
+
+/** O resumo do gatilho ("NEURO, MAMA +2") com a bolinha da cor antes de cada nome que a tem. */
+function ResumoComCor({
+  marcadas,
+  placeholder,
+}: {
+  marcadas: OpcaoMultipla[];
+  placeholder: string;
+}) {
+  if (!marcadas.some((o) => 'cor' in o)) return resumir(marcadas.map(nomeDa), placeholder);
+  const primeiras = marcadas.slice(0, 2);
+  return (
+    <>
+      {primeiras.map((opcao, i) => (
+        <Fragment key={opcao.valor}>
+          {i > 0 && ', '}
+          {'cor' in opcao && (
+            <BolinhaCor cor={opcao.cor ?? null} className="mr-1.5 inline-block align-middle" />
+          )}
+          {nomeDa(opcao)}
+        </Fragment>
+      ))}
+      {marcadas.length > 2 && ` +${marcadas.length - 2}`}
+    </>
   );
 }
 

@@ -55,11 +55,19 @@ export function FiltroMultiplo({
   onMudar,
   className,
 }: FiltroMultiploProps) {
-  const nomes = new Map(opcoes.map((o) => [o.valor, o.rotulo]));
+  const porValor = new Map(opcoes.map((o) => [o.valor, o]));
   const resumo = (marcados: string[]) => {
     if (marcados.length === 0) return todos;
-    const primeiro = nomes.get(marcados[0] as string) ?? '';
-    return marcados.length > 1 ? `${primeiro} +${marcados.length - 1}` : primeiro;
+    const primeira = porValor.get(marcados[0] as string);
+    const nome = primeira?.rotulo ?? '';
+    return (
+      <>
+        {primeira && 'cor' in primeira && (
+          <BolinhaCor cor={primeira.cor ?? null} className="mr-1.5 inline-block align-middle" />
+        )}
+        {marcados.length > 1 ? `${nome} +${marcados.length - 1}` : nome}
+      </>
+    );
   };
 
   return (

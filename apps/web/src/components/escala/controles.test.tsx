@@ -60,6 +60,30 @@ describe('FiltroMultiplo', () => {
     expect(screen.getByRole('combobox', { name: 'Frentes' })).toHaveTextContent('TC Neuro +1');
   });
 
+  it('no gatilho, a bolinha da cor da primeira marcada; "Todas" sem bolinha', () => {
+    const gatilho = () => screen.getByRole('combobox', { name: 'Frentes' });
+    const { rerender } = render(
+      <FiltroMultiplo
+        rotulo="Frentes"
+        todos="Todas"
+        opcoes={opcoes}
+        valor={[]}
+        onMudar={vi.fn()}
+      />,
+    );
+    expect(gatilho().querySelector('[data-cor]')).not.toBeInTheDocument();
+    rerender(
+      <FiltroMultiplo
+        rotulo="Frentes"
+        todos="Todas"
+        opcoes={opcoes}
+        valor={['a', 'b']}
+        onMudar={vi.fn()}
+      />,
+    );
+    expect(gatilho().querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#4E8C88' });
+  });
+
   it('marca opções', async () => {
     const onMudar = vi.fn();
     render(

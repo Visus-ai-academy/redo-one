@@ -166,6 +166,26 @@ describe('SelecaoMultiplaField', () => {
     expect(screen.queryByRole('combobox', { name: 'Especialidades' })).not.toBeInTheDocument();
   });
 
+  it('no gatilho, a bolinha da cor antes de cada nome do resumo', () => {
+    const opcoes: OpcaoMultipla[] = [
+      { valor: 'neuro', rotulo: 'NEURO', cor: '#4E8C88' },
+      { valor: 'mama', rotulo: 'MAMA', cor: '#8A4A4A' },
+      { valor: 'tc', rotulo: 'TC', cor: '#4A5A8A' },
+    ];
+    render(<Formulario opcoes={opcoes} inicial={['neuro', 'mama', 'tc']} onSubmit={vi.fn()} />);
+    expect(campo()).toHaveTextContent('NEURO, MAMA +1');
+    expect(
+      [...campo().querySelectorAll('[data-cor]')].map(
+        (b) => (b as HTMLElement).style.backgroundColor,
+      ),
+    ).toEqual(['rgb(78, 140, 136)', 'rgb(138, 74, 74)']);
+  });
+
+  it('sem cor nas opções, o gatilho não tem bolinha', () => {
+    render(<Formulario inicial={[POUCAS[0]?.valor ?? '']} onSubmit={vi.fn()} />);
+    expect(campo().querySelector('[data-cor]')).not.toBeInTheDocument();
+  });
+
   it('agrupa por subtítulo e mostra a cor; com busca, esconde o grupo vazio', async () => {
     const poucas: OpcaoMultipla[] = [
       { valor: 'neuro', rotulo: 'NEURO', grupo: 'Especialidades', cor: '#4E8C88' },

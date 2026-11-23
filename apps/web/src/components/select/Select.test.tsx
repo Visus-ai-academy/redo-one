@@ -173,6 +173,31 @@ describe('Select', () => {
       );
     });
 
+    it('mostra a bolinha da cor da opção escolhida no gatilho, nas duas listas', () => {
+      const comTodas = [{ valor: '', rotulo: 'Todas' }, ...frentes];
+      const { rerender } = render(
+        <Select aria-label="Frente" value="neuro" onValueChange={vi.fn()} opcoes={comTodas} />,
+      );
+      const gatilho = () => screen.getByRole('combobox', { name: 'Frente' });
+      expect(gatilho()).toHaveTextContent('NEURO');
+      expect(gatilho().querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#4E8C88' });
+
+      rerender(<Select aria-label="Frente" value="" onValueChange={vi.fn()} opcoes={comTodas} />);
+      expect(gatilho()).toHaveTextContent('Todas');
+      expect(gatilho().querySelector('[data-cor]')).not.toBeInTheDocument();
+
+      const muitas = [
+        ...comTodas,
+        ...['A1', 'A2', 'A3', 'A4', 'A5'].map((n) => ({ valor: n, rotulo: n })),
+      ];
+      rerender(<Select aria-label="Frente" value="tc" onValueChange={vi.fn()} opcoes={muitas} />);
+      expect(gatilho()).toHaveTextContent('TC');
+      expect(gatilho().querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#8A4A4A' });
+
+      rerender(<Select aria-label="Frente" value="A1" onValueChange={vi.fn()} opcoes={muitas} />);
+      expect(gatilho().querySelector('[data-cor]')).not.toBeInTheDocument();
+    });
+
     it('com busca: filtra dentro dos grupos e some o subtítulo de grupo vazio', async () => {
       const muitas = [
         ...['A1', 'A2', 'A3', 'A4', 'A5'].map((n) => ({
