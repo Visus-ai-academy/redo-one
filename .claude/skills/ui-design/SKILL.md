@@ -132,7 +132,7 @@ Responda na ordem; a primeira resposta "sim" decide.
 **O painel lateral sempre fica por cima** (decidido em 23/11/2026)
 
 - Nunca encolhe nem empurra a tela: o layout de trás fica exatamente como estava, em toda tela (lista, grade, calendário, quadro).
-- O resto da tela ganha um desfoque bem discreto (só para tirar o foco dela, sem escurecer) e deixa de ser clicável: **clicar fora fecha o painel**, assim como X, Esc e arrastar. Com formulário alterado, qualquer forma de fechar pergunta "Descartar as alterações?".
+- O resto da tela ganha um desfoque bem discreto e um escurecimento leve (só para tirar o foco dela) e deixa de ser clicável: **clicar fora fecha o painel**, assim como X, Esc e arrastar. Com formulário alterado, qualquer forma de fechar pergunta "Descartar as alterações?".
 - O foco fica preso no painel enquanto ele está aberto (modal) e volta para o que o abriu ao fechar.
 - Trocar de item é fechar e abrir outro (dois cliques).
 
