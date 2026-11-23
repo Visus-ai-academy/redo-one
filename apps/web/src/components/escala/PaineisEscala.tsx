@@ -137,8 +137,9 @@ function PlantaoAberto({
       onCobertura={() => onAbrir({ tipo: 'cobertura', ocorrencia: o })}
       onRemover={async () => {
         await alocacoesControllerRemover({ path: { id: o.alocacaoId } }).unwrap();
-        await depois(o.coberturaDe ? 'Cobertura removida.' : 'Alocação removida.');
+        // Fecha antes de recarregar a semana: o plantão some dela e o painel não tem o que mostrar.
         fechar();
+        await depois(o.coberturaDe ? 'Cobertura removida.' : 'Alocação removida.');
       }}
       onAjustar={async (produtividade, observacoes) => {
         await alocacoesControllerDefinirAjuste({

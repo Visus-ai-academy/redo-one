@@ -18,6 +18,8 @@ import {
   TelaEscala,
 } from '../../../components/escala/TelaEscala';
 import { SemPermissao } from '../../../components/estado/estados';
+import { PainelCarregando } from '../../../components/painel/PainelCarregando';
+import { PainelLateral } from '../../../components/painel/PainelLateral';
 import { ajustesDiaControllerListarQueryOptions } from '../../../gen/hooks/useAjustesDiaControllerListar';
 import { ausenciasControllerListarQueryOptions } from '../../../gen/hooks/useAusenciasControllerListar';
 import { classificacoesEscalaControllerListarQueryOptions } from '../../../gen/hooks/useClassificacoesEscalaControllerListar';
@@ -47,6 +49,12 @@ const buscaSchema = z.object({
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   /** Sáb e dom à mostra mesmo vazios. */
   fimDeSemana: z.literal(1).optional().catch(undefined),
+  /** Plantão aberto no painel: `<alocacaoId>_<AAAA-MM-DD>`. */
+  plantao: z
+    .string()
+    .regex(/^[0-9a-f-]{36}_\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .catch(undefined),
 });
 type Busca = z.infer<typeof buscaSchema>;
 
@@ -100,8 +108,9 @@ function consultaAusencias(busca: Busca, hoje: string, podeVerAusencias: boolean
 
 export const Route = createFileRoute('/_app/escala/')({
   validateSearch: buscaSchema,
-  // A busca por nome e o agrupamento só mudam a tela, não a consulta.
-  loaderDeps: ({ search: { busca: _busca, agrupar: _agrupar, ...resto } }) => resto,
+  // A busca por nome, o agrupamento e o plantão aberto só mudam a tela, não a consulta.
+  loaderDeps: ({ search: { busca: _busca, agrupar: _agrupar, plantao: _plantao, ...resto } }) =>
+    resto,
   loader: async ({ context, deps: pedido, cause }) => {
     if (!pode(context.sessao, 'escala.ver')) return;
     const { queryClient } = context;
@@ -129,6 +138,33 @@ export const Route = createFileRoute('/_app/escala/')({
   head: () => ({ meta: [{ title: 'Escala | One' }] }),
   component: Pagina,
 });
+
+/** O plantão na URL: `<alocacaoId>_<AAAA-MM-DD>`. */
+const chaveNaUrl = (o: { alocacaoId: string; data: string }) => `${o.alocacaoId}_${o.data}`;
+
+/** O plantão do link ainda carregando, ou que não está na semana (removido, outra semana). */
+function PlantaoForaDaTela({
+  carregando,
+  erro,
+  onTentarDeNovo,
+  onFechar,
+}: {
+  carregando: boolean;
+  erro: boolean;
+  onTentarDeNovo: () => void;
+  onFechar: () => void;
+}) {
+  if (carregando || erro) {
+    return <PainelCarregando onFechar={onFechar} erro={erro} onTentarDeNovo={onTentarDeNovo} />;
+  }
+  return (
+    <PainelLateral titulo="Plantão não encontrado" onFechar={onFechar}>
+      <p className="text-muted-foreground p-4">
+        Ele pode ter sido removido ou não estar mais nesta semana. Feche e procure na escala.
+      </p>
+    </PainelLateral>
+  );
+}
 
 function Pagina() {
   const { sessao } = Route.useRouteContext();
@@ -231,8 +267,8 @@ function Escala() {
     (novos: Partial<FiltrosEscala>) =>
       void navigate({
         search: (atual) => {
-          // Outra semana, modo ou busca volta à primeira página das ausências.
-          const proxima = { ...atual, pagina: undefined, ...novos };
+          // Outra semana, modo ou busca volta à primeira página das ausências e fecha o plantão.
+          const proxima = { ...atual, pagina: undefined, plantao: undefined, ...novos };
           // O padrão não vai para a URL.
           if (proxima.modo === 'semana') proxima.modo = undefined;
           if (proxima.agrupar === 'frente') proxima.agrupar = undefined;
@@ -243,18 +279,27 @@ function Escala() {
     [navigate],
   );
 
-  // Depois de salvar, o plantão aberto mostra os dados novos (ajuste do dia, cobertura).
+  // O plantão aberto mora na URL (recarregar ou mandar o link reabre); vem dos dados da semana,
+  // então depois de salvar ele já mostra o que mudou (ajuste do dia, cobertura).
+  const plantaoAberto = busca.plantao
+    ? ocorrencias.data?.ocorrencias.find((o) => chaveNaUrl(o) === busca.plantao)
+    : undefined;
+  const carregandoPlantao =
+    Boolean(busca.plantao) && !plantaoAberto && (!ocorrencias.data || ocorrencias.isFetching);
   const painelAtual: PainelAberto | null =
-    painel?.tipo === 'plantao'
-      ? {
-          tipo: 'plantao',
-          ocorrencia:
-            ocorrencias.data?.ocorrencias.find(
-              (o) =>
-                o.alocacaoId === painel.ocorrencia.alocacaoId && o.data === painel.ocorrencia.data,
-            ) ?? painel.ocorrencia,
-        }
-      : painel;
+    painel ?? (plantaoAberto ? { tipo: 'plantao', ocorrencia: plantaoAberto } : null);
+
+  const abrirPainel = (novo: PainelAberto | null) => {
+    if (novo?.tipo === 'plantao') {
+      setPainel(null);
+      void navigate({ search: (a) => ({ ...a, plantao: chaveNaUrl(novo.ocorrencia) }) });
+      return;
+    }
+    setPainel(novo);
+    if (busca.plantao) {
+      void navigate({ search: (a) => ({ ...a, plantao: undefined }), replace: Boolean(novo) });
+    }
+  };
 
   return (
     <>
@@ -279,7 +324,7 @@ function Escala() {
         avisos={avisos}
         onDispensarAvisos={() => setAvisos([])}
         onMudar={mudar}
-        onAbrirPlantao={(ocorrencia) => setPainel({ tipo: 'plantao', ocorrencia })}
+        onAbrirPlantao={(ocorrencia) => abrirPainel({ tipo: 'plantao', ocorrencia })}
         onAlocar={(lugar) => setPainel({ tipo: 'alocar', inicial: lugar })}
         onMontarEscala={() =>
           busca.medicoId &&
@@ -296,8 +341,16 @@ function Escala() {
           conflitos={ocorrencias.data?.conflitos ?? []}
           permissoes={permissoes}
           podeDefinirAusencia={pode(sessao, 'ausencias.criar')}
-          onAbrir={setPainel}
+          onAbrir={abrirPainel}
           onAvisos={setAvisos}
+        />
+      )}
+      {!painelAtual && busca.plantao && (
+        <PlantaoForaDaTela
+          carregando={carregandoPlantao}
+          erro={ocorrencias.isError}
+          onTentarDeNovo={() => void ocorrencias.refetch()}
+          onFechar={() => abrirPainel(null)}
         />
       )}
     </>

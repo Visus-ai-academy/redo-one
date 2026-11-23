@@ -103,4 +103,13 @@ describe('busca da escala na URL', () => {
     expect(validar({ frenteIds: 'nao-e-uuid' }).frenteIds).toBeUndefined();
     expect(validar({ frenteIds: [] }).frenteIds).toBeUndefined();
   });
+
+  it('o plantão aberto fica na URL (alocação e dia), sem refazer a busca da semana', () => {
+    expect(validar({ plantao: `${ID}_2026-12-09` }).plantao).toBe(`${ID}_2026-12-09`);
+    expect(validar({ plantao: 'qualquer' }).plantao).toBeUndefined();
+    const deps = (Route.options.loaderDeps as (o: unknown) => Record<string, unknown>)({
+      search: { data: '2026-12-09', plantao: `${ID}_2026-12-09` },
+    });
+    expect(deps).not.toHaveProperty('plantao');
+  });
 });
