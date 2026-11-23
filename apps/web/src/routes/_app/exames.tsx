@@ -1,19 +1,26 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { Abas } from '../../components/abas/Abas';
-import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelExame } from '../../components/catalogo/PainelExame';
 import { PainelExameForaPadrao } from '../../components/catalogo/PainelExameForaPadrao';
 import { PainelQuebra } from '../../components/catalogo/PainelQuebra';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
+import { useFaseDoCarregamento } from '../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../components/toast/use-avisos';
 import { deParaValoresExameControllerAtualizar } from '../../gen/clients/deParaValoresExameControllerAtualizar';
 import { deParaValoresExameControllerCriar } from '../../gen/clients/deParaValoresExameControllerCriar';
@@ -44,6 +51,7 @@ import {
   subespecialidadeQueFica,
   subespecialidadesDaEspecialidade,
 } from '../../lib/catalogo';
+import { numero } from '../../lib/formato';
 import { type PodeNaTela, pode, podeNaTela } from '../../lib/permissoes';
 
 const POR_PAGINA = 25;
@@ -102,10 +110,13 @@ const consultaQuebras = (b: Busca) =>
 export const Route = createFileRoute('/_app/exames')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'exames.ver')) return;
+    // Na própria tela (filtro, página, painel), a lista busca sozinha e deixa a de antes à vista,
+    // esmaecida, enquanto isso.
+    const esperar = cause !== 'stay';
     if (deps.aba === 'fora-do-padrao') {
-      await context.queryClient.ensureQueryData(consultaForaPadrao(deps));
+      if (esperar) await context.queryClient.ensureQueryData(consultaForaPadrao(deps));
       return;
     }
     if (deps.aba === 'quebras') {
@@ -114,7 +125,7 @@ export const Route = createFileRoute('/_app/exames')({
           quebrasControllerObterQueryOptions({ path: { id: deps.id } }),
         );
       await Promise.all([
-        context.queryClient.ensureQueryData(consultaQuebras(deps)),
+        esperar && context.queryClient.ensureQueryData(consultaQuebras(deps)),
         context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
       ]);
       return;
@@ -125,11 +136,12 @@ export const Route = createFileRoute('/_app/exames')({
         examesControllerObterQueryOptions({ path: { id: deps.id } }),
       );
     await Promise.all([
-      context.queryClient.ensureQueryData(examesControllerListarQueryOptions(consulta(deps))),
+      esperar &&
+        context.queryClient.ensureQueryData(examesControllerListarQueryOptions(consulta(deps))),
       context.queryClient.ensureQueryData(opcoesControllerListasQueryOptions()),
     ]);
   },
-  head: () => ({ meta: [{ title: 'Exames | One' }] }),
+  head: () => ({ meta: [{ title: 'Exames · One' }] }),
   component: PaginaExames,
 });
 
@@ -164,7 +176,11 @@ const nome = (ref: { nome: string } | null) => ref?.nome ?? '—';
 function Exames({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(examesControllerListarQueryOptions(consulta(busca)));
+  const lista = useQuery({
+    ...examesControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
+  });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
 
   const ir = useCallback(
@@ -175,14 +191,17 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
 
   const colunas = useMemo(
     () => [
       coluna.accessor('nome', {
         header: 'Exame',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+          >
             <span className="flex flex-col leading-snug">
               <span>{info.getValue()}</span>
               {info.row.original.codigo && (
@@ -191,7 +210,7 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
                 </span>
               )}
             </span>
-          </BotaoAbrir>
+          </LinkDaLinha>
         ),
       }),
       coluna.accessor((e) => nome(e.modalidade), { id: 'modalidade', header: 'Modalidade' }),
@@ -220,7 +239,7 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
         ),
       }),
     ],
-    [abrir],
+    [],
   );
 
   const temFiltro = Boolean(
@@ -299,7 +318,12 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(e) => e.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'os exames', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -329,8 +353,8 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
   );
 }
 
-const buscarExames = async (termo: string) => {
-  const exames = await opcoesControllerExames({ query: { busca: termo } }).unwrap();
+const buscarExames = async (termo: string, sinal?: AbortSignal) => {
+  const exames = await opcoesControllerExames({ query: { busca: termo }, signal: sinal }).unwrap();
   return exames.map((e) => ({ valor: e.id, rotulo: e.nome, detalhe: e.modalidade }));
 };
 
@@ -347,12 +371,15 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
     enabled: Boolean(id),
   });
   const exame = consulta.data;
+  const fase = useFaseDoCarregamento(Boolean(id) && !exame);
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  if (id && !exame)
+  if (id && (!exame || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o exame"
+        voltar={{ to: '/exames', rotulo: 'Voltar para Exames' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -370,6 +397,7 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
         if (id) await examesControllerAtualizar({ path: { id }, body }).unwrap();
         else alvo = (await examesControllerCriar({ body }).unwrap()).id;
         await invalidarCatalogo(queryClient);
+        sucesso(id ? 'Exame salvo.' : 'Exame criado.');
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onSalvarSubespecialidade={
@@ -389,6 +417,7 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
           ? async () => {
               await examesControllerExcluir({ path: { id } }).unwrap();
               fechar();
+              sucesso('Exame excluído.');
               await invalidarCatalogo(queryClient);
             }
           : undefined
@@ -407,13 +436,13 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
 }
 
 const cFora = createDataTableColumnHelper<DeParaValorItemDto>();
-const numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
 
 /** Estudos que chegam fora do padrão do cadastro, com quanto valem e o exame padronizado ligado. */
 function ForaDoPadrao({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(consultaForaPadrao(busca));
+  const lista = useQuery({ ...consultaForaPadrao(busca), placeholderData: keepPreviousData });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -423,20 +452,27 @@ function ForaDoPadrao({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
 
+  // A coluna inteira com a mesma quantidade de casas: 2 se algum vale fração, senão nenhuma.
+  const casasVale = pagina.itens.some((i) => !Number.isInteger(i.valores)) ? 2 : 0;
   const colunas = useMemo(
     () => [
       cFora.accessor('estudoDescricao', {
         header: 'Descrição do estudo',
         cell: (i) => (
-          <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>{i.getValue()}</BotaoAbrir>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: i.row.original.id, novo: undefined })}
+          >
+            {i.getValue()}
+          </LinkDaLinha>
         ),
       }),
       cFora.accessor('valores', {
         header: () => <span className="block text-right">Vale</span>,
         cell: (i) => (
-          <span className="block text-right tabular-nums">{numero.format(i.getValue())}</span>
+          <span className="block text-right tabular-nums">{numero(i.getValue(), casasVale)}</span>
         ),
       }),
       cFora.accessor('destinoNome', {
@@ -457,7 +493,7 @@ function ForaDoPadrao({ permissoes }: { permissoes: PodeNaTela }) {
           ),
       }),
     ],
-    [abrir],
+    [casasVale],
   );
 
   return (
@@ -496,7 +532,16 @@ function ForaDoPadrao({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(i) => i.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? {
+              erro: lista.error,
+              oQue: 'os exames fora do padrão',
+              onTentarDeNovo: () => void lista.refetch(),
+            }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -541,12 +586,16 @@ function PainelForaPadrao({
     enabled: Boolean(id) && !daPagina,
   });
   const item = daPagina ?? consulta.data;
+  const fase = useFaseDoCarregamento(Boolean(id) && !item);
+  const { sucesso } = useAvisos();
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  if (id && !item)
+  if (id && (!item || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="o exame fora do padrão"
+        voltar={{ to: '/exames', rotulo: 'Voltar para Exames' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -562,6 +611,7 @@ function PainelForaPadrao({
         if (id) await deParaValoresExameControllerAtualizar({ path: { id }, body }).unwrap();
         else alvo = (await deParaValoresExameControllerCriar({ body }).unwrap()).id;
         await invalidarCatalogo(queryClient);
+        sucesso(id ? 'Exame fora do padrão salvo.' : 'Exame fora do padrão criado.');
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
@@ -569,6 +619,7 @@ function PainelForaPadrao({
           ? async () => {
               await deParaValoresExameControllerExcluir({ path: { id } }).unwrap();
               fechar();
+              sucesso('Exame fora do padrão excluído.');
               await invalidarCatalogo(queryClient);
             }
           : undefined
@@ -583,7 +634,8 @@ const cQuebra = createDataTableColumnHelper<QuebraResumoDto>();
 function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: pagina } = useSuspenseQuery(consultaQuebras(busca));
+  const lista = useQuery({ ...consultaQuebras(busca), placeholderData: keepPreviousData });
+  const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -593,14 +645,17 @@ function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
 
   const colunas = useMemo(
     () => [
       cQuebra.accessor('estudoOrigem', {
         header: 'Estudo que chega',
         cell: (i) => (
-          <BotaoAbrir onAbrir={() => abrir(i.row.original.id)}>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: i.row.original.id, novo: undefined })}
+          >
             <span className="flex flex-col leading-snug">
               <span>{i.getValue()}</span>
               {i.row.original.exame && (
@@ -609,7 +664,7 @@ function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
                 </span>
               )}
             </span>
-          </BotaoAbrir>
+          </LinkDaLinha>
         ),
       }),
       cQuebra.accessor((q) => q.pecas.filter((p) => p.ativo).map((p) => p.nome), {
@@ -632,7 +687,7 @@ function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
         cell: (i) => <span className="block text-right tabular-nums">{i.getValue()}</span>,
       }),
     ],
-    [abrir],
+    [],
   );
 
   return (
@@ -655,7 +710,12 @@ function Quebras({ permissoes }: { permissoes: PodeNaTela }) {
       itens={pagina.itens}
       getRowId={(q) => q.id}
       selecionadoId={busca.id}
-      onAbrir={abrir}
+      recarregando={lista.isPlaceholderData}
+      erro={
+        lista.isError && !lista.data
+          ? { erro: lista.error, oQue: 'as quebras', onTentarDeNovo: () => void lista.refetch() }
+          : undefined
+      }
       pagina={pagina.pagina}
       porPagina={pagina.porPagina}
       total={pagina.total}
@@ -686,12 +746,16 @@ function PainelDaQuebra({ id, permissoes }: { id?: string; permissoes: PodeNaTel
     enabled: Boolean(id),
   });
   const quebra = consulta.data;
+  const fase = useFaseDoCarregamento(Boolean(id) && !quebra);
+  const { sucesso } = useAvisos();
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
-  if (id && !quebra)
+  if (id && (!quebra || fase !== 'conteudo'))
     return (
       <PainelCarregando
         onFechar={fechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="a quebra"
+        voltar={{ to: '/exames', rotulo: 'Voltar para Exames' }}
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );
@@ -712,6 +776,7 @@ function PainelDaQuebra({ id, permissoes }: { id?: string; permissoes: PodeNaTel
         if (id) await quebrasControllerAtualizar({ path: { id }, body }).unwrap();
         else alvo = (await quebrasControllerCriar({ body }).unwrap()).id;
         await depois();
+        sucesso(id ? 'Quebra salva.' : 'Quebra criada.');
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}
       onExcluir={
@@ -719,6 +784,7 @@ function PainelDaQuebra({ id, permissoes }: { id?: string; permissoes: PodeNaTel
           ? async () => {
               await quebrasControllerExcluir({ path: { id } }).unwrap();
               fechar();
+              sucesso('Quebra excluída.');
               await depois();
             }
           : undefined
