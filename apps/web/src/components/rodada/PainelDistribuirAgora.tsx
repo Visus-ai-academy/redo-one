@@ -1,5 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Play } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
 import type { RecolhimentoPrevistoDto } from '../../gen/types/RecolhimentoPrevistoDto';
 import type { RecortesRodadaDto } from '../../gen/types/RecortesRodadaDto';
@@ -15,6 +16,8 @@ import { PainelLateral } from '../painel/PainelLateral';
 import {
   esquemaDistribuir,
   estimativa,
+  examesNasFrentes,
+  frentesDoTipo,
   opcoesSubespecialidade,
   recortesDoFormulario,
   type ValoresDistribuir,
@@ -45,10 +48,13 @@ export function PainelDistribuirAgora({
   const temTurnos = fila.turnos.length > 0;
   const comMedicos = new Set(fila.medicosEmTurno.map((m) => m.turnoId));
   const subespecialidades = opcoesSubespecialidade(fila);
+  const frentesEspecialidade = frentesDoTipo(fila, 'especialidade');
+  const frentesModalidade = frentesDoTipo(fila, 'modalidade');
   const form = useAppForm({
     defaultValues: {
       turnoIds: fila.turnos.filter((t) => t.emAndamento && t.medicos > 0).map((t) => t.turnoId),
-      frenteIds: fila.porFrente.flatMap((f) => (f.frenteId ? [f.frenteId] : [])),
+      frentesEspecialidade: frentesEspecialidade.map((f) => f.frenteId),
+      frentesModalidade: frentesModalidade.map((f) => f.frenteId),
       prioridadeIds: fila.prioridades.flatMap((p) =>
         p.prioridadeOperacaoId ? [p.prioridadeOperacaoId] : [],
       ),
@@ -77,10 +83,20 @@ export function PainelDistribuirAgora({
         className="flex min-h-[calc(100dvh-73px)] flex-col"
       >
         <div className="flex flex-1 flex-col gap-6 p-4">
-          <p className="text-muted-foreground text-[13px]">
-            Nada é atribuído antes da aprovação. O paciente não se divide: se um exame dele entra,
-            os outros da mesma frente vão junto.
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-muted-foreground text-[13px]">
+              Nada é atribuído antes da aprovação. O paciente não se divide: se um exame dele entra,
+              os outros da mesma frente vão junto.
+            </p>
+            {temTurnos && (
+              <p className="text-subtle-foreground text-xs">
+                <span aria-hidden className="text-destructive">
+                  *
+                </span>{' '}
+                Campo obrigatório
+              </p>
+            )}
+          </div>
           {temTurnos ? (
             <form.AppField name="turnoIds">
               {(field) => (
@@ -91,12 +107,12 @@ export function PainelDistribuirAgora({
                   opcoes={fila.turnos.map((t) => ({
                     valor: t.turnoId,
                     rotulo: (
-                      <>
+                      <ComCor cor={t.cor}>
                         {t.nome}{' '}
                         <span className="text-subtle-foreground tabular-nums">
                           {horaDeBrasilia(t.inicio)} a {horaDeBrasilia(t.fim)}
                         </span>
-                      </>
+                      </ComCor>
                     ),
                     desabilitada: !comMedicos.has(t.turnoId) && t.medicos === 0,
                     contagem:
@@ -115,18 +131,54 @@ export function PainelDistribuirAgora({
               turno abaixo ou confira a escala.
             </Alerta>
           )}
-          {fila.porFrente.some((f) => f.frenteId) && (
-            <form.AppField name="frenteIds">
+          {frentesEspecialidade.length > 0 && (
+            <form.AppField name="frentesEspecialidade">
               {(field) => (
                 <field.CaixasComContagemField
-                  label="Frentes"
+                  label="Frentes de especialidade"
+                  todos={{
+                    rotulo: 'Todas as especialidades',
+                    contagem: num(
+                      examesNasFrentes(
+                        fila,
+                        frentesEspecialidade.map((f) => f.frenteId),
+                      ),
+                    ),
+                  }}
+                  opcoes={frentesEspecialidade.map((f) => ({
+                    valor: f.frenteId,
+                    rotulo: <ComCor cor={f.cor}>{f.nome}</ComCor>,
+                    contagem: num(f.exames),
+                  }))}
+                />
+              )}
+            </form.AppField>
+          )}
+          {frentesModalidade.length > 0 && (
+            <form.AppField name="frentesModalidade">
+              {(field) => (
+                <field.CaixasComContagemField
+                  label="Frentes de modalidade"
                   colunas={2}
-                  todos={{ rotulo: 'Todas as frentes', contagem: `${num(fila.total)} exames` }}
-                  opcoes={fila.porFrente.flatMap((f) =>
-                    f.frenteId
-                      ? [{ valor: f.frenteId, rotulo: f.nome, contagem: num(f.exames) }]
-                      : [],
-                  )}
+                  todos={{
+                    rotulo: 'Todas as modalidades',
+                    contagem: num(
+                      examesNasFrentes(
+                        fila,
+                        frentesModalidade.map((f) => f.frenteId),
+                      ),
+                    ),
+                  }}
+                  opcoes={frentesModalidade.map((f) => ({
+                    valor: f.frenteId,
+                    rotulo: <ComCor cor={f.cor}>{f.nome}</ComCor>,
+                    contagem: num(f.exames),
+                  }))}
+                  description={
+                    frentesEspecialidade.length > 0
+                      ? 'O exame conta na frente da especialidade e na da modalidade; marcar uma delas já o leva.'
+                      : undefined
+                  }
                 />
               )}
             </form.AppField>
@@ -137,7 +189,13 @@ export function PainelDistribuirAgora({
                 label="Prioridades da operação"
                 opcoes={fila.prioridades.flatMap((p) =>
                   p.prioridadeOperacaoId
-                    ? [{ valor: p.prioridadeOperacaoId, rotulo: p.nome, contagem: num(p.exames) }]
+                    ? [
+                        {
+                          valor: p.prioridadeOperacaoId,
+                          rotulo: <ComCor cor={p.cor}>{p.nome}</ComCor>,
+                          contagem: num(p.exames),
+                        },
+                      ]
                     : [],
                 )}
               />
@@ -152,12 +210,7 @@ export function PainelDistribuirAgora({
                   todos={{ rotulo: 'Todas as subespecialidades' }}
                   opcoes={subespecialidades.map((o) => ({
                     valor: o.valor,
-                    rotulo: (
-                      <span className="flex items-center gap-2">
-                        <BolinhaCor cor={o.cor} />
-                        {o.rotulo}
-                      </span>
-                    ),
+                    rotulo: <ComCor cor={o.cor}>{o.rotulo}</ComCor>,
                     contagem: num(o.exames),
                   }))}
                 />
@@ -210,22 +263,12 @@ export function PainelDistribuirAgora({
             {(v) => {
               const e = estimativa(v, fila);
               return (
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-[13px] tabular-nums">
-                    <strong className="font-semibold">Cerca de {num(e.exames)} exames</strong>{' '}
-                    <span className="text-muted-foreground">
-                      para {num(e.medicos)} {e.medicos === 1 ? 'médico' : 'médicos'}
-                    </span>
+                <p className="text-[13px] tabular-nums" aria-live="polite">
+                  <strong className="font-semibold">Cerca de {num(e.exames)} exames</strong>{' '}
+                  <span className="text-muted-foreground">
+                    para {num(e.medicos)} {e.medicos === 1 ? 'médico' : 'médicos'}
                   </span>
-                  {temTurnos && (
-                    <span className="text-subtle-foreground text-xs">
-                      <span aria-hidden className="text-destructive">
-                        *
-                      </span>{' '}
-                      Campo obrigatório
-                    </span>
-                  )}
-                </div>
+                </p>
               );
             }}
           </form.Subscribe>
@@ -247,5 +290,15 @@ export function PainelDistribuirAgora({
         </div>
       </form>
     </PainelLateral>
+  );
+}
+
+/** Rótulo de caixa com a bolinha da cor cadastrada antes (frente, prioridade, turno, segmento). */
+function ComCor({ cor, children }: { cor: string | null; children: ReactNode }) {
+  return (
+    <span className="flex items-center gap-2">
+      <BolinhaCor cor={cor} />
+      <span className="min-w-0">{children}</span>
+    </span>
   );
 }

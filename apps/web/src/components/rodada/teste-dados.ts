@@ -48,7 +48,9 @@ export const FILA: FilaDoMomentoDto = {
   porFrente: [
     {
       frenteId: 'f1',
+      tipo: 'especialidade',
       nome: 'NEURO',
+      cor: '#7A5AB5',
       exames: 26,
       urgentes: 5,
       primeiroVencimento: '2026-11-18T13:52:00Z',
@@ -83,13 +85,22 @@ export const FILA: FilaDoMomentoDto = {
     },
     {
       frenteId: 'f2',
+      tipo: 'modalidade',
       nome: 'RX',
+      cor: null,
       exames: 4,
       urgentes: 0,
       primeiroVencimento: null,
       porPrioridade: [{ prioridadeOperacaoId: 'p-rot', exames: 4, urgentes: 0 }],
       porSegmento: [],
     },
+  ],
+  grupos: [
+    { frenteIds: ['f1'], segmentoId: 's-cranio', prioridadeOperacaoId: 'p-urg', exames: 3 },
+    { frenteIds: ['f1'], segmentoId: 's-cranio', prioridadeOperacaoId: 'p-rot', exames: 15 },
+    { frenteIds: ['f1'], segmentoId: null, prioridadeOperacaoId: 'p-urg', exames: 2 },
+    { frenteIds: ['f1'], segmentoId: null, prioridadeOperacaoId: 'p-rot', exames: 6 },
+    { frenteIds: ['f2'], segmentoId: null, prioridadeOperacaoId: 'p-rot', exames: 4 },
   ],
   porPrioridade: [],
   porEspecialidade: [],

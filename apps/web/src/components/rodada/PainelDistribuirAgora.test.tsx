@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -6,7 +6,7 @@ import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
 import type { RecolhimentoPrevistoDto } from '../../gen/types/RecolhimentoPrevistoDto';
 import { renderComRotas } from '../../test/render';
 import { PainelDistribuirAgora } from './PainelDistribuirAgora';
-import { FILA } from './teste-dados';
+import { FILA, medicoEmTurno } from './teste-dados';
 
 const fila: FilaDoMomentoDto = {
   ...FILA,
@@ -101,7 +101,9 @@ describe('PainelDistribuirAgora', () => {
   it('subespecialidade de mesmo nome em frentes diferentes leva o nome da frente', async () => {
     const outros = (frente: string, segmentoId: string) => ({
       frenteId: frente,
+      tipo: 'especialidade' as const,
       nome: frente,
+      cor: null,
       exames: 2,
       urgentes: 0,
       primeiroVencimento: null,
@@ -127,6 +129,59 @@ describe('PainelDistribuirAgora', () => {
     expect(onDistribuir).toHaveBeenCalledWith(
       expect.objectContaining({ subespecialidadeIds: ['s-mi'], subespecialidadeGeral: false }),
     );
+  });
+
+  it('frentes separadas em especialidade e modalidade, com a cor cadastrada', async () => {
+    abrir();
+    const esp = await screen.findByRole('group', { name: /Frentes de especialidade/ });
+    const mod = screen.getByRole('group', { name: /Frentes de modalidade/ });
+    expect(within(esp).getByRole('checkbox', { name: /NEURO/ })).toBeChecked();
+    expect(within(esp).queryByRole('checkbox', { name: /^RX/ })).toBeNull();
+    expect(within(mod).getByRole('checkbox', { name: /RX/ })).toBeChecked();
+    const neuro = within(esp).getByText('NEURO').closest('label');
+    expect(neuro?.querySelector('[data-cor]')).toHaveStyle({ backgroundColor: '#7A5AB5' });
+  });
+
+  it('exame em duas frentes conta uma vez; marcar só a de modalidade já o leva', async () => {
+    const frente = (
+      frenteId: string,
+      tipo: 'especialidade' | 'modalidade',
+      exames: number,
+    ): FilaDoMomentoDto['porFrente'][number] => ({
+      frenteId,
+      tipo,
+      nome: frenteId,
+      cor: null,
+      exames,
+      urgentes: 0,
+      primeiroVencimento: null,
+      porPrioridade: [{ prioridadeOperacaoId: 'p-rot', exames, urgentes: 0 }],
+      porSegmento: [],
+    });
+    const onDistribuir = abrir(undefined, undefined, {
+      ...fila,
+      total: 4,
+      porFrente: [frente('MI', 'especialidade', 3), frente('TC', 'modalidade', 3)],
+      grupos: [
+        { frenteIds: ['MI', 'TC'], segmentoId: null, prioridadeOperacaoId: 'p-rot', exames: 2 },
+        { frenteIds: ['MI'], segmentoId: null, prioridadeOperacaoId: 'p-rot', exames: 1 },
+        { frenteIds: ['TC'], segmentoId: null, prioridadeOperacaoId: 'p-rot', exames: 1 },
+      ],
+      medicosEmTurno: [
+        medicoEmTurno('a', 'Ana', 0, 10, { frenteId: 'MI' }),
+        medicoEmTurno('b', 'Bia', 0, 10, {
+          frenteId: 'TC',
+          frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'mod-tc' },
+        }),
+      ],
+    });
+    expect(await screen.findByText(/Cerca de 4 exames/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('checkbox', { name: /^MI/ }));
+    expect(screen.getByText(/Cerca de 3 exames/)).toBeInTheDocument();
+    // Só a frente de TC: o médico de MI não entra.
+    expect(screen.getByText(/para 1 médico$/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
+    expect(onDistribuir).toHaveBeenCalledWith(expect.objectContaining({ frenteIds: ['TC'] }));
   });
 
   it('mostra quantos exames a rodada recolheria de médicos fora do turno ou ausentes', async () => {

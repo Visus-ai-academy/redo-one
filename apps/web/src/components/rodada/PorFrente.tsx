@@ -53,10 +53,11 @@ export function PorFrente({ fila }: { fila: FilaDoMomentoDto }) {
         id="titulo-matriz"
         ajuda={
           <AjudaContextual assunto="a frente e a prioridade da operação">
-            Frente é a da escala (especialidade ou modalidade). A prioridade da operação vem do
-            de-para em Configurações › Distribuição. Passe o mouse ou foque a linha para ver os
-            exames de cada prioridade (no celular, toque na barra). Clique na frente para ver as
-            subespecialidades.
+            Frente é a da escala (especialidade ou modalidade). O exame conta em cada frente que o
+            pega (ex.: na especialidade e na modalidade dele), então somar as frentes pode passar do
+            total. A prioridade da operação vem do de-para em Configurações › Distribuição. Passe o
+            mouse ou foque a linha para ver os exames de cada prioridade (no celular, toque na
+            barra). Clique na frente para ver as subespecialidades.
           </AjudaContextual>
         }
       />
