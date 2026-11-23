@@ -108,6 +108,7 @@ export interface ItemDaOrdem {
   prazo: Date | null;
   entradaEm: Date;
   clienteId: string | null;
+  unidadeId?: string | null;
   especialidadeId: string | null;
   modalidadeId: string | null;
 }
@@ -129,6 +130,7 @@ export function ordemDeExecucao(
     modalidadeId: i.modalidadeId,
     subespecialidadeId: null,
     clienteId: i.clienteId,
+    unidadeId: i.unidadeId ?? null,
     posicao: i.posicao ?? SEM_POSICAO,
     urgente: i.urgente,
     paciente: i.id,

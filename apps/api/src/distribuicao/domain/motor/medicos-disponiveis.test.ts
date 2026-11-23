@@ -630,6 +630,22 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
     expect(doMedico(fora, 'A')?.extraPara('e1')).toBe(0);
   });
 
+  it('o cliente do ajuste casa pela unidade (só ela) e pelo principal (todas as unidades)', () => {
+    const doCliente = (clienteId: string) =>
+      ajuste({
+        recorte: { clienteId, especialidadeId: null, modalidadeId: null, subespecialidadeId: null },
+      });
+    const exames = [
+      exame('ro', { clienteId: 'CEDI', unidadeId: 'RO' }),
+      exame('rj', { clienteId: 'CEDI', unidadeId: 'RJ' }),
+    ];
+    const daUnidade = montar({ exames, ajustes: [doCliente('RO')] });
+    expect(doMedico(daUnidade, 'A')?.extraPara('ro')).toBe(10);
+    expect(doMedico(daUnidade, 'A')?.extraPara('rj')).toBe(0);
+    const doPrincipal = montar({ exames, ajustes: [doCliente('CEDI')] });
+    expect(doMedico(doPrincipal, 'A')?.extraPara('rj')).toBe(10);
+  });
+
   it('prioridade liberada fura o arranjo e o recorte do período', () => {
     const base = {
       medicos: [medico('A', [arranjo({ prioridadeIds: [OP_ROTINA] })])],

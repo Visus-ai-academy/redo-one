@@ -21,6 +21,21 @@ const maisLongoPrimeiro = (a: { chave: string }, b: { chave: string }) =>
  * dashboards-one (`limparNomeClienteLegado` + `daEmpresa`).
  */
 export function montarResolvedorCliente(cadastro: CadastroClientes) {
+  const unidade = montarResolvedorUnidadeCliente(cadastro);
+  const principal = new Map(
+    cadastro.clientes.flatMap((c) => (c.unificadoEmId ? [[c.id, c.unificadoEmId] as const] : [])),
+  );
+  return (empresa: string): string | null => {
+    const id = unidade(empresa);
+    return id === null ? null : (principal.get(id) ?? id);
+  };
+}
+
+/**
+ * O cadastro que casa com o nome da empresa, sem subir ao principal: a unidade de um cliente
+ * unificado fica ela mesma (a distribuição casa arranjos pela unidade).
+ */
+export function montarResolvedorUnidadeCliente(cadastro: CadastroClientes) {
   const exatos = cadastro.aliases.filter((a) => a.tipo === 'exato');
   const prefixos = cadastro.aliases.filter((a) => a.tipo === 'prefixo').sort(maisLongoPrimeiro);
 
@@ -35,10 +50,7 @@ export function montarResolvedorCliente(cadastro: CadastroClientes) {
   for (const a of cadastro.aliases) if (a.tipo === 'normalizado') registrar(a.chave, a.clienteId);
   for (const c of cadastro.clientes) registrar(normalizarNome(c.nomeFantasia ?? ''), c.id);
 
-  const principal = new Map(
-    cadastro.clientes.flatMap((c) => (c.unificadoEmId ? [[c.id, c.unificadoEmId] as const] : [])),
-  );
-  const comPrincipal = (id: string | undefined) => (id ? (principal.get(id) ?? id) : null);
+  const doCadastro = (id: string | undefined) => id ?? null;
 
   const cortarSufixos = (nome: string) => {
     let limpo = nome;
@@ -54,11 +66,11 @@ export function montarResolvedorCliente(cadastro: CadastroClientes) {
     const formas = [maiusculo, semEspacoNoSublinhado];
 
     const exato = exatos.find((a) => formas.includes(a.chave));
-    if (exato) return comPrincipal(exato.clienteId);
+    if (exato) return doCadastro(exato.clienteId);
     const prefixo = prefixos.find((a) => formas.some((f) => f.startsWith(a.chave)));
-    if (prefixo) return comPrincipal(prefixo.clienteId);
+    if (prefixo) return doCadastro(prefixo.clienteId);
 
-    return comPrincipal(
+    return doCadastro(
       porChave.get(normalizarNome(cortarSufixos(empresa.trim()))) ??
         porChave.get(normalizarNome(empresa)),
     );

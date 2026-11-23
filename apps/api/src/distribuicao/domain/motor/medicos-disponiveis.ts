@@ -11,6 +11,7 @@ import {
 import {
   type AlvoExame,
   casaArranjo,
+  citaCliente,
   type DirecaoEquipe,
   direcionadoPara,
   escalaMarcaSegmento,
@@ -291,7 +292,7 @@ const par = (medicoId: string, exameId: string) => `${medicoId}|${exameId}`;
 function ajusteCobre(a: AjusteDia, e: AlvoExame, agora: Date): boolean {
   if (agora < a.inicio || agora >= a.fim) return false;
   const r = a.recorte;
-  if (r.clienteId !== null && r.clienteId !== e.clienteId) return false;
+  if (r.clienteId !== null && !citaCliente([r.clienteId], e)) return false;
   if (r.modalidadeId !== null && r.modalidadeId !== e.modalidadeId) return false;
   if (r.subespecialidadeId !== null && r.subespecialidadeId !== e.subespecialidadeId) return false;
   if (

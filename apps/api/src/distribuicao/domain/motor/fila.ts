@@ -1,5 +1,6 @@
 import type { FrenteEscala } from '../arranjo';
 import type { ConfiguracaoDistribuicao, ItemOrdemFila, RegrasPorFrente } from './configuracao';
+import { citaCliente } from './elegibilidade';
 
 /**
  * A fila e o pacote do paciente. Fonte: dashboards-one `motor.ts` (`montarFila`, `chavePacote`,
@@ -16,7 +17,10 @@ export interface ExameMotor {
   especialidadeId: string | null;
   modalidadeId: string | null;
   subespecialidadeId: string | null;
+  /** O cliente principal. */
   clienteId: string | null;
+  /** A unidade de onde o exame veio, quando é unidade de um principal (ver `citaCliente`). */
+  unidadeId?: string | null;
   /** Posição da prioridade da operação na fila (1 = primeiro). */
   posicao: number;
   /** A operação trata o exame como urgência (regra da prioridade, com a da frente). */
@@ -45,7 +49,7 @@ export interface PrioridadeCliente {
 }
 
 export type NivelDoExame = (
-  e: Pick<ExameMotor, 'clienteId' | 'especialidadeId' | 'modalidadeId'>,
+  e: Pick<ExameMotor, 'clienteId' | 'unidadeId' | 'especialidadeId' | 'modalidadeId'>,
 ) => number;
 
 /** Fora de todo recorte o cliente é normal: depois de qualquer nível cadastrado. */
@@ -61,13 +65,19 @@ export function criarNivelDoExame(
     const k = `${p.clienteId}|${p.frente.especialidadeId ?? p.frente.modalidadeId}`;
     nivel.set(k, Math.min(nivel.get(k) ?? NIVEL_NORMAL, p.nivel));
   }
+  // A prioridade cadastrada na unidade vale só para ela; a do principal, para todas as unidades.
   return (e) =>
-    e.clienteId
-      ? Math.min(
-          nivel.get(`${e.clienteId}|${e.especialidadeId}`) ?? NIVEL_NORMAL,
-          nivel.get(`${e.clienteId}|${e.modalidadeId}`) ?? NIVEL_NORMAL,
-        )
-      : NIVEL_NORMAL;
+    Math.min(
+      NIVEL_NORMAL,
+      ...[e.clienteId, e.unidadeId].flatMap((cliente) =>
+        cliente
+          ? [
+              nivel.get(`${cliente}|${e.especialidadeId}`) ?? NIVEL_NORMAL,
+              nivel.get(`${cliente}|${e.modalidadeId}`) ?? NIVEL_NORMAL,
+            ]
+          : [],
+      ),
+    );
 }
 
 type CriterioInterno = ItemOrdemFila['criterio'] | 'prazoCritico' | 'cliente';
@@ -244,13 +254,11 @@ export function recortarPacotes<
 
 /** Filtro de clínica da rodada: devolve os exames de outra clínica (ou sem cliente). */
 export function recortarClinicas(
-  exames: readonly { id: string; clienteId: string | null }[],
+  exames: readonly { id: string; clienteId: string | null; unidadeId?: string | null }[],
   clienteIds: readonly string[],
 ): Set<string> {
   if (!clienteIds.length) return new Set();
   return new Set(
-    exames
-      .filter((e) => e.clienteId === null || !clienteIds.includes(e.clienteId))
-      .map((e) => e.id),
+    exames.filter((e) => e.clienteId === null || !citaCliente(clienteIds, e)).map((e) => e.id),
   );
 }

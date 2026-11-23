@@ -96,6 +96,11 @@ export interface CatalogoDaFila {
   }): ClassificacaoEstudo;
   /** Unidade da MobileMed → cliente (o principal, se for unidade de outro); null = sem cadastro. */
   cliente(unidade: string): string | null;
+  /**
+   * Unidade da MobileMed → o cadastro que casou, sem subir ao principal (a unidade de um cliente
+   * unificado); null = sem cadastro. O arranjo que cita a unidade vale só para ela.
+   */
+  unidade(unidade: string): string | null;
   /** Grafia da MobileMed → prioridade do catálogo, pelas variações. */
   traduzirPrioridade(grafia: string): string | null;
 }
@@ -188,6 +193,8 @@ export interface ExameLido extends ClassificacaoEstudo {
   posicao: number | null;
   urgente: boolean;
   clienteId: string | null;
+  /** A unidade de onde o exame veio, quando é unidade de um principal; senão, null. */
+  unidadeId?: string | null;
 }
 
 export interface EntradaMontada {
@@ -265,6 +272,12 @@ function cotaNaUnidade(
   );
 }
 
+/** A unidade só quando é diferente do principal (o próprio principal não é unidade). */
+function unidadeDo(catalogo: CatalogoDaFila, nomeMobileMed: string, clienteId: string | null) {
+  const unidade = catalogo.unidade(nomeMobileMed);
+  return unidade !== null && unidade !== clienteId ? unidade : null;
+}
+
 export function montarEntrada(p: {
   agora: Date;
   leitura: Leitura;
@@ -314,6 +327,7 @@ export function montarEntrada(p: {
     const exclusivo = reservadoPara(reservas, {
       ...c,
       clienteId,
+      unidadeId: unidadeDo(catalogo, e.unidade, clienteId),
       prioridadeOperacaoId: null,
       urgente: false,
       restanteMin: null,
@@ -330,6 +344,7 @@ export function montarEntrada(p: {
   const exames = p.leitura.semMedico.map((e) => {
     const c = catalogo.classificar(e);
     const clienteId = catalogo.cliente(e.unidade);
+    const unidadeId = unidadeDo(catalogo, e.unidade, clienteId);
     if (!c.exameId) semCatalogo++;
     if (!clienteId) semCliente++;
     const pacienteChave = chavePaciente(e.paciente);
@@ -351,11 +366,13 @@ export function montarEntrada(p: {
       posicao: op?.posicao ?? null,
       urgente: op !== null && urgente(urgenciaNaFrente(op, c, regras), restanteMin),
       clienteId,
+      unidadeId,
     });
     return {
       id: e.idExame,
       exameId: c.exameId,
       clienteId,
+      unidadeId,
       especialidadeId: c.especialidadeId,
       especialidadesDoSegmento: c.especialidadesDoSegmento,
       modalidadeId: c.modalidadeId,

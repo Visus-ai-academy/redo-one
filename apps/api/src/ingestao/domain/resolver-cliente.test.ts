@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { type CadastroClientes, montarResolvedorCliente } from './resolver-cliente';
+import {
+  type CadastroClientes,
+  montarResolvedorCliente,
+  montarResolvedorUnidadeCliente,
+} from './resolver-cliente';
 
 const cadastro: CadastroClientes = {
   clientes: [
@@ -75,6 +79,13 @@ describe('montarResolvedorCliente', () => {
 
   it('a unidade leva ao cliente principal', () => {
     expect(resolver('PRN TELE_A')).toBe('c-prn');
+  });
+
+  it('o resolvedor da unidade para no cadastro que casou, sem subir ao principal', () => {
+    const unidade = montarResolvedorUnidadeCliente(cadastro);
+    expect(unidade('PRN TELE_A')).toBe('c-prn-a');
+    expect(unidade('CEDIDIAG-CT')).toBe('c-cedi');
+    expect(unidade('NINGUEM')).toBeNull();
   });
 
   it('se o nome cortado não acha, tenta o nome como chegou', () => {

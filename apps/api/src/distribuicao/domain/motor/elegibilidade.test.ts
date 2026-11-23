@@ -197,6 +197,47 @@ describe('casaArranjo', () => {
   });
 });
 
+describe('cliente com unidades (casa pela unidade)', () => {
+  // CEDI_RO é unidade do principal CEDIDIAG: o exame chega com as duas.
+  const PRINCIPAL = 'cli-cedidiag';
+  const UNIDADE = 'cli-cedi-ro';
+  const OUTRA = 'cli-cedi-rj';
+  const daUnidade = alvo({ clienteId: PRINCIPAL, unidadeId: UNIDADE });
+
+  it('"exceto" a unidade barra só ela; "exceto" o principal barra todas as unidades', () => {
+    expect(casaArranjo(arranjo({ modoClientes: 'exceto', clienteIds: [UNIDADE] }), daUnidade)).toBe(
+      false,
+    );
+    expect(casaArranjo(arranjo({ modoClientes: 'exceto', clienteIds: [OUTRA] }), daUnidade)).toBe(
+      true,
+    );
+    expect(
+      casaArranjo(arranjo({ modoClientes: 'exceto', clienteIds: [PRINCIPAL] }), daUnidade),
+    ).toBe(false);
+  });
+
+  it('"apenas" a unidade aceita só ela; "apenas" o principal aceita todas as unidades', () => {
+    expect(casaArranjo(arranjo({ modoClientes: 'apenas', clienteIds: [UNIDADE] }), daUnidade)).toBe(
+      true,
+    );
+    expect(casaArranjo(arranjo({ modoClientes: 'apenas', clienteIds: [OUTRA] }), daUnidade)).toBe(
+      false,
+    );
+    expect(
+      casaArranjo(arranjo({ modoClientes: 'apenas', clienteIds: [PRINCIPAL] }), daUnidade),
+    ).toBe(true);
+  });
+
+  it('a clínica exclusiva vale pela unidade e pelo principal', () => {
+    const reserva = (cliente: string) => [
+      { medicoId: 'm', arranjo: arranjo({ clientesExclusivosIds: [cliente] }) },
+    ];
+    expect([...reservadoPara(reserva(UNIDADE), daUnidade)]).toEqual(['m']);
+    expect([...reservadoPara(reserva(PRINCIPAL), daUnidade)]).toEqual(['m']);
+    expect([...reservadoPara(reserva(OUTRA), daUnidade)]).toEqual([]);
+  });
+});
+
 describe('reservadoPara (clínica exclusiva)', () => {
   const regra = arranjo({
     especialidadeId: MSK,

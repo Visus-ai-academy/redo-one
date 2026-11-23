@@ -26,7 +26,13 @@ export interface AlvoExame {
   /** A operação trata o exame como urgência. */
   urgente: boolean;
   exameId: string | null;
+  /** O cliente principal (a unidade de um cliente unificado vira o principal). */
   clienteId: string | null;
+  /**
+   * O cadastro de onde o exame veio, quando é unidade de um principal. Quem cita a unidade vale só
+   * para ela; quem cita o principal vale para ele e todas as unidades. Ausente = o próprio principal.
+   */
+  unidadeId?: string | null;
   /** Minutos até o prazo; negativo = vencido; null = ilegível. */
   restanteMin: number | null;
 }
@@ -43,6 +49,15 @@ function daEspecialidade(especialidadeId: string, alvo: AlvoDaFrente): boolean {
     alvo.especialidadeId === especialidadeId ||
     alvo.especialidadesDoSegmento.includes(especialidadeId)
   );
+}
+
+/** A lista de clientes cita o exame: pelo principal ou pela unidade de onde ele veio. */
+export function citaCliente(
+  lista: readonly string[],
+  alvo: { clienteId: string | null; unidadeId?: string | null },
+): boolean {
+  if (alvo.clienteId !== null && lista.includes(alvo.clienteId)) return true;
+  return !!alvo.unidadeId && lista.includes(alvo.unidadeId);
 }
 
 function atende(modo: ModoVinculo, naLista: boolean): boolean {
@@ -92,8 +107,7 @@ export function casaArranjo(a: Arranjo, alvo: AlvoExame, opcoes: OpcoesCasamento
   if (!opcoes.segmentoDaEscala && !casaSegmento(a, alvo.subespecialidadeId)) return false;
   if (!casaPrioridade(a.prioridadeIds, alvo, opcoes.prioridadesLiberadas)) return false;
   if (alvo.exameId && !atende(a.modoExames, a.exameIds.includes(alvo.exameId))) return false;
-  if (alvo.clienteId && !atende(a.modoClientes, a.clienteIds.includes(alvo.clienteId)))
-    return false;
+  if (alvo.clienteId && !atende(a.modoClientes, citaCliente(a.clienteIds, alvo))) return false;
   return true;
 }
 
@@ -118,7 +132,7 @@ export function reservadoPara(reservas: readonly ReservaMedico[], alvo: AlvoExam
   const quem = new Set<string>();
   if (!alvo.clienteId) return quem;
   for (const r of reservas) {
-    if (quem.has(r.medicoId) || !r.arranjo.clientesExclusivosIds.includes(alvo.clienteId)) continue;
+    if (quem.has(r.medicoId) || !citaCliente(r.arranjo.clientesExclusivosIds, alvo)) continue;
     if (sabeQueEDoRecorte(r.arranjo, alvo)) quem.add(r.medicoId);
   }
   return quem;

@@ -80,6 +80,7 @@ const catalogo: CatalogoDaFila = {
     especialidadesDoSegmento: [],
   }),
   cliente: (u) => (u === 'HOSPITAL A' ? 'cli-a' : null),
+  unidade: (u) => (u === 'HOSPITAL A' ? 'cli-a' : null),
   traduzirPrioridade: (g) => (g === 'Urgência' ? 'pri-urg' : 'pri-rot'),
 };
 const arranjo: Arranjo = {

@@ -332,4 +332,23 @@ describe('recortes da rodada', () => {
     expect([...recortarClinicas(fila, ['A'])].sort()).toEqual(['2', '3']);
     expect(recortarClinicas(fila, []).size).toBe(0);
   });
+
+  it('clínicas: a unidade marcada leva só ela; o principal marcado leva todas as unidades', () => {
+    const fila = [
+      { id: 'ro', clienteId: 'CEDI', unidadeId: 'RO' },
+      { id: 'rj', clienteId: 'CEDI', unidadeId: 'RJ' },
+    ];
+    expect([...recortarClinicas(fila, ['RO'])]).toEqual(['rj']);
+    expect(recortarClinicas(fila, ['CEDI']).size).toBe(0);
+  });
+});
+
+describe('prioridade do cliente com unidades', () => {
+  it('vale a da unidade e a do principal (a melhor das duas)', () => {
+    const nivel = criarNivelDoExame([vip('RO', NEURO, 1), vip('CEDI', NEURO, 2)]);
+    const daUnidade = (unidadeId: string) =>
+      nivel?.({ clienteId: 'CEDI', unidadeId, especialidadeId: NEURO, modalidadeId: CT });
+    expect(daUnidade('RO')).toBe(1);
+    expect(daUnidade('RJ')).toBe(2);
+  });
 });

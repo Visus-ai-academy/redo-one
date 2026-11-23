@@ -48,6 +48,8 @@ export interface ExameFilaRodada {
   /** Exame do catálogo; null = não identificado. */
   exameId: string | null;
   clienteId: string | null;
+  /** A unidade de onde o exame veio, quando é unidade de um principal (ver `citaCliente`). */
+  unidadeId?: string | null;
   especialidadeId: string | null;
   especialidadesDoSegmento: readonly string[];
   modalidadeId: string | null;
@@ -350,6 +352,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     urgente: l.urgente,
     exameId: l.fila.exameId,
     clienteId: l.fila.clienteId,
+    unidadeId: l.fila.unidadeId ?? null,
     restanteMin: l.restanteMin,
     entregues: l.fila.entregues,
   }));
@@ -378,6 +381,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     modalidadeId: l.fila.modalidadeId,
     subespecialidadeId: l.fila.subespecialidadeId,
     clienteId: l.fila.clienteId,
+    unidadeId: l.fila.unidadeId ?? null,
     posicao: l.posicao,
     urgente: l.urgente,
     paciente: l.fila.paciente,

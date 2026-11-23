@@ -43,7 +43,10 @@ const catalogo: CatalogoDaFila = {
           subespecialidadeId: null,
           especialidadesDoSegmento: [],
         },
-  cliente: (unidade) => (unidade === 'HOSPITAL A' ? 'cli-a' : null),
+  // HOSPITAL A2 é unidade do principal HOSPITAL A.
+  cliente: (unidade) => (unidade === 'HOSPITAL A' || unidade === 'HOSPITAL A2' ? 'cli-a' : null),
+  unidade: (unidade) =>
+    unidade === 'HOSPITAL A' ? 'cli-a' : unidade === 'HOSPITAL A2' ? 'cli-a2' : null,
   traduzirPrioridade: (g) => (g === 'Rotina' ? 'pri-rotina' : g === 'Urgência' ? 'pri-urg' : null),
 };
 
@@ -259,6 +262,41 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
       },
     });
     expect(entrada.medicos[0]).toMatchObject({ cargaEmMaos: 1, cargaReservadaEmMaos: 1 });
+  });
+
+  it('o exame de uma unidade leva o principal e a unidade; a exclusiva da unidade conta em mãos', () => {
+    const { entrada, lidos } = montar({
+      leitura: {
+        semMedico: [exame({ idExame: 'u1', unidade: 'HOSPITAL A2' })],
+        emMaos: [
+          {
+            idExame: 'm1',
+            medicoIdMobilemed: 101,
+            ...EM_MAOS,
+            estudo: 'TC TORAX',
+            unidade: 'HOSPITAL A2',
+            modalidade: 'CT',
+            especialidade: null,
+            laudos: 1,
+            paciente: { codigo: '1', nome: 'X' },
+          },
+        ],
+      },
+      insumos: insumos({
+        medicos: [
+          {
+            id: 'A',
+            nome: 'Dra. A',
+            idMobilemed: 101,
+            arranjos: [arranjo({ clientesExclusivosIds: ['cli-a2'] })],
+            unidadeTeto: 'exames',
+          },
+        ],
+      }),
+    });
+    expect(entrada.exames[0]).toMatchObject({ clienteId: 'cli-a', unidadeId: 'cli-a2' });
+    expect(lidos[0]).toMatchObject({ clienteId: 'cli-a', unidadeId: 'cli-a2' });
+    expect(entrada.medicos[0]).toMatchObject({ cargaReservadaEmMaos: 1 });
   });
 
   it('já entregue e cota gratificada vêm do histórico das designações', () => {
