@@ -1,21 +1,28 @@
 import { Button } from '@base-ui/react/button';
 import { ArrowsClockwise, FileArrowUp } from '@phosphor-icons/react';
-import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { Alerta } from '../../components/alerta/Alerta';
 import { mensagemDaApi } from '../../components/alerta/mensagem-da-api';
 import { buttonClassName } from '../../components/button/button-class';
-import { BotaoAbrir, ListaCadastro } from '../../components/cadastro/ListaCadastro';
+import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
+import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { EnvioDeArquivo } from '../../components/envio-arquivo/EnvioDeArquivo';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { DetalheImportacao } from '../../components/importacao/DetalheImportacao';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { PainelLateral } from '../../components/painel/PainelLateral';
+import { useFaseDoCarregamento } from '../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../components/toast/use-avisos';
 import { importacaoMobileMedControllerImportarAgora } from '../../gen/clients/importacaoMobileMedControllerImportarAgora';
 import { importacoesControllerBaixarArquivo } from '../../gen/clients/importacoesControllerBaixarArquivo';
@@ -27,11 +34,14 @@ import {
 import { importacoesControllerObterQueryOptions } from '../../gen/hooks/useImportacoesControllerObter';
 import type { ImportacaoDto } from '../../gen/types/ImportacaoDto';
 import { dataHoraCurta } from '../../lib/datas';
+import { numero } from '../../lib/formato';
 import {
   atualizarEnquantoRoda,
   enviarPlanilha,
   origemDaImportacao,
   situacaoDaImportacao,
+  terminadas,
+  textoDoFim,
 } from '../../lib/importacao';
 import { pode } from '../../lib/permissoes';
 
@@ -49,14 +59,18 @@ const consulta = (b: Busca) => ({ query: { pagina: b.pagina ?? 1, porPagina: POR
 export const Route = createFileRoute('/_app/importacao')({
   validateSearch: buscaSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, deps }) => {
+  loader: async ({ context, deps, cause }) => {
     if (!pode(context.sessao, 'importacao.ver')) return;
     if (deps.id)
       void context.queryClient.prefetchQuery(
         importacoesControllerObterQueryOptions({ path: { id: deps.id } }),
       );
+    // Na própria tela (página, painel), a lista busca sozinha e deixa a de antes à vista.
     await Promise.all([
-      context.queryClient.ensureQueryData(importacoesControllerListarQueryOptions(consulta(deps))),
+      cause !== 'stay' &&
+        context.queryClient.ensureQueryData(
+          importacoesControllerListarQueryOptions(consulta(deps)),
+        ),
       context.queryClient.ensureQueryData(importacaoMobileMedControllerSituacaoQueryOptions()),
     ]);
   },
@@ -74,7 +88,8 @@ function PaginaImportacao() {
 }
 
 const coluna = createDataTableColumnHelper<ImportacaoDto>();
-const numero = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'));
+const PAGINA_VAZIA = { itens: [], total: 0, pagina: 1, porPagina: POR_PAGINA };
+const quantidade = (n: number | null) => (n === null ? '—' : numero(n));
 const aDireita = (texto: string) => () => <span className="block text-right">{texto}</span>;
 
 function Importacao() {
@@ -85,17 +100,19 @@ function Importacao() {
   const queryClient = useQueryClient();
   const { data: mobilemed } = useSuspenseQuery(importacaoMobileMedControllerSituacaoQueryOptions());
   const [erroMobileMed, setErroMobileMed] = useState<string | null>(null);
-  const { data: pagina } = useSuspenseQuery({
+  const lista = useQuery({
     ...importacoesControllerListarQueryOptions(consulta(busca)),
+    placeholderData: keepPreviousData,
     refetchInterval: (q) => atualizarEnquantoRoda(q.state.data?.itens ?? []),
     refetchIntervalInBackground: false,
   });
+  const pagina = lista.data ?? PAGINA_VAZIA;
+  const fim = useAvisoDoFim(lista.isPlaceholderData ? undefined : lista.data?.itens);
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
     [navigate],
   );
-  const abrir = useCallback((id: string) => ir((a) => ({ ...a, id, novo: undefined })), [ir]);
   const fechar = () => ir((a) => ({ ...a, id: undefined, novo: undefined }));
 
   const colunas = useMemo(
@@ -103,9 +120,14 @@ function Importacao() {
       coluna.accessor('criadaEm', {
         header: 'Enviada em',
         cell: (info) => (
-          <BotaoAbrir onAbrir={() => abrir(info.row.original.id)}>
-            <span className="whitespace-nowrap tabular-nums">{dataHoraCurta(info.getValue())}</span>
-          </BotaoAbrir>
+          <LinkDaLinha
+            from={Route.fullPath}
+            to="."
+            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+            className="whitespace-nowrap tabular-nums"
+          >
+            {dataHoraCurta(info.getValue())}
+          </LinkDaLinha>
         ),
       }),
       coluna.accessor((i) => origemDaImportacao(i), {
@@ -131,7 +153,7 @@ function Importacao() {
             }[campo],
           ),
           cell: (info) => (
-            <span className="block text-right tabular-nums">{numero(info.getValue())}</span>
+            <span className="block text-right tabular-nums">{quantidade(info.getValue())}</span>
           ),
         }),
       ),
@@ -140,7 +162,7 @@ function Importacao() {
         header: 'Enviada por',
       }),
     ],
-    [abrir],
+    [],
   );
 
   const mobilemedEmCurso = pagina.itens.some(
@@ -148,70 +170,107 @@ function Importacao() {
   );
 
   return (
-    <ListaCadastro
-      titulo="Importação de laudos"
-      totalNoTitulo={false}
-      acoes={
-        podeEnviar && mobilemed.ligada ? (
-          <>
-            {erroMobileMed && <Alerta tom="erro">{erroMobileMed}</Alerta>}
-            <BotaoImportarAgora
-              emCurso={mobilemedEmCurso}
-              onErro={setErroMobileMed}
-              onImportada={async (id) => {
+    <>
+      {/* O fim de uma importação que rodava é anunciado ao leitor de tela (e o concluído, em aviso). */}
+      <p role="status" className="sr-only">
+        {fim}
+      </p>
+      <ListaCadastro
+        titulo="Importação de laudos"
+        totalNoTitulo={false}
+        acoes={
+          podeEnviar && mobilemed.ligada ? (
+            <>
+              {erroMobileMed && <Alerta tom="erro">{erroMobileMed}</Alerta>}
+              <BotaoImportarAgora
+                emCurso={mobilemedEmCurso}
+                onErro={setErroMobileMed}
+                onImportada={async (id) => {
+                  await queryClient.invalidateQueries({
+                    queryKey: importacoesControllerListarQueryKey(),
+                  });
+                  ir((a) => ({ ...a, novo: undefined, id, pagina: undefined }), true);
+                }}
+              />
+            </>
+          ) : undefined
+        }
+        novo={
+          podeEnviar
+            ? {
+                rotulo: 'Enviar planilha',
+                icone: FileArrowUp,
+                onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
+              }
+            : undefined
+        }
+        colunas={colunas}
+        itens={pagina.itens}
+        getRowId={(item) => item.id}
+        selecionadoId={busca.id}
+        recarregando={lista.isPlaceholderData || !lista.data}
+        erro={
+          lista.isError && !lista.data
+            ? {
+                erro: lista.error,
+                oQue: 'as importações',
+                onTentarDeNovo: () => void lista.refetch(),
+              }
+            : undefined
+        }
+        pagina={pagina.pagina}
+        porPagina={pagina.porPagina}
+        total={pagina.total}
+        vazio={{
+          titulo: 'Nenhuma planilha importada ainda.',
+          texto: podeEnviar
+            ? 'Envie o relatório "Descritivo Especialidades" (ou o de compartilhamento) exportado da MobileMed.'
+            : 'Quem cuida da importação envia as planilhas da MobileMed.',
+        }}
+        onFiltrar={() => undefined}
+        onLimparFiltros={() => undefined}
+        onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
+        painel={
+          busca.novo && podeEnviar ? (
+            <PainelEnvio
+              key="novo"
+              onFechar={fechar}
+              onEnviada={async (id) => {
                 await queryClient.invalidateQueries({
                   queryKey: importacoesControllerListarQueryKey(),
                 });
                 ir((a) => ({ ...a, novo: undefined, id, pagina: undefined }), true);
               }}
             />
-          </>
-        ) : undefined
-      }
-      novo={
-        podeEnviar
-          ? {
-              rotulo: 'Enviar planilha',
-              icone: FileArrowUp,
-              onClick: () => ir((a) => ({ ...a, id: undefined, novo: 1 })),
-            }
-          : undefined
-      }
-      colunas={colunas}
-      itens={pagina.itens}
-      getRowId={(item) => item.id}
-      selecionadoId={busca.id}
-      onAbrir={abrir}
-      pagina={pagina.pagina}
-      porPagina={pagina.porPagina}
-      total={pagina.total}
-      vazio={{
-        titulo: 'Nenhuma planilha importada ainda.',
-        texto: podeEnviar
-          ? 'Envie o relatório "Descritivo Especialidades" (ou o de compartilhamento) exportado da MobileMed.'
-          : 'Quem cuida da importação envia as planilhas da MobileMed.',
-      }}
-      onFiltrar={() => undefined}
-      onLimparFiltros={() => undefined}
-      onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
-      painel={
-        busca.novo && podeEnviar ? (
-          <PainelEnvio
-            key="novo"
-            onFechar={fechar}
-            onEnviada={async (id) => {
-              await queryClient.invalidateQueries({
-                queryKey: importacoesControllerListarQueryKey(),
-              });
-              ir((a) => ({ ...a, novo: undefined, id, pagina: undefined }), true);
-            }}
-          />
-        ) : busca.id ? (
-          <PainelDaImportacao key={busca.id} id={busca.id} onFechar={fechar} />
-        ) : undefined
-      }
-    />
+          ) : busca.id ? (
+            <PainelDaImportacao key={busca.id} id={busca.id} onFechar={fechar} />
+          ) : undefined
+        }
+      />
+    </>
   );
+}
+
+/**
+ * Espera longa: a importação roda em segundo plano e a pessoa segue usando a tela. Quando uma que
+ * rodava termina, avisa (toast no concluído) e devolve o texto para o anúncio do leitor de tela.
+ */
+function useAvisoDoFim(itens: ImportacaoDto[] | undefined) {
+  const { sucesso } = useAvisos();
+  const anteriores = useRef<ImportacaoDto[] | undefined>(undefined);
+  const [texto, setTexto] = useState('');
+  useEffect(() => {
+    if (!itens) return;
+    const fim = terminadas(anteriores.current, itens);
+    anteriores.current = itens;
+    if (fim.length === 0) return;
+    const textos = fim.map(textoDoFim);
+    setTexto(textos.join(' '));
+    for (const [i, importacao] of fim.entries()) {
+      if (importacao.status === 'concluida') sucesso(textos[i] ?? '');
+    }
+  }, [itens, sucesso]);
+  return texto;
 }
 
 /** "Importar agora": põe na fila a importação da MobileMed do período configurado. */
@@ -296,11 +355,13 @@ function PainelDaImportacao({ id, onFechar }: { id: string; onFechar: () => void
     refetchIntervalInBackground: false,
   });
   const importacao = consulta.data;
-  if (!importacao)
+  const fase = useFaseDoCarregamento(!importacao);
+  if (!importacao || fase !== 'conteudo')
     return (
       <PainelCarregando
         onFechar={onFechar}
-        erro={consulta.isError}
+        erro={consulta.error ?? undefined}
+        oQue="a importação"
         onTentarDeNovo={() => void consulta.refetch()}
       />
     );

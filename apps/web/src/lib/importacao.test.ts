@@ -10,6 +10,8 @@ import {
   periodoDosLaudos,
   situacaoDaImportacao,
   TIPO_XLSX,
+  terminadas,
+  textoDoFim,
 } from './importacao';
 
 vi.mock('../gen/clients/importacoesControllerPrepararEnvio');
@@ -73,5 +75,44 @@ describe('enviarPlanilha', () => {
     });
     expect(enviarArquivo).toHaveBeenCalledWith('https://storage/x', arquivo, TIPO_XLSX, progresso);
     expect(importacoesControllerConfirmarEnvio).toHaveBeenCalledWith({ body: { arquivoId: 'a1' } });
+  });
+});
+
+describe('terminadas', () => {
+  it('devolve as que rodavam na consulta anterior e agora terminaram', () => {
+    const antes = [
+      { id: 'a', status: 'processando' as const },
+      { id: 'b', status: 'na_fila' as const },
+      { id: 'c', status: 'concluida' as const },
+    ];
+    const agora = [
+      { id: 'a', status: 'concluida' as const },
+      { id: 'b', status: 'processando' as const },
+      { id: 'c', status: 'concluida' as const },
+      { id: 'd', status: 'erro' as const },
+    ];
+
+    expect(terminadas(antes, agora).map((i) => i.id)).toEqual(['a']);
+  });
+
+  it('sem consulta anterior, nada terminou', () => {
+    expect(terminadas(undefined, [{ id: 'a', status: 'concluida' as const }])).toEqual([]);
+  });
+});
+
+describe('textoDoFim', () => {
+  it('diz como a importação terminou, com os números em pt-BR', () => {
+    expect(textoDoFim({ status: 'concluida', inseridos: 1234, atualizados: 5 })).toBe(
+      'Importação concluída: 1.234 laudos novos e 5 alterados.',
+    );
+    expect(textoDoFim({ status: 'concluida', inseridos: 1, atualizados: 0 })).toBe(
+      'Importação concluída: 1 laudo novo e nenhum alterado.',
+    );
+    expect(textoDoFim({ status: 'recusada', inseridos: null, atualizados: null })).toBe(
+      'Importação recusada. Abra a importação para ver o motivo.',
+    );
+    expect(textoDoFim({ status: 'erro', inseridos: null, atualizados: null })).toBe(
+      'A importação falhou. Abra a importação para ver o erro.',
+    );
   });
 });

@@ -4,6 +4,7 @@ import { importacoesControllerConfirmarEnvio } from '../gen/clients/importacoesC
 import { importacoesControllerPrepararEnvio } from '../gen/clients/importacoesControllerPrepararEnvio';
 import type { StatusImportacaoKey } from '../gen/types/StatusImportacao';
 import { enviarArquivo } from './envio-arquivo';
+import { numero, plural } from './formato';
 
 export const TIPO_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -23,6 +24,35 @@ const emAndamento = (status: StatusImportacaoKey) =>
 /** Polling de 30 s (regra do apps/web) só enquanto alguma importação ainda roda. */
 export const atualizarEnquantoRoda = (itens: { status: StatusImportacaoKey }[]) =>
   itens.some((i) => emAndamento(i.status)) ? 30_000 : (false as const);
+
+/** As que rodavam na consulta anterior e agora terminaram (para avisar o fim). */
+export function terminadas<T extends { id: string; status: StatusImportacaoKey }>(
+  antes: { id: string; status: StatusImportacaoKey }[] | undefined,
+  agora: T[],
+): T[] {
+  if (!antes) return [];
+  const rodavam = new Set(antes.filter((i) => emAndamento(i.status)).map((i) => i.id));
+  return agora.filter((i) => rodavam.has(i.id) && !emAndamento(i.status));
+}
+
+/** Como a importação terminou, para o aviso e o leitor de tela. */
+export function textoDoFim(i: {
+  status: StatusImportacaoKey;
+  inseridos: number | null;
+  atualizados: number | null;
+}): string {
+  if (i.status === 'recusada') return 'Importação recusada. Abra a importação para ver o motivo.';
+  if (i.status === 'erro') return 'A importação falhou. Abra a importação para ver o erro.';
+  const novos = plural(i.inseridos ?? 0, {
+    um: 'laudo novo',
+    varios: 'laudos novos',
+    nenhum: 'nenhum laudo novo',
+  });
+  const alterados = i.atualizados
+    ? `${numero(i.atualizados)} ${i.atualizados === 1 ? 'alterado' : 'alterados'}`
+    : 'nenhum alterado';
+  return `Importação concluída: ${novos} e ${alterados}.`;
+}
 
 /** O que a importação leu: a planilha enviada ou o relatório da MobileMed. */
 export function origemDaImportacao(i: {

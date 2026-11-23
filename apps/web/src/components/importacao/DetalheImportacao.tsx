@@ -4,6 +4,7 @@ import { type ReactNode, useId, useState } from 'react';
 
 import type { ImportacaoDetalheDto } from '../../gen/types/ImportacaoDetalheDto';
 import { dataHoraCurta } from '../../lib/datas';
+import { numero as formatar } from '../../lib/formato';
 import { periodoDosLaudos, situacaoDaImportacao } from '../../lib/importacao';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
@@ -11,7 +12,7 @@ import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 
-const numero = (n: number | null) => (n ?? 0).toLocaleString('pt-BR');
+const numero = (n: number | null) => formatar(n ?? 0);
 
 function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   const id = useId();
