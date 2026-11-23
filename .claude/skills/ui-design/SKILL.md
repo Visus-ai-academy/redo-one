@@ -9,6 +9,8 @@ O One é ferramenta de trabalho: a equipe passa o dia nele distribuindo exames, 
 
 As decisões já tomadas (tokens, direção visual, padrões de navegação) estão em [sistema.md](sistema.md). Leia antes de desenhar e siga. Mudou uma decisão com o usuário? Atualize o `sistema.md` no mesmo passo.
 
+Como a tela reage (validação, estado na URL, erros por código HTTP, textos de erro e vazio, desfazer, teclado, tempo do skeleton) está em [comportamento.md](comportamento.md). Leia antes de codar qualquer tela com formulário, lista ou ação.
+
 ## Processo (não pule etapas)
 
 1. **Contexto real.** Abra a tela equivalente no legado (`../dashboards-one/src/app/(dashboard)/…` e `src/components/…`) e anote o que ela faz, os dados, as ações e as permissões (`src/lib/permissoes.ts`). Leia `docs/redesenho-banco.md` para o que muda no modelo. Nunca desenhe só de memória.
@@ -21,7 +23,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
    - Onde cada interação acontece (no lugar, popover, painel, diálogo, aba, página...) e por quê; ver "Onde cada interação acontece" abaixo.
 3. **Direção.** Se o `sistema.md` ainda não tem a direção visual, proponha 2–3 direções de verdade diferentes (eixo nomeável: "denso claro" × "marca escura"…), com prévia low-fi, e espere o usuário escolher. Depois grave a escolha no `sistema.md`. Com direção gravada, não reabra a discussão.
 4. **Checkpoint por tela** (escreva para si antes de montar): hierarquia (o que se vê primeiro, segundo, terceiro), densidade (px de linha e padding), superfícies, o que é ação primária, e o que você está deliberadamente **não** colocando.
-5. **Construir** seguindo as regras abaixo e o `sistema.md`.
+5. **Construir** seguindo as regras abaixo, o `sistema.md` e o `comportamento.md`.
 6. **Auditar** com a checklist do fim antes de entregar. Corrija o que falhar; não entregue com "melhorias futuras" que caberiam agora.
 
 ## Regras de produto do One (fixas)
@@ -32,7 +34,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - **Texto em pt-BR**, frase com inicial maiúscula (sentence case), sem caixa alta em rótulos. Botão diz a ação ("Enviar convite", não "Confirmar"); a mesma ação mantém o nome no fluxo inteiro (botão "Desativar" → aviso "Usuário desativado").
 - **Toda lista que pode passar de ~10 itens é paginada**, com o total ("1–10 de 26"), inclusive as que ficam dentro de uma seção ou de um painel (sessões abertas, acessos, histórico). Nunca uma lista que cresce sem fim na tela. Dado sem limite: paginação pela API. Lista curta e limitada que a API já devolve inteira: paginação no navegador, 10 por página numa página e 5 num painel lateral.
 - **Dado de paciente** só em tela que precisa e para quem tem permissão; CPF mascarado por padrão.
-- **Ação destrutiva ou irreversível** (fechar competência, desativar, excluir papel) pede confirmação que diz a consequência ("6 usuários perdem o acesso"). Ação comum não pede confirmação.
+- **Ação destrutiva ou irreversível** (fechar competência, desativar, excluir papel) pede confirmação que diz a consequência ("6 usuários perdem o acesso"). Ação comum não pede confirmação; se é reversível, o toast oferece "Desfazer" (ver `comportamento.md`).
 - **Sem texto de marketing** dentro do sistema (nem no login): nada de slogan, "tudo em um só lugar", números de vaidade.
 
 ## Regras visuais (modo operação)
@@ -52,6 +54,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 **Superfícies e profundidade**
 - **Uma estratégia de profundidade: bordas de 1px.** Sombra só no que flutua (menu suspenso, popover, modal, toast). Nunca borda + sombra no mesmo elemento.
 - Raio: 6px em controles, 8px em painéis e tabelas, 12px em modal. Pílula só para status pequenos.
+- **Raios concêntricos:** peça encostada na borda de outra arredondada usa raio interno = raio de fora − distância entre elas (com padding 0, raio de fora − borda). Nunca canto reto ou raio maior dentro de canto arredondado.
 - Proibido card dentro de card. Proibido grade de cards iguais (ícone + título + texto) como estrutura de página: prefira lista com divisórias.
 
 **Cor**
@@ -68,7 +71,7 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 **Tabelas**
 - Cabeçalho 12–13px, peso 500, cor secundária, sentence case. Texto à esquerda, números à direita, datas em formato curto (`12/11 22:31`, `Hoje, 09:12`).
 - Sem zebra; divisória de 1px entre linhas; hover sutil; linha selecionada com fundo do acento bem claro.
-- Ações da linha: a linha inteira abre o detalhe (clique em qualquer coluna, com cursor de mãozinha; o nome continua sendo o botão para o teclado); ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
+- Ações da linha: a linha inteira abre o detalhe (clique em qualquer coluna, com cursor de mãozinha; o nome é um `<Link>` com o `?id=` do painel, que o teclado alcança e o Ctrl/⌘+clique abre em outra aba); ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
 - Filtros acima da tabela, na mesma faixa da busca; contagem e paginação no rodapé.
 - Com o painel lateral aberto, a lista só perde coluna que não cabe: mede a largura e tira, na ordem, primeiro as secundárias escolhidas pela tela e depois as outras da direita para a esquerda; o nome nunca sai. Com espaço sobrando, todas ficam.
 - Lista que é o trabalho principal da tela cabe na altura da janela no computador: a tabela rola por dentro, com o cabeçalho fixo, e o rodapé com contagem e paginação fica sempre à vista; a página em si não rola. No celular, a página rola normalmente.
@@ -78,6 +81,16 @@ As decisões já tomadas (tokens, direção visual, padrões de navegação) est
 - Rótulo acima do campo, ajuda abaixo, erro abaixo (texto que diz o problema e como resolver). Largura de leitura: 480–640px.
 - Seleção com mais de 7 opções abre com um campo de busca no topo da lista, com o foco nele: a pessoa digita parte do nome (sem acento nem maiúscula) em vez de rolar. Lista curta (situação, tipo) fica sem busca.
 - Um botão primário por formulário, à direita no rodapé (ou largura total em formulários estreitos de acesso); "Cancelar" secundário ao lado.
+- Validação, envio, alterações não salvas e erro do servidor: `comportamento.md`.
+
+**Gráficos** (painéis do `analytics`)
+- Escolha pela pergunta: evolução no tempo → linha ou coluna; comparação entre itens → barra horizontal ordenada; parte do todo → barra empilhada. Pizza ou rosca só com até 5 fatias; mais que isso vira barra.
+- O gráfico diz a granularidade (dia, semana, mês, competência) e, quando faz sentido, deixa trocar. Eixos e rótulos com números e datas em pt-BR (`Intl`), volume sempre como soma.
+- Legenda junto do gráfico (ou rótulo direto na linha); dica com o valor exato ao passar o mouse e ao focar pelo teclado. Cor nunca é o único sinal: rótulo, padrão ou ordem também distinguem.
+- Séries com matizes bem separados e pouco saturados (a paleta categórica do `sistema.md`); a série principal pode usar o acento, as de comparação ficam neutras. Linhas de grade bem claras; marcas com contraste 3:1, texto 4,5:1.
+- Estados iguais aos das tabelas: skeleton com o formato do gráfico, vazio que diz por quê (sem dados no período, filtro), erro com "Tentar de novo".
+- Todo gráfico tem como ver os números: tabela abaixo, aba "Tabela" ou exportação.
+- Sem animação de entrada do gráfico.
 
 **Onde cada interação acontece**
 
@@ -150,7 +163,23 @@ O visual de cada padrão segue as regras desta skill (sombra só no que flutua, 
 7. **Regras do One:** `*` nos obrigatórios, Phosphor em tudo, pt-BR sentence case, sem caixa alta, paginação com total, confirmação só no destrutivo.
 8. **Anti-padrões:** passe a lista acima item por item.
 9. **Onde cada interação acontece:** cada ação está no padrão que o brief escolheu? Nada virou tela nova, modal ou painel por hábito?
-10. **Celular:** a tela funciona em 390px (menu vira gaveta, tabela rola dentro da caixa, filtros quebram linha)?
+10. **Celular:** a tela funciona em 390px (menu vira gaveta, tabela rola dentro da caixa, filtros quebram linha)? Os campos têm texto de 16px no celular (sem zoom do iOS ao focar)?
+11. **Comportamento:** passe o `comportamento.md` item por item (validação, URL, erros por código, textos, desfazer, teclado, tempo do skeleton).
+12. **Só teclado e zoom:** faça o verbo principal da tela só com o teclado, e confira a tela com zoom de 200% no navegador. Nada some, nada fica coberto, nada exige mouse.
+13. **Dados extremos:** nome longo, número grande, lista vazia e cheia, cliques repetidos, rede lenta e API fora (lista no `comportamento.md`).
+14. **Custo do verbo principal:** conte os cliques e as trocas de contexto para fazer a tarefa principal. Dá para tirar algum (no lugar, atalho, valor padrão, ação em massa)?
+15. **Pelos olhos de quem usa:** percorra a tela como 2–3 papéis reais (ex.: coordenador de especialidade, financeiro, operação) com a tarefa deles. Anote onde cada um trava.
+
+**Severidade** de cada problema achado, para decidir o que corrigir antes de entregar:
+
+| Nível | Quando | O que fazer |
+| --- | --- | --- |
+| P0 | Impede a tarefa, perde dado ou mostra estado errado | Corrigir antes de entregar |
+| P1 | Dificulta muito, viola acessibilidade AA, ou a pessoa ligaria para o suporte | Corrigir antes de entregar |
+| P2 | Incomoda, mas tem caminho | Corrigir se couber no passo; senão, listar no resumo |
+| P3 | Acabamento | Listar no resumo |
+
+Teste da severidade: "a pessoa ligaria para o suporte por causa disso?" Se sim, é no mínimo P1.
 
 ## Onde desenhar
 

@@ -45,6 +45,12 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 | Informação | texto `#1D4E89` / fundo `#E5EEFA` | avisos neutros |
 | Inativo | texto `#4F5B58` / fundo `#EEF1F0` | "Desativado" |
 
+### Cores de categoria (aprovado em 16/11/2026)
+
+Para itens de uma mesma lista que ganham cor para se distinguir (frentes da escala, turnos, tipos de ausência, séries de gráfico): matizes bem separados e pouco saturados, legíveis no branco; os mais distantes para os itens que aparecem juntos; nunca dois tons do mesmo matiz na mesma lista. Quando a cor é de um cadastro (ex.: frente), ela é dado editável na tela, não constante no código.
+
+Paleta, em ordem de uso: `#C0525E` · `#5A9A64` · `#8462A8` · `#4E8C88` · `#B5609E` · `#C9804A` · `#5677B8` · `#8A8A45` · `#8C6A45` · `#B89A4A` · `#3E4A82` · `#8A4A4A` · `#4F9BC2` · `#6B7684`.
+
 ### Tipografia
 
 - **IBM Plex Sans** 400/500/600 na interface inteira; **IBM Plex Mono** 400 só para chaves técnicas (permissões, ids).
@@ -56,6 +62,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 
 - Menu lateral 240px (recolhido 64px); item 36px; ícone 20px.
 - Controles 36px de altura no app, 44px nas telas de acesso (com texto de 16px, que evita o zoom automático do iOS ao focar).
+- Campos de texto, número, select e busca com texto de 16px no celular e 14px a partir de `sm` (`text-base sm:text-sm`), para o iOS não dar zoom ao focar. Regra única nos campos do kit. Decidido em 23/11/2026.
 - Linha de tabela 44px; padding de painel 16px; espaço entre seções 24–32px.
 - Raio: 6px controles, 8px painéis e tabelas, 12px modal.
 - Tabela encostada na borda de um painel: o fundo do cabeçalho segue o raio da caixa, nunca canto reto sobre o canto arredondado. O `DataTable` já arredonda o topo da caixa que rola (raio interno: 8px menos a borda); tabela fora do kit põe o `overflow-x-auto` no próprio elemento com borda e raio, ou dentro de caixa que corta (ex.: `Caixa`).
