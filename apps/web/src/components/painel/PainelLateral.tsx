@@ -31,7 +31,7 @@ let montados = 0;
 
 /**
  * Painel de ver ou editar um item (detalhe, edição), sobre o Drawer do Base UI. Sempre por cima:
- * nunca encolhe a tela; o resto ganha um fundo com desfoque discreto (sem escurecer) que não deixa
+ * nunca encolhe a tela; o resto ganha um fundo com desfoque mínimo e um véu bem leve que não deixa
  * clicar atrás. Modal: o foco fica preso no painel e volta para quem abriu ao fechar. Fecha pelo X,
  * pelo Esc, arrastando para a direita, clicando fora ou pelo `BotaoCancelar` do formulário; com
  * `alterado`, pergunta antes de descartar. No computador ocupa 400px à direita (720px no largo);
@@ -94,10 +94,10 @@ export function PainelLateral({
       swipeDirection="right"
     >
       <Drawer.Portal>
-        {/* Desfoque discreto, sem escurecer; só a opacidade anima (o blur nunca). */}
+        {/* Desfoque mínimo e véu de 4% do texto: só a opacidade anima (a cor e o blur nunca). */}
         <Drawer.Backdrop
           data-fundo-painel
-          className="fixed inset-0 z-40 bg-transparent backdrop-blur-[2px] transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
+          className="bg-foreground/[0.04] fixed inset-0 z-40 backdrop-blur-[0.5px] transition-opacity duration-200 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         />
         <Drawer.Viewport className="pointer-events-none fixed inset-0 z-40 flex justify-end">
           <Drawer.Popup
