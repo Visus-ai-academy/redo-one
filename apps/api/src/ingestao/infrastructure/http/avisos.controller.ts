@@ -32,7 +32,10 @@ import {
   ParametrosIngestaoDto,
 } from './dto/aviso.dto';
 
-/** Avisos de cadastro (cliente, médico, estudo... desconhecido) encontrados na importação. */
+/**
+ * Avisos de cadastro (cliente, médico, estudo... desconhecido) encontrados na importação. Cada
+ * um só aparece para quem vê a tela onde ele se resolve (`tiposDeAvisoVisiveis`).
+ */
 @ApiTags('ingestao')
 @Controller('ingestao/avisos')
 export class AvisosController {
@@ -44,7 +47,10 @@ export class AvisosController {
   @Get()
   @Permissao('avisos.ver')
   @ApiOkResponse({ type: PaginaAvisosDto })
-  async listar(@Query() q: ListarAvisosDto): Promise<PaginaAvisosDto> {
+  async listar(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Query() q: ListarAvisosDto,
+  ): Promise<PaginaAvisosDto> {
     const filtro = {
       pagina: q.pagina,
       porPagina: q.porPagina,
@@ -53,7 +59,7 @@ export class AvisosController {
       busca: q.busca,
     };
     return {
-      ...(await this.listarAvisos.executar(filtro)),
+      ...(await this.listarAvisos.executar(filtro, ator)),
       pagina: q.pagina,
       porPagina: q.porPagina,
     };
@@ -62,9 +68,12 @@ export class AvisosController {
   @Get(':id')
   @Permissao('avisos.ver')
   @ApiOkResponse({ type: AvisoDto })
-  @ApiNotFoundResponse()
-  obter(@Param('id', ParseUUIDPipe) id: string): Promise<AvisoDto> {
-    return this.listarAvisos.obter(id);
+  @ApiNotFoundResponse({ description: 'Não existe ou é de um tipo que o usuário não vê.' })
+  obter(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<AvisoDto> {
+    return this.listarAvisos.obter(id, ator);
   }
 
   @Post(':id/ignorar')
@@ -78,7 +87,7 @@ export class AvisosController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() corpo: IgnorarAvisoDto,
   ): Promise<void> {
-    return this.triar.ignorar(ator.usuarioId, id, corpo.motivo);
+    return this.triar.ignorar(ator, id, corpo.motivo);
   }
 
   @Post(':id/reabrir')
@@ -91,7 +100,7 @@ export class AvisosController {
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
-    return this.triar.reabrir(ator.usuarioId, id);
+    return this.triar.reabrir(ator, id);
   }
 }
 

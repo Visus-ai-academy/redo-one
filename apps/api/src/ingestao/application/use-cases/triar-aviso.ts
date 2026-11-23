@@ -1,6 +1,13 @@
 import type { Auditoria } from '../../../auditoria/auditoria';
-import { AvisoNaoEncontradoError, TriagemInvalidaError } from '../erros';
+import type { AcessoAvisos } from '../../domain/avisos-visiveis';
+import { TriagemInvalidaError } from '../erros';
 import type { ConsultaAvisos, StatusAviso } from '../ports/avisos.consulta';
+import { obterAvisoVisivel } from './consultas-simples';
+
+/** Quem tria: só os avisos dos tipos que vê. */
+export interface AtorTriagem extends AcessoAvisos {
+  usuarioId: string;
+}
 
 /**
  * Triagem dos avisos de cadastro: ignorar o que não precisa de cadastro (ex.: cliente de teste)
@@ -13,9 +20,9 @@ export class TriarAviso {
     private readonly agora: () => Date,
   ) {}
 
-  ignorar(usuarioId: string, id: string, motivo: string) {
+  ignorar(ator: AtorTriagem, id: string, motivo: string) {
     return this.decidir(
-      usuarioId,
+      ator,
       id,
       'pendente',
       'ignorado',
@@ -25,9 +32,9 @@ export class TriarAviso {
     );
   }
 
-  reabrir(usuarioId: string, id: string) {
+  reabrir(ator: AtorTriagem, id: string) {
     return this.decidir(
-      usuarioId,
+      ator,
       id,
       'ignorado',
       'pendente',
@@ -38,7 +45,7 @@ export class TriarAviso {
   }
 
   private async decidir(
-    usuarioId: string,
+    ator: AtorTriagem,
     id: string,
     de: StatusAviso,
     para: StatusAviso,
@@ -46,8 +53,8 @@ export class TriarAviso {
     acao: string,
     recusa: string,
   ) {
-    const aviso = await this.avisos.obter(id);
-    if (!aviso) throw new AvisoNaoEncontradoError();
+    const aviso = await obterAvisoVisivel(this.avisos, id, ator);
+    const usuarioId = ator.usuarioId;
     if (aviso.status !== de) throw new TriagemInvalidaError(recusa);
     const antes = { status: aviso.status, motivo: aviso.motivo };
     const em = this.agora();

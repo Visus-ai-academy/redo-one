@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ilike, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
 
 import { contem, relevancia } from '../../../database/busca';
 import { DATABASE, type Database } from '../../../database/database';
@@ -30,9 +30,10 @@ export class DrizzleConsultaAvisos implements ConsultaAvisos {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async listar(f: FiltroAvisos) {
+    if (f.tipos.length === 0) return { itens: [], total: 0 };
     const onde = and(
       f.status ? eq(avisosCadastro.status, f.status) : undefined,
-      f.tipo ? eq(avisosCadastro.tipo, f.tipo) : undefined,
+      inArray(avisosCadastro.tipo, [...f.tipos]),
       f.busca ? ilike(avisosCadastro.valor, contem(f.busca)) : undefined,
     );
     const [itens, [total]] = await Promise.all([

@@ -8,6 +8,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
+import { tiposDeAvisoVisiveis } from '../../domain/avisos-visiveis';
 
 import { DrizzleArquivosRepository } from './drizzle-arquivos.repository';
 import { DrizzleAvisosCadastroRepository } from './drizzle-avisos-cadastro.repository';
@@ -18,6 +19,7 @@ import { DrizzleParametrosIngestaoRepository } from './drizzle-parametros-ingest
 
 const url = process.env.TEST_DATABASE_URL;
 const agora = new Date('2026-10-07T12:00:00Z');
+const TODOS_OS_TIPOS = tiposDeAvisoVisiveis({ acessoTotal: true, permissoes: new Set() });
 
 describe.skipIf(!url)('repositórios Drizzle da importação', () => {
   let pool: Pool;
@@ -412,16 +414,33 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
       ]);
       const consulta = new DrizzleConsultaAvisos(db);
 
-      const todos = await consulta.listar({ pagina: 1, porPagina: 10 });
+      const todos = await consulta.listar({ pagina: 1, porPagina: 10, tipos: TODOS_OS_TIPOS });
       expect(todos.total).toBe(3);
       expect(todos.itens.map((a) => a.valor)).toEqual(['C', 'B', 'A']);
       const pendentesDeCliente = await consulta.listar({
         pagina: 1,
         porPagina: 10,
         status: 'pendente',
-        tipo: 'cliente',
+        tipos: ['cliente'],
       });
       expect(pendentesDeCliente.itens.map((a) => a.valor)).toEqual(['A']);
+    });
+
+    it('lista só os tipos pedidos; sem tipo nenhum, nada', async () => {
+      await inserir([
+        { valor: 'A' },
+        { valor: 'B', tipo: 'medico' },
+        { valor: 'C', tipo: 'estudo' },
+      ]);
+      const consulta = new DrizzleConsultaAvisos(db);
+
+      const r = await consulta.listar({ pagina: 1, porPagina: 10, tipos: ['cliente', 'estudo'] });
+      expect(r.itens.map((a) => a.valor)).toEqual(['C', 'A']);
+      expect(r.total).toBe(2);
+      expect(await consulta.listar({ pagina: 1, porPagina: 10, tipos: [] })).toEqual({
+        itens: [],
+        total: 0,
+      });
     });
 
     it('a busca acha pela grafia, a mais parecida na frente', async () => {
@@ -430,6 +449,7 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
       const r = await new DrizzleConsultaAvisos(db).listar({
         pagina: 1,
         porPagina: 10,
+        tipos: TODOS_OS_TIPOS,
         busca: 'nova',
       });
 

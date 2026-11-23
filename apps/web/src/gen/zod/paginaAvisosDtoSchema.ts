@@ -5,9 +5,11 @@
 
 import * as z from 'zod'
 import { avisoDtoSchema } from './avisoDtoSchema'
+import { tipoAvisoSchema } from './tipoAvisoSchema'
 
 export const paginaAvisosDtoSchema = z.object({
   itens: z.array(avisoDtoSchema),
+  tipos: z.array(tipoAvisoSchema).describe('Tipos que o usuário vê (os da tela onde cada um se resolve): opções do filtro.'),
   total: z.int(),
   pagina: z.int(),
   porPagina: z.int(),

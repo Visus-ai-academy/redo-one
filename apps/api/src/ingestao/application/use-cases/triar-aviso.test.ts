@@ -6,6 +6,8 @@ import type { AvisoCadastro, ConsultaAvisos } from '../ports/avisos.consulta';
 import { TriarAviso } from './triar-aviso';
 
 const agora = new Date('2026-11-16T12:00:00Z');
+/** Quem tria: vê a tela Clientes (os avisos de cliente), não a de Médicos. */
+const u1 = { usuarioId: 'u1', acessoTotal: false, permissoes: new Set(['clientes.ver']) };
 
 describe('TriarAviso', () => {
   let avisos: Map<string, AvisoCadastro>;
@@ -41,7 +43,7 @@ describe('TriarAviso', () => {
   });
 
   it('ignora o pendente com o motivo e audita', async () => {
-    await triar.ignorar('u1', 'p', 'Cliente de teste da MobileMed');
+    await triar.ignorar(u1, 'p', 'Cliente de teste da MobileMed');
 
     expect(avisos.get('p')).toMatchObject({
       status: 'ignorado',
@@ -61,23 +63,29 @@ describe('TriarAviso', () => {
   });
 
   it('reabre o ignorado, que volta a pendente sem motivo', async () => {
-    await triar.reabrir('u1', 'i');
+    await triar.reabrir(u1, 'i');
 
     expect(avisos.get('i')).toMatchObject({ status: 'pendente', motivo: null });
     expect(auditoria.eventos[0]?.acao).toBe('reaberto');
   });
 
   it('só ignora o pendente e só reabre o ignorado', async () => {
-    await expect(triar.ignorar('u1', 'r', 'teste')).rejects.toThrow(
+    await expect(triar.ignorar(u1, 'r', 'teste')).rejects.toThrow(
       'Só um aviso pendente pode ser ignorado.',
     );
-    await expect(triar.reabrir('u1', 'p')).rejects.toThrow(
-      'Só um aviso ignorado pode ser reaberto.',
-    );
+    await expect(triar.reabrir(u1, 'p')).rejects.toThrow('Só um aviso ignorado pode ser reaberto.');
     expect(auditoria.eventos).toEqual([]);
   });
 
   it('aviso que não existe é erro de não encontrado', async () => {
-    await expect(triar.ignorar('u1', 'x', 'teste')).rejects.toThrow(AvisoNaoEncontradoError);
+    await expect(triar.ignorar(u1, 'x', 'teste')).rejects.toThrow(AvisoNaoEncontradoError);
+  });
+
+  it('aviso de tipo que quem tria não vê é não encontrado, sem mudar nada', async () => {
+    avisos.set('m', { ...(avisos.get('p') as AvisoCadastro), id: 'm', tipo: 'medico' });
+
+    await expect(triar.ignorar(u1, 'm', 'teste')).rejects.toThrow(AvisoNaoEncontradoError);
+    expect(avisos.get('m')?.status).toBe('pendente');
+    expect(auditoria.eventos).toEqual([]);
   });
 });

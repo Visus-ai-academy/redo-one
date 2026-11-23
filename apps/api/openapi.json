@@ -7134,7 +7134,7 @@
             }
           },
           "404": {
-            "description": ""
+            "description": "Não existe ou é de um tipo que o usuário não vê."
           }
         },
         "tags": [
@@ -15292,6 +15292,13 @@
               "$ref": "#/components/schemas/AvisoDto"
             }
           },
+          "tipos": {
+            "type": "array",
+            "description": "Tipos que o usuário vê (os da tela onde cada um se resolve): opções do filtro.",
+            "items": {
+              "$ref": "#/components/schemas/TipoAviso"
+            }
+          },
           "total": {
             "type": "integer"
           },
@@ -15304,6 +15311,7 @@
         },
         "required": [
           "itens",
+          "tipos",
           "total",
           "pagina",
           "porPagina"

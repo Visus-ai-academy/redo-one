@@ -4,9 +4,15 @@
 */
 
 import type { AvisoDto } from './AvisoDto'
+import type { TipoAvisoKey } from './TipoAviso'
 
 export type PaginaAvisosDto = {
   itens: AvisoDto[];
+  /**
+   * @description Tipos que o usuário vê (os da tela onde cada um se resolve): opções do filtro.
+   * @type array
+   */
+  tipos: TipoAvisoKey[];
   total: number;
   pagina: number;
   porPagina: number;

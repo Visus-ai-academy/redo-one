@@ -21,7 +21,8 @@ export interface AvisoCadastro {
 
 export interface FiltroAvisos extends Paginacao {
   status?: StatusAviso;
-  tipo?: TipoAviso;
+  /** Só estes tipos (os que quem consulta vê, já estreitados pelo filtro); vazia, nenhum. */
+  tipos: readonly TipoAviso[];
   busca?: string;
 }
 

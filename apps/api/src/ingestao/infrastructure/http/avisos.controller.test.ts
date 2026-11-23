@@ -26,9 +26,9 @@ describe('AvisosController', () => {
     expect(exigidas('reabrir')).toEqual(['avisos.triar']);
   });
 
-  it('lista com os filtros e tria em nome de quem está logado', async () => {
+  it('lista, abre e tria com o acesso de quem está logado', async () => {
     const listar = {
-      executar: vi.fn(async () => ({ itens: [], total: 0 })),
+      executar: vi.fn(async () => ({ itens: [], total: 0, tipos: ['cliente'] })),
       obter: vi.fn(async () => ({ id: 'a1' })),
     };
     const triar = { ignorar: vi.fn(async () => undefined), reabrir: vi.fn(async () => undefined) };
@@ -38,26 +38,24 @@ describe('AvisosController', () => {
     );
 
     expect(
-      await controller.listar({
+      await controller.listar(ator, {
         pagina: 1,
         porPagina: 25,
         status: 'pendente',
         tipo: 'cliente',
         busca: 'x',
       }),
-    ).toEqual({ itens: [], total: 0, pagina: 1, porPagina: 25 });
-    expect(listar.executar).toHaveBeenCalledWith({
-      pagina: 1,
-      porPagina: 25,
-      status: 'pendente',
-      tipo: 'cliente',
-      busca: 'x',
-    });
-    expect(await controller.obter('a1')).toEqual({ id: 'a1' });
+    ).toEqual({ itens: [], total: 0, tipos: ['cliente'], pagina: 1, porPagina: 25 });
+    expect(listar.executar).toHaveBeenCalledWith(
+      { pagina: 1, porPagina: 25, status: 'pendente', tipo: 'cliente', busca: 'x' },
+      ator,
+    );
+    expect(await controller.obter(ator, 'a1')).toEqual({ id: 'a1' });
+    expect(listar.obter).toHaveBeenCalledWith('a1', ator);
     await controller.ignorar(ator, 'a1', { motivo: 'teste' });
-    expect(triar.ignorar).toHaveBeenCalledWith('u1', 'a1', 'teste');
+    expect(triar.ignorar).toHaveBeenCalledWith(ator, 'a1', 'teste');
     await controller.reabrir(ator, 'a1');
-    expect(triar.reabrir).toHaveBeenCalledWith('u1', 'a1');
+    expect(triar.reabrir).toHaveBeenCalledWith(ator, 'a1');
   });
 });
 

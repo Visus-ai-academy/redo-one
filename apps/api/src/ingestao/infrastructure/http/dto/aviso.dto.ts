@@ -68,6 +68,13 @@ export class AvisoDto {
 
 export class PaginaAvisosDto {
   @ApiProperty({ type: [AvisoDto] }) itens!: AvisoDto[];
+  @ApiProperty({
+    enum: TIPOS,
+    enumName: 'TipoAviso',
+    isArray: true,
+    description: 'Tipos que o usuário vê (os da tela onde cada um se resolve): opções do filtro.',
+  })
+  tipos!: (typeof TIPOS)[number][];
   @ApiProperty({ type: 'integer' }) total!: number;
   @ApiProperty({ type: 'integer' }) pagina!: number;
   @ApiProperty({ type: 'integer' }) porPagina!: number;
