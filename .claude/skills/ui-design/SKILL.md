@@ -73,7 +73,6 @@ Como a tela reage (validação, estado na URL, erros por código HTTP, textos de
 - Sem zebra; divisória de 1px entre linhas; hover sutil; linha selecionada com fundo do acento bem claro.
 - Ações da linha: a linha inteira abre o detalhe (clique em qualquer coluna, com cursor de mãozinha; o nome é um `<Link>` com o `?id=` do painel, que o teclado alcança e o Ctrl/⌘+clique abre em outra aba); ações raras num menu "⋯" (ícone `DotsThree`). No máximo uma ação visível por linha.
 - Filtros acima da tabela, na mesma faixa da busca; contagem e paginação no rodapé.
-- Com o painel lateral aberto, a lista só perde coluna que não cabe: mede a largura e tira, na ordem, primeiro as secundárias escolhidas pela tela e depois as outras da direita para a esquerda; o nome nunca sai. Com espaço sobrando, todas ficam.
 - Lista que é o trabalho principal da tela cabe na altura da janela no computador: a tabela rola por dentro, com o cabeçalho fixo, e o rodapé com contagem e paginação fica sempre à vista; a página em si não rola. No celular, a página rola normalmente.
 
 **Formulários**
@@ -130,11 +129,12 @@ Responda na ordem; a primeira resposta "sim" decide.
 4. **É ver ou editar um item de uma lista, alternando entre itens?** (painel do médico, do cliente, do usuário, do aviso) → **painel lateral**. Ele pode ter abas, histórico e listas.
 5. **É fluxo longo, com várias seções ou etapas, ou é o trabalho principal?** → **página** (rota própria).
 
-**O painel lateral empurra a tela ou fica por cima?**
+**O painel lateral sempre fica por cima** (decidido em 23/11/2026)
 
-- **Empurra (encolhe a tela ao lado, `RESERVA_DO_PAINEL`)** só em tela que é uma lista ou tabela que sabe perder colunas (cadastros, usuários, avisos): a pessoa troca de linha com o painel aberto e precisa ver a lista inteira.
-- **Fica por cima** (sem encolher nada, sem escurecer o fundo, a tela continua clicável) em todo o resto: grade, calendário, quadro com várias colunas, painel de números, formulário. Encolher esses layouts quebra a grade; é melhor cobrir a faixa da direita do que espremer tudo. Se o item clicado fica embaixo do painel, a tela rola até ele.
-- Nunca as duas coisas na mesma tela: escolha pela tela, não pelo painel.
+- Nunca encolhe nem empurra a tela: o layout de trás fica exatamente como estava, em toda tela (lista, grade, calendário, quadro).
+- O resto da tela ganha um desfoque bem discreto (só para tirar o foco dela, sem escurecer) e deixa de ser clicável: **clicar fora fecha o painel**, assim como X, Esc e arrastar. Com formulário alterado, qualquer forma de fechar pergunta "Descartar as alterações?".
+- O foco fica preso no painel enquanto ele está aberto (modal) e volta para o que o abriu ao fechar.
+- Trocar de item é fechar e abrir outro (dois cliques).
 
 **Estados**
 - Todo controle: padrão, hover, foco visível (anel de 2px na cor do acento), ativo, desabilitado.
