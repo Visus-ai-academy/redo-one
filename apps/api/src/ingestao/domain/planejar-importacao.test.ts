@@ -77,6 +77,49 @@ describe('planejarImportacao', () => {
     expect(plano.pacientes.map((l) => l.identidade)).toEqual(['sem-nome', 'mudou', 'novo']);
   });
 
+  it('completa o id da conta MobileMed do laudo igual que não o tinha ou o tinha diferente', () => {
+    const comIds = (identidade: string, assinou: number | null, reassinou: number | null) => ({
+      ...laudo(identidade),
+      medicoIdMobilemed: assinou,
+      medicoReassinaturaIdMobilemed: reassinou,
+    });
+    const existente = (assinou: number | null, reassinou: number | null) => ({
+      hashConteudo: 'igual',
+      removido: false,
+      medicoIdMobilemed: assinou,
+      medicoReassinaturaIdMobilemed: reassinou,
+    });
+    const iguais = (...ls: ReturnType<typeof comIds>[]) =>
+      ls.map((l) => ({ ...l, hashConteudo: 'igual' }));
+    const existentes = new Map([
+      ['sem-id', existente(null, null)],
+      ['mesmo-id', existente(45, null)],
+      ['outro-id', existente(45, null)],
+      ['so-reassinatura', existente(45, null)],
+      ['upload-sem-id', existente(45, 46)],
+    ]);
+
+    const plano = planejarImportacao(
+      iguais(
+        comIds('sem-id', 45, null),
+        comIds('mesmo-id', 45, null),
+        comIds('outro-id', 47, null),
+        comIds('so-reassinatura', 45, 46),
+        // O upload não traz o id: não apaga o que a API gravou.
+        comIds('upload-sem-id', null, null),
+      ),
+      existentes,
+      trava,
+    );
+
+    expect(plano.inalterados).toBe(5);
+    expect(plano.idsMedico.map((l) => l.identidade)).toEqual([
+      'sem-id',
+      'outro-id',
+      'so-reassinatura',
+    ]);
+  });
+
   it('recusa quando sumiriam mais laudos que o mínimo e que o múltiplo das linhas do arquivo', () => {
     const existentes = new Map(
       Array.from(

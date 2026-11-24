@@ -53,6 +53,8 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         removido: sql<boolean>`${laudos.removidoEm} is not null`,
         // Só a conferência (HMAC): a importação não lê o nome gravado.
         pacienteConferencia: laudosPacientes.conferencia,
+        medicoIdMobilemed: laudos.medicoIdMobilemed,
+        medicoReassinaturaIdMobilemed: laudos.medicoReassinaturaIdMobilemed,
       })
       .from(laudos)
       .leftJoin(laudosPacientes, eq(laudosPacientes.laudoId, laudos.id))
@@ -97,6 +99,26 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           return dados && laudoId ? [{ laudoId, importacaoId, dados }] : [];
         });
         if (brutas.length) await tx.insert(laudosLinhasBrutas).values(brutas).onConflictDoNothing();
+      }
+
+      // O id da conta MobileMed do laudo sem outra mudança (fora do hash); nulo mantém o gravado.
+      for (const lote of emLotes([...a.idsMedico])) {
+        const valores = sql.join(
+          lote.map(
+            ([identidade, ids]) =>
+              sql`(${identidade}::text, ${ids.medicoIdMobilemed}::integer, ${ids.medicoReassinaturaIdMobilemed}::integer)`,
+          ),
+          sql`, `,
+        );
+        await tx.execute(sql`
+          update ${laudos} set
+            medico_id_mobilemed = coalesce(v.assinou, ${laudos.medicoIdMobilemed}),
+            medico_reassinatura_id_mobilemed =
+              coalesce(v.reassinou, ${laudos.medicoReassinaturaIdMobilemed}),
+            atualizado_em = ${agora}
+          from (values ${valores}) as v(identidade, assinou, reassinou)
+          where ${laudos.identidade} = v.identidade
+        `);
       }
 
       // O paciente vai à parte, também de laudo sem outra mudança (o que não o tinha ganha).

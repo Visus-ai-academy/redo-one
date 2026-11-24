@@ -220,6 +220,45 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
     expect(totalDepois).toMatchObject({ quantidade: 2, volume: 3 });
   });
 
+  it('o laudo igual do upload ganha o id da conta pela MobileMed sem contar como atualizado', async () => {
+    await db
+      .insert(schema.medicos)
+      .values({ nome: 'Ana Souza', chaveNormalizada: 'ana souza', idMobilemed: 45 });
+    expect(await importar([linha('1', 'TC TORAX', 1, 'Dra. Ana Souza')])).toMatchObject({
+      inseridos: 1,
+    });
+    expect((await db.select().from(schema.laudos))[0]?.medicoIdMobilemed).toBeNull();
+    const brutas = (await db.select().from(schema.laudosLinhasBrutas)).length;
+
+    const daApi = await importarDaMobileMed([
+      {
+        nome_fantasia: 'CLINICA X',
+        nome_paciente: 'Paciente Teste',
+        codigo_paciente: '1',
+        estudo_descricao: 'TC TORAX',
+        pacs_accession_no: 'ACC1',
+        modalidade_id: 2,
+        prioridade_id: 1,
+        status_id: 1,
+        valor: '1',
+        especialidade: 'MEDICINA INTERNA',
+        medico: 'Dra. Ana Souza',
+        usuario_id: 45,
+        medico_primeiro_laudo: null,
+        medico_primeiro_laudo_id: null,
+        is_duplicado: 0,
+        is_anterior: 0,
+        data_realizacao: '2026-10-05T11:00:00.000Z',
+        data_laudo: '2026-10-06T13:00:00.000Z',
+        sla_expiration_date: '2026-10-06T12:00:00.000Z',
+      },
+    ]);
+
+    expect(daApi).toMatchObject({ status: 'concluida', atualizados: 0, inalterados: 1 });
+    expect((await db.select().from(schema.laudos))[0]?.medicoIdMobilemed).toBe(45);
+    expect(await db.select().from(schema.laudosLinhasBrutas)).toHaveLength(brutas);
+  });
+
   it('a MobileMed liga pelo id da conta o laudo que o nome deixou sem médico, sem duplicar', async () => {
     const [ana] = await db
       .insert(schema.medicos)

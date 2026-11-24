@@ -3,6 +3,9 @@ export interface LaudoExistente {
   removido: boolean;
   /** Conferência do paciente gravado (`PacienteDoLaudo.conferencia`); nulo = sem paciente. */
   pacienteConferencia?: string | null;
+  /** Conta MobileMed de quem assinou e reassinou, gravada (fora do hash). */
+  medicoIdMobilemed?: number | null;
+  medicoReassinaturaIdMobilemed?: number | null;
 }
 
 /** Trava contra arquivo truncado (valores de `parametros_ingestao`). */
@@ -22,11 +25,27 @@ export interface PlanoImportacao<L> {
    * que mudou, mesmo com o resto do laudo igual (o paciente fica fora do hash do conteúdo).
    */
   pacientes: L[];
+  /**
+   * Laudos iguais (fora do inserir e do atualizar) cujo id da conta MobileMed do médico veio e
+   * falta ou difere do gravado: só esses ids são gravados (o upload, que não os traz, não apaga).
+   */
+  idsMedico: L[];
   /** Linhas repetidas na própria planilha (mesma identidade): contam uma vez. */
   repetidas: number;
   /** Motivo da recusa; com recusa, nada é gravado. */
   recusa: string | null;
 }
+
+type IdsMedico = {
+  medicoIdMobilemed?: number | null;
+  medicoReassinaturaIdMobilemed?: number | null;
+};
+
+/** Algum id da conta MobileMed veio e falta ou difere do gravado. */
+const idMedicoNovo = (laudo: IdsMedico, existente: IdsMedico) =>
+  (['medicoIdMobilemed', 'medicoReassinaturaIdMobilemed'] as const).some(
+    (campo) => laudo[campo] != null && laudo[campo] !== existente[campo],
+  );
 
 /**
  * Compara os laudos do arquivo com os da janela que ele cobre: novos entram, os de conteúdo
@@ -39,6 +58,8 @@ export function planejarImportacao<
     identidade: string;
     hashConteudo: string;
     paciente?: { conferencia: string } | null;
+    medicoIdMobilemed?: number | null;
+    medicoReassinaturaIdMobilemed?: number | null;
   },
 >(
   laudos: L[],
@@ -52,6 +73,7 @@ export function planejarImportacao<
     inalterados: 0,
     remover: [],
     pacientes: [],
+    idsMedico: [],
     repetidas: 0,
     recusa: null,
   };
@@ -66,7 +88,10 @@ export function planejarImportacao<
     if (!existente) plano.inserir.push(laudo);
     else if (existente.removido || existente.hashConteudo !== laudo.hashConteudo) {
       plano.atualizar.push(laudo);
-    } else plano.inalterados++;
+    } else {
+      plano.inalterados++;
+      if (idMedicoNovo(laudo, existente)) plano.idsMedico.push(laudo);
+    }
     if (laudo.paciente && laudo.paciente.conferencia !== existente?.pacienteConferencia) {
       plano.pacientes.push(laudo);
     }

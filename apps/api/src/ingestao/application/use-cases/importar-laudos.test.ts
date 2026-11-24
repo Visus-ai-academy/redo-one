@@ -195,6 +195,22 @@ describe('ImportarLaudos', () => {
     expect([...laudos.pacientes.values()].map((p) => p.nome)).toEqual(['Paciente Corrigido']);
   });
 
+  it('o laudo igual já gravado sem o id da conta MobileMed ganha o id, sem contar como atualizado', async () => {
+    await importar('i1', [registro('1')]);
+    const r = await importar('i2', [registro('1', { MEDICO_ID: 45, MEDICO_REASSINATURA_ID: 46 })]);
+
+    expect(r?.resultado).toMatchObject({ inseridos: 0, atualizados: 0, inalterados: 1 });
+    expect(laudos.ativos()).toMatchObject([
+      { medicoIdMobilemed: 45, medicoReassinaturaIdMobilemed: 46 },
+    ]);
+    // A linha crua não é regravada.
+    expect(laudos.linhasBrutas).toHaveLength(1);
+
+    // O upload, que não traz o id, não apaga o que a API gravou.
+    await importar('i3', [registro('1')]);
+    expect(laudos.ativos()[0]?.medicoIdMobilemed).toBe(45);
+  });
+
   it('o laudo que mudou é atualizado e o que sumiu da janela é removido', async () => {
     await importar('i1', [registro('1'), registro('2')]);
     const r = await importar('i2', [registro('1', { STATUS: 'Reassinado' })]);

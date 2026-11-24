@@ -224,7 +224,8 @@ export function prepararLaudo(
       hashConteudo: createHash('sha256').update(JSON.stringify(conteudo)).digest('hex'),
       ...conteudo,
       // Fora do hash: o upload não traz o id, e o mesmo laudo tem de dar o mesmo hash pelos dois
-      // caminhos. Quando o id muda o médico resolvido, o medicoId (no hash) já muda o hash.
+      // caminhos. Quando o id muda o médico resolvido, o medicoId (no hash) já muda o hash; no
+      // laudo igual, o plano (`idsMedico`) grava o id que falta ou mudou.
       medicoIdMobilemed: l.medicoIdMobilemed,
       medicoReassinaturaIdMobilemed: l.medicoReassinaturaIdMobilemed,
       paciente: pacienteDoLaudo(l, pseudonimo),

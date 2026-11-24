@@ -102,6 +102,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     remover: [],
     linhasBrutas: new Map(),
     pacientes: new Map(),
+    idsMedico: new Map(),
   };
 
   it('grava os novos com a linha crua e devolve-os na janela', async () => {
@@ -113,7 +114,18 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     );
 
     expect(await repo.existentesNaJanela(janela)).toEqual(
-      new Map([['a', { hashConteudo: 'h-a', removido: false, pacienteConferencia: null }]]),
+      new Map([
+        [
+          'a',
+          {
+            hashConteudo: 'h-a',
+            removido: false,
+            pacienteConferencia: null,
+            medicoIdMobilemed: null,
+            medicoReassinaturaIdMobilemed: null,
+          },
+        ],
+      ]),
     );
     const brutas = await db.select().from(schema.laudosLinhasBrutas);
     expect(brutas.map((b) => b.dados)).toEqual([{ EMPRESA: 'CLINICA X' }]);
@@ -173,6 +185,48 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     expect(lidos).toEqual(new Map([[a?.id, { nome: 'Fulano Corrigido', codigo: '007' }]]));
   });
 
+  it('grava o id da conta MobileMed em laudo sem outra mudança; nulo mantém o gravado', async () => {
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, inserir: [laudo('a'), laudo('b')] },
+      agora,
+    );
+    const ids = async (identidade: string) => {
+      const e = (await repo.existentesNaJanela(janela)).get(identidade);
+      return [e?.medicoIdMobilemed, e?.medicoReassinaturaIdMobilemed];
+    };
+
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      {
+        ...vazio,
+        idsMedico: new Map([
+          ['a', { medicoIdMobilemed: 45, medicoReassinaturaIdMobilemed: null }],
+          ['nao-existe', { medicoIdMobilemed: 1, medicoReassinaturaIdMobilemed: 2 }],
+        ]),
+      },
+      agora,
+    );
+    expect(await ids('a')).toEqual([45, null]);
+    expect(await ids('b')).toEqual([null, null]);
+
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      {
+        ...vazio,
+        idsMedico: new Map([['a', { medicoIdMobilemed: null, medicoReassinaturaIdMobilemed: 46 }]]),
+      },
+      agora,
+    );
+    expect(await ids('a')).toEqual([45, 46]);
+    // O laudo não muda de hash nem ganha linha crua.
+    expect((await repo.existentesNaJanela(janela)).get('a')?.hashConteudo).toBe('h-a');
+    expect(await db.select().from(schema.laudosLinhasBrutas)).toEqual([]);
+  });
+
   it('a janela filtra origem, dias, empresas e competências bloqueadas', async () => {
     await repo.aplicar(
       importacaoId,
@@ -227,6 +281,8 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
       hashConteudo: 'novo',
       removido: false,
       pacienteConferencia: null,
+      medicoIdMobilemed: null,
+      medicoReassinaturaIdMobilemed: null,
     });
     const [gravado] = await db.select().from(schema.laudos);
     expect(gravado?.status).toBe('Reassinado');

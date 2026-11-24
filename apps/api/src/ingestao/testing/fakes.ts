@@ -125,6 +125,8 @@ export class LaudosEmMemoria implements LaudosRepository {
           hashConteudo: l.hashConteudo,
           removido: l.removido,
           pacienteConferencia: this.pacientes.get(l.identidade)?.conferencia ?? null,
+          medicoIdMobilemed: l.medicoIdMobilemed,
+          medicoReassinaturaIdMobilemed: l.medicoReassinaturaIdMobilemed,
         });
       }
     }
@@ -137,6 +139,13 @@ export class LaudosEmMemoria implements LaudosRepository {
       if (a.linhasBrutas.has(l.identidade)) {
         this.linhasBrutas.push({ identidade: l.identidade, importacaoId });
       }
+    }
+    for (const [identidade, ids] of a.idsMedico) {
+      const l = this.laudos.get(identidade);
+      if (!l) continue;
+      l.medicoIdMobilemed = ids.medicoIdMobilemed ?? l.medicoIdMobilemed;
+      l.medicoReassinaturaIdMobilemed =
+        ids.medicoReassinaturaIdMobilemed ?? l.medicoReassinaturaIdMobilemed;
     }
     for (const [identidade, paciente] of a.pacientes) {
       if (!this.laudos.has(identidade)) continue;

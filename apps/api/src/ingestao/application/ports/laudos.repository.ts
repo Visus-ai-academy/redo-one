@@ -27,12 +27,22 @@ export interface AlteracoesLaudos {
    * que não o tinha e do que mudou, inclusive de laudos sem outra mudança.
    */
   pacientes: ReadonlyMap<string, PacienteDoLaudo>;
+  /**
+   * Id da conta MobileMed de quem assinou e reassinou a gravar em laudos sem outra mudança, por
+   * identidade; nulo mantém o gravado.
+   */
+  idsMedico: ReadonlyMap<string, IdsMedicoMobilemed>;
+}
+
+export interface IdsMedicoMobilemed {
+  medicoIdMobilemed: number | null;
+  medicoReassinaturaIdMobilemed: number | null;
 }
 
 export interface LaudosRepository {
   existentesNaJanela(janela: JanelaLaudos): Promise<Map<string, LaudoExistente>>;
   /**
-   * Grava tudo numa transação: upsert dos laudos (com peças e linha crua), upsert dos pacientes,
+   * Grava tudo numa transação: upsert dos laudos (com peças e linha crua), upsert dos pacientes, ids da conta MobileMed dos laudos iguais,
    * marca os removidos e recalcula os totais dos dias da janela.
    */
   aplicar(
