@@ -49,6 +49,15 @@ describe('DatabaseModule', () => {
     await app.close();
   });
 
+  it('não derruba a aplicação quando o banco corta uma conexão parada', async () => {
+    const app = await createApp();
+    const pool = app.get<Pool>(PG_POOL);
+
+    // Sem ouvinte, o `error` de um cliente ocioso vira exceção e mata o processo.
+    expect(() => pool.emit('error', new Error('read ECONNRESET'))).not.toThrow();
+    await app.close();
+  });
+
   it('lê o máximo de conexões de DATABASE_POOL_MAX', async () => {
     const app = await createApp({ DATABASE_POOL_MAX: '4' });
 

@@ -1,4 +1,4 @@
-import { Global, Inject, Module, type OnApplicationShutdown } from '@nestjs/common';
+import { Global, Inject, Logger, Module, type OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
@@ -27,14 +27,21 @@ function maximoDeConexoes(config: ConfigService): number {
       provide: PG_POOL,
       inject: [ConfigService],
       // O pool só abre conexão na primeira query; subir a aplicação não exige o banco no ar.
-      useFactory: (config: ConfigService) =>
-        new Pool({
+      useFactory: (config: ConfigService) => {
+        const pool = new Pool({
           connectionString: config.getOrThrow<string>('DATABASE_URL'),
           max: maximoDeConexoes(config),
           idleTimeoutMillis: POOL_OCIOSO_MS,
           // Evita que NAT/proxy no caminho derrube em silêncio a conexão parada.
           keepAlive: true,
-        }),
+        });
+        // O banco (ou o pooler) pode cortar uma conexão parada; sem ouvinte, o `error` derruba a
+        // API inteira. O pool descarta o cliente e abre outro na próxima consulta.
+        pool.on('error', (erro) =>
+          new Logger('Banco').warn(`Conexão parada caiu e foi descartada: ${erro.message}`),
+        );
+        return pool;
+      },
     },
     {
       provide: DATABASE,
