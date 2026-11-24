@@ -17,13 +17,21 @@ export interface VigenciaRegistrada {
   criadoPor: string | null;
 }
 
+/** O cliente pedido, para saber se o corte dele pode ser configurado. */
+export interface ClienteDoCorte {
+  /** Principal de quem o cliente é unidade; nulo se não é unidade. */
+  unificadoEmId: string | null;
+  principalNome: string | null;
+}
+
 /** Tabela `cortes_competencia`. Também é a porta `LeitorCortesCompetencia` da `ingestao`. */
 export interface CortesRepository extends LeitorCortesCompetencia {
   /** Grava a vigência padrão inicial se não houver nenhuma vigência padrão. Idempotente. */
   garantirPadraoInicial(): Promise<void>;
   /** Do cliente (nulo = do padrão), mais nova primeiro. */
   listarVigencias(clienteId: string | null): Promise<VigenciaRegistrada[]>;
-  clienteExiste(clienteId: string): Promise<boolean>;
+  /** Nulo se o cliente não existe. */
+  obterCliente(clienteId: string): Promise<ClienteDoCorte | null>;
   /**
    * Grava a vigência e enfileira o recálculo da competência dos laudos atingidos (do cliente ou,
    * no padrão, de todos), na mesma transação. Devolve o id.

@@ -1,5 +1,6 @@
 import {
   ClienteNaoEncontradoError,
+  ClienteUnidadeError,
   corteDaEntrada,
   type EntradaVigencia,
   exigirCompetencia,
@@ -14,7 +15,7 @@ export type PedidoVigencia = EntradaVigencia & { desde: string };
 
 /**
  * Valida o pedido de vigência como a prévia e a criação o veem: formato de `desde`, corte, cliente
- * existente, `desde` depois da última competência fechada e sem vigência no mesmo mês.
+ * existente e que não é unidade, `desde` depois da última competência fechada e sem vigência no mesmo mês.
  */
 export async function prepararVigencia(
   pedido: PedidoVigencia,
@@ -24,8 +25,12 @@ export async function prepararVigencia(
   const { clienteId, desde } = pedido;
   exigirCompetencia(desde);
   const corte = corteDaEntrada(pedido);
-  if (clienteId !== null && !(await cortes.clienteExiste(clienteId))) {
-    throw new ClienteNaoEncontradoError();
+  if (clienteId !== null) {
+    const cliente = await cortes.obterCliente(clienteId);
+    if (!cliente) throw new ClienteNaoEncontradoError();
+    if (cliente.unificadoEmId !== null) {
+      throw new ClienteUnidadeError(cliente.principalNome ?? 'outro cliente');
+    }
   }
   validarDesde(desde, await competencias.ultimaFechada());
   if ((await cortes.listarVigencias(clienteId)).some((v) => v.desde === desde)) {

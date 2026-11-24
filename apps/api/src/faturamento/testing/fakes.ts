@@ -10,7 +10,11 @@ import type {
   CompetenciaResumo,
   CompetenciasRepository,
 } from '../application/ports/competencias.repository';
-import type { CortesRepository, VigenciaRegistrada } from '../application/ports/cortes.repository';
+import type {
+  ClienteDoCorte,
+  CortesRepository,
+  VigenciaRegistrada,
+} from '../application/ports/cortes.repository';
 import type {
   LaudoParaPrevia,
   LaudosCompetencia,
@@ -146,7 +150,7 @@ export interface VigenciaCriada {
 export class CortesEmMemoria implements CortesRepository {
   readonly padrao: VigenciaCorte[] = [];
   readonly porCliente = new Map<string, VigenciaCliente[]>();
-  readonly clientes = new Set<string>();
+  readonly clientes = new Map<string, ClienteDoCorte>();
   readonly criadas: VigenciaCriada[] = [];
 
   async carregar(): Promise<TabelaCortes> {
@@ -177,8 +181,8 @@ export class CortesEmMemoria implements CortesRepository {
       }));
   }
 
-  async clienteExiste(clienteId: string) {
-    return this.clientes.has(clienteId);
+  async obterCliente(clienteId: string) {
+    return this.clientes.get(clienteId) ?? null;
   }
 
   async criar(vigencia: NovaVigencia, autor: Autor) {

@@ -264,9 +264,26 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
     });
   });
 
-  it('clienteExiste', async () => {
-    expect(await repo.clienteExiste(clienteId)).toBe(true);
-    expect(await repo.clienteExiste('00000000-0000-0000-0000-000000000000')).toBe(false);
+  it('obterCliente diz se o cliente é unidade e de qual principal', async () => {
+    const nome = `CLIENTE_CORTE_${Math.random()}`;
+    const [unidade] = await db
+      .insert(schema.clientes)
+      .values({ nome, chaveNormalizada: nome, unificadoEmId: clienteId })
+      .returning();
+    const [principal] = await db
+      .select({ nome: schema.clientes.nome })
+      .from(schema.clientes)
+      .where(eq(schema.clientes.id, clienteId));
+
+    expect(await repo.obterCliente(clienteId)).toEqual({
+      unificadoEmId: null,
+      principalNome: null,
+    });
+    expect(await repo.obterCliente(unidade?.id ?? '')).toEqual({
+      unificadoEmId: clienteId,
+      principalNome: principal?.nome,
+    });
+    expect(await repo.obterCliente('00000000-0000-0000-0000-000000000000')).toBeNull();
   });
 
   describe('criar', () => {

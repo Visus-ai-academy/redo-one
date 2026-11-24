@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import { DATABASE, type Database } from '../../../database/database';
 import { clientes, cortesCompetencia, usuarios } from '../../../database/schema';
@@ -13,10 +14,13 @@ import {
 import { enfileirarRecalculoCompetencias } from '../../../ingestao/infrastructure/jobs/enfileirar-recalculo-competencias';
 import type { Autor } from '../../application/ports/competencias.repository';
 import type {
+  ClienteDoCorte,
   CortesRepository,
   VigenciaRegistrada,
 } from '../../application/ports/cortes.repository';
 import { camposDoCorte, type NovaVigencia } from '../../domain/vigencia-corte';
+
+const principal = alias(clientes, 'principal');
 
 type Linha = Pick<
   typeof cortesCompetencia.$inferSelect,
@@ -105,12 +109,13 @@ export class DrizzleCortesRepository implements CortesRepository {
     }));
   }
 
-  async clienteExiste(clienteId: string): Promise<boolean> {
+  async obterCliente(clienteId: string): Promise<ClienteDoCorte | null> {
     const [linha] = await this.db
-      .select({ id: clientes.id })
+      .select({ unificadoEmId: clientes.unificadoEmId, principalNome: principal.nome })
       .from(clientes)
+      .leftJoin(principal, eq(principal.id, clientes.unificadoEmId))
       .where(eq(clientes.id, clienteId));
-    return linha !== undefined;
+    return linha ?? null;
   }
 
   criar({ clienteId, desde, corte }: NovaVigencia, { usuarioId, em }: Autor): Promise<string> {

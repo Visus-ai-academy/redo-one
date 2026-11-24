@@ -7145,7 +7145,7 @@
             "description": "Cliente não encontrado."
           },
           "409": {
-            "description": "Já existe uma vigência a partir de `desde`."
+            "description": "Já existe uma vigência a partir de `desde`, ou o cliente é unidade de outro (o corte fica no cliente principal)."
           }
         },
         "tags": [
@@ -7185,7 +7185,7 @@
             "description": "Cliente não encontrado."
           },
           "409": {
-            "description": "Já existe uma vigência a partir de `desde`."
+            "description": "Já existe uma vigência a partir de `desde`, ou o cliente é unidade de outro (o corte fica no cliente principal)."
           }
         },
         "tags": [

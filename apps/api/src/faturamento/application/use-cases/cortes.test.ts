@@ -4,6 +4,7 @@ import { InMemoryAuditoria } from '../../../auditoria/testing';
 import { CORTE_PADRAO_INICIAL } from '../../../ingestao/domain/competencia';
 import {
   ClienteNaoEncontradoError,
+  ClienteUnidadeError,
   CompetenciaInvalidaError,
   VigenciaInvalidaError,
   VigenciaRepetidaError,
@@ -48,8 +49,9 @@ describe('cortes', () => {
   beforeEach(async () => {
     cortes = new CortesEmMemoria();
     await cortes.garantirPadraoInicial();
-    cortes.clientes.add('c1');
-    cortes.clientes.add('c2');
+    cortes.clientes.set('c1', { unificadoEmId: null, principalNome: null });
+    cortes.clientes.set('c2', { unificadoEmId: null, principalNome: null });
+    cortes.clientes.set('u1', { unificadoEmId: 'c1', principalNome: 'PRN' });
     competencias = new CompetenciasEmMemoria();
     competencias.competencias.set('2026-09', { status: 'fechada', importacaoTravada: false });
     competencias.competencias.set('2026-10', { status: 'aberta', importacaoTravada: false });
@@ -187,9 +189,28 @@ describe('cortes', () => {
         criar.executar('u1', { clienteId: 'c9', desde: '2026-11', ...dia25 }),
       ).rejects.toThrow(ClienteNaoEncontradoError);
     });
+
+    it('recusa o corte de uma unidade, apontando o cliente principal', async () => {
+      const pedido = { clienteId: 'u1', desde: '2026-11', ...dia25 };
+      await expect(criar.executar('u1', pedido)).rejects.toThrow(ClienteUnidadeError);
+      await expect(criar.executar('u1', pedido)).rejects.toThrow(
+        'Este cliente é unidade de PRN; configure o corte no cliente principal.',
+      );
+      await expect(
+        criar.executar('u1', { ...pedido, usaPadrao: true, mes: null, consideraExame: null }),
+      ).rejects.toThrow(ClienteUnidadeError);
+      expect(cortes.criadas).toEqual([]);
+      expect(auditoria.eventos).toEqual([]);
+    });
   });
 
   describe('prévia', () => {
+    it('recusa a prévia do corte de uma unidade', async () => {
+      await expect(
+        previa.executar({ clienteId: 'u1', desde: '2026-11', ...dia25 }),
+      ).rejects.toThrow(ClienteUnidadeError);
+    });
+
     it('conta quantos laudos mudam, de qual competência para qual, sem gravar nada', async () => {
       laudos.laudos.push(
         // Pelo padrão (dia 7, mês seguinte) em 2026-10; pelo dia 25 próprio, 26/10 vai para 11.

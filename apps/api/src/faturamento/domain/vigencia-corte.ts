@@ -31,6 +31,14 @@ export class ClienteNaoEncontradoError extends ErroDeDominio {
   }
 }
 
+/** A unidade fatura pelo cliente principal: o corte dela é o dele. */
+export class ClienteUnidadeError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor(principal: string) {
+    super(`Este cliente é unidade de ${principal}; configure o corte no cliente principal.`);
+  }
+}
+
 /** "YYYY-MM" com mês de 01 a 12. */
 export function exigirCompetencia(competencia: string): void {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)) throw new CompetenciaInvalidaError();
@@ -42,7 +50,7 @@ export const mesAno = (competencia: string) =>
 
 /** O mês da competência já acabou em horário de Brasília. */
 export const mesAcabou = (competencia: string, agora: Date) =>
-  competencia.localeCompare(diaBrasilia(agora).slice(0, 7)) < 0;
+  competencia < diaBrasilia(agora).slice(0, 7);
 
 /** Pedido de nova vigência, como chega da tela (o mesmo da prévia e da criação). */
 export interface EntradaVigencia {
@@ -90,7 +98,7 @@ export function corteDaEntrada(entrada: EntradaVigencia): Corte | null {
  * corte não alcança mês fechado (nem há fechada depois dele).
  */
 export function validarDesde(desde: string, ultimaFechada: string | null): void {
-  if (ultimaFechada !== null && desde.localeCompare(ultimaFechada) <= 0) {
+  if (ultimaFechada !== null && desde <= ultimaFechada) {
     throw new VigenciaInvalidaError(
       `A vigência tem de começar depois da última competência fechada (${mesAno(ultimaFechada)}).`,
     );
@@ -100,7 +108,7 @@ export function validarDesde(desde: string, ultimaFechada: string | null): void 
 /** A tabela de cortes como fica com a nova vigência (para a prévia). */
 export function comNovaVigencia(tabela: TabelaCortes, nova: NovaVigencia): TabelaCortes {
   const ordem = <T extends { desde: string }>(l: T[]) =>
-    l.sort((a, b) => a.desde.localeCompare(b.desde));
+    l.sort((a, b) => (a.desde < b.desde ? -1 : a.desde > b.desde ? 1 : 0));
   if (nova.clienteId === null) {
     if (!nova.corte) throw new Error('A vigência padrão sempre tem corte.');
     return {

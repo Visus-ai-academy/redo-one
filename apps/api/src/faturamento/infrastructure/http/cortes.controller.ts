@@ -41,7 +41,8 @@ const vigenciaParaDto = ({ corte, ...v }: VigenciaRegistrada): VigenciaCorteDto 
 
 const ERROS_VIGENCIA = {
   bad: 'Corte incompleto, "usa o padrão" sem cliente, ou `desde` na última competência fechada ou antes dela.',
-  conflito: 'Já existe uma vigência a partir de `desde`.',
+  conflito:
+    'Já existe uma vigência a partir de `desde`, ou o cliente é unidade de outro (o corte fica no cliente principal).',
 };
 
 /** Corte da competência: o padrão (sem cliente) e o de cada cliente, por vigências. */
