@@ -1,6 +1,6 @@
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import type { Pool } from 'pg';
+import { Client, type Pool } from 'pg';
 import { describe, expect, it } from 'vitest';
 
 import { DATABASE, PG_POOL } from './database';
@@ -55,6 +55,19 @@ describe('DatabaseModule', () => {
 
     // Sem ouvinte, o `error` de um cliente ocioso vira exceção e mata o processo.
     expect(() => pool.emit('error', new Error('read ECONNRESET'))).not.toThrow();
+    await app.close();
+  });
+
+  it('não derruba a aplicação quando cai a conexão de um cliente emprestado do pool', async () => {
+    const app = await createApp();
+    const pool = app.get<Pool>(PG_POOL);
+    // Cliente emprestado (ex.: o que segura a trava do trabalhador, ou o do LISTEN do
+    // graphile-worker depois de soltar o próprio ouvinte): o pool não ouve o `error` dele.
+    const cliente = new Client();
+    pool.emit('connect', cliente);
+
+    expect(() => cliente.emit('error', new Error('read ECONNRESET'))).not.toThrow();
+    expect(() => cliente.emit('error', new Error('read EADDRNOTAVAIL'))).not.toThrow();
     await app.close();
   });
 
