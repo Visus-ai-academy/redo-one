@@ -27,11 +27,11 @@ const NEURO: FrenteEscala = { tipo: 'especialidade', especialidadeId: 'neuro', m
 const RX: FrenteEscala = { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'rx' };
 const TC: FrenteEscala = { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'tc' };
 
-/** Médico → conta na MobileMed. */
-const CONTAS = new Map<string, number | null>([
-  ['ana', 1],
-  ['bia', 2],
-  ['caio', 3],
+/** Médico → contas na MobileMed (a principal primeiro; a Ana tem também a 11). */
+const CONTAS = new Map<string, readonly number[]>([
+  ['ana', [1, 11]],
+  ['bia', [2]],
+  ['caio', [3]],
 ]);
 
 const periodo = (
@@ -84,7 +84,9 @@ const ids = (r: ReturnType<typeof recolher>) => r.recolhidos.map((x) => x.idExam
 describe('recolhimento: exame entregue pelo robô, não aberto, com o turno encerrado', () => {
   it('recolhe o exame do turno que acabou há mais que a carência, de quem o tinha', () => {
     const r = recolher(entrada());
-    expect(r.recolhidos).toEqual([{ idExame: 'e1', deMedicoId: 'ana', motivo: 'turno_encerrado' }]);
+    expect(r.recolhidos).toEqual([
+      { idExame: 'e1', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'turno_encerrado' },
+    ]);
   });
 
   it('desligado (carência nula): nada é recolhido, nem por ausência', () => {
@@ -205,8 +207,8 @@ describe('recolhimento: o pacote paciente × médico sai inteiro ou fica inteiro
   it('o irmão NOVO do mesmo paciente com o mesmo médico sai junto, mesmo sem designação do robô', () => {
     const r = recolher(entrada({ exames: pacote() }));
     expect(r.recolhidos).toEqual([
-      { idExame: 'e1', deMedicoId: 'ana', motivo: 'turno_encerrado' },
-      { idExame: 'e2', deMedicoId: 'ana', motivo: 'turno_encerrado' },
+      { idExame: 'e1', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'turno_encerrado' },
+      { idExame: 'e2', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'turno_encerrado' },
     ]);
   });
 
@@ -258,8 +260,8 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
       }),
     );
     expect(r.recolhidos).toEqual([
-      { idExame: 'e1', deMedicoId: 'ana', motivo: 'ausencia' },
-      { idExame: 'e2', deMedicoId: 'ana', motivo: 'ausencia' },
+      { idExame: 'e1', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'ausencia' },
+      { idExame: 'e2', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'ausencia' },
     ]);
   });
 
@@ -301,6 +303,42 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
       entrada({ agora: h('10:00'), ausencias: [{ medicoId: 'bia', frentes: [] }] }),
     );
     expect(r.recolhidos).toEqual([]);
+  });
+});
+
+describe('recolhimento: médico com outras contas na MobileMed', () => {
+  it('o entregue que está noutra conta do mesmo médico não é trocado por fora: sai dela', () => {
+    const r = recolher(entrada({ exames: [exame('e1', { medicoIdMobilemed: 11 })] }));
+    expect(r.recolhidos).toEqual([
+      { idExame: 'e1', deMedicoId: 'ana', deMedicoIdMobilemed: 11, motivo: 'turno_encerrado' },
+    ]);
+    expect(r.ficaram.trocado_por_fora).toBe(0);
+  });
+
+  it('o pacote é do médico: o exame aberto na outra conta prende o da principal', () => {
+    const r = recolher(
+      entrada({
+        exames: [
+          exame('e1'),
+          exame('e2', { medicoIdMobilemed: 11, status: 'LAUDANDO', pacienteChave: 'p-e1' }),
+        ],
+      }),
+    );
+    expect(r.recolhidos).toEqual([]);
+    expect(r.ficaram.pacote_aberto).toBe(1);
+  });
+
+  it('ausente: perde o NOVO de qualquer conta dele, mesmo o que o robô não deu', () => {
+    const r = recolher(
+      entrada({
+        exames: [exame('e1', { medicoIdMobilemed: 11 })],
+        entregas: new Map(),
+        ausencias: [{ medicoId: 'ana', frentes: [] }],
+      }),
+    );
+    expect(r.recolhidos).toEqual([
+      { idExame: 'e1', deMedicoId: 'ana', deMedicoIdMobilemed: 11, motivo: 'ausencia' },
+    ]);
   });
 });
 
@@ -392,7 +430,7 @@ describe('a leitura da rodada com os recolhidos', () => {
 
   it('o recolhido sai das mãos do médico e entra na fila da rodada, com o que a MobileMed mostra', () => {
     const l = leituraComRecolhidos(leitura, [
-      { idExame: 'r1', deMedicoId: 'ana', motivo: 'turno_encerrado' },
+      { idExame: 'r1', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'turno_encerrado' },
     ]);
     expect(l.emMaos.map((e) => e.idExame)).toEqual(['m1']);
     expect(l.semMedico.map((e) => e.idExame)).toEqual(['s1', 'r1']);
@@ -408,8 +446,8 @@ describe('a leitura da rodada com os recolhidos', () => {
     const porExame = entregasComRecolhidos(
       new Map([['r1', [anterior]]]),
       [
-        { idExame: 'r1', deMedicoId: 'ana', motivo: 'turno_encerrado' },
-        { idExame: 'r2', deMedicoId: 'caio', motivo: 'ausencia' },
+        { idExame: 'r1', deMedicoId: 'ana', deMedicoIdMobilemed: 1, motivo: 'turno_encerrado' },
+        { idExame: 'r2', deMedicoId: 'caio', deMedicoIdMobilemed: 3, motivo: 'ausencia' },
       ],
       AGORA,
     );

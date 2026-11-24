@@ -73,6 +73,7 @@ describe.skipIf(!url)('insumos da rodada (banco)', () => {
     ids.ana = await medico('Ana', 101);
     ids.beto = await medico('Beto', 102);
     ids.caio = await medico('Caio', 103, false);
+    await db.insert(schema.medicosContasMobilemed).values({ medicoId: ids.ana, idMobilemed: 201 });
     await db.insert(schema.medicosDistribuicao).values([
       { medicoId: ids.ana, habilitadoRobo: true },
       { medicoId: ids.beto, habilitadoRobo: false },
@@ -96,7 +97,9 @@ describe.skipIf(!url)('insumos da rodada (banco)', () => {
 
   it('só os médicos ativos e habilitados, com os arranjos', async () => {
     const { insumos } = await new DrizzleInsumosRodada(db, semEscala).carregar(agora);
-    expect(insumos.medicos).toEqual([expect.objectContaining({ id: ids.ana, idMobilemed: 101 })]);
+    expect(insumos.medicos).toEqual([
+      expect.objectContaining({ id: ids.ana, idMobilemed: 101, outrasContas: [201] }),
+    ]);
     expect(insumos.medicos[0]?.arranjos[0]).toMatchObject({
       especialidadeId: ids.mi,
       modalidadeIds: [ids.ct],
@@ -143,6 +146,7 @@ describe.skipIf(!url)('insumos da rodada (banco)', () => {
       ativo: true,
       idMobilemed: 101,
       habilitadoRobo: true,
+      outrasContas: [201],
     });
     expect(cadastro.get(ids.caio ?? '')?.ativo).toBe(false);
   });

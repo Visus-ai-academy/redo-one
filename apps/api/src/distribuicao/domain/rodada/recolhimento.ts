@@ -77,8 +77,11 @@ export interface EntradaRecolhimento {
   exames: readonly ExameComMedico[];
   /** Exame (id na MobileMed) → a última entrega do robô. */
   entregas: ReadonlyMap<string, UltimaEntrega>;
-  /** Médico → conta na MobileMed (os das entregas e os ausentes). */
-  contas: ReadonlyMap<string, number | null>;
+  /**
+   * Médico → as contas dele na MobileMed, a principal e as outras (os das entregas e os ausentes):
+   * o exame em qualquer uma está com ele.
+   */
+  contas: ReadonlyMap<string, readonly number[]>;
   periodos: readonly PeriodoDoMedico[];
   ausencias: readonly AusenciaDoDia[];
   /** A frente do exame recolhe ao fim do turno (`recolheAoFimDoTurno`)? */
@@ -91,6 +94,8 @@ export type MotivoRecolhimento = (typeof MOTIVOS_RECOLHIMENTO)[number];
 export interface ExameRecolhido {
   idExame: string;
   deMedicoId: string;
+  /** A conta em que o exame estava na leitura (a troca só acontece se ele segue nela). */
+  deMedicoIdMobilemed: number;
   motivo: MotivoRecolhimento;
 }
 
@@ -165,7 +170,15 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
   if (!p) return { recolhidos: [], ficaram };
 
   const novo = (e: ExameComMedico) => normalizarGrafia(e.status) === STATUS_NOVO;
-  const pacoteDe = (e: ExameComMedico) => `${e.pacienteChave}|${e.medicoIdMobilemed}`;
+  // Conta → médico: o pacote é do médico, em qualquer conta dele.
+  const medicoDaConta = new Map<number, string>();
+  for (const [medicoId, contas] of entrada.contas) {
+    for (const conta of contas) medicoDaConta.set(conta, medicoId);
+  }
+  const ehDele = (medicoId: string, e: ExameComMedico) =>
+    entrada.contas.get(medicoId)?.includes(e.medicoIdMobilemed) ?? false;
+  const pacoteDe = (e: ExameComMedico) =>
+    `${e.pacienteChave}|${medicoDaConta.get(e.medicoIdMobilemed) ?? `conta:${e.medicoIdMobilemed}`}`;
 
   // Ausência de hoje por médico: null = todas as frentes.
   const ausenteEm = new Map<string, FrenteEscala[] | null>();
@@ -181,8 +194,7 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
   };
   const ausentePorConta = new Map<number, string>();
   for (const medicoId of ausenteEm.keys()) {
-    const conta = entrada.contas.get(medicoId);
-    if (conta != null) ausentePorConta.set(conta, medicoId);
+    for (const conta of entrada.contas.get(medicoId) ?? []) ausentePorConta.set(conta, medicoId);
   }
   const periodosDe = new Map<string, PeriodoDoMedico[]>();
   for (const o of entrada.periodos) {
@@ -211,7 +223,7 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
       ficaram.aberto++;
       continue;
     }
-    if (entrada.contas.get(entrega.medicoId) !== e.medicoIdMobilemed) {
+    if (!ehDele(entrega.medicoId, e)) {
       ficaram.trocado_por_fora++;
       continue;
     }
@@ -228,6 +240,7 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
     saem.set(e.idExame, {
       idExame: e.idExame,
       deMedicoId: entrega.medicoId,
+      deMedicoIdMobilemed: e.medicoIdMobilemed,
       motivo: ausente ? 'ausencia' : 'turno_encerrado',
     });
     donoDoPacote.set(pacote, entrega.medicoId);
@@ -241,6 +254,7 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
     saem.set(e.idExame, {
       idExame: e.idExame,
       deMedicoId: dono,
+      deMedicoIdMobilemed: e.medicoIdMobilemed,
       motivo: ausenteNoExame(dono, e) ? 'ausencia' : 'turno_encerrado',
     });
   }
@@ -255,16 +269,20 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
       continue;
     }
     if (abertos.has(pacoteDe(e))) continue;
-    saem.set(e.idExame, { idExame: e.idExame, deMedicoId: medicoId, motivo: 'ausencia' });
+    saem.set(e.idExame, {
+      idExame: e.idExame,
+      deMedicoId: medicoId,
+      deMedicoIdMobilemed: e.medicoIdMobilemed,
+      motivo: 'ausencia',
+    });
   }
 
   // O pacote aberto conta uma vez por exame candidato NOVO; o preso, todos os candidatos dele.
   for (const e of entrada.exames) {
     if (!candidatos.has(e.idExame) || !novo(e)) continue;
     const pacote = pacoteDe(e);
-    const trocado =
-      entrada.entregas.has(e.idExame) &&
-      entrada.contas.get(entrada.entregas.get(e.idExame)?.medicoId ?? '') !== e.medicoIdMobilemed;
+    const entrega = entrada.entregas.get(e.idExame);
+    const trocado = entrega !== undefined && !ehDele(entrega.medicoId, e);
     if (trocado) continue;
     if (abertos.has(pacote)) ficaram.pacote_aberto++;
     else if (presos.has(pacote)) {

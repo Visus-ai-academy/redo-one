@@ -37,6 +37,8 @@ export interface DesignacaoNova extends ExameLido {
   naMao: boolean;
   /** Recolhido: de quem sai (a execução só troca se ainda estiver com ele, NOVO). */
   recolhidoDeId: string | null;
+  /** Recolhido: a conta em que estava na leitura (pode ser uma das outras contas do médico). */
+  recolhidoDeIdMobilemed: number | null;
   motivoRecolhimento: MotivoRecolhimento | null;
 }
 
@@ -200,6 +202,7 @@ export function montarProposta(p: {
       barrados: it?.barrados ?? {},
       naMao: false,
       recolhidoDeId: recolhidoDe.get(id)?.deMedicoId ?? null,
+      recolhidoDeIdMobilemed: recolhidoDe.get(id)?.deMedicoIdMobilemed ?? null,
       motivoRecolhimento: recolhidoDe.get(id)?.motivo ?? null,
     };
   });

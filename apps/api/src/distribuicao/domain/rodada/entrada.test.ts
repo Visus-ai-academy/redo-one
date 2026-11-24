@@ -97,7 +97,14 @@ const insumos = (p: Partial<InsumosRodada> = {}): InsumosRodada => ({
   config: CONFIGURACAO_INICIAL,
   medicos: [
     { id: 'A', nome: 'Dra. A', idMobilemed: 101, arranjos: [arranjo()], unidadeTeto: 'exames' },
-    { id: 'B', nome: 'Dr. B', idMobilemed: 102, arranjos: [arranjo()], unidadeTeto: 'laudos' },
+    {
+      id: 'B',
+      nome: 'Dr. B',
+      idMobilemed: 102,
+      outrasContas: [202],
+      arranjos: [arranjo()],
+      unidadeTeto: 'laudos',
+    },
   ],
   equipes: [],
   ocorrencias: [oc('A'), oc('B')],
@@ -228,6 +235,29 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
     });
     expect(entrada.medicos.find((m) => m.id === 'B')?.cargaEmMaos).toBe(2);
     expect(entrada.medicos.find((m) => m.id === 'A')?.cargaEmMaos).toBe(0);
+    expect(entrada.exames[0]?.medicoAderente).toBe('B');
+  });
+
+  it('o exame em mãos numa outra conta do médico conta na carga e na aderência dele', () => {
+    const { entrada } = montar({
+      leitura: {
+        semMedico: [exame({ idExame: 'e1' })],
+        emMaos: [
+          {
+            idExame: 'm1',
+            medicoIdMobilemed: 202,
+            ...EM_MAOS,
+            estudo: 'TC TORAX',
+            unidade: 'HOSPITAL A',
+            modalidade: 'CT',
+            especialidade: null,
+            laudos: 3,
+            paciente: { codigo: '123', nome: 'Paciente Fictício' },
+          },
+        ],
+      },
+    });
+    expect(entrada.medicos.find((m) => m.id === 'B')?.cargaEmMaos).toBe(3);
     expect(entrada.exames[0]?.medicoAderente).toBe('B');
   });
 

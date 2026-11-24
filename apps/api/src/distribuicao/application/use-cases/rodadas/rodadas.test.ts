@@ -1253,6 +1253,27 @@ describe('rodada do robô (casos de uso)', () => {
       expect(daRodada(id, 'r1')?.status).toBe('executada');
     });
 
+    it('o exame que a Dra. A pegou noutra conta dela é recolhido dessa conta, e vai para a principal do Dr. B', async () => {
+      await entregarAoA('r1');
+      const a = medicos.medicos.find((m) => m.id === 'A');
+      if (a) a.outrasContas = [301];
+      mobilemed.leitura = {
+        ...mobilemed.leitura,
+        emMaos: mobilemed.leitura.emMaos.map((e) => ({ ...e, medicoIdMobilemed: 301 })),
+      };
+      const id = await criarELer();
+      expect(daRodada(id, 'r1')).toMatchObject({
+        medicoId: 'B',
+        recolhidoDeId: 'A',
+        recolhidoDeIdMobilemed: 301,
+      });
+      await casos.aprovar.executar(admin, id);
+      await jobs();
+      expect(mobilemed.pedidos).toEqual([
+        { idExame: 'r1', medicoIdMobilemed: 102, deMedicoIdMobilemed: 301 },
+      ]);
+    });
+
     it('a carência vale: dentro dela o exame fica com quem tem', async () => {
       await entregarAoA('r1');
       agora = br('2026-11-18T13:59');

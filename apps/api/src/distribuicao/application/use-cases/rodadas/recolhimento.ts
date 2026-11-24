@@ -57,7 +57,12 @@ export async function lerRecolhimento(
       };
     }),
     entregas,
-    contas: new Map([...cadastro].map(([id, m]) => [id, m.idMobilemed])),
+    contas: new Map(
+      [...cadastro].map(([id, m]) => [
+        id,
+        [...(m.idMobilemed === null ? [] : [m.idMobilemed]), ...(m.outrasContas ?? [])],
+      ]),
+    ),
     periodos,
     ausencias,
     recolhe: (e) => regras.doExame(e)?.recolheAoFimDoTurno ?? true,

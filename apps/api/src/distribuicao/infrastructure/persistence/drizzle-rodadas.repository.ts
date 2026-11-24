@@ -141,6 +141,7 @@ const comoDesignacao = (d: LinhaDesignacao): Designacao => ({
   pacienteChave: d.pacienteChave,
   retiradoDeId: d.retiradoDeId,
   recolhidoDeId: d.recolhidoDeId,
+  recolhidoDeIdMobilemed: d.recolhidoDeIdMobilemed,
   posicao: d.posicao,
   urgente: d.urgente,
   prazo: d.prazo,
@@ -184,6 +185,7 @@ const linhaDaDesignacao = (rodadaId: string, d: DesignacaoNova) => ({
   barrados: d.barrados,
   naMao: d.naMao,
   recolhidoDeId: d.recolhidoDeId,
+  recolhidoDeIdMobilemed: d.recolhidoDeIdMobilemed,
   motivoRecolhimento: d.motivoRecolhimento,
 });
 

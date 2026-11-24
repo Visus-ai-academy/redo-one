@@ -108,8 +108,13 @@ export interface CatalogoDaFila {
 export interface MedicoDaRodada {
   id: string;
   nome: string;
-  /** Conta na MobileMed; sem ela, o médico não recebe (não há como atribuir). */
+  /** Conta principal na MobileMed; sem ela, o médico não recebe (não há como atribuir). */
   idMobilemed: number | null;
+  /**
+   * As outras contas dele na MobileMed (o login do dia): o exame em mãos em qualquer uma conta na
+   * carga e na aderência dele; a atribuição vai sempre para a principal.
+   */
+  outrasContas?: readonly number[];
   arranjos: Arranjo[];
   /** Em que o teto dele é contado (parâmetro do médico na distribuição). */
   unidadeTeto: UnidadeTeto;
@@ -302,7 +307,9 @@ export function montarEntrada(p: {
   const medicos = insumos.medicos.filter((m) => !excluidos.has(m.id));
   const porConta = new Map(
     insumos.medicos.flatMap((m) =>
-      m.idMobilemed === null ? [] : [[m.idMobilemed, m.id] as const],
+      [...(m.outrasContas ?? []), ...(m.idMobilemed === null ? [] : [m.idMobilemed])].map(
+        (conta) => [conta, m.id] as const,
+      ),
     ),
   );
   const reservas: ReservaMedico[] = medicos.flatMap((m) =>

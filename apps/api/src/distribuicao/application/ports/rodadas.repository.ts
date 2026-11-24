@@ -54,6 +54,8 @@ export interface Designacao {
   retiradoDeId: string | null;
   /** Recolhido: de quem sai (a execução só troca se ainda estiver com ele, NOVO). */
   recolhidoDeId: string | null;
+  /** A conta em que o exame estava ao ser recolhido; null nas rodadas antigas. */
+  recolhidoDeIdMobilemed: number | null;
   posicao: number | null;
   urgente: boolean;
   prazo: Date | null;

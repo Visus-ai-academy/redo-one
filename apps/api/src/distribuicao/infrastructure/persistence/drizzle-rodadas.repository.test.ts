@@ -74,6 +74,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     barrados: {},
     naMao: false,
     recolhidoDeId: null,
+    recolhidoDeIdMobilemed: null,
     motivoRecolhimento: null,
     ...p,
   });
@@ -410,12 +411,17 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
     });
     const deId = outro?.id ?? '';
     const id = await criarComProposta([
-      designacao('e1', { recolhidoDeId: deId, motivoRecolhimento: 'turno_encerrado' }),
+      designacao('e1', {
+        recolhidoDeId: deId,
+        recolhidoDeIdMobilemed: 70,
+        motivoRecolhimento: 'turno_encerrado',
+      }),
       designacao('e2', { ordem: 1 }),
     ]);
     expect((await repo.obter(id))?.recolhidos).toBe(1);
     const [p1] = await repo.previstas(id);
     expect(p1?.recolhidoDeId).toBe(deId);
+    expect(p1?.recolhidoDeIdMobilemed).toBe(70);
     await repo.registrarResultado(
       p1?.id ?? '',
       { status: 'executada', motivo: null, detalhe: null, retentavel: false },

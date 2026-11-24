@@ -55,8 +55,11 @@ export class ExecutarRodada {
         if (atual?.status !== 'executando') break;
         const p = porId.get(id);
         const conta = p?.medicoId ? contas.get(p.medicoId) : undefined;
-        // Recolhido: a conta de quem o tem (a MobileMed só troca se ele segue com ela, NOVO).
-        const de = p?.recolhidoDeId ? (contas.get(p.recolhidoDeId)?.idMobilemed ?? null) : null;
+        // Recolhido: a conta em que o exame estava na leitura (pode ser uma das outras contas do
+        // médico); a MobileMed só troca se ele segue nela, NOVO. Nas rodadas antigas, a principal.
+        const de = p?.recolhidoDeId
+          ? (p.recolhidoDeIdMobilemed ?? contas.get(p.recolhidoDeId)?.idMobilemed ?? null)
+          : null;
         let resultado: ResultadoDesignacao;
         if (!p?.medicoId || !conta?.ativo || conta.idMobilemed === null) {
           resultado = {

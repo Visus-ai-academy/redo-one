@@ -201,6 +201,7 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
     pacienteChave: d.pacienteChave,
     retiradoDeId: d.retiradoDeId,
     recolhidoDeId: d.recolhidoDeId,
+    recolhidoDeIdMobilemed: d.recolhidoDeIdMobilemed,
     posicao: d.posicao,
     urgente: d.urgente,
     prazo: d.prazo,

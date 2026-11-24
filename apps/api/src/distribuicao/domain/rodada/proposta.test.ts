@@ -279,9 +279,9 @@ describe('proposta com os recolhidos', () => {
       resultado: resultado([vai('r', 'A'), vai('rc1', 'B'), vai('rc2', 'A'), fica('rc3')]),
       recolhimento: {
         recolhidos: [
-          { idExame: 'rc1', deMedicoId: 'C', motivo: 'turno_encerrado' },
-          { idExame: 'rc2', deMedicoId: 'D', motivo: 'ausencia' },
-          { idExame: 'rc3', deMedicoId: 'C', motivo: 'turno_encerrado' },
+          { idExame: 'rc1', deMedicoId: 'C', deMedicoIdMobilemed: 9, motivo: 'turno_encerrado' },
+          { idExame: 'rc2', deMedicoId: 'D', deMedicoIdMobilemed: 9, motivo: 'ausencia' },
+          { idExame: 'rc3', deMedicoId: 'C', deMedicoIdMobilemed: 9, motivo: 'turno_encerrado' },
         ],
         ficaram,
       },

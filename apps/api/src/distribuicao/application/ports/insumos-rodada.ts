@@ -20,8 +20,10 @@ export interface MedicoDaConta {
   nome: string;
   ativo: boolean;
   habilitadoRobo: boolean;
-  /** Conta na MobileMed; sem ela não há como atribuir. */
+  /** Conta principal na MobileMed; sem ela não há como atribuir. */
   idMobilemed: number | null;
+  /** As outras contas dele na MobileMed (o exame em qualquer uma está com ele). */
+  outrasContas?: number[];
 }
 
 /** O cadastro dos médicos que a rodada consulta na hora (a conta corrigida no meio já vale). */

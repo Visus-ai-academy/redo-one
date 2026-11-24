@@ -18,6 +18,7 @@ import {
   exames,
   frentesEscala,
   medicos,
+  medicosContasMobilemed,
   medicosDistribuicao,
   modalidades,
   subespecialidades,
@@ -83,6 +84,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       cadastros,
       examesSub,
       subsEsp,
+      outrasContas,
     ] = await Promise.all([
       new DrizzleConfiguracaoDistribuicaoRepository(db).obter(),
       new DrizzleRegrasFrenteRepository(db).listar(),
@@ -116,6 +118,12 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         .from(exames)
         .where(isNotNull(exames.subespecialidadeId)),
       db.select().from(subespecialidadesEspecialidades),
+      db
+        .select({
+          medicoId: medicosContasMobilemed.medicoId,
+          idMobilemed: medicosContasMobilemed.idMobilemed,
+        })
+        .from(medicosContasMobilemed),
     ]);
 
     // --- arranjos de médicos e equipes ---
@@ -274,7 +282,11 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       catalogo,
       insumos: {
         config: config ?? CONFIGURACAO_INICIAL,
-        medicos: habilitados.map((m) => ({ ...m, arranjos: arranjosDo.get(m.id) ?? [] })),
+        medicos: habilitados.map((m) => ({
+          ...m,
+          outrasContas: outrasContas.filter((c) => c.medicoId === m.id).map((c) => c.idMobilemed),
+          arranjos: arranjosDo.get(m.id) ?? [],
+        })),
         equipes: listaEquipes
           .filter((e) => arranjosDo.has(e.id))
           .map((e) => ({
