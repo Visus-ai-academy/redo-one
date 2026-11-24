@@ -1,4 +1,4 @@
-// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição e as competências do banco do dashboards-one para o banco do redo-one
+// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências e os dados fiscais dos clientes do banco do dashboards-one para o banco do redo-one
 // (DATABASE_URL). O banco do dashboards-one é aberto SÓ PARA LEITURA; do redo-one, sem --gravar, só
 // se leem os usuários (a escala casa autor, revisor e gestora com eles). Sem --gravar, só mostra o
 // que faria. Uso:
@@ -29,6 +29,7 @@ import {
   mapearConfiguracaoDistribuicao,
   prioridadesOperacaoDaCarga,
 } from '../migracao-legado/mapear-configuracao-distribuicao';
+import { mapearDadosFiscais } from '../migracao-legado/mapear-dados-fiscais';
 import { mapearDistribuicao } from '../migracao-legado/mapear-distribuicao';
 import { mapearEscala } from '../migracao-legado/mapear-escala';
 import { mapearMedicos } from '../migracao-legado/mapear-medicos';
@@ -55,6 +56,7 @@ async function migrarLegado() {
   const legado = await lerLegado(url);
   const catalogo = mapearCatalogo(legado.catalogo);
   const medicos = mapearMedicos(legado.medicos);
+  const dadosFiscais = mapearDadosFiscais(legado.dadosFiscais, catalogo.tabelas);
   // Os recortes de prioridade da escala e do arranjo são pelas prioridades da operação.
   const prioridadesOperacao = prioridadesOperacaoDaCarga();
   const distribuicao = mapearDistribuicao(legado.distribuicao, {
@@ -96,6 +98,7 @@ async function migrarLegado() {
       ...escala.tabelas,
       ...distribuicao.tabelas,
       ...competencias.tabelas,
+      ...dadosFiscais.tabelas,
     })) {
       console.log(`  ${tabela.padEnd(34)} ${String(linhas.length).padStart(5)}`);
     }
@@ -112,6 +115,9 @@ async function migrarLegado() {
       console.log(
         `  ${c.competencia} ${c.status} fechada=${c.fechadaEm?.toISOString() ?? '-'} por ${c.fechadaPorId ?? c.fechadaPorLegado ?? '-'} reaberta=${c.reabertaEm?.toISOString() ?? '-'} travada=${c.importacaoTravadaEm?.toISOString() ?? '-'}`,
       );
+    console.log('\nExclusão fiscal (nome do dashboards-one → cliente no redo-one):');
+    for (const e of dadosFiscais.exclusaoFiscal)
+      console.log(`  ${e.nome} → ${e.cliente ?? 'não resolveu (fica de fora)'}`);
     console.log('\nConfiguração do robô (global, regras da frente, prioridade do cliente):');
     for (const [chave, n] of Object.entries(configuracaoDistribuicao.resumo).sort()) {
       console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);
@@ -165,6 +171,7 @@ async function migrarLegado() {
       ...distribuicao.avisos,
       ...configuracaoDistribuicao.avisos,
       ...competencias.avisos,
+      ...dadosFiscais.avisos,
     ];
     console.log(`\nAvisos (${avisos.length}): o que não migrou como estava.`);
     mostrarAvisos(avisos);
@@ -181,6 +188,7 @@ async function migrarLegado() {
       distribuicao,
       configuracaoDistribuicao,
       competencias,
+      dadosFiscais,
     );
     console.log('\nGravado no banco do redo-one.');
   } finally {

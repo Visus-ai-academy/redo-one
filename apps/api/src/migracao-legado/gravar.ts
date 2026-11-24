@@ -22,6 +22,7 @@ import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/pe
 import type { CatalogoMigrado } from './mapear-catalogo';
 import type { CompetenciasMigradas } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
+import type { DadosFiscaisMigrados } from './mapear-dados-fiscais';
 import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
@@ -92,6 +93,7 @@ export async function gravarMigracao(
   distribuicao?: DistribuicaoMigrada,
   configuracaoDistribuicao?: ConfiguracaoDistribuicaoMigrada,
   competencias?: CompetenciasMigradas,
+  dadosFiscais?: DadosFiscaisMigrados,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -176,6 +178,11 @@ export async function gravarMigracao(
       await gravarConfiguracaoDistribuicao(tx, configuracaoDistribuicao);
     if (competencias)
       await upsert(tx, schema.competencias, competencias.tabelas.competencias, ['competencia']);
+    // Sobrescreve o que mudou no redo-one: o dashboards-one é a fonte até a virada.
+    if (dadosFiscais)
+      await upsert(tx, schema.clientesDadosFiscais, dadosFiscais.tabelas.clientesDadosFiscais, [
+        'clienteId',
+      ]);
   });
 }
 

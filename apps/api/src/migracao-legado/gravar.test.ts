@@ -19,6 +19,7 @@ import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
 import { mapearCompetencias } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
+import { mapearDadosFiscais } from './mapear-dados-fiscais';
 import { mapearDistribuicao } from './mapear-distribuicao';
 import { type EscalaMigrada, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
@@ -333,6 +334,71 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
     await migrar('aberto');
     expect((await ler()).rows[1]).toMatchObject({ competencia: '2026-10', status: 'aberta' });
+  });
+
+  it('grava os dados fiscais e sobrescreve o que mudou no redo-one (o dashboards-one é a fonte)', async () => {
+    const ficha = {
+      id: 'cl-a',
+      contato: null,
+      email: null,
+      emailEnvioNf: 'nf@prn.com.br; administracao@teleimagem.com.br',
+      telefone: null,
+      bancoCodigo: null,
+      bancoAgencia: null,
+      bancoConta: null,
+      endereco: 'Rua A',
+      enderecoNumero: null,
+      complemento: null,
+      bairro: null,
+      cidade: 'Araraquara',
+      estado: 'SP',
+      cep: '4553010',
+      omieCodigoCliente: '855',
+      omieDataSincronizacao: '2026-03-11T03:23:09.850Z',
+    };
+    const migrar = () =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mapearDadosFiscais({ clientes: [ficha], exclusaoFiscal: ['PRN'] }, catalogo.tabelas),
+      );
+    const ler = async () =>
+      (
+        await db.execute(
+          sql`select c.nome, d.emails_nf, d.cep, d.omie_codigo_cliente, d.exclusao_fiscal
+            from clientes_dados_fiscais d join clientes c on c.id = d.cliente_id order by c.nome`,
+        )
+      ).rows;
+
+    await migrar();
+    const primeira = await ler();
+    expect(primeira).toEqual([
+      {
+        nome: 'PRN',
+        emails_nf: [],
+        cep: null,
+        omie_codigo_cliente: null,
+        exclusao_fiscal: true,
+      },
+      {
+        nome: 'PRN TELE_ARARAQUARA',
+        emails_nf: ['nf@prn.com.br', 'administracao@teleimagem.com.br'],
+        cep: '04553010',
+        omie_codigo_cliente: '855',
+        exclusao_fiscal: false,
+      },
+    ]);
+    await db
+      .update(schema.clientesDadosFiscais)
+      .set({ emailsNf: ['outro@x.com'] })
+      .where(sql`${schema.clientesDadosFiscais.clienteId} = ${idDoLegado('clientes', 'cl-a')}`);
+    await migrar();
+    expect(await ler()).toEqual(primeira);
   });
 
   it('grava a escala com cobertura e recortes; rodar de novo não duplica nem sobrescreve o tipo editado', async () => {

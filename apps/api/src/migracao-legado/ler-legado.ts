@@ -4,6 +4,7 @@ import type {
   LegadoCatalogo,
   LegadoCompetencia,
   LegadoConfiguracaoDistribuicao,
+  LegadoDadosFiscais,
   LegadoDistribuicao,
   LegadoEscala,
   LegadoMedicos,
@@ -22,6 +23,7 @@ export async function lerLegado(url: string): Promise<{
   distribuicao: LegadoDistribuicao;
   configuracaoDistribuicao: LegadoConfiguracaoDistribuicao;
   competencias: LegadoCompetencia[];
+  dadosFiscais: LegadoDadosFiscais;
 }> {
   const cliente = new Client({
     connectionString: url,
@@ -185,8 +187,27 @@ export async function lerLegado(url: string): Promise<{
         ${instante('reabertoEm')}, "reabertoPor", ${instante('importacaoTravadaEm')},
         "importacaoTravadaPor" from fechamentos_periodo order by competencia`,
     );
+    const [exclusao] = await ler<{ faturamentoExclusaoFiscal: string[] | null }>(
+      'select "faturamentoExclusaoFiscal" from configuracoes order by ctid limit 1',
+    );
+    const dadosFiscais: LegadoDadosFiscais = {
+      clientes: await ler(
+        `select id, contato, email, "emailEnvioNf", telefone, "bancoCodigo", "bancoAgencia",
+          "bancoConta", endereco, "enderecoNumero", complemento, bairro, cidade, estado, cep,
+          "omieCodigoCliente", ${instante('omieDataSincronizacao')} from clientes order by ctid`,
+      ),
+      exclusaoFiscal: exclusao?.faturamentoExclusaoFiscal ?? [],
+    };
     await cliente.query('COMMIT');
-    return { catalogo, medicos, escala, distribuicao, configuracaoDistribuicao, competencias };
+    return {
+      catalogo,
+      medicos,
+      escala,
+      distribuicao,
+      configuracaoDistribuicao,
+      competencias,
+      dadosFiscais,
+    };
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;

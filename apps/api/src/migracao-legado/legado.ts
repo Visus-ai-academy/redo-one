@@ -324,3 +324,30 @@ export interface LegadoCompetencia {
   importacaoTravadaEm: string | null;
   importacaoTravadaPor: string | null;
 }
+
+/** Ficha do cliente que é do `faturamento` (`clientes`), mais a exclusão fiscal da configuração. */
+export interface LegadoDadosFiscais {
+  clientes: {
+    id: string;
+    contato: string | null;
+    email: string | null;
+    /** Texto livre: vários e-mails separados por `,` ou `;`. */
+    emailEnvioNf: string | null;
+    telefone: string | null;
+    bancoCodigo: string | null;
+    bancoAgencia: string | null;
+    bancoConta: string | null;
+    endereco: string | null;
+    enderecoNumero: string | null;
+    complemento: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    estado: string | null;
+    cep: string | null;
+    omieCodigoCliente: string | null;
+    /** ISO em UTC. */
+    omieDataSincronizacao: string | null;
+  }[];
+  /** `configuracoes.faturamentoExclusaoFiscal`: nomes de cliente como chegam da MobileMed. */
+  exclusaoFiscal: string[];
+}
