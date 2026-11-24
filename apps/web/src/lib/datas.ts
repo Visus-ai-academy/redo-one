@@ -24,6 +24,12 @@ function partes(instante: Date) {
 
 const chaveDoDia = (p: ReturnType<typeof partes>) => `${p.ano}-${p.mes}-${p.dia}`;
 
+/** Mês do instante em Brasília, no formato da competência: "2026-11". */
+export function mesDeBrasilia(instante: Date) {
+  const p = partes(instante);
+  return `${p.ano}-${p.mes}`;
+}
+
 /** "02/10/2026". */
 export function dataDeBrasilia(iso: string) {
   const p = partes(new Date(iso));

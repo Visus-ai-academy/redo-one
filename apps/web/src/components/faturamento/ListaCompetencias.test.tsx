@@ -8,7 +8,8 @@ import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { ListaCompetencias, type ListaCompetenciasProps } from './ListaCompetencias';
 
-const AGORA = new Date('2026-11-24T15:00:00.000Z');
+// 05/12 em Brasília: novembro já acabou e pode ser fechado.
+const AGORA = new Date('2026-12-05T15:00:00.000Z');
 
 const pagina: PaginaCompetenciasDto = {
   itens: [
@@ -148,7 +149,78 @@ describe('ListaCompetencias', () => {
     const alerta = await screen.findByRole('alert');
     expect(alerta).toHaveTextContent('Não foi possível fechar a competência 11/2026.');
     expect(alerta).toHaveTextContent(message);
-    expect(screen.queryByRole('region', { name: 'Avisos' })).not.toHaveTextContent('fechada.');
+    expect(screen.queryByText('Competência 11/2026 fechada.')).not.toBeInTheDocument();
+  });
+
+  it('o alerta de falha some ao trocar de página', async () => {
+    const message = 'A competência já está fechada.';
+    const { onIrPara } = montar({
+      pagina: { ...pagina, total: 60 },
+      onExecutar: vi
+        .fn()
+        .mockRejectedValue(
+          new ResponseError({ status: 409, data: { statusCode: 409, message } } as never),
+        ),
+    });
+    await userEvent.click(
+      within(await linha('11/2026')).getByRole('button', { name: 'Ações de 11/2026' }),
+    );
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Fechar competência…' }));
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Fechar competência',
+      }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+    expect(onIrPara).toHaveBeenCalledWith(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('no mês corrente, fechar aparece desativado com o motivo', async () => {
+    montar({ agora: new Date('2026-11-24T15:00:00.000Z') });
+    await userEvent.click(
+      within(await linha('11/2026')).getByRole('button', { name: 'Ações de 11/2026' }),
+    );
+    const item = await screen.findByRole('menuitem', { name: /Fechar competência/ });
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent(
+      'O mês ainda não acabou: dá para fechar a partir de 01/12/2026.',
+    );
+    await userEvent.click(item);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    // Travar continua disponível no mês corrente.
+    expect(screen.getByRole('menuitem', { name: 'Travar importação…' })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+  });
+
+  it('enquanto a ação roda, a linha diz o que está fazendo', async () => {
+    let terminar = () => {};
+    const onExecutar = vi.fn(
+      () =>
+        new Promise<void>((resolver) => {
+          terminar = resolver;
+        }),
+    );
+    montar({ onExecutar });
+    await userEvent.click(
+      within(await linha('11/2026')).getByRole('button', { name: 'Ações de 11/2026' }),
+    );
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Travar importação…' }));
+    await userEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Travar importação',
+      }),
+    );
+    const novembro = within(await linha('11/2026'));
+    expect(await novembro.findByText('Travando…')).toBeInTheDocument();
+    expect(novembro.getByRole('button', { name: 'Ações de 11/2026' })).toBeDisabled();
+
+    terminar();
+    expect(await acharAviso()).toHaveTextContent('Importação de 11/2026 travada.');
+    expect(novembro.queryByText('Travando…')).not.toBeInTheDocument();
   });
 
   it('sem permissão de ação, a linha não tem menu', async () => {

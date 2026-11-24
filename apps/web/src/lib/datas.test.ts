@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dataDeBrasilia, dataHoraCurta } from './datas';
+import { dataDeBrasilia, dataHoraCurta, mesDeBrasilia } from './datas';
 
 describe('dataDeBrasilia', () => {
   it('formata a data no fuso de Brasília', () => {
@@ -26,5 +26,14 @@ describe('dataHoraCurta', () => {
 
   it('em outro ano, mostra o ano', () => {
     expect(dataHoraCurta('2025-12-30T13:00:00.000Z', agora)).toBe('30/12/2025 10:00');
+  });
+});
+
+describe('mesDeBrasilia', () => {
+  it('dá o mês (AAAA-MM) do instante no fuso de Brasília', () => {
+    expect(mesDeBrasilia(new Date('2026-11-24T15:00:00.000Z'))).toBe('2026-11');
+    // 02:00 UTC de 1/12 ainda é 30/11 em Brasília.
+    expect(mesDeBrasilia(new Date('2026-12-01T02:00:00.000Z'))).toBe('2026-11');
+    expect(mesDeBrasilia(new Date('2026-12-01T03:00:00.000Z'))).toBe('2026-12');
   });
 });

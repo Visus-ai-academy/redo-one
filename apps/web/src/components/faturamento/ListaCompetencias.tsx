@@ -73,11 +73,12 @@ export function ListaCompetencias({
 }: ListaCompetenciasProps) {
   const { sucesso } = useAvisos();
   const [falha, setFalha] = useState<string | null>(null);
-  const [emCurso, setEmCurso] = useState<string | null>(null);
+  /** A ação que está rodando e em qual linha. */
+  const [emCurso, setEmCurso] = useState<{ competencia: string; andamento: string } | null>(null);
 
   const executar = async (competencia: string, acao: AcaoCompetencia) => {
     setFalha(null);
-    setEmCurso(competencia);
+    setEmCurso({ competencia, andamento: acao.andamento });
     try {
       await onExecutar(acao.tipo, competencia);
       sucesso(acao.sucesso);
@@ -169,8 +170,11 @@ export function ListaCompetencias({
         cell: ({ row }) => (
           <AcoesDaLinha
             competencia={row.original.competencia}
-            acoes={acoesDaCompetencia(row.original, acesso)}
+            acoes={acoesDaCompetencia(row.original, acesso, agora ?? new Date())}
             ocupada={emCurso !== null}
+            andamento={
+              emCurso?.competencia === row.original.competencia ? emCurso.andamento : undefined
+            }
             onConfirmar={(competencia, acao) => executarAtual.current(competencia, acao)}
           />
         ),
@@ -198,7 +202,11 @@ export function ListaCompetencias({
       }}
       onFiltrar={nada}
       onLimparFiltros={nada}
-      onIrPara={onIrPara}
+      onIrPara={(numero) => {
+        // O erro era de uma linha desta página; na outra, ele só atrapalha.
+        setFalha(null);
+        onIrPara(numero);
+      }}
     />
   );
 }
@@ -208,17 +216,25 @@ function AcoesDaLinha({
   competencia,
   acoes,
   ocupada,
+  andamento,
   onConfirmar,
 }: {
   competencia: string;
   acoes: AcaoCompetencia[];
   ocupada: boolean;
+  /** Texto da ação que roda nesta linha ("Fechando…"). */
+  andamento?: string;
   onConfirmar: (competencia: string, acao: AcaoCompetencia) => Promise<void>;
 }) {
   const [escolhida, setEscolhida] = useState<AcaoCompetencia | null>(null);
   if (acoes.length === 0) return null;
   return (
-    <span className="flex justify-end">
+    <span className="flex items-center justify-end gap-2">
+      {andamento && (
+        <span role="status" className="text-muted-foreground text-[13px] whitespace-nowrap">
+          {andamento}
+        </span>
+      )}
       <Menu.Root>
         <Menu.Trigger
           disabled={ocupada}
@@ -233,15 +249,25 @@ function AcoesDaLinha({
               {acoes.map((acao) => (
                 <Menu.Item
                   key={acao.tipo}
+                  disabled={Boolean(acao.desabilitada)}
                   onClick={() => setEscolhida(acao)}
-                  className="data-[highlighted]:bg-muted flex h-9 items-center gap-2 px-3 outline-none"
+                  className="data-[highlighted]:bg-muted flex min-h-9 max-w-80 items-start gap-2 px-3 py-2 outline-none data-[disabled]:cursor-not-allowed"
                 >
                   {acao.tipo === 'fechar' || acao.tipo === 'travar' ? (
-                    <Lock size={16} aria-hidden />
+                    <Lock size={16} aria-hidden className="mt-0.5 flex-none" />
                   ) : (
-                    <LockOpen size={16} aria-hidden />
+                    <LockOpen size={16} aria-hidden className="mt-0.5 flex-none" />
                   )}
-                  {`${acao.rotulo}…`}
+                  <span className="flex flex-col gap-0.5">
+                    <span className={acao.desabilitada ? 'text-muted-foreground' : undefined}>
+                      {`${acao.rotulo}…`}
+                    </span>
+                    {acao.desabilitada && (
+                      <span className="text-muted-foreground text-xs leading-snug">
+                        {acao.desabilitada}
+                      </span>
+                    )}
+                  </span>
                 </Menu.Item>
               ))}
             </Menu.Popup>

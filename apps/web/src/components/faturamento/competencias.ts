@@ -1,4 +1,5 @@
 import type { CompetenciaDto } from '../../gen/types/CompetenciaDto';
+import { mesDeBrasilia } from '../../lib/datas';
 import { plural } from '../../lib/formato';
 import { pode } from '../../lib/permissoes';
 
@@ -20,15 +21,30 @@ export type AcaoCompetencia = {
   sucesso: string;
   /** Início do erro, antes do motivo que a API dá. */
   falha: string;
+  /** Na linha enquanto a ação roda ("Fechando…"). */
+  andamento: string;
+  /** A ação aparece desativada com este motivo (ex.: o mês ainda não acabou). */
+  desabilitada?: string;
 };
+
+/** "2026-11" → "01/12/2026": o primeiro dia do mês seguinte. */
+function inicioDoMesSeguinte(competencia: string) {
+  const [ano = 0, mes = 0] = competencia.split('-').map(Number);
+  return mes === 12 ? `01/01/${ano + 1}` : `01/${String(mes + 1).padStart(2, '0')}/${ano}`;
+}
 
 type Acesso = Parameters<typeof pode>[0];
 
 /**
  * As ações que a competência aceita no estado dela e que a sessão pode fazer, na ordem do menu:
- * fechar ou reabrir, depois travar ou destravar a importação. A API confere de novo (409).
+ * fechar ou reabrir, depois travar ou destravar a importação. Fechar fica desativado até o mês
+ * acabar em Brasília (`agora`). A API confere de novo (409).
  */
-export function acoesDaCompetencia(c: CompetenciaDto, acesso: Acesso): AcaoCompetencia[] {
+export function acoesDaCompetencia(
+  c: CompetenciaDto,
+  acesso: Acesso,
+  agora: Date,
+): AcaoCompetencia[] {
   const mes = mesAno(c.competencia);
   const travada = c.importacaoTravadaEm !== null;
   const acoes: AcaoCompetencia[] = [];
@@ -41,6 +57,10 @@ export function acoesDaCompetencia(c: CompetenciaDto, acesso: Acesso): AcaoCompe
       consequencia: `Os ${plural(c.laudos, { um: 'laudo', varios: 'laudos' })} dela deixam de mudar: a importação e o recálculo do corte passam a ignorá-la. Dá para reabrir depois.`,
       sucesso: `Competência ${mes} fechada.`,
       falha: `Não foi possível fechar a competência ${mes}.`,
+      andamento: 'Fechando…',
+      ...(c.competencia >= mesDeBrasilia(agora) && {
+        desabilitada: `O mês ainda não acabou: dá para fechar a partir de ${inicioDoMesSeguinte(c.competencia)}.`,
+      }),
     });
   if (c.status === 'fechada' && pode(acesso, 'faturamento.competencia.reabrir'))
     acoes.push({
@@ -52,6 +72,7 @@ export function acoesDaCompetencia(c: CompetenciaDto, acesso: Acesso): AcaoCompe
         : `A importação volta a atualizar os laudos de ${mes}.`,
       sucesso: `Competência ${mes} reaberta.`,
       falha: `Não foi possível reabrir a competência ${mes}.`,
+      andamento: 'Reabrindo…',
     });
 
   if (pode(acesso, 'faturamento.competencia.travar'))
@@ -67,6 +88,7 @@ export function acoesDaCompetencia(c: CompetenciaDto, acesso: Acesso): AcaoCompe
                 : `A importação volta a atualizar os laudos de ${mes}.`,
             sucesso: `Importação de ${mes} destravada.`,
             falha: `Não foi possível destravar a importação de ${mes}.`,
+            andamento: 'Destravando…',
           }
         : {
             tipo: 'travar',
@@ -75,6 +97,7 @@ export function acoesDaCompetencia(c: CompetenciaDto, acesso: Acesso): AcaoCompe
             consequencia: `A importação deixa de mexer nos laudos de ${mes}, mesmo com a competência aberta.`,
             sucesso: `Importação de ${mes} travada.`,
             falha: `Não foi possível travar a importação de ${mes}.`,
+            andamento: 'Travando…',
           },
     );
 
