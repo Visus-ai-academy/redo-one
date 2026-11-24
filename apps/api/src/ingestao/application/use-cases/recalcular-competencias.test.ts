@@ -109,4 +109,62 @@ describe('RecalcularCompetencias', () => {
     expect(resultado).toEqual({ lidos: 5001, alterados: 5001 });
     expect(laudos.lotesLidos).toBe(2);
   });
+
+  describe('entre um lote e outro', () => {
+    /** Lote 1: 5.000 laudos de 2026-10 que vão para 2026-11; lote 2 vem depois deles. */
+    const loteCheio = () =>
+      guardar(
+        ...Array.from({ length: 5000 }, (_, i) => laudo(`x${String(i).padStart(5, '0')}`, 'c-x')),
+      );
+
+    beforeEach(() => {
+      laudos.laudos.clear();
+      cortes.porCliente.set('c-x', [{ desde: '2026-10', corte: corteDia15 }]);
+    });
+
+    it('a competência nova do lote gravado tem linha mesmo se o job cair no lote seguinte', async () => {
+      loteCheio();
+      // Lote 2: laudo de 20/11 que vai para 2026-12.
+      guardar({
+        ...laudo('z1', 'c-x'),
+        dataLaudo: new Date('2026-11-20T17:00:00Z'),
+        competencia: '2026-11',
+      });
+      const gravar = laudos.atualizarCompetencias.bind(laudos);
+      let chamadas = 0;
+      laudos.atualizarCompetencias = async (mudancas) => {
+        chamadas++;
+        if (chamadas === 2) throw new Error('caiu no 2º lote');
+        return gravar(mudancas);
+      };
+
+      await expect(recalcular.executar({ clienteIds: ['c-x'] })).rejects.toThrow('caiu');
+      const retentativa = await recalcular.executar({ clienteIds: ['c-x'] });
+
+      expect(retentativa).toEqual({ lidos: 5001, alterados: 1 });
+      expect(competenciaDe('x00000')).toBe('2026-11');
+      expect(competenciaDe('z1')).toBe('2026-12');
+      expect([...competencias.competencias.keys()].sort()).toEqual(['2026-11', '2026-12']);
+    });
+
+    it('relê as bloqueadas: a competência fechada durante a execução não muda nem recebe laudos', async () => {
+      loteCheio();
+      // Lote 2: um laudo que sai de 2026-10 e um que iria para 2026-11.
+      guardar(laudo('z1', 'c-x'), { ...laudo('z2', 'c-x'), competencia: '2026-12' });
+      const gravar = laudos.atualizarCompetencias.bind(laudos);
+      laudos.atualizarCompetencias = async (mudancas) => {
+        await gravar(mudancas);
+        // Fecham 2026-10 e 2026-11 logo depois do 1º lote.
+        competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+        competencias.competencias.set('2026-11', { status: 'fechada', importacaoTravada: false });
+      };
+
+      const resultado = await recalcular.executar({ clienteIds: ['c-x'] });
+
+      expect(resultado.alterados).toBe(5000);
+      expect(competenciaDe('x04999')).toBe('2026-11');
+      expect(competenciaDe('z1')).toBe('2026-10');
+      expect(competenciaDe('z2')).toBe('2026-12');
+    });
+  });
 });

@@ -26,12 +26,11 @@ export class RecalcularCompetencias {
   ) {}
 
   async executar({ clienteIds }: PedidoRecalculo): Promise<{ lidos: number; alterados: number }> {
-    const [bloqueadas, tabela] = await Promise.all([
+    const [iniciais, tabela] = await Promise.all([
       this.competencias.listar(),
       this.cortes.carregar(),
     ]);
-    const bloqueada = new Set(bloqueadas);
-    const novas = new Set<string>();
+    let bloqueadas = iniciais;
     let lidos = 0;
     let alterados = 0;
     let depoisDe: string | null = null;
@@ -44,7 +43,11 @@ export class RecalcularCompetencias {
         limite: LOTE,
       });
       lidos += lote.length;
+      // Relidas a cada lote: a competência fechada durante a execução não muda mais a partir daqui.
+      bloqueadas = await this.competencias.listar();
+      const bloqueada = new Set(bloqueadas);
       const mudancas = lote.flatMap((l) => {
+        if (bloqueada.has(l.competencia)) return [];
         const competencia = competenciaPelaCadeia(
           l.dataRealizacao,
           l.dataLaudo,
@@ -55,15 +58,16 @@ export class RecalcularCompetencias {
           : [{ id: l.id, competencia }];
       });
       if (mudancas.length) {
+        // A linha da competência antes dos laudos: se o job cair depois de gravar o lote, a
+        // retentativa não vê mais a mudança, e a competência ficaria sem linha (sem como fechar).
+        await this.competencias.garantir([...new Set(mudancas.map((m) => m.competencia))].sort());
         await this.laudos.atualizarCompetencias(mudancas, this.agora());
-        for (const m of mudancas) novas.add(m.competencia);
         alterados += mudancas.length;
       }
       if (lote.length < LOTE) break;
       depoisDe = lote[lote.length - 1]?.id ?? null;
     }
 
-    if (novas.size) await this.competencias.garantir([...novas].sort());
     return { lidos, alterados };
   }
 }
