@@ -12,6 +12,7 @@ const resolver = montarResolvedorMedico({
     { chaveNormalizada: 'ana p souza', medicoId: 'm-ana' },
     { chaveNormalizada: 'joao l', medicoId: 'm-joao' },
   ],
+  outrasContas: [{ idMobilemed: 102, medicoId: 'm-ana' }],
 });
 
 describe('montarResolvedorMedico', () => {
@@ -32,6 +33,12 @@ describe('montarResolvedorMedico', () => {
     // O nome que a MobileMed manda pode ter um sobrenome a mais que o cadastro.
     expect(resolver('Dra. Ana Souza Prado', 101)).toBe('m-ana');
     expect(resolver('Dr. João Lima', 303)).toBe('m-bia');
+  });
+
+  it('outra conta do médico vale como a principal, antes do nome', () => {
+    expect(resolver('Dra. Ana Souza.', 102)).toBe('m-ana');
+    expect(resolver('Dr. João Lima', 102)).toBe('m-ana');
+    expect(resolver(null, 102)).toBe('m-ana');
   });
 
   it('id desconhecido cai no nome, como sem id', () => {

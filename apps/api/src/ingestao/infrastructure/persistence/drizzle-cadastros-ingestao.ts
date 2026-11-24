@@ -12,6 +12,7 @@ import {
   examesDeParaValores,
   medicos,
   medicosAliases,
+  medicosContasMobilemed,
   modalidades,
   modalidadesDePara,
   prioridades,
@@ -74,6 +75,7 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
       sufixos,
       listaMedicos,
       aliasesMedico,
+      outrasContas,
     ] = await Promise.all([
       db.select().from(exames).orderBy(asc(exames.nome)),
       db.select().from(examesDeParaValores).where(eq(examesDeParaValores.ativo, true)),
@@ -112,6 +114,12 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
           chaveNormalizada: medicosAliases.chaveNormalizada,
         })
         .from(medicosAliases),
+      db
+        .select({
+          idMobilemed: medicosContasMobilemed.idMobilemed,
+          medicoId: medicosContasMobilemed.medicoId,
+        })
+        .from(medicosContasMobilemed),
     ]);
 
     const exameDoCadastro = (e: (typeof listaExames)[number]): ExameDoCadastro => ({
@@ -182,7 +190,11 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
       ]),
       resolverCliente: montarResolvedorCliente(cadastroClientes),
       resolverUnidadeCliente: montarResolvedorUnidadeCliente(cadastroClientes),
-      resolverMedico: montarResolvedorMedico({ medicos: listaMedicos, aliases: aliasesMedico }),
+      resolverMedico: montarResolvedorMedico({
+        medicos: listaMedicos,
+        aliases: aliasesMedico,
+        outrasContas,
+      }),
     };
   }
 }
