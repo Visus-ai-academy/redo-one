@@ -342,6 +342,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Criar vigência do corte padrão ou do corte de um cliente.',
         sensivel: true,
       },
+      // Decide se o laudo fatura: CO/NC/NC1, sub-regras e a configuração de cada cliente.
+      {
+        chave: 'faturamento.tipificacao.editar',
+        rotulo: 'Editar tipificação',
+        descricao:
+          'Mudar as regras e sub-regras da tipificação e a configuração da tipificação de um cliente.',
+        sensivel: true,
+      },
     ],
   },
   {

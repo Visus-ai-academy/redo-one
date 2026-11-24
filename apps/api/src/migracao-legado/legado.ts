@@ -351,3 +351,58 @@ export interface LegadoDadosFiscais {
   /** `configuracoes.faturamentoExclusaoFiscal`: nomes de cliente como chegam da MobileMed. */
   exclusaoFiscal: string[];
 }
+
+/** Filtro de médico de um critério do dashboards-one (`modo` + chaves normalizadas + grupos). */
+export interface LegadoFiltroMedico {
+  modo?: string;
+  medicos?: string[];
+  /** Ids de `grupos_medicos`. */
+  grupos?: string[];
+}
+
+/**
+ * Tipificação do dashboards-one (`regras_categorias`, `sub_regras`, `cliente_regras`,
+ * `cliente_sub_regras`, `clientes_regras_ordem`, `grupos_medicos`). Tudo por `empresa`, o nome do
+ * cliente como chega da MobileMed. As listas vêm na ordem física (`ctid`), que é a do Prisma de lá
+ * (decide a precedência entre sub-regras do mesmo passo).
+ */
+export interface LegadoTipificacao {
+  regras: {
+    id: string;
+    nome: string;
+    descricao: string | null;
+    cor: string | null;
+    ordem: number;
+    ativo: boolean;
+  }[];
+  subRegras: {
+    id: string;
+    regraId: string;
+    nome: string;
+    descricao: string | null;
+    ordem: number;
+    ativo: boolean;
+    fatura: boolean;
+  }[];
+  clienteRegras: { empresa: string; regraId: string; principal: boolean }[];
+  clienteSubRegras: {
+    empresa: string;
+    subRegraId: string;
+    catchAll: boolean;
+    /** Valor (modalidade ou especialidade) → filtro de médico, na ordem do jsonb. */
+    modalidadeMedicos: Record<string, LegadoFiltroMedico>;
+    especialidadeMedicos: Record<string, LegadoFiltroMedico>;
+    prioridades: string[];
+  }[];
+  ordens: {
+    empresa: string;
+    personalizada: boolean;
+    linhas: {
+      tipo?: string;
+      valores?: string[];
+      filtro?: LegadoFiltroMedico;
+      subRegraId?: string;
+    }[];
+  }[];
+  grupos: { id: string; nome: string; ativo: boolean }[];
+}

@@ -5,17 +5,22 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { clientes } from './catalogo';
+import { clientes, especialidades, modalidades, prioridades } from './catalogo';
 import { usuarios } from './identidade';
+import { laudos } from './ingestao';
+import { equipes, medicos } from './medicos';
 
 // Contexto `faturamento`: as competências (meses de faturamento) com fechamento e trava da
-// importação, e os cortes que decidem a competência de cada laudo (padrão e por cliente).
+// importação, os cortes que decidem a competência de cada laudo (padrão e por cliente), os dados
+// fiscais do cliente e a tipificação (CO/NC/NC1 e sub-regras) que decide se o laudo fatura.
 
 const quando = (nome: string) => timestamp(nome, { withTimezone: true });
 const quem = (nome: string) => uuid(nome).references(() => usuarios.id);
@@ -138,4 +143,219 @@ export const clientesDadosFiscais = pgTable(
     atualizadoPorId: quem('atualizado_por_id'),
   },
   (t) => [index('clientes_dados_fiscais_exclusao_fiscal_idx').on(t.exclusaoFiscal)],
+);
+
+/**
+ * Regra da tipificação (CO, NC, NC1). O laudo que nenhuma linha do cliente casou fica na regra
+ * principal do cliente, sem sub-regra, e fatura conforme `fatura_sem_subregra`. A regra `padrao` é
+ * a do cliente sem configuração (uma só).
+ */
+export const regrasTipificacao = pgTable(
+  'regras_tipificacao',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nome: text('nome').notNull().unique(),
+    descricao: text('descricao'),
+    /** Hex `#RRGGBB` do selo. */
+    cor: text('cor'),
+    ordem: integer('ordem').notNull().default(0),
+    ativo: boolean('ativo').notNull().default(true),
+    faturaSemSubregra: boolean('fatura_sem_subregra').notNull(),
+    padrao: boolean('padrao').notNull().default(false),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    atualizadoEm: quando('atualizado_em')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex('regras_tipificacao_padrao_key').on(t.padrao).where(sql`${t.padrao}`)],
+);
+
+/** Sub-regra (CO-FT, NC-NF...): o resultado de uma linha da configuração do cliente. */
+export const subregrasTipificacao = pgTable(
+  'subregras_tipificacao',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    regraId: uuid('regra_id')
+      .notNull()
+      .references(() => regrasTipificacao.id),
+    nome: text('nome').notNull().unique(),
+    descricao: text('descricao'),
+    /** O laudo nesta sub-regra fatura. */
+    fatura: boolean('fatura').notNull().default(true),
+    ordem: integer('ordem').notNull().default(0),
+    ativo: boolean('ativo').notNull().default(true),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    atualizadoEm: quando('atualizado_em')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index('subregras_tipificacao_regra_idx').on(t.regraId)],
+);
+
+/**
+ * Configuração da tipificação do cliente ou da unidade. A unidade sem linha aqui segue a do
+ * principal; sem nenhuma, vale a regra padrão. Regra principal vazia na unidade = a do principal.
+ */
+export const clientesTipificacao = pgTable(
+  'clientes_tipificacao',
+  {
+    clienteId: uuid('cliente_id')
+      .primaryKey()
+      .references(() => clientes.id, { onDelete: 'cascade' }),
+    /** Regra do laudo que nenhuma linha casou; vazio = a do principal ou a padrão. */
+    regraId: uuid('regra_id').references(() => regrasTipificacao.id),
+    /** "Todos os demais": sub-regra do laudo que nenhuma linha casou; vazio = só a regra. */
+    subregraDemaisId: uuid('subregra_demais_id').references(() => subregrasTipificacao.id),
+    atualizadoEm: quando('atualizado_em')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    /** Nulo na carga do dashboards-one. */
+    atualizadoPorId: quem('atualizado_por_id'),
+  },
+  (t) => [
+    index('clientes_tipificacao_regra_idx').on(t.regraId),
+    index('clientes_tipificacao_subregra_demais_idx').on(t.subregraDemaisId),
+  ],
+);
+
+/**
+ * Linha da configuração: "se a modalidade/especialidade/prioridade for uma destas e o médico for
+ * (todos | apenas | exceto) estes → sub-regra". Vale a primeira linha que casar, pela `ordem`.
+ */
+export const clientesTipificacaoLinhas = pgTable(
+  'clientes_tipificacao_linhas',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clienteId: uuid('cliente_id')
+      .notNull()
+      .references(() => clientesTipificacao.clienteId, { onDelete: 'cascade' }),
+    ordem: integer('ordem').notNull(),
+    tipo: text('tipo', { enum: ['modalidade', 'especialidade', 'prioridade'] }).notNull(),
+    /** `apenas` nunca casa com laudo sem médico; `exceto` sempre casa. */
+    modoMedico: text('modo_medico', { enum: ['todos', 'apenas', 'exceto'] })
+      .notNull()
+      .default('todos'),
+    subregraId: uuid('subregra_id')
+      .notNull()
+      .references(() => subregrasTipificacao.id),
+  },
+  (t) => [
+    unique('clientes_tipificacao_linhas_ordem_key').on(t.clienteId, t.ordem),
+    index('clientes_tipificacao_linhas_subregra_idx').on(t.subregraId),
+    check(
+      'clientes_tipificacao_linhas_tipo_check',
+      sql`${t.tipo} in ('modalidade', 'especialidade', 'prioridade')`,
+    ),
+    check(
+      'clientes_tipificacao_linhas_modo_check',
+      sql`${t.modoMedico} in ('todos', 'apenas', 'exceto')`,
+    ),
+  ],
+);
+
+const linhaTipificacao = () =>
+  uuid('linha_id')
+    .notNull()
+    .references(() => clientesTipificacaoLinhas.id, { onDelete: 'cascade' });
+
+/** Modalidades da linha do tipo `modalidade`. */
+export const clientesTipificacaoLinhasModalidades = pgTable(
+  'clientes_tipificacao_linhas_modalidades',
+  {
+    linhaId: linhaTipificacao(),
+    modalidadeId: uuid('modalidade_id')
+      .notNull()
+      .references(() => modalidades.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.linhaId, t.modalidadeId] }),
+    index('clientes_tipificacao_linhas_modalidades_modalidade_idx').on(t.modalidadeId),
+  ],
+);
+
+/** Especialidades da linha do tipo `especialidade`. */
+export const clientesTipificacaoLinhasEspecialidades = pgTable(
+  'clientes_tipificacao_linhas_especialidades',
+  {
+    linhaId: linhaTipificacao(),
+    especialidadeId: uuid('especialidade_id')
+      .notNull()
+      .references(() => especialidades.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.linhaId, t.especialidadeId] }),
+    index('clientes_tipificacao_linhas_especialidades_especialidade_idx').on(t.especialidadeId),
+  ],
+);
+
+/** Prioridades (do catálogo) da linha do tipo `prioridade`. */
+export const clientesTipificacaoLinhasPrioridades = pgTable(
+  'clientes_tipificacao_linhas_prioridades',
+  {
+    linhaId: linhaTipificacao(),
+    prioridadeId: uuid('prioridade_id')
+      .notNull()
+      .references(() => prioridades.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.linhaId, t.prioridadeId] }),
+    index('clientes_tipificacao_linhas_prioridades_prioridade_idx').on(t.prioridadeId),
+  ],
+);
+
+/** Médicos do filtro `apenas`/`exceto` da linha. */
+export const clientesTipificacaoLinhasMedicos = pgTable(
+  'clientes_tipificacao_linhas_medicos',
+  {
+    linhaId: linhaTipificacao(),
+    medicoId: uuid('medico_id')
+      .notNull()
+      .references(() => medicos.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.linhaId, t.medicoId] }),
+    index('clientes_tipificacao_linhas_medicos_medico_idx').on(t.medicoId),
+  ],
+);
+
+/** Equipes (contexto `medicos`) do filtro `apenas`/`exceto` da linha: valem os membros. */
+export const clientesTipificacaoLinhasEquipes = pgTable(
+  'clientes_tipificacao_linhas_equipes',
+  {
+    linhaId: linhaTipificacao(),
+    equipeId: uuid('equipe_id')
+      .notNull()
+      .references(() => equipes.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.linhaId, t.equipeId] }),
+    index('clientes_tipificacao_linhas_equipes_equipe_idx').on(t.equipeId),
+  ],
+);
+
+/**
+ * Tipificação de cada laudo: calculada na importação (mesma transação) e pelo job de
+ * reclassificação das competências abertas. Laudo de competência fechada ou travada não muda.
+ */
+export const classificacoesLaudo = pgTable(
+  'classificacoes_laudo',
+  {
+    laudoId: uuid('laudo_id')
+      .primaryKey()
+      .references(() => laudos.id, { onDelete: 'cascade' }),
+    regraId: uuid('regra_id')
+      .notNull()
+      .references(() => regrasTipificacao.id),
+    /** Nulo: nenhuma linha casou e não há "todos os demais". */
+    subregraId: uuid('subregra_id').references(() => subregrasTipificacao.id),
+    fatura: boolean('fatura').notNull(),
+    calculadoEm: quando('calculado_em').notNull(),
+  },
+  (t) => [
+    index('classificacoes_laudo_regra_idx').on(t.regraId),
+    index('classificacoes_laudo_subregra_idx').on(t.subregraId),
+  ],
 );

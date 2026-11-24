@@ -1,4 +1,4 @@
-// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências e os dados fiscais dos clientes do banco do dashboards-one para o banco do redo-one
+// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências, os dados fiscais e a tipificação dos clientes do banco do dashboards-one para o banco do redo-one
 // (DATABASE_URL). O banco do dashboards-one é aberto SÓ PARA LEITURA; do redo-one, sem --gravar, só
 // se leem os usuários (a escala casa autor, revisor e gestora com eles). Sem --gravar, só mostra o
 // que faria. Uso:
@@ -15,7 +15,12 @@ import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';
 import { DATABASE, type Database } from '../database/database';
-import { medicos as tabMedicos, turnos as tabTurnos, usuarios } from '../database/schema';
+import {
+  laudos as tabLaudos,
+  medicos as tabMedicos,
+  turnos as tabTurnos,
+  usuarios,
+} from '../database/schema';
 import type { Aviso } from '../migracao-legado/comum';
 import {
   alocacoesSumidasDoLegado,
@@ -33,6 +38,7 @@ import { mapearDadosFiscais } from '../migracao-legado/mapear-dados-fiscais';
 import { mapearDistribuicao } from '../migracao-legado/mapear-distribuicao';
 import { mapearEscala } from '../migracao-legado/mapear-escala';
 import { mapearMedicos } from '../migracao-legado/mapear-medicos';
+import { cadastroDaCarga, mapearTipificacao } from '../migracao-legado/mapear-tipificacao';
 
 function mostrarAvisos(avisos: Aviso[]) {
   const porTabela = new Map<string, Aviso[]>();
@@ -87,6 +93,28 @@ async function migrarLegado() {
       },
     );
 
+    // A tipificação casa o valor cru do dashboards-one (COLUNAS) com a especialidade que a
+    // importação do redo-one deu aos laudos com esse valor.
+    const especialidadesDosLaudos = (
+      await db
+        .selectDistinct({
+          origem: tabLaudos.especialidadeOrigem,
+          especialidadeId: tabLaudos.especialidadeId,
+        })
+        .from(tabLaudos)
+    ).flatMap((l) =>
+      l.origem && l.especialidadeId
+        ? [{ origem: l.origem, especialidadeId: l.especialidadeId }]
+        : [],
+    );
+    const tipificacao = mapearTipificacao(
+      legado.tipificacao,
+      cadastroDaCarga(especialidadesDosLaudos, catalogo.tabelas, medicos.tabelas),
+      // Decisão do usuário (24/11): RADI_IMAGEM × RADI-IMAGEM vale a RADI_IMAGEM, a única com
+      // laudos. Pelo mesmo critério, CEMVALENCA × CEMVALENCA_PLANTÃO vale a CEMVALENCA.
+      { grafiasPreferidas: ['RADI_IMAGEM', 'CEMVALENCA'] },
+    );
+
     const competencias = mapearCompetencias(legado.competencias, {
       usuarios: await db.select({ id: usuarios.id, email: usuarios.email }).from(usuarios),
     });
@@ -99,6 +127,7 @@ async function migrarLegado() {
       ...distribuicao.tabelas,
       ...competencias.tabelas,
       ...dadosFiscais.tabelas,
+      ...tipificacao.tabelas,
     })) {
       console.log(`  ${tabela.padEnd(34)} ${String(linhas.length).padStart(5)}`);
     }
@@ -175,12 +204,22 @@ async function migrarLegado() {
       ...configuracaoDistribuicao.avisos,
       ...competencias.avisos,
       ...dadosFiscais.avisos,
+      ...tipificacao.avisos,
     ];
     console.log(`\nAvisos (${avisos.length}): o que não migrou como estava.`);
     mostrarAvisos(avisos);
+    if (tipificacao.erros.length) {
+      console.log(`\nTipificação: ${tipificacao.erros.length} erro(s) que impedem gravar.`);
+      for (const e of tipificacao.erros) console.log(`  - ${e}`);
+    }
 
     if (!values.gravar) {
       console.log('\nNada gravado. Rode com --gravar para gravar no banco do redo-one.');
+      return;
+    }
+    if (tipificacao.erros.length) {
+      console.error('\nNada gravado: corrija os erros da tipificação acima.');
+      process.exitCode = 1;
       return;
     }
     await gravarMigracao(
@@ -192,6 +231,7 @@ async function migrarLegado() {
       configuracaoDistribuicao,
       competencias,
       dadosFiscais,
+      tipificacao,
     );
     console.log('\nGravado no banco do redo-one.');
   } finally {

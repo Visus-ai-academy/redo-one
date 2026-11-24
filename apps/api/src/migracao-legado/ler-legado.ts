@@ -8,6 +8,7 @@ import type {
   LegadoDistribuicao,
   LegadoEscala,
   LegadoMedicos,
+  LegadoTipificacao,
 } from './legado';
 
 /**
@@ -24,6 +25,7 @@ export async function lerLegado(url: string): Promise<{
   configuracaoDistribuicao: LegadoConfiguracaoDistribuicao;
   competencias: LegadoCompetencia[];
   dadosFiscais: LegadoDadosFiscais;
+  tipificacao: LegadoTipificacao;
 }> {
   const cliente = new Client({
     connectionString: url,
@@ -199,8 +201,28 @@ export async function lerLegado(url: string): Promise<{
       ),
       exclusaoFiscal: exclusao?.faturamentoExclusaoFiscal ?? [],
     };
+    const tipificacao: LegadoTipificacao = {
+      regras: await ler(
+        'select id, nome, descricao, cor, ordem, ativo from regras_categorias order by ctid',
+      ),
+      subRegras: await ler(
+        'select id, "regraId", nome, descricao, ordem, ativo, fatura from sub_regras order by ctid',
+      ),
+      clienteRegras: await ler(
+        'select empresa, "regraId", principal from cliente_regras order by ctid',
+      ),
+      clienteSubRegras: await ler(
+        `select empresa, "subRegraId", "catchAll", "modalidadeMedicos", "especialidadeMedicos",
+          prioridades from cliente_sub_regras order by ctid`,
+      ),
+      ordens: await ler(
+        'select empresa, personalizada, linhas from clientes_regras_ordem order by ctid',
+      ),
+      grupos: await ler('select id, nome, ativo from grupos_medicos order by ctid'),
+    };
     await cliente.query('COMMIT');
     return {
+      tipificacao,
       catalogo,
       medicos,
       escala,

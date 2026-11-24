@@ -23,6 +23,7 @@ import { mapearDadosFiscais } from './mapear-dados-fiscais';
 import { mapearDistribuicao } from './mapear-distribuicao';
 import { type EscalaMigrada, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
+import { cadastroDaCarga, mapearTipificacao } from './mapear-tipificacao';
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -223,7 +224,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias cascade`,
+      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias, regras_tipificacao, subregras_tipificacao cascade`,
     );
   });
 
@@ -399,6 +400,148 @@ describe.skipIf(!url)('gravarMigracao', () => {
       .where(sql`${schema.clientesDadosFiscais.clienteId} = ${idDoLegado('clientes', 'cl-a')}`);
     await migrar();
     expect(await ler()).toEqual(primeira);
+  });
+
+  it('grava a tipificação; rodar de novo troca as linhas do cliente da carga e mantém a do cliente fora dela', async () => {
+    const tipificacao = mapearTipificacao(
+      {
+        regras: [
+          { id: 'r-co', nome: 'CO', descricao: null, cor: null, ordem: 0, ativo: true },
+          { id: 'r-nc', nome: 'NC', descricao: null, cor: null, ordem: 1, ativo: true },
+        ],
+        subRegras: [
+          {
+            id: 's-ncnf',
+            regraId: 'r-nc',
+            nome: 'NC-NF',
+            descricao: null,
+            ordem: 0,
+            ativo: true,
+            fatura: false,
+          },
+          {
+            id: 's-ncft',
+            regraId: 'r-nc',
+            nome: 'NC-FT',
+            descricao: null,
+            ordem: 1,
+            ativo: true,
+            fatura: true,
+          },
+        ],
+        clienteRegras: [{ empresa: 'PRN TELE_ARARAQUARA', regraId: 'r-nc', principal: true }],
+        clienteSubRegras: [],
+        ordens: [
+          {
+            empresa: 'PRN TELE_ARARAQUARA',
+            personalizada: true,
+            linhas: [
+              {
+                tipo: 'especialidade',
+                valores: ['NEURO'],
+                filtro: { modo: 'apenas', medicos: ['ana'], grupos: ['g1'] },
+                subRegraId: 's-ncnf',
+              },
+              {
+                tipo: 'modalidade',
+                valores: ['CT'],
+                filtro: { modo: 'todos' },
+                subRegraId: 's-ncnf',
+              },
+              { tipo: 'demais', valores: [], filtro: { modo: 'todos' }, subRegraId: 's-ncft' },
+            ],
+          },
+        ],
+        grupos: [{ id: 'g1', nome: 'Equipe 1', ativo: true }],
+      },
+      cadastroDaCarga([], catalogo.tabelas, medicos.tabelas),
+    );
+    expect(tipificacao.erros).toEqual([]);
+    const migrar = () =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        tipificacao,
+      );
+    const ler = async () =>
+      (
+        await db.execute(sql`
+          select c.nome cliente, r.nome regra, d.nome demais, l.ordem, l.tipo, l.modo_medico,
+            s.nome sub,
+            (select count(*)::int from clientes_tipificacao_linhas_especialidades x where x.linha_id = l.id) esp,
+            (select count(*)::int from clientes_tipificacao_linhas_modalidades x where x.linha_id = l.id) mods,
+            (select count(*)::int from clientes_tipificacao_linhas_medicos x where x.linha_id = l.id) meds,
+            (select count(*)::int from clientes_tipificacao_linhas_equipes x where x.linha_id = l.id) eqs
+          from clientes_tipificacao t join clientes c on c.id = t.cliente_id
+          left join regras_tipificacao r on r.id = t.regra_id
+          left join subregras_tipificacao d on d.id = t.subregra_demais_id
+          left join clientes_tipificacao_linhas l on l.cliente_id = t.cliente_id
+          left join subregras_tipificacao s on s.id = l.subregra_id
+          order by c.nome, l.ordem`)
+      ).rows;
+
+    await migrar();
+    const primeira = await ler();
+    expect(primeira).toEqual([
+      {
+        cliente: 'PRN TELE_ARARAQUARA',
+        regra: 'NC',
+        demais: 'NC-FT',
+        ordem: 1,
+        tipo: 'especialidade',
+        modo_medico: 'apenas',
+        sub: 'NC-NF',
+        esp: 1,
+        mods: 0,
+        meds: 1,
+        eqs: 1,
+      },
+      {
+        cliente: 'PRN TELE_ARARAQUARA',
+        regra: 'NC',
+        demais: 'NC-FT',
+        ordem: 2,
+        tipo: 'modalidade',
+        modo_medico: 'todos',
+        sub: 'NC-NF',
+        esp: 0,
+        mods: 1,
+        meds: 0,
+        eqs: 0,
+      },
+    ]);
+    const regras = await db.execute(
+      sql`select nome, fatura_sem_subregra, padrao from regras_tipificacao order by nome`,
+    );
+    expect(regras.rows).toEqual([
+      { nome: 'CO', fatura_sem_subregra: true, padrao: true },
+      { nome: 'NC', fatura_sem_subregra: false, padrao: false },
+    ]);
+
+    // Linha a mais na tela do redo-one: a carga a troca pela lista do dashboards-one.
+    const unidade = idDoLegado('clientes', 'cl-a');
+    await db.insert(schema.clientesTipificacaoLinhas).values({
+      clienteId: unidade,
+      ordem: 3,
+      tipo: 'prioridade',
+      subregraId: idDoLegado('sub_regras', 's-ncft'),
+    });
+    // Cliente configurado só no redo-one: fica.
+    const outro = idDoLegado('clientes', 'cl-b');
+    await db.insert(schema.clientesTipificacao).values({
+      clienteId: outro,
+      regraId: idDoLegado('regras_categorias', 'r-co'),
+    });
+    await migrar();
+    const segunda = await ler();
+    expect(segunda.slice(0, 2)).toEqual(primeira);
+    expect(segunda[2]).toMatchObject({ cliente: 'PRN TELE_MARABA', regra: 'CO', ordem: null });
   });
 
   it('o principal que saiu da exclusão fiscal do dashboards-one é desmarcado; o resto dele fica', async () => {

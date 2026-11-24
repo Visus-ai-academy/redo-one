@@ -120,6 +120,11 @@ export const laudos = pgTable(
     /** Texto como chegou da MobileMed; o id é resolvido na importação (nulo = aviso pendente). */
     empresaOrigem: text('empresa_origem').notNull(),
     clienteId: uuid('cliente_id').references(() => clientes.id),
+    /**
+     * Unidade de origem, quando a empresa casou com uma unidade (`clientes.unificado_em_id`): o
+     * `cliente_id` é o principal, e a tipificação usa a configuração da unidade.
+     */
+    unidadeId: uuid('unidade_id').references(() => clientes.id),
     accessionNumber: text('accession_number'),
     /** HMAC do código do paciente (pseudônimo); o nome e o código ficam em `laudos_pacientes`. */
     pacienteChave: text('paciente_chave').notNull(), // LGPD: saúde

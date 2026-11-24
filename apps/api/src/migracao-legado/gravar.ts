@@ -26,6 +26,7 @@ import type { DadosFiscaisMigrados } from './mapear-dados-fiscais';
 import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
+import type { TipificacaoMigrada } from './mapear-tipificacao';
 
 /** Linhas por insert: fica longe do limite de parâmetros do Postgres. */
 const LOTE = 300;
@@ -94,6 +95,7 @@ export async function gravarMigracao(
   configuracaoDistribuicao?: ConfiguracaoDistribuicaoMigrada,
   competencias?: CompetenciasMigradas,
   dadosFiscais?: DadosFiscaisMigrados,
+  tipificacao?: TipificacaoMigrada,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -192,7 +194,50 @@ export async function gravarMigracao(
             inArray(schema.clientesDadosFiscais.clienteId, dadosFiscais.desmarcarExclusaoFiscal),
           );
     }
+    if (tipificacao) await gravarTipificacao(tx, tipificacao);
   });
+}
+
+/**
+ * Tipificação: regras e sub-regras pelo id; a configuração de cada cliente da carga é trocada
+ * inteira (o dashboards-one é a fonte até a virada). O cliente configurado só no redo-one fica.
+ */
+async function gravarTipificacao(tx: Transacao, { tabelas: t }: TipificacaoMigrada) {
+  await upsert(tx, schema.regrasTipificacao, t.regrasTipificacao);
+  await upsert(tx, schema.subregrasTipificacao, t.subregrasTipificacao);
+  const clientes = t.clientesTipificacao.map((c) => c.clienteId);
+  if (clientes.length > 0)
+    await tx
+      .delete(schema.clientesTipificacaoLinhas)
+      .where(inArray(schema.clientesTipificacaoLinhas.clienteId, clientes));
+  await upsert(tx, schema.clientesTipificacao, t.clientesTipificacao, ['clienteId']);
+  await upsert(tx, schema.clientesTipificacaoLinhas, t.clientesTipificacaoLinhas);
+  await upsert(
+    tx,
+    schema.clientesTipificacaoLinhasModalidades,
+    t.clientesTipificacaoLinhasModalidades,
+    ['linhaId', 'modalidadeId'],
+  );
+  await upsert(
+    tx,
+    schema.clientesTipificacaoLinhasEspecialidades,
+    t.clientesTipificacaoLinhasEspecialidades,
+    ['linhaId', 'especialidadeId'],
+  );
+  await upsert(
+    tx,
+    schema.clientesTipificacaoLinhasPrioridades,
+    t.clientesTipificacaoLinhasPrioridades,
+    ['linhaId', 'prioridadeId'],
+  );
+  await upsert(tx, schema.clientesTipificacaoLinhasMedicos, t.clientesTipificacaoLinhasMedicos, [
+    'linhaId',
+    'medicoId',
+  ]);
+  await upsert(tx, schema.clientesTipificacaoLinhasEquipes, t.clientesTipificacaoLinhasEquipes, [
+    'linhaId',
+    'equipeId',
+  ]);
 }
 
 /**

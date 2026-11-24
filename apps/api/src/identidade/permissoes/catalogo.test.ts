@@ -123,6 +123,7 @@ describe('catálogo de permissões', () => {
       'faturamento.competencia.reabrir',
       'faturamento.competencia.travar',
       'faturamento.corte.editar',
+      'faturamento.tipificacao.editar',
     ]);
     expect(especiais('repasse')).toEqual(['repasse.adicional.lancar', 'repasse.fechar']);
     expect(especiais('pre-pago')).toEqual(['pre-pago.recarga.solicitar']);
@@ -152,6 +153,7 @@ describe('catálogo de permissões', () => {
       'faturamento.competencia.reabrir',
       'faturamento.competencia.travar',
       'faturamento.corte.editar',
+      'faturamento.tipificacao.editar',
     ]);
     expect(sensiveis('medicos')).toEqual([
       'medicos.pagamento.ver',
