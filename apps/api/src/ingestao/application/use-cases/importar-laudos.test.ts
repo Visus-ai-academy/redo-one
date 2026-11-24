@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ArmazenamentoArquivos } from '../../../comum/armazenamento/armazenamento-arquivos';
+import { CompetenciasEmMemoria, CortesEmMemoria } from '../../../faturamento/testing/fakes';
 import type { Celula } from '../../domain/celulas';
 import type { CadastrosIngestao } from '../../domain/preparar-laudo';
 import { AvisosEmMemoria, ImportacoesEmMemoria, LaudosEmMemoria } from '../../testing/fakes';
@@ -57,7 +58,8 @@ describe('ImportarLaudos', () => {
   let laudos: LaudosEmMemoria;
   let avisos: AvisosEmMemoria;
   let planilha: { formato: FormatoPlanilha; registros: Record<string, Celula>[] } | Error;
-  let bloqueadas: string[];
+  let competencias: CompetenciasEmMemoria;
+  let cortes: CortesEmMemoria;
   let trava: { travaRemocaoMinimo: number; travaRemocaoFator: number };
 
   const armazenamento = {
@@ -102,7 +104,8 @@ describe('ImportarLaudos', () => {
       armazenamento,
       leitor,
       { carregar: async () => cadastros },
-      { listar: async () => bloqueadas, garantir: async () => {} },
+      competencias,
+      cortes,
       laudos,
       avisos,
       parametrosFake,
@@ -126,7 +129,8 @@ describe('ImportarLaudos', () => {
     importacoes = new ImportacoesEmMemoria();
     laudos = new LaudosEmMemoria();
     avisos = new AvisosEmMemoria();
-    bloqueadas = [];
+    competencias = new CompetenciasEmMemoria();
+    cortes = new CortesEmMemoria();
     trava = { travaRemocaoMinimo: 500, travaRemocaoFator: 2 };
   });
 
@@ -268,7 +272,7 @@ describe('ImportarLaudos', () => {
   });
 
   it('linhas de competência bloqueada ficam de fora', async () => {
-    bloqueadas = ['2026-10'];
+    competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
     const r = await importar('i1', [
       registro('1'),
       registro('2', { DATA_REALIZACAO: '05/11/2026', DATA_LAUDO: '06/11/2026' }),
@@ -276,6 +280,39 @@ describe('ImportarLaudos', () => {
 
     expect(r?.resultado).toMatchObject({ inseridos: 1, ignoradasCompetenciaFechada: 1 });
     expect(laudos.ativos().map((l) => l.competencia)).toEqual(['2026-11']);
+  });
+
+  it('o corte do cliente decide a competência do laudo', async () => {
+    cortes.porCliente.set('c-x', [
+      { desde: '2026-11', corte: { dia: 25, mes: 'proprio', consideraExame: false } },
+    ]);
+    await importar('i1', [
+      registro('1', { DATA_REALIZACAO: '20/11/2026', DATA_LAUDO: '27/11/2026' }),
+      registro('2', {
+        EMPRESA: 'CLINICA Y',
+        DATA_REALIZACAO: '20/11/2026',
+        DATA_LAUDO: '27/11/2026',
+      }),
+    ]);
+
+    const porCliente = new Map(laudos.ativos().map((l) => [l.clienteId, l.competencia]));
+    expect(porCliente.get('c-x')).toBe('2026-12');
+    expect(porCliente.get('c-y')).toBe('2026-11');
+  });
+
+  it('cria as competências dos laudos gravados, sem as das linhas ignoradas', async () => {
+    competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+    await importar('i1', [
+      registro('1'),
+      registro('2', { DATA_REALIZACAO: '05/11/2026', DATA_LAUDO: '06/11/2026' }),
+    ]);
+
+    expect([...competencias.competencias.keys()].sort()).toEqual(['2026-10', '2026-11']);
+    expect(competencias.competencias.get('2026-10')?.status).toBe('fechada');
+    expect(competencias.competencias.get('2026-11')).toEqual({
+      status: 'aberta',
+      importacaoTravada: false,
+    });
   });
 
   it('importação que já terminou não roda de novo', async () => {

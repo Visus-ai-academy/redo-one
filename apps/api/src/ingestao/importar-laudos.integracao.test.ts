@@ -7,10 +7,11 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import writeXlsxFile from 'write-excel-file/node';
-
 import type { ArmazenamentoArquivos } from '../comum/armazenamento/armazenamento-arquivos';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
+import { DrizzleCompetenciasRepository } from '../faturamento/infrastructure/persistence/drizzle-competencias.repository';
+import { DrizzleCortesRepository } from '../faturamento/infrastructure/persistence/drizzle-cortes.repository';
 import type { PlanilhaLida } from './application/ports/leitor-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
 import { itemParaRegistro, itemRelatorio } from './infrastructure/mobilemed/esquemas-relatorio';
@@ -138,7 +139,8 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       armazenamento,
       new XlsxLeitorPlanilha(),
       new DrizzleCadastrosIngestao(db),
-      { listar: async () => [], garantir: async () => {} },
+      new DrizzleCompetenciasRepository(db),
+      new DrizzleCortesRepository(db),
       new DrizzleLaudosRepository(db),
       new DrizzleAvisosCadastroRepository(db),
       new DrizzleParametrosIngestaoRepository(db),
@@ -161,7 +163,7 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table laudos, totais_laudos_dia, avisos_cadastro, importacoes, arquivos,
+      sql`truncate table competencias, laudos, totais_laudos_dia, avisos_cadastro, importacoes, arquivos,
         clientes, sufixos_nome_cliente, modalidades, especialidades, prioridades, exames,
         quebras_estudo, exames_de_para_valores, medicos cascade`,
     );
@@ -197,6 +199,9 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       ['estudo', 'tc estudo novo', 1],
     ]);
     const [laudo] = await db.select().from(schema.laudos).limit(1);
+    // A competência do laudo gravado passa a existir, aberta.
+    const competencias = await db.select().from(schema.competencias);
+    expect(competencias.map((c) => [c.competencia, c.status])).toEqual([['2026-10', 'aberta']]);
     expect(JSON.stringify(laudo)).not.toContain('Paciente Teste');
     // O nome e o código vão à parte, em `laudos_pacientes`.
     const pacientes = await db.select().from(schema.laudosPacientes);

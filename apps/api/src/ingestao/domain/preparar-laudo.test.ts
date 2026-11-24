@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-
 import type { RetratoCatalogo } from './classificar-estudo';
+import { CORTE_PADRAO_INICIAL, type TabelaCortes } from './competencia';
 import type { LinhaLaudo } from './linha-planilha';
 import { type CadastrosIngestao, prepararLaudo } from './preparar-laudo';
 
@@ -28,6 +28,7 @@ const cadastros: CadastrosIngestao = {
 };
 
 const pseudonimo = (texto: string) => `hmac(${texto})`;
+const cortes: TabelaCortes = { padrao: [CORTE_PADRAO_INICIAL], porCliente: new Map() };
 
 const linha = (campos: Partial<LinhaLaudo> = {}): LinhaLaudo => ({
   empresa: 'CLINICA X',
@@ -56,7 +57,7 @@ const linha = (campos: Partial<LinhaLaudo> = {}): LinhaLaudo => ({
 
 describe('prepararLaudo', () => {
   it('resolve os cadastros e calcula volume, dia, competência e identidade', () => {
-    const { laudo, pendencias } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo);
+    const { laudo, pendencias } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes);
 
     expect(laudo).toMatchObject({
       origem: 'normal',
@@ -78,17 +79,17 @@ describe('prepararLaudo', () => {
   });
 
   it('o paciente vira pseudônimo do código sem zeros à esquerda; sem código, do nome', () => {
-    expect(prepararLaudo(linha(), 'normal', cadastros, pseudonimo).laudo.pacienteChave).toBe(
-      'hmac(codigo:123)',
-    );
     expect(
-      prepararLaudo(linha({ codigoPaciente: null }), 'normal', cadastros, pseudonimo).laudo
+      prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes).laudo.pacienteChave,
+    ).toBe('hmac(codigo:123)');
+    expect(
+      prepararLaudo(linha({ codigoPaciente: null }), 'normal', cadastros, pseudonimo, cortes).laudo
         .pacienteChave,
     ).toBe('hmac(nome:maria da silva)');
   });
 
   it('o paciente vai à parte, como chegou, com a conferência em HMAC e fora do hash do conteúdo', () => {
-    const { laudo } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo);
+    const { laudo } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes);
     expect(laudo.paciente).toEqual({
       nome: 'Maria da Silva',
       codigo: '00123',
@@ -101,6 +102,7 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     ).laudo;
     expect(corrigido.identidade).toBe(laudo.identidade);
     expect(corrigido.hashConteudo).toBe(laudo.hashConteudo);
@@ -113,16 +115,23 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
     expect(laudo.paciente).toBeNull();
   });
 
   it('o hash do conteúdo muda quando um campo gravado muda', () => {
-    const a = prepararLaudo(linha(), 'normal', cadastros, pseudonimo).laudo;
-    const b = prepararLaudo(linha({ status: 'Reassinado' }), 'normal', cadastros, pseudonimo).laudo;
+    const a = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes).laudo;
+    const b = prepararLaudo(
+      linha({ status: 'Reassinado' }),
+      'normal',
+      cadastros,
+      pseudonimo,
+      cortes,
+    ).laudo;
     expect(b.identidade).toBe(a.identidade);
     expect(b.hashConteudo).not.toBe(a.hashConteudo);
-    expect(prepararLaudo(linha(), 'normal', cadastros, pseudonimo).laudo.hashConteudo).toBe(
+    expect(prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes).laudo.hashConteudo).toBe(
       a.hashConteudo,
     );
   });
@@ -138,6 +147,7 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
 
     expect(laudo.clienteId).toBeNull();
@@ -157,6 +167,7 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
     expect(pendencias).toContainEqual({
       tipo: 'estudo',
@@ -166,7 +177,7 @@ describe('prepararLaudo', () => {
   });
 
   it('devolve o que foi conferido, para resolver avisos que deixaram de faltar', () => {
-    const { conferidos } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo);
+    const { conferidos } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes);
     expect(conferidos).toEqual(
       expect.arrayContaining([
         { tipo: 'cliente', chave: 'clinica x' },
@@ -183,6 +194,7 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
 
     expect(laudo).toMatchObject({
@@ -205,6 +217,7 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
     expect(laudo).toMatchObject({
       medicoReassinaturaId: 'm-bia',
@@ -218,6 +231,7 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
     expect(laudo).toMatchObject({ medicoId: 'm-ana', medicoIdMobilemed: 999 });
     expect(pendencias).toEqual([]);
@@ -229,12 +243,14 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
     const semId = prepararLaudo(
       linha({ medico: 'Dr. Pedro Alves' }),
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     );
 
     // A chave continua a do nome: o mesmo médico pelo upload e pela API é um aviso só.
@@ -251,12 +267,13 @@ describe('prepararLaudo', () => {
   });
 
   it('o id da conta não muda a identidade nem o hash quando o médico é o mesmo (upload = API)', () => {
-    const doUpload = prepararLaudo(linha(), 'normal', cadastros, pseudonimo).laudo;
+    const doUpload = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes).laudo;
     const daApi = prepararLaudo(
       linha({ medicoIdMobilemed: 45 }),
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     ).laudo;
 
     expect(daApi.identidade).toBe(doUpload.identidade);
@@ -269,16 +286,61 @@ describe('prepararLaudo', () => {
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     ).laudo;
     const comId = prepararLaudo(
       linha({ medico: 'Dra. Ana Souza Prado', medicoIdMobilemed: 45 }),
       'normal',
       cadastros,
       pseudonimo,
+      cortes,
     ).laudo;
 
     expect(soNome.medicoId).toBeNull();
     expect(comId.identidade).toBe(soNome.identidade);
     expect(comId.hashConteudo).not.toBe(soNome.hashConteudo);
+  });
+
+  it('a competência vem do corte configurado do cliente', () => {
+    const comCorte: TabelaCortes = {
+      padrao: [CORTE_PADRAO_INICIAL],
+      porCliente: new Map([
+        ['c-x', [{ desde: '2026-11', corte: { dia: 25, mes: 'proprio', consideraExame: false } }]],
+      ]),
+    };
+    const dados = {
+      dataRealizacao: new Date('2026-11-20T13:00:00Z'),
+      dataLaudo: new Date('2026-11-27T13:00:00Z'),
+    };
+
+    expect(
+      prepararLaudo(linha(dados), 'normal', cadastros, pseudonimo, cortes).laudo.competencia,
+    ).toBe('2026-11');
+    expect(
+      prepararLaudo(linha(dados), 'normal', cadastros, pseudonimo, comCorte).laudo.competencia,
+    ).toBe('2026-12');
+  });
+
+  it('sem cliente resolvido usa o corte padrão', () => {
+    const comCorte: TabelaCortes = {
+      padrao: [CORTE_PADRAO_INICIAL],
+      porCliente: new Map([
+        ['c-x', [{ desde: '2026-11', corte: { dia: 25, mes: 'proprio', consideraExame: false } }]],
+      ]),
+    };
+    const { laudo } = prepararLaudo(
+      linha({
+        empresa: 'DESCONHECIDA',
+        dataRealizacao: new Date('2026-11-20T13:00:00Z'),
+        dataLaudo: new Date('2026-11-27T13:00:00Z'),
+      }),
+      'normal',
+      cadastros,
+      pseudonimo,
+      comCorte,
+    );
+
+    expect(laudo.clienteId).toBeNull();
+    expect(laudo.competencia).toBe('2026-11');
   });
 });

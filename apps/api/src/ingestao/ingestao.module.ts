@@ -32,6 +32,10 @@ import {
   type ConsultaImportacoes,
 } from './application/ports/consulta-importacoes';
 import {
+  CORTES_COMPETENCIA,
+  type LeitorCortesCompetencia,
+} from './application/ports/cortes-competencia';
+import {
   IMPORTACOES_REPOSITORY,
   type ImportacoesRepository,
 } from './application/ports/importacoes.repository';
@@ -232,6 +236,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
         LEITOR_PLANILHA,
         CADASTROS_INGESTAO,
         COMPETENCIAS_BLOQUEADAS,
+        CORTES_COMPETENCIA,
         LAUDOS_REPOSITORY,
         AVISOS_CADASTRO_REPOSITORY,
         PARAMETROS_INGESTAO_REPOSITORY,
@@ -244,6 +249,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
         leitor: LeitorPlanilha,
         cadastros: LeitorCadastrosIngestao,
         competencias: CompetenciasBloqueadas,
+        cortes: LeitorCortesCompetencia,
         laudos: LaudosRepository,
         avisos: AvisosCadastroRepository,
         parametros: ParametrosIngestaoRepository,
@@ -256,6 +262,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
           leitor,
           cadastros,
           competencias,
+          cortes,
           laudos,
           avisos,
           parametros,

@@ -3,7 +3,12 @@ import { createHash } from 'node:crypto';
 import { normalizarNome } from '../../catalogo/comum/nomes';
 import { normalizarNomeMedico } from '../../medicos/comum/nome-medico';
 import { classificarEstudo, type RetratoCatalogo, type TipoPendencia } from './classificar-estudo';
-import { competenciaDoLaudo, diaBrasilia } from './competencia';
+import {
+  cadeiaDoCliente,
+  competenciaPelaCadeia,
+  diaBrasilia,
+  type TabelaCortes,
+} from './competencia';
 import { identidadeDoLaudo } from './identidade-laudo';
 import type { LinhaLaudo } from './linha-planilha';
 import { chaveEstudo } from './nome-estudo';
@@ -132,6 +137,7 @@ export function prepararLaudo(
   origem: OrigemLaudo,
   cadastros: CadastrosIngestao,
   pseudonimo: (texto: string) => string,
+  cortes: TabelaCortes,
 ): {
   laudo: LaudoPreparado;
   pendencias: PendenciaCadastro[];
@@ -207,7 +213,11 @@ export function prepararLaudo(
     dataPrazo: l.dataPrazo,
     dataReassinatura: l.dataReassinatura,
     diaLaudo: diaBrasilia(l.dataLaudo),
-    competencia: competenciaDoLaudo(l.dataRealizacao, l.dataLaudo),
+    competencia: competenciaPelaCadeia(
+      l.dataRealizacao,
+      l.dataLaudo,
+      cadeiaDoCliente(cortes, clienteId),
+    ),
     pecas: estudo.pecas,
   };
 

@@ -12,6 +12,7 @@ import {
 import type { AvisosCadastroRepository } from '../ports/avisos-cadastro.repository';
 import type { LeitorCadastrosIngestao } from '../ports/cadastros-ingestao';
 import type { CompetenciasBloqueadas } from '../ports/competencias-bloqueadas';
+import type { LeitorCortesCompetencia } from '../ports/cortes-competencia';
 import type {
   ImportacaoParaProcessar,
   ImportacoesRepository,
@@ -58,6 +59,7 @@ export class ImportarLaudos {
     private readonly leitor: LeitorPlanilha,
     private readonly cadastros: LeitorCadastrosIngestao,
     private readonly competencias: CompetenciasBloqueadas,
+    private readonly cortesCompetencia: LeitorCortesCompetencia,
     private readonly laudos: LaudosRepository,
     private readonly avisos: AvisosCadastroRepository,
     private readonly parametros: ParametrosIngestaoRepository,
@@ -97,9 +99,10 @@ export class ImportarLaudos {
             parametros.mobilemedCompartilhamentoUnidades,
           )
         : await this.leitor.ler(await this.armazenamento.ler(importacao.arquivoChave));
-    const [cadastros, bloqueadas] = await Promise.all([
+    const [cadastros, bloqueadas, cortes] = await Promise.all([
       this.cadastros.carregar(),
       this.competencias.listar(),
+      this.cortesCompetencia.carregar(),
     ]);
     const competenciasBloqueadas = new Set(bloqueadas);
     const origem = planilha.formato === 'compartilhamento' ? 'compartilhamento' : 'normal';
@@ -116,7 +119,7 @@ export class ImportarLaudos {
     for (const { numero, registro } of planilha.linhas) {
       let preparo: ReturnType<typeof prepararLaudo>;
       try {
-        preparo = prepararLaudo(converterLinha(registro), origem, cadastros, pseudonimo);
+        preparo = prepararLaudo(converterLinha(registro), origem, cadastros, pseudonimo, cortes);
       } catch (erro) {
         invalidas++;
         if (errosLinhas.length < MAXIMO_ERROS_GUARDADOS) {
@@ -206,6 +209,9 @@ export class ImportarLaudos {
       },
       this.agora(),
     );
+    // Só as competências dos laudos gravados: as das linhas ignoradas (bloqueadas) não entram.
+    const gravados = [...plano.inserir, ...plano.atualizar].map((l) => l.competencia);
+    await this.competencias.garantir([...new Set(gravados)].sort());
     await this.avisos.registrar(
       importacaoId,
       [...pendencias.values()],
