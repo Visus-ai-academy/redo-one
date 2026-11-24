@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -21,11 +22,13 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../../drizzle') });
+    await runMigrations({ pgPool: pool });
     repo = new DrizzleCompetenciasRepository(db);
   });
 
   beforeEach(async () => {
     await db.execute(sql`truncate table competencias, laudos, importacoes cascade`);
+    await db.execute(sql`delete from graphile_worker._private_jobs`);
     await db.delete(schema.usuarios).where(sql`${schema.usuarios.email} like 'competencias-%'`);
   });
 
@@ -265,6 +268,67 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
         importacaoTravadaEm: null,
         importacaoTravadaPorId: null,
         importacaoTravadaPorLegado: null,
+      });
+    });
+
+    describe('destravar enfileira o recálculo', () => {
+      const jobs = async () =>
+        (
+          await db.execute<{ tarefa: string; payload: unknown; fila: string | null }>(
+            sql`select t.identifier as tarefa, j.payload, q.queue_name as fila
+                from graphile_worker._private_jobs j
+                join graphile_worker._private_tasks t on t.id = j.task_id
+                left join graphile_worker._private_job_queues q on q.id = j.job_queue_id
+                order by j.id`,
+          )
+        ).rows;
+
+      it('de todos os laudos, junto com a destrava; sem destrava, sem job', async () => {
+        await db
+          .insert(schema.competencias)
+          .values({ competencia: '2026-10', status: 'aberta', importacaoTravadaEm: new Date() });
+
+        expect(await repo.destravarImportacao('2026-10')).toBe(true);
+        expect(await repo.destravarImportacao('2026-10')).toBe(false);
+
+        expect(await jobs()).toEqual([
+          {
+            tarefa: 'ingestao.recalcular-competencias',
+            payload: { clienteIds: null },
+            fila: 'ingestao',
+          },
+        ]);
+      });
+
+      it('se o job não entra, a destrava também não', async () => {
+        await db
+          .insert(schema.competencias)
+          .values({ competencia: '2026-10', status: 'aberta', importacaoTravadaEm: new Date() });
+
+        await db
+          .transaction(async (tx) => {
+            // Derruba o add_job só nesta transação: enfileirar falha.
+            const {
+              rows: [funcao],
+            } = await tx.execute<{ assinatura: string }>(
+              sql`select oid::regprocedure::text as assinatura from pg_proc
+                  where proname = 'add_job' and pronamespace = 'graphile_worker'::regnamespace`,
+            );
+            await tx.execute(
+              sql.raw(`alter function ${funcao?.assinatura} rename to add_job_fora`),
+            );
+            const noTx = new DrizzleCompetenciasRepository(tx as unknown as Database);
+
+            await expect(noTx.destravarImportacao('2026-10')).rejects.toThrow();
+            expect((await noTx.obter('2026-10'))?.importacaoTravada).toBe(true);
+            tx.rollback();
+          })
+          .catch((e) => {
+            if (!String(e).includes('Rollback')) throw e;
+          });
+
+        expect((await repo.obter('2026-10'))?.importacaoTravada).toBe(true);
+        expect(await jobs()).toEqual([]);
       });
     });
   });

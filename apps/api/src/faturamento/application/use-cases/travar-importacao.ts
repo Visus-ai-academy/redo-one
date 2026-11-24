@@ -36,7 +36,10 @@ export class TravarImportacao {
   }
 }
 
-/** Destrava a importação. A competência fechada continua bloqueada pelo status. */
+/**
+ * Destrava a importação. A competência fechada continua bloqueada pelo status. O repositório
+ * enfileira o recálculo junto: os laudos pulados enquanto estava travada ganham o corte atual.
+ */
 export class DestravarImportacao {
   constructor(
     private readonly competencias: CompetenciasRepository,

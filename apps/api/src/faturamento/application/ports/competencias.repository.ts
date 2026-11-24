@@ -49,6 +49,9 @@ export interface CompetenciasRepository extends CompetenciasBloqueadas {
   reabrir(competencia: string, autor: Autor): Promise<boolean>;
   /** Só se ainda não estiver travada. */
   travarImportacao(competencia: string, autor: Autor): Promise<boolean>;
-  /** Só se estiver travada; limpa quem travou e quando. */
+  /**
+   * Só se estiver travada; limpa quem travou e quando e, na mesma transação, enfileira o recálculo
+   * da competência de todos os laudos.
+   */
   destravarImportacao(competencia: string): Promise<boolean>;
 }

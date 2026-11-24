@@ -17,6 +17,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { Pagina, Paginacao } from '../../../catalogo/comum/paginacao';
 import { DATABASE, type Database } from '../../../database/database';
 import { competencias, laudos, usuarios } from '../../../database/schema';
+import { enfileirarRecalculoCompetencias } from '../../../ingestao/infrastructure/jobs/enfileirar-recalculo-competencias';
 import type {
   Autor,
   CompetenciaResumo,
@@ -130,8 +131,9 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
     competencia: string,
     condicao: SQL | undefined,
     valores: Partial<typeof competencias.$inferInsert>,
+    db: Pick<Database, 'update'> = this.db,
   ): Promise<boolean> {
-    const linhas = await this.db
+    const linhas = await db
       .update(competencias)
       .set(valores)
       .where(and(eq(competencias.competencia, competencia), condicao))
@@ -165,11 +167,24 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
     });
   }
 
+  /**
+   * Com o recálculo de todos os laudos na mesma transação: os que a importação e o job pularam
+   * enquanto estava travada ganham o corte atual.
+   */
   destravarImportacao(competencia: string): Promise<boolean> {
-    return this.atualizar(competencia, isNotNull(competencias.importacaoTravadaEm), {
-      importacaoTravadaEm: null,
-      importacaoTravadaPorId: null,
-      importacaoTravadaPorLegado: null,
+    return this.db.transaction(async (tx) => {
+      const destravou = await this.atualizar(
+        competencia,
+        isNotNull(competencias.importacaoTravadaEm),
+        {
+          importacaoTravadaEm: null,
+          importacaoTravadaPorId: null,
+          importacaoTravadaPorLegado: null,
+        },
+        tx,
+      );
+      if (destravou) await enfileirarRecalculoCompetencias(tx, null);
+      return destravou;
     });
   }
 }
