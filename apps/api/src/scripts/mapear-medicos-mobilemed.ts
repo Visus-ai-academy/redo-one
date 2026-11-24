@@ -7,6 +7,9 @@
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api mobilemed:mapear-medicos
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api mobilemed:mapear-medicos --gravar
 // O comando roda com JOBS_WORKER=false: este processo não pega jobs (nem loga na MobileMed por eles).
+// --origem laudos: sem MobileMed nem dashboards-one; acha a conta pelos laudos já importados, que
+// trazem o nome e o id da conta de quem assinou (e reassinou). Vale para todo médico sem id:
+//   pnpm --filter @repo/api mobilemed:mapear-medicos --origem laudos [--gravar]
 import { writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -14,16 +17,23 @@ import { parseArgs } from 'node:util';
 
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { sql } from 'drizzle-orm';
 import { Client } from 'pg';
 
 import { AppModule } from '../app.module';
 import { ClienteMobileMed } from '../comum/mobilemed/cliente-mobilemed';
 import { TOKEN_MOBILEMED, type TokenMobileMed } from '../comum/mobilemed/token-mobilemed';
+import { DATABASE, type Database } from '../database/database';
+import { laudos } from '../database/schema';
 import { IdMobilemedEmUsoError } from '../medicos/cadastro/medicos.errors';
 import { MEDICOS_REPOSITORY, type MedicosRepository } from '../medicos/cadastro/medicos.repository';
 import { MedicosService } from '../medicos/cadastro/medicos.service';
 import { lerContasMobileMed } from '../medicos/mapeamento-mobilemed/contas-mobilemed';
 import { lerLaudosMobileMed } from '../medicos/mapeamento-mobilemed/laudos-mobilemed';
+import {
+  type AssinaturaNosLaudos,
+  mapearPorLaudos,
+} from '../medicos/mapeamento-mobilemed/mapear-por-laudos';
 import {
   csvPendencias,
   DOMINANCIA,
@@ -39,6 +49,7 @@ import { idDoLegado } from '../migracao-legado/comum';
 const MOTIVOS = {
   nome: 'mapeamento pelo nome na MobileMed',
   evidência: 'mapeamento pelo nome na MobileMed e pelos exames que o robô antigo entregou',
+  laudos: 'mapeamento pelos laudos importados (nome e conta MobileMed de quem assinou)',
 } as const;
 const esperar = (ms: number) => new Promise<void>((pronto) => setTimeout(pronto, ms));
 
@@ -63,13 +74,94 @@ async function lerEntregasLegado(url: string) {
   }
 }
 
+/** Nome e conta de quem assinou e de quem reassinou, com a contagem de laudos. */
+async function lerAssinaturas(db: Database): Promise<AssinaturaNosLaudos[]> {
+  const { rows } = await db.execute<{ nome: string; id: number; n: number }>(sql`
+    select nome, id, sum(n)::int as n from (
+      select ${laudos.medicoOrigem} as nome, ${laudos.medicoIdMobilemed} as id, count(*) as n
+        from ${laudos}
+        where ${laudos.medicoOrigem} is not null and ${laudos.medicoIdMobilemed} is not null
+        group by 1, 2
+      union all
+      select ${laudos.medicoReassinaturaOrigem}, ${laudos.medicoReassinaturaIdMobilemed}, count(*)
+        from ${laudos}
+        where ${laudos.medicoReassinaturaOrigem} is not null
+          and ${laudos.medicoReassinaturaIdMobilemed} is not null
+        group by 1, 2
+    ) a group by 1, 2`);
+  return rows.map((r) => ({ nome: r.nome, idMobilemed: Number(r.id), laudos: Number(r.n) }));
+}
+
+async function mapearPelosLaudos(gravar: boolean) {
+  const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
+  try {
+    const repo = app.get<MedicosRepository>(MEDICOS_REPOSITORY);
+    const donos = new Map<number, string>();
+    const semConta: (MedicoSemConta & { ativo: boolean })[] = [];
+    for (let pagina = 1; ; pagina++) {
+      const { itens, total } = await repo.listar({ pagina, porPagina: 500 });
+      for (const m of itens) {
+        if (m.idMobilemed !== null) donos.set(m.idMobilemed, m.nome);
+        else {
+          const detalhe = await repo.buscar(m.id);
+          const apelidos = detalhe?.aliases.map((a) => a.nomeOrigem) ?? [];
+          semConta.push({ id: m.id, nome: m.nome, crm: m.crm, apelidos, ativo: m.ativo });
+        }
+      }
+      if (pagina * 500 >= total) break;
+    }
+    const assinaturas = await lerAssinaturas(app.get<Database>(DATABASE));
+    const r = mapearPorLaudos(semConta, assinaturas, donos);
+    const contas = (m: Map<number, number>) =>
+      [...m].map(([id, n]) => `${id}: ${n} laudos`).join(', ') || '-';
+    console.log(`Médicos sem id no One: ${semConta.length}`);
+    console.log(`\nA gravar pelos laudos (${r.gravar.length}):`);
+    for (const g of r.gravar)
+      console.log(`  ${g.medico.nome} → ${g.idMobilemed} (${g.laudos} laudos)`);
+    const comLaudos = r.pendencias.filter((p) => p.contas.size);
+    console.log(`\nPendentes, para conferir com o suporte (${comLaudos.length}):`);
+    for (const p of comLaudos)
+      console.log(`  ${p.medico.nome}: ${p.situacao} (${contas(p.contas)})`);
+    console.log(`Sem laudos com conta: ${r.pendencias.length - comLaudos.length}`);
+
+    if (!gravar) {
+      console.log('\nNada gravado. Rode com --gravar para gravar os ids.');
+      return;
+    }
+    const service = app.get(MedicosService);
+    let gravados = 0;
+    let pulados = 0;
+    for (const g of r.gravar) {
+      try {
+        if (await service.definirIdMobilemed(g.medico.id, g.idMobilemed, MOTIVOS.laudos))
+          gravados++;
+        else pulados++;
+      } catch (erro) {
+        if (!(erro instanceof IdMobilemedEmUsoError)) throw erro;
+        console.log(`  ${g.medico.nome}: ${erro.message}`);
+        pulados++;
+      }
+    }
+    console.log(`\nGravados: ${gravados}. Pulados (já tinham id ou id em uso): ${pulados}.`);
+  } finally {
+    await app.close();
+  }
+}
+
 async function mapearMedicos() {
   const { values } = parseArgs({
     options: {
       gravar: { type: 'boolean', default: false },
       simular: { type: 'boolean', default: false },
+      origem: { type: 'string', default: 'mobilemed' },
     },
   });
+  if (values.origem === 'laudos') return mapearPelosLaudos(values.gravar);
+  if (values.origem !== 'mobilemed') {
+    console.error('--origem aceita mobilemed (padrão) ou laudos.');
+    process.exitCode = 1;
+    return;
+  }
   const urlLegado = process.env.LEGADO_DATABASE_URL;
   if (!urlLegado) {
     console.error('Informe LEGADO_DATABASE_URL (o banco do dashboards-one, só leitura).');
