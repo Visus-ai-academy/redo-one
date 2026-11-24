@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
-import { type AssinaturaNosLaudos, mapearPorLaudos } from './mapear-por-laudos';
-import type { MedicoSemConta } from './mapear-por-nome';
+import {
+  type AssinaturaNosLaudos,
+  type MedicoDoMapeamento,
+  mapearPorLaudos,
+} from './mapear-por-laudos';
 
-const medico = (nome: string, apelidos: string[] = []): MedicoSemConta => ({
+const medico = (
+  nome: string,
+  apelidos: string[] = [],
+  contas: { idMobilemed?: number; outrasContas?: number[] } = {},
+): MedicoDoMapeamento => ({
   id: `m-${nome}`,
   nome,
   crm: null,
   apelidos,
+  idMobilemed: contas.idMobilemed ?? null,
+  outrasContas: contas.outrasContas ?? [],
 });
 const assinou = (nome: string, idMobilemed: number, laudos: number): AssinaturaNosLaudos => ({
   nome,
@@ -42,7 +51,7 @@ describe('mapearPorLaudos', () => {
     expect(r.gravar).toEqual([{ medico: lara, idMobilemed: 35829, laudos: 834 }]);
   });
 
-  it('deixa pendente quando o mesmo nome assina por duas contas', () => {
+  it('com mais de uma conta, a dominante vira a principal e as outras, outras contas', () => {
     const tiago = medico('Dr. Tiago Oliveira Lordelo');
     const r = mapearPorLaudos(
       [tiago],
@@ -53,17 +62,74 @@ describe('mapearPorLaudos', () => {
       new Map(),
     );
 
+    expect(r.gravar).toEqual([{ medico: tiago, idMobilemed: 14087, laudos: 310 }]);
+    expect(r.extras).toEqual([{ medico: tiago, idMobilemed: 48605, laudos: 11 }]);
+    expect(r.pendencias).toEqual([]);
+  });
+
+  it('sem conta dominante (menos de 90%), fica pendente', () => {
+    const ana = medico('Dra. Ana Lima');
+    const r = mapearPorLaudos(
+      [ana],
+      [assinou('Dra. Ana Lima', 1, 60), assinou('Dra. Ana Lima', 2, 40)],
+      new Map(),
+    );
+
     expect(r.gravar).toEqual([]);
-    expect(r.pendencias).toEqual([
-      {
-        medico: tiago,
-        situacao: '2 contas para o mesmo nome',
-        contas: new Map([
-          [14087, 310],
-          [48605, 11],
-        ]),
-      },
+    expect(r.extras).toEqual([]);
+    expect(r.pendencias[0]?.situacao).toBe(
+      '2 contas para o mesmo nome, nenhuma com 90% dos laudos',
+    );
+  });
+
+  it('médico com principal: as outras contas que assinam com o nome dele viram outras contas', () => {
+    const james = medico('Dr. James Henrique Yared', ['Dr. James Yared'], { idMobilemed: 7968 });
+    const r = mapearPorLaudos(
+      [james],
+      [
+        assinou('Dr. James Yared', 7968, 168),
+        assinou('Dr. James Henrique Yared', 19053, 10),
+        assinou('Dr. James Henrique Yared.', 4964, 10),
+      ],
+      new Map([[7968, { medicoId: james.id, nome: james.nome }]]),
+    );
+
+    expect(r.gravar).toEqual([]);
+    expect(r.extras).toEqual([
+      { medico: james, idMobilemed: 19053, laudos: 10 },
+      { medico: james, idMobilemed: 4964, laudos: 10 },
     ]);
+    expect(r.pendencias).toEqual([]);
+  });
+
+  it('a outra conta já gravada não é sugerida de novo; a com poucos laudos fica pendente', () => {
+    const tiago = medico('Dr. Tiago Lordelo', [], { idMobilemed: 14087, outrasContas: [48605] });
+    const r = mapearPorLaudos(
+      [tiago],
+      [
+        assinou('Dr. Tiago Lordelo', 14087, 289),
+        assinou('Dr. Tiago Lordelo', 48605, 11),
+        assinou('Dr. Tiago Lordelo', 1576, 2),
+      ],
+      new Map([
+        [14087, { medicoId: tiago.id, nome: tiago.nome }],
+        [48605, { medicoId: tiago.id, nome: tiago.nome }],
+      ]),
+    );
+
+    expect(r.extras).toEqual([]);
+    expect(r.pendencias.map((p) => p.situacao)).toEqual(['conta 1576: poucos laudos (2 < 10)']);
+  });
+
+  it('médico com principal e só ela nos laudos: nada a fazer', () => {
+    const ana = medico('Dra. Ana Lima', [], { idMobilemed: 7 });
+    const r = mapearPorLaudos(
+      [ana],
+      [assinou('Dra. Ana Lima', 7, 50)],
+      new Map([[7, { medicoId: ana.id, nome: ana.nome }]]),
+    );
+
+    expect(r).toEqual({ gravar: [], extras: [], pendencias: [] });
   });
 
   it('deixa pendente com poucos laudos', () => {
@@ -75,7 +141,7 @@ describe('mapearPorLaudos', () => {
     );
 
     expect(r.gravar).toEqual([]);
-    expect(r.pendencias[0]?.situacao).toBe('poucos laudos (6 < 10)');
+    expect(r.pendencias[0]?.situacao).toBe('conta 27561: poucos laudos (6 < 10)');
   });
 
   it('deixa pendente quando a conta já é de outro médico do cadastro', () => {
@@ -83,11 +149,11 @@ describe('mapearPorLaudos', () => {
     const r = mapearPorLaudos(
       [ana],
       [assinou('Dra. Ana Lima', 7, 50)],
-      new Map([[7, 'Dra. Ana Souza Lima']]),
+      new Map([[7, { medicoId: 'm-outra', nome: 'Dra. Ana Souza Lima' }]]),
     );
 
     expect(r.gravar).toEqual([]);
-    expect(r.pendencias[0]?.situacao).toBe('conta 7 já é de Dra. Ana Souza Lima');
+    expect(r.pendencias[0]?.situacao).toBe('conta 7: já é de Dra. Ana Souza Lima');
   });
 
   it('deixa pendente quando a conta também assina com o nome de outra pessoa', () => {
@@ -99,7 +165,7 @@ describe('mapearPorLaudos', () => {
     );
 
     expect(r.gravar).toEqual([]);
-    expect(r.pendencias[0]?.situacao).toBe('conta 7 também assina como Dr. Outro Nome');
+    expect(r.pendencias[0]?.situacao).toBe('conta 7: também assina como Dr. Outro Nome');
   });
 
   it('deixa pendentes os dois médicos quando a mesma conta casa com ambos', () => {
@@ -109,8 +175,8 @@ describe('mapearPorLaudos', () => {
 
     expect(r.gravar).toEqual([]);
     expect(r.pendencias.map((p) => p.situacao)).toEqual([
-      'conta 7 casa com mais de um médico',
-      'conta 7 casa com mais de um médico',
+      'conta 7: casa com mais de um médico',
+      'conta 7: casa com mais de um médico',
     ]);
   });
 

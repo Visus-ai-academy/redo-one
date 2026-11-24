@@ -384,6 +384,14 @@ Decidido em 19/11 (pelo nome) e em 22/11 (com a evidência do robô antigo: "se 
 - Sem `--gravar`, só mostra o resumo e gera o CSV. Roda com `JOBS_WORKER=false` (não pega jobs).
 - Rodada de 22/11 (141 médicos ativos sem id): 118 pelo nome (92 com a evidência a favor, 26 sem evidência), 7 pela evidência (ambíguos e uma conta "(E2)"), 16 em branco: 6 em que a conta do nome assina menos da metade (nenhuma outra conta domina), 8 ambíguos sem evidência suficiente, 1 só com conta secundária, 1 sem resultado.
 
+### 4.5 Contas do médico pelos laudos e outras contas (`--origem laudos`)
+
+Decidido em 24/11: o médico pode ter mais de uma conta na MobileMed (entra por uma conforme o login do dia, não por arranjo; ex.: James Yared 7968 com 19053 e 4964, Tiago Lordelo 14087 com 48605). `medicos.id_mobilemed` é a **principal** (a única que recebe exame); as outras ficam em `medicos_contas_mobilemed` (tela do médico, aba Cadastro, "Outras contas na MobileMed", com `medicos.editar` e auditoria). A importação e a carga do robô reconhecem o médico por qualquer uma; o recolhimento troca a partir da conta lida no exame.
+
+`pnpm --filter @repo/api mobilemed:mapear-medicos --origem laudos [--gravar]` lê os laudos importados (nome e conta de quem assinou e reassinou, sem a MobileMed): para quem não tem principal, a conta que assina sozinha ou a dominante (≥ 90% dos laudos) vira a principal; as outras contas que assinam com o nome do médico (também de quem já tem principal) viram outras contas. Cada conta precisa de ≥ 10 laudos, não pode ser de outro médico, assinar com outro nome nem casar com dois médicos; o resto fica pendente. Grava com ator `sistema` e o motivo na auditoria.
+
+Contas com sufixo `(E2)`/`(F)`: o robô antigo as descartava ao escolher a conta pelo NOME (decisão de 01/10 no legado, com exceção fixa para uma médica). No One a conta vem do cadastro, nunca do nome na hora de atribuir: a regra não se aplica. O mapeamento pelo nome (4.4) continua sem sugerir conta com sufixo como principal; uma conta com sufixo pode ser outra conta (ou a principal, se for a única em que o médico lauda) por decisão de quem cadastra.
+
 ## 5. Mapeamento para as portas do redo-one
 
 ### 5.1 `FilaExames.ler()`

@@ -7,8 +7,10 @@
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api mobilemed:mapear-medicos
 //   LEGADO_DATABASE_URL=postgres://... pnpm --filter @repo/api mobilemed:mapear-medicos --gravar
 // O comando roda com JOBS_WORKER=false: este processo não pega jobs (nem loga na MobileMed por eles).
-// --origem laudos: sem MobileMed nem dashboards-one; acha a conta pelos laudos já importados, que
-// trazem o nome e o id da conta de quem assinou (e reassinou). Vale para todo médico sem id:
+// --origem laudos: sem MobileMed nem dashboards-one; acha as contas pelos laudos já importados, que
+// trazem o nome e o id da conta de quem assinou (e reassinou). Para quem não tem id, a conta que
+// assina sozinha (ou a dominante) vira a principal; as outras contas que assinam com o nome do
+// médico viram "outras contas" (também para quem já tem principal). Tudo com auditoria:
 //   pnpm --filter @repo/api mobilemed:mapear-medicos --origem laudos [--gravar]
 import { writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -21,6 +23,7 @@ import { sql } from 'drizzle-orm';
 import { Client } from 'pg';
 
 import { AppModule } from '../app.module';
+import { ErroDeDominio } from '../comum/erro-de-dominio';
 import { ClienteMobileMed } from '../comum/mobilemed/cliente-mobilemed';
 import { TOKEN_MOBILEMED, type TokenMobileMed } from '../comum/mobilemed/token-mobilemed';
 import { DATABASE, type Database } from '../database/database';
@@ -32,6 +35,8 @@ import { lerContasMobileMed } from '../medicos/mapeamento-mobilemed/contas-mobil
 import { lerLaudosMobileMed } from '../medicos/mapeamento-mobilemed/laudos-mobilemed';
 import {
   type AssinaturaNosLaudos,
+  type DonoDaConta,
+  type MedicoDoMapeamento,
   mapearPorLaudos,
 } from '../medicos/mapeamento-mobilemed/mapear-por-laudos';
 import {
@@ -44,6 +49,7 @@ import {
   resolverComEvidencia,
   resumoEvidencia,
 } from '../medicos/mapeamento-mobilemed/mapear-por-nome';
+import { OutrasContasMedicoService } from '../medicos/outras-contas/outras-contas-medico.service';
 import { idDoLegado } from '../migracao-legado/comum';
 
 const MOTIVOS = {
@@ -96,27 +102,38 @@ async function mapearPelosLaudos(gravar: boolean) {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   try {
     const repo = app.get<MedicosRepository>(MEDICOS_REPOSITORY);
-    const donos = new Map<number, string>();
-    const semConta: (MedicoSemConta & { ativo: boolean })[] = [];
+    const donos = new Map<number, DonoDaConta>();
+    const cadastro: MedicoDoMapeamento[] = [];
     for (let pagina = 1; ; pagina++) {
       const { itens, total } = await repo.listar({ pagina, porPagina: 500 });
       for (const m of itens) {
-        if (m.idMobilemed !== null) donos.set(m.idMobilemed, m.nome);
-        else {
-          const detalhe = await repo.buscar(m.id);
-          const apelidos = detalhe?.aliases.map((a) => a.nomeOrigem) ?? [];
-          semConta.push({ id: m.id, nome: m.nome, crm: m.crm, apelidos, ativo: m.ativo });
+        const detalhe = await repo.buscar(m.id);
+        const outrasContas = detalhe?.outrasContas.map((c) => c.idMobilemed) ?? [];
+        for (const conta of [m.idMobilemed, ...outrasContas]) {
+          if (conta !== null) donos.set(conta, { medicoId: m.id, nome: m.nome });
         }
+        cadastro.push({
+          id: m.id,
+          nome: m.nome,
+          crm: m.crm,
+          apelidos: detalhe?.aliases.map((a) => a.nomeOrigem) ?? [],
+          idMobilemed: m.idMobilemed,
+          outrasContas,
+        });
       }
       if (pagina * 500 >= total) break;
     }
     const assinaturas = await lerAssinaturas(app.get<Database>(DATABASE));
-    const r = mapearPorLaudos(semConta, assinaturas, donos);
+    const r = mapearPorLaudos(cadastro, assinaturas, donos);
     const contas = (m: Map<number, number>) =>
       [...m].map(([id, n]) => `${id}: ${n} laudos`).join(', ') || '-';
-    console.log(`Médicos sem id no One: ${semConta.length}`);
-    console.log(`\nA gravar pelos laudos (${r.gravar.length}):`);
+    const semConta = cadastro.filter((m) => m.idMobilemed === null).length;
+    console.log(`Médicos no One: ${cadastro.length} (${semConta} sem conta principal)`);
+    console.log(`\nConta principal a gravar pelos laudos (${r.gravar.length}):`);
     for (const g of r.gravar)
+      console.log(`  ${g.medico.nome} → ${g.idMobilemed} (${g.laudos} laudos)`);
+    console.log(`\nOutras contas a gravar pelos laudos (${r.extras.length}):`);
+    for (const g of r.extras)
       console.log(`  ${g.medico.nome} → ${g.idMobilemed} (${g.laudos} laudos)`);
     const comLaudos = r.pendencias.filter((p) => p.contas.size);
     console.log(`\nPendentes, para conferir com o suporte (${comLaudos.length}):`);
@@ -125,24 +142,34 @@ async function mapearPelosLaudos(gravar: boolean) {
     console.log(`Sem laudos com conta: ${r.pendencias.length - comLaudos.length}`);
 
     if (!gravar) {
-      console.log('\nNada gravado. Rode com --gravar para gravar os ids.');
+      console.log('\nNada gravado. Rode com --gravar para gravar as contas.');
       return;
     }
     const service = app.get(MedicosService);
+    const outras = app.get(OutrasContasMedicoService);
     let gravados = 0;
     let pulados = 0;
-    for (const g of r.gravar) {
+    const tentar = async (nome: string, gravarConta: () => Promise<boolean>) => {
       try {
-        if (await service.definirIdMobilemed(g.medico.id, g.idMobilemed, MOTIVOS.laudos))
-          gravados++;
+        if (await gravarConta()) gravados++;
         else pulados++;
       } catch (erro) {
-        if (!(erro instanceof IdMobilemedEmUsoError)) throw erro;
-        console.log(`  ${g.medico.nome}: ${erro.message}`);
+        if (!(erro instanceof ErroDeDominio)) throw erro;
+        console.log(`  ${nome}: ${erro.message}`);
         pulados++;
       }
+    };
+    for (const g of r.gravar) {
+      await tentar(g.medico.nome, () =>
+        service.definirIdMobilemed(g.medico.id, g.idMobilemed, MOTIVOS.laudos),
+      );
     }
-    console.log(`\nGravados: ${gravados}. Pulados (já tinham id ou id em uso): ${pulados}.`);
+    for (const g of r.extras) {
+      await tentar(g.medico.nome, () =>
+        outras.adicionarPeloSistema(g.medico.id, g.idMobilemed, MOTIVOS.laudos),
+      );
+    }
+    console.log(`\nGravados: ${gravados}. Pulados (já gravados ou conta em uso): ${pulados}.`);
   } finally {
     await app.close();
   }
