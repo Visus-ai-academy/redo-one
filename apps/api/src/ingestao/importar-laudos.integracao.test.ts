@@ -19,7 +19,6 @@ import { DrizzleCadastrosIngestao } from './infrastructure/persistence/drizzle-c
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
 import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-laudos.repository';
 import { DrizzleParametrosIngestaoRepository } from './infrastructure/persistence/drizzle-parametros-ingestao.repository';
-import { SemCompetenciasBloqueadas } from './infrastructure/persistence/sem-competencias-bloqueadas';
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
 import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
@@ -139,7 +138,7 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       armazenamento,
       new XlsxLeitorPlanilha(),
       new DrizzleCadastrosIngestao(db),
-      new SemCompetenciasBloqueadas(),
+      { listar: async () => [], garantir: async () => {} },
       new DrizzleLaudosRepository(db),
       new DrizzleAvisosCadastroRepository(db),
       new DrizzleParametrosIngestaoRepository(db),

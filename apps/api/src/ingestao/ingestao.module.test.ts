@@ -2,11 +2,12 @@ import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { parseCrontab } from 'graphile-worker';
 import { describe, expect, it } from 'vitest';
-
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { ComumModule } from '../comum/comum.module';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { DatabaseModule } from '../database/database.module';
+import { CORTES_REPOSITORY } from '../faturamento/application/ports/cortes.repository';
+import { CortesEmMemoria } from '../faturamento/testing/fakes';
 import { RELATORIO_MOBILEMED } from './application/ports/relatorio-mobilemed';
 import {
   TAREFA_AGENDAR_MOBILEMED,
@@ -37,7 +38,11 @@ async function montar(env: Record<string, string>) {
       ComumModule,
       IngestaoModule,
     ],
-  }).compile();
+  })
+    // Sem banco nos testes: o corte padrão inicial gravado ao subir vai para a memória.
+    .overrideProvider(CORTES_REPOSITORY)
+    .useValue(new CortesEmMemoria())
+    .compile();
   await modulo.init();
   return modulo;
 }
@@ -52,7 +57,11 @@ describe('IngestaoModule', () => {
         ComumModule,
         IngestaoModule,
       ],
-    }).compile();
+    })
+      // Sem banco nos testes: o corte padrão inicial gravado ao subir vai para a memória.
+      .overrideProvider(CORTES_REPOSITORY)
+      .useValue(new CortesEmMemoria())
+      .compile();
     await modulo.init();
 
     expect(modulo.get(ImportarLaudos)).toBeInstanceOf(ImportarLaudos);
@@ -82,7 +91,11 @@ describe('IngestaoModule', () => {
         ComumModule,
         IngestaoModule,
       ],
-    }).compile();
+    })
+      // Sem banco nos testes: o corte padrão inicial gravado ao subir vai para a memória.
+      .overrideProvider(CORTES_REPOSITORY)
+      .useValue(new CortesEmMemoria())
+      .compile();
     await modulo.init();
 
     const tarefa = modulo.get(RegistroTarefas).listar()[TAREFA_IMPORTAR_LAUDOS];

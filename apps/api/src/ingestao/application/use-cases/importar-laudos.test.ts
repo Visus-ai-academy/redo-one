@@ -102,7 +102,7 @@ describe('ImportarLaudos', () => {
       armazenamento,
       leitor,
       { carregar: async () => cadastros },
-      { listar: async () => bloqueadas },
+      { listar: async () => bloqueadas, garantir: async () => {} },
       laudos,
       avisos,
       parametrosFake,

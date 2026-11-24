@@ -9,6 +9,7 @@ import {
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { ClienteMobileMed } from '../comum/mobilemed/cliente-mobilemed';
 import { TOKEN_MOBILEMED, type TokenMobileMed } from '../comum/mobilemed/token-mobilemed';
+import { FaturamentoModule } from '../faturamento/faturamento.module';
 import {
   ARQUIVOS_REPOSITORY,
   type ArquivosRepository,
@@ -85,7 +86,6 @@ import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-la
 import { DrizzleLinhasBrutasRepository } from './infrastructure/persistence/drizzle-linhas-brutas.repository';
 import { DrizzlePacientesLaudos } from './infrastructure/persistence/drizzle-pacientes-laudos';
 import { DrizzleParametrosIngestaoRepository } from './infrastructure/persistence/drizzle-parametros-ingestao.repository';
-import { SemCompetenciasBloqueadas } from './infrastructure/persistence/sem-competencias-bloqueadas';
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
 import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
@@ -100,6 +100,8 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
 
 /** Contexto `ingestao` (hexagonal): importação dos laudos da MobileMed. */
 @Module({
+  // Competências bloqueadas e cortes vêm do `faturamento`.
+  imports: [FaturamentoModule],
   controllers: [
     ImportacoesController,
     ImportacaoMobileMedController,
@@ -161,7 +163,6 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
     { provide: AVISOS_CADASTRO_REPOSITORY, useClass: DrizzleAvisosCadastroRepository },
     { provide: PARAMETROS_INGESTAO_REPOSITORY, useClass: DrizzleParametrosIngestaoRepository },
     { provide: CADASTROS_INGESTAO, useClass: DrizzleCadastrosIngestao },
-    { provide: COMPETENCIAS_BLOQUEADAS, useClass: SemCompetenciasBloqueadas },
     { provide: LEITOR_PLANILHA, useClass: XlsxLeitorPlanilha },
     { provide: LINHAS_BRUTAS_REPOSITORY, useClass: DrizzleLinhasBrutasRepository },
     // Nome e código do paciente: só por este caso de uso (permissão + auditoria). Exportado para
