@@ -1,4 +1,4 @@
-// Migra o catálogo, os médicos, a escala, os arranjos e a configuração do robô da distribuição do banco do dashboards-one para o banco do redo-one
+// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição e as competências do banco do dashboards-one para o banco do redo-one
 // (DATABASE_URL). O banco do dashboards-one é aberto SÓ PARA LEITURA; do redo-one, sem --gravar, só
 // se leem os usuários (a escala casa autor, revisor e gestora com eles). Sem --gravar, só mostra o
 // que faria. Uso:
@@ -24,6 +24,7 @@ import {
 } from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
+import { mapearCompetencias } from '../migracao-legado/mapear-competencias';
 import {
   mapearConfiguracaoDistribuicao,
   prioridadesOperacaoDaCarga,
@@ -84,12 +85,17 @@ async function migrarLegado() {
       },
     );
 
+    const competencias = mapearCompetencias(legado.competencias, {
+      usuarios: await db.select({ id: usuarios.id, email: usuarios.email }).from(usuarios),
+    });
+
     console.log('\nO que vai para o redo-one:');
     for (const [tabela, linhas] of Object.entries({
       ...catalogo.tabelas,
       ...medicos.tabelas,
       ...escala.tabelas,
       ...distribuicao.tabelas,
+      ...competencias.tabelas,
     })) {
       console.log(`  ${tabela.padEnd(34)} ${String(linhas.length).padStart(5)}`);
     }
@@ -101,6 +107,11 @@ async function migrarLegado() {
     for (const [chave, n] of Object.entries(distribuicao.resumo).sort()) {
       console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);
     }
+    console.log('\nCompetências (fechamentos_periodo; cortes por cliente não migram):');
+    for (const c of competencias.tabelas.competencias)
+      console.log(
+        `  ${c.competencia} ${c.status} fechada=${c.fechadaEm?.toISOString() ?? '-'} por ${c.fechadaPorId ?? c.fechadaPorLegado ?? '-'} reaberta=${c.reabertaEm?.toISOString() ?? '-'} travada=${c.importacaoTravadaEm?.toISOString() ?? '-'}`,
+      );
     console.log('\nConfiguração do robô (global, regras da frente, prioridade do cliente):');
     for (const [chave, n] of Object.entries(configuracaoDistribuicao.resumo).sort()) {
       console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);
@@ -153,6 +164,7 @@ async function migrarLegado() {
       ...escala.avisos,
       ...distribuicao.avisos,
       ...configuracaoDistribuicao.avisos,
+      ...competencias.avisos,
     ];
     console.log(`\nAvisos (${avisos.length}): o que não migrou como estava.`);
     mostrarAvisos(avisos);
@@ -161,7 +173,15 @@ async function migrarLegado() {
       console.log('\nNada gravado. Rode com --gravar para gravar no banco do redo-one.');
       return;
     }
-    await gravarMigracao(db, catalogo, medicos, escala, distribuicao, configuracaoDistribuicao);
+    await gravarMigracao(
+      db,
+      catalogo,
+      medicos,
+      escala,
+      distribuicao,
+      configuracaoDistribuicao,
+      competencias,
+    );
     console.log('\nGravado no banco do redo-one.');
   } finally {
     await app.close();

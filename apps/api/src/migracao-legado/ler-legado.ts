@@ -2,6 +2,7 @@ import { Client } from 'pg';
 
 import type {
   LegadoCatalogo,
+  LegadoCompetencia,
   LegadoConfiguracaoDistribuicao,
   LegadoDistribuicao,
   LegadoEscala,
@@ -20,6 +21,7 @@ export async function lerLegado(url: string): Promise<{
   escala: LegadoEscala;
   distribuicao: LegadoDistribuicao;
   configuracaoDistribuicao: LegadoConfiguracaoDistribuicao;
+  competencias: LegadoCompetencia[];
 }> {
   const cliente = new Client({
     connectionString: url,
@@ -178,8 +180,13 @@ export async function lerLegado(url: string): Promise<{
         'select "clienteId", "especialidadeId", nivel from prioridades_cliente order by ctid',
       ),
     };
+    const competencias = await ler<LegadoCompetencia>(
+      `select competencia, status, ${instante('dataFechamento')}, "fechadoPor", observacoes,
+        ${instante('reabertoEm')}, "reabertoPor", ${instante('importacaoTravadaEm')},
+        "importacaoTravadaPor" from fechamentos_periodo order by competencia`,
+    );
     await cliente.query('COMMIT');
-    return { catalogo, medicos, escala, distribuicao, configuracaoDistribuicao };
+    return { catalogo, medicos, escala, distribuicao, configuracaoDistribuicao, competencias };
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;

@@ -311,3 +311,16 @@ export interface LegadoConfiguracaoDistribuicao {
   /** `prioridades_cliente`: o id é de `especialidades` (que lá também guarda frente de modalidade). */
   prioridadesCliente: { clienteId: string; especialidadeId: string; nivel: number }[];
 }
+
+/** `fechamentos_periodo`; os instantes chegam como ISO em UTC, os autores como e-mail ou texto. */
+export interface LegadoCompetencia {
+  competencia: string;
+  status: string;
+  dataFechamento: string | null;
+  fechadoPor: string | null;
+  observacoes: string | null;
+  reabertoEm: string | null;
+  reabertoPor: string | null;
+  importacaoTravadaEm: string | null;
+  importacaoTravadaPor: string | null;
+}

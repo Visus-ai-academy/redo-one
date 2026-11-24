@@ -20,6 +20,7 @@ import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastruct
 import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import type { CatalogoMigrado } from './mapear-catalogo';
+import type { CompetenciasMigradas } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
 import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
@@ -90,6 +91,7 @@ export async function gravarMigracao(
   escala?: EscalaMigrada,
   distribuicao?: DistribuicaoMigrada,
   configuracaoDistribuicao?: ConfiguracaoDistribuicaoMigrada,
+  competencias?: CompetenciasMigradas,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -172,6 +174,8 @@ export async function gravarMigracao(
     if (distribuicao) await gravarDistribuicao(tx, distribuicao);
     if (configuracaoDistribuicao)
       await gravarConfiguracaoDistribuicao(tx, configuracaoDistribuicao);
+    if (competencias)
+      await upsert(tx, schema.competencias, competencias.tabelas.competencias, ['competencia']);
   });
 }
 

@@ -17,6 +17,7 @@ import { idDoLegado } from './comum';
 import { alocacoesSumidasDoLegado, ausenciasSumidasDoLegado, gravarMigracao } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
+import { mapearCompetencias } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
 import { mapearDistribuicao } from './mapear-distribuicao';
 import { type EscalaMigrada, mapearEscala } from './mapear-escala';
@@ -221,7 +222,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria cascade`,
+      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias cascade`,
     );
   });
 
@@ -261,6 +262,77 @@ describe.skipIf(!url)('gravarMigracao', () => {
       { nome: 'PRN TELE_ARARAQUARA', principal: 'PRN' },
       { nome: 'PRN TELE_MARABA', principal: 'PRN' },
     ]);
+  });
+
+  it('grava as competências; rodar de novo dá o mesmo e atualiza o que mudou', async () => {
+    const [usuario] = await db
+      .insert(schema.usuarios)
+      .values({ nome: 'Financeiro', email: 'financeiro2@teleimagem.com.br' } as never)
+      .onConflictDoUpdate({ target: schema.usuarios.email, set: { nome: 'Financeiro' } })
+      .returning({ id: schema.usuarios.id });
+    const usuarioId = usuario?.id as string;
+    const legadoComp = (status: string) => [
+      {
+        competencia: '2026-10',
+        status,
+        dataFechamento: '2026-11-10T23:34:33.000Z',
+        fechadoPor: 'financeiro2@teleimagem.com.br',
+        observacoes: null,
+        reabertoEm: null,
+        reabertoPor: null,
+        importacaoTravadaEm: null,
+        importacaoTravadaPor: null,
+      },
+      {
+        competencia: '2026-09',
+        status: 'fechado',
+        dataFechamento: '2026-10-05T12:00:00.000Z',
+        fechadoPor: 'claude-code',
+        observacoes: null,
+        reabertoEm: null,
+        reabertoPor: null,
+        importacaoTravadaEm: null,
+        importacaoTravadaPor: null,
+      },
+    ];
+    const migrar = (status: string) =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        mapearCompetencias(legadoComp(status), {
+          usuarios: [{ id: usuarioId, email: 'financeiro2@teleimagem.com.br' }],
+        }),
+      );
+    const ler = () =>
+      db.execute(
+        sql`select competencia, status, fechada_por_id, fechada_por_legado from competencias order by competencia`,
+      );
+
+    await migrar('fechado');
+    const primeira = (await ler()).rows;
+    await migrar('fechado');
+    expect((await ler()).rows).toEqual(primeira);
+    expect(primeira).toEqual([
+      {
+        competencia: '2026-09',
+        status: 'fechada',
+        fechada_por_id: null,
+        fechada_por_legado: 'claude-code',
+      },
+      {
+        competencia: '2026-10',
+        status: 'fechada',
+        fechada_por_id: usuarioId,
+        fechada_por_legado: null,
+      },
+    ]);
+
+    await migrar('aberto');
+    expect((await ler()).rows[1]).toMatchObject({ competencia: '2026-10', status: 'aberta' });
   });
 
   it('grava a escala com cobertura e recortes; rodar de novo não duplica nem sobrescreve o tipo editado', async () => {
