@@ -97,3 +97,45 @@ export const cortesCompetencia = pgTable(
     ),
   ],
 );
+
+/**
+ * Dados de faturamento do cliente (1:1 com `clientes`): para onde vai a NF, endereço e contato do
+ * cadastro no Omie, banco e o código do cliente no Omie. Nada é obrigatório no banco (o
+ * dashboards-one tem clientes sem endereço); a tela exige o endereço mínimo quando ele é preenchido.
+ */
+export const clientesDadosFiscais = pgTable(
+  'clientes_dados_fiscais',
+  {
+    clienteId: uuid('cliente_id')
+      .primaryKey()
+      .references(() => clientes.id, { onDelete: 'cascade' }),
+    /** E-mails que recebem a NF e os demonstrativos, na ordem cadastrada. */
+    emailsNf: text('emails_nf').array().notNull().default(sql`'{}'::text[]`), // LGPD: pessoal
+    email: text('email'), // LGPD: pessoal
+    contatoNome: text('contato_nome'), // LGPD: pessoal
+    telefone: text('telefone'), // LGPD: pessoal
+    /** Só dígitos; a carga traz como estava o que não deu 8 dígitos. */
+    cep: text('cep'),
+    logradouro: text('logradouro'),
+    numero: text('numero'),
+    complemento: text('complemento'),
+    bairro: text('bairro'),
+    cidade: text('cidade'),
+    uf: text('uf'),
+    bancoCodigo: text('banco_codigo'),
+    bancoAgencia: text('banco_agencia'),
+    bancoConta: text('banco_conta'),
+    /** Preenchido pela sincronização com o Omie; não é único (unidades do mesmo CNPJ repetem). */
+    omieCodigoCliente: text('omie_codigo_cliente'),
+    omieSincronizadoEm: quando('omie_sincronizado_em'),
+    /** Os laudos do cliente saem do faturamento (`faturamentoExclusaoFiscal` do dashboards-one). */
+    exclusaoFiscal: boolean('exclusao_fiscal').notNull().default(false),
+    atualizadoEm: quando('atualizado_em')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    /** Nulo na carga do dashboards-one. */
+    atualizadoPorId: quem('atualizado_por_id'),
+  },
+  (t) => [index('clientes_dados_fiscais_exclusao_fiscal_idx').on(t.exclusaoFiscal)],
+);
