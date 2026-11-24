@@ -20,6 +20,8 @@ const PERMISSAO_DO_TIPO: Readonly<Record<TipoAviso, string>> = {
   prioridade: 'catalogo.ver',
   // A grafia entra no de-para das prioridades da operação (Configurações › Distribuição).
   prioridade_operacao: 'distribuicao-config.ver',
+  // A conta é liberada na MobileMed, ou a certa entra nas outras contas do médico (tela Médicos).
+  conta_unidade: 'medicos.ver',
 };
 
 const TIPOS = Object.keys(PERMISSAO_DO_TIPO) as TipoAviso[];

@@ -372,6 +372,13 @@
       "when": 1795555569251,
       "tag": "0052_permissoes_faturamento_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795557612565,
+      "tag": "0053_young_hiroim",
+      "breakpoints": true
     }
   ]
 }

@@ -16238,7 +16238,8 @@
           "modalidade",
           "especialidade",
           "prioridade",
-          "prioridade_operacao"
+          "prioridade_operacao",
+          "conta_unidade"
         ]
       },
       "AvisoDto": {

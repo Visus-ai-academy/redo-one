@@ -13,6 +13,7 @@ const TIPOS: Record<TipoAvisoKey, string> = {
   especialidade: 'Especialidade',
   prioridade: 'Prioridade',
   prioridade_operacao: 'Prioridade da operação',
+  conta_unidade: 'Conta na unidade',
 };
 
 export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
@@ -55,6 +56,17 @@ export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: strin
         rotulo: 'Procurar em Exames',
         to: '/exames' as const,
         search: { busca: valor.replace(/(?:\s+X\d+)+\s*$/i, '') },
+      };
+    case 'conta_unidade':
+      // A conta certa entra nas outras contas do médico (ou é liberada na MobileMed).
+      return {
+        rotulo: 'Procurar em Médicos',
+        to: '/medicos' as const,
+        search: {
+          busca: valor
+            .replace(/\s+sem conta liberada na unidade .*$/, '')
+            .replace(/^dra?\.?\s+/i, ''),
+        },
       };
     case 'prioridade_operacao':
       // A grafia entra no de-para de uma das prioridades da operação (a tela tem poucas).

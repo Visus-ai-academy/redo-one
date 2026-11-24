@@ -11,6 +11,7 @@ describe('tipoDoAviso', () => {
     expect(tipoDoAviso('especialidade')).toBe('Especialidade');
     expect(tipoDoAviso('prioridade')).toBe('Prioridade');
     expect(tipoDoAviso('prioridade_operacao')).toBe('Prioridade da operação');
+    expect(tipoDoAviso('conta_unidade')).toBe('Conta na unidade');
   });
 });
 
@@ -51,6 +52,17 @@ describe('ondeProcurar', () => {
       rotulo: 'Abrir as prioridades da operação',
       to: '/configuracoes/distribuicao',
       search: {},
+    });
+    // A conta certa entra nas outras contas do médico; a busca vai só com o nome.
+    expect(
+      ondeProcurar({
+        tipo: 'conta_unidade',
+        valor: 'Dr. Fulano de Tal sem conta liberada na unidade CEDI_RJ',
+      }),
+    ).toEqual({
+      rotulo: 'Procurar em Médicos',
+      to: '/medicos',
+      search: { busca: 'Fulano de Tal' },
     });
   });
 });

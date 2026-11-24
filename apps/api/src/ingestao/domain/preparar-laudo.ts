@@ -16,8 +16,11 @@ import { chaveEstudo } from './nome-estudo';
 export type OrigemLaudo = 'normal' | 'compartilhamento';
 
 type TipoDaImportacao = TipoPendencia | 'cliente' | 'medico' | 'prioridade';
-/** `prioridade_operacao`: grafia sem de-para nas prioridades da operação, vista pela rodada. */
-export type TipoAviso = TipoDaImportacao | 'prioridade_operacao';
+/**
+ * Vistos pela rodada da distribuição: `prioridade_operacao` (grafia sem de-para nas prioridades da
+ * operação) e `conta_unidade` (médico escalado sem conta liberada na unidade do exame na MobileMed).
+ */
+export type TipoAviso = TipoDaImportacao | 'prioridade_operacao' | 'conta_unidade';
 
 /** Cadastro que faltou, com a chave normalizada que identifica o aviso. */
 export interface PendenciaCadastro {

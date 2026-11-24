@@ -280,6 +280,8 @@ export const tipoAvisoCadastro = pgEnum('tipo_aviso_cadastro', [
   'prioridade',
   /** Grafia sem de-para nas prioridades da operação, vista pela rodada da distribuição. */
   'prioridade_operacao',
+  /** Médico escalado sem conta liberada na unidade do exame na MobileMed, visto pela rodada. */
+  'conta_unidade',
 ]);
 
 export const statusAvisoCadastro = pgEnum('status_aviso_cadastro', [
@@ -292,7 +294,7 @@ export const statusAvisoCadastro = pgEnum('status_aviso_cadastro', [
 
 /**
  * Pendência de cadastro encontrada na importação (cliente, médico, estudo... desconhecido) ou na
- * rodada da distribuição (grafia de prioridade sem de-para).
+ * rodada da distribuição (grafia de prioridade sem de-para, conta não liberada na unidade).
  */
 export const avisosCadastro = pgTable(
   'avisos_cadastro',

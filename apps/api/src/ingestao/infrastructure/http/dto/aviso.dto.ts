@@ -26,6 +26,7 @@ const TIPOS = [
   'especialidade',
   'prioridade',
   'prioridade_operacao',
+  'conta_unidade',
 ] as const;
 const STATUS = ['pendente', 'resolvido', 'ignorado'] as const;
 

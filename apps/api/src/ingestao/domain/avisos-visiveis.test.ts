@@ -17,6 +17,7 @@ describe('tiposDeAvisoVisiveis', () => {
       'especialidade',
       'prioridade',
       'prioridade_operacao',
+      'conta_unidade',
     ]);
   });
 
@@ -26,7 +27,7 @@ describe('tiposDeAvisoVisiveis', () => {
 
   it('cada tipo segue o ver da tela onde o aviso se resolve', () => {
     expect(tiposDeAvisoVisiveis(acesso('clientes.ver'))).toEqual(['cliente']);
-    expect(tiposDeAvisoVisiveis(acesso('medicos.ver'))).toEqual(['medico']);
+    expect(tiposDeAvisoVisiveis(acesso('medicos.ver'))).toEqual(['medico', 'conta_unidade']);
     expect(tiposDeAvisoVisiveis(acesso('exames.ver'))).toEqual(['estudo']);
     expect(tiposDeAvisoVisiveis(acesso('catalogo.ver'))).toEqual([
       'modalidade',
