@@ -36,6 +36,8 @@ function montar(distribuicao?: React.ReactNode) {
       onSalvar={vi.fn()}
       onCriarApelido={vi.fn()}
       onExcluirApelido={vi.fn()}
+      onAdicionarOutraConta={vi.fn()}
+      onRemoverOutraConta={vi.fn()}
       onFechar={vi.fn()}
       distribuicao={distribuicao}
     />,

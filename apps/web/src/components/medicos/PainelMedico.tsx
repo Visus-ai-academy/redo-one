@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { AliasMedicoDto } from '../../gen/types/AliasMedicoDto';
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import type { MedicoDto } from '../../gen/types/MedicoDto';
+import type { OutraContaMedicoDto } from '../../gen/types/OutraContaMedicoDto';
 import { Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
@@ -33,6 +34,9 @@ export type PainelMedicoProps = {
   onExcluir?: () => Promise<void>;
   onCriarApelido: (dados: AliasMedicoDto) => Promise<void>;
   onExcluirApelido: (id: string) => Promise<void>;
+  /** Outras contas na MobileMed: adicionar e remover (só com `podeEditar`). */
+  onAdicionarOutraConta: (dados: OutraContaMedicoDto) => Promise<void>;
+  onRemoverOutraConta: (id: string) => Promise<void>;
   onFechar: () => void;
   /** Conteúdo da aba Pagamento; sem ele (sem permissão), a aba não aparece. */
   pagamento?: ReactNode;
@@ -92,6 +96,8 @@ export function PainelMedico({
   onExcluir,
   onCriarApelido,
   onExcluirApelido,
+  onAdicionarOutraConta,
+  onRemoverOutraConta,
   onFechar,
   pagamento,
   acesso,
@@ -125,6 +131,14 @@ export function PainelMedico({
         />
       ) : (
         medico && <CadastroSomenteLeitura medico={medico} onExcluir={onExcluir} />
+      )}
+      {medico && (
+        <OutrasContas
+          contas={medico.outrasContas}
+          podeEditar={podeEditar}
+          onAdicionar={onAdicionarOutraConta}
+          onRemover={onRemoverOutraConta}
+        />
       )}
       {medico && (
         <Apelidos
@@ -286,7 +300,7 @@ function FormCadastro({
               label="ID na MobileMed"
               placeholder="Ex.: 1234"
               min={1}
-              description="O robô escolhe a conta por ele, não pelo nome."
+              description="A conta principal: o robô entrega os exames nela."
               className="flex-[1_1_160px]"
             />
           )}
@@ -566,6 +580,166 @@ function Apelidos({
             >
               Adicionar apelido
             </form.SubmitButton>
+          </form.AppForm>
+        </form>
+      )}
+    </section>
+  );
+}
+
+const POR_PAGINA_CONTAS = 5;
+const ERRO_ID_CONTA = 'Informe o ID da conta na MobileMed, um número inteiro positivo.';
+
+/**
+ * Outras contas do médico na MobileMed (o login do dia): a importação e a carga do robô o
+ * reconhecem por elas; os exames continuam indo para a conta principal.
+ */
+function OutrasContas({
+  contas,
+  podeEditar,
+  onAdicionar,
+  onRemover,
+}: {
+  contas: MedicoDetalheDto['outrasContas'];
+  podeEditar: boolean;
+  onAdicionar: (dados: OutraContaMedicoDto) => Promise<void>;
+  onRemover: (id: string) => Promise<void>;
+}) {
+  const tituloId = useId();
+  const [erro, setErro] = useState<string>();
+  const pagina = usePaginaLocal(contas, POR_PAGINA_CONTAS);
+  const form = useAppForm({
+    defaultValues: { idMobilemed: '', observacao: '' },
+    validators: {
+      onSubmit: z.object({
+        idMobilemed: z
+          .string()
+          .refine(
+            (v) => /^[1-9]\d{0,9}$/.test(v.trim()) && Number(v) <= 2_147_483_647,
+            ERRO_ID_CONTA,
+          ),
+        observacao: z.string(),
+      }),
+    },
+    onSubmit: async ({ value, formApi }) => {
+      setErro(undefined);
+      try {
+        await onAdicionar({
+          idMobilemed: Number(value.idMobilemed.trim()),
+          observacao: opcional(value.observacao),
+        });
+        formApi.reset();
+      } catch (falha) {
+        setErro(mensagemDaApi(falha, 'Não foi possível adicionar agora. Tente de novo.'));
+      }
+    },
+  });
+
+  return (
+    <section aria-labelledby={tituloId} className="flex flex-col gap-3 border-t p-4">
+      <div className="flex flex-col gap-1">
+        <h3 id={tituloId} className="text-base font-semibold">
+          Outras contas na MobileMed
+        </h3>
+        <p className="text-muted-foreground text-[13px]">
+          Contas além da principal, pelas quais o médico também entra. A importação e a carga do
+          robô reconhecem o médico por elas; os exames continuam indo para a principal.
+        </p>
+      </div>
+      {erro && <Alerta tom="erro">{erro}</Alerta>}
+      {contas.length === 0 ? (
+        <p className="text-muted-foreground">Nenhuma: só a conta principal é reconhecida.</p>
+      ) : (
+        <ul className="flex flex-col divide-y rounded-md border">
+          {pagina.itensDaPagina.map((conta) => (
+            <li key={conta.id} className="flex items-center gap-3 px-3 py-2">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="font-medium tabular-nums">{conta.idMobilemed}</span>
+                {conta.observacao && (
+                  <span
+                    title={conta.observacao}
+                    className="text-muted-foreground truncate text-[13px]"
+                  >
+                    {conta.observacao}
+                  </span>
+                )}
+              </div>
+              {podeEditar && (
+                <Button
+                  type="button"
+                  aria-label={`Remover conta ${conta.idMobilemed}`}
+                  onClick={async () => {
+                    setErro(undefined);
+                    try {
+                      await onRemover(conta.id);
+                    } catch (falha) {
+                      setErro(
+                        mensagemDaApi(falha, 'Não foi possível remover agora. Tente de novo.'),
+                      );
+                    }
+                  }}
+                  className={buttonClassName({
+                    variant: 'ghost',
+                    className: 'text-muted-foreground size-9 flex-none px-0',
+                  })}
+                >
+                  <Trash size={16} aria-hidden />
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {pagina.precisaPaginar && (
+        <div className="-mx-4 -mb-4">
+          <Paginacao
+            pagina={pagina.pagina}
+            porPagina={pagina.porPagina}
+            total={pagina.total}
+            onIrPara={pagina.irPara}
+          />
+        </div>
+      )}
+      {podeEditar && (
+        <form
+          method="post"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-wrap gap-4">
+            <form.AppField name="idMobilemed">
+              {(field) => (
+                <field.NumberField
+                  label="ID da conta"
+                  placeholder="Ex.: 19053"
+                  min={1}
+                  required
+                  className="flex-[1_1_140px]"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="observacao">
+              {(field) => (
+                <field.TextField
+                  label="Observação"
+                  placeholder="Ex.: login do plantão"
+                  autoComplete="off"
+                  className="flex-[2_1_200px]"
+                />
+              )}
+            </form.AppField>
+          </div>
+          <form.AppForm>
+            <div className="flex flex-wrap items-center gap-3">
+              <form.SubmitButton pendingLabel="Adicionando…" variant="secondary">
+                Adicionar conta
+              </form.SubmitButton>
+              <form.RequiredLegend />
+            </div>
           </form.AppForm>
         </form>
       )}

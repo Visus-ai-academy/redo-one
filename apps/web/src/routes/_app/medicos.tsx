@@ -30,11 +30,13 @@ import { acessoMedicoControllerBuscarContas } from '../../gen/clients/acessoMedi
 import { acessoMedicoControllerConvidar } from '../../gen/clients/acessoMedicoControllerConvidar';
 import { acessoMedicoControllerDesligar } from '../../gen/clients/acessoMedicoControllerDesligar';
 import { acessoMedicoControllerLigar } from '../../gen/clients/acessoMedicoControllerLigar';
+import { medicosControllerAdicionarOutraConta } from '../../gen/clients/medicosControllerAdicionarOutraConta';
 import { medicosControllerAtualizar } from '../../gen/clients/medicosControllerAtualizar';
 import { medicosControllerCriar } from '../../gen/clients/medicosControllerCriar';
 import { medicosControllerCriarAlias } from '../../gen/clients/medicosControllerCriarAlias';
 import { medicosControllerExcluir } from '../../gen/clients/medicosControllerExcluir';
 import { medicosControllerExcluirAlias } from '../../gen/clients/medicosControllerExcluirAlias';
+import { medicosControllerRemoverOutraConta } from '../../gen/clients/medicosControllerRemoverOutraConta';
 import { medicosControllerSalvarPagamento } from '../../gen/clients/medicosControllerSalvarPagamento';
 import { acessoMedicoControllerObterQueryOptions } from '../../gen/hooks/useAcessoMedicoControllerObter';
 import { acessoMedicoControllerPapeisQueryOptions } from '../../gen/hooks/useAcessoMedicoControllerPapeis';
@@ -339,6 +341,30 @@ function PainelDoMedico({
               await medicosControllerCriarAlias({
                 path: { id },
                 body: { nomeOrigem: apelido.nomeOrigem, observacoes: apelido.observacoes },
+              }).unwrap();
+              await atualizar();
+            },
+          },
+        });
+      }}
+      onAdicionarOutraConta={async (dados) => {
+        if (!id) return;
+        await medicosControllerAdicionarOutraConta({ path: { id }, body: dados }).unwrap();
+        await atualizar();
+        avisos.sucesso('Conta adicionada.');
+      }}
+      onRemoverOutraConta={async (contaId) => {
+        if (!id) return;
+        const conta = medico?.outrasContas.find((c) => c.id === contaId);
+        await medicosControllerRemoverOutraConta({ path: { id, contaId } }).unwrap();
+        await atualizar();
+        avisos.sucesso('Conta removida.', {
+          acao: conta && {
+            rotulo: 'Desfazer',
+            onClick: async () => {
+              await medicosControllerAdicionarOutraConta({
+                path: { id },
+                body: { idMobilemed: conta.idMobilemed, observacao: conta.observacao },
               }).unwrap();
               await atualizar();
             },

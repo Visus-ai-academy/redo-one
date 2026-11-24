@@ -35,7 +35,14 @@ const medico: MedicoDetalheDto = {
       observacoes: null,
     },
   ],
-  outrasContas: [],
+  outrasContas: [
+    {
+      id: 'c-1',
+      idMobilemed: 19053,
+      observacao: 'login do plantão',
+      criadoEm: '2026-11-24T12:00:00Z',
+    },
+  ],
   equipes: [{ id: 'eq-1', nome: 'Equipe 1' }],
 };
 
@@ -44,6 +51,8 @@ function montar(props: Partial<PainelMedicoProps> = {}) {
     onSalvar: vi.fn(async () => undefined),
     onCriarApelido: vi.fn(async () => undefined),
     onExcluirApelido: vi.fn(async () => undefined),
+    onAdicionarOutraConta: vi.fn(async () => undefined),
+    onRemoverOutraConta: vi.fn(async () => undefined),
     onFechar: vi.fn(),
   };
   render(
@@ -125,6 +134,57 @@ describe('PainelMedico', () => {
     expect(onExcluirApelido).toHaveBeenCalledWith('a-1');
   });
 
+  it('editando, lista, adiciona e remove outras contas na MobileMed', async () => {
+    const { onAdicionarOutraConta, onRemoverOutraConta } = montar({ medico });
+
+    const contas = screen.getByRole('region', { name: 'Outras contas na MobileMed' });
+    expect(within(contas).getByText('19053')).toBeInTheDocument();
+    expect(within(contas).getByText('login do plantão')).toBeInTheDocument();
+
+    await userEvent.type(within(contas).getByRole('textbox', { name: /ID da conta/ }), '4964');
+    await userEvent.type(
+      within(contas).getByRole('textbox', { name: 'Observação' }),
+      ' conta antiga ',
+    );
+    await userEvent.click(within(contas).getByRole('button', { name: 'Adicionar conta' }));
+    expect(onAdicionarOutraConta).toHaveBeenCalledWith({
+      idMobilemed: 4964,
+      observacao: 'conta antiga',
+    });
+
+    await userEvent.click(within(contas).getByRole('button', { name: 'Remover conta 19053' }));
+    expect(onRemoverOutraConta).toHaveBeenCalledWith('c-1');
+  });
+
+  it('outra conta: exige o id, número inteiro positivo', async () => {
+    const { onAdicionarOutraConta } = montar({ medico });
+
+    const contas = screen.getByRole('region', { name: 'Outras contas na MobileMed' });
+    await userEvent.click(within(contas).getByRole('button', { name: 'Adicionar conta' }));
+
+    expect(
+      await within(contas).findByText(
+        'Informe o ID da conta na MobileMed, um número inteiro positivo.',
+      ),
+    ).toBeInTheDocument();
+    expect(onAdicionarOutraConta).not.toHaveBeenCalled();
+  });
+
+  it('outra conta: a falha ao adicionar aparece junto da lista', async () => {
+    montar({
+      medico,
+      onAdicionarOutraConta: vi.fn(async () => Promise.reject(new Error('rede'))),
+    });
+
+    const contas = screen.getByRole('region', { name: 'Outras contas na MobileMed' });
+    await userEvent.type(within(contas).getByRole('textbox', { name: /ID da conta/ }), '7');
+    await userEvent.click(within(contas).getByRole('button', { name: 'Adicionar conta' }));
+
+    expect(await within(contas).findByRole('alert')).toHaveTextContent(
+      'Não foi possível adicionar agora. Tente de novo.',
+    );
+  });
+
   it('editando, as abas Pagamento e Acesso aparecem só quando há conteúdo para elas', async () => {
     montar({ medico, pagamento: <p>conteúdo do pagamento</p> });
 
@@ -163,6 +223,9 @@ describe('PainelMedico', () => {
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Nível' })).toHaveValue('Nível 2');
     expect(screen.queryByRole('button', { name: 'Adicionar apelido' })).not.toBeInTheDocument();
+    const contas = screen.getByRole('region', { name: 'Outras contas na MobileMed' });
+    expect(within(contas).getByText('19053')).toBeInTheDocument();
+    expect(within(contas).queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {

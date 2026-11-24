@@ -22,6 +22,8 @@ const FRASES: Record<string, Record<string, string>> = {
     excluido: 'Médico excluído',
     alias_criado: 'Apelido adicionado',
     alias_excluido: 'Apelido removido',
+    conta_mobilemed_adicionada: 'Outra conta na MobileMed adicionada',
+    conta_mobilemed_removida: 'Outra conta na MobileMed removida',
     pagamento_lido: 'Dados de pagamento consultados',
     pagamento_alterado: 'Dados de pagamento alterados',
   },
@@ -105,6 +107,8 @@ const CAMPOS: Record<string, string> = {
   nivelId: 'Nível',
   dataInicioVinculo: 'Início do vínculo',
   observacoes: 'Observações',
+  observacao: 'Observação',
+  motivo: 'Motivo',
   nomeOrigem: 'Apelido',
   cpf: 'CPF',
   cnpj: 'CNPJ',
@@ -154,6 +158,9 @@ const VALORES: Record<string, Record<string, string>> = {
   },
 };
 
+/** Números que são identificadores: sem separador de milhar. */
+const IDS = new Set(['idMobilemed']);
+
 /** Campos que só dizem a quem o evento se refere, por entidade. */
 const CONTEXTO: Record<string, Set<string>> = {
   // A conta aparece pelo id do evento; nome, e-mail e CPF dela são da tela Usuários.
@@ -184,7 +191,7 @@ function formatarValor(campo: string, v: unknown, nomes: NomesHistorico): string
     if (DIA.test(v)) return v.split('-').reverse().join('/');
     return VALORES[campo]?.[v] ?? v;
   }
-  if (typeof v === 'number') return v.toLocaleString('pt-BR');
+  if (typeof v === 'number') return IDS.has(campo) ? String(v) : v.toLocaleString('pt-BR');
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }

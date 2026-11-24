@@ -90,6 +90,28 @@ describe('alteracoesDoCadastro', () => {
     ]);
   });
 
+  it('outra conta na MobileMed: o id sem separador de milhar, a observação e o motivo', () => {
+    expect(descreverEventoCadastro('medico', 'conta_mobilemed_adicionada')).toBe(
+      'Outra conta na MobileMed adicionada',
+    );
+    expect(descreverEventoCadastro('medico', 'conta_mobilemed_removida')).toBe(
+      'Outra conta na MobileMed removida',
+    );
+    expect(
+      alteracoesDoCadastro(
+        evento('medico', 'conta_mobilemed_adicionada', null, {
+          idMobilemed: 19053,
+          observacao: 'login do plantão',
+          motivo: 'mapeamento pelos laudos',
+        }),
+      ),
+    ).toEqual([
+      { rotulo: 'ID na MobileMed', antes: null, depois: '19053' },
+      { rotulo: 'Observação', antes: null, depois: 'login do plantão' },
+      { rotulo: 'Motivo', antes: null, depois: 'mapeamento pelos laudos' },
+    ]);
+  });
+
   it('unidade do teto do médico na distribuição', () => {
     expect(
       alteracoesDoCadastro(

@@ -36,6 +36,8 @@ function montar(escala?: React.ReactNode) {
       onSalvar={vi.fn()}
       onCriarApelido={vi.fn()}
       onExcluirApelido={vi.fn()}
+      onAdicionarOutraConta={vi.fn()}
+      onRemoverOutraConta={vi.fn()}
       onFechar={vi.fn()}
       escala={escala}
     />,
