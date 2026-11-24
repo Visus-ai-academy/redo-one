@@ -317,4 +317,28 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       [laudos[0]?.id, 'Paciente Teste', '1'],
     ]);
   });
+
+  it('o laudo da unidade vai para o principal e segue o corte do principal', async () => {
+    const [principal] = await db
+      .insert(schema.clientes)
+      .values({ nome: 'PRINCIPAL', chaveNormalizada: 'principal' })
+      .returning();
+    await db
+      .update(schema.clientes)
+      .set({ unificadoEmId: principal?.id })
+      .where(sql`${schema.clientes.chaveNormalizada} = 'clinica x'`);
+    // Até o dia 5, no próprio mês: o laudo de 06/10 vai para 2026-11 (pelo padrão, 2026-10).
+    await db.insert(schema.cortesCompetencia).values({
+      clienteId: principal?.id,
+      desde: '2026-10',
+      dia: 5,
+      mes: 'proprio',
+      consideraExame: false,
+    });
+
+    expect(await importar([linha('1', 'TC TORAX', 1)])).toMatchObject({ inseridos: 1 });
+
+    const [laudo] = await db.select().from(schema.laudos);
+    expect(laudo).toMatchObject({ clienteId: principal?.id, competencia: '2026-11' });
+  });
 });

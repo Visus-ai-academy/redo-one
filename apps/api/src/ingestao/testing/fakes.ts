@@ -9,7 +9,9 @@ import type {
 import type {
   AlteracoesLaudos,
   JanelaLaudos,
+  LaudoParaRecalculo,
   LaudosRepository,
+  LoteRecalculo,
 } from '../application/ports/laudos.repository';
 import type { FormatoPlanilha } from '../application/ports/leitor-planilha';
 import type { PeriodoDias } from '../domain/periodo-mobilemed';
@@ -106,6 +108,8 @@ export class LaudosEmMemoria implements LaudosRepository {
   /** `laudos_pacientes`, por identidade do laudo. */
   readonly pacientes = new Map<string, PacienteDoLaudo>();
   gravacoesPaciente = 0;
+  /** Quantas vezes o recálculo leu um lote. */
+  lotesLidos = 0;
 
   private naJanela(l: LaudoGuardado, j: JanelaLaudos) {
     return (
@@ -155,6 +159,35 @@ export class LaudosEmMemoria implements LaudosRepository {
     for (const identidade of a.remover) {
       const l = this.laudos.get(identidade);
       if (l) l.removido = true;
+    }
+  }
+
+  /** O id do laudo no fake é a identidade. */
+  async lerParaRecalculo(lote: LoteRecalculo): Promise<LaudoParaRecalculo[]> {
+    this.lotesLidos++;
+    return [...this.laudos.values()]
+      .filter(
+        (l) =>
+          (lote.depoisDe === null || l.identidade > lote.depoisDe) &&
+          (lote.clienteIds === null ||
+            (l.clienteId !== null && lote.clienteIds.includes(l.clienteId))) &&
+          !lote.competenciasBloqueadas.includes(l.competencia),
+      )
+      .sort((a, b) => (a.identidade < b.identidade ? -1 : 1))
+      .slice(0, lote.limite)
+      .map((l) => ({
+        id: l.identidade,
+        clienteId: l.clienteId,
+        dataRealizacao: l.dataRealizacao,
+        dataLaudo: l.dataLaudo,
+        competencia: l.competencia,
+      }));
+  }
+
+  async atualizarCompetencias(mudancas: { id: string; competencia: string }[]) {
+    for (const { id, competencia } of mudancas) {
+      const l = this.laudos.get(id);
+      if (l) l.competencia = competencia;
     }
   }
 

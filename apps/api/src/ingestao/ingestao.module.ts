@@ -59,6 +59,7 @@ import {
   TAREFA_AGENDAR_MOBILEMED,
   TAREFA_EXPURGAR_LINHAS_BRUTAS,
   TAREFA_IMPORTAR_LAUDOS,
+  TAREFA_RECALCULAR_COMPETENCIAS,
 } from './application/tarefas';
 import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
@@ -68,6 +69,7 @@ import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-pla
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
 import { LerPacientesDosLaudos } from './application/use-cases/ler-pacientes-dos-laudos';
+import { RecalcularCompetencias } from './application/use-cases/recalcular-competencias';
 import { TriarAviso } from './application/use-cases/triar-aviso';
 import {
   AvisosController,
@@ -214,6 +216,15 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
       },
     },
     {
+      provide: RecalcularCompetencias,
+      inject: [LAUDOS_REPOSITORY, COMPETENCIAS_BLOQUEADAS, CORTES_COMPETENCIA],
+      useFactory: (
+        laudos: LaudosRepository,
+        competencias: CompetenciasBloqueadas,
+        cortes: LeitorCortesCompetencia,
+      ) => new RecalcularCompetencias(laudos, competencias, cortes, () => new Date()),
+    },
+    {
       provide: CriarImportacaoMobileMed,
       inject: [IMPORTACOES_REPOSITORY, PARAMETROS_INGESTAO_REPOSITORY, ConfigService],
       useFactory: (
@@ -280,6 +291,7 @@ export class IngestaoModule implements OnModuleInit {
     private readonly importarLaudos: ImportarLaudos,
     private readonly expurgarLinhasBrutas: ExpurgarLinhasBrutas,
     private readonly criarImportacaoMobileMed: CriarImportacaoMobileMed,
+    private readonly recalcularCompetencias: RecalcularCompetencias,
   ) {}
 
   onModuleInit() {
@@ -287,6 +299,13 @@ export class IngestaoModule implements OnModuleInit {
       const id = (payload as { importacaoId?: unknown } | null)?.importacaoId;
       if (typeof id !== 'string') throw new Error(`${TAREFA_IMPORTAR_LAUDOS}: payload inválido`);
       await this.importarLaudos.executar(id);
+    });
+    this.registro.registrar(TAREFA_RECALCULAR_COMPETENCIAS, async (payload) => {
+      const ids = (payload as { clienteIds?: unknown } | null)?.clienteIds;
+      const valido =
+        ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string'));
+      if (!valido) throw new Error(`${TAREFA_RECALCULAR_COMPETENCIAS}: payload inválido`);
+      await this.recalcularCompetencias.executar({ clienteIds: ids as string[] | null });
     });
     this.registro.registrar(TAREFA_EXPURGAR_LINHAS_BRUTAS, async () => {
       await this.expurgarLinhasBrutas.executar();

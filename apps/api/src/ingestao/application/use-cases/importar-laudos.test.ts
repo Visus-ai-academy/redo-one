@@ -98,12 +98,15 @@ describe('ImportarLaudos', () => {
       };
     },
   };
-  const novo = (pseudonimo: (t: string) => string = (t) => `hmac(${t})`) =>
+  const novo = (
+    pseudonimo: (t: string) => string = (t) => `hmac(${t})`,
+    cadastrosDaImportacao: CadastrosIngestao = cadastros,
+  ) =>
     new ImportarLaudos(
       importacoes,
       armazenamento,
       leitor,
-      { carregar: async () => cadastros },
+      { carregar: async () => cadastrosDaImportacao },
       competencias,
       cortes,
       laudos,
@@ -298,6 +301,28 @@ describe('ImportarLaudos', () => {
     const porCliente = new Map(laudos.ativos().map((l) => [l.clienteId, l.competencia]));
     expect(porCliente.get('c-x')).toBe('2026-12');
     expect(porCliente.get('c-y')).toBe('2026-11');
+  });
+
+  it('o cliente resolvido depois da importação leva o laudo ao corte dele na reimportação', async () => {
+    cortes.porCliente.set('c-novo', [
+      { desde: '2026-10', corte: { dia: 5, mes: 'proprio', consideraExame: false } },
+    ]);
+    const linha = registro('1', { EMPRESA: 'CLINICA NOVA' });
+    await importar('i1', [linha]);
+    expect(laudos.ativos().map((l) => [l.clienteId, l.competencia])).toEqual([[null, '2026-10']]);
+
+    // O apelido cadastrado resolve o cliente: o laudo muda de cliente na próxima importação.
+    planilha = { formato: 'laudos', registros: [linha] };
+    importacoes.criar('i2');
+    await novo(undefined, {
+      ...cadastros,
+      resolverCliente: (empresa) => (empresa === 'CLINICA NOVA' ? 'c-novo' : null),
+    }).executar('i2');
+
+    expect(importacoes.itens.get('i2')?.resultado).toMatchObject({ atualizados: 1 });
+    expect(laudos.ativos().map((l) => [l.clienteId, l.competencia])).toEqual([
+      ['c-novo', '2026-11'],
+    ]);
   });
 
   it('cria as competências dos laudos gravados, sem as das linhas ignoradas', async () => {

@@ -377,4 +377,97 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     expect(await db.select().from(schema.laudosLinhasBrutas)).toEqual([]);
     expect(await db.select().from(schema.laudos)).toHaveLength(1);
   });
+
+  describe('recálculo da competência', () => {
+    let clienteX: string;
+    let clienteY: string;
+
+    beforeEach(async () => {
+      const sufixo = Math.random().toString(36).slice(2);
+      const criados = await db
+        .insert(schema.clientes)
+        .values([
+          { nome: `X ${sufixo}`, chaveNormalizada: `x ${sufixo}` },
+          { nome: `Y ${sufixo}`, chaveNormalizada: `y ${sufixo}` },
+        ])
+        .returning({ id: schema.clientes.id });
+      clienteX = criados[0]?.id ?? '';
+      clienteY = criados[1]?.id ?? '';
+      await repo.aplicar(
+        importacaoId,
+        janela,
+        {
+          ...vazio,
+          inserir: [
+            laudo('x1', { clienteId: clienteX }),
+            laudo('x2', { clienteId: clienteX, competencia: '2026-09' }),
+            laudo('y1', { clienteId: clienteY }),
+            laudo('s1'),
+          ],
+        },
+        agora,
+      );
+    });
+
+    const idsPorIdentidade = async () =>
+      new Map((await db.select().from(schema.laudos)).map((l) => [l.id, l.identidade] as const));
+
+    it('lê em lotes por id, só dos clientes pedidos e fora das competências bloqueadas', async () => {
+      const identidades = await idsPorIdentidade();
+      const primeiro = await repo.lerParaRecalculo({
+        clienteIds: [clienteX, clienteY],
+        competenciasBloqueadas: ['2026-09'],
+        depoisDe: null,
+        limite: 1,
+      });
+      const resto = await repo.lerParaRecalculo({
+        clienteIds: [clienteX, clienteY],
+        competenciasBloqueadas: ['2026-09'],
+        depoisDe: primeiro[0]?.id ?? null,
+        limite: 10,
+      });
+
+      expect(primeiro).toHaveLength(1);
+      expect([...primeiro, ...resto].map((l) => identidades.get(l.id)).sort()).toEqual([
+        'x1',
+        'y1',
+      ]);
+      expect(primeiro[0]).toMatchObject({
+        dataRealizacao: new Date('2026-10-05T11:00:00Z'),
+        dataLaudo: new Date('2026-10-06T13:00:00Z'),
+        competencia: '2026-10',
+      });
+    });
+
+    it('sem clientes, lê todos, inclusive os sem cliente', async () => {
+      const lidos = await repo.lerParaRecalculo({
+        clienteIds: null,
+        competenciasBloqueadas: [],
+        depoisDe: null,
+        limite: 10,
+      });
+
+      expect(lidos).toHaveLength(4);
+      expect(lidos.find((l) => l.clienteId === null)).toBeDefined();
+    });
+
+    it('atualiza só a competência dos laudos indicados', async () => {
+      const [x1] = await db
+        .select()
+        .from(schema.laudos)
+        .where(sql`${schema.laudos.identidade} = 'x1'`);
+      const depois = new Date('2026-11-24T12:00:00Z');
+
+      await repo.atualizarCompetencias([{ id: x1?.id ?? '', competencia: '2026-11' }], depois);
+
+      const laudos = await db.select().from(schema.laudos);
+      const porIdentidade = new Map(laudos.map((l) => [l.identidade, l]));
+      expect(porIdentidade.get('x1')).toMatchObject({
+        competencia: '2026-11',
+        hashConteudo: 'h-x1',
+        atualizadoEm: depois,
+      });
+      expect(porIdentidade.get('y1')?.competencia).toBe('2026-10');
+    });
+  });
 });

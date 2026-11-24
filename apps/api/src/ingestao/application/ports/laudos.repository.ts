@@ -39,6 +39,26 @@ export interface IdsMedicoMobilemed {
   medicoReassinaturaIdMobilemed: number | null;
 }
 
+/** O que o recálculo da competência lê de cada laudo. */
+export interface LaudoParaRecalculo {
+  id: string;
+  clienteId: string | null;
+  dataRealizacao: Date;
+  dataLaudo: Date;
+  competencia: string;
+}
+
+/** Um lote do recálculo, em ordem de id, a partir do cursor. */
+export interface LoteRecalculo {
+  /** Nulo = todos os clientes (inclusive os laudos sem cliente). */
+  clienteIds: string[] | null;
+  /** Laudos dessas competências ficam de fora. */
+  competenciasBloqueadas: string[];
+  /** Id do último laudo do lote anterior; nulo no primeiro lote. */
+  depoisDe: string | null;
+  limite: number;
+}
+
 export interface LaudosRepository {
   existentesNaJanela(janela: JanelaLaudos): Promise<Map<string, LaudoExistente>>;
   /**
@@ -49,6 +69,13 @@ export interface LaudosRepository {
     importacaoId: string,
     janela: JanelaLaudos,
     alteracoes: AlteracoesLaudos,
+    agora: Date,
+  ): Promise<void>;
+  /** Lote de laudos para recalcular a competência, removidos inclusive. */
+  lerParaRecalculo(lote: LoteRecalculo): Promise<LaudoParaRecalculo[]>;
+  /** Grava só a competência (e `atualizado_em`) dos laudos. */
+  atualizarCompetencias(
+    mudancas: { id: string; competencia: string }[],
     agora: Date,
   ): Promise<void>;
 }

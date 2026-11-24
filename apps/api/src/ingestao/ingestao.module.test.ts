@@ -13,6 +13,7 @@ import {
   TAREFA_AGENDAR_MOBILEMED,
   TAREFA_EXPURGAR_LINHAS_BRUTAS,
   TAREFA_IMPORTAR_LAUDOS,
+  TAREFA_RECALCULAR_COMPETENCIAS,
 } from './application/tarefas';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
@@ -100,6 +101,17 @@ describe('IngestaoModule', () => {
 
     const tarefa = modulo.get(RegistroTarefas).listar()[TAREFA_IMPORTAR_LAUDOS];
     await expect(tarefa?.({})).rejects.toThrow('payload inválido');
+
+    await modulo.close();
+  });
+
+  it('registra o recálculo da competência, que recusa payload sem clienteIds válido', async () => {
+    const modulo = await montar({});
+
+    const tarefa = modulo.get(RegistroTarefas).listar()[TAREFA_RECALCULAR_COMPETENCIAS];
+    expect(tarefa).toBeDefined();
+    await expect(tarefa?.({})).rejects.toThrow('payload inválido');
+    await expect(tarefa?.({ clienteIds: [1] })).rejects.toThrow('payload inválido');
 
     await modulo.close();
   });

@@ -10,3 +10,9 @@ export const TAREFA_AGENDAR_MOBILEMED = 'ingestao:agendar-mobilemed';
 
 /** Fila própria: uma importação por vez, na ordem em que chegaram. */
 export const FILA_INGESTAO = 'ingestao';
+
+/**
+ * Tarefa que recalcula a competência gravada nos laudos depois que um corte muda; payload
+ * `{ clienteIds: string[] | null }` (nulo = todos). Na `FILA_INGESTAO`, em série com a importação.
+ */
+export const TAREFA_RECALCULAR_COMPETENCIAS = 'ingestao.recalcular-competencias';

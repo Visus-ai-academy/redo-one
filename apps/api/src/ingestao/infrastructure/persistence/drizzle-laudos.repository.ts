@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, between, eq, getTableColumns, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, between, eq, getTableColumns, gt, inArray, notInArray, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../../database/database';
 import {
@@ -12,7 +12,9 @@ import {
 import type {
   AlteracoesLaudos,
   JanelaLaudos,
+  LaudoParaRecalculo,
   LaudosRepository,
+  LoteRecalculo,
 } from '../../application/ports/laudos.repository';
 import type { LaudoExistente } from '../../domain/planejar-importacao';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
@@ -176,5 +178,43 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           status
       `);
     });
+  }
+
+  async lerParaRecalculo(lote: LoteRecalculo): Promise<LaudoParaRecalculo[]> {
+    if (lote.clienteIds?.length === 0) return [];
+    return this.db
+      .select({
+        id: laudos.id,
+        clienteId: laudos.clienteId,
+        dataRealizacao: laudos.dataRealizacao,
+        dataLaudo: laudos.dataLaudo,
+        competencia: laudos.competencia,
+      })
+      .from(laudos)
+      .where(
+        and(
+          lote.depoisDe ? gt(laudos.id, lote.depoisDe) : undefined,
+          lote.clienteIds ? inArray(laudos.clienteId, lote.clienteIds) : undefined,
+          lote.competenciasBloqueadas.length
+            ? notInArray(laudos.competencia, lote.competenciasBloqueadas)
+            : undefined,
+        ),
+      )
+      .orderBy(asc(laudos.id))
+      .limit(lote.limite);
+  }
+
+  async atualizarCompetencias(mudancas: { id: string; competencia: string }[], agora: Date) {
+    for (const lote of emLotes(mudancas)) {
+      const valores = sql.join(
+        lote.map(({ id, competencia }) => sql`(${id}::uuid, ${competencia}::text)`),
+        sql`, `,
+      );
+      await this.db.execute(sql`
+        update ${laudos} set competencia = v.competencia, atualizado_em = ${agora}
+        from (values ${valores}) as v(id, competencia)
+        where ${laudos.id} = v.id
+      `);
+    }
   }
 }
