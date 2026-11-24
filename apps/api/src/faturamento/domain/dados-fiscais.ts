@@ -114,13 +114,14 @@ export function prepararDadosFiscais(entrada: DadosFiscais): DadosFiscais {
   const erros: Record<string, string> = {};
   const vistos = new Set<string>();
   const emailsNf: string[] = [];
-  for (const bruto of entrada.emailsNf) {
+  // O erro aponta a posição que veio (a tela manda as linhas vazias), não a da lista limpa.
+  entrada.emailsNf.forEach((bruto, i) => {
     const email = bruto.trim();
-    if (!email || vistos.has(email.toLowerCase())) continue;
+    if (!email || vistos.has(email.toLowerCase())) return;
     vistos.add(email.toLowerCase());
-    if (!EMAIL.test(email)) erros[`emailsNf[${emailsNf.length}]`] ??= emailInvalido(email);
+    if (!EMAIL.test(email)) erros[`emailsNf[${i}]`] = emailInvalido(email);
     emailsNf.push(email);
-  }
+  });
 
   const cepDigitado = aparar(entrada.cep);
   const dados: DadosFiscais = {

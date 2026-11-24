@@ -70,6 +70,12 @@ describe('prepararDadosFiscais', () => {
     });
   });
 
+  it('o erro do e-mail da NF aponta a posição que veio (com as linhas vazias da tela)', () => {
+    expect(erroDe(dados({ emailsNf: ['', 'x@y.com', 'ruim'] })).detalhes).toEqual({
+      campos: { 'emailsNf[2]': 'O e-mail "ruim" não é válido.' },
+    });
+  });
+
   it('recusa o e-mail do cadastro inválido', () => {
     expect(erroDe(dados({ email: 'a@b' })).detalhes).toEqual({
       campos: { email: 'O e-mail "a@b" não é válido.' },
