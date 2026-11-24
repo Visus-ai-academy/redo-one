@@ -17,6 +17,7 @@ import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { DadosFaturamentoCliente } from '../../components/faturamento/dados-faturamento-cliente';
 import { EditorCorte } from '../../components/faturamento/editor-corte';
+import { EditorTipificacao } from '../../components/faturamento/editor-tipificacao';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
@@ -269,6 +270,7 @@ function Painel({
   // pergunta antes de descartar.
   const [corteAlterado, setCorteAlterado] = useState(false);
   const [dadosAlterados, setDadosAlterados] = useState(false);
+  const [tipificacaoAlterada, setTipificacaoAlterada] = useState(false);
   const veCorte = pode(sessao, 'faturamento.ver');
   const veDados = pode(sessao, 'clientes.faturamento.ver');
   const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
@@ -292,7 +294,7 @@ function Painel({
       podeCriar={permissoes.criar}
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
-      faturamentoAlterado={corteAlterado || dadosAlterados}
+      faturamentoAlterado={corteAlterado || dadosAlterados || tipificacaoAlterada}
       historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
       distribuicao={
         id && pode(sessao, 'clientes.distribuicao.ver') ? (
@@ -317,6 +319,17 @@ function Painel({
                   unidadeDe={cliente?.unificadoEm?.nome}
                   nivelTitulos={4}
                   onAlterado={setCorteAlterado}
+                />
+              </section>
+            )}
+            {veCorte && (
+              <section className="flex flex-col gap-4 border-t pt-6">
+                <h3 className="text-base font-semibold">Tipificação</h3>
+                <EditorTipificacao
+                  key={id}
+                  clienteId={id}
+                  podeEditar={pode(sessao, 'faturamento.tipificacao.editar')}
+                  onAlterado={setTipificacaoAlterada}
                 />
               </section>
             )}

@@ -32,6 +32,7 @@ import { Route as AppConfiguracoesImportacaoRouteImport } from './routes/_app/co
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 import { Route as AppConfiguracoesNiveisMedicoRouteImport } from './routes/_app/configuracoes/niveis-medico'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
+import { Route as AppConfiguracoesTipificacaoRouteImport } from './routes/_app/configuracoes/tipificacao'
 import { Route as AppConfiguracoesUsuariosRouteImport } from './routes/_app/configuracoes/usuarios'
 import { Route as AppDistribuicaoIndexRouteImport } from './routes/_app/distribuicao/index'
 import { Route as AppEscalaIndexRouteImport } from './routes/_app/escala/index'
@@ -161,6 +162,12 @@ const AppConfiguracoesPapeisRoute = AppConfiguracoesPapeisRouteImport.update({
   path: '/configuracoes/papeis',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesTipificacaoRoute =
+  AppConfiguracoesTipificacaoRouteImport.update({
+    id: '/configuracoes/tipificacao',
+    path: '/configuracoes/tipificacao',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppConfiguracoesUsuariosRoute =
   AppConfiguracoesUsuariosRouteImport.update({
     id: '/configuracoes/usuarios',
@@ -222,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
+  '/configuracoes/tipificacao': typeof AppConfiguracoesTipificacaoRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/escala/historico': typeof AppEscalaHistoricoRoute
@@ -253,6 +261,7 @@ export interface FileRoutesByTo {
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
+  '/configuracoes/tipificacao': typeof AppConfiguracoesTipificacaoRoute
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/escala/historico': typeof AppEscalaHistoricoRoute
@@ -286,6 +295,7 @@ export interface FileRoutesById {
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
+  '/_app/configuracoes/tipificacao': typeof AppConfiguracoesTipificacaoRoute
   '/_app/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/_app/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/_app/escala/historico': typeof AppEscalaHistoricoRoute
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
+    | '/configuracoes/tipificacao'
     | '/configuracoes/usuarios'
     | '/escala/ausencias'
     | '/escala/historico'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
+    | '/configuracoes/tipificacao'
     | '/configuracoes/usuarios'
     | '/escala/ausencias'
     | '/escala/historico'
@@ -382,6 +394,7 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/niveis-medico'
     | '/_app/configuracoes/papeis'
+    | '/_app/configuracoes/tipificacao'
     | '/_app/configuracoes/usuarios'
     | '/_app/escala/ausencias'
     | '/_app/escala/historico'
@@ -562,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesPapeisRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/tipificacao': {
+      id: '/_app/configuracoes/tipificacao'
+      path: '/configuracoes/tipificacao'
+      fullPath: '/configuracoes/tipificacao'
+      preLoaderRoute: typeof AppConfiguracoesTipificacaoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/usuarios': {
       id: '/_app/configuracoes/usuarios'
       path: '/configuracoes/usuarios'
@@ -633,6 +653,7 @@ interface AppRouteChildren {
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesNiveisMedicoRoute: typeof AppConfiguracoesNiveisMedicoRoute
   AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
+  AppConfiguracoesTipificacaoRoute: typeof AppConfiguracoesTipificacaoRoute
   AppConfiguracoesUsuariosRoute: typeof AppConfiguracoesUsuariosRoute
   AppEscalaAusenciasRoute: typeof AppEscalaAusenciasRoute
   AppEscalaHistoricoRoute: typeof AppEscalaHistoricoRoute
@@ -662,6 +683,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesNiveisMedicoRoute: AppConfiguracoesNiveisMedicoRoute,
   AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,
+  AppConfiguracoesTipificacaoRoute: AppConfiguracoesTipificacaoRoute,
   AppConfiguracoesUsuariosRoute: AppConfiguracoesUsuariosRoute,
   AppEscalaAusenciasRoute: AppEscalaAusenciasRoute,
   AppEscalaHistoricoRoute: AppEscalaHistoricoRoute,

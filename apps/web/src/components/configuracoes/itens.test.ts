@@ -60,10 +60,11 @@ describe('grupo Operação', () => {
 });
 
 describe('grupo Financeiro', () => {
-  it('tem o Faturamento (corte da competência), com o ver do faturamento', () => {
+  it('tem o Faturamento (corte da competência) e a Tipificação, com o ver do faturamento', () => {
     const financeiro = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Financeiro');
     expect(financeiro?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Faturamento', '/configuracoes/faturamento', 'faturamento.ver'],
+      ['Tipificação', '/configuracoes/tipificacao', 'faturamento.ver'],
     ]);
   });
 });
