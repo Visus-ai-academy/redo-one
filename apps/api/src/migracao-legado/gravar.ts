@@ -19,6 +19,7 @@ import { DrizzleConfiguracaoDistribuicaoRepository } from '../distribuicao/infra
 import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-cliente.repository';
 import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
+import { enfileirarReclassificacaoTipificacao } from '../ingestao/infrastructure/jobs/enfileirar-reclassificacao-tipificacao';
 import type { CatalogoMigrado } from './mapear-catalogo';
 import type { CompetenciasMigradas } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
@@ -201,6 +202,7 @@ export async function gravarMigracao(
 /**
  * Tipificação: regras e sub-regras pelo id; a configuração de cada cliente da carga é trocada
  * inteira (o dashboards-one é a fonte até a virada). O cliente configurado só no redo-one fica.
+ * Na mesma transação, a reclassificação de todos os laudos das competências abertas.
  */
 async function gravarTipificacao(tx: Transacao, { tabelas: t }: TipificacaoMigrada) {
   await upsert(tx, schema.regrasTipificacao, t.regrasTipificacao);
@@ -238,6 +240,8 @@ async function gravarTipificacao(tx: Transacao, { tabelas: t }: TipificacaoMigra
     'linhaId',
     'equipeId',
   ]);
+  // Os laudos das competências abertas passam a seguir a configuração carregada.
+  await enfileirarReclassificacaoTipificacao(tx, null);
 }
 
 /**

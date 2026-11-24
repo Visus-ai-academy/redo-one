@@ -3,6 +3,7 @@ import { Inject, Module, type OnModuleInit } from '@nestjs/common';
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competencias-bloqueadas';
 import { CORTES_COMPETENCIA } from '../ingestao/application/ports/cortes-competencia';
+import { TIPIFICACAO_LAUDOS } from '../ingestao/application/ports/tipificacao-laudos';
 import {
   COMPETENCIAS_REPOSITORY,
   type CompetenciasRepository,
@@ -12,7 +13,13 @@ import {
   DADOS_FISCAIS_REPOSITORY,
   type DadosFiscaisRepository,
 } from './application/ports/dados-fiscais.repository';
+import { EQUIPES_MEDICOS, type EquipesMedicos } from './application/ports/equipes-medicos';
 import { LAUDOS_COMPETENCIA, type LaudosCompetencia } from './application/ports/laudos-competencia';
+import {
+  TIPIFICACAO_REPOSITORY,
+  type TipificacaoRepository,
+} from './application/ports/tipificacao.repository';
+import { CarregarTipificador } from './application/use-cases/carregar-tipificador';
 import { CriarCorte } from './application/use-cases/criar-corte';
 import { DefinirDadosFiscais, ObterDadosFiscais } from './application/use-cases/dados-fiscais';
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
@@ -27,7 +34,9 @@ import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.cont
 import { DrizzleCompetenciasRepository } from './infrastructure/persistence/drizzle-competencias.repository';
 import { DrizzleCortesRepository } from './infrastructure/persistence/drizzle-cortes.repository';
 import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/drizzle-dados-fiscais.repository';
+import { DrizzleEquipesMedicos } from './infrastructure/persistence/drizzle-equipes-medicos';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
+import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizzle-tipificacao.repository';
 
 const agora = () => new Date();
 
@@ -40,8 +49,8 @@ const ACOES_COMPETENCIA = [
 ] as const;
 
 /**
- * Contexto `faturamento` (hexagonal): competências, cortes e dados fiscais do cliente. Implementa as portas da `ingestao`
- * (`COMPETENCIAS_BLOQUEADAS`, `CORTES_COMPETENCIA`); não importa o `IngestaoModule`, para não
+ * Contexto `faturamento` (hexagonal): competências, cortes, dados fiscais do cliente e tipificação. Implementa as portas da `ingestao`
+ * (`COMPETENCIAS_BLOQUEADAS`, `CORTES_COMPETENCIA`, `TIPIFICACAO_LAUDOS`); não importa o `IngestaoModule`, para não
  * criar ciclo.
  */
 @Module({
@@ -53,6 +62,15 @@ const ACOES_COMPETENCIA = [
     { provide: DADOS_FISCAIS_REPOSITORY, useClass: DrizzleDadosFiscaisRepository },
     { provide: COMPETENCIAS_BLOQUEADAS, useExisting: COMPETENCIAS_REPOSITORY },
     { provide: CORTES_COMPETENCIA, useExisting: CORTES_REPOSITORY },
+    { provide: TIPIFICACAO_REPOSITORY, useClass: DrizzleTipificacaoRepository },
+    // Equipes e médicos do contexto `medicos`, lidos por uma porta (sem importar o MedicosModule).
+    { provide: EQUIPES_MEDICOS, useClass: DrizzleEquipesMedicos },
+    {
+      provide: TIPIFICACAO_LAUDOS,
+      inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS],
+      useFactory: (repo: TipificacaoRepository, equipes: EquipesMedicos) =>
+        new CarregarTipificador(repo, equipes),
+    },
     {
       provide: ListarCompetencias,
       inject: [COMPETENCIAS_REPOSITORY],
@@ -99,7 +117,7 @@ const ACOES_COMPETENCIA = [
         new DefinirDadosFiscais(repo, auditoria, agora),
     },
   ],
-  exports: [COMPETENCIAS_BLOQUEADAS, CORTES_COMPETENCIA],
+  exports: [COMPETENCIAS_BLOQUEADAS, CORTES_COMPETENCIA, TIPIFICACAO_LAUDOS],
 })
 export class FaturamentoModule implements OnModuleInit {
   constructor(@Inject(CORTES_REPOSITORY) private readonly cortes: CortesRepository) {}

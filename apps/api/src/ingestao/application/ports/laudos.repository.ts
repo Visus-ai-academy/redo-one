@@ -1,3 +1,4 @@
+import type { Tipificacao } from '../../../faturamento/domain/tipificacao';
 import type { Celula } from '../../domain/celulas';
 import type { LaudoExistente } from '../../domain/planejar-importacao';
 import type { LaudoPreparado, OrigemLaudo, PacienteDoLaudo } from '../../domain/preparar-laudo';
@@ -32,6 +33,11 @@ export interface AlteracoesLaudos {
    * identidade; nulo mantém o gravado.
    */
   idsMedico: ReadonlyMap<string, IdsMedicoMobilemed>;
+  /**
+   * Tipificação de cada laudo da janela, por identidade, inclusive dos que não mudaram (a
+   * configuração nova chega a eles na importação seguinte). Só grava a que mudou.
+   */
+  classificacoes: ReadonlyMap<string, Tipificacao>;
 }
 
 export interface IdsMedicoMobilemed {
@@ -59,6 +65,27 @@ export interface LoteRecalculo {
   limite: number;
 }
 
+/** O que a reclassificação da tipificação lê de cada laudo, com a tipificação gravada. */
+export interface LaudoParaReclassificacao {
+  id: string;
+  empresaOrigem: string;
+  clienteId: string | null;
+  unidadeId: string | null;
+  modalidadeId: string | null;
+  especialidadeId: string | null;
+  prioridadeId: string | null;
+  medicoId: string | null;
+  competencia: string;
+  /** Nula se o laudo ainda não foi tipificado. */
+  tipificacao: Tipificacao | null;
+}
+
+export interface ReclassificacaoLaudo {
+  id: string;
+  unidadeId: string | null;
+  tipificacao: Tipificacao;
+}
+
 export interface LaudosRepository {
   existentesNaJanela(janela: JanelaLaudos): Promise<Map<string, LaudoExistente>>;
   /**
@@ -73,6 +100,14 @@ export interface LaudosRepository {
   ): Promise<void>;
   /** Lote de laudos para recalcular a competência, removidos inclusive. */
   lerParaRecalculo(lote: LoteRecalculo): Promise<LaudoParaRecalculo[]>;
+  /** Lote de laudos para reclassificar a tipificação, removidos inclusive. */
+  lerParaReclassificacao(lote: LoteRecalculo): Promise<LaudoParaReclassificacao[]>;
+  /** Grava a unidade de origem e a tipificação dos laudos (só a dos que não estão bloqueados). */
+  gravarReclassificacao(
+    mudancas: ReclassificacaoLaudo[],
+    competenciasBloqueadas: string[],
+    agora: Date,
+  ): Promise<void>;
   /** Grava só a competência (e `atualizado_em`) dos laudos. */
   atualizarCompetencias(
     mudancas: { id: string; competencia: string }[],

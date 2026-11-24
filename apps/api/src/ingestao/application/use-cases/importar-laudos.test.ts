@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ArmazenamentoArquivos } from '../../../comum/armazenamento/armazenamento-arquivos';
+import type { Tipificador } from '../../../faturamento/domain/tipificacao';
 import { CompetenciasEmMemoria, CortesEmMemoria } from '../../../faturamento/testing/fakes';
 import type { Celula } from '../../domain/celulas';
 import type { CadastrosIngestao } from '../../domain/preparar-laudo';
@@ -31,6 +32,7 @@ const cadastros: CadastrosIngestao = {
   },
   prioridades: new Map([['rotina', 'pri-rotina']]),
   resolverCliente: (empresa) => ({ 'CLINICA X': 'c-x', 'CLINICA Y': 'c-y' })[empresa] ?? null,
+  resolverUnidade: () => null,
   resolverMedico: () => 'm-ana',
 };
 
@@ -61,6 +63,8 @@ describe('ImportarLaudos', () => {
   let competencias: CompetenciasEmMemoria;
   let cortes: CortesEmMemoria;
   let trava: { travaRemocaoMinimo: number; travaRemocaoFator: number };
+  /** Tipifica pela especialidade (o mecanismo de verdade é testado no `faturamento`). */
+  let tipificar: Tipificador | null;
 
   const armazenamento = {
     ler: async () => Readable.from([]),
@@ -109,6 +113,7 @@ describe('ImportarLaudos', () => {
       { carregar: async () => cadastrosDaImportacao },
       competencias,
       cortes,
+      { carregar: async () => tipificar },
       laudos,
       avisos,
       parametrosFake,
@@ -135,6 +140,28 @@ describe('ImportarLaudos', () => {
     competencias = new CompetenciasEmMemoria();
     cortes = new CortesEmMemoria();
     trava = { travaRemocaoMinimo: 500, travaRemocaoFator: 2 };
+    tipificar = null;
+  });
+
+  it('tipifica todos os laudos da janela, inclusive os que não mudaram', async () => {
+    tipificar = (l) => ({ regraId: 'CO', subregraId: null, fatura: l.clienteId === 'c-x' });
+    await importar('i1', [registro('1'), registro('2', { EMPRESA: 'CLINICA Y' })]);
+    expect([...laudos.classificacoes.values()].map((c) => c.fatura)).toEqual([true, false]);
+
+    // Configuração nova: reimportar o mesmo arquivo não muda os laudos, mas a tipificação sim.
+    tipificar = (l) => ({ regraId: 'NC', subregraId: 'NC-NF', fatura: l.clienteId !== 'c-x' });
+    const r = await importar('i2', [registro('1'), registro('2', { EMPRESA: 'CLINICA Y' })]);
+    expect(r?.resultado).toMatchObject({ inalterados: 2 });
+    expect([...laudos.classificacoes.values()]).toEqual([
+      { regraId: 'NC', subregraId: 'NC-NF', fatura: false },
+      { regraId: 'NC', subregraId: 'NC-NF', fatura: true },
+    ]);
+  });
+
+  it('sem regras de tipificação cadastradas, os laudos entram sem tipificação', async () => {
+    await importar('i1', [registro('1')]);
+    expect(laudos.ativos()).toHaveLength(1);
+    expect(laudos.classificacoes.size).toBe(0);
   });
 
   it('importa os laudos e conclui com os contadores e a janela', async () => {

@@ -148,6 +148,8 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
       aliases,
       sufixos: sufixos.map((s) => s.sufixo),
     };
+    const resolverCliente = montarResolvedorCliente(cadastroClientes);
+    const resolverUnidadeCliente = montarResolvedorUnidadeCliente(cadastroClientes);
     return {
       catalogo: {
         exames: indice(
@@ -188,8 +190,12 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
           v.prioridadeId,
         ]),
       ]),
-      resolverCliente: montarResolvedorCliente(cadastroClientes),
-      resolverUnidadeCliente: montarResolvedorUnidadeCliente(cadastroClientes),
+      resolverCliente,
+      resolverUnidade: (empresa) => {
+        const unidade = resolverUnidadeCliente(empresa);
+        return unidade && unidade !== resolverCliente(empresa) ? unidade : null;
+      },
+      resolverUnidadeCliente,
       resolverMedico: montarResolvedorMedico({
         medicos: listaMedicos,
         aliases: aliasesMedico,

@@ -34,6 +34,8 @@ export interface CadastrosIngestao {
   /** `normalizarNome` do nome da prioridade ou da variação → id. */
   prioridades: ReadonlyMap<string, string>;
   resolverCliente: (empresa: string) => string | null;
+  /** A unidade (`clientes.unificado_em_id`) com que a empresa casou; nulo se não é unidade. */
+  resolverUnidade: (empresa: string) => string | null;
   /** Pelo id da conta MobileMed primeiro; sem id, ou com id desconhecido, pelo nome. */
   resolverMedico: (nome: string | null, idMobilemed: number | null) => string | null;
 }
@@ -55,6 +57,7 @@ export interface LaudoPreparado {
   origem: OrigemLaudo;
   empresaOrigem: string;
   clienteId: string | null;
+  unidadeId: string | null;
   accessionNumber: string | null;
   pacienteChave: string;
   estudo: string;
@@ -190,6 +193,7 @@ export function prepararLaudo(
     origem,
     empresaOrigem: l.empresa,
     clienteId,
+    unidadeId: clienteId ? cadastros.resolverUnidade(l.empresa) : null,
     accessionNumber: l.accessionNumber,
     pacienteChave,
     estudo: l.estudo,

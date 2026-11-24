@@ -1,3 +1,4 @@
+import type { Tipificacao } from '../../faturamento/domain/tipificacao';
 import type { ArquivoIngestao, ArquivosRepository } from '../application/ports/arquivos.repository';
 import type { AvisosCadastroRepository } from '../application/ports/avisos-cadastro.repository';
 import type {
@@ -10,8 +11,10 @@ import type {
   AlteracoesLaudos,
   JanelaLaudos,
   LaudoParaRecalculo,
+  LaudoParaReclassificacao,
   LaudosRepository,
   LoteRecalculo,
+  ReclassificacaoLaudo,
 } from '../application/ports/laudos.repository';
 import type { FormatoPlanilha } from '../application/ports/leitor-planilha';
 import type { PeriodoDias } from '../domain/periodo-mobilemed';
@@ -110,6 +113,8 @@ export class LaudosEmMemoria implements LaudosRepository {
   gravacoesPaciente = 0;
   /** Quantas vezes o recálculo leu um lote. */
   lotesLidos = 0;
+  /** `classificacoes_laudo`, por identidade do laudo. */
+  readonly classificacoes = new Map<string, Tipificacao>();
 
   private naJanela(l: LaudoGuardado, j: JanelaLaudos) {
     return (
@@ -137,7 +142,7 @@ export class LaudosEmMemoria implements LaudosRepository {
     return existentes;
   }
 
-  async aplicar(importacaoId: string, _janela: JanelaLaudos, a: AlteracoesLaudos) {
+  async aplicar(importacaoId: string, janela: JanelaLaudos, a: AlteracoesLaudos) {
     for (const l of [...a.inserir, ...a.atualizar]) {
       this.laudos.set(l.identidade, { ...l, removido: false, importacaoId });
       if (a.linhasBrutas.has(l.identidade)) {
@@ -159,6 +164,11 @@ export class LaudosEmMemoria implements LaudosRepository {
     for (const identidade of a.remover) {
       const l = this.laudos.get(identidade);
       if (l) l.removido = true;
+    }
+    for (const [identidade, t] of a.classificacoes) {
+      const l = this.laudos.get(identidade);
+      if (l && !janela.competenciasBloqueadas.includes(l.competencia))
+        this.classificacoes.set(identidade, t);
     }
   }
 
@@ -182,6 +192,40 @@ export class LaudosEmMemoria implements LaudosRepository {
         dataLaudo: l.dataLaudo,
         competencia: l.competencia,
       }));
+  }
+
+  async lerParaReclassificacao(lote: LoteRecalculo): Promise<LaudoParaReclassificacao[]> {
+    return [...this.laudos.values()]
+      .filter(
+        (l) =>
+          (lote.depoisDe === null || l.identidade > lote.depoisDe) &&
+          (lote.clienteIds === null ||
+            (l.clienteId !== null && lote.clienteIds.includes(l.clienteId))) &&
+          !lote.competenciasBloqueadas.includes(l.competencia),
+      )
+      .sort((a, b) => (a.identidade < b.identidade ? -1 : 1))
+      .slice(0, lote.limite)
+      .map((l) => ({
+        id: l.identidade,
+        empresaOrigem: l.empresaOrigem,
+        clienteId: l.clienteId,
+        unidadeId: l.unidadeId ?? null,
+        modalidadeId: l.modalidadeId,
+        especialidadeId: l.especialidadeId,
+        prioridadeId: l.prioridadeId,
+        medicoId: l.medicoId,
+        competencia: l.competencia,
+        tipificacao: this.classificacoes.get(l.identidade) ?? null,
+      }));
+  }
+
+  async gravarReclassificacao(mudancas: ReclassificacaoLaudo[], bloqueadas: string[]) {
+    for (const m of mudancas) {
+      const l = this.laudos.get(m.id);
+      if (!l || bloqueadas.includes(l.competencia)) continue;
+      l.unidadeId = m.unidadeId;
+      this.classificacoes.set(m.id, m.tipificacao);
+    }
   }
 
   async atualizarCompetencias(mudancas: { id: string; competencia: string }[]) {

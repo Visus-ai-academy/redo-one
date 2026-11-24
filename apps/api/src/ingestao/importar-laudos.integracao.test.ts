@@ -10,8 +10,11 @@ import writeXlsxFile from 'write-excel-file/node';
 import type { ArmazenamentoArquivos } from '../comum/armazenamento/armazenamento-arquivos';
 import type { Database } from '../database/database';
 import * as schema from '../database/schema';
+import { CarregarTipificador } from '../faturamento/application/use-cases/carregar-tipificador';
 import { DrizzleCompetenciasRepository } from '../faturamento/infrastructure/persistence/drizzle-competencias.repository';
 import { DrizzleCortesRepository } from '../faturamento/infrastructure/persistence/drizzle-cortes.repository';
+import { DrizzleEquipesMedicos } from '../faturamento/infrastructure/persistence/drizzle-equipes-medicos';
+import { DrizzleTipificacaoRepository } from '../faturamento/infrastructure/persistence/drizzle-tipificacao.repository';
 import type { PlanilhaLida } from './application/ports/leitor-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
 import { itemParaRegistro, itemRelatorio } from './infrastructure/mobilemed/esquemas-relatorio';
@@ -141,6 +144,7 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       new DrizzleCadastrosIngestao(db),
       new DrizzleCompetenciasRepository(db),
       new DrizzleCortesRepository(db),
+      new CarregarTipificador(new DrizzleTipificacaoRepository(db), new DrizzleEquipesMedicos(db)),
       new DrizzleLaudosRepository(db),
       new DrizzleAvisosCadastroRepository(db),
       new DrizzleParametrosIngestaoRepository(db),

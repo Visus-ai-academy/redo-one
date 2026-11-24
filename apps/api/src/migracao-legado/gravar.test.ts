@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -220,6 +221,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../drizzle') });
+    await runMigrations({ pgPool: pool });
   });
 
   beforeEach(async () => {
@@ -486,7 +488,10 @@ describe.skipIf(!url)('gravarMigracao', () => {
           order by c.nome, l.ordem`)
       ).rows;
 
+    await db.execute(sql`delete from graphile_worker._private_jobs`);
     await migrar();
+    const job = await db.execute(sql`select key from graphile_worker.jobs`);
+    expect(job.rows).toEqual([{ key: 'ingestao.reclassificar-tipificacao:todos' }]);
     const primeira = await ler();
     expect(primeira).toEqual([
       {

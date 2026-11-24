@@ -3,6 +3,7 @@ import { and, asc, between, eq, getTableColumns, gt, inArray, notInArray, sql } 
 
 import { DATABASE, type Database } from '../../../database/database';
 import {
+  classificacoesLaudo,
   laudos,
   laudosLinhasBrutas,
   laudosPacientes,
@@ -13,8 +14,10 @@ import type {
   AlteracoesLaudos,
   JanelaLaudos,
   LaudoParaRecalculo,
+  LaudoParaReclassificacao,
   LaudosRepository,
   LoteRecalculo,
+  ReclassificacaoLaudo,
 } from '../../application/ports/laudos.repository';
 import type { LaudoExistente } from '../../domain/planejar-importacao';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
@@ -169,6 +172,31 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           });
       }
 
+      // Tipificação (`faturamento`) na mesma transação: só a que mudou, e nunca em bloqueada.
+      for (const lote of emLotes([...a.classificacoes])) {
+        const valores = sql.join(
+          lote.map(
+            ([identidade, t]) =>
+              sql`(${identidade}::text, ${t.regraId}::uuid, ${t.subregraId}::uuid, ${t.fatura}::boolean)`,
+          ),
+          sql`, `,
+        );
+        await tx.execute(sql`
+          insert into ${classificacoesLaudo} (laudo_id, regra_id, subregra_id, fatura, calculado_em)
+          select ${laudos.id}, v.regra, v.subregra, v.fatura, ${agora}
+          from (values ${valores}) as v(identidade, regra, subregra, fatura)
+          join ${laudos} on ${laudos.identidade} = v.identidade
+          ${desbloqueado ? sql`where ${desbloqueado}` : sql``}
+          on conflict (laudo_id) do update set
+            regra_id = excluded.regra_id,
+            subregra_id = excluded.subregra_id,
+            fatura = excluded.fatura,
+            calculado_em = excluded.calculado_em
+          where (${classificacoesLaudo.regraId}, ${classificacoesLaudo.subregraId}, ${classificacoesLaudo.fatura})
+            is distinct from (excluded.regra_id, excluded.subregra_id, excluded.fatura)
+        `);
+      }
+
       for (const lote of emLotes(a.remover)) {
         await tx
           .update(laudos)
@@ -218,6 +246,74 @@ export class DrizzleLaudosRepository implements LaudosRepository {
       )
       .orderBy(asc(laudos.id))
       .limit(lote.limite);
+  }
+
+  async lerParaReclassificacao(lote: LoteRecalculo): Promise<LaudoParaReclassificacao[]> {
+    if (lote.clienteIds?.length === 0) return [];
+    const linhas = await this.db
+      .select({
+        id: laudos.id,
+        empresaOrigem: laudos.empresaOrigem,
+        clienteId: laudos.clienteId,
+        unidadeId: laudos.unidadeId,
+        modalidadeId: laudos.modalidadeId,
+        especialidadeId: laudos.especialidadeId,
+        prioridadeId: laudos.prioridadeId,
+        medicoId: laudos.medicoId,
+        competencia: laudos.competencia,
+        regraId: classificacoesLaudo.regraId,
+        subregraId: classificacoesLaudo.subregraId,
+        fatura: classificacoesLaudo.fatura,
+      })
+      .from(laudos)
+      .leftJoin(classificacoesLaudo, eq(classificacoesLaudo.laudoId, laudos.id))
+      .where(
+        and(
+          lote.depoisDe ? gt(laudos.id, lote.depoisDe) : undefined,
+          lote.clienteIds ? inArray(laudos.clienteId, lote.clienteIds) : undefined,
+          foraDasBloqueadas(lote.competenciasBloqueadas),
+        ),
+      )
+      .orderBy(asc(laudos.id))
+      .limit(lote.limite);
+    return linhas.map(({ regraId, subregraId, fatura, ...l }) => ({
+      ...l,
+      tipificacao: regraId === null || fatura === null ? null : { regraId, subregraId, fatura },
+    }));
+  }
+
+  async gravarReclassificacao(mudancas: ReclassificacaoLaudo[], bloqueadas: string[], agora: Date) {
+    const desbloqueado = foraDasBloqueadas(bloqueadas);
+    await this.db.transaction(async (tx) => {
+      for (const lote of emLotes(mudancas)) {
+        const valores = sql.join(
+          lote.map(
+            (m) =>
+              sql`(${m.id}::uuid, ${m.unidadeId}::uuid, ${m.tipificacao.regraId}::uuid, ${m.tipificacao.subregraId}::uuid, ${m.tipificacao.fatura}::boolean)`,
+          ),
+          sql`, `,
+        );
+        // Só a unidade de origem: fora do `atualizado_em`, que diz quando a importação mudou o laudo.
+        await tx.execute(sql`
+          update ${laudos} set unidade_id = v.unidade
+          from (values ${valores}) as v(id, unidade, regra, subregra, fatura)
+          where ${laudos.id} = v.id and ${laudos.unidadeId} is distinct from v.unidade
+            ${desbloqueado ? sql`and ${desbloqueado}` : sql``}
+        `);
+        await tx.execute(sql`
+          insert into ${classificacoesLaudo} (laudo_id, regra_id, subregra_id, fatura, calculado_em)
+          select ${laudos.id}, v.regra, v.subregra, v.fatura, ${agora}
+          from (values ${valores}) as v(id, unidade, regra, subregra, fatura)
+          join ${laudos} on ${laudos.id} = v.id
+          ${desbloqueado ? sql`where ${desbloqueado}` : sql``}
+          on conflict (laudo_id) do update set
+            regra_id = excluded.regra_id,
+            subregra_id = excluded.subregra_id,
+            fatura = excluded.fatura,
+            calculado_em = excluded.calculado_em
+        `);
+      }
+    });
   }
 
   async atualizarCompetencias(mudancas: { id: string; competencia: string }[], agora: Date) {

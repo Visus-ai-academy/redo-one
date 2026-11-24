@@ -16,3 +16,10 @@ export const FILA_INGESTAO = 'ingestao';
  * `{ clienteIds: string[] | null }` (nulo = todos). Na `FILA_INGESTAO`, em série com a importação.
  */
 export const TAREFA_RECALCULAR_COMPETENCIAS = 'ingestao.recalcular-competencias';
+
+/**
+ * Tarefa que reclassifica a tipificação dos laudos das competências abertas depois que a
+ * configuração muda; payload `{ clienteIds: string[] | null }` (os principais; nulo = todos). Na
+ * `FILA_INGESTAO`, em série com a importação (que também tipifica).
+ */
+export const TAREFA_RECLASSIFICAR_TIPIFICACAO = 'ingestao.reclassificar-tipificacao';

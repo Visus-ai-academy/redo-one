@@ -8,6 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
+import type { Tipificacao } from '../../../faturamento/domain/tipificacao';
 import type { JanelaLaudos } from '../../application/ports/laudos.repository';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
 import { DrizzleLaudosRepository } from './drizzle-laudos.repository';
@@ -23,6 +24,7 @@ const laudo = (identidade: string, campos: Partial<LaudoPreparado> = {}): LaudoP
   origem: 'normal',
   empresaOrigem: 'CLINICA X',
   clienteId: null,
+  unidadeId: null,
   accessionNumber: 'A1',
   pacienteChave: 'p',
   estudo: 'TC TORAX',
@@ -79,7 +81,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table laudos, totais_laudos_dia, importacoes, arquivos, medicos cascade`,
+      sql`truncate table laudos, totais_laudos_dia, importacoes, arquivos, medicos, regras_tipificacao, subregras_tipificacao cascade`,
     );
     const [arquivo] = await db
       .insert(schema.arquivos)
@@ -103,6 +105,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     linhasBrutas: new Map(),
     pacientes: new Map(),
     idsMedico: new Map(),
+    classificacoes: new Map(),
   };
 
   it('grava os novos com a linha crua e devolve-os na janela', async () => {
@@ -226,6 +229,77 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     // O laudo não muda de hash nem ganha linha crua.
     expect((await repo.existentesNaJanela(janela)).get('a')?.hashConteudo).toBe('h-a');
     expect(await db.select().from(schema.laudosLinhasBrutas)).toEqual([]);
+  });
+
+  it('grava a tipificação dos laudos da janela, só a que mudou, e nunca na competência bloqueada', async () => {
+    const [co, nc] = await db
+      .insert(schema.regrasTipificacao)
+      .values([
+        { nome: 'CO', faturaSemSubregra: true, padrao: true },
+        { nome: 'NC', faturaSemSubregra: false },
+      ])
+      .returning();
+    const [ncnf] = await db
+      .insert(schema.subregrasTipificacao)
+      .values({ regraId: nc?.id ?? '', nome: 'NC-NF', fatura: false })
+      .returning();
+    const CO: Tipificacao = { regraId: co?.id ?? '', subregraId: null, fatura: true };
+    const NCNF = { regraId: nc?.id ?? '', subregraId: ncnf?.id ?? '', fatura: false };
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      {
+        ...vazio,
+        inserir: [laudo('a'), laudo('b', { competencia: '2026-09' })],
+        classificacoes: new Map([
+          ['a', CO],
+          ['b', CO],
+        ]),
+      },
+      agora,
+    );
+    const ler = async () =>
+      (
+        await db.execute<{ identidade: string; fatura: boolean; calculado_em: string }>(sql`
+          select l.identidade, c.fatura, c.calculado_em from classificacoes_laudo c
+          join laudos l on l.id = c.laudo_id order by l.identidade`)
+      ).rows;
+    expect((await ler()).map((r) => [r.identidade, r.fatura])).toEqual([
+      ['a', true],
+      ['b', true],
+    ]);
+
+    // Depois: "b" mudou; "a" igual não é regravada; a de 2026-09 (agora fechada) não muda.
+    const depois = new Date('2026-10-08T12:00:00Z');
+    await repo.aplicar(
+      importacaoId,
+      { ...janela, competenciasBloqueadas: ['2026-09'] },
+      {
+        ...vazio,
+        classificacoes: new Map([
+          ['a', CO],
+          ['b', NCNF],
+        ]),
+      },
+      depois,
+    );
+    const linhas = await ler();
+    expect(
+      linhas.map((r) => [r.identidade, r.fatura, new Date(r.calculado_em).toISOString()]),
+    ).toEqual([
+      ['a', true, agora.toISOString()],
+      ['b', true, agora.toISOString()],
+    ]);
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, classificacoes: new Map([['b', NCNF]]) },
+      depois,
+    );
+    expect((await ler()).map((r) => [r.identidade, r.fatura])).toEqual([
+      ['a', true],
+      ['b', false],
+    ]);
   });
 
   it('a janela filtra origem, dias e empresas, e traz também os de competência bloqueada', async () => {
@@ -510,6 +584,47 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
 
       expect(lidos).toHaveLength(4);
       expect(lidos.find((l) => l.clienteId === null)).toBeDefined();
+    });
+
+    it('reclassificação: lê com a tipificação gravada e grava unidade e tipificação fora das bloqueadas', async () => {
+      const [co] = await db
+        .insert(schema.regrasTipificacao)
+        .values({ nome: 'CO', faturaSemSubregra: true, padrao: true })
+        .returning();
+      const CO = { regraId: co?.id ?? '', subregraId: null, fatura: true };
+      const identidades = await idsPorIdentidade();
+      const id = (identidade: string) =>
+        [...identidades].find(([, i]) => i === identidade)?.[0] ?? '';
+      const ler = () =>
+        repo.lerParaReclassificacao({
+          clienteIds: [clienteX],
+          competenciasBloqueadas: [],
+          depoisDe: null,
+          limite: 10,
+        });
+
+      const antes = await ler();
+      expect(antes.map((l) => [identidades.get(l.id), l.tipificacao]).sort()).toEqual([
+        ['x1', null],
+        ['x2', null],
+      ]);
+      expect(antes[0]).toMatchObject({
+        empresaOrigem: 'CLINICA X',
+        clienteId: clienteX,
+        unidadeId: null,
+      });
+
+      await repo.gravarReclassificacao(
+        [
+          { id: id('x1'), unidadeId: clienteY, tipificacao: CO },
+          { id: id('x2'), unidadeId: clienteY, tipificacao: CO },
+        ],
+        ['2026-09'],
+        new Date('2026-11-24T12:00:00Z'),
+      );
+      const depois = new Map((await ler()).map((l) => [identidades.get(l.id), l]));
+      expect(depois.get('x1')).toMatchObject({ unidadeId: clienteY, tipificacao: CO });
+      expect(depois.get('x2')).toMatchObject({ unidadeId: null, tipificacao: null });
     });
 
     it('atualiza só a competência dos laudos indicados', async () => {

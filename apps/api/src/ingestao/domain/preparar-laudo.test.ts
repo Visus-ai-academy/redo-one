@@ -21,7 +21,9 @@ const catalogo: RetratoCatalogo = {
 const cadastros: CadastrosIngestao = {
   catalogo,
   prioridades: new Map([['rotina', 'pri-rotina']]),
-  resolverCliente: (empresa) => (empresa === 'CLINICA X' ? 'c-x' : null),
+  resolverCliente: (empresa) =>
+    empresa === 'CLINICA X' ? 'c-x' : empresa === 'CLINICA X_UNIDADE' ? 'c-x' : null,
+  resolverUnidade: (empresa) => (empresa === 'CLINICA X_UNIDADE' ? 'c-x-unidade' : null),
   // Ana tem a conta 45 na MobileMed; Bia, a 46.
   resolverMedico: (nome, idMobilemed) =>
     ({ 45: 'm-ana', 46: 'm-bia' })[idMobilemed ?? 0] ?? (nome === 'Dr. Ana Souza' ? 'm-ana' : null),
@@ -56,6 +58,29 @@ const linha = (campos: Partial<LinhaLaudo> = {}): LinhaLaudo => ({
 });
 
 describe('prepararLaudo', () => {
+  it('a empresa que casa com uma unidade grava o principal e a unidade de origem', () => {
+    const daUnidade = prepararLaudo(
+      linha({ empresa: 'CLINICA X_UNIDADE' }),
+      'normal',
+      cadastros,
+      pseudonimo,
+      cortes,
+    ).laudo;
+    expect(daUnidade).toMatchObject({ clienteId: 'c-x', unidadeId: 'c-x-unidade' });
+    const comum = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes).laudo;
+    expect(comum).toMatchObject({ clienteId: 'c-x', unidadeId: null });
+    // A unidade entra no hash: mudar a unidade de origem regrava o laudo.
+    expect(daUnidade.hashConteudo).not.toBe(
+      prepararLaudo(
+        linha({ empresa: 'CLINICA X_UNIDADE' }),
+        'normal',
+        { ...cadastros, resolverUnidade: () => null },
+        pseudonimo,
+        cortes,
+      ).laudo.hashConteudo,
+    );
+  });
+
   it('resolve os cadastros e calcula volume, dia, competência e identidade', () => {
     const { laudo, pendencias } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes);
 

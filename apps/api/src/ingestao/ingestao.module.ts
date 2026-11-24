@@ -55,11 +55,13 @@ import {
   RELATORIO_MOBILEMED,
   type RelatorioMobileMed,
 } from './application/ports/relatorio-mobilemed';
+import { type LeitorTipificacao, TIPIFICACAO_LAUDOS } from './application/ports/tipificacao-laudos';
 import {
   TAREFA_AGENDAR_MOBILEMED,
   TAREFA_EXPURGAR_LINHAS_BRUTAS,
   TAREFA_IMPORTAR_LAUDOS,
   TAREFA_RECALCULAR_COMPETENCIAS,
+  TAREFA_RECLASSIFICAR_TIPIFICACAO,
 } from './application/tarefas';
 import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
@@ -70,6 +72,7 @@ import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-br
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
 import { LerPacientesDosLaudos } from './application/use-cases/ler-pacientes-dos-laudos';
 import { RecalcularCompetencias } from './application/use-cases/recalcular-competencias';
+import { ReclassificarTipificacao } from './application/use-cases/reclassificar-tipificacao';
 import { TriarAviso } from './application/use-cases/triar-aviso';
 import {
   AvisosController,
@@ -106,7 +109,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
 
 /** Contexto `ingestao` (hexagonal): importação dos laudos da MobileMed. */
 @Module({
-  // Competências bloqueadas e cortes vêm do `faturamento`.
+  // Competências bloqueadas, cortes e tipificação vêm do `faturamento`.
   imports: [FaturamentoModule],
   controllers: [
     ImportacoesController,
@@ -225,6 +228,23 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
       ) => new RecalcularCompetencias(laudos, competencias, cortes, () => new Date()),
     },
     {
+      provide: ReclassificarTipificacao,
+      inject: [LAUDOS_REPOSITORY, COMPETENCIAS_BLOQUEADAS, CADASTROS_INGESTAO, TIPIFICACAO_LAUDOS],
+      useFactory: (
+        laudos: LaudosRepository,
+        competencias: CompetenciasBloqueadas,
+        cadastros: LeitorCadastrosIngestao,
+        tipificacao: LeitorTipificacao,
+      ) =>
+        new ReclassificarTipificacao(
+          laudos,
+          competencias,
+          cadastros,
+          tipificacao,
+          () => new Date(),
+        ),
+    },
+    {
       provide: CriarImportacaoMobileMed,
       inject: [IMPORTACOES_REPOSITORY, PARAMETROS_INGESTAO_REPOSITORY, ConfigService],
       useFactory: (
@@ -248,6 +268,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
         CADASTROS_INGESTAO,
         COMPETENCIAS_BLOQUEADAS,
         CORTES_COMPETENCIA,
+        TIPIFICACAO_LAUDOS,
         LAUDOS_REPOSITORY,
         AVISOS_CADASTRO_REPOSITORY,
         PARAMETROS_INGESTAO_REPOSITORY,
@@ -261,6 +282,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
         cadastros: LeitorCadastrosIngestao,
         competencias: CompetenciasBloqueadas,
         cortes: LeitorCortesCompetencia,
+        tipificacao: LeitorTipificacao,
         laudos: LaudosRepository,
         avisos: AvisosCadastroRepository,
         parametros: ParametrosIngestaoRepository,
@@ -274,6 +296,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
           cadastros,
           competencias,
           cortes,
+          tipificacao,
           laudos,
           avisos,
           parametros,
@@ -292,6 +315,7 @@ export class IngestaoModule implements OnModuleInit {
     private readonly expurgarLinhasBrutas: ExpurgarLinhasBrutas,
     private readonly criarImportacaoMobileMed: CriarImportacaoMobileMed,
     private readonly recalcularCompetencias: RecalcularCompetencias,
+    private readonly reclassificarTipificacao: ReclassificarTipificacao,
   ) {}
 
   onModuleInit() {
@@ -306,6 +330,13 @@ export class IngestaoModule implements OnModuleInit {
         ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string'));
       if (!valido) throw new Error(`${TAREFA_RECALCULAR_COMPETENCIAS}: payload inválido`);
       await this.recalcularCompetencias.executar({ clienteIds: ids as string[] | null });
+    });
+    this.registro.registrar(TAREFA_RECLASSIFICAR_TIPIFICACAO, async (payload) => {
+      const ids = (payload as { clienteIds?: unknown } | null)?.clienteIds;
+      const valido =
+        ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string'));
+      if (!valido) throw new Error(`${TAREFA_RECLASSIFICAR_TIPIFICACAO}: payload inválido`);
+      await this.reclassificarTipificacao.executar({ clienteIds: ids as string[] | null });
     });
     this.registro.registrar(TAREFA_EXPURGAR_LINHAS_BRUTAS, async () => {
       await this.expurgarLinhasBrutas.executar();

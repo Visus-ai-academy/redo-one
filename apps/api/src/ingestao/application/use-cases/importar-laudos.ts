@@ -27,6 +27,7 @@ import {
 import type { ParametrosIngestaoRepository } from '../ports/parametros-ingestao.repository';
 import type { Pseudonimizador } from '../ports/pseudonimizador';
 import { type RelatorioMobileMed, RelatorioMobileMedError } from '../ports/relatorio-mobilemed';
+import type { LeitorTipificacao } from '../ports/tipificacao-laudos';
 
 /**
  * No compartilhamento da MobileMed, só as unidades de destino configuradas (o RPA marcava
@@ -60,6 +61,7 @@ export class ImportarLaudos {
     private readonly cadastros: LeitorCadastrosIngestao,
     private readonly competencias: CompetenciasBloqueadas,
     private readonly cortesCompetencia: LeitorCortesCompetencia,
+    private readonly tipificacao: LeitorTipificacao,
     private readonly laudos: LaudosRepository,
     private readonly avisos: AvisosCadastroRepository,
     private readonly parametros: ParametrosIngestaoRepository,
@@ -99,10 +101,11 @@ export class ImportarLaudos {
             parametros.mobilemedCompartilhamentoUnidades,
           )
         : await this.leitor.ler(await this.armazenamento.ler(importacao.arquivoChave));
-    const [cadastros, bloqueadas, cortes] = await Promise.all([
+    const [cadastros, bloqueadas, cortes, tipificar] = await Promise.all([
       this.cadastros.carregar(),
       this.competencias.listar(),
       this.cortesCompetencia.carregar(),
+      this.tipificacao.carregar(),
     ]);
     const competenciasBloqueadas = new Set(bloqueadas);
     const origem = planilha.formato === 'compartilhamento' ? 'compartilhamento' : 'normal';
@@ -214,6 +217,10 @@ export class ImportarLaudos {
         ),
         pacientes: new Map(
           plano.pacientes.flatMap((l) => (l.paciente ? [[l.identidade, l.paciente] as const] : [])),
+        ),
+        // Todos os da janela: a configuração mudada chega também aos laudos que não mudaram.
+        classificacoes: new Map(
+          tipificar ? preparados.map((l) => [l.identidade, tipificar(l)] as const) : [],
         ),
       },
       this.agora(),
