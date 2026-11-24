@@ -188,7 +188,8 @@ export async function lerLegado(url: string): Promise<{
         "importacaoTravadaPor" from fechamentos_periodo order by competencia`,
     );
     const [exclusao] = await ler<{ faturamentoExclusaoFiscal: string[] | null }>(
-      'select "faturamentoExclusaoFiscal" from configuracoes order by ctid limit 1',
+      // A linha única, como o dashboards-one a lê (`configuracao.findUnique({ id: 'default' })`).
+      `select "faturamentoExclusaoFiscal" from configuracoes where id = 'default'`,
     );
     const dadosFiscais: LegadoDadosFiscais = {
       clientes: await ler(

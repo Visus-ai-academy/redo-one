@@ -118,6 +118,9 @@ async function migrarLegado() {
     console.log('\nExclusão fiscal (nome do dashboards-one → cliente no redo-one):');
     for (const e of dadosFiscais.exclusaoFiscal)
       console.log(`  ${e.nome} → ${e.cliente ?? 'não resolveu (fica de fora)'}`);
+    console.log(
+      `  sem ficha no dashboards-one (exclusão fiscal desmarcada): ${dadosFiscais.desmarcarExclusaoFiscal.length}`,
+    );
     console.log('\nConfiguração do robô (global, regras da frente, prioridade do cliente):');
     for (const [chave, n] of Object.entries(configuracaoDistribuicao.resumo).sort()) {
       console.log(`  ${chave.padEnd(34)} ${String(n).padStart(5)}`);

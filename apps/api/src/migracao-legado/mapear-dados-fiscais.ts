@@ -24,6 +24,11 @@ type Linha = typeof clientesDadosFiscais.$inferInsert;
 export interface DadosFiscaisMigrados {
   tabelas: { clientesDadosFiscais: Linha[] };
   avisos: Aviso[];
+  /**
+   * Clientes do cadastro sem linha nesta carga (os principais criados na carga): a gravação só
+   * desmarca a exclusão fiscal deles, que pode ter vindo de uma carga anterior; o resto fica.
+   */
+  desmarcarExclusaoFiscal: string[];
   /** Cada nome da exclusão fiscal e o cliente a que chegou (nulo = não resolveu). */
   exclusaoFiscal: { nome: string; cliente: string | null }[];
 }
@@ -99,8 +104,11 @@ export function mapearDadosFiscais(
     const clienteId = idDoLegado('clientes', f.id);
     if (!nomeDe.has(clienteId)) continue;
     const emailsNf = separarEmails(f.emailEnvioNf);
-    for (const e of emailsNf.filter((x) => !EMAIL.test(x)))
-      avisar(clienteId, `E-mail da NF "${e}" fora do formato: ${CORRIGIR}`);
+    // Só a posição: o e-mail é dado de contato e o relatório vai para o terminal.
+    emailsNf.forEach((e, i) => {
+      if (!EMAIL.test(e))
+        avisar(clienteId, `O ${i + 1}º e-mail da NF está fora do formato: ${CORRIGIR}`);
+    });
     const { cep, valido } = cepDo(f.cep);
     if (!valido) avisar(clienteId, `CEP "${cep}" sem 8 dígitos: ${CORRIGIR}`);
     linhas.set(clienteId, {
@@ -157,5 +165,10 @@ export function mapearDadosFiscais(
     linhas.set(clienteId, linha);
   }
 
-  return { tabelas: { clientesDadosFiscais: [...linhas.values()] }, avisos, exclusaoFiscal };
+  return {
+    tabelas: { clientesDadosFiscais: [...linhas.values()] },
+    desmarcarExclusaoFiscal: cadastro.clientes.map((c) => c.id).filter((id) => !linhas.has(id)),
+    avisos,
+    exclusaoFiscal,
+  };
 }

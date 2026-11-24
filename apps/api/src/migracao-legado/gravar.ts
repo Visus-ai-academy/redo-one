@@ -178,11 +178,20 @@ export async function gravarMigracao(
       await gravarConfiguracaoDistribuicao(tx, configuracaoDistribuicao);
     if (competencias)
       await upsert(tx, schema.competencias, competencias.tabelas.competencias, ['competencia']);
-    // Sobrescreve o que mudou no redo-one: o dashboards-one é a fonte até a virada.
-    if (dadosFiscais)
+    // Sobrescreve o que mudou no redo-one: o dashboards-one é a fonte até a virada. Quem não tem
+    // linha nesta carga (principal criado na carga) só perde a exclusão fiscal que não está mais lá.
+    if (dadosFiscais) {
       await upsert(tx, schema.clientesDadosFiscais, dadosFiscais.tabelas.clientesDadosFiscais, [
         'clienteId',
       ]);
+      if (dadosFiscais.desmarcarExclusaoFiscal.length > 0)
+        await tx
+          .update(schema.clientesDadosFiscais)
+          .set({ exclusaoFiscal: false })
+          .where(
+            inArray(schema.clientesDadosFiscais.clienteId, dadosFiscais.desmarcarExclusaoFiscal),
+          );
+    }
   });
 }
 

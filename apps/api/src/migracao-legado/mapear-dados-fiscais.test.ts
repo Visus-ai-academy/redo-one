@@ -138,7 +138,7 @@ describe('mapearDadosFiscais', () => {
     ]);
   });
 
-  it('e-mail fora do formato vem como está, com aviso', () => {
+  it('e-mail fora do formato vem como está, com aviso que diz a posição, sem o e-mail (dado de contato)', () => {
     const { tabelas, avisos } = mapear([ficha({ emailEnvioNf: 'ok@x.com, financeiro' })]);
     expect(tabelas.clientesDadosFiscais[0]?.emailsNf).toEqual(['ok@x.com', 'financeiro']);
     expect(avisos).toEqual([
@@ -146,7 +146,7 @@ describe('mapearDadosFiscais', () => {
         tabela: 'clientes_dados_fiscais',
         item: 'CLINICA RADIOCOR',
         motivo:
-          'E-mail da NF "financeiro" fora do formato: veio como está; a tela pede para corrigir ao salvar.',
+          'O 2º e-mail da NF está fora do formato: veio como está; a tela pede para corrigir ao salvar.',
       },
     ]);
   });
@@ -215,5 +215,19 @@ describe('mapearDadosFiscais', () => {
     expect(tabelas.clientesDadosFiscais).toEqual([
       expect.objectContaining({ clienteId: principal, exclusaoFiscal: true, emailsNf: [] }),
     ]);
+  });
+
+  it('quem a carga não traz linha (principal criado na carga) tem a exclusão fiscal desmarcada', () => {
+    const principal = idDoLegado('clientes-principal', 'prn');
+    const c = cadastro();
+    c.clientes.push({
+      id: principal,
+      nome: 'PRN',
+      chaveNormalizada: 'prn',
+      nomeFantasia: 'PRN',
+      unificadoEmId: null,
+    });
+    expect(mapear([ficha()], [], c).desmarcarExclusaoFiscal).toEqual([ID2, principal]);
+    expect(mapear([ficha()], ['PRN'], c).desmarcarExclusaoFiscal).toEqual([ID2]);
   });
 });

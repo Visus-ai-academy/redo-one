@@ -401,6 +401,34 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(await ler()).toEqual(primeira);
   });
 
+  it('o principal que saiu da exclusão fiscal do dashboards-one é desmarcado; o resto dele fica', async () => {
+    const migrar = (exclusaoFiscal: string[]) =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mapearDadosFiscais({ clientes: [], exclusaoFiscal }, catalogo.tabelas),
+      );
+    await migrar(['PRN']);
+    const principal = idDoLegado('clientes-principal', 'prn');
+    await db
+      .update(schema.clientesDadosFiscais)
+      .set({ emailsNf: ['nf@prn.com.br'] })
+      .where(sql`${schema.clientesDadosFiscais.clienteId} = ${principal}`);
+    await migrar([]);
+    expect(
+      (
+        await db.execute(
+          sql`select emails_nf, exclusao_fiscal from clientes_dados_fiscais where cliente_id = ${principal}`,
+        )
+      ).rows,
+    ).toEqual([{ emails_nf: ['nf@prn.com.br'], exclusao_fiscal: false }]);
+  });
+
   it('grava a escala com cobertura e recortes; rodar de novo não duplica nem sobrescreve o tipo editado', async () => {
     const contarEscala = async () => {
       const r = await db.execute<{ t: string; n: number }>(sql`
