@@ -18,6 +18,17 @@ export class IdMobilemedEmUsoError extends ErroDeDominio {
   }
 }
 
+/** A conta não pode ser a principal e uma das outras contas do mesmo médico ao mesmo tempo. */
+export class IdMobilemedEmOutrasContasError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+
+  constructor() {
+    super(
+      'Esse ID está em Outras contas deste médico. Remova-o de lá antes de torná-lo a conta principal.',
+    );
+  }
+}
+
 export class NivelInexistenteError extends ErroDeDominio {
   readonly tipo = 'invalido';
 

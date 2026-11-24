@@ -4,6 +4,7 @@
 */
 
 import type { AliasMedicoItemDto } from './AliasMedicoItemDto'
+import type { OutraContaMedicoItemDto } from './OutraContaMedicoItemDto'
 import type { ReferenciaDto } from './ReferenciaDto'
 
 export const medicoDetalheDtoFuncaoEnum = {
@@ -39,5 +40,10 @@ export type MedicoDetalheDto = {
   dataInicioVinculo: string | null;
   observacoes: string | null;
   aliases: AliasMedicoItemDto[];
+  /**
+   * @description Contas além da principal.
+   * @type array
+   */
+  outrasContas: OutraContaMedicoItemDto[];
   equipes: ReferenciaDto[];
 };

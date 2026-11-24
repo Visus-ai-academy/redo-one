@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PERMISSOES_EXIGIDAS } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
 import type { AliasesMedicoService } from '../aliases/aliases-medico.service';
+import type { OutrasContasMedicoService } from '../outras-contas/outras-contas-medico.service';
 import type { PagamentoMedicoService } from '../pagamento/pagamento-medico.service';
 import { MedicosController } from './medicos.controller';
 import type { MedicosService } from './medicos.service';
@@ -23,10 +24,37 @@ describe('MedicosController', () => {
       excluir: 'medicos.excluir',
       criarAlias: 'medicos.criar',
       excluirAlias: 'medicos.excluir',
+      adicionarOutraConta: 'medicos.editar',
+      removerOutraConta: 'medicos.editar',
     } as const;
     for (const [m, chave] of Object.entries(esperado)) {
       expect(exigidas(m as keyof typeof esperado)).toEqual([chave]);
     }
+  });
+
+  it('outras contas: adiciona e remove em nome de quem está logado', async () => {
+    const contas = {
+      adicionar: vi.fn(async () => 'c-1'),
+      remover: vi.fn(async () => undefined),
+    };
+    const controller = new MedicosController(
+      {} as MedicosService,
+      {} as AliasesMedicoService,
+      {} as PagamentoMedicoService,
+      contas as unknown as OutrasContasMedicoService,
+    );
+    const ator = { usuarioId: 'u-ana' } as PrincipalUsuario;
+
+    expect(
+      await controller.adicionarOutraConta(ator, 'm-1', { idMobilemed: 19053, observacao: null }),
+    ).toEqual({ id: 'c-1' });
+    await controller.removerOutraConta(ator, 'm-1', 'c-1');
+
+    expect(contas.adicionar).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, 'm-1', {
+      idMobilemed: 19053,
+      observacao: null,
+    });
+    expect(contas.remover).toHaveBeenCalledWith({ usuarioId: 'u-ana' }, 'm-1', 'c-1');
   });
 
   it('pagamento tem permissão própria para ver e para editar', () => {
@@ -40,6 +68,7 @@ describe('MedicosController', () => {
       {} as MedicosService,
       {} as AliasesMedicoService,
       pagamento as unknown as PagamentoMedicoService,
+      {} as OutrasContasMedicoService,
     );
 
     await controller.obterPagamento({ usuarioId: 'u-ana' } as PrincipalUsuario, 'm-1');

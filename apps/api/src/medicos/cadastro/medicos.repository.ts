@@ -37,6 +37,19 @@ export interface Referencia {
   nome: string;
 }
 
+/** Outra conta do médico na MobileMed, além da principal (`idMobilemed`). */
+export interface OutraContaMobilemed {
+  id: string;
+  idMobilemed: number;
+  observacao: string | null;
+  criadoEm: Date;
+}
+
+/** Quem tem a conta: como principal (`medicos.id_mobilemed`) ou como outra conta. */
+export interface DonoDaConta extends Referencia {
+  principal: boolean;
+}
+
 export interface MedicoResumo {
   id: string;
   nome: string;
@@ -54,6 +67,8 @@ export interface MedicoDetalhe extends Omit<DadosMedico, 'nivelId'> {
   id: string;
   nivel: Referencia | null;
   aliases: AliasMedico[];
+  /** Outras contas na MobileMed (a principal é `idMobilemed`). */
+  outrasContas: OutraContaMobilemed[];
   equipes: Referencia[];
 }
 
@@ -70,7 +85,8 @@ export interface MedicosRepository {
   buscar(id: string): Promise<MedicoDetalhe | null>;
   /** Médico cujo nome normalizado é essa chave. */
   buscarPorChave(chaveNormalizada: string): Promise<Referencia | null>;
-  buscarPorIdMobilemed(idMobilemed: number): Promise<Referencia | null>;
+  /** O médico que tem a conta, como principal ou como outra conta. */
+  buscarPorIdMobilemed(idMobilemed: number): Promise<DonoDaConta | null>;
   criar(dados: DadosMedico & { chaveNormalizada: string }): Promise<string>;
   atualizar(id: string, dados: DadosMedico & { chaveNormalizada: string }): Promise<void>;
   /** `false` quando outro cadastro referencia o médico. Apelidos, pagamento e equipes saem junto. */

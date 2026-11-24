@@ -12,7 +12,12 @@ import type {
   FiltroMedicos,
   MedicoResumo,
   MedicosRepository,
+  OutraContaMobilemed,
 } from '../cadastro/medicos.repository';
+import type {
+  NovaOutraConta,
+  OutrasContasMedicoRepository,
+} from '../outras-contas/outras-contas-medico.repository';
 import type {
   DadosPagamento,
   PagamentoMedicoRepository,
@@ -24,12 +29,15 @@ const contem = (valor: string | null, busca: string) =>
 type MedicoGuardado = DadosMedico & { id: string; chaveNormalizada: string };
 
 /** Médicos em memória para os testes dos services. */
-export class InMemoryMedicosRepository implements MedicosRepository, AliasesMedicoRepository {
+export class InMemoryMedicosRepository
+  implements MedicosRepository, AliasesMedicoRepository, OutrasContasMedicoRepository
+{
   readonly medicos = new Map<string, MedicoGuardado>();
   readonly aliases = new Map<
     string,
     AliasMedico & { medicoId: string; chaveNormalizada: string }
   >();
+  readonly outrasContas = new Map<string, OutraContaMobilemed & { medicoId: string }>();
   /** Equipes de cada médico (id → nomes), para o detalhe. */
   readonly equipesDoMedico = new Map<string, { id: string; nome: string }[]>();
   /** Ids referenciados por outro cadastro: `excluir` recusa. */
@@ -91,6 +99,10 @@ export class InMemoryMedicosRepository implements MedicosRepository, AliasesMedi
       ...resto,
       nivel: await this.nivelDe(nivelId),
       aliases: this.aliasesDe(id),
+      outrasContas: [...this.outrasContas.values()]
+        .filter((c) => c.medicoId === id)
+        .sort((a, b) => a.idMobilemed - b.idMobilemed)
+        .map(({ medicoId: _, ...c }) => c),
       equipes: this.equipesDoMedico.get(id) ?? [],
     };
   }
@@ -102,7 +114,10 @@ export class InMemoryMedicosRepository implements MedicosRepository, AliasesMedi
 
   async buscarPorIdMobilemed(idMobilemed: number) {
     const m = [...this.medicos.values()].find((x) => x.idMobilemed === idMobilemed);
-    return m ? { id: m.id, nome: m.nome } : null;
+    if (m) return { id: m.id, nome: m.nome, principal: true };
+    const outra = [...this.outrasContas.values()].find((c) => c.idMobilemed === idMobilemed);
+    const dono = outra && this.medicos.get(outra.medicoId);
+    return dono ? { id: dono.id, nome: dono.nome, principal: false } : null;
   }
 
   async criar(dados: DadosMedico & { chaveNormalizada: string }) {
@@ -121,7 +136,27 @@ export class InMemoryMedicosRepository implements MedicosRepository, AliasesMedi
     for (const [aliasId, alias] of this.aliases) {
       if (alias.medicoId === id) this.aliases.delete(aliasId);
     }
+    for (const [contaId, conta] of this.outrasContas) {
+      if (conta.medicoId === id) this.outrasContas.delete(contaId);
+    }
     return true;
+  }
+
+  async criarOutraConta(medicoId: string, conta: NovaOutraConta) {
+    const id = randomUUID();
+    this.outrasContas.set(id, { ...conta, id, medicoId, criadoEm: new Date() });
+    return id;
+  }
+
+  async buscarOutraContaDoMedico(medicoId: string, contaId: string) {
+    const conta = this.outrasContas.get(contaId);
+    if (!conta || conta.medicoId !== medicoId) return null;
+    const { medicoId: _, ...resto } = conta;
+    return resto;
+  }
+
+  async excluirOutraConta(contaId: string) {
+    this.outrasContas.delete(contaId);
   }
 
   async buscarAlias(chave: string) {

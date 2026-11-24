@@ -25,6 +25,7 @@ import { IdCriadoDto } from '../../catalogo/comum/dto';
 import { Permissao, PrincipalAtual } from '../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../identidade/principal';
 import { AliasesMedicoService } from '../aliases/aliases-medico.service';
+import { OutrasContasMedicoService } from '../outras-contas/outras-contas-medico.service';
 import { PagamentoMedicoDto } from '../pagamento/dto/pagamento.dto';
 import { PagamentoMedicoService } from '../pagamento/pagamento-medico.service';
 import {
@@ -32,6 +33,7 @@ import {
   ListarMedicosDto,
   MedicoDetalheDto,
   MedicoDto,
+  OutraContaMedicoDto,
   PaginaMedicosDto,
 } from './dto/medico.dto';
 import { MedicosService } from './medicos.service';
@@ -43,6 +45,7 @@ export class MedicosController {
     private readonly medicos: MedicosService,
     private readonly aliases: AliasesMedicoService,
     private readonly pagamento: PagamentoMedicoService,
+    private readonly outrasContas: OutrasContasMedicoService,
   ) {}
 
   @Get()
@@ -130,6 +133,33 @@ export class MedicosController {
     @Param('aliasId', ParseUUIDPipe) aliasId: string,
   ): Promise<void> {
     return this.aliases.excluir({ usuarioId: ator.usuarioId }, id, aliasId);
+  }
+
+  @Post(':id/outras-contas')
+  @Permissao('medicos.editar')
+  @ApiCreatedResponse({ type: IdCriadoDto })
+  @ApiBadRequestResponse({ description: 'Id que não é inteiro positivo.' })
+  @ApiConflictResponse({ description: 'Conta já é deste médico ou de outro (principal ou outra).' })
+  @ApiNotFoundResponse()
+  async adicionarOutraConta(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() corpo: OutraContaMedicoDto,
+  ): Promise<IdCriadoDto> {
+    return { id: await this.outrasContas.adicionar({ usuarioId: ator.usuarioId }, id, corpo) };
+  }
+
+  @Delete(':id/outras-contas/:contaId')
+  @Permissao('medicos.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse()
+  removerOutraConta(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('contaId', ParseUUIDPipe) contaId: string,
+  ): Promise<void> {
+    return this.outrasContas.remover({ usuarioId: ator.usuarioId }, id, contaId);
   }
 
   @Get(':id/pagamento')

@@ -717,6 +717,11 @@ export const designacoes = pgTable(
      * dia). A execução só troca se ele ainda estiver com esse médico; o robô não o devolve a ele.
      */
     recolhidoDeId: uuid('recolhido_de_id').references(() => medicos.id, { onDelete: 'set null' }),
+    /**
+     * A conta MobileMed com que o exame estava quando foi recolhido (a lida na fila, que pode ser
+     * uma das outras contas do médico): a troca só acontece se ele segue nela. Null nas antigas.
+     */
+    recolhidoDeIdMobilemed: integer('recolhido_de_id_mobilemed'),
     /** Por que foi recolhido: `turno_encerrado` ou `ausencia`. */
     motivoRecolhimento: text('motivo_recolhimento').$type<'turno_encerrado' | 'ausencia'>(),
     /** Médicos que podiam laudar o exame na leitura, sem chave estrangeira (é histórico). */

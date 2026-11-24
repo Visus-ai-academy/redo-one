@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { aliasMedicoItemDtoSchema } from './aliasMedicoItemDtoSchema'
+import { outraContaMedicoItemDtoSchema } from './outraContaMedicoItemDtoSchema'
 import { referenciaDtoSchema } from './referenciaDtoSchema'
 
 export const medicoDetalheDtoSchema = z.object({
@@ -23,6 +24,7 @@ export const medicoDetalheDtoSchema = z.object({
   dataInicioVinculo: z.iso.date().nullable(),
   observacoes: z.string().nullable(),
   aliases: z.array(aliasMedicoItemDtoSchema),
+  outrasContas: z.array(outraContaMedicoItemDtoSchema).describe('Contas além da principal.'),
   equipes: z.array(referenciaDtoSchema),
 })
 

@@ -9,6 +9,7 @@ import {
   equipesMembros,
   medicos,
   medicosAliases,
+  medicosContasMobilemed,
   niveisMedico,
 } from '../../database/schema';
 import type {
@@ -16,6 +17,10 @@ import type {
   NovoAliasMedico,
 } from '../aliases/aliases-medico.repository';
 import { normalizarNomeMedico } from '../comum/nome-medico';
+import type {
+  NovaOutraConta,
+  OutrasContasMedicoRepository,
+} from '../outras-contas/outras-contas-medico.repository';
 import type {
   DadosMedico,
   FiltroMedicos,
@@ -39,8 +44,17 @@ const camposAlias = {
   observacoes: medicosAliases.observacoes,
 };
 
+const camposConta = {
+  id: medicosContasMobilemed.id,
+  idMobilemed: medicosContasMobilemed.idMobilemed,
+  observacao: medicosContasMobilemed.observacao,
+  criadoEm: medicosContasMobilemed.criadoEm,
+};
+
 @Injectable()
-export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedicoRepository {
+export class DrizzleMedicosRepository
+  implements MedicosRepository, AliasesMedicoRepository, OutrasContasMedicoRepository
+{
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async listar(filtro: FiltroMedicos) {
@@ -54,7 +68,12 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
           nome ? ilike(medicos.chaveNormalizada, contem(nome)) : undefined,
           eq(medicos.crm, filtro.busca),
           digitos !== null && digitos <= 2_147_483_647
-            ? eq(medicos.idMobilemed, digitos)
+            ? or(
+                eq(medicos.idMobilemed, digitos),
+                sql`exists (select 1 from ${medicosContasMobilemed}
+                  where ${medicosContasMobilemed.medicoId} = ${medicos.id}
+                  and ${medicosContasMobilemed.idMobilemed} = ${digitos})`,
+              )
             : undefined,
         ),
       );
@@ -122,12 +141,17 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
       .limit(1);
     if (!medico) return null;
 
-    const [aliases, equipesDoMedico] = await Promise.all([
+    const [aliases, outrasContas, equipesDoMedico] = await Promise.all([
       this.db
         .select(camposAlias)
         .from(medicosAliases)
         .where(eq(medicosAliases.medicoId, id))
         .orderBy(asc(medicosAliases.nomeOrigem)),
+      this.db
+        .select(camposConta)
+        .from(medicosContasMobilemed)
+        .where(eq(medicosContasMobilemed.medicoId, id))
+        .orderBy(asc(medicosContasMobilemed.idMobilemed)),
       this.db
         .select({ id: equipes.id, nome: equipes.nome })
         .from(equipesMembros)
@@ -135,7 +159,7 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
         .where(eq(equipesMembros.medicoId, id))
         .orderBy(asc(equipes.ordem), asc(equipes.nome)),
     ]);
-    return { ...medico, aliases, equipes: equipesDoMedico };
+    return { ...medico, aliases, outrasContas, equipes: equipesDoMedico };
   }
 
   async buscarPorChave(chaveNormalizada: string) {
@@ -148,12 +172,19 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
   }
 
   async buscarPorIdMobilemed(idMobilemed: number) {
-    const [medico] = await this.db
+    const [principal] = await this.db
       .select({ id: medicos.id, nome: medicos.nome })
       .from(medicos)
       .where(eq(medicos.idMobilemed, idMobilemed))
       .limit(1);
-    return medico ?? null;
+    if (principal) return { ...principal, principal: true };
+    const [outra] = await this.db
+      .select({ id: medicos.id, nome: medicos.nome })
+      .from(medicosContasMobilemed)
+      .innerJoin(medicos, eq(medicos.id, medicosContasMobilemed.medicoId))
+      .where(eq(medicosContasMobilemed.idMobilemed, idMobilemed))
+      .limit(1);
+    return outra ? { ...outra, principal: false } : null;
   }
 
   async criar(dados: DadosMedico & { chaveNormalizada: string }) {
@@ -206,5 +237,29 @@ export class DrizzleMedicosRepository implements MedicosRepository, AliasesMedic
 
   async excluirAlias(aliasId: string) {
     await this.db.delete(medicosAliases).where(eq(medicosAliases.id, aliasId));
+  }
+
+  async criarOutraConta(medicoId: string, conta: NovaOutraConta) {
+    const [criada] = await this.db
+      .insert(medicosContasMobilemed)
+      .values({ ...conta, medicoId })
+      .returning({ id: medicosContasMobilemed.id });
+    if (!criada) throw new Error('insert não devolveu o id');
+    return criada.id;
+  }
+
+  async buscarOutraContaDoMedico(medicoId: string, contaId: string) {
+    const [conta] = await this.db
+      .select(camposConta)
+      .from(medicosContasMobilemed)
+      .where(
+        and(eq(medicosContasMobilemed.id, contaId), eq(medicosContasMobilemed.medicoId, medicoId)),
+      )
+      .limit(1);
+    return conta ?? null;
+  }
+
+  async excluirOutraConta(contaId: string) {
+    await this.db.delete(medicosContasMobilemed).where(eq(medicosContasMobilemed.id, contaId));
   }
 }

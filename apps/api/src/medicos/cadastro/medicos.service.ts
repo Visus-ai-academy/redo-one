@@ -14,6 +14,7 @@ import { CLOCK, type Clock } from '../../identidade/clock';
 import { normalizarNomeMedico } from '../comum/nome-medico';
 import { NIVEIS_MEDICO } from '../niveis/tokens';
 import {
+  IdMobilemedEmOutrasContasError,
   IdMobilemedEmUsoError,
   NivelInexistenteError,
   NomeMedicoInvalidoError,
@@ -109,6 +110,7 @@ export class MedicosService {
     if (dados.idMobilemed !== null) {
       const dono = await this.repo.buscarPorIdMobilemed(dados.idMobilemed);
       if (dono && dono.id !== idAtual) throw new IdMobilemedEmUsoError(dono.nome);
+      if (dono && !dono.principal) throw new IdMobilemedEmOutrasContasError();
     }
     if (dados.nivelId && !(await this.niveis.buscar(dados.nivelId))) {
       throw new NivelInexistenteError();
@@ -130,6 +132,7 @@ function dadosDe({
   id: _,
   nivel,
   aliases: __,
+  outrasContas: ____,
   equipes: ___,
   ...resto
 }: MedicoDetalhe): DadosMedico {

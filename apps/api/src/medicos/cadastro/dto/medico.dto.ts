@@ -143,6 +143,28 @@ export class AliasMedicoDto {
   observacoes: string | null = null;
 }
 
+export class OutraContaMedicoDto {
+  @ApiProperty({ type: 'integer', minimum: 1, maximum: 2147483647, example: 19053 })
+  @Type(() => Number)
+  @IsInt({ message: 'Informe o ID da conta na MobileMed, um número inteiro positivo.' })
+  @Min(1, { message: 'Informe o ID da conta na MobileMed, um número inteiro positivo.' })
+  @Max(2_147_483_647, { message: 'ID da MobileMed grande demais.' })
+  idMobilemed!: number;
+
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 300 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  observacao: string | null = null;
+}
+
+export class OutraContaMedicoItemDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ type: 'integer' }) idMobilemed!: number;
+  @ApiProperty({ type: String, nullable: true }) observacao!: string | null;
+  @ApiProperty({ type: String, format: 'date-time' }) criadoEm!: Date;
+}
+
 export class ReferenciaDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() nome!: string;
@@ -185,6 +207,8 @@ export class MedicoDetalheDto {
   @ApiProperty({ type: String, format: 'date', nullable: true }) dataInicioVinculo!: string | null;
   @ApiProperty({ type: String, nullable: true }) observacoes!: string | null;
   @ApiProperty({ type: [AliasMedicoItemDto] }) aliases!: AliasMedicoItemDto[];
+  @ApiProperty({ type: [OutraContaMedicoItemDto], description: 'Contas além da principal.' })
+  outrasContas!: OutraContaMedicoItemDto[];
   @ApiProperty({ type: [ReferenciaDto] }) equipes!: ReferenciaDto[];
 }
 

@@ -4644,6 +4644,89 @@
         ]
       }
     },
+    "/medicos/{id}/outras-contas": {
+      "post": {
+        "operationId": "MedicosController_adicionarOutraConta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutraContaMedicoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Id que não é inteiro positivo."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Conta já é deste médico ou de outro (principal ou outra)."
+          }
+        },
+        "tags": [
+          "medicos"
+        ]
+      }
+    },
+    "/medicos/{id}/outras-contas/{contaId}": {
+      "delete": {
+        "operationId": "MedicosController_removerOutraConta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "medicos"
+        ]
+      }
+    },
     "/medicos/{id}/pagamento": {
       "get": {
         "operationId": "MedicosController_obterPagamento",
@@ -12186,6 +12269,32 @@
           "observacoes"
         ]
       },
+      "OutraContaMedicoItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idMobilemed": {
+            "type": "integer"
+          },
+          "observacao": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "idMobilemed",
+          "observacao",
+          "criadoEm"
+        ]
+      },
       "MedicoDetalheDto": {
         "type": "object",
         "properties": {
@@ -12256,6 +12365,13 @@
               "$ref": "#/components/schemas/AliasMedicoItemDto"
             }
           },
+          "outrasContas": {
+            "description": "Contas além da principal.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutraContaMedicoItemDto"
+            }
+          },
           "equipes": {
             "type": "array",
             "items": {
@@ -12279,6 +12395,7 @@
           "dataInicioVinculo",
           "observacoes",
           "aliases",
+          "outrasContas",
           "equipes"
         ]
       },
@@ -12375,6 +12492,25 @@
         },
         "required": [
           "nomeOrigem"
+        ]
+      },
+      "OutraContaMedicoDto": {
+        "type": "object",
+        "properties": {
+          "idMobilemed": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "example": 19053
+          },
+          "observacao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "idMobilemed"
         ]
       },
       "PagamentoMedicoDto": {

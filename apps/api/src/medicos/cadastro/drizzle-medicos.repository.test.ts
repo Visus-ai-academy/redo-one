@@ -94,6 +94,37 @@ describe.skipIf(!url)('DrizzleMedicosRepository', () => {
     expect(await repo.buscar('00000000-0000-0000-0000-000000000000')).toBeNull();
   });
 
+  it('outras contas: no detalhe, na busca pelo id e no dono da conta; saem com o médico', async () => {
+    const james = await repo.criar(dados('james yared', { idMobilemed: 7968 }));
+    const conta = await repo.criarOutraConta(james, { idMobilemed: 19053, observacao: 'plantão' });
+    await repo.criarOutraConta(james, { idMobilemed: 4964, observacao: null });
+
+    expect((await repo.buscar(james))?.outrasContas).toEqual([
+      { id: expect.any(String), idMobilemed: 4964, observacao: null, criadoEm: expect.any(Date) },
+      { id: conta, idMobilemed: 19053, observacao: 'plantão', criadoEm: expect.any(Date) },
+    ]);
+    expect(await repo.buscarPorIdMobilemed(7968)).toEqual({
+      id: james,
+      nome: 'james yared',
+      principal: true,
+    });
+    expect(await repo.buscarPorIdMobilemed(19053)).toEqual({
+      id: james,
+      nome: 'james yared',
+      principal: false,
+    });
+    expect(await repo.buscarPorIdMobilemed(1)).toBeNull();
+    expect((await repo.listar({ busca: '19053', pagina: 1, porPagina: 10 })).itens[0]?.id).toBe(
+      james,
+    );
+    expect(await repo.buscarOutraContaDoMedico(james, conta)).toMatchObject({ idMobilemed: 19053 });
+
+    await repo.excluirOutraConta(conta);
+    expect(await repo.buscarPorIdMobilemed(19053)).toBeNull();
+    await repo.excluir(james);
+    expect(await repo.buscarPorIdMobilemed(4964)).toBeNull();
+  });
+
   it('lista pela chave, com nível e total de apelidos, filtrando por busca, nível e equipe', async () => {
     const carla = await repo.criar(dados('carla souza', { crm: '999', nivelId: nivel2 }));
     const bruno = await repo.criar(dados('bruno alves', { idMobilemed: 42 }));
@@ -147,7 +178,7 @@ describe.skipIf(!url)('DrizzleMedicosRepository', () => {
     const id = await repo.criar(dados('ana reis', { idMobilemed: 5 }));
 
     expect(await repo.buscarPorChave('ana reis')).toEqual({ id, nome: 'ana reis' });
-    expect(await repo.buscarPorIdMobilemed(5)).toEqual({ id, nome: 'ana reis' });
+    expect(await repo.buscarPorIdMobilemed(5)).toEqual({ id, nome: 'ana reis', principal: true });
     expect(await repo.buscarPorChave('outro')).toBeNull();
   });
 

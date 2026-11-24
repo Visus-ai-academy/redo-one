@@ -21,6 +21,7 @@ const medico: MedicoDetalheDto = {
   dataInicioVinculo: null,
   observacoes: null,
   aliases: [],
+  outrasContas: [],
   equipes: [],
 };
 

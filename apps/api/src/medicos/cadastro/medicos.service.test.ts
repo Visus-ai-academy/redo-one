@@ -103,6 +103,27 @@ describe('MedicosService', () => {
     );
   });
 
+  it('recusa como principal a outra conta de outro médico ou do próprio', async () => {
+    const ana = await service.criar(ator, dados({ nome: 'Ana Reis', idMobilemed: 77 }));
+    await repo.criarOutraConta(ana, { idMobilemed: 78, observacao: null });
+
+    await expect(service.criar(ator, dados({ idMobilemed: 78 }))).rejects.toThrow(
+      'Esse ID da MobileMed já está no cadastro de Ana Reis.',
+    );
+    await expect(
+      service.atualizar(ator, ana, dados({ nome: 'Ana Reis', idMobilemed: 78 })),
+    ).rejects.toThrow('Esse ID está em Outras contas deste médico.');
+    await expect(service.definirIdMobilemed(ana, 78, 'x')).resolves.toBe(false);
+  });
+
+  it('o sistema não grava como principal a outra conta de alguém', async () => {
+    const ana = await service.criar(ator, dados({ nome: 'Ana Reis', idMobilemed: 77 }));
+    await repo.criarOutraConta(ana, { idMobilemed: 78, observacao: null });
+    const bia = await service.criar(ator, dados({ nome: 'Bia Lima' }));
+
+    await expect(service.definirIdMobilemed(bia, 78, 'x')).rejects.toThrow(IdMobilemedEmUsoError);
+  });
+
   it('exige que o nível exista', async () => {
     await expect(service.criar(ator, dados({ nivelId: 'nao-existe' }))).rejects.toThrow(
       NivelInexistenteError,

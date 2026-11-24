@@ -137,6 +137,26 @@ export const medicosAliases = pgTable(
   (t) => [index('medicos_aliases_medico_idx').on(t.medicoId)],
 );
 
+/**
+ * Outras contas do médico na MobileMed, além da principal (`medicos.id_mobilemed`, a que recebe os
+ * exames): o médico entra por uma delas conforme o login do dia. A importação e a carga do robô
+ * reconhecem o médico por qualquer uma; a atribuição vai sempre para a principal. O id é único
+ * aqui e não pode ser a principal de ninguém (conferido pelo service).
+ */
+export const medicosContasMobilemed = pgTable(
+  'medicos_contas_mobilemed',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    medicoId: uuid('medico_id')
+      .notNull()
+      .references(() => medicos.id, { onDelete: 'cascade' }),
+    idMobilemed: integer('id_mobilemed').notNull().unique(),
+    observacao: text('observacao'),
+    criadoEm: criadoEm(),
+  },
+  (t) => [index('medicos_contas_mobilemed_medico_idx').on(t.medicoId)],
+);
+
 export const equipes = pgTable('equipes', {
   id: uuid('id').primaryKey().defaultRandom(),
   nome: text('nome').notNull().unique(),

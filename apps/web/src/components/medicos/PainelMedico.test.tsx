@@ -35,6 +35,7 @@ const medico: MedicoDetalheDto = {
       observacoes: null,
     },
   ],
+  outrasContas: [],
   equipes: [{ id: 'eq-1', nome: 'Equipe 1' }],
 };
 
