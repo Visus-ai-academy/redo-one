@@ -200,7 +200,7 @@ export const laudosLinhasBrutas = pgTable(
  * Nome e código do paciente de cada laudo (1:1), como chegaram da MobileMed: à parte de `laudos`
  * para que só quem precisa leia. Leitura só pela porta `PacientesLaudos`, com
  * `importacao.paciente.ver` e auditada; nunca em log, erro, analytics nem totais. A distribuição
- * não grava paciente (o nome da rodada fica em memória). Retenção: a definir (TODO.md).
+ * não grava paciente (o nome da rodada fica em memória). Retenção: a do laudo (sai em cascata com ele).
  */
 export const laudosPacientes = pgTable('laudos_pacientes', {
   laudoId: uuid('laudo_id')
