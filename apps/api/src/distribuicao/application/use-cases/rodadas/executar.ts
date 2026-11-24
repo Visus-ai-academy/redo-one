@@ -1,4 +1,9 @@
 import {
+  type ContaForaDaUnidade,
+  chaveContaUnidade,
+  valorContaUnidade,
+} from '../../../domain/rodada/contas-fora-da-unidade';
+import {
   desfechoExecucao,
   iniciarExecucao,
   STATUS_VIVOS,
@@ -9,10 +14,13 @@ import type { ResultadoAtribuicao } from '../../ports/atribuidor-exames';
 import type { ResultadoDesignacao } from '../../ports/rodadas.repository';
 import { configuracaoAtual, type DependenciasRodada, mensagemDo } from './comum';
 
-const comoResultado = (r: ResultadoAtribuicao): ResultadoDesignacao =>
-  r.status === 'executada'
-    ? { status: 'executada', motivo: null, detalhe: null, retentavel: false }
-    : r;
+const comoResultado = (r: ResultadoAtribuicao): ResultadoDesignacao => {
+  if (r.status === 'executada') {
+    return { status: 'executada', motivo: null, detalhe: null, retentavel: false };
+  }
+  const { unidade: _, ...resultado } = r;
+  return resultado;
+};
 
 /**
  * Job da execução: atribui as previstas pela porta, uma por vez, na ordem da fila do momento, com o
@@ -52,6 +60,8 @@ export class ExecutarRodada {
       const total = ordem.length;
       // Um lote por execução: a lista de médicos de cada unidade é lida uma vez só.
       const lote = this.d.atribuidor.lote();
+      // Conta não liberada na unidade: um aviso por médico + unidade, registrado no fim.
+      const foraDaUnidade = new Map<string, ContaForaDaUnidade>();
       for (const [i, id] of ordem.entries()) {
         const atual = await this.d.rodadas.obter(rodadaId);
         if (atual?.status !== 'executando') break;
@@ -92,13 +102,25 @@ export class ExecutarRodada {
           };
         } else {
           try {
-            resultado = comoResultado(
-              await lote.atribuir({
-                idExame: p.idExameMobilemed,
-                medicoIdMobilemed: conta.idMobilemed,
-                deMedicoIdMobilemed: de,
-              }),
-            );
+            const atribuicao = await lote.atribuir({
+              idExame: p.idExameMobilemed,
+              medicoIdMobilemed: conta.idMobilemed,
+              deMedicoIdMobilemed: de,
+            });
+            if (
+              atribuicao.status !== 'executada' &&
+              atribuicao.motivo === 'medico_fora_da_unidade' &&
+              atribuicao.unidade
+            ) {
+              const chave = chaveContaUnidade(p.medicoId, atribuicao.unidade.id);
+              const atual = foraDaUnidade.get(chave);
+              if (atual) atual.exames += 1;
+              else {
+                const valor = valorContaUnidade(conta.nome, atribuicao.unidade);
+                foraDaUnidade.set(chave, { chave, valor, exames: 1 });
+              }
+            }
+            resultado = comoResultado(atribuicao);
           } catch (erro) {
             resultado = {
               status: 'falhou',
@@ -116,6 +138,7 @@ export class ExecutarRodada {
           { atual: i + 1, total },
         );
       }
+      await this.avisarContas(rodadaId, [...foraDaUnidade.values()]);
       await this.fechar(rodadaId);
     } catch (erro) {
       const mensagem = mensagemDo(erro);
@@ -124,6 +147,20 @@ export class ExecutarRodada {
       await this.d.rodadas.registrarEvento(
         rodadaId,
         `A execução falhou: ${mensagem}`,
+        this.d.agora(),
+      );
+    }
+  }
+
+  /** Só avisa: o cadastro do médico (e as outras contas) não muda sozinho. */
+  private async avisarContas(rodadaId: string, pendentes: ContaForaDaUnidade[]): Promise<void> {
+    if (!pendentes.length) return;
+    try {
+      await this.d.avisosContaUnidade.registrar(pendentes, [], this.d.agora());
+    } catch (erro) {
+      await this.d.rodadas.registrarEvento(
+        rodadaId,
+        `Não foi possível registrar os avisos de conta não liberada na unidade: ${mensagemDo(erro)}`,
         this.d.agora(),
       );
     }

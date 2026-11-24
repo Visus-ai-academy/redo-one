@@ -2,6 +2,7 @@ import type { Auditoria } from '../../../../auditoria/auditoria';
 import { CONFIGURACAO_INICIAL, type ConfiguracaoGlobal } from '../../../domain/configuracao-global';
 import { type RecorteForaDoEscopoError, rodadaNoEscopo } from '../../../domain/rodada/escopo';
 import type { AtribuidorExames } from '../../ports/atribuidor-exames';
+import type { AvisosContaUnidade } from '../../ports/avisos-conta-unidade';
 import type { AvisosPrioridade } from '../../ports/avisos-prioridade';
 import type { ConfiguracaoDistribuicaoRepository } from '../../ports/configuracao-distribuicao.repository';
 import type { ConsultaRodadas } from '../../ports/consulta-rodadas';
@@ -36,6 +37,8 @@ export interface DependenciasRodada {
   pseudonimizador: PseudonimizadorPaciente;
   /** Grafia de prioridade sem de-para vira aviso em Operação › Avisos. */
   avisosPrioridade: AvisosPrioridade;
+  /** Médico escalado sem conta liberada na unidade do exame vira aviso em Operação › Avisos. */
+  avisosContaUnidade: AvisosContaUnidade;
   /** Nomes dos pacientes da leitura, só em memória, para a conferência. */
   nomesPacientes: NomesPacientesRodada;
   auditoria: Auditoria;

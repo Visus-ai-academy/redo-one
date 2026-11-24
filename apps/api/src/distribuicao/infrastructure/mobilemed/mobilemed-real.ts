@@ -137,6 +137,7 @@ const paraExameDaFila = (e: ItemListaMobileMed): ExameDaFila => ({
   estudo: e.estudo_descricao,
   unidade: e.nome_fantasia,
   unidadeMobilemed: unidadeDaAtribuicao(e),
+  nomeUnidadeMobilemed: nomeDaUnidadeDaAtribuicao(e),
   modalidade: e.modalidade,
   // shortcut: a especialidade só vem como `subespecialidade_id`; o catálogo decide pelo estudo
   // até o HAR mostrar o formato (`docs/integracao-mobilemed.md`, 5.4).
@@ -198,6 +199,12 @@ export const unidadeDaAtribuicao = (e: ExameMobileMed): number | null => {
     );
   }
   return e.empresa_id ?? null;
+};
+
+/** O nome da unidade da atribuição: só o da origem vem no exame; o de destino, não (null). */
+export const nomeDaUnidadeDaAtribuicao = (e: ExameMobileMed): string | null => {
+  const unidade = unidadeDaAtribuicao(e);
+  return unidade !== null && unidade === (e.empresa_id ?? null) ? (e.nome_fantasia ?? null) : null;
 };
 
 /** Contas liberadas por unidade, lidas uma vez por lote (a leitura que falhou não fica). */
@@ -452,6 +459,7 @@ export class MobileMedReal implements FilaExames, AtribuidorExames {
             motivo: 'medico_fora_da_unidade',
             detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
             retentavel: false,
+            unidade: { id: unidade, nome: nomeDaUnidadeDaAtribuicao(exame) },
           };
         }
       }

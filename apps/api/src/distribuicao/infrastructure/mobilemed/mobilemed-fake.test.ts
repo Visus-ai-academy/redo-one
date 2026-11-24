@@ -196,8 +196,10 @@ describe('MobileMed fake (fila sintética e atribuição que só registra)', () 
 describe('MobileMed fake: conta do médico liberada na unidade', () => {
   it('cada exame traz o id da unidade, o mesmo para o mesmo nome', async () => {
     const { semMedico, emMaos } = await criar().ler();
-    for (const e of [...semMedico, ...emMaos])
+    for (const e of [...semMedico, ...emMaos]) {
       expect(e.unidadeMobilemed).toEqual(expect.any(Number));
+      expect(e.nomeUnidadeMobilemed).toBe(e.unidade);
+    }
     const porNome = new Map(semMedico.map((e) => [e.unidade, e.unidadeMobilemed]));
     for (const e of semMedico) expect(e.unidadeMobilemed).toBe(porNome.get(e.unidade));
   });
@@ -233,6 +235,7 @@ describe('MobileMed fake: conta do médico liberada na unidade', () => {
       motivo: 'medico_fora_da_unidade',
       detalhe: 'Conta do médico não liberada nesta unidade na MobileMed (simulada).',
       retentavel: false,
+      unidade: { id: e?.unidadeMobilemed, nome: e?.unidade },
     });
     expect((await fake.ler()).semMedico.map((x) => x.idExame)).toContain(idExame);
   });

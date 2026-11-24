@@ -16,6 +16,10 @@ import {
   type ArranjosRepository,
 } from './application/ports/arranjos.repository';
 import { ATRIBUIDOR_EXAMES, type AtribuidorExames } from './application/ports/atribuidor-exames';
+import {
+  AVISOS_CONTA_UNIDADE,
+  type AvisosContaUnidade,
+} from './application/ports/avisos-conta-unidade';
 import { AVISOS_PRIORIDADE, type AvisosPrioridade } from './application/ports/avisos-prioridade';
 import {
   CADASTROS_DISTRIBUICAO,
@@ -150,6 +154,7 @@ import {
 } from './infrastructure/http/prioridades-operacao.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { RodadasController } from './infrastructure/http/rodadas.controller';
+import { AvisosContaUnidadeAdapter } from './infrastructure/ingestao/avisos-conta-unidade.adapter';
 import { AvisosPrioridadeAdapter } from './infrastructure/ingestao/avisos-prioridade.adapter';
 import { NomesPacientesEmMemoria } from './infrastructure/memoria/nomes-pacientes-em-memoria';
 import {
@@ -232,6 +237,7 @@ const CASOS_RODADA = [
     { provide: MEDICOS_RODADA, useClass: DrizzleMedicosRodada },
     { provide: ESCOPO_RODADA, useClass: EscopoRodadaAdapter },
     { provide: AVISOS_PRIORIDADE, useClass: AvisosPrioridadeAdapter },
+    { provide: AVISOS_CONTA_UNIDADE, useClass: AvisosContaUnidadeAdapter },
     DrizzleAmostraCatalogo,
     {
       // Fake (padrão) ou a MobileMed de verdade: só `DISTRIBUICAO_MOBILEMED=real` liga a integração.
@@ -303,6 +309,7 @@ const CASOS_RODADA = [
         PRIORIDADES_CLIENTE_REPOSITORY,
         PSEUDONIMIZADOR_PACIENTE,
         AVISOS_PRIORIDADE,
+        AVISOS_CONTA_UNIDADE,
         NOMES_PACIENTES_RODADA,
         AUDITORIA,
       ],
@@ -320,6 +327,7 @@ const CASOS_RODADA = [
         prioridadesCliente: PrioridadesClienteRepository,
         pseudonimizador: PseudonimizadorPaciente,
         avisosPrioridade: AvisosPrioridade,
+        avisosContaUnidade: AvisosContaUnidade,
         nomesPacientes: NomesPacientesRodada,
         auditoria: Auditoria,
       ): DependenciasRodada => ({
@@ -336,6 +344,7 @@ const CASOS_RODADA = [
         prioridadesCliente,
         pseudonimizador,
         avisosPrioridade,
+        avisosContaUnidade,
         nomesPacientes,
         auditoria,
         agora,

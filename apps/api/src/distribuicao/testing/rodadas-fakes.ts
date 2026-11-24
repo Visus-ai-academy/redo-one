@@ -1,3 +1,4 @@
+import type { AvisosContaUnidade } from '../application/ports/avisos-conta-unidade';
 import type { AvisosPrioridade } from '../application/ports/avisos-prioridade';
 import type {
   ConsultaRodadas,
@@ -30,6 +31,7 @@ import type {
   UltimaEntrega,
 } from '../application/ports/rodadas.repository';
 import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
+import type { ContaForaDaUnidade } from '../domain/rodada/contas-fora-da-unidade';
 import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
 import type { GrafiaSemDePara } from '../domain/rodada/grafias-sem-de-para';
 import { estaViva, type StatusRodada } from '../domain/rodada/maquina';
@@ -635,6 +637,21 @@ export class AvisosPrioridadeEmMemoria implements AvisosPrioridade {
   falha: Error | null = null;
 
   async registrar(pendentes: readonly GrafiaSemDePara[], conferidas: readonly string[]) {
+    if (this.falha) throw this.falha;
+    for (const p of pendentes) this.avisos.set(p.chave, { ...p, status: 'pendente' });
+    for (const c of conferidas) {
+      const a = this.avisos.get(c);
+      if (a) a.status = 'resolvido';
+    }
+  }
+}
+
+/** Os avisos de conta não liberada na unidade na memória, pelo par médico + unidade. */
+export class AvisosContaUnidadeEmMemoria implements AvisosContaUnidade {
+  readonly avisos = new Map<string, ContaForaDaUnidade & { status: 'pendente' | 'resolvido' }>();
+  falha: Error | null = null;
+
+  async registrar(pendentes: readonly ContaForaDaUnidade[], conferidas: readonly string[]) {
     if (this.falha) throw this.falha;
     for (const p of pendentes) this.avisos.set(p.chave, { ...p, status: 'pendente' });
     for (const c of conferidas) {

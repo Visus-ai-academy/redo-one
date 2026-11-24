@@ -16,6 +16,7 @@ import { RecorteForaDoEscopoError } from '../../../domain/rodada/escopo';
 import { RodadaEmEstadoInvalidoError } from '../../../domain/rodada/maquina';
 import { ConfiguracaoEmMemoria, PrioridadesClienteEmMemoria } from '../../../testing/fakes';
 import {
+  AvisosContaUnidadeEmMemoria,
   AvisosPrioridadeEmMemoria,
   EscalaRecolhimentoEmMemoria,
   EscopoEmMemoria,
@@ -196,6 +197,7 @@ describe('rodada do robô (casos de uso)', () => {
   let escopo: EscopoEmMemoria;
   let insumos: InsumosFixos;
   let avisosPrioridade: AvisosPrioridadeEmMemoria;
+  let avisosContaUnidade: AvisosContaUnidadeEmMemoria;
   let escalaRecolhimento: EscalaRecolhimentoEmMemoria;
   let nomesPacientes: NomesPacientesDeTeste;
   let casos: ReturnType<typeof criarCasosDeUsoRodada>;
@@ -234,6 +236,7 @@ describe('rodada do robô (casos de uso)', () => {
     insumos = new InsumosFixos(insumosBase(), catalogo);
     escalaRecolhimento = new EscalaRecolhimentoEmMemoria();
     avisosPrioridade = new AvisosPrioridadeEmMemoria();
+    avisosContaUnidade = new AvisosContaUnidadeEmMemoria();
     nomesPacientes = new NomesPacientesDeTeste();
     contasUnidade = new ContasPorUnidadeDeTeste();
     casos = criarCasosDeUsoRodada({
@@ -250,6 +253,7 @@ describe('rodada do robô (casos de uso)', () => {
       prioridadesCliente: new PrioridadesClienteEmMemoria(),
       pseudonimizador: { pseudonimo: (t) => `hmac(${t})` },
       avisosPrioridade,
+      avisosContaUnidade,
       nomesPacientes,
       auditoria,
       agora: () => agora,
@@ -545,6 +549,54 @@ describe('rodada do robô (casos de uso)', () => {
         detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
       });
       expect(designacao('e2')).toMatchObject({ status: 'executada' });
+    });
+
+    it('a conta fora da unidade na execução vira aviso do médico + unidade', async () => {
+      const fora = (): ResultadoAtribuicao => ({
+        status: 'pulada',
+        motivo: 'medico_fora_da_unidade',
+        detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
+        retentavel: false,
+        unidade: { id: 10, nome: 'CEDI_RJ' },
+      });
+      mobilemed.resultados.set('e1', [fora()]);
+      const id = await criarELer();
+      await casos.aprovar.executar(admin, id);
+      await jobs();
+      const medicoId = designacao('e1')?.medicoId ?? '';
+      const nome = medicoId === 'A' ? 'Dra. A' : 'Dr. B';
+      expect([...avisosContaUnidade.avisos.values()]).toEqual([
+        {
+          chave: `${medicoId}|10`,
+          valor: `${nome} sem conta liberada na unidade CEDI_RJ`,
+          exames: 1,
+          status: 'pendente',
+        },
+      ]);
+      expect(designacao('e1')).toMatchObject({
+        status: 'pulada',
+        motivo: 'medico_fora_da_unidade',
+      });
+    });
+
+    it('falha ao registrar o aviso da conta não derruba a execução', async () => {
+      avisosContaUnidade.falha = new Error('banco fora');
+      mobilemed.resultados.set('e1', [
+        {
+          status: 'pulada',
+          motivo: 'medico_fora_da_unidade',
+          detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
+          retentavel: false,
+          unidade: { id: 10, nome: 'CEDI_RJ' },
+        },
+      ]);
+      const id = await criarELer();
+      await casos.aprovar.executar(admin, id);
+      await jobs();
+      expect(repo.rodadas.get(id)?.status).toBe('concluida');
+      expect((await repo.eventos(id, 50)).map((e) => e.texto)).toContainEqual(
+        expect.stringMatching(/avisos de conta não liberada na unidade: banco fora/),
+      );
     });
 
     it('a proposta vencida não é aprovada', async () => {
@@ -927,6 +979,45 @@ describe('rodada do robô (casos de uso)', () => {
           titulo: 'Conta liberada na unidade',
           detalhe: 'Conta não liberada nesta unidade na MobileMed',
         });
+      });
+
+      it('o médico barrado só pela conta vira aviso, um por médico + unidade', async () => {
+        mobilemed.leitura.semMedico.push(
+          exame({ idExame: 'e3', unidadeMobilemed: 10, nomeUnidadeMobilemed: 'CEDI_RJ' }),
+        );
+        mobilemed.leitura.semMedico[0] = exame({
+          idExame: 'e1',
+          unidadeMobilemed: 10,
+          nomeUnidadeMobilemed: 'CEDI_RJ',
+        });
+        await criarELer();
+        expect([...avisosContaUnidade.avisos.values()]).toEqual([
+          {
+            chave: 'B|10',
+            valor: 'Dr. B sem conta liberada na unidade CEDI_RJ',
+            exames: 2,
+            status: 'pendente',
+          },
+        ]);
+        expect(JSON.stringify([...avisosContaUnidade.avisos.values()])).not.toMatch(/Fict/);
+      });
+
+      it('a conta liberada depois resolve o aviso do par na próxima proposta', async () => {
+        const id = await criarELer();
+        expect(avisosContaUnidade.avisos.get('B|10')?.status).toBe('pendente');
+        await casos.cancelar.executar(admin, id);
+        contasUnidade.porUnidade.set(10, new Set([101, 102]));
+        await criarELer();
+        expect(avisosContaUnidade.avisos.get('B|10')?.status).toBe('resolvido');
+      });
+
+      it('falha ao registrar o aviso da conta não derruba a proposta', async () => {
+        avisosContaUnidade.falha = new Error('banco fora');
+        const id = await criarELer();
+        expect(repo.rodadas.get(id)?.status).toBe('aguardando_aprovacao');
+        expect(repo.diario.filter((e) => e.rodadaId === id).map((e) => e.texto)).toContainEqual(
+          expect.stringMatching(/avisos de conta não liberada na unidade: banco fora/),
+        );
       });
 
       it('ninguém liberado: o exame fica de fora com o motivo', async () => {

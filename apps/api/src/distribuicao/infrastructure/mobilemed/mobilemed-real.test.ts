@@ -140,6 +140,7 @@ describe('MobileMedReal: leitura da fila', () => {
       estudo: 'RM CRANIO',
       unidade: 'HOSPITAL A',
       unidadeMobilemed: 10,
+      nomeUnidadeMobilemed: 'HOSPITAL A',
       modalidade: 'MR',
       laudos: null,
       realizadoEm: new Date('2026-11-18T10:00:00.000Z'),
@@ -333,6 +334,8 @@ describe('MobileMedReal: conta do médico liberada na unidade do exame', () => {
       motivo: 'medico_fora_da_unidade',
       detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
       retentavel: false,
+      // Para o aviso de conta não liberada (o nome é o da unidade de origem).
+      unidade: { id: 10, nome: 'HOSPITAL A' },
     });
     expect(unidades).toEqual([10]);
     expect(puts).toHaveLength(0);
@@ -364,6 +367,22 @@ describe('MobileMedReal: conta do médico liberada na unidade do exame', () => {
     await mm.atribuir(pedido('1', 101));
     await mm.atribuir(pedido('2', 101));
     expect(unidades).toEqual([77, 10]);
+  });
+
+  it('compartilhado fora da origem: a unidade de destino vai sem nome (a MobileMed não o traz)', async () => {
+    const { mm, ajustes } = simulada([
+      exame(1, {
+        compartilhamentos: [{ empresa_compartilhada_id: 77, permissao_sla_medico: false }],
+        permissao: [],
+      }),
+    ]);
+    ajustes.porUnidade[77] = [];
+    expect(await mm.atribuir(pedido('1', 101))).toMatchObject({
+      motivo: 'medico_fora_da_unidade',
+      unidade: { id: 77, nome: null },
+    });
+    const [lido] = (await mm.ler()).semMedico;
+    expect(lido).toMatchObject({ unidadeMobilemed: 77, nomeUnidadeMobilemed: null });
   });
 
   it('a lista que falha não fica no lote: falhou, retentável, e o próximo exame lê de novo', async () => {

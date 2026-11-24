@@ -1,3 +1,5 @@
+import type { UnidadeConta } from '../../domain/rodada/contas-fora-da-unidade';
+
 export const ATRIBUIDOR_EXAMES = Symbol('ATRIBUIDOR_EXAMES');
 
 export interface PedidoAtribuicao {
@@ -26,6 +28,8 @@ export type ResultadoAtribuicao =
       /** Texto para a pessoa, dizendo que a falha veio da MobileMed; nunca com dado de paciente. */
       detalhe: string | null;
       retentavel: boolean;
+      /** `medico_fora_da_unidade`: a unidade cuja lista não tem a conta (para o aviso). */
+      unidade?: UnidadeConta;
     };
 
 /**

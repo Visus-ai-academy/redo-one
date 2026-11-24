@@ -49,6 +49,8 @@ export interface ExameDaLeitura {
   unidade: string;
   /** Id da unidade na MobileMed cuja lista de médicos vale na atribuição; null = desconhecida. */
   unidadeMobilemed?: number | null;
+  /** Nome dessa unidade na MobileMed (para os avisos); null = a leitura não trouxe. */
+  nomeUnidadeMobilemed?: string | null;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;
@@ -71,6 +73,8 @@ export interface ExameEmMaosDaLeitura {
   estudo: string;
   unidade: string;
   unidadeMobilemed?: number | null;
+  /** Nome dessa unidade na MobileMed (para os avisos); null = a leitura não trouxe. */
+  nomeUnidadeMobilemed?: string | null;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;

@@ -25,6 +25,11 @@ export interface ExameDaFila {
    * consultado fora da origem); null/ausente = desconhecida (sem conferência na proposta).
    */
   unidadeMobilemed?: number | null;
+  /**
+   * Nome dessa unidade na MobileMed, para os avisos; null quando a leitura não o traz (a de destino
+   * do compartilhado).
+   */
+  nomeUnidadeMobilemed?: string | null;
   modalidade: string | null;
   especialidade: string | null;
   /** Quantidade de laudos do registro; null = 1. */
@@ -53,6 +58,11 @@ export interface ExameEmMaos {
   estudo: string;
   unidade: string;
   unidadeMobilemed?: number | null;
+  /**
+   * Nome dessa unidade na MobileMed, para os avisos; null quando a leitura não o traz (a de destino
+   * do compartilhado).
+   */
+  nomeUnidadeMobilemed?: string | null;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;

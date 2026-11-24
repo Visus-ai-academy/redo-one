@@ -11,6 +11,7 @@ import type {
   FilaExames,
   LeituraFila,
 } from '../../application/ports/fila-exames';
+import type { UnidadeConta } from '../../domain/rodada/contas-fora-da-unidade';
 import { type AmostraCatalogo, gerarFilaSintetica } from './fila-sintetica';
 
 export interface OpcoesMobileMedFake {
@@ -95,6 +96,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     const comDono = (e: ExameEmMaos | ExameDaFila): ExameEmMaos => ({
       idExame: e.idExame,
       unidadeMobilemed: idDaUnidade(e.unidade),
+      nomeUnidadeMobilemed: e.unidade,
       medicoIdMobilemed:
         donos.get(e.idExame) ?? ('medicoIdMobilemed' in e ? e.medicoIdMobilemed : 0),
       status: this.statusDe(e.idExame),
@@ -112,7 +114,11 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     return {
       semMedico: semMedico
         .filter((e) => !donos.has(e.idExame))
-        .map((e) => ({ ...e, unidadeMobilemed: idDaUnidade(e.unidade) })),
+        .map((e) => ({
+          ...e,
+          unidadeMobilemed: idDaUnidade(e.unidade),
+          nomeUnidadeMobilemed: e.unidade,
+        })),
       emMaos: [...emMaos, ...semMedico.filter((e) => donos.has(e.idExame))].map(comDono),
     };
   }
@@ -182,21 +188,23 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     return {
       atribuir: async (pedido) => {
         const { semMedico, emMaos } = await this.ler();
-        const unidade = [...semMedico, ...emMaos].find(
-          (e) => e.idExame === pedido.idExame,
-        )?.unidadeMobilemed;
+        const e = [...semMedico, ...emMaos].find((x) => x.idExame === pedido.idExame);
+        const unidade = e?.unidadeMobilemed;
         if (unidade != null && !consultadas.has(unidade)) {
           consultadas.add(unidade);
           this.consultasUnidade++;
         }
-        return this.atribuirNaUnidade(pedido, unidade);
+        return this.atribuirNaUnidade(
+          pedido,
+          unidade == null ? null : { id: unidade, nome: e?.nomeUnidadeMobilemed ?? null },
+        );
       },
     };
   }
 
   private async atribuirNaUnidade(
     pedido: PedidoAtribuicao,
-    unidade: number | null | undefined,
+    unidade: UnidadeConta | null,
   ): Promise<ResultadoAtribuicao> {
     const intocado = (
       await this.intocados([
@@ -219,12 +227,13 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
             retentavel: false,
           };
     }
-    if (unidade != null && !this.liberada(unidade, pedido.medicoIdMobilemed)) {
+    if (unidade && !this.liberada(unidade.id, pedido.medicoIdMobilemed)) {
       return {
         status: 'pulada',
         motivo: 'medico_fora_da_unidade',
         detalhe: 'Conta do médico não liberada nesta unidade na MobileMed (simulada).',
         retentavel: false,
+        unidade,
       };
     }
     const tentativa = (this.tentativas.get(pedido.idExame) ?? 0) + 1;

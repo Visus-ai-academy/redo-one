@@ -1,4 +1,5 @@
 import { rodarMotor } from '../../../domain/motor/rodada';
+import { contasForaDaUnidade } from '../../../domain/rodada/contas-fora-da-unidade';
 import { escalaDosMedicos, montarEntrada } from '../../../domain/rodada/entrada';
 import { grafiasSemDePara } from '../../../domain/rodada/grafias-sem-de-para';
 import { iniciarLeitura, propor, STATUS_VIVOS } from '../../../domain/rodada/maquina';
@@ -148,6 +149,24 @@ export class LerFila {
           `Não foi possível registrar os avisos de prioridade: ${mensagemDo(erro)}`,
           this.d.agora(),
         );
+      }
+      if (contasPorUnidade) {
+        const contas = contasForaDaUnidade({
+          exames: leitura.semMedico,
+          designacoes: proposta.designacoes,
+          conferidas: new Set(contasPorUnidade.keys()),
+          nomes: new Map(insumos.medicos.map((m) => [m.id, m.nome])),
+        });
+        try {
+          // Só avisa: o cadastro do médico (e as outras contas) não muda sozinho.
+          await this.d.avisosContaUnidade.registrar(contas.pendentes, contas.conferidas, agora);
+        } catch (erro) {
+          await this.d.rodadas.registrarEvento(
+            rodadaId,
+            `Não foi possível registrar os avisos de conta não liberada na unidade: ${mensagemDo(erro)}`,
+            this.d.agora(),
+          );
+        }
       }
       const previstas = proposta.designacoes.filter((d) => d.status === 'prevista');
       const medicos = new Set(previstas.map((d) => d.medicoId)).size;
