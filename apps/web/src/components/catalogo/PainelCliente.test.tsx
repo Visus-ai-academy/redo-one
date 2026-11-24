@@ -134,6 +134,23 @@ describe('PainelCliente', () => {
     ]);
   });
 
+  it('com o faturamento, a aba vem depois da Distribuição e abre o corte', async () => {
+    montar({
+      cliente,
+      historico: <p>h</p>,
+      distribuicao: <p>prioridade do cliente</p>,
+      faturamento: <p>corte do cliente</p>,
+    });
+    expect(screen.getAllByRole('tab').map((aba) => aba.textContent)).toEqual([
+      'Cadastro',
+      'Distribuição',
+      'Faturamento',
+      'Histórico',
+    ]);
+    await userEvent.click(screen.getByRole('tab', { name: 'Faturamento' }));
+    expect(screen.getByText('corte do cliente')).toBeInTheDocument();
+  });
+
   it('criando, sem abas', () => {
     montar({ historico: <p>conteúdo do histórico</p> });
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();

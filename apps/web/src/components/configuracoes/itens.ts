@@ -7,6 +7,7 @@ import {
   type Icon,
   IdentificationBadge,
   Ranking,
+  Receipt,
   Robot,
   UserCircle,
   Users,
@@ -126,6 +127,18 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: Robot,
         to: '/configuracoes/distribuicao',
         permissao: 'distribuicao-config.ver',
+      },
+    ],
+  },
+  {
+    titulo: 'Financeiro',
+    itens: [
+      {
+        nome: 'Faturamento',
+        descricao: 'Corte da competência: até que dia, pela data do laudo, o laudo entra no mês',
+        icone: Receipt,
+        to: '/configuracoes/faturamento',
+        permissao: 'faturamento.ver',
       },
     ],
   },

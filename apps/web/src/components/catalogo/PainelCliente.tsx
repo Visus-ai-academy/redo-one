@@ -42,6 +42,8 @@ export type PainelClienteProps = {
   historico?: ReactNode;
   /** Conteúdo da aba Distribuição (prioridade na fila); sem ele (sem permissão), a aba não aparece. */
   distribuicao?: ReactNode;
+  /** Conteúdo da aba Faturamento (corte da competência); sem ele (sem permissão), a aba não aparece. */
+  faturamento?: ReactNode;
 };
 
 const TIPOS_APELIDO = {
@@ -92,6 +94,7 @@ export function PainelCliente({
   onFechar,
   historico,
   distribuicao,
+  faturamento,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
   const iniciais = {
@@ -158,8 +161,15 @@ export function PainelCliente({
       <AbasComHistorico
         historico={cliente ? historico : undefined}
         extras={
-          cliente && distribuicao
-            ? [{ valor: 'distribuicao', rotulo: 'Distribuição', conteudo: distribuicao }]
+          cliente
+            ? [
+                ...(distribuicao
+                  ? [{ valor: 'distribuicao', rotulo: 'Distribuição', conteudo: distribuicao }]
+                  : []),
+                ...(faturamento
+                  ? [{ valor: 'faturamento', rotulo: 'Faturamento', conteudo: faturamento }]
+                  : []),
+              ]
             : undefined
         }
         aria-label="Partes do cadastro do cliente"

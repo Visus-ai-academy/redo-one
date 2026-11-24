@@ -15,6 +15,7 @@ import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { AbaDistribuicaoCliente } from '../../components/distribuicao/AbaDistribuicaoCliente';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { EditorCorte } from '../../components/faturamento/editor-corte';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
@@ -292,6 +293,20 @@ function Painel({
             clienteId={id}
             podeEditar={pode(sessao, 'clientes.distribuicao.editar')}
           />
+        ) : undefined
+      }
+      faturamento={
+        id && pode(sessao, 'faturamento.ver') ? (
+          <div className="flex flex-col gap-4 p-4">
+            <h3 className="text-base font-semibold">Corte da competência</h3>
+            <EditorCorte
+              key={id}
+              clienteId={id}
+              podeEditar={pode(sessao, 'faturamento.corte.editar')}
+              porPagina={5}
+              unidadeDe={cliente?.unificadoEm?.nome}
+            />
+          </div>
         ) : undefined
       }
       onSalvar={async (body) => {
