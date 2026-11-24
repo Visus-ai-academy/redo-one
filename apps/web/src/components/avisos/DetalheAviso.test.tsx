@@ -103,6 +103,30 @@ describe('DetalheAviso', () => {
     );
   });
 
+  it('a conta não liberada na unidade diz o que fazer e que nada mudou sozinho', () => {
+    const conta = {
+      ...pendente,
+      tipo: 'conta_unidade' as const,
+      valor: 'Dr. Fulano sem conta liberada na unidade CEDI_RJ',
+      ocorrencias: 3,
+    };
+    const { unmount } = render(
+      <DetalheAviso aviso={conta} podeTriar={false} procurar={<a href="/x">Abrir</a>} />,
+    );
+    expect(screen.getByText('Conta na unidade').nextSibling).toHaveTextContent(
+      'Dr. Fulano sem conta liberada na unidade CEDI_RJ',
+    );
+    expect(screen.getByText('Exames na última rodada').nextSibling).toHaveTextContent('3');
+    expect(
+      screen.getByText(/Libere a conta do médico nesta unidade na MobileMed/),
+    ).toBeInTheDocument();
+    unmount();
+    render(<DetalheAviso aviso={{ ...conta, status: 'resolvido' }} podeTriar={false} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Uma rodada encontrou a conta do médico liberada nesta unidade',
+    );
+  });
+
   it('com o motivo digitado e não enviado, avisa quem usa (o painel pergunta antes de fechar)', async () => {
     const onAlterado = vi.fn();
     render(<DetalheAviso aviso={pendente} podeTriar onIgnorar={vi.fn()} onAlterado={onAlterado} />);

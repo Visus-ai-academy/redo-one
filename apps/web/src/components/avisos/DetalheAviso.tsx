@@ -30,6 +30,28 @@ const schema = z.object({
     .max(300, 'Use até 300 caracteres.'),
 });
 
+const TEXTOS_IMPORTACAO = {
+  resolvido: 'Uma importação achou o cadastro deste nome. O aviso saiu da lista de pendentes.',
+  oQueFazer:
+    'Se o cadastro já existe com outra grafia, acrescente este nome como apelido ou variação. A próxima importação resolve o aviso.',
+};
+
+/** Os tipos que nascem na rodada da distribuição, com o que resolve cada um. */
+const TEXTOS: Partial<Record<AvisoDto['tipo'], typeof TEXTOS_IMPORTACAO>> = {
+  prioridade_operacao: {
+    resolvido:
+      'A grafia entrou no de-para das prioridades da operação. O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'Acrescente esta grafia ao de-para de uma das prioridades da operação. A próxima rodada resolve o aviso.',
+  },
+  conta_unidade: {
+    resolvido:
+      'Uma rodada encontrou a conta do médico liberada nesta unidade na MobileMed. O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'O robô não entrega exames desta unidade a este médico, e nada mudou sozinho no cadastro. Libere a conta do médico nesta unidade na MobileMed ou, se ele usa outra conta lá, acrescente-a às outras contas dele. A próxima rodada que conferir a unidade resolve o aviso.',
+  },
+};
+
 /** Conteúdo do painel de um aviso de cadastro, com a triagem (ignorar ou reabrir). */
 export function DetalheAviso({
   aviso,
@@ -66,8 +88,9 @@ export function DetalheAviso({
     return () => onAlterado?.(false);
   }, [alterado, onAlterado]);
   const decisao = aviso.status === 'ignorado' ? 'Ignorado' : 'Resolvido';
-  // A grafia sem de-para da distribuição vem da rodada, não da importação.
-  const daRodada = aviso.tipo === 'prioridade_operacao';
+  // A grafia sem de-para e a conta não liberada na unidade vêm da rodada, não da importação.
+  const daRodada = aviso.tipo === 'prioridade_operacao' || aviso.tipo === 'conta_unidade';
+  const textos = TEXTOS[aviso.tipo] ?? TEXTOS_IMPORTACAO;
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -77,9 +100,7 @@ export function DetalheAviso({
         </span>
         {aviso.status === 'resolvido' && (
           <Alerta tom="sucesso" role="status">
-            {daRodada
-              ? 'A grafia entrou no de-para das prioridades da operação. O aviso saiu da lista de pendentes.'
-              : 'Uma importação achou o cadastro deste nome. O aviso saiu da lista de pendentes.'}
+            {textos.resolvido}
           </Alerta>
         )}
       </div>
@@ -100,11 +121,7 @@ export function DetalheAviso({
 
       {aviso.status === 'pendente' && procurar && (
         <div className="flex flex-col gap-2">
-          <p className="text-muted-foreground text-[13px]">
-            {daRodada
-              ? 'Acrescente esta grafia ao de-para de uma das prioridades da operação. A próxima rodada resolve o aviso.'
-              : 'Se o cadastro já existe com outra grafia, acrescente este nome como apelido ou variação. A próxima importação resolve o aviso.'}
-          </p>
+          <p className="text-muted-foreground text-[13px]">{textos.oQueFazer}</p>
           <div>{procurar}</div>
         </div>
       )}
