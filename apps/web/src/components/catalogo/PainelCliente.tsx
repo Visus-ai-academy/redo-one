@@ -42,9 +42,9 @@ export type PainelClienteProps = {
   historico?: ReactNode;
   /** Conteúdo da aba Distribuição (prioridade na fila); sem ele (sem permissão), a aba não aparece. */
   distribuicao?: ReactNode;
-  /** Conteúdo da aba Faturamento (corte da competência); sem ele (sem permissão), a aba não aparece. */
+  /** Conteúdo da aba Faturamento (corte e dados de faturamento); sem ele (sem permissão), a aba não aparece. */
   faturamento?: ReactNode;
-  /** A aba Faturamento tem uma vigência do corte digitada e não salva: fechar pergunta antes. */
+  /** A aba Faturamento tem algo digitado e não salvo (corte ou dados): fechar pergunta antes. */
   faturamentoAlterado?: boolean;
 };
 

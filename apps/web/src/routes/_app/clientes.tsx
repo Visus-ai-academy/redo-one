@@ -15,6 +15,7 @@ import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { AbaDistribuicaoCliente } from '../../components/distribuicao/AbaDistribuicaoCliente';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
+import { DadosFaturamentoCliente } from '../../components/faturamento/dados-faturamento-cliente';
 import { EditorCorte } from '../../components/faturamento/editor-corte';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
@@ -264,8 +265,12 @@ function Painel({
   });
   const cliente = consulta.data;
   const avisos = useAvisos();
-  // Vigência do corte digitada na aba Faturamento: fechar o painel pergunta antes de descartar.
+  // Vigência do corte ou dados de faturamento digitados na aba Faturamento: fechar o painel
+  // pergunta antes de descartar.
   const [corteAlterado, setCorteAlterado] = useState(false);
+  const [dadosAlterados, setDadosAlterados] = useState(false);
+  const veCorte = pode(sessao, 'faturamento.ver');
+  const veDados = pode(sessao, 'clientes.faturamento.ver');
   const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
   if (id && (!cliente || fase !== 'conteudo'))
@@ -287,7 +292,7 @@ function Painel({
       podeCriar={permissoes.criar}
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
-      faturamentoAlterado={corteAlterado}
+      faturamentoAlterado={corteAlterado || dadosAlterados}
       historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
       distribuicao={
         id && pode(sessao, 'clientes.distribuicao.ver') ? (
@@ -299,18 +304,33 @@ function Painel({
         ) : undefined
       }
       faturamento={
-        id && pode(sessao, 'faturamento.ver') ? (
-          <div className="flex flex-col gap-4 p-4">
-            <h3 className="text-base font-semibold">Corte da competência</h3>
-            <EditorCorte
-              key={id}
-              clienteId={id}
-              podeEditar={pode(sessao, 'faturamento.corte.editar')}
-              porPagina={5}
-              unidadeDe={cliente?.unificadoEm?.nome}
-              nivelTitulos={4}
-              onAlterado={setCorteAlterado}
-            />
+        id && (veCorte || veDados) ? (
+          <div className="flex flex-col gap-6 p-4">
+            {veCorte && (
+              <section className="flex flex-col gap-4">
+                <h3 className="text-base font-semibold">Corte da competência</h3>
+                <EditorCorte
+                  key={id}
+                  clienteId={id}
+                  podeEditar={pode(sessao, 'faturamento.corte.editar')}
+                  porPagina={5}
+                  unidadeDe={cliente?.unificadoEm?.nome}
+                  nivelTitulos={4}
+                  onAlterado={setCorteAlterado}
+                />
+              </section>
+            )}
+            {veDados && (
+              <section className={veCorte ? 'border-t pt-6' : undefined}>
+                <DadosFaturamentoCliente
+                  key={id}
+                  clienteId={id}
+                  podeEditar={pode(sessao, 'clientes.faturamento.editar')}
+                  unidadeDe={cliente?.unificadoEm?.nome}
+                  onAlterado={setDadosAlterados}
+                />
+              </section>
+            )}
           </div>
         ) : undefined
       }
