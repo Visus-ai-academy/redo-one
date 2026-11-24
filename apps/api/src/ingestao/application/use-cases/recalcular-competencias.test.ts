@@ -88,6 +88,23 @@ describe('RecalcularCompetencias', () => {
     expect(competenciaDe('x1')).toBe('2026-10');
   });
 
+  it('descarta o laudo cuja competência de origem foi bloqueada entre ler o lote e filtrar', async () => {
+    cortes.porCliente.set('c-x', [{ desde: '2026-10', corte: corteDia15 }]);
+    const ler = laudos.lerParaRecalculo.bind(laudos);
+    laudos.lerParaRecalculo = async (lote) => {
+      const lidos = await ler(lote);
+      // Fecham 2026-10 logo depois da leitura: o lote já traz x1, de 2026-10.
+      competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+      return lidos;
+    };
+
+    const resultado = await recalcular.executar({ clienteIds: ['c-x'] });
+
+    expect(resultado).toEqual({ lidos: 1, alterados: 0 });
+    expect(competenciaDe('x1')).toBe('2026-10');
+    expect(competencias.competencias.has('2026-11')).toBe(false);
+  });
+
   it('rodar duas vezes não muda nada na segunda', async () => {
     cortes.porCliente.set('c-x', [{ desde: '2026-10', corte: corteDia15 }]);
 

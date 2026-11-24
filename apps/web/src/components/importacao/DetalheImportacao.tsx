@@ -104,7 +104,7 @@ export function DetalheImportacao({
             <Campo rotulo="Removidos da janela">{numero(i.removidos)}</Campo>
             <Campo rotulo="Linhas inválidas">{numero(i.invalidas)}</Campo>
             {(i.ignoradasCompetenciaFechada ?? 0) > 0 && (
-              <Campo rotulo="Fora por competência fechada">
+              <Campo rotulo="Fora por competência fechada ou travada">
                 {numero(i.ignoradasCompetenciaFechada)}
               </Campo>
             )}

@@ -325,6 +325,111 @@ describe('ImportarLaudos', () => {
     ]);
   });
 
+  describe('laudo gravado quando o cálculo da competência diverge', () => {
+    // O apelido triado passa a resolver a CLINICA NOVA para o c-novo; o resto continua igual.
+    const comApelido: CadastrosIngestao['resolverCliente'] = (e) =>
+      e === 'CLINICA NOVA' ? 'c-novo' : cadastros.resolverCliente(e);
+    const reimportar = async (id: string, ...registros: Record<string, Celula>[]) => {
+      planilha = { formato: 'laudos', registros };
+      importacoes.criar(id);
+      await novo(undefined, {
+        ...cadastros,
+        resolverCliente: comApelido,
+      }).executar(id);
+      return importacoes.itens.get(id);
+    };
+
+    it('o laudo de competência fechada não sai dela, mesmo que o novo cálculo dê um mês aberto', async () => {
+      // Até o dia 25 no próprio mês: o laudo de 27/10 do c-novo cai em 2026-11.
+      cortes.porCliente.set('c-novo', [
+        { desde: '2026-10', corte: { dia: 25, mes: 'proprio', consideraExame: false } },
+      ]);
+      const linha = registro('1', {
+        EMPRESA: 'CLINICA NOVA',
+        DATA_REALIZACAO: '27/10/2026',
+        DATA_LAUDO: '27/10/2026',
+      });
+      await importar('i1', [linha]);
+      expect(laudos.ativos().map((l) => [l.clienteId, l.competencia])).toEqual([[null, '2026-10']]);
+      const antes = structuredClone(laudos.laudos.get(laudos.ativos()[0]?.identidade ?? ''));
+      competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+
+      const r = await reimportar('i2', linha);
+
+      expect(r?.resultado).toMatchObject({
+        inseridos: 0,
+        atualizados: 0,
+        removidos: 0,
+        ignoradasCompetenciaFechada: 1,
+      });
+      expect(laudos.ativos().map((l) => [l.clienteId, l.competencia])).toEqual([[null, '2026-10']]);
+      expect(laudos.laudos.get(antes?.identidade ?? '')).toEqual(antes);
+      expect(competencias.competencias.has('2026-11')).toBe(false);
+    });
+
+    it('o laudo de competência aberta não é removido quando o novo cálculo dá uma bloqueada', async () => {
+      // Até o dia 7 do mês seguinte, sem olhar o exame: o laudo de 03/11 do c-novo cai em 2026-10.
+      cortes.porCliente.set('c-novo', [
+        { desde: '2026-10', corte: { dia: 7, mes: 'seguinte', consideraExame: false } },
+      ]);
+      const linha = registro('1', {
+        EMPRESA: 'CLINICA NOVA',
+        DATA_REALIZACAO: '03/11/2026',
+        DATA_LAUDO: '03/11/2026',
+      });
+      // Outro laudo do mesmo dia, que segue em 2026-11: a janela da planilha cobre o 03/11.
+      const novembro = registro('2', { DATA_REALIZACAO: '01/11/2026', DATA_LAUDO: '03/11/2026' });
+      await importar('i1', [linha, novembro]);
+      expect(laudos.ativos().map((l) => l.competencia)).toEqual(['2026-11', '2026-11']);
+      const identidade =
+        laudos.ativos().find((l) => l.empresaOrigem === 'CLINICA NOVA')?.identidade ?? '';
+      const antes = structuredClone(laudos.laudos.get(identidade));
+      competencias.competencias.set('2026-10', { status: 'aberta', importacaoTravada: true });
+
+      const r = await reimportar('i2', linha, novembro);
+
+      expect(r?.resultado).toMatchObject({
+        inalterados: 1,
+        removidos: 0,
+        ignoradasCompetenciaFechada: 1,
+      });
+      expect(laudos.laudos.get(identidade)).toEqual(antes);
+    });
+
+    it('o laudo de competência bloqueada fora do arquivo não é removido', async () => {
+      // Os dois laudados em 06/11: o de exame de 25/10 fica em 2026-10, o de 05/11 em 2026-11.
+      const outubro = registro('1', { DATA_REALIZACAO: '25/10/2026', DATA_LAUDO: '06/11/2026' });
+      const novembro = registro('2', { DATA_REALIZACAO: '05/11/2026', DATA_LAUDO: '06/11/2026' });
+      await importar('i1', [outubro, novembro]);
+      expect(laudos.ativos().map((l) => l.competencia)).toEqual(['2026-10', '2026-11']);
+      competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+
+      const r = await importar('i2', [novembro]);
+
+      expect(r?.resultado).toMatchObject({
+        inalterados: 1,
+        removidos: 0,
+        ignoradasCompetenciaFechada: 0,
+      });
+      expect(laudos.ativos()).toHaveLength(2);
+    });
+  });
+
+  it('cria a linha da competência antes de gravar os laudos (se a gravação cair, ela existe)', async () => {
+    laudos.aplicar = async () => {
+      throw new Error('caiu ao gravar');
+    };
+    planilha = { formato: 'laudos', registros: [registro('1')] };
+    importacoes.criar('i1');
+
+    await expect(novo().executar('i1')).rejects.toThrow('caiu ao gravar');
+
+    expect(competencias.competencias.get('2026-10')).toEqual({
+      status: 'aberta',
+      importacaoTravada: false,
+    });
+  });
+
   it('cria as competências dos laudos gravados, sem as das linhas ignoradas', async () => {
     competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
     await importar('i1', [

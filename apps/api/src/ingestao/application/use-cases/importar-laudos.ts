@@ -114,7 +114,8 @@ export class ImportarLaudos {
     const conferidos = new Map<string, { tipo: TipoAviso; chave: string }>();
     const errosLinhas: { linha: number; mensagem: string }[] = [];
     let invalidas = 0;
-    let ignoradasCompetenciaFechada = 0;
+    // Identidades das linhas cuja competência calculada está bloqueada: o gravado fica como está.
+    const ignoradas = new Set<string>();
 
     for (const { numero, registro } of planilha.linhas) {
       let preparo: ReturnType<typeof prepararLaudo>;
@@ -128,7 +129,7 @@ export class ImportarLaudos {
         continue;
       }
       if (competenciasBloqueadas.has(preparo.laudo.competencia)) {
-        ignoradasCompetenciaFechada++;
+        ignoradas.add(preparo.laudo.identidade);
         continue;
       }
       preparados.push(preparo.laudo);
@@ -145,7 +146,7 @@ export class ImportarLaudos {
       formato: planilha.formato,
       linhasArquivo: planilha.linhas.length,
       invalidas,
-      ignoradasCompetenciaFechada,
+      ignoradasCompetenciaFechada: ignoradas.size,
       errosLinhas,
     };
     if (preparados.length === 0) {
@@ -169,11 +170,15 @@ export class ImportarLaudos {
           : undefined,
       competenciasBloqueadas: bloqueadas,
     };
-    const plano = planejarImportacao(preparados, await this.laudos.existentesNaJanela(janela), {
-      minimo: parametros.travaRemocaoMinimo,
-      fator: parametros.travaRemocaoFator,
-    });
+    const plano = planejarImportacao(
+      preparados,
+      await this.laudos.existentesNaJanela(janela),
+      { minimo: parametros.travaRemocaoMinimo, fator: parametros.travaRemocaoFator },
+      { competencias: competenciasBloqueadas, identidadesIgnoradas: ignoradas },
+    );
     Object.assign(resultado, {
+      // As da competência calculada bloqueada e as do laudo gravado numa bloqueada.
+      ignoradasCompetenciaFechada: ignoradas.size + plano.ignoradasBloqueada,
       janelaInicio: janela.inicio,
       janelaFim: janela.fim,
       inseridos: plano.inserir.length,
@@ -183,6 +188,10 @@ export class ImportarLaudos {
     });
     if (plano.recusa) return { ...resultado, status: 'recusada' as const, mensagem: plano.recusa };
 
+    // A linha da competência antes dos laudos: se a gravação cair, a retentativa vê os laudos como
+    // inalterados, e a competência ficaria sem linha (sem como fechar). Só as dos laudos gravados.
+    const gravados = [...plano.inserir, ...plano.atualizar].map((l) => l.competencia);
+    await this.competencias.garantir([...new Set(gravados)].sort());
     const alterados = new Set([...plano.inserir, ...plano.atualizar].map((l) => l.identidade));
     await this.laudos.aplicar(
       importacaoId,
@@ -209,9 +218,6 @@ export class ImportarLaudos {
       },
       this.agora(),
     );
-    // Só as competências dos laudos gravados: as das linhas ignoradas (bloqueadas) não entram.
-    const gravados = [...plano.inserir, ...plano.atualizar].map((l) => l.competencia);
-    await this.competencias.garantir([...new Set(gravados)].sort());
     await this.avisos.registrar(
       importacaoId,
       [...pendencias.values()],

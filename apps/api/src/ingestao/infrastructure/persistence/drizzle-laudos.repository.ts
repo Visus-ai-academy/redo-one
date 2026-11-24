@@ -34,6 +34,13 @@ const colunasAtualizadas = Object.fromEntries(
     .map(([campo, coluna]) => [campo, sql.raw(`excluded."${coluna.name}"`)]),
 );
 
+/**
+ * Só os laudos fora das competências bloqueadas: nenhuma escrita em `laudos` muda um laudo de
+ * competência fechada ou travada, mesmo que o plano peça (cinto de segurança do plano).
+ */
+const foraDasBloqueadas = (bloqueadas: string[]) =>
+  bloqueadas.length ? notInArray(laudos.competencia, bloqueadas) : undefined;
+
 const linhaDoLaudo = (
   { pecas: _pecas, paciente: _paciente, ...l }: LaudoPreparado,
   importacaoId: string,
@@ -53,6 +60,8 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         identidade: laudos.identidade,
         hashConteudo: laudos.hashConteudo,
         removido: sql<boolean>`${laudos.removidoEm} is not null`,
+        // Também os de competência bloqueada: o plano não os muda nem os remove.
+        competencia: laudos.competencia,
         // Só a conferência (HMAC): a importação não lê o nome gravado.
         pacienteConferencia: laudosPacientes.conferencia,
         medicoIdMobilemed: laudos.medicoIdMobilemed,
@@ -65,34 +74,38 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           eq(laudos.origem, j.origem),
           between(laudos.diaLaudo, j.inicio, j.fim),
           j.empresas ? inArray(laudos.empresaOrigem, j.empresas) : undefined,
-          j.competenciasBloqueadas.length
-            ? notInArray(laudos.competencia, j.competenciasBloqueadas)
-            : undefined,
         ),
       );
     return new Map(linhas.map(({ identidade, ...l }) => [identidade, l]));
   }
 
   async aplicar(importacaoId: string, j: JanelaLaudos, a: AlteracoesLaudos, agora: Date) {
+    const desbloqueado = foraDasBloqueadas(j.competenciasBloqueadas);
+    // Nem a linha nova leva um laudo gravado para uma competência bloqueada.
+    const vaiParaDesbloqueada = j.competenciasBloqueadas.length
+      ? sql`excluded."competencia" not in ${j.competenciasBloqueadas}`
+      : undefined;
     await this.db.transaction(async (tx) => {
       for (const lote of emLotes([...a.inserir, ...a.atualizar])) {
         const gravados = await tx
           .insert(laudos)
           .values(lote.map((l) => linhaDoLaudo(l, importacaoId)))
-          .onConflictDoUpdate({ target: laudos.identidade, set: colunasAtualizadas })
+          // Conflito com competência bloqueada (gravada ou nova): não atualiza nem volta no returning.
+          .onConflictDoUpdate({
+            target: laudos.identidade,
+            set: colunasAtualizadas,
+            setWhere: and(desbloqueado, vaiParaDesbloqueada),
+          })
           .returning({ id: laudos.id, identidade: laudos.identidade });
         const idPorIdentidade = new Map(gravados.map((g) => [g.identidade, g.id]));
 
         await tx
           .delete(laudosPecasQuebra)
           .where(inArray(laudosPecasQuebra.laudoId, [...idPorIdentidade.values()]));
-        const pecas = lote.flatMap((l) =>
-          l.pecas.map((p, ordem) => ({
-            laudoId: idPorIdentidade.get(l.identidade) ?? '',
-            ordem,
-            ...p,
-          })),
-        );
+        const pecas = lote.flatMap((l) => {
+          const laudoId = idPorIdentidade.get(l.identidade);
+          return laudoId ? l.pecas.map((p, ordem) => ({ laudoId, ordem, ...p })) : [];
+        });
         if (pecas.length) await tx.insert(laudosPecasQuebra).values(pecas);
 
         const brutas = lote.flatMap((l) => {
@@ -119,7 +132,7 @@ export class DrizzleLaudosRepository implements LaudosRepository {
               coalesce(v.reassinou, ${laudos.medicoReassinaturaIdMobilemed}),
             atualizado_em = ${agora}
           from (values ${valores}) as v(identidade, assinou, reassinou)
-          where ${laudos.identidade} = v.identidade
+          where ${laudos.identidade} = v.identidade ${desbloqueado ? sql`and ${desbloqueado}` : sql``}
         `);
       }
 
@@ -129,9 +142,12 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           .select({ id: laudos.id, identidade: laudos.identidade })
           .from(laudos)
           .where(
-            inArray(
-              laudos.identidade,
-              lote.map(([identidade]) => identidade),
+            and(
+              inArray(
+                laudos.identidade,
+                lote.map(([identidade]) => identidade),
+              ),
+              desbloqueado,
             ),
           );
         const pacientes = ids.flatMap(({ id, identidade }) => {
@@ -157,7 +173,7 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         await tx
           .update(laudos)
           .set({ removidoEm: agora, importacaoId })
-          .where(inArray(laudos.identidade, lote));
+          .where(and(inArray(laudos.identidade, lote), desbloqueado));
       }
 
       // Totais dos dias da janela, refeitos do zero: idempotente e sem conta incremental.

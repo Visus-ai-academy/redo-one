@@ -84,7 +84,7 @@ export const importacoes = pgTable(
     removidos: integer('removidos'),
     /** Linhas que não puderam ser lidas (ver `errosLinhas`). */
     invalidas: integer('invalidas'),
-    /** Linhas de competência fechada ou com a importação travada. */
+    /** Linhas de competência bloqueada (fechada ou travada), calculada ou do laudo já gravado. */
     ignoradasCompetenciaFechada: integer('ignoradas_competencia_fechada'),
     /** Até 20 erros de leitura `{ linha, mensagem }`, sem dado de paciente. */
     errosLinhas: jsonb('erros_linhas').$type<{ linha: number; mensagem: string }[]>(),
@@ -157,7 +157,7 @@ export const laudos = pgTable(
     dataReassinatura: timestamp('data_reassinatura', { withTimezone: true }),
     /** Dia do laudo em horário de Brasília: chave dos totais e da janela da importação. */
     diaLaudo: date('dia_laudo').notNull(),
-    /** "YYYY-MM" (`competenciaDoLaudo`). */
+    /** "YYYY-MM" (`competenciaPelaCadeia`, pela cadeia de cortes do cliente). */
     competencia: text('competencia').notNull(),
     /** O laudo deixou de vir na janela de uma importação (cancelado, estudo renomeado...). */
     removidoEm: timestamp('removido_em', { withTimezone: true }),

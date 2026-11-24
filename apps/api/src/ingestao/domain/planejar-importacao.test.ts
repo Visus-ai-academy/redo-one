@@ -140,3 +140,41 @@ describe('planejarImportacao', () => {
     ).toBeNull();
   });
 });
+
+describe('planejarImportacao com competências bloqueadas', () => {
+  const bloqueio = (identidadesIgnoradas: string[] = []) => ({
+    competencias: new Set(['2026-10']),
+    identidadesIgnoradas: new Set(identidadesIgnoradas),
+  });
+
+  it('o laudo gravado em competência bloqueada não é atualizado, nem volta se estava removido', () => {
+    const existentes = new Map([
+      ['a', { hashConteudo: 'antigo', removido: false, competencia: '2026-10' }],
+      ['b', { hashConteudo: 'h-b', removido: true, competencia: '2026-10' }],
+      ['c', { hashConteudo: 'antigo', removido: false, competencia: '2026-11' }],
+    ]);
+
+    const plano = planejarImportacao(
+      [laudo('a'), laudo('b'), laudo('c')],
+      existentes,
+      trava,
+      bloqueio(),
+    );
+
+    expect(plano.atualizar.map((l) => l.identidade)).toEqual(['c']);
+    expect(plano.inserir).toEqual([]);
+    expect(plano.ignoradasBloqueada).toBe(2);
+  });
+
+  it('não remove o laudo gravado em competência bloqueada nem o das linhas ignoradas', () => {
+    const existentes = new Map([
+      ['fechado', { hashConteudo: 'x', removido: false, competencia: '2026-10' }],
+      ['ignorado', { hashConteudo: 'y', removido: false, competencia: '2026-11' }],
+      ['sumiu', { hashConteudo: 'z', removido: false, competencia: '2026-11' }],
+    ]);
+
+    const plano = planejarImportacao([], existentes, trava, bloqueio(['ignorado']));
+
+    expect(plano.remover).toEqual(['sumiu']);
+  });
+});

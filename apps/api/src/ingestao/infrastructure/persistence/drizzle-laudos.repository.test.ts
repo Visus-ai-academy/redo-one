@@ -120,6 +120,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
           {
             hashConteudo: 'h-a',
             removido: false,
+            competencia: '2026-10',
             pacienteConferencia: null,
             medicoIdMobilemed: null,
             medicoReassinaturaIdMobilemed: null,
@@ -227,7 +228,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     expect(await db.select().from(schema.laudosLinhasBrutas)).toEqual([]);
   });
 
-  it('a janela filtra origem, dias, empresas e competências bloqueadas', async () => {
+  it('a janela filtra origem, dias e empresas, e traz também os de competência bloqueada', async () => {
     await repo.aplicar(
       importacaoId,
       janela,
@@ -248,8 +249,67 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
       [...(await repo.existentesNaJanela({ ...janela, ...j })).keys()].sort();
     expect(await chaves({})).toEqual(['a', 'd', 'e']);
     expect(await chaves({ empresas: ['CLINICA X'] })).toEqual(['a', 'e']);
-    expect(await chaves({ competenciasBloqueadas: ['2026-09'] })).toEqual(['a', 'd']);
+    // A importação decide o que fazer com eles pela competência gravada (não os remove).
+    expect(await chaves({ competenciasBloqueadas: ['2026-09'] })).toEqual(['a', 'd', 'e']);
+    expect((await repo.existentesNaJanela(janela)).get('e')?.competencia).toBe('2026-09');
     expect(await chaves({ origem: 'compartilhamento' })).toEqual(['b']);
+  });
+
+  it('nunca sobrescreve nem remove laudo gravado em competência bloqueada', async () => {
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      {
+        ...vazio,
+        inserir: [
+          laudo('a'),
+          laudo('b'),
+          laudo('aberto', { competencia: '2026-11' }),
+          laudo('vai', { competencia: '2026-11' }),
+        ],
+      },
+      agora,
+    );
+    const antes = await db.select().from(schema.laudos).orderBy(schema.laudos.identidade);
+    const [exame] = await db
+      .insert(schema.exames)
+      .values({ nome: 'TC TORAX', chaveNormalizada: 'tc torax' })
+      .returning();
+    const bloqueada = { ...janela, competenciasBloqueadas: ['2026-10'] };
+
+    // Como se o plano tivesse falhado: tenta mover 'a' para um mês aberto, 'vai' para o bloqueado
+    // e remover 'b'.
+    await repo.aplicar(
+      importacaoId,
+      bloqueada,
+      {
+        ...vazio,
+        atualizar: [
+          laudo('a', {
+            hashConteudo: 'novo',
+            competencia: '2026-11',
+            pecas: [{ exameId: exame?.id ?? '', categoriaId: null }],
+          }),
+          laudo('aberto', { hashConteudo: 'novo', competencia: '2026-11' }),
+          laudo('vai', { hashConteudo: 'novo', competencia: '2026-10' }),
+        ],
+        inserir: [laudo('c', { competencia: '2026-11' })],
+        remover: ['b'],
+        linhasBrutas: new Map([['a', { EMPRESA: 'CLINICA X' }]]),
+        pacientes: new Map([['a', { nome: 'Fulano', codigo: '1', conferencia: 'p1' }]]),
+        idsMedico: new Map([['a', { medicoIdMobilemed: 45, medicoReassinaturaIdMobilemed: 46 }]]),
+      },
+      agora,
+    );
+
+    const depois = await db.select().from(schema.laudos).orderBy(schema.laudos.identidade);
+    const intactos = (l: { identidade: string }) => ['a', 'b', 'vai'].includes(l.identidade);
+    expect(depois.filter(intactos)).toEqual(antes.filter(intactos));
+    expect(depois.find((l) => l.identidade === 'aberto')?.hashConteudo).toBe('novo');
+    expect(depois.find((l) => l.identidade === 'c')?.competencia).toBe('2026-11');
+    expect(await db.select().from(schema.laudosPecasQuebra)).toEqual([]);
+    expect(await db.select().from(schema.laudosLinhasBrutas)).toEqual([]);
+    expect(await db.select().from(schema.laudosPacientes)).toEqual([]);
   });
 
   it('atualiza pelo identidade, troca as peças da quebra e desfaz a remoção', async () => {
@@ -280,6 +340,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     expect((await repo.existentesNaJanela(janela)).get('a')).toEqual({
       hashConteudo: 'novo',
       removido: false,
+      competencia: '2026-10',
       pacienteConferencia: null,
       medicoIdMobilemed: null,
       medicoReassinaturaIdMobilemed: null,

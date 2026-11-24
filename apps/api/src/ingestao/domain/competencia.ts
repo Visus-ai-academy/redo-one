@@ -118,8 +118,3 @@ export function competenciaPelaCadeia(
   }
   return competencia;
 }
-
-/** Competência pelo corte padrão inicial (dia 7, mês seguinte). Caminho antigo, até a importação usar a cadeia. */
-export function competenciaDoLaudo(realizacao: Date, laudo: Date): string {
-  return competenciaPelaCadeia(realizacao, laudo, [CORTE_PADRAO_INICIAL]);
-}

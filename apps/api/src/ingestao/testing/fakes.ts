@@ -116,8 +116,7 @@ export class LaudosEmMemoria implements LaudosRepository {
       l.origem === j.origem &&
       l.diaLaudo >= j.inicio &&
       l.diaLaudo <= j.fim &&
-      (!j.empresas || j.empresas.includes(l.empresaOrigem)) &&
-      !j.competenciasBloqueadas.includes(l.competencia)
+      (!j.empresas || j.empresas.includes(l.empresaOrigem))
     );
   }
 
@@ -128,6 +127,7 @@ export class LaudosEmMemoria implements LaudosRepository {
         existentes.set(l.identidade, {
           hashConteudo: l.hashConteudo,
           removido: l.removido,
+          competencia: l.competencia,
           pacienteConferencia: this.pacientes.get(l.identidade)?.conferencia ?? null,
           medicoIdMobilemed: l.medicoIdMobilemed,
           medicoReassinaturaIdMobilemed: l.medicoReassinaturaIdMobilemed,
