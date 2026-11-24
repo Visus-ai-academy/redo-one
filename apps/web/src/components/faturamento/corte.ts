@@ -35,9 +35,16 @@ export function fraseDoCorte(c: CamposCorte) {
       : 'de 01 ao último dia do mês seguinte';
   } else {
     const dia = c.dia ?? 0;
-    periodo = proprio
-      ? `de ${dois(dia + 1)} do mês anterior a ${dois(dia)} do próprio mês`
-      : `de ${dois(dia + 1)} de um mês a ${dois(dia)} do seguinte`;
+    if (dia >= 28) {
+      // Fevereiro (ou um mês de 30 dias) não tem o dia seguinte nem, às vezes, o próprio dia.
+      periodo = proprio
+        ? `do dia seguinte ao dia ${dia} do mês anterior até o dia ${dia} do próprio mês (ou o último dia, no mês mais curto)`
+        : `do dia seguinte ao dia ${dia} de um mês até o dia ${dia} do seguinte (ou o último dia, no mês mais curto)`;
+    } else {
+      periodo = proprio
+        ? `de ${dois(dia + 1)} do mês anterior a ${dois(dia)} do próprio mês`
+        : `de ${dois(dia + 1)} de um mês a ${dois(dia)} do seguinte`;
+    }
   }
   const exame = c.consideraExame ? 'considera a data do exame' : 'só a data do laudo conta';
   return `Laudos assinados ${periodo}; ${exame}`;

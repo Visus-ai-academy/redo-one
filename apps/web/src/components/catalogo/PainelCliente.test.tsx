@@ -178,4 +178,13 @@ describe('PainelCliente', () => {
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
     await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
   });
+
+  it('com a vigência do corte digitada na aba Faturamento, fechar pergunta antes de descartar', async () => {
+    const { onFechar } = montar({ cliente, faturamento: <p>corte</p>, faturamentoAlterado: true });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
+  });
 });

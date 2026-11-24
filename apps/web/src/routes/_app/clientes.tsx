@@ -5,7 +5,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
@@ -264,6 +264,8 @@ function Painel({
   });
   const cliente = consulta.data;
   const avisos = useAvisos();
+  // Vigência do corte digitada na aba Faturamento: fechar o painel pergunta antes de descartar.
+  const [corteAlterado, setCorteAlterado] = useState(false);
   const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
   const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
   if (id && (!cliente || fase !== 'conteudo'))
@@ -285,6 +287,7 @@ function Painel({
       podeCriar={permissoes.criar}
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
+      faturamentoAlterado={corteAlterado}
       historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
       distribuicao={
         id && pode(sessao, 'clientes.distribuicao.ver') ? (
@@ -305,6 +308,8 @@ function Painel({
               podeEditar={pode(sessao, 'faturamento.corte.editar')}
               porPagina={5}
               unidadeDe={cliente?.unificadoEm?.nome}
+              nivelTitulos={4}
+              onAlterado={setCorteAlterado}
             />
           </div>
         ) : undefined

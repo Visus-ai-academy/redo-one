@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -165,6 +165,77 @@ describe('EditorCorte (padrão)', () => {
   });
 });
 
+describe('EditorCorte (alterações e corridas)', () => {
+  it('Cancelar sem mudar nada fecha direto', async () => {
+    editor();
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nova vigência' })).toBeInTheDocument();
+  });
+
+  it('Cancelar com algo digitado pergunta antes de descartar e avisa quem está fora', async () => {
+    const onAlterado = vi.fn();
+    editor({ onAlterado });
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
+    await escolherOpcao('A partir de', '12/2026');
+    expect(onAlterado).toHaveBeenLastCalledWith(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
+    expect(screen.getByRole('combobox', { name: 'A partir de' })).toHaveTextContent('12/2026');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+    expect(await screen.findByRole('button', { name: 'Nova vigência' })).toBeInTheDocument();
+    expect(onAlterado).toHaveBeenLastCalledWith(false);
+  });
+
+  it('prévia que chega depois de mudar um campo é descartada', async () => {
+    let responder: (v: unknown) => void = () => {};
+    previa.mockReturnValue({
+      unwrap: () =>
+        new Promise((r) => {
+          responder = r;
+        }),
+    } as never);
+    editor();
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
+    await escolherOpcao('A partir de', '12/2026');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
+    await escolherOpcao('Mês do corte', 'No próprio mês');
+    responder({ alterados: 120, movimentos: [{ de: '2026-11', para: '2026-12', laudos: 120 }] });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeEnabled());
+    expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar vigência' })).not.toBeInTheDocument();
+    // Nem volta ao voltar o campo: a prévia que chegou atrasada não ficou guardada.
+    await escolherOpcao('Mês do corte', 'No mês seguinte');
+    expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
+  });
+
+  it('sem corte padrão em vigor vindo da API, mostra o erro e não inventa um corte', async () => {
+    porCliente = { padrao: [] };
+    editor();
+    expect(
+      await screen.findByText('Não foi possível achar o corte padrão em vigor agora.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nova vigência' })).not.toBeInTheDocument();
+  });
+
+  it('dentro de outra seção (aba do cliente), os títulos descem um nível', async () => {
+    editor({ clienteId: 'c-1', nivelTitulos: 4 });
+    expect(await screen.findByRole('heading', { level: 4, name: 'Em vigor' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 4, name: 'Histórico de vigências' }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Nova vigência' }));
+    expect(screen.getByRole('heading', { level: 4, name: 'Nova vigência' })).toBeInTheDocument();
+  });
+});
+
 describe('EditorCorte (cliente)', () => {
   it('sem vigência própria, diz que usa o padrão e qual é', async () => {
     editor({ clienteId: 'c-1', podeEditar: false });
@@ -224,5 +295,6 @@ describe('EditorCorte (cliente)', () => {
     expect(
       await screen.findByText(/Os laudos desta unidade seguem o corte de PRN/),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nova vigência' })).not.toBeInTheDocument();
   });
 });

@@ -44,6 +44,8 @@ export type PainelClienteProps = {
   distribuicao?: ReactNode;
   /** Conteúdo da aba Faturamento (corte da competência); sem ele (sem permissão), a aba não aparece. */
   faturamento?: ReactNode;
+  /** A aba Faturamento tem uma vigência do corte digitada e não salva: fechar pergunta antes. */
+  faturamentoAlterado?: boolean;
 };
 
 const TIPOS_APELIDO = {
@@ -95,6 +97,7 @@ export function PainelCliente({
   historico,
   distribuicao,
   faturamento,
+  faturamentoAlterado = false,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
   const iniciais = {
@@ -156,7 +159,7 @@ export function PainelCliente({
       titulo={cliente?.nome ?? 'Novo cliente'}
       subtitulo={cliente?.nomeFantasia ?? undefined}
       onFechar={onFechar}
-      alterado={alterado}
+      alterado={alterado || faturamentoAlterado}
     >
       <AbasComHistorico
         historico={cliente ? historico : undefined}

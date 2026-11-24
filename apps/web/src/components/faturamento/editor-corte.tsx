@@ -28,6 +28,7 @@ import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { useDescartarAlteracoes } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import { mesAno } from './competencias';
@@ -87,6 +88,8 @@ export type EditorCorteProps = {
   unidadeDe?: string;
   /** Avisa quando a nova vigência tem algo digitado e não salvo (guarda de saída da página). */
   onAlterado?: (alterado: boolean) => void;
+  /** Nível dos títulos internos: 3 sob o título da página (h2), 4 dentro da aba do cliente (h3). */
+  nivelTitulos?: 3 | 4;
   agora?: Date;
 };
 
@@ -101,8 +104,10 @@ export function EditorCorte({
   porPagina,
   unidadeDe,
   onAlterado,
+  nivelTitulos = 3,
   agora = new Date(),
 }: EditorCorteProps) {
+  const Titulo = nivelTitulos === 4 ? 'h4' : 'h3';
   const doCliente = useQuery(
     cortesControllerListarQueryOptions(clienteId ? { query: { clienteId } } : {}),
   );
@@ -135,6 +140,19 @@ export function EditorCorte({
   const padraoEmVigor = vigenciaEmVigor(padroes, mesAtual);
   const proprioEmVigor = clienteId ? vigenciaEmVigor(vigencias, mesAtual) : undefined;
   const emVigor = proprioEmVigor && !proprioEmVigor.usaPadrao ? proprioEmVigor : padraoEmVigor;
+  // A API sempre tem a vigência padrão inicial; sem ela, não há corte certo para mostrar nem partir.
+  if (!emVigor) {
+    return (
+      <AbaComErro
+        onTentarDeNovo={() => {
+          void doCliente.refetch();
+          if (clienteId) void padrao.refetch();
+        }}
+      >
+        Não foi possível achar o corte padrão em vigor agora.
+      </AbaComErro>
+    );
+  }
   const itensCompetencias = competencias.data.itens;
 
   return (
@@ -147,24 +165,20 @@ export function EditorCorte({
       )}
 
       <section aria-labelledby={idEmVigor} className="flex flex-col gap-1">
-        <h3 id={idEmVigor} className="text-subtle-foreground text-[13px] font-medium">
+        <Titulo id={idEmVigor} className="text-subtle-foreground text-[13px] font-medium">
           Em vigor
-        </h3>
+        </Titulo>
         {clienteId && emVigor === padraoEmVigor && (
           <p className="font-medium">Usa o corte padrão</p>
         )}
-        {emVigor && (
-          <p
-            className={
-              clienteId && emVigor === padraoEmVigor ? 'text-muted-foreground' : 'font-medium'
-            }
-          >
-            {fraseDoCorte(emVigor)}
-          </p>
-        )}
-        {emVigor && (
-          <p className="text-muted-foreground text-[13px]">{exemplo(mesAtual, emVigor)}</p>
-        )}
+        <p
+          className={
+            clienteId && emVigor === padraoEmVigor ? 'text-muted-foreground' : 'font-medium'
+          }
+        >
+          {fraseDoCorte(emVigor)}
+        </p>
+        <p className="text-muted-foreground text-[13px]">{exemplo(mesAtual, emVigor)}</p>
       </section>
 
       {podeEditar &&
@@ -172,7 +186,8 @@ export function EditorCorte({
         (criando ? (
           <NovaVigencia
             clienteId={clienteId}
-            base={emVigor ?? valoresPadraoDeHoje}
+            base={emVigor}
+            Titulo={Titulo}
             opcoesDesde={opcoesDeDesde({
               ultimaFechada:
                 itensCompetencias.find((c) => c.status === 'fechada')?.competencia ?? null,
@@ -198,9 +213,9 @@ export function EditorCorte({
         ))}
 
       <section aria-labelledby={idHistorico} className="flex flex-col gap-2">
-        <h3 id={idHistorico} className="text-subtle-foreground text-[13px] font-medium">
+        <Titulo id={idHistorico} className="text-subtle-foreground text-[13px] font-medium">
           Histórico de vigências
-        </h3>
+        </Titulo>
         {vigencias.length === 0 ? (
           <p className="text-muted-foreground">Nenhuma vigência própria.</p>
         ) : (
@@ -229,14 +244,6 @@ export function EditorCorte({
     </div>
   );
 }
-
-/** Sem vigência padrão nenhuma (não acontece: a API garante a inicial), parte do corte de hoje. */
-const valoresPadraoDeHoje: CamposCorte = {
-  dia: 7,
-  ultimoDia: false,
-  mes: 'seguinte',
-  consideraExame: true,
-};
 
 function exemplo(competencia: string, corte: CamposCorte) {
   const { inicio, fim } = periodoDaCompetencia(competencia, corte);
@@ -278,9 +285,11 @@ function NovaVigencia({
   opcoesDesde,
   onAlterado,
   onFechar,
+  Titulo,
 }: {
   clienteId: string | null;
   base: CamposCorte;
+  Titulo: 'h3' | 'h4';
   opcoesDesde: string[];
   onAlterado?: (alterado: boolean) => void;
   onFechar: () => void;
@@ -288,6 +297,7 @@ function NovaVigencia({
   const queryClient = useQueryClient();
   const avisos = useAvisos();
   const { erro, tentar } = useErroDoPainel();
+  const { pedir, confirmacao } = useDescartarAlteracoes();
   // A prévia vale para o corpo com que foi pedida; mudou um campo, pede de novo.
   const [previa, setPrevia] = useState<{ chave: string; resultado: PreviaCorteDto }>();
   const iniciais = valoresIniciais(base);
@@ -300,6 +310,8 @@ function NovaVigencia({
       if (previa?.chave !== chave) {
         return tentar(async () => {
           const resultado = await cortesControllerPrevia({ body: corpo }).unwrap();
+          // Chegou depois de a pessoa mudar um campo: é a prévia de outro corte, fica de fora.
+          if (JSON.stringify(corpoDaVigencia(form.state.values, clienteId)) !== chave) return;
           setPrevia({ chave, resultado });
         }, 'Não foi possível calcular a prévia agora. Confira sua conexão e tente de novo.');
       }
@@ -321,6 +333,8 @@ function NovaVigencia({
   const previaAtual = previa?.chave === chaveAtual ? previa.resultado : undefined;
   const alterado = JSON.stringify(valores) !== JSON.stringify(iniciais);
   useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
+  // Saiu da tela (fechou, trocou de aba): não há mais nada digitado aqui.
+  useEffect(() => () => onAlterado?.(false), [onAlterado]);
   // Mudou um campo, a prévia de antes deixa de valer (mesmo voltando ao valor: os laudos mudam).
   useEffect(() => {
     setPrevia((p) => (p && p.chave !== chaveAtual ? undefined : p));
@@ -333,109 +347,112 @@ function NovaVigencia({
     (corteDigitado.dia !== null || corteDigitado.ultimoDia);
 
   return (
-    <form
-      noValidate
-      aria-label="Nova vigência do corte"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void form.handleSubmit();
-      }}
-      className="flex flex-col gap-4 border-t pt-4"
-    >
-      <h3 className="text-base font-semibold">Nova vigência</h3>
-      <form.AppField name="desde">
-        {(field) => (
-          <field.SelectField
-            label="A partir de"
-            placeholder="Escolha a competência"
-            required
-            opcoes={opcoesDesde.map((m) => ({ valor: m, rotulo: mesAno(m) }))}
-            description="Só competências depois da última fechada: mês fechado não muda."
-          />
-        )}
-      </form.AppField>
-      {clienteId && (
-        <form.AppField name="usaPadrao">
+    <>
+      <form
+        noValidate
+        aria-label="Nova vigência do corte"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        className="flex flex-col gap-4 border-t pt-4"
+      >
+        <Titulo className="text-base font-semibold">Nova vigência</Titulo>
+        <form.AppField name="desde">
           {(field) => (
-            <field.CheckboxField
-              label="Usar o corte padrão"
-              description="A partir desta competência, o cliente segue o corte padrão."
+            <field.SelectField
+              label="A partir de"
+              placeholder="Escolha a competência"
+              required
+              opcoes={opcoesDesde.map((m) => ({ valor: m, rotulo: mesAno(m) }))}
+              description="Só competências depois da última fechada: mês fechado não muda."
             />
           )}
         </form.AppField>
-      )}
-      {!valores.usaPadrao && (
-        <>
-          <div className="flex flex-wrap gap-4">
-            <form.AppField name="dia">
-              {(field) => (
-                <field.SelectField
-                  label="Dia do corte (data do laudo)"
-                  placeholder="Escolha o dia"
-                  required
-                  opcoes={DIAS}
-                  description="Último dia que entra. Maior que o mês vale o último dia dele."
-                  className="flex-[1_1_180px]"
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="mes">
-              {(field) => (
-                <field.SelectField
-                  label="Mês do corte"
-                  placeholder="Escolha o mês"
-                  required
-                  opcoes={MESES}
-                  description="Em que mês, em relação à competência, cai o dia do corte."
-                  className="flex-[1_1_180px]"
-                />
-              )}
-            </form.AppField>
-          </div>
-          <div className="flex items-start gap-1">
-            <form.AppField name="consideraExame">
-              {(field) => (
-                <field.CheckboxField
-                  label="Considerar a data do exame"
-                  description="Ligado, o laudo nunca vai para um mês anterior ao da data do exame. Desligado, só a data do laudo conta."
-                />
-              )}
-            </form.AppField>
-            <AjudaContextual assunto="considerar a data do exame">
-              Ex.: corte no dia 7 do mês seguinte, exame feito em 02/12 e laudo assinado em 03/12.
-              Pela data do laudo, iria para 11; considerando a data do exame, fica em 12.
-            </AjudaContextual>
-          </div>
-          {completo && (
-            <p className="bg-muted rounded-md px-3 py-2 text-[13px]">
-              {fraseDoCorte(corteDigitado)}.{' '}
-              {valores.desde && exemplo(valores.desde, corteDigitado)}
-            </p>
-          )}
-        </>
-      )}
+        {clienteId && (
+          <form.AppField name="usaPadrao">
+            {(field) => (
+              <field.CheckboxField
+                label="Usar o corte padrão"
+                description="A partir desta competência, o cliente segue o corte padrão."
+              />
+            )}
+          </form.AppField>
+        )}
+        {!valores.usaPadrao && (
+          <>
+            <div className="flex flex-wrap gap-4">
+              <form.AppField name="dia">
+                {(field) => (
+                  <field.SelectField
+                    label="Dia do corte (data do laudo)"
+                    placeholder="Escolha o dia"
+                    required
+                    opcoes={DIAS}
+                    description="Último dia que entra. Maior que o mês vale o último dia dele."
+                    className="flex-[1_1_180px]"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="mes">
+                {(field) => (
+                  <field.SelectField
+                    label="Mês do corte"
+                    placeholder="Escolha o mês"
+                    required
+                    opcoes={MESES}
+                    description="Em que mês, em relação à competência, cai o dia do corte."
+                    className="flex-[1_1_180px]"
+                  />
+                )}
+              </form.AppField>
+            </div>
+            <div className="flex items-start gap-1">
+              <form.AppField name="consideraExame">
+                {(field) => (
+                  <field.CheckboxField
+                    label="Considerar a data do exame"
+                    description="Ligado, o laudo nunca vai para um mês anterior ao da data do exame. Desligado, só a data do laudo conta."
+                  />
+                )}
+              </form.AppField>
+              <AjudaContextual assunto="considerar a data do exame">
+                Ex.: corte no dia 7 do mês seguinte, exame feito em 02/12 e laudo assinado em 03/12.
+                Pela data do laudo, iria para 11; considerando a data do exame, fica em 12.
+              </AjudaContextual>
+            </div>
+            {completo && (
+              <p className="bg-muted rounded-md px-3 py-2 text-[13px]">
+                {fraseDoCorte(corteDigitado)}.{' '}
+                {valores.desde && exemplo(valores.desde, corteDigitado)}
+              </p>
+            )}
+          </>
+        )}
 
-      {erro && <Alerta tom="erro">{erro}</Alerta>}
-      {previaAtual && <Previa previa={previaAtual} />}
+        {erro && <Alerta tom="erro">{erro}</Alerta>}
+        {previaAtual && <Previa previa={previaAtual} />}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-        <form.AppForm>
-          <form.RequiredLegend />
-          <Button
-            type="button"
-            onClick={onFechar}
-            className={buttonClassName({ variant: 'secondary' })}
-          >
-            Cancelar
-          </Button>
-          {previaAtual ? (
-            <form.SubmitButton pendingLabel="Salvando…">Salvar vigência</form.SubmitButton>
-          ) : (
-            <form.SubmitButton pendingLabel="Calculando…">Ver prévia</form.SubmitButton>
-          )}
-        </form.AppForm>
-      </div>
-    </form>
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+          <form.AppForm>
+            <form.RequiredLegend />
+            <Button
+              type="button"
+              onClick={() => pedir(alterado, onFechar)}
+              className={buttonClassName({ variant: 'secondary' })}
+            >
+              Cancelar
+            </Button>
+            {previaAtual ? (
+              <form.SubmitButton pendingLabel="Salvando…">Salvar vigência</form.SubmitButton>
+            ) : (
+              <form.SubmitButton pendingLabel="Calculando…">Ver prévia</form.SubmitButton>
+            )}
+          </form.AppForm>
+        </div>
+      </form>
+      {confirmacao}
+    </>
   );
 }
 

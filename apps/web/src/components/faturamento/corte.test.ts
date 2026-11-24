@@ -49,6 +49,17 @@ describe('fraseDoCorte', () => {
   });
 });
 
+describe('fraseDoCorte com dias que nem todo mês tem', () => {
+  it('dia 28 a 30 não cita dia inexistente (31, 29 de fevereiro)', () => {
+    expect(fraseDoCorte({ ...SROSALIA, dia: 30 })).toBe(
+      'Laudos assinados do dia seguinte ao dia 30 do mês anterior até o dia 30 do próprio mês (ou o último dia, no mês mais curto); só a data do laudo conta',
+    );
+    expect(fraseDoCorte({ ...PADRAO, dia: 28 })).toBe(
+      'Laudos assinados do dia seguinte ao dia 28 de um mês até o dia 28 do seguinte (ou o último dia, no mês mais curto); considera a data do exame',
+    );
+  });
+});
+
 describe('periodoDaCompetencia', () => {
   it('padrão: 12/2026 vai de 08/12/2026 a 07/01/2027 (virada do ano)', () => {
     expect(periodoDaCompetencia('2026-12', PADRAO)).toEqual({
