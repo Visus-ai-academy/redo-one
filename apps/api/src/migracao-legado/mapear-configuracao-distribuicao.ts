@@ -246,6 +246,7 @@ export function mapearConfiguracaoDistribuicao(
       tetoPorRodada: cfg.roboTetoPorRodada,
       // Sem equivalente no dashboards-one (a tela lia a fila a cada atualização): o padrão.
       retratoFilaMin: CONFIGURACAO_INICIAL.retratoFilaMin,
+      contasUnidadeValidadeMin: CONFIGURACAO_INICIAL.contasUnidadeValidadeMin,
     };
     contar('configuracaoGlobal');
   }

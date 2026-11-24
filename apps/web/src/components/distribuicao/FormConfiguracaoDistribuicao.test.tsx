@@ -29,6 +29,7 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
   retratoFilaMin: 5,
+  contasUnidadeValidadeMin: 240,
 };
 
 const ROTINA: PrioridadeOperacaoDto = {

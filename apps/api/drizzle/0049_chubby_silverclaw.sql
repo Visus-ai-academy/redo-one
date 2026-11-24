@@ -1,0 +1,1 @@
+ALTER TABLE "configuracao_distribuicao" ADD COLUMN "contas_unidade_validade_min" integer DEFAULT 240;

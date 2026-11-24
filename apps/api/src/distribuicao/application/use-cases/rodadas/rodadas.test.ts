@@ -77,6 +77,23 @@ class MobileMedDeTeste implements FilaExames, AtribuidorExames {
   }
 }
 
+/** Contas liberadas por unidade (a lista da MobileMed), com as leituras pedidas. */
+class ContasPorUnidadeDeTeste {
+  porUnidade = new Map<number, ReadonlySet<number>>();
+  falhar = new Set<number>();
+  pedidos: { unidades: number[]; validadeMin: number }[] = [];
+  async liberadas(unidades: readonly number[], validadeMin: number) {
+    this.pedidos.push({ unidades: [...unidades], validadeMin });
+    const porUnidade = new Map<number, ReadonlySet<number>>();
+    const falharam: number[] = [];
+    for (const u of unidades) {
+      if (this.falhar.has(u)) falharam.push(u);
+      else porUnidade.set(u, this.porUnidade.get(u) ?? new Set());
+    }
+    return { porUnidade, falharam, lidasAgora: unidades.length };
+  }
+}
+
 const catalogo: CatalogoDaFila = {
   classificar: (e) => ({
     exameId: e.estudo === 'TC TORAX' ? 'ex-tc' : null,
@@ -175,6 +192,7 @@ describe('rodada do robô (casos de uso)', () => {
   let auditoria: InMemoryAuditoria;
   let configuracao: ConfiguracaoEmMemoria;
   let medicos: MedicosRodadaEmMemoria;
+  let contasUnidade: ContasPorUnidadeDeTeste;
   let escopo: EscopoEmMemoria;
   let insumos: InsumosFixos;
   let avisosPrioridade: AvisosPrioridadeEmMemoria;
@@ -217,7 +235,9 @@ describe('rodada do robô (casos de uso)', () => {
     escalaRecolhimento = new EscalaRecolhimentoEmMemoria();
     avisosPrioridade = new AvisosPrioridadeEmMemoria();
     nomesPacientes = new NomesPacientesDeTeste();
+    contasUnidade = new ContasPorUnidadeDeTeste();
     casos = criarCasosDeUsoRodada({
+      contasUnidade,
       rodadas: repo,
       consulta: repo,
       fila: mobilemed,
@@ -881,6 +901,63 @@ describe('rodada do robô (casos de uso)', () => {
       expect(a.checks.every((c) => c.ok)).toBe(true);
       const c = await casos.explicar.executar(id, e1, 'C');
       expect(c.checks[0]).toMatchObject({ ok: false, titulo: 'Habilitado no robô' });
+    });
+
+    describe('conta liberada na unidade, na proposta', () => {
+      beforeEach(() => {
+        mobilemed.leitura = {
+          semMedico: [exame({ idExame: 'e1', unidadeMobilemed: 10 }), exame({ idExame: 'e2' })],
+          emMaos: [],
+        };
+        contasUnidade.porUnidade.set(10, new Set([101]));
+      });
+
+      it('quem não está liberado na unidade do exame não o recebe, com o porquê', async () => {
+        const id = await criarELer();
+        expect(contasUnidade.pedidos).toEqual([{ unidades: [10], validadeMin: 240 }]);
+        expect(designacao('e1')?.medicoId).toBe('A');
+        expect(designacao('e1')?.barrados).toMatchObject({ B: 'fora_da_unidade' });
+        const b = await casos.explicar.executar(id, designacao('e1')?.id ?? '', 'B');
+        expect(b.pegou).toBe(false);
+        expect(b.titulo).toBe(
+          'Não pegou porque a conta dele não está liberada nesta unidade na MobileMed.',
+        );
+        expect(b.checks.at(-1)).toMatchObject({
+          ok: false,
+          titulo: 'Conta liberada na unidade',
+          detalhe: 'Conta não liberada nesta unidade na MobileMed',
+        });
+      });
+
+      it('ninguém liberado: o exame fica de fora com o motivo', async () => {
+        contasUnidade.porUnidade.set(10, new Set());
+        await criarELer();
+        expect(designacao('e1')).toMatchObject({
+          status: 'recusada',
+          motivo: 'sem_medico_elegivel',
+          detalhe: expect.stringMatching(/^Conta não liberada nesta unidade na MobileMed/),
+        });
+      });
+
+      it('a lista que não pôde ser lida não segura a proposta: sem filtro ali, com aviso no diário', async () => {
+        contasUnidade.falhar.add(10);
+        const id = await criarELer();
+        expect(repo.rodadas.get(id)?.status).toBe('aguardando_aprovacao');
+        expect(designacao('e1')?.barrados).not.toHaveProperty('B');
+        expect(repo.diario.filter((e) => e.rodadaId === id).map((e) => e.texto)).toContainEqual(
+          expect.stringMatching(/1 unidade\(s\).*a execução confere na hora/),
+        );
+      });
+
+      it('com a conferência desligada na configuração, não lê as listas', async () => {
+        insumos.insumos = {
+          ...insumosBase(),
+          config: { ...CONFIGURACAO_INICIAL, contasUnidadeValidadeMin: null },
+        };
+        await criarELer();
+        expect(contasUnidade.pedidos).toEqual([]);
+        expect(designacao('e1')?.barrados).not.toHaveProperty('B');
+      });
     });
 
     it('médico sem conta na MobileMed não recebe: sai no funil e no "por quê"', async () => {

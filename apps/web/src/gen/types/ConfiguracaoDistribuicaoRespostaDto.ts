@@ -102,4 +102,9 @@ export type ConfiguracaoDistribuicaoRespostaDto = {
    * @type number
    */
   retratoFilaMin: number | null;
+  /**
+   * @description Minutos que vale a lista de médicos liberados por unidade; 0 = relê a cada rodada; nulo = a proposta não confere a unidade.
+   * @type number
+   */
+  contasUnidadeValidadeMin: number | null;
 };

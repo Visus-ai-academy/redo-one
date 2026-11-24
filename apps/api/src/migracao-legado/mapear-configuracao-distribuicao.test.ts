@@ -187,6 +187,7 @@ describe('mapearConfiguracaoDistribuicao', () => {
       expiracaoPropostaMin: 45,
       tetoPorRodada: null,
       retratoFilaMin: 5,
+      contasUnidadeValidadeMin: 240,
     });
     expect(avisos.filter((a) => a.tabela === 'configuracao_distribuicao')).toEqual([]);
   });

@@ -33,6 +33,7 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
   retratoFilaMin: 5,
+  contasUnidadeValidadeMin: 240,
 };
 
 const erros = (v: ValoresConfiguracao) => {
@@ -102,6 +103,25 @@ describe('configuração global no formulário', () => {
       'retratoFilaMin: Use um número inteiro de 1 a 1440.',
     ]);
     expect(erros({ ...v, lerFila: false, retratoFilaMin: '0' })).toEqual([]);
+  });
+
+  it('conta liberada na unidade na proposta: validade de 0 a 10080 min, ou desligada (nulo)', () => {
+    const v = valoresDaConfiguracao(PRODUCAO);
+    expect(v).toMatchObject({ conferirUnidade: true, contasUnidadeValidadeMin: '240' });
+    expect(configuracaoParaApi({ ...v, contasUnidadeValidadeMin: '0' })).toMatchObject({
+      contasUnidadeValidadeMin: 0,
+    });
+    expect(configuracaoParaApi({ ...v, conferirUnidade: false })).toMatchObject({
+      contasUnidadeValidadeMin: null,
+    });
+    expect(valoresDaConfiguracao({ ...PRODUCAO, contasUnidadeValidadeMin: null })).toMatchObject({
+      conferirUnidade: false,
+      contasUnidadeValidadeMin: '240',
+    });
+    expect(erros({ ...v, contasUnidadeValidadeMin: '10081' })).toEqual([
+      'contasUnidadeValidadeMin: Use um número inteiro de 0 a 10080.',
+    ]);
+    expect(erros({ ...v, conferirUnidade: false, contasUnidadeValidadeMin: '' })).toEqual([]);
   });
 
   it('valida faixas, turnos posteriores e marcadores repetidos', () => {

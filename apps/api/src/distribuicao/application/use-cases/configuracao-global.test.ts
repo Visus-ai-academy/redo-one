@@ -99,6 +99,22 @@ describe('configuração global da distribuição', () => {
     }
   });
 
+  it('validade da lista de médicos por unidade: 0 a 10080 min, ou desligada; ausente mantém', async () => {
+    expect((await obter.executar()).contasUnidadeValidadeMin).toBe(240);
+    await definir.executar(ator, producao({ contasUnidadeValidadeMin: 60 }));
+    expect((await obter.executar()).contasUnidadeValidadeMin).toBe(60);
+    const { contasUnidadeValidadeMin: _, ...sem } = producao({ cicloMinutos: 25 });
+    await definir.executar(ator, sem);
+    expect((await obter.executar()).contasUnidadeValidadeMin).toBe(60);
+    await definir.executar(ator, producao({ contasUnidadeValidadeMin: null }));
+    expect((await obter.executar()).contasUnidadeValidadeMin).toBeNull();
+    for (const contasUnidadeValidadeMin of [-1, 10_081, 2.5]) {
+      await expect(
+        definir.executar(ator, producao({ contasUnidadeValidadeMin })),
+      ).rejects.toBeInstanceOf(ConfiguracaoInvalidaError);
+    }
+  });
+
   it('apara os marcadores antes de gravar', async () => {
     await definir.executar(ator, producao({ marcadoresEquilibrio: [' ONCO '] }));
     expect((await obter.executar()).marcadoresEquilibrio).toEqual(['ONCO']);

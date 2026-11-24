@@ -47,6 +47,8 @@ export interface ExameDaLeitura {
   prioridade: string | null;
   estudo: string;
   unidade: string;
+  /** Id da unidade na MobileMed cuja lista de médicos vale na atribuição; null = desconhecida. */
+  unidadeMobilemed?: number | null;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;
@@ -68,6 +70,7 @@ export interface ExameEmMaosDaLeitura {
   prazo: Date | null;
   estudo: string;
   unidade: string;
+  unidadeMobilemed?: number | null;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;
@@ -295,6 +298,11 @@ export function montarEntrada(p: {
    * designação casa com o do laudo.
    */
   pseudonimo: (texto: string) => string;
+  /**
+   * Unidade (id na MobileMed) → contas liberadas nela: o médico cuja conta principal não está na
+   * lista da unidade do exame fica de fora dele. Unidade fora do mapa = sem conferência.
+   */
+  contasPorUnidade?: ReadonlyMap<number, ReadonlySet<number>>;
 }): EntradaMontada {
   const { agora, catalogo, insumos, recortes } = p;
   const chavePaciente = (pac: PacienteDaLeitura) =>
@@ -342,6 +350,19 @@ export function montarEntrada(p: {
     if (exclusivo) cargaReservada.set(medicoId, (cargaReservada.get(medicoId) ?? 0) + laudos);
     const chave = `${chavePaciente(e.paciente)}|${c.especialidadeId ?? ''}`;
     if (c.especialidadeId && !aderente.has(chave)) aderente.set(chave, medicoId);
+  }
+
+  // --- a conta liberada na unidade: quem fica de fora de cada unidade, calculado uma vez ---
+  const foraDaUnidade = new Map<number, ReadonlySet<string>>();
+  for (const [unidade, contas] of p.contasPorUnidade ?? []) {
+    foraDaUnidade.set(
+      unidade,
+      new Set(
+        medicos
+          .filter((m) => m.idMobilemed !== null && !contas.has(m.idMobilemed))
+          .map((m) => m.id),
+      ),
+    );
   }
 
   // --- a fila ---
@@ -395,6 +416,7 @@ export function montarEntrada(p: {
         ? (aderente.get(`${pacienteChave}|${c.especialidadeId}`) ?? null)
         : null,
       entregues: p.entregas.porExame.get(e.idExame) ?? [],
+      naoLiberados: e.unidadeMobilemed == null ? undefined : foraDaUnidade.get(e.unidadeMobilemed),
     };
   });
 

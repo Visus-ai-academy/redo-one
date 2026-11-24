@@ -139,6 +139,7 @@ describe('MobileMedReal: leitura da fila', () => {
     expect(semMedico[0]).toMatchObject({
       estudo: 'RM CRANIO',
       unidade: 'HOSPITAL A',
+      unidadeMobilemed: 10,
       modalidade: 'MR',
       laudos: null,
       realizadoEm: new Date('2026-11-18T10:00:00.000Z'),

@@ -136,6 +136,7 @@ const paraExameDaFila = (e: ItemListaMobileMed): ExameDaFila => ({
   prioridade: prioridadeDe(e),
   estudo: e.estudo_descricao,
   unidade: e.nome_fantasia,
+  unidadeMobilemed: unidadeDaAtribuicao(e),
   modalidade: e.modalidade,
   // shortcut: a especialidade só vem como `subespecialidade_id`; o catálogo decide pelo estudo
   // até o HAR mostrar o formato (`docs/integracao-mobilemed.md`, 5.4).

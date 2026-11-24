@@ -808,6 +808,13 @@ const PORTOES: {
     frase: 'a clínica é exclusiva de outro médico',
   },
   {
+    barreira: ['fora_da_unidade'],
+    titulo: 'Conta liberada na unidade',
+    ok: 'A conta dele está liberada na unidade do exame na MobileMed (ou a lista da unidade não foi conferida)',
+    falha: 'Conta não liberada nesta unidade na MobileMed',
+    frase: 'a conta dele não está liberada nesta unidade na MobileMed',
+  },
+  {
     barreira: ['ja_entregue', 'retirado_na_conferencia', 'recolhido'],
     titulo: 'Não tinha sido tirado deste exame',
     ok: 'O robô nunca devolve o exame a quem já o recebeu ou de quem a operação o tirou',

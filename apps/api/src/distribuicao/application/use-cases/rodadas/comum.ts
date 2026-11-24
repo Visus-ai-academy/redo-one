@@ -5,6 +5,7 @@ import type { AtribuidorExames } from '../../ports/atribuidor-exames';
 import type { AvisosPrioridade } from '../../ports/avisos-prioridade';
 import type { ConfiguracaoDistribuicaoRepository } from '../../ports/configuracao-distribuicao.repository';
 import type { ConsultaRodadas } from '../../ports/consulta-rodadas';
+import type { ContasPorUnidade } from '../../ports/contas-por-unidade';
 import type { FilaExames } from '../../ports/fila-exames';
 import type {
   EscalaRecolhimento,
@@ -24,6 +25,8 @@ export interface DependenciasRodada {
   consulta: ConsultaRodadas;
   fila: FilaExames;
   atribuidor: AtribuidorExames;
+  /** Contas liberadas por unidade na MobileMed (memória entre rodadas), para a proposta. */
+  contasUnidade: ContasPorUnidade;
   insumos: LeitorInsumosRodada;
   escalaRecolhimento: EscalaRecolhimento;
   medicos: MedicosRodada;

@@ -548,6 +548,24 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
     expect(r.funil.exames.escala).toBe(0);
   });
 
+  it('conta não liberada na unidade do exame: barrado só nesse exame, depois do arranjo', () => {
+    const r = montar({
+      exames: [exame('e1', { naoLiberados: new Set(['B', 'C']) }), exame('e2')],
+      medicos: [medico('A'), medico('B'), medico('C', [arranjo({ especialidadeId: 'outra' })])],
+      ocorrencias: [oc('A'), oc('B'), oc('C')],
+    });
+    expect(r.explicacao('e1')).toEqual({
+      elegiveis: ['A'],
+      barrados: { B: 'fora_da_unidade', C: 'arranjo' },
+    });
+    expect(r.explicacao('e2').elegiveis).toEqual(['A', 'B']);
+  });
+
+  it('ninguém liberado na unidade: a elegibilidade zera no portão da unidade', () => {
+    const r = montar({ exames: [exame('e1', { naoLiberados: new Set(['A']) })] });
+    expect(r.etapaElegibilidade.get('e1')).toBe('unidade');
+  });
+
   it('horário sem robô fecha só o período fixo que começa nele (o plantão), não a Lista', () => {
     const regras = new RegrasPorFrente([
       {

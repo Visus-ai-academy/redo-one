@@ -19,6 +19,31 @@ const horaBrasilia = (d: Date) => new Date(d.getTime() - 3 * 3_600_000).toISOStr
 export class LerFila {
   constructor(private readonly d: DependenciasRodada) {}
 
+  /**
+   * As contas liberadas em cada unidade da fila (memória entre rodadas, ou lidas agora). A lista
+   * que falha não segura a proposta: naquela unidade não há filtro, e a execução confere na hora.
+   */
+  private async contasPorUnidade(
+    rodadaId: string,
+    exames: readonly { unidadeMobilemed?: number | null }[],
+    validadeMin: number | null,
+  ): Promise<ReadonlyMap<number, ReadonlySet<number>> | undefined> {
+    if (validadeMin === null) return undefined;
+    const unidades = [
+      ...new Set(exames.flatMap((e) => (e.unidadeMobilemed == null ? [] : [e.unidadeMobilemed]))),
+    ];
+    if (!unidades.length) return undefined;
+    const { porUnidade, falharam } = await this.d.contasUnidade.liberadas(unidades, validadeMin);
+    if (falharam.length) {
+      await this.d.rodadas.registrarEvento(
+        rodadaId,
+        `Aviso: não deu para ler na MobileMed a lista de médicos de ${falharam.length} unidade(s); nelas a proposta não conferiu se a conta do médico está liberada (a execução confere na hora).`,
+        this.d.agora(),
+      );
+    }
+    return porUnidade;
+  }
+
   async executar(rodadaId: string): Promise<void> {
     const r = await this.d.rodadas.obter(rodadaId);
     if (!r) return;
@@ -55,7 +80,13 @@ export class LerFila {
             .map((o) => ({ alocacaoId: o.alocacaoId, desde: o.inicio })),
         ),
       ]);
+      const contasPorUnidade = await this.contasPorUnidade(
+        rodadaId,
+        leitura.semMedico,
+        config.contasUnidadeValidadeMin,
+      );
       const montada = montarEntrada({
+        contasPorUnidade,
         agora,
         leitura,
         catalogo,

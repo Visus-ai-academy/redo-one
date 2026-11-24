@@ -68,6 +68,8 @@ export interface ExameFilaRodada {
   novo: boolean;
   medicoAderente: string | null;
   entregues: readonly EntregaAnterior[];
+  /** Médicos cuja conta não está liberada na unidade do exame na MobileMed. */
+  naoLiberados?: ReadonlySet<string>;
 }
 
 export interface FiltroRodada {
@@ -133,6 +135,8 @@ export const POR_QUE_SEM_MEDICO: Record<
   equipe: 'O exame é direcionado a uma equipe e nenhum membro dela pode recebê-lo nesta rodada.',
   reservado:
     'A clínica é exclusiva de outro(s) médico(s) neste recorte, e nenhum deles pode recebê-lo nesta rodada.',
+  unidade:
+    'Conta não liberada nesta unidade na MobileMed: quem laudaria este exame não está habilitado na unidade dele.',
   pacote:
     'Cada exame do paciente tem quem o laude, mas ninguém pode laudar o pacote inteiro (mesma especialidade).',
 };
@@ -355,6 +359,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     unidadeId: l.fila.unidadeId ?? null,
     restanteMin: l.restanteMin,
     entregues: l.fila.entregues,
+    naoLiberados: l.fila.naoLiberados,
   }));
   const montados = montarMedicosDisponiveis({
     agora,

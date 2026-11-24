@@ -48,6 +48,10 @@ export class DefinirConfiguracaoGlobal {
           entrada.tetoPorRodada === undefined ? atual.tetoPorRodada : entrada.tetoPorRodada,
         retratoFilaMin:
           entrada.retratoFilaMin === undefined ? atual.retratoFilaMin : entrada.retratoFilaMin,
+        contasUnidadeValidadeMin:
+          entrada.contasUnidadeValidadeMin === undefined
+            ? atual.contasUnidadeValidadeMin
+            : entrada.contasUnidadeValidadeMin,
       }),
     );
     validarConfiguracaoGlobal(nova);

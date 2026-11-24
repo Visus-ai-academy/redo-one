@@ -27,6 +27,7 @@ export const configuracaoDistribuicaoRespostaDtoSchema = z.object({
   expiracaoPropostaMin: z.number().describe('Minutos que a proposta vale sem aprovação; depois expira.'),
   tetoPorRodada: z.number().nullable().describe('Máximo de exames propostos por rodada; nulo = sem teto.'),
   retratoFilaMin: z.number().nullable().describe('Minutos entre as leituras da fila do momento; nulo = leitura automática desligada.'),
+  contasUnidadeValidadeMin: z.number().nullable().describe('Minutos que vale a lista de médicos liberados por unidade; 0 = relê a cada rodada; nulo = a proposta não confere a unidade.'),
 })
 
 export type ConfiguracaoDistribuicaoRespostaDtoSchemaType = z.infer<typeof configuracaoDistribuicaoRespostaDtoSchema>

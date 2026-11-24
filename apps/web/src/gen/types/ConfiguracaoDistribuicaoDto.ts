@@ -102,4 +102,9 @@ export type ConfiguracaoDistribuicaoDto = {
    * @type number | undefined
    */
   retratoFilaMin?: number | null;
+  /**
+   * @description Minutos (0 a 10080) que vale a lista de médicos liberados por unidade na MobileMed, guardada entre rodadas; 0 = relê a cada rodada; nulo = a proposta não confere a unidade. Ausente = mantém o gravado.
+   * @type number | undefined
+   */
+  contasUnidadeValidadeMin?: number | null;
 };

@@ -20,6 +20,11 @@ export interface ExameDaFila {
   estudo: string;
   /** Unidade (empresa) na MobileMed: casa com o cliente pelos apelidos. */
   unidade: string;
+  /**
+   * Id da unidade cuja lista de médicos vale na atribuição (a de destino no compartilhado
+   * consultado fora da origem); null/ausente = desconhecida (sem conferência na proposta).
+   */
+  unidadeMobilemed?: number | null;
   modalidade: string | null;
   especialidade: string | null;
   /** Quantidade de laudos do registro; null = 1. */
@@ -47,6 +52,7 @@ export interface ExameEmMaos {
   prioridade: string | null;
   estudo: string;
   unidade: string;
+  unidadeMobilemed?: number | null;
   modalidade: string | null;
   especialidade: string | null;
   laudos: number | null;

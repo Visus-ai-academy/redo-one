@@ -27,6 +27,7 @@ export const configuracaoDistribuicaoDtoSchema = z.object({
   expiracaoPropostaMin: z.number().optional().describe('Minutos que a proposta vale sem aprovação; depois expira. Ausente = mantém o gravado.'),
   tetoPorRodada: z.number().nullish().describe('Máximo de exames propostos por rodada; nulo = sem teto. Ausente = mantém o gravado.'),
   retratoFilaMin: z.number().nullish().describe('Minutos entre as leituras da fila do momento (1 a 1440); nulo = leitura automática desligada. Ausente = mantém o gravado.'),
+  contasUnidadeValidadeMin: z.number().nullish().describe('Minutos (0 a 10080) que vale a lista de médicos liberados por unidade na MobileMed, guardada entre rodadas; 0 = relê a cada rodada; nulo = a proposta não confere a unidade. Ausente = mantém o gravado.'),
 })
 
 export type ConfiguracaoDistribuicaoDtoSchemaType = z.infer<typeof configuracaoDistribuicaoDtoSchema>

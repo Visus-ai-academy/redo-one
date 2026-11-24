@@ -26,6 +26,7 @@ import {
   type ConfiguracaoDistribuicaoRepository,
 } from './application/ports/configuracao-distribuicao.repository';
 import { CONSULTA_RODADAS, type ConsultaRodadas } from './application/ports/consulta-rodadas';
+import { CONTAS_POR_UNIDADE, type ContasPorUnidade } from './application/ports/contas-por-unidade';
 import { ESCALA_DO_AJUSTE, type EscalaDoAjuste } from './application/ports/escala-do-ajuste';
 import { FILA_EXAMES, type FilaExames } from './application/ports/fila-exames';
 import {
@@ -151,6 +152,10 @@ import { RegrasFrenteController } from './infrastructure/http/regras-frente.cont
 import { RodadasController } from './infrastructure/http/rodadas.controller';
 import { AvisosPrioridadeAdapter } from './infrastructure/ingestao/avisos-prioridade.adapter';
 import { NomesPacientesEmMemoria } from './infrastructure/memoria/nomes-pacientes-em-memoria';
+import {
+  ContasPorUnidadeEmMemoria,
+  type FonteMedicosUnidade,
+} from './infrastructure/mobilemed/contas-por-unidade-em-memoria';
 import { DrizzleAmostraCatalogo } from './infrastructure/mobilemed/drizzle-amostra-catalogo';
 import { MobileMedFake } from './infrastructure/mobilemed/mobilemed-fake';
 import { MobileMedReal } from './infrastructure/mobilemed/mobilemed-real';
@@ -261,11 +266,19 @@ const CASOS_RODADA = [
           porForaPct: inteiro(config, 'DISTRIBUICAO_FAKE_POR_FORA_PCT', 0),
           abertosPct: inteiro(config, 'DISTRIBUICAO_FAKE_ABERTOS_PCT', 0),
           foraDaUnidadePct: inteiro(config, 'DISTRIBUICAO_FAKE_FORA_UNIDADE_PCT', 0),
+          latenciaUnidadeMs: inteiro(config, 'DISTRIBUICAO_FAKE_LATENCIA_UNIDADE_MS', 0),
         });
       },
     },
     { provide: FILA_EXAMES, useExisting: MOBILEMED },
     { provide: ATRIBUIDOR_EXAMES, useExisting: MOBILEMED },
+    {
+      // Um só por processo: as listas por unidade vivem na memória da API entre rodadas.
+      provide: CONTAS_POR_UNIDADE,
+      inject: [MOBILEMED],
+      useFactory: (mobilemed: FonteMedicosUnidade) =>
+        new ContasPorUnidadeEmMemoria(mobilemed, agora),
+    },
     {
       provide: PSEUDONIMIZADOR_PACIENTE,
       inject: [ConfigService],
@@ -281,6 +294,7 @@ const CASOS_RODADA = [
         CONSULTA_RODADAS,
         FILA_EXAMES,
         ATRIBUIDOR_EXAMES,
+        CONTAS_POR_UNIDADE,
         INSUMOS_RODADA,
         ESCALA_RECOLHIMENTO,
         MEDICOS_RODADA,
@@ -297,6 +311,7 @@ const CASOS_RODADA = [
         consulta: ConsultaRodadas,
         fila: FilaExames,
         atribuidor: AtribuidorExames,
+        contasUnidade: ContasPorUnidade,
         insumos: LeitorInsumosRodada,
         escalaRecolhimento: EscalaRecolhimento,
         medicos: MedicosRodada,
@@ -312,6 +327,7 @@ const CASOS_RODADA = [
         consulta,
         fila,
         atribuidor,
+        contasUnidade,
         insumos,
         escalaRecolhimento,
         medicos,

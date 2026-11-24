@@ -34,6 +34,11 @@ export interface OpcoesMobileMedFake {
    * atribuição pula com `medico_fora_da_unidade` (`DISTRIBUICAO_FAKE_FORA_UNIDADE_PCT`).
    */
   foraDaUnidadePct?: number;
+  /**
+   * Espera de cada leitura da lista de médicos de uma unidade, para medir o efeito da memória
+   * entre rodadas (`DISTRIBUICAO_FAKE_LATENCIA_UNIDADE_MS`, padrão 0).
+   */
+  latenciaUnidadeMs?: number;
 }
 
 /** Conta na MobileMed de "alguém de fora" (um médico que pegou o exame sem o robô). */
@@ -43,6 +48,9 @@ const HORA = 3_600_000;
 
 /** Hash pequeno e estável do id, para escolher as falhas sem sorteio. */
 const hashDo = (id: string) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+/** Id estável da unidade a partir do nome (a fila sintética só tem o nome). */
+const idDaUnidade = (nome: string) => 1_000 + (hashDo(`unidade:${nome}`) % 100_000);
 
 /**
  * MobileMed de mentira, na memória do processo: a fila é a sintética (refeita a cada hora, para os
@@ -84,6 +92,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     ]);
     const comDono = (e: ExameEmMaos | ExameDaFila): ExameEmMaos => ({
       idExame: e.idExame,
+      unidadeMobilemed: idDaUnidade(e.unidade),
       medicoIdMobilemed:
         donos.get(e.idExame) ?? ('medicoIdMobilemed' in e ? e.medicoIdMobilemed : 0),
       status: this.statusDe(e.idExame),
@@ -99,7 +108,9 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
       paciente: e.paciente,
     });
     return {
-      semMedico: semMedico.filter((e) => !donos.has(e.idExame)),
+      semMedico: semMedico
+        .filter((e) => !donos.has(e.idExame))
+        .map((e) => ({ ...e, unidadeMobilemed: idDaUnidade(e.unidade) })),
       emMaos: [...emMaos, ...semMedico.filter((e) => donos.has(e.idExame))].map(comDono),
     };
   }
@@ -144,7 +155,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
   }
 
   /** A conta está liberada na unidade? Estável por unidade × conta, sem sorteio. */
-  liberada(unidade: string, conta: number): boolean {
+  liberada(unidade: number, conta: number): boolean {
     const pct = this.opcoes.foraDaUnidadePct ?? 0;
     return pct <= 0 || hashDo(`unidade:${unidade}|${conta}`) % 100 >= pct;
   }
@@ -153,15 +164,25 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     return this.lote().atribuir(pedido);
   }
 
+  /** As contas da amostra liberadas na unidade (a lista que a MobileMed devolveria). */
+  async medicosDaUnidade(unidade: number): Promise<{ id: number; nome: string }[]> {
+    const espera = this.opcoes.latenciaUnidadeMs ?? 0;
+    if (espera > 0) await new Promise((pronto) => setTimeout(pronto, espera));
+    const { medicosMobilemed } = await this.carregarAmostra();
+    return medicosMobilemed
+      .filter((conta) => this.liberada(unidade, conta))
+      .map((id) => ({ id, nome: `Conta ${id}` }));
+  }
+
   lote(): LoteAtribuicao {
-    const consultadas = new Set<string>();
+    const consultadas = new Set<number>();
     return {
       atribuir: async (pedido) => {
         const { semMedico, emMaos } = await this.ler();
         const unidade = [...semMedico, ...emMaos].find(
           (e) => e.idExame === pedido.idExame,
-        )?.unidade;
-        if (unidade !== undefined && !consultadas.has(unidade)) {
+        )?.unidadeMobilemed;
+        if (unidade != null && !consultadas.has(unidade)) {
           consultadas.add(unidade);
           this.consultasUnidade++;
         }
@@ -172,7 +193,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
 
   private async atribuirNaUnidade(
     pedido: PedidoAtribuicao,
-    unidade: string | undefined,
+    unidade: number | null | undefined,
   ): Promise<ResultadoAtribuicao> {
     const intocado = (
       await this.intocados([
@@ -195,7 +216,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
             retentavel: false,
           };
     }
-    if (unidade !== undefined && !this.liberada(unidade, pedido.medicoIdMobilemed)) {
+    if (unidade != null && !this.liberada(unidade, pedido.medicoIdMobilemed)) {
       return {
         status: 'pulada',
         motivo: 'medico_fora_da_unidade',

@@ -200,6 +200,18 @@ export class ConfiguracaoDistribuicaoDto {
   @ValidateIf((_, v) => v !== null)
   @IsInt()
   retratoFilaMin?: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    required: false,
+    description:
+      'Minutos (0 a 10080) que vale a lista de médicos liberados por unidade na MobileMed, guardada entre rodadas; 0 = relê a cada rodada; nulo = a proposta não confere a unidade. Ausente = mantém o gravado.',
+  })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  contasUnidadeValidadeMin?: number | null;
 }
 
 /** A configuração como está gravada (os campos do robô sempre presentes). */
@@ -224,4 +236,12 @@ export class ConfiguracaoDistribuicaoRespostaDto extends ConfiguracaoDistribuica
       'Minutos entre as leituras da fila do momento; nulo = leitura automática desligada.',
   })
   declare retratoFilaMin: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description:
+      'Minutos que vale a lista de médicos liberados por unidade; 0 = relê a cada rodada; nulo = a proposta não confere a unidade.',
+  })
+  declare contasUnidadeValidadeMin: number | null;
 }

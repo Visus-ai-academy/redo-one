@@ -194,6 +194,22 @@ describe('MobileMed fake (fila sintética e atribuição que só registra)', () 
 });
 
 describe('MobileMed fake: conta do médico liberada na unidade', () => {
+  it('cada exame traz o id da unidade, o mesmo para o mesmo nome', async () => {
+    const { semMedico, emMaos } = await criar().ler();
+    for (const e of [...semMedico, ...emMaos])
+      expect(e.unidadeMobilemed).toEqual(expect.any(Number));
+    const porNome = new Map(semMedico.map((e) => [e.unidade, e.unidadeMobilemed]));
+    for (const e of semMedico) expect(e.unidadeMobilemed).toBe(porNome.get(e.unidade));
+  });
+
+  it('a lista de médicos da unidade são as contas da amostra liberadas nela', async () => {
+    const fake = criar({ foraDaUnidadePct: 50 });
+    const [e] = (await fake.ler()).semMedico;
+    const unidade = e?.unidadeMobilemed ?? 0;
+    const lista = (await fake.medicosDaUnidade(unidade)).map((m) => m.id);
+    expect(lista).toEqual([101, 102].filter((c) => fake.liberada(unidade, c)));
+  });
+
   it('sem % configurado, toda conta está liberada em toda unidade', async () => {
     const fake = criar();
     const [e] = (await fake.ler()).semMedico;
@@ -231,7 +247,7 @@ describe('MobileMed fake: conta do médico liberada na unidade', () => {
         medicoIdMobilemed: 101,
         deMedicoIdMobilemed: null,
       });
-      expect(r.status).toBe(fake.liberada(e.unidade, 101) ? 'executada' : 'pulada');
+      expect(r.status).toBe(fake.liberada(e.unidadeMobilemed ?? 0, 101) ? 'executada' : 'pulada');
     }
     expect(fake.consultasUnidade).toBe(new Set(exames.map((e) => e.unidade)).size);
   });

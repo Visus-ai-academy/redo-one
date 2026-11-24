@@ -18067,6 +18067,11 @@
             "type": "number",
             "nullable": true,
             "description": "Minutos entre as leituras da fila do momento; nulo = leitura automática desligada."
+          },
+          "contasUnidadeValidadeMin": {
+            "type": "number",
+            "nullable": true,
+            "description": "Minutos que vale a lista de médicos liberados por unidade; 0 = relê a cada rodada; nulo = a proposta não confere a unidade."
           }
         },
         "required": [
@@ -18088,7 +18093,8 @@
           "roboAtivo",
           "expiracaoPropostaMin",
           "tetoPorRodada",
-          "retratoFilaMin"
+          "retratoFilaMin",
+          "contasUnidadeValidadeMin"
         ]
       },
       "ConfiguracaoDistribuicaoDto": {
@@ -18184,6 +18190,11 @@
             "type": "number",
             "nullable": true,
             "description": "Minutos entre as leituras da fila do momento (1 a 1440); nulo = leitura automática desligada. Ausente = mantém o gravado."
+          },
+          "contasUnidadeValidadeMin": {
+            "type": "number",
+            "nullable": true,
+            "description": "Minutos (0 a 10080) que vale a lista de médicos liberados por unidade na MobileMed, guardada entre rodadas; 0 = relê a cada rodada; nulo = a proposta não confere a unidade. Ausente = mantém o gravado."
           }
         },
         "required": [

@@ -222,6 +222,11 @@ export const configuracaoDistribuicao = pgTable(
     tetoPorRodada: integer('teto_por_rodada'),
     /** Minutos entre as leituras do retrato da fila do momento; null = só pelo "Ler agora". */
     retratoFilaMin: integer('retrato_fila_min').default(5),
+    /**
+     * Minutos que vale a lista de médicos liberados por unidade (memória da API) para a proposta;
+     * 0 = relê a cada rodada; null = a proposta não confere.
+     */
+    contasUnidadeValidadeMin: integer('contas_unidade_validade_min').default(240),
     atualizadoEm: atualizadoEm(),
   },
   (t) => [check('configuracao_distribuicao_unica', sql`${t.id} = 1`)],

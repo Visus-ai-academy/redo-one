@@ -65,6 +65,9 @@ export type ValoresConfiguracao = {
   /** Leitura automática da fila do momento ligada. */
   lerFila: boolean;
   retratoFilaMin: string;
+  /** A proposta confere se a conta do médico está liberada na unidade do exame. */
+  conferirUnidade: boolean;
+  contasUnidadeValidadeMin: string;
 };
 
 export function valoresDaConfiguracao(
@@ -99,6 +102,9 @@ export function valoresDaConfiguracao(
     lerFila: c.retratoFilaMin !== null,
     // Desligada, religar sugere os 5 min de padrão.
     retratoFilaMin: String(c.retratoFilaMin ?? 5),
+    conferirUnidade: c.contasUnidadeValidadeMin !== null,
+    // Desligada, religar sugere as 4 h de padrão.
+    contasUnidadeValidadeMin: String(c.contasUnidadeValidadeMin ?? 240),
   };
 }
 
@@ -136,6 +142,7 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
     expiracaoPropostaMin: Number(v.expiracaoPropostaMin),
     tetoPorRodada: v.temTeto ? Number(v.tetoPorRodada) : null,
     retratoFilaMin: v.lerFila ? Number(v.retratoFilaMin) : null,
+    contasUnidadeValidadeMin: v.conferirUnidade ? Number(v.contasUnidadeValidadeMin) : null,
   };
 }
 
@@ -178,6 +185,8 @@ const valoresSchema = z.object({
   tetoPorRodada: z.string(),
   lerFila: z.boolean(),
   retratoFilaMin: z.string(),
+  conferirUnidade: z.boolean(),
+  contasUnidadeValidadeMin: z.string(),
 });
 
 /** As faixas do domínio (`configuracao-global.ts` da API), na ordem dos campos. */
@@ -202,6 +211,7 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
   faixa('expiracaoPropostaMin', 1, 1440);
   if (v.temTeto) faixa('tetoPorRodada', 1, 100_000);
   if (v.lerFila) faixa('retratoFilaMin', 1, 1440);
+  if (v.conferirUnidade) faixa('contasUnidadeValidadeMin', 0, 10_080);
   if (v.ordemFila.length === 0) erro('ordemFila', 'A fila precisa de ao menos um critério.');
   for (const [campo, min, max] of FAIXAS) faixa(campo, min, max);
   faixa('cicloMinutos', 1, 1440);
@@ -249,6 +259,15 @@ export function resumoConfiguracao(
           rotulo: 'Leitura da fila do momento',
           valor:
             c.retratoFilaMin == null ? 'Só pelo "Ler agora"' : `A cada ${c.retratoFilaMin} min`,
+        },
+        {
+          rotulo: 'Conta liberada na unidade, na proposta',
+          valor:
+            c.contasUnidadeValidadeMin == null
+              ? 'Não confere (só a execução)'
+              : c.contasUnidadeValidadeMin === 0
+                ? 'Confere, lendo a lista a cada rodada'
+                : `Confere, com a lista de cada unidade valendo ${c.contasUnidadeValidadeMin} min`,
         },
       ],
     },

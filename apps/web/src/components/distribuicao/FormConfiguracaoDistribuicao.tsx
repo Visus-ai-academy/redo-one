@@ -149,7 +149,7 @@ export function FormConfiguracaoDistribuicao({
     >
       <Painel
         titulo="Robô"
-        descricao="Se dá para pedir rodada, quanto tempo a proposta espera a aprovação e de quanto em quanto tempo a fila do momento é lida."
+        descricao="Se dá para pedir rodada, quanto tempo a proposta espera a aprovação, de quanto em quanto tempo a fila do momento é lida e se a proposta confere a conta do médico na unidade."
       >
         <div className="flex flex-col gap-4">
           <form.AppField name="roboAtivo">
@@ -215,6 +215,32 @@ export function FormConfiguracaoDistribuicao({
                       placeholder="Ex.: 5"
                       min={1}
                       max={1440}
+                      required
+                    />
+                  )}
+                </form.AppField>
+              )
+            }
+          </form.Subscribe>
+          <form.AppField name="conferirUnidade">
+            {(field) => (
+              <field.CheckboxField
+                label="Conferir na proposta a conta do médico na unidade"
+                description="A proposta não oferece o exame a quem não está liberado na unidade dele na MobileMed. A lista de médicos de cada unidade fica guardada na API; a execução sempre confere na hora."
+              />
+            )}
+          </form.AppField>
+          <form.Subscribe selector={(s) => s.values.conferirUnidade}>
+            {(conferirUnidade) =>
+              conferirUnidade && (
+                <form.AppField name="contasUnidadeValidadeMin">
+                  {(field) => (
+                    <field.NumberField
+                      label="Validade da lista de cada unidade (minutos)"
+                      placeholder="Ex.: 240"
+                      description="Depois disso a lista é lida de novo na MobileMed. 0 = lê a cada rodada."
+                      min={0}
+                      max={10080}
                       required
                     />
                   )}

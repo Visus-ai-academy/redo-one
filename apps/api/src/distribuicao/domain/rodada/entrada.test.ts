@@ -261,6 +261,25 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
     expect(entrada.exames[0]?.medicoAderente).toBe('B');
   });
 
+  it('quem não tem a conta principal na lista da unidade do exame fica de fora dele', () => {
+    const { entrada } = montar({
+      leitura: {
+        semMedico: [
+          exame({ idExame: 'e1', unidadeMobilemed: 10 }),
+          exame({ idExame: 'e2', unidadeMobilemed: 20 }),
+          exame({ idExame: 'e3' }),
+        ],
+        emMaos: [],
+      },
+      contasPorUnidade: new Map([[10, new Set([101])]]),
+    });
+    expect(entrada.exames.map((e) => e.naoLiberados && [...e.naoLiberados])).toEqual([
+      ['B'],
+      undefined,
+      undefined,
+    ]);
+  });
+
   it('a carga exclusiva em mãos é a da clínica exclusiva do médico', () => {
     const { entrada } = montar({
       insumos: insumos({

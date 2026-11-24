@@ -38,10 +38,22 @@ export interface ConfiguracaoGlobal extends ConfiguracaoDistribuicao {
    * agora"). Não distribui nada: a rodada lê a fila ao vivo.
    */
   retratoFilaMin: number | null;
+  /**
+   * Por quantos minutos vale a lista de médicos (contas) liberados em cada unidade na MobileMed,
+   * guardada na memória da API entre rodadas: a proposta não oferece o exame a quem não está
+   * liberado na unidade dele. 0 = relê a cada rodada; null = a proposta não confere (a execução
+   * sempre confere na hora).
+   */
+  contasUnidadeValidadeMin: number | null;
 }
 
 /** Os campos do robô: a tela de antes deles não os manda, e o PUT sem eles mantém os gravados. */
-export type CamposRobo = 'roboAtivo' | 'expiracaoPropostaMin' | 'tetoPorRodada' | 'retratoFilaMin';
+export type CamposRobo =
+  | 'roboAtivo'
+  | 'expiracaoPropostaMin'
+  | 'tetoPorRodada'
+  | 'retratoFilaMin'
+  | 'contasUnidadeValidadeMin';
 export type EdicaoConfiguracaoGlobal = Omit<ConfiguracaoGlobal, CamposRobo> &
   Partial<Pick<ConfiguracaoGlobal, CamposRobo>>;
 
@@ -73,6 +85,7 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
   retratoFilaMin: 5,
+  contasUnidadeValidadeMin: 240,
 };
 
 const CRITERIOS = new Set(['prioridade', 'prazo', 'antiguidade']);
@@ -119,6 +132,14 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
   }
   if (c.retratoFilaMin !== null) {
     inteiroEntre(c.retratoFilaMin, 1, 1440, 'Leitura da fila do momento (minutos)');
+  }
+  if (c.contasUnidadeValidadeMin !== null) {
+    inteiroEntre(
+      c.contasUnidadeValidadeMin,
+      0,
+      10_080,
+      'Validade da lista de médicos por unidade (minutos)',
+    );
   }
 
   const marcadores = c.marcadoresEquilibrio.map((m) => m.trim());

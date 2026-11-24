@@ -99,6 +99,11 @@ export interface ExameElegivel extends AlvoExame {
    * já o recebeu ou de quem a operação o tirou nos últimos `diasJaEntregue` dias.
    */
   entregues: readonly EntregaAnterior[];
+  /**
+   * Médicos cuja conta principal não está liberada na unidade do exame na MobileMed (a lista da
+   * unidade lida pela rodada): não recebem este exame. Ausente = sem conferência.
+   */
+  naoLiberados?: ReadonlySet<string>;
 }
 
 export interface EntregaAnterior {
@@ -118,6 +123,7 @@ export type Barreira =
   | 'arranjo'
   | 'equipe'
   | 'reservado'
+  | 'fora_da_unidade'
   | 'ja_entregue'
   | 'retirado_na_conferencia'
   | 'recolhido';
@@ -189,6 +195,7 @@ export type EtapaElegibilidade =
   | 'arranjo'
   | 'equipe'
   | 'reservado'
+  | 'unidade'
   | 'retirado';
 
 /**
@@ -527,6 +534,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
       arranjo: false,
       equipe: false,
       reservado: false,
+      unidade: false,
     };
     const barrados: Record<string, Barreira> = {};
     barradosPorExame.set(e.id, barrados);
@@ -584,6 +592,11 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
         continue;
       }
       alcancou.reservado = true;
+      if (e.naoLiberados?.has(medicoId)) {
+        barrados[medicoId] = 'fora_da_unidade';
+        continue;
+      }
+      alcancou.unidade = true;
       const entregas = e.entregues.filter(
         (x) => x.medicoId === medicoId && x.em.getTime() >= limiteEntregue,
       );
@@ -628,9 +641,11 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
               ? 'equipe'
               : !alcancou.reservado
                 ? 'reservado'
-                : !doExame.size
-                  ? 'retirado'
-                  : null;
+                : !alcancou.unidade
+                  ? 'unidade'
+                  : !doExame.size
+                    ? 'retirado'
+                    : null;
     if (zerou) etapaElegibilidade.set(e.id, zerou);
   }
 
