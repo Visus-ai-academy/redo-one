@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { runMigrations } from 'graphile-worker';
@@ -31,6 +31,7 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
   let base: string;
   const usuarios: string[] = [];
   const papeis: string[] = [];
+  let clienteId: string;
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: url });
@@ -56,10 +57,18 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
     );
     await app.listen(0);
     base = (await app.getUrl()).replace('[::1]', 'localhost');
+    const nome = `${PREFIXO}-cliente-${Math.random()}`;
+    const [cliente] = await db
+      .insert(schema.clientes)
+      .values({ nome, chaveNormalizada: nome })
+      .returning();
+    if (!cliente) throw new Error('cliente não criado');
+    clienteId = cliente.id;
   });
 
   afterAll(async () => {
     const db = drizzle({ client: pool, schema });
+    if (clienteId) await db.delete(schema.clientes).where(eq(schema.clientes.id, clienteId));
     if (usuarios.length) {
       await db.execute(sql`delete from sessoes where usuario_id in ${usuarios}`);
       await db
@@ -149,5 +158,63 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
 
     expect((await pedir(cookie, 'GET', '/faturamento/competencias')).status).toBe(403);
     expect((await pedir(cookie, 'GET', '/faturamento/cortes')).status).toBe(403);
+  });
+
+  describe('dados de faturamento do cliente', () => {
+    const caminho = () => `/faturamento/clientes/${clienteId}/dados-fiscais`;
+    const dados = {
+      emailsNf: ['nf@cliente.com.br', 'administracao@teleimagem.com.br'],
+      email: null,
+      contatoNome: 'Ana',
+      telefone: null,
+      cep: '01310-100',
+      logradouro: 'Av. Paulista',
+      numero: '1000',
+      complemento: null,
+      bairro: null,
+      cidade: 'São Paulo',
+      uf: 'SP',
+      bancoCodigo: null,
+      bancoAgencia: null,
+      bancoConta: null,
+      exclusaoFiscal: false,
+    };
+
+    it('sem clientes.faturamento.ver: 403 ao ler', async () => {
+      const cookie = await entrarCom(['clientes.ver', 'faturamento.ver']);
+      expect((await pedir(cookie, 'GET', caminho())).status).toBe(403);
+    });
+
+    it('só ver: lê, mas salvar responde 403', async () => {
+      const cookie = await entrarCom(['clientes.faturamento.ver']);
+      expect((await pedir(cookie, 'GET', caminho())).status).toBe(200);
+      expect((await pedir(cookie, 'PUT', caminho(), dados)).status).toBe(403);
+    });
+
+    it('com editar: salva, lê o que salvou (CEP só com dígitos) e audita', async () => {
+      // O papel salvo pela tela leva o ver junto (editar implica ver).
+      const cookie = await entrarCom(['clientes.faturamento.ver', 'clientes.faturamento.editar']);
+      expect((await pedir(cookie, 'PUT', caminho(), dados)).status).toBe(204);
+      const lido = (await (await pedir(cookie, 'GET', caminho())).json()) as Record<
+        string,
+        unknown
+      >;
+      expect(lido).toMatchObject({ ...dados, cep: '01310100', omieCodigoCliente: null });
+      expect(lido.atualizadoPor).toBe('Usuário de teste');
+      const db = drizzle({ client: pool, schema });
+      const eventos = await db
+        .select()
+        .from(schema.eventosAuditoria)
+        .where(eq(schema.eventosAuditoria.entidadeId, clienteId));
+      expect(eventos.map((e) => [e.entidade, e.acao])).toEqual([
+        ['cliente_dados_fiscais', 'alterado'],
+      ]);
+    });
+
+    it('corpo fora do contrato: 400', async () => {
+      const cookie = await entrarCom(['clientes.faturamento.editar']);
+      const { exclusaoFiscal: _, ...semExclusao } = dados;
+      expect((await pedir(cookie, 'PUT', caminho(), semExclusao)).status).toBe(400);
+    });
   });
 });

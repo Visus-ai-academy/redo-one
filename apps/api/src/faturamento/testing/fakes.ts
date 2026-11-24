@@ -16,11 +16,17 @@ import type {
   VigenciaRegistrada,
 } from '../application/ports/cortes.repository';
 import type {
+  DadosFiscaisRegistrados,
+  DadosFiscaisRepository,
+  OmieDoCliente,
+} from '../application/ports/dados-fiscais.repository';
+import type {
   LaudoParaPrevia,
   LaudosCompetencia,
   LotePrevia,
 } from '../application/ports/laudos-competencia';
 import type { StatusCompetencia } from '../domain/competencia-status';
+import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
 import type { NovaVigencia } from '../domain/vigencia-corte';
 
 export interface CompetenciaGuardada {
@@ -213,5 +219,34 @@ export class LaudosCompetenciaEmMemoria implements LaudosCompetencia {
           !bloqueada.has(l.competencia),
       )
       .slice(0, lote.limite);
+  }
+}
+
+export class DadosFiscaisEmMemoria implements DadosFiscaisRepository {
+  readonly clientes = new Set<string>();
+  readonly linhas = new Map<string, { dados: DadosFiscais; atualizadoEm: Date }>();
+  /** O que a sincronização com o Omie teria gravado. */
+  readonly omie = new Map<string, OmieDoCliente>();
+  readonly autores: Autor[] = [];
+
+  async clienteExiste(clienteId: string) {
+    return this.clientes.has(clienteId);
+  }
+
+  async obter(clienteId: string): Promise<DadosFiscaisRegistrados | null> {
+    const linha = this.linhas.get(clienteId);
+    const omie = this.omie.get(clienteId);
+    if (!linha && !omie) return null;
+    return {
+      dados: structuredClone(linha?.dados ?? DADOS_FISCAIS_VAZIOS),
+      omie: omie ?? { codigoCliente: null, sincronizadoEm: null },
+      atualizadoEm: linha?.atualizadoEm ?? new Date(0),
+      atualizadoPor: linha ? 'Ana' : null,
+    };
+  }
+
+  async salvar(clienteId: string, dados: DadosFiscais, autor: Autor) {
+    this.linhas.set(clienteId, { dados: structuredClone(dados), atualizadoEm: autor.em });
+    this.autores.push(autor);
   }
 }

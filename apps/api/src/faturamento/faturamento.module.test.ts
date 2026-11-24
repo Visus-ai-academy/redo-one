@@ -10,6 +10,7 @@ import { CORTE_PADRAO_INICIAL } from '../ingestao/domain/competencia';
 import { COMPETENCIAS_REPOSITORY } from './application/ports/competencias.repository';
 import { CORTES_REPOSITORY } from './application/ports/cortes.repository';
 import { CriarCorte } from './application/use-cases/criar-corte';
+import { DefinirDadosFiscais } from './application/use-cases/dados-fiscais';
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
 import { FaturamentoModule } from './faturamento.module';
 import { CompetenciasEmMemoria, CortesEmMemoria } from './testing/fakes';
@@ -38,6 +39,7 @@ describe('FaturamentoModule', () => {
     expect(cortes.padrao).toEqual([CORTE_PADRAO_INICIAL]);
     expect(modulo.get(FecharCompetencia)).toBeInstanceOf(FecharCompetencia);
     expect(modulo.get(CriarCorte)).toBeInstanceOf(CriarCorte);
+    expect(modulo.get(DefinirDadosFiscais)).toBeInstanceOf(DefinirDadosFiscais);
 
     await modulo.close();
   });

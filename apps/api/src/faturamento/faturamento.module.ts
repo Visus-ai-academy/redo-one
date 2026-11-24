@@ -8,8 +8,13 @@ import {
   type CompetenciasRepository,
 } from './application/ports/competencias.repository';
 import { CORTES_REPOSITORY, type CortesRepository } from './application/ports/cortes.repository';
+import {
+  DADOS_FISCAIS_REPOSITORY,
+  type DadosFiscaisRepository,
+} from './application/ports/dados-fiscais.repository';
 import { LAUDOS_COMPETENCIA, type LaudosCompetencia } from './application/ports/laudos-competencia';
 import { CriarCorte } from './application/use-cases/criar-corte';
+import { DefinirDadosFiscais, ObterDadosFiscais } from './application/use-cases/dados-fiscais';
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
 import { ListarCompetencias } from './application/use-cases/listar-competencias';
 import { ListarCortes } from './application/use-cases/listar-cortes';
@@ -18,8 +23,10 @@ import { ReabrirCompetencia } from './application/use-cases/reabrir-competencia'
 import { DestravarImportacao, TravarImportacao } from './application/use-cases/travar-importacao';
 import { CompetenciasController } from './infrastructure/http/competencias.controller';
 import { CortesController } from './infrastructure/http/cortes.controller';
+import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.controller';
 import { DrizzleCompetenciasRepository } from './infrastructure/persistence/drizzle-competencias.repository';
 import { DrizzleCortesRepository } from './infrastructure/persistence/drizzle-cortes.repository';
+import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/drizzle-dados-fiscais.repository';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
 
 const agora = () => new Date();
@@ -33,16 +40,17 @@ const ACOES_COMPETENCIA = [
 ] as const;
 
 /**
- * Contexto `faturamento` (hexagonal): competências e cortes. Implementa as portas da `ingestao`
+ * Contexto `faturamento` (hexagonal): competências, cortes e dados fiscais do cliente. Implementa as portas da `ingestao`
  * (`COMPETENCIAS_BLOQUEADAS`, `CORTES_COMPETENCIA`); não importa o `IngestaoModule`, para não
  * criar ciclo.
  */
 @Module({
-  controllers: [CompetenciasController, CortesController],
+  controllers: [CompetenciasController, CortesController, DadosFiscaisController],
   providers: [
     { provide: COMPETENCIAS_REPOSITORY, useClass: DrizzleCompetenciasRepository },
     { provide: CORTES_REPOSITORY, useClass: DrizzleCortesRepository },
     { provide: LAUDOS_COMPETENCIA, useClass: DrizzleLaudosCompetencia },
+    { provide: DADOS_FISCAIS_REPOSITORY, useClass: DrizzleDadosFiscaisRepository },
     { provide: COMPETENCIAS_BLOQUEADAS, useExisting: COMPETENCIAS_REPOSITORY },
     { provide: CORTES_COMPETENCIA, useExisting: CORTES_REPOSITORY },
     {
@@ -78,6 +86,17 @@ const ACOES_COMPETENCIA = [
         competencias: CompetenciasRepository,
         auditoria: Auditoria,
       ) => new CriarCorte(cortes, competencias, auditoria, agora),
+    },
+    {
+      provide: ObterDadosFiscais,
+      inject: [DADOS_FISCAIS_REPOSITORY],
+      useFactory: (repo: DadosFiscaisRepository) => new ObterDadosFiscais(repo),
+    },
+    {
+      provide: DefinirDadosFiscais,
+      inject: [DADOS_FISCAIS_REPOSITORY, AUDITORIA],
+      useFactory: (repo: DadosFiscaisRepository, auditoria: Auditoria) =>
+        new DefinirDadosFiscais(repo, auditoria, agora),
     },
   ],
   exports: [COMPETENCIAS_BLOQUEADAS, CORTES_COMPETENCIA],

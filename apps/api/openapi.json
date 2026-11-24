@@ -7193,6 +7193,76 @@
         ]
       }
     },
+    "/faturamento/clientes/{clienteId}/dados-fiscais": {
+      "get": {
+        "operationId": "DadosFiscaisController_obter",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DadosFiscaisClienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "put": {
+        "operationId": "DadosFiscaisController_salvar",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosFiscaisDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Salvo (ou já estava igual)."
+          },
+          "400": {
+            "description": "E-mail inválido, CEP sem 8 dígitos, UF inexistente ou endereço começado sem CEP, logradouro, cidade e UF (`campos` diz qual)."
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -15462,6 +15532,251 @@
         "required": [
           "alterados",
           "movimentos"
+        ]
+      },
+      "DadosFiscaisClienteDto": {
+        "type": "object",
+        "properties": {
+          "emailsNf": {
+            "maxItems": 20,
+            "example": [
+              "financeiro@cliente.com.br",
+              "administracao@teleimagem.com.br"
+            ],
+            "description": "Recebem a NF e os demonstrativos, na ordem; repetidos e vazios saem.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 254,
+            "description": "E-mail do cadastro no Omie."
+          },
+          "contatoNome": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "telefone": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 9,
+            "description": "Só os dígitos são guardados; 8 dígitos.",
+            "example": "01310-100"
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 30
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2,
+            "description": "Uma das 27 siglas.",
+            "example": "SP"
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 10,
+            "description": "Código FEBRABAN do banco.",
+            "example": "341"
+          },
+          "bancoAgencia": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20
+          },
+          "bancoConta": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 30
+          },
+          "exclusaoFiscal": {
+            "type": "boolean",
+            "description": "Os laudos do cliente saem do faturamento."
+          },
+          "omieCodigoCliente": {
+            "type": "string",
+            "nullable": true,
+            "description": "Código do cliente no Omie; vem da sincronização (só leitura)."
+          },
+          "omieSincronizadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "atualizadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Vazio se o cliente ainda não tem dados de faturamento."
+          },
+          "atualizadoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem salvou por último; vazio na carga do dashboards-one."
+          }
+        },
+        "required": [
+          "emailsNf",
+          "email",
+          "contatoNome",
+          "telefone",
+          "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "uf",
+          "bancoCodigo",
+          "bancoAgencia",
+          "bancoConta",
+          "exclusaoFiscal",
+          "omieCodigoCliente",
+          "omieSincronizadoEm",
+          "atualizadoEm",
+          "atualizadoPor"
+        ]
+      },
+      "DadosFiscaisDto": {
+        "type": "object",
+        "properties": {
+          "emailsNf": {
+            "maxItems": 20,
+            "example": [
+              "financeiro@cliente.com.br",
+              "administracao@teleimagem.com.br"
+            ],
+            "description": "Recebem a NF e os demonstrativos, na ordem; repetidos e vazios saem.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 254,
+            "description": "E-mail do cadastro no Omie."
+          },
+          "contatoNome": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "telefone": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 9,
+            "description": "Só os dígitos são guardados; 8 dígitos.",
+            "example": "01310-100"
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 30
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2,
+            "description": "Uma das 27 siglas.",
+            "example": "SP"
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 10,
+            "description": "Código FEBRABAN do banco.",
+            "example": "341"
+          },
+          "bancoAgencia": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20
+          },
+          "bancoConta": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 30
+          },
+          "exclusaoFiscal": {
+            "type": "boolean",
+            "description": "Os laudos do cliente saem do faturamento."
+          }
+        },
+        "required": [
+          "emailsNf",
+          "email",
+          "contatoNome",
+          "telefone",
+          "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "uf",
+          "bancoCodigo",
+          "bancoAgencia",
+          "bancoConta",
+          "exclusaoFiscal"
         ]
       },
       "StatusImportacao": {
