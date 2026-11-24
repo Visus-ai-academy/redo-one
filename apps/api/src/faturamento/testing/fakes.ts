@@ -20,13 +20,26 @@ import type {
   DadosFiscaisRepository,
   OmieDoCliente,
 } from '../application/ports/dados-fiscais.repository';
+import type { EquipesMedicos } from '../application/ports/equipes-medicos';
 import type {
   LaudoParaPrevia,
   LaudosCompetencia,
   LotePrevia,
 } from '../application/ports/laudos-competencia';
+import type {
+  ClienteDaTipificacao,
+  ConfiguracaoRegistrada,
+  DadosRegra,
+  DadosSubregra,
+  LaudoParaPreviaTipificacao,
+  LotePreviaTipificacao,
+  RegraRegistrada,
+  SubregraRegistrada,
+  TipificacaoRepository,
+} from '../application/ports/tipificacao.repository';
 import type { StatusCompetencia } from '../domain/competencia-status';
 import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
+import type { ConfiguracaoCliente } from '../domain/tipificacao';
 import type { NovaVigencia } from '../domain/vigencia-corte';
 
 export interface CompetenciaGuardada {
@@ -248,5 +261,115 @@ export class DadosFiscaisEmMemoria implements DadosFiscaisRepository {
   async salvar(clienteId: string, dados: DadosFiscais, autor: Autor) {
     this.linhas.set(clienteId, { dados: structuredClone(dados), atualizadoEm: autor.em });
     this.autores.push(autor);
+  }
+}
+
+/** Tipificação em memória: regras, sub-regras, clientes e laudos para a prévia. */
+export class TipificacaoEmMemoria implements TipificacaoRepository {
+  readonly regras = new Map<string, RegraRegistrada>();
+  readonly subregras = new Map<string, SubregraRegistrada>();
+  readonly clientes = new Map<string, ClienteDaTipificacao>();
+  readonly configuracoes = new Map<string, ConfiguracaoRegistrada>();
+  readonly laudos: LaudoParaPreviaTipificacao[] = [];
+  /** Escopos de reclassificação enfileirados (nulo = todos). */
+  readonly reclassificacoes: (string[] | null)[] = [];
+  private proximo = 1;
+
+  async carregarConfiguracao() {
+    if (!this.regras.size) return null;
+    return {
+      regras: [...this.regras.values()],
+      subregras: [...this.subregras.values()],
+      clientes: [...this.configuracoes.values()],
+    };
+  }
+  async listarRegras() {
+    return [...this.regras.values()];
+  }
+  async listarSubregras() {
+    return [...this.subregras.values()];
+  }
+  async regraComNome(nome: string) {
+    return (
+      [...this.regras.values()].find((r) => r.nome.toLowerCase() === nome.toLowerCase())?.id ?? null
+    );
+  }
+  async subregraComNome(nome: string) {
+    return (
+      [...this.subregras.values()].find((s) => s.nome.toLowerCase() === nome.toLowerCase())?.id ??
+      null
+    );
+  }
+  async salvarRegra(id: string | null, dados: DadosRegra) {
+    const salvo = id ?? `regra-${this.proximo++}`;
+    const atual = this.regras.get(salvo);
+    this.regras.set(salvo, { ordem: 0, padrao: false, clientes: 0, ...atual, ...dados, id: salvo });
+    this.reclassificacoes.push(null);
+    return salvo;
+  }
+  async salvarSubregra(id: string | null, dados: DadosSubregra) {
+    const salvo = id ?? `sub-${this.proximo++}`;
+    const atual = this.subregras.get(salvo);
+    this.subregras.set(salvo, { ordem: 0, clientes: 0, ...atual, ...dados, id: salvo });
+    this.reclassificacoes.push(null);
+    return salvo;
+  }
+  async obterCliente(clienteId: string) {
+    return this.clientes.get(clienteId) ?? null;
+  }
+  async obterConfiguracaoCliente(clienteId: string) {
+    const c = this.configuracoes.get(clienteId);
+    return c ? structuredClone(c) : null;
+  }
+  async salvarConfiguracaoCliente(
+    clienteId: string,
+    configuracao: Omit<ConfiguracaoCliente, 'clienteId'> | null,
+    principalId: string,
+    autor: Autor,
+  ) {
+    if (configuracao)
+      this.configuracoes.set(clienteId, {
+        clienteId,
+        ...structuredClone(configuracao),
+        atualizadoEm: autor.em,
+        atualizadoPor: 'Ana',
+      });
+    else this.configuracoes.delete(clienteId);
+    this.reclassificacoes.push([principalId]);
+  }
+  async lerParaPrevia(lote: LotePreviaTipificacao) {
+    return this.laudos
+      .filter(
+        (l) =>
+          l.clienteId === lote.clienteId &&
+          (lote.unidadeId === null || l.unidadeId === lote.unidadeId) &&
+          !lote.competenciasBloqueadas.includes(l.competencia) &&
+          (lote.depoisDe === null || l.id > lote.depoisDe),
+      )
+      .sort((a, b) => (a.id < b.id ? -1 : 1))
+      .slice(0, lote.limite);
+  }
+  async listarOpcoes() {
+    return { modalidades: [], especialidades: [], prioridades: [] };
+  }
+}
+
+/** Equipes e médicos em memória. */
+export class EquipesMedicosEmMemoria implements EquipesMedicos {
+  readonly equipes: { id: string; nome: string; medicos: string[] }[] = [];
+  readonly medicos: { id: string; nome: string }[] = [];
+  async membros() {
+    return this.equipes.map((e) => ({ id: e.id, medicos: e.medicos }));
+  }
+  async listarEquipes() {
+    return this.equipes.map((e) => ({ id: e.id, nome: e.nome, cor: null }));
+  }
+  async buscarMedicos(busca: string, limite: number) {
+    return this.medicos
+      .filter((m) => m.nome.toLowerCase().includes(busca.toLowerCase()))
+      .slice(0, limite);
+  }
+  async nomesMedicos(ids: string[]) {
+    return this.medicos.filter((m) => ids.includes(m.id));
   }
 }

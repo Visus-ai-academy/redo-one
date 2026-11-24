@@ -217,4 +217,29 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
       expect((await pedir(cookie, 'PUT', caminho(), semExclusao)).status).toBe(400);
     });
   });
+
+  describe('tipificação', () => {
+    const configuracao = { regraId: null, subregraDemaisId: null, linhas: [] };
+
+    it('só ver: lê as regras e a do cliente; mudar e a prévia respondem 403', async () => {
+      const cookie = await entrarCom(['faturamento.ver']);
+      expect((await pedir(cookie, 'GET', '/faturamento/tipificacao')).status).toBe(200);
+      expect((await pedir(cookie, 'GET', '/faturamento/tipificacao/opcoes')).status).toBe(200);
+      const caminho = `/faturamento/clientes/${clienteId}/tipificacao`;
+      expect((await pedir(cookie, 'GET', caminho)).status).toBe(200);
+      expect((await pedir(cookie, 'PUT', caminho, configuracao)).status).toBe(403);
+      expect((await pedir(cookie, 'POST', `${caminho}/previa`, configuracao)).status).toBe(403);
+      expect((await pedir(cookie, 'GET', '/faturamento/tipificacao/medicos')).status).toBe(403);
+    });
+
+    it('com editar: linha fora do contrato é 400; a vazia salva (sem configuração própria)', async () => {
+      const cookie = await entrarCom(['faturamento.ver', 'faturamento.tipificacao.editar']);
+      const caminho = `/faturamento/clientes/${clienteId}/tipificacao`;
+      const ruim = { ...configuracao, linhas: [{ tipo: 'categoria', valores: [] }] };
+      expect((await pedir(cookie, 'PUT', caminho, ruim)).status).toBe(400);
+      expect((await pedir(cookie, 'PUT', caminho, configuracao)).status).toBe(204);
+      const lido = (await (await pedir(cookie, 'GET', caminho)).json()) as Record<string, unknown>;
+      expect(lido.configuracao).toBeNull();
+    });
+  });
 });

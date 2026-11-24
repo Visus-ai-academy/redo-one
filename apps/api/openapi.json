@@ -7263,6 +7263,359 @@
         ]
       }
     },
+    "/faturamento/tipificacao": {
+      "get": {
+        "operationId": "TipificacaoController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipificacaoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/opcoes": {
+      "get": {
+        "operationId": "TipificacaoController_opcoes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Modalidades, especialidades, prioridades e equipes ativas, para o editor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpcoesTipificacaoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/medicos": {
+      "get": {
+        "operationId": "TipificacaoController_medicos",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Até 20 médicos ativos pelo nome.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NomeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/regras": {
+      "post": {
+        "operationId": "TipificacaoController_criarRegra",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosRegraTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Salvo; a reclassificação das competências abertas vai para a fila.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Nome vazio, cor fora de `#RRGGBB` ou regra da sub-regra inexistente."
+          },
+          "409": {
+            "description": "Nome em uso."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/regras/{id}": {
+      "put": {
+        "operationId": "TipificacaoController_alterarRegra",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosRegraTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Salvo; a reclassificação das competências abertas vai para a fila."
+          },
+          "400": {
+            "description": "Nome vazio, cor fora de `#RRGGBB` ou regra da sub-regra inexistente."
+          },
+          "404": {
+            "description": "Regra não encontrada."
+          },
+          "409": {
+            "description": "Nome em uso."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/subregras": {
+      "post": {
+        "operationId": "TipificacaoController_criarSubregra",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosSubregraTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Salvo; a reclassificação das competências abertas vai para a fila.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Nome vazio, cor fora de `#RRGGBB` ou regra da sub-regra inexistente."
+          },
+          "409": {
+            "description": "Nome em uso."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/subregras/{id}": {
+      "put": {
+        "operationId": "TipificacaoController_alterarSubregra",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosSubregraTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Salvo; a reclassificação das competências abertas vai para a fila."
+          },
+          "400": {
+            "description": "Nome vazio, cor fora de `#RRGGBB` ou regra da sub-regra inexistente."
+          },
+          "404": {
+            "description": "Sub-regra não encontrada."
+          },
+          "409": {
+            "description": "Nome em uso."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/clientes/{clienteId}/tipificacao": {
+      "get": {
+        "operationId": "TipificacaoClienteController_obter",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipificacaoClienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "put": {
+        "operationId": "TipificacaoClienteController_salvar",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Salvo; a reclassificação das competências abertas vai para a fila. Vazia (sem regra, linhas nem \"todos os demais\") apaga a configuração."
+          },
+          "400": {
+            "description": "Linha sem valores, \"apenas\"/\"exceto\" sem médico nem equipe, ou regra/sub-regra inexistente."
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/clientes/{clienteId}/tipificacao/previa": {
+      "post": {
+        "operationId": "TipificacaoClienteController_previa",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Laudos e volume das competências abertas em cada resultado, com a configuração gravada e com a nova, sem gravar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LinhaPreviaTipificacaoDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Linha sem valores, \"apenas\"/\"exceto\" sem médico nem equipe, ou regra/sub-regra inexistente."
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -15777,6 +16130,519 @@
           "bancoAgencia",
           "bancoConta",
           "exclusaoFiscal"
+        ]
+      },
+      "RegraTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "NC"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#dc2626",
+            "description": "`#RRGGBB`."
+          },
+          "faturaSemSubregra": {
+            "type": "boolean",
+            "description": "O laudo que nenhuma linha casou, sem sub-regra, fatura."
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ordem": {
+            "type": "number"
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Regra do cliente sem configuração."
+          },
+          "clientes": {
+            "type": "number",
+            "description": "Clientes e unidades com esta regra principal."
+          }
+        },
+        "required": [
+          "nome",
+          "descricao",
+          "cor",
+          "faturaSemSubregra",
+          "ativo",
+          "id",
+          "ordem",
+          "padrao",
+          "clientes"
+        ]
+      },
+      "SubregraTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "regraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "NC-NF"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "fatura": {
+            "type": "boolean",
+            "description": "O laudo nesta sub-regra fatura."
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ordem": {
+            "type": "number"
+          },
+          "clientes": {
+            "type": "number",
+            "description": "Clientes e unidades que usam a sub-regra."
+          }
+        },
+        "required": [
+          "regraId",
+          "nome",
+          "descricao",
+          "fatura",
+          "ativo",
+          "id",
+          "ordem",
+          "clientes"
+        ]
+      },
+      "TipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "regras": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegraTipificacaoDto"
+            }
+          },
+          "subregras": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubregraTipificacaoDto"
+            }
+          }
+        },
+        "required": [
+          "regras",
+          "subregras"
+        ]
+      },
+      "OpcaoTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor"
+        ]
+      },
+      "OpcoesTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "modalidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoTipificacaoDto"
+            }
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoTipificacaoDto"
+            }
+          },
+          "prioridades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoTipificacaoDto"
+            }
+          },
+          "equipes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoTipificacaoDto"
+            }
+          }
+        },
+        "required": [
+          "modalidades",
+          "especialidades",
+          "prioridades",
+          "equipes"
+        ]
+      },
+      "NomeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "DadosRegraTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "NC"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#dc2626",
+            "description": "`#RRGGBB`."
+          },
+          "faturaSemSubregra": {
+            "type": "boolean",
+            "description": "O laudo que nenhuma linha casou, sem sub-regra, fatura."
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nome",
+          "descricao",
+          "cor",
+          "faturaSemSubregra",
+          "ativo"
+        ]
+      },
+      "DadosSubregraTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "regraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "NC-NF"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "fatura": {
+            "type": "boolean",
+            "description": "O laudo nesta sub-regra fatura."
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "regraId",
+          "nome",
+          "descricao",
+          "fatura",
+          "ativo"
+        ]
+      },
+      "ClienteTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "unificadoEmId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "principalNome": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "unificadoEmId",
+          "principalNome"
+        ]
+      },
+      "LinhaTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "modalidade",
+              "especialidade",
+              "prioridade"
+            ]
+          },
+          "valores": {
+            "description": "Modalidades, especialidades ou prioridades, conforme o tipo.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "modoMedico": {
+            "type": "string",
+            "enum": [
+              "todos",
+              "apenas",
+              "exceto"
+            ],
+            "description": "`apenas` nunca casa com laudo sem médico; `exceto` sempre casa."
+          },
+          "medicos": {
+            "description": "Médicos do filtro.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "equipes": {
+            "description": "Equipes do filtro (valem os membros).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subregraId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tipo",
+          "valores",
+          "modoMedico",
+          "medicos",
+          "equipes",
+          "subregraId"
+        ]
+      },
+      "ConfiguracaoTipificacaoRegistradaDto": {
+        "type": "object",
+        "properties": {
+          "regraId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Vazio = a do principal (na unidade) ou a padrão."
+          },
+          "subregraDemaisId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "\"Todos os demais\"."
+          },
+          "linhas": {
+            "description": "Vale a primeira que casar.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaTipificacaoDto"
+            }
+          },
+          "atualizadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "atualizadoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vazio na carga do dashboards-one."
+          }
+        },
+        "required": [
+          "regraId",
+          "subregraDemaisId",
+          "linhas",
+          "atualizadoEm",
+          "atualizadoPor"
+        ]
+      },
+      "TipificacaoClienteDto": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "$ref": "#/components/schemas/ClienteTipificacaoDto"
+          },
+          "configuracao": {
+            "nullable": true,
+            "description": "Vazia = segue a do principal (na unidade) ou a padrão.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoRegistradaDto"
+              }
+            ]
+          },
+          "doPrincipal": {
+            "nullable": true,
+            "description": "Só na unidade: a do principal.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoRegistradaDto"
+              }
+            ]
+          },
+          "regraPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "medicos": {
+            "description": "Nome dos médicos citados nas linhas.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NomeDto"
+            }
+          }
+        },
+        "required": [
+          "cliente",
+          "configuracao",
+          "doPrincipal",
+          "regraPadraoId",
+          "medicos"
+        ]
+      },
+      "ConfiguracaoTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "regraId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Vazio = a do principal (na unidade) ou a padrão."
+          },
+          "subregraDemaisId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "\"Todos os demais\"."
+          },
+          "linhas": {
+            "description": "Vale a primeira que casar.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaTipificacaoDto"
+            }
+          }
+        },
+        "required": [
+          "regraId",
+          "subregraDemaisId",
+          "linhas"
+        ]
+      },
+      "ContagemPreviaDto": {
+        "type": "object",
+        "properties": {
+          "laudos": {
+            "type": "number"
+          },
+          "volume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "laudos",
+          "volume"
+        ]
+      },
+      "LinhaPreviaTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "competencia": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "regraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subregraId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "fatura": {
+            "type": "boolean"
+          },
+          "antes": {
+            "$ref": "#/components/schemas/ContagemPreviaDto"
+          },
+          "depois": {
+            "$ref": "#/components/schemas/ContagemPreviaDto"
+          }
+        },
+        "required": [
+          "competencia",
+          "regraId",
+          "subregraId",
+          "fatura",
+          "antes",
+          "depois"
         ]
       },
       "StatusImportacao": {
