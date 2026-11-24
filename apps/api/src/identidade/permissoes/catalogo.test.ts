@@ -97,6 +97,7 @@ describe('catálogo de permissões', () => {
     expect(especiais('importacao')).toEqual([
       'importacao.arquivo.baixar',
       'importacao.parametros.editar',
+      'importacao.paciente.ver',
     ]);
     expect(especiais('escala')).toEqual([]);
     expect(especiais('ausencias')).toEqual(['ausencias.aprovar', 'ausencias.observacoes.ver']);
@@ -133,6 +134,11 @@ describe('catálogo de permissões', () => {
     expect(sensiveis('distribuicao')).toEqual([
       'distribuicao.rodada.aprovar',
       'distribuicao.paciente.ver',
+    ]);
+    expect(sensiveis('importacao')).toEqual([
+      'importacao.arquivo.baixar',
+      'importacao.parametros.editar',
+      'importacao.paciente.ver',
     ]);
     expect(sensiveis('distribuicao-config')).toEqual(['distribuicao-config.editar']);
     expect(sensiveis('ausencias')).toEqual(['ausencias.observacoes.ver']);

@@ -87,6 +87,36 @@ describe('prepararLaudo', () => {
     ).toBe('hmac(nome:maria da silva)');
   });
 
+  it('o paciente vai à parte, como chegou, com a conferência em HMAC e fora do hash do conteúdo', () => {
+    const { laudo } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo);
+    expect(laudo.paciente).toEqual({
+      nome: 'Maria da Silva',
+      codigo: '00123',
+      conferencia: 'hmac(paciente:["Maria da Silva","00123"])',
+    });
+
+    // Só o nome mudou (grafia corrigida na MobileMed): o laudo é o mesmo, a conferência não.
+    const corrigido = prepararLaudo(
+      linha({ nomePaciente: 'Maria da Silva Souza' }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    ).laudo;
+    expect(corrigido.identidade).toBe(laudo.identidade);
+    expect(corrigido.hashConteudo).toBe(laudo.hashConteudo);
+    expect(corrigido.paciente?.conferencia).not.toBe(laudo.paciente?.conferencia);
+  });
+
+  it('linha sem nome nem código não tem paciente para gravar', () => {
+    const { laudo } = prepararLaudo(
+      linha({ nomePaciente: null, codigoPaciente: null }),
+      'normal',
+      cadastros,
+      pseudonimo,
+    );
+    expect(laudo.paciente).toBeNull();
+  });
+
   it('o hash do conteúdo muda quando um campo gravado muda', () => {
     const a = prepararLaudo(linha(), 'normal', cadastros, pseudonimo).laudo;
     const b = prepararLaudo(linha({ status: 'Reassinado' }), 'normal', cadastros, pseudonimo).laudo;

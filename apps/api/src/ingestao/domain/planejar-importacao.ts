@@ -1,6 +1,8 @@
 export interface LaudoExistente {
   hashConteudo: string;
   removido: boolean;
+  /** Conferência do paciente gravado (`PacienteDoLaudo.conferencia`); nulo = sem paciente. */
+  pacienteConferencia?: string | null;
 }
 
 /** Trava contra arquivo truncado (valores de `parametros_ingestao`). */
@@ -15,6 +17,11 @@ export interface PlanoImportacao<L> {
   inalterados: number;
   /** Identidades da janela que não vieram no arquivo. */
   remover: string[];
+  /**
+   * Laudos cujo paciente (nome e código) tem de ser gravado: o novo, o que ainda não tinha e o
+   * que mudou, mesmo com o resto do laudo igual (o paciente fica fora do hash do conteúdo).
+   */
+  pacientes: L[];
   /** Linhas repetidas na própria planilha (mesma identidade): contam uma vez. */
   repetidas: number;
   /** Motivo da recusa; com recusa, nada é gravado. */
@@ -27,7 +34,13 @@ export interface PlanoImportacao<L> {
  * Recusa quando sumiria muito mais do que o arquivo traz (arquivo incompleto), como a trava do
  * dashboards-one (`substituicaoSuspeita`).
  */
-export function planejarImportacao<L extends { identidade: string; hashConteudo: string }>(
+export function planejarImportacao<
+  L extends {
+    identidade: string;
+    hashConteudo: string;
+    paciente?: { conferencia: string } | null;
+  },
+>(
   laudos: L[],
   existentes: ReadonlyMap<string, LaudoExistente>,
   trava: TravaRemocao,
@@ -38,6 +51,7 @@ export function planejarImportacao<L extends { identidade: string; hashConteudo:
     atualizar: [],
     inalterados: 0,
     remover: [],
+    pacientes: [],
     repetidas: 0,
     recusa: null,
   };
@@ -53,6 +67,9 @@ export function planejarImportacao<L extends { identidade: string; hashConteudo:
     else if (existente.removido || existente.hashConteudo !== laudo.hashConteudo) {
       plano.atualizar.push(laudo);
     } else plano.inalterados++;
+    if (laudo.paciente && laudo.paciente.conferencia !== existente?.pacienteConferencia) {
+      plano.pacientes.push(laudo);
+    }
   }
 
   for (const [identidade, existente] of existentes) {

@@ -5,6 +5,7 @@ import { DATABASE, type Database } from '../../../database/database';
 import {
   laudos,
   laudosLinhasBrutas,
+  laudosPacientes,
   laudosPecasQuebra,
   totaisLaudosDia,
 } from '../../../database/schema';
@@ -31,7 +32,10 @@ const colunasAtualizadas = Object.fromEntries(
     .map(([campo, coluna]) => [campo, sql.raw(`excluded."${coluna.name}"`)]),
 );
 
-const linhaDoLaudo = ({ pecas: _pecas, ...l }: LaudoPreparado, importacaoId: string) => ({
+const linhaDoLaudo = (
+  { pecas: _pecas, paciente: _paciente, ...l }: LaudoPreparado,
+  importacaoId: string,
+) => ({
   ...l,
   importacaoId,
   removidoEm: null,
@@ -47,8 +51,11 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         identidade: laudos.identidade,
         hashConteudo: laudos.hashConteudo,
         removido: sql<boolean>`${laudos.removidoEm} is not null`,
+        // Só a conferência (HMAC): a importação não lê o nome gravado.
+        pacienteConferencia: laudosPacientes.conferencia,
       })
       .from(laudos)
+      .leftJoin(laudosPacientes, eq(laudosPacientes.laudoId, laudos.id))
       .where(
         and(
           eq(laudos.origem, j.origem),
@@ -90,6 +97,36 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           return dados && laudoId ? [{ laudoId, importacaoId, dados }] : [];
         });
         if (brutas.length) await tx.insert(laudosLinhasBrutas).values(brutas).onConflictDoNothing();
+      }
+
+      // O paciente vai à parte, também de laudo sem outra mudança (o que não o tinha ganha).
+      for (const lote of emLotes([...a.pacientes])) {
+        const ids = await tx
+          .select({ id: laudos.id, identidade: laudos.identidade })
+          .from(laudos)
+          .where(
+            inArray(
+              laudos.identidade,
+              lote.map(([identidade]) => identidade),
+            ),
+          );
+        const pacientes = ids.flatMap(({ id, identidade }) => {
+          const p = a.pacientes.get(identidade);
+          return p ? [{ laudoId: id, ...p }] : [];
+        });
+        if (!pacientes.length) continue;
+        await tx
+          .insert(laudosPacientes)
+          .values(pacientes)
+          .onConflictDoUpdate({
+            target: laudosPacientes.laudoId,
+            set: {
+              nome: sql.raw('excluded."nome"'),
+              codigo: sql.raw('excluded."codigo"'),
+              conferencia: sql.raw('excluded."conferencia"'),
+              atualizadoEm: agora,
+            },
+          });
       }
 
       for (const lote of emLotes(a.remover)) {

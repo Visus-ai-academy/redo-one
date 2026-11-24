@@ -50,6 +50,33 @@ describe('planejarImportacao', () => {
     expect(plano.repetidas).toBe(1);
   });
 
+  it('grava o paciente do laudo que não o tem ou cujo paciente mudou, mesmo sem outra mudança', () => {
+    const comPaciente = (identidade: string, conferencia: string) => ({
+      ...laudo(identidade),
+      paciente: { nome: 'X', codigo: null, conferencia },
+    });
+    const existentes = new Map([
+      ['sem-nome', { hashConteudo: 'h-sem-nome', removido: false, pacienteConferencia: null }],
+      ['igual', { hashConteudo: 'h-igual', removido: false, pacienteConferencia: 'p1' }],
+      ['mudou', { hashConteudo: 'h-mudou', removido: false, pacienteConferencia: 'p1' }],
+    ]);
+
+    const plano = planejarImportacao(
+      [
+        comPaciente('sem-nome', 'p1'),
+        comPaciente('igual', 'p1'),
+        comPaciente('mudou', 'p2'),
+        comPaciente('novo', 'p3'),
+        { ...laudo('linha-sem-paciente'), paciente: null },
+      ],
+      existentes,
+      trava,
+    );
+
+    expect(plano.inalterados).toBe(3);
+    expect(plano.pacientes.map((l) => l.identidade)).toEqual(['sem-nome', 'mudou', 'novo']);
+  });
+
   it('recusa quando sumiriam mais laudos que o mínimo e que o múltiplo das linhas do arquivo', () => {
     const existentes = new Map(
       Array.from(

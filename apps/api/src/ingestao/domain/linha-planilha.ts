@@ -3,7 +3,7 @@ import { booleano, type Celula, dataHoraBrasilia, numero, texto } from './celula
 /** Uma linha do relatório de laudos da MobileMed, convertida. */
 export interface LinhaLaudo {
   empresa: string;
-  /** Só para o pseudônimo quando falta o código; não é gravado no laudo. */
+  /** Pseudônimo quando falta o código; gravado só em `laudos_pacientes`. */
   nomePaciente: string | null;
   codigoPaciente: string | null;
   estudo: string;

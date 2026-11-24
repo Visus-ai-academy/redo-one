@@ -163,6 +163,38 @@ describe('ImportarLaudos', () => {
     expect(laudos.linhasBrutas).toHaveLength(2);
   });
 
+  it('grava o nome e o código do paciente à parte, e reimportar igual não os regrava', async () => {
+    await importar('i1', [registro('1'), registro('2', { NOME_PACIENTE: null })]);
+
+    expect([...laudos.pacientes.values()].map(({ nome, codigo }) => ({ nome, codigo }))).toEqual([
+      { nome: 'Paciente', codigo: '1' },
+      { nome: null, codigo: '2' },
+    ]);
+    expect(laudos.gravacoesPaciente).toBe(2);
+
+    await importar('i2', [registro('1'), registro('2', { NOME_PACIENTE: null })]);
+    expect(laudos.gravacoesPaciente).toBe(2);
+  });
+
+  it('o laudo já gravado sem paciente ganha o nome na próxima importação, mesmo sem mudar', async () => {
+    await importar('i1', [registro('1')]);
+    // Como os laudos importados antes de o nome ser guardado.
+    laudos.pacientes.clear();
+
+    const r = await importar('i2', [registro('1')]);
+
+    expect(r?.resultado).toMatchObject({ inseridos: 0, atualizados: 0, inalterados: 1 });
+    expect([...laudos.pacientes.values()].map((p) => p.nome)).toEqual(['Paciente']);
+  });
+
+  it('o nome corrigido na MobileMed é regravado sem contar o laudo como atualizado', async () => {
+    await importar('i1', [registro('1')]);
+    const r = await importar('i2', [registro('1', { NOME_PACIENTE: 'Paciente Corrigido' })]);
+
+    expect(r?.resultado).toMatchObject({ atualizados: 0, inalterados: 1 });
+    expect([...laudos.pacientes.values()].map((p) => p.nome)).toEqual(['Paciente Corrigido']);
+  });
+
   it('o laudo que mudou é atualizado e o que sumiu da janela é removido', async () => {
     await importar('i1', [registro('1'), registro('2')]);
     const r = await importar('i2', [registro('1', { STATUS: 'Reassinado' })]);

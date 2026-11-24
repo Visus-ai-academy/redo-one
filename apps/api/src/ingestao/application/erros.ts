@@ -36,3 +36,12 @@ export class ParametrosInvalidosError extends ErroDeDominio {
 export class ImportacaoMobileMedIndisponivelError extends ErroDeDominio {
   readonly tipo = 'conflito';
 }
+
+export class LeituraDePacienteProibidaError extends ErroDeDominio {
+  readonly tipo = 'proibido';
+  constructor() {
+    super(
+      'Você não tem permissão para ver o paciente dos laudos. Peça a quem administra os papéis.',
+    );
+  }
+}

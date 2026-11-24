@@ -15,6 +15,7 @@ import {
 } from './application/tarefas';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
+import { LerPacientesDosLaudos } from './application/use-cases/ler-pacientes-dos-laudos';
 import {
   AvisosController,
   ParametrosIngestaoController,
@@ -55,6 +56,7 @@ describe('IngestaoModule', () => {
     await modulo.init();
 
     expect(modulo.get(ImportarLaudos)).toBeInstanceOf(ImportarLaudos);
+    expect(modulo.get(LerPacientesDosLaudos)).toBeInstanceOf(LerPacientesDosLaudos);
     expect(modulo.get(PrepararEnvio)).toBeInstanceOf(PrepararEnvio);
     expect(modulo.get(ConfirmarEnvio)).toBeInstanceOf(ConfirmarEnvio);
     expect(modulo.get(ImportacoesController)).toBeInstanceOf(ImportacoesController);

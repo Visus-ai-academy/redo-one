@@ -121,7 +121,7 @@ export const laudos = pgTable(
     empresaOrigem: text('empresa_origem').notNull(),
     clienteId: uuid('cliente_id').references(() => clientes.id),
     accessionNumber: text('accession_number'),
-    /** HMAC do código do paciente (pseudônimo); o nome e o código não são guardados aqui. */
+    /** HMAC do código do paciente (pseudônimo); o nome e o código ficam em `laudos_pacientes`. */
     pacienteChave: text('paciente_chave').notNull(), // LGPD: saúde
     estudo: text('estudo').notNull(),
     exameId: uuid('exame_id').references(() => exames.id),
@@ -195,6 +195,24 @@ export const laudosLinhasBrutas = pgTable(
     index('laudos_linhas_brutas_criado_idx').on(t.criadoEm),
   ],
 );
+
+/**
+ * Nome e código do paciente de cada laudo (1:1), como chegaram da MobileMed: à parte de `laudos`
+ * para que só quem precisa leia. Leitura só pela porta `PacientesLaudos`, com
+ * `importacao.paciente.ver` e auditada; nunca em log, erro, analytics nem totais. A distribuição
+ * não grava paciente (o nome da rodada fica em memória). Retenção: a definir (TODO.md).
+ */
+export const laudosPacientes = pgTable('laudos_pacientes', {
+  laudoId: uuid('laudo_id')
+    .primaryKey()
+    .references(() => laudos.id, { onDelete: 'cascade' }),
+  nome: text('nome'), // LGPD: saúde
+  /** Código do paciente na MobileMed, como chegou (com os zeros à esquerda). */
+  codigo: text('codigo'), // LGPD: saúde
+  /** HMAC do nome e do código: diz se a reimportação tem de regravar o paciente. */
+  conferencia: text('conferencia').notNull(),
+  atualizadoEm: atualizadoEm(),
+});
 
 /** Peças da quebra do estudo (cada uma vale 1 no faturamento). Não muda o volume do laudo. */
 export const laudosPecasQuebra = pgTable(

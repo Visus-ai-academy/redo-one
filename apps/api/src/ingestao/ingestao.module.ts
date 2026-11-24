@@ -40,6 +40,7 @@ import {
   LINHAS_BRUTAS_REPOSITORY,
   type LinhasBrutasRepository,
 } from './application/ports/linhas-brutas.repository';
+import { PACIENTES_LAUDOS, type PacientesLaudos } from './application/ports/pacientes-laudos';
 import {
   PARAMETROS_INGESTAO_REPOSITORY,
   type ParametrosIngestaoRepository,
@@ -61,6 +62,7 @@ import { CriarImportacaoMobileMed } from './application/use-cases/criar-importac
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
+import { LerPacientesDosLaudos } from './application/use-cases/ler-pacientes-dos-laudos';
 import { TriarAviso } from './application/use-cases/triar-aviso';
 import {
   AvisosController,
@@ -81,6 +83,7 @@ import { DrizzleConsultaImportacoes } from './infrastructure/persistence/drizzle
 import { DrizzleImportacoesRepository } from './infrastructure/persistence/drizzle-importacoes.repository';
 import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-laudos.repository';
 import { DrizzleLinhasBrutasRepository } from './infrastructure/persistence/drizzle-linhas-brutas.repository';
+import { DrizzlePacientesLaudos } from './infrastructure/persistence/drizzle-pacientes-laudos';
 import { DrizzleParametrosIngestaoRepository } from './infrastructure/persistence/drizzle-parametros-ingestao.repository';
 import { SemCompetenciasBloqueadas } from './infrastructure/persistence/sem-competencias-bloqueadas';
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
@@ -161,6 +164,15 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
     { provide: COMPETENCIAS_BLOQUEADAS, useClass: SemCompetenciasBloqueadas },
     { provide: LEITOR_PLANILHA, useClass: XlsxLeitorPlanilha },
     { provide: LINHAS_BRUTAS_REPOSITORY, useClass: DrizzleLinhasBrutasRepository },
+    // Nome e código do paciente: só por este caso de uso (permissão + auditoria). Exportado para
+    // as telas de faturamento, pré-pago, qualidade e pendências; nenhuma o usa ainda.
+    { provide: PACIENTES_LAUDOS, useClass: DrizzlePacientesLaudos },
+    {
+      provide: LerPacientesDosLaudos,
+      inject: [PACIENTES_LAUDOS, AUDITORIA],
+      useFactory: (pacientes: PacientesLaudos, auditoria: Auditoria) =>
+        new LerPacientesDosLaudos(pacientes, auditoria, () => new Date()),
+    },
     {
       provide: ExpurgarLinhasBrutas,
       inject: [PARAMETROS_INGESTAO_REPOSITORY, LINHAS_BRUTAS_REPOSITORY],
@@ -252,6 +264,7 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
         ),
     },
   ],
+  exports: [LerPacientesDosLaudos],
 })
 export class IngestaoModule implements OnModuleInit {
   constructor(

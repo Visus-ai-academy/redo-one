@@ -31,7 +31,7 @@ const flag = z.union([z.number(), z.string(), z.boolean()]).nullish();
 export const itemRelatorio = z.object({
   nome_fantasia: z.string(),
   is_compartilhamento_enviado_para: texto,
-  nome_paciente: texto, // LGPD: pessoal (só a linha crua, como no upload)
+  nome_paciente: texto, // LGPD: saúde (linha crua e `laudos_pacientes`, como no upload)
   codigo_paciente: textoOuNumero, // LGPD: saúde (vira o pseudônimo)
   estudo_descricao: z.string(),
   descricao_subespecialidade: texto,

@@ -30,6 +30,17 @@ export interface CadastrosIngestao {
   resolverMedico: (nome: string | null, idMobilemed: number | null) => string | null;
 }
 
+/**
+ * Nome e código do paciente como chegaram da MobileMed, gravados à parte do laudo
+ * (`laudos_pacientes`, leitura só com permissão e auditada). Fora do hash do conteúdo: a
+ * `conferencia` (HMAC dos dois) é que diz se a reimportação tem de regravá-los.
+ */
+export interface PacienteDoLaudo {
+  nome: string | null; // LGPD: saúde
+  codigo: string | null; // LGPD: saúde
+  conferencia: string;
+}
+
 export interface LaudoPreparado {
   identidade: string;
   hashConteudo: string;
@@ -67,6 +78,8 @@ export interface LaudoPreparado {
   diaLaudo: string;
   competencia: string;
   pecas: { exameId: string; categoriaId: string | null }[];
+  /** Nulo quando a linha não traz nem nome nem código. */
+  paciente: PacienteDoLaudo | null;
 }
 
 const CHAVE_DO_AVISO: Record<TipoDaImportacao, (valor: string) => string> = {
@@ -86,7 +99,8 @@ const comChave = (tipo: TipoDaImportacao, valor: string): PendenciaCadastro => (
 
 /**
  * Pseudônimo do paciente: o código sem zeros à esquerda (como a MobileMed compara) ou, sem código,
- * o nome normalizado. O texto cru só passa pelo HMAC; nunca é gravado no laudo.
+ * o nome normalizado. O texto cru só passa pelo HMAC; no laudo fica só o pseudônimo (o nome e o
+ * código vão para `laudos_pacientes`, ver `PacienteDoLaudo`).
  */
 export function textoDoPaciente(p: {
   codigoPaciente?: string | null;
@@ -96,10 +110,22 @@ export function textoDoPaciente(p: {
   return codigo ? `codigo:${codigo}` : `nome:${normalizarNome(p.nomePaciente ?? '')}`;
 }
 
+function pacienteDoLaudo(
+  l: LinhaLaudo,
+  pseudonimo: (texto: string) => string,
+): PacienteDoLaudo | null {
+  if (!l.nomePaciente && !l.codigoPaciente) return null;
+  return {
+    nome: l.nomePaciente,
+    codigo: l.codigoPaciente,
+    conferencia: pseudonimo(`paciente:${JSON.stringify([l.nomePaciente, l.codigoPaciente])}`),
+  };
+}
+
 /**
  * Prepara o laudo de uma linha lida: resolve os cadastros, classifica o estudo e calcula volume,
  * dia, competência, identidade e o hash do conteúdo (que diz se uma reimportação mudou o laudo).
- * O id da conta MobileMed dos médicos fica fora do hash (ver o fim da função).
+ * O id da conta MobileMed dos médicos e o paciente ficam fora do hash (ver o fim da função).
  */
 export function prepararLaudo(
   l: LinhaLaudo,
@@ -201,6 +227,7 @@ export function prepararLaudo(
       // caminhos. Quando o id muda o médico resolvido, o medicoId (no hash) já muda o hash.
       medicoIdMobilemed: l.medicoIdMobilemed,
       medicoReassinaturaIdMobilemed: l.medicoReassinaturaIdMobilemed,
+      paciente: pacienteDoLaudo(l, pseudonimo),
     },
     pendencias,
     conferidos: conferidos.map(({ tipo, chave }) => ({ tipo, chave })),

@@ -12,6 +12,7 @@ import type { JanelaLaudos } from '../../application/ports/laudos.repository';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
 import { DrizzleLaudosRepository } from './drizzle-laudos.repository';
 import { DrizzleLinhasBrutasRepository } from './drizzle-linhas-brutas.repository';
+import { DrizzlePacientesLaudos } from './drizzle-pacientes-laudos';
 
 const url = process.env.TEST_DATABASE_URL;
 const agora = new Date('2026-10-07T12:00:00Z');
@@ -52,6 +53,7 @@ const laudo = (identidade: string, campos: Partial<LaudoPreparado> = {}): LaudoP
   diaLaudo: '2026-10-06',
   competencia: '2026-10',
   pecas: [],
+  paciente: null,
   ...campos,
 });
 
@@ -94,7 +96,13 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     await pool.end();
   });
 
-  const vazio = { inserir: [], atualizar: [], remover: [], linhasBrutas: new Map() };
+  const vazio = {
+    inserir: [],
+    atualizar: [],
+    remover: [],
+    linhasBrutas: new Map(),
+    pacientes: new Map(),
+  };
 
   it('grava os novos com a linha crua e devolve-os na janela', async () => {
     await repo.aplicar(
@@ -105,10 +113,64 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     );
 
     expect(await repo.existentesNaJanela(janela)).toEqual(
-      new Map([['a', { hashConteudo: 'h-a', removido: false }]]),
+      new Map([['a', { hashConteudo: 'h-a', removido: false, pacienteConferencia: null }]]),
     );
     const brutas = await db.select().from(schema.laudosLinhasBrutas);
     expect(brutas.map((b) => b.dados)).toEqual([{ EMPRESA: 'CLINICA X' }]);
+  });
+
+  it('grava o paciente à parte, também de laudo sem outra mudança, e o regrava quando muda', async () => {
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, inserir: [laudo('a'), laudo('b')] },
+      agora,
+    );
+    const paciente = (nome: string, conferencia: string) => ({ nome, codigo: '007', conferencia });
+
+    // Os dois já existiam sem paciente e não mudaram: só o paciente é gravado.
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      {
+        ...vazio,
+        pacientes: new Map([
+          ['a', paciente('Fulano', 'p1')],
+          ['b', paciente('Beltrano', 'p2')],
+          ['nao-existe', paciente('Ninguém', 'p3')],
+        ]),
+      },
+      agora,
+    );
+    const existentes = await repo.existentesNaJanela(janela);
+    expect(existentes.get('a')?.pacienteConferencia).toBe('p1');
+    expect(existentes.get('b')?.pacienteConferencia).toBe('p2');
+
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, pacientes: new Map([['a', paciente('Fulano Corrigido', 'p4')]]) },
+      agora,
+    );
+    const gravados = await db
+      .select({ nome: schema.laudosPacientes.nome, codigo: schema.laudosPacientes.codigo })
+      .from(schema.laudosPacientes)
+      .orderBy(schema.laudosPacientes.nome);
+    expect(gravados).toEqual([
+      { nome: 'Beltrano', codigo: '007' },
+      { nome: 'Fulano Corrigido', codigo: '007' },
+    ]);
+
+    // A leitura por id do laudo (a porta do caso de uso auditado).
+    const [a] = await db
+      .select({ id: schema.laudos.id })
+      .from(schema.laudos)
+      .where(sql`${schema.laudos.identidade} = 'a'`);
+    const lidos = await new DrizzlePacientesLaudos(db).porLaudos([
+      a?.id ?? '',
+      '00000000-0000-0000-0000-000000000000',
+    ]);
+    expect(lidos).toEqual(new Map([[a?.id, { nome: 'Fulano Corrigido', codigo: '007' }]]));
   });
 
   it('a janela filtra origem, dias, empresas e competências bloqueadas', async () => {
@@ -164,6 +226,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     expect((await repo.existentesNaJanela(janela)).get('a')).toEqual({
       hashConteudo: 'novo',
       removido: false,
+      pacienteConferencia: null,
     });
     const [gravado] = await db.select().from(schema.laudos);
     expect(gravado?.status).toBe('Reassinado');

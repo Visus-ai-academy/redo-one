@@ -153,6 +153,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Mudar a trava contra planilha truncada e a retenção das linhas cruas.',
         sensivel: true,
       },
+      // Dado de paciente (LGPD): nome e código gravados na importação; cada leitura é auditada.
+      {
+        chave: 'importacao.paciente.ver',
+        rotulo: 'Ver paciente',
+        descricao:
+          'Ver o nome e o código do paciente dos laudos importados (cada leitura é auditada).',
+        sensivel: true,
+      },
     ],
   },
   {

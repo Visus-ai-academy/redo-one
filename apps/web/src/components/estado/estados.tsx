@@ -1,9 +1,10 @@
 import { Button } from '@base-ui/react/button';
 import { ArrowClockwise, LockKey, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
-import { Link, useRouter } from '@tanstack/react-router';
+import { type ErrorComponentProps, Link, useRouter } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 import { buttonClassName } from '../button/button-class';
+import { tipoDoErro } from './tipo-do-erro';
 
 function Estado({
   icone,
@@ -48,16 +49,23 @@ export function NaoEncontrada() {
   );
 }
 
-/** Endereço aberto direto por quem o papel não permite (o item já some do menu). */
-export function SemPermissao({ tela }: { tela: string }) {
+/**
+ * Tela que o papel não permite: aberta pelo endereço (o item já some do menu) ou recusada pela
+ * API (403). Fica dentro do layout, com o menu de pé.
+ */
+export function SemPermissao({ tela }: { tela?: string }) {
   return (
     <Estado
       icone={<LockKey size={24} aria-hidden />}
-      titulo="Sem acesso a esta tela"
-      texto={`Seu papel não permite abrir ${tela}. Se precisar, fale com quem administra o One.`}
+      titulo="Você não tem permissão para ver esta tela."
+      texto={
+        tela
+          ? `Seu papel não dá acesso a ${tela}. Se precisar, peça a quem administra o One para liberar.`
+          : 'Se precisar, peça a quem administra o One para liberar no seu papel.'
+      }
       acao={
-        <Link to="/" className={buttonClassName({ variant: 'secondary' })}>
-          Voltar ao início
+        <Link to="/" className={buttonClassName()}>
+          Ir para a tela inicial
         </Link>
       }
     />
@@ -85,8 +93,12 @@ export function ErroInesperado({ onTentarDeNovo }: { onTentarDeNovo: () => void 
   );
 }
 
-/** Erro de rota: o "Tentar de novo" recarrega os dados da página. */
-export function ErroDeRota() {
+/**
+ * Erro de rota sem tratamento próprio: 403 da API é acesso negado; o resto (500, rede) é erro
+ * inesperado, e o "Tentar de novo" recarrega os dados da página.
+ */
+export function ErroDeRota({ error }: Pick<ErrorComponentProps, 'error'>) {
   const router = useRouter();
+  if (tipoDoErro(error) === 'permissao') return <SemPermissao />;
   return <ErroInesperado onTentarDeNovo={() => void router.invalidate()} />;
 }

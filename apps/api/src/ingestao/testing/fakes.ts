@@ -14,7 +14,7 @@ import type {
 import type { FormatoPlanilha } from '../application/ports/leitor-planilha';
 import type { PeriodoDias } from '../domain/periodo-mobilemed';
 import type { LaudoExistente } from '../domain/planejar-importacao';
-import type { LaudoPreparado, PendenciaCadastro } from '../domain/preparar-laudo';
+import type { LaudoPreparado, PacienteDoLaudo, PendenciaCadastro } from '../domain/preparar-laudo';
 
 /** `Omit` que preserva a união. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -103,6 +103,9 @@ interface LaudoGuardado extends LaudoPreparado {
 export class LaudosEmMemoria implements LaudosRepository {
   readonly laudos = new Map<string, LaudoGuardado>();
   readonly linhasBrutas: { identidade: string; importacaoId: string }[] = [];
+  /** `laudos_pacientes`, por identidade do laudo. */
+  readonly pacientes = new Map<string, PacienteDoLaudo>();
+  gravacoesPaciente = 0;
 
   private naJanela(l: LaudoGuardado, j: JanelaLaudos) {
     return (
@@ -118,7 +121,11 @@ export class LaudosEmMemoria implements LaudosRepository {
     const existentes = new Map<string, LaudoExistente>();
     for (const l of this.laudos.values()) {
       if (this.naJanela(l, j)) {
-        existentes.set(l.identidade, { hashConteudo: l.hashConteudo, removido: l.removido });
+        existentes.set(l.identidade, {
+          hashConteudo: l.hashConteudo,
+          removido: l.removido,
+          pacienteConferencia: this.pacientes.get(l.identidade)?.conferencia ?? null,
+        });
       }
     }
     return existentes;
@@ -130,6 +137,11 @@ export class LaudosEmMemoria implements LaudosRepository {
       if (a.linhasBrutas.has(l.identidade)) {
         this.linhasBrutas.push({ identidade: l.identidade, importacaoId });
       }
+    }
+    for (const [identidade, paciente] of a.pacientes) {
+      if (!this.laudos.has(identidade)) continue;
+      this.pacientes.set(identidade, paciente);
+      this.gravacoesPaciente++;
     }
     for (const identidade of a.remover) {
       const l = this.laudos.get(identidade);

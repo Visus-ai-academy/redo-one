@@ -191,6 +191,9 @@ export class ImportarLaudos {
         linhasBrutas: new Map(
           [...linhasBrutas].filter(([identidade]) => alterados.has(identidade)),
         ),
+        pacientes: new Map(
+          plano.pacientes.flatMap((l) => (l.paciente ? [[l.identidade, l.paciente] as const] : [])),
+        ),
       },
       this.agora(),
     );

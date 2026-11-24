@@ -199,6 +199,13 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
     ]);
     const [laudo] = await db.select().from(schema.laudos).limit(1);
     expect(JSON.stringify(laudo)).not.toContain('Paciente Teste');
+    // O nome e o código vão à parte, em `laudos_pacientes`.
+    const pacientes = await db.select().from(schema.laudosPacientes);
+    expect(pacientes.map((p) => [p.nome, p.codigo]).sort()).toEqual([
+      ['Paciente Teste', '1'],
+      ['Paciente Teste', '2'],
+      ['Paciente Teste', '3'],
+    ]);
 
     const segunda = await importar([
       linha('1', 'TC TORAX', 1),
@@ -261,5 +268,10 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
     expect(total?.medicoId).toBe(ana?.id);
     const [aviso] = await db.select().from(schema.avisosCadastro);
     expect(aviso).toMatchObject({ tipo: 'medico', chave: 'ana souza prado', status: 'resolvido' });
+    // O paciente da API é o mesmo do upload: uma linha só, com o nome e o código.
+    const pacientes = await db.select().from(schema.laudosPacientes);
+    expect(pacientes.map((p) => [p.laudoId, p.nome, p.codigo])).toEqual([
+      [laudos[0]?.id, 'Paciente Teste', '1'],
+    ]);
   });
 });
