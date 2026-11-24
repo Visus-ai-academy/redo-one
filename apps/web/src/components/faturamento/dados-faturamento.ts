@@ -110,7 +110,10 @@ export const esquemaDadosFaturamento = z
       if (!v.cidade.trim()) erro('cidade', 'Informe a cidade.');
       if (!v.uf) erro('uf', 'Escolha a UF.');
     }
-    if (v.cep.trim() && soDigitos(v.cep).length !== 8) erro('cep', 'O CEP tem 8 dígitos.');
+    const digitosCep = soDigitos(v.cep).length;
+    if (v.cep.trim() && digitosCep !== 8) {
+      erro('cep', `O CEP tem 8 dígitos; este tem ${digitosCep}. Digite o CEP certo.`);
+    }
   });
 
 /**
@@ -140,16 +143,38 @@ export function valoresIniciais(d: DadosFiscaisClienteDto): ValoresDadosFaturame
 const opcional = (texto: string) => texto.trim() || null;
 
 /**
+ * Telefone de um número só (com ou sem pontuação), que cabe na máscara. Vazio também cabe. O que
+ * a carga trouxe com nomes ou dois números ("Luísa (11) … / Felipe (11) …") não cabe.
+ */
+export function telefoneUnico(telefone: string | null) {
+  if (!telefone) return true;
+  const digitos = soDigitos(telefone);
+  return (
+    digitos === telefone.replace(/[\s()-]/g, '') && digitos.length >= 10 && digitos.length <= 11
+  );
+}
+
+/** CEP vazio ou com 8 dígitos: cabe na máscara. O da carga fora disso aparece como está. */
+export const cepNoFormato = (cep: string | null) => !cep || /^\d{8}$/.test(cep);
+
+/**
  * O corpo do PUT. CEP vai só com os dígitos; o telefone também, a não ser que a pessoa não o
- * tenha mexido (o que veio da carga, como "Luísa (11) … / Felipe (11) …", fica como está).
+ * tenha mexido (o que veio da carga fica como está) ou que ele não caiba na máscara (aí vai como
+ * a pessoa o reescreveu). Os e-mails vão na ordem e com as linhas vazias, para o erro que a API
+ * devolver (`emailsNf[i]`) cair na mesma linha da tela; a API tira as vazias.
  */
 export function corpoDosDados(
   v: ValoresDadosFaturamento,
   salvo: DadosFiscaisClienteDto,
 ): DadosFiscaisDto {
   const telefoneMexido = v.telefone !== (salvo.telefone ?? '');
+  const telefone = !telefoneMexido
+    ? salvo.telefone
+    : telefoneUnico(salvo.telefone)
+      ? opcional(soDigitos(v.telefone))
+      : opcional(v.telefone);
   return {
-    emailsNf: v.emailsNf.map((e) => e.trim()).filter(Boolean),
+    emailsNf: v.emailsNf.map((e) => e.trim()),
     exclusaoFiscal: v.exclusaoFiscal,
     cep: opcional(soDigitos(v.cep)),
     logradouro: opcional(v.logradouro),
@@ -160,7 +185,7 @@ export function corpoDosDados(
     uf: opcional(v.uf),
     contatoNome: opcional(v.contatoNome),
     email: opcional(v.email),
-    telefone: telefoneMexido ? opcional(soDigitos(v.telefone)) : salvo.telefone,
+    telefone,
     bancoCodigo: opcional(v.bancoCodigo),
     bancoAgencia: opcional(v.bancoAgencia),
     bancoConta: opcional(v.bancoConta),
@@ -170,8 +195,5 @@ export function corpoDosDados(
 /** Telefone para leitura: com a máscara quando é um número só; senão, como está. */
 export function telefoneParaLer(telefone: string | null) {
   if (!telefone) return '—';
-  const digitos = soDigitos(telefone);
-  return digitos === telefone.replace(/[\s()-]/g, '') && digitos.length >= 10
-    ? aplicarMascara('telefone', digitos)
-    : telefone;
+  return telefoneUnico(telefone) ? aplicarMascara('telefone', soDigitos(telefone)) : telefone;
 }

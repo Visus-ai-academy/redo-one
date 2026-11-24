@@ -5,6 +5,7 @@ import {
   corpoDosDados,
   esquemaDadosFaturamento,
   telefoneParaLer,
+  telefoneUnico,
   type ValoresDadosFaturamento,
   valoresIniciais,
 } from './dados-faturamento';
@@ -65,7 +66,7 @@ describe('dados de faturamento: formulário', () => {
 
   it('CEP sem 8 dígitos (como o que a carga trouxe fora do formato)', () => {
     expect(erros(valores({ cep: '129410030', logradouro: 'R', cidade: 'C', uf: 'SP' }))).toEqual({
-      cep: 'O CEP tem 8 dígitos.',
+      cep: 'O CEP tem 8 dígitos; este tem 9. Digite o CEP certo.',
     });
   });
 
@@ -76,7 +77,7 @@ describe('dados de faturamento: formulário', () => {
     });
   });
 
-  it('corpo: só dígitos no CEP e no telefone digitado, nulo no vazio, sem linhas vazias', () => {
+  it('corpo: só dígitos no CEP e no telefone digitado, nulo no vazio; linhas vazias vão, para o índice do erro da API ser o da tela', () => {
     const corpo = corpoDosDados(
       valores({
         emailsNf: [' a@x.com ', ''],
@@ -89,7 +90,7 @@ describe('dados de faturamento: formulário', () => {
       salvo(),
     );
     expect(corpo).toMatchObject({
-      emailsNf: ['a@x.com'],
+      emailsNf: ['a@x.com', ''],
       cep: '01310100',
       logradouro: 'Av. Paulista',
       telefone: '1133334444',
@@ -102,7 +103,18 @@ describe('dados de faturamento: formulário', () => {
     const dados = salvo({ telefone });
     expect(corpoDosDados(valoresIniciais(dados), dados).telefone).toBe(telefone);
     expect(telefoneParaLer(telefone)).toBe(telefone);
+    expect(telefoneUnico(telefone)).toBe(false);
+    expect(telefoneUnico('(11) 99999-0000')).toBe(true);
+    expect(telefoneUnico(null)).toBe(true);
     expect(telefoneParaLer('11999990000')).toBe('(11) 99999-0000');
     expect(telefoneParaLer(null)).toBe('—');
+  });
+
+  it('telefone sem máscara (dois contatos) reescrito vai como digitado, aparado', () => {
+    const dados = salvo({ telefone: 'Luísa (11) 99999-0000 / Felipe (11) 98888-0000' });
+    expect(
+      corpoDosDados({ ...valoresIniciais(dados), telefone: ' Luísa (11) 99999-0000 ' }, dados)
+        .telefone,
+    ).toBe('Luísa (11) 99999-0000');
   });
 });

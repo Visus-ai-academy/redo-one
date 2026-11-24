@@ -3,7 +3,7 @@ import { Fieldset } from '@base-ui/react/fieldset';
 import { Plus, Trash } from '@phosphor-icons/react';
 import { useStore } from '@tanstack/react-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { dadosFiscaisControllerSalvar } from '../../gen/clients/dadosFiscaisControllerSalvar';
 import { dadosFiscaisControllerObterQueryOptions } from '../../gen/hooks/useDadosFiscaisControllerObter';
@@ -21,10 +21,12 @@ import { useAlterado } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import {
+  cepNoFormato,
   corpoDosDados,
   enderecoComecado,
   esquemaDadosFaturamento,
   telefoneParaLer,
+  telefoneUnico,
   UFS,
   valoresIniciais,
 } from './dados-faturamento';
@@ -94,8 +96,6 @@ export function DadosFaturamentoCliente({
       )}
       {podeEditar ? (
         <FormDados
-          // Voltou da API depois de salvar: o formulário recomeça do que foi gravado.
-          key={dados.atualizadoEm ?? 'novo'}
           clienteId={clienteId}
           dados={dados}
           queryKey={opcoes.queryKey}
@@ -229,6 +229,9 @@ function FormDados({
           body: corpoDosDados(value, dados),
         }).unwrap();
         await queryClient.invalidateQueries({ queryKey });
+        // Recomeça do que foi gravado (CEP e telefone voltam só com os dígitos).
+        const gravado = queryClient.getQueryData<DadosFiscaisClienteDto>(queryKey);
+        if (gravado) formApi.reset(valoresIniciais(gravado));
         avisos.sucesso('Dados de faturamento salvos.');
       } catch (falha) {
         // Erro de um campo (e-mail, CEP, UF) vai para o campo; o resto, acima do botão.
@@ -237,6 +240,17 @@ function FormDados({
     },
   });
   const alterado = useAlterado(form, iniciais);
+  // Os dados chegaram de novo (outra pessoa salvou, a janela voltou ao foco): sem nada digitado,
+  // o formulário passa a mostrá-los; com algo digitado, o rascunho fica (o TanStack Form já faz
+  // isso enquanto nenhum campo foi tocado; aqui, para o campo tocado que voltou ao valor salvo).
+  const chaveIniciais = JSON.stringify(iniciais);
+  const iniciaisAntes = useRef(chaveIniciais);
+  useEffect(() => {
+    if (iniciaisAntes.current === chaveIniciais) return;
+    const limpo = JSON.stringify(form.state.values) === iniciaisAntes.current;
+    iniciaisAntes.current = chaveIniciais;
+    if (limpo) form.reset(JSON.parse(chaveIniciais));
+  }, [chaveIniciais, form]);
   useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
   // Saiu da tela (fechou, trocou de aba): não há mais nada digitado aqui.
   useEffect(() => () => onAlterado?.(false), [onAlterado]);
@@ -329,7 +343,11 @@ function FormDados({
               <field.TextField
                 label="CEP"
                 placeholder="00000-000"
-                mascara="cep"
+                // O da carga fora do formato aparece como está, para o erro fazer sentido.
+                mascara={cepNoFormato(dados.cep) ? 'cep' : undefined}
+                description={
+                  cepNoFormato(dados.cep) ? undefined : 'Veio do dashboards-one fora do formato.'
+                }
                 required={exigeEndereco}
                 className="flex-[1_1_120px]"
               />
@@ -427,7 +445,15 @@ function FormDados({
               <field.TextField
                 label="Telefone"
                 placeholder="(00) 00000-0000"
-                mascara="telefone"
+                // Com dois contatos (veio assim da carga), sem máscara: a pessoa vê tudo e
+                // reescreve como deve ficar.
+                type="tel"
+                mascara={telefoneUnico(dados.telefone) ? 'telefone' : undefined}
+                description={
+                  telefoneUnico(dados.telefone)
+                    ? undefined
+                    : 'Veio do dashboards-one com mais de um contato. Reescreva como deve ficar: o que estiver aqui ao salvar é o que fica.'
+                }
                 className="flex-[1_1_160px]"
               />
             )}

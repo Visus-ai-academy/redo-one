@@ -170,4 +170,69 @@ describe('DadosFaturamentoCliente', () => {
     );
     expect(await screen.findByText('O CEP tem 8 dígitos.')).toBeInTheDocument();
   });
+
+  it('telefone com dois contatos da carga aparece inteiro, sem máscara, e reescrito vai como digitado', async () => {
+    const telefone = 'Luísa (11) 99999-0000 / Felipe (11) 98888-0000';
+    com({ ...DADOS, telefone });
+    abrir();
+    const campo = await screen.findByLabelText('Telefone');
+    expect(campo).toHaveValue(telefone);
+    expect(screen.getByText(/mais de um contato/)).toBeInTheDocument();
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'Luísa (11) 99999-0000');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar dados de faturamento' }));
+    await waitFor(() =>
+      expect(salvar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({ telefone: 'Luísa (11) 99999-0000' }),
+        }),
+      ),
+    );
+  });
+
+  it('CEP da carga sem 8 dígitos aparece como está, com o erro dizendo quantos tem', async () => {
+    com({ ...DADOS, cep: '129410030' });
+    abrir();
+    const cep = await screen.findByLabelText('CEP');
+    expect(cep).toHaveValue('129410030');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar dados de faturamento' }));
+    expect(
+      await screen.findByText('O CEP tem 8 dígitos; este tem 9. Digite o CEP certo.'),
+    ).toBeInTheDocument();
+    expect(salvar).not.toHaveBeenCalled();
+  });
+
+  it('dados que chegam de novo (outra pessoa salvou) não apagam o que está sendo digitado', async () => {
+    const onAlterado = vi.fn();
+    const { queryClient } = abrir({ onAlterado });
+    const contato = await screen.findByLabelText('Nome do contato');
+    await userEvent.clear(contato);
+    await userEvent.type(contato, 'Maria');
+    com({ ...DADOS, cidade: 'Campinas', atualizadoEm: '2026-11-24T16:00:00.000Z' });
+    await queryClient.refetchQueries();
+    await waitFor(() => expect(obter).toHaveBeenCalledTimes(2));
+    expect(screen.getByLabelText('Nome do contato')).toHaveValue('Maria');
+    expect(onAlterado).toHaveBeenLastCalledWith(true);
+  });
+
+  it('sem nada digitado, os dados que chegam de novo aparecem', async () => {
+    const { queryClient } = abrir();
+    await screen.findByLabelText('Nome do contato');
+    com({ ...DADOS, contatoNome: 'Beatriz', atualizadoEm: '2026-11-24T16:00:00.000Z' });
+    await queryClient.refetchQueries();
+    await waitFor(() => expect(screen.getByLabelText('Nome do contato')).toHaveValue('Beatriz'));
+  });
+
+  it('depois de salvar, o formulário deixa de estar alterado', async () => {
+    const onAlterado = vi.fn();
+    abrir({ onAlterado });
+    const tel = await screen.findByLabelText('Telefone');
+    await userEvent.clear(tel);
+    await userEvent.type(tel, '1133334444');
+    com({ ...DADOS, telefone: '1133334444', atualizadoEm: '2026-11-24T16:00:00.000Z' });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar dados de faturamento' }));
+    expect(await acharAviso()).toHaveTextContent('Dados de faturamento salvos.');
+    await waitFor(() => expect(onAlterado).toHaveBeenLastCalledWith(false));
+    expect(screen.getByLabelText('Telefone')).toHaveValue('(11) 3333-4444');
+  });
 });
