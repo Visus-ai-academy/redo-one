@@ -203,7 +203,9 @@
 | Problema no dashboards-one | No redo-one | Status | Fonte |
 | --- | --- | --- | --- |
 | Preços do cliente só por importação e exportação de Excel | Incluir, editar e excluir preço na tela | Regra do legado | 10/11 · 70f6e884 |
-| Preço alterado não vale para período fechado sem reabrir e pausar o RPA | Trava de importação por competência; definir quando a competência fecha | Pendente | 10/11 · 70f6e884 |
+| Preço alterado não vale para período fechado sem reabrir e pausar o RPA | Trava de importação por competência feita: competência fechada recusa laudos na importação; reabrir libera | Feito | 10/11 · 70f6e884 |
+| Corte da competência fixo no código | Corte configurável (padrão e por cliente, com vigência e "considera a data do exame"), com recálculo das competências | Feito | 24/11 |
+| "Dia de fechamento" e "Dia de faturamento" da ficha do cliente sem efeito no cálculo (SANTA_LUCIA 31, CENTRO_ANGIO_NEURO 30, SROSALIA faturamento 26) | Um único corte, que o cálculo usa; o dia da nota volta com a Omie | Feito / Pendente (dia da nota) | 24/11 |
 | Faltava o relatório "Quantitativo por Tipo de Faturamento" | Exportação com as 5 abas, com equipe resolvida por apelido (870 exames de outubro sem equipe) | Regra do legado / Pendente | 09/11 · 5693887a |
 | Excel não marca atraso nem retroativo | Colunas "Atrasado", "Minutos de atraso" e "Retroativo" | Ideia | 11/11 · b8788621 |
 | Carência da franquia sem campo na tela | Campo na tela | Pendente | 05/11 · ce11186b |
