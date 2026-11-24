@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, sql } from 'drizzle-orm';
+import { asc, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../../database/database';
-import { cortesCompetencia } from '../../../database/schema';
-import type { LeitorCortesCompetencia } from '../../../ingestao/application/ports/cortes-competencia';
+import { clientes, cortesCompetencia, usuarios } from '../../../database/schema';
 import {
   CORTE_PADRAO_INICIAL,
   type Corte,
@@ -11,23 +10,35 @@ import {
   type VigenciaCliente,
   type VigenciaCorte,
 } from '../../../ingestao/domain/competencia';
-import type { CortesRepository } from '../../application/ports/cortes.repository';
+import { enfileirarRecalculoCompetencias } from '../../../ingestao/infrastructure/jobs/enfileirar-recalculo-competencias';
+import type { Autor } from '../../application/ports/competencias.repository';
+import type {
+  CortesRepository,
+  VigenciaRegistrada,
+} from '../../application/ports/cortes.repository';
+import { camposDoCorte, type NovaVigencia } from '../../domain/vigencia-corte';
 
-type Linha = typeof cortesCompetencia.$inferSelect;
+type Linha = Pick<
+  typeof cortesCompetencia.$inferSelect,
+  'id' | 'usaPadrao' | 'dia' | 'ultimoDia' | 'mes' | 'consideraExame'
+>;
 
-/** Corte da linha; nulo com "usa o padrão" (as restrições da tabela garantem o resto). */
-const corteDa = (l: Linha): Corte | null =>
-  l.usaPadrao
-    ? null
-    : {
-        dia: l.ultimoDia ? 'ultimo' : (l.dia ?? 0),
-        mes: l.mes ?? 'seguinte',
-        consideraExame: l.consideraExame ?? true,
-      };
+/**
+ * Corte da linha; nulo com "usa o padrão". As restrições da tabela garantem os campos; se faltar
+ * algum, é dado corrompido e o erro aparece, em vez de um corte inventado.
+ */
+const corteDa = (l: Linha): Corte | null => {
+  if (l.usaPadrao) return null;
+  const dia = l.ultimoDia ? 'ultimo' : l.dia;
+  if (dia === null || l.mes === null || l.consideraExame === null) {
+    throw new Error(`Vigência ${l.id} de corte_competencia inválida: corte incompleto.`);
+  }
+  return { dia, mes: l.mes, consideraExame: l.consideraExame };
+};
 
 /** Também é a porta `LeitorCortesCompetencia` da `ingestao`. */
 @Injectable()
-export class DrizzleCortesRepository implements CortesRepository, LeitorCortesCompetencia {
+export class DrizzleCortesRepository implements CortesRepository {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async carregar(): Promise<TabelaCortes> {
@@ -60,5 +71,58 @@ export class DrizzleCortesRepository implements CortesRepository, LeitorCortesCo
       where not exists (select 1 from ${cortesCompetencia} where cliente_id is null)
       on conflict do nothing
     `);
+  }
+
+  async listarVigencias(clienteId: string | null): Promise<VigenciaRegistrada[]> {
+    const linhas = await this.db
+      .select({
+        id: cortesCompetencia.id,
+        clienteId: cortesCompetencia.clienteId,
+        desde: cortesCompetencia.desde,
+        usaPadrao: cortesCompetencia.usaPadrao,
+        dia: cortesCompetencia.dia,
+        ultimoDia: cortesCompetencia.ultimoDia,
+        mes: cortesCompetencia.mes,
+        consideraExame: cortesCompetencia.consideraExame,
+        criadoEm: cortesCompetencia.criadoEm,
+        criadoPor: usuarios.nome,
+      })
+      .from(cortesCompetencia)
+      .leftJoin(usuarios, eq(usuarios.id, cortesCompetencia.criadoPorId))
+      .where(
+        clienteId === null
+          ? isNull(cortesCompetencia.clienteId)
+          : eq(cortesCompetencia.clienteId, clienteId),
+      )
+      .orderBy(desc(cortesCompetencia.desde));
+    return linhas.map((l) => ({
+      id: l.id,
+      clienteId: l.clienteId,
+      desde: l.desde,
+      corte: corteDa(l),
+      criadoEm: l.criadoEm,
+      criadoPor: l.criadoPor,
+    }));
+  }
+
+  async clienteExiste(clienteId: string): Promise<boolean> {
+    const [linha] = await this.db
+      .select({ id: clientes.id })
+      .from(clientes)
+      .where(eq(clientes.id, clienteId));
+    return linha !== undefined;
+  }
+
+  criar({ clienteId, desde, corte }: NovaVigencia, { usuarioId, em }: Autor): Promise<string> {
+    return this.db.transaction(async (tx) => {
+      const [linha] = await tx
+        .insert(cortesCompetencia)
+        .values({ clienteId, desde, ...camposDoCorte(corte), criadoEm: em, criadoPorId: usuarioId })
+        .returning({ id: cortesCompetencia.id });
+      if (!linha) throw new Error('Vigência do corte não gravada.');
+      // O padrão vale para todos os clientes sem corte próprio (e para os laudos sem cliente).
+      await enfileirarRecalculoCompetencias(tx, clienteId === null ? null : [clienteId]);
+      return linha.id;
+    });
   }
 }

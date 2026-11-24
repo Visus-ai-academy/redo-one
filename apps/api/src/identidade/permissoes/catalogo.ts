@@ -315,6 +315,18 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Reabrir uma competência já fechada.',
         sensivel: true,
       },
+      {
+        chave: 'faturamento.competencia.travar',
+        rotulo: 'Travar importação',
+        descricao: 'Travar e destravar a importação dos laudos de uma competência.',
+        sensivel: true,
+      },
+      {
+        chave: 'faturamento.corte.editar',
+        rotulo: 'Editar corte da competência',
+        descricao: 'Criar vigência do corte padrão ou do corte de um cliente.',
+        sensivel: true,
+      },
     ],
   },
   {

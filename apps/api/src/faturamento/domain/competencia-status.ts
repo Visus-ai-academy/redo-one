@@ -28,3 +28,41 @@ export function reabrir(status: StatusCompetencia): StatusCompetencia {
   if (status === 'aberta') throw new CompetenciaJaAbertaError();
   return 'aberta';
 }
+
+export class ImportacaoJaTravadaError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor() {
+    super('A importação desta competência já está travada.');
+  }
+}
+
+export class ImportacaoNaoTravadaError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor() {
+    super('A importação desta competência não está travada.');
+  }
+}
+
+export class CompetenciaNaoEncontradaError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Competência não encontrada. Ela passa a existir quando chega o primeiro laudo do mês.');
+  }
+}
+
+export class CompetenciaEmAndamentoError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor() {
+    super('A competência só pode ser fechada depois que o mês dela acabar.');
+  }
+}
+
+/** Trava a importação da competência (mesmo aberta); recusa a já travada. */
+export function travar(travada: boolean): void {
+  if (travada) throw new ImportacaoJaTravadaError();
+}
+
+/** Destrava a importação; recusa a que não está travada. */
+export function destravar(travada: boolean): void {
+  if (!travada) throw new ImportacaoNaoTravadaError();
+}

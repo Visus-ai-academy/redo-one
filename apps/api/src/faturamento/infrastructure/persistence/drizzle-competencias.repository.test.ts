@@ -25,7 +25,8 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table competencias`);
+    await db.execute(sql`truncate table competencias, laudos, importacoes cascade`);
+    await db.delete(schema.usuarios).where(sql`${schema.usuarios.email} like 'competencias-%'`);
   });
 
   afterAll(async () => {
@@ -42,8 +43,6 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
       { competencia: '2026-10', status: 'aberta' },
     ]);
 
-    expect((await repo.listarBloqueadas()).sort()).toEqual(['2026-08', '2026-09']);
-    // A porta da ingestão vê o mesmo.
     expect((await repo.listar()).sort()).toEqual(['2026-08', '2026-09']);
   });
 
@@ -70,5 +69,203 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
     await expect(
       db.execute(sql`insert into competencias (competencia, status) values ('2026-10', 'aberto')`),
     ).rejects.toThrow();
+  });
+
+  const usuario = async (nome: string) => {
+    const [u] = await db
+      .insert(schema.usuarios)
+      .values({ nome, email: `competencias-${Math.random()}@exemplo.com` })
+      .returning();
+    return u?.id ?? '';
+  };
+
+  describe('lista paginada', () => {
+    const laudos = async (
+      linhas: { competencia: string; volume: number; removido?: boolean }[],
+    ) => {
+      const [importacao] = await db
+        .insert(schema.importacoes)
+        .values({ origem: 'mobilemed' })
+        .returning();
+      await db.insert(schema.laudos).values(
+        linhas.map((l, i) => ({
+          identidade: `id-${Math.random()}-${i}`,
+          hashConteudo: 'h',
+          importacaoId: importacao?.id ?? '',
+          origem: 'normal' as const,
+          empresaOrigem: 'CLINICA',
+          pacienteChave: 'p',
+          estudo: 'TC',
+          modalidadeOrigem: 'CT',
+          prioridadeOrigem: 'Rotina',
+          volume: l.volume,
+          status: 'Assinado',
+          dataRealizacao: new Date('2026-10-05T12:00:00Z'),
+          dataLaudo: new Date('2026-10-05T12:00:00Z'),
+          diaLaudo: '2026-10-05',
+          competencia: l.competencia,
+          removidoEm: l.removido ? new Date() : null,
+        })),
+      );
+    };
+
+    it('da mais nova para a mais antiga, com autores, trava e laudos e volume de cada uma', async () => {
+      const ana = await usuario('Ana');
+      const bia = await usuario('Bia');
+      const fechadaEm = new Date('2026-10-10T13:00:00Z');
+      await db.insert(schema.competencias).values([
+        {
+          competencia: '2026-09',
+          status: 'fechada',
+          fechadaEm,
+          fechadaPorLegado: 'claude-code',
+          reabertaEm: fechadaEm,
+          reabertaPorId: bia,
+          importacaoTravadaEm: fechadaEm,
+          importacaoTravadaPorId: ana,
+          observacoes: 'do dashboards-one',
+        },
+        { competencia: '2026-10', status: 'fechada', fechadaEm, fechadaPorId: ana },
+        { competencia: '2026-11', status: 'aberta' },
+      ]);
+      await laudos([
+        { competencia: '2026-10', volume: 1 },
+        { competencia: '2026-10', volume: 2.5 },
+        { competencia: '2026-10', volume: 9, removido: true },
+        { competencia: '2026-09', volume: 3 },
+      ]);
+
+      const pagina = await repo.listarPagina({ pagina: 1, porPagina: 2 });
+      expect(pagina.total).toBe(3);
+      expect(pagina.itens).toEqual([
+        {
+          competencia: '2026-11',
+          status: 'aberta',
+          fechadaEm: null,
+          fechadaPor: null,
+          reabertaEm: null,
+          reabertaPor: null,
+          importacaoTravadaEm: null,
+          importacaoTravadaPor: null,
+          observacoes: null,
+          laudos: 0,
+          volume: 0,
+        },
+        {
+          competencia: '2026-10',
+          status: 'fechada',
+          fechadaEm,
+          fechadaPor: 'Ana',
+          reabertaEm: null,
+          reabertaPor: null,
+          importacaoTravadaEm: null,
+          importacaoTravadaPor: null,
+          observacoes: null,
+          laudos: 2,
+          volume: 3.5,
+        },
+      ]);
+
+      const [setembro] = (await repo.listarPagina({ pagina: 2, porPagina: 2 })).itens;
+      expect(setembro).toMatchObject({
+        competencia: '2026-09',
+        fechadaPor: 'claude-code',
+        reabertaPor: 'Bia',
+        importacaoTravadaPor: 'Ana',
+        observacoes: 'do dashboards-one',
+        laudos: 1,
+        volume: 3,
+      });
+    });
+  });
+
+  describe('ações', () => {
+    const linha = async (competencia: string) =>
+      (await db.select().from(schema.competencias).where(sql`competencia = ${competencia}`))[0];
+
+    it('obter devolve status e trava, ou nulo sem linha', async () => {
+      await db.insert(schema.competencias).values({
+        competencia: '2026-10',
+        status: 'aberta',
+        importacaoTravadaEm: new Date(),
+      });
+      expect(await repo.obter('2026-10')).toEqual({ status: 'aberta', importacaoTravada: true });
+      expect(await repo.obter('2026-11')).toBeNull();
+    });
+
+    it('a última fechada é a mais recente com status fechada', async () => {
+      expect(await repo.ultimaFechada()).toBeNull();
+      await db.insert(schema.competencias).values([
+        { competencia: '2026-08', status: 'fechada' },
+        { competencia: '2026-09', status: 'fechada' },
+        { competencia: '2026-10', status: 'aberta', importacaoTravadaEm: new Date() },
+      ]);
+      expect(await repo.ultimaFechada()).toBe('2026-09');
+    });
+
+    it('fecha só a aberta e reabre só a fechada, guardando quem e quando', async () => {
+      const ana = await usuario('Ana');
+      const em = new Date('2026-11-24T15:00:00Z');
+      await db.insert(schema.competencias).values({ competencia: '2026-10', status: 'aberta' });
+
+      expect(await repo.fechar('2026-10', { usuarioId: ana, em })).toBe(true);
+      expect(await repo.fechar('2026-10', { usuarioId: ana, em })).toBe(false);
+      expect(await linha('2026-10')).toMatchObject({
+        status: 'fechada',
+        fechadaEm: em,
+        fechadaPorId: ana,
+      });
+
+      const depois = new Date('2026-11-25T15:00:00Z');
+      expect(await repo.reabrir('2026-10', { usuarioId: ana, em: depois })).toBe(true);
+      expect(await repo.reabrir('2026-10', { usuarioId: ana, em: depois })).toBe(false);
+      expect(await linha('2026-10')).toMatchObject({
+        status: 'aberta',
+        fechadaEm: em,
+        reabertaEm: depois,
+        reabertaPorId: ana,
+      });
+      expect(await repo.fechar('2026-09', { usuarioId: ana, em })).toBe(false);
+    });
+
+    it('fechar de novo troca o autor do texto do dashboards-one pelo usuário', async () => {
+      const ana = await usuario('Ana');
+      const em = new Date('2026-11-24T15:00:00Z');
+      await db
+        .insert(schema.competencias)
+        .values({ competencia: '2026-10', status: 'aberta', fechadaPorLegado: 'claude-code' });
+
+      await repo.fechar('2026-10', { usuarioId: ana, em });
+
+      expect(await linha('2026-10')).toMatchObject({ fechadaPorId: ana, fechadaPorLegado: null });
+    });
+
+    it('trava e destrava a importação sem mexer no status', async () => {
+      const ana = await usuario('Ana');
+      const em = new Date('2026-11-24T15:00:00Z');
+      await db.insert(schema.competencias).values({
+        competencia: '2026-10',
+        status: 'fechada',
+        importacaoTravadaPorLegado: 'x',
+      });
+
+      expect(await repo.travarImportacao('2026-10', { usuarioId: ana, em })).toBe(true);
+      expect(await repo.travarImportacao('2026-10', { usuarioId: ana, em })).toBe(false);
+      expect(await linha('2026-10')).toMatchObject({
+        status: 'fechada',
+        importacaoTravadaEm: em,
+        importacaoTravadaPorId: ana,
+        importacaoTravadaPorLegado: null,
+      });
+
+      expect(await repo.destravarImportacao('2026-10')).toBe(true);
+      expect(await repo.destravarImportacao('2026-10')).toBe(false);
+      expect(await linha('2026-10')).toMatchObject({
+        status: 'fechada',
+        importacaoTravadaEm: null,
+        importacaoTravadaPorId: null,
+        importacaoTravadaPorLegado: null,
+      });
+    });
   });
 });

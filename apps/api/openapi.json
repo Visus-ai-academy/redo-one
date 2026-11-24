@@ -6901,6 +6901,298 @@
         ]
       }
     },
+    "/faturamento/competencias": {
+      "get": {
+        "operationId": "CompetenciasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A mais nova primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaCompetenciasDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/competencias/{competencia}/fechar": {
+      "post": {
+        "operationId": "CompetenciasController_fechar",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Competência fora do formato AAAA-MM."
+          },
+          "404": {
+            "description": "Competência sem linha (nenhum laudo do mês ainda)."
+          },
+          "409": {
+            "description": "Já fechada, ou o mês ainda não acabou em Brasília."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/competencias/{competencia}/reabrir": {
+      "post": {
+        "operationId": "CompetenciasController_reabrir",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reaberta; a trava da importação fica como estava."
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já aberta."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/competencias/{competencia}/travar": {
+      "post": {
+        "operationId": "CompetenciasController_travar",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "A importação passa a ignorar os laudos da competência."
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já travada."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/competencias/{competencia}/destravar": {
+      "post": {
+        "operationId": "CompetenciasController_destravar",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está travada."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/cortes": {
+      "get": {
+        "operationId": "CortesController_listar",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": false,
+            "in": "query",
+            "description": "Sem cliente = o corte padrão.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A vigência mais nova primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VigenciaCorteDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "post": {
+        "operationId": "CortesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaVigenciaCorteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vigência criada; o recálculo dos laudos atingidos vai para a fila.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corte incompleto, \"usa o padrão\" sem cliente, ou `desde` na última competência fechada ou antes dela."
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          },
+          "409": {
+            "description": "Já existe uma vigência a partir de `desde`."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/cortes/previa": {
+      "post": {
+        "operationId": "CortesController_previa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaVigenciaCorteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quantos laudos das competências abertas mudariam, sem gravar nada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaCorteDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Corte incompleto, \"usa o padrão\" sem cliente, ou `desde` na última competência fechada ou antes dela."
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          },
+          "409": {
+            "description": "Já existe uma vigência a partir de `desde`."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -14886,6 +15178,290 @@
           "total",
           "pagina",
           "porPagina"
+        ]
+      },
+      "StatusCompetencia": {
+        "type": "string",
+        "enum": [
+          "aberta",
+          "fechada"
+        ]
+      },
+      "CompetenciaDto": {
+        "type": "object",
+        "properties": {
+          "competencia": {
+            "type": "string",
+            "example": "2026-10",
+            "description": "Mês de faturamento (AAAA-MM)."
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusCompetencia"
+              }
+            ]
+          },
+          "fechadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fechada em."
+          },
+          "fechadaPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem fechou: nome do usuário ou, na migração, o texto do dashboards-one."
+          },
+          "reabertaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Reaberta em."
+          },
+          "reabertaPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem reabriu (nome ou texto)."
+          },
+          "importacaoTravadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Importação travada em; vazio = destravada."
+          },
+          "importacaoTravadaPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem travou (nome ou texto)."
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "laudos": {
+            "type": "integer",
+            "description": "Laudos (não removidos) desta competência."
+          },
+          "volume": {
+            "type": "number",
+            "description": "Soma do volume desses laudos."
+          }
+        },
+        "required": [
+          "competencia",
+          "status",
+          "fechadaEm",
+          "fechadaPor",
+          "reabertaEm",
+          "reabertaPor",
+          "importacaoTravadaEm",
+          "importacaoTravadaPor",
+          "observacoes",
+          "laudos",
+          "volume"
+        ]
+      },
+      "PaginaCompetenciasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompetenciaDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "MesCorte": {
+        "type": "string",
+        "enum": [
+          "proprio",
+          "seguinte"
+        ],
+        "description": "`seguinte`: o corte cai no mês M+1; `proprio`: no próprio mês M."
+      },
+      "VigenciaCorteDto": {
+        "type": "object",
+        "properties": {
+          "usaPadrao": {
+            "type": "boolean",
+            "description": "Só com cliente: a partir de `desde`, ele segue o corte padrão."
+          },
+          "dia": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 31,
+            "description": "Dia do mês, pela data do laudo, até o qual vai a competência; maior que o mês vale o último dia. Vazio com `ultimoDia` ou `usaPadrao`."
+          },
+          "ultimoDia": {
+            "type": "boolean",
+            "description": "O corte é o último dia do mês."
+          },
+          "mes": {
+            "nullable": true,
+            "description": "`seguinte`: o corte cai no mês M+1; `proprio`: no próprio mês M.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MesCorte"
+              }
+            ]
+          },
+          "consideraExame": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "A competência nunca fica antes do mês da data do exame."
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Nulo = o corte padrão."
+          },
+          "desde": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual vale; depois da última competência fechada."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem criou; vazio na vigência padrão inicial."
+          }
+        },
+        "required": [
+          "usaPadrao",
+          "dia",
+          "ultimoDia",
+          "mes",
+          "consideraExame",
+          "clienteId",
+          "desde",
+          "id",
+          "criadoEm",
+          "criadoPor"
+        ]
+      },
+      "NovaVigenciaCorteDto": {
+        "type": "object",
+        "properties": {
+          "usaPadrao": {
+            "type": "boolean",
+            "description": "Só com cliente: a partir de `desde`, ele segue o corte padrão."
+          },
+          "dia": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 31,
+            "description": "Dia do mês, pela data do laudo, até o qual vai a competência; maior que o mês vale o último dia. Vazio com `ultimoDia` ou `usaPadrao`."
+          },
+          "ultimoDia": {
+            "type": "boolean",
+            "description": "O corte é o último dia do mês."
+          },
+          "mes": {
+            "nullable": true,
+            "description": "`seguinte`: o corte cai no mês M+1; `proprio`: no próprio mês M.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MesCorte"
+              }
+            ]
+          },
+          "consideraExame": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "A competência nunca fica antes do mês da data do exame."
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Nulo = o corte padrão."
+          },
+          "desde": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual vale; depois da última competência fechada."
+          }
+        },
+        "required": [
+          "usaPadrao",
+          "dia",
+          "ultimoDia",
+          "mes",
+          "consideraExame",
+          "clienteId",
+          "desde"
+        ]
+      },
+      "MovimentoPreviaDto": {
+        "type": "object",
+        "properties": {
+          "de": {
+            "type": "string",
+            "example": "2026-11",
+            "description": "Competência atual."
+          },
+          "para": {
+            "type": "string",
+            "example": "2026-12",
+            "description": "Competência com o novo corte."
+          },
+          "laudos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "de",
+          "para",
+          "laudos"
+        ]
+      },
+      "PreviaCorteDto": {
+        "type": "object",
+        "properties": {
+          "alterados": {
+            "type": "integer",
+            "description": "Laudos que mudam de competência."
+          },
+          "movimentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimentoPreviaDto"
+            }
+          }
+        },
+        "required": [
+          "alterados",
+          "movimentos"
         ]
       },
       "StatusImportacao": {
