@@ -21,4 +21,11 @@ describe('GRUPOS_MENU', () => {
       ['Ausências', '/escala/ausencias', 'ausencias.ver'],
     ]);
   });
+
+  it('Financeiro tem Faturamento, que abre as competências e exige faturamento.ver', () => {
+    const financeiro = GRUPOS_MENU.find((g) => g.titulo === 'Financeiro');
+    expect(financeiro?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
+      ['Faturamento', '/faturamento/competencias', 'faturamento.ver'],
+    ]);
+  });
 });

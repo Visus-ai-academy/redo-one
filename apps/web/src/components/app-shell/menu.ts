@@ -7,6 +7,7 @@ import {
   Flask,
   Gear,
   type Icon,
+  Receipt,
   Robot,
   Stethoscope,
 } from '@phosphor-icons/react';
@@ -54,6 +55,17 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       { nome: 'Clientes', to: '/clientes', icone: Buildings, permissao: 'clientes.ver' },
       { nome: 'Médicos', to: '/medicos', icone: Stethoscope, permissao: 'medicos.ver' },
       { nome: 'Exames', to: '/exames', icone: Flask, permissao: 'exames.ver' },
+    ],
+  },
+  {
+    titulo: 'Financeiro',
+    itens: [
+      {
+        nome: 'Faturamento',
+        to: '/faturamento/competencias',
+        icone: Receipt,
+        permissao: 'faturamento.ver',
+      },
     ],
   },
 ];

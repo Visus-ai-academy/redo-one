@@ -36,6 +36,7 @@ import { Route as AppDistribuicaoIndexRouteImport } from './routes/_app/distribu
 import { Route as AppEscalaIndexRouteImport } from './routes/_app/escala/index'
 import { Route as AppEscalaAusenciasRouteImport } from './routes/_app/escala/ausencias'
 import { Route as AppEscalaHistoricoRouteImport } from './routes/_app/escala/historico'
+import { Route as AppFaturamentoCompetenciasRouteImport } from './routes/_app/faturamento/competencias'
 import { Route as AppDistribuicaoRodadasIdRouteImport } from './routes/_app/distribuicao/rodadas.$id'
 
 const AppRoute = AppRouteImport.update({
@@ -179,6 +180,12 @@ const AppEscalaHistoricoRoute = AppEscalaHistoricoRouteImport.update({
   path: '/escala/historico',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFaturamentoCompetenciasRoute =
+  AppFaturamentoCompetenciasRouteImport.update({
+    id: '/faturamento/competencias',
+    path: '/faturamento/competencias',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppDistribuicaoRodadasIdRoute =
   AppDistribuicaoRodadasIdRouteImport.update({
     id: '/distribuicao/rodadas/$id',
@@ -210,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/escala/historico': typeof AppEscalaHistoricoRoute
+  '/faturamento/competencias': typeof AppFaturamentoCompetenciasRoute
   '/configuracoes/': typeof AppConfiguracoesIndexRoute
   '/distribuicao/': typeof AppDistribuicaoIndexRoute
   '/escala/': typeof AppEscalaIndexRoute
@@ -239,6 +247,7 @@ export interface FileRoutesByTo {
   '/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/escala/historico': typeof AppEscalaHistoricoRoute
+  '/faturamento/competencias': typeof AppFaturamentoCompetenciasRoute
   '/configuracoes': typeof AppConfiguracoesIndexRoute
   '/distribuicao': typeof AppDistribuicaoIndexRoute
   '/escala': typeof AppEscalaIndexRoute
@@ -270,6 +279,7 @@ export interface FileRoutesById {
   '/_app/configuracoes/usuarios': typeof AppConfiguracoesUsuariosRoute
   '/_app/escala/ausencias': typeof AppEscalaAusenciasRoute
   '/_app/escala/historico': typeof AppEscalaHistoricoRoute
+  '/_app/faturamento/competencias': typeof AppFaturamentoCompetenciasRoute
   '/_app/configuracoes/': typeof AppConfiguracoesIndexRoute
   '/_app/distribuicao/': typeof AppDistribuicaoIndexRoute
   '/_app/escala/': typeof AppEscalaIndexRoute
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/configuracoes/usuarios'
     | '/escala/ausencias'
     | '/escala/historico'
+    | '/faturamento/competencias'
     | '/configuracoes/'
     | '/distribuicao/'
     | '/escala/'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/configuracoes/usuarios'
     | '/escala/ausencias'
     | '/escala/historico'
+    | '/faturamento/competencias'
     | '/configuracoes'
     | '/distribuicao'
     | '/escala'
@@ -360,6 +372,7 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/usuarios'
     | '/_app/escala/ausencias'
     | '/_app/escala/historico'
+    | '/_app/faturamento/competencias'
     | '/_app/configuracoes/'
     | '/_app/distribuicao/'
     | '/_app/escala/'
@@ -564,6 +577,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEscalaHistoricoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/faturamento/competencias': {
+      id: '/_app/faturamento/competencias'
+      path: '/faturamento/competencias'
+      fullPath: '/faturamento/competencias'
+      preLoaderRoute: typeof AppFaturamentoCompetenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/distribuicao/rodadas/$id': {
       id: '/_app/distribuicao/rodadas/$id'
       path: '/distribuicao/rodadas/$id'
@@ -595,6 +615,7 @@ interface AppRouteChildren {
   AppConfiguracoesUsuariosRoute: typeof AppConfiguracoesUsuariosRoute
   AppEscalaAusenciasRoute: typeof AppEscalaAusenciasRoute
   AppEscalaHistoricoRoute: typeof AppEscalaHistoricoRoute
+  AppFaturamentoCompetenciasRoute: typeof AppFaturamentoCompetenciasRoute
   AppConfiguracoesIndexRoute: typeof AppConfiguracoesIndexRoute
   AppDistribuicaoIndexRoute: typeof AppDistribuicaoIndexRoute
   AppEscalaIndexRoute: typeof AppEscalaIndexRoute
@@ -622,6 +643,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesUsuariosRoute: AppConfiguracoesUsuariosRoute,
   AppEscalaAusenciasRoute: AppEscalaAusenciasRoute,
   AppEscalaHistoricoRoute: AppEscalaHistoricoRoute,
+  AppFaturamentoCompetenciasRoute: AppFaturamentoCompetenciasRoute,
   AppConfiguracoesIndexRoute: AppConfiguracoesIndexRoute,
   AppDistribuicaoIndexRoute: AppDistribuicaoIndexRoute,
   AppEscalaIndexRoute: AppEscalaIndexRoute,
