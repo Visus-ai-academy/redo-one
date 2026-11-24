@@ -64,6 +64,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
   private readonly tentativas = new Map<string, number>();
   /** Quantas vezes a lista de médicos de uma unidade foi "consultada" (uma por unidade e lote). */
   consultasUnidade = 0;
+  private amostra: AmostraCatalogo | null = null;
 
   constructor(
     private readonly carregarAmostra: () => Promise<AmostraCatalogo>,
@@ -78,6 +79,7 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
 
   async ler(): Promise<LeituraFila> {
     const amostra = await this.carregarAmostra();
+    this.amostra = amostra;
     const base = new Date(Math.floor(this.agora().getTime() / HORA) * HORA);
     const { semMedico, emMaos } = gerarFilaSintetica({
       amostra,
@@ -168,8 +170,9 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
   async medicosDaUnidade(unidade: number): Promise<{ id: number; nome: string }[]> {
     const espera = this.opcoes.latenciaUnidadeMs ?? 0;
     if (espera > 0) await new Promise((pronto) => setTimeout(pronto, espera));
-    const { medicosMobilemed } = await this.carregarAmostra();
-    return medicosMobilemed
+    // A amostra da última leitura da fila (recarregar o catálogo a cada unidade seria lento).
+    this.amostra ??= await this.carregarAmostra();
+    return this.amostra.medicosMobilemed
       .filter((conta) => this.liberada(unidade, conta))
       .map((id) => ({ id, nome: `Conta ${id}` }));
   }
