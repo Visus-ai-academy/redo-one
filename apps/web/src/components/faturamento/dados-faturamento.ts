@@ -36,6 +36,9 @@ export const UFS = [
   'TO',
 ];
 
+/** Máximo de e-mails da NF (linhas vazias contam): o mesmo teto da API (`ArrayMaxSize(20)`). */
+export const MAX_EMAILS_NF = 20;
+
 /** O formulário: tudo texto (vazio = não informado), os e-mails da NF como lista. */
 export type ValoresDadosFaturamento = {
   emailsNf: string[];

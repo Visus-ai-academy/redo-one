@@ -25,6 +25,7 @@ import {
   corpoDosDados,
   enderecoComecado,
   esquemaDadosFaturamento,
+  MAX_EMAILS_NF,
   telefoneParaLer,
   telefoneUnico,
   UFS,
@@ -274,54 +275,65 @@ function FormDados({
     >
       <Grupo titulo="Nota fiscal">
         <form.AppField name="emailsNf" mode="array">
-          {(lista) => (
-            <div className="flex flex-col gap-3">
-              <p className="text-muted-foreground text-[13px]">
-                Recebem a NF e os demonstrativos depois do fechamento, nesta ordem.
-              </p>
-              <ul className="flex flex-col gap-3">
-                {lista.state.value.map((_, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: os e-mails não têm id.
-                  <li key={i} className="flex items-start gap-2">
-                    <form.AppField name={`emailsNf[${i}]`}>
-                      {(field) => (
-                        <field.TextField
-                          label={`E-mail da NF ${i + 1}`}
-                          placeholder="nf@empresa.com.br"
-                          type="email"
-                          className="min-w-0 flex-1"
-                        />
-                      )}
-                    </form.AppField>
-                    <Button
-                      type="button"
-                      aria-label={`Remover e-mail da NF ${i + 1}`}
-                      onClick={() =>
-                        lista.state.value.length === 1
-                          ? form.setFieldValue('emailsNf[0]', '')
-                          : lista.removeValue(i)
-                      }
-                      className={buttonClassName({
-                        variant: 'ghost',
-                        // Na altura do campo (abaixo do rótulo), mesmo com o erro aparecendo embaixo.
-                        className: 'text-muted-foreground mt-7 size-9 flex-none px-0',
-                      })}
-                    >
-                      <Trash size={16} aria-hidden />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                type="button"
-                onClick={() => lista.pushValue('')}
-                className={buttonClassName({ variant: 'secondary', className: 'self-start' })}
-              >
-                <Plus size={16} aria-hidden />
-                Adicionar e-mail
-              </Button>
-            </div>
-          )}
+          {(lista) => {
+            const noLimite = lista.state.value.length >= MAX_EMAILS_NF;
+            return (
+              <div className="flex flex-col gap-3">
+                <p className="text-muted-foreground text-[13px]">
+                  Recebem a NF e os demonstrativos depois do fechamento, nesta ordem.
+                </p>
+                <ul className="flex flex-col gap-3">
+                  {lista.state.value.map((_, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: os e-mails não têm id.
+                    <li key={i} className="flex items-start gap-2">
+                      <form.AppField name={`emailsNf[${i}]`}>
+                        {(field) => (
+                          <field.TextField
+                            label={`E-mail da NF ${i + 1}`}
+                            placeholder="nf@empresa.com.br"
+                            type="email"
+                            className="min-w-0 flex-1"
+                          />
+                        )}
+                      </form.AppField>
+                      <Button
+                        type="button"
+                        aria-label={`Remover e-mail da NF ${i + 1}`}
+                        onClick={() =>
+                          lista.state.value.length === 1
+                            ? form.setFieldValue('emailsNf[0]', '')
+                            : lista.removeValue(i)
+                        }
+                        className={buttonClassName({
+                          variant: 'ghost',
+                          // Na altura do campo (abaixo do rótulo), mesmo com o erro aparecendo embaixo.
+                          className: 'text-muted-foreground mt-7 size-9 flex-none px-0',
+                        })}
+                      >
+                        <Trash size={16} aria-hidden />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    disabled={noLimite}
+                    onClick={() => lista.pushValue('')}
+                    className={buttonClassName({ variant: 'secondary' })}
+                  >
+                    <Plus size={16} aria-hidden />
+                    Adicionar e-mail
+                  </Button>
+                  {noLimite ? (
+                    <p className="text-muted-foreground text-[13px]">
+                      Limite de {MAX_EMAILS_NF} e-mails da NF.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            );
+          }}
         </form.AppField>
         <form.AppField name="exclusaoFiscal">
           {(field) => (

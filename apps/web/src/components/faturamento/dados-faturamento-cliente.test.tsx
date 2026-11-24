@@ -140,6 +140,23 @@ describe('DadosFaturamentoCliente', () => {
     expect(await acharAviso()).toHaveTextContent('Dados de faturamento salvos.');
   });
 
+  it('limita a lista a 20 e-mails da NF: no 20º, adicionar fica desligado com a dica', async () => {
+    com({
+      ...DADOS,
+      emailsNf: Array.from({ length: 19 }, (_, i) => `nf${i}@cliente.com.br`),
+    });
+    abrir();
+    const adicionar = await screen.findByRole('button', { name: 'Adicionar e-mail' });
+    expect(adicionar).toBeEnabled();
+    expect(screen.queryByText('Limite de 20 e-mails da NF.')).not.toBeInTheDocument();
+    await userEvent.click(adicionar);
+    expect(await screen.findByLabelText('E-mail da NF 20')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adicionar e-mail' })).toBeDisabled();
+    expect(screen.getByText('Limite de 20 e-mails da NF.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remover e-mail da NF 20' }));
+    expect(screen.getByRole('button', { name: 'Adicionar e-mail' })).toBeEnabled();
+  });
+
   it('e-mail inválido ou repetido aparece no campo', async () => {
     abrir();
     await userEvent.click(await screen.findByRole('button', { name: 'Adicionar e-mail' }));
