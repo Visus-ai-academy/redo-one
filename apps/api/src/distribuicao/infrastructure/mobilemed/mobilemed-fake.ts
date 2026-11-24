@@ -1,5 +1,6 @@
 import type {
   AtribuidorExames,
+  LoteAtribuicao,
   PedidoAtribuicao,
   ResultadoAtribuicao,
 } from '../../application/ports/atribuidor-exames';
@@ -28,6 +29,11 @@ export interface OpcoesMobileMedFake {
    * (`DISTRIBUICAO_FAKE_ABERTOS_PCT`).
    */
   abertosPct?: number;
+  /**
+   * % dos pares unidade × conta em que a conta do médico NÃO está liberada na unidade: a
+   * atribuição pula com `medico_fora_da_unidade` (`DISTRIBUICAO_FAKE_FORA_UNIDADE_PCT`).
+   */
+  foraDaUnidadePct?: number;
 }
 
 /** Conta na MobileMed de "alguém de fora" (um médico que pegou o exame sem o robô). */
@@ -48,6 +54,8 @@ const hashDo = (id: string) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0
 export class MobileMedFake implements FilaExames, AtribuidorExames {
   private readonly atribuidos = new Map<string, number>();
   private readonly tentativas = new Map<string, number>();
+  /** Quantas vezes a lista de médicos de uma unidade foi "consultada" (uma por unidade e lote). */
+  consultasUnidade = 0;
 
   constructor(
     private readonly carregarAmostra: () => Promise<AmostraCatalogo>,
@@ -135,7 +143,37 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
     );
   }
 
-  async atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao> {
+  /** A conta está liberada na unidade? Estável por unidade × conta, sem sorteio. */
+  liberada(unidade: string, conta: number): boolean {
+    const pct = this.opcoes.foraDaUnidadePct ?? 0;
+    return pct <= 0 || hashDo(`unidade:${unidade}|${conta}`) % 100 >= pct;
+  }
+
+  atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao> {
+    return this.lote().atribuir(pedido);
+  }
+
+  lote(): LoteAtribuicao {
+    const consultadas = new Set<string>();
+    return {
+      atribuir: async (pedido) => {
+        const { semMedico, emMaos } = await this.ler();
+        const unidade = [...semMedico, ...emMaos].find(
+          (e) => e.idExame === pedido.idExame,
+        )?.unidade;
+        if (unidade !== undefined && !consultadas.has(unidade)) {
+          consultadas.add(unidade);
+          this.consultasUnidade++;
+        }
+        return this.atribuirNaUnidade(pedido, unidade);
+      },
+    };
+  }
+
+  private async atribuirNaUnidade(
+    pedido: PedidoAtribuicao,
+    unidade: string | undefined,
+  ): Promise<ResultadoAtribuicao> {
     const intocado = (
       await this.intocados([
         { idExame: pedido.idExame, medicoIdMobilemed: pedido.deMedicoIdMobilemed },
@@ -156,6 +194,14 @@ export class MobileMedFake implements FilaExames, AtribuidorExames {
               'MobileMed: o exame já foi aberto ou trocado de médico desde que foi recolhido.',
             retentavel: false,
           };
+    }
+    if (unidade !== undefined && !this.liberada(unidade, pedido.medicoIdMobilemed)) {
+      return {
+        status: 'pulada',
+        motivo: 'medico_fora_da_unidade',
+        detalhe: 'Conta do médico não liberada nesta unidade na MobileMed (simulada).',
+        retentavel: false,
+      };
     }
     const tentativa = (this.tentativas.get(pedido.idExame) ?? 0) + 1;
     this.tentativas.set(pedido.idExame, tentativa);

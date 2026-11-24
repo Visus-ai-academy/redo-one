@@ -50,6 +50,8 @@ export class ExecutarRodada {
         ),
       ]);
       const total = ordem.length;
+      // Um lote por execução: a lista de médicos de cada unidade é lida uma vez só.
+      const lote = this.d.atribuidor.lote();
       for (const [i, id] of ordem.entries()) {
         const atual = await this.d.rodadas.obter(rodadaId);
         if (atual?.status !== 'executando') break;
@@ -91,7 +93,7 @@ export class ExecutarRodada {
         } else {
           try {
             resultado = comoResultado(
-              await this.d.atribuidor.atribuir({
+              await lote.atribuir({
                 idExame: p.idExameMobilemed,
                 medicoIdMobilemed: conta.idMobilemed,
                 deMedicoIdMobilemed: de,

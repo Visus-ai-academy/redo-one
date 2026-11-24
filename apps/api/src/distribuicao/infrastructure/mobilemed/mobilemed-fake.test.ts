@@ -14,6 +14,7 @@ type Opcoes = Partial<{
   falhasPct: number;
   porForaPct: number;
   abertosPct: number;
+  foraDaUnidadePct: number;
   entregues: AmostraCatalogo['entregues'];
 }>;
 const criar = (opcoes: Opcoes = {}) =>
@@ -26,6 +27,7 @@ const criar = (opcoes: Opcoes = {}) =>
       falhasPct: opcoes.falhasPct ?? 0,
       porForaPct: opcoes.porForaPct ?? 0,
       abertosPct: opcoes.abertosPct ?? 0,
+      foraDaUnidadePct: opcoes.foraDaUnidadePct ?? 0,
     },
   );
 const semDono = (ids: (string | undefined)[]) =>
@@ -188,5 +190,49 @@ describe('MobileMed fake (fila sintética e atribuição que só registra)', () 
         { idExame: idb, medicoIdMobilemed: 101 },
       ]),
     ).toEqual(new Set([idb]));
+  });
+});
+
+describe('MobileMed fake: conta do médico liberada na unidade', () => {
+  it('sem % configurado, toda conta está liberada em toda unidade', async () => {
+    const fake = criar();
+    const [e] = (await fake.ler()).semMedico;
+    expect(
+      await fake.atribuir({
+        idExame: e?.idExame ?? '',
+        medicoIdMobilemed: 101,
+        deMedicoIdMobilemed: null,
+      }),
+    ).toEqual({ status: 'executada' });
+  });
+
+  it('com 100%, nenhuma conta está liberada: pula sem atribuir, com o motivo', async () => {
+    const fake = criar({ foraDaUnidadePct: 100 });
+    const [e] = (await fake.ler()).semMedico;
+    const idExame = e?.idExame ?? '';
+    expect(
+      await fake.atribuir({ idExame, medicoIdMobilemed: 101, deMedicoIdMobilemed: null }),
+    ).toEqual({
+      status: 'pulada',
+      motivo: 'medico_fora_da_unidade',
+      detalhe: 'Conta do médico não liberada nesta unidade na MobileMed (simulada).',
+      retentavel: false,
+    });
+    expect((await fake.ler()).semMedico.map((x) => x.idExame)).toContain(idExame);
+  });
+
+  it('a habilitação é estável por unidade e conta, e o lote consulta cada unidade uma vez', async () => {
+    const fake = criar({ foraDaUnidadePct: 50, tamanho: 40 });
+    const exames = (await fake.ler()).semMedico;
+    const lote = fake.lote();
+    for (const e of exames) {
+      const r = await lote.atribuir({
+        idExame: e.idExame,
+        medicoIdMobilemed: 101,
+        deMedicoIdMobilemed: null,
+      });
+      expect(r.status).toBe(fake.liberada(e.unidade, 101) ? 'executada' : 'pulada');
+    }
+    expect(fake.consultasUnidade).toBe(new Set(exames.map((e) => e.unidade)).size);
   });
 });

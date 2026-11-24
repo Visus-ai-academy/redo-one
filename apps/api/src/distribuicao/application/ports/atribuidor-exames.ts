@@ -34,6 +34,15 @@ export type ResultadoAtribuicao =
  * real (`DISTRIBUICAO_MOBILEMED=real`: `PUT /exame` com o corpo mínimo, conferindo antes e
  * relendo depois).
  */
-export interface AtribuidorExames {
+export interface AtribuidorExames extends LoteAtribuicao {
+  /**
+   * Um lote de atribuições (uma execução da rodada): o que o adaptador confere uma vez por unidade
+   * (a lista de médicos liberados nela na MobileMed) vale até o fim do lote, sem consultar a cada
+   * exame. Fora do lote, `atribuir` confere tudo de novo.
+   */
+  lote(): LoteAtribuicao;
+}
+
+export interface LoteAtribuicao {
   atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao>;
 }

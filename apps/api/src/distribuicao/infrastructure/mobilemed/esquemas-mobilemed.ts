@@ -68,6 +68,8 @@ export const exameMobileMed = z.object({
   id,
   status_id: inteiro,
   usuario_id: usuarioId,
+  /** Unidade de origem (a lista de médicos liberados é por unidade). */
+  empresa_id: inteiro.nullish(),
   empresa,
   sla_empresa_id: inteiro.nullish(),
   compartilhamentos: z.array(compartilhamento).nullish(),

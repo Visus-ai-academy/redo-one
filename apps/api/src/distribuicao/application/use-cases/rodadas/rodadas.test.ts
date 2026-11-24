@@ -69,6 +69,12 @@ class MobileMedDeTeste implements FilaExames, AtribuidorExames {
     await this.aoAtribuir(p);
     return this.resultados.get(p.idExame)?.shift() ?? { status: 'executada' };
   }
+  /** Lotes abertos (um por execução). */
+  lotes = 0;
+  lote() {
+    this.lotes++;
+    return { atribuir: (p: PedidoAtribuicao) => this.atribuir(p) };
+  }
 }
 
 const catalogo: CatalogoDaFila = {
@@ -498,6 +504,27 @@ describe('rodada do robô (casos de uso)', () => {
       expect(designacao('e1')).toMatchObject({ status: 'executada' });
       const diario = await repo.eventos(id, 50);
       expect(diario.some((e) => e.total === 2 && e.atual === 2)).toBe(true);
+    });
+
+    it('a execução atribui num lote só; a conta fora da unidade fica pulada com o motivo', async () => {
+      mobilemed.resultados.set('e1', [
+        {
+          status: 'pulada',
+          motivo: 'medico_fora_da_unidade',
+          detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
+          retentavel: false,
+        },
+      ]);
+      const id = await criarELer();
+      await casos.aprovar.executar(admin, id);
+      await jobs();
+      expect(mobilemed.lotes).toBe(1);
+      expect(designacao('e1')).toMatchObject({
+        status: 'pulada',
+        motivo: 'medico_fora_da_unidade',
+        detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
+      });
+      expect(designacao('e2')).toMatchObject({ status: 'executada' });
     });
 
     it('a proposta vencida não é aprovada', async () => {

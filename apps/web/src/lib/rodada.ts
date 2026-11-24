@@ -104,6 +104,7 @@ const MOTIVOS: Record<string, string> = {
   sessao_caiu: 'A sessão da MobileMed caiu',
   ja_atribuido_mobilemed: 'Já atribuído na MobileMed',
   mudou_de_dono: 'Aberto ou trocado de médico desde o recolhimento',
+  medico_fora_da_unidade: 'Conta do médico não liberada nesta unidade na MobileMed',
 };
 
 export function rotuloMotivo(motivo: string | null | undefined) {

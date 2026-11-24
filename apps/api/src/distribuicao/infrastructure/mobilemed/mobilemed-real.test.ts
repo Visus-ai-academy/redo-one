@@ -18,6 +18,7 @@ const exame = (id: number, extra: Partial<Exame> = {}): Exame => ({
   sla_expiration_date: '2026-11-20T10:00:00.000Z',
   nome_paciente: `PACIENTE ${id}`,
   codigo_paciente: `C${id}`,
+  empresa_id: 10,
   empresa: { exigir_motivo: false, permissao_sla_medico: true },
   is_complementar: null,
   is_duplicado: false,
@@ -35,6 +36,7 @@ interface Corpo {
     paginacao: { pagina: number; total_registros: number };
   };
   exame?: { id: number; usuario_id: number };
+  filtro?: { empresa_id: number };
 }
 
 /**
@@ -46,7 +48,17 @@ const simulada = (exames: Exame[]) => {
   const puts: Corpo['exame'][] = [];
   const rotas: string[] = [];
   const falhas: Record<string, number[]> = {};
-  const ajustes = { totalAMais: 0, ignorarPut: false, medicos: [{ id: 101, nome: 'Dra. A' }] };
+  const ajustes = {
+    totalAMais: 0,
+    ignorarPut: false,
+    medicos: [
+      { id: 101, nome: 'Dra. A' },
+      { id: 102, nome: 'Dr. B' },
+    ],
+    /** Médicos habilitados por unidade; a que não está aqui usa `medicos`. */
+    porUnidade: {} as Record<number, { id: number; nome: string }[]>,
+  };
+  const unidades: number[] = [];
   const resp = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status });
   const fn = (async (url: string, init: RequestInit) => {
     const caminho = url.replace('http://mm.teste/portal-api', '');
@@ -83,7 +95,11 @@ const simulada = (exames: Exame[]) => {
       if (e && !ajustes.ignorarPut) e.usuario_id = corpo.exame.usuario_id || null;
       return resp({});
     }
-    if (rota === 'POST /usuario/lista/empresa') return resp({ lista: ajustes.medicos });
+    if (rota === 'POST /usuario/lista/empresa') {
+      const unidade = corpo.filtro?.empresa_id ?? 0;
+      unidades.push(unidade);
+      return resp({ lista: ajustes.porUnidade[unidade] ?? ajustes.medicos });
+    }
     return resp({}, 404);
   }) as unknown as typeof fetch;
   const cliente = new ClienteMobileMed({
@@ -95,7 +111,7 @@ const simulada = (exames: Exame[]) => {
     fetch: fn,
   });
   const mm = new MobileMedReal(cliente, { porPagina: 2, maximoExames: 100 });
-  return { mm, base, puts, rotas, falhas, ajustes };
+  return { mm, base, puts, rotas, falhas, ajustes, unidades };
 };
 
 const pedido = (idExame: string, medicoIdMobilemed: number, de: number | null = null) => ({
@@ -195,7 +211,12 @@ describe('MobileMedReal: atribuir, trocar e tirar', () => {
   it('atribui com o corpo mínimo e confirma relendo', async () => {
     const { mm, puts, rotas, base } = simulada([exame(1)]);
     expect(await mm.atribuir(pedido('1', 101))).toEqual({ status: 'executada' });
-    expect(rotas).toEqual(['GET /exame/{id}', 'PUT /exame', 'GET /exame/{id}']);
+    expect(rotas).toEqual([
+      'GET /exame/{id}',
+      'POST /usuario/lista/empresa',
+      'PUT /exame',
+      'GET /exame/{id}',
+    ]);
     expect(puts).toEqual([
       {
         id: 1,
@@ -302,6 +323,79 @@ describe('MobileMedReal: atribuir, trocar e tirar', () => {
   });
 });
 
+describe('MobileMedReal: conta do médico liberada na unidade do exame', () => {
+  it('não atribui se a conta não está entre os médicos da unidade', async () => {
+    const { mm, puts, ajustes, unidades } = simulada([exame(1)]);
+    ajustes.porUnidade[10] = [{ id: 102, nome: 'Dr. B' }];
+    expect(await mm.atribuir(pedido('1', 101))).toEqual({
+      status: 'pulada',
+      motivo: 'medico_fora_da_unidade',
+      detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
+      retentavel: false,
+    });
+    expect(unidades).toEqual([10]);
+    expect(puts).toHaveLength(0);
+  });
+
+  it('no lote, a lista de cada unidade é lida uma vez só', async () => {
+    const { mm, unidades } = simulada([exame(1), exame(2), exame(3, { empresa_id: 20 })]);
+    const lote = mm.lote();
+    for (const id of ['1', '2', '3']) {
+      expect(await lote.atribuir(pedido(id, 101))).toEqual({ status: 'executada' });
+    }
+    expect(unidades).toEqual([10, 20]);
+    // Outro lote (outra execução) lê de novo.
+    await mm.lote().atribuir(pedido('1', 102, 101));
+    expect(unidades).toEqual([10, 20, 10]);
+  });
+
+  it('exame compartilhado consultado fora da origem: vale a unidade de destino', async () => {
+    const { mm, unidades } = simulada([
+      exame(1, {
+        compartilhamentos: [{ empresa_compartilhada_id: 77, permissao_sla_medico: false }],
+        permissao: [],
+      }),
+      exame(2, {
+        compartilhamentos: [{ empresa_compartilhada_id: 77, permissao_sla_medico: false }],
+        permissao: [{ perfil: 1 }],
+      }),
+    ]);
+    await mm.atribuir(pedido('1', 101));
+    await mm.atribuir(pedido('2', 101));
+    expect(unidades).toEqual([77, 10]);
+  });
+
+  it('a lista que falha não fica no lote: falhou, retentável, e o próximo exame lê de novo', async () => {
+    const { mm, falhas, puts, unidades } = simulada([exame(1), exame(2)]);
+    falhas['POST /usuario/lista/empresa'] = [503];
+    const lote = mm.lote();
+    expect(await lote.atribuir(pedido('1', 101))).toMatchObject({
+      status: 'falhou',
+      motivo: 'mobilemed_indisponivel',
+      retentavel: true,
+    });
+    expect(puts).toHaveLength(0);
+    expect(await lote.atribuir(pedido('2', 101))).toEqual({ status: 'executada' });
+    expect(unidades).toEqual([10]);
+  });
+
+  it('sem a unidade no exame, não atribui', async () => {
+    const { mm, puts } = simulada([exame(1, { empresa_id: null })]);
+    expect(await mm.atribuir(pedido('1', 101))).toMatchObject({
+      status: 'falhou',
+      motivo: 'resposta_inesperada',
+      retentavel: false,
+    });
+    expect(puts).toHaveLength(0);
+  });
+
+  it('tirar o médico não confere a unidade', async () => {
+    const { mm, rotas } = simulada([exame(1, { usuario_id: 101 })]);
+    expect(await mm.tirar('1', 101)).toEqual({ status: 'executada' });
+    expect(rotas).not.toContain('POST /usuario/lista/empresa');
+  });
+});
+
 describe('flagsResetSla (porte do portal)', () => {
   const base = {
     id: 1,
@@ -339,7 +433,10 @@ describe('flagsResetSla (porte do portal)', () => {
 describe('MobileMedReal: médicos da unidade', () => {
   it('lista id e nome dos médicos ativos da unidade', async () => {
     const { mm, rotas } = simulada([]);
-    expect(await mm.medicosDaUnidade(55)).toEqual([{ id: 101, nome: 'Dra. A' }]);
+    expect(await mm.medicosDaUnidade(55)).toEqual([
+      { id: 101, nome: 'Dra. A' },
+      { id: 102, nome: 'Dr. B' },
+    ]);
     expect(rotas).toEqual(['POST /usuario/lista/empresa']);
   });
 });

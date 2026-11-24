@@ -1,6 +1,7 @@
 import { type ClienteMobileMed, ErroMobileMed } from '../../../comum/mobilemed/cliente-mobilemed';
 import type {
   AtribuidorExames,
+  LoteAtribuicao,
   PedidoAtribuicao,
   ResultadoAtribuicao,
 } from '../../application/ports/atribuidor-exames';
@@ -179,6 +180,28 @@ export const flagsResetSla = (e: ExameMobileMed, novo: number | null) => {
   return flags;
 };
 
+/**
+ * A unidade cuja lista de médicos vale para o exame, como a janela de atribuição do portal escolhe
+ * (`mobile.js:43062-43065`): no compartilhado consultado fora da origem (sem permissão nela), a de
+ * destino; senão, a de origem. Null = o exame não trouxe a unidade.
+ */
+export const unidadeDaAtribuicao = (e: ExameMobileMed): number | null => {
+  const compartilhamento = e.compartilhamentos?.[0];
+  const naOrigem = (e.permissao?.length ?? 0) > 0;
+  if (compartilhamento && !naOrigem) {
+    return (
+      compartilhamento.empresa_compartilhada_id ??
+      compartilhamento.empresa_destino?.id ??
+      e.empresa_id ??
+      null
+    );
+  }
+  return e.empresa_id ?? null;
+};
+
+/** Contas liberadas por unidade, lidas uma vez por lote (a leitura que falhou não fica). */
+type CacheUnidades = Map<number, Promise<Set<number>>>;
+
 const pulada = (motivo: string, detalhe: string): ResultadoAtribuicao => ({
   status: 'pulada',
   motivo,
@@ -311,7 +334,20 @@ export class MobileMedReal implements FilaExames, AtribuidorExames {
   }
 
   atribuir(pedido: PedidoAtribuicao): Promise<ResultadoAtribuicao> {
-    return this.mudarMedico(pedido.idExame, pedido.deMedicoIdMobilemed, pedido.medicoIdMobilemed);
+    return this.lote().atribuir(pedido);
+  }
+
+  lote(): LoteAtribuicao {
+    const unidades: CacheUnidades = new Map();
+    return {
+      atribuir: (pedido) =>
+        this.mudarMedico(
+          pedido.idExame,
+          pedido.deMedicoIdMobilemed,
+          pedido.medicoIdMobilemed,
+          unidades,
+        ),
+    };
   }
 
   /** Devolve o exame à fila (sem médico), se ele segue NOVO com `deMedicoIdMobilemed`. */
@@ -319,7 +355,7 @@ export class MobileMedReal implements FilaExames, AtribuidorExames {
     return this.mudarMedico(idExame, deMedicoIdMobilemed, null);
   }
 
-  /** Médicos da unidade com conta na MobileMed (para o de-para de `medicos.id_mobilemed`). */
+  /** Médicos (contas) liberados na unidade da MobileMed: a janela de atribuição só aceita esses. */
   async medicosDaUnidade(empresaId: number): Promise<MedicoDaUnidade[]> {
     const r = await this.cliente.chamar('POST', '/usuario/lista/empresa', respostaMedicosUnidade, {
       filtro: {
@@ -345,10 +381,26 @@ export class MobileMedReal implements FilaExames, AtribuidorExames {
     }
   }
 
+  /** A conta está liberada na unidade? A lista de cada unidade é lida uma vez por lote. */
+  private async liberadaNaUnidade(
+    unidade: number,
+    conta: number,
+    cache: CacheUnidades,
+  ): Promise<boolean> {
+    let lista = cache.get(unidade);
+    if (!lista) {
+      lista = this.medicosDaUnidade(unidade).then((ms) => new Set(ms.map((m) => m.id)));
+      cache.set(unidade, lista);
+      lista.catch(() => cache.delete(unidade));
+    }
+    return (await lista).has(conta);
+  }
+
   private async mudarMedico(
     idExame: string,
     de: number | null,
     para: number | null,
+    unidades: CacheUnidades = new Map(),
   ): Promise<ResultadoAtribuicao> {
     if (this.cliente.freado) {
       return {
@@ -381,6 +433,26 @@ export class MobileMedReal implements FilaExames, AtribuidorExames {
       if (exame.empresa.exigir_motivo) {
         // Decisão: o One não inventa motivo; a operação atribui à mão na MobileMed.
         return pulada('unidade_exige_motivo', 'a unidade exige motivo; atribua à mão.');
+      }
+      if (para !== null) {
+        const unidade = unidadeDaAtribuicao(exame);
+        if (unidade === null) {
+          return {
+            status: 'falhou',
+            motivo: 'resposta_inesperada',
+            detalhe:
+              'MobileMed: o exame veio sem a unidade; não deu para conferir se a conta do médico está liberada nela.',
+            retentavel: false,
+          };
+        }
+        if (!(await this.liberadaNaUnidade(unidade, para, unidades))) {
+          return {
+            status: 'pulada',
+            motivo: 'medico_fora_da_unidade',
+            detalhe: 'Conta do médico não liberada nesta unidade na MobileMed.',
+            retentavel: false,
+          };
+        }
       }
       await this.cliente.chamar('PUT', '/exame', respostaQualquer, {
         exame: {

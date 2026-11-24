@@ -32,6 +32,7 @@ export function validarAmbiente(env: Ambiente): Ambiente {
   opcional('DISTRIBUICAO_FAKE_FALHAS_PCT', inteiroAte(100), 'inteiro de 0 a 100');
   opcional('DISTRIBUICAO_FAKE_POR_FORA_PCT', inteiroAte(100), 'inteiro de 0 a 100');
   opcional('DISTRIBUICAO_FAKE_ABERTOS_PCT', inteiroAte(100), 'inteiro de 0 a 100');
+  opcional('DISTRIBUICAO_FAKE_FORA_UNIDADE_PCT', inteiroAte(100), 'inteiro de 0 a 100');
 
   opcional('DISTRIBUICAO_MOBILEMED', (v) => v === 'fake' || v === 'real', 'use fake ou real');
   opcional(

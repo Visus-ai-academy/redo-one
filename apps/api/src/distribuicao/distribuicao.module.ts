@@ -260,6 +260,7 @@ const CASOS_RODADA = [
           falhasPct: inteiro(config, 'DISTRIBUICAO_FAKE_FALHAS_PCT', 0),
           porForaPct: inteiro(config, 'DISTRIBUICAO_FAKE_POR_FORA_PCT', 0),
           abertosPct: inteiro(config, 'DISTRIBUICAO_FAKE_ABERTOS_PCT', 0),
+          foraDaUnidadePct: inteiro(config, 'DISTRIBUICAO_FAKE_FORA_UNIDADE_PCT', 0),
         });
       },
     },
