@@ -108,7 +108,14 @@ export class RegraSegmentoDto {
 }
 
 export class FatiaMisturaDto {
-  @uuidNulo('Nula = o segmento em qualquer especialidade.')
+  @ApiProperty({
+    description:
+      'O segmento em qualquer especialidade (com `especialidadeId` nula). Sem ele, a especialidade é obrigatória.',
+  })
+  @IsBoolean()
+  todasEspecialidades!: boolean;
+
+  @uuidNulo('Sem `todasEspecialidades`: a especialidade da fatia.')
   @ValidateIf((_, v) => v !== null)
   @IsUUID()
   especialidadeId!: string | null;

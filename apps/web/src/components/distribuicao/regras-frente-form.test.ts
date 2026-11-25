@@ -4,6 +4,7 @@ import { TODAS } from '../form/caixas-todas';
 
 import {
   esquemaRegras,
+  QUALQUER_ESPECIALIDADE,
   regrasParaApi,
   resumoRegras,
   type ValoresRegras,
@@ -87,8 +88,8 @@ describe('regras da frente no formulário', () => {
         },
       ],
       mistura: [
-        { especialidadeId: null, subespecialidadeId: 's-col' },
-        { especialidadeId: 'e-neuro', subespecialidadeId: null },
+        { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: 's-col' },
+        { todasEspecialidades: false, especialidadeId: 'e-neuro', subespecialidadeId: null },
       ],
     };
     const valores = valoresDasRegras(regras);
@@ -215,11 +216,28 @@ describe('regras da frente no formulário', () => {
           { especialidadeId: '', subespecialidadeId: '' },
           { especialidadeId: 'e-neuro', subespecialidadeId: '' },
           { especialidadeId: 'e-neuro', subespecialidadeId: '' },
+          { especialidadeId: QUALQUER_ESPECIALIDADE, subespecialidadeId: '' },
         ],
       }),
     ).toEqual([
-      'mistura.0.subespecialidadeId: Escolha a especialidade ou o segmento.',
+      'mistura.0.especialidadeId: Escolha a especialidade (ou "Qualquer").',
       'mistura.2.subespecialidadeId: Fatia repetida.',
+      'mistura.3.subespecialidadeId: Em qualquer especialidade, escolha o segmento.',
+    ]);
+  });
+
+  it('"Qualquer" vira o todasEspecialidades explícito, e volta', () => {
+    const base = valoresDasRegras(NEUTRAS);
+    const v = {
+      ...base,
+      mistura: [
+        { especialidadeId: QUALQUER_ESPECIALIDADE, subespecialidadeId: 's-col' },
+        { especialidadeId: 'e-neuro', subespecialidadeId: '' },
+      ],
+    };
+    expect(regrasParaApi(v, 'especialidade').mistura).toEqual([
+      { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: 's-col' },
+      { todasEspecialidades: false, especialidadeId: 'e-neuro', subespecialidadeId: null },
     ]);
   });
 });
@@ -275,8 +293,8 @@ describe('resumo das regras (só leitura)', () => {
           },
         ],
         mistura: [
-          { especialidadeId: null, subespecialidadeId: 's-col' },
-          { especialidadeId: 'e-neuro', subespecialidadeId: null },
+          { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: 's-col' },
+          { todasEspecialidades: false, especialidadeId: 'e-neuro', subespecialidadeId: null },
         ],
       },
       CATALOGO,

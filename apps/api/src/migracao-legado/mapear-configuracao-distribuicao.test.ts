@@ -253,11 +253,23 @@ describe('mapearConfiguracaoDistribuicao', () => {
       },
     ]);
     expect(neuro?.mistura).toEqual([
-      { especialidadeId: null, subespecialidadeId: sub('COLUNAS') },
-      { especialidadeId: esp('NEURO'), subespecialidadeId: sub('ANGIO') },
-      { especialidadeId: esp('NEURO'), subespecialidadeId: sub('CRÂNIO') },
-      { especialidadeId: esp('NEURO'), subespecialidadeId: null },
-      { especialidadeId: esp('MUSCULO ESQUELETICO'), subespecialidadeId: null },
+      { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: sub('COLUNAS') },
+      {
+        todasEspecialidades: false,
+        especialidadeId: esp('NEURO'),
+        subespecialidadeId: sub('ANGIO'),
+      },
+      {
+        todasEspecialidades: false,
+        especialidadeId: esp('NEURO'),
+        subespecialidadeId: sub('CRÂNIO'),
+      },
+      { todasEspecialidades: false, especialidadeId: esp('NEURO'), subespecialidadeId: null },
+      {
+        todasEspecialidades: false,
+        especialidadeId: esp('MUSCULO ESQUELETICO'),
+        subespecialidadeId: null,
+      },
     ]);
   });
 

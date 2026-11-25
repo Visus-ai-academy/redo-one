@@ -3,7 +3,7 @@ import type { OpcaoComCorDto } from '../../gen/types/OpcaoComCorDto';
 import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
-import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
+import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas } from '../form/caixas-todas';
 import {
   celulasParaApi,
   errosDaGrade,
@@ -40,7 +40,14 @@ export type ValoresSegmento = {
   pacoteAParte: boolean;
 };
 /** Vazio = qualquer especialidade / o geral (sem segmento). */
+/**
+ * Uma fatia da mistura no formulário. `especialidadeId` é `QUALQUER_ESPECIALIDADE` ("Qualquer",
+ * o `todasEspecialidades` da API), o id, ou '' (nada escolhido, que o esquema recusa).
+ */
 export type ValoresFatia = { especialidadeId: string; subespecialidadeId: string };
+
+/** "Qualquer especialidade" explícito na fatia da mistura (vazio nunca é "qualquer"). */
+export const QUALQUER_ESPECIALIDADE = '__qualquer__';
 
 /** Números como texto (o `NumberField` do kit guarda texto; "" é vazio). */
 export type ValoresRegras = {
@@ -79,7 +86,7 @@ export function valoresDasRegras(r: RegrasFrenteDto): ValoresRegras {
     listaDepoisDosFixos: r.listaDepoisDosFixos,
     distribuiPeloRobo: r.distribuiPeloRobo,
     horariosSemRobo: r.horariosSemRobo.map((h) => ({
-      diasSemana: h.diasSemana.length ? h.diasSemana.map(String) : [TODAS],
+      diasSemana: caixasDaApi(h.todosDias, h.diasSemana.map(String)),
       inicio: h.inicio,
       fim: h.fim,
     })),
@@ -100,7 +107,7 @@ export function valoresDasRegras(r: RegrasFrenteDto): ValoresRegras {
       pacoteAParte: s.pacoteAParte,
     })),
     mistura: r.mistura.map((f) => ({
-      especialidadeId: f.especialidadeId ?? '',
+      especialidadeId: f.todasEspecialidades ? QUALQUER_ESPECIALIDADE : (f.especialidadeId ?? ''),
       subespecialidadeId: f.subespecialidadeId ?? '',
     })),
   };
@@ -139,7 +146,9 @@ export function regrasParaApi(v: ValoresRegras, tipo: TipoFrente): RegrasFrenteD
       pacoteAParte: s.pacoteAParte,
     })),
     mistura: v.mistura.map((f) => ({
-      especialidadeId: f.especialidadeId || null,
+      todasEspecialidades: f.especialidadeId === QUALQUER_ESPECIALIDADE,
+      especialidadeId:
+        f.especialidadeId === QUALQUER_ESPECIALIDADE ? null : f.especialidadeId || null,
       subespecialidadeId: f.subespecialidadeId || null,
     })),
     listaDepoisDosFixos: v.listaDepoisDosFixos,
@@ -316,11 +325,19 @@ export function esquemaRegras(tipo: TipoFrente) {
     }
     const fatias = new Set<string>();
     v.mistura.forEach((f, i) => {
-      if (!f.especialidadeId && !f.subespecialidadeId) {
+      if (!f.especialidadeId) {
+        problema(
+          ctx,
+          ['mistura', i, 'especialidadeId'],
+          'Escolha a especialidade (ou "Qualquer").',
+        );
+        return;
+      }
+      if (f.especialidadeId === QUALQUER_ESPECIALIDADE && !f.subespecialidadeId) {
         problema(
           ctx,
           ['mistura', i, 'subespecialidadeId'],
-          'Escolha a especialidade ou o segmento.',
+          'Em qualquer especialidade, escolha o segmento.',
         );
         return;
       }
@@ -414,10 +431,11 @@ export function resumoRegras(
     : [{ rotulo: 'Regras por segmento', valor: 'Nenhuma' }];
 
   const fatia = (f: RegrasFrenteDto['mistura'][number]) => {
-    if (f.especialidadeId === null) {
+    if (f.todasEspecialidades) {
       return `${nomeDe(c.subespecialidades, f.subespecialidadeId ?? '')} (qualquer especialidade)`;
     }
-    const esp = nomeDe(c.especialidades, f.especialidadeId);
+    // Sem "qualquer" e sem especialidade, a fatia não casa nada.
+    const esp = f.especialidadeId ? nomeDe(c.especialidades, f.especialidadeId) : 'Nenhuma';
     return f.subespecialidadeId === null
       ? `${esp} (geral)`
       : `${esp}, ${nomeDe(c.subespecialidades, f.subespecialidadeId)}`;

@@ -5,7 +5,12 @@
 
 export type FatiaMisturaDto = {
   /**
-   * @description Nula = o segmento em qualquer especialidade.
+   * @description O segmento em qualquer especialidade (com `especialidadeId` nula). Sem ele, a especialidade é obrigatória.
+   * @type boolean
+   */
+  todasEspecialidades: boolean;
+  /**
+   * @description Sem `todasEspecialidades`: a especialidade da fatia.
    *
    * Format: `uuid`
    * @type string

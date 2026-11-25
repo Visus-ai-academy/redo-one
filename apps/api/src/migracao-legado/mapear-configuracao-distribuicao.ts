@@ -432,6 +432,8 @@ export function mapearConfiguracaoDistribuicao(
     });
   comEspecialidade('NEURO', (r) => {
     const fatias = MISTURA_NEURO.map((f) => ({
+      // Especialidade nula no motor do dashboards-one = qualquer: no redo-one, explícito.
+      todasEspecialidades: f.especialidade === null,
       especialidadeId: f.especialidade === null ? null : especialidade(f.especialidade),
       subespecialidadeId: f.segmento === null ? null : segmento(f.segmento),
     }));

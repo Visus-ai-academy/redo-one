@@ -79,12 +79,21 @@ export function validarRegrasFrente(r: RegrasFrente): void {
 
   if (r.mistura.length === 1) invalida('A mistura precisa de ao menos duas fatias.');
   for (const f of r.mistura) {
-    if (f.especialidadeId === null && f.subespecialidadeId === null) {
-      invalida('Cada fatia da mistura precisa de uma especialidade ou um segmento.');
+    // Vazio nunca é "qualquer" (25/11/2026): ou "qualquer especialidade", ou a especialidade.
+    if (f.todasEspecialidades && f.especialidadeId !== null) {
+      invalida('Fatia da mistura: escolha "qualquer especialidade" ou uma, não as duas.');
+    }
+    if (!f.todasEspecialidades && f.especialidadeId === null) {
+      invalida('Fatia da mistura: escolha a especialidade (ou "qualquer").');
+    }
+    if (f.todasEspecialidades && f.subespecialidadeId === null) {
+      invalida('Fatia da mistura em qualquer especialidade precisa de um segmento.');
     }
   }
   semRepetidos(
-    r.mistura.map((f) => `${f.especialidadeId}|${f.subespecialidadeId}`),
+    r.mistura.map(
+      (f) => `${f.todasEspecialidades ? '*' : f.especialidadeId}|${f.subespecialidadeId}`,
+    ),
     'Há fatia repetida na mistura.',
   );
 }

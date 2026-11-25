@@ -90,10 +90,12 @@ export interface RegraSegmento {
 
 /**
  * Uma fatia da mistura entre segmentos. Segmento nulo = o geral (exame sem segmento) da
- * especialidade; especialidade nula = o segmento em qualquer especialidade (COLUNAS é de NEURO e
- * de MSK).
+ * especialidade; `todasEspecialidades` = o segmento em qualquer especialidade (COLUNAS é de NEURO
+ * e de MSK). Especialidade nula sem `todasEspecialidades` não casa nada (vazio nunca é "qualquer").
  */
 export interface FatiaMistura {
+  todasEspecialidades: boolean;
+  /** Sem `todasEspecialidades`: a especialidade da fatia. */
   especialidadeId: string | null;
   subespecialidadeId: string | null;
 }

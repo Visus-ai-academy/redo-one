@@ -929,11 +929,11 @@ describe('mistura entre segmentos (a do neurologista)', () => {
   const ANGIO = 'seg-angio';
   const CRANIO = 'seg-cranio';
   const mistura = [
-    { especialidadeId: null, subespecialidadeId: COLUNAS },
-    { especialidadeId: NEURO, subespecialidadeId: ANGIO },
-    { especialidadeId: NEURO, subespecialidadeId: CRANIO },
-    { especialidadeId: NEURO, subespecialidadeId: null },
-    { especialidadeId: MSK, subespecialidadeId: null },
+    { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: COLUNAS },
+    { todasEspecialidades: false, especialidadeId: NEURO, subespecialidadeId: ANGIO },
+    { todasEspecialidades: false, especialidadeId: NEURO, subespecialidadeId: CRANIO },
+    { todasEspecialidades: false, especialidadeId: NEURO, subespecialidadeId: null },
+    { todasEspecialidades: false, especialidadeId: MSK, subespecialidadeId: null },
   ];
   const proporcao = (pct: { MR: number; CT: number }) => ({
     metodo: 'proporcao' as const,

@@ -365,11 +365,13 @@ export function distribuirNaOrdem(
   const misturas = regras.todas
     .filter((r) => r.mistura.length)
     .map((dono) => ({ dono, fatias: dono.mistura }));
+  const daEspecialidade = (e: ExameMotor, f: FatiaMistura) =>
+    f.todasEspecialidades ||
+    (f.especialidadeId !== null && f.especialidadeId === e.especialidadeId);
   const casaFatia = (e: ExameMotor, f: FatiaMistura) =>
     f.subespecialidadeId === null
-      ? e.subespecialidadeId === null && e.especialidadeId === f.especialidadeId
-      : e.subespecialidadeId === f.subespecialidadeId &&
-        (f.especialidadeId === null || f.especialidadeId === e.especialidadeId);
+      ? e.subespecialidadeId === null && daEspecialidade(e, f)
+      : e.subespecialidadeId === f.subespecialidadeId && daEspecialidade(e, f);
   const fatiaCache = new Map<string, { m: number; f: number } | null>();
   const fatiaDe = (e: ExameMotor) => {
     if (!fatiaCache.has(e.id)) {

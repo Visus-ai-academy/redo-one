@@ -558,14 +558,17 @@ export const regrasFrenteSegmentos = pgTable(
 );
 
 /**
- * Mistura entre segmentos (a do neurologista), na ordem do cadastro. Especialidade nula = o
- * segmento em qualquer especialidade; segmento nulo = o geral da especialidade.
+ * Mistura entre segmentos (a do neurologista), na ordem do cadastro. "Qualquer especialidade" é
+ * `todas_especialidades` (com a especialidade nula; vazio nunca é "qualquer"); segmento nulo = o
+ * geral da especialidade.
  */
 export const regrasFrenteMistura = pgTable(
   'regras_frente_mistura',
   {
     regraFrenteId: daRegra(),
     ordem: integer('ordem').notNull(),
+    /** O segmento em qualquer especialidade (com `especialidade_id` nulo). */
+    todasEspecialidades: boolean('todas_especialidades').notNull().default(false),
     especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
       onDelete: 'cascade',
     }),

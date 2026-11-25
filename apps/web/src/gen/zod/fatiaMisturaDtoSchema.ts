@@ -6,7 +6,8 @@
 import * as z from 'zod'
 
 export const fatiaMisturaDtoSchema = z.object({
-  especialidadeId: z.uuid().nullable().describe('Nula = o segmento em qualquer especialidade.'),
+  todasEspecialidades: z.boolean().describe('O segmento em qualquer especialidade (com `especialidadeId` nula). Sem ele, a especialidade é obrigatória.'),
+  especialidadeId: z.uuid().nullable().describe('Sem `todasEspecialidades`: a especialidade da fatia.'),
   subespecialidadeId: z.uuid().nullable().describe('Nulo = o geral (exame sem segmento) da especialidade.'),
 })
 

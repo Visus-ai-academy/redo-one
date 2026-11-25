@@ -49,6 +49,7 @@ export function regrasDoDto(dto: RegrasFrenteDto): Omit<RegrasFrente, 'frente'> 
       pacoteAParte: s.pacoteAParte,
     })),
     mistura: dto.mistura.map((f) => ({
+      todasEspecialidades: f.todasEspecialidades,
       especialidadeId: f.especialidadeId,
       subespecialidadeId: f.subespecialidadeId,
     })),

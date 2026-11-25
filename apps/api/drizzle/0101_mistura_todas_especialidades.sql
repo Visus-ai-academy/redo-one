@@ -1,0 +1,1 @@
+ALTER TABLE "regras_frente_mistura" ADD COLUMN "todas_especialidades" boolean DEFAULT false NOT NULL;

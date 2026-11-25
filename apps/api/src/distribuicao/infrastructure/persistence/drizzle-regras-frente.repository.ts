@@ -139,6 +139,7 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
           pacoteAParte: s.pacoteAParte,
         })),
         mistura: mistDe(l.id).map((m) => ({
+          todasEspecialidades: m.todasEspecialidades,
           especialidadeId: m.especialidadeId,
           subespecialidadeId: m.subespecialidadeId,
         })),

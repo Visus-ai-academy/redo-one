@@ -156,8 +156,8 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
         },
       ],
       mistura: [
-        { especialidadeId: null, subespecialidadeId: id('cp') },
-        { especialidadeId: id('neuro'), subespecialidadeId: null },
+        { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: id('cp') },
+        { todasEspecialidades: false, especialidadeId: id('neuro'), subespecialidadeId: null },
       ],
       listaDepoisDosFixos: true,
     };

@@ -23058,11 +23058,15 @@
       "FatiaMisturaDto": {
         "type": "object",
         "properties": {
+          "todasEspecialidades": {
+            "type": "boolean",
+            "description": "O segmento em qualquer especialidade (com `especialidadeId` nula). Sem ele, a especialidade é obrigatória."
+          },
           "especialidadeId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Nula = o segmento em qualquer especialidade."
+            "description": "Sem `todasEspecialidades`: a especialidade da fatia."
           },
           "subespecialidadeId": {
             "type": "string",
@@ -23072,6 +23076,7 @@
           }
         },
         "required": [
+          "todasEspecialidades",
           "especialidadeId",
           "subespecialidadeId"
         ]

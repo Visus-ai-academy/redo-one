@@ -179,8 +179,8 @@ describe('regras da frente', () => {
           NEURO,
           editadas({
             mistura: [
-              { especialidadeId: 'msk', subespecialidadeId: 's-avc' },
-              { especialidadeId: 'neuro', subespecialidadeId: null },
+              { todasEspecialidades: false, especialidadeId: 'msk', subespecialidadeId: 's-avc' },
+              { todasEspecialidades: false, especialidadeId: 'neuro', subespecialidadeId: null },
             ],
           }),
         ),
@@ -190,8 +190,8 @@ describe('regras da frente', () => {
         NEURO,
         editadas({
           mistura: [
-            { especialidadeId: 'msk', subespecialidadeId: 's-colunas' },
-            { especialidadeId: null, subespecialidadeId: 's-avc' },
+            { todasEspecialidades: false, especialidadeId: 'msk', subespecialidadeId: 's-colunas' },
+            { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: 's-avc' },
           ],
         }),
       );
@@ -202,8 +202,8 @@ describe('regras da frente', () => {
       const antigas = editadas({
         segmentos: [segmento('s-avc')],
         mistura: [
-          { especialidadeId: 'msk', subespecialidadeId: 's-avc' },
-          { especialidadeId: 'mama', subespecialidadeId: null },
+          { todasEspecialidades: false, especialidadeId: 'msk', subespecialidadeId: 's-avc' },
+          { todasEspecialidades: false, especialidadeId: 'mama', subespecialidadeId: null },
         ],
       });
       await repo.salvar({ frente: MAMA, ...antigas });

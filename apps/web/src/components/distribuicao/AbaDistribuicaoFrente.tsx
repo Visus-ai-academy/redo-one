@@ -36,6 +36,7 @@ import {
   type CatalogoRegras,
   DIAS_DA_SEMANA,
   esquemaRegras,
+  QUALQUER_ESPECIALIDADE,
   type ReferenciasOperacao,
   regrasParaApi,
   resumoRegras,
@@ -609,9 +610,10 @@ function FormRegras({
                             {(field) => (
                               <field.SelectField
                                 label="Especialidade"
-                                placeholder="Qualquer"
+                                placeholder="Escolha"
+                                required
                                 opcoes={[
-                                  { valor: '', rotulo: 'Qualquer' },
+                                  { valor: QUALQUER_ESPECIALIDADE, rotulo: 'Qualquer' },
                                   ...catalogo.especialidades.map((e) => ({
                                     valor: e.id,
                                     rotulo: e.nome,

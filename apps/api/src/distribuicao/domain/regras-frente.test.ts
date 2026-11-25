@@ -43,8 +43,8 @@ describe('regras da frente', () => {
             },
           ],
           mistura: [
-            { especialidadeId: null, subespecialidadeId: 'colunas' },
-            { especialidadeId: 'neuro', subespecialidadeId: null },
+            { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: 'colunas' },
+            { todasEspecialidades: false, especialidadeId: 'neuro', subespecialidadeId: null },
           ],
         }),
       ),
@@ -159,12 +159,26 @@ describe('regras da frente', () => {
 
   it('mistura: duas ou mais fatias, cada uma com especialidade ou segmento, sem repetir', () => {
     const f = (especialidadeId: string | null, subespecialidadeId: string | null) => ({
+      todasEspecialidades: especialidadeId === null,
       especialidadeId,
       subespecialidadeId,
     });
     falha(regras({ mistura: [f('neuro', null)] }), /duas fatias/);
-    falha(regras({ mistura: [f(null, null), f('neuro', null)] }), /especialidade ou um segmento/);
+    falha(regras({ mistura: [f(null, null), f('neuro', null)] }), /precisa de um segmento/);
     falha(regras({ mistura: [f('neuro', null), f('neuro', null)] }), /fatia repetida/);
+    // Vazio nunca é "qualquer especialidade".
+    falha(
+      regras({
+        mistura: [{ ...f(null, 'colunas'), todasEspecialidades: false }, f('neuro', null)],
+      }),
+      /escolha a especialidade/,
+    );
+    falha(
+      regras({
+        mistura: [{ ...f('neuro', 'colunas'), todasEspecialidades: true }, f('neuro', null)],
+      }),
+      /não as duas/,
+    );
   });
 
   it('canônica: listas de ids e dias ordenados (a ordem da mistura conta)', () => {
@@ -188,8 +202,8 @@ describe('regras da frente', () => {
           ],
         },
         mistura: [
-          { especialidadeId: 'z', subespecialidadeId: null },
-          { especialidadeId: 'a', subespecialidadeId: null },
+          { todasEspecialidades: false, especialidadeId: 'z', subespecialidadeId: null },
+          { todasEspecialidades: false, especialidadeId: 'a', subespecialidadeId: null },
         ],
       }),
     );
@@ -235,8 +249,8 @@ describe('regras da frente', () => {
             },
           ],
           mistura: [
-            { especialidadeId: null, subespecialidadeId: 'colunas' },
-            { especialidadeId: 'msk', subespecialidadeId: null },
+            { todasEspecialidades: true, especialidadeId: null, subespecialidadeId: 'colunas' },
+            { todasEspecialidades: false, especialidadeId: 'msk', subespecialidadeId: null },
           ],
         }),
       ),

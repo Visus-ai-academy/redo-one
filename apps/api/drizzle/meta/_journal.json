@@ -708,6 +708,20 @@
       "when": 1795638169387,
       "tag": "0100_usuarios_ve_toda_escala_dados",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1795638179708,
+      "tag": "0101_mistura_todas_especialidades",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1795638180260,
+      "tag": "0102_mistura_todas_especialidades_dados",
+      "breakpoints": true
     }
   ]
 }
