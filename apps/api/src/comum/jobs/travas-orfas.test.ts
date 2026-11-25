@@ -1,11 +1,120 @@
+import { EventEmitter } from 'node:events';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { adicionarJob } from './adicionar-job';
-import { assumirTrabalho } from './travas-orfas';
+import { assumirTrabalho, PRAZO_CONSULTA_MS, VERIFICACAO_TRAVA_MS } from './travas-orfas';
+
+/** Cliente do pg de mentira: responde pelo `responder` e guarda como foi devolvido ao pool. */
+class ClienteFalso extends EventEmitter {
+  devolvido: { erro?: unknown } | undefined;
+  responder: (sql: string) => Promise<{ rows: unknown[] }> = async (sql) =>
+    sql.includes('locked_by') ? { rows: [] } : { rows: [{ ok: true }] };
+  consultas: string[] = [];
+  query = vi.fn(async (sql: string) => {
+    this.consultas.push(sql);
+    return this.responder(sql);
+  });
+  release = vi.fn((erro?: unknown) => {
+    this.devolvido = { erro };
+  });
+}
+
+const nuncaResponde = () => new Promise<never>(() => {});
+
+describe('sessão do trabalhador (conexão que segura a trava)', () => {
+  let cliente: ClienteFalso;
+  const assumir = () =>
+    assumirTrabalho({ connect: async () => cliente } as unknown as Pool).then((s) => {
+      if (!s) throw new Error('não assumiu');
+      return s;
+    });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    cliente = new ClienteFalso();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('avisa que a trava se perdeu quando a conexão dá erro', async () => {
+    const sessao = await assumir();
+
+    cliente.emit('error', new Error('read ECONNRESET'));
+
+    await expect(sessao.perdida).resolves.toMatch(/ECONNRESET/);
+  });
+
+  it('avisa que a trava se perdeu quando a conexão termina', async () => {
+    const sessao = await assumir();
+
+    cliente.emit('end');
+
+    await expect(sessao.perdida).resolves.toMatch(/conexão/);
+  });
+
+  it('confere de tempos em tempos e avisa quando o banco já não registra a trava', async () => {
+    const sessao = await assumir();
+    let perdida: string | undefined;
+    void sessao.perdida.then((m) => {
+      perdida = m;
+    });
+    await vi.advanceTimersByTimeAsync(VERIFICACAO_TRAVA_MS);
+    expect(perdida).toBeUndefined();
+
+    cliente.responder = async () => ({ rows: [{ ok: false }] });
+    await vi.advanceTimersByTimeAsync(VERIFICACAO_TRAVA_MS);
+
+    expect(perdida).toMatch(/trava/);
+  });
+
+  it('avisa que a trava se perdeu quando a conferência não responde no prazo', async () => {
+    const sessao = await assumir();
+    cliente.responder = nuncaResponde;
+
+    await vi.advanceTimersByTimeAsync(VERIFICACAO_TRAVA_MS + PRAZO_CONSULTA_MS);
+
+    await expect(sessao.perdida).resolves.toMatch(/prazo/);
+  });
+
+  it('ao encerrar, solta a trava e devolve a conexão ao pool', async () => {
+    const sessao = await assumir();
+
+    await sessao.encerrar();
+
+    expect(cliente.consultas.at(-1)).toMatch(/pg_advisory_unlock/);
+    expect(cliente.devolvido).toEqual({ erro: undefined });
+  });
+
+  it('com a conexão morta, encerra dentro do prazo e descarta a conexão', async () => {
+    const sessao = await assumir();
+    cliente.emit('error', new Error('read ECONNRESET'));
+    cliente.responder = nuncaResponde;
+    let encerrou = false;
+
+    void sessao.encerrar().then(() => {
+      encerrou = true;
+    });
+    await vi.advanceTimersByTimeAsync(PRAZO_CONSULTA_MS);
+
+    expect(encerrou).toBe(true);
+    expect(cliente.devolvido?.erro).toBeInstanceOf(Error);
+  });
+
+  it('depois de encerrar, para de conferir a trava', async () => {
+    const sessao = await assumir();
+    await sessao.encerrar();
+    const consultas = cliente.consultas.length;
+
+    await vi.advanceTimersByTimeAsync(VERIFICACAO_TRAVA_MS * 3);
+
+    expect(cliente.consultas.length).toBe(consultas);
+  });
+});
 
 // Roda contra um Postgres de verdade; sem TEST_DATABASE_URL, fica "skipped".
 const url = process.env.TEST_DATABASE_URL;

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
+import { comPrazo } from '../comum/prazo';
 import { DATABASE, PG_POOL } from './database';
 import * as schema from './schema';
 
@@ -10,6 +11,11 @@ import * as schema from './schema';
 const POOL_MAX_PADRAO = 10;
 /** Abrir conexão custa ~0,5 s no banco remoto: conexões paradas ficam 5 min antes de fechar. */
 const POOL_OCIOSO_MS = 5 * 60 * 1000;
+/**
+ * Prazo para fechar o pool no desligamento. O `end` do pg espera as conexões emprestadas voltarem,
+ * e uma consulta presa numa conexão morta nunca volta: passado o prazo, o desligamento segue.
+ */
+export const PRAZO_FECHAR_POOL_MS = 10_000;
 
 function maximoDeConexoes(config: ConfigService): number {
   const valor = config.get<string>('DATABASE_POOL_MAX');
@@ -63,6 +69,8 @@ export class DatabaseModule implements OnApplicationShutdown {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async onApplicationShutdown() {
-    await this.pool.end();
+    await comPrazo(this.pool.end(), PRAZO_FECHAR_POOL_MS, 'fechar o pool').catch((erro) =>
+      new Logger('Banco').warn(`Desligando sem fechar todas as conexões: ${erro.message}`),
+    );
   }
 }

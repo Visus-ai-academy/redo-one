@@ -1,10 +1,10 @@
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { Client, type Pool } from 'pg';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { DATABASE, PG_POOL } from './database';
-import { DatabaseModule } from './database.module';
+import { DatabaseModule, PRAZO_FECHAR_POOL_MS } from './database.module';
 
 async function createApp(env: Record<string, string> = {}) {
   const moduleRef = await Test.createTestingModule({
@@ -35,6 +35,26 @@ describe('DatabaseModule', () => {
     await app.close();
 
     expect(pool.ended).toBe(true);
+  });
+
+  it('não pendura o desligamento quando uma conexão emprestada nunca volta ao pool', async () => {
+    const app = await createApp();
+    await app.init();
+    // O `end` do pg espera todas as conexões emprestadas voltarem; uma consulta presa numa
+    // conexão morta (ex.: a do trabalhador da fila) nunca volta.
+    vi.spyOn(app.get<Pool>(PG_POOL), 'end').mockImplementation(
+      (() => new Promise<void>(() => {})) as never,
+    );
+    vi.useFakeTimers();
+    let fechou = false;
+
+    void app.close().then(() => {
+      fechou = true;
+    });
+    await vi.advanceTimersByTimeAsync(PRAZO_FECHAR_POOL_MS);
+    vi.useRealTimers();
+
+    expect(fechou).toBe(true);
   });
 
   it('mantém as conexões abertas e vivas entre requisições, até 10 por padrão', async () => {
