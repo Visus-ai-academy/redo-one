@@ -43,7 +43,7 @@ Do usuário: as seções e campos do esboço aprovado; carga trazendo tudo como 
 
 Minhas (o usuário pode corrigir):
 
-1. **Permissões** no padrão da aba de distribuição: `clientes.faturamento.ver` e `clientes.faturamento.editar`. O corte continua com `faturamento.corte.editar`.
+1. **Permissões** no padrão da aba de distribuição: `clientes.faturamento.ver` e `clientes.faturamento.editar`. O corte continua com `faturamento.corte.editar`. **Ninguém recebe o ver por padrão** (decisão do usuário, 24/11, LGPD): a migration `0052` o dava a quem via clientes, e a `0055` o revoga; quem precisa recebe a chave no papel.
 2. **Obrigatórios:** nada é obrigatório no banco (o legado tem clientes sem endereço). Na tela, se qualquer campo de endereço for preenchido, CEP, logradouro, cidade e UF passam a ser obrigatórios (com `*`). CEP com 8 dígitos; UF entre as 27 siglas; e-mails validados um a um.
 3. **E-mails de NF:** lista (`text[]`), editada como lista na tela (adicionar e remover). Na carga, separados por `,`, `;` ou espaço, sem vazios e sem repetidos, na ordem original.
 4. **CEP** guardado só com dígitos; na carga, 7 dígitos ganham o zero à esquerda; o que não der 8 dígitos vem como está e a tela mostra o erro ao editar.
