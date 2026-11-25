@@ -243,7 +243,11 @@ export async function precosComHistoriaNoRedo(
  * nunca deixa duas versões valendo. Quem já tem história no redo-one (`precosComHistoriaNoRedo`)
  * fica como está: o relatório da carga o lista.
  */
-async function gravarPrecos(tx: Transacao, { tabelas }: PrecosMigrados) {
+async function gravarPrecos(tx: Transacao, { tabelas, catalogo }: PrecosMigrados) {
+  // Categorias e prioridades que só os preços do dashboards-one usam: entram antes dos preços. Só
+  // vêm as que ainda não estão no redo-one, então o que a tela mudou nelas fica.
+  await upsert(tx, schema.categoriasExame, catalogo.categoriasExame);
+  await upsert(tx, schema.prioridades, catalogo.prioridades);
   // A mesma trava por dono da tela (`DrizzlePrecosRepository.aplicar`), antes de ler quem tem
   // história: uma mudança pela tela durante a carga espera, ou a carga espera por ela.
   const donos = async (tipo: 'cliente' | 'contratado', coluna: AnyPgColumn, daCarga: string[]) => [

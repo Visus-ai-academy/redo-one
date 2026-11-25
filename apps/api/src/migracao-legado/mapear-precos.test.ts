@@ -14,6 +14,7 @@ const cadastro: CadastroParaPrecos = {
     { id: 'mod-ct', codigo: 'CT' },
     { id: 'mod-mg', codigo: 'MG' },
     { id: 'mod-do', codigo: 'DO' },
+    { id: 'mod-mr', codigo: 'MR' },
   ],
   especialidades: [
     { id: 'esp-neuro', nome: 'NEURO' },
@@ -28,6 +29,10 @@ const cadastro: CadastroParaPrecos = {
   prioridades: [
     { id: 'pri-rotina', nome: 'ROTINA' },
     { id: 'pri-plantao', nome: 'PLANTÃO' },
+  ],
+  especialidadesDePara: [
+    { origem: 'MAMO', especialidadeId: 'esp-mama' },
+    { origem: 'D.O', especialidadeId: 'esp-msk' },
   ],
 };
 
@@ -115,18 +120,41 @@ describe('mapearPrecos', () => {
     ]);
   });
 
-  it('aplica os de-paras (MG, MAMO) → (MG, MAMA) e (DO, D.O) → (DO, MÚSCULO ESQUELÉTICO)', () => {
+  it('aplica os de-paras de grafia do catálogo em qualquer modalidade (MAMO → MAMA, D.O → MÚSCULO ESQUELÉTICO)', () => {
     const r = mapearPrecos(
       legado([
         preco({ modalidade: 'MG', especialidade: 'MAMO' }),
         preco({ modalidade: 'DO', especialidade: 'D.O' }),
+        preco({ modalidade: 'MR', especialidade: 'MAMO' }),
+        preco({ modalidade: 'CT', especialidade: 'D.O', categoria: 'CABEÇA' }),
       ]),
       cadastro,
     );
     expect(r.tabelas.precosCliente.map((p) => [p.modalidadeId, p.especialidadeId])).toEqual([
       ['mod-mg', 'esp-mama'],
       ['mod-do', 'esp-msk'],
+      ['mod-mr', 'esp-mama'],
+      ['mod-ct', 'esp-msk'],
     ]);
+    expect(r.naoResolvidas).toEqual([]);
+  });
+
+  it('o de-para que junta duas linhas com valores diferentes vira preço repetido: vale a mais recente', () => {
+    const r = mapearPrecos(
+      legado([
+        preco({ modalidade: 'MG', especialidade: 'MAMO', valorBase: 30 }),
+        preco({
+          modalidade: 'MG',
+          especialidade: 'MAMA',
+          valorBase: 34,
+          atualizadoEm: '2026-09-01T00:00:00.000Z',
+        }),
+      ]),
+      cadastro,
+    );
+    expect(r.tabelas.precosCliente.map((p) => p.valor)).toEqual([34]);
+    expect(r.precosRepetidos).toHaveLength(1);
+    expect(r.precosRepetidos[0]?.versoes.map((v) => v.valor)).toEqual([30, 34]);
   });
 
   it('categoria em minúsculas e sem categoria (SC) casam com o catálogo; sem prioridade = ROTINA', () => {
@@ -144,24 +172,76 @@ describe('mapearPrecos', () => {
   });
 
   it('repetidas com o mesmo valor viram uma; com valores diferentes vale a mais recente e vão para a lista', () => {
+    const antiga = preco({
+      prioridade: 'PLANTÃO',
+      valorBase: 336,
+      atualizadoEm: '2026-07-01T00:00:00.000Z',
+    });
+    const nova = preco({
+      prioridade: 'PLANTÃO',
+      valorBase: 120,
+      condVolume: 'TOTAL',
+      atualizadoEm: '2026-09-01T00:00:00.000Z',
+    });
     const r = mapearPrecos(
       legado([
         preco({ valorBase: 50 }),
         preco({ valorBase: 50, volumeFinal: 999999 }),
-        preco({ prioridade: 'PLANTÃO', valorBase: 336, atualizadoEm: '2026-07-01T00:00:00.000Z' }),
-        preco({ prioridade: 'PLANTÃO', valorBase: 120, atualizadoEm: '2026-09-01T00:00:00.000Z' }),
+        antiga,
+        nova,
       ]),
       cadastro,
     );
     expect(r.tabelas.precosCliente.map((p) => p.valor)).toEqual([50, 120]);
     expect(r.repetidasIguais).toBe(1);
-    expect(r.conflitos).toEqual([
+    expect(r.precosRepetidos).toEqual([
       {
+        tabela: 'precos_cliente',
+        donoId: idDoLegado('clientes', 'cl-a'),
         dono: 'CLINICA_A',
-        arranjo: 'CT | NEURO | SC | PLANTÃO | sem faixa',
-        valores: [120, 336],
-        escolhido: 120,
+        modalidadeId: 'mod-ct',
+        especialidadeId: 'esp-neuro',
+        categoriaId: 'cat-sc',
+        prioridadeId: 'pri-plantao',
+        faixaInicio: null,
+        faixaFim: null,
+        vigenciaDesde: null,
+        vigenciaAte: null,
+        descricao: 'CT | NEURO | SC | PLANTÃO | sem faixa',
+        versoes: [
+          {
+            id: idDoLegado('precos_servicos', antiga.id),
+            idLegado: antiga.id,
+            valor: 336,
+            condVolume: 'MOD_ESP_CAT',
+            atualizadoEm: '2026-07-01T00:00:00.000Z',
+          },
+          {
+            id: idDoLegado('precos_servicos', nova.id),
+            idLegado: nova.id,
+            valor: 120,
+            condVolume: 'TOTAL',
+            atualizadoEm: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        escolhida: idDoLegado('precos_servicos', nova.id),
       },
+    ]);
+  });
+
+  it('preço repetido da tabela padrão aponta o contratado', () => {
+    const r = mapearPrecos(
+      legado(
+        [],
+        [
+          preco({ donoId: 'ct-1', donoNome: null, valorBase: 10 }),
+          preco({ donoId: 'ct-1', donoNome: null, valorBase: 12, atualizadoEm: '2026-09-01' }),
+        ],
+      ),
+      cadastro,
+    );
+    expect(r.precosRepetidos.map((p) => [p.tabela, p.donoId, p.dono])).toEqual([
+      ['precos_padrao_contratado', idDoLegado('contratados', 'ct-1'), 'TELEIMAGEM'],
     ]);
   });
 
@@ -179,12 +259,91 @@ describe('mapearPrecos', () => {
     ]);
   });
 
+  it('categoria e prioridade que os preços usam e o catálogo não tem viram itens do catálogo', () => {
+    const r = mapearPrecos(
+      legado(
+        [
+          preco({ categoria: 'SUBCLAVIA' }),
+          preco({ categoria: 'subclavia', prioridade: 'PLANTÃO' }),
+          preco({ donoId: 'cl-b', donoNome: 'CLINICA_B', categoria: ' SUBCLAVIA ' }),
+          preco({ prioridade: 'CONVÊNIO' }),
+        ],
+        [preco({ donoId: 'ct-1', donoNome: null, categoria: 'SUBCLAVIA' })],
+      ),
+      cadastro,
+    );
+    const subclavia = idDoLegado('categorias_exame', 'carga-precos:SUBCLAVIA');
+    const convenio = idDoLegado('prioridades', 'carga-precos:CONVENIO');
+    expect(r.naoResolvidas).toEqual([]);
+    expect(r.tabelas.precosCliente.map((p) => [p.categoriaId, p.prioridadeId])).toEqual([
+      [subclavia, 'pri-rotina'],
+      [subclavia, 'pri-plantao'],
+      [subclavia, 'pri-rotina'],
+      ['cat-sc', convenio],
+    ]);
+    expect(r.tabelas.precosPadraoContratado.map((p) => p.categoriaId)).toEqual([subclavia]);
+    const descricao =
+      'Criado pela carga do dashboards-one: os preços de lá usam este item, que não existe no catálogo de lá.';
+    expect(r.catalogo).toEqual({
+      categoriasExame: [
+        { id: subclavia, nome: 'SUBCLAVIA', descricao, cor: null, ordem: 0, ativo: true },
+      ],
+      prioridades: [
+        {
+          id: convenio,
+          nome: 'CONVÊNIO',
+          descricao,
+          cor: null,
+          ordem: 0,
+          ativo: true,
+          urgente: false,
+        },
+      ],
+    });
+    expect(r.itensCriados).toEqual([
+      {
+        tipo: 'categoria',
+        id: subclavia,
+        nome: 'SUBCLAVIA',
+        linhas: 4,
+        donos: ['CLINICA_A', 'CLINICA_B', 'TELEIMAGEM'],
+        jaNoRedo: false,
+      },
+      {
+        tipo: 'prioridade',
+        id: convenio,
+        nome: 'CONVÊNIO',
+        linhas: 1,
+        donos: ['CLINICA_A'],
+        jaNoRedo: false,
+      },
+    ]);
+  });
+
+  it('o item que já está no redo-one (criado por carga anterior ou pela tela) é reaproveitado, sem regravar', () => {
+    const r = mapearPrecos(legado([preco({ categoria: 'SUBCLAVIA' })]), {
+      ...cadastro,
+      noRedo: { categorias: [{ id: 'cat-sub-tela', nome: 'Subclávia' }], prioridades: [] },
+    });
+    expect(r.tabelas.precosCliente.map((p) => p.categoriaId)).toEqual(['cat-sub-tela']);
+    expect(r.catalogo).toEqual({ categoriasExame: [], prioridades: [] });
+    expect(r.itensCriados).toEqual([
+      expect.objectContaining({ id: 'cat-sub-tela', nome: 'Subclávia', jaNoRedo: true }),
+    ]);
+  });
+
+  it('linha sem preço (valor zero) não cria item do catálogo', () => {
+    const r = mapearPrecos(legado([preco({ categoria: 'NOVA', valorBase: 0 })]), cadastro);
+    expect(r.itensCriados).toEqual([]);
+    expect(r.catalogo).toEqual({ categoriasExame: [], prioridades: [] });
+  });
+
   it('o que não resolve fica de fora e vai para o relatório, agrupado', () => {
     const r = mapearPrecos(
       legado([
-        preco({ categoria: 'SUBCLAVIA' }),
-        preco({ categoria: 'SUBCLAVIA', prioridade: 'PLANTÃO' }),
-        preco({ prioridade: 'CONVÊNIO' }),
+        preco({ modalidade: 'PET' }),
+        preco({ modalidade: 'PET', prioridade: 'PLANTÃO' }),
+        preco({ especialidade: 'GERAL' }),
         preco({ donoId: 'cl-x', donoNome: 'SUMIU' }),
         preco({ valorBase: 0, categoria: 'OIT' }),
       ]),
@@ -192,8 +351,8 @@ describe('mapearPrecos', () => {
     );
     expect(r.tabelas.precosCliente).toEqual([]);
     expect(r.naoResolvidas).toEqual([
-      { motivo: 'categoria "SUBCLAVIA" não existe no catálogo', linhas: 2, donos: ['CLINICA_A'] },
-      { motivo: 'prioridade "CONVÊNIO" não existe no catálogo', linhas: 1, donos: ['CLINICA_A'] },
+      { motivo: 'modalidade "PET" não existe no catálogo', linhas: 2, donos: ['CLINICA_A'] },
+      { motivo: 'especialidade "GERAL" não existe no catálogo', linhas: 1, donos: ['CLINICA_A'] },
       { motivo: 'cliente sem cadastro no redo-one', linhas: 1, donos: ['SUMIU'] },
       {
         motivo: 'valor zero ou negativo (o dashboards-one o trata como sem preço)',

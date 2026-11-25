@@ -18,8 +18,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { DATABASE, type Database } from '../database/database';
 import {
+  categoriasExame as tabCategorias,
   laudos as tabLaudos,
   medicos as tabMedicos,
+  prioridades as tabPrioridades,
   turnos as tabTurnos,
   usuarios,
 } from '../database/schema';
@@ -68,23 +70,6 @@ async function migrarLegado() {
   const catalogo = mapearCatalogo(legado.catalogo);
   const medicos = mapearMedicos(legado.medicos);
   const dadosFiscais = mapearDadosFiscais(legado.dadosFiscais, catalogo.tabelas);
-  const precos = mapearPrecos(legado.precos, {
-    clientes: catalogo.tabelas.clientes,
-    contratados: catalogo.tabelas.contratados.map((c) => ({
-      id: c.id as string,
-      razaoSocial: c.razaoSocial,
-    })),
-    modalidades: catalogo.tabelas.modalidades.map((m) => ({
-      id: m.id as string,
-      codigo: m.codigo,
-    })),
-    especialidades: catalogo.tabelas.especialidades.map((e) => ({
-      id: e.id as string,
-      nome: e.nome,
-    })),
-    categorias: catalogo.tabelas.categoriasExame.map((c) => ({ id: c.id as string, nome: c.nome })),
-    prioridades: catalogo.tabelas.prioridades.map((p) => ({ id: p.id as string, nome: p.nome })),
-  });
   // Os recortes de prioridade da escala e do arranjo são pelas prioridades da operação.
   const prioridadesOperacao = prioridadesOperacaoDaCarga();
   const distribuicao = mapearDistribuicao(legado.distribuicao, {
@@ -97,6 +82,40 @@ async function migrarLegado() {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   try {
     const db = app.get<Database>(DATABASE);
+    const precos = mapearPrecos(legado.precos, {
+      clientes: catalogo.tabelas.clientes,
+      contratados: catalogo.tabelas.contratados.map((c) => ({
+        id: c.id as string,
+        razaoSocial: c.razaoSocial,
+      })),
+      modalidades: catalogo.tabelas.modalidades.map((m) => ({
+        id: m.id as string,
+        codigo: m.codigo,
+      })),
+      especialidades: catalogo.tabelas.especialidades.map((e) => ({
+        id: e.id as string,
+        nome: e.nome,
+      })),
+      categorias: catalogo.tabelas.categoriasExame.map((c) => ({
+        id: c.id as string,
+        nome: c.nome,
+      })),
+      prioridades: catalogo.tabelas.prioridades.map((p) => ({ id: p.id as string, nome: p.nome })),
+      especialidadesDePara: catalogo.tabelas.especialidadesDePara.flatMap((d) =>
+        d.tipo === 'normalizacao' && d.ativo !== false && d.especialidadeId
+          ? [{ origem: d.origem, especialidadeId: d.especialidadeId }]
+          : [],
+      ),
+      // O item que só os preços usam e já está no redo-one (carga anterior ou tela) é reaproveitado.
+      noRedo: {
+        categorias: await db
+          .select({ id: tabCategorias.id, nome: tabCategorias.nome })
+          .from(tabCategorias),
+        prioridades: await db
+          .select({ id: tabPrioridades.id, nome: tabPrioridades.nome })
+          .from(tabPrioridades),
+      },
+    });
     const escala = mapearEscala(legado.escala, {
       legadoCatalogo: legado.catalogo,
       catalogo: catalogo.tabelas,
@@ -258,10 +277,27 @@ async function migrarLegado() {
       `\nPreços: ${precos.lidas} linhas ativas lidas; ${precos.repetidasIguais} repetidas com o mesmo valor viraram uma; ${precos.sentinelas} faixas sentinela viraram "sem faixa" ou faixa aberta.`,
     );
     console.log(
-      `Preços repetidos com valores diferentes (${precos.conflitos.length}): vale a alteração mais recente no dashboards-one.`,
+      `Itens do catálogo criados pela carga (${precos.itensCriados.length}): os preços do dashboards-one os usam e o catálogo de lá não os tem.`,
     );
-    for (const c of precos.conflitos)
-      console.log(`  - ${c.dono} | ${c.arranjo}: ${c.valores.join(' × ')} → ${c.escolhido}`);
+    for (const i of precos.itensCriados)
+      console.log(
+        `  - ${i.tipo} ${i.nome}${i.jaNoRedo ? ' (já estava no redo-one: reaproveitado)' : ''}: ${i.linhas} linha(s) de ${i.donos.length} dono(s) (${i.donos.slice(0, 10).join(', ')}${i.donos.length > 10 ? '…' : ''})`,
+      );
+    console.log(
+      `Preços repetidos com valores diferentes (${precos.precosRepetidos.length}): vale a alteração mais recente no dashboards-one.`,
+    );
+    const versao = (v: (typeof precos.precosRepetidos)[number]['versoes'][number]) =>
+      v.condVolume === 'MOD_ESP_CAT' ? `${v.valor}` : `${v.valor} (${v.condVolume})`;
+    for (const r of precos.precosRepetidos) {
+      const escolhida = r.versoes.find((v) => v.id === r.escolhida);
+      const vigencia =
+        r.vigenciaDesde || r.vigenciaAte
+          ? ` | vigência ${r.vigenciaDesde ?? '…'}–${r.vigenciaAte ?? '…'}`
+          : '';
+      console.log(
+        `  - ${r.dono} | ${r.descricao}${vigencia}: ${[...new Set(r.versoes.map(versao))].join(' × ')} → ${escolhida ? versao(escolhida) : '?'}`,
+      );
+    }
     const protegidos = await precosComHistoriaNoRedo(db);
     const nomeDe = new Map<string, string>([
       ...catalogo.tabelas.clientes.map((c) => [c.id, c.nome] as [string, string]),

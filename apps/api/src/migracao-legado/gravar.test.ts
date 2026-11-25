@@ -641,6 +641,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
         })),
         categorias: [{ id: idDoLegado('t', 'sc'), nome: 'SC' }],
         prioridades: [{ id: idDoLegado('t', 'ro'), nome: 'ROTINA' }],
+        especialidadesDePara: [],
       },
     );
     expect(precos.naoResolvidas).toEqual([]);
@@ -690,6 +691,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
       })),
       categorias: [{ id: idDoLegado('t', 'sc'), nome: 'SC' }],
       prioridades: [{ id: idDoLegado('t', 'ro'), nome: 'ROTINA' }],
+      especialidadesDePara: [],
     };
     const outra = mapearPrecos(
       {
@@ -744,6 +746,95 @@ describe.skipIf(!url)('gravarMigracao', () => {
       await db.execute(sql`select valor::float8 valor, vigencia_ate from precos_cliente`)
     ).rows;
     expect(depois).toEqual([{ valor: 55, vigencia_ate: '2026-11' }]);
+  });
+
+  it('grava a categoria e a prioridade que só os preços usam; de novo, reaproveita e não regrava', async () => {
+    await db.insert(schema.categoriasExame).values({ id: idDoLegado('t', 'sc'), nome: 'SC' });
+    await db.insert(schema.prioridades).values({ id: idDoLegado('t', 'ro'), nome: 'ROTINA' });
+    const linha = {
+      modalidade: 'CT',
+      especialidade: 'NEURO',
+      valorBase: 51,
+      condVolume: null,
+      volumeInicial: 1,
+      volumeFinal: 2147483647,
+      vigenciaDesde: null,
+      vigenciaAte: null,
+      atualizadoEm: '2026-08-01T00:00:00.000Z',
+      donoId: 'cl-a',
+      donoNome: 'PRN TELE_ARARAQUARA',
+    };
+    const legadoPrecos = {
+      clientes: [
+        { ...linha, id: 'p-1', categoria: 'SUBCLAVIA', prioridade: 'ROTINA' },
+        { ...linha, id: 'p-2', categoria: 'SC', prioridade: 'CONVÊNIO' },
+      ],
+      padrao: [],
+    };
+    const cadastro = async () => ({
+      clientes: catalogo.tabelas.clientes,
+      contratados: [],
+      modalidades: catalogo.tabelas.modalidades.map((m) => ({
+        id: m.id as string,
+        codigo: m.codigo,
+      })),
+      especialidades: catalogo.tabelas.especialidades.map((e) => ({
+        id: e.id as string,
+        nome: e.nome,
+      })),
+      categorias: [{ id: idDoLegado('t', 'sc'), nome: 'SC' }],
+      prioridades: [{ id: idDoLegado('t', 'ro'), nome: 'ROTINA' }],
+      especialidadesDePara: [],
+      noRedo: {
+        categorias: await db
+          .select({ id: schema.categoriasExame.id, nome: schema.categoriasExame.nome })
+          .from(schema.categoriasExame),
+        prioridades: await db
+          .select({ id: schema.prioridades.id, nome: schema.prioridades.nome })
+          .from(schema.prioridades),
+      },
+    });
+    const migrar = async () => {
+      const precos = mapearPrecos(legadoPrecos, await cadastro());
+      await gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        precos,
+      );
+      return precos;
+    };
+    const primeira = await migrar();
+    expect(primeira.itensCriados.map((i) => [i.nome, i.jaNoRedo])).toEqual([
+      ['SUBCLAVIA', false],
+      ['CONVÊNIO', false],
+    ]);
+    // A tela desativou a prioridade: a carga seguinte não a regrava.
+    await db.execute(sql`update prioridades set ativo = false where nome = 'CONVÊNIO'`);
+    const segunda = await migrar();
+    expect(segunda.itensCriados.map((i) => [i.nome, i.jaNoRedo])).toEqual([
+      ['SUBCLAVIA', true],
+      ['CONVÊNIO', true],
+    ]);
+    const itens = (
+      await db.execute(sql`
+        select 'categoria' t, nome, ativo from categorias_exame where nome = 'SUBCLAVIA'
+        union all select 'prioridade', nome, ativo from prioridades where nome = 'CONVÊNIO'
+        order by 1`)
+    ).rows;
+    expect(itens).toEqual([
+      { t: 'categoria', nome: 'SUBCLAVIA', ativo: true },
+      { t: 'prioridade', nome: 'CONVÊNIO', ativo: false },
+    ]);
+    expect((await db.execute(sql`select count(*)::int n from precos_cliente`)).rows[0]).toEqual({
+      n: 2,
+    });
   });
 
   it('o principal que saiu da exclusão fiscal do dashboards-one é desmarcado; o resto dele fica', async () => {
