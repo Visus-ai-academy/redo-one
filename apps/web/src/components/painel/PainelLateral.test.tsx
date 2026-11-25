@@ -5,7 +5,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Select } from '../select/Select';
 import { BotaoCancelar } from './BotaoCancelar';
+import { useInformarAlterado } from './fechamento';
 import { PainelLateral } from './PainelLateral';
+
+/** Campo de um formulário de dentro do painel, que avisa sozinho quando tem algo digitado. */
+function Campo() {
+  const [texto, setTexto] = useState('');
+  useInformarAlterado(texto !== '');
+  return <input aria-label="Vigência" value={texto} onChange={(e) => setTexto(e.target.value)} />;
+}
 
 function montar() {
   const onFechar = vi.fn();
@@ -200,6 +208,41 @@ describe('PainelLateral', () => {
   });
 
   describe('com alterações não salvas', () => {
+    it('um formulário de dentro avisa sozinho (`useInformarAlterado`): fechar pergunta', async () => {
+      const onFechar = vi.fn();
+      render(
+        <PainelLateral titulo="Ana Reis" onFechar={onFechar}>
+          <Campo />
+        </PainelLateral>,
+      );
+      await userEvent.type(await screen.findByRole('textbox', { name: 'Vigência' }), '01/2026');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+      expect(
+        await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+      ).toBeInTheDocument();
+      expect(onFechar).not.toHaveBeenCalled();
+    });
+
+    it('com algo digitado, recarregar ou fechar a guia do navegador pergunta antes', async () => {
+      render(
+        <PainelLateral titulo="Ana Reis" onFechar={vi.fn()}>
+          <Campo />
+        </PainelLateral>,
+      );
+      const sair = () => {
+        const evento = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(evento);
+        return evento.defaultPrevented;
+      };
+      expect(sair()).toBe(false);
+
+      await userEvent.type(await screen.findByRole('textbox', { name: 'Vigência' }), 'x');
+
+      expect(sair()).toBe(true);
+    });
+
     function montarAlterado() {
       const onFechar = vi.fn();
       render(

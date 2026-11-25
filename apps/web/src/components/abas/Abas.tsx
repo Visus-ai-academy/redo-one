@@ -2,6 +2,11 @@ import { Tabs } from '@base-ui/react/tabs';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { cn } from '../../lib/cn';
+import {
+  AlteradosDaAba,
+  useColetorDeAlterados,
+  useDescartarAlteracoes,
+} from '../painel/fechamento';
 
 export type Aba = { valor: string; rotulo: string };
 
@@ -11,12 +16,18 @@ type AbasProps = {
   /** Quem usa guarda a aba na URL (`?aba=`): dá para voltar, recarregar e mandar o link. */
   onMudar: (valor: string) => void;
   'aria-label': string;
-  /** Conteúdo da aba atual (só ele é montado). Sem conteúdo, as abas são só a navegação. */
+  /**
+   * Conteúdo da aba atual (só ele é montado). Sem conteúdo, as abas são só a navegação. Formulário
+   * dele que avisa alteração (`useInformarAlterado`) faz a troca de aba perguntar antes de descartar.
+   */
   children?: ReactNode;
   className?: string;
 };
 
-/** Subtelas do mesmo assunto (ex.: as listas do catálogo), sobre o Tabs do Base UI. */
+/**
+ * Subtelas do mesmo assunto (ex.: as listas do catálogo), sobre o Tabs do Base UI. Com algo
+ * digitado e não salvo na aba atual, trocar pergunta antes ("Descartar as alterações?").
+ */
 export function Abas({
   abas,
   valor,
@@ -27,6 +38,8 @@ export function Abas({
 }: AbasProps) {
   const lista = useRef<HTMLDivElement>(null);
   const [sobra, setSobra] = useState({ esquerda: false, direita: false });
+  const coletor = useColetorDeAlterados();
+  const { pedir, confirmacao } = useDescartarAlteracoes();
 
   // Num espaço estreito (ex.: as cinco abas do médico no painel lateral) a lista rola de lado, sem
   // barra: a borda que tem mais abas esmaece, e a aba atual sempre fica à vista.
@@ -74,7 +87,7 @@ export function Abas({
   return (
     <Tabs.Root
       value={valor}
-      onValueChange={(novo) => onMudar(String(novo))}
+      onValueChange={(novo) => pedir(coletor.alterado, () => onMudar(String(novo)))}
       className={cn('flex flex-col gap-5', className)}
     >
       <Tabs.List
@@ -109,9 +122,22 @@ export function Abas({
           value={valor}
           className="focus-visible:outline-ring flex flex-col gap-5 focus-visible:outline-2"
         >
-          {children}
+          <AlteradosDaAba value={coletor.registrar}>{children}</AlteradosDaAba>
         </Tabs.Panel>
       )}
+      {confirmacao}
     </Tabs.Root>
+  );
+}
+
+/**
+ * Conteúdo que fica montado (escondido) nas outras abas, como o cadastro: voltar a ele não perde o
+ * digitado, então trocar de aba não pergunta por ele (fechar o painel, sim).
+ */
+export function AbaMantida({ ativa, children }: { ativa: boolean; children: ReactNode }) {
+  return (
+    <div hidden={!ativa}>
+      <AlteradosDaAba value={undefined}>{children}</AlteradosDaAba>
+    </div>
   );
 }

@@ -4,7 +4,8 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { buttonClassName } from '../button/button-class';
-import { PedirFechamento, useDescartarAlteracoes } from './fechamento';
+import { CamadaDeAlterados } from './CamadaDeAlterados';
+import { PedirFechamento, useColetorDeAlterados, useDescartarAlteracoes } from './fechamento';
 
 type PainelLateralProps = {
   titulo: ReactNode;
@@ -19,7 +20,8 @@ type PainelLateralProps = {
   largura?: 'padrao' | 'larga';
   /**
    * Formulário com alterações não salvas (`useAlterado(form)`): fechar pelo X, Esc, arrastar ou
-   * pelo `BotaoCancelar` pergunta antes "Descartar as alterações?".
+   * pelo `BotaoCancelar` pergunta antes "Descartar as alterações?". Formulário de dentro (ex.: o
+   * de uma aba) avisa sozinho com `useInformarAlterado`, sem passar por aqui.
    */
   alterado?: boolean;
   children: ReactNode;
@@ -56,11 +58,21 @@ export function PainelLateral({
   const [aberto, setAberto] = useState(() => montados > 0);
   const fechando = useRef(false);
   const { pedir, confirmacao } = useDescartarAlteracoes();
+  const coletor = useColetorDeAlterados();
+  const comAlteracao = alterado || coletor.alterado;
   const fechar = () =>
-    pedir(alterado, () => {
+    pedir(comAlteracao, () => {
       fechando.current = true;
       setAberto(false);
     });
+
+  // Recarregar ou fechar a guia do navegador com algo digitado: o navegador pergunta antes.
+  useEffect(() => {
+    if (!comAlteracao) return;
+    const perguntar = (evento: BeforeUnloadEvent) => evento.preventDefault();
+    window.addEventListener('beforeunload', perguntar);
+    return () => window.removeEventListener('beforeunload', perguntar);
+  }, [comAlteracao]);
 
   useEffect(() => {
     montados += 1;
@@ -129,7 +141,9 @@ export function PainelLateral({
               </Drawer.Close>
             </div>
             <Drawer.Content className="flex flex-col">
-              <PedirFechamento value={fechar}>{children}</PedirFechamento>
+              <CamadaDeAlterados registrar={coletor.registrar}>
+                <PedirFechamento value={fechar}>{children}</PedirFechamento>
+              </CamadaDeAlterados>
             </Drawer.Content>
             {confirmacao}
           </Drawer.Popup>

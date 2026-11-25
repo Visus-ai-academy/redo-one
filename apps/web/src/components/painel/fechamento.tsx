@@ -1,5 +1,5 @@
 import { type AnyFormApi, useStore } from '@tanstack/react-form';
-import { createContext, type ReactNode, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 
@@ -42,4 +42,55 @@ export function useDescartarAlteracoes() {
 export function useAlterado(form: AnyFormApi, iniciais: unknown) {
   const valores = useStore(form.store, (estado) => estado.values);
   return JSON.stringify(valores) !== JSON.stringify(iniciais);
+}
+
+/** Registra se um formulário (`chave`) tem alteração não salva. */
+type Registrar = (chave: object, alterado: boolean) => void;
+
+/**
+ * Coletor da camada (`PainelLateral`, `Dialogo`): fechar pergunta se algum formulário de dentro
+ * avisou alteração.
+ */
+export const AlteradosDaCamada = createContext<Registrar | undefined>(undefined);
+/**
+ * Coletor da aba aberta (`Abas`): trocar de aba pergunta se algum formulário dela avisou alteração.
+ * O que fica montado na troca (`AbaMantida`) e as camadas abertas de dentro ficam de fora.
+ */
+export const AlteradosDaAba = createContext<Registrar | undefined>(undefined);
+
+/** Junta os avisos de `useInformarAlterado` de quem está dentro: `alterado` se algum avisou. */
+export function useColetorDeAlterados() {
+  const [alterados, setAlterados] = useState<ReadonlySet<object>>(() => new Set());
+  const registrar = useCallback<Registrar>((chave, alterado) => {
+    setAlterados((atuais) => {
+      if (atuais.has(chave) === alterado) return atuais;
+      const novos = new Set(atuais);
+      if (alterado) novos.add(chave);
+      else novos.delete(chave);
+      return novos;
+    });
+  }, []);
+  return { alterado: alterados.size > 0, registrar };
+}
+
+/**
+ * O formulário avisa, numa linha, que tem alteração não salva (ex.:
+ * `useInformarAlterado(useAlterado(form, iniciais))`): o painel ou diálogo em volta pergunta antes
+ * de fechar, e as abas, antes de trocar. Fora deles, não faz nada. Ao sair da tela, deixa de contar.
+ */
+export function useInformarAlterado(alterado: boolean) {
+  const camada = useContext(AlteradosDaCamada);
+  const aba = useContext(AlteradosDaAba);
+  const [chave] = useState(() => ({}));
+  useEffect(() => {
+    camada?.(chave, alterado);
+    aba?.(chave, alterado);
+  }, [camada, aba, chave, alterado]);
+  useEffect(
+    () => () => {
+      camada?.(chave, false);
+      aba?.(chave, false);
+    },
+    [camada, aba, chave],
+  );
 }

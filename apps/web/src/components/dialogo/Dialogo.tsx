@@ -2,7 +2,12 @@ import { Dialog } from '@base-ui/react/dialog';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { buttonClassName } from '../button/button-class';
-import { PedirFechamento, useDescartarAlteracoes } from '../painel/fechamento';
+import { CamadaDeAlterados } from '../painel/CamadaDeAlterados';
+import {
+  PedirFechamento,
+  useColetorDeAlterados,
+  useDescartarAlteracoes,
+} from '../painel/fechamento';
 
 type DialogoProps = {
   titulo: ReactNode;
@@ -50,11 +55,12 @@ export function Dialogo({
   const fechando = useRef(false);
   const popup = useRef<HTMLDivElement>(null);
   const { pedir, confirmacao } = useDescartarAlteracoes();
+  const coletor = useColetorDeAlterados();
 
   useEffect(() => setAberto(true), []);
 
   const fechar = () =>
-    pedir(alterado, () => {
+    pedir(alterado || coletor.alterado, () => {
       fechando.current = true;
       setAberto(false);
     });
@@ -102,22 +108,24 @@ export function Dialogo({
               </Dialog.Description>
             )}
           </div>
-          <PedirFechamento value={fechar}>
-            {onEnviar ? (
-              <form
-                noValidate
-                onSubmit={(evento) => {
-                  evento.preventDefault();
-                  onEnviar();
-                }}
-                className="flex min-h-0 flex-col"
-              >
-                {corpo}
-              </form>
-            ) : (
-              corpo
-            )}
-          </PedirFechamento>
+          <CamadaDeAlterados registrar={coletor.registrar}>
+            <PedirFechamento value={fechar}>
+              {onEnviar ? (
+                <form
+                  noValidate
+                  onSubmit={(evento) => {
+                    evento.preventDefault();
+                    onEnviar();
+                  }}
+                  className="flex min-h-0 flex-col"
+                >
+                  {corpo}
+                </form>
+              ) : (
+                corpo
+              )}
+            </PedirFechamento>
+          </CamadaDeAlterados>
           {confirmacao}
         </Dialog.Popup>
       </Dialog.Portal>

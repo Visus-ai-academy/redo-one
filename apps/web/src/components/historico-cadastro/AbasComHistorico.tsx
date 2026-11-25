@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 
-import { Abas } from '../abas/Abas';
+import { AbaMantida, Abas } from '../abas/Abas';
 
 /** Aba além de Cadastro e Histórico (ex.: Distribuição), entre as duas. */
 export type AbaExtra = { valor: string; rotulo: string; conteudo: ReactNode };
@@ -37,7 +37,7 @@ export function AbasComHistorico({
       className="gap-0 pt-2"
     >
       {/* O cadastro fica montado (escondido) nas outras abas: voltar a ele não perde o digitado. */}
-      <div hidden={aba !== 'cadastro'}>{children}</div>
+      <AbaMantida ativa={aba === 'cadastro'}>{children}</AbaMantida>
       {aba === 'historico' && historico ? historico : extra?.conteudo}
     </Abas>
   );
