@@ -66,7 +66,7 @@ describe('PainelEscalaFixa', () => {
     const acoes = montar({ buscarGrade });
     expect(screen.getByRole('dialog', { name: 'Montar escala' })).toBeInTheDocument();
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
-    expect(screen.getByLabelText(/A partir de/)).toHaveValue('2026-11-16');
+    expect(screen.getByLabelText(/A partir de/)).toHaveValue('16/11/2026');
 
     // Só as frentes com turno no recorte.
     await userEvent.click(screen.getByRole('combobox', { name: /Frente/ }));

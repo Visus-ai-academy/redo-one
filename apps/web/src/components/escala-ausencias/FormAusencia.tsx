@@ -9,6 +9,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import type { OpcaoMarcar } from '../form/CheckboxListField';
+import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -168,26 +169,10 @@ export function FormAusencia({
         </form.AppField>
         <div className="flex flex-wrap gap-4">
           <form.AppField name="dataInicio">
-            {(field) => (
-              <field.TextField
-                label="Início"
-                type="date"
-                placeholder="dd/mm/aaaa"
-                required
-                className="flex-[1_1_150px]"
-              />
-            )}
+            {() => <DateField label="Início" required className="flex-[1_1_150px]" />}
           </form.AppField>
           <form.AppField name="dataFim">
-            {(field) => (
-              <field.TextField
-                label="Fim"
-                type="date"
-                placeholder="dd/mm/aaaa"
-                required
-                className="flex-[1_1_150px]"
-              />
-            )}
+            {() => <DateField label="Fim" required className="flex-[1_1_150px]" />}
           </form.AppField>
         </div>
         {frentes.length > 0 && (

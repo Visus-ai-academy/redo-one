@@ -1,16 +1,14 @@
-import { Input } from '@base-ui/react/input';
 import { ArrowLeft } from '@phosphor-icons/react';
 import { Link } from '@tanstack/react-router';
 import { useId, useMemo, useState } from 'react';
-
 import type { EntidadeEscalaKey } from '../../gen/types/EntidadeEscala';
 import type { ItemHistoricoDto } from '../../gen/types/ItemHistoricoDto';
 import type { PaginaHistoricoDto } from '../../gen/types/PaginaHistoricoDto';
 import { dataHoraCurta } from '../../lib/datas';
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { ListaCadastro } from '../cadastro/ListaCadastro';
+import { CampoData } from '../campo-data/CampoData';
 import { createDataTableColumnHelper } from '../data-table/columns';
-import { controlClassName } from '../form/control-class';
 import { Select } from '../select/Select';
 import {
   alteracoesDoEvento,
@@ -157,9 +155,8 @@ export function HistoricoEscala({
               <label htmlFor={deId} className="text-muted-foreground text-[13px]">
                 De
               </label>
-              <Input
+              <CampoData
                 id={deId}
-                type="date"
                 value={filtros.de ?? ''}
                 max={filtros.ate}
                 onValueChange={(valor) => {
@@ -169,14 +166,13 @@ export function HistoricoEscala({
                     de && filtros.ate && de > filtros.ate ? { de, ate: undefined } : { de },
                   );
                 }}
-                className={controlClassName('app', 'min-w-0 flex-1 md:w-40')}
+                className="min-w-0 flex-1 md:w-40"
               />
               <label htmlFor={ateId} className="text-muted-foreground text-[13px]">
                 Até
               </label>
-              <Input
+              <CampoData
                 id={ateId}
-                type="date"
                 value={filtros.ate ?? ''}
                 min={filtros.de}
                 onValueChange={(valor) => {
@@ -185,7 +181,7 @@ export function HistoricoEscala({
                     ate && filtros.de && ate < filtros.de ? { ate, de: undefined } : { ate },
                   );
                 }}
-                className={controlClassName('app', 'min-w-0 flex-1 md:w-40')}
+                className="min-w-0 flex-1 md:w-40"
               />
             </span>
           </>

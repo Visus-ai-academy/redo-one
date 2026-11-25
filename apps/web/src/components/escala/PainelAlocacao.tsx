@@ -12,6 +12,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -302,11 +303,9 @@ export function PainelAlocacao({
                 )}
                 <div className="flex flex-wrap gap-4">
                   <form.AppField name="dataInicio">
-                    {(field) => (
-                      <field.TextField
-                        type="date"
+                    {() => (
+                      <DateField
                         label={comFim ? 'Início' : 'A partir de'}
-                        placeholder="AAAA-MM-DD"
                         required
                         className="flex-[1_1_150px]"
                       />
@@ -314,15 +313,7 @@ export function PainelAlocacao({
                   </form.AppField>
                   {comFim && (
                     <form.AppField name="dataFim">
-                      {(field) => (
-                        <field.TextField
-                          type="date"
-                          label="Fim"
-                          placeholder="AAAA-MM-DD"
-                          required
-                          className="flex-[1_1_150px]"
-                        />
-                      )}
+                      {() => <DateField label="Fim" required className="flex-[1_1_150px]" />}
                     </form.AppField>
                   )}
                 </div>

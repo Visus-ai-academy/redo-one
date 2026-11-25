@@ -17,6 +17,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { controlClassName } from '../form/control-class';
+import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { PainelLateral } from '../painel/PainelLateral';
 import { Skeleton } from '../skeleton/Skeleton';
@@ -201,15 +202,7 @@ export function PainelEscalaFixa({
             )}
           </form.AppField>
           <form.AppField name="aPartirDe">
-            {(field) => (
-              <field.TextField
-                type="date"
-                label="A partir de"
-                placeholder="AAAA-MM-DD"
-                required
-                className="flex-[1_1_150px]"
-              />
-            )}
+            {() => <DateField label="A partir de" required className="flex-[1_1_150px]" />}
           </form.AppField>
         </div>
 

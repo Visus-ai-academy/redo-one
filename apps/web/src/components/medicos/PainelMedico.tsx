@@ -14,6 +14,7 @@ import { buttonClassName } from '../button/button-class';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -362,13 +363,8 @@ function FormCadastro({
         </form.AppField>
       </div>
       <form.AppField name="dataInicioVinculo">
-        {(field) => (
-          <field.TextField
-            label="Início do vínculo"
-            type="date"
-            placeholder="AAAA-MM-DD"
-            description="Quando começou a prestar serviço."
-          />
+        {() => (
+          <DateField label="Início do vínculo" description="Quando começou a prestar serviço." />
         )}
       </form.AppField>
       <form.AppField name="senior">

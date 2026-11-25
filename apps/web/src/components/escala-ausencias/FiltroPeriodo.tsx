@@ -1,10 +1,8 @@
 import { Button } from '@base-ui/react/button';
-import { Input } from '@base-ui/react/input';
 import { Popover } from '@base-ui/react/popover';
 import { useId, useRef, useState } from 'react';
-
 import { buttonClassName } from '../button/button-class';
-import { controlClassName } from '../form/control-class';
+import { CampoData } from '../campo-data/CampoData';
 import { Select } from '../select/Select';
 import {
   ATALHOS_PERIODO,
@@ -125,24 +123,22 @@ function Intervalo({
           <label htmlFor={deId} className="font-medium">
             De
           </label>
-          <Input
+          <CampoData
             id={deId}
-            type="date"
             value={inicio}
             onValueChange={(v) => {
               setInicio(v);
               setErro(false);
             }}
-            className={controlClassName('app', 'min-w-0')}
+            className="min-w-0"
           />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-2">
           <label htmlFor={ateId} className="font-medium">
             Até
           </label>
-          <Input
+          <CampoData
             id={ateId}
-            type="date"
             value={fim}
             aria-invalid={erro || undefined}
             aria-describedby={erro ? erroId : undefined}
@@ -150,7 +146,7 @@ function Intervalo({
               setFim(v);
               setErro(false);
             }}
-            className={controlClassName('app', 'aria-invalid:border-destructive min-w-0')}
+            className="min-w-0"
           />
         </span>
       </div>

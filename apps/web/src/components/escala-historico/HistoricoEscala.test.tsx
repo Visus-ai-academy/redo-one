@@ -146,7 +146,7 @@ describe('HistoricoEscala', () => {
   it('filtra pelo período; um início depois do fim limpa o fim', async () => {
     const { onFiltrar } = montar({ filtros: { ate: '2026-11-10' } });
 
-    fireEvent.change(await screen.findByLabelText('De'), { target: { value: '2026-11-12' } });
+    fireEvent.change(await screen.findByLabelText('De'), { target: { value: '12/11/2026' } });
 
     expect(onFiltrar).toHaveBeenLastCalledWith({ de: '2026-11-12', ate: undefined });
   });

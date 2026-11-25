@@ -13,7 +13,7 @@ type TextFieldProps = {
   /** Exemplo do formato esperado (`nome@empresa.com.br`, `Ex.: Maria Souza`). Nunca substitui o rótulo. */
   placeholder: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'search' | 'tel' | 'url' | 'date';
+  type?: 'text' | 'email' | 'search' | 'tel' | 'url';
   description?: string;
   autoComplete?: string;
   /** `acesso`: controles de 44px das telas de login, recuperação e convite. */

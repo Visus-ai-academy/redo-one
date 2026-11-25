@@ -12,6 +12,7 @@ import type { SalvarAjusteDiaDto } from '../../gen/types/SalvarAjusteDiaDto';
 import { plural } from '../../lib/formato';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
+import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { CaixasField } from './campos';
@@ -292,11 +293,11 @@ function FormAjuste({
         )}
       </form.AppField>
       <form.AppField name="ate">
-        {(field) => (
-          <field.TextField
-            type="date"
+        {() => (
+          <DateField
             label="Até"
-            placeholder="AAAA-MM-DD"
+            min={data}
+            max={ateMaximo}
             description={
               noPeriodo
                 ? `De ${diaMes(data)} a ${diaMes(ate)}, nos dias de plantão; os outros seguem o arranjo e as regras da frente.`

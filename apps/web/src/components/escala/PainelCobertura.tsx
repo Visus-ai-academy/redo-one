@@ -6,6 +6,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
+import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -88,22 +89,22 @@ export function PainelCobertura({
         </form.AppField>
         <div className="flex flex-wrap gap-4">
           <form.AppField name="dataInicio">
-            {(field) => (
-              <field.TextField
-                type="date"
+            {() => (
+              <DateField
                 label="De"
-                placeholder="AAAA-MM-DD"
+                min={titular.dataInicio}
+                max={titular.dataFim ?? undefined}
                 required
                 className="flex-[1_1_150px]"
               />
             )}
           </form.AppField>
           <form.AppField name="dataFim">
-            {(field) => (
-              <field.TextField
-                type="date"
+            {() => (
+              <DateField
                 label="Até"
-                placeholder="AAAA-MM-DD"
+                min={titular.dataInicio}
+                max={titular.dataFim ?? undefined}
                 required
                 className="flex-[1_1_150px]"
               />

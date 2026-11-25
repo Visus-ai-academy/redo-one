@@ -5,7 +5,6 @@ import { CalendarBlank, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import {
   type ComponentProps,
   type KeyboardEvent,
-  type Ref,
   type RefObject,
   useEffect,
   useRef,
@@ -48,7 +47,6 @@ type CampoDataProps = Omit<
   hoje?: string;
   /** Altura do controle: `acesso` nas telas de login. */
   tamanho?: 'app' | 'acesso';
-  inputRef?: Ref<HTMLInputElement>;
 };
 
 /**
@@ -69,7 +67,6 @@ export function CampoData({
   tamanho = 'app',
   placeholder = 'dd/mm/aaaa',
   className,
-  inputRef,
   onBlur,
   onKeyDown,
   ...props
@@ -125,11 +122,7 @@ export function CampoData({
       <div ref={ancora} className={cn('relative', className)}>
         <Input
           {...props}
-          ref={(el) => {
-            campo.current = el;
-            if (typeof inputRef === 'function') inputRef(el);
-            else if (inputRef) (inputRef as RefObject<HTMLInputElement | null>).current = el;
-          }}
+          ref={campo}
           type="text"
           inputMode="numeric"
           autoComplete="off"
@@ -150,7 +143,10 @@ export function CampoData({
             if (texto !== textoDaData(value)) setTexto(textoDaData(value));
             onBlur?.(evento);
           }}
-          className={controlClassName(tamanho, 'pr-10 tabular-nums')}
+          className={controlClassName(
+            tamanho,
+            'aria-invalid:border-destructive pr-10 tabular-nums',
+          )}
         />
         <Popover.Trigger
           disabled={disabled}

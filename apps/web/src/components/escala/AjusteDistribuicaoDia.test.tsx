@@ -134,7 +134,7 @@ describe('AjusteDistribuicaoDia', () => {
 
   it('"Até" começa no próprio dia: só neste dia, sem aviso de período', async () => {
     montar();
-    expect(await screen.findByLabelText('Até')).toHaveValue('2026-11-18');
+    expect(await screen.findByLabelText('Até')).toHaveValue('18/11/2026');
     expect(screen.getByText(/Só neste dia/)).toBeInTheDocument();
     expect(screen.queryByText(/dias de plantão/)).not.toBeInTheDocument();
   });
@@ -143,7 +143,7 @@ describe('AjusteDistribuicaoDia', () => {
     comPeriodo(['2026-11-20']);
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
-    await escolherAte('2026-11-25');
+    await escolherAte('25/11/2026');
     expect(await screen.findByText(/De 18\/11 a 25\/11/)).toBeInTheDocument();
     expect(
       await screen.findByText('Grava em 3 dias de plantão; 1 já tinha ajuste e será substituído.'),
@@ -161,12 +161,12 @@ describe('AjusteDistribuicaoDia', () => {
   it('"Até" antes do dia ou além do limite não salva', async () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
-    await escolherAte('2026-11-17');
+    await escolherAte('17/11/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
     expect(
       await screen.findByText('"Até" não pode ser antes do dia aberto (18/11).'),
     ).toBeInTheDocument();
-    await escolherAte('2026-12-19');
+    await escolherAte('19/12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
     expect(
       await screen.findByText('Escolha "Até" até 18/12 (31 dias por vez).'),
@@ -177,7 +177,7 @@ describe('AjusteDistribuicaoDia', () => {
   it('tirar ajuste com "Até" tira os do período e avisa quantos são', async () => {
     comPeriodo(['2026-11-20', '2026-11-25']);
     const { onSalvar } = montar();
-    await escolherAte('2026-11-27');
+    await escolherAte('27/11/2026');
     expect(
       await screen.findByText('Tirar ajuste tira o de 2 dias do período.'),
     ).toBeInTheDocument();

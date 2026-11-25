@@ -74,8 +74,8 @@ describe('FormAusencia', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Bruno Alves' }));
     await userEvent.click(screen.getByRole('combobox', { name: 'Tipo' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Congresso' }));
-    data('Início', '2026-12-01');
-    data('Fim', '2026-12-03');
+    data('Início', '01/12/2026');
+    data('Fim', '03/12/2026');
     await userEvent.click(screen.getByRole('checkbox', { name: 'NEURO' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Tarde' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Qua' }));
@@ -133,8 +133,8 @@ describe('FormAusencia', () => {
     expect(within(medicos).getByText('Ana Reis')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'TC' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Manhã' })).toBeChecked();
-    expect(screen.getByLabelText('Início')).toHaveValue('2026-12-05');
-    expect(screen.getByLabelText('Fim')).toHaveValue('2026-12-05');
+    expect(screen.getByLabelText('Início')).toHaveValue('05/12/2026');
+    expect(screen.getByLabelText('Fim')).toHaveValue('05/12/2026');
   });
 
   it('avisa quando o médico pedido não existe e deixa o formulário vazio', () => {
@@ -147,8 +147,8 @@ describe('FormAusencia', () => {
   it('exige médico, tipo e período coerente', async () => {
     const { onSalvar } = montar();
 
-    data('Início', '2026-12-10');
-    data('Fim', '2026-12-01');
+    data('Início', '10/12/2026');
+    data('Fim', '01/12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Lançar ausência' }));
 
     expect(await screen.findByText('Escolha ao menos um médico.')).toBeInTheDocument();
@@ -224,7 +224,7 @@ describe('FormAusencia', () => {
   it('fechar com o formulário alterado pergunta antes de descartar', async () => {
     const onFechar = vi.fn();
     montar({ onFechar });
-    data('Início', '2026-12-10');
+    data('Início', '10/12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
     expect(
       await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),

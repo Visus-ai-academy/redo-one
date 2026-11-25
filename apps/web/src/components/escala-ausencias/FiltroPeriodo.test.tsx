@@ -42,8 +42,8 @@ describe('FiltroPeriodo', () => {
 
     await escolher('Personalizado…');
     const popup = await screen.findByRole('dialog', { name: 'Período personalizado' });
-    fireEvent.change(within(popup).getByLabelText('De'), { target: { value: '2026-12-05' } });
-    fireEvent.change(within(popup).getByLabelText('Até'), { target: { value: '2026-12-12' } });
+    fireEvent.change(within(popup).getByLabelText('De'), { target: { value: '05/12/2026' } });
+    fireEvent.change(within(popup).getByLabelText('Até'), { target: { value: '12/12/2026' } });
     await userEvent.click(within(popup).getByRole('button', { name: 'Aplicar' }));
 
     expect(onMudar).toHaveBeenCalledWith({ de: '2026-12-05', ate: '2026-12-12' });
@@ -55,8 +55,8 @@ describe('FiltroPeriodo', () => {
 
     await escolher('Personalizado…');
     const popup = await screen.findByRole('dialog', { name: 'Período personalizado' });
-    fireEvent.change(within(popup).getByLabelText('De'), { target: { value: '2026-12-12' } });
-    fireEvent.change(within(popup).getByLabelText('Até'), { target: { value: '2026-12-05' } });
+    fireEvent.change(within(popup).getByLabelText('De'), { target: { value: '12/12/2026' } });
+    fireEvent.change(within(popup).getByLabelText('Até'), { target: { value: '05/12/2026' } });
     await userEvent.click(within(popup).getByRole('button', { name: 'Aplicar' }));
 
     expect(within(popup).getByText('O fim não pode ser antes do início.')).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('FiltroPeriodo', () => {
     expect(screen.getByRole('combobox', { name: 'Período' })).toHaveTextContent('05/12 a 12/12');
     await escolher('Personalizado…');
     const popup = await screen.findByRole('dialog', { name: 'Período personalizado' });
-    expect(within(popup).getByLabelText('De')).toHaveValue('2026-12-05');
+    expect(within(popup).getByLabelText('De')).toHaveValue('05/12/2026');
     await userEvent.click(within(popup).getByRole('button', { name: 'Limpar' }));
 
     expect(onMudar).toHaveBeenCalledWith({ de: undefined, ate: undefined });
