@@ -11,7 +11,10 @@ import type {
   subregrasTipificacao,
   subregrasTipificacaoFatura,
 } from '../database/schema';
-import { montarResolvedorUnidadeCliente } from '../ingestao/domain/resolver-cliente';
+import {
+  montarClientesAmbiguos,
+  montarResolvedorUnidadeCliente,
+} from '../ingestao/domain/resolver-cliente';
 import { normalizarNomeMedico } from '../medicos/comum/nome-medico';
 import { type Aviso, idDoLegado, texto } from './comum';
 import type { LegadoFiltroMedico, LegadoTipificacao } from './legado';
@@ -220,11 +223,13 @@ export function mapearTipificacao(
   }));
 
   // Resolvedores do cadastro do redo-one.
-  const resolverEmpresa = montarResolvedorUnidadeCliente({
+  const cadastroClientes = {
     clientes: cadastro.clientes,
     aliases: cadastro.clientesAliases,
     sufixos: cadastro.sufixosNomeCliente.filter((s) => s.ativo !== false).map((s) => s.sufixo),
-  });
+  };
+  const resolverEmpresa = montarResolvedorUnidadeCliente(cadastroClientes);
+  const clientesAmbiguos = montarClientesAmbiguos(cadastroClientes);
   const clientePorId = new Map(cadastro.clientes.map((c) => [c.id, c]));
   const porChave = <T>(itens: T[], chave: (i: T) => string, id: (i: T) => string | null) => {
     const m = new Map<string, string>();
@@ -309,19 +314,13 @@ export function mapearTipificacao(
   ];
   // A empresa do dashboards-one é o nome do cliente de lá, que a carga do catálogo trouxe com o
   // mesmo nome: casa primeiro pelo nome. Só sem cliente de mesmo nome vale o resolvedor da
-  // importação (apelidos e nome normalizado), que pega o primeiro de mesma chave normalizada:
-  // se outro cliente tem a mesma chave, a carga para em vez de escolher.
+  // importação (apelidos e nome normalizado); se ele fica ambíguo, a carga para em vez de
+  // escolher.
   const clientesPorNome = new Map<string, string[]>();
   for (const c of cadastro.clientes) {
     const k = chaveCadastro(c.nome);
     clientesPorNome.set(k, [...(clientesPorNome.get(k) ?? []), c.id]);
   }
-  const clientesPorChave = new Map<string, string[]>();
-  for (const c of cadastro.clientes)
-    clientesPorChave.set(c.chaveNormalizada, [
-      ...(clientesPorChave.get(c.chaveNormalizada) ?? []),
-      c.id,
-    ]);
   const nomesDe = (ids: string[]) =>
     ids
       .map((id) => clientePorId.get(id)?.nome ?? id)
@@ -329,10 +328,6 @@ export function mapearTipificacao(
       .join(', ');
   const ignoradas = new Set((opcoes.empresasIgnoradas ?? []).map(chaveCadastro));
   const empresasPorCliente = new Map<string, string[]>();
-  // Clientes de mesma chave normalizada (RADI_IMAGEM × RADI-IMAGEM): a importação escolhe pela
-  // ordem do banco, que a carga não conhece; aí não dá para comparar o destino.
-  const mesmaChave = (a: string, b: string) =>
-    clientePorId.get(a)?.chaveNormalizada === clientePorId.get(b)?.chaveNormalizada;
   /** Empresa gravada no cliente de mesmo nome cujos laudos a importação manda para outro. */
   const outroDestino: { empresa: string; clienteId: string; destinoId: string }[] = [];
   for (const empresa of empresas) {
@@ -342,13 +337,10 @@ export function mapearTipificacao(
     }
     const mesmoNome = clientesPorNome.get(chaveCadastro(empresa)) ?? [];
     const id = mesmoNome.length ? (mesmoNome[0] as string) : resolverEmpresa(empresa);
-    const candidatos =
-      mesmoNome.length || !id
-        ? mesmoNome
-        : (clientesPorChave.get(clientePorId.get(id)?.chaveNormalizada ?? '') ?? []);
-    if (candidatos.length > 1) {
+    const candidatos = mesmoNome.length ? nomesDe(mesmoNome) : clientesAmbiguos(empresa).join(', ');
+    if (mesmoNome.length > 1 || (!id && candidatos)) {
       erros.push(
-        `Empresa "${empresa}" casa com mais de um cliente do redo-one (${nomesDe(candidatos)}): diga qual vale.`,
+        `Empresa "${empresa}" casa com mais de um cliente do redo-one (${candidatos}): diga qual vale.`,
       );
       continue;
     }
@@ -358,8 +350,7 @@ export function mapearTipificacao(
     }
     empresasPorCliente.set(id, [...(empresasPorCliente.get(id) ?? []), empresa]);
     const destinoId = mesmoNome.length ? resolverEmpresa(empresa) : id;
-    if (destinoId && destinoId !== id && !mesmaChave(destinoId, id))
-      outroDestino.push({ empresa, clienteId: id, destinoId });
+    if (destinoId && destinoId !== id) outroDestino.push({ empresa, clienteId: id, destinoId });
   }
 
   const tabelas: TipificacaoMigrada['tabelas'] = {

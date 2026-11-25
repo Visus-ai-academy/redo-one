@@ -139,4 +139,30 @@ describe.skipIf(!url)('DrizzleCadastrosIngestao', () => {
     expect(cadastros.resolverMedico('Dra. Ana Souza Prado', 45)).toBe(ids.ana);
     expect(cadastros.resolverMedico('Dra. Ana Souza Prado', 999)).toBeNull();
   });
+
+  it.each([
+    ['sublinhado gravado primeiro', ['RADI_IMAGEM', 'RADI-IMAGEM']],
+    ['hífen gravado primeiro', ['RADI-IMAGEM', 'RADI_IMAGEM']],
+  ])('clientes de mesma chave: nome exato, apelido ou aviso (%s)', async (_, nomes) => {
+    await db
+      .delete(schema.clientes)
+      .where(sql`${schema.clientes.chaveNormalizada} = 'radi imagem'`);
+    const radi: Record<string, string> = {};
+    for (const nome of nomes)
+      radi[nome] = await db
+        .insert(schema.clientes)
+        .values({ nome, chaveNormalizada: 'radi imagem' })
+        .returning()
+        .then((r) => r[0]?.id ?? '');
+    await db
+      .insert(schema.clientesAliases)
+      .values({ clienteId: radi.RADI_IMAGEM ?? '', tipo: 'exato', padrao: 'RADI', chave: 'RADI' });
+
+    const cadastros = await new DrizzleCadastrosIngestao(db).carregar();
+    expect(cadastros.resolverCliente('RADI_IMAGEM')).toBe(radi.RADI_IMAGEM);
+    expect(cadastros.resolverCliente('RADI-IMAGEM')).toBe(radi['RADI-IMAGEM']);
+    expect(cadastros.resolverCliente('RADI')).toBe(radi.RADI_IMAGEM);
+    expect(cadastros.resolverCliente('RADI.IMAGEM')).toBeNull();
+    expect(cadastros.clientesAmbiguos?.('RADI.IMAGEM')).toEqual(['RADI-IMAGEM', 'RADI_IMAGEM']);
+  });
 });

@@ -186,6 +186,27 @@ describe('prepararLaudo', () => {
     );
   });
 
+  it('cliente de nome ambíguo vira aviso de cliente que diz entre quais', () => {
+    const { laudo, pendencias, conferidos } = prepararLaudo(
+      linha({ empresa: 'RADI.IMAGEM' }),
+      'normal',
+      {
+        ...cadastros,
+        clientesAmbiguos: (empresa) =>
+          empresa === 'RADI.IMAGEM' ? ['RADI-IMAGEM', 'RADI_IMAGEM'] : [],
+      },
+      pseudonimo,
+      cortes,
+    );
+    expect(laudo.clienteId).toBeNull();
+    expect(pendencias).toContainEqual({
+      tipo: 'cliente',
+      chave: 'radi imagem',
+      valor: 'RADI.IMAGEM (mais de um cliente com esse nome: RADI-IMAGEM, RADI_IMAGEM)',
+    });
+    expect(conferidos).not.toContainEqual(expect.objectContaining({ tipo: 'cliente' }));
+  });
+
   it('a pendência de estudo usa a chave do estudo sem o sufixo X', () => {
     const { pendencias } = prepararLaudo(
       linha({ estudo: 'RM Espectroscopia X2' }),

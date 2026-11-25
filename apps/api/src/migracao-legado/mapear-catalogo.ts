@@ -1,4 +1,4 @@
-import { normalizarNome } from '../catalogo/comum/nomes';
+import { chaveCadastro, normalizarNome } from '../catalogo/comum/nomes';
 import type {
   categoriasExame,
   clientes,
@@ -70,8 +70,9 @@ const VARIACOES_MODALIDADE: [origem: string, destino: string][] = [
 ];
 
 const semAcento = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
 /** Casa texto livre com um cadastro sem diferenciar maiúsculas, espaços nem acentos. */
-export const chaveCadastro = (v: string | null | undefined) => semAcento(chaveTexto(v));
+export { chaveCadastro };
 
 const TIPO_DE_PARA = {
   NORMALIZACAO: 'normalizacao',

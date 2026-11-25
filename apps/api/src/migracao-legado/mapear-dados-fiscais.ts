@@ -135,6 +135,7 @@ export function mapearDadosFiscais(
   const resolver = montarResolvedorUnidadeCliente({
     clientes: cadastro.clientes.map((c) => ({
       id: c.id,
+      nome: c.nome,
       chaveNormalizada: c.chaveNormalizada,
       nomeFantasia: c.nomeFantasia ?? null,
       unificadoEmId: c.unificadoEmId ?? null,

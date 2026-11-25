@@ -11,3 +11,17 @@ export function normalizarNome(nome: string): string {
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
+
+/**
+ * Nome de cadastro como texto, sem diferenciar maiúsculas, espaços nem acentos, mas mantendo a
+ * pontuação: RADI_IMAGEM e RADI-IMAGEM são nomes diferentes, embora tenham a mesma
+ * `normalizarNome`.
+ */
+export function chaveCadastro(nome: string | null | undefined): string {
+  return (nome ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}

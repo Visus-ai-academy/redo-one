@@ -31,6 +31,7 @@ import { chaveEstudo, chaveEstudoLimpo } from '../../domain/nome-estudo';
 import type { CadastrosIngestao } from '../../domain/preparar-laudo';
 import {
   type CadastroClientes,
+  montarClientesAmbiguos,
   montarResolvedorCliente,
   montarResolvedorUnidadeCliente,
 } from '../../domain/resolver-cliente';
@@ -98,9 +99,17 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
       db.select().from(especialidadesDePara).where(eq(especialidadesDePara.ativo, true)),
       db.select().from(prioridades).where(eq(prioridades.ativo, true)),
       db.select().from(prioridadesDePara).where(eq(prioridadesDePara.ativo, true)),
-      db.select().from(clientes),
-      db.select().from(clientesAliases),
-      db.select().from(sufixosNomeCliente).where(eq(sufixosNomeCliente.ativo, true)),
+      // Em ordem, para o retrato não depender da ordem física das linhas.
+      db.select().from(clientes).orderBy(asc(clientes.nome)),
+      db
+        .select()
+        .from(clientesAliases)
+        .orderBy(asc(clientesAliases.tipo), asc(clientesAliases.chave)),
+      db
+        .select()
+        .from(sufixosNomeCliente)
+        .where(eq(sufixosNomeCliente.ativo, true))
+        .orderBy(asc(sufixosNomeCliente.sufixo)),
       db
         .select({
           id: medicos.id,
@@ -191,6 +200,7 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
         ]),
       ]),
       resolverCliente,
+      clientesAmbiguos: montarClientesAmbiguos(cadastroClientes),
       resolverUnidade: (empresa) => {
         const unidade = resolverUnidadeCliente(empresa);
         return unidade && unidade !== resolverCliente(empresa) ? unidade : null;

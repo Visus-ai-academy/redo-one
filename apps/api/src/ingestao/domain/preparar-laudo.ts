@@ -34,6 +34,11 @@ export interface CadastrosIngestao {
   /** `normalizarNome` do nome da prioridade ou da variação → id. */
   prioridades: ReadonlyMap<string, string>;
   resolverCliente: (empresa: string) => string | null;
+  /**
+   * Os clientes entre os quais a empresa fica ambígua (mesma chave normalizada, sem nome exato
+   * nem apelido que decida); vazio quando resolve ou não casa.
+   */
+  clientesAmbiguos?: (empresa: string) => string[];
   /** A unidade (`clientes.unificado_em_id`) com que a empresa casou; nulo se não é unidade. */
   resolverUnidade: (empresa: string) => string | null;
   /** Pelo id da conta MobileMed primeiro; sem id, ou com id desconhecido, pelo nome. */
@@ -160,7 +165,15 @@ export function prepararLaudo(
   pendencias.push(...estudo.pendencias.map((p) => comChave(p.tipo, p.valor)));
   conferidos.push(...estudo.conferidos.map((p) => comChave(p.tipo, p.valor)));
 
-  const clienteId = conferir('cliente', l.empresa, cadastros.resolverCliente(l.empresa));
+  const clienteId = cadastros.resolverCliente(l.empresa);
+  // O aviso é pelo nome; o valor diz quando o nome existe, mas casa com mais de um cliente.
+  const ambiguos = clienteId ? [] : (cadastros.clientesAmbiguos?.(l.empresa) ?? []);
+  if (ambiguos.length) {
+    pendencias.push({
+      ...comChave('cliente', l.empresa),
+      valor: `${l.empresa} (mais de um cliente com esse nome: ${ambiguos.join(', ')})`,
+    });
+  } else conferir('cliente', l.empresa, clienteId);
   const prioridadeId = conferir(
     'prioridade',
     l.prioridade,
