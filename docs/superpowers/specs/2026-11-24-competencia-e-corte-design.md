@@ -164,3 +164,7 @@ Aprovado pelo usuário ("Sim" sobre o esboço). Até aqui o exame só tinha a ch
 - SROSALIA e as demais vigências continuam como estão.
 - Vigência, travas e recálculo por job: os mesmos do corte do laudo.
 - Tela: o editor de corte mostra as duas partes ("Data do laudo \*" e "Data do exame") e o resumo descreve os dois períodos ("laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 01 a 31 do mês").
+
+## Adendo 25/11/2026: sem Omie
+
+O redo-one não terá Omie (decisão do usuário; o financeiro passa a ser do One, com NFS-e pela Focus NFe). Onde este documento diz que o `diaFaturamento` "volta com a Omie", leia: o dia da nota, se for preciso, volta com o módulo `financeiro`.
