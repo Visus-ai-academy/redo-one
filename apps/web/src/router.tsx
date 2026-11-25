@@ -5,6 +5,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import { ErroDeRota, NaoEncontrada } from './components/estado/estados';
 import { configurarApi } from './lib/api';
 import { cookieDaRequisicao } from './lib/cookie-da-requisicao';
+import { criarRestauracaoDeRolagem } from './lib/rolagem';
 import { routeTree } from './routeTree.gen';
 
 configurarApi(cookieDaRequisicao);
@@ -16,7 +17,8 @@ export function getRouter() {
   const router = createRouter({
     routeTree,
     context: { queryClient },
-    scrollRestoration: true,
+    // Abrir ou fechar um painel que mora na URL (`?id=`, `?plantao=`) não rola a página.
+    scrollRestoration: criarRestauracaoDeRolagem(),
     // Deixa o TanStack Query controlar a validade dos dados, não o cache de preload do router.
     defaultPreloadStaleTime: 0,
     // Erro ou rota inexistente aparecem dentro do layout, com o menu de pé.
