@@ -167,6 +167,35 @@ const CAMPOS_DA_ENTIDADE: Record<string, Record<string, string>> = {
   },
 };
 
+/** Ordem das linhas por entidade (a da tela); o JSON gravado (jsonb) não guarda a ordem. */
+const ORDEM_DA_ENTIDADE: Record<string, string[]> = {
+  cliente_dados_fiscais: [
+    'emailsNf',
+    'exclusaoFiscal',
+    'cep',
+    'logradouro',
+    'numero',
+    'complemento',
+    'bairro',
+    'cidade',
+    'uf',
+    'contatoNome',
+    'email',
+    'telefone',
+    'bancoCodigo',
+    'bancoAgencia',
+    'bancoConta',
+  ],
+};
+
+/** Campos na ordem da tela da entidade; os que ela não lista vêm depois, como vieram. */
+function naOrdemDaEntidade(campos: string[], entidade: string) {
+  const ordem = ORDEM_DA_ENTIDADE[entidade];
+  if (!ordem) return campos;
+  const posicao = (c: string) => (ordem.includes(c) ? ordem.indexOf(c) : ordem.length);
+  return [...campos].sort((a, b) => posicao(a) - posicao(b));
+}
+
 /** Valores com formato próprio na aba Faturamento; fora do formato, aparecem como estão. */
 const FORMATOS_DA_ENTIDADE: Record<string, Record<string, (v: string) => string>> = {
   cliente_dados_fiscais: {
@@ -365,8 +394,11 @@ export function alteracoesDoCadastro(evento: Evento, nomes: NomesHistorico = {})
 
   const { antes, depois } = evento;
   const contexto = CONTEXTO[evento.entidade] ?? new Set<string>();
-  const campos = [...new Set([...Object.keys(antes ?? {}), ...Object.keys(depois ?? {})])].filter(
-    (c) => !contexto.has(c),
+  const campos = naOrdemDaEntidade(
+    [...new Set([...Object.keys(antes ?? {}), ...Object.keys(depois ?? {})])].filter(
+      (c) => !contexto.has(c),
+    ),
+    evento.entidade,
   );
   for (const campo of campos) {
     const de = antes?.[campo];

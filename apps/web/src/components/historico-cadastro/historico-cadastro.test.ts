@@ -252,13 +252,13 @@ describe('dados de faturamento do cliente', () => {
         ),
       ),
     ).toEqual([
+      { rotulo: 'Exclusão fiscal', antes: 'Não', depois: 'Sim' },
       { rotulo: 'CEP', antes: '(vazio)', depois: '01310-100' },
       { rotulo: 'UF', antes: '(vazio)', depois: 'SP' },
       { rotulo: 'Nome do contato', antes: '(vazio)', depois: 'Ana' },
       { rotulo: 'E-mail do contato', antes: 'velho@cliente.com.br', depois: 'novo@cliente.com.br' },
       { rotulo: 'Telefone do contato', antes: '(vazio)', depois: '(11) 99999-8888' },
       { rotulo: 'Agência', antes: '(vazio)', depois: '0001' },
-      { rotulo: 'Exclusão fiscal', antes: 'Não', depois: 'Sim' },
     ]);
   });
 
@@ -296,6 +296,37 @@ describe('dados de faturamento do cliente', () => {
       ),
     ).toEqual([
       { rotulo: 'Ordem dos e-mails da NF', antes: 'a@x.com, b@x.com', depois: 'b@x.com, a@x.com' },
+    ]);
+  });
+
+  it('na ordem da aba, não na do JSON gravado (o jsonb reordena as chaves)', () => {
+    const linhas = alteracoesDoCadastro(
+      fiscais(
+        {
+          uf: null,
+          cep: null,
+          cidade: null,
+          emailsNf: [],
+          logradouro: null,
+          exclusaoFiscal: false,
+        },
+        {
+          uf: 'SP',
+          cep: '01310100',
+          cidade: 'São Paulo',
+          emailsNf: ['a@x.com'],
+          logradouro: 'Av. Paulista',
+          exclusaoFiscal: true,
+        },
+      ),
+    );
+    expect(linhas.map((l) => l.rotulo)).toEqual([
+      'E-mail da NF adicionado',
+      'Exclusão fiscal',
+      'CEP',
+      'Logradouro',
+      'Cidade',
+      'UF',
     ]);
   });
 });
