@@ -11,8 +11,11 @@ import * as schema from '../../database/schema';
 import { TABELA_NIVEIS } from '../niveis/tabela';
 import { DrizzlePagamentoMedicoRepository } from '../pagamento/drizzle-pagamento-medico.repository';
 import { DrizzleEquipesRepository } from './drizzle-equipes.repository';
+import type { EquipesAlteradas } from './equipes-alteradas';
 
 const url = process.env.TEST_DATABASE_URL;
+
+const semAviso: EquipesAlteradas = { aoAlterar: async () => undefined };
 
 describe.skipIf(!url)('repositórios de equipes, níveis e pagamento', () => {
   let pool: Pool;
@@ -53,8 +56,31 @@ describe.skipIf(!url)('repositórios de equipes, níveis e pagamento', () => {
     await pool.end();
   });
 
+  it('alterar a equipe avisa quem depende dela na mesma transação; se o aviso falha, nada muda', async () => {
+    const avisos: unknown[] = [];
+    const repo = new DrizzleEquipesRepository(db, {
+      aoAlterar: async (tx) => {
+        avisos.push(tx);
+      },
+    });
+    const id = await repo.criar(equipe('Equipe 1', [ana]));
+    expect(avisos).toHaveLength(0);
+    await repo.atualizar(id, equipe('Equipe 1', [ana, bruno]));
+    expect(avisos).toHaveLength(1);
+    // O aviso recebe a transação, não o banco: enfileirar e trocar os membros andam juntos.
+    expect(avisos[0]).not.toBe(db);
+
+    const falha = new DrizzleEquipesRepository(db, {
+      aoAlterar: async () => {
+        throw new Error('fila fora');
+      },
+    });
+    await expect(falha.atualizar(id, equipe('Equipe 1', [bruno]))).rejects.toThrow('fila fora');
+    expect((await repo.buscar(id))?.medicoIds.sort()).toEqual([ana, bruno].sort());
+  });
+
   it('equipe: grava e troca os membros junto, e lista com eles', async () => {
-    const repo = new DrizzleEquipesRepository(db);
+    const repo = new DrizzleEquipesRepository(db, semAviso);
     const id = await repo.criar(equipe('Equipe 1', [ana, bruno]));
 
     expect(await repo.buscar(id)).toMatchObject({

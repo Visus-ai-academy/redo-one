@@ -4,6 +4,7 @@ import { DrizzleListaRepository } from '../../catalogo/listas/drizzle-lista.repo
 import type { Database } from '../../database/database';
 import { equipes, equipesMembros } from '../../database/schema';
 import type { DadosEquipe } from './equipes.repository';
+import type { EquipesAlteradas } from './equipes-alteradas';
 
 const medicoIds = sql<string[]>`coalesce((
   select array_agg(${equipesMembros.medicoId}::text order by ${equipesMembros.medicoId})
@@ -15,7 +16,10 @@ type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /** As equipes, com os membros gravados junto. */
 export class DrizzleEquipesRepository extends DrizzleListaRepository<DadosEquipe> {
-  constructor(db: Database) {
+  constructor(
+    db: Database,
+    private readonly alteradas: EquipesAlteradas,
+  ) {
     super(db, {
       tabela: equipes,
       id: equipes.id,
@@ -56,6 +60,7 @@ export class DrizzleEquipesRepository extends DrizzleListaRepository<DadosEquipe
       await tx.update(equipes).set(this.valores(dados)).where(eq(equipes.id, id));
       await tx.delete(equipesMembros).where(eq(equipesMembros.equipeId, id));
       await gravarMembros(tx, id, dados.medicoIds);
+      await this.alteradas.aoAlterar(tx);
     });
   }
 }

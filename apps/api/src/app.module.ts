@@ -13,6 +13,7 @@ import { DatabaseModule } from './database/database.module';
 import { DistribuicaoModule } from './distribuicao/distribuicao.module';
 import { EscalaModule } from './escala/escala.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
+import { GatilhosTipificacaoModule } from './faturamento/infrastructure/jobs/gatilhos-tipificacao.module';
 import { IdentidadeModule } from './identidade/identidade.module';
 import { IngestaoModule } from './ingestao/ingestao.module';
 import { MedicosModule } from './medicos/medicos.module';
@@ -25,6 +26,7 @@ import { MedicosModule } from './medicos/medicos.module';
     AuditoriaModule,
     IdentidadeModule,
     CatalogoModule,
+    GatilhosTipificacaoModule,
     MedicosModule,
     EscalaModule,
     FaturamentoModule,

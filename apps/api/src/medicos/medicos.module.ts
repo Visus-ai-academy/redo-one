@@ -14,6 +14,7 @@ import { MedicosService } from './cadastro/medicos.service';
 import { DrizzleEquipesRepository } from './equipes/drizzle-equipes.repository';
 import { EquipesController } from './equipes/equipes.controller';
 import { EquipesService } from './equipes/equipes.service';
+import { EQUIPES_ALTERADAS, type EquipesAlteradas } from './equipes/equipes-alteradas';
 import { NiveisMedicoController } from './niveis/niveis.controller';
 import { TABELA_NIVEIS } from './niveis/tabela';
 import { NIVEIS_MEDICO, NIVEIS_MEDICO_SERVICE } from './niveis/tokens';
@@ -52,9 +53,16 @@ const ROTULO_NIVEL = { entidade: 'nivel_medico', singular: 'Nível', genero: 'm'
     },
     {
       provide: EquipesService,
-      inject: [DATABASE, MEDICOS_REPOSITORY, AUDITORIA, CLOCK],
-      useFactory: (db: Database, medicos: MedicosRepository, auditoria: Auditoria, clock: Clock) =>
-        new EquipesService(new DrizzleEquipesRepository(db), medicos, auditoria, clock),
+      // EQUIPES_ALTERADAS vem de fora (a tipificação do faturamento), pelo módulo global de gatilhos.
+      inject: [DATABASE, MEDICOS_REPOSITORY, AUDITORIA, CLOCK, EQUIPES_ALTERADAS],
+      useFactory: (
+        db: Database,
+        medicos: MedicosRepository,
+        auditoria: Auditoria,
+        clock: Clock,
+        alteradas: EquipesAlteradas,
+      ) =>
+        new EquipesService(new DrizzleEquipesRepository(db, alteradas), medicos, auditoria, clock),
     },
   ],
 })

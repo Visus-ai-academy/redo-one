@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { ListaService } from '../catalogo/listas/listas.service';
 import { DatabaseModule } from '../database/database.module';
+import { GatilhosTipificacaoModule } from '../faturamento/infrastructure/jobs/gatilhos-tipificacao.module';
 import { MedicosController } from './cadastro/medicos.controller';
 import { EquipesController } from './equipes/equipes.controller';
 import { EquipesService } from './equipes/equipes.service';
@@ -19,6 +20,7 @@ describe('MedicosModule', () => {
         ConfigModule.forRoot({ isGlobal: true }),
         DatabaseModule,
         AuditoriaModule,
+        GatilhosTipificacaoModule,
         MedicosModule,
       ],
     }).compile();
