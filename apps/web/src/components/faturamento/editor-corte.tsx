@@ -1,8 +1,9 @@
 import { Button } from '@base-ui/react/button';
+import { Fieldset } from '@base-ui/react/fieldset';
 import { Plus } from '@phosphor-icons/react';
 import { useStore } from '@tanstack/react-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useId, useState } from 'react';
+import { type ReactNode, useEffect, useId, useState } from 'react';
 import { z } from 'zod';
 
 import { cortesControllerCriar } from '../../gen/clients/cortesControllerCriar';
@@ -39,6 +40,7 @@ import {
   fraseDoCorte,
   opcoesDeDesde,
   periodoDaCompetencia,
+  periodoDoExame,
   textoDaPrevia,
   valoresIniciais,
   vigenciaEmVigor,
@@ -63,6 +65,8 @@ const esquema = z
     dia: z.string(),
     mes: z.enum(['', 'proprio', 'seguinte']),
     consideraExame: z.boolean(),
+    exameDia: z.string(),
+    exameMes: z.enum(['', 'proprio', 'seguinte']),
   })
   .superRefine((v, ctx) => {
     if (!v.desde) {
@@ -75,6 +79,21 @@ const esquema = z
     if (v.usaPadrao) return;
     if (!v.dia) ctx.addIssue({ code: 'custom', path: ['dia'], message: 'Escolha o dia do corte.' });
     if (!v.mes) ctx.addIssue({ code: 'custom', path: ['mes'], message: 'Escolha o mês do corte.' });
+    if (!v.consideraExame) return;
+    if (!v.exameDia) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exameDia'],
+        message: 'Escolha o dia do corte do exame.',
+      });
+    }
+    if (!v.exameMes) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exameMes'],
+        message: 'Escolha o mês do corte do exame.',
+      });
+    }
   });
 
 export type EditorCorteProps = {
@@ -247,7 +266,35 @@ export function EditorCorte({
 
 function exemplo(competencia: string, corte: CamposCorte) {
   const { inicio, fim } = periodoDaCompetencia(competencia, corte);
-  return `Ex.: a competência ${mesAno(competencia)} recebe os laudos assinados de ${inicio} a ${fim} (data do laudo).`;
+  const laudos = `Ex.: a competência ${mesAno(competencia)} recebe os laudos assinados de ${inicio} a ${fim} (data do laudo)`;
+  if (!corte.consideraExame) return `${laudos}.`;
+  const exame = periodoDoExame(competencia, corte);
+  return `${laudos} e de exames realizados de ${exame.inicio} a ${exame.fim} (data do exame); quando as duas datas dão competências diferentes, vale a mais tarde.`;
+}
+
+/** Grupo de campos com legenda (e o * do obrigatório), sobre o Fieldset do Base UI. */
+function Grupo({
+  legenda,
+  required = false,
+  children,
+}: {
+  legenda: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Fieldset.Root className="flex flex-col gap-3">
+      <Fieldset.Legend className="flex items-baseline gap-1 font-medium">
+        {legenda}
+        {required && (
+          <span aria-hidden="true" className="text-destructive">
+            *
+          </span>
+        )}
+      </Fieldset.Legend>
+      {children}
+    </Fieldset.Root>
+  );
 }
 
 function LinhaVigencia({
@@ -344,7 +391,10 @@ function NovaVigencia({
   const completo =
     !valores.usaPadrao &&
     corteDigitado.mes !== null &&
-    (corteDigitado.dia !== null || corteDigitado.ultimoDia);
+    (corteDigitado.dia !== null || corteDigitado.ultimoDia) &&
+    (!valores.consideraExame ||
+      (corteDigitado.exameMes !== null &&
+        (corteDigitado.exameDia !== null || corteDigitado.exameUltimoDia)));
 
   return (
     <>
@@ -381,46 +431,79 @@ function NovaVigencia({
         )}
         {!valores.usaPadrao && (
           <>
-            <div className="flex flex-wrap gap-4">
-              <form.AppField name="dia">
-                {(field) => (
-                  <field.SelectField
-                    label="Dia do corte (data do laudo)"
-                    placeholder="Escolha o dia"
-                    required
-                    opcoes={DIAS}
-                    description="Último dia que entra. Maior que o mês vale o último dia dele."
-                    className="flex-[1_1_180px]"
-                  />
-                )}
-              </form.AppField>
-              <form.AppField name="mes">
-                {(field) => (
-                  <field.SelectField
-                    label="Mês do corte"
-                    placeholder="Escolha o mês"
-                    required
-                    opcoes={MESES}
-                    description="Em que mês, em relação à competência, cai o dia do corte."
-                    className="flex-[1_1_180px]"
-                  />
-                )}
-              </form.AppField>
-            </div>
-            <div className="flex items-start gap-1">
-              <form.AppField name="consideraExame">
-                {(field) => (
-                  <field.CheckboxField
-                    label="Considerar a data do exame"
-                    description="Ligado, o laudo nunca vai para um mês anterior ao da data do exame. Desligado, só a data do laudo conta."
-                  />
-                )}
-              </form.AppField>
-              <AjudaContextual assunto="considerar a data do exame">
-                Ex.: corte no dia 7 do mês seguinte, exame feito em 02/12 e laudo assinado em 03/12.
-                Pela data do laudo, iria para 11; considerando a data do exame, fica em 12.
-              </AjudaContextual>
-            </div>
+            <Grupo legenda="Data do laudo" required>
+              <div className="flex flex-wrap gap-4">
+                <form.AppField name="dia">
+                  {(field) => (
+                    <field.SelectField
+                      label="Dia do corte (data do laudo)"
+                      placeholder="Escolha o dia"
+                      required
+                      opcoes={DIAS}
+                      description="Último dia que entra. Maior que o mês vale o último dia dele."
+                      className="flex-[1_1_180px]"
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="mes">
+                  {(field) => (
+                    <field.SelectField
+                      label="Mês do corte (data do laudo)"
+                      placeholder="Escolha o mês"
+                      required
+                      opcoes={MESES}
+                      description="Em que mês, em relação à competência, cai o dia do corte."
+                      className="flex-[1_1_180px]"
+                    />
+                  )}
+                </form.AppField>
+              </div>
+            </Grupo>
+            <Grupo legenda="Data do exame">
+              <div className="flex items-start gap-1">
+                <form.AppField name="consideraExame">
+                  {(field) => (
+                    <field.CheckboxField
+                      label="Considerar a data do exame"
+                      description="Ligado, a competência é a mais tarde entre a da data do laudo e a da data do exame, cada uma pelo seu corte. Desligado, só a data do laudo conta."
+                    />
+                  )}
+                </form.AppField>
+                <AjudaContextual assunto="considerar a data do exame">
+                  Ex.: laudo até o dia 7 do mês seguinte e exame até o último dia do próprio mês.
+                  Exame feito em 02/12 e laudo assinado em 03/12: pela data do laudo, iria para 11;
+                  considerando a data do exame, fica em 12.
+                </AjudaContextual>
+              </div>
+              {valores.consideraExame && (
+                <div className="flex flex-wrap gap-4">
+                  <form.AppField name="exameDia">
+                    {(field) => (
+                      <field.SelectField
+                        label="Dia do corte (data do exame)"
+                        placeholder="Escolha o dia"
+                        required
+                        opcoes={DIAS}
+                        description="Último dia que entra. Maior que o mês vale o último dia dele."
+                        className="flex-[1_1_180px]"
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="exameMes">
+                    {(field) => (
+                      <field.SelectField
+                        label="Mês do corte (data do exame)"
+                        placeholder="Escolha o mês"
+                        required
+                        opcoes={MESES}
+                        description="Em que mês, em relação à competência, cai o dia do corte."
+                        className="flex-[1_1_180px]"
+                      />
+                    )}
+                  </form.AppField>
+                </div>
+              )}
+            </Grupo>
             {completo && (
               <p className="bg-muted rounded-md px-3 py-2 text-[13px]">
                 {fraseDoCorte(corteDigitado)}.{' '}

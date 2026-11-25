@@ -31,6 +31,9 @@ const INICIAL: VigenciaCorteDto = {
   ultimoDia: false,
   mes: 'seguinte',
   consideraExame: true,
+  exameDia: null,
+  exameUltimoDia: true,
+  exameMes: 'proprio',
   criadoEm: '2026-11-01T12:00:00.000Z',
   criadoPor: null,
 };
@@ -84,7 +87,7 @@ describe('EditorCorte (padrão)', () => {
     editor({ podeEditar: false });
     expect(
       await screen.findAllByText(
-        'Laudos assinados de 08 de um mês a 07 do seguinte; considera a data do exame',
+        'Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 01 ao último dia do próprio mês',
       ),
     ).toHaveLength(2);
     expect(screen.getByText('Desde o início')).toBeInTheDocument();
@@ -114,6 +117,9 @@ describe('EditorCorte (padrão)', () => {
       ultimoDia: false,
       mes: 'seguinte',
       consideraExame: true,
+      exameDia: null,
+      exameUltimoDia: true,
+      exameMes: 'proprio',
     };
     expect(previa).toHaveBeenCalledWith({ body: corpo });
     expect(await screen.findByText('120 laudos mudam de competência.')).toBeInTheDocument();
@@ -135,11 +141,11 @@ describe('EditorCorte (padrão)', () => {
     await escolherOpcao('A partir de', '12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
     expect(await screen.findByRole('button', { name: 'Salvar vigência' })).toBeInTheDocument();
-    await escolherOpcao('Mês do corte', 'No próprio mês');
+    await escolherOpcao('Mês do corte (data do laudo)', 'No próprio mês');
     expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
     // Voltar ao valor da prévia não a traz de volta: os laudos podem ter mudado.
-    await escolherOpcao('Mês do corte', 'No mês seguinte');
+    await escolherOpcao('Mês do corte (data do laudo)', 'No mês seguinte');
     expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
   });
 
@@ -162,6 +168,82 @@ describe('EditorCorte (padrão)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar vigência' })).not.toBeInTheDocument();
+  });
+});
+
+describe('EditorCorte (data do exame)', () => {
+  it('agrupa os campos em "Data do laudo" (obrigatório) e "Data do exame", com o período do exame', async () => {
+    editor();
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
+    const laudo = screen.getByRole('group', { name: 'Data do laudo' });
+    expect(within(laudo).getByText('Data do laudo')).toHaveTextContent('Data do laudo*');
+    expect(
+      within(screen.getByRole('group', { name: 'Data do exame' })).getByText('Data do exame'),
+    ).toHaveTextContent(/^Data do exame$/);
+    expect(
+      within(laudo).getByRole('combobox', { name: 'Dia do corte (data do laudo)' }),
+    ).toBeInTheDocument();
+    const exame = screen.getByRole('group', { name: 'Data do exame' });
+    expect(
+      within(exame).getByRole('checkbox', { name: /Considerar a data do exame/ }),
+    ).toBeChecked();
+    expect(
+      within(exame).getByRole('combobox', { name: 'Dia do corte (data do exame)' }),
+    ).toHaveTextContent('Último dia do mês');
+    expect(
+      within(exame).getByRole('combobox', { name: 'Mês do corte (data do exame)' }),
+    ).toHaveTextContent('No próprio mês');
+
+    await escolherOpcao('A partir de', '12/2026');
+    await escolherOpcao('Dia do corte (data do exame)', '25');
+    expect(
+      screen.getByText(
+        /Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 26 do mês anterior a 25 do próprio mês\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/exames realizados de 26\/11\/2026 a 25\/12\/2026 \(data do exame\)/),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
+    expect(previa).toHaveBeenCalledWith({
+      body: expect.objectContaining({ exameDia: 25, exameUltimoDia: false, exameMes: 'proprio' }),
+    });
+  });
+
+  it('sem considerar a data do exame, os campos dele somem e a frase diz que só o laudo conta', async () => {
+    editor();
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Considerar a data do exame/ }));
+    expect(
+      screen.queryByRole('combobox', { name: 'Dia do corte (data do exame)' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Laudos assinados de 08 de um mês a 07 do seguinte; só a data do laudo conta\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('o histórico mostra o período do exame de cada vigência', async () => {
+    porCliente = {
+      padrao: [
+        {
+          ...INICIAL,
+          id: 'v-2',
+          desde: '2027-01',
+          exameDia: 20,
+          exameUltimoDia: false,
+          criadoPor: 'Ana',
+        },
+        INICIAL,
+      ],
+    };
+    editor({ podeEditar: false });
+    expect(
+      await screen.findByText(
+        'Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 21 do mês anterior a 20 do próprio mês',
+      ),
+    ).toBeInTheDocument();
   });
 });
 
@@ -204,13 +286,13 @@ describe('EditorCorte (alterações e corridas)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
     await escolherOpcao('A partir de', '12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
-    await escolherOpcao('Mês do corte', 'No próprio mês');
+    await escolherOpcao('Mês do corte (data do laudo)', 'No próprio mês');
     responder({ alterados: 120, movimentos: [{ de: '2026-11', para: '2026-12', laudos: 120 }] });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeEnabled());
     expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar vigência' })).not.toBeInTheDocument();
     // Nem volta ao voltar o campo: a prévia que chegou atrasada não ficou guardada.
-    await escolherOpcao('Mês do corte', 'No mês seguinte');
+    await escolherOpcao('Mês do corte (data do laudo)', 'No mês seguinte');
     expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
   });
@@ -242,7 +324,7 @@ describe('EditorCorte (cliente)', () => {
     expect(await screen.findByText('Usa o corte padrão')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Laudos assinados de 08 de um mês a 07 do seguinte; considera a data do exame',
+        'Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 01 ao último dia do próprio mês',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Nenhuma vigência própria.')).toBeInTheDocument();
@@ -286,6 +368,9 @@ describe('EditorCorte (cliente)', () => {
         ultimoDia: false,
         mes: null,
         consideraExame: null,
+        exameDia: null,
+        exameUltimoDia: false,
+        exameMes: null,
       },
     });
   });

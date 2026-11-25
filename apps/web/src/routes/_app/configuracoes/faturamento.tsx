@@ -43,7 +43,7 @@ function Faturamento() {
       <h1 className="text-[22px] leading-snug font-semibold">Faturamento</h1>
       <Painel
         titulo="Corte da competência padrão"
-        descricao="Até que dia, pela data do laudo, o laudo entra na competência. Vale para todos os clientes sem corte próprio (o corte próprio fica na aba Faturamento do cliente)."
+        descricao="Até que dia, pela data do laudo e, se ela contar, pela data do exame, o laudo entra na competência. Vale para todos os clientes sem corte próprio (o corte próprio fica na aba Faturamento do cliente)."
       >
         <EditorCorte
           clienteId={null}

@@ -137,7 +137,8 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
     itens: [
       {
         nome: 'Faturamento',
-        descricao: 'Corte da competência: até que dia, pela data do laudo, o laudo entra no mês',
+        descricao:
+          'Corte da competência: até que dia, pela data do laudo e do exame, o laudo entra no mês',
         icone: Receipt,
         to: '/configuracoes/faturamento',
         permissao: 'faturamento.ver',

@@ -99,8 +99,8 @@ export function ListaCompetencias({
           <span className="inline-flex items-center gap-1">
             Competência
             <AjudaContextual assunto="a competência">
-              Mês de faturamento. O laudo entra nele pela data do laudo (assinatura), conforme o
-              corte configurado.
+              Mês de faturamento. O laudo entra nele pela data do laudo (assinatura) e, se o corte
+              considerar, pela data do exame, conforme o corte configurado.
             </AjudaContextual>
           </span>
         ),

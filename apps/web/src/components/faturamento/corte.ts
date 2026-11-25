@@ -3,13 +3,28 @@ import type { NovaVigenciaCorteDto } from '../../gen/types/NovaVigenciaCorteDto'
 import type { VigenciaCorteDto } from '../../gen/types/VigenciaCorteDto';
 import { plural } from '../../lib/formato';
 
-/** O corte em si: até que dia (pela data do laudo) vai a competência e se a data do exame conta. */
+/**
+ * O corte em si: até que dia (pela data do laudo) vai a competência e, se a data do exame conta,
+ * até que dia ela vai pela data do exame.
+ */
 export type CamposCorte = {
   dia: number | null;
   ultimoDia: boolean;
   mes: MesCorteKey | null;
   consideraExame: boolean | null;
+  exameDia: number | null;
+  exameUltimoDia: boolean;
+  exameMes: MesCorteKey | null;
 };
+
+/** Um período de corte (o da data do laudo ou o da data do exame). */
+type Periodo = Pick<CamposCorte, 'dia' | 'ultimoDia' | 'mes'>;
+
+/** O período da data do exame; sem ele, o mês cheio (o de antes de o exame ter corte). */
+const doExame = (c: CamposCorte): Periodo =>
+  c.exameMes === null
+    ? { dia: null, ultimoDia: true, mes: 'proprio' }
+    : { dia: c.exameDia, ultimoDia: c.exameUltimoDia, mes: c.exameMes };
 
 /** Valores do formulário de nova vigência; `dia` é "1"…"31" ou "ultimo". */
 export type ValoresVigencia = {
@@ -18,42 +33,48 @@ export type ValoresVigencia = {
   dia: string;
   mes: MesCorteKey | '';
   consideraExame: boolean;
+  exameDia: string;
+  exameMes: MesCorteKey | '';
 };
 
 const dois = (n: number) => String(n).padStart(2, '0');
 
 /** Dia 31 é sempre o último dia do mês (dia maior que o mês vale o último). */
-const eUltimoDia = (c: CamposCorte) => c.ultimoDia || c.dia === 31;
+const eUltimoDia = (p: Periodo) => p.ultimoDia || p.dia === 31;
 
-/** "Laudos assinados de 08 de um mês a 07 do seguinte; considera a data do exame". */
-export function fraseDoCorte(c: CamposCorte) {
-  const proprio = c.mes === 'proprio';
-  let periodo: string;
-  if (eUltimoDia(c)) {
-    periodo = proprio
-      ? 'de 01 ao último dia do próprio mês'
-      : 'de 01 ao último dia do mês seguinte';
-  } else {
-    const dia = c.dia ?? 0;
-    if (dia >= 28) {
-      // Fevereiro (ou um mês de 30 dias) não tem o dia seguinte nem, às vezes, o próprio dia.
-      periodo = proprio
-        ? `do dia seguinte ao dia ${dia} do mês anterior até o dia ${dia} do próprio mês (ou o último dia, no mês mais curto)`
-        : `do dia seguinte ao dia ${dia} de um mês até o dia ${dia} do seguinte (ou o último dia, no mês mais curto)`;
-    } else {
-      periodo = proprio
-        ? `de ${dois(dia + 1)} do mês anterior a ${dois(dia)} do próprio mês`
-        : `de ${dois(dia + 1)} de um mês a ${dois(dia)} do seguinte`;
-    }
+/** "de 08 de um mês a 07 do seguinte". */
+function textoDoPeriodo(p: Periodo) {
+  const proprio = p.mes === 'proprio';
+  if (eUltimoDia(p)) {
+    return proprio ? 'de 01 ao último dia do próprio mês' : 'de 01 ao último dia do mês seguinte';
   }
-  const exame = c.consideraExame ? 'considera a data do exame' : 'só a data do laudo conta';
-  return `Laudos assinados ${periodo}; ${exame}`;
+  const dia = p.dia ?? 0;
+  if (dia >= 28) {
+    // Fevereiro (ou um mês de 30 dias) não tem o dia seguinte nem, às vezes, o próprio dia.
+    return proprio
+      ? `do dia seguinte ao dia ${dia} do mês anterior até o dia ${dia} do próprio mês (ou o último dia, no mês mais curto)`
+      : `do dia seguinte ao dia ${dia} de um mês até o dia ${dia} do seguinte (ou o último dia, no mês mais curto)`;
+  }
+  return proprio
+    ? `de ${dois(dia + 1)} do mês anterior a ${dois(dia)} do próprio mês`
+    : `de ${dois(dia + 1)} de um mês a ${dois(dia)} do seguinte`;
+}
+
+/**
+ * "Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 01 ao último dia do
+ * próprio mês" (ou "; só a data do laudo conta").
+ */
+export function fraseDoCorte(c: CamposCorte) {
+  const exame = c.consideraExame
+    ? `exames realizados ${textoDoPeriodo(doExame(c))}`
+    : 'só a data do laudo conta';
+  return `Laudos assinados ${textoDoPeriodo(c)}; ${exame}`;
 }
 
 const diasNoMes = (ano: number, mes: number) => new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 
 /** Último dia (data do laudo) da competência `ano`/`mes` (mês de 1 a 12), como [ano, mês, dia]. */
-function fimDe(ano: number, mes: number, c: CamposCorte): [number, number, number] {
+function fimDe(ano: number, mes: number, c: Periodo): [number, number, number] {
   const deslocado = new Date(Date.UTC(ano, mes - 1 + (c.mes === 'seguinte' ? 1 : 0), 1));
   const a = deslocado.getUTCFullYear();
   const m = deslocado.getUTCMonth() + 1;
@@ -64,7 +85,7 @@ function fimDe(ano: number, mes: number, c: CamposCorte): [number, number, numbe
 const formatar = ([a, m, d]: [number, number, number]) => `${dois(d)}/${dois(m)}/${a}`;
 
 /** Primeiro e último dia (pela data do laudo) que entram na competência "AAAA-MM" com o corte. */
-export function periodoDaCompetencia(competencia: string, c: CamposCorte) {
+export function periodoDaCompetencia(competencia: string, c: Periodo) {
   const [ano, mes] = competencia.split('-').map(Number) as [number, number];
   const [a, m, d] = fimDe(mes === 1 ? ano - 1 : ano, mes === 1 ? 12 : mes - 1, c);
   const dia = new Date(Date.UTC(a, m - 1, d + 1));
@@ -73,6 +94,10 @@ export function periodoDaCompetencia(competencia: string, c: CamposCorte) {
     fim: formatar(fimDe(ano, mes, c)),
   };
 }
+
+/** Primeiro e último dia pela data do exame da competência "AAAA-MM" com o corte. */
+export const periodoDoExame = (competencia: string, c: CamposCorte) =>
+  periodoDaCompetencia(competencia, doExame(c));
 
 /** A vigência que vale no mês (a de maior `desde` que já começou); a lista vem da mais nova. */
 export function vigenciaEmVigor<T extends { desde: string }>(vigencias: readonly T[], mes: string) {
@@ -121,6 +146,8 @@ export function valoresIniciais(base: CamposCorte): ValoresVigencia {
     dia: base.ultimoDia ? 'ultimo' : base.dia === null ? '' : String(base.dia),
     mes: base.mes ?? '',
     consideraExame: base.consideraExame ?? true,
+    exameDia: base.exameUltimoDia || base.exameDia === null ? 'ultimo' : String(base.exameDia),
+    exameMes: base.exameMes ?? 'proprio',
   };
 }
 
@@ -138,9 +165,13 @@ export function corpoDaVigencia(
       ultimoDia: false,
       mes: null,
       consideraExame: null,
+      exameDia: null,
+      exameUltimoDia: false,
+      exameMes: null,
     };
   }
   const ultimo = v.dia === 'ultimo';
+  const exameUltimo = v.exameDia === 'ultimo';
   return {
     clienteId,
     desde: v.desde,
@@ -149,6 +180,9 @@ export function corpoDaVigencia(
     ultimoDia: ultimo,
     mes: v.mes === '' ? null : v.mes,
     consideraExame: v.consideraExame,
+    exameDia: exameUltimo || v.exameDia === '' ? null : Number(v.exameDia),
+    exameUltimoDia: exameUltimo,
+    exameMes: v.exameMes === '' ? null : v.exameMes,
   };
 }
 

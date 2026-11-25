@@ -6,13 +6,27 @@ import {
   fraseDoCorte,
   opcoesDeDesde,
   periodoDaCompetencia,
+  periodoDoExame,
   textoDaPrevia,
   valoresIniciais,
   vigenciaEmVigor,
 } from './corte';
 
-const PADRAO: CamposCorte = { dia: 7, ultimoDia: false, mes: 'seguinte', consideraExame: true };
-const SROSALIA: CamposCorte = { dia: 25, ultimoDia: false, mes: 'proprio', consideraExame: false };
+const MES_CHEIO = { exameDia: null, exameUltimoDia: true, exameMes: 'proprio' as const };
+const PADRAO: CamposCorte = {
+  dia: 7,
+  ultimoDia: false,
+  mes: 'seguinte',
+  consideraExame: true,
+  ...MES_CHEIO,
+};
+const SROSALIA: CamposCorte = {
+  dia: 25,
+  ultimoDia: false,
+  mes: 'proprio',
+  consideraExame: false,
+  ...MES_CHEIO,
+};
 
 const vigencia = (desde: string, campos: Partial<CamposCorte> & { usaPadrao?: boolean } = {}) => ({
   id: desde,
@@ -26,9 +40,9 @@ const vigencia = (desde: string, campos: Partial<CamposCorte> & { usaPadrao?: bo
 });
 
 describe('fraseDoCorte', () => {
-  it('o padrão de hoje: de 08 de um mês a 07 do seguinte, considerando a data do exame', () => {
+  it('o padrão de hoje: laudos de 08 de um mês a 07 do seguinte, exames no mês cheio', () => {
     expect(fraseDoCorte(PADRAO)).toBe(
-      'Laudos assinados de 08 de um mês a 07 do seguinte; considera a data do exame',
+      'Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 01 ao último dia do próprio mês',
     );
   });
 
@@ -41,11 +55,41 @@ describe('fraseDoCorte', () => {
   it('último dia (e o dia 31, que é sempre o último) vira o mês inteiro', () => {
     const ultimo = { ...PADRAO, dia: null, ultimoDia: true, mes: 'proprio' as const };
     expect(fraseDoCorte(ultimo)).toBe(
-      'Laudos assinados de 01 ao último dia do próprio mês; considera a data do exame',
+      'Laudos assinados de 01 ao último dia do próprio mês; exames realizados de 01 ao último dia do próprio mês',
     );
     expect(fraseDoCorte({ ...ultimo, dia: 31, ultimoDia: false, mes: 'seguinte' })).toBe(
-      'Laudos assinados de 01 ao último dia do mês seguinte; considera a data do exame',
+      'Laudos assinados de 01 ao último dia do mês seguinte; exames realizados de 01 ao último dia do próprio mês',
     );
+  });
+});
+
+describe('fraseDoCorte com o período do exame', () => {
+  it('descreve o período do exame com a mesma regra do laudo', () => {
+    expect(fraseDoCorte({ ...PADRAO, exameDia: 25, exameUltimoDia: false })).toBe(
+      'Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 26 do mês anterior a 25 do próprio mês',
+    );
+    expect(
+      fraseDoCorte({ ...PADRAO, exameDia: 5, exameUltimoDia: false, exameMes: 'seguinte' }),
+    ).toBe(
+      'Laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 06 de um mês a 05 do seguinte',
+    );
+  });
+
+  it('sem considerar o exame, o período dele não aparece', () => {
+    expect(fraseDoCorte({ ...SROSALIA, exameDia: 25, exameUltimoDia: false })).toBe(
+      'Laudos assinados de 26 do mês anterior a 25 do próprio mês; só a data do laudo conta',
+    );
+  });
+
+  it('o período do exame de uma competência', () => {
+    expect(periodoDoExame('2027-02', { ...PADRAO })).toEqual({
+      inicio: '01/02/2027',
+      fim: '28/02/2027',
+    });
+    expect(periodoDoExame('2027-01', { ...PADRAO, exameDia: 25, exameUltimoDia: false })).toEqual({
+      inicio: '26/12/2026',
+      fim: '25/01/2027',
+    });
   });
 });
 
@@ -55,7 +99,7 @@ describe('fraseDoCorte com dias que nem todo mês tem', () => {
       'Laudos assinados do dia seguinte ao dia 30 do mês anterior até o dia 30 do próprio mês (ou o último dia, no mês mais curto); só a data do laudo conta',
     );
     expect(fraseDoCorte({ ...PADRAO, dia: 28 })).toBe(
-      'Laudos assinados do dia seguinte ao dia 28 de um mês até o dia 28 do seguinte (ou o último dia, no mês mais curto); considera a data do exame',
+      'Laudos assinados do dia seguinte ao dia 28 de um mês até o dia 28 do seguinte (ou o último dia, no mês mais curto); exames realizados de 01 ao último dia do próprio mês',
     );
   });
 });
@@ -148,6 +192,8 @@ describe('valoresIniciais e corpoDaVigencia', () => {
       dia: '7',
       mes: 'seguinte',
       consideraExame: true,
+      exameDia: 'ultimo',
+      exameMes: 'proprio',
     });
     expect(corpoDaVigencia({ ...valores, dia: 'ultimo' }, 'c-1')).toEqual({
       clienteId: 'c-1',
@@ -157,7 +203,22 @@ describe('valoresIniciais e corpoDaVigencia', () => {
       ultimoDia: true,
       mes: 'seguinte',
       consideraExame: true,
+      exameDia: null,
+      exameUltimoDia: true,
+      exameMes: 'proprio',
     });
+    expect(
+      corpoDaVigencia({ ...valores, exameDia: '25', exameMes: 'seguinte' }, null),
+    ).toMatchObject({ exameDia: 25, exameUltimoDia: false, exameMes: 'seguinte' });
+  });
+
+  it('parte do período do exame em vigor; sem ele, do mês cheio', () => {
+    expect(
+      valoresIniciais({ ...PADRAO, exameDia: 20, exameUltimoDia: false, exameMes: 'seguinte' }),
+    ).toMatchObject({ exameDia: '20', exameMes: 'seguinte' });
+    expect(
+      valoresIniciais({ ...PADRAO, exameDia: null, exameUltimoDia: false, exameMes: null }),
+    ).toMatchObject({ exameDia: 'ultimo', exameMes: 'proprio' });
   });
 
   it('"usar o padrão" manda só o desde, sem os campos do corte', () => {
@@ -170,6 +231,9 @@ describe('valoresIniciais e corpoDaVigencia', () => {
       ultimoDia: false,
       mes: null,
       consideraExame: null,
+      exameDia: null,
+      exameUltimoDia: false,
+      exameMes: null,
     });
   });
 });
