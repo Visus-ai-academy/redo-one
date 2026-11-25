@@ -166,10 +166,15 @@ export function mapearTipificacao(
   cadastro: CadastroParaTipificacao,
   opcoes: {
     /**
-     * Grafia que vale quando duas do mesmo cliente têm configurações diferentes (decisão do
-     * usuário: RADI_IMAGEM, a única com laudos em set/out, e não RADI-IMAGEM).
+     * Grafia que vale quando duas sem cliente de mesmo nome caem no mesmo cliente (apelido ou
+     * nome normalizado) e têm configurações diferentes. Sem ela, a carga para.
      */
     grafiasPreferidas?: string[];
+    /**
+     * Empresas cuja configuração não migra, por decisão do usuário (RADI-IMAGEM: vale a da
+     * RADI_IMAGEM, a única com laudos em set/out). Saem no relatório.
+     */
+    empresasIgnoradas?: string[];
   } = {},
 ): TipificacaoMigrada {
   const avisos: Aviso[] = [];
@@ -302,14 +307,59 @@ export function mapearTipificacao(
       ...legado.ordens.filter((o) => o.personalizada && o.linhas.length).map((o) => o.empresa),
     ]),
   ];
+  // A empresa do dashboards-one é o nome do cliente de lá, que a carga do catálogo trouxe com o
+  // mesmo nome: casa primeiro pelo nome. Só sem cliente de mesmo nome vale o resolvedor da
+  // importação (apelidos e nome normalizado), que pega o primeiro de mesma chave normalizada:
+  // se outro cliente tem a mesma chave, a carga para em vez de escolher.
+  const clientesPorNome = new Map<string, string[]>();
+  for (const c of cadastro.clientes) {
+    const k = chaveCadastro(c.nome);
+    clientesPorNome.set(k, [...(clientesPorNome.get(k) ?? []), c.id]);
+  }
+  const clientesPorChave = new Map<string, string[]>();
+  for (const c of cadastro.clientes)
+    clientesPorChave.set(c.chaveNormalizada, [
+      ...(clientesPorChave.get(c.chaveNormalizada) ?? []),
+      c.id,
+    ]);
+  const nomesDe = (ids: string[]) =>
+    ids
+      .map((id) => clientePorId.get(id)?.nome ?? id)
+      .sort()
+      .join(', ');
+  const ignoradas = new Set((opcoes.empresasIgnoradas ?? []).map(chaveCadastro));
   const empresasPorCliente = new Map<string, string[]>();
+  // Clientes de mesma chave normalizada (RADI_IMAGEM × RADI-IMAGEM): a importação escolhe pela
+  // ordem do banco, que a carga não conhece; aí não dá para comparar o destino.
+  const mesmaChave = (a: string, b: string) =>
+    clientePorId.get(a)?.chaveNormalizada === clientePorId.get(b)?.chaveNormalizada;
+  /** Empresa gravada no cliente de mesmo nome cujos laudos a importação manda para outro. */
+  const outroDestino: { empresa: string; clienteId: string; destinoId: string }[] = [];
   for (const empresa of empresas) {
-    const id = resolverEmpresa(empresa);
+    if (ignoradas.has(chaveCadastro(empresa))) {
+      avisar('clientes_tipificacao', empresa, 'Configuração ignorada por decisão: não migra.');
+      continue;
+    }
+    const mesmoNome = clientesPorNome.get(chaveCadastro(empresa)) ?? [];
+    const id = mesmoNome.length ? (mesmoNome[0] as string) : resolverEmpresa(empresa);
+    const candidatos =
+      mesmoNome.length || !id
+        ? mesmoNome
+        : (clientesPorChave.get(clientePorId.get(id)?.chaveNormalizada ?? '') ?? []);
+    if (candidatos.length > 1) {
+      erros.push(
+        `Empresa "${empresa}" casa com mais de um cliente do redo-one (${nomesDe(candidatos)}): diga qual vale.`,
+      );
+      continue;
+    }
     if (!id) {
       erros.push(`Empresa "${empresa}" não casa com nenhum cliente do redo-one.`);
       continue;
     }
     empresasPorCliente.set(id, [...(empresasPorCliente.get(id) ?? []), empresa]);
+    const destinoId = mesmoNome.length ? resolverEmpresa(empresa) : id;
+    if (destinoId && destinoId !== id && !mesmaChave(destinoId, id))
+      outroDestino.push({ empresa, clienteId: id, destinoId });
   }
 
   const tabelas: TipificacaoMigrada['tabelas'] = {
@@ -615,6 +665,40 @@ export function mapearTipificacao(
       'clientes_tipificacao',
       a.chave,
       `Grafia de ${nome} sem configuração no dashboards-one (lá era CO): no redo-one segue a de ${nome}.`,
+    );
+  }
+
+  // A configuração vale pelo cliente do laudo: se a importação manda os laudos da empresa para
+  // outro cliente, com outra configuração efetiva, o relatório diz.
+  const versaoDoCliente = new Map(tabelas.clientesTipificacaoVersoes.map((v) => [v.clienteId, v]));
+  const valoresDaLinha = (linhaId: string) =>
+    [
+      ...tabelas.clientesTipificacaoLinhasModalidades.map((v) => [v.linhaId, v.modalidadeId]),
+      ...tabelas.clientesTipificacaoLinhasEspecialidades.map((v) => [v.linhaId, v.especialidadeId]),
+      ...tabelas.clientesTipificacaoLinhasPrioridades.map((v) => [v.linhaId, v.prioridadeId]),
+      ...tabelas.clientesTipificacaoLinhasMedicos.map((v) => [v.linhaId, `m:${v.medicoId}`]),
+      ...tabelas.clientesTipificacaoLinhasEquipes.map((v) => [v.linhaId, `e:${v.equipeId}`]),
+    ]
+      .filter(([l]) => l === linhaId)
+      .map(([, v]) => v)
+      .sort();
+  const efetiva = (clienteId: string) => {
+    const principal = clientePorId.get(clienteId)?.unificadoEmId;
+    const v =
+      versaoDoCliente.get(clienteId) ?? (principal ? versaoDoCliente.get(principal) : undefined);
+    if (!v) return JSON.stringify([padraoId, null, []]);
+    const linhas = tabelas.clientesTipificacaoLinhas
+      .filter((l) => l.versaoId === v.id)
+      .sort((a, b) => a.ordem - b.ordem)
+      .map((l) => [l.tipo, l.modoMedico, l.subregraId, valoresDaLinha(l.id)]);
+    return JSON.stringify([v.regraId ?? padraoId, v.subregraDemaisId ?? null, linhas]);
+  };
+  for (const { empresa, clienteId, destinoId } of outroDestino) {
+    if (efetiva(clienteId) === efetiva(destinoId)) continue;
+    avisar(
+      'clientes_tipificacao',
+      empresa,
+      `Gravada no cliente ${clientePorId.get(clienteId)?.nome ?? clienteId}, mas a importação manda os laudos de "${empresa}" para ${clientePorId.get(destinoId)?.nome ?? destinoId}, que tem outra configuração.`,
     );
   }
 

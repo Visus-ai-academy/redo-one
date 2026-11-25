@@ -498,6 +498,110 @@ describe('mapearTipificacao', () => {
     ]);
   });
 
+  describe('RADI_IMAGEM e RADI-IMAGEM como dois clientes com o mesmo nome normalizado', () => {
+    // Como no redo-one: dois cadastros com chave "radi imagem", o da RADI-IMAGEM primeiro.
+    const comDois: CadastroParaTipificacao = {
+      ...cadastro,
+      clientes: [
+        {
+          id: 'c-radi-hifen',
+          nome: 'RADI-IMAGEM',
+          chaveNormalizada: 'radi imagem',
+          nomeFantasia: 'RADI_IMAGEM',
+          unificadoEmId: null,
+        },
+        ...cadastro.clientes,
+      ],
+    };
+    const legado = base({
+      clienteRegras: [
+        { empresa: 'RADI-IMAGEM', regraId: CO, principal: true },
+        { empresa: 'RADI_IMAGEM', regraId: NC, principal: true },
+      ],
+    });
+
+    it('cada empresa vai para o cliente de mesmo nome, não para o primeiro de mesma chave', () => {
+      const r = mapearTipificacao(legado, comDois);
+      expect(r.erros).toEqual([]);
+      expect(configs(r)).toEqual([
+        {
+          clienteId: 'c-radi-hifen',
+          regraId: regra(CO),
+          subregraDemaisId: null,
+          criadoPorId: null,
+        },
+        { clienteId: 'c-radi', regraId: regra(NC), subregraDemaisId: null, criadoPorId: null },
+      ]);
+    });
+
+    it('empresa ignorada por decisão não grava e sai no relatório (decisão 5: vale a RADI_IMAGEM)', () => {
+      const r = mapearTipificacao(legado, comDois, { empresasIgnoradas: ['RADI-IMAGEM'] });
+      expect(r.erros).toEqual([]);
+      expect(configs(r)).toEqual([
+        { clienteId: 'c-radi', regraId: regra(NC), subregraDemaisId: null, criadoPorId: null },
+      ]);
+      expect(r.avisos).toContainEqual({
+        tabela: 'clientes_tipificacao',
+        item: 'RADI-IMAGEM',
+        motivo: 'Configuração ignorada por decisão: não migra.',
+      });
+    });
+
+    it('empresa sem cliente de mesmo nome que cai em dois clientes pela chave normalizada: para', () => {
+      const r = mapearTipificacao(
+        base({ clienteRegras: [{ empresa: 'RADI IMAGEM', regraId: NC, principal: true }] }),
+        comDois,
+      );
+      expect(r.erros).toEqual([
+        'Empresa "RADI IMAGEM" casa com mais de um cliente do redo-one (RADI-IMAGEM, RADI_IMAGEM): diga qual vale.',
+      ]);
+      expect(configs(r)).toEqual([]);
+    });
+  });
+
+  it('empresa com cliente de mesmo nome cujos laudos a importação manda para outro cliente com outra configuração: grava no de mesmo nome e avisa', () => {
+    // Como GOLD_RMX: cliente próprio, mas o apelido leva os laudos para outro cliente.
+    const comProprio: CadastroParaTipificacao = {
+      ...cadastro,
+      clientes: [
+        ...cadastro.clientes,
+        {
+          id: 'c-cedi-x',
+          nome: 'CEDI_X',
+          chaveNormalizada: 'cedi x',
+          nomeFantasia: null,
+          unificadoEmId: null,
+        },
+      ],
+    };
+    const r = mapearTipificacao(
+      base({
+        clienteRegras: [
+          { empresa: 'CEDI_X', regraId: NC, principal: true },
+          { empresa: 'CEDI_Y', regraId: CO, principal: true },
+        ],
+      }),
+      comProprio,
+    );
+    expect(r.erros).toEqual([]);
+    expect(configs(r)).toEqual([
+      { clienteId: 'c-cedi-x', regraId: regra(NC), subregraDemaisId: null, criadoPorId: null },
+      { clienteId: 'c-cedidiag', regraId: regra(CO), subregraDemaisId: null, criadoPorId: null },
+    ]);
+    expect(r.avisos).toContainEqual({
+      tabela: 'clientes_tipificacao',
+      item: 'CEDI_X',
+      motivo:
+        'Gravada no cliente CEDI_X, mas a importação manda os laudos de "CEDI_X" para CEDIDIAG, que tem outra configuração.',
+    });
+    // Mesma configuração efetiva (CO explícita × sem configuração) não avisa.
+    const soCo = mapearTipificacao(
+      base({ clienteRegras: [{ empresa: 'CEDI_X', regraId: CO, principal: true }] }),
+      comProprio,
+    );
+    expect(soCo.avisos.filter((a) => a.item === 'CEDI_X')).toEqual([]);
+  });
+
   it('grafias do mesmo cliente com a mesma configuração entram uma vez', () => {
     const r = mapearTipificacao(
       base({

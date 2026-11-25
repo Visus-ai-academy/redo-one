@@ -133,8 +133,8 @@ async function migrarLegado() {
       legado.tipificacao,
       cadastroDaCarga(especialidadesDosLaudos, catalogo.tabelas, medicos.tabelas),
       // Decisão do usuário (24/11): RADI_IMAGEM × RADI-IMAGEM vale a RADI_IMAGEM, a única com
-      // laudos. Pelo mesmo critério, CEMVALENCA × CEMVALENCA_PLANTÃO vale a CEMVALENCA.
-      { grafiasPreferidas: ['RADI_IMAGEM', 'CEMVALENCA'] },
+      // laudos em set/out; a da RADI-IMAGEM não migra e sai no relatório.
+      { empresasIgnoradas: ['RADI-IMAGEM'] },
     );
 
     const competencias = mapearCompetencias(legado.competencias, {
