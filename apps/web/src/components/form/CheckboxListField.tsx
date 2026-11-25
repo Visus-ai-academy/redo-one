@@ -38,8 +38,8 @@ type CheckboxListFieldProps = {
  * a bolinha.
  *
  * Com `todas`, ganha no topo a caixa-mãe do Base UI (`allValues` + `parent`) e as opções ficam
- * recuadas abaixo dela. Aí o valor vazio quer dizer "todas" e desmarcar tudo vira `[NENHUMA]`, que
- * o esquema recusa: use `esquemaCaixasComTodas` no campo (regras em `caixas-todas.ts`).
+ * recuadas abaixo dela. Aí "Todas" marcada vale `[TODAS]` e nada marcado vale `[]`, que o
+ * esquema recusa: use `esquemaCaixasComTodas` no campo (regras em `caixas-todas.ts`).
  */
 export function CheckboxListField({
   label,

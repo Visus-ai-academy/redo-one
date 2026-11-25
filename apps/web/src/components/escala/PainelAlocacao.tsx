@@ -12,7 +12,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
-import { NENHUMA } from '../form/caixas-todas';
+import { TODAS } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
@@ -120,11 +120,13 @@ export function PainelAlocacao({
     filtrar: (sugestao, frenteId) => {
       const subs = subsDaFrente(frentes.find((f) => f.id === frenteId));
       return {
-        prioridadeIds: sugestao.prioridadeIds.filter((id) => prioridades.some((p) => p.id === id)),
-        subespecialidadeIds: [
+        prioridadeIds: ouTodas(
+          sugestao.prioridadeIds.filter((id) => prioridades.some((p) => p.id === id)),
+        ),
+        subespecialidadeIds: ouTodas([
           ...sugestao.subespecialidadeIds.filter((id) => subs.some((s) => s.id === id)),
           ...(sugestao.subespecialidadeGeral && subs.length > 0 ? [GERAL] : []),
-        ],
+        ]),
       };
     },
   });
@@ -180,16 +182,18 @@ export function PainelAlocacao({
               // se ela não tem nenhuma) saem.
               const daFrente = subsDaFrente(frentes.find((f) => f.id === value));
               const marcadas = form.getFieldValue('subespecialidadeIds');
-              // "Nenhuma marcada" continua inválido (não vira "Sem restrição" calado).
-              const ficam = marcadas.filter((id) =>
-                id === NENHUMA
-                  ? daFrente.length > 0
+              // "Sem restrição" fica; sem segmentos na frente, o campo some e vale "Sem restrição".
+              // Nada marcado continua inválido (não vira "Sem restrição" calado).
+              const filtradas = marcadas.filter((id) =>
+                id === TODAS
+                  ? true
                   : id === GERAL
                     ? daFrente.length > 0
                     : daFrente.some((s) => s.id === id),
               );
+              const ficam = daFrente.length === 0 ? [TODAS] : filtradas;
               // Sem marcar o campo como mexido: a sugestão do médico ainda pode preenchê-lo.
-              if (ficam.length !== marcadas.length)
+              if (ficam.join() !== marcadas.join())
                 form.setFieldValue('subespecialidadeIds', ficam, {
                   dontUpdateMeta: true,
                   dontValidate: true,
@@ -399,7 +403,7 @@ export function PainelAlocacao({
                 <form.AppField name="subespecialidadeIds">
                   {(field) =>
                     // Só com frente de especialidade que tem subespecialidades (ou algo já marcado).
-                    (subs.length > 0 || field.state.value.length > 0) && (
+                    (subs.length > 0 || field.state.value.some((v) => v !== TODAS)) && (
                       <CaixasField
                         label="Segmentos"
                         opcoes={[
@@ -432,6 +436,9 @@ export function PainelAlocacao({
     </PainelLateral>
   );
 }
+
+/** Da API (vazio = todas) para o formulário. */
+const ouTodas = (ids: string[]) => (ids.length ? ids : [TODAS]);
 
 type CampoSugerido = 'prioridadeIds' | 'subespecialidadeIds';
 const CAMPOS_SUGERIDOS: CampoSugerido[] = ['prioridadeIds', 'subespecialidadeIds'];

@@ -10,7 +10,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { CaixasField } from '../escala/campos';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import type { OpcaoMarcar } from '../form/CheckboxListField';
-import { esquemaCaixasComTodas } from '../form/caixas-todas';
+import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
@@ -26,6 +26,8 @@ const OPCOES_DIAS = DIAS_DA_SEMANA.map((d) => ({ valor: String(d.valor), rotulo:
 
 const FALHA_AO_SALVAR = 'Não foi possível salvar agora. Confira sua conexão e tente de novo.';
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
+/** Da API (vazio = todas) para o formulário. */
+const ouTodas = (ids: string[]) => (ids.length ? ids : [TODAS]);
 
 const schema = z
   .object({
@@ -105,9 +107,9 @@ export function FormAusencia({
     tipoId: ausencia?.tipo.id ?? '',
     dataInicio: ausencia?.dataInicio ?? inicial.de ?? '',
     dataFim: ausencia?.dataFim ?? inicial.de ?? '',
-    frenteIds: ausencia?.frentes.map((f) => f.id) ?? inicial.frenteIds ?? [],
-    turnoIds: ausencia?.turnos.map((t) => t.id) ?? inicial.turnoIds ?? [],
-    diasSemana: ausencia?.diasSemana.map(String) ?? ([] as string[]),
+    frenteIds: ouTodas(ausencia?.frentes.map((f) => f.id) ?? inicial.frenteIds ?? []),
+    turnoIds: ouTodas(ausencia?.turnos.map((t) => t.id) ?? inicial.turnoIds ?? []),
+    diasSemana: ouTodas(ausencia?.diasSemana.map(String) ?? []),
     observacoes: ausencia?.observacoes ?? '',
   };
   const form = useAppForm({
@@ -121,9 +123,11 @@ export function FormAusencia({
           tipoId: value.tipoId,
           dataInicio: value.dataInicio,
           dataFim: value.dataFim,
-          frenteIds: value.frenteIds,
-          turnoIds: value.turnoIds,
-          diasSemana: value.diasSemana.map(Number).sort((a, b) => a - b),
+          frenteIds: caixasParaApi(value.frenteIds).ids,
+          turnoIds: caixasParaApi(value.turnoIds).ids,
+          diasSemana: caixasParaApi(value.diasSemana)
+            .ids.map(Number)
+            .sort((a, b) => a - b),
           observacoes: observacoesOcultas ? null : value.observacoes.trim() || null,
         });
       } catch (falha) {

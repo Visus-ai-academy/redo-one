@@ -15,6 +15,7 @@ import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CaixasField, OpcoesField } from '../escala/campos';
+import { TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { Select } from '../select/Select';
@@ -324,7 +325,7 @@ function FormRegras({
                     )}
                     <Button
                       type="button"
-                      onClick={() => lista.pushValue({ diasSemana: [], inicio: '', fim: '' })}
+                      onClick={() => lista.pushValue({ diasSemana: [TODAS], inicio: '', fim: '' })}
                       className={adicionarClasse}
                     >
                       <Plus size={16} aria-hidden />

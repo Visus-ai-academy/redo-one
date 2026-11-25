@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { esquemaCaixasComTodas } from './caixas-todas';
+import { esquemaCaixasComTodas, TODAS } from './caixas-todas';
 import { useAppForm } from './form';
 
 const schema = z.object({ escalas: esquemaCaixasComTodas('Marque ao menos uma escala.') });
 
 function Formulario({
-  escalas = [],
+  escalas = [TODAS],
   aoEnviar = () => {},
 }: {
   escalas?: string[];
@@ -48,7 +48,7 @@ function Formulario({
 }
 
 describe('CheckboxListField com "Todas"', () => {
-  it('valor vazio mostra "Todas" e as opções marcadas', () => {
+  it('"Todas" marcada mostra as opções marcadas', () => {
     render(<Formulario />);
     expect(screen.getByRole('checkbox', { name: 'Todas' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Tomografia' })).toBeChecked();
@@ -62,12 +62,12 @@ describe('CheckboxListField com "Todas"', () => {
     await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith(['b']));
   });
 
-  it('marcar todas uma a uma envia vazio ("Todas")', async () => {
+  it('marcar todas uma a uma envia "Todas"', async () => {
     const aoEnviar = vi.fn();
     render(<Formulario escalas={['a']} aoEnviar={aoEnviar} />);
     await userEvent.click(screen.getByRole('checkbox', { name: 'Ressonância' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith([]));
+    await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith([TODAS]));
   });
 
   it('desmarcar "Todas" mostra o erro e não envia', async () => {

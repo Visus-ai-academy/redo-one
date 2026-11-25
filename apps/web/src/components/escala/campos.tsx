@@ -43,8 +43,8 @@ function Legenda({ required, children }: { required: boolean; children: ReactNod
  * CheckboxGroup do Base UI. O valor é a lista dos marcados.
  *
  * Com `todas` (rótulo: "Todas", "Todos os dias"…), ganha antes das outras a caixa-mãe do Base UI
- * (`allValues` + `parent`, meio marcada quando só parte está). Aí o valor vazio quer dizer "todas"
- * e desmarcar tudo vira `[NENHUMA]`, que o esquema recusa: use `esquemaCaixasComTodas` no campo
+ * (`allValues` + `parent`, meio marcada quando só parte está). Aí "Todas" marcada vale `[TODAS]`
+ * e nada marcado vale `[]`, que o esquema recusa: use `esquemaCaixasComTodas` no campo
  * (regras em `form/caixas-todas.ts`).
  */
 export function CaixasField({

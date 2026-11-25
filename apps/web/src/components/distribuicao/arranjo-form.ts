@@ -5,7 +5,7 @@ import type { ModoVinculoKey } from '../../gen/types/ModoVinculo';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { GERAL } from '../escala/alocacao-form';
-import { esquemaCaixasComTodas } from '../form/caixas-todas';
+import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 
 /** Dono do arranjo: só o do médico tem clínica exclusiva. */
 export type DonoArranjo = 'medico' | 'equipe';
@@ -43,7 +43,7 @@ export const ARRANJO_VAZIO: ValoresArranjo = {
   especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
-  prioridadeIds: [],
+  prioridadeIds: [TODAS],
   modoClientes: 'todos',
   clientes: [],
   modoExames: 'todos',
@@ -87,7 +87,7 @@ export function valoresDoArranjo(
       ...arranjo.subespecialidadeIds,
       ...(arranjo.subespecialidadeGeral ? [GERAL] : []),
     ],
-    prioridadeIds: arranjo.prioridadeIds,
+    prioridadeIds: arranjo.prioridadeIds.length ? arranjo.prioridadeIds : [TODAS],
     modoClientes: arranjo.modoClientes,
     clientes: opcoes(arranjo.clienteIds, nomes.clientes),
     modoExames: arranjo.modoExames,
@@ -110,7 +110,7 @@ export function paraApi(v: ValoresArranjo, dono: DonoArranjo = 'medico'): Arranj
     modalidadeIds: daEspecialidade ? v.modalidadeIds : [],
     subespecialidadeIds: daEspecialidade ? v.subespecialidadeIds.filter((id) => id !== GERAL) : [],
     subespecialidadeGeral: daEspecialidade && v.subespecialidadeIds.includes(GERAL),
-    prioridadeIds: v.prioridadeIds,
+    prioridadeIds: caixasParaApi(v.prioridadeIds).ids,
     modoClientes: v.modoClientes,
     clienteIds: v.modoClientes === 'todos' ? [] : ids(v.clientes),
     modoExames: v.modoExames,

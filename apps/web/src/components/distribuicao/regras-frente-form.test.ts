@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
-import { NENHUMA } from '../form/caixas-todas';
+import { TODAS } from '../form/caixas-todas';
+
 import {
   esquemaRegras,
   regrasParaApi,
@@ -132,8 +132,8 @@ describe('regras da frente no formulário', () => {
     const v: ValoresRegras = {
       ...valoresDasRegras(NEUTRAS),
       horariosSemRobo: [
-        { diasSemana: [], inicio: '25:00', fim: '07:00' },
-        { diasSemana: [], inicio: '07:00', fim: '07:00' },
+        { diasSemana: [TODAS], inicio: '25:00', fim: '07:00' },
+        { diasSemana: [TODAS], inicio: '07:00', fim: '07:00' },
       ],
     };
     expect(erros(v)).toEqual([
@@ -145,7 +145,7 @@ describe('regras da frente no formulário', () => {
   it('recusa horário com todos os dias desmarcados (nem "Todos os dias")', () => {
     const v: ValoresRegras = {
       ...valoresDasRegras(NEUTRAS),
-      horariosSemRobo: [{ diasSemana: [NENHUMA], inicio: '19:00', fim: '07:00' }],
+      horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
     };
     expect(erros(v)).toEqual(['horariosSemRobo.0.diasSemana: Marque ao menos um dia.']);
   });

@@ -3,7 +3,7 @@ import type { OpcaoComCorDto } from '../../gen/types/OpcaoComCorDto';
 import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
-import { esquemaCaixasComTodas } from '../form/caixas-todas';
+import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import {
   celulasParaApi,
   errosDaGrade,
@@ -79,7 +79,7 @@ export function valoresDasRegras(r: RegrasFrenteDto): ValoresRegras {
     listaDepoisDosFixos: r.listaDepoisDosFixos,
     distribuiPeloRobo: r.distribuiPeloRobo,
     horariosSemRobo: r.horariosSemRobo.map((h) => ({
-      diasSemana: h.diasSemana.map(String),
+      diasSemana: h.diasSemana.length ? h.diasSemana.map(String) : [TODAS],
       inicio: h.inicio,
       fim: h.fim,
     })),
@@ -114,7 +114,9 @@ export function regrasParaApi(v: ValoresRegras, tipo: TipoFrente): RegrasFrenteD
     recolheAoFimDoTurno: v.recolheAoFimDoTurno,
     distribuiPeloRobo: v.distribuiPeloRobo,
     horariosSemRobo: v.horariosSemRobo.map((h) => ({
-      diasSemana: h.diasSemana.map(Number).sort((a, b) => a - b),
+      diasSemana: caixasParaApi(h.diasSemana)
+        .ids.map(Number)
+        .sort((a, b) => a - b),
       inicio: normalizarHora(h.inicio),
       fim: normalizarHora(h.fim),
     })),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-
 import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
-import { NENHUMA } from '../form/caixas-todas';
+import { TODAS } from '../form/caixas-todas';
+
 import { esquemaAlocacao, GERAL, paraApi, valoresIniciais } from './alocacao-form';
 
 const alocacao: AlocacaoItemDto = {
@@ -133,14 +133,21 @@ describe('esquemaAlocacao', () => {
     ]);
   });
 
-  it('semanas, prioridades e segmentos: vazio é "todas"; desmarcar tudo pede ao menos uma', () => {
-    expect(erros({ ...validos, semanasDoMes: [], prioridadeIds: [] })).toEqual([]);
+  it('semanas, prioridades e segmentos: "Todas" explícita; nada marcado pede ao menos uma', () => {
     expect(
       erros({
         ...validos,
-        semanasDoMes: [NENHUMA],
-        prioridadeIds: [NENHUMA],
-        subespecialidadeIds: [NENHUMA],
+        semanasDoMes: [TODAS],
+        prioridadeIds: [TODAS],
+        subespecialidadeIds: [TODAS],
+      }),
+    ).toEqual([]);
+    expect(
+      erros({
+        ...validos,
+        semanasDoMes: [],
+        prioridadeIds: [],
+        subespecialidadeIds: [],
       }),
     ).toEqual([
       'Marque ao menos uma semana.',

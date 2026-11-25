@@ -4,7 +4,11 @@ import type { AlocacaoDto } from '../../gen/types/AlocacaoDto';
 import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { horarioValido, normalizarHorario } from '../escala-config/horario';
-import { esquemaCaixasComTodas } from '../form/caixas-todas';
+import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
+
+/** Da API (vazio = todas) para o formulário. */
+const ouTodas = (ids: string[]) => (ids.length ? ids : [TODAS]);
+
 import { diaDaSemana } from './calendario';
 
 /** Marca "Geral (sem segmento)" entre as subespecialidades do formulário. */
@@ -89,16 +93,16 @@ export function valoresIniciais({
       dataInicio: alocacao.dataInicio,
       dataFim: alocacao.dataFim ?? '',
       diasSemana: alocacao.diasSemana.map(String),
-      semanasDoMes: alocacao.semanasDoMes.map(String),
+      semanasDoMes: ouTodas(alocacao.semanasDoMes.map(String)),
       horarioInicio: alocacao.horarioInicio,
       horarioFim: alocacao.horarioFim,
       produtividade: texto(alocacao.produtividade),
       gratificado: alocacao.gratificado,
-      prioridadeIds: alocacao.prioridadeIds,
-      subespecialidadeIds: [
+      prioridadeIds: ouTodas(alocacao.prioridadeIds),
+      subespecialidadeIds: ouTodas([
         ...alocacao.subespecialidadeIds,
         ...(alocacao.subespecialidadeGeral ? [GERAL] : []),
-      ],
+      ]),
       observacoes: alocacao.observacoes ?? '',
     };
   }
@@ -110,16 +114,16 @@ export function valoresIniciais({
     dataInicio: inicial.data ?? hoje,
     dataFim: '',
     diasSemana: inicial.data ? [String(diaDaSemana(inicial.data))] : [],
-    semanasDoMes: [],
+    semanasDoMes: [TODAS],
     horarioInicio: inicial.horarioInicio ?? '',
     horarioFim: inicial.horarioFim ?? '',
     produtividade: texto(inicial.produtividade),
     gratificado: false,
-    prioridadeIds: inicial.prioridadeIds ?? [],
-    subespecialidadeIds: [
+    prioridadeIds: ouTodas(inicial.prioridadeIds ?? []),
+    subespecialidadeIds: ouTodas([
       ...(inicial.subespecialidadeIds ?? []),
       ...(inicial.subespecialidadeGeral ? [GERAL] : []),
-    ],
+    ]),
     observacoes: '',
   };
 }
@@ -135,7 +139,6 @@ export const esquemaAlocacao = z
     dataInicio: z.string(),
     dataFim: z.string(),
     diasSemana: z.array(z.string()),
-    // Vazio = "Toda semana" / "Sem restrição" (a caixa "Todas" marcada).
     semanasDoMes: esquemaCaixasComTodas('Marque ao menos uma semana.'),
     horarioInicio: z.string(),
     horarioFim: z.string(),
@@ -180,15 +183,15 @@ export function paraApi(v: ValoresAlocacao): AlocacaoDto {
     turnoId: v.turnoId,
     vigencia,
     diasSemana: v.diasSemana.map(Number).sort((a, b) => a - b),
-    semanasDoMes: v.gratificado ? [] : v.semanasDoMes.map(Number),
+    semanasDoMes: v.gratificado ? [] : caixasParaApi(v.semanasDoMes).ids.map(Number),
     horarioInicio: horario(v.horarioInicio),
     horarioFim: horario(v.horarioFim),
     dataInicio: v.dataInicio,
     dataFim: v.dataFim || null,
     produtividade: v.produtividade.trim() ? Number(v.produtividade) : null,
     gratificado: v.gratificado,
-    prioridadeIds: v.prioridadeIds,
-    subespecialidadeIds: v.subespecialidadeIds.filter((id) => id !== GERAL),
+    prioridadeIds: caixasParaApi(v.prioridadeIds).ids,
+    subespecialidadeIds: caixasParaApi(v.subespecialidadeIds).ids.filter((id) => id !== GERAL),
     subespecialidadeGeral: v.subespecialidadeIds.includes(GERAL),
     observacoes: v.observacoes.trim() || null,
   };

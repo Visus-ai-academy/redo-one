@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { esquemaCaixasComTodas } from '../form/caixas-todas';
+import { esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
 import { CaixasField } from './campos';
 
@@ -68,7 +68,7 @@ describe('CaixasField', () => {
 const esquemaTodos = z.object({ dias: esquemaCaixasComTodas('Marque ao menos um dia.') });
 
 function FormularioTodos({
-  dias = [],
+  dias = [TODAS],
   aoEnviar = () => {},
 }: {
   dias?: string[];
@@ -109,7 +109,7 @@ function FormularioTodos({
 }
 
 describe('CaixasField com "Todas"', () => {
-  it('valor vazio mostra "Todos os dias" e todas as caixas marcadas', () => {
+  it('"Todos os dias" marcada mostra e todas as caixas marcadas', () => {
     render(<FormularioTodos />);
     expect(screen.getByRole('checkbox', { name: 'Todos os dias' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Seg' })).toBeChecked();
@@ -128,14 +128,14 @@ describe('CaixasField com "Todas"', () => {
     await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith(['1', '3']));
   });
 
-  it('marcar uma a uma todas vira "Todos os dias" (valor vazio)', async () => {
+  it('marcar uma a uma todas vira "Todos os dias" (`[TODAS]`)', async () => {
     const aoEnviar = vi.fn();
     render(<FormularioTodos dias={['1']} aoEnviar={aoEnviar} />);
     await userEvent.click(screen.getByRole('checkbox', { name: 'Ter' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Qua' }));
     expect(screen.getByRole('checkbox', { name: 'Todos os dias' })).toBeChecked();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith([]));
+    await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith([TODAS]));
   });
 
   it('desmarcar "Todos os dias" desmarca tudo e mostra o erro, sem enviar', async () => {
