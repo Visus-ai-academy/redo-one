@@ -181,12 +181,10 @@ const ACOES_COMPETENCIA = [
     },
     {
       provide: MudarPrecos,
-      inject: [PRECOS_REPOSITORY, COMPETENCIAS_REPOSITORY, AUDITORIA],
-      useFactory: (
-        repo: PrecosRepository,
-        competencias: CompetenciasRepository,
-        auditoria: Auditoria,
-      ) => new MudarPrecos(repo, competencias, auditoria, agora),
+      inject: [PRECOS_REPOSITORY, COMPETENCIAS_REPOSITORY],
+      // A auditoria vai pelo repositório, na mesma transação da mudança.
+      useFactory: (repo: PrecosRepository, competencias: CompetenciasRepository) =>
+        new MudarPrecos(repo, competencias, agora),
     },
     {
       provide: ExportarPrecos,

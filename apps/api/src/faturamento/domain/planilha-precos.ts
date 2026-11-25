@@ -11,6 +11,7 @@ const CABECALHO = [
   'Faixa fim',
   'Volume por',
   'Valor',
+  'Vale a partir de',
 ];
 
 /** Como o condVolume aparece na planilha e na tela. */
@@ -31,6 +32,8 @@ export interface LinhaPlanilhaPreco {
   faixaFim: number | null;
   condVolume: CondVolume;
   valor: number;
+  /** "YYYY-MM" da versão programada (começa depois do mês atual); vazio = a que vale hoje. */
+  valeAPartirDe: string | null;
 }
 
 type Opcao = { id: string; nome: string };
@@ -42,7 +45,8 @@ export interface CatalogoPlanilha {
 }
 
 export interface PlanilhaLida {
-  linhas: { linha: number; dados: DadosPreco }[];
+  /** `valeAPartirDe` ("YYYY-MM") só na linha de uma versão programada. */
+  linhas: { linha: number; dados: DadosPreco; valeAPartirDe: string | null }[];
   erros: { linha: number; erro: string }[];
 }
 
@@ -63,6 +67,7 @@ export function gerarPlanilhaPrecos(linhas: readonly LinhaPlanilhaPreco[]): stri
       l.faixaFim === null ? '' : String(l.faixaFim),
       ROTULO_COND[l.condVolume],
       l.valor.toFixed(2).replace('.', ','),
+      l.valeAPartirDe ? `${l.valeAPartirDe.slice(5, 7)}/${l.valeAPartirDe.slice(0, 4)}` : '',
     ]
       .map(celula)
       .join(';'),
@@ -93,11 +98,22 @@ function celulas(linha: string): string[] {
   return out.map((v) => v.trim());
 }
 
-/** "1.234,5" ou "1234.5" → 1234.5; vazio ou inválido → nulo. */
-function numero(v: string): number | null {
+/**
+ * Número em pt-BR, como o Excel em português salva: ponto só separa milhar, vírgula separa os
+ * centavos ("1.200" = 1200, "1.200,50" = 1200,5, "57,00" = 57). O resto é recusado.
+ */
+export function numeroPtBr(v: string, casas: 0 | 2): number | null {
+  const t = v.trim();
+  const decimais = casas ? `(,\\d{1,${casas}})?` : '';
+  if (!new RegExp(`^(\\d{1,3}(\\.\\d{3})+|\\d+)${decimais}$`).test(t)) return null;
+  return Number(t.replace(/\./g, '').replace(',', '.'));
+}
+
+/** "12/2026" → "2026-12"; vazio → nulo; outro formato → undefined. */
+function competenciaDaCelula(v: string): string | null | undefined {
   if (!v) return null;
-  const n = Number(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v);
-  return Number.isFinite(n) ? n : null;
+  const m = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(v.trim());
+  return m ? `${m[2]}-${m[1]}` : undefined;
 }
 
 /**
@@ -126,11 +142,14 @@ export function lerPlanilhaPrecos(texto: string, catalogo: CatalogoPlanilha): Pl
   );
 
   /** Os dados da linha, ou o problema dela. */
-  const lerLinha = (texto: string): DadosPreco | string => {
+  const lerLinha = (
+    texto: string,
+  ): { dados: DadosPreco; valeAPartirDe: string | null } | string => {
     const c = celulas(texto);
     if (c.length !== CABECALHO.length)
       return `A linha tem de ter ${CABECALHO.length} colunas separadas por ";".`;
-    const [mod, esp, cat, pri, ini, fim, vol, valor] = c as [
+    const [mod, esp, cat, pri, ini, fim, vol, valor, desde] = c as [
+      string,
       string,
       string,
       string,
@@ -156,23 +175,28 @@ export function lerPlanilhaPrecos(texto: string, catalogo: CatalogoPlanilha): Pl
       ['Faixa início', ini],
       ['Faixa fim', fim],
     ] as const) {
-      const n = v ? Number(v) : null;
-      if (n !== null && !Number.isInteger(n)) return `${nome} "${v}" não é um número inteiro.`;
+      const n = v ? numeroPtBr(v, 0) : null;
+      if (v && n === null) return `${nome} "${v}" não é um número inteiro.`;
       faixa.push(n);
     }
     const condVolume = vol ? cond.get(chave(vol)) : 'MOD_ESP_CAT';
     if (!condVolume) return `Volume por "${vol}" tem de ser MOD, MOD/ESP, MOD/ESP/CAT ou TOTAL.`;
-    const v = numero(valor);
-    if (v === null) return 'Valor vazio ou inválido.';
+    const v = valor ? numeroPtBr(valor, 2) : null;
+    if (v === null) return `Valor "${valor}" inválido: use vírgula nos centavos, como 1.200,50.`;
+    const valeAPartirDe = competenciaDaCelula(desde);
+    if (valeAPartirDe === undefined) return `Vale a partir de "${desde}" tem de ser MM/AAAA.`;
     return {
-      modalidadeId: arranjo.Modalidade as string,
-      especialidadeId: arranjo.Especialidade as string,
-      categoriaId: arranjo.Categoria as string,
-      prioridadeId: arranjo.Prioridade as string,
-      faixaInicio: faixa[0] ?? null,
-      faixaFim: faixa[1] ?? null,
-      condVolume,
-      valor: v,
+      valeAPartirDe,
+      dados: {
+        modalidadeId: arranjo.Modalidade as string,
+        especialidadeId: arranjo.Especialidade as string,
+        categoriaId: arranjo.Categoria as string,
+        prioridadeId: arranjo.Prioridade as string,
+        faixaInicio: faixa[0] ?? null,
+        faixaFim: faixa[1] ?? null,
+        condVolume,
+        valor: v,
+      },
     };
   };
 
@@ -180,7 +204,7 @@ export function lerPlanilhaPrecos(texto: string, catalogo: CatalogoPlanilha): Pl
     if (!texto.trim()) continue;
     const dados = lerLinha(texto);
     if (typeof dados === 'string') r.erros.push({ linha: i + 2, erro: dados });
-    else r.linhas.push({ linha: i + 2, dados });
+    else r.linhas.push({ linha: i + 2, ...dados });
   }
   return r;
 }

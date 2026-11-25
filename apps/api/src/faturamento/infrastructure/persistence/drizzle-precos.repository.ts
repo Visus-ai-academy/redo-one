@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { DATABASE, type Database } from '../../../database/database';
 import {
   categoriasExame,
   clientes,
+  competencias,
   contratados,
   especialidades,
   eventosAuditoria,
@@ -19,18 +20,24 @@ import type {
   Dono,
   EventoVersao,
   InfoDono,
+  MudancaGravada,
+  OpcoesAplicar,
   OpcoesPreco,
   PrecosRepository,
   VersaoComNomes,
 } from '../../application/ports/precos.repository';
 import { ENTIDADE_PRECO } from '../../application/use-cases/precos';
 import type { Arranjo } from '../../domain/preco';
-import { type MudancaPreco, VersaoAlteradaError } from '../../domain/versoes-preco';
+import {
+  VersaoAlteradaError,
+  VersaoConflitanteError,
+  VigenciaPrecoInvalidaError,
+} from '../../domain/versoes-preco';
+import { mesAno } from '../../domain/vigencia-corte';
 
 const tabela = (dono: Dono) => (dono.tipo === 'cliente' ? precosCliente : precosPadraoContratado);
 const colunaDono = (dono: Dono) =>
   dono.tipo === 'cliente' ? precosCliente.clienteId : precosPadraoContratado.contratadoId;
-
 @Injectable()
 export class DrizzlePrecosRepository implements PrecosRepository {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
@@ -101,24 +108,46 @@ export class DrizzlePrecosRepository implements PrecosRepository {
     }));
   }
 
-  async aplicar(dono: Dono, mudancas: MudancaPreco[], autor: { usuarioId: string }) {
+  async aplicar(dono: Dono, mudancas: MudancaGravada[], opcoes: OpcoesAplicar): Promise<void> {
     const t = tabela(dono);
-    return this.db.transaction(async (tx) => {
-      const criadas: string[] = [];
+    const doDono = eq(colunaDono(dono), dono.id);
+    await this.db.transaction(async (tx) => {
+      // Uma mudança por vez na tabela do dono: a conferência de sobreposição abaixo vale até o commit.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`precos:${dono.tipo}:${dono.id}`}))`,
+      );
+      // A competência pode ter sido fechada ou travada depois da validação: confere de novo.
+      const bloqueadas = await tx
+        .select({ competencia: competencias.competencia })
+        .from(competencias)
+        .where(
+          and(
+            gte(competencias.competencia, opcoes.aPartirDe),
+            or(eq(competencias.status, 'fechada'), isNotNull(competencias.importacaoTravadaEm)),
+          ),
+        )
+        .for('share');
+      if (bloqueadas.length)
+        throw new VigenciaPrecoInvalidaError(
+          `A competência ${mesAno(bloqueadas[0]?.competencia as string)} acabou de ser fechada ou travada: o preço não muda nela. Recarregue e escolha outra competência.`,
+        );
+
+      const conferir: string[] = [];
       for (const m of mudancas) {
-        if (m.tipo === 'encerrar') {
+        if (m.tipo === 'encerrar' || m.tipo === 'reabrir') {
           const r = await tx
             .update(t)
             .set({ vigenciaAte: m.vigenciaAte })
             .where(
               and(
                 eq(t.id, m.id),
-                eq(colunaDono(dono), dono.id),
+                doDono,
                 sql`${t.vigenciaAte} is not distinct from ${m.vigenciaAteAntes}`,
               ),
             )
             .returning({ id: t.id });
           if (!r.length) throw new VersaoAlteradaError();
+          if (m.tipo === 'reabrir') conferir.push(m.id);
         } else if (m.tipo === 'remover') {
           // Só a versão programada (nunca valeu) chega aqui; a condição repete a regra no banco.
           const r = await tx
@@ -126,7 +155,7 @@ export class DrizzlePrecosRepository implements PrecosRepository {
             .where(
               and(
                 eq(t.id, m.id),
-                eq(colunaDono(dono), dono.id),
+                doDono,
                 sql`${t.vigenciaDesde} > to_char(now() at time zone 'America/Sao_Paulo', 'YYYY-MM')`,
               ),
             )
@@ -134,25 +163,57 @@ export class DrizzlePrecosRepository implements PrecosRepository {
           if (!r.length) throw new VersaoAlteradaError();
         } else {
           const valores = {
+            id: m.id,
             ...m.dados,
             vigenciaDesde: m.vigenciaDesde,
             vigenciaAte: m.vigenciaAte,
-            criadoPorId: autor.usuarioId,
+            criadoPorId: opcoes.usuarioId,
           };
-          const [nova] =
-            dono.tipo === 'cliente'
-              ? await tx
-                  .insert(precosCliente)
-                  .values({ ...valores, clienteId: dono.id })
-                  .returning({ id: precosCliente.id })
-              : await tx
-                  .insert(precosPadraoContratado)
-                  .values({ ...valores, contratadoId: dono.id })
-                  .returning({ id: precosPadraoContratado.id });
-          criadas.push((nova as { id: string }).id);
+          if (dono.tipo === 'cliente')
+            await tx.insert(precosCliente).values({ ...valores, clienteId: dono.id });
+          else
+            await tx.insert(precosPadraoContratado).values({ ...valores, contratadoId: dono.id });
+          conferir.push(m.id);
         }
       }
-      return criadas;
+
+      // Nenhuma versão criada ou reaberta cruza outra do mesmo arranjo e faixa (o que outra
+      // requisição gravou antes do lock entra aqui).
+      if (conferir.length) {
+        const nome = sql.raw(
+          dono.tipo === 'cliente' ? 'precos_cliente' : 'precos_padrao_contratado',
+        );
+        const col = sql.raw(dono.tipo === 'cliente' ? 'cliente_id' : 'contratado_id');
+        const cruzadas = await tx.execute(sql`
+          select 1 from ${nome} a join ${nome} b
+            on b.id <> a.id and b.${col} = a.${col}
+            and b.modalidade_id = a.modalidade_id and b.especialidade_id = a.especialidade_id
+            and b.categoria_id = a.categoria_id and b.prioridade_id = a.prioridade_id
+            and b.faixa_inicio is not distinct from a.faixa_inicio
+            and b.faixa_fim is not distinct from a.faixa_fim
+            and (b.vigencia_ate is null or a.vigencia_desde is null or a.vigencia_desde <= b.vigencia_ate)
+            and (a.vigencia_ate is null or b.vigencia_desde is null or b.vigencia_desde <= a.vigencia_ate)
+          where a.id in (${sql.join(
+            conferir.map((id) => sql`${id}::uuid`),
+            sql`, `,
+          )})
+          limit 1`);
+        if (cruzadas.rows.length) throw new VersaoConflitanteError();
+      }
+
+      if (opcoes.eventos.length)
+        await tx.insert(eventosAuditoria).values(
+          opcoes.eventos.map((e) => ({
+            ocorridoEm: e.em,
+            atorTipo: e.ator.tipo,
+            atorId: e.ator.id ?? null,
+            entidade: e.entidade,
+            entidadeId: e.entidadeId,
+            acao: e.acao,
+            antes: e.antes ?? null,
+            depois: e.depois ?? null,
+          })),
+        );
     });
   }
 

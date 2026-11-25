@@ -1,4 +1,6 @@
-import type { Auditoria } from '../../../auditoria/auditoria';
+import { randomUUID } from 'node:crypto';
+
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import type { Paginacao } from '../../../catalogo/comum/paginacao';
 import { ErroDeDominio } from '../../../comum/erro-de-dominio';
 import type { CompetenciasBloqueadas } from '../../../ingestao/application/ports/competencias-bloqueadas';
@@ -17,9 +19,11 @@ import {
   type VersaoPreco,
   validarAPartirDe,
 } from '../../domain/versoes-preco';
+import { mesAno } from '../../domain/vigencia-corte';
 import type {
   Dono,
   InfoDono,
+  MudancaGravada,
   OpcoesPreco,
   PrecosRepository,
   TipoDono,
@@ -191,15 +195,15 @@ const mesmaChave = (a: DadosPreco, b: DadosPreco) =>
 
 /**
  * Incluir, alterar, encerrar e importar preços. Nada se sobrescreve: cada mudança encerra a versão
- * e cria outra (ver `versoes-preco`), sempre a partir de competência aberta ou futura, com evento
- * de auditoria por versão criada, encerrada ou apagada.
+ * e cria outra (ver `versoes-preco`), sempre a partir de competência aberta ou futura. Os eventos de
+ * auditoria (versão criada, encerrada, reaberta ou apagada) vão na mesma transação da mudança.
  */
 export class MudarPrecos {
   constructor(
     private readonly repo: PrecosRepository,
     private readonly competencias: CompetenciasBloqueadas,
-    private readonly auditoria: Auditoria,
     private readonly agora: () => Date,
+    private readonly novoId: () => string = randomUUID,
   ) {}
 
   async incluir(usuarioId: string, dono: Dono, dados: DadosPreco, aPartirDe: string) {
@@ -209,6 +213,7 @@ export class MudarPrecos {
       dono,
       planejarInclusao(dados, aPartirDe, versoes, ctx),
       versoes,
+      aPartirDe,
     );
     return id as string;
   }
@@ -220,19 +225,28 @@ export class MudarPrecos {
       dono,
       planejarAlteracao(id, dados, aPartirDe, versoes, ctx),
       versoes,
+      aPartirDe,
     );
     return novo as string;
   }
 
   async encerrar(usuarioId: string, dono: Dono, id: string, aPartirDe: string) {
     const { versoes, ctx } = await this.carregar(dono);
-    await this.gravar(usuarioId, dono, planejarEncerramento(id, aPartirDe, versoes, ctx), versoes);
+    await this.gravar(
+      usuarioId,
+      dono,
+      planejarEncerramento(id, aPartirDe, versoes, ctx),
+      versoes,
+      aPartirDe,
+    );
   }
 
   /**
-   * A planilha inteira ou nada: cada linha inclui o arranjo e faixa que não existem a partir de
-   * `aPartirDe` ou altera o que existe (a linha igual fica como está). Não encerra o que a planilha
-   * não traz.
+   * A planilha inteira ou nada, no modelo da exportação. A linha sem "Vale a partir de" é o preço
+   * que vale hoje: igual, fica; diferente, é alterado a partir de `aPartirDe`; inexistente, é
+   * incluído a partir de `aPartirDe`. A linha com "Vale a partir de" é a versão programada daquela
+   * competência: igual, fica; diferente, é trocada; inexistente, é incluída nela. A versão
+   * programada que a planilha não traz nunca é mexida, e nada que falta na planilha é encerrado.
    */
   async importar(
     usuarioId: string,
@@ -246,27 +260,43 @@ export class MudarPrecos {
     const erros = [...lida.erros];
     const mudancas: MudancaPreco[] = [];
     const r: ResultadoImportacao = { incluidos: 0, alterados: 0, iguais: 0 };
-    const vistas: { linha: number; dados: DadosPreco }[] = [];
-    for (const { linha, dados } of lida.linhas) {
-      const repetida = vistas.find((v) => mesmaChave(v.dados, dados));
+    const vistas: { linha: number; dados: DadosPreco; valeAPartirDe: string | null }[] = [];
+    let menor = aPartirDe;
+    for (const { linha, dados, valeAPartirDe } of lida.linhas) {
+      const repetida = vistas.find(
+        (v) => mesmaChave(v.dados, dados) && v.valeAPartirDe === valeAPartirDe,
+      );
       if (repetida) {
-        erros.push({ linha, erro: `Mesmo arranjo e faixa da linha ${repetida.linha}.` });
+        erros.push({ linha, erro: `Mesmo arranjo, faixa e vigência da linha ${repetida.linha}.` });
         continue;
       }
-      vistas.push({ linha, dados });
+      vistas.push({ linha, dados, valeAPartirDe });
       try {
+        const desde = valeAPartirDe ?? aPartirDe;
         const atual = versoes.find(
-          (v) => mesmaChave(v, dados) && (v.vigenciaAte === null || v.vigenciaAte >= aPartirDe),
+          (v) =>
+            mesmaChave(v, dados) &&
+            (valeAPartirDe ? v.vigenciaDesde === valeAPartirDe : vigenteEm(v, ctx.mesAtual)),
         );
-        if (!atual) {
-          mudancas.push(...planejarInclusao(dados, aPartirDe, versoes, ctx));
-          r.incluidos += 1;
-        } else if (atual.valor === dados.valor && atual.condVolume === dados.condVolume) {
+        if (atual && atual.valor === dados.valor && atual.condVolume === dados.condVolume) {
           r.iguais += 1;
-        } else {
-          mudancas.push(...planejarAlteracao(atual.id, dados, aPartirDe, versoes, ctx));
-          r.alterados += 1;
+          continue;
         }
+        if (atual && !valeAPartirDe && atual.vigenciaAte !== null && atual.vigenciaAte < desde) {
+          erros.push({
+            linha,
+            erro: `O preço de hoje vale só até ${mesAno(atual.vigenciaAte)}: para mudar o que vem depois, altere a linha com "Vale a partir de".`,
+          });
+          continue;
+        }
+        if (atual) {
+          mudancas.push(...planejarAlteracao(atual.id, dados, desde, versoes, ctx));
+          r.alterados += 1;
+        } else {
+          mudancas.push(...planejarInclusao(dados, desde, versoes, ctx));
+          r.incluidos += 1;
+        }
+        if (desde < menor) menor = desde;
       } catch (e) {
         if (!(e instanceof ErroDeDominio)) throw e;
         erros.push({ linha, erro: e.message });
@@ -274,7 +304,7 @@ export class MudarPrecos {
     }
     if (erros.length)
       throw new PlanilhaPrecosInvalidaError(erros.sort((a, b) => a.linha - b.linha));
-    if (mudancas.length) await this.gravar(usuarioId, dono, mudancas, versoes);
+    if (mudancas.length) await this.gravar(usuarioId, dono, mudancas, versoes, menor);
     return r;
   }
 
@@ -286,66 +316,59 @@ export class MudarPrecos {
     };
   }
 
+  /** Grava as mudanças com os eventos; devolve os ids das versões criadas, na ordem. */
   private async gravar(
     usuarioId: string,
     dono: Dono,
-    mudancas: MudancaPreco[],
+    planejadas: MudancaPreco[],
     versoes: VersaoPreco[],
+    aPartirDe: string,
   ): Promise<string[]> {
-    const criadas = await this.repo.aplicar(dono, mudancas, { usuarioId });
     const em = this.agora();
     const entidade = ENTIDADE_PRECO[dono.tipo];
-    const donoCampo = dono.tipo === 'cliente' ? 'clienteId' : 'contratadoId';
+    const doDono = { [dono.tipo === 'cliente' ? 'clienteId' : 'contratadoId']: dono.id };
     const ator = { tipo: 'usuario' as const, id: usuarioId };
-    let i = 0;
-    for (const m of mudancas) {
-      if (m.tipo === 'criar') {
-        await this.auditoria.registrar({
-          ator,
-          entidade,
-          entidadeId: criadas[i++] as string,
+    const mudancas: MudancaGravada[] = planejadas.map((m) =>
+      m.tipo === 'criar' ? { ...m, id: this.novoId() } : m,
+    );
+    const eventos: EventoAuditoria[] = mudancas.map((m) => {
+      const base = { ator, entidade, entidadeId: m.id, em };
+      if (m.tipo === 'criar')
+        return {
+          ...base,
           acao: 'criado',
           depois: {
-            [donoCampo]: dono.id,
+            ...doDono,
             ...m.dados,
             vigenciaDesde: m.vigenciaDesde,
             vigenciaAte: m.vigenciaAte,
           },
-          em,
-        });
-      } else if (m.tipo === 'encerrar') {
-        await this.auditoria.registrar({
-          ator,
-          entidade,
-          entidadeId: m.id,
-          acao: 'encerrado',
-          antes: { vigenciaAte: m.vigenciaAteAntes },
-          depois: { vigenciaAte: m.vigenciaAte },
-          em,
-        });
-      } else {
-        const {
-          id,
-          nomes: _nomes,
-          ...antes
-        } = versoes.find((v) => v.id === m.id) as VersaoPreco & {
-          nomes?: unknown;
         };
-        await this.auditoria.registrar({
-          ator,
-          entidade,
-          entidadeId: id,
-          acao: 'removido',
-          antes: { [donoCampo]: dono.id, ...antes },
-          em,
-        });
-      }
-    }
-    return criadas;
+      if (m.tipo === 'encerrar' || m.tipo === 'reabrir')
+        return {
+          ...base,
+          acao: m.tipo === 'encerrar' ? 'encerrado' : 'reaberto',
+          antes: { ...doDono, vigenciaAte: m.vigenciaAteAntes },
+          depois: { ...doDono, vigenciaAte: m.vigenciaAte },
+        };
+      const {
+        id: _id,
+        nomes: _nomes,
+        ...antes
+      } = versoes.find((v) => v.id === m.id) as VersaoPreco & {
+        nomes?: unknown;
+      };
+      return { ...base, acao: 'removido', antes: { ...doDono, ...antes } };
+    });
+    await this.repo.aplicar(dono, mudancas, { usuarioId, aPartirDe, eventos });
+    return mudancas.flatMap((m) => (m.tipo === 'criar' ? [m.id] : []));
   }
 }
 
-/** A tabela em vigor no mês atual, na planilha do modelo da importação. */
+/**
+ * A tabela em vigor no mês atual e as versões programadas (com o "Vale a partir de"), na planilha
+ * do modelo da importação: importar o arquivo sem mudar nada não muda nada.
+ */
 export class ExportarPrecos {
   constructor(
     private readonly repo: PrecosRepository,
@@ -356,7 +379,7 @@ export class ExportarPrecos {
     const info = await exigirDono(this.repo, dono);
     const mes = diaBrasilia(this.agora()).slice(0, 7);
     const versoes = (await this.repo.listarVersoes(dono))
-      .filter((v) => vigenteEm(v, mes))
+      .filter((v) => vigenteEm(v, mes) || (v.vigenciaDesde !== null && v.vigenciaDesde > mes))
       .sort(ordem);
     const nome = info.nome.replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '');
     return {
@@ -368,6 +391,7 @@ export class ExportarPrecos {
           faixaFim: v.faixaFim,
           condVolume: v.condVolume,
           valor: v.valor,
+          valeAPartirDe: vigenteEm(v, mes) ? null : v.vigenciaDesde,
         })),
       ),
     };

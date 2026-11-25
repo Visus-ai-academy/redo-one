@@ -1,3 +1,4 @@
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import type { Arranjo } from '../../domain/preco';
 import type { MudancaPreco, VersaoPreco } from '../../domain/versoes-preco';
 
@@ -43,6 +44,18 @@ export interface EventoVersao {
   em: Date;
 }
 
+/** A mudança como é gravada: a versão nova já com o id (para o evento de auditoria). */
+export type MudancaGravada =
+  | Exclude<MudancaPreco, { tipo: 'criar' }>
+  | (Extract<MudancaPreco, { tipo: 'criar' }> & { id: string });
+
+export interface OpcoesAplicar {
+  usuarioId: string;
+  /** Primeira competência que a mudança alcança. */
+  aPartirDe: string;
+  eventos: EventoAuditoria[];
+}
+
 /** Tabelas `precos_cliente` e `precos_padrao_contratado`. */
 export interface PrecosRepository {
   /** Nulo se o cliente ou o contratado não existe. */
@@ -50,11 +63,12 @@ export interface PrecosRepository {
   /** Todas as versões do dono (ou só as do arranjo), com os nomes. */
   listarVersoes(dono: Dono, arranjo?: Arranjo): Promise<VersaoComNomes[]>;
   /**
-   * Grava as mudanças numa transação e devolve os ids das versões criadas, na ordem. O encerrar
-   * confere o `vigencia_ate` de antes: se outra pessoa mudou a versão no meio, nada é gravado e
-   * lança `VersaoAlteradaError`.
+   * Grava as mudanças e os eventos de auditoria numa transação, com o dono travado (uma mudança por
+   * vez na tabela). Dentro dela confere de novo: nenhuma competência fechada ou travada a partir de
+   * `aPartirDe`; o `vigencia_ate` de antes de cada encerrar ou reabrir; e que nenhuma versão criada
+   * ou reaberta cruza outra do mesmo arranjo e faixa. Se algo falha, nada é gravado.
    */
-  aplicar(dono: Dono, mudancas: MudancaPreco[], autor: { usuarioId: string }): Promise<string[]>;
+  aplicar(dono: Dono, mudancas: MudancaGravada[], opcoes: OpcoesAplicar): Promise<void>;
   opcoes(): Promise<OpcoesPreco>;
   /** Eventos de auditoria das versões, por id, do mais antigo ao mais novo. */
   eventos(dono: Dono, ids: string[]): Promise<Map<string, EventoVersao[]>>;

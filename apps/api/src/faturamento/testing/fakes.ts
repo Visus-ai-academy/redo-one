@@ -1,3 +1,4 @@
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { Paginacao } from '../../catalogo/comum/paginacao';
 import {
   CORTE_PADRAO_INICIAL,
@@ -30,6 +31,8 @@ import type {
   Dono,
   EventoVersao,
   InfoDono,
+  MudancaGravada,
+  OpcoesAplicar,
   OpcoesPreco,
   PrecosRepository,
   VersaoComNomes,
@@ -49,7 +52,7 @@ import type { StatusCompetencia } from '../domain/competencia-status';
 import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
 import type { Arranjo } from '../domain/preco';
 import type { ConfiguracaoCliente } from '../domain/tipificacao';
-import { type MudancaPreco, VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
+import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
 import type { NovaVigencia } from '../domain/vigencia-corte';
 
 export interface CompetenciaGuardada {
@@ -411,7 +414,6 @@ export class PrecosEmMemoria implements PrecosRepository {
   readonly donos = new Map<string, InfoDono>();
   readonly versoes: (VersaoPreco & { dono: string })[] = [];
   readonly eventosPorId = new Map<string, EventoVersao[]>();
-  private seq = 0;
 
   private chave = (d: Dono) => `${d.tipo}:${d.id}`;
 
@@ -441,31 +443,37 @@ export class PrecosEmMemoria implements PrecosRepository {
       }));
   }
 
-  async aplicar(dono: Dono, mudancas: MudancaPreco[]) {
-    const criadas: string[] = [];
-    for (const m of mudancas) {
-      if (m.tipo === 'criar') {
-        const id = `p${++this.seq}`;
-        this.versoes.push({
-          id,
-          dono: this.chave(dono),
-          ...m.dados,
-          vigenciaDesde: m.vigenciaDesde,
-          vigenciaAte: m.vigenciaAte,
-        });
-        criadas.push(id);
-      } else if (m.tipo === 'encerrar') {
-        const v = this.versoes.find((x) => x.id === m.id);
-        if (!v || v.vigenciaAte !== m.vigenciaAteAntes) throw new VersaoAlteradaError();
-        v.vigenciaAte = m.vigenciaAte;
-      } else {
-        this.versoes.splice(
-          this.versoes.findIndex((x) => x.id === m.id),
-          1,
-        );
+  /** Eventos gravados junto com as mudanças (a transação do repositório real). */
+  readonly eventosGravados: EventoAuditoria[] = [];
+
+  async aplicar(dono: Dono, mudancas: MudancaGravada[], opcoes: OpcoesAplicar) {
+    const antes = this.versoes.map((v) => ({ ...v }));
+    try {
+      for (const m of mudancas) {
+        if (m.tipo === 'criar') {
+          this.versoes.push({
+            id: m.id,
+            dono: this.chave(dono),
+            ...m.dados,
+            vigenciaDesde: m.vigenciaDesde,
+            vigenciaAte: m.vigenciaAte,
+          });
+        } else if (m.tipo === 'encerrar' || m.tipo === 'reabrir') {
+          const v = this.versoes.find((x) => x.id === m.id);
+          if (!v || v.vigenciaAte !== m.vigenciaAteAntes) throw new VersaoAlteradaError();
+          v.vigenciaAte = m.vigenciaAte;
+        } else {
+          this.versoes.splice(
+            this.versoes.findIndex((x) => x.id === m.id),
+            1,
+          );
+        }
       }
+    } catch (e) {
+      this.versoes.splice(0, this.versoes.length, ...antes);
+      throw e;
     }
-    return criadas;
+    this.eventosGravados.push(...opcoes.eventos);
   }
 
   async opcoes(): Promise<OpcoesPreco> {

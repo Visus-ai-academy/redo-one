@@ -32,7 +32,9 @@ export interface ContextoVigencia {
 export type MudancaPreco =
   | { tipo: 'criar'; dados: DadosPreco; vigenciaDesde: string; vigenciaAte: string | null }
   | { tipo: 'encerrar'; id: string; vigenciaAteAntes: string | null; vigenciaAte: string }
-  | { tipo: 'remover'; id: string };
+  | { tipo: 'remover'; id: string }
+  /** A versão encerrada para dar lugar à programada que saiu volta a valer até onde a programada ia. */
+  | { tipo: 'reabrir'; id: string; vigenciaAteAntes: string; vigenciaAte: string | null };
 
 export class PrecoInvalidoError extends ErroDeDominio {
   readonly tipo = 'invalido';
@@ -76,11 +78,19 @@ export function proxima(competencia: string): string {
 export function validarAPartirDe(aPartirDe: string, ctx: ContextoVigencia): void {
   if (!COMPETENCIA.test(aPartirDe))
     throw new VigenciaPrecoInvalidaError('Informe a competência no formato AAAA-MM.');
-  const ultima = [...ctx.bloqueadas].sort().at(-1);
-  if (ultima !== undefined && aPartirDe <= ultima)
+  const minimo = aPartirDeMinimo(ctx);
+  if (aPartirDe < minimo)
     throw new VigenciaPrecoInvalidaError(
-      `O preço só muda a partir de uma competência aberta ou futura: depois de ${mesAno(ultima)}, que está fechada ou travada.`,
+      ctx.bloqueadas.length
+        ? `O preço só muda a partir de uma competência aberta ou futura: de ${mesAno(minimo)} em diante (a anterior está fechada ou travada).`
+        : `O preço só muda a partir de ${mesAno(minimo)}.`,
     );
+}
+
+/** Primeira competência em que uma mudança pode valer: depois da última fechada ou travada; sem nenhuma, o mês atual. */
+export function aPartirDeMinimo(ctx: ContextoVigencia): string {
+  const ultima = [...ctx.bloqueadas].sort().at(-1);
+  return ultima !== undefined ? proxima(ultima) : ctx.mesAtual;
 }
 
 export function validarDados(d: DadosPreco): void {
@@ -219,7 +229,28 @@ export function planejarEncerramento(
       throw new VigenciaPrecoInvalidaError(
         `Este preço vale desde ${mesAno(v.vigenciaDesde)} e não se apaga: encerre a partir de ${mesAno(proxima(v.vigenciaDesde))} ou depois.`,
       );
-    return [{ tipo: 'remover', id: v.id }];
+    // Cancelar a programada: a versão que ela encerrou (mesma faixa, até a competência anterior)
+    // volta a valer até onde a programada ia.
+    const antecessora = versoes.find(
+      (x) =>
+        x.id !== v.id &&
+        mesmaChave(x, v) &&
+        x.vigenciaAte !== null &&
+        x.vigenciaAte === anterior(v.vigenciaDesde as string),
+    );
+    return [
+      { tipo: 'remover', id: v.id },
+      ...(antecessora
+        ? [
+            {
+              tipo: 'reabrir' as const,
+              id: antecessora.id,
+              vigenciaAteAntes: antecessora.vigenciaAte as string,
+              vigenciaAte: v.vigenciaAte,
+            },
+          ]
+        : []),
+    ];
   }
   return [
     {

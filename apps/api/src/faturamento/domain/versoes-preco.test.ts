@@ -56,6 +56,11 @@ describe('planejarInclusao', () => {
       planejarInclusao(DADOS, '2026-11', [], { ...CTX, bloqueadas: ['2026-12'] }),
     ).toThrow(VigenciaPrecoInvalidaError);
     expect(() => planejarInclusao(DADOS, '2026-13', [], CTX)).toThrow(VigenciaPrecoInvalidaError);
+    // Sem competência fechada ou travada, o mínimo é o mês atual (nada de reprecificar o passado).
+    expect(() => planejarInclusao(DADOS, '2019-01', [], { ...CTX, bloqueadas: [] })).toThrow(
+      VigenciaPrecoInvalidaError,
+    );
+    expect(planejarInclusao(DADOS, '2026-11', [], { ...CTX, bloqueadas: [] })).toHaveLength(1);
   });
 
   it('recusa valor zero ou negativo e faixa invertida', () => {
@@ -175,6 +180,23 @@ describe('planejarEncerramento', () => {
     expect(
       planejarEncerramento('v1', '2027-02', [versao({ vigenciaDesde: '2027-01' })], CTX),
     ).toEqual([{ tipo: 'encerrar', id: 'v1', vigenciaAteAntes: null, vigenciaAte: '2027-01' }]);
+  });
+
+  it('apagar a programada devolve à versão anterior a vigência que ela tinha', () => {
+    const atual = versao({ id: 'a', vigenciaAte: '2026-12' });
+    const programada = versao({ id: 'p', valor: 70, vigenciaDesde: '2027-01' });
+    expect(planejarEncerramento('p', '2027-01', [atual, programada], CTX)).toEqual([
+      { tipo: 'remover', id: 'p' },
+      { tipo: 'reabrir', id: 'a', vigenciaAteAntes: '2026-12', vigenciaAte: null },
+    ]);
+    // A programada seguida de outra: a anterior volta até onde a programada ia.
+    const meio = versao({ id: 'm', valor: 70, vigenciaDesde: '2027-01', vigenciaAte: '2027-03' });
+    expect(planejarEncerramento('m', '2027-01', [atual, meio], CTX)[1]).toEqual({
+      tipo: 'reabrir',
+      id: 'a',
+      vigenciaAteAntes: '2026-12',
+      vigenciaAte: '2027-03',
+    });
   });
 
   it('a versão em vigor desde a competência atual não é apagada', () => {

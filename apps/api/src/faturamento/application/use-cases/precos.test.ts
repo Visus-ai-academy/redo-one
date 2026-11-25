@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { InMemoryAuditoria } from '../../../auditoria/testing';
 import type { DadosPreco } from '../../domain/versoes-preco';
 import { VigenciaPrecoInvalidaError } from '../../domain/versoes-preco';
 import { CompetenciasEmMemoria, PrecosEmMemoria } from '../../testing/fakes';
@@ -33,7 +32,6 @@ const PAGINA = { pagina: 1, porPagina: 25 };
 describe('preços do cliente e tabela padrão', () => {
   let repo: PrecosEmMemoria;
   let competencias: CompetenciasEmMemoria;
-  let auditoria: InMemoryAuditoria;
   let mudar: MudarPrecos;
   let listar: ListarPrecos;
 
@@ -44,14 +42,13 @@ describe('preços do cliente e tabela padrão', () => {
     competencias = new CompetenciasEmMemoria();
     competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
     competencias.competencias.set('2026-11', { status: 'aberta', importacaoTravada: false });
-    auditoria = new InMemoryAuditoria();
-    mudar = new MudarPrecos(repo, competencias, auditoria, agora);
+    mudar = new MudarPrecos(repo, competencias, agora);
     listar = new ListarPrecos(repo, competencias, agora);
   });
 
   it('incluir cria a versão e audita; a lista sugere a próxima competência', async () => {
     const id = await mudar.incluir('u1', DONO, DADOS, '2026-12');
-    expect(auditoria.eventos).toEqual([
+    expect(repo.eventosGravados).toEqual([
       expect.objectContaining({
         entidade: 'preco_cliente',
         entidadeId: id,
@@ -76,9 +73,14 @@ describe('preços do cliente e tabela padrão', () => {
       [v1, 63, '2026-11', '2026-11'],
       [v2, 70, '2026-12', null],
     ]);
-    expect(auditoria.eventos.map((e) => [e.entidadeId, e.acao, e.antes, e.depois])).toEqual([
+    expect(repo.eventosGravados.map((e) => [e.entidadeId, e.acao, e.antes, e.depois])).toEqual([
       [v1, 'criado', undefined, expect.anything()],
-      [v1, 'encerrado', { vigenciaAte: null }, { vigenciaAte: '2026-11' }],
+      [
+        v1,
+        'encerrado',
+        { clienteId: 'c1', vigenciaAte: null },
+        { clienteId: 'c1', vigenciaAte: '2026-11' },
+      ],
       [v2, 'criado', undefined, expect.objectContaining({ valor: 70 })],
     ]);
     // A lista mostra as duas (a de novembro ainda vale no mês atual).
@@ -102,7 +104,7 @@ describe('preços do cliente e tabela padrão', () => {
     );
     await mudar.encerrar('u1', DONO, programada, '2027-01');
     expect(repo.versoes.map((v) => v.id)).toEqual([vigente]);
-    expect(auditoria.eventos.at(-1)).toMatchObject({
+    expect(repo.eventosGravados.at(-1)).toMatchObject({
       entidadeId: programada,
       acao: 'removido',
       antes: expect.objectContaining({ valor: 63, vigenciaDesde: '2027-01' }),
@@ -128,7 +130,7 @@ describe('preços do cliente e tabela padrão', () => {
     const id = await mudar.incluir('u1', PADRAO, DADOS, '2026-12');
     await mudar.encerrar('u1', PADRAO, id, '2026-12');
     expect(repo.versoes).toEqual([]);
-    expect(auditoria.eventos.map((e) => [e.entidade, e.acao])).toEqual([
+    expect(repo.eventosGravados.map((e) => [e.entidade, e.acao])).toEqual([
       ['preco_padrao_contratado', 'criado'],
       ['preco_padrao_contratado', 'removido'],
     ]);
@@ -170,8 +172,8 @@ describe('preços do cliente e tabela padrão', () => {
     const existente = await mudar.incluir('u1', DONO, DADOS, '2026-11');
     await mudar.incluir('u1', DONO, { ...DADOS, prioridadeId: 'URGÊNCIA' }, '2026-11');
     const cab =
-      'Modalidade;Especialidade;Categoria;Prioridade;Faixa início;Faixa fim;Volume por;Valor\n';
-    const csv = `${cab}MR;NEURO;SC;ROTINA;;;;65\nMR;NEURO;SC;URGÊNCIA;;;;63\nCT;NEURO;SC;ROTINA;;;;40\n`;
+      'Modalidade;Especialidade;Categoria;Prioridade;Faixa início;Faixa fim;Volume por;Valor;Vale a partir de\n';
+    const csv = `${cab}MR;NEURO;SC;ROTINA;;;;65;\nMR;NEURO;SC;URGÊNCIA;;;;63;\nCT;NEURO;SC;ROTINA;;;;40;\n`;
     expect(await mudar.importar('u1', DONO, csv, '2026-12')).toEqual({
       incluidos: 1,
       alterados: 1,
@@ -180,13 +182,17 @@ describe('preços do cliente e tabela padrão', () => {
     expect(repo.versoes.find((v) => v.id === existente)?.vigenciaAte).toBe('2026-11');
 
     const antes = repo.versoes.length;
-    const ruim = `${cab}MR;NEURO;SC;ROTINA;;;;66\nXX;NEURO;SC;ROTINA;;;;1\nMR;NEURO;SC;ROTINA;;;;67\n`;
+    const ruim = `${cab}MR;NEURO;SC;ROTINA;;;;66;\nXX;NEURO;SC;ROTINA;;;;1;\nMR;NEURO;SC;ROTINA;;;;67;\n`;
     await expect(mudar.importar('u1', DONO, ruim, '2027-01')).rejects.toMatchObject({
       constructor: PlanilhaPrecosInvalidaError,
       detalhes: {
         erros: [
+          {
+            linha: 2,
+            erro: 'O preço de hoje vale só até 11/2026: para mudar o que vem depois, altere a linha com "Vale a partir de".',
+          },
           { linha: 3, erro: 'Modalidade "XX" não existe no catálogo.' },
-          { linha: 4, erro: 'Mesmo arranjo e faixa da linha 2.' },
+          { linha: 4, erro: 'Mesmo arranjo, faixa e vigência da linha 2.' },
         ],
       },
     });
@@ -199,8 +205,54 @@ describe('preços do cliente e tabela padrão', () => {
     const r = await new ExportarPrecos(repo, agora).executar(DONO);
     expect(r.nomeArquivo).toBe('precos-CLINICA-2026-11.csv');
     expect(r.conteudo.split('\r\n').slice(1)).toEqual([
-      'MR;NEURO;SC;ROTINA;;;MOD/ESP/CAT;63,00',
+      'MR;NEURO;SC;ROTINA;;;MOD/ESP/CAT;63,00;',
+      'MR;NEURO;SC;URGÊNCIA;;;MOD/ESP/CAT;63,00;01/2027',
       '',
+    ]);
+  });
+
+  it('exportar e importar sem mudar nada não muda nada (nem a versão programada)', async () => {
+    const atual = await mudar.incluir('u1', DONO, DADOS, '2026-11');
+    await mudar.alterar('u1', DONO, atual, { ...DADOS, valor: 80 }, '2027-01');
+    await mudar.incluir('u1', DONO, { ...DADOS, prioridadeId: 'URGÊNCIA' }, '2026-11');
+    const antes = JSON.stringify(repo.versoes);
+    const { conteudo } = await new ExportarPrecos(repo, agora).executar(DONO);
+    expect(await mudar.importar('u1', DONO, conteudo, '2026-12')).toEqual({
+      incluidos: 0,
+      alterados: 0,
+      iguais: 3,
+    });
+    expect(JSON.stringify(repo.versoes)).toBe(antes);
+  });
+
+  it('a importação muda o preço de hoje sem mexer na versão programada', async () => {
+    const atual = await mudar.incluir('u1', DONO, DADOS, '2026-11');
+    const programada = await mudar.alterar('u1', DONO, atual, { ...DADOS, valor: 80 }, '2027-01');
+    const { conteudo } = await new ExportarPrecos(repo, agora).executar(DONO);
+    const editado = conteudo.replace('ROTINA;;;MOD/ESP/CAT;63,00;', 'ROTINA;;;MOD/ESP/CAT;65,00;');
+    expect(await mudar.importar('u1', DONO, editado, '2026-12')).toMatchObject({ alterados: 1 });
+    const p = repo.versoes.find((v) => v.id === programada);
+    expect([p?.valor, p?.vigenciaDesde, p?.vigenciaAte]).toEqual([80, '2027-01', null]);
+    expect(
+      repo.versoes.filter((v) => v.valor === 65).map((v) => [v.vigenciaDesde, v.vigenciaAte]),
+    ).toEqual([['2026-12', '2026-12']]);
+  });
+
+  it('apagar o reajuste programado devolve o preço anterior, com auditoria', async () => {
+    const atual = await mudar.incluir('u1', DONO, DADOS, '2026-11');
+    const programada = await mudar.alterar('u1', DONO, atual, { ...DADOS, valor: 80 }, '2027-01');
+    await mudar.encerrar('u2', DONO, programada, '2027-01');
+    expect(repo.versoes.map((v) => [v.id, v.vigenciaAte])).toEqual([[atual, null]]);
+    expect(
+      repo.eventosGravados.slice(-2).map((e) => [e.entidadeId, e.acao, e.antes, e.depois]),
+    ).toEqual([
+      [programada, 'removido', expect.objectContaining({ valor: 80, clienteId: 'c1' }), undefined],
+      [
+        atual,
+        'reaberto',
+        { clienteId: 'c1', vigenciaAte: '2026-12' },
+        { clienteId: 'c1', vigenciaAte: null },
+      ],
     ]);
   });
 });

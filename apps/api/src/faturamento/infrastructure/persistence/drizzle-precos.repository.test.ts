@@ -1,14 +1,23 @@
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
+
+import { eq } from 'drizzle-orm';
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
 import type { Dono } from '../../application/ports/precos.repository';
-import { type DadosPreco, VersaoAlteradaError } from '../../domain/versoes-preco';
+import {
+  type DadosPreco,
+  VersaoAlteradaError,
+  VersaoConflitanteError,
+  VigenciaPrecoInvalidaError,
+} from '../../domain/versoes-preco';
 import { DrizzlePrecosRepository } from './drizzle-precos.repository';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -114,37 +123,42 @@ describe.skipIf(!url)('DrizzlePrecosRepository', () => {
     ).toBeNull();
   });
 
+  const criar = (d: DadosPreco, vigenciaDesde: string, vigenciaAte: string | null = null) => ({
+    tipo: 'criar' as const,
+    id: randomUUID(),
+    dados: d,
+    vigenciaDesde,
+    vigenciaAte,
+  });
+  // Competência sem fechamento possível (outros testes deixam competências fechadas no banco).
+  const opcoes = (eventos: EventoAuditoria[] = [], aPartirDe = '2999-06') => ({
+    usuarioId,
+    aPartirDe,
+    eventos,
+  });
+
   it('cria, encerra conferindo o fim anterior e lista com os nomes', async () => {
-    const [id] = await repo.aplicar(
-      cliente,
-      [{ tipo: 'criar', dados, vigenciaDesde: '2026-11', vigenciaAte: null }],
-      { usuarioId },
-    );
+    const nova = criar(dados, '2026-11');
+    await repo.aplicar(cliente, [nova], opcoes());
     await repo.aplicar(
       cliente,
-      [{ tipo: 'encerrar', id: id as string, vigenciaAteAntes: null, vigenciaAte: '2026-12' }],
-      { usuarioId },
+      [{ tipo: 'encerrar', id: nova.id, vigenciaAteAntes: null, vigenciaAte: '2026-12' }],
+      opcoes(),
     );
-    // Outra pessoa já mudou: nada é gravado.
+    // Outra pessoa já mudou: nada é gravado (nem a versão nova do mesmo lote).
     await expect(
       repo.aplicar(
         cliente,
         [
-          {
-            tipo: 'criar',
-            dados: { ...dados, valor: 1 },
-            vigenciaDesde: '2027-01',
-            vigenciaAte: null,
-          },
-          { tipo: 'encerrar', id: id as string, vigenciaAteAntes: null, vigenciaAte: '2027-01' },
+          criar({ ...dados, valor: 1 }, '2027-01'),
+          { tipo: 'encerrar', id: nova.id, vigenciaAteAntes: null, vigenciaAte: '2027-01' },
         ],
-        { usuarioId },
+        opcoes(),
       ),
     ).rejects.toThrow(VersaoAlteradaError);
-    const versoes = await repo.listarVersoes(cliente, dados);
-    expect(versoes).toEqual([
+    expect(await repo.listarVersoes(cliente, dados)).toEqual([
       {
-        id,
+        id: nova.id,
         ...dados,
         vigenciaDesde: '2026-11',
         vigenciaAte: '2026-12',
@@ -159,62 +173,84 @@ describe.skipIf(!url)('DrizzlePrecosRepository', () => {
     expect(await repo.listarVersoes(unidade)).toEqual([]);
   });
 
-  it('só apaga a versão que começa depois do mês atual', async () => {
-    const [futura, atual] = await repo.aplicar(
-      contratado,
-      [
-        { tipo: 'criar', dados, vigenciaDesde: '2999-01', vigenciaAte: null },
-        {
-          tipo: 'criar',
-          dados: { ...dados, faixaInicio: 300, faixaFim: null },
-          vigenciaDesde: '2020-01',
-          vigenciaAte: null,
-        },
-      ],
-      { usuarioId },
-    );
-    await repo.aplicar(contratado, [{ tipo: 'remover', id: futura as string }], { usuarioId });
-    await expect(
-      repo.aplicar(contratado, [{ tipo: 'remover', id: atual as string }], { usuarioId }),
-    ).rejects.toThrow(VersaoAlteradaError);
-    expect((await repo.listarVersoes(contratado)).map((v) => v.id)).toEqual([atual]);
+  it('duas inclusões ao mesmo tempo do mesmo arranjo e faixa: só uma entra', async () => {
+    const d = { ...dados, faixaInicio: 700, faixaFim: null };
+    const resultados = await Promise.allSettled([
+      repo.aplicar(unidade, [criar(d, '2027-02')], opcoes()),
+      repo.aplicar(unidade, [criar({ ...d, valor: 99 }, '2027-03')], opcoes()),
+    ]);
+    expect(resultados.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    const falha = resultados.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+    expect(falha.reason).toBeInstanceOf(VersaoConflitanteError);
+    expect(await repo.listarVersoes(unidade)).toHaveLength(1);
   });
 
-  it('eventos da auditoria por versão, com o nome de quem fez', async () => {
-    const [id] = await repo.aplicar(
-      cliente,
-      [
-        {
-          tipo: 'criar',
-          dados: { ...dados, faixaInicio: 500, faixaFim: null },
-          vigenciaDesde: '2027-01',
-          vigenciaAte: null,
-        },
-      ],
-      { usuarioId },
-    );
+  it('reabrir confere o fim de antes; versão reaberta que cruza outra é recusada', async () => {
+    const d = { ...dados, faixaInicio: 800, faixaFim: null };
+    const a = criar(d, '2026-01', '2026-12');
+    const b = criar(d, '2027-01');
+    await repo.aplicar(contratado, [a, b], opcoes());
+    await expect(
+      repo.aplicar(
+        contratado,
+        [{ tipo: 'reabrir', id: a.id, vigenciaAteAntes: '2026-12', vigenciaAte: null }],
+        opcoes(),
+      ),
+    ).rejects.toThrow(VersaoConflitanteError);
+    await expect(
+      repo.aplicar(
+        contratado,
+        [{ tipo: 'reabrir', id: a.id, vigenciaAteAntes: '2026-11', vigenciaAte: null }],
+        opcoes(),
+      ),
+    ).rejects.toThrow(VersaoAlteradaError);
+  });
+
+  it('competência fechada ou travada a partir da mudança: nada é gravado', async () => {
+    await db
+      .insert(schema.competencias)
+      .values({ competencia: '2998-05', status: 'fechada' })
+      .onConflictDoNothing();
+    const d = { ...dados, faixaInicio: 900, faixaFim: null };
+    await expect(
+      repo.aplicar(cliente, [criar(d, '2998-01')], opcoes([], '2998-01')),
+    ).rejects.toThrow(VigenciaPrecoInvalidaError);
+    await db.delete(schema.competencias).where(eq(schema.competencias.competencia, '2998-05'));
+    expect((await repo.listarVersoes(cliente)).some((v) => v.faixaInicio === 900)).toBe(false);
+  });
+
+  it('só apaga a versão que começa depois do mês atual', async () => {
+    const futura = criar(dados, '2999-01');
+    const atual = criar({ ...dados, faixaInicio: 300, faixaFim: null }, '2020-01');
+    await repo.aplicar(contratado, [futura, atual], opcoes());
+    await repo.aplicar(contratado, [{ tipo: 'remover', id: futura.id }], opcoes());
+    await expect(
+      repo.aplicar(contratado, [{ tipo: 'remover', id: atual.id }], opcoes()),
+    ).rejects.toThrow(VersaoAlteradaError);
+    expect((await repo.listarVersoes(contratado)).map((v) => v.id)).toContain(atual.id);
+    expect((await repo.listarVersoes(contratado)).map((v) => v.id)).not.toContain(futura.id);
+  });
+
+  it('os eventos de auditoria entram na mesma transação; lidos com o nome de quem fez', async () => {
     const em = new Date('2026-11-25T12:00:00Z');
-    await db.insert(schema.eventosAuditoria).values([
-      {
-        ocorridoEm: em,
-        atorTipo: 'usuario',
-        atorId: usuarioId,
-        entidade: 'preco_cliente',
-        entidadeId: id as string,
-        acao: 'criado',
-      },
-      {
-        ocorridoEm: em,
-        atorTipo: 'usuario',
-        atorId: usuarioId,
-        entidade: 'preco_padrao_contratado',
-        entidadeId: id as string,
-        acao: 'criado',
-      },
-    ]);
-    expect(await repo.eventos(cliente, [id as string])).toEqual(
-      new Map([[id, [{ acao: 'criado', quem: 'Ana', em }]]]),
+    const nova = criar({ ...dados, faixaInicio: 500, faixaFim: null }, '2027-01');
+    const evento = (id: string): EventoAuditoria => ({
+      ator: { tipo: 'usuario', id: usuarioId },
+      entidade: 'preco_cliente',
+      entidadeId: id,
+      acao: 'criado',
+      em,
+    });
+    await repo.aplicar(cliente, [nova], opcoes([evento(nova.id)]));
+    expect(await repo.eventos(cliente, [nova.id])).toEqual(
+      new Map([[nova.id, [{ acao: 'criado', quem: 'Ana', em }]]]),
     );
+    // A mudança falhou: o evento também não fica.
+    const repetida = criar({ ...dados, faixaInicio: 500, faixaFim: null }, '2027-05');
+    await expect(repo.aplicar(cliente, [repetida], opcoes([evento(repetida.id)]))).rejects.toThrow(
+      VersaoConflitanteError,
+    );
+    expect(await repo.eventos(cliente, [repetida.id])).toEqual(new Map());
   });
 
   it('opções trazem os cadastros ativos', async () => {
