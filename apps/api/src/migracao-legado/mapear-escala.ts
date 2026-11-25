@@ -62,6 +62,11 @@ export interface EscalaMigrada {
    * ausência, a gravação recusa.
    */
   legado: { alocacaoIds: string[]; ausenciaIds: string[]; ontem: string };
+  /**
+   * Usuárias que existem no redo-one e não têm recorte no dashboards-one (vazio lá = vê tudo): a
+   * gravação liga o "vê toda a escala" explícito de quem ainda não tem recorte no redo-one.
+   */
+  usuariosVeemTodaEscala: string[];
 }
 
 /**
@@ -759,12 +764,18 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   }
 
   // ── Recorte da gestora ─────────────────────────────────────────────────────────────────────
-  // Recorte que fica sem linha nenhuma quer dizer "vê tudo": se nenhum id do recorte de uma
-  // usuária que existe casa, a carga para em vez de ampliar o acesso dela.
+  // Se nenhum id do recorte de uma usuária que existe casa, a carga para em vez de gravar um
+  // recorte vazio (ou ampliar o acesso dela).
   const tabEscopos: EscalaMigrada['tabelas']['usuariosEscoposEscala'] = [];
   const recorteTodoOrfao: string[] = [];
+  const veemTodaEscala: string[] = [];
   for (const u of legado.usuarios) {
-    if (u.escopoTurnoIds.length === 0 && u.escopoEspecialidadeIds.length === 0) continue;
+    if (u.escopoTurnoIds.length === 0 && u.escopoEspecialidadeIds.length === 0) {
+      // Vazio no dashboards-one = vê tudo: no redo-one, o "vê toda a escala" explícito.
+      const usuarioId = usuarioDoLegado(u.id);
+      if (usuarioId) veemTodaEscala.push(usuarioId);
+      continue;
+    }
     const usuarioId = usuarioDoLegado(u.id);
     const nome = texto(u.nome) ?? '(sem nome)';
     if (!usuarioId) {
@@ -806,7 +817,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   }
   if (recorteTodoOrfao.length > 0)
     throw new Error(
-      `Recorte da escala sem nenhum turno ou frente que exista no redo-one (sem recorte, veria a escala toda): ${recorteTodoOrfao.join(', ')}. Corrija o recorte dela no dashboards-one e rode a carga de novo.`,
+      `Recorte da escala sem nenhum turno ou frente que exista no redo-one (o recorte ficaria vazio): ${recorteTodoOrfao.join(', ')}. Corrija o recorte dela no dashboards-one e rode a carga de novo.`,
     );
 
   // ── Histórico (logs_alteracao_escala → eventos_auditoria) ────────────────────────────────────
@@ -934,5 +945,6 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       ausenciaIds: legado.ausencias.map((a) => idDoLegado('ausencias_medico', a.id)),
       ontem,
     },
+    usuariosVeemTodaEscala: [...new Set(veemTodaEscala)],
   };
 }

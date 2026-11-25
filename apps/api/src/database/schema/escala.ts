@@ -332,7 +332,7 @@ export const ausenciasTurnos = pgTable(
 
 /**
  * Recorte da gestora de escala: ela só vê e edita alocações e ausências dos turnos OU das
- * frentes listados. Sem linha = sem recorte (vê tudo que a permissão deixa).
+ * frentes listados. "Vê toda a escala" é `usuarios.ve_toda_escala`; sem ele e sem linha, nada.
  */
 export const usuariosEscoposEscala = pgTable(
   'usuarios_escopos_escala',

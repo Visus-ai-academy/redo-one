@@ -7,6 +7,7 @@ import * as z from 'zod'
 import { referenciaEscopoDtoSchema } from './referenciaEscopoDtoSchema'
 
 export const escopoDtoSchema = z.object({
+  veTodaEscala: z.boolean().describe('Vê toda a escala (sem recorte).'),
   turnoIds: z.array(z.uuid()),
   frenteIds: z.array(z.uuid()),
   turnos: z.array(referenciaEscopoDtoSchema),

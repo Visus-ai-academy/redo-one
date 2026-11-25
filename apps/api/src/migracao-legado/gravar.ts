@@ -5,6 +5,7 @@ import {
   getTableName,
   inArray,
   isNull,
+  notExists,
   notInArray,
   or,
   type SQL,
@@ -686,13 +687,38 @@ async function gravarEscala(tx: Transacao, escala: EscalaMigrada) {
     ['ausenciaId', 'turnoId'],
   );
 
+  const comRecorte = [...new Set(e.usuariosEscoposEscala.map((u) => u.usuarioId))];
   await trocar(
     schema.usuariosEscoposEscala,
     schema.usuariosEscoposEscala.usuarioId,
-    [...new Set(e.usuariosEscoposEscala.map((u) => u.usuarioId))],
+    comRecorte,
     e.usuariosEscoposEscala,
     ['id'],
   );
+  // "Vê toda a escala" é explícito (vazio nunca é "toda a escala"): quem tem recorte no
+  // dashboards-one fica sem ele; quem não tem lá e ainda não tem recorte aqui ganha o "todos".
+  if (comRecorte.length) {
+    await tx
+      .update(schema.usuarios)
+      .set({ veTodaEscala: false })
+      .where(inArray(schema.usuarios.id, comRecorte));
+  }
+  if (escala.usuariosVeemTodaEscala.length) {
+    await tx
+      .update(schema.usuarios)
+      .set({ veTodaEscala: true })
+      .where(
+        and(
+          inArray(schema.usuarios.id, escala.usuariosVeemTodaEscala),
+          notExists(
+            tx
+              .select({ um: sql`1` })
+              .from(schema.usuariosEscoposEscala)
+              .where(eq(schema.usuariosEscoposEscala.usuarioId, schema.usuarios.id)),
+          ),
+        ),
+      );
+  }
   await upsert(tx, schema.eventosAuditoria, e.eventosAuditoria);
   await encerrarSumidas(tx, escala);
   await recusarSumidas(tx, escala);

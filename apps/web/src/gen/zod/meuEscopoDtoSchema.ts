@@ -7,7 +7,7 @@ import * as z from 'zod'
 import { escopoDtoSchema } from './escopoDtoSchema'
 
 export const meuEscopoDtoSchema = z.object({
-  escopo: escopoDtoSchema.nullable().describe('`null`: sem recorte, vê a escala inteira.'),
+  escopo: escopoDtoSchema.nullable().describe('`null`: vê a escala inteira (acesso total ou "vê toda a escala").'),
 })
 
 export type MeuEscopoDtoSchemaType = z.infer<typeof meuEscopoDtoSchema>

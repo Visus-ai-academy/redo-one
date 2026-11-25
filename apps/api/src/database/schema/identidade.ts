@@ -56,6 +56,11 @@ export const usuarios = pgTable('usuarios', {
   /** Falhas seguidas de senha; zera no login com sucesso ou no desbloqueio. */
   tentativasFalhas: integer('tentativas_falhas').notNull().default(0),
   bloqueadoAte: timestamp('bloqueado_ate', { withTimezone: true }),
+  /**
+   * Vê a escala inteira (sem recorte em `usuarios_escopos_escala`). Sem ele, só o recorte; sem
+   * linhas no recorte, nada. Vazio nunca é "toda a escala" (25/11/2026).
+   */
+  veTodaEscala: boolean('ve_toda_escala').notNull().default(false),
   criadoEm: criadoEm(),
 });
 

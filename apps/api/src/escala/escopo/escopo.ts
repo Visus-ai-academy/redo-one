@@ -25,9 +25,19 @@ export function frentesPermitidas(escopo: EscopoEscala | null, todasFrenteIds: s
 
 export const ESCOPO_ESCALA_REPOSITORY = Symbol('ESCOPO_ESCALA_REPOSITORY');
 
+/** O recorte como se grava: "vê toda a escala" explícito, ou os turnos e as frentes. */
+export interface RecorteEscala {
+  veTodaEscala: boolean;
+  turnoIds: string[];
+  frenteIds: string[];
+}
+
 export interface EscopoEscalaRepository {
-  /** Sem linhas = `null` (sem recorte). */
+  /**
+   * Com "vê toda a escala", `null` (sem recorte). Sem ele, o recorte; sem turno nem frente, um
+   * recorte vazio (não vê nada): vazio nunca é "toda a escala".
+   */
   doUsuario(usuarioId: string): Promise<EscopoEscala | null>;
-  /** Troca o recorte inteiro; listas vazias apagam o recorte (volta a ser sem recorte). */
-  definir(usuarioId: string, escopo: { turnoIds: string[]; frenteIds: string[] }): Promise<void>;
+  /** Troca o recorte inteiro. */
+  definir(usuarioId: string, escopo: RecorteEscala): Promise<void>;
 }

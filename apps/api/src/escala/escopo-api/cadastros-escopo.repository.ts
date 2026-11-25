@@ -1,4 +1,5 @@
 import type { EventoAuditoria } from '../../auditoria/auditoria';
+import type { RecorteEscala } from '../escopo/escopo';
 
 export const CADASTROS_ESCOPO_REPOSITORY = Symbol('CADASTROS_ESCOPO_REPOSITORY');
 
@@ -12,13 +13,10 @@ export interface Referencia {
  * gravação do recorte com a auditoria.
  */
 export interface CadastrosEscopoRepository {
-  /**
-   * Troca o recorte inteiro do usuário (listas vazias = sem recorte) e grava os eventos de
-   * auditoria na mesma transação.
-   */
+  /** Troca o recorte inteiro do usuário e grava os eventos de auditoria na mesma transação. */
   gravarRecorte(
     usuarioId: string,
-    escopo: { turnoIds: string[]; frenteIds: string[] },
+    escopo: RecorteEscala,
     eventos: EventoAuditoria[],
   ): Promise<void>;
   usuarioExiste(id: string): Promise<boolean>;

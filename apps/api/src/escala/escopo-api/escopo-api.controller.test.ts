@@ -32,11 +32,13 @@ describe('EscopoApiController', () => {
     const controller = new EscopoApiController(service as unknown as EscopoApiService);
 
     await controller.definir({ usuarioId: 'u-admin' } as PrincipalUsuario, 'u-carla', {
+      veTodaEscala: false,
       turnoIds: ['t-1'],
       frenteIds: [],
     });
 
     expect(service.definir).toHaveBeenCalledWith({ usuarioId: 'u-admin' }, 'u-carla', {
+      veTodaEscala: false,
       turnoIds: ['t-1'],
       frenteIds: [],
     });

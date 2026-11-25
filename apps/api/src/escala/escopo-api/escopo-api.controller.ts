@@ -61,6 +61,7 @@ export class EscopoApiController {
     @Body() corpo: DefinirEscopoDto,
   ): Promise<void> {
     return this.escopos.definir({ usuarioId: ator.usuarioId }, usuarioId, {
+      veTodaEscala: corpo.veTodaEscala,
       turnoIds: corpo.turnoIds,
       frenteIds: corpo.frenteIds,
     });

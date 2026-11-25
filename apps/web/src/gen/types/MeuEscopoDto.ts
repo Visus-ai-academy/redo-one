@@ -7,7 +7,7 @@ import type { EscopoDto } from './EscopoDto'
 
 export type MeuEscopoDto = {
   /**
-   * @description `null`: sem recorte, vê a escala inteira.
+   * @description `null`: vê a escala inteira (acesso total ou "vê toda a escala").
    * @type object
    */
   escopo: EscopoDto | null;

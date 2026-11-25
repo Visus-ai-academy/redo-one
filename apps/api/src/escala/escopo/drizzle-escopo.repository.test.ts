@@ -58,27 +58,31 @@ describe.skipIf(!url)('repositório do recorte da escala', () => {
     await pool.end();
   });
 
-  it('sem linhas, o usuário não tem recorte', async () => {
+  it('sem "vê toda a escala" e sem linhas, o recorte é vazio (não vê nada)', async () => {
     const repo = new DrizzleEscopoEscalaRepository(db);
-    expect(await repo.doUsuario(usuarioId)).toBeNull();
+    expect(await repo.doUsuario(usuarioId)).toEqual({ turnoIds: new Set(), frenteIds: new Set() });
   });
 
-  it('grava, lê e troca o recorte inteiro; listas vazias tiram o recorte', async () => {
+  it('grava, lê e troca o recorte inteiro; "vê toda a escala" tira o recorte', async () => {
     const repo = new DrizzleEscopoEscalaRepository(db);
 
-    await repo.definir(usuarioId, { turnoIds: [manha, tarde], frenteIds: [neuro] });
+    await repo.definir(usuarioId, {
+      veTodaEscala: false,
+      turnoIds: [manha, tarde],
+      frenteIds: [neuro],
+    });
     expect(await repo.doUsuario(usuarioId)).toEqual({
       turnoIds: new Set([manha, tarde]),
       frenteIds: new Set([neuro]),
     });
 
-    await repo.definir(usuarioId, { turnoIds: [tarde, tarde], frenteIds: [] });
+    await repo.definir(usuarioId, { veTodaEscala: false, turnoIds: [tarde, tarde], frenteIds: [] });
     expect(await repo.doUsuario(usuarioId)).toEqual({
       turnoIds: new Set([tarde]),
       frenteIds: new Set(),
     });
 
-    await repo.definir(usuarioId, { turnoIds: [], frenteIds: [] });
+    await repo.definir(usuarioId, { veTodaEscala: true, turnoIds: [], frenteIds: [] });
     expect(await repo.doUsuario(usuarioId)).toBeNull();
   });
 });

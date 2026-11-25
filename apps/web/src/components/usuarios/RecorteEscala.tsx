@@ -33,7 +33,7 @@ export type RecorteEscalaProps = {
 };
 
 const AJUDA =
-  'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Sem nada marcado, vê tudo.';
+  'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Para ela ver tudo, marque "Vê toda a escala".';
 
 // A API devolve no máximo 100 por página; turnos e frentes ativos são bem menos que isso.
 const CADASTROS_ATIVOS = { query: { ativo: true, porPagina: 100 } };
@@ -91,8 +91,11 @@ export function RecorteEscala({
 }
 
 function LeituraRecorte({ escopo }: { escopo: EscopoDto }) {
+  if (escopo.veTodaEscala) {
+    return <p className="text-muted-foreground">Vê toda a escala.</p>;
+  }
   if (escopo.turnos.length === 0 && escopo.frentes.length === 0) {
-    return <p className="text-muted-foreground">Sem recorte: vê toda a escala.</p>;
+    return <p className="text-muted-foreground">Sem turno nem frente: não vê a escala.</p>;
   }
   return (
     <div className="flex flex-col gap-3">
@@ -151,12 +154,17 @@ function EditorRecorte({
   const turnos = useTurnosControllerListar(CADASTROS_ATIVOS);
   const frentes = useFrentesControllerListar(CADASTROS_ATIVOS);
   const definir = useEscopoApiControllerDefinir();
+  const [veTodaEscala, setVeTodaEscala] = useState(escopo.veTodaEscala);
   const [turnoIds, setTurnoIds] = useState(escopo.turnoIds);
   const [frenteIds, setFrenteIds] = useState(escopo.frenteIds);
   const [falhou, setFalhou] = useState(false);
+  const [semNada, setSemNada] = useState(false);
+  const erroId = useId();
 
   const mudou =
-    !mesmoConjunto(turnoIds, escopo.turnoIds) || !mesmoConjunto(frenteIds, escopo.frenteIds);
+    veTodaEscala !== escopo.veTodaEscala ||
+    (!veTodaEscala &&
+      (!mesmoConjunto(turnoIds, escopo.turnoIds) || !mesmoConjunto(frenteIds, escopo.frenteIds)));
   useEffect(() => {
     onAlterado?.(mudou);
     return () => onAlterado?.(false);
@@ -164,8 +172,17 @@ function EditorRecorte({
 
   const salvar = async () => {
     setFalhou(false);
+    // Vazio nunca é "toda a escala": sem o "todos", ao menos um turno ou uma frente.
+    if (!veTodaEscala && turnoIds.length === 0 && frenteIds.length === 0) {
+      setSemNada(true);
+      return;
+    }
+    setSemNada(false);
+    const body = veTodaEscala
+      ? { veTodaEscala, turnoIds: [], frenteIds: [] }
+      : { veTodaEscala, turnoIds, frenteIds };
     try {
-      await definir.mutateAsync({ path: { usuarioId }, body: { turnoIds, frenteIds } });
+      await definir.mutateAsync({ path: { usuarioId }, body });
     } catch {
       setFalhou(true);
       return;
@@ -198,26 +215,47 @@ function EditorRecorte({
           Não foi possível carregar os turnos e as frentes. Feche e abra o painel de novo.
         </Alerta>
       )}
-      <GrupoDeMarcar
-        legenda="Turnos"
-        carregando={!turnos.data}
-        opcoes={opcoesCom(
-          (turnos.data?.itens ?? []).map((t) => ({ id: t.id, nome: t.nome })),
-          escopo.turnos,
-        )}
-        valor={turnoIds}
-        onMudar={setTurnoIds}
-      />
-      <GrupoDeMarcar
-        legenda="Frentes"
-        carregando={!frentes.data}
-        opcoes={opcoesCom(
-          (frentes.data?.itens ?? []).map((f) => ({ id: f.id, nome: f.rotulo })),
-          escopo.frentes,
-        )}
-        valor={frenteIds}
-        onMudar={setFrenteIds}
-      />
+      <Field.Root>
+        <Field.Label className="flex items-center gap-2">
+          <CaixaDeSelecao
+            checked={veTodaEscala}
+            onCheckedChange={(marcada) => {
+              setVeTodaEscala(marcada);
+              setSemNada(false);
+            }}
+          />
+          Vê toda a escala
+        </Field.Label>
+      </Field.Root>
+      {!veTodaEscala && (
+        <>
+          <GrupoDeMarcar
+            legenda="Turnos"
+            carregando={!turnos.data}
+            opcoes={opcoesCom(
+              (turnos.data?.itens ?? []).map((t) => ({ id: t.id, nome: t.nome })),
+              escopo.turnos,
+            )}
+            valor={turnoIds}
+            onMudar={setTurnoIds}
+          />
+          <GrupoDeMarcar
+            legenda="Frentes"
+            carregando={!frentes.data}
+            opcoes={opcoesCom(
+              (frentes.data?.itens ?? []).map((f) => ({ id: f.id, nome: f.rotulo })),
+              escopo.frentes,
+            )}
+            valor={frenteIds}
+            onMudar={setFrenteIds}
+          />
+          {semNada && (
+            <p id={erroId} role="alert" className="text-destructive text-[13px]">
+              Marque ao menos um turno ou uma frente (ou "Vê toda a escala").
+            </p>
+          )}
+        </>
+      )}
       <div className="flex justify-end">
         <Button
           type="submit"

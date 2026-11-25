@@ -21,8 +21,15 @@ const definir = vi.mocked(escopoApiControllerDefinir);
 const listarTurnos = vi.mocked(turnosControllerListar);
 const listarFrentes = vi.mocked(frentesControllerListar);
 
-const SEM_RECORTE: EscopoDto = { turnoIds: [], frenteIds: [], turnos: [], frentes: [] };
+const SEM_RECORTE: EscopoDto = {
+  veTodaEscala: true,
+  turnoIds: [],
+  frenteIds: [],
+  turnos: [],
+  frentes: [],
+};
 const COM_RECORTE: EscopoDto = {
+  veTodaEscala: false,
   turnoIds: ['t-manha'],
   frenteIds: ['f-neuro'],
   turnos: [{ id: 't-manha', nome: 'Manhã' }],
@@ -86,11 +93,17 @@ describe('RecorteEscala', () => {
     );
   });
 
-  it('sem permissão de editar, diz que não há recorte', async () => {
+  it('sem permissão de editar, diz que vê toda a escala', async () => {
     montar(SEM_RECORTE, { podeEditar: false });
 
-    expect(await screen.findByText('Sem recorte: vê toda a escala.')).toBeInTheDocument();
+    expect(await screen.findByText('Vê toda a escala.')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('sem "vê toda a escala" e sem turno nem frente, diz que não vê a escala', async () => {
+    montar({ ...SEM_RECORTE, veTodaEscala: false }, { podeEditar: false });
+
+    expect(await screen.findByText('Sem turno nem frente: não vê a escala.')).toBeInTheDocument();
   });
 
   it('sem permissão de editar, mostra os turnos e as frentes do recorte', async () => {
@@ -123,7 +136,7 @@ describe('RecorteEscala', () => {
     expect(manha).toBeChecked();
     expect(
       screen.getByText(
-        'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Sem nada marcado, vê tudo.',
+        'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Para ela ver tudo, marque "Vê toda a escala".',
       ),
     ).toBeVisible();
     const salvar = screen.getByRole('button', { name: 'Salvar recorte' });
@@ -138,11 +151,38 @@ describe('RecorteEscala', () => {
       expect(definir).toHaveBeenCalledWith(
         expect.objectContaining({
           path: { usuarioId: 'u-maria' },
-          body: { turnoIds: ['t-manha', 't-tarde'], frenteIds: ['f-mama'] },
+          body: { veTodaEscala: false, turnoIds: ['t-manha', 't-tarde'], frenteIds: ['f-mama'] },
         }),
       ),
     );
     expect(await acharAviso()).toHaveTextContent('Recorte da escala salvo.');
+  });
+
+  it('"Vê toda a escala" esconde os turnos e as frentes e salva o "todos" explícito', async () => {
+    montar(COM_RECORTE);
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Vê toda a escala' }));
+    expect(screen.queryByRole('checkbox', { name: 'Manhã' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar recorte' }));
+
+    await waitFor(() =>
+      expect(definir).toHaveBeenCalledWith(
+        expect.objectContaining({ body: { veTodaEscala: true, turnoIds: [], frenteIds: [] } }),
+      ),
+    );
+  });
+
+  it('vazio nunca é "toda a escala": sem o "todos" e sem nada marcado, não salva', async () => {
+    montar(COM_RECORTE);
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Manhã' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Neuro' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar recorte' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Marque ao menos um turno ou uma frente (ou "Vê toda a escala").',
+    );
+    expect(definir).not.toHaveBeenCalled();
   });
 
   it('avisa quem usa quando há marcação não salva (o painel pergunta antes de fechar)', async () => {
@@ -170,7 +210,7 @@ describe('RecorteEscala', () => {
         throw new Error('falhou');
       },
     } as never);
-    montar(SEM_RECORTE);
+    montar({ ...SEM_RECORTE, veTodaEscala: false });
 
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Manhã' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar recorte' }));

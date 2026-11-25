@@ -6,6 +6,11 @@
 import type { ReferenciaEscopoDto } from './ReferenciaEscopoDto'
 
 export type EscopoDto = {
+  /**
+   * @description Vê toda a escala (sem recorte).
+   * @type boolean
+   */
+  veTodaEscala: boolean;
   turnoIds: string[];
   frenteIds: string[];
   turnos: ReferenciaEscopoDto[];

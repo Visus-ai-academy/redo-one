@@ -5,6 +5,11 @@
 
 export type DefinirEscopoDto = {
   /**
+   * @description Vê toda a escala (sem recorte). Sem ele, ao menos um turno ou uma frente.
+   * @type boolean
+   */
+  veTodaEscala: boolean;
+  /**
    * @description Turnos liberados.
    * @type array
    */

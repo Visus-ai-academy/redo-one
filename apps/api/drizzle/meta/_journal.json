@@ -694,6 +694,20 @@
       "when": 1795638158710,
       "tag": "0098_rodadas_todos_dados",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1795638168842,
+      "tag": "0099_usuarios_ve_toda_escala",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1795638169387,
+      "tag": "0100_usuarios_ve_toda_escala_dados",
+      "breakpoints": true
     }
   ]
 }

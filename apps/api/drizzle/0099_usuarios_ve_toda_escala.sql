@@ -1,0 +1,1 @@
+ALTER TABLE "usuarios" ADD COLUMN "ve_toda_escala" boolean DEFAULT false NOT NULL;

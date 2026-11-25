@@ -565,6 +565,33 @@ describe('mapearEscala: ausências e escopo', () => {
     );
   });
 
+  it('sem recorte no dashboards-one (vê tudo lá), a usuária que existe vai para o "vê toda a escala"', () => {
+    const { usuariosVeemTodaEscala, tabelas } = mapearEscala(
+      escala({
+        usuarios: [
+          {
+            id: 'u-gestora',
+            nome: 'Gestora',
+            email: 'gestora@tele.com',
+            escopoTurnoIds: [],
+            escopoEspecialidadeIds: [],
+          },
+          {
+            id: 'u-outra',
+            nome: 'Outra',
+            email: 'outra@tele.com',
+            escopoTurnoIds: [],
+            escopoEspecialidadeIds: [],
+          },
+        ],
+      }),
+      contexto,
+    );
+
+    expect(usuariosVeemTodaEscala).toEqual(['aaaaaaaa-0000-4000-8000-000000000001']);
+    expect(tabelas.usuariosEscoposEscala).toEqual([]);
+  });
+
   it('recorte da usuária que existe com todos os ids órfãos falha a carga (sem linhas ela veria tudo)', () => {
     const usuarios = [
       {

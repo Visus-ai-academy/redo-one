@@ -5,6 +5,7 @@ import {
   ESCOPO_ESCALA_REPOSITORY,
   type EscopoEscala,
   type EscopoEscalaRepository,
+  type RecorteEscala,
 } from '../escopo/escopo';
 import {
   CADASTROS_ESCOPO_REPOSITORY,
@@ -14,12 +15,14 @@ import {
 import {
   EscopoDoProprioUsuarioError,
   FrenteInexistenteError,
+  RecorteEscalaInvalidoError,
   TurnoInexistenteError,
   UsuarioInexistenteError,
 } from './escopo-api.errors';
 
-/** Recorte com os nomes, para a tela. Listas vazias = sem recorte. */
+/** Recorte com os nomes, para a tela. "Vê toda a escala" é explícito; listas vazias sem ele = nada. */
 export interface EscopoDetalhado {
+  veTodaEscala: boolean;
   turnoIds: string[];
   frenteIds: string[];
   turnos: Referencia[];
@@ -42,7 +45,7 @@ export class EscopoApiService {
     return this.detalhar(await this.escopos.doUsuario(usuarioId));
   }
 
-  /** O recorte de quem está logado; `null` = vê tudo (acesso total ou sem linhas). */
+  /** O recorte de quem está logado; `null` = vê tudo (acesso total ou "vê toda a escala"). */
   async doPrincipal(principal: {
     usuarioId: string;
     acessoTotal: boolean;
@@ -55,9 +58,19 @@ export class EscopoApiService {
   async definir(
     ator: { usuarioId: string },
     usuarioId: string,
-    novo: { turnoIds: string[]; frenteIds: string[] },
+    novo: RecorteEscala,
   ): Promise<void> {
     if (ator.usuarioId === usuarioId) throw new EscopoDoProprioUsuarioError();
+    if (novo.veTodaEscala && (novo.turnoIds.length || novo.frenteIds.length)) {
+      throw new RecorteEscalaInvalidoError(
+        'Escolha "vê toda a escala" ou os turnos e as frentes, não as duas coisas.',
+      );
+    }
+    if (!novo.veTodaEscala && !novo.turnoIds.length && !novo.frenteIds.length) {
+      throw new RecorteEscalaInvalidoError(
+        'Marque ao menos um turno ou uma frente (ou "vê toda a escala").',
+      );
+    }
     if (!(await this.cadastros.usuarioExiste(usuarioId))) throw new UsuarioInexistenteError();
 
     const turnoIds = unicos(novo.turnoIds);
@@ -69,12 +82,14 @@ export class EscopoApiService {
 
     const antes = await this.detalhar(await this.escopos.doUsuario(usuarioId));
     const depois: EscopoDetalhado = {
+      veTodaEscala: novo.veTodaEscala,
       turnoIds: turnos.map((t) => t.id),
       frenteIds: frentes.map((f) => f.id),
       turnos,
       frentes,
     };
     if (
+      antes.veTodaEscala === depois.veTodaEscala &&
       mesmoConjunto(antes.turnoIds, depois.turnoIds) &&
       mesmoConjunto(antes.frenteIds, depois.frenteIds)
     ) {
@@ -82,7 +97,8 @@ export class EscopoApiService {
     }
 
     // O recorte e o evento na mesma transação.
-    await this.cadastros.gravarRecorte(usuarioId, { turnoIds, frenteIds }, [
+    const recorte = { veTodaEscala: novo.veTodaEscala, turnoIds, frenteIds };
+    await this.cadastros.gravarRecorte(usuarioId, recorte, [
       {
         ator: { tipo: 'usuario', id: ator.usuarioId },
         entidade: 'escopo_escala',
@@ -96,10 +112,13 @@ export class EscopoApiService {
   }
 
   private async detalhar(escopo: EscopoEscala | null): Promise<EscopoDetalhado> {
-    if (!escopo) return { turnoIds: [], frenteIds: [], turnos: [], frentes: [] };
+    if (!escopo) {
+      return { veTodaEscala: true, turnoIds: [], frenteIds: [], turnos: [], frentes: [] };
+    }
     const turnos = await this.cadastros.turnos([...escopo.turnoIds]);
     const frentes = await this.cadastros.frentes([...escopo.frenteIds]);
     return {
+      veTodaEscala: false,
       turnoIds: turnos.map((t) => t.id),
       frenteIds: frentes.map((f) => f.id),
       turnos,
@@ -115,6 +134,7 @@ function mesmoConjunto(a: string[], b: string[]): boolean {
 /** Ids (para o recorte) e nomes (para o histórico mostrar antes → depois). */
 function paraEvento(escopo: EscopoDetalhado): Record<string, unknown> {
   return {
+    veTodaEscala: escopo.veTodaEscala,
     turnoIds: escopo.turnoIds,
     frenteIds: escopo.frenteIds,
     turnos: escopo.turnos.map((t) => t.nome),

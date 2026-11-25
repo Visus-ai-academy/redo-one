@@ -95,12 +95,16 @@ describe.skipIf(!url)('cadastros consultados pelo recorte da escala', () => {
 
     it('troca o recorte inteiro e grava o evento junto', async () => {
       const repo = new DrizzleCadastrosEscopoRepository(db);
-      await repo.gravarRecorte(usuarioId, { turnoIds: [tarde], frenteIds: [neuro] }, [
-        evento(usuarioId),
-      ]);
-      await repo.gravarRecorte(usuarioId, { turnoIds: [manha], frenteIds: [] }, [
-        evento(usuarioId),
-      ]);
+      await repo.gravarRecorte(
+        usuarioId,
+        { veTodaEscala: false, turnoIds: [tarde], frenteIds: [neuro] },
+        [evento(usuarioId)],
+      );
+      await repo.gravarRecorte(
+        usuarioId,
+        { veTodaEscala: false, turnoIds: [manha], frenteIds: [] },
+        [evento(usuarioId)],
+      );
 
       expect(await recorte()).toEqual([{ turnoId: manha, frenteId: null }]);
       const eventos = await db.select().from(schema.eventosAuditoria);
@@ -110,10 +114,16 @@ describe.skipIf(!url)('cadastros consultados pelo recorte da escala', () => {
 
     it('se o evento falha, o recorte fica como estava', async () => {
       const repo = new DrizzleCadastrosEscopoRepository(db);
-      await repo.gravarRecorte(usuarioId, { turnoIds: [tarde], frenteIds: [] }, []);
+      await repo.gravarRecorte(
+        usuarioId,
+        { veTodaEscala: false, turnoIds: [tarde], frenteIds: [] },
+        [],
+      );
 
       await expect(
-        repo.gravarRecorte(usuarioId, { turnoIds: [manha], frenteIds: [] }, [evento('nao-e-uuid')]),
+        repo.gravarRecorte(usuarioId, { veTodaEscala: false, turnoIds: [manha], frenteIds: [] }, [
+          evento('nao-e-uuid'),
+        ]),
       ).rejects.toThrow();
 
       expect(await recorte()).toEqual([{ turnoId: tarde, frenteId: null }]);

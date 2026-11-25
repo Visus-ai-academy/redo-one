@@ -62,8 +62,8 @@ describe('HistoricoEscalaService', () => {
   });
 
   it('aplica o recorte de quem consulta; acesso total nunca tem recorte', async () => {
-    escopos.escopos.set('u-carla', { turnoIds: ['t-manha'], frenteIds: [] });
-    escopos.escopos.set('u-admin', { turnoIds: ['t-manha'], frenteIds: [] });
+    escopos.escopos.set('u-carla', { veTodaEscala: false, turnoIds: ['t-manha'], frenteIds: [] });
+    escopos.escopos.set('u-admin', { veTodaEscala: false, turnoIds: ['t-manha'], frenteIds: [] });
 
     await service.listar(gestora, { pagina: 1, porPagina: 25 });
     await service.listar({ usuarioId: 'u-admin', acessoTotal: true }, { pagina: 1, porPagina: 25 });

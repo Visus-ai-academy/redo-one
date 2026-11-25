@@ -279,7 +279,11 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
 
   it('recorte: a gestora não vê nem mexe no turno de fora, e não escala nele', async () => {
     const { escopos, service } = montar();
-    await escopos.definir(id('gestora'), { turnoIds: [id('manha')], frenteIds: [] });
+    await escopos.definir(id('gestora'), {
+      veTodaEscala: false,
+      turnoIds: [id('manha')],
+      frenteIds: [],
+    });
     await definir([celula('lista', SEG, 30)], '2026-11-02');
     const gestora = { usuarioId: id('gestora'), acessoTotal: false };
 

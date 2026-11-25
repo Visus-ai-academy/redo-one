@@ -6,6 +6,7 @@ import type { CadastrosEscopoRepository, Referencia } from './cadastros-escopo.r
 import {
   EscopoDoProprioUsuarioError,
   FrenteInexistenteError,
+  RecorteEscalaInvalidoError,
   TurnoInexistenteError,
   UsuarioInexistenteError,
 } from './escopo-api.errors';
@@ -17,7 +18,7 @@ class FakeCadastros implements CadastrosEscopoRepository {
 
   async gravarRecorte(
     usuarioId: string,
-    escopo: { turnoIds: string[]; frenteIds: string[] },
+    escopo: { veTodaEscala: boolean; turnoIds: string[]; frenteIds: string[] },
     eventos: EventoAuditoria[],
   ) {
     await this.escopos.definir(usuarioId, escopo);
@@ -57,8 +58,9 @@ describe('EscopoApiService', () => {
   });
 
   describe('obter', () => {
-    it('sem recorte, devolve listas vazias', async () => {
+    it('vê toda a escala: o "todos" explícito, com as listas vazias', async () => {
       expect(await service.obter('u-carla')).toEqual({
+        veTodaEscala: true,
         turnoIds: [],
         frenteIds: [],
         turnos: [],
@@ -67,8 +69,13 @@ describe('EscopoApiService', () => {
     });
 
     it('devolve os ids e os nomes dos turnos e frentes do recorte', async () => {
-      escopos.escopos.set('u-carla', { turnoIds: ['t-tarde'], frenteIds: ['f-neuro'] });
+      escopos.escopos.set('u-carla', {
+        veTodaEscala: false,
+        turnoIds: ['t-tarde'],
+        frenteIds: ['f-neuro'],
+      });
       expect(await service.obter('u-carla')).toEqual({
+        veTodaEscala: false,
         turnoIds: ['t-tarde'],
         frenteIds: ['f-neuro'],
         turnos: [{ id: 't-tarde', nome: 'Tarde' }],
@@ -83,14 +90,16 @@ describe('EscopoApiService', () => {
 
   describe('definir', () => {
     it('grava o recorte e audita antes e depois com ids e nomes', async () => {
-      escopos.escopos.set('u-carla', { turnoIds: ['t-manha'], frenteIds: [] });
+      escopos.escopos.set('u-carla', { veTodaEscala: false, turnoIds: ['t-manha'], frenteIds: [] });
 
       await service.definir({ usuarioId: 'u-admin' }, 'u-carla', {
+        veTodaEscala: false,
         turnoIds: ['t-tarde', 't-tarde'],
         frenteIds: ['f-neuro'],
       });
 
       expect(escopos.escopos.get('u-carla')).toEqual({
+        veTodaEscala: false,
         turnoIds: ['t-tarde'],
         frenteIds: ['f-neuro'],
       });
@@ -100,8 +109,15 @@ describe('EscopoApiService', () => {
           entidade: 'escopo_escala',
           entidadeId: 'u-carla',
           acao: 'definido',
-          antes: { turnoIds: ['t-manha'], frenteIds: [], turnos: ['Manhã'], frentes: [] },
+          antes: {
+            veTodaEscala: false,
+            turnoIds: ['t-manha'],
+            frenteIds: [],
+            turnos: ['Manhã'],
+            frentes: [],
+          },
           depois: {
+            veTodaEscala: false,
             turnoIds: ['t-tarde'],
             frenteIds: ['f-neuro'],
             turnos: ['Tarde'],
@@ -113,17 +129,52 @@ describe('EscopoApiService', () => {
     });
 
     it('nada mudou: não grava evento', async () => {
-      escopos.escopos.set('u-carla', { turnoIds: ['t-manha'], frenteIds: [] });
+      escopos.escopos.set('u-carla', { veTodaEscala: false, turnoIds: ['t-manha'], frenteIds: [] });
       await service.definir({ usuarioId: 'u-admin' }, 'u-carla', {
+        veTodaEscala: false,
         turnoIds: ['t-manha'],
         frenteIds: [],
       });
       expect(auditoria.eventos).toEqual([]);
     });
 
+    it('vazio nunca é "toda a escala": sem o "todos", ao menos um turno ou frente', async () => {
+      const ator = { usuarioId: 'u-admin' };
+      await expect(
+        service.definir(ator, 'u-carla', { veTodaEscala: false, turnoIds: [], frenteIds: [] }),
+      ).rejects.toBeInstanceOf(RecorteEscalaInvalidoError);
+      await expect(
+        service.definir(ator, 'u-carla', {
+          veTodaEscala: true,
+          turnoIds: ['t-manha'],
+          frenteIds: [],
+        }),
+      ).rejects.toThrow(/não as duas/);
+      expect(escopos.escopos.size).toBe(0);
+    });
+
+    it('"vê toda a escala" grava o "todos" e tira as linhas', async () => {
+      escopos.escopos.set('u-carla', { veTodaEscala: false, turnoIds: ['t-manha'], frenteIds: [] });
+      await service.definir({ usuarioId: 'u-admin' }, 'u-carla', {
+        veTodaEscala: true,
+        turnoIds: [],
+        frenteIds: [],
+      });
+      expect(escopos.escopos.get('u-carla')).toEqual({
+        veTodaEscala: true,
+        turnoIds: [],
+        frenteIds: [],
+      });
+      expect(auditoria.eventos[0]?.depois).toMatchObject({ veTodaEscala: true });
+    });
+
     it('ninguém edita o próprio recorte', async () => {
       await expect(
-        service.definir({ usuarioId: 'u-carla' }, 'u-carla', { turnoIds: [], frenteIds: [] }),
+        service.definir({ usuarioId: 'u-carla' }, 'u-carla', {
+          veTodaEscala: true,
+          turnoIds: [],
+          frenteIds: [],
+        }),
       ).rejects.toBeInstanceOf(EscopoDoProprioUsuarioError);
       expect(auditoria.eventos).toEqual([]);
     });
@@ -131,13 +182,13 @@ describe('EscopoApiService', () => {
     it('usuário, turno ou frente inexistente', async () => {
       const ator = { usuarioId: 'u-admin' };
       await expect(
-        service.definir(ator, 'u-x', { turnoIds: [], frenteIds: [] }),
+        service.definir(ator, 'u-x', { veTodaEscala: true, turnoIds: [], frenteIds: [] }),
       ).rejects.toBeInstanceOf(UsuarioInexistenteError);
       await expect(
-        service.definir(ator, 'u-carla', { turnoIds: ['t-x'], frenteIds: [] }),
+        service.definir(ator, 'u-carla', { veTodaEscala: false, turnoIds: ['t-x'], frenteIds: [] }),
       ).rejects.toBeInstanceOf(TurnoInexistenteError);
       await expect(
-        service.definir(ator, 'u-carla', { turnoIds: [], frenteIds: ['f-x'] }),
+        service.definir(ator, 'u-carla', { veTodaEscala: false, turnoIds: [], frenteIds: ['f-x'] }),
       ).rejects.toBeInstanceOf(FrenteInexistenteError);
       expect(escopos.escopos.size).toBe(0);
     });
@@ -145,14 +196,15 @@ describe('EscopoApiService', () => {
 
   describe('doPrincipal', () => {
     it('acesso total nunca tem recorte', async () => {
-      escopos.escopos.set('u-admin', { turnoIds: ['t-manha'], frenteIds: [] });
+      escopos.escopos.set('u-admin', { veTodaEscala: false, turnoIds: ['t-manha'], frenteIds: [] });
       expect(await service.doPrincipal({ usuarioId: 'u-admin', acessoTotal: true })).toBeNull();
     });
 
-    it('sem linhas, null; com recorte, ids e nomes', async () => {
+    it('vê toda a escala, null; com recorte, ids e nomes', async () => {
       expect(await service.doPrincipal({ usuarioId: 'u-carla', acessoTotal: false })).toBeNull();
-      escopos.escopos.set('u-carla', { turnoIds: [], frenteIds: ['f-neuro'] });
+      escopos.escopos.set('u-carla', { veTodaEscala: false, turnoIds: [], frenteIds: ['f-neuro'] });
       expect(await service.doPrincipal({ usuarioId: 'u-carla', acessoTotal: false })).toEqual({
+        veTodaEscala: false,
         turnoIds: [],
         frenteIds: ['f-neuro'],
         turnos: [],

@@ -9,6 +9,11 @@ export class EscopoDoProprioUsuarioError extends ErroDeDominio {
   }
 }
 
+/** Vazio nunca é "toda a escala": ou "vê toda a escala", ou ao menos um turno ou frente. */
+export class RecorteEscalaInvalidoError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+}
+
 export class UsuarioInexistenteError extends ErroDeDominio {
   readonly tipo = 'nao_encontrado';
 

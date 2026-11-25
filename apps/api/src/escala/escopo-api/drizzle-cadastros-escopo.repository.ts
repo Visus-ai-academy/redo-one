@@ -9,9 +9,10 @@ import {
   modalidades,
   turnos,
   usuarios,
-  usuariosEscoposEscala,
 } from '../../database/schema';
 import { gravarEventos } from '../alocacoes/drizzle-alocacoes.repository';
+import { gravarRecorteEscala } from '../escopo/drizzle-escopo.repository';
+import type { RecorteEscala } from '../escopo/escopo';
 import { frenteDoCatalogo, ordemDasFrentes } from '../frentes/frente-do-catalogo';
 import type { CadastrosEscopoRepository, Referencia } from './cadastros-escopo.repository';
 
@@ -21,16 +22,11 @@ export class DrizzleCadastrosEscopoRepository implements CadastrosEscopoReposito
 
   async gravarRecorte(
     usuarioId: string,
-    escopo: { turnoIds: string[]; frenteIds: string[] },
+    escopo: RecorteEscala,
     eventos: EventoAuditoria[],
   ): Promise<void> {
-    const linhas = [
-      ...[...new Set(escopo.turnoIds)].map((turnoId) => ({ usuarioId, turnoId })),
-      ...[...new Set(escopo.frenteIds)].map((frenteId) => ({ usuarioId, frenteId })),
-    ];
     await this.db.transaction(async (tx) => {
-      await tx.delete(usuariosEscoposEscala).where(eq(usuariosEscoposEscala.usuarioId, usuarioId));
-      if (linhas.length > 0) await tx.insert(usuariosEscoposEscala).values(linhas);
+      await gravarRecorteEscala(tx, usuarioId, escopo);
       await gravarEventos(tx, eventos);
     });
   }

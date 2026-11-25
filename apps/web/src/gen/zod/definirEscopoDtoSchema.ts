@@ -6,6 +6,7 @@
 import * as z from 'zod'
 
 export const definirEscopoDtoSchema = z.object({
+  veTodaEscala: z.boolean().describe('Vê toda a escala (sem recorte). Sem ele, ao menos um turno ou uma frente.'),
   turnoIds: z.array(z.uuid()).describe('Turnos liberados.'),
   frenteIds: z.array(z.uuid()).describe('Frentes liberadas.'),
 })
