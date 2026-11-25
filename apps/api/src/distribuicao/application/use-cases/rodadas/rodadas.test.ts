@@ -1369,6 +1369,7 @@ describe('rodada do robô (casos de uso)', () => {
   describe('recolhimento', () => {
     const MANHA_A = { medicoId: 'A', inicio: br('2026-11-18T07:00'), fim: br('2026-11-18T13:00') };
     const periodo = {
+      turnoId: 'manha',
       lista: false,
       ausente: false,
       frente: { tipo: 'especialidade', especialidadeId: MI, modalidadeId: null } as const,
@@ -1477,14 +1478,48 @@ describe('rodada do robô (casos de uso)', () => {
       expect(repo.insumosGravados.get(id)?.recolhimento?.naoRecolhidos.turno_em_curso).toBe(1);
     });
 
-    it('a escala é lida desde a véspera do maior fim que ainda segura (a carência da Lista)', async () => {
+    it('a escala é lida desde a véspera do maior fim que ainda segura (o maior prazo por turno)', async () => {
       await entregarAoA('r1');
+      insumos.insumos = {
+        ...insumos.insumos,
+        config: {
+          ...CONFIGURACAO_INICIAL,
+          recolhimentoPorTurno: [
+            { turnoId: 'lista', minutos: 1440 },
+            { turnoId: 'tarde', minutos: 30 },
+          ],
+        },
+      };
       agora = br('2026-11-28T14:30');
       await criarELer();
       expect(escalaRecolhimento.pedidos.at(-1)).toEqual({
         desde: br('2026-11-26T14:30'),
         agora: br('2026-11-28T14:30'),
       });
+    });
+
+    it('sem prazo por turno, a escala é lida desde a véspera do prazo padrão', async () => {
+      await entregarAoA('r1');
+      agora = br('2026-11-28T14:30');
+      await criarELer();
+      expect(escalaRecolhimento.pedidos.at(-1)).toEqual({
+        desde: br('2026-11-27T13:30'),
+        agora: br('2026-11-28T14:30'),
+      });
+    });
+
+    it('o prazo próprio do turno vale no lugar do padrão: a Manhã com 120 min segura o exame', async () => {
+      await entregarAoA('r1');
+      insumos.insumos = {
+        ...insumos.insumos,
+        config: {
+          ...CONFIGURACAO_INICIAL,
+          recolhimentoPorTurno: [{ turnoId: 'manha', minutos: 120 }],
+        },
+      };
+      const id = await criarELer();
+      expect(daRodada(id, 'r1')).toBeUndefined();
+      expect(repo.insumosGravados.get(id)?.recolhimento?.naoRecolhidos.turno_em_curso).toBe(1);
     });
 
     it('a Dra. A na Tarde da mesma frente: o exame fica com ela, sem troca entre médicos em turno', async () => {

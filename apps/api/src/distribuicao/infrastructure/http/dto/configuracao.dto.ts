@@ -54,6 +54,19 @@ export class TurnosPosterioresDto {
   cheiaEm!: string;
 }
 
+export class PrazoRecolhimentoTurnoDto {
+  @ApiProperty({ format: 'uuid', description: 'Turno da escala.' })
+  @IsUUID()
+  turnoId!: string;
+
+  @ApiProperty({
+    type: 'integer',
+    description: 'Minutos depois do fim do turno (0 a 10080), no lugar do prazo padrão.',
+  })
+  @IsInt()
+  minutos!: number;
+}
+
 /** Configurações › Distribuição (global). O PUT troca tudo. */
 export class ConfiguracaoDistribuicaoDto {
   @ApiProperty({
@@ -146,19 +159,22 @@ export class ConfiguracaoDistribuicaoDto {
     type: Number,
     nullable: true,
     description:
-      'Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado.',
+      'Prazo padrão (minutos) para recolher o exame não aberto depois do fim do turno; nulo = recolhimento desligado.',
   })
   @ValidateIf((_, v) => v !== null)
   @IsInt()
   recolhimentoAposTurnoMin!: number | null;
 
   @ApiProperty({
-    type: 'integer',
+    type: [PrazoRecolhimentoTurnoDto],
     description:
-      'Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080).',
+      'Prazo próprio de alguns turnos, no lugar do padrão (um por turno). Os outros usam o padrão.',
   })
-  @IsInt()
-  recolhimentoAposListaMin!: number;
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => PrazoRecolhimentoTurnoDto)
+  recolhimentoPorTurno!: PrazoRecolhimentoTurnoDto[];
 
   @ApiProperty({
     required: false,

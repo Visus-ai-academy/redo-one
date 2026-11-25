@@ -59,8 +59,6 @@ describe('configuração global da distribuição', () => {
     ['cicloMinutos', 0],
     ['diasJaEntregue', -1],
     ['recolhimentoAposTurnoMin', -1],
-    ['recolhimentoAposListaMin', -1],
-    ['recolhimentoAposListaMin', 10_081],
     ['expiracaoPropostaMin', 0],
     ['expiracaoPropostaMin', 1441],
     ['tetoPorRodada', 0],
@@ -81,6 +79,38 @@ describe('configuração global da distribuição', () => {
     falha({ turnosPosteriores: { turnoIds: [], cheiaEm: '10:50' } }, /ao menos um turno/);
     falha({ turnosPosteriores: { turnoIds: ['t', 't'], cheiaEm: '10:50' } }, /turno repetido/);
     falha({ turnosPosteriores: { turnoIds: ['t'], cheiaEm: '25:00' } }, /HH:MM/);
+  });
+
+  it('prazo do recolhimento por turno: de 0 a 10080 min, um por turno', () => {
+    expect(() =>
+      validarConfiguracaoGlobal(
+        valida({
+          recolhimentoPorTurno: [
+            { turnoId: 'lista', minutos: 1440 },
+            { turnoId: 'tarde', minutos: 0 },
+          ],
+        }),
+      ),
+    ).not.toThrow();
+    falha({ recolhimentoPorTurno: [{ turnoId: 'lista', minutos: -1 }] }, /Prazo do recolhimento/);
+    falha(
+      { recolhimentoPorTurno: [{ turnoId: 'lista', minutos: 10_081 }] },
+      /Prazo do recolhimento/,
+    );
+    falha({ recolhimentoPorTurno: [{ turnoId: 'lista', minutos: 1.5 }] }, /Prazo do recolhimento/);
+    falha(
+      {
+        recolhimentoPorTurno: [
+          { turnoId: 'lista', minutos: 1440 },
+          { turnoId: 'lista', minutos: 30 },
+        ],
+      },
+      /turno repetido no prazo do recolhimento/,
+    );
+  });
+
+  it('a inicial não tem prazo por turno (sem turno cadastrado, nada a apontar)', () => {
+    expect(CONFIGURACAO_INICIAL.recolhimentoPorTurno).toEqual([]);
   });
 
   it('marcadores não podem ser vazios nem repetidos (sem diferenciar maiúsculas)', () => {

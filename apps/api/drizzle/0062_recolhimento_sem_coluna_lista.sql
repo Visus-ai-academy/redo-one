@@ -1,0 +1,1 @@
+ALTER TABLE "configuracao_distribuicao" DROP COLUMN "recolhimento_apos_lista_min";

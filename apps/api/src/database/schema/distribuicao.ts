@@ -210,10 +210,11 @@ export const configuracaoDistribuicao = pgTable(
     diasJaEntregue: integer('dias_ja_entregue').notNull(),
     /** "HH:MM" da rodada que enche os turnos posteriores; null = nenhum turno posterior. */
     turnosPosterioresCheiaEm: text('turnos_posteriores_cheia_em'),
-    /** Null = recolhimento desligado. */
+    /**
+     * Prazo padrão do recolhimento depois do fim do turno; null = recolhimento desligado. O prazo
+     * próprio de alguns turnos fica em `configuracao_distribuicao_recolhimento_turnos`.
+     */
     recolhimentoAposTurnoMin: integer('recolhimento_apos_turno_min'),
-    /** Carência do recolhimento depois do fim da Lista (no dashboards-one, 24 h fixas). */
-    recolhimentoAposListaMin: integer('recolhimento_apos_lista_min').notNull().default(1440),
     /** Desligado, ninguém inicia rodada. */
     roboAtivo: boolean('robo_ativo').notNull().default(true),
     /** Minutos que a proposta vale sem aprovação. */
@@ -262,6 +263,27 @@ export const configuracaoDistribuicaoTurnosPosteriores = pgTable(
       .primaryKey()
       .references(() => turnos.id, { onDelete: 'cascade' }),
   },
+);
+
+/**
+ * Prazo próprio de um turno para o recolhimento, no lugar do padrão
+ * (`configuracao_distribuicao.recolhimento_apos_turno_min`). Um por turno. No dashboards-one, só a
+ * Lista tinha, fixo no código (24 h).
+ */
+export const configuracaoDistribuicaoRecolhimentoTurnos = pgTable(
+  'configuracao_distribuicao_recolhimento_turnos',
+  {
+    turnoId: uuid('turno_id')
+      .primaryKey()
+      .references(() => turnos.id, { onDelete: 'cascade' }),
+    minutos: integer('minutos').notNull(),
+  },
+  (t) => [
+    check(
+      'configuracao_distribuicao_recolhimento_turnos_minutos_check',
+      sql`${t.minutos} between 0 and 10080`,
+    ),
+  ],
 );
 
 // ---------------------------------------------------------------------------------------------

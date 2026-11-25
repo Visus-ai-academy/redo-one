@@ -262,7 +262,7 @@ export function configuracaoDoMotor(c: ConfiguracaoGlobal): ConfiguracaoDistribu
     expiracaoPropostaMin: __,
     tetoPorRodada: ___,
     recolhimentoAposTurnoMin: ____,
-    recolhimentoAposListaMin: _____,
+    recolhimentoPorTurno: _____,
     ...motor
   } = c;
   return motor;

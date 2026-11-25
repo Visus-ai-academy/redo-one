@@ -41,7 +41,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
   beforeEach(async () => {
     await db.execute(
       sql`truncate table ajustes_dia_distribuicao, alocacoes, frentes_escala, usuarios, papeis, medicos, prioridades_cliente, regras_frente, configuracao_distribuicao, prioridades_operacao,
-        configuracao_distribuicao_turnos_posteriores,
+        configuracao_distribuicao_turnos_posteriores, configuracao_distribuicao_recolhimento_turnos,
         turnos, clientes, modalidades, especialidades, subespecialidades, prioridades cascade`,
     );
     ids.urg = await primeiro(
@@ -83,6 +83,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       ...CONFIGURACAO_INICIAL,
       marcadoresEquilibrio: ['ONCO'],
       turnosPosteriores: { turnoIds: [id('tarde')], cheiaEm: '10:50' },
+      recolhimentoPorTurno: [{ turnoId: id('tarde'), minutos: 30 }],
     };
     await repo.salvar(producao);
     expect(await repo.obter()).toEqual(producao);
@@ -91,6 +92,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       ...producao,
       turnosPosteriores: null,
       recolhimentoAposTurnoMin: null,
+      recolhimentoPorTurno: [],
     };
     await repo.salvar(semPosteriores);
     expect(await repo.obter()).toEqual(semPosteriores);

@@ -9,7 +9,7 @@ const DIA = 1440 * MIN;
 
 /**
  * O recolhimento no instante da leitura: a última entrega do robô de cada exame em mãos, a escala
- * que pode estar em curso agora (da véspera do maior fim ainda dentro da carência), as ausências de
+ * que pode estar em curso agora (da véspera do maior fim ainda dentro do maior prazo), as ausências de
  * hoje e as contas dos médicos. Undefined = desligado (carência nula na configuração).
  */
 export async function lerRecolhimento(
@@ -20,7 +20,11 @@ export async function lerRecolhimento(
   const { config } = insumos;
   if (config.recolhimentoAposTurnoMin === null) return undefined;
 
-  const carencia = Math.max(config.recolhimentoAposTurnoMin, config.recolhimentoAposListaMin);
+  // A escala que ainda pode segurar um exame: a do maior prazo (o padrão ou o de algum turno).
+  const carencia = Math.max(
+    config.recolhimentoAposTurnoMin,
+    ...config.recolhimentoPorTurno.map((p) => p.minutos),
+  );
   const [entregas, periodos, ausencias] = await Promise.all([
     d.rodadas.ultimasEntregas(leitura.emMaos.map((e) => e.idExame)),
     d.escalaRecolhimento.periodos(new Date(agora.getTime() - carencia * MIN - DIA), agora),
@@ -37,7 +41,7 @@ export async function lerRecolhimento(
     agora,
     parametros: {
       carenciaMin: config.recolhimentoAposTurnoMin,
-      carenciaListaMin: config.recolhimentoAposListaMin,
+      carenciaPorTurno: new Map(config.recolhimentoPorTurno.map((p) => [p.turnoId, p.minutos])),
       antecedenciaMin: config.antecedenciaPeriodoMin,
       escalaRestringeEspecialidade: config.escalaRestringeEspecialidade,
     },

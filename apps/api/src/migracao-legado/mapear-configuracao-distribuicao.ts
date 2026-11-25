@@ -199,6 +199,11 @@ export function mapearConfiguracaoDistribuicao(
   );
   const segmento = (nome: string) => subPorNome.get(chaveCadastro(nome)) ?? null;
 
+  const turnosLista = ctx.turnos
+    .filter((t) => t.tipo === 'lista')
+    .map((t) => t.id)
+    .sort();
+
   // ---- Configuração global ----
   let configuracao: ConfiguracaoGlobal | null = null;
   const cfg = legado.config;
@@ -240,7 +245,11 @@ export function mapearConfiguracaoDistribuicao(
         ? { turnoIds: tarde.map((t) => t.id).sort(), cheiaEm: CHEIA_POSTERIORES }
         : null,
       recolhimentoAposTurnoMin: cfg.roboRecolherAposTurnoMin,
-      recolhimentoAposListaMin: CARENCIA_LISTA_MIN,
+      // A Lista com as 24 h fixas do dashboards-one, como prazo próprio de cada turno do tipo.
+      recolhimentoPorTurno: turnosLista.map((turnoId) => ({
+        turnoId,
+        minutos: CARENCIA_LISTA_MIN,
+      })),
       roboAtivo: cfg.roboAtivo,
       expiracaoPropostaMin: cfg.roboExpiracaoMin,
       tetoPorRodada: cfg.roboTetoPorRodada,
@@ -255,10 +264,6 @@ export function mapearConfiguracaoDistribuicao(
   const prioridadesOperacao = prioridadesOperacaoDaCarga();
   const idOperacao = (nome: string) =>
     prioridadesOperacao.find((p) => p.nome === nome)?.id as string;
-  const turnosLista = ctx.turnos
-    .filter((t) => t.tipo === 'lista')
-    .map((t) => t.id)
-    .sort();
   if (!turnosLista.length) {
     avisos.push({
       tabela: 'recebimento_geral',

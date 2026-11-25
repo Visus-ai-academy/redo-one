@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../../../database/database';
 import {
   configuracaoDistribuicao,
+  configuracaoDistribuicaoRecolhimentoTurnos,
   configuracaoDistribuicaoTurnosPosteriores,
 } from '../../../database/schema';
 import type { ConfiguracaoDistribuicaoRepository } from '../../application/ports/configuracao-distribuicao.repository';
@@ -23,10 +24,17 @@ export class DrizzleConfiguracaoDistribuicaoRepository
       .from(configuracaoDistribuicao)
       .where(eq(configuracaoDistribuicao.id, ID));
     if (!linha) return null;
-    const posteriores = await this.db.select().from(configuracaoDistribuicaoTurnosPosteriores);
+    const [posteriores, prazos] = await Promise.all([
+      this.db.select().from(configuracaoDistribuicaoTurnosPosteriores),
+      this.db
+        .select()
+        .from(configuracaoDistribuicaoRecolhimentoTurnos)
+        .orderBy(configuracaoDistribuicaoRecolhimentoTurnos.turnoId),
+    ]);
     const { id: _, atualizadoEm: __, turnosPosterioresCheiaEm, ...resto } = linha;
     return {
       ...resto,
+      recolhimentoPorTurno: prazos.map((p) => ({ turnoId: p.turnoId, minutos: p.minutos })),
       turnosPosteriores:
         turnosPosterioresCheiaEm === null
           ? null
@@ -38,7 +46,7 @@ export class DrizzleConfiguracaoDistribuicaoRepository
   }
 
   async salvar(c: ConfiguracaoGlobal): Promise<void> {
-    const { turnosPosteriores, ...escalares } = c;
+    const { turnosPosteriores, recolhimentoPorTurno, ...escalares } = c;
     const linha = { ...escalares, turnosPosterioresCheiaEm: turnosPosteriores?.cheiaEm ?? null };
     await this.db.transaction(async (tx) => {
       await tx
@@ -50,6 +58,9 @@ export class DrizzleConfiguracaoDistribuicaoRepository
         await tx
           .insert(configuracaoDistribuicaoTurnosPosteriores)
           .values(turnosPosteriores.turnoIds.map((turnoId) => ({ turnoId })));
+      await tx.delete(configuracaoDistribuicaoRecolhimentoTurnos);
+      if (recolhimentoPorTurno.length)
+        await tx.insert(configuracaoDistribuicaoRecolhimentoTurnos).values(recolhimentoPorTurno);
     });
   }
 }

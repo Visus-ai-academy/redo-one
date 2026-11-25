@@ -42,7 +42,9 @@ export interface PeriodoDoMedico {
   medicoId: string;
   inicio: Date;
   fim: Date;
-  /** Turno do tipo Lista: a carência dela é outra. */
+  /** O turno da escala: o prazo do recolhimento pode ser próprio dele. */
+  turnoId: string;
+  /** Turno do tipo Lista: só segura o que foi entregue nela. */
   lista: boolean;
   /** Ocorrência com ausência: não protege ninguém. */
   ausente: boolean;
@@ -60,10 +62,10 @@ export interface AusenciaDoDia {
 
 /** Os números da configuração (Configurações › Distribuição). */
 export interface ParametrosRecolhimento {
-  /** Minutos depois do fim do último turno que cobre o exame. */
+  /** Minutos depois do fim do último turno que cobre o exame (o prazo padrão). */
   carenciaMin: number;
-  /** Minutos depois do fim da Lista (no dashboards-one, 24 h). */
-  carenciaListaMin: number;
+  /** Turno → o prazo próprio dele, no lugar do padrão (a Lista, 24 h no dashboards-one). */
+  carenciaPorTurno: ReadonlyMap<string, number>;
   /** A antecedência do período: o turno que vai começar já segura o exame. */
   antecedenciaMin: number;
   /** A frente de especialidade recorta o exame (a mesma chave do motor). */
@@ -125,7 +127,7 @@ const MIN = 60_000;
 
 /**
  * Algum período do médico em curso agora cobre o exame? Em curso = da antecedência antes do início
- * até a carência depois do fim (a da Lista, se for Lista); cobre = a frente (especialidade ou
+ * até a carência depois do fim (a do turno, se ele tem prazo próprio); cobre = a frente (especialidade ou
  * modalidade) e o recorte de segmento, como na elegibilidade do motor. O período com ausência não
  * protege. No turno comum não importa em que turno o exame foi entregue; a Lista só segura o que
  * foi entregue nela (recebe na terça para laudar até quarta, volta na quinta), senão a Lista de
@@ -144,7 +146,7 @@ export function protegidoPelaEscala(
     (j) =>
       !j.ausente &&
       j.inicio.getTime() - p.antecedenciaMin * MIN <= t &&
-      t < j.fim.getTime() + (j.lista ? p.carenciaListaMin : p.carenciaMin) * MIN &&
+      t < j.fim.getTime() + (p.carenciaPorTurno.get(j.turnoId) ?? p.carenciaMin) * MIN &&
       (!j.lista || (j.inicio.getTime() - p.antecedenciaMin * MIN <= e && e < j.fim.getTime())) &&
       periodoCobreExame(j, exame, p.escalaRestringeEspecialidade),
   );

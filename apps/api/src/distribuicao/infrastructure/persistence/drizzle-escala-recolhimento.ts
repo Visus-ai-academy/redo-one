@@ -67,6 +67,7 @@ export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
           medicoId: o.medicoId,
           inicio: new Date(o.inicio),
           fim: new Date(o.fim),
+          turnoId: o.turnoId,
           lista: o.turnoTipo === 'lista',
           ausente: o.ausente,
           frente,

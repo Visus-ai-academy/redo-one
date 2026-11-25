@@ -9,23 +9,29 @@ import {
 
 export { ConfiguracaoInvalidaError };
 
+/** O prazo próprio de um turno da escala para o recolhimento, no lugar do padrão. */
+export interface PrazoRecolhimentoTurno {
+  turnoId: string;
+  minutos: number;
+}
+
 /**
  * Configurações › Distribuição: o que o motor lê (`ConfiguracaoDistribuicao`) e o que o
  * recolhimento vai ler. Uma linha só, editável por tela com auditoria.
  */
 export interface ConfiguracaoGlobal extends ConfiguracaoDistribuicao {
   /**
-   * Carência do recolhimento: exame entregue, não aberto e com o turno encerrado há estes minutos
-   * volta para a fila (nas frentes que recolhem). Null = recolhimento desligado. No dashboards-one,
-   * `roboRecolherAposTurnoMin` (60 em produção). O motor não usa; o recolhimento (passo 5) usa.
+   * Prazo padrão do recolhimento: exame entregue, não aberto e com o turno encerrado há estes
+   * minutos volta para a fila (nas frentes que recolhem). Null = recolhimento desligado. No
+   * dashboards-one, `roboRecolherAposTurnoMin` (60 em produção). O motor não usa; o recolhimento
+   * (passo 5) usa.
    */
   recolhimentoAposTurnoMin: number | null;
   /**
-   * Carência do recolhimento depois do fim da Lista (no lugar da de cima): o exame entregue numa
-   * Lista fica com o médico até estes minutos depois do fim dela. No dashboards-one,
-   * `CARENCIA_LISTA_MIN` (24 h, fixo no código).
+   * Prazo próprio de alguns turnos, no lugar do padrão (um por turno). No dashboards-one, só a
+   * Lista tinha, fixo no código (`CARENCIA_LISTA_MIN`, 24 h).
    */
-  recolhimentoAposListaMin: number;
+  recolhimentoPorTurno: PrazoRecolhimentoTurno[];
   /** Desligado, ninguém inicia rodada (no dashboards-one, `roboAtivo`). */
   roboAtivo: boolean;
   /** Minutos que a proposta vale antes de expirar sem aprovação (`roboExpiracaoMin`). */
@@ -80,7 +86,7 @@ export const CONFIGURACAO_INICIAL: ConfiguracaoGlobal = {
   diasJaEntregue: 7,
   turnosPosteriores: null,
   recolhimentoAposTurnoMin: 60,
-  recolhimentoAposListaMin: 1440,
+  recolhimentoPorTurno: [],
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
@@ -117,13 +123,14 @@ export function validarConfiguracaoGlobal(c: ConfiguracaoGlobal): void {
   inteiroEntre(c.cicloMinutos, 1, 1440, 'Ciclo entre rodadas (minutos)');
   inteiroEntre(c.diasJaEntregue, 0, 90, 'Dias do "já entregue"');
   if (c.recolhimentoAposTurnoMin !== null) {
-    inteiroEntre(c.recolhimentoAposTurnoMin, 0, 1440, 'Carência do recolhimento (minutos)');
+    inteiroEntre(c.recolhimentoAposTurnoMin, 0, 1440, 'Prazo para recolher (minutos)');
   }
-  inteiroEntre(
-    c.recolhimentoAposListaMin,
-    0,
-    10_080,
-    'Carência do recolhimento na Lista (minutos)',
+  for (const p of c.recolhimentoPorTurno) {
+    inteiroEntre(p.minutos, 0, 10_080, 'Prazo do recolhimento do turno (minutos)');
+  }
+  semRepetidos(
+    c.recolhimentoPorTurno.map((p) => p.turnoId),
+    'Há turno repetido no prazo do recolhimento por turno.',
   );
 
   inteiroEntre(c.expiracaoPropostaMin, 1, 1440, 'Validade da proposta (minutos)');

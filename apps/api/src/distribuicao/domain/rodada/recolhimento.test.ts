@@ -18,7 +18,7 @@ const h = (hora: string, dia = 18) =>
 const AGORA = h('15:00');
 const PARAMETROS = {
   carenciaMin: 60,
-  carenciaListaMin: 1440,
+  carenciaPorTurno: new Map([['lista', 1440]]),
   antecedenciaMin: 180,
   escalaRestringeEspecialidade: true,
 };
@@ -43,6 +43,7 @@ const periodo = (
   medicoId,
   inicio,
   fim,
+  turnoId: 'manha',
   lista: false,
   ausente: false,
   frente: NEURO,
@@ -131,7 +132,7 @@ describe('recolhimento: exame entregue pelo robô, não aberto, com o turno ence
 
   it('Lista: recebe na terça para laudar até quarta; na quinta volta, mesmo com a Lista de quinta', () => {
     const listas = [17, 18, 19].map((d) =>
-      periodo('ana', h('00:00', d), h('23:59', d), { lista: true }),
+      periodo('ana', h('00:00', d), h('23:59', d), { turnoId: 'lista', lista: true }),
     );
     const r = recolher(
       entrada({
@@ -351,7 +352,7 @@ describe('protegidoPelaEscala: algum período em curso do médico cobre o exame'
   ) => protegidoPelaEscala(periodos, exame('e1'), entregue, agora, p);
 
   it('Lista: fica com o médico até a carência da Lista depois do fim dela', () => {
-    const lista = [periodo('ana', h('07:00', 17), h('07:00'), { lista: true })];
+    const lista = [periodo('ana', h('07:00', 17), h('07:00'), { turnoId: 'lista', lista: true })];
     expect(proteje(lista, h('09:00'))).toBe(true);
     expect(proteje(lista, h('06:59', 19))).toBe(true);
     expect(proteje(lista, h('07:00', 19))).toBe(false);
@@ -359,7 +360,7 @@ describe('protegidoPelaEscala: algum período em curso do médico cobre o exame'
 
   it('Lista todo dia: conta a Lista da entrega, e a de hoje não segura o entregue anteontem', () => {
     const listas = [17, 18, 19].map((d) =>
-      periodo('ana', h('07:00', d), h('07:00', d + 1), { lista: true }),
+      periodo('ana', h('07:00', d), h('07:00', d + 1), { turnoId: 'lista', lista: true }),
     );
     expect(proteje(listas, h('06:59', 19))).toBe(true);
     expect(proteje(listas, h('08:00', 19))).toBe(false);
@@ -368,10 +369,33 @@ describe('protegidoPelaEscala: algum período em curso do médico cobre o exame'
   it('Lista não segura o exame entregue fora dela (num turno comum)', () => {
     const turnos = [
       periodo('ana', h('07:00', 17), h('13:00', 17)),
-      periodo('ana', h('13:00', 17), h('13:00'), { lista: true }),
+      periodo('ana', h('13:00', 17), h('13:00'), { turnoId: 'lista', lista: true }),
     ];
     expect(proteje(turnos, h('15:00', 17))).toBe(false);
     expect(proteje(turnos, h('15:00', 17), PARAMETROS, h('14:00', 17))).toBe(true);
+  });
+
+  it('prazo próprio do turno: a Tarde com 30 min recolhe antes do prazo padrão', () => {
+    const tarde = [periodo('ana', h('13:00'), h('19:00'), { turnoId: 'tarde' })];
+    const p = { ...PARAMETROS, carenciaPorTurno: new Map([['tarde', 30]]) };
+    expect(proteje(tarde, h('19:29'), p, h('14:00'))).toBe(true);
+    expect(proteje(tarde, h('19:30'), p, h('14:00'))).toBe(false);
+    // Sem prazo próprio, o padrão (60 min).
+    expect(proteje(tarde, h('19:59'), PARAMETROS, h('14:00'))).toBe(true);
+  });
+
+  it('a Lista sem prazo próprio usa o prazo padrão (a regra da entrega na Lista continua)', () => {
+    const lista = [periodo('ana', h('07:00', 17), h('07:00'), { turnoId: 'lista', lista: true })];
+    const p = { ...PARAMETROS, carenciaPorTurno: new Map<string, number>() };
+    expect(proteje(lista, h('07:59'), p)).toBe(true);
+    expect(proteje(lista, h('08:00'), p)).toBe(false);
+  });
+
+  it('o prazo vale pelo turno, não pelo tipo: um turno fixo pode ter 24 h', () => {
+    const manha = [periodo('ana', h('07:00', 17), h('13:00', 17))];
+    const p = { ...PARAMETROS, carenciaPorTurno: new Map([['manha', 1440]]) };
+    expect(proteje(manha, h('12:59'), p)).toBe(true);
+    expect(proteje(manha, h('13:00'), p)).toBe(false);
   });
 
   it('o período que vai começar protege dentro da antecedência, não antes', () => {

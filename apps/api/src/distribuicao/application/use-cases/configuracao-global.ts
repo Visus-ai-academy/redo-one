@@ -17,6 +17,9 @@ const canonica = (c: ConfiguracaoGlobal): ConfiguracaoGlobal => ({
     ...c.turnosPosteriores,
     turnoIds: ordenados(c.turnosPosteriores.turnoIds),
   },
+  recolhimentoPorTurno: [...c.recolhimentoPorTurno].sort((a, b) =>
+    a.turnoId < b.turnoId ? -1 : a.turnoId > b.turnoId ? 1 : 0,
+  ),
 });
 
 /** Configurações › Distribuição. Sem nada salvo, a inicial. */
@@ -56,7 +59,10 @@ export class DefinirConfiguracaoGlobal {
     );
     validarConfiguracaoGlobal(nova);
     await exigirReferencias(this.cadastros, {
-      turno: nova.turnosPosteriores?.turnoIds ?? [],
+      turno: [
+        ...(nova.turnosPosteriores?.turnoIds ?? []),
+        ...nova.recolhimentoPorTurno.map((p) => p.turnoId),
+      ],
     });
     const mudancas = diferenca({ ...atual }, { ...nova });
     if (!mudancas) return;

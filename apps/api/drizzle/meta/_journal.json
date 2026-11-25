@@ -421,6 +421,27 @@
       "when": 1795611520245,
       "tag": "0059_corte_exame_restricoes",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795613119683,
+      "tag": "0060_recolhimento_por_turno",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795613122393,
+      "tag": "0061_recolhimento_lista_para_turno",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1795613132091,
+      "tag": "0062_recolhimento_sem_coluna_lista",
+      "breakpoints": true
     }
   ]
 }
