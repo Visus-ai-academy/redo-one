@@ -44,6 +44,8 @@ export type PainelClienteProps = {
   distribuicao?: ReactNode;
   /** Conteúdo da aba Faturamento (corte e dados de faturamento); sem ele (sem permissão), a aba não aparece. */
   faturamento?: ReactNode;
+  /** Conteúdo da aba Preços; sem ele (sem permissão), a aba não aparece. */
+  precos?: ReactNode;
   /** A aba Faturamento tem algo digitado e não salvo (corte ou dados): fechar pergunta antes. */
   faturamentoAlterado?: boolean;
 };
@@ -97,6 +99,7 @@ export function PainelCliente({
   historico,
   distribuicao,
   faturamento,
+  precos,
   faturamentoAlterado = false,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
@@ -172,6 +175,7 @@ export function PainelCliente({
                 ...(faturamento
                   ? [{ valor: 'faturamento', rotulo: 'Faturamento', conteudo: faturamento }]
                   : []),
+                ...(precos ? [{ valor: 'precos', rotulo: 'Preços', conteudo: precos }] : []),
               ]
             : undefined
         }

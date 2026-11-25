@@ -18,6 +18,7 @@ import { Etiqueta } from '../../components/etiqueta/Etiqueta';
 import { DadosFaturamentoCliente } from '../../components/faturamento/dados-faturamento-cliente';
 import { EditorCorte } from '../../components/faturamento/editor-corte';
 import { EditorTipificacao } from '../../components/faturamento/editor-tipificacao';
+import { TabelaPrecos } from '../../components/faturamento/tabela-precos';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
@@ -271,6 +272,7 @@ function Painel({
   const [corteAlterado, setCorteAlterado] = useState(false);
   const [dadosAlterados, setDadosAlterados] = useState(false);
   const [tipificacaoAlterada, setTipificacaoAlterada] = useState(false);
+  const [precoAlterado, setPrecoAlterado] = useState(false);
   const veCorte = pode(sessao, 'faturamento.ver');
   const veDados = pode(sessao, 'clientes.faturamento.ver');
   const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
@@ -294,7 +296,7 @@ function Painel({
       podeCriar={permissoes.criar}
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
-      faturamentoAlterado={corteAlterado || dadosAlterados || tipificacaoAlterada}
+      faturamentoAlterado={corteAlterado || dadosAlterados || tipificacaoAlterada || precoAlterado}
       historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
       distribuicao={
         id && pode(sessao, 'clientes.distribuicao.ver') ? (
@@ -344,6 +346,19 @@ function Painel({
                 />
               </section>
             )}
+          </div>
+        ) : undefined
+      }
+      precos={
+        id && veCorte ? (
+          <div className="p-4">
+            <TabelaPrecos
+              key={id}
+              tipo="cliente"
+              donoId={id}
+              podeEditar={pode(sessao, 'faturamento.precos.editar')}
+              onAlterado={setPrecoAlterado}
+            />
           </div>
         ) : undefined
       }
