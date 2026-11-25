@@ -324,7 +324,13 @@ export class MudarPrecos {
           em,
         });
       } else {
-        const { id, ...antes } = versoes.find((v) => v.id === m.id) as VersaoPreco;
+        const {
+          id,
+          nomes: _nomes,
+          ...antes
+        } = versoes.find((v) => v.id === m.id) as VersaoPreco & {
+          nomes?: unknown;
+        };
         await this.auditoria.registrar({
           ator,
           entidade,
