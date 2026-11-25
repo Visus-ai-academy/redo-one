@@ -1,22 +1,30 @@
 import { describe, expect, it } from 'vitest';
+import { comTodasPadrao } from '../testing/fakes';
 
-import { type Arranjo, ArranjoInvalidoError, sugestaoAlocacao, validarArranjos } from './arranjo';
+import {
+  type Arranjo,
+  ArranjoInvalidoError,
+  normalizarArranjo,
+  sugestaoAlocacao,
+  validarArranjos,
+} from './arranjo';
 
-const arranjo = (parcial: Partial<Arranjo> = {}): Arranjo => ({
-  especialidadeId: 'esp',
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-  ...parcial,
-});
+const arranjo = (parcial: Partial<Arranjo> = {}): Arranjo =>
+  comTodasPadrao({
+    especialidadeId: 'esp',
+    modalidadeId: null,
+    especialidadeIds: [],
+    modalidadeIds: [],
+    subespecialidadeIds: [],
+    subespecialidadeGeral: false,
+    prioridadeIds: [],
+    modoClientes: 'todos',
+    clienteIds: [],
+    modoExames: 'todos',
+    exameIds: [],
+    clientesExclusivosIds: [],
+    ...parcial,
+  });
 
 describe('validarArranjos', () => {
   it('aceita arranjo só com a frente (lauda tudo dela)', () => {
@@ -57,6 +65,65 @@ describe('validarArranjos', () => {
     ).not.toThrow();
     expect(() => validarArranjos([arranjo({ especialidadeIds: ['mi'] })], 'medico')).toThrow(
       ArranjoInvalidoError,
+    );
+  });
+
+  it('vazio nunca é "todas": cada eixo da frente é "todas" ou ao menos um', () => {
+    const semNada = { todasModalidades: false, modalidadeIds: [] };
+    expect(() => validarArranjos([arranjo(semNada)], 'medico')).toThrow(/ao menos um/);
+    expect(() =>
+      validarArranjos([arranjo({ todasPrioridades: false, prioridadeIds: [] })], 'medico'),
+    ).toThrow(/prioridade/);
+    expect(() =>
+      validarArranjos([arranjo({ todosSegmentos: false, subespecialidadeIds: [] })], 'medico'),
+    ).toThrow(/segmento/);
+    expect(() =>
+      validarArranjos([arranjo({ todosSegmentos: false, subespecialidadeGeral: true })], 'medico'),
+    ).not.toThrow();
+    expect(() =>
+      validarArranjos(
+        [
+          arranjo({
+            especialidadeId: null,
+            modalidadeId: 'rx',
+            todasEspecialidades: false,
+            especialidadeIds: [],
+          }),
+        ],
+        'medico',
+      ),
+    ).toThrow(/especialidade/);
+  });
+
+  it('recusa "todas" junto com uma lista no mesmo eixo', () => {
+    expect(() =>
+      validarArranjos([arranjo({ todasModalidades: true, modalidadeIds: ['ct'] })], 'medico'),
+    ).toThrow(/não as duas/);
+  });
+
+  it('recusa "todos, exceto" sem ninguém na lista', () => {
+    expect(() => validarArranjos([arranjo({ modoClientes: 'exceto' })], 'medico')).toThrow(
+      /exceto/,
+    );
+    expect(() => validarArranjos([arranjo({ modoExames: 'exceto' })], 'medico')).toThrow(/exceto/);
+  });
+
+  it('normalizarArranjo desliga o "todas" dos eixos que não são da frente', () => {
+    const rx = normalizarArranjo(
+      arranjo({
+        especialidadeId: null,
+        modalidadeId: 'rx',
+        todasModalidades: true,
+        todosSegmentos: true,
+      }),
+    );
+    expect(rx).toMatchObject({
+      todasModalidades: false,
+      todosSegmentos: false,
+      todasEspecialidades: true,
+    });
+    expect(normalizarArranjo(arranjo({ todasEspecialidades: true })).todasEspecialidades).toBe(
+      false,
     );
   });
 
@@ -132,7 +199,9 @@ describe('sugestaoAlocacao', () => {
         neuro,
       ),
     ).toEqual({
+      todasPrioridades: false,
       prioridadeIds: ['rotina'],
+      todosSegmentos: false,
       subespecialidadeIds: ['cranio'],
       subespecialidadeGeral: true,
     });
@@ -156,13 +225,15 @@ describe('sugestaoAlocacao', () => {
         neuro,
       ),
     ).toEqual({
+      todasPrioridades: false,
       prioridadeIds: ['rotina', 'urgencia'],
+      todosSegmentos: false,
       subespecialidadeIds: ['cranio', 'angio'],
       subespecialidadeGeral: false,
     });
   });
 
-  it('um arranjo sem recorte num eixo libera o eixo inteiro', () => {
+  it('um arranjo com "todas" num eixo libera o eixo inteiro', () => {
     expect(
       sugestaoAlocacao(
         [
@@ -175,7 +246,13 @@ describe('sugestaoAlocacao', () => {
         ],
         neuro,
       ),
-    ).toEqual({ prioridadeIds: [], subespecialidadeIds: [], subespecialidadeGeral: false });
+    ).toEqual({
+      todasPrioridades: true,
+      prioridadeIds: [],
+      todosSegmentos: true,
+      subespecialidadeIds: [],
+      subespecialidadeGeral: false,
+    });
   });
 
   it('frente de especialidade não é coberta por arranjo de frente de modalidade', () => {
@@ -210,7 +287,9 @@ describe('sugestaoAlocacao', () => {
         rx,
       ),
     ).toEqual({
+      todasPrioridades: false,
       prioridadeIds: ['rotina', 'urgencia', 'internado'],
+      todosSegmentos: true,
       subespecialidadeIds: [],
       subespecialidadeGeral: false,
     });

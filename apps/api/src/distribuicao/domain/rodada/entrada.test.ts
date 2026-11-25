@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { comTodasPadrao } from '../../testing/fakes';
 
 import type { Arranjo } from '../arranjo';
 import { CONFIGURACAO_INICIAL } from '../configuracao-global';
@@ -62,21 +63,22 @@ const op = (id: string, posicao: number, urg: PrioridadeOperacao['urgencia'], gr
     cor: null,
   }) as PrioridadeOperacao;
 
-const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
-  especialidadeId: null,
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-  ...p,
-});
+const arranjo = (p: Partial<Arranjo> = {}): Arranjo =>
+  comTodasPadrao({
+    especialidadeId: null,
+    modalidadeId: null,
+    especialidadeIds: [],
+    modalidadeIds: [],
+    subespecialidadeIds: [],
+    subespecialidadeGeral: false,
+    prioridadeIds: [],
+    modoClientes: 'todos',
+    clienteIds: [],
+    modoExames: 'todos',
+    exameIds: [],
+    clientesExclusivosIds: [],
+    ...p,
+  });
 const oc = (medicoId: string, p: Partial<OcorrenciaRodada> = {}): OcorrenciaRodada => ({
   alocacaoId: `aloc-${medicoId}`,
   medicoId,

@@ -21214,24 +21214,36 @@
             "nullable": true,
             "description": "Frente de modalidade. Exatamente uma das frentes (esta ou `especialidadeId`)."
           },
+          "todasEspecialidades": {
+            "type": "boolean",
+            "description": "Só na frente de modalidade: todas as especialidades."
+          },
           "especialidadeIds": {
-            "description": "Só na frente de modalidade: especialidades; vazia = todas.",
+            "description": "Só na frente de modalidade, sem `todasEspecialidades`: especialidades.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
+          },
+          "todasModalidades": {
+            "type": "boolean",
+            "description": "Só na frente de especialidade: todas as modalidades."
           },
           "modalidadeIds": {
-            "description": "Só na frente de especialidade: modalidades; vazia = todas.",
+            "description": "Só na frente de especialidade, sem `todasModalidades`: modalidades.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
+          "todosSegmentos": {
+            "type": "boolean",
+            "description": "Só na frente de especialidade: todos os segmentos (e o exame sem segmento)."
+          },
           "subespecialidadeIds": {
-            "description": "Só na frente de especialidade: segmentos; vazia e sem o geral = todos.",
+            "description": "Só na frente de especialidade, sem `todosSegmentos`: segmentos.",
             "type": "array",
             "items": {
               "type": "string",
@@ -21242,8 +21254,12 @@
             "type": "boolean",
             "description": "O recorte de segmento inclui o exame sem segmento (geral)."
           },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Todas as prioridades da operação."
+          },
           "prioridadeIds": {
-            "description": "Prioridades da operação (Configurações › Distribuição); vazia = todas.",
+            "description": "Sem `todasPrioridades`: prioridades da operação (Configurações › Distribuição).",
             "type": "array",
             "items": {
               "type": "string",
@@ -21292,10 +21308,14 @@
         "required": [
           "especialidadeId",
           "modalidadeId",
+          "todasEspecialidades",
           "especialidadeIds",
+          "todasModalidades",
           "modalidadeIds",
+          "todosSegmentos",
           "subespecialidadeIds",
           "subespecialidadeGeral",
+          "todasPrioridades",
           "prioridadeIds",
           "modoClientes",
           "clienteIds",
@@ -21482,6 +21502,10 @@
       "SugestaoAlocacaoDto": {
         "type": "object",
         "properties": {
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Todas as prioridades da operação."
+          },
           "prioridadeIds": {
             "description": "Prioridades da operação.",
             "type": "array",
@@ -21489,6 +21513,10 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "todosSegmentos": {
+            "type": "boolean",
+            "description": "Todos os segmentos."
           },
           "subespecialidadeIds": {
             "type": "array",
@@ -21502,7 +21530,9 @@
           }
         },
         "required": [
+          "todasPrioridades",
           "prioridadeIds",
+          "todosSegmentos",
           "subespecialidadeIds",
           "subespecialidadeGeral"
         ]

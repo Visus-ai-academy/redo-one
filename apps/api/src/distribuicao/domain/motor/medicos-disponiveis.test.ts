@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { comTodasPadrao } from '../../testing/fakes';
 
 import type { Arranjo } from '../arranjo';
 import {
@@ -51,21 +52,22 @@ const CONFIG: ConfiguracaoDistribuicao = {
   turnosPosteriores: null,
 };
 
-const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
-  especialidadeId: null,
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-  ...p,
-});
+const arranjo = (p: Partial<Arranjo> = {}): Arranjo =>
+  comTodasPadrao({
+    especialidadeId: null,
+    modalidadeId: null,
+    especialidadeIds: [],
+    modalidadeIds: [],
+    subespecialidadeIds: [],
+    subespecialidadeGeral: false,
+    prioridadeIds: [],
+    modoClientes: 'todos',
+    clienteIds: [],
+    modoExames: 'todos',
+    exameIds: [],
+    clientesExclusivosIds: [],
+    ...p,
+  });
 
 let seqOc = 0;
 const oc = (medicoId: string, p: Partial<OcorrenciaRodada> = {}): OcorrenciaRodada => ({

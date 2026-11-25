@@ -14,6 +14,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { GERAL } from '../escala/alocacao-form';
 import { CaixasField, OpcoesField } from '../escala/campos';
 import { BuscaMultiplaField } from '../form/BuscaMultiplaField';
+import { TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -294,18 +295,22 @@ function FormArranjo({
           name="frente"
           listeners={{
             onChange: ({ value }) => {
-              // O recorte é da frente: o da outra dimensão sai, e o segmento fica só se é dela.
+              // O recorte é da frente: o da outra dimensão volta a "Todas", e o segmento fica só
+              // se é dela (sem segmentos na nova frente, o campo some e fica "Todos").
               const f = frenteDaChave(value);
-              if (f?.tipo !== 'modalidade' && form.getFieldValue('especialidadeIds').length)
-                form.setFieldValue('especialidadeIds', []);
-              if (f?.tipo !== 'especialidade' && form.getFieldValue('modalidadeIds').length)
-                form.setFieldValue('modalidadeIds', []);
+              const paraTodas = (campo: 'especialidadeIds' | 'modalidadeIds') => {
+                if (form.getFieldValue(campo).join() !== TODAS) form.setFieldValue(campo, [TODAS]);
+              };
+              if (f?.tipo !== 'modalidade') paraTodas('especialidadeIds');
+              if (f?.tipo !== 'especialidade') paraTodas('modalidadeIds');
               const daNova = subsDa(value);
               const marcadas = form.getFieldValue('subespecialidadeIds');
-              const ficam = marcadas.filter((id) =>
-                id === GERAL ? daNova.length > 0 : daNova.some((s) => s.id === id),
-              );
-              if (ficam.length !== marcadas.length)
+              const ficam = daNova.length
+                ? marcadas.filter(
+                    (id) => id === TODAS || id === GERAL || daNova.some((s) => s.id === id),
+                  )
+                : [TODAS];
+              if (ficam.join() !== marcadas.join())
                 form.setFieldValue('subespecialidadeIds', ficam);
             },
           }}
@@ -328,7 +333,9 @@ function FormArranjo({
                   {(field) => (
                     <field.SelecaoMultiplaField
                       label="Especialidades"
-                      placeholder="Todas"
+                      placeholder="Escolha as especialidades"
+                      todas="Todas"
+                      required
                       opcoes={catalogo.especialidades.map((e) => ({
                         valor: e.id,
                         rotulo: e.nome,
@@ -347,7 +354,9 @@ function FormArranjo({
                   {(field) => (
                     <field.SelecaoMultiplaField
                       label="Modalidades"
-                      placeholder="Todas"
+                      placeholder="Escolha as modalidades"
+                      todas="Todas"
+                      required
                       opcoes={catalogo.modalidades.map((m) => ({
                         valor: m.id,
                         rotulo: m.nome,
@@ -358,10 +367,12 @@ function FormArranjo({
                 </form.AppField>
                 <form.AppField name="subespecialidadeIds">
                   {(field) =>
-                    (subs.length > 0 || field.state.value.length > 0) && (
+                    (subs.length > 0 || field.state.value.some((v) => v !== TODAS)) && (
                       <field.SelecaoMultiplaField
                         label="Segmentos"
-                        placeholder="Todos"
+                        placeholder="Escolha os segmentos"
+                        todas="Todos"
+                        required
                         opcoes={[
                           ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
                           { valor: GERAL, rotulo: 'Geral (sem segmento)' },
@@ -384,6 +395,7 @@ function FormArranjo({
                 cor: p.cor,
               }))}
               todas="Todas"
+              required
             />
           )}
         </form.AppField>

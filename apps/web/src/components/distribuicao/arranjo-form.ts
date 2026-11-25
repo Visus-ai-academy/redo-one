@@ -5,7 +5,7 @@ import type { ModoVinculoKey } from '../../gen/types/ModoVinculo';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { GERAL } from '../escala/alocacao-form';
-import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
+import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 
 /** Dono do arranjo: só o do médico tem clínica exclusiva. */
 export type DonoArranjo = 'medico' | 'equipe';
@@ -13,12 +13,13 @@ export type DonoArranjo = 'medico' | 'equipe';
 export type ValoresArranjo = {
   /** A frente: `E:<especialidade>` ou `M:<modalidade>`; vazia até escolher (obrigatória). */
   frente: string;
-  /** Só na frente de modalidade; vazia = todas. */
+  /** Só na frente de modalidade; `[TODAS]` = todas (nada marcado é inválido). */
   especialidadeIds: string[];
-  /** Só na frente de especialidade; vazia = todas. */
+  /** Só na frente de especialidade; `[TODAS]` = todas. */
   modalidadeIds: string[];
-  /** Só na frente de especialidade. Com `GERAL` para o exame sem subespecialidade. */
+  /** Só na frente de especialidade. `[TODAS]` = todos; `GERAL` = o exame sem subespecialidade. */
   subespecialidadeIds: string[];
+  /** `[TODAS]` = todas. */
   prioridadeIds: string[];
   modoClientes: ModoVinculoKey;
   clientes: OpcaoBusca[];
@@ -40,9 +41,9 @@ export type CatalogoDoArranjo = {
 
 export const ARRANJO_VAZIO: ValoresArranjo = {
   frente: '',
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
+  especialidadeIds: [TODAS],
+  modalidadeIds: [TODAS],
+  subespecialidadeIds: [TODAS],
   prioridadeIds: [TODAS],
   modoClientes: 'todos',
   clientes: [],
@@ -81,13 +82,20 @@ export function valoresDoArranjo(
   if (!arranjo) return ARRANJO_VAZIO;
   return {
     frente: chaveDaFrente(arranjo),
-    especialidadeIds: arranjo.especialidadeIds,
-    modalidadeIds: arranjo.modalidadeIds,
-    subespecialidadeIds: [
-      ...arranjo.subespecialidadeIds,
-      ...(arranjo.subespecialidadeGeral ? [GERAL] : []),
-    ],
-    prioridadeIds: arranjo.prioridadeIds.length ? arranjo.prioridadeIds : [TODAS],
+    // O eixo que não é da frente começa em "Todas", para trocar de frente sem campo vazio.
+    especialidadeIds: arranjo.modalidadeId
+      ? caixasDaApi(arranjo.todasEspecialidades, arranjo.especialidadeIds)
+      : [TODAS],
+    modalidadeIds: arranjo.especialidadeId
+      ? caixasDaApi(arranjo.todasModalidades, arranjo.modalidadeIds)
+      : [TODAS],
+    subespecialidadeIds: arranjo.especialidadeId
+      ? caixasDaApi(arranjo.todosSegmentos, [
+          ...arranjo.subespecialidadeIds,
+          ...(arranjo.subespecialidadeGeral ? [GERAL] : []),
+        ])
+      : [TODAS],
+    prioridadeIds: caixasDaApi(arranjo.todasPrioridades, arranjo.prioridadeIds),
     modoClientes: arranjo.modoClientes,
     clientes: opcoes(arranjo.clienteIds, nomes.clientes),
     modoExames: arranjo.modoExames,
@@ -103,14 +111,22 @@ export function paraApi(v: ValoresArranjo, dono: DonoArranjo = 'medico'): Arranj
   const frente = frenteDaChave(v.frente);
   const daEspecialidade = frente?.tipo === 'especialidade';
   const daModalidade = frente?.tipo === 'modalidade';
+  const especialidades = caixasParaApi(v.especialidadeIds);
+  const modalidades = caixasParaApi(v.modalidadeIds);
+  const segmentos = caixasParaApi(v.subespecialidadeIds);
+  const prioridades = caixasParaApi(v.prioridadeIds);
   return {
     especialidadeId: daEspecialidade ? frente.id : null,
     modalidadeId: daModalidade ? frente.id : null,
-    especialidadeIds: daModalidade ? v.especialidadeIds : [],
-    modalidadeIds: daEspecialidade ? v.modalidadeIds : [],
-    subespecialidadeIds: daEspecialidade ? v.subespecialidadeIds.filter((id) => id !== GERAL) : [],
-    subespecialidadeGeral: daEspecialidade && v.subespecialidadeIds.includes(GERAL),
-    prioridadeIds: caixasParaApi(v.prioridadeIds).ids,
+    todasEspecialidades: daModalidade && especialidades.todas,
+    especialidadeIds: daModalidade ? especialidades.ids : [],
+    todasModalidades: daEspecialidade && modalidades.todas,
+    modalidadeIds: daEspecialidade ? modalidades.ids : [],
+    todosSegmentos: daEspecialidade && segmentos.todas,
+    subespecialidadeIds: daEspecialidade ? segmentos.ids.filter((id) => id !== GERAL) : [],
+    subespecialidadeGeral: daEspecialidade && segmentos.ids.includes(GERAL),
+    todasPrioridades: prioridades.todas,
+    prioridadeIds: prioridades.ids,
     modoClientes: v.modoClientes,
     clienteIds: v.modoClientes === 'todos' ? [] : ids(v.clientes),
     modoExames: v.modoExames,
@@ -145,11 +161,23 @@ export const esquemaArranjo = z
   .superRefine((v, ctx) => {
     const erro = (path: string, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message });
-    if (!frenteDaChave(v.frente)) erro('frente', 'Escolha a frente.');
+    const frente = frenteDaChave(v.frente);
+    if (!frente) erro('frente', 'Escolha a frente.');
+    // Só o eixo da frente vale: nada marcado nele é erro (vazio nunca é "todas").
+    if (frente?.tipo === 'modalidade' && !v.especialidadeIds.length)
+      erro('especialidadeIds', 'Escolha ao menos uma especialidade.');
+    if (frente?.tipo === 'especialidade' && !v.modalidadeIds.length)
+      erro('modalidadeIds', 'Escolha ao menos uma modalidade.');
+    if (frente?.tipo === 'especialidade' && !v.subespecialidadeIds.length)
+      erro('subespecialidadeIds', 'Escolha ao menos um segmento.');
     if (v.modoClientes === 'apenas' && v.clientes.length === 0)
       erro('clientes', 'Escolha ao menos um cliente.');
+    if (v.modoClientes === 'exceto' && v.clientes.length === 0)
+      erro('clientes', 'Escolha ao menos um cliente (ou "Todos").');
     if (v.modoExames === 'apenas' && v.exames.length === 0)
       erro('exames', 'Escolha ao menos um exame.');
+    if (v.modoExames === 'exceto' && v.exames.length === 0)
+      erro('exames', 'Escolha ao menos um exame (ou "Todos").');
     const fora = v.clientesExclusivos.filter((c) => !atendeCliente(v, c.valor));
     if (fora.length)
       erro(
@@ -194,7 +222,7 @@ export function resumoDoArranjo(
   nomes: NomesDoArranjo,
 ): { titulo: string; linhas: { rotulo: string; valor: string }[] } {
   const linhas: { rotulo: string; valor: string }[] = [];
-  if (a.subespecialidadeIds.length || a.subespecialidadeGeral) {
+  if (a.especialidadeId && !a.todosSegmentos) {
     linhas.push({
       rotulo: 'Segmentos',
       valor: listar([
@@ -205,9 +233,9 @@ export function resumoDoArranjo(
   }
   linhas.push({
     rotulo: 'Prioridades',
-    valor: a.prioridadeIds.length
-      ? listar(nomesNaOrdemDe(a.prioridadeIds, catalogo.prioridades, 'Inativa'))
-      : 'Todas',
+    valor: a.todasPrioridades
+      ? 'Todas'
+      : listar(nomesNaOrdemDe(a.prioridadeIds, catalogo.prioridades, 'Inativa')),
   });
   if (a.modoClientes !== 'todos') {
     linhas.push({
@@ -237,17 +265,17 @@ function tituloDoArranjo(a: ArranjoDto, catalogo: CatalogoDoArranjo): string {
   if (a.modalidadeId) {
     const frente =
       catalogo.modalidades.find((m) => m.id === a.modalidadeId)?.nome ?? 'Modalidade inativa';
-    const recorte = a.especialidadeIds.length
-      ? listar(nomesNaOrdemDe(a.especialidadeIds, catalogo.especialidades, 'Inativa'))
-      : 'todas as especialidades';
+    const recorte = a.todasEspecialidades
+      ? 'todas as especialidades'
+      : listar(nomesNaOrdemDe(a.especialidadeIds, catalogo.especialidades, 'Inativa'));
     return `${frente} · ${recorte}`;
   }
   if (!a.especialidadeId) return 'Sem frente';
   const frente =
     catalogo.especialidades.find((e) => e.id === a.especialidadeId)?.nome ??
     'Especialidade inativa';
-  const recorte = a.modalidadeIds.length
-    ? listar(nomesNaOrdemDe(a.modalidadeIds, catalogo.modalidades, 'Inativa'))
-    : 'todas as modalidades';
+  const recorte = a.todasModalidades
+    ? 'todas as modalidades'
+    : listar(nomesNaOrdemDe(a.modalidadeIds, catalogo.modalidades, 'Inativa'));
   return `${frente} · ${recorte}`;
 }

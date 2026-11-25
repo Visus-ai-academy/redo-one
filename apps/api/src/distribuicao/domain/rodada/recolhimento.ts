@@ -148,7 +148,11 @@ export function protegidoPelaEscala(
       j.inicio.getTime() - p.antecedenciaMin * MIN <= t &&
       t < j.fim.getTime() + (p.carenciaPorTurno.get(j.turnoId) ?? p.carenciaMin) * MIN &&
       (!j.lista || (j.inicio.getTime() - p.antecedenciaMin * MIN <= e && e < j.fim.getTime())) &&
-      periodoCobreExame(j, exame, p.escalaRestringeEspecialidade),
+      periodoCobreExame(
+        { ...j, todosSegmentos: !j.subespecialidadeIds.length && !j.subespecialidadeGeral },
+        exame,
+        p.escalaRestringeEspecialidade,
+      ),
   );
 }
 

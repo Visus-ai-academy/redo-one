@@ -22,8 +22,10 @@ const lista = (descricao: string): ApiPropertyOptions => ({
 });
 
 /**
- * Um arranjo: a frente (uma especialidade OU uma modalidade) e o recorte da outra dimensão; em
- * cada eixo, lista vazia = todos.
+ * Um arranjo: a frente (uma especialidade OU uma modalidade) e o recorte da outra dimensão. Em
+ * cada eixo da frente, "todas" é explícito (`todasModalidades` etc.); sem ele, a lista precisa de
+ * ao menos um (lista vazia nunca quer dizer "todas"). Nos eixos que não são da frente, o "todas" é
+ * ignorado e a lista vai vazia.
  */
 export class ArranjoDto {
   @ApiProperty({
@@ -46,19 +48,33 @@ export class ArranjoDto {
   @IsUUID()
   modalidadeId!: string | null;
 
-  @ApiProperty(lista('Só na frente de modalidade: especialidades; vazia = todas.'))
+  @ApiProperty({ description: 'Só na frente de modalidade: todas as especialidades.' })
+  @IsBoolean()
+  todasEspecialidades!: boolean;
+
+  @ApiProperty(lista('Só na frente de modalidade, sem `todasEspecialidades`: especialidades.'))
   @IsArray()
   @ArrayMaxSize(50)
   @IsUUID('all', { each: true })
   especialidadeIds!: string[];
 
-  @ApiProperty(lista('Só na frente de especialidade: modalidades; vazia = todas.'))
+  @ApiProperty({ description: 'Só na frente de especialidade: todas as modalidades.' })
+  @IsBoolean()
+  todasModalidades!: boolean;
+
+  @ApiProperty(lista('Só na frente de especialidade, sem `todasModalidades`: modalidades.'))
   @IsArray()
   @ArrayMaxSize(50)
   @IsUUID('all', { each: true })
   modalidadeIds!: string[];
 
-  @ApiProperty(lista('Só na frente de especialidade: segmentos; vazia e sem o geral = todos.'))
+  @ApiProperty({
+    description: 'Só na frente de especialidade: todos os segmentos (e o exame sem segmento).',
+  })
+  @IsBoolean()
+  todosSegmentos!: boolean;
+
+  @ApiProperty(lista('Só na frente de especialidade, sem `todosSegmentos`: segmentos.'))
   @IsArray()
   @ArrayMaxSize(100)
   @IsUUID('all', { each: true })
@@ -68,7 +84,13 @@ export class ArranjoDto {
   @IsBoolean()
   subespecialidadeGeral!: boolean;
 
-  @ApiProperty(lista('Prioridades da operação (Configurações › Distribuição); vazia = todas.'))
+  @ApiProperty({ description: 'Todas as prioridades da operação.' })
+  @IsBoolean()
+  todasPrioridades!: boolean;
+
+  @ApiProperty(
+    lista('Sem `todasPrioridades`: prioridades da operação (Configurações › Distribuição).'),
+  )
   @IsArray()
   @ArrayMaxSize(20)
   @IsUUID('all', { each: true })
@@ -188,8 +210,10 @@ export class SugestaoAlocacaoQueryDto {
 }
 
 export class SugestaoAlocacaoDto {
+  @ApiProperty({ description: 'Todas as prioridades da operação.' }) todasPrioridades!: boolean;
   @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })
   prioridadeIds!: string[];
+  @ApiProperty({ description: 'Todos os segmentos.' }) todosSegmentos!: boolean;
   @ApiProperty({ type: [String], format: 'uuid' }) subespecialidadeIds!: string[];
   @ApiProperty() subespecialidadeGeral!: boolean;
 }

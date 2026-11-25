@@ -120,13 +120,16 @@ export function PainelAlocacao({
     filtrar: (sugestao, frenteId) => {
       const subs = subsDaFrente(frentes.find((f) => f.id === frenteId));
       return {
-        prioridadeIds: ouTodas(
-          sugestao.prioridadeIds.filter((id) => prioridades.some((p) => p.id === id)),
-        ),
-        subespecialidadeIds: ouTodas([
-          ...sugestao.subespecialidadeIds.filter((id) => subs.some((s) => s.id === id)),
-          ...(sugestao.subespecialidadeGeral && subs.length > 0 ? [GERAL] : []),
-        ]),
+        prioridadeIds: sugestao.todasPrioridades
+          ? [TODAS]
+          : sugestao.prioridadeIds.filter((id) => prioridades.some((p) => p.id === id)),
+        subespecialidadeIds:
+          sugestao.todosSegmentos || subs.length === 0
+            ? [TODAS]
+            : [
+                ...sugestao.subespecialidadeIds.filter((id) => subs.some((s) => s.id === id)),
+                ...(sugestao.subespecialidadeGeral ? [GERAL] : []),
+              ],
       };
     },
   });
@@ -436,9 +439,6 @@ export function PainelAlocacao({
     </PainelLateral>
   );
 }
-
-/** Da API (vazio = todas) para o formulário. */
-const ouTodas = (ids: string[]) => (ids.length ? ids : [TODAS]);
 
 type CampoSugerido = 'prioridadeIds' | 'subespecialidadeIds';
 const CAMPOS_SUGERIDOS: CampoSugerido[] = ['prioridadeIds', 'subespecialidadeIds'];

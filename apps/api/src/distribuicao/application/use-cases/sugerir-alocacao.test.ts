@@ -25,7 +25,9 @@ describe('SugerirAlocacao', () => {
       arranjoVazio({ especialidadeId: 'neuro', prioridadeIds: ['rotina'] }),
     ]);
     expect(await sugerir.executar('m1', 'f-neuro')).toEqual({
+      todasPrioridades: false,
       prioridadeIds: ['rotina'],
+      todosSegmentos: true,
       subespecialidadeIds: [],
       subespecialidadeGeral: false,
     });

@@ -20,7 +20,7 @@ export interface AlvoExame {
   subespecialidadeId: string | null;
   /**
    * Prioridade da operação (de-para próprio da distribuição): a dos recortes do arranjo, da
-   * alocação e do ajuste do dia. Null = grafia sem de-para e sem padrão: só o recorte vazio a aceita.
+   * alocação e do ajuste do dia. Null = grafia sem de-para e sem padrão: só "todas" a aceita.
    */
   prioridadeOperacaoId: string | null;
   /** A operação trata o exame como urgência. */
@@ -65,23 +65,28 @@ function atende(modo: ModoVinculo, naLista: boolean): boolean {
   return modo === 'apenas' ? naLista : !naLista;
 }
 
-/** Recorte de segmento: vazio sem o geral = todos; o exame sem segmento só passa com o geral. */
-function casaSegmento(
-  recorte: { subespecialidadeIds: readonly string[]; subespecialidadeGeral: boolean },
-  subespecialidadeId: string | null,
-): boolean {
-  if (!recorte.subespecialidadeIds.length && !recorte.subespecialidadeGeral) return true;
+/** Recorte de segmento, com o "todos" explícito; o exame sem segmento só passa com o geral. */
+export interface RecorteSegmento {
+  todosSegmentos: boolean;
+  subespecialidadeIds: readonly string[];
+  subespecialidadeGeral: boolean;
+}
+
+function casaSegmento(recorte: RecorteSegmento, subespecialidadeId: string | null): boolean {
+  if (recorte.todosSegmentos) return true;
   if (subespecialidadeId === null) return recorte.subespecialidadeGeral;
   return recorte.subespecialidadeIds.includes(subespecialidadeId);
 }
 
-/** O recorte de prioridade (da operação) aceita o exame? Vazio = todas. */
+/** O recorte de prioridade (da operação) aceita o exame? "Todas" é explícito. */
 function casaPrioridade(
+  todas: boolean,
   prioridadeIds: readonly string[],
   a: Pick<AlvoExame, 'prioridadeOperacaoId'>,
   liberadas: ReadonlySet<string> | undefined,
 ): boolean {
-  if (!prioridadeIds.length || a.prioridadeOperacaoId === null) return !prioridadeIds.length;
+  if (todas) return true;
+  if (a.prioridadeOperacaoId === null) return false;
   return prioridadeIds.includes(a.prioridadeOperacaoId) || !!liberadas?.has(a.prioridadeOperacaoId);
 }
 
@@ -93,24 +98,29 @@ export interface OpcoesCasamento {
 }
 
 /**
- * O arranjo casa o exame por inteiro? Lista vazia é "todos"; valor desconhecido não casa lista
- * restrita, exceto cliente e exame (não se barra pelo que não se sabe).
+ * O arranjo casa o exame por inteiro? Cada eixo da frente é "todas" (explícito) ou a lista; valor
+ * desconhecido não casa lista restrita, exceto cliente e exame (não se barra pelo que não se sabe).
  */
 export function casaArranjo(a: Arranjo, alvo: AlvoExame, opcoes: OpcoesCasamento = {}): boolean {
   // Frente: a especialidade ou a modalidade do arranjo; depois, o recorte da outra dimensão.
   if (a.especialidadeId !== null && !daEspecialidade(a.especialidadeId, alvo)) return false;
   if (a.modalidadeId !== null && alvo.modalidadeId !== a.modalidadeId) return false;
-  if (a.especialidadeIds.length && !a.especialidadeIds.some((e) => daEspecialidade(e, alvo))) {
+  if (a.modalidadeId !== null) {
+    if (!a.todasEspecialidades && !a.especialidadeIds.some((e) => daEspecialidade(e, alvo))) {
+      return false;
+    }
+  } else {
+    if (
+      !a.todasModalidades &&
+      (alvo.modalidadeId === null || !a.modalidadeIds.includes(alvo.modalidadeId))
+    ) {
+      return false;
+    }
+    if (!opcoes.segmentoDaEscala && !casaSegmento(a, alvo.subespecialidadeId)) return false;
+  }
+  if (!casaPrioridade(a.todasPrioridades, a.prioridadeIds, alvo, opcoes.prioridadesLiberadas)) {
     return false;
   }
-  if (
-    a.modalidadeIds.length &&
-    (alvo.modalidadeId === null || !a.modalidadeIds.includes(alvo.modalidadeId))
-  ) {
-    return false;
-  }
-  if (!opcoes.segmentoDaEscala && !casaSegmento(a, alvo.subespecialidadeId)) return false;
-  if (!casaPrioridade(a.prioridadeIds, alvo, opcoes.prioridadesLiberadas)) return false;
   if (alvo.exameId && !atende(a.modoExames, a.exameIds.includes(alvo.exameId))) return false;
   if (alvo.clienteId && !atende(a.modoClientes, citaCliente(a.clienteIds, alvo))) return false;
   return true;
@@ -179,8 +189,10 @@ export interface PeriodoEscala {
   /** Escala gratificada: segue o SLA puro (fora da grade de recebimento), com cota à parte. */
   gratificado: boolean;
   frente: FrenteEscala;
-  /** Recortes da alocação (prioridades da operação e segmentos); vazio = sem recorte. */
+  /** Recortes da alocação (prioridades da operação e segmentos), com o "todas" explícito. */
+  todasPrioridades: boolean;
   prioridadeIds: readonly string[];
+  todosSegmentos: boolean;
   subespecialidadeIds: readonly string[];
   subespecialidadeGeral: boolean;
   /** Período de cobertura: o titular que ele cobre. */
@@ -244,7 +256,10 @@ function porQueFrenteRecusa(
  * alocação, sem olhar a grade de recebimento nem a prioridade (o recolhimento usa só isto).
  */
 export function periodoCobreExame(
-  p: Pick<PeriodoEscala, 'frente' | 'subespecialidadeIds' | 'subespecialidadeGeral'>,
+  p: Pick<
+    PeriodoEscala,
+    'frente' | 'todosSegmentos' | 'subespecialidadeIds' | 'subespecialidadeGeral'
+  >,
   a: AlvoDaFrente,
   escalaRestringeEspecialidade: boolean,
 ): boolean {
@@ -290,7 +305,7 @@ export function porQuePeriodoRecusa(
     }
   }
 
-  if (!casaPrioridade(p.prioridadeIds, a, ctx.prioridadesLiberadas)) {
+  if (!casaPrioridade(p.todasPrioridades, p.prioridadeIds, a, ctx.prioridadesLiberadas)) {
     return a.prioridadeOperacaoId === null
       ? 'O período recorta prioridades e a do exame não tem de-para na operação.'
       : 'O período não aceita a prioridade do exame (não está marcada na alocação).';

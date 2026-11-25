@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ArranjoDto } from '../../gen/types/ArranjoDto';
+import { arranjoDeTeste } from '../../test/arranjo';
 import {
   ARRANJO_VAZIO,
   esquemaArranjo,
@@ -11,21 +12,8 @@ import {
   valoresDoArranjo,
 } from './arranjo-form';
 
-const arranjo = (mudar: Partial<ArranjoDto> = {}): ArranjoDto => ({
-  especialidadeId: 'e-neuro',
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-  ...mudar,
-});
+const arranjo = (mudar: Partial<ArranjoDto> = {}): ArranjoDto =>
+  arranjoDeTeste({ especialidadeId: 'e-neuro', modalidadeId: null, ...mudar });
 
 const NOMES = {
   clientes: [
@@ -177,6 +165,26 @@ describe('esquemaArranjo', () => {
     expect(erros({ ...COM_FRENTE, modoClientes: 'apenas', modoExames: 'apenas' })).toEqual([
       'clientes: Escolha ao menos um cliente.',
       'exames: Escolha ao menos um exame.',
+    ]);
+  });
+
+  it('nada marcado no eixo da frente é erro (vazio nunca é "todas")', () => {
+    expect(erros({ ...COM_FRENTE, especialidadeIds: [] })).toEqual([
+      'especialidadeIds: Escolha ao menos uma especialidade.',
+    ]);
+    const neuro: ValoresArranjo = { ...ARRANJO_VAZIO, frente: 'E:e-neuro' };
+    expect(erros({ ...neuro, modalidadeIds: [], subespecialidadeIds: [] })).toEqual([
+      'modalidadeIds: Escolha ao menos uma modalidade.',
+      'subespecialidadeIds: Escolha ao menos um segmento.',
+    ]);
+    // O eixo que não é da frente não pesa.
+    expect(erros({ ...COM_FRENTE, modalidadeIds: [] })).toEqual([]);
+  });
+
+  it('"todos, exceto" pede ao menos um cliente e um exame', () => {
+    expect(erros({ ...COM_FRENTE, modoClientes: 'exceto', modoExames: 'exceto' })).toEqual([
+      'clientes: Escolha ao menos um cliente (ou "Todos").',
+      'exames: Escolha ao menos um exame (ou "Todos").',
     ]);
   });
 

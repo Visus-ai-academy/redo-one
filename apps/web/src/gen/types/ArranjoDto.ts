@@ -21,17 +21,32 @@ export type ArranjoDto = {
    */
   modalidadeId: string | null;
   /**
-   * @description Só na frente de modalidade: especialidades; vazia = todas.
+   * @description Só na frente de modalidade: todas as especialidades.
+   * @type boolean
+   */
+  todasEspecialidades: boolean;
+  /**
+   * @description Só na frente de modalidade, sem `todasEspecialidades`: especialidades.
    * @type array
    */
   especialidadeIds: string[];
   /**
-   * @description Só na frente de especialidade: modalidades; vazia = todas.
+   * @description Só na frente de especialidade: todas as modalidades.
+   * @type boolean
+   */
+  todasModalidades: boolean;
+  /**
+   * @description Só na frente de especialidade, sem `todasModalidades`: modalidades.
    * @type array
    */
   modalidadeIds: string[];
   /**
-   * @description Só na frente de especialidade: segmentos; vazia e sem o geral = todos.
+   * @description Só na frente de especialidade: todos os segmentos (e o exame sem segmento).
+   * @type boolean
+   */
+  todosSegmentos: boolean;
+  /**
+   * @description Só na frente de especialidade, sem `todosSegmentos`: segmentos.
    * @type array
    */
   subespecialidadeIds: string[];
@@ -41,7 +56,12 @@ export type ArranjoDto = {
    */
   subespecialidadeGeral: boolean;
   /**
-   * @description Prioridades da operação (Configurações › Distribuição); vazia = todas.
+   * @description Todas as prioridades da operação.
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
+   * @description Sem `todasPrioridades`: prioridades da operação (Configurações › Distribuição).
    * @type array
    */
   prioridadeIds: string[];

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { comTodasPadrao } from '../../testing/fakes';
 
 import type { Arranjo } from '../arranjo';
 import { REGRAS_NEUTRAS, type RegrasFrente, RegrasPorFrente } from './configuracao';
@@ -37,21 +38,22 @@ const MANHA = 'turno-manha';
 const LISTA = 'turno-lista';
 const CARDIO = 'esp-cardio';
 
-const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
-  especialidadeId: null,
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-  ...p,
-});
+const arranjo = (p: Partial<Arranjo> = {}): Arranjo =>
+  comTodasPadrao({
+    especialidadeId: null,
+    modalidadeId: null,
+    especialidadeIds: [],
+    modalidadeIds: [],
+    subespecialidadeIds: [],
+    subespecialidadeGeral: false,
+    prioridadeIds: [],
+    modoClientes: 'todos',
+    clienteIds: [],
+    modoExames: 'todos',
+    exameIds: [],
+    clientesExclusivosIds: [],
+    ...p,
+  });
 
 const alvo = (p: Partial<AlvoExame> = {}): AlvoExame => ({
   especialidadeId: NEURO,
@@ -67,6 +69,16 @@ const alvo = (p: Partial<AlvoExame> = {}): AlvoExame => ({
 });
 
 describe('casaArranjo', () => {
+  it('lista vazia sem "todas" não casa nada (vazio nunca é "todas")', () => {
+    const nada = (p: Partial<Arranjo>) => arranjo({ especialidadeId: NEURO, ...p });
+    expect(casaArranjo(nada({ todasModalidades: false }), alvo())).toBe(false);
+    expect(casaArranjo(nada({ todasPrioridades: false }), alvo())).toBe(false);
+    expect(casaArranjo(nada({ todosSegmentos: false }), alvo({ subespecialidadeId: 'x' }))).toBe(
+      false,
+    );
+    expect(casaArranjo(nada({}), alvo())).toBe(true);
+  });
+
   it('arranjo sem especialidade vale para todas ("lauda todo RX" numa linha só)', () => {
     const todoRx = arranjo({ modalidadeIds: [RX] });
     expect(casaArranjo(todoRx, alvo({ especialidadeId: NEURO }))).toBe(true);
@@ -288,7 +300,7 @@ describe('reservadoPara (clínica exclusiva)', () => {
   it('dois exclusivos no mesmo recorte dividem; o recorte de cada um vale', () => {
     const dois = [
       { medicoId: 'BRUNO', arranjo: regra },
-      { medicoId: 'TIAGO', arranjo: { ...regra, modalidadeIds: [MR] } },
+      { medicoId: 'TIAGO', arranjo: { ...regra, todasModalidades: false, modalidadeIds: [MR] } },
     ];
     expect([...reservadoPara(dois, exame)].sort()).toEqual(['BRUNO', 'TIAGO']);
     expect([...reservadoPara(dois, { ...exame, modalidadeId: CT })]).toEqual(['BRUNO']);
@@ -396,6 +408,9 @@ describe('porQuePeriodoRecusa', () => {
     subespecialidadeGeral: false,
     coberturaDeId: null,
     ...p,
+    todasPrioridades: p.todasPrioridades ?? !p.prioridadeIds?.length,
+    todosSegmentos:
+      p.todosSegmentos ?? (!p.subespecialidadeIds?.length && !p.subespecialidadeGeral),
   });
   const exame = (p: Partial<AlvoExame> = {}) =>
     alvo({ especialidadeId: MI, modalidadeId: CT, restanteMin: 3000, ...p });

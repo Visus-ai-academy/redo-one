@@ -14,7 +14,11 @@ import {
 } from '../../../domain/rodada/entrada';
 import { RecorteForaDoEscopoError } from '../../../domain/rodada/escopo';
 import { RodadaEmEstadoInvalidoError } from '../../../domain/rodada/maquina';
-import { ConfiguracaoEmMemoria, PrioridadesClienteEmMemoria } from '../../../testing/fakes';
+import {
+  arranjoVazio,
+  ConfiguracaoEmMemoria,
+  PrioridadesClienteEmMemoria,
+} from '../../../testing/fakes';
 import {
   AvisosContaUnidadeEmMemoria,
   AvisosPrioridadeEmMemoria,
@@ -107,20 +111,7 @@ const catalogo: CatalogoDaFila = {
   unidade: (u) => (u === 'HOSPITAL A' ? 'cli-a' : null),
   traduzirPrioridade: (g) => (g === 'Urgência' ? 'pri-urg' : 'pri-rot'),
 };
-const arranjo: Arranjo = {
-  especialidadeId: null,
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-};
+const arranjo: Arranjo = arranjoVazio();
 const oc = (medicoId: string, p: Partial<OcorrenciaRodada> = {}): OcorrenciaRodada => ({
   alocacaoId: `aloc-${medicoId}`,
   medicoId,

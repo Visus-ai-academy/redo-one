@@ -183,9 +183,10 @@ export function mapearDistribuicao(
     if (typeof prioridadeIds === 'string') return sair(prioridadeIds);
 
     const modo = (m: string) => (MODOS.has(m) ? (m as 'todos' | 'apenas' | 'exceto') : null);
-    const modoClientes = modo(a.modoClientes);
-    const modoExames = modo(a.modoExames);
-    if (!modoClientes || !modoExames) return sair('Modo de clientes ou de exames desconhecido.');
+    const modoClientesLegado = modo(a.modoClientes);
+    const modoExamesLegado = modo(a.modoExames);
+    if (!modoClientesLegado || !modoExamesLegado)
+      return sair('Modo de clientes ou de exames desconhecido.');
 
     // Cliente ou exame que não migrou sai da lista, com aviso (dado depois de saber se o
     // arranjo fica: se ele cai, o aviso dele já diz tudo).
@@ -199,9 +200,16 @@ export function mapearDistribuicao(
       return [...new Set(ok)];
     };
     const clienteIds =
-      modoClientes === 'todos' ? [] : migrados(a.clientes, 'clientes', clientesMigrados, 'cliente');
+      modoClientesLegado === 'todos'
+        ? []
+        : migrados(a.clientes, 'clientes', clientesMigrados, 'cliente');
     const exameIds =
-      modoExames === 'todos' ? [] : migrados(a.exames, 'exames', examesMigrados, 'exame');
+      modoExamesLegado === 'todos' ? [] : migrados(a.exames, 'exames', examesMigrados, 'exame');
+    // "Todos, exceto nenhum" no dashboards-one era "todos": no redo-one, o modo "todos" explícito.
+    const semExcecao = (m: typeof modoClientesLegado, ids: string[]) =>
+      m === 'exceto' && !ids.length ? 'todos' : m;
+    const modoClientes = semExcecao(modoClientesLegado, clienteIds);
+    const modoExames = semExcecao(modoExamesLegado, exameIds);
     if (modoClientes === 'apenas' && !clienteIds.length)
       return sair('"Só estes clientes" ficou sem nenhum cliente: o arranjo ficou de fora.');
     if (modoExames === 'apenas' && !exameIds.length)
@@ -233,7 +241,12 @@ export function mapearDistribuicao(
       equipeId: dono.equipeId,
       especialidadeId,
       modalidadeId,
+      // Lista vazia no dashboards-one queria dizer "todas": no redo-one, "todas" é explícito.
+      todasEspecialidades: modalidadeId !== null,
+      todasModalidades: modalidadeId === null && !modalidadeIds.length,
+      todosSegmentos: modalidadeId === null && !subIds.length && !geral,
       subespecialidadeGeral: geral,
+      todasPrioridades: !prioridadeIds.length,
       modoClientes,
       modoExames,
       ordem: a.ordem,

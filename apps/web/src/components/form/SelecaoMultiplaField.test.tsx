@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { TODAS } from './caixas-todas';
 import { useAppForm } from './form';
 import type { OpcaoMultipla } from './SelecaoMultiplaField';
 
@@ -29,7 +30,9 @@ function Formulario({
   onSubmit,
   somenteLeitura,
   obrigatorio = false,
+  todas,
 }: {
+  todas?: string;
   opcoes?: OpcaoMultipla[];
   inicial?: string[];
   onSubmit: (valores: { ids: string[] }) => void;
@@ -63,6 +66,7 @@ function Formulario({
             required={obrigatorio}
             description="Onde o turno lauda."
             somenteLeitura={somenteLeitura}
+            todas={todas}
           />
         )}
       </form.AppField>
@@ -74,6 +78,36 @@ function Formulario({
 const campo = () => screen.getByRole('combobox', { name: 'Especialidades' });
 
 describe('SelecaoMultiplaField', () => {
+  it('com "Todas": mostra a opção, escolhê-la tira as outras e escolher outra a tira', async () => {
+    const onSubmit = vi.fn();
+    render(<Formulario inicial={[TODAS]} todas="Todas" onSubmit={onSubmit} />);
+
+    expect(campo()).toHaveTextContent('Todas');
+    await userEvent.click(campo());
+    await userEvent.click(await screen.findByRole('option', { name: 'MAMA' }));
+    await userEvent.keyboard('{Escape}');
+    expect(campo()).toHaveTextContent('MAMA');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(onSubmit).toHaveBeenLastCalledWith({ ids: ['mama'] });
+
+    await userEvent.click(campo());
+    await userEvent.click(await screen.findByRole('option', { name: 'Todas' }));
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(onSubmit).toHaveBeenLastCalledWith({ ids: [TODAS] });
+  });
+
+  it('com "Todas": nada marcado é erro e não envia', async () => {
+    const onSubmit = vi.fn();
+    render(<Formulario inicial={[TODAS]} todas="Todas" obrigatorio onSubmit={onSubmit} />);
+    await userEvent.click(campo());
+    await userEvent.click(await screen.findByRole('option', { name: 'Todas' }));
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText('Escolha ao menos uma.')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('mostra "Nenhuma" vazio e o resumo com os dois primeiros e o resto', async () => {
     const onSubmit = vi.fn();
     render(<Formulario onSubmit={onSubmit} />);

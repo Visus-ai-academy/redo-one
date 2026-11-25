@@ -1,6 +1,11 @@
 import type { Ator, Auditoria } from '../../../auditoria/auditoria';
 import { mensagemSegmentoFora, segmentoForaDaEspecialidade } from '../../../comum/segmentos';
-import { type Arranjo, ArranjoInvalidoError, validarArranjos } from '../../domain/arranjo';
+import {
+  type Arranjo,
+  ArranjoInvalidoError,
+  normalizarArranjo,
+  validarArranjos,
+} from '../../domain/arranjo';
 import type { PrioridadeOperacao } from '../../domain/motor/prioridades-operacao';
 import {
   ArranjosInvalidosError,
@@ -103,8 +108,9 @@ export class SalvarArranjos {
     private readonly agora: () => Date,
   ) {}
 
-  async executar(ator: Ator, dono: Dono, novos: Arranjo[]): Promise<void> {
+  async executar(ator: Ator, dono: Dono, pedidos: Arranjo[]): Promise<void> {
     await exigirDono(this.cadastros, dono);
+    const novos = pedidos.map(normalizarArranjo);
     try {
       validarArranjos(novos, dono.tipo);
     } catch (erro) {

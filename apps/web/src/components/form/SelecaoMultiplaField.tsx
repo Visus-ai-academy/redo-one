@@ -14,6 +14,7 @@ import {
   temGrupos,
 } from '../select/grupos';
 import { CampoSomenteLeitura } from './CampoSomenteLeitura';
+import { escolhidasAoMudar, TODAS } from './caixas-todas';
 import { useFieldContext } from './context';
 import { FieldError, FieldLabel } from './field-parts';
 import { useCampo } from './use-campo';
@@ -54,6 +55,11 @@ type SelecaoMultiplaFieldProps = {
   opcoes: OpcaoMultipla[];
   /** Texto com nada marcado. */
   placeholder?: string;
+  /**
+   * Rótulo da opção "Todas" explícita, no topo da lista. Escolhê-la tira as outras (o valor vira
+   * `[TODAS]`); escolher outra a tira. Nada marcado é inválido: use `esquemaCaixasComTodas`.
+   */
+  todas?: string;
   required?: boolean;
   description?: string;
   /** Mostra o resumo sem deixar mudar. */
@@ -81,6 +87,7 @@ export function SelecaoMultiplaField({
   label,
   opcoes,
   placeholder = 'Nenhuma',
+  todas,
   required = false,
   description,
   somenteLeitura = false,
@@ -90,13 +97,16 @@ export function SelecaoMultiplaField({
   const { erros: errors, invalido: invalid, aoSair, ref } = useCampo(field);
   const marcados = field.state.value;
   // Inativa só entra na lista se já estiver marcada.
-  const visiveis = opcoes.filter((o) => !o.inativa || marcados.includes(o.valor));
+  const visiveis = [
+    ...(todas ? [{ valor: TODAS, rotulo: todas }] : []),
+    ...opcoes.filter((o) => !o.inativa || marcados.includes(o.valor)),
+  ];
   // Na ordem da lista, não na dos ids salvos (a API devolve em ordem própria).
   const marcadas = visiveis.filter((o) => marcados.includes(o.valor));
   const resumo = resumir(marcadas.map(nomeDa), placeholder);
   const resumoNoGatilho = <ResumoComCor marcadas={marcadas} placeholder={placeholder} />;
   const mudar = (valores: string[]) => {
-    field.handleChange(valores);
+    field.handleChange(todas ? escolhidasAoMudar(marcados, valores) : valores);
     aoSair();
   };
 

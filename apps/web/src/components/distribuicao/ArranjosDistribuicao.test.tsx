@@ -3,26 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ArranjoDto } from '../../gen/types/ArranjoDto';
+import { arranjoDeTeste } from '../../test/arranjo';
 import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
 import { escolherOpcao } from '../../test/select';
 import { ArranjosDistribuicao, type ArranjosDistribuicaoProps } from './ArranjosDistribuicao';
 
-const arranjo = (mudar: Partial<ArranjoDto> = {}): ArranjoDto => ({
-  especialidadeId: null,
-  modalidadeId: null,
-  especialidadeIds: [],
-  modalidadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
-  prioridadeIds: [],
-  modoClientes: 'todos',
-  clienteIds: [],
-  modoExames: 'todos',
-  exameIds: [],
-  clientesExclusivosIds: [],
-  ...mudar,
-});
+const arranjo = (mudar: Partial<ArranjoDto> = {}): ArranjoDto =>
+  arranjoDeTeste({ especialidadeId: null, modalidadeId: null, ...mudar });
 
 const NEURO = arranjo({
   especialidadeId: 'e-neuro',
@@ -125,14 +113,35 @@ describe('ArranjosDistribuicao', () => {
     ]);
   });
 
-  it('trocar a frente tira o recorte da outra dimensão', async () => {
+  it('trocar a frente tira o recorte da outra dimensão e começa a nova em "Todas"', async () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('button', { name: /NEURO/ }));
     await escolherOpcao('Frente', 'RX');
+    expect(screen.getByRole('combobox', { name: /Especialidades/ })).toHaveTextContent('Todas');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(onSalvar).toHaveBeenCalledWith([
-      { ...NEURO, especialidadeId: null, modalidadeId: 'm-rx', modalidadeIds: [] },
+      {
+        ...NEURO,
+        especialidadeId: null,
+        modalidadeId: 'm-rx',
+        modalidadeIds: [],
+        todasEspecialidades: true,
+        todasModalidades: false,
+        todosSegmentos: false,
+      },
     ]);
+  });
+
+  it('especialidades sem nenhuma (nem "Todas") não salva', async () => {
+    const { onSalvar } = montar({ arranjos: [] });
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    await escolherOpcao('Frente', 'RX');
+    await userEvent.click(screen.getByRole('combobox', { name: /Especialidades/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Todas' }));
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
+    expect(await screen.findByText('Escolha ao menos uma especialidade.')).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
   });
 
   it('prioridades sem nenhuma marcada não salva', async () => {
@@ -176,8 +185,11 @@ describe('ArranjosDistribuicao', () => {
     await userEvent.click(await screen.findByRole('button', { name: /NEURO/ }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'ROTINA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    // Marcar a que faltava é marcar todas: vira "Todas" (lista vazia).
-    expect(onSalvar).toHaveBeenCalledWith([{ ...NEURO, prioridadeIds: [] }, outro]);
+    // Marcar a que faltava é marcar todas: vira "Todas" explícito.
+    expect(onSalvar).toHaveBeenCalledWith([
+      { ...NEURO, todasPrioridades: true, prioridadeIds: [] },
+      outro,
+    ]);
     expect(await acharAviso()).toHaveTextContent('Arranjo salvo.');
   });
 

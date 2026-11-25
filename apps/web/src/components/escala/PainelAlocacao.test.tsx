@@ -307,7 +307,9 @@ describe('PainelAlocacao', () => {
 
   describe('pré-preenchimento pelos arranjos do médico', () => {
     const sugestao = {
+      todasPrioridades: false,
       prioridadeIds: ['p-urg'],
+      todosSegmentos: false,
       subespecialidadeIds: ['s-cab'],
       subespecialidadeGeral: true,
     };

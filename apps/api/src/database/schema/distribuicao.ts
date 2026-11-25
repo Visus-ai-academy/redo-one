@@ -31,7 +31,8 @@ import { prioridadesOperacao, tipoUrgencia } from './prioridades-operacao';
 
 // Contexto `distribuicao`: o que cada médico (ou equipe) lauda e os parâmetros do robô por
 // médico. Os arranjos são uma união: o médico pega o exame se QUALQUER arranjo dele casar por
-// inteiro, e cada eixo vazio significa "todos". O histórico vai para `eventos_auditoria`
+// inteiro. Em cada eixo, "todas" é uma coluna booleana explícita (vazio nunca quer dizer "todas",
+// decisão de 25/11/2026). O histórico vai para `eventos_auditoria`
 // (entidades `arranjos_medico`, `arranjos_equipe`, `medico_distribuicao`).
 
 const criadoEm = () => timestamp('criado_em', { withTimezone: true }).notNull().defaultNow();
@@ -61,8 +62,16 @@ export const arranjos = pgTable(
     especialidadeId: uuid('especialidade_id').references(() => especialidades.id),
     /** Frente de modalidade. */
     modalidadeId: uuid('modalidade_id').references(() => modalidades.id),
+    /** Frente de modalidade: todas as especialidades (sem linhas em `arranjos_especialidades`). */
+    todasEspecialidades: boolean('todas_especialidades').notNull().default(false),
+    /** Frente de especialidade: todas as modalidades (sem linhas em `arranjos_modalidades`). */
+    todasModalidades: boolean('todas_modalidades').notNull().default(false),
+    /** Frente de especialidade: todos os segmentos, com o geral. */
+    todosSegmentos: boolean('todos_segmentos').notNull().default(false),
     /** Recorte de segmento inclui o geral (exame sem subespecialidade). */
     subespecialidadeGeral: boolean('subespecialidade_geral').notNull().default(false),
+    /** Todas as prioridades da operação (sem linhas em `arranjos_prioridades`). */
+    todasPrioridades: boolean('todas_prioridades').notNull().default(false),
     modoClientes: modoVinculo('modo_clientes').notNull().default('todos'),
     modoExames: modoVinculo('modo_exames').notNull().default('todos'),
     ordem: integer('ordem').notNull().default(0),
@@ -85,7 +94,7 @@ const doArranjo = () =>
     .notNull()
     .references(() => arranjos.id, { onDelete: 'cascade' });
 
-/** Especialidades do arranjo de frente de modalidade ("RX de MI e MSK"). Nenhuma linha = todas. */
+/** Especialidades do arranjo de frente de modalidade ("RX de MI e MSK"), sem `todas_especialidades`. */
 export const arranjosEspecialidades = pgTable(
   'arranjos_especialidades',
   {
@@ -97,7 +106,7 @@ export const arranjosEspecialidades = pgTable(
   (t) => [primaryKey({ columns: [t.arranjoId, t.especialidadeId] })],
 );
 
-/** Modalidades do arranjo de frente de especialidade. Nenhuma linha = todas. */
+/** Modalidades do arranjo de frente de especialidade, sem `todas_modalidades`. */
 export const arranjosModalidades = pgTable(
   'arranjos_modalidades',
   {
@@ -109,7 +118,7 @@ export const arranjosModalidades = pgTable(
   (t) => [primaryKey({ columns: [t.arranjoId, t.modalidadeId] })],
 );
 
-/** Segmentos do arranjo. Nenhuma linha e sem `subespecialidade_geral` = todos. */
+/** Segmentos do arranjo, sem `todos_segmentos`. */
 export const arranjosSubespecialidades = pgTable(
   'arranjos_subespecialidades',
   {
@@ -122,8 +131,8 @@ export const arranjosSubespecialidades = pgTable(
 );
 
 /**
- * Prioridades da operação do arranjo (não as do catálogo, decisão de 19/11/2026). Nenhuma linha =
- * todas. Sem cascata: excluir uma prioridade em uso alargaria o recorte calado.
+ * Prioridades da operação do arranjo (não as do catálogo, decisão de 19/11/2026), sem
+ * `todas_prioridades`. Sem cascata: excluir uma prioridade em uso estreitaria o recorte calado.
  */
 export const arranjosPrioridades = pgTable(
   'arranjos_prioridades',

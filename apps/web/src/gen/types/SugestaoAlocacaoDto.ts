@@ -5,10 +5,20 @@
 
 export type SugestaoAlocacaoDto = {
   /**
+   * @description Todas as prioridades da operação.
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
    * @description Prioridades da operação.
    * @type array
    */
   prioridadeIds: string[];
+  /**
+   * @description Todos os segmentos.
+   * @type boolean
+   */
+  todosSegmentos: boolean;
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
 };

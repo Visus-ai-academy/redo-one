@@ -175,7 +175,11 @@ describe('mapearDistribuicao', () => {
         equipeId: null,
         especialidadeId: id.neuro,
         modalidadeId: null,
+        todasEspecialidades: false,
+        todasModalidades: false,
+        todosSegmentos: false,
         subespecialidadeGeral: true,
+        todasPrioridades: false,
         modoClientes: 'apenas',
         modoExames: 'exceto',
         ordem: 0,
@@ -196,6 +200,31 @@ describe('mapearDistribuicao', () => {
     expect(r.tabelas.arranjosClientesExclusivos).toEqual([{ arranjoId: aid, clienteId: id.clA }]);
     expect(r.tabelas.arranjosExames).toEqual([{ arranjoId: aid, exameId: id.tc }]);
     expect(r.avisos).toEqual([]);
+  });
+
+  it('lista vazia no dashboards-one ("todas") vira "todas" explícito', () => {
+    const r = mapear({ arranjosMedico: [doMedico({ modalidades: [], prioridades: [] })] });
+    expect(r.tabelas.arranjos[0]).toMatchObject({
+      todasModalidades: true,
+      todosSegmentos: true,
+      todasPrioridades: true,
+      todasEspecialidades: false,
+    });
+    const rx = mapear({ arranjosMedico: [doMedico({ especialidadeId: 'es-rx' })] });
+    expect(rx.tabelas.arranjos[0]).toMatchObject({
+      todasEspecialidades: true,
+      todasModalidades: false,
+      todosSegmentos: false,
+    });
+  });
+
+  it('"todos, exceto" sem ninguém que migrou vira "todos"', () => {
+    const r = mapear({
+      arranjosMedico: [
+        doMedico({ modoClientes: 'exceto', clientes: [], modoExames: 'exceto', exames: [] }),
+      ],
+    });
+    expect(r.tabelas.arranjos[0]).toMatchObject({ modoClientes: 'todos', modoExames: 'todos' });
   });
 
   it('grafias da MobileMed viram as prioridades da operação, sem repetir (Internado à parte da Rotina)', () => {

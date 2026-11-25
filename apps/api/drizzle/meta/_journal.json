@@ -575,6 +575,20 @@
       "when": 1795628338714,
       "tag": "0081_contratado_usa_financeiro_padrao",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1795631947157,
+      "tag": "0082_arranjos_todas_explicito",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1795631954150,
+      "tag": "0083_arranjos_todas_dados",
+      "breakpoints": true
     }
   ]
 }

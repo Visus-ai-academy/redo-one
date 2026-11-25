@@ -3,8 +3,11 @@
  * QUALQUER arranjo dele casar por inteiro. Cada arranjo começa pela FRENTE, uma especialidade OU
  * uma modalidade do catálogo (a mesma ideia de frente da escala e das regras da frente): na de
  * especialidade, recorta-se por modalidades e segmentos; na de modalidade, por especialidades
- * ("RX de MI e MSK"). Em cada eixo, lista vazia significa "todos"; nos segmentos, lista vazia
- * SEM `subespecialidadeGeral` é "todos", e com ela é "só o geral".
+ * ("RX de MI e MSK"). Em cada eixo, "todas" é explícito (`todasModalidades` etc.): lista vazia
+ * nunca quer dizer "todas" (decisão de 25/11/2026), e sem "todas" a lista precisa de ao menos um.
+ * Nos segmentos, `subespecialidadeGeral` sozinho é "só o geral". O eixo que não é da frente
+ * (modalidades e segmentos na de modalidade; especialidades na de especialidade) fica vazio e com
+ * "todas" falso.
  */
 export type ModoVinculo = 'todos' | 'apenas' | 'exceto';
 
@@ -13,12 +16,19 @@ export interface Arranjo {
   especialidadeId: string | null;
   /** Frente de modalidade. */
   modalidadeId: string | null;
-  /** Só na frente de modalidade: as especialidades dela que ele lauda; vazia = todas. */
+  /** Só na frente de modalidade: lauda todas as especialidades dela. */
+  todasEspecialidades: boolean;
+  /** Só na frente de modalidade, sem `todasEspecialidades`: as especialidades que ele lauda. */
   especialidadeIds: string[];
-  /** Só na frente de especialidade: as modalidades dela que ele lauda; vazia = todas. */
+  /** Só na frente de especialidade: lauda todas as modalidades dela. */
+  todasModalidades: boolean;
+  /** Só na frente de especialidade, sem `todasModalidades`: as modalidades que ele lauda. */
   modalidadeIds: string[];
+  /** Só na frente de especialidade: lauda todos os segmentos (e o exame sem segmento). */
+  todosSegmentos: boolean;
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
+  todasPrioridades: boolean;
   /** Prioridades da operação (Internado, Ambulatório etc. separados); a grafia entra pelo de-para delas. */
   prioridadeIds: string[];
   modoClientes: ModoVinculo;
@@ -59,19 +69,49 @@ function validarFrente(a: Arranjo): void {
     );
   }
   if (a.modalidadeId !== null) {
-    if (a.modalidadeIds.length) {
+    if (a.modalidadeIds.length || a.todasModalidades) {
       throw new ArranjoInvalidoError(
         'Na frente de modalidade, o recorte é por especialidades, não por modalidades.',
       );
     }
-    if (a.subespecialidadeIds.length || a.subespecialidadeGeral) {
+    if (a.subespecialidadeIds.length || a.subespecialidadeGeral || a.todosSegmentos) {
       throw new ArranjoInvalidoError('Segmento só vale na frente de especialidade.');
     }
-  } else if (a.especialidadeIds.length) {
-    throw new ArranjoInvalidoError(
-      'Na frente de especialidade, o recorte é por modalidades, não por especialidades.',
+    exigirRecorte(a.todasEspecialidades, a.especialidadeIds.length > 0, 'especialidade');
+  } else {
+    if (a.especialidadeIds.length || a.todasEspecialidades) {
+      throw new ArranjoInvalidoError(
+        'Na frente de especialidade, o recorte é por modalidades, não por especialidades.',
+      );
+    }
+    exigirRecorte(a.todasModalidades, a.modalidadeIds.length > 0, 'modalidade');
+    exigirRecorte(
+      a.todosSegmentos,
+      a.subespecialidadeIds.length > 0 || a.subespecialidadeGeral,
+      'segmento',
     );
   }
+  exigirRecorte(a.todasPrioridades, a.prioridadeIds.length > 0, 'prioridade');
+}
+
+/** O eixo é "todas" OU uma lista com ao menos um: nunca as duas coisas, nem nenhuma. */
+function exigirRecorte(todas: boolean, temLista: boolean, eixo: string): void {
+  if (todas && temLista) {
+    throw new ArranjoInvalidoError(`Escolha "todas" ou uma lista de ${eixo}, não as duas.`);
+  }
+  if (!todas && !temLista) {
+    throw new ArranjoInvalidoError(`Escolha ao menos um(a) ${eixo} ou marque "todas".`);
+  }
+}
+
+/**
+ * Tira do arranjo o "todas" dos eixos que não são da frente (a tela pode mandar ligado): na
+ * frente de modalidade não há modalidades nem segmentos; na de especialidade, não há especialidades.
+ */
+export function normalizarArranjo(a: Arranjo): Arranjo {
+  return a.modalidadeId !== null
+    ? { ...a, todasModalidades: false, todosSegmentos: false }
+    : { ...a, todasEspecialidades: false };
 }
 
 export function validarArranjos(arranjos: Arranjo[], dono: DonoArranjo): void {
@@ -90,6 +130,13 @@ export function validarArranjos(arranjos: Arranjo[], dono: DonoArranjo): void {
     }
     if (a.modoExames === 'apenas' && !a.exameIds.length) {
       throw new ArranjoInvalidoError('Escolha ao menos um exame em "só estes exames".');
+    }
+    // "Todos, exceto nenhum" seria "todos" às escondidas: para isso existe o modo "todos".
+    if (a.modoClientes === 'exceto' && !a.clienteIds.length) {
+      throw new ArranjoInvalidoError('Escolha ao menos um cliente em "todos, exceto estes".');
+    }
+    if (a.modoExames === 'exceto' && !a.exameIds.length) {
+      throw new ArranjoInvalidoError('Escolha ao menos um exame em "todos, exceto estes".');
     }
     if (a.clientesExclusivosIds.length && dono === 'equipe') {
       throw new ArranjoInvalidoError(
@@ -110,15 +157,17 @@ export type FrenteEscala =
   | { tipo: 'modalidade'; especialidadeId: null; modalidadeId: string };
 
 export interface SugestaoAlocacao {
+  todasPrioridades: boolean;
   prioridadeIds: string[];
+  todosSegmentos: boolean;
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
 }
 
-/** Une os recortes de um eixo: se algum arranjo não recorta, o eixo fica livre. */
-function unir(listas: string[][]): string[] {
-  if (listas.some((l) => l.length === 0)) return [];
-  return [...new Set(listas.flat())];
+/** Une os recortes de um eixo: se algum arranjo pega todas, o eixo fica com todas. */
+function unir(eixos: { todas: boolean; ids: string[] }[]): { todas: boolean; ids: string[] } {
+  if (eixos.some((e) => e.todas)) return { todas: true, ids: [] };
+  return { todas: false, ids: [...new Set(eixos.flatMap((e) => e.ids))] };
 }
 
 /**
@@ -138,20 +187,24 @@ export function sugestaoAlocacao(
       : a.modalidadeId === frente.modalidadeId || a.modalidadeIds.includes(frente.modalidadeId),
   );
   if (!daFrente.length) return null;
-  const prioridadeIds = unir(daFrente.map((a) => a.prioridadeIds));
+  const prioridades = unir(
+    daFrente.map((a) => ({ todas: a.todasPrioridades, ids: a.prioridadeIds })),
+  );
+  const comPrioridades = { todasPrioridades: prioridades.todas, prioridadeIds: prioridades.ids };
+  const todosOsSegmentos = {
+    todosSegmentos: true,
+    subespecialidadeIds: [],
+    subespecialidadeGeral: false,
+  };
   // Segmento é recorte da especialidade: na frente de modalidade os arranjos podem ser de
   // especialidades diferentes, e juntar os segmentos delas não diz nada.
-  if (frente.tipo === 'modalidade') {
-    return { prioridadeIds, subespecialidadeIds: [], subespecialidadeGeral: false };
+  if (frente.tipo === 'modalidade' || daFrente.some((a) => a.todosSegmentos)) {
+    return { ...comPrioridades, ...todosOsSegmentos };
   }
-  const semRecorte = daFrente.some(
-    (a) => !a.subespecialidadeIds.length && !a.subespecialidadeGeral,
-  );
-  return semRecorte
-    ? { prioridadeIds, subespecialidadeIds: [], subespecialidadeGeral: false }
-    : {
-        prioridadeIds,
-        subespecialidadeIds: [...new Set(daFrente.flatMap((a) => a.subespecialidadeIds))],
-        subespecialidadeGeral: daFrente.some((a) => a.subespecialidadeGeral),
-      };
+  return {
+    ...comPrioridades,
+    todosSegmentos: false,
+    subespecialidadeIds: [...new Set(daFrente.flatMap((a) => a.subespecialidadeIds))],
+    subespecialidadeGeral: daFrente.some((a) => a.subespecialidadeGeral),
+  };
 }
