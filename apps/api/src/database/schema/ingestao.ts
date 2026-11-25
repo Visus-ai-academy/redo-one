@@ -171,6 +171,8 @@ export const laudos = pgTable(
   },
   (t) => [
     index('laudos_janela_idx').on(t.origem, t.diaLaudo),
+    // Os totais refeitos por dia leem só os laudos que valem.
+    index('laudos_dia_vigentes_idx').on(t.diaLaudo).where(sql`${t.removidoEm} is null`),
     index('laudos_competencia_idx').on(t.competencia),
     index('laudos_cliente_idx').on(t.clienteId, t.diaLaudo),
     index('laudos_medico_idx').on(t.medicoId, t.diaLaudo),

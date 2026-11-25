@@ -554,6 +554,13 @@
       "when": 1795622849993,
       "tag": "0078_remover_omie",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795627448874,
+      "tag": "0079_laudos_dia_vigentes",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+CREATE INDEX "laudos_dia_vigentes_idx" ON "laudos" USING btree ("dia_laudo") WHERE "laudos"."removido_em" is null;
