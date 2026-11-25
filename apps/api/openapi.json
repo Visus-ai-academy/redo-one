@@ -16232,7 +16232,27 @@
           "consideraExame": {
             "type": "boolean",
             "nullable": true,
-            "description": "A competência nunca fica antes do mês da data do exame."
+            "description": "A competência é o maior entre o mês da data do laudo e o da data do exame, cada um pelo seu corte; sem isso, só o laudo."
+          },
+          "exameDia": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 31,
+            "description": "Dia do mês, pela data do exame, até o qual vai a competência; maior que o mês vale o último dia. Vale com `consideraExame`. Vazio com `exameUltimoDia` ou `usaPadrao`."
+          },
+          "exameUltimoDia": {
+            "type": "boolean",
+            "description": "O corte da data do exame é o último dia do mês."
+          },
+          "exameMes": {
+            "nullable": true,
+            "description": "Corte da data do exame. `seguinte`: cai no mês M+1; `proprio`: no próprio mês M. Vazio com `usaPadrao`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MesCorte"
+              }
+            ]
           },
           "clienteId": {
             "type": "string",
@@ -16266,6 +16286,9 @@
           "ultimoDia",
           "mes",
           "consideraExame",
+          "exameDia",
+          "exameUltimoDia",
+          "exameMes",
           "clienteId",
           "desde",
           "id",
@@ -16303,7 +16326,27 @@
           "consideraExame": {
             "type": "boolean",
             "nullable": true,
-            "description": "A competência nunca fica antes do mês da data do exame."
+            "description": "A competência é o maior entre o mês da data do laudo e o da data do exame, cada um pelo seu corte; sem isso, só o laudo."
+          },
+          "exameDia": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 31,
+            "description": "Dia do mês, pela data do exame, até o qual vai a competência; maior que o mês vale o último dia. Vale com `consideraExame`. Vazio com `exameUltimoDia` ou `usaPadrao`."
+          },
+          "exameUltimoDia": {
+            "type": "boolean",
+            "description": "O corte da data do exame é o último dia do mês."
+          },
+          "exameMes": {
+            "nullable": true,
+            "description": "Corte da data do exame. `seguinte`: cai no mês M+1; `proprio`: no próprio mês M. Vazio com `usaPadrao`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MesCorte"
+              }
+            ]
           },
           "clienteId": {
             "type": "string",
@@ -16324,6 +16367,9 @@
           "ultimoDia",
           "mes",
           "consideraExame",
+          "exameDia",
+          "exameUltimoDia",
+          "exameMes",
           "clienteId",
           "desde"
         ]

@@ -32,6 +32,9 @@ const pedidoDo = (d: NovaVigenciaCorteDto): PedidoVigencia => ({
   ultimoDia: d.ultimoDia,
   mes: d.mes,
   consideraExame: d.consideraExame,
+  exameDia: d.exameDia,
+  exameUltimoDia: d.exameUltimoDia,
+  exameMes: d.exameMes,
 });
 
 const vigenciaParaDto = ({ corte, ...v }: VigenciaRegistrada): VigenciaCorteDto => ({

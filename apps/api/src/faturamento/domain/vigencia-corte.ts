@@ -2,6 +2,7 @@ import { ErroDeDominio } from '../../comum/erro-de-dominio';
 import {
   type Corte,
   diaBrasilia,
+  EXAME_PADRAO,
   type TabelaCortes,
   type VigenciaCliente,
 } from '../../ingestao/domain/competencia';
@@ -62,6 +63,10 @@ export interface EntradaVigencia {
   ultimoDia: boolean;
   mes: 'proprio' | 'seguinte' | null;
   consideraExame: boolean | null;
+  /** Período da data do exame, com a mesma forma do laudo; vale quando `consideraExame`. */
+  exameDia: number | null;
+  exameUltimoDia: boolean;
+  exameMes: 'proprio' | 'seguinte' | null;
 }
 
 export interface NovaVigencia {
@@ -83,15 +88,30 @@ export function corteDaEntrada(entrada: EntradaVigencia): Corte | null {
   if ((dia === null) === !ultimoDia) {
     throw new VigenciaInvalidaError('Informe o dia do corte ou o último dia do mês.');
   }
-  if (dia !== null && !(Number.isInteger(dia) && dia >= 1 && dia <= 31)) {
+  if (dia !== null && !diaValido(dia)) {
     throw new VigenciaInvalidaError('O dia do corte tem de ser de 1 a 31.');
   }
   if (mes === null) throw new VigenciaInvalidaError('Informe o mês do corte.');
   if (consideraExame === null) {
     throw new VigenciaInvalidaError('Informe se o corte considera a data do exame.');
   }
-  return { dia: ultimoDia ? 'ultimo' : (dia as number), mes, consideraExame };
+  const { exameDia, exameUltimoDia, exameMes } = entrada;
+  if ((exameDia === null) === !exameUltimoDia) {
+    throw new VigenciaInvalidaError('Informe o dia do corte do exame ou o último dia do mês.');
+  }
+  if (exameDia !== null && !diaValido(exameDia)) {
+    throw new VigenciaInvalidaError('O dia do corte do exame tem de ser de 1 a 31.');
+  }
+  if (exameMes === null) throw new VigenciaInvalidaError('Informe o mês do corte do exame.');
+  return {
+    dia: ultimoDia ? 'ultimo' : (dia as number),
+    mes,
+    consideraExame,
+    exame: { dia: exameUltimoDia ? 'ultimo' : (exameDia as number), mes: exameMes },
+  };
 }
+
+const diaValido = (dia: number) => Number.isInteger(dia) && dia >= 1 && dia <= 31;
 
 /**
  * `desde` depois da última competência fechada: todo mês a partir dele está aberto, e a mudança de
@@ -123,10 +143,16 @@ export function comNovaVigencia(tabela: TabelaCortes, nova: NovaVigencia): Tabel
 }
 
 /** O corte em campos, como a tabela e a tela o guardam (`usaPadrao` quando não há corte). */
-export const camposDoCorte = (corte: Corte | null) => ({
-  usaPadrao: corte === null,
-  dia: corte && corte.dia !== 'ultimo' ? corte.dia : null,
-  ultimoDia: corte?.dia === 'ultimo',
-  mes: corte?.mes ?? null,
-  consideraExame: corte?.consideraExame ?? null,
-});
+export const camposDoCorte = (corte: Corte | null) => {
+  const exame = corte ? (corte.exame ?? EXAME_PADRAO) : null;
+  return {
+    usaPadrao: corte === null,
+    dia: corte && corte.dia !== 'ultimo' ? corte.dia : null,
+    ultimoDia: corte?.dia === 'ultimo',
+    mes: corte?.mes ?? null,
+    consideraExame: corte?.consideraExame ?? null,
+    exameDia: exame && exame.dia !== 'ultimo' ? exame.dia : null,
+    exameUltimoDia: exame?.dia === 'ultimo',
+    exameMes: exame?.mes ?? null,
+  };
+};

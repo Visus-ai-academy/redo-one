@@ -28,10 +28,26 @@ export type VigenciaCorteDto = {
    */
   mes: MesCorteKey | null;
   /**
-   * @description A competência nunca fica antes do mês da data do exame.
+   * @description A competência é o maior entre o mês da data do laudo e o da data do exame, cada um pelo seu corte; sem isso, só o laudo.
    * @type boolean
    */
   consideraExame: boolean | null;
+  /**
+   * @description Dia do mês, pela data do exame, até o qual vai a competência; maior que o mês vale o último dia. Vale com `consideraExame`. Vazio com `exameUltimoDia` ou `usaPadrao`.
+   * @minimum 1
+   * @maximum 31
+   * @type integer
+   */
+  exameDia: number | null;
+  /**
+   * @description O corte da data do exame é o último dia do mês.
+   * @type boolean
+   */
+  exameUltimoDia: boolean;
+  /**
+   * @description Corte da data do exame. `seguinte`: cai no mês M+1; `proprio`: no próprio mês M. Vazio com `usaPadrao`.
+   */
+  exameMes: MesCorteKey | null;
   /**
    * @description Nulo = o corte padrão.
    *

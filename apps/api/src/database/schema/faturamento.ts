@@ -86,8 +86,15 @@ export const cortesCompetencia = pgTable(
     ultimoDia: boolean('ultimo_dia').notNull().default(false),
     /** `seguinte`: o corte cai no mês M+1; `proprio`: no próprio mês M. */
     mes: text('mes', { enum: ['proprio', 'seguinte'] }),
-    /** A competência nunca fica antes do mês da data do exame. */
+    /** A competência é o maior entre o mês da data do laudo e o da data do exame (cada um pelo seu corte). */
     consideraExame: boolean('considera_exame'),
+    /**
+     * Período da data do exame, com a mesma forma do laudo; vale com `considera_exame`. Nulos com
+     * `usa_padrao`; as vigências de antes de 25/11/2026 ficaram com o mês cheio (último dia, próprio).
+     */
+    exameDia: integer('exame_dia'),
+    exameUltimoDia: boolean('exame_ultimo_dia').notNull().default(false),
+    exameMes: text('exame_mes', { enum: ['proprio', 'seguinte'] }),
     criadoEm: quando('criado_em').notNull().defaultNow(),
     criadoPorId: quem('criado_por_id'),
   },
@@ -100,6 +107,15 @@ export const cortesCompetencia = pgTable(
       .where(sql`${t.clienteId} is not null`),
     check('cortes_competencia_dia_check', sql`${t.dia} between 1 and 31`),
     check('cortes_competencia_mes_check', sql`${t.mes} in ('proprio', 'seguinte')`),
+    check('cortes_competencia_exame_dia_check', sql`${t.exameDia} between 1 and 31`),
+    check('cortes_competencia_exame_mes_check', sql`${t.exameMes} in ('proprio', 'seguinte')`),
+    check(
+      'cortes_competencia_exame_check',
+      sql`case when ${t.usaPadrao}
+        then ${t.exameDia} is null and not ${t.exameUltimoDia} and ${t.exameMes} is null
+        else ${t.exameMes} is not null and (${t.exameDia} is not null) <> ${t.exameUltimoDia}
+      end`,
+    ),
     check(
       'cortes_competencia_usa_padrao_check',
       sql`not ${t.usaPadrao} or ${t.clienteId} is not null`,

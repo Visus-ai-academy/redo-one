@@ -126,6 +126,8 @@ describe.skipIf(!url)('recalcular competências (integração)', () => {
       dia: 15,
       mes: 'proprio',
       consideraExame: false,
+      exameUltimoDia: true,
+      exameMes: 'proprio',
     });
     const recalcular = new RecalcularCompetencias(
       new DrizzleLaudosRepository(db),

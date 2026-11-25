@@ -59,11 +59,41 @@ class CamposCorteDto {
   @ApiProperty({
     type: Boolean,
     nullable: true,
-    description: 'A competência nunca fica antes do mês da data do exame.',
+    description:
+      'A competência é o maior entre o mês da data do laudo e o da data do exame, cada um pelo seu corte; sem isso, só o laudo.',
   })
   @ValidateIf((_, v) => v !== null)
   @IsBoolean()
   consideraExame!: boolean | null;
+
+  @ApiProperty({
+    type: 'integer',
+    nullable: true,
+    minimum: 1,
+    maximum: 31,
+    description:
+      'Dia do mês, pela data do exame, até o qual vai a competência; maior que o mês vale o último dia. Vale com `consideraExame`. Vazio com `exameUltimoDia` ou `usaPadrao`.',
+  })
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  exameDia!: number | null;
+
+  @ApiProperty({ description: 'O corte da data do exame é o último dia do mês.' })
+  @IsBoolean()
+  exameUltimoDia!: boolean;
+
+  @ApiProperty({
+    enum: MESES,
+    enumName: 'MesCorte',
+    nullable: true,
+    description:
+      'Corte da data do exame. `seguinte`: cai no mês M+1; `proprio`: no próprio mês M. Vazio com `usaPadrao`.',
+  })
+  @ValidateIf((_, v) => v !== null)
+  @IsIn(MESES)
+  exameMes!: (typeof MESES)[number] | null;
 }
 
 export class NovaVigenciaCorteDto extends CamposCorteDto {

@@ -25,6 +25,9 @@ const corpo: NovaVigenciaCorteDto = {
   ultimoDia: false,
   mes: 'proprio',
   consideraExame: false,
+  exameDia: null,
+  exameUltimoDia: true,
+  exameMes: 'proprio',
 };
 
 describe('controller dos cortes', () => {
@@ -43,7 +46,12 @@ describe('controller dos cortes', () => {
         id: 'v2',
         clienteId: null,
         desde: '2027-01',
-        corte: { dia: 'ultimo', mes: 'proprio', consideraExame: true },
+        corte: {
+          dia: 'ultimo',
+          mes: 'proprio',
+          consideraExame: true,
+          exame: { dia: 20, mes: 'seguinte' },
+        },
         criadoEm,
         criadoPor: 'Ana',
       },
@@ -65,6 +73,9 @@ describe('controller dos cortes', () => {
         ultimoDia: true,
         mes: 'proprio',
         consideraExame: true,
+        exameDia: 20,
+        exameUltimoDia: false,
+        exameMes: 'seguinte',
         criadoEm,
         criadoPor: 'Ana',
       },
@@ -77,6 +88,9 @@ describe('controller dos cortes', () => {
         ultimoDia: false,
         mes: null,
         consideraExame: null,
+        exameDia: null,
+        exameUltimoDia: false,
+        exameMes: null,
         criadoEm,
         criadoPor: null,
       },
@@ -117,5 +131,12 @@ describe('controller dos cortes', () => {
     expect(erros({ mes: 'anterior' })).toEqual(['mes']);
     expect(erros({ clienteId: 'c1' })).toEqual(['clienteId']);
     expect(erros({ consideraExame: 'sim' })).toEqual(['consideraExame']);
+    expect(erros({ exameDia: 25, exameUltimoDia: false, exameMes: 'seguinte' })).toEqual([]);
+    expect(erros({ exameDia: 0 })).toEqual(['exameDia']);
+    expect(erros({ exameDia: 32 })).toEqual(['exameDia']);
+    expect(erros({ exameDia: undefined })).toEqual(['exameDia']);
+    expect(erros({ exameUltimoDia: undefined })).toEqual(['exameUltimoDia']);
+    expect(erros({ exameMes: 'anterior' })).toEqual(['exameMes']);
+    expect(erros({ exameMes: undefined })).toEqual(['exameMes']);
   });
 });

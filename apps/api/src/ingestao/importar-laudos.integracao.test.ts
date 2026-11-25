@@ -338,6 +338,8 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       dia: 5,
       mes: 'proprio',
       consideraExame: false,
+      exameUltimoDia: true,
+      exameMes: 'proprio',
     });
 
     expect(await importar([linha('1', 'TC TORAX', 1)])).toMatchObject({ inseridos: 1 });

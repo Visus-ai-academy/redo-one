@@ -27,6 +27,9 @@ const dia25 = {
   ultimoDia: false,
   mes: 'proprio' as const,
   consideraExame: false,
+  exameDia: null,
+  exameUltimoDia: true,
+  exameMes: 'proprio' as const,
 };
 
 /** Exame feito em 01/10/2026; a competência gravada é a do corte padrão. */
@@ -87,7 +90,12 @@ describe('cortes', () => {
           vigencia: {
             clienteId: 'c1',
             desde: '2026-10',
-            corte: { dia: 25, mes: 'proprio', consideraExame: false },
+            corte: {
+              dia: 25,
+              mes: 'proprio',
+              consideraExame: false,
+              exame: { dia: 'ultimo', mes: 'proprio' },
+            },
           },
           autor: { usuarioId: 'u1', em: agora },
           recalculo: ['c1'],
@@ -119,6 +127,9 @@ describe('cortes', () => {
         ultimoDia: false,
         mes: null,
         consideraExame: null,
+        exameDia: null,
+        exameUltimoDia: false,
+        exameMes: null,
       });
       expect(cortes.criadas[0]?.vigencia.corte).toBeNull();
       expect(auditoria.eventos[0]?.depois).toEqual({
@@ -129,6 +140,9 @@ describe('cortes', () => {
         ultimoDia: false,
         mes: null,
         consideraExame: null,
+        exameDia: null,
+        exameUltimoDia: false,
+        exameMes: null,
       });
     });
 
@@ -315,8 +329,41 @@ describe('cortes', () => {
           ultimoDia: false,
           mes: corte.mes,
           consideraExame: corte.consideraExame,
+          exameDia: null,
+          exameUltimoDia: true,
+          exameMes: 'proprio',
         }),
       ).toEqual({ alterados: 0, movimentos: [] });
+    });
+
+    it('o período do exame entra na prévia', async () => {
+      // Exame em 28/10, laudo em 29/10: pelo padrão, 2026-10. Com o exame só até o dia 25 do próprio
+      // mês, o exame de 28/10 conta como novembro e leva o laudo junto.
+      laudos.laudos.push({
+        ...laudo('l1', 'c1', '2026-10-29T15:00:00Z', '2026-10'),
+        dataRealizacao: new Date('2026-10-28T15:00:00Z'),
+      });
+      const pedido = {
+        clienteId: 'c1',
+        desde: '2026-10',
+        usaPadrao: false,
+        dia: 7,
+        ultimoDia: false,
+        mes: 'seguinte' as const,
+        consideraExame: true,
+        exameDia: 25,
+        exameUltimoDia: false,
+        exameMes: 'proprio' as const,
+      };
+      expect(await previa.executar(pedido)).toEqual({
+        alterados: 1,
+        movimentos: [{ de: '2026-10', para: '2026-11', laudos: 1 }],
+      });
+      // Sem considerar o exame, o período dele não pesa: o laudo de 29/10 fica em outubro.
+      expect(await previa.executar({ ...pedido, consideraExame: false })).toEqual({
+        alterados: 0,
+        movimentos: [],
+      });
     });
   });
 });

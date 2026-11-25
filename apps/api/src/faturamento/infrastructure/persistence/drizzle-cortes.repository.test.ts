@@ -48,7 +48,15 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
     await pool.end();
   });
 
-  const inserir = (linha: NovaLinha) => db.insert(schema.cortesCompetencia).values(linha);
+  /** Sem "usa o padrão" e sem o período do exame, grava o do exame no mês cheio. */
+  const inserir = (linha: NovaLinha) =>
+    db
+      .insert(schema.cortesCompetencia)
+      .values(
+        linha.usaPadrao || linha.exameMes !== undefined
+          ? linha
+          : { exameUltimoDia: true, exameMes: 'proprio', ...linha },
+      );
 
   /** Usuária Ana; devolve o id. */
   const ana = async () => {
@@ -82,11 +90,35 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
       const tabela = await repo.carregar();
 
       expect(tabela.padrao).toEqual([
-        { desde: '2000-01', corte: { dia: 7, mes: 'seguinte', consideraExame: true } },
-        { desde: '2027-01', corte: { dia: 'ultimo', mes: 'proprio', consideraExame: false } },
+        {
+          desde: '2000-01',
+          corte: {
+            dia: 7,
+            mes: 'seguinte',
+            consideraExame: true,
+            exame: { dia: 'ultimo', mes: 'proprio' },
+          },
+        },
+        {
+          desde: '2027-01',
+          corte: {
+            dia: 'ultimo',
+            mes: 'proprio',
+            consideraExame: false,
+            exame: { dia: 'ultimo', mes: 'proprio' },
+          },
+        },
       ]);
       expect(tabela.porCliente.get(clienteId)).toEqual([
-        { desde: '2026-12', corte: { dia: 25, mes: 'proprio', consideraExame: false } },
+        {
+          desde: '2026-12',
+          corte: {
+            dia: 25,
+            mes: 'proprio',
+            consideraExame: false,
+            exame: { dia: 'ultimo', mes: 'proprio' },
+          },
+        },
         { desde: '2027-03', corte: null },
       ]);
     });
@@ -116,6 +148,9 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
         ultimoDia: false,
         mes: 'seguinte',
         consideraExame: true,
+        exameDia: null,
+        exameUltimoDia: true,
+        exameMes: 'proprio',
       });
     });
 
@@ -183,6 +218,47 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
       ['corte sem considera exame', () => ({ desde: '2026-12', dia: 7, mes: 'seguinte' })],
       ['dia 0', () => ({ desde: '2026-12', dia: 0, mes: 'seguinte', consideraExame: true })],
       ['dia 32', () => ({ desde: '2026-12', dia: 32, mes: 'seguinte', consideraExame: true })],
+      [
+        'corte sem o período do exame',
+        () => ({ desde: '2026-12', dia: 7, mes: 'seguinte', consideraExame: true, exameMes: null }),
+      ],
+      [
+        'exame com dia e último dia juntos',
+        () => ({
+          desde: '2026-12',
+          dia: 7,
+          mes: 'seguinte',
+          consideraExame: true,
+          exameDia: 5,
+          exameUltimoDia: true,
+          exameMes: 'proprio',
+        }),
+      ],
+      [
+        'exame sem dia nem último dia',
+        () => ({
+          desde: '2026-12',
+          dia: 7,
+          mes: 'seguinte',
+          consideraExame: true,
+          exameMes: 'proprio',
+        }),
+      ],
+      [
+        'exame no dia 32',
+        () => ({
+          desde: '2026-12',
+          dia: 7,
+          mes: 'seguinte',
+          consideraExame: true,
+          exameDia: 32,
+          exameMes: 'proprio',
+        }),
+      ],
+      [
+        '"usa o padrão" com período do exame',
+        () => ({ clienteId, desde: '2026-12', usaPadrao: true, exameUltimoDia: true }),
+      ],
     ])('recusa %s', async (_caso, linha) => {
       await inserir({ desde: '2000-01', dia: 7, mes: 'seguinte', consideraExame: true });
 
@@ -225,9 +301,32 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
         await tx.execute(
           sql`alter table cortes_competencia drop constraint cortes_competencia_corte_check`,
         );
+        await tx.insert(schema.cortesCompetencia).values({
+          desde: '2026-12',
+          mes: 'proprio',
+          consideraExame: true,
+          exameUltimoDia: true,
+          exameMes: 'proprio',
+        });
+        await expect(
+          new DrizzleCortesRepository(tx as unknown as Database).carregar(),
+        ).rejects.toThrow(/corte_competencia inválida/);
+        tx.rollback();
+      })
+      .catch((e) => {
+        if (!String(e).includes('Rollback')) throw e;
+      });
+  });
+
+  it('carregar recusa linha com o período do exame incompleto', async () => {
+    await db
+      .transaction(async (tx) => {
+        await tx.execute(
+          sql`alter table cortes_competencia drop constraint cortes_competencia_exame_check`,
+        );
         await tx
           .insert(schema.cortesCompetencia)
-          .values({ desde: '2026-12', mes: 'proprio', consideraExame: true });
+          .values({ desde: '2026-12', dia: 7, mes: 'seguinte', consideraExame: true });
         await expect(
           new DrizzleCortesRepository(tx as unknown as Database).carregar(),
         ).rejects.toThrow(/corte_competencia inválida/);
@@ -253,8 +352,28 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
 
       const padrao = await repo.listarVigencias(null);
       expect(padrao.map((v) => [v.desde, v.corte, v.criadoPor, v.clienteId])).toEqual([
-        ['2027-01', { dia: 'ultimo', mes: 'proprio', consideraExame: false }, 'Ana', null],
-        ['2000-01', { dia: 7, mes: 'seguinte', consideraExame: true }, null, null],
+        [
+          '2027-01',
+          {
+            dia: 'ultimo',
+            mes: 'proprio',
+            consideraExame: false,
+            exame: { dia: 'ultimo', mes: 'proprio' },
+          },
+          'Ana',
+          null,
+        ],
+        [
+          '2000-01',
+          {
+            dia: 7,
+            mes: 'seguinte',
+            consideraExame: true,
+            exame: { dia: 'ultimo', mes: 'proprio' },
+          },
+          null,
+          null,
+        ],
       ]);
       expect(padrao[0]?.id).toEqual(expect.any(String));
       expect(padrao[0]?.criadoEm).toBeInstanceOf(Date);
@@ -300,7 +419,16 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
     it('grava a vigência do cliente e o recálculo dele', async () => {
       const em = new Date('2026-11-24T15:00:00Z');
       const id = await repo.criar(
-        { clienteId, desde: '2026-12', corte: { dia: 25, mes: 'proprio', consideraExame: false } },
+        {
+          clienteId,
+          desde: '2026-12',
+          corte: {
+            dia: 25,
+            mes: 'proprio',
+            consideraExame: false,
+            exame: { dia: 20, mes: 'seguinte' },
+          },
+        },
         {
           usuarioId: await ana(),
           em,
@@ -319,6 +447,9 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
         ultimoDia: false,
         mes: 'proprio',
         consideraExame: false,
+        exameDia: 20,
+        exameUltimoDia: false,
+        exameMes: 'seguinte',
         criadoEm: em,
       });
       expect(await jobs()).toEqual([
@@ -336,7 +467,12 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
         {
           clienteId: null,
           desde: '2027-01',
-          corte: { dia: 'ultimo', mes: 'proprio', consideraExame: true },
+          corte: {
+            dia: 'ultimo',
+            mes: 'proprio',
+            consideraExame: true,
+            exame: { dia: 3, mes: 'proprio' },
+          },
         },
         autor,
       );
@@ -345,7 +481,12 @@ describe.skipIf(!url)('DrizzleCortesRepository', () => {
       expect(tabela.porCliente.get(clienteId)).toEqual([{ desde: '2026-12', corte: null }]);
       expect(tabela.padrao.at(-1)).toEqual({
         desde: '2027-01',
-        corte: { dia: 'ultimo', mes: 'proprio', consideraExame: true },
+        corte: {
+          dia: 'ultimo',
+          mes: 'proprio',
+          consideraExame: true,
+          exame: { dia: 3, mes: 'proprio' },
+        },
       });
       expect((await jobs()).map((j) => j.payload)).toEqual([
         { clienteIds: [clienteId] },

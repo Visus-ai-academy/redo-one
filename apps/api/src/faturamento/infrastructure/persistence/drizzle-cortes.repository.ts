@@ -24,7 +24,15 @@ const principal = alias(clientes, 'principal');
 
 type Linha = Pick<
   typeof cortesCompetencia.$inferSelect,
-  'id' | 'usaPadrao' | 'dia' | 'ultimoDia' | 'mes' | 'consideraExame'
+  | 'id'
+  | 'usaPadrao'
+  | 'dia'
+  | 'ultimoDia'
+  | 'mes'
+  | 'consideraExame'
+  | 'exameDia'
+  | 'exameUltimoDia'
+  | 'exameMes'
 >;
 
 /**
@@ -34,10 +42,22 @@ type Linha = Pick<
 const corteDa = (l: Linha): Corte | null => {
   if (l.usaPadrao) return null;
   const dia = l.ultimoDia ? 'ultimo' : l.dia;
-  if (dia === null || l.mes === null || l.consideraExame === null) {
+  const exameDia = l.exameUltimoDia ? 'ultimo' : l.exameDia;
+  if (
+    dia === null ||
+    l.mes === null ||
+    l.consideraExame === null ||
+    exameDia === null ||
+    l.exameMes === null
+  ) {
     throw new Error(`Vigência ${l.id} de corte_competencia inválida: corte incompleto.`);
   }
-  return { dia, mes: l.mes, consideraExame: l.consideraExame };
+  return {
+    dia,
+    mes: l.mes,
+    consideraExame: l.consideraExame,
+    exame: { dia: exameDia, mes: l.exameMes },
+  };
 };
 
 /** Também é a porta `LeitorCortesCompetencia` da `ingestao`. */
@@ -67,11 +87,13 @@ export class DrizzleCortesRepository implements CortesRepository {
 
   async garantirPadraoInicial(): Promise<void> {
     const { desde, corte } = CORTE_PADRAO_INICIAL;
-    const dia = corte.dia === 'ultimo' ? null : corte.dia;
+    const c = camposDoCorte(corte);
     // Num comando só: duas subidas ao mesmo tempo não gravam duas linhas.
     await this.db.execute(sql`
-      insert into ${cortesCompetencia} (desde, dia, ultimo_dia, mes, considera_exame)
-      select ${desde}, ${dia}, ${corte.dia === 'ultimo'}, ${corte.mes}, ${corte.consideraExame}
+      insert into ${cortesCompetencia}
+        (desde, dia, ultimo_dia, mes, considera_exame, exame_dia, exame_ultimo_dia, exame_mes)
+      select ${desde}, ${c.dia}, ${c.ultimoDia}, ${c.mes}, ${c.consideraExame},
+        ${c.exameDia}, ${c.exameUltimoDia}, ${c.exameMes}
       where not exists (select 1 from ${cortesCompetencia} where cliente_id is null)
       on conflict do nothing
     `);
@@ -88,6 +110,9 @@ export class DrizzleCortesRepository implements CortesRepository {
         ultimoDia: cortesCompetencia.ultimoDia,
         mes: cortesCompetencia.mes,
         consideraExame: cortesCompetencia.consideraExame,
+        exameDia: cortesCompetencia.exameDia,
+        exameUltimoDia: cortesCompetencia.exameUltimoDia,
+        exameMes: cortesCompetencia.exameMes,
         criadoEm: cortesCompetencia.criadoEm,
         criadoPor: usuarios.nome,
       })

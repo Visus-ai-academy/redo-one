@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CompetenciaInvalidaError,
+  camposDoCorte,
   corteDaEntrada,
   exigirCompetencia,
   mesAcabou,
@@ -17,7 +18,12 @@ const entrada = {
   ultimoDia: false,
   mes: 'seguinte' as const,
   consideraExame: true,
+  exameDia: null,
+  exameUltimoDia: true,
+  exameMes: 'proprio' as const,
 };
+
+const exameMesCheio = { dia: 'ultimo', mes: 'proprio' };
 
 describe('competência "YYYY-MM"', () => {
   it.each(['2026-01', '2026-12', '1999-07'])('aceita %s', (c) => {
@@ -46,7 +52,12 @@ describe('competência "YYYY-MM"', () => {
 
 describe('corte da nova vigência', () => {
   it('corte com dia', () => {
-    expect(corteDaEntrada(entrada)).toEqual({ dia: 7, mes: 'seguinte', consideraExame: true });
+    expect(corteDaEntrada(entrada)).toEqual({
+      dia: 7,
+      mes: 'seguinte',
+      consideraExame: true,
+      exame: exameMesCheio,
+    });
   });
 
   it('corte no último dia', () => {
@@ -58,7 +69,18 @@ describe('corte da nova vigência', () => {
         mes: 'proprio',
         consideraExame: false,
       }),
-    ).toEqual({ dia: 'ultimo', mes: 'proprio', consideraExame: false });
+    ).toEqual({ dia: 'ultimo', mes: 'proprio', consideraExame: false, exame: exameMesCheio });
+  });
+
+  it('corte do exame com dia', () => {
+    expect(
+      corteDaEntrada({ ...entrada, exameDia: 25, exameUltimoDia: false, exameMes: 'seguinte' }),
+    ).toEqual({
+      dia: 7,
+      mes: 'seguinte',
+      consideraExame: true,
+      exame: { dia: 25, mes: 'seguinte' },
+    });
   });
 
   it('"usa o padrão" do cliente não tem corte', () => {
@@ -70,6 +92,8 @@ describe('corte da nova vigência', () => {
         dia: null,
         mes: null,
         consideraExame: null,
+        exameUltimoDia: false,
+        exameMes: null,
       }),
     ).toBeNull();
   });
@@ -94,6 +118,47 @@ describe('corte da nova vigência', () => {
     expect(() => corteDaEntrada({ ...entrada, consideraExame: null })).toThrow(
       VigenciaInvalidaError,
     );
+  });
+});
+
+describe('corte do exame da nova vigência', () => {
+  it.each([0, 32, 7.5])('recusa o dia %d', (exameDia) => {
+    expect(() => corteDaEntrada({ ...entrada, exameDia, exameUltimoDia: false })).toThrow(
+      'O dia do corte do exame tem de ser de 1 a 31.',
+    );
+  });
+
+  it('pede o dia do exame ou o último dia, não os dois nem nenhum', () => {
+    const mensagem = 'Informe o dia do corte do exame ou o último dia do mês.';
+    expect(() => corteDaEntrada({ ...entrada, exameDia: 5 })).toThrow(mensagem);
+    expect(() => corteDaEntrada({ ...entrada, exameUltimoDia: false })).toThrow(mensagem);
+  });
+
+  it('pede o mês do corte do exame', () => {
+    expect(() => corteDaEntrada({ ...entrada, exameMes: null })).toThrow(
+      'Informe o mês do corte do exame.',
+    );
+  });
+
+  it('em campos, o corte traz o do exame; sem corte, tudo vazio', () => {
+    expect(
+      camposDoCorte({
+        dia: 7,
+        mes: 'seguinte',
+        consideraExame: true,
+        exame: { dia: 20, mes: 'proprio' },
+      }),
+    ).toMatchObject({ exameDia: 20, exameUltimoDia: false, exameMes: 'proprio' });
+    expect(camposDoCorte({ dia: 7, mes: 'seguinte', consideraExame: false })).toMatchObject({
+      exameDia: null,
+      exameUltimoDia: true,
+      exameMes: 'proprio',
+    });
+    expect(camposDoCorte(null)).toMatchObject({
+      exameDia: null,
+      exameUltimoDia: false,
+      exameMes: null,
+    });
   });
 });
 

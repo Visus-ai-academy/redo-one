@@ -138,6 +138,9 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
     ultimoDia: false,
     mes: 'seguinte',
     consideraExame: true,
+    exameDia: null,
+    exameUltimoDia: true,
+    exameMes: 'proprio',
   };
 
   it('só com faturamento.ver: lê, mas toda ação responde 403', async () => {
