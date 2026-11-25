@@ -117,9 +117,15 @@ export const turnosFrentes = pgTable(
 );
 
 /**
- * Alocação: o médico escalado num turno e numa frente, com recorrência. Sem `data_fim` é a
- * escala fixa; com `data_fim` (e sem ser gratificada nem cobertura) é período único, que no
- * mesmo turno e frente substitui a fixa nos dias dele. Com `cobertura_de_id` é a cobertura de
+ * `fixa`: repete nos dias marcados, com fim opcional (encerrada continua fixa). `periodo`: período
+ * único, sempre com fim; sem ser gratificado, no mesmo médico, turno e frente substitui a fixa.
+ */
+export const vigenciaAlocacao = pgEnum('vigencia_alocacao', ['fixa', 'periodo']);
+
+/**
+ * Alocação: o médico escalado num turno e numa frente, com recorrência. `vigencia` diz se é a
+ * escala fixa (fim opcional) ou um período único, que no mesmo turno e frente substitui a fixa
+ * nos dias dele. A gratificada e a cobertura são períodos. Com `cobertura_de_id` é a cobertura de
  * outra alocação (o titular sai nesses dias).
  */
 export const alocacoes = pgTable(
@@ -142,6 +148,7 @@ export const alocacoes = pgTable(
     /** Horário do vínculo, dentro da caixa do turno. */
     horarioInicio: text('horario_inicio').notNull(),
     horarioFim: text('horario_fim').notNull(),
+    vigencia: vigenciaAlocacao('vigencia').notNull(),
     dataInicio: date('data_inicio').notNull(),
     dataFim: date('data_fim'),
     /** Registros por turno; nulo = não informado (≠ 0). No gratificado é a cota do período. */
@@ -163,6 +170,7 @@ export const alocacoes = pgTable(
     index('alocacoes_turno_frente_idx').on(t.turnoId, t.frenteId),
     index('alocacoes_cobertura_de_idx').on(t.coberturaDeId),
     check('alocacoes_periodo_check', sql`${t.dataFim} is null or ${t.dataFim} >= ${t.dataInicio}`),
+    check('alocacoes_vigencia_check', sql`${t.vigencia} = 'fixa' or ${t.dataFim} is not null`),
     check('alocacoes_horario_inicio_check', ehHorario(t.horarioInicio)),
     check('alocacoes_horario_fim_check', ehHorario(t.horarioFim)),
     check(

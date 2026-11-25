@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { VigenciaAlocacaoKey } from './VigenciaAlocacao'
+
 export type AlocacaoDto = {
   /**
    * @description
@@ -23,6 +25,11 @@ export type AlocacaoDto = {
    * @type string
    */
   frenteId: string;
+  /**
+   * @description `fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.
+   * @type string
+   */
+  vigencia: VigenciaAlocacaoKey;
   /**
    * @description 0 = domingo … 6 = sábado. Ao menos um.
    * @type array
@@ -52,7 +59,7 @@ export type AlocacaoDto = {
    */
   dataInicio: string;
   /**
-   * @description Ausente ou nulo = escala fixa, sem fim.
+   * @description Ausente ou nulo = sem fim (só na escala fixa; o período exige fim).
    *
    * Format: `date`
    * @type string | undefined

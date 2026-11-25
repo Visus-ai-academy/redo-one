@@ -375,6 +375,9 @@ describe('mapearEscala: alocações', () => {
     const porId = Object.fromEntries(tabelas.alocacoes.map((a) => [a.id, a]));
     expect(porId[idAlocacao('vigente')]?.dataFim).toBe('2026-11-15');
     expect(porId[idAlocacao('acabou')]?.dataFim).toBe('2026-06-30');
+    // A vigência é a do dashboards-one (sem fim lá = fixa): encerrar aqui não vira período.
+    expect(porId[idAlocacao('vigente')]?.vigencia).toBe('fixa');
+    expect(porId[idAlocacao('acabou')]?.vigencia).toBe('periodo');
     expect(porId[idAlocacao('futura')]).toBeUndefined();
     expect(resumo).toMatchObject({
       alocacoesEncerradasMedicoInativo: 1,

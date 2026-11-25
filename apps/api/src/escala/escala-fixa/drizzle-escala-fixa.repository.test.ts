@@ -205,6 +205,7 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
     const [futura] = await daAna();
     const repoAlocacoes = new DrizzleAlocacoesRepository(db);
     await db.insert(schema.alocacoes).values({
+      vigencia: 'periodo',
       medicoId: id('bruno'),
       turnoId: id('lista'),
       frenteId: id('neuro'),
@@ -244,6 +245,7 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
     const [comRecorte] = await db
       .insert(schema.alocacoes)
       .values({
+        vigencia: 'fixa',
         medicoId: id('ana'),
         turnoId: id('manha'),
         frenteId: id('neuro'),
@@ -257,6 +259,7 @@ describe.skipIf(!url)('repositório da escala fixa (banco)', () => {
       .insert(schema.alocacoesPrioridades)
       .values({ alocacaoId: comRecorte?.id ?? '', prioridadeId: id('urgente') });
     await db.insert(schema.alocacoes).values({
+      vigencia: 'fixa',
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),

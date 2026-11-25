@@ -41,6 +41,7 @@ export function alocacaoEscala(campos: Partial<AlocacaoEscala> & { id: string })
     subespecialidadeIds: [],
     coberturaDeId: null,
     ...campos,
+    vigencia: campos.vigencia ?? (campos.dataFim ? 'periodo' : 'fixa'),
   };
 }
 

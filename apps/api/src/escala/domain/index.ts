@@ -5,6 +5,8 @@ export {
   type DadosAlocacao,
   type TipoTurno,
   type TurnoDaAlocacao,
+  VIGENCIAS,
+  type Vigencia,
   validarAlocacao,
   validarHorarioNoTurno,
   validarPeriodo,

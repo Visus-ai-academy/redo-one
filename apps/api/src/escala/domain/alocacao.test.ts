@@ -17,6 +17,7 @@ const lista = {
 };
 
 const fixa: DadosAlocacao = {
+  vigencia: 'fixa',
   diasSemana: [3, 1],
   dataInicio: '2026-11-02',
 };
@@ -29,9 +30,37 @@ describe('validarAlocacao', () => {
       horarioInicio: '07:00',
       horarioFim: '13:00',
       dataInicio: '2026-11-02',
+      vigencia: 'fixa',
       dataFim: null,
       produtividade: null,
       gratificado: false,
+    });
+  });
+
+  describe('vigência', () => {
+    it('escala fixa aceita fim opcional e continua fixa', () => {
+      expect(validarAlocacao({ ...fixa, dataFim: '2026-12-31' }, manha)).toMatchObject({
+        vigencia: 'fixa',
+        dataFim: '2026-12-31',
+      });
+    });
+
+    it('período único precisa de data de fim', () => {
+      expect(() => validarAlocacao({ ...fixa, vigencia: 'periodo' }, manha)).toThrow(
+        'Período único precisa de data de fim.',
+      );
+    });
+
+    it('período único com fim fica período', () => {
+      expect(
+        validarAlocacao({ ...fixa, vigencia: 'periodo', dataFim: '2026-11-30' }, manha).vigencia,
+      ).toBe('periodo');
+    });
+
+    it('recusa vigência desconhecida', () => {
+      expect(() =>
+        validarAlocacao({ ...fixa, vigencia: 'outra' as never, dataFim: '2026-11-30' }, manha),
+      ).toThrow(EscalaInvalidaError);
     });
   });
 
@@ -88,6 +117,7 @@ describe('validarAlocacao', () => {
 
   describe('gratificado', () => {
     const gratificada: DadosAlocacao = {
+      vigencia: 'periodo',
       diasSemana: [0, 6],
       semanasDoMes: [3],
       dataInicio: '2026-11-01',
@@ -114,6 +144,12 @@ describe('validarAlocacao', () => {
       );
     });
 
+    it('é sempre período único', () => {
+      expect(() => validarAlocacao({ ...gratificada, vigencia: 'fixa' }, lista)).toThrow(
+        'Escala gratificada é período único.',
+      );
+    });
+
     it.each([null, 0, undefined])('exige cota maior que zero (%s)', (produtividade) => {
       expect(() => validarAlocacao({ ...gratificada, produtividade }, lista)).toThrow(
         'Escala gratificada precisa da cota de registros.',
@@ -131,24 +167,28 @@ describe('validarProdutividade', () => {
 });
 
 describe('classificarAlocacao', () => {
-  const base = { dataFim: null, gratificado: false, coberturaDeId: null };
+  const base = { vigencia: 'fixa' as const, gratificado: false, coberturaDeId: null };
 
-  it('sem fim é fixa', () => {
+  it('escala fixa é fixa', () => {
     expect(classificarAlocacao(base)).toBe('fixa');
   });
 
-  it('com fim é período único', () => {
-    expect(classificarAlocacao({ ...base, dataFim: '2026-11-30' })).toBe('periodo_unico');
+  it('escala fixa com fim (encerrada ou com fim marcado) continua fixa', () => {
+    expect(classificarAlocacao({ ...base, dataFim: '2026-11-30' } as never)).toBe('fixa');
+  });
+
+  it('período é período único', () => {
+    expect(classificarAlocacao({ ...base, vigencia: 'periodo' })).toBe('periodo_unico');
   });
 
   it('gratificada vence período único', () => {
-    expect(classificarAlocacao({ ...base, dataFim: '2026-11-30', gratificado: true })).toBe(
+    expect(classificarAlocacao({ ...base, vigencia: 'periodo', gratificado: true })).toBe(
       'gratificada',
     );
   });
 
   it('cobertura vence tudo', () => {
-    expect(classificarAlocacao({ ...base, dataFim: '2026-11-30', coberturaDeId: 'titular' })).toBe(
+    expect(classificarAlocacao({ ...base, vigencia: 'periodo', coberturaDeId: 'titular' })).toBe(
       'cobertura',
     );
   });

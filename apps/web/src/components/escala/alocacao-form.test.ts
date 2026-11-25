@@ -8,6 +8,7 @@ const alocacao: AlocacaoItemDto = {
   medicoId: 'm1',
   turnoId: 't1',
   frenteId: 'f1',
+  vigencia: 'fixa',
   diasSemana: [1, 3],
   semanasDoMes: [-1],
   horarioInicio: '07:00',
@@ -70,6 +71,22 @@ describe('valoresIniciais', () => {
       subespecialidadeIds: ['s1', GERAL],
     });
   });
+
+  it('edição de fixa com fim: continua fixa, com o "Até" preenchido', () => {
+    const v = valoresIniciais({
+      hoje: '2026-11-16',
+      alocacao: { ...alocacao, dataFim: '2026-12-31' },
+    });
+    expect(v).toMatchObject({ vigencia: 'fixa', dataFim: '2026-12-31' });
+  });
+
+  it('edição de período único', () => {
+    const v = valoresIniciais({
+      hoje: '2026-11-16',
+      alocacao: { ...alocacao, vigencia: 'periodo', dataFim: '2026-11-30' },
+    });
+    expect(v).toMatchObject({ vigencia: 'periodo', dataFim: '2026-11-30' });
+  });
 });
 
 const validos = {
@@ -108,6 +125,13 @@ describe('esquemaAlocacao', () => {
     ]);
   });
 
+  it('escala fixa: "Até" é opcional, mas não antes do início', () => {
+    expect(erros({ ...validos, dataFim: '' })).toEqual([]);
+    expect(erros({ ...validos, dataFim: '2026-11-01' })).toEqual([
+      'O fim não pode ser antes do início.',
+    ]);
+  });
+
   it('gratificado exige fim e cota', () => {
     expect(erros({ ...validos, gratificado: true, dataFim: '', produtividade: '' })).toEqual([
       'Informe o fim do período.',
@@ -124,19 +148,20 @@ describe('esquemaAlocacao', () => {
 });
 
 describe('paraApi', () => {
-  it('escala fixa: sem fim; vazios viram nulo; o geral vira a marcação própria', () => {
+  it('escala fixa sem "Até": sem fim; vazios viram nulo; o geral vira a marcação própria', () => {
     expect(
       paraApi({
         ...validos,
         semanasDoMes: ['2', '-1'],
         subespecialidadeIds: ['s1', GERAL],
         observacoes: '  ',
-        dataFim: '2026-12-01',
+        dataFim: '',
       }),
     ).toEqual({
       medicoId: 'm1',
       frenteId: 'f1',
       turnoId: 't1',
+      vigencia: 'fixa',
       diasSemana: [1],
       semanasDoMes: [2, -1],
       horarioInicio: '07:00',
@@ -152,6 +177,13 @@ describe('paraApi', () => {
     });
   });
 
+  it('escala fixa com "Até": manda o fim e continua fixa', () => {
+    expect(paraApi({ ...validos, dataFim: '2026-12-31' })).toMatchObject({
+      vigencia: 'fixa',
+      dataFim: '2026-12-31',
+    });
+  });
+
   it('gratificado: com fim e cota, sem semanas do mês', () => {
     const corpo = paraApi({
       ...validos,
@@ -161,6 +193,7 @@ describe('paraApi', () => {
       semanasDoMes: ['1'],
     });
     expect(corpo).toMatchObject({
+      vigencia: 'periodo',
       gratificado: true,
       dataFim: '2026-11-30',
       produtividade: 80,

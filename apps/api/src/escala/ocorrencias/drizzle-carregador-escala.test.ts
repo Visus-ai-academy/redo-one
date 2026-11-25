@@ -85,7 +85,13 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
   it('carrega titular, cobertura, ausência aprovada e ajuste; a expansão monta a semana', async () => {
     const [titular] = await db
       .insert(schema.alocacoes)
-      .values({ ...base(), medicoId: ids.ana ?? '', dataInicio: '2026-01-01', produtividade: 20 })
+      .values({
+        vigencia: 'fixa',
+        ...base(),
+        medicoId: ids.ana ?? '',
+        dataInicio: '2026-01-01',
+        produtividade: 20,
+      })
       .returning();
     const titularId = titular?.id ?? '';
     await db
@@ -98,6 +104,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     const [cobertura] = await db
       .insert(schema.alocacoes)
       .values({
+        vigencia: 'periodo',
         ...base(),
         diasSemana: [2],
         medicoId: ids.bruno ?? '',
@@ -135,8 +142,8 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     ]);
     // Fora da janela e de médico inativo.
     await db.insert(schema.alocacoes).values([
-      { ...base(), medicoId: ids.bruno ?? '', dataInicio: '2026-12-01' },
-      { ...base(), medicoId: ids.inativo ?? '', dataInicio: '2026-01-01' },
+      { vigencia: 'fixa', ...base(), medicoId: ids.bruno ?? '', dataInicio: '2026-12-01' },
+      { vigencia: 'fixa', ...base(), medicoId: ids.inativo ?? '', dataInicio: '2026-01-01' },
     ]);
 
     const carregador = new DrizzleCarregadorEscala(db);
@@ -198,6 +205,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     const [titular] = await db
       .insert(schema.alocacoes)
       .values({
+        vigencia: 'periodo',
         ...base(),
         medicoId: ids.ana ?? '',
         dataInicio: '2026-01-01',
@@ -205,6 +213,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
       })
       .returning();
     await db.insert(schema.alocacoes).values({
+      vigencia: 'fixa',
       ...base(),
       medicoId: ids.bruno ?? '',
       dataInicio: '2026-11-16',
@@ -248,6 +257,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     const [titular] = await db
       .insert(schema.alocacoes)
       .values({
+        vigencia: 'periodo',
         ...base(),
         medicoId: ids.ana ?? '',
         dataInicio: '2026-01-01',
@@ -255,6 +265,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
       })
       .returning();
     await db.insert(schema.alocacoes).values({
+      vigencia: 'periodo',
       ...base(),
       medicoId: ids.bruno ?? '',
       dataInicio: '2026-11-16',

@@ -72,6 +72,7 @@ const alocacao = (campos: Partial<AlocacaoGravada> & { id: string }): AlocacaoGr
   coberturaDeId: null,
   observacoes: null,
   ...campos,
+  vigencia: campos.vigencia ?? (campos.dataFim ? 'periodo' : 'fixa'),
 });
 
 const celula = (turnoId: string, diaSemana: number, produtividade: number | null) => ({

@@ -4,6 +4,7 @@
 */
 
 import type { TipoTurnoKey } from './TipoTurno'
+import type { VigenciaAlocacaoKey } from './VigenciaAlocacao'
 import type { VinculoDaCoberturaDto } from './VinculoDaCoberturaDto'
 
 export type OcorrenciaDto = {
@@ -82,6 +83,21 @@ export type OcorrenciaDto = {
   produtividadeEscala: number | null;
   ajustada: boolean;
   gratificado: boolean;
+  /**
+   * @description Da alocação: escala fixa (fim opcional) ou período único.
+   * @type string
+   */
+  vigencia: VigenciaAlocacaoKey;
+  /**
+   * @description Da alocação: 0 = domingo … 6 = sábado.
+   * @type array
+   */
+  diasSemana: number[];
+  /**
+   * @description Da alocação: 1–5 e -1 (última); vazio = toda semana.
+   * @type array
+   */
+  semanasDoMes: number[];
   /**
    * @description
    * Format: `date`

@@ -5,6 +5,7 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -21,6 +22,10 @@ import { aparar } from '../../../catalogo/comum/dto';
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
 const HORARIO = /^\d{1,2}:\d{2}$/;
 const CLASSIFICACOES = ['fixa', 'periodo_unico', 'gratificada', 'cobertura'] as const;
+const VIGENCIAS = ['fixa', 'periodo'] as const;
+const DESCRICAO_VIGENCIA =
+  '`fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no ' +
+  'mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.';
 
 /** Corpo de criar e editar uma alocação (a cobertura tem corpo próprio). */
 export class AlocacaoDto {
@@ -35,6 +40,10 @@ export class AlocacaoDto {
   @ApiProperty({ format: 'uuid', description: 'Precisa estar cadastrada no turno.' })
   @IsUUID()
   frenteId!: string;
+
+  @ApiProperty({ enum: VIGENCIAS, enumName: 'VigenciaAlocacao', description: DESCRICAO_VIGENCIA })
+  @IsIn(VIGENCIAS)
+  vigencia!: (typeof VIGENCIAS)[number];
 
   @ApiProperty({ type: [Number], description: '0 = domingo … 6 = sábado. Ao menos um.' })
   @IsArray()
@@ -82,7 +91,7 @@ export class AlocacaoDto {
     type: String,
     format: 'date',
     nullable: true,
-    description: 'Ausente ou nulo = escala fixa, sem fim.',
+    description: 'Ausente ou nulo = sem fim (só na escala fixa; o período exige fim).',
   })
   @IsOptional()
   @Matches(DIA, { message: 'Data no formato AAAA-MM-DD.' })
@@ -219,6 +228,8 @@ export class AlocacaoItemDto {
   @ApiProperty({ format: 'uuid' }) medicoId!: string;
   @ApiProperty({ format: 'uuid' }) turnoId!: string;
   @ApiProperty({ format: 'uuid' }) frenteId!: string;
+  @ApiProperty({ enum: VIGENCIAS, enumName: 'VigenciaAlocacao', description: DESCRICAO_VIGENCIA })
+  vigencia!: (typeof VIGENCIAS)[number];
   @ApiProperty({ type: [Number] }) diasSemana!: number[];
   @ApiProperty({ type: [Number] }) semanasDoMes!: number[];
   @ApiProperty({ example: '07:00' }) horarioInicio!: string;

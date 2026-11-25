@@ -12,6 +12,7 @@ import {
   classificarAlocacao,
   type DadosCobertura,
   EscalaInvalidaError,
+  type Vigencia,
   validarAlocacao,
   validarCobertura,
 } from '../domain';
@@ -42,6 +43,8 @@ export interface EntradaAlocacao {
   medicoId: string;
   turnoId: string;
   frenteId: string;
+  /** Escala fixa (fim opcional) ou período único (fim obrigatório). */
+  vigencia: Vigencia;
   diasSemana: number[];
   /** Vazio ou ausente = toda semana. */
   semanasDoMes?: number[];
@@ -257,6 +260,8 @@ export class AlocacoesService {
       id,
       turnoId: titular.turnoId,
       frenteId: titular.frenteId,
+      // A cobertura é sempre um período (tem fim) e não substitui a fixa de quem cobre.
+      vigencia: 'periodo',
       ...validada,
       subespecialidadeGeral: false,
       prioridadeIds: [],

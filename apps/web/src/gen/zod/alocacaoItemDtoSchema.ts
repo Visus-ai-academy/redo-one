@@ -5,12 +5,14 @@
 
 import * as z from 'zod'
 import { classificacaoAlocacaoSchema } from './classificacaoAlocacaoSchema'
+import { vigenciaAlocacaoSchema } from './vigenciaAlocacaoSchema'
 
 export const alocacaoItemDtoSchema = z.object({
   id: z.uuid(),
   medicoId: z.uuid(),
   turnoId: z.uuid(),
   frenteId: z.uuid(),
+  vigencia: vigenciaAlocacaoSchema.describe('`fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.'),
   diasSemana: z.array(z.number()),
   semanasDoMes: z.array(z.number()),
   horarioInicio: z.string().meta({ examples: ['07:00'] }),

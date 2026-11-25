@@ -17,6 +17,7 @@ describe('domínio da escala', () => {
       prioridadeIds: [],
       subespecialidadeIds: [],
       coberturaDeId: null,
+      vigencia: 'fixa' as const,
     };
     const ocorrencias = expandirOcorrencias({
       de: '2026-11-02',

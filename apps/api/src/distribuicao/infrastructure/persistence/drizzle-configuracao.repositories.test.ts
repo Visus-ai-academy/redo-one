@@ -297,6 +297,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       db
         .insert(schema.alocacoes)
         .values({
+          vigencia: 'fixa',
           medicoId: medico,
           turnoId: id('tarde'),
           frenteId: frente,

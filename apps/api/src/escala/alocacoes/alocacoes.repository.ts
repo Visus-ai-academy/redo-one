@@ -1,6 +1,6 @@
 import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { Segmento } from '../../comum/segmentos';
-import type { Data, TurnoDaAlocacao } from '../domain';
+import type { Data, TurnoDaAlocacao, Vigencia } from '../domain';
 
 export const ALOCACOES_REPOSITORY = Symbol('ALOCACOES_REPOSITORY');
 
@@ -10,6 +10,8 @@ export interface AlocacaoGravada {
   medicoId: string;
   turnoId: string;
   frenteId: string;
+  /** Escala fixa (fim opcional) ou período único; a cobertura e a gratificada são períodos. */
+  vigencia: Vigencia;
   diasSemana: number[];
   semanasDoMes: number[];
   horarioInicio: string;

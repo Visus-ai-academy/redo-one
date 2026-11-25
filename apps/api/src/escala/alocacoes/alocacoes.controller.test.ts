@@ -87,6 +87,7 @@ describe('AlocacoesController', () => {
           medicoId: UUID,
           turnoId: UUID,
           frenteId: UUID,
+          vigencia: 'fixa',
           diasSemana: [1],
           dataInicio: '2026-11-01',
         }),
@@ -96,12 +97,20 @@ describe('AlocacoesController', () => {
           medicoId: 'x',
           turnoId: UUID,
           frenteId: UUID,
+          vigencia: 'aberta',
           diasSemana: [],
           dataInicio: '2026-02-30',
           horarioInicio: '7h',
           produtividade: -1,
         }),
-      ).toEqual(['dataInicio', 'diasSemana', 'horarioInicio', 'medicoId', 'produtividade']);
+      ).toEqual([
+        'dataInicio',
+        'diasSemana',
+        'horarioInicio',
+        'medicoId',
+        'produtividade',
+        'vigencia',
+      ]);
     });
 
     it('cobertura exige data de fim', async () => {

@@ -95,6 +95,19 @@ export class OcorrenciaDto {
   produtividadeEscala!: number | null;
   @ApiProperty() ajustada!: boolean;
   @ApiProperty() gratificado!: boolean;
+  @ApiProperty({
+    enum: ['fixa', 'periodo'],
+    enumName: 'VigenciaAlocacao',
+    description: 'Da alocação: escala fixa (fim opcional) ou período único.',
+  })
+  vigencia!: 'fixa' | 'periodo';
+  @ApiProperty({ type: [Number], description: 'Da alocação: 0 = domingo … 6 = sábado.' })
+  diasSemana!: number[];
+  @ApiProperty({
+    type: [Number],
+    description: 'Da alocação: 1–5 e -1 (última); vazio = toda semana.',
+  })
+  semanasDoMes!: number[];
   @ApiProperty({ format: 'date' }) dataInicio!: string;
   @ApiProperty({ type: String, format: 'date', nullable: true }) dataFim!: string | null;
   @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })

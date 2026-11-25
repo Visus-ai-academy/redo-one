@@ -14088,6 +14088,14 @@
           "medicoIds"
         ]
       },
+      "VigenciaAlocacao": {
+        "type": "string",
+        "enum": [
+          "fixa",
+          "periodo"
+        ],
+        "description": "`fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período."
+      },
       "ClassificacaoAlocacao": {
         "type": "string",
         "enum": [
@@ -14115,6 +14123,14 @@
           "frenteId": {
             "type": "string",
             "format": "uuid"
+          },
+          "vigencia": {
+            "description": "`fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VigenciaAlocacao"
+              }
+            ]
           },
           "diasSemana": {
             "type": "array",
@@ -14192,6 +14208,7 @@
           "medicoId",
           "turnoId",
           "frenteId",
+          "vigencia",
           "diasSemana",
           "semanasDoMes",
           "horarioInicio",
@@ -14223,6 +14240,14 @@
             "type": "string",
             "format": "uuid",
             "description": "Precisa estar cadastrada no turno."
+          },
+          "vigencia": {
+            "description": "`fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VigenciaAlocacao"
+              }
+            ]
           },
           "diasSemana": {
             "description": "0 = domingo … 6 = sábado. Ao menos um.",
@@ -14258,7 +14283,7 @@
             "type": "string",
             "format": "date",
             "nullable": true,
-            "description": "Ausente ou nulo = escala fixa, sem fim."
+            "description": "Ausente ou nulo = sem fim (só na escala fixa; o período exige fim)."
           },
           "produtividade": {
             "type": "integer",
@@ -14300,6 +14325,7 @@
           "medicoId",
           "turnoId",
           "frenteId",
+          "vigencia",
           "diasSemana",
           "dataInicio"
         ]
@@ -14598,6 +14624,28 @@
           "gratificado": {
             "type": "boolean"
           },
+          "vigencia": {
+            "description": "Da alocação: escala fixa (fim opcional) ou período único.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VigenciaAlocacao"
+              }
+            ]
+          },
+          "diasSemana": {
+            "description": "Da alocação: 0 = domingo … 6 = sábado.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "semanasDoMes": {
+            "description": "Da alocação: 1–5 e -1 (última); vazio = toda semana.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
           "dataInicio": {
             "type": "string",
             "format": "date"
@@ -14699,6 +14747,9 @@
           "produtividadeEscala",
           "ajustada",
           "gratificado",
+          "vigencia",
+          "diasSemana",
+          "semanasDoMes",
           "dataInicio",
           "dataFim",
           "prioridadeIds",

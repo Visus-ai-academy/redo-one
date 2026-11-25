@@ -4,17 +4,19 @@
 */
 
 import * as z from 'zod'
+import { vigenciaAlocacaoSchema } from './vigenciaAlocacaoSchema'
 
 export const alocacaoDtoSchema = z.object({
   medicoId: z.uuid(),
   turnoId: z.uuid(),
   frenteId: z.uuid().describe('Precisa estar cadastrada no turno.'),
+  vigencia: vigenciaAlocacaoSchema.describe('`fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.'),
   diasSemana: z.array(z.number()).describe('0 = domingo … 6 = sábado. Ao menos um.'),
   semanasDoMes: z.array(z.number()).optional().describe('1–5 e -1 (última). Vazio ou ausente = toda semana.'),
   horarioInicio: z.string().nullish().describe('Ausente = o do turno.').meta({ examples: ['07:00'] }),
   horarioFim: z.string().nullish().describe('Ausente = o do turno.').meta({ examples: ['13:00'] }),
   dataInicio: z.iso.date(),
-  dataFim: z.iso.date().nullish().describe('Ausente ou nulo = escala fixa, sem fim.'),
+  dataFim: z.iso.date().nullish().describe('Ausente ou nulo = sem fim (só na escala fixa; o período exige fim).'),
   produtividade: z.int().min(0).nullish().describe('Registros por turno; nulo = não informado. No gratificado, a cota do período.'),
   gratificado: z.boolean().optional().describe('Só em turno lista. Ausente: falso ao criar; na edição, mantém o atual.'),
   prioridadeIds: z.array(z.uuid()).optional().describe('Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.'),

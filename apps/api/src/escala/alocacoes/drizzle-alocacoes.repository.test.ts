@@ -122,6 +122,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
+      vigencia: 'fixa',
       diasSemana: [1, 3, 5],
       dataInicio: '2026-11-01',
       produtividade: 20,
@@ -133,6 +134,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
+      vigencia: 'fixa',
       diasSemana: [1, 3, 5],
       semanasDoMes: [],
       horarioInicio: '07:00',
@@ -152,13 +154,21 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
+      vigencia: 'fixa',
       diasSemana: [1, 3, 5],
       dataInicio: '2026-11-01',
+      dataFim: '2026-12-31',
       produtividade: 22,
       prioridadeIds: [],
       subespecialidadeIds: [id('avc')],
     });
-    expect(await repo.buscar(criada.id)).toMatchObject({ produtividade: 22, prioridadeIds: [] });
+    // A fixa ganha fim e continua fixa.
+    expect(await repo.buscar(criada.id)).toMatchObject({
+      vigencia: 'fixa',
+      dataFim: '2026-12-31',
+      produtividade: 22,
+      prioridadeIds: [],
+    });
 
     const cobertura = await alocacoes.criarCobertura(ator(), criada.id, {
       medicoId: id('bruno'),
@@ -169,6 +179,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       expect.objectContaining({
         id: cobertura.id,
         coberturaDeId: criada.id,
+        vigencia: 'periodo',
         diasSemana: [1, 3, 5],
       }),
     ]);
@@ -221,6 +232,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
+      vigencia: 'fixa',
       diasSemana: [1],
       dataInicio: '2026-11-01',
     });
@@ -243,6 +255,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
         medicoId: id('ana'),
         turnoId: id('manha'),
         frenteId: id('neuro'),
+        vigencia: 'fixa',
         diasSemana: [1, 3, 5],
         dataInicio: '2026-11-01',
       })
@@ -290,6 +303,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     const [cob] = await db
       .insert(schema.alocacoes)
       .values({
+        vigencia: 'periodo',
         medicoId: id('bruno'),
         turnoId: id('manha'),
         frenteId: id('neuro'),

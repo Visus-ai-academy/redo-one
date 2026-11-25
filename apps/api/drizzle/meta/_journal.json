@@ -470,6 +470,27 @@
       "when": 1795613626335,
       "tag": "0066_tipificacao_sem_configuracao_antiga",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1795615373516,
+      "tag": "0067_alocacoes_vigencia",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795615382583,
+      "tag": "0068_alocacoes_vigencia_dados",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1795615389501,
+      "tag": "0069_alocacoes_vigencia_obrigatoria",
+      "breakpoints": true
     }
   ]
 }

@@ -40,6 +40,7 @@ export const selecao = {
   medicoId: alocacoes.medicoId,
   turnoId: alocacoes.turnoId,
   frenteId: alocacoes.frenteId,
+  vigencia: alocacoes.vigencia,
   diasSemana: alocacoes.diasSemana,
   semanasDoMes: alocacoes.semanasDoMes,
   horarioInicio: alocacoes.horarioInicio,

@@ -41,6 +41,8 @@ function alocacao(over: Partial<AlocacaoEscala> & { id: string }): AlocacaoEscal
     subespecialidadeIds: [],
     coberturaDeId: null,
     ...over,
+    // Como os dados antigos: sem fim é fixa, com fim é período (salvo quando o teste diz).
+    vigencia: over.vigencia ?? (over.dataFim ? 'periodo' : 'fixa'),
   };
 }
 
@@ -124,6 +126,9 @@ describe('expandirOcorrencias', () => {
       gratificado: false,
       dataInicio: '2026-10-01',
       dataFim: null,
+      vigencia: 'fixa',
+      diasSemana: [1, 3],
+      semanasDoMes: [],
       prioridadeIds: ['urgente'],
       subespecialidadeIds: ['coluna'],
       subespecialidadeGeral: true,
@@ -338,6 +343,29 @@ describe('expandirOcorrencias', () => {
         ['2026-11-02', 'unico'],
         ['2026-11-04', 'fixa'],
       ]);
+    });
+
+    it('fixa com fim (ex.: encerrada) não substitui outra fixa e é substituída pelo período', () => {
+      const encerrada = alocacao({
+        id: 'encerrada',
+        vigencia: 'fixa',
+        diasSemana: [1],
+        dataFim: '2026-11-30',
+      });
+      const soFixas = expandirOcorrencias(entrada({ alocacoes: [fixa, encerrada] }));
+      expect(
+        soFixas
+          .filter((o) => o.data === '2026-11-02')
+          .map((o) => o.alocacaoId)
+          .sort(),
+      ).toEqual(['encerrada', 'fixa']);
+      const comUnico = expandirOcorrencias(entrada({ alocacoes: [encerrada, unico] }));
+      expect(comUnico.map((o) => [o.data, o.alocacaoId])).toEqual([['2026-11-02', 'unico']]);
+    });
+
+    it('a ocorrência diz a vigência e a repetição da alocação', () => {
+      const [o] = expandirOcorrencias(entrada({ alocacoes: [{ ...fixa, semanasDoMes: [1, 3] }] }));
+      expect(o).toMatchObject({ vigencia: 'fixa', diasSemana: [1, 3], semanasDoMes: [1, 3] });
     });
 
     it('em outro turno é extra', () => {

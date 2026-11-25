@@ -29,6 +29,7 @@ const alocacao = (campos: Partial<AlocacaoGravada> & { id: string }): AlocacaoGr
   coberturaDeId: null,
   observacoes: null,
   ...campos,
+  vigencia: campos.vigencia ?? (campos.dataFim ? 'periodo' : 'fixa'),
 });
 
 function montar() {

@@ -60,6 +60,7 @@ const entrada = (campos: Partial<EntradaAlocacao> = {}): EntradaAlocacao => ({
   diasSemana: [1, 3, 5],
   dataInicio: '2026-11-01',
   ...campos,
+  vigencia: campos.vigencia ?? (campos.dataFim ? 'periodo' : 'fixa'),
 });
 
 function conflito(a: string, b: string): ConflitoEscala {
@@ -99,6 +100,7 @@ describe('AlocacoesService', () => {
         medicoId: 'm-ana',
         turnoId: 't-manha',
         frenteId: 'f-neuro',
+        vigencia: 'fixa',
         diasSemana: [1, 3, 5],
         semanasDoMes: [],
         horarioInicio: '07:00',
@@ -123,6 +125,7 @@ describe('AlocacoesService', () => {
             medicoId: 'm-ana',
             turnoId: 't-manha',
             frenteId: 'f-neuro',
+            vigencia: 'fixa',
             produtividade: 20,
           }),
           em: agora,
@@ -397,6 +400,48 @@ describe('AlocacoesService', () => {
       expect(repo.eventos).toEqual([]);
     });
 
+    it('a fixa ganha fim e nova repetição e continua fixa, com o evento', async () => {
+      const { repo, service } = montar();
+      const { id } = await service.criar(admin, entrada({ dataInicio: '2026-11-02' }));
+      repo.eventos.length = 0;
+
+      await service.atualizar(
+        admin,
+        id,
+        entrada({
+          vigencia: 'fixa',
+          dataInicio: '2026-11-02',
+          dataFim: '2026-12-31',
+          diasSemana: [1, 3],
+          semanasDoMes: [1, 3],
+        }),
+      );
+
+      expect(await service.obter(admin, id)).toMatchObject({
+        vigencia: 'fixa',
+        dataFim: '2026-12-31',
+        classificacao: 'fixa',
+      });
+      expect(repo.eventos).toEqual([
+        expect.objectContaining({
+          acao: 'alterado',
+          antes: { diasSemana: [1, 3, 5], semanasDoMes: [], dataFim: null },
+          depois: expect.objectContaining({
+            diasSemana: [1, 3],
+            semanasDoMes: [1, 3],
+            dataFim: '2026-12-31',
+          }),
+        }),
+      ]);
+    });
+
+    it('período único sem fim é recusado', async () => {
+      const { service } = montar();
+      await expect(service.criar(admin, entrada({ vigencia: 'periodo' }))).rejects.toThrow(
+        'Período único precisa de data de fim.',
+      );
+    });
+
     it('gratificado ausente na edição mantém a situação atual', async () => {
       const { repo, service } = montar();
       const { id } = await service.criar(
@@ -556,6 +601,7 @@ describe('AlocacoesService', () => {
         medicoId: 'm-bruno',
         turnoId: 't-manha',
         frenteId: 'f-neuro',
+        vigencia: 'periodo',
         diasSemana: [1, 3],
         semanasDoMes: [],
         horarioInicio: '07:00',

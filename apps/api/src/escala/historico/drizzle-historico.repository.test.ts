@@ -82,6 +82,7 @@ describe.skipIf(!url)('repositório do histórico da escala', () => {
     const [alocCaio] = await db
       .insert(schema.alocacoes)
       .values({
+        vigencia: 'fixa',
         medicoId: m.caio,
         turnoId: manha,
         frenteId: tc,

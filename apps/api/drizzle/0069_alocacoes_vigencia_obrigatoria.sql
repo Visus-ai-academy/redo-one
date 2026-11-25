@@ -1,0 +1,2 @@
+ALTER TABLE "alocacoes" ALTER COLUMN "vigencia" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "alocacoes" ADD CONSTRAINT "alocacoes_vigencia_check" CHECK ("alocacoes"."vigencia" = 'fixa' or "alocacoes"."data_fim" is not null);

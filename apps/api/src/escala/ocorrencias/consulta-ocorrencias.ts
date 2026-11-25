@@ -36,9 +36,14 @@ export interface VinculoDaCobertura {
 }
 
 export interface OcorrenciaDetalhada
-  extends Omit<Ocorrencia, 'prioridadeIds' | 'subespecialidadeIds'> {
+  extends Omit<
+    Ocorrencia,
+    'prioridadeIds' | 'subespecialidadeIds' | 'diasSemana' | 'semanasDoMes'
+  > {
   prioridadeIds: string[];
   subespecialidadeIds: string[];
+  diasSemana: number[];
+  semanasDoMes: number[];
   medicoNome: string;
   turnoNome: string;
   turnoCor: string | null;
@@ -150,6 +155,8 @@ export class ConsultaOcorrenciasEscala implements ConsultaOcorrencias {
         ...o,
         prioridadeIds: [...o.prioridadeIds],
         subespecialidadeIds: [...o.subespecialidadeIds],
+        diasSemana: [...o.diasSemana],
+        semanasDoMes: [...o.semanasDoMes],
         medicoNome: nomes.get(o.medicoId) ?? '',
         turnoNome: turno?.nome ?? '',
         turnoCor: turno?.cor ?? null,

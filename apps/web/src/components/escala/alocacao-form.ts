@@ -84,7 +84,7 @@ export function valoresIniciais({
       medico: medico ?? null,
       frenteId: alocacao.frenteId,
       turnoId: alocacao.turnoId,
-      vigencia: alocacao.dataFim === null ? 'fixa' : 'periodo',
+      vigencia: alocacao.vigencia,
       dataInicio: alocacao.dataInicio,
       dataFim: alocacao.dataFim ?? '',
       diasSemana: alocacao.diasSemana.map(String),
@@ -151,11 +151,11 @@ export const esquemaAlocacao = z
     if (!v.turnoId) erro('turnoId', 'Escolha o turno.');
     if (!v.dataInicio) erro('dataInicio', 'Informe o início.');
     if (v.diasSemana.length === 0) erro('diasSemana', 'Marque ao menos um dia da semana.');
-    if (v.vigencia === 'periodo' || v.gratificado) {
-      if (!v.dataFim) erro('dataFim', 'Informe o fim do período.');
-      else if (v.dataInicio && v.dataFim < v.dataInicio)
-        erro('dataFim', 'O fim não pode ser antes do início.');
-    }
+    // Período único e gratificado exigem fim; na escala fixa o "Até" é opcional.
+    if ((v.vigencia === 'periodo' || v.gratificado) && !v.dataFim)
+      erro('dataFim', 'Informe o fim do período.');
+    else if (v.dataFim && v.dataInicio && v.dataFim < v.dataInicio)
+      erro('dataFim', 'O fim não pode ser antes do início.');
     for (const campo of ['horarioInicio', 'horarioFim'] as const) {
       if (v[campo].trim() && !horarioValido(v[campo])) erro(campo, 'Use HH:MM, como 07:00.');
     }
@@ -169,18 +169,20 @@ export const esquemaAlocacao = z
 
 /** Do formulário para a API. */
 export function paraApi(v: ValoresAlocacao): AlocacaoDto {
-  const comFim = v.vigencia === 'periodo' || v.gratificado;
+  // Gratificado é sempre período único (o campo Vigência fica escondido nele).
+  const vigencia = v.gratificado ? 'periodo' : v.vigencia;
   const horario = (h: string) => (h.trim() ? normalizarHorario(h) : null);
   return {
     medicoId: v.medico?.valor ?? '',
     frenteId: v.frenteId,
     turnoId: v.turnoId,
+    vigencia,
     diasSemana: v.diasSemana.map(Number).sort((a, b) => a - b),
     semanasDoMes: v.gratificado ? [] : v.semanasDoMes.map(Number),
     horarioInicio: horario(v.horarioInicio),
     horarioFim: horario(v.horarioFim),
     dataInicio: v.dataInicio,
-    dataFim: comFim ? v.dataFim : null,
+    dataFim: v.dataFim || null,
     produtividade: v.produtividade.trim() ? Number(v.produtividade) : null,
     gratificado: v.gratificado,
     prioridadeIds: v.prioridadeIds,

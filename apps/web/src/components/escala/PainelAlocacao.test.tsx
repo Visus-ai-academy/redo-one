@@ -73,6 +73,7 @@ const ALOCACAO: AlocacaoItemDto = {
   medicoId: 'm1',
   turnoId: 't-manha',
   frenteId: 'f-tc',
+  vigencia: 'fixa',
   diasSemana: [1],
   semanasDoMes: [],
   horarioInicio: '07:00',

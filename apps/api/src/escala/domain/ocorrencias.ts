@@ -1,4 +1,4 @@
-import type { TipoTurno } from './alocacao';
+import type { TipoTurno, Vigencia } from './alocacao';
 import { type AusenciaEscala, aplicaNaOcorrencia, type TipoAusencia } from './ausencia';
 import { EscalaInvalidaError } from './errors';
 import { duracaoMinutos, type FaixaHorario, type Horario, minutosDoDia } from './horario';
@@ -29,6 +29,7 @@ export const JANELA_MAXIMA_DIAS = 400;
 /** Alocação como a expansão a lê (com os recortes já carregados). */
 export interface AlocacaoEscala extends FaixaHorario {
   id: string;
+  vigencia: Vigencia;
   medicoId: string;
   turnoId: string;
   frenteId: string;
@@ -106,6 +107,10 @@ export interface Ocorrencia {
   produtividadeEscala: number | null;
   ajustada: boolean;
   gratificado: boolean;
+  /** Vigência e repetição da alocação do plantão (na cobertura, as da cobertura). */
+  vigencia: Vigencia;
+  diasSemana: readonly number[];
+  semanasDoMes: readonly number[];
   dataInicio: Data;
   dataFim: Data | null;
   prioridadeIds: readonly string[];
@@ -264,6 +269,9 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
         gratificado: alocacao.gratificado,
         dataInicio: alocacao.dataInicio,
         dataFim: alocacao.dataFim,
+        vigencia: alocacao.vigencia,
+        diasSemana: alocacao.diasSemana,
+        semanasDoMes: alocacao.semanasDoMes,
         prioridadeIds: vinculo.prioridadeIds,
         subespecialidadeIds: vinculo.subespecialidadeIds,
         subespecialidadeGeral: vinculo.subespecialidadeGeral,
@@ -296,16 +304,17 @@ function datasDaJanela(alocacao: AlocacaoEscala, de: Data, ate: Data): Data[] {
 }
 
 /**
- * Período único (com fim, sem ser gratificado nem cobertura) no mesmo médico, turno e frente da
- * fixa substitui a fixa naquele dia: "hoje à tarde ela lauda só COLUNAS" vale sozinho. Em outro
- * turno ou frente, é extra. Fonte: dashboards-one `src/lib/utils/periodoUnico.ts`.
+ * Período único (vigência `periodo`, sem ser gratificado) no mesmo médico, turno e frente da fixa
+ * substitui a fixa naquele dia: "hoje à tarde ela lauda só COLUNAS" vale sozinho. Em outro turno
+ * ou frente, é extra. A fixa com fim (encerrada ou com fim marcado) continua fixa: não substitui.
+ * Fonte: dashboards-one `src/lib/utils/periodoUnico.ts`, que derivava a fixa de não ter fim.
  */
 function semFixaSubstituida(plantoes: Plantao[]): Plantao[] {
   const chave = (p: Plantao) =>
     `${p.alocacao.medicoId}|${p.alocacao.turnoId}|${p.alocacao.frenteId}|${p.data}`;
-  const ehUnico = (a: AlocacaoEscala) => a.dataFim !== null && !a.gratificado;
+  const ehUnico = (a: AlocacaoEscala) => a.vigencia === 'periodo' && !a.gratificado;
   const comUnico = new Set(plantoes.filter((p) => ehUnico(p.alocacao)).map(chave));
-  return plantoes.filter((p) => p.alocacao.dataFim !== null || !comUnico.has(chave(p)));
+  return plantoes.filter((p) => p.alocacao.vigencia !== 'fixa' || !comUnico.has(chave(p)));
 }
 
 /** A ausência de maior gravidade que vale na ocorrência; no empate, a primeira da lista. */

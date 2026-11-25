@@ -4,6 +4,7 @@
 */
 
 import type { ClassificacaoAlocacaoKey } from './ClassificacaoAlocacao'
+import type { VigenciaAlocacaoKey } from './VigenciaAlocacao'
 
 export type AlocacaoItemDto = {
   /**
@@ -30,6 +31,11 @@ export type AlocacaoItemDto = {
    * @type string
    */
   frenteId: string;
+  /**
+   * @description `fixa`: repete nos dias marcados, com fim opcional. `periodo`: período único, com fim; no mesmo turno e frente substitui a escala fixa do médico nesses dias. Gratificada é período.
+   * @type string
+   */
+  vigencia: VigenciaAlocacaoKey;
   diasSemana: number[];
   semanasDoMes: number[];
   /**

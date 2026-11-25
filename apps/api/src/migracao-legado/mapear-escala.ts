@@ -503,6 +503,8 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       medicoId: medico.id as string,
       turnoId,
       frenteId,
+      // No dashboards-one a fixa é a sem fim lá; a encerrada aqui (médico inativo) segue fixa.
+      vigencia: a.dataFim ? 'periodo' : 'fixa',
       diasSemana,
       semanasDoMes: semanasValidas(a.semanasDoMes),
       horarioInicio: a.horarioInicio,

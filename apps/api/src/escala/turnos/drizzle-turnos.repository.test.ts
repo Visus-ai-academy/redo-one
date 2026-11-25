@@ -45,6 +45,7 @@ describe.skipIf(!url)('DrizzleTurnosRepository', () => {
     extra: Partial<typeof schema.alocacoes.$inferInsert> = {},
   ) =>
     db.insert(schema.alocacoes).values({
+      vigencia: 'fixa',
       medicoId: medico,
       turnoId,
       frenteId,

@@ -17,8 +17,19 @@ export interface TurnoDaAlocacao extends FaixaHorario {
   tipo: TipoTurno;
 }
 
+/**
+ * Vigência da alocação, explícita (antes saía de ter ou não `dataFim`):
+ * - `fixa`: repete nos dias marcados a partir do início; o fim é opcional (vazio = sem fim). Uma
+ *   fixa encerrada (pela grade, pela carga do legado ou por quem editou) continua fixa.
+ * - `periodo`: período único, sempre com fim; no mesmo médico, turno e frente substitui a fixa.
+ */
+export type Vigencia = 'fixa' | 'periodo';
+
+export const VIGENCIAS: readonly Vigencia[] = ['fixa', 'periodo'];
+
 /** Entrada de criação ou edição de uma alocação (sem a cobertura, que tem validação própria). */
 export interface DadosAlocacao {
+  vigencia: Vigencia;
   diasSemana: readonly number[];
   /** Vazio ou ausente = toda semana. */
   semanasDoMes?: readonly number[];
@@ -26,13 +37,14 @@ export interface DadosAlocacao {
   horarioInicio?: string | null;
   horarioFim?: string | null;
   dataInicio: string;
-  /** Ausente ou nulo = escala fixa, sem fim. */
+  /** Ausente ou nulo = sem fim (só na fixa: o período único exige fim). */
   dataFim?: string | null;
   produtividade?: number | null;
   gratificado?: boolean;
 }
 
 export interface AlocacaoValidada {
+  vigencia: Vigencia;
   diasSemana: number[];
   semanasDoMes: number[];
   horarioInicio: Horario;
@@ -93,6 +105,10 @@ export function validarHorarioNoTurno(
  * "a cada N dias" e sem recorte de modalidades (decisões do redo-one).
  */
 export function validarAlocacao(dados: DadosAlocacao, turno: TurnoDaAlocacao): AlocacaoValidada {
+  if (!VIGENCIAS.includes(dados.vigencia)) {
+    throw new EscalaInvalidaError('Vigência inválida: use escala fixa ou período único.');
+  }
+  const vigencia = dados.vigencia;
   const diasSemana = normalizarDiasSemana(dados.diasSemana);
   if (diasSemana.length === 0) {
     throw new EscalaInvalidaError('Selecione ao menos um dia da semana.');
@@ -114,6 +130,12 @@ export function validarAlocacao(dados: DadosAlocacao, turno: TurnoDaAlocacao): A
     if (!produtividade) {
       throw new EscalaInvalidaError('Escala gratificada precisa da cota de registros.');
     }
+    if (vigencia !== 'periodo') {
+      throw new EscalaInvalidaError('Escala gratificada é período único.');
+    }
+  }
+  if (vigencia === 'periodo' && dataFim === null) {
+    throw new EscalaInvalidaError('Período único precisa de data de fim.');
   }
   // Período fechado gratificado não repete por semana do mês.
   const semanasDoMes = gratificado ? [] : normalizarSemanasDoMes(dados.semanasDoMes ?? []);
@@ -122,11 +144,20 @@ export function validarAlocacao(dados: DadosAlocacao, turno: TurnoDaAlocacao): A
     throw new EscalaInvalidaError('Nenhum dia marcado cai no período.');
   }
 
-  return { diasSemana, semanasDoMes, ...faixa, dataInicio, dataFim, produtividade, gratificado };
+  return {
+    vigencia,
+    diasSemana,
+    semanasDoMes,
+    ...faixa,
+    dataInicio,
+    dataFim,
+    produtividade,
+    gratificado,
+  };
 }
 
 /**
- * - `fixa`: sem fim, repete para sempre.
+ * - `fixa`: repete nos dias marcados, com fim opcional.
  * - `periodo_unico`: com fim; no mesmo médico, turno e frente substitui a fixa nos dias dele.
  * - `gratificada`: período fechado com cota, só em turno lista.
  * - `cobertura`: outro médico assume o vínculo do titular no período.
@@ -134,11 +165,11 @@ export function validarAlocacao(dados: DadosAlocacao, turno: TurnoDaAlocacao): A
 export type ClassificacaoAlocacao = 'fixa' | 'periodo_unico' | 'gratificada' | 'cobertura';
 
 export function classificarAlocacao(alocacao: {
-  dataFim: Data | null;
+  vigencia: Vigencia;
   gratificado: boolean;
   coberturaDeId: string | null;
 }): ClassificacaoAlocacao {
   if (alocacao.coberturaDeId !== null) return 'cobertura';
   if (alocacao.gratificado) return 'gratificada';
-  return alocacao.dataFim === null ? 'fixa' : 'periodo_unico';
+  return alocacao.vigencia === 'fixa' ? 'fixa' : 'periodo_unico';
 }

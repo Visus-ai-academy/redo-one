@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { tipoTurnoSchema } from './tipoTurnoSchema'
+import { vigenciaAlocacaoSchema } from './vigenciaAlocacaoSchema'
 import { vinculoDaCoberturaDtoSchema } from './vinculoDaCoberturaDtoSchema'
 
 export const ocorrenciaDtoSchema = z.object({
@@ -30,6 +31,9 @@ export const ocorrenciaDtoSchema = z.object({
   produtividadeEscala: z.number().nullable().describe('A da escala, sem o ajuste.'),
   ajustada: z.boolean(),
   gratificado: z.boolean(),
+  vigencia: vigenciaAlocacaoSchema.describe('Da alocação: escala fixa (fim opcional) ou período único.'),
+  diasSemana: z.array(z.number()).describe('Da alocação: 0 = domingo … 6 = sábado.'),
+  semanasDoMes: z.array(z.number()).describe('Da alocação: 1–5 e -1 (última); vazio = toda semana.'),
   dataInicio: z.iso.date(),
   dataFim: z.iso.date().nullable(),
   prioridadeIds: z.array(z.uuid()).describe('Prioridades da operação.'),

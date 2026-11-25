@@ -122,6 +122,7 @@ describe.skipIf(!url)('DrizzleAusenciasRepository', () => {
     // Ana: NEURO de manhã, fixa. Bia: TC à tarde, até out/2026.
     await db.insert(schema.alocacoes).values([
       {
+        vigencia: 'fixa',
         medicoId: ids.ana,
         turnoId: ids.manha,
         frenteId: ids.neuro,
@@ -131,6 +132,7 @@ describe.skipIf(!url)('DrizzleAusenciasRepository', () => {
         dataInicio: '2026-01-01',
       },
       {
+        vigencia: 'periodo',
         medicoId: ids.bia,
         turnoId: ids.tarde,
         frenteId: ids.tc,
