@@ -838,6 +838,119 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
       ]);
     });
 
+    describe('cliente resolvido de novo', () => {
+      const tarefas = async () =>
+        (
+          await db.execute<{ task: string; payload: { clienteIds: string[] | null } }>(
+            sql`select t.identifier task, j.payload from graphile_worker._private_jobs j
+              join graphile_worker._private_tasks t on t.id = j.task_id order by 1`,
+          )
+        ).rows.map((j) => ({
+          ...j,
+          payload: { clienteIds: j.payload.clienteIds?.sort() ?? null },
+        }));
+      const porIdentidade = async () =>
+        new Map((await db.select().from(schema.laudos)).map((l) => [l.identidade, l]));
+      const totais = async () =>
+        (await db.select().from(schema.totaisLaudosDia))
+          .map((t) => [t.dia, t.clienteId, t.quantidade] as const)
+          .sort();
+
+      beforeEach(async () => {
+        await db.execute(sql`delete from graphile_worker._private_jobs`);
+      });
+
+      it('grava cliente e unidade fora das bloqueadas, refaz os totais e enfileira competência e tipificação', async () => {
+        const l = await porIdentidade();
+        const id = (identidade: string) => l.get(identidade)?.id ?? '';
+        const depois = new Date('2026-11-25T12:00:00Z');
+
+        await repo.gravarClientes(
+          [
+            // Sem cliente → X, e x1 de X para Y.
+            { id: id('s1'), clienteId: clienteX, unidadeId: null },
+            { id: id('x1'), clienteId: clienteY, unidadeId: clienteX },
+            // Competência bloqueada: não muda.
+            { id: id('x2'), clienteId: clienteY, unidadeId: null },
+          ],
+          ['2026-09'],
+          depois,
+        );
+
+        const g = await porIdentidade();
+        expect(g.get('s1')).toMatchObject({ clienteId: clienteX, unidadeId: null });
+        expect(g.get('x1')).toMatchObject({ clienteId: clienteY, unidadeId: clienteX });
+        expect(g.get('x2')).toMatchObject({ clienteId: clienteX, unidadeId: null });
+        // O laudo que mudou de cliente é uma mudança do laudo; o hash continua o da importação.
+        expect(g.get('x1')).toMatchObject({ atualizadoEm: depois, hashConteudo: 'h-x1' });
+        // s1 e x2 em X, x1 e y1 em Y; nenhum sem cliente.
+        expect(await totais()).toEqual(
+          [
+            ['2026-10-06', clienteX, 2],
+            ['2026-10-06', clienteY, 2],
+          ].sort(),
+        );
+        expect(await tarefas()).toEqual([
+          {
+            task: 'ingestao.recalcular-competencias',
+            payload: { clienteIds: [clienteX, clienteY].sort() },
+          },
+          {
+            task: 'ingestao.reclassificar-tipificacao',
+            payload: { clienteIds: [clienteX, clienteY].sort() },
+          },
+        ]);
+      });
+
+      it('só a unidade mudou: grava sem tocar `atualizado_em` nem os totais e reclassifica', async () => {
+        const antes = await porIdentidade();
+        const totaisAntes = await totais();
+
+        await repo.gravarClientes(
+          [{ id: antes.get('y1')?.id ?? '', clienteId: clienteY, unidadeId: clienteX }],
+          [],
+          new Date('2026-11-25T12:00:00Z'),
+        );
+
+        const y1 = (await porIdentidade()).get('y1');
+        expect(y1).toMatchObject({
+          unidadeId: clienteX,
+          atualizadoEm: antes.get('y1')?.atualizadoEm,
+        });
+        expect(await totais()).toEqual(totaisAntes);
+        expect(await tarefas()).toEqual([
+          { task: 'ingestao.reclassificar-tipificacao', payload: { clienteIds: [clienteY] } },
+        ]);
+      });
+
+      it('laudo que fica sem cliente pede o recálculo de todos', async () => {
+        const antes = await porIdentidade();
+
+        await repo.gravarClientes(
+          [{ id: antes.get('y1')?.id ?? '', clienteId: null, unidadeId: null }],
+          [],
+          new Date('2026-11-25T12:00:00Z'),
+        );
+
+        expect(await tarefas()).toEqual([
+          { task: 'ingestao.recalcular-competencias', payload: { clienteIds: null } },
+          { task: 'ingestao.reclassificar-tipificacao', payload: { clienteIds: null } },
+        ]);
+      });
+
+      it('nada mudou de fato: não grava nem enfileira', async () => {
+        const antes = await porIdentidade();
+
+        await repo.gravarClientes(
+          [{ id: antes.get('x2')?.id ?? '', clienteId: clienteY, unidadeId: null }],
+          ['2026-09'],
+          new Date('2026-11-25T12:00:00Z'),
+        );
+
+        expect(await tarefas()).toEqual([]);
+      });
+    });
+
     it('atualiza só a competência dos laudos indicados', async () => {
       const [x1] = await db
         .select()

@@ -62,6 +62,7 @@ import {
   TAREFA_IMPORTAR_LAUDOS,
   TAREFA_RECALCULAR_COMPETENCIAS,
   TAREFA_RECLASSIFICAR_TIPIFICACAO,
+  TAREFA_RERESOLVER_CLIENTES,
 } from './application/tarefas';
 import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
@@ -73,6 +74,7 @@ import { ImportarLaudos } from './application/use-cases/importar-laudos';
 import { LerPacientesDosLaudos } from './application/use-cases/ler-pacientes-dos-laudos';
 import { RecalcularCompetencias } from './application/use-cases/recalcular-competencias';
 import { ReclassificarTipificacao } from './application/use-cases/reclassificar-tipificacao';
+import { ReresolverClientes } from './application/use-cases/reresolver-clientes';
 import { TriarAviso } from './application/use-cases/triar-aviso';
 import {
   AvisosController,
@@ -245,6 +247,15 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
         ),
     },
     {
+      provide: ReresolverClientes,
+      inject: [LAUDOS_REPOSITORY, COMPETENCIAS_BLOQUEADAS, CADASTROS_INGESTAO],
+      useFactory: (
+        laudos: LaudosRepository,
+        competencias: CompetenciasBloqueadas,
+        cadastros: LeitorCadastrosIngestao,
+      ) => new ReresolverClientes(laudos, competencias, cadastros, () => new Date()),
+    },
+    {
       provide: CriarImportacaoMobileMed,
       inject: [IMPORTACOES_REPOSITORY, PARAMETROS_INGESTAO_REPOSITORY, ConfigService],
       useFactory: (
@@ -316,6 +327,7 @@ export class IngestaoModule implements OnModuleInit {
     private readonly criarImportacaoMobileMed: CriarImportacaoMobileMed,
     private readonly recalcularCompetencias: RecalcularCompetencias,
     private readonly reclassificarTipificacao: ReclassificarTipificacao,
+    private readonly reresolverClientes: ReresolverClientes,
   ) {}
 
   onModuleInit() {
@@ -337,6 +349,9 @@ export class IngestaoModule implements OnModuleInit {
         ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string'));
       if (!valido) throw new Error(`${TAREFA_RECLASSIFICAR_TIPIFICACAO}: payload inválido`);
       await this.reclassificarTipificacao.executar({ clienteIds: ids as string[] | null });
+    });
+    this.registro.registrar(TAREFA_RERESOLVER_CLIENTES, async () => {
+      await this.reresolverClientes.executar();
     });
     this.registro.registrar(TAREFA_EXPURGAR_LINHAS_BRUTAS, async () => {
       await this.expurgarLinhasBrutas.executar();

@@ -21,6 +21,7 @@
     "paridade:precos": "nest build && JOBS_WORKER=false node dist/scripts/paridade-precos.js",
     "comparar:rodadas-legado": "nest build && JOBS_WORKER=false node dist/scripts/comparar-rodadas-legado.js",
     "mobilemed:mapear-medicos": "nest build && JOBS_WORKER=false node dist/scripts/mapear-medicos-mobilemed.js",
+    "clientes:reresolver": "nest build && JOBS_WORKER=false node dist/scripts/reresolver-clientes.js",
     "storage:preparar": "nest build && node dist/scripts/preparar-storage.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

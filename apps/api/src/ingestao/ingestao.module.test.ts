@@ -14,6 +14,7 @@ import {
   TAREFA_EXPURGAR_LINHAS_BRUTAS,
   TAREFA_IMPORTAR_LAUDOS,
   TAREFA_RECALCULAR_COMPETENCIAS,
+  TAREFA_RERESOLVER_CLIENTES,
 } from './application/tarefas';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ImportarLaudos } from './application/use-cases/importar-laudos';
@@ -112,6 +113,14 @@ describe('IngestaoModule', () => {
     expect(tarefa).toBeDefined();
     await expect(tarefa?.({})).rejects.toThrow('payload inválido');
     await expect(tarefa?.({ clienteIds: [1] })).rejects.toThrow('payload inválido');
+
+    await modulo.close();
+  });
+
+  it('registra a nova resolução do cliente dos laudos', async () => {
+    const modulo = await montar({});
+
+    expect(modulo.get(RegistroTarefas).listar()[TAREFA_RERESOLVER_CLIENTES]).toBeDefined();
 
     await modulo.close();
   });

@@ -23,3 +23,10 @@ export const TAREFA_RECALCULAR_COMPETENCIAS = 'ingestao.recalcular-competencias'
  * `FILA_INGESTAO`, em série com a importação (que também tipifica).
  */
 export const TAREFA_RECLASSIFICAR_TIPIFICACAO = 'ingestao.reclassificar-tipificacao';
+
+/**
+ * Tarefa que resolve de novo o cliente e a unidade dos laudos das competências abertas depois que
+ * o cadastro que decide a resolução muda (apelido, sufixo, nome, unificação); payload `{}`. Na
+ * `FILA_INGESTAO`, em série com a importação (que também resolve).
+ */
+export const TAREFA_RERESOLVER_CLIENTES = 'ingestao.reresolver-clientes';

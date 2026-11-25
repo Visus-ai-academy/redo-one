@@ -88,6 +88,13 @@ export interface ReclassificacaoLaudo {
   tipificacao: Tipificacao;
 }
 
+/** Cliente (o principal) e unidade de origem resolvidos de novo para um laudo. */
+export interface ClienteDoLaudo {
+  id: string;
+  clienteId: string | null;
+  unidadeId: string | null;
+}
+
 export interface LaudosRepository {
   existentesNaJanela(janela: JanelaLaudos): Promise<Map<string, LaudoExistente>>;
   /**
@@ -108,6 +115,16 @@ export interface LaudosRepository {
   /** Grava a unidade de origem e a tipificação dos laudos (só a dos que não estão bloqueados). */
   gravarReclassificacao(
     mudancas: ReclassificacaoLaudo[],
+    competenciasBloqueadas: string[],
+    agora: Date,
+  ): Promise<void>;
+  /**
+   * Grava o cliente e a unidade dos laudos (só dos que não estão bloqueados), numa transação que
+   * refaz os totais dos dias dos laudos que mudaram de cliente e enfileira o recálculo da
+   * competência e a reclassificação da tipificação deles.
+   */
+  gravarClientes(
+    mudancas: ClienteDoLaudo[],
     competenciasBloqueadas: string[],
     agora: Date,
   ): Promise<void>;

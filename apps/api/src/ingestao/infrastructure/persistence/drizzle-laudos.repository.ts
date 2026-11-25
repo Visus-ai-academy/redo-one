@@ -11,6 +11,7 @@ import {
 } from '../../../database/schema';
 import type {
   AlteracoesLaudos,
+  ClienteDoLaudo,
   JanelaLaudos,
   LaudoParaRecalculo,
   LaudoParaReclassificacao,
@@ -20,6 +21,7 @@ import type {
 } from '../../application/ports/laudos.repository';
 import type { LaudoExistente } from '../../domain/planejar-importacao';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
+import { enfileirarRecalculoCompetencias } from '../jobs/enfileirar-recalculo-competencias';
 import { enfileirarReclassificacaoTipificacao } from '../jobs/enfileirar-reclassificacao-tipificacao';
 
 /** Linhas por comando (o Postgres aceita até 65 mil parâmetros; o laudo tem ~35 colunas). */
@@ -52,6 +54,31 @@ const linhaDoLaudo = (
   importacaoId,
   removidoEm: null,
 });
+
+type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
+
+/** Totais só dos dias afetados, refeitos do zero: idempotente e sem conta incremental. */
+async function refazerTotais(tx: Transacao, dias: string[]) {
+  if (!dias.length) return;
+  // A agregação de um mês de laudos derrama em disco com o work_mem padrão (4 MB).
+  await tx.execute(sql`set local work_mem = '32MB'`);
+  await tx.delete(totaisLaudosDia).where(inArray(totaisLaudosDia.dia, dias));
+  await tx.execute(sql`
+    insert into ${totaisLaudosDia} (dia, cliente_id, modalidade_id, especialidade_id,
+      prioridade_id, medico_id, status, quantidade, volume, com_prazo, atrasados,
+      soma_tat_minutos, soma_atraso_minutos)
+    select dia_laudo, cliente_id, modalidade_id, especialidade_id, prioridade_id, medico_id,
+      status, count(*), sum(volume), count(data_prazo),
+      count(*) filter (where data_laudo > data_prazo),
+      coalesce(sum(greatest(0, round(extract(epoch from data_laudo - data_realizacao) / 60))), 0),
+      coalesce(sum(round(extract(epoch from data_laudo - data_prazo) / 60))
+        filter (where data_laudo > data_prazo), 0)
+    from ${laudos}
+    where ${inArray(laudos.diaLaudo, dias)} and removido_em is null
+    group by dia_laudo, cliente_id, modalidade_id, especialidade_id, prioridade_id, medico_id,
+      status
+  `);
+}
 
 @Injectable()
 export class DrizzleLaudosRepository implements LaudosRepository {
@@ -226,27 +253,7 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         for (const r of removidos) diasAfetados.add(r.dia);
       }
 
-      // Totais só dos dias afetados, refeitos do zero: idempotente e sem conta incremental.
-      if (!diasAfetados.size) return;
-      const dias = [...diasAfetados];
-      // A agregação de um mês de laudos derrama em disco com o work_mem padrão (4 MB).
-      await tx.execute(sql`set local work_mem = '32MB'`);
-      await tx.delete(totaisLaudosDia).where(inArray(totaisLaudosDia.dia, dias));
-      await tx.execute(sql`
-        insert into ${totaisLaudosDia} (dia, cliente_id, modalidade_id, especialidade_id,
-          prioridade_id, medico_id, status, quantidade, volume, com_prazo, atrasados,
-          soma_tat_minutos, soma_atraso_minutos)
-        select dia_laudo, cliente_id, modalidade_id, especialidade_id, prioridade_id, medico_id,
-          status, count(*), sum(volume), count(data_prazo),
-          count(*) filter (where data_laudo > data_prazo),
-          coalesce(sum(greatest(0, round(extract(epoch from data_laudo - data_realizacao) / 60))), 0),
-          coalesce(sum(round(extract(epoch from data_laudo - data_prazo) / 60))
-            filter (where data_laudo > data_prazo), 0)
-        from ${laudos}
-        where ${inArray(laudos.diaLaudo, dias)} and removido_em is null
-        group by dia_laudo, cliente_id, modalidade_id, especialidade_id, prioridade_id, medico_id,
-          status
-      `);
+      await refazerTotais(tx, [...diasAfetados]);
     });
   }
 
@@ -339,6 +346,67 @@ export class DrizzleLaudosRepository implements LaudosRepository {
             calculado_em = excluded.calculado_em
         `);
       }
+    });
+  }
+
+  async gravarClientes(mudancas: ClienteDoLaudo[], bloqueadas: string[], agora: Date) {
+    const pedido = new Map(mudancas.map((m) => [m.id, m]));
+    await this.db.transaction(async (tx) => {
+      const dias = new Set<string>();
+      // Clientes dos laudos que mudaram (o novo; nulo = algum ficou sem cliente).
+      const competencia = new Set<string | null>();
+      const tipificacao = new Set<string | null>();
+      for (const lote of emLotes(mudancas)) {
+        const gravados = await tx
+          .select({
+            id: laudos.id,
+            clienteId: laudos.clienteId,
+            unidadeId: laudos.unidadeId,
+            dia: laudos.diaLaudo,
+          })
+          .from(laudos)
+          .where(
+            and(
+              inArray(
+                laudos.id,
+                lote.map((m) => m.id),
+              ),
+              foraDasBloqueadas(bloqueadas),
+            ),
+          )
+          .for('update');
+        const mudaram = gravados.flatMap((g) => {
+          const m = pedido.get(g.id);
+          if (!m || (m.clienteId === g.clienteId && m.unidadeId === g.unidadeId)) return [];
+          const trocouCliente = m.clienteId !== g.clienteId;
+          if (trocouCliente) {
+            dias.add(g.dia);
+            competencia.add(m.clienteId);
+          }
+          tipificacao.add(m.clienteId);
+          return [{ ...m, trocouCliente }];
+        });
+        if (!mudaram.length) continue;
+        const valores = sql.join(
+          mudaram.map(
+            (m) =>
+              sql`(${m.id}::uuid, ${m.clienteId}::uuid, ${m.unidadeId}::uuid, ${m.trocouCliente}::boolean)`,
+          ),
+          sql`, `,
+        );
+        // Trocar de cliente é mudar o laudo (`atualizado_em`); só a unidade de origem, não.
+        await tx.execute(sql`
+          update ${laudos} set cliente_id = v.cliente, unidade_id = v.unidade,
+            atualizado_em = case when v.trocou then ${agora} else ${laudos.atualizadoEm} end
+          from (values ${valores}) as v(id, cliente, unidade, trocou)
+          where ${laudos.id} = v.id
+        `);
+      }
+      await refazerTotais(tx, [...dias]);
+      // A competência sai do corte do cliente, e a tipificação, do cliente e da unidade.
+      const escopo = (ids: Set<string | null>) => (ids.has(null) ? null : ([...ids] as string[]));
+      if (competencia.size) await enfileirarRecalculoCompetencias(tx, escopo(competencia));
+      if (tipificacao.size) await enfileirarReclassificacaoTipificacao(tx, escopo(tipificacao));
     });
   }
 

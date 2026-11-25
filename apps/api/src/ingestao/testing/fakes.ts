@@ -9,6 +9,7 @@ import type {
 } from '../application/ports/importacoes.repository';
 import type {
   AlteracoesLaudos,
+  ClienteDoLaudo,
   JanelaLaudos,
   LaudoParaRecalculo,
   LaudoParaReclassificacao,
@@ -229,6 +230,15 @@ export class LaudosEmMemoria implements LaudosRepository {
       if (!l || bloqueadas.includes(l.competencia)) continue;
       l.unidadeId = m.unidadeId;
       this.classificacoes.set(m.id, m.tipificacao);
+    }
+  }
+
+  async gravarClientes(mudancas: ClienteDoLaudo[], bloqueadas: string[]) {
+    for (const m of mudancas) {
+      const l = this.laudos.get(m.id);
+      if (!l || bloqueadas.includes(l.competencia)) continue;
+      l.clienteId = m.clienteId;
+      l.unidadeId = m.unidadeId;
     }
   }
 
