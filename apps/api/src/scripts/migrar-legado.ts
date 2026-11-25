@@ -28,6 +28,7 @@ import {
   alocacoesSumidasDoLegado,
   ausenciasSumidasDoLegado,
   gravarMigracao,
+  precosComHistoriaNoRedo,
 } from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
@@ -245,6 +246,18 @@ async function migrarLegado() {
     );
     for (const c of precos.conflitos)
       console.log(`  - ${c.dono} | ${c.arranjo}: ${c.valores.join(' × ')} → ${c.escolhido}`);
+    const protegidos = await precosComHistoriaNoRedo(db);
+    const nomeDe = new Map<string, string>([
+      ...catalogo.tabelas.clientes.map((c) => [c.id, c.nome] as [string, string]),
+      ...catalogo.tabelas.contratados.map(
+        (c) => [c.id as string, c.razaoSocial] as [string, string],
+      ),
+    ]);
+    const intocados = [...protegidos.clientes, ...protegidos.contratados];
+    console.log(
+      `Preços com história no redo-one (alterados pela tela): a carga não mexe neles (${intocados.length}):`,
+    );
+    for (const id of intocados) console.log(`  - ${nomeDe.get(id) ?? id}`);
     console.log(`Preços que não entram (${precos.naoResolvidas.length} motivos):`);
     for (const n of precos.naoResolvidas)
       console.log(

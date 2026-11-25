@@ -198,13 +198,98 @@ export async function gravarMigracao(
           );
     }
     if (tipificacao) await gravarTipificacao(tx, tipificacao);
-    // Preços pelo id estável da linha do dashboards-one: a carga de novo atualiza as mesmas versões.
-    // As versões criadas no redo-one (com autor) ficam como estão.
-    if (precos) {
-      await upsert(tx, schema.precosCliente, precos.tabelas.precosCliente);
-      await upsert(tx, schema.precosPadraoContratado, precos.tabelas.precosPadraoContratado);
-    }
+    if (precos) await gravarPrecos(tx, precos);
   });
+}
+
+type Executor = Database | Transacao;
+
+/**
+ * Clientes e contratados cuja tabela de preços já tem história no redo-one: alguma versão criada,
+ * encerrada, reaberta ou apagada por alguém (a carga não grava auditoria nem autor). A carga não
+ * mexe neles.
+ */
+export async function precosComHistoriaNoRedo(
+  db: Executor,
+): Promise<{ clientes: string[]; contratados: string[] }> {
+  const donos = async (tabela: 'precos_cliente' | 'precos_padrao_contratado') => {
+    const col = tabela === 'precos_cliente' ? 'clienteId' : 'contratadoId';
+    const colSql = sql.raw(tabela === 'precos_cliente' ? 'cliente_id' : 'contratado_id');
+    const entidade = tabela === 'precos_cliente' ? 'preco_cliente' : 'preco_padrao_contratado';
+    const r = await db.execute<{ dono: string }>(sql`
+      select ${colSql}::text dono from ${sql.raw(tabela)} where criado_por_id is not null
+      union
+      select coalesce(e.depois->>${col}, e.antes->>${col}) from eventos_auditoria e
+        where e.entidade = ${entidade} and coalesce(e.depois->>${col}, e.antes->>${col}) is not null
+      union
+      select p.${colSql}::text from eventos_auditoria e
+        join ${sql.raw(tabela)} p on p.id::text = e.entidade_id
+        where e.entidade = ${entidade}`);
+    return r.rows.map((l) => l.dono).sort();
+  };
+  return {
+    clientes: await donos('precos_cliente'),
+    contratados: await donos('precos_padrao_contratado'),
+  };
+}
+
+/**
+ * Preços: por cliente (e por contratado, na tabela padrão), a tabela sem história no redo-one é
+ * trocada inteira pela da carga (sai a versão que veio de uma carga anterior e não está mais lá; o
+ * resto é gravado pelo id estável da linha do dashboards-one), então rodar de novo dá o mesmo e
+ * nunca deixa duas versões valendo. Quem já tem história no redo-one (`precosComHistoriaNoRedo`)
+ * fica como está: o relatório da carga o lista.
+ */
+async function gravarPrecos(tx: Transacao, { tabelas }: PrecosMigrados) {
+  const protegidos = await precosComHistoriaNoRedo(tx);
+  const trocar = async <
+    T extends typeof schema.precosCliente | typeof schema.precosPadraoContratado,
+  >(
+    tabela: T,
+    coluna: AnyPgColumn,
+    idColuna: AnyPgColumn,
+    linhas: (T['$inferInsert'] & { id: string })[],
+    donoDe: (l: T['$inferInsert']) => string,
+    fora: string[],
+  ) => {
+    const pulados = new Set(fora);
+    const porDono = new Map<string, string[]>();
+    for (const l of linhas) {
+      const dono = donoDe(l);
+      if (!pulados.has(dono)) porDono.set(dono, [...(porDono.get(dono) ?? []), l.id]);
+    }
+    const existentes = (await tx.selectDistinct({ dono: coluna }).from(tabela as PgTable)).map(
+      (l) => String(l.dono),
+    );
+    for (const dono of new Set([...porDono.keys(), ...existentes])) {
+      if (pulados.has(dono)) continue;
+      const ids = porDono.get(dono) ?? [];
+      await tx
+        .delete(tabela as PgTable)
+        .where(and(eq(coluna, dono), ...(ids.length ? [notInArray(idColuna, ids)] : [])));
+    }
+    await upsert(
+      tx,
+      tabela,
+      linhas.filter((l) => !pulados.has(donoDe(l))),
+    );
+  };
+  await trocar(
+    schema.precosCliente,
+    schema.precosCliente.clienteId,
+    schema.precosCliente.id,
+    tabelas.precosCliente,
+    (l) => l.clienteId,
+    protegidos.clientes,
+  );
+  await trocar(
+    schema.precosPadraoContratado,
+    schema.precosPadraoContratado.contratadoId,
+    schema.precosPadraoContratado.id,
+    tabelas.precosPadraoContratado,
+    (l) => l.contratadoId,
+    protegidos.contratados,
+  );
 }
 
 /**

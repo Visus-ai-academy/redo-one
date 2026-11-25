@@ -186,6 +186,7 @@ describe('mapearPrecos', () => {
         preco({ categoria: 'SUBCLAVIA', prioridade: 'PLANTÃO' }),
         preco({ prioridade: 'CONVÊNIO' }),
         preco({ donoId: 'cl-x', donoNome: 'SUMIU' }),
+        preco({ valorBase: 0, categoria: 'OIT' }),
       ]),
       cadastro,
     );
@@ -194,6 +195,11 @@ describe('mapearPrecos', () => {
       { motivo: 'categoria "SUBCLAVIA" não existe no catálogo', linhas: 2, donos: ['CLINICA_A'] },
       { motivo: 'prioridade "CONVÊNIO" não existe no catálogo', linhas: 1, donos: ['CLINICA_A'] },
       { motivo: 'cliente sem cadastro no redo-one', linhas: 1, donos: ['SUMIU'] },
+      {
+        motivo: 'valor zero ou negativo (o dashboards-one o trata como sem preço)',
+        linhas: 1,
+        donos: ['CLINICA_A'],
+      },
     ]);
   });
 

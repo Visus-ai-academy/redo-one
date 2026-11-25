@@ -15,7 +15,12 @@ import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastruct
 import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import { idDoLegado } from './comum';
-import { alocacoesSumidasDoLegado, ausenciasSumidasDoLegado, gravarMigracao } from './gravar';
+import {
+  alocacoesSumidasDoLegado,
+  ausenciasSumidasDoLegado,
+  gravarMigracao,
+  precosComHistoriaNoRedo,
+} from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
 import { mapearCompetencias } from './mapear-competencias';
@@ -617,6 +622,79 @@ describe.skipIf(!url)('gravarMigracao', () => {
       { tabela: 'cliente', valor: 51, faixa_inicio: null, faixa_fim: null },
       { tabela: 'padrao', valor: 70, faixa_inicio: null, faixa_fim: null },
     ]);
+
+    // O dashboards-one mudou: a linha saiu e entrou outra (outro id). Sem história no redo-one, a
+    // tabela do cliente é trocada inteira: nada de duas versões valendo.
+    const cadastro = {
+      clientes: catalogo.tabelas.clientes,
+      contratados: catalogo.tabelas.contratados.map((c) => ({
+        id: c.id as string,
+        razaoSocial: c.razaoSocial,
+      })),
+      modalidades: catalogo.tabelas.modalidades.map((m) => ({
+        id: m.id as string,
+        codigo: m.codigo,
+      })),
+      especialidades: catalogo.tabelas.especialidades.map((e) => ({
+        id: e.id as string,
+        nome: e.nome,
+      })),
+      categorias: [{ id: idDoLegado('t', 'sc'), nome: 'SC' }],
+      prioridades: [{ id: idDoLegado('t', 'ro'), nome: 'ROTINA' }],
+    };
+    const outra = mapearPrecos(
+      {
+        clientes: [
+          { ...linha, id: 'p-2', donoId: 'cl-a', donoNome: 'PRN TELE_ARARAQUARA', valorBase: 55 },
+        ],
+        padrao: [],
+      },
+      cadastro,
+    );
+    const migrarOutra = () =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        outra,
+      );
+    await migrarOutra();
+    expect(await ler()).toEqual([
+      { tabela: 'cliente', valor: 55, faixa_inicio: null, faixa_fim: null },
+    ]);
+
+    // Alguém mexeu no preço do cliente pelo redo-one: a carga não toca mais nele.
+    const [u] = await db
+      .insert(schema.usuarios)
+      .values({ nome: 'Ana', email: `carga-precos-${Math.random()}@exemplo.com` })
+      .returning();
+    await db.execute(
+      sql`update precos_cliente set vigencia_ate = '2026-11' where cliente_id = ${idDoLegado('clientes', 'cl-a')}`,
+    );
+    await db.insert(schema.eventosAuditoria).values({
+      ocorridoEm: new Date(),
+      atorTipo: 'usuario',
+      atorId: u?.id,
+      entidade: 'preco_cliente',
+      entidadeId: idDoLegado('precos_servicos', 'p-2'),
+      acao: 'encerrado',
+      depois: { clienteId: idDoLegado('clientes', 'cl-a'), vigenciaAte: '2026-11' },
+    });
+    expect(await precosComHistoriaNoRedo(db)).toEqual({
+      clientes: [idDoLegado('clientes', 'cl-a')],
+      contratados: [],
+    });
+    await migrar();
+    const depois = (
+      await db.execute(sql`select valor::float8 valor, vigencia_ate from precos_cliente`)
+    ).rows;
+    expect(depois).toEqual([{ valor: 55, vigencia_ate: '2026-11' }]);
   });
 
   it('o principal que saiu da exclusão fiscal do dashboards-one é desmarcado; o resto dele fica', async () => {

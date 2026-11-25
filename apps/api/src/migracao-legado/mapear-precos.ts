@@ -129,6 +129,10 @@ export function mapearPrecos(legado: LegadoPrecos, cadastro: CadastroParaPrecos)
         naoResolveu(`${dono.tipo} sem cadastro no redo-one`, nomeDono);
         continue;
       }
+      if (!(typeof p.valorBase === 'number' && p.valorBase > 0)) {
+        naoResolveu('valor zero ou negativo (o dashboards-one o trata como sem preço)', nomeDono);
+        continue;
+      }
       const mod = chaveCadastro(p.modalidade);
       const espLegado = chaveCadastro(p.especialidade);
       const esp = chaveCadastro(DE_PARAS[`${mod}|${espLegado}`] ?? espLegado);
