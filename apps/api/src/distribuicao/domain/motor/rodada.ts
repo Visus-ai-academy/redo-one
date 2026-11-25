@@ -1,4 +1,5 @@
 import type { FrenteEscala } from '../arranjo';
+import { diaEmBrasilia } from '../excecoes-recebimento';
 import type { UnidadeTeto } from './capacidade';
 import { type ConfiguracaoDistribuicao, type RegrasFrente, RegrasPorFrente } from './configuracao';
 import type { DirecaoEquipe } from './elegibilidade';
@@ -27,6 +28,7 @@ import { distribuir, type MotivoNaoDistribuido, ROTULO_MOTIVO, type TrilhaMotor 
 import {
   type CelulaRecebimento,
   criarLeitorPrioridade,
+  type ExcecaoRecebimento,
   GradeRecebimento,
   type PrioridadeOperacao,
   urgenciaNaFrente,
@@ -103,6 +105,8 @@ export interface EntradaRodada {
   prioridadesOperacao: readonly PrioridadeOperacao[];
   /** Grade geral de recebimento prioridade da operação × turno; célula ausente = segue o SLA. */
   gradeRecebimento: readonly CelulaRecebimento[];
+  /** Exceções temporárias da grade; valem as vigentes no dia da rodada (Brasília). */
+  excecoesRecebimento?: readonly ExcecaoRecebimento[];
   prioridadesCliente: readonly PrioridadeCliente[];
   /** Alocação gratificada → o já executado por ela. */
   cotaEntregue: Readonly<Record<string, number>>;
@@ -370,7 +374,10 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     ajustes: entrada.ajustes,
     regras,
     config,
-    grade: new GradeRecebimento(entrada.gradeRecebimento, regras),
+    grade: new GradeRecebimento(entrada.gradeRecebimento, regras, {
+      excecoes: entrada.excecoesRecebimento ?? [],
+      dia: diaEmBrasilia(agora),
+    }),
     prioridadeIdsQueFuramGrade,
     cotaEntregue: entrada.cotaEntregue,
     ...(filtro.turnoIds ? { filtroTurnoIds: filtro.turnoIds } : {}),

@@ -18,6 +18,7 @@ import type {
 import {
   type CelulaRecebimento,
   criarLeitorPrioridade,
+  type ExcecaoRecebimento,
   normalizarGrafia,
   type PrioridadeOperacao,
   urgenciaNaFrente,
@@ -141,6 +142,8 @@ export interface InsumosRodada {
   regrasFrente: RegrasFrente[];
   prioridadesOperacao: PrioridadeOperacao[];
   gradeRecebimento: CelulaRecebimento[];
+  /** Exceções temporárias da grade que podem valer hoje (o motor escolhe pelo dia). */
+  excecoesRecebimento?: ExcecaoRecebimento[];
   prioridadesCliente: PrioridadeCliente[];
   /** Id → nome, só para os textos (prioridades, clientes, frentes, segmentos). */
   nomes: Readonly<Record<string, string>>;
@@ -463,6 +466,7 @@ export function montarEntrada(p: {
       config: configuracaoDoMotor(insumos.config),
       prioridadesOperacao: insumos.prioridadesOperacao,
       gradeRecebimento: insumos.gradeRecebimento,
+      excecoesRecebimento: insumos.excecoesRecebimento ?? [],
       prioridadesCliente: insumos.prioridadesCliente,
       cotaEntregue: cotaNaUnidade(p.entregas.cotaEntregue, insumos),
       filtro,

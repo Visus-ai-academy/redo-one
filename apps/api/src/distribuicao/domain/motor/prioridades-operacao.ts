@@ -110,17 +110,61 @@ export function urgenciaNaFrente(
 }
 
 /**
- * A grade de recebimento: a célula da frente do período, senão a da grade geral, senão "segue o
- * SLA".
+ * Exceção temporária da grade de recebimento (ex.: "toda a Lista segue o SLA até 22/12"): num
+ * turno, opcionalmente só numa frente e/ou só numa prioridade da operação, de `de` a `ate`
+ * (dias em Brasília, inclusivos). Fora do período a grade volta sozinha ao que está cadastrado.
+ */
+export interface ExcecaoRecebimento {
+  id: string;
+  turnoId: string;
+  /** Null = todas as frentes. */
+  frente: FrenteEscala | null;
+  /** Null = todas as prioridades. */
+  prioridadeOperacaoId: string | null;
+  regra: RegraRecebimento;
+  /** `AAAA-MM-DD`, em Brasília, inclusivo. */
+  de: string;
+  /** `AAAA-MM-DD`, em Brasília, inclusivo. */
+  ate: string;
+  /** Desempate entre duas igualmente específicas: vale a criada por último. */
+  criadoEm: Date;
+}
+
+/** A exceção vale no dia (Brasília)? */
+export const excecaoVigente = (e: Pick<ExcecaoRecebimento, 'de' | 'ate'>, dia: string) =>
+  e.de <= dia && dia <= e.ate;
+
+const mesmaFrente = (a: FrenteEscala, b: FrenteEscala) =>
+  a.tipo === b.tipo && a.especialidadeId === b.especialidadeId && a.modalidadeId === b.modalidadeId;
+
+/** Frente + prioridade (2) > só a frente ou só a prioridade (1) > só o turno (0). */
+export const especificidade = (e: Pick<ExcecaoRecebimento, 'frente' | 'prioridadeOperacaoId'>) =>
+  (e.frente ? 1 : 0) + (e.prioridadeOperacaoId ? 1 : 0);
+
+/**
+ * A grade de recebimento (precedência registrada no cortex em 25/11/2026): a exceção temporária
+ * vigente no dia da rodada (a mais específica; empate = a criada por último), senão a célula da
+ * frente do período, senão a da grade geral, senão "segue o SLA". O ajuste do dia do médico
+ * ("segue o SLA") continua valendo por cima, na elegibilidade.
  */
 export class GradeRecebimento {
   private readonly geral: Map<string, RegraRecebimento>;
+  private readonly excecoes: readonly ExcecaoRecebimento[];
 
   constructor(
     geral: readonly CelulaRecebimento[],
     private readonly regras: RegrasPorFrente,
+    temporarias?: { excecoes: readonly ExcecaoRecebimento[]; dia: string },
   ) {
     this.geral = new Map(geral.map((c) => [`${c.prioridadeOperacaoId}|${c.turnoId}`, c.regra]));
+    this.excecoes = temporarias
+      ? temporarias.excecoes
+          .filter((e) => excecaoVigente(e, temporarias.dia))
+          .sort(
+            (a, b) =>
+              especificidade(b) - especificidade(a) || b.criadoEm.getTime() - a.criadoEm.getTime(),
+          )
+      : [];
   }
 
   regra(
@@ -128,6 +172,13 @@ export class GradeRecebimento {
     turnoId: string,
     frente: FrenteEscala,
   ): RegraRecebimento {
+    const excecao = this.excecoes.find(
+      (e) =>
+        e.turnoId === turnoId &&
+        (e.frente === null || mesmaFrente(e.frente, frente)) &&
+        (e.prioridadeOperacaoId === null || e.prioridadeOperacaoId === prioridadeOperacaoId),
+    );
+    if (excecao) return excecao.regra;
     if (prioridadeOperacaoId === null) return SEGUE_SLA;
     const daFrente = this.regras
       .daFrente(frente)

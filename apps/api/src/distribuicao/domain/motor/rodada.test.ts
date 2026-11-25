@@ -303,6 +303,38 @@ describe('rodarMotor', () => {
     expect(item(r, 'u')?.medicoId).toBe('B');
   });
 
+  it('exceção temporária "a Lista segue o SLA até 17/11" vale no dia da rodada em Brasília e depois volta à grade', () => {
+    const grade: CelulaRecebimento[] = [
+      { prioridadeOperacaoId: 'op-rotina', turnoId: 'lista', regra: { tipo: 'nao_recebe' } },
+    ];
+    const lista = oc('A', {
+      turnoId: 'lista',
+      turnoTipo: 'lista',
+      inicio: br('2026-11-17T07:00'),
+      fim: br('2026-11-18T07:00'),
+    });
+    const excecao = {
+      id: 'x1',
+      turnoId: 'lista',
+      frente: null,
+      prioridadeOperacaoId: null,
+      regra: { tipo: 'segue_sla' as const },
+      de: '2026-11-10',
+      ate: '2026-11-17',
+      criadoEm: br('2026-11-10T09:00'),
+    };
+    const base = {
+      exames: [exame({ id: 'r', prazo: br('2026-11-19T08:00') })],
+      ocorrencias: [lista],
+      gradeRecebimento: grade,
+      excecoesRecebimento: [excecao],
+    };
+    // 22h em Brasília já é 18/11 em UTC: ainda vale o dia 17.
+    expect(item(rodar({ ...base, agora: br('2026-11-17T22:00') }), 'r')?.medicoId).toBe('A');
+    expect(item(rodar({ ...base, agora: br('2026-11-18T00:30') }), 'r')?.medicoId).toBeNull();
+    expect(item(rodar({ ...base, excecoesRecebimento: [] }), 'r')?.medicoId).toBeNull();
+  });
+
   it('só exame NOVO entra', () => {
     const r = rodar({ exames: [exame({ id: 'velho', novo: false })] });
     expect(item(r, 'velho')).toMatchObject({ medicoId: null, motivo: 'nao_novo' });

@@ -19,6 +19,10 @@ import type {
   EscalaDoAjuste,
 } from '../application/ports/escala-do-ajuste';
 import type {
+  ExcecaoRecebimentoGravavel,
+  ExcecoesRecebimentoRepository,
+} from '../application/ports/excecoes-recebimento.repository';
+import type {
   ParametrosEquipe,
   ParametrosEquipeRepository,
 } from '../application/ports/parametros-equipe.repository';
@@ -39,7 +43,11 @@ import type { AjusteDiaDistribuicao } from '../domain/ajuste-dia';
 import type { Arranjo, FrenteEscala } from '../domain/arranjo';
 import type { ConfiguracaoGlobal } from '../domain/configuracao-global';
 import type { RegrasFrente } from '../domain/motor/configuracao';
-import type { CelulaRecebimento, PrioridadeOperacao } from '../domain/motor/prioridades-operacao';
+import type {
+  CelulaRecebimento,
+  ExcecaoRecebimento,
+  PrioridadeOperacao,
+} from '../domain/motor/prioridades-operacao';
 import type { PrioridadeDaFrente } from '../domain/prioridade-cliente';
 import type { EdicaoPrioridadeOperacao } from '../domain/prioridades-operacao';
 
@@ -330,5 +338,39 @@ export class RetratoFilaEmMemoria implements RetratoFilaRepository {
   async pedirLeitura(em: Date) {
     this.pedidos++;
     this.atual = { ...this.atual, pedidaEm: em };
+  }
+}
+
+export class ExcecoesRecebimentoEmMemoria implements ExcecoesRecebimentoRepository {
+  readonly itens = new Map<string, ExcecaoRecebimento>();
+  private seq = 0;
+
+  async listar() {
+    return [...this.itens.values()].sort(
+      (a, b) => b.de.localeCompare(a.de) || b.criadoEm.getTime() - a.criadoEm.getTime(),
+    );
+  }
+
+  async terminandoDesde(dia: string) {
+    return (await this.listar()).filter((e) => e.ate >= dia);
+  }
+
+  async obter(id: string) {
+    return this.itens.get(id) ?? null;
+  }
+
+  async criar(e: Omit<ExcecaoRecebimento, 'id'>) {
+    const id = `exc-${++this.seq}`;
+    this.itens.set(id, { ...e, id });
+    return id;
+  }
+
+  async salvar(e: ExcecaoRecebimentoGravavel) {
+    const atual = this.itens.get(e.id);
+    if (atual) this.itens.set(e.id, { ...e, criadoEm: atual.criadoEm });
+  }
+
+  async excluir(id: string) {
+    this.itens.delete(id);
   }
 }

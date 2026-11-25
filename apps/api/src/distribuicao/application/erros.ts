@@ -63,3 +63,10 @@ export class PrioridadeOperacaoEmUsoError extends ErroDeDominio {
     );
   }
 }
+
+export class ExcecaoRecebimentoNaoEncontradaError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Exceção da grade de recebimento não encontrada.');
+  }
+}

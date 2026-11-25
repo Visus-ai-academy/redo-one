@@ -4,6 +4,7 @@ import { REGRAS_NEUTRAS, type RegrasFrente, RegrasPorFrente } from './configurac
 import {
   type CelulaRecebimento,
   criarLeitorPrioridade,
+  type ExcecaoRecebimento,
   GradeRecebimento,
   type PrioridadeOperacao,
   urgenciaNaFrente,
@@ -160,5 +161,111 @@ describe('GradeRecebimento', () => {
     expect(grade.regra(ROTINA.id, LISTA, frenteEsp(CARDIO))).toEqual({ tipo: 'segue_sla' });
     expect(grade.regra(URGENCIA.id, LISTA, frenteEsp(CARDIO))).toEqual({ tipo: 'nao_recebe' });
     expect(grade.regra(ROTINA.id, MANHA, frenteEsp(MAMA))).toEqual({ tipo: 'segue_sla' });
+  });
+});
+
+describe('GradeRecebimento com exceções temporárias', () => {
+  const geral: CelulaRecebimento[] = [
+    { prioridadeOperacaoId: ROTINA.id, turnoId: LISTA, regra: { tipo: 'prazo_minimo', horas: 24 } },
+    { prioridadeOperacaoId: URGENCIA.id, turnoId: LISTA, regra: { tipo: 'nao_recebe' } },
+  ];
+  const regrasCardio = new RegrasPorFrente([
+    regrasDa(frenteEsp(CARDIO), {
+      recebimento: [
+        {
+          prioridadeOperacaoId: ROTINA.id,
+          turnoId: LISTA,
+          regra: { tipo: 'prazo_minimo', horas: 48 },
+        },
+      ],
+    }),
+  ]);
+  let seq = 0;
+  const excecao = (p: Partial<ExcecaoRecebimento> = {}): ExcecaoRecebimento => ({
+    id: `exc-${++seq}`,
+    turnoId: LISTA,
+    frente: null,
+    prioridadeOperacaoId: null,
+    regra: { tipo: 'segue_sla' },
+    de: '2026-11-25',
+    ate: '2026-12-22',
+    criadoEm: new Date('2026-11-25T12:00:00Z'),
+    ...p,
+  });
+
+  it('toda a Lista segue o SLA até 22/12: sobrepõe a grade geral e a da frente no período', () => {
+    const excecoes = [excecao()];
+    const naVigencia = new GradeRecebimento(geral, regrasCardio, { excecoes, dia: '2026-12-22' });
+    expect(naVigencia.regra(ROTINA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'segue_sla' });
+    expect(naVigencia.regra(URGENCIA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'segue_sla' });
+    expect(naVigencia.regra(ROTINA.id, LISTA, frenteEsp(CARDIO))).toEqual({ tipo: 'segue_sla' });
+    expect(naVigencia.regra(null, LISTA, frenteEsp(MI))).toEqual({ tipo: 'segue_sla' });
+  });
+
+  it('fora do período volta sozinha ao que está na grade', () => {
+    const excecoes = [excecao()];
+    const depois = new GradeRecebimento(geral, regrasCardio, { excecoes, dia: '2026-12-23' });
+    const antes = new GradeRecebimento(geral, regrasCardio, { excecoes, dia: '2026-11-24' });
+    for (const g of [antes, depois]) {
+      expect(g.regra(ROTINA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'prazo_minimo', horas: 24 });
+      expect(g.regra(ROTINA.id, LISTA, frenteEsp(CARDIO))).toEqual({
+        tipo: 'prazo_minimo',
+        horas: 48,
+      });
+    }
+  });
+
+  it('vale só para o turno, a frente e a prioridade que recorta', () => {
+    const excecoes = [
+      excecao({
+        frente: frenteEsp(CARDIO),
+        prioridadeOperacaoId: ROTINA.id,
+        regra: { tipo: 'nao_recebe' },
+      }),
+    ];
+    const g = new GradeRecebimento(geral, regrasCardio, { excecoes, dia: '2026-12-01' });
+    expect(g.regra(ROTINA.id, LISTA, frenteEsp(CARDIO))).toEqual({ tipo: 'nao_recebe' });
+    expect(g.regra(ROTINA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'prazo_minimo', horas: 24 });
+    expect(g.regra(URGENCIA.id, LISTA, frenteEsp(CARDIO))).toEqual({ tipo: 'nao_recebe' });
+    expect(g.regra(ROTINA.id, MANHA, frenteEsp(CARDIO))).toEqual({ tipo: 'segue_sla' });
+    // Frente de modalidade só casa com o período da mesma modalidade.
+    const rx = new GradeRecebimento(geral, regrasCardio, {
+      excecoes: [excecao({ frente: frenteMod(RX), regra: { tipo: 'nao_recebe' } })],
+      dia: '2026-12-01',
+    });
+    expect(rx.regra(ROTINA.id, LISTA, frenteMod(RX))).toEqual({ tipo: 'nao_recebe' });
+    expect(rx.regra(ROTINA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'prazo_minimo', horas: 24 });
+  });
+
+  it('a mais específica vence: frente+prioridade > frente ou prioridade > só o turno', () => {
+    const soTurno = excecao({ regra: { tipo: 'segue_sla' }, criadoEm: new Date('2026-11-30') });
+    const soPrioridade = excecao({
+      prioridadeOperacaoId: ROTINA.id,
+      regra: { tipo: 'prazo_minimo', horas: 6 },
+      criadoEm: new Date('2026-11-01'),
+    });
+    const frenteEPrioridade = excecao({
+      frente: frenteEsp(CARDIO),
+      prioridadeOperacaoId: ROTINA.id,
+      regra: { tipo: 'nao_recebe' },
+      criadoEm: new Date('2026-10-01'),
+    });
+    const g = new GradeRecebimento(geral, regrasCardio, {
+      excecoes: [soTurno, soPrioridade, frenteEPrioridade],
+      dia: '2026-12-01',
+    });
+    expect(g.regra(ROTINA.id, LISTA, frenteEsp(CARDIO))).toEqual({ tipo: 'nao_recebe' });
+    expect(g.regra(ROTINA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'prazo_minimo', horas: 6 });
+    expect(g.regra(URGENCIA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'segue_sla' });
+  });
+
+  it('no empate de especificidade, vale a criada por último', () => {
+    const antiga = excecao({ regra: { tipo: 'nao_recebe' }, criadoEm: new Date('2026-11-01') });
+    const nova = excecao({ regra: { tipo: 'segue_sla' }, criadoEm: new Date('2026-11-20') });
+    const g = new GradeRecebimento(geral, regrasCardio, {
+      excecoes: [nova, antiga],
+      dia: '2026-12-01',
+    });
+    expect(g.regra(ROTINA.id, LISTA, frenteEsp(MI))).toEqual({ tipo: 'segue_sla' });
   });
 });
