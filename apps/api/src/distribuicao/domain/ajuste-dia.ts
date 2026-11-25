@@ -11,7 +11,9 @@ export interface AjusteDiaEdicao {
   prioridadeIdsLiberadas: string[];
   /** Segue o SLA neste dia: o prazo mínimo das células da grade de recebimento não vale. */
   segueSla: boolean;
-  /** Só os exames deste cliente; null = todos. */
+  /** Vale para os exames de todos os clientes (com `clienteId` null). Vazio nunca é "todos". */
+  todosClientes: boolean;
+  /** Sem `todosClientes`: só os exames deste cliente. */
   clienteId: string | null;
   /** Laudos acima do teto só para os exames do cliente; 0 = nenhum. Exige o cliente. */
   laudosExtra: number;
@@ -36,10 +38,15 @@ export function validarAjusteDia(a: AjusteDiaEdicao): void {
   if (!Number.isInteger(a.laudosExtra) || a.laudosExtra < 0 || a.laudosExtra > MAX_LAUDOS_EXTRA) {
     invalida(`Os laudos extras precisam ser um número inteiro entre 0 e ${MAX_LAUDOS_EXTRA}.`);
   }
-  if (a.laudosExtra > 0 && a.clienteId === null) {
+  // Vazio nunca é "todos" (25/11/2026): ou "todos os clientes", ou o cliente.
+  if (a.todosClientes && a.clienteId !== null) {
+    invalida('Escolha "todos os clientes" ou um cliente, não as duas coisas.');
+  }
+  if (!a.todosClientes && a.clienteId === null) invalida('Escolha o cliente (ou "todos").');
+  if (a.laudosExtra > 0 && a.todosClientes) {
     invalida('O +N laudos de todos os exames é a produtividade do dia; aqui, escolha o cliente.');
   }
-  if (a.clienteId !== null && ajusteVazio(a)) {
+  if (!a.todosClientes && ajusteVazio(a)) {
     invalida(
       'O cliente só recorta prioridades liberadas, "segue o SLA neste dia" ou laudos extras.',
     );

@@ -8,7 +8,8 @@ import * as z from 'zod'
 export const ajusteDiaDtoSchema = z.object({
   prioridadeIdsLiberadas: z.array(z.uuid()).describe('Prioridades da operação liberadas no dia, além do arranjo e da alocação.'),
   segueSla: z.boolean().describe('Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele.'),
-  clienteId: z.uuid().nullable().describe('Só os exames deste cliente; nulo = todos.'),
+  todosClientes: z.boolean().describe('Vale para os exames de todos os clientes (com `clienteId` nulo). Sem ele, o cliente é obrigatório.'),
+  clienteId: z.uuid().nullable().describe('Sem `todosClientes`: só os exames deste cliente.'),
   laudosExtra: z.number().min(0).max(500).describe('Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum.'),
   id: z.uuid(),
   alocacaoId: z.uuid(),

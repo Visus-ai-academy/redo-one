@@ -23197,11 +23197,15 @@
             "type": "boolean",
             "description": "Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele."
           },
+          "todosClientes": {
+            "type": "boolean",
+            "description": "Vale para os exames de todos os clientes (com `clienteId` nulo). Sem ele, o cliente é obrigatório."
+          },
           "clienteId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só os exames deste cliente; nulo = todos."
+            "description": "Sem `todosClientes`: só os exames deste cliente."
           },
           "laudosExtra": {
             "type": "number",
@@ -23241,6 +23245,7 @@
         "required": [
           "prioridadeIdsLiberadas",
           "segueSla",
+          "todosClientes",
           "clienteId",
           "laudosExtra",
           "id",
@@ -23316,11 +23321,15 @@
             "type": "boolean",
             "description": "Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele."
           },
+          "todosClientes": {
+            "type": "boolean",
+            "description": "Vale para os exames de todos os clientes (com `clienteId` nulo). Sem ele, o cliente é obrigatório."
+          },
           "clienteId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só os exames deste cliente; nulo = todos."
+            "description": "Sem `todosClientes`: só os exames deste cliente."
           },
           "laudosExtra": {
             "type": "number",
@@ -23337,6 +23346,7 @@
         "required": [
           "prioridadeIdsLiberadas",
           "segueSla",
+          "todosClientes",
           "clienteId",
           "laudosExtra"
         ]

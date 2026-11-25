@@ -624,6 +624,7 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
     prioridadeIdsLiberadas: [],
     segueSla: false,
     recorte: {
+      todosClientes: true,
       clienteId: null,
       especialidadeId: null,
       modalidadeId: null,
@@ -640,6 +641,7 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
       ajustes: [
         ajuste({
           recorte: {
+            todosClientes: false,
             clienteId: 'X',
             especialidadeId: null,
             modalidadeId: null,
@@ -658,7 +660,13 @@ describe('montarMedicosDisponiveis: ajuste do dia', () => {
   it('o cliente do ajuste casa pela unidade (só ela) e pelo principal (todas as unidades)', () => {
     const doCliente = (clienteId: string) =>
       ajuste({
-        recorte: { clienteId, especialidadeId: null, modalidadeId: null, subespecialidadeId: null },
+        recorte: {
+          todosClientes: false,
+          clienteId,
+          especialidadeId: null,
+          modalidadeId: null,
+          subespecialidadeId: null,
+        },
       });
     const exames = [
       exame('ro', { clienteId: 'CEDI', unidadeId: 'RO' }),

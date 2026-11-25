@@ -30,7 +30,12 @@ async function gravar(tx: Transacao, ajuste: AjusteDiaDistribuicao) {
     .values(linha)
     .onConflictDoUpdate({
       target: [a.alocacaoId, a.data],
-      set: { segueSla: linha.segueSla, clienteId: linha.clienteId, laudosExtra: linha.laudosExtra },
+      set: {
+        segueSla: linha.segueSla,
+        todosClientes: linha.todosClientes,
+        clienteId: linha.clienteId,
+        laudosExtra: linha.laudosExtra,
+      },
     });
   const [gravado] = await tx
     .select({ id: a.id })
@@ -57,6 +62,7 @@ export class DrizzleAjustesDiaRepository implements AjustesDiaRepository {
         alocacaoId: a.alocacaoId,
         data: a.data,
         segueSla: a.segueSla,
+        todosClientes: a.todosClientes,
         clienteId: a.clienteId,
         laudosExtra: a.laudosExtra,
         clienteNome: clientes.nome,

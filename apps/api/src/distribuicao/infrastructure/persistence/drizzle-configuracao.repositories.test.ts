@@ -316,6 +316,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       data: '2026-11-18',
       prioridadeIdsLiberadas: [id('opInt')],
       segueSla: false,
+      todosClientes: true,
       clienteId: null,
       laudosExtra: 0,
     };
@@ -334,6 +335,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
             ...base,
             prioridadeIdsLiberadas: [id('opRot'), id('opInt')].sort(),
             segueSla: true,
+            todosClientes: false,
             clienteId: id('cli'),
             laudosExtra: 30,
           },
@@ -353,6 +355,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       ...base,
       prioridadeIdsLiberadas: [id('opRot'), id('opInt')].sort(),
       segueSla: true,
+      todosClientes: false,
       clienteId: id('cli'),
       laudosExtra: 30,
       clienteNome: 'CLINICA X',

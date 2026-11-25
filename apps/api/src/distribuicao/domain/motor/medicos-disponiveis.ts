@@ -84,8 +84,12 @@ export interface AjusteDia {
   laudosExtra: number;
   prioridadeIdsLiberadas: readonly string[];
   segueSla: boolean;
-  /** Null em cada eixo = todos. */
+  /**
+   * Cliente: `todosClientes` explícito ou o cliente (vazio nunca é "todos"). Os outros eixos são
+   * internos do motor (null = sem recorte nesse eixo).
+   */
   recorte: {
+    todosClientes: boolean;
     clienteId: string | null;
     especialidadeId: string | null;
     modalidadeId: string | null;
@@ -303,7 +307,7 @@ const par = (medicoId: string, exameId: string) => `${medicoId}|${exameId}`;
 function ajusteCobre(a: AjusteDia, e: AlvoExame, agora: Date): boolean {
   if (agora < a.inicio || agora >= a.fim) return false;
   const r = a.recorte;
-  if (r.clienteId !== null && !citaCliente([r.clienteId], e)) return false;
+  if (!r.todosClientes && (r.clienteId === null || !citaCliente([r.clienteId], e))) return false;
   if (r.modalidadeId !== null && r.modalidadeId !== e.modalidadeId) return false;
   if (r.subespecialidadeId !== null && r.subespecialidadeId !== e.subespecialidadeId) return false;
   if (

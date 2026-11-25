@@ -628,7 +628,9 @@ export const ajustesDiaDistribuicao = pgTable(
       .references(() => alocacoes.id, { onDelete: 'cascade' }),
     data: date('data').notNull(),
     segueSla: boolean('segue_sla').notNull().default(false),
-    /** Só os exames deste cliente; null = todos. */
+    /** Vale para todos os clientes (com `cliente_id` null). Vazio nunca é "todos". */
+    todosClientes: boolean('todos_clientes').notNull().default(false),
+    /** Sem `todos_clientes`: só os exames deste cliente. */
     clienteId: uuid('cliente_id').references(() => clientes.id, { onDelete: 'cascade' }),
     /** Laudos acima do teto só para os exames do cliente; exige `cliente_id`. */
     laudosExtra: integer('laudos_extra').notNull().default(0),

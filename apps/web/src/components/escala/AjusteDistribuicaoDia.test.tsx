@@ -77,6 +77,7 @@ describe('AjusteDistribuicaoDia', () => {
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: ['p-urg'],
       segueSla: true,
+      todosClientes: true,
       clienteId: null,
       laudosExtra: 0,
     });
@@ -100,35 +101,38 @@ describe('AjusteDistribuicaoDia', () => {
       frenteId: 'f',
       prioridadeIdsLiberadas: ['p-urg'],
       segueSla: false,
+      todosClientes: false,
       clienteId: 'c-hc',
       clienteNome: 'HCLONDRINA',
       laudosExtra: 30,
     });
     const { onSalvar } = montar();
     expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
-    expect(screen.getByRole('combobox', { name: 'Só para o cliente' })).toHaveValue('HCLONDRINA');
+    expect(screen.getByRole('combobox', { name: /^Cliente\b(?!s)/ })).toHaveValue('HCLONDRINA');
     expect(screen.getByRole('textbox', { name: 'Laudos a mais deste cliente' })).toHaveValue('30');
     await userEvent.click(screen.getByRole('button', { name: 'Tirar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: [],
       segueSla: false,
+      todosClientes: true,
       clienteId: null,
       laudosExtra: 0,
     });
   });
 
-  it('+N laudos só de um cliente: sem o cliente, aponta a produtividade do dia', async () => {
+  it('"Só um cliente" é explícito: sem o cliente escolhido, não salva (vazio nunca é "todos")', async () => {
     const { onSalvar } = montar();
+    expect(
+      screen.queryByRole('textbox', { name: 'Laudos a mais deste cliente' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('combobox', { name: /^Clientes/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Só um cliente' }));
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Laudos a mais deste cliente' }),
       '30',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
-    expect(
-      await screen.findByText(
-        'Escolha o cliente. O +N de todos os exames é a produtividade do dia.',
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Escolha o cliente.')).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });
 
@@ -152,6 +156,7 @@ describe('AjusteDistribuicaoDia', () => {
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: ['p-urg'],
       segueSla: false,
+      todosClientes: true,
       clienteId: null,
       laudosExtra: 0,
       ate: '2026-11-25',
@@ -185,6 +190,7 @@ describe('AjusteDistribuicaoDia', () => {
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: [],
       segueSla: false,
+      todosClientes: true,
       clienteId: null,
       laudosExtra: 0,
       ate: '2026-11-27',

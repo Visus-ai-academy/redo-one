@@ -44,6 +44,7 @@ describe('controller do ajuste do dia da distribuição', () => {
     const corpo = {
       prioridadeIdsLiberadas: ['u'],
       segueSla: true,
+      todosClientes: true,
       clienteId: null,
       laudosExtra: 0,
     };

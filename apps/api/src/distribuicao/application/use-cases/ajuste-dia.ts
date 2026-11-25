@@ -37,6 +37,7 @@ const foto = (a: AjusteDiaDistribuicao, aloc: AlocacaoDoAjuste): Record<string, 
   data: a.data,
   prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
   segueSla: a.segueSla,
+  todosClientes: a.todosClientes,
   clienteId: a.clienteId,
   laudosExtra: a.laudosExtra,
   medicoId: aloc.medicoId,
@@ -124,6 +125,7 @@ const semLeitura = (lido: AjusteDiaLido): AjusteDiaDistribuicao => ({
   data: lido.data,
   prioridadeIdsLiberadas: lido.prioridadeIdsLiberadas,
   segueSla: lido.segueSla,
+  todosClientes: lido.todosClientes,
   clienteId: lido.clienteId,
   laudosExtra: lido.laudosExtra,
 });
@@ -204,6 +206,7 @@ export class DefinirAjusteDia {
         data: dia,
         prioridadeIdsLiberadas: edicao.prioridadeIdsLiberadas,
         segueSla: edicao.segueSla,
+        todosClientes: edicao.todosClientes,
         clienteId: edicao.clienteId,
         laudosExtra: edicao.laudosExtra,
       };

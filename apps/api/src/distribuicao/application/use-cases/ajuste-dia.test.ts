@@ -18,9 +18,10 @@ const agora = new Date('2026-11-17T18:00:00Z');
 const admin = { usuarioId: 'u1', acessoTotal: true };
 const gestora = { usuarioId: 'g1', acessoTotal: false };
 const DIA = '2026-11-18';
-const liberar = (parcial = {}) => ({
+const liberar = (parcial: { clienteId?: string | null; [k: string]: unknown } = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
   segueSla: false,
+  todosClientes: !parcial.clienteId,
   clienteId: null,
   laudosExtra: 0,
   ...parcial,
@@ -78,6 +79,7 @@ describe('ajuste do dia da distribuição', () => {
           data: DIA,
           prioridadeIdsLiberadas: ['urg'],
           segueSla: true,
+          todosClientes: false,
           clienteId: 'c1',
           laudosExtra: 0,
           medicoId: 'm1',

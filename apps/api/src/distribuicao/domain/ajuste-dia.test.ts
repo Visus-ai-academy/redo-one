@@ -9,9 +9,10 @@ import {
   validarAjusteDia,
 } from './ajuste-dia';
 
-const ajuste = (parcial = {}) => ({
+const ajuste = (parcial: { clienteId?: string | null; [k: string]: unknown } = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
   segueSla: false,
+  todosClientes: !parcial.clienteId,
   clienteId: null,
   laudosExtra: 0,
   ...parcial,
@@ -47,6 +48,13 @@ describe('ajuste do dia da distribuição', () => {
     for (const laudosExtra of [-1, 1.5, 501]) {
       expect(() => validarAjusteDia(ajuste({ clienteId: 'c1', laudosExtra }))).toThrow(/0 e 500/);
     }
+  });
+
+  it('vazio nunca é "todos": sem "todos os clientes", o cliente é obrigatório', () => {
+    expect(() => validarAjusteDia(ajuste({ todosClientes: false }))).toThrow(/Escolha o cliente/);
+    expect(() => validarAjusteDia(ajuste({ todosClientes: true, clienteId: 'c1' }))).toThrow(
+      /não as duas/,
+    );
   });
 
   it('canônico: prioridades ordenadas', () => {

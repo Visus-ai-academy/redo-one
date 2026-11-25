@@ -36,10 +36,17 @@ export class AjusteDiaEdicaoDto {
   segueSla!: boolean;
 
   @ApiProperty({
+    description:
+      'Vale para os exames de todos os clientes (com `clienteId` nulo). Sem ele, o cliente é obrigatório.',
+  })
+  @IsBoolean()
+  todosClientes!: boolean;
+
+  @ApiProperty({
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'Só os exames deste cliente; nulo = todos.',
+    description: 'Sem `todosClientes`: só os exames deste cliente.',
   })
   @ValidateIf((_, v) => v !== null)
   @IsUUID()

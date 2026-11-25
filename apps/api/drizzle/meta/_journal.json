@@ -666,6 +666,20 @@
       "when": 1795638136282,
       "tag": "0094_excecoes_recebimento_todas_dados",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1795638147835,
+      "tag": "0095_ajustes_dia_todos_clientes",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1795638148370,
+      "tag": "0096_ajustes_dia_todos_clientes_dados",
+      "breakpoints": true
     }
   ]
 }

@@ -15,7 +15,12 @@ export type SalvarAjusteDiaDto = {
    */
   segueSla: boolean;
   /**
-   * @description Só os exames deste cliente; nulo = todos.
+   * @description Vale para os exames de todos os clientes (com `clienteId` nulo). Sem ele, o cliente é obrigatório.
+   * @type boolean
+   */
+  todosClientes: boolean;
+  /**
+   * @description Sem `todosClientes`: só os exames deste cliente.
    *
    * Format: `uuid`
    * @type string

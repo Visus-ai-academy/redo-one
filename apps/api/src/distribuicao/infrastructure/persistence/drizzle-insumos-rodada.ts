@@ -247,6 +247,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
           prioridadeIdsLiberadas: a.prioridadeIdsLiberadas,
           segueSla: a.segueSla,
           recorte: {
+            todosClientes: a.todosClientes,
             clienteId: a.clienteId,
             especialidadeId: null,
             modalidadeId: null,

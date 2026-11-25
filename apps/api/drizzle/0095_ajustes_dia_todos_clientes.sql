@@ -1,0 +1,1 @@
+ALTER TABLE "ajustes_dia_distribuicao" ADD COLUMN "todos_clientes" boolean DEFAULT false NOT NULL;

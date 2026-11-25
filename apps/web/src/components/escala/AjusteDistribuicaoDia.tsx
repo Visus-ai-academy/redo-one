@@ -37,12 +37,19 @@ type Props = {
 type Valores = {
   prioridadeIdsLiberadas: string[];
   segueSla: boolean;
+  /** "todos": vale para os exames de todos os clientes; "um": só os do `cliente`. */
+  clientes: 'todos' | 'um';
   cliente: OpcaoBusca | null;
   /** Texto do NumberField ("" = 0). */
   laudosExtra: string;
   /** Último dia do ajuste, AAAA-MM-DD; começa no próprio dia. */
   ate: string;
 };
+
+const OPCOES_CLIENTES = [
+  { valor: 'todos', rotulo: 'Todos os clientes' },
+  { valor: 'um', rotulo: 'Só um cliente' },
+];
 
 /** "18/11": o período cabe em um mês, então o ano não ajuda. */
 const diaMes = (data: string) => `${data.slice(8, 10)}/${data.slice(5, 7)}`;
@@ -66,6 +73,7 @@ const esquemaDoAjuste = (data: string, ateMaximo: string | undefined) =>
     .object({
       prioridadeIdsLiberadas: z.array(z.string()),
       segueSla: z.boolean(),
+      clientes: z.enum(['todos', 'um']),
       cliente: z.custom<OpcaoBusca | null>(),
       laudosExtra: z.string(),
       ate: z.string(),
@@ -73,15 +81,13 @@ const esquemaDoAjuste = (data: string, ateMaximo: string | undefined) =>
     .superRefine((v, ctx) => {
       const erroAte = erroDoAte(data, v.ate, ateMaximo);
       if (erroAte) ctx.addIssue({ code: 'custom', path: ['ate'], message: erroAte });
-      const extra = Number(v.laudosExtra || 0);
+      // Os laudos a mais são só de um cliente (o +N de todos é a produtividade do dia).
+      const extra = v.clientes === 'um' ? Number(v.laudosExtra || 0) : 0;
       const nada = v.prioridadeIdsLiberadas.length === 0 && !v.segueSla && extra === 0;
-      if (extra > 0 && !v.cliente) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['laudosExtra'],
-          message: 'Escolha o cliente. O +N de todos os exames é a produtividade do dia.',
-        });
-      } else if (nada && v.cliente) {
+      // Vazio nunca é "todos": "Só um cliente" pede o cliente.
+      if (v.clientes === 'um' && !v.cliente) {
+        ctx.addIssue({ code: 'custom', path: ['cliente'], message: 'Escolha o cliente.' });
+      } else if (nada && v.clientes === 'um') {
         ctx.addIssue({
           code: 'custom',
           path: ['cliente'],
@@ -140,6 +146,7 @@ export function AjusteDistribuicaoDia({
           inicial={{
             prioridadeIdsLiberadas: consulta.data.ajuste?.prioridadeIdsLiberadas ?? [],
             segueSla: consulta.data.ajuste?.segueSla ?? false,
+            clientes: consulta.data.ajuste && !consulta.data.ajuste.todosClientes ? 'um' : 'todos',
             cliente: consulta.data.ajuste?.clienteId
               ? {
                   valor: consulta.data.ajuste.clienteId,
@@ -224,13 +231,15 @@ function FormAjuste({
       onSalvar({
         prioridadeIdsLiberadas: value.prioridadeIdsLiberadas,
         segueSla: value.segueSla,
-        clienteId: value.cliente?.valor ?? null,
-        laudosExtra: Number(value.laudosExtra || 0),
+        todosClientes: value.clientes === 'todos',
+        clienteId: value.clientes === 'um' ? (value.cliente?.valor ?? null) : null,
+        laudosExtra: value.clientes === 'um' ? Number(value.laudosExtra || 0) : 0,
         ...comAte(data, value.ate),
       }),
   });
   useAvisarAlterado(form, inicial, onAlterado);
   const ateDigitado = useStore(form.store, (estado) => estado.values.ate);
+  const soUmCliente = useStore(form.store, (estado) => estado.values.clientes === 'um');
   const ate = ateDigitado || data;
   const ateValido = ehData(ate) && ate >= data;
   const periodo = useQuery({
@@ -270,28 +279,43 @@ function FormAjuste({
           />
         )}
       </form.AppField>
-      <form.AppField name="cliente">
+      <form.AppField name="clientes">
         {(field) => (
-          <field.BuscaField
-            label="Só para o cliente"
-            placeholder="Todos os clientes"
-            description="Opcional: o ajuste vale só para os exames deste cliente."
-            chave="clientes-ajuste-dia"
-            buscar={buscarClientes}
+          <field.SelectField
+            label="Clientes"
+            placeholder="Escolha"
+            required
+            opcoes={OPCOES_CLIENTES}
+            description="O ajuste vale para os exames de todos os clientes ou só para os de um."
           />
         )}
       </form.AppField>
-      <form.AppField name="laudosExtra">
-        {(field) => (
-          <field.NumberField
-            label="Laudos a mais deste cliente"
-            placeholder="Ex.: 30"
-            description="Passa do teto só com exames do cliente escolhido. Os dele também contam no teto."
-            min={0}
-            max={500}
-          />
-        )}
-      </form.AppField>
+      {soUmCliente && (
+        <>
+          <form.AppField name="cliente">
+            {(field) => (
+              <field.BuscaField
+                label="Cliente"
+                required
+                placeholder="Busque o cliente"
+                chave="clientes-ajuste-dia"
+                buscar={buscarClientes}
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="laudosExtra">
+            {(field) => (
+              <field.NumberField
+                label="Laudos a mais deste cliente"
+                placeholder="Ex.: 30"
+                description="Passa do teto só com exames do cliente escolhido. Os dele também contam no teto."
+                min={0}
+                max={500}
+              />
+            )}
+          </form.AppField>
+        </>
+      )}
       <form.AppField name="ate">
         {() => (
           <DateField
@@ -315,6 +339,7 @@ function FormAjuste({
               void onSalvar({
                 prioridadeIdsLiberadas: [],
                 segueSla: false,
+                todosClientes: true,
                 clienteId: null,
                 laudosExtra: 0,
                 ...comAte(data, noPeriodo ? ate : data),
