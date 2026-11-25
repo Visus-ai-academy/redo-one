@@ -271,7 +271,7 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
       });
     });
 
-    describe('destravar enfileira o recálculo', () => {
+    describe('destravar e reabrir enfileiram o recálculo e a reclassificação', () => {
       const jobs = async () =>
         (
           await db.execute<{ tarefa: string; payload: unknown; fila: string | null }>(
@@ -294,6 +294,27 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
         expect(await jobs()).toEqual([
           {
             tarefa: 'ingestao.recalcular-competencias',
+            payload: { clienteIds: null },
+            fila: 'ingestao',
+          },
+          {
+            tarefa: 'ingestao.reclassificar-tipificacao',
+            payload: { clienteIds: null },
+            fila: 'ingestao',
+          },
+        ]);
+      });
+
+      it('reabrir reclassifica a tipificação de todos, junto com a reabertura; sem reabrir, sem job', async () => {
+        const ana = await usuario('Ana');
+        await db.insert(schema.competencias).values({ competencia: '2026-10', status: 'fechada' });
+
+        expect(await repo.reabrir('2026-10', { usuarioId: ana, em: new Date() })).toBe(true);
+        expect(await repo.reabrir('2026-10', { usuarioId: ana, em: new Date() })).toBe(false);
+
+        expect(await jobs()).toEqual([
+          {
+            tarefa: 'ingestao.reclassificar-tipificacao',
             payload: { clienteIds: null },
             fila: 'ingestao',
           },

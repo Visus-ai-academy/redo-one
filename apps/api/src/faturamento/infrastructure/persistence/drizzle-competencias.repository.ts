@@ -18,6 +18,7 @@ import type { Pagina, Paginacao } from '../../../catalogo/comum/paginacao';
 import { DATABASE, type Database } from '../../../database/database';
 import { competencias, laudos, usuarios } from '../../../database/schema';
 import { enfileirarRecalculoCompetencias } from '../../../ingestao/infrastructure/jobs/enfileirar-recalculo-competencias';
+import { enfileirarReclassificacaoTipificacao } from '../../../ingestao/infrastructure/jobs/enfileirar-reclassificacao-tipificacao';
 import type {
   Autor,
   CompetenciaResumo,
@@ -150,12 +151,20 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
     });
   }
 
+  /**
+   * Com a reclassificação da tipificação na mesma transação: a configuração mudada enquanto a
+   * competência estava fechada chega aos laudos dela.
+   */
   reabrir(competencia: string, { usuarioId, em }: Autor): Promise<boolean> {
-    return this.atualizar(competencia, eq(competencias.status, 'fechada'), {
-      status: 'aberta',
-      reabertaEm: em,
-      reabertaPorId: usuarioId,
-      reabertaPorLegado: null,
+    return this.db.transaction(async (tx) => {
+      const reabriu = await this.atualizar(
+        competencia,
+        eq(competencias.status, 'fechada'),
+        { status: 'aberta', reabertaEm: em, reabertaPorId: usuarioId, reabertaPorLegado: null },
+        tx,
+      );
+      if (reabriu) await enfileirarReclassificacaoTipificacao(tx, null);
+      return reabriu;
     });
   }
 
@@ -168,8 +177,8 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
   }
 
   /**
-   * Com o recálculo de todos os laudos na mesma transação: os que a importação e o job pularam
-   * enquanto estava travada ganham o corte atual.
+   * Com o recálculo e a reclassificação de todos os laudos na mesma transação: os que a importação
+   * e os jobs pularam enquanto estava travada ganham o corte e a tipificação atuais.
    */
   destravarImportacao(competencia: string): Promise<boolean> {
     return this.db.transaction(async (tx) => {
@@ -183,7 +192,10 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
         },
         tx,
       );
-      if (destravou) await enfileirarRecalculoCompetencias(tx, null);
+      if (destravou) {
+        await enfileirarRecalculoCompetencias(tx, null);
+        await enfileirarReclassificacaoTipificacao(tx, null);
+      }
       return destravou;
     });
   }
