@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { BolinhaCor } from '../bolinha-cor/BolinhaCor';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
+import { marcadasAoMudar, marcadasNaTela } from '../form/caixas-todas';
 import { useFieldContext } from '../form/context';
 import { FieldError } from '../form/field-parts';
 import { useCampo } from '../form/use-campo';
@@ -40,22 +41,32 @@ function Legenda({ required, children }: { required: boolean; children: ReactNod
 /**
  * Várias caixas de marcar lado a lado, quebrando linha (dias da semana, prioridades), sobre o
  * CheckboxGroup do Base UI. O valor é a lista dos marcados.
+ *
+ * Com `todas` (rótulo: "Todas", "Todos os dias"…), ganha antes das outras a caixa-mãe do Base UI
+ * (`allValues` + `parent`, meio marcada quando só parte está). Aí o valor vazio quer dizer "todas"
+ * e desmarcar tudo vira `[NENHUMA]`, que o esquema recusa: use `esquemaCaixasComTodas` no campo
+ * (regras em `form/caixas-todas.ts`).
  */
 export function CaixasField({
   label,
   opcoes,
+  todas,
   required = false,
   description,
   className,
 }: {
   label: string;
   opcoes: Opcao[];
+  /** Rótulo da caixa-mãe que marca todas ("Todas", "Todos os dias", "Sem restrição"…). */
+  todas?: string;
   required?: boolean;
   description?: ReactNode;
   className?: string;
 }) {
   const { field, erros, invalido, aoSair, ref } = useErros();
-  const valor = field.state.value as string[];
+  const valores = opcoes.map((o) => o.valor);
+  const doForm = field.state.value as string[];
+  const valor = todas ? marcadasNaTela(doForm, valores) : doForm;
   return (
     <Field.Root
       ref={ref}
@@ -68,8 +79,9 @@ export function CaixasField({
         render={
           <CheckboxGroup
             value={valor}
+            allValues={todas ? valores : undefined}
             onValueChange={(novos) => {
-              field.handleChange(novos);
+              field.handleChange(todas ? marcadasAoMudar(novos, valores) : novos);
               aoSair();
             }}
           />
@@ -83,6 +95,14 @@ export function CaixasField({
           </Field.Description>
         )}
         <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {todas && (
+            <Field.Item className="border-border border-r pr-4">
+              <Field.Label className="flex items-center gap-2">
+                <CaixaDeSelecao parent />
+                {todas}
+              </Field.Label>
+            </Field.Item>
+          )}
           {opcoes.map((opcao) => (
             <Field.Item key={opcao.valor}>
               <Field.Label className="flex items-center gap-2">

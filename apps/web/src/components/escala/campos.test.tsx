@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
+import { esquemaCaixasComTodas } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
 import { CaixasField } from './campos';
 
@@ -61,5 +62,89 @@ describe('CaixasField', () => {
     expect(await screen.findByText('Marque ao menos um dia.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Ter' }));
     expect(screen.queryByText('Marque ao menos um dia.')).not.toBeInTheDocument();
+  });
+});
+
+const esquemaTodos = z.object({ dias: esquemaCaixasComTodas('Marque ao menos um dia.') });
+
+function FormularioTodos({
+  dias = [],
+  aoEnviar = () => {},
+}: {
+  dias?: string[];
+  aoEnviar?: (v: string[]) => void;
+}) {
+  const form = useAppForm({
+    defaultValues: { dias },
+    validators: { onSubmit: esquemaTodos },
+    onSubmit: ({ value }) => aoEnviar(value.dias),
+  });
+  return (
+    <form
+      noValidate
+      onSubmit={(evento) => {
+        evento.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <form.AppField name="dias">
+        {() => (
+          <CaixasField
+            label="Dias"
+            required
+            todas="Todos os dias"
+            opcoes={[
+              { valor: '1', rotulo: 'Seg' },
+              { valor: '2', rotulo: 'Ter' },
+              { valor: '3', rotulo: 'Qua' },
+            ]}
+          />
+        )}
+      </form.AppField>
+      <form.AppForm>
+        <form.SubmitButton pendingLabel="Salvando…">Salvar</form.SubmitButton>
+      </form.AppForm>
+    </form>
+  );
+}
+
+describe('CaixasField com "Todas"', () => {
+  it('valor vazio mostra "Todos os dias" e todas as caixas marcadas', () => {
+    render(<FormularioTodos />);
+    expect(screen.getByRole('checkbox', { name: 'Todos os dias' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Seg' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Qua' })).toBeChecked();
+  });
+
+  it('desmarcar uma deixa as demais e "Todos os dias" fica meio marcada', async () => {
+    const aoEnviar = vi.fn();
+    render(<FormularioTodos aoEnviar={aoEnviar} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ter' }));
+    expect(screen.getByRole('checkbox', { name: 'Todos os dias' })).toHaveAttribute(
+      'aria-checked',
+      'mixed',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith(['1', '3']));
+  });
+
+  it('marcar uma a uma todas vira "Todos os dias" (valor vazio)', async () => {
+    const aoEnviar = vi.fn();
+    render(<FormularioTodos dias={['1']} aoEnviar={aoEnviar} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ter' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Qua' }));
+    expect(screen.getByRole('checkbox', { name: 'Todos os dias' })).toBeChecked();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith([]));
+  });
+
+  it('desmarcar "Todos os dias" desmarca tudo e mostra o erro, sem enviar', async () => {
+    const aoEnviar = vi.fn();
+    render(<FormularioTodos aoEnviar={aoEnviar} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Todos os dias' }));
+    expect(screen.getByRole('checkbox', { name: 'Seg' })).not.toBeChecked();
+    expect(await screen.findByText('Marque ao menos um dia.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(aoEnviar).not.toHaveBeenCalled();
   });
 });
