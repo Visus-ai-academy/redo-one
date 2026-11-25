@@ -3,9 +3,10 @@ import { Fieldset } from '@base-ui/react/fieldset';
 import { Plus, Trash } from '@phosphor-icons/react';
 import { useStore } from '@tanstack/react-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 import { dadosFiscaisControllerSalvar } from '../../gen/clients/dadosFiscaisControllerSalvar';
+import { dadosFiscaisControllerHistoricoQueryKey } from '../../gen/hooks/useDadosFiscaisControllerHistorico';
 import { dadosFiscaisControllerObterQueryOptions } from '../../gen/hooks/useDadosFiscaisControllerObter';
 import type { DadosFiscaisClienteDto } from '../../gen/types/DadosFiscaisClienteDto';
 import { dataHoraCurta } from '../../lib/datas';
@@ -17,6 +18,7 @@ import { AbaComErro } from '../distribuicao/estados';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { mostrarErrosDoServidor } from '../form/erros-do-servidor';
 import { useAppForm } from '../form/form';
+import { HistoricoCadastro } from '../historico-cadastro/HistoricoCadastro';
 import { useAlterado } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
@@ -106,7 +108,26 @@ export function DadosFaturamentoCliente({
       ) : (
         <Leitura dados={dados} agora={agora} />
       )}
+      <HistoricoAlteracoes clienteId={clienteId} agora={agora} />
     </div>
+  );
+}
+
+/**
+ * Quem mudou o quê e quando, lido da auditoria (os dados fiscais não entram no cálculo, então não
+ * têm vigência). A carga do dashboards-one não aparece: não é alteração feita no redo-one.
+ */
+function HistoricoAlteracoes({ clienteId, agora }: { clienteId: string; agora: Date }) {
+  const idTitulo = useId();
+  return (
+    <section aria-labelledby={idTitulo} className="flex flex-col gap-3 border-t pt-4">
+      <h3 id={idTitulo} className="text-base font-semibold">
+        Histórico de alterações
+      </h3>
+      <div className="rounded-md border">
+        <HistoricoCadastro cadastro="dados-fiscais" id={clienteId} porPagina={5} agora={agora} />
+      </div>
+    </section>
   );
 }
 
@@ -230,6 +251,10 @@ function FormDados({
           body: corpoDosDados(value, dados),
         }).unwrap();
         await queryClient.invalidateQueries({ queryKey });
+        // A alteração entra no histórico (todas as páginas dele).
+        void queryClient.invalidateQueries({
+          queryKey: dadosFiscaisControllerHistoricoQueryKey({ path: { clienteId } }),
+        });
         // Recomeça do que foi gravado (CEP e telefone voltam só com os dígitos).
         const gravado = queryClient.getQueryData<DadosFiscaisClienteDto>(queryKey);
         if (gravado) formApi.reset(valoresIniciais(gravado));

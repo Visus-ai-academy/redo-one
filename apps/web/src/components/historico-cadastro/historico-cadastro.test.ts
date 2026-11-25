@@ -216,3 +216,86 @@ describe('alteracoesDoCadastro', () => {
     ).toEqual([{ rotulo: 'Conta', antes: null, depois: 'Ana (portal)' }]);
   });
 });
+
+describe('dados de faturamento do cliente', () => {
+  const fiscais = (antes: Record<string, unknown>, depois: Record<string, unknown>) =>
+    evento('cliente_dados_fiscais', 'alterado', antes, depois, 'c-1');
+
+  it('frase do evento', () => {
+    expect(descreverEventoCadastro('cliente_dados_fiscais', 'alterado')).toBe(
+      'Dados de faturamento alterados',
+    );
+  });
+
+  it('campos com rótulos da aba, CEP e telefone formatados', () => {
+    expect(
+      alteracoesDoCadastro(
+        fiscais(
+          {
+            cep: null,
+            uf: null,
+            contatoNome: null,
+            email: 'velho@cliente.com.br',
+            telefone: null,
+            bancoAgencia: null,
+            exclusaoFiscal: false,
+          },
+          {
+            cep: '01310100',
+            uf: 'SP',
+            contatoNome: 'Ana',
+            email: 'novo@cliente.com.br',
+            telefone: '11999998888',
+            bancoAgencia: '0001',
+            exclusaoFiscal: true,
+          },
+        ),
+      ),
+    ).toEqual([
+      { rotulo: 'CEP', antes: '(vazio)', depois: '01310-100' },
+      { rotulo: 'UF', antes: '(vazio)', depois: 'SP' },
+      { rotulo: 'Nome do contato', antes: '(vazio)', depois: 'Ana' },
+      { rotulo: 'E-mail do contato', antes: 'velho@cliente.com.br', depois: 'novo@cliente.com.br' },
+      { rotulo: 'Telefone do contato', antes: '(vazio)', depois: '(11) 99999-8888' },
+      { rotulo: 'Agência', antes: '(vazio)', depois: '0001' },
+      { rotulo: 'Exclusão fiscal', antes: 'Não', depois: 'Sim' },
+    ]);
+  });
+
+  it('CEP ou telefone fora do formato aparecem como estão', () => {
+    expect(
+      alteracoesDoCadastro(
+        fiscais({ cep: '2016010', telefone: null }, { cep: '20160100', telefone: '1133 / 1144' }),
+      ),
+    ).toEqual([
+      { rotulo: 'CEP', antes: '2016010', depois: '20160-100' },
+      { rotulo: 'Telefone do contato', antes: '(vazio)', depois: '1133 / 1144' },
+    ]);
+  });
+
+  it('e-mails da NF: um item por e-mail adicionado ou removido', () => {
+    expect(
+      alteracoesDoCadastro(
+        fiscais(
+          { emailsNf: ['a@x.com', 'b@x.com'], cidade: null },
+          { emailsNf: ['b@x.com', 'c@x.com', 'd@x.com'], cidade: 'Santos' },
+        ),
+      ),
+    ).toEqual([
+      { rotulo: 'E-mail da NF removido', antes: 'a@x.com', depois: null },
+      { rotulo: 'E-mail da NF adicionado', antes: null, depois: 'c@x.com' },
+      { rotulo: 'E-mail da NF adicionado', antes: null, depois: 'd@x.com' },
+      { rotulo: 'Cidade', antes: '(vazio)', depois: 'Santos' },
+    ]);
+  });
+
+  it('e-mails da NF só reordenados: mostra a ordem antes e depois', () => {
+    expect(
+      alteracoesDoCadastro(
+        fiscais({ emailsNf: ['a@x.com', 'b@x.com'] }, { emailsNf: ['b@x.com', 'a@x.com'] }),
+      ),
+    ).toEqual([
+      { rotulo: 'Ordem dos e-mails da NF', antes: 'a@x.com, b@x.com', depois: 'b@x.com, a@x.com' },
+    ]);
+  });
+});

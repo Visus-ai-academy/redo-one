@@ -2,6 +2,7 @@ import { Button } from '@base-ui/react/button';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { dadosFiscaisControllerHistoricoQueryOptions } from '../../gen/hooks/useDadosFiscaisControllerHistorico';
 import { historicoCadastroControllerDoClienteQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoCliente';
 import { historicoCadastroControllerDoExameQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoExame';
 import { historicoCadastroControllerDoMedicoQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoMedico';
@@ -18,20 +19,29 @@ import {
   type LinhaAlteracao,
 } from './historico-cadastro';
 
-export type CadastroComHistorico = 'medico' | 'cliente' | 'exame';
+/** `dados-fiscais`: os dados de faturamento do cliente (aba Faturamento, `id` do cliente). */
+export type CadastroComHistorico = 'medico' | 'cliente' | 'exame' | 'dados-fiscais';
 
 /** Num painel lateral, 10 mudanças por página (a API pagina). */
 const POR_PAGINA = 10;
 
-/** As três rotas devolvem a mesma página; o tipo é o da do médico. */
+/** As rotas devolvem a mesma página; o tipo é o da do médico. */
 type OpcoesHistorico = ReturnType<typeof historicoCadastroControllerDoMedicoQueryOptions>;
 
 function opcoesDaConsulta(
   cadastro: CadastroComHistorico,
   id: string,
   pagina: number,
+  porPagina: number,
 ): OpcoesHistorico {
-  const args = { path: { id }, query: { pagina, porPagina: POR_PAGINA } };
+  const query = { pagina, porPagina };
+  if (cadastro === 'dados-fiscais') {
+    return dadosFiscaisControllerHistoricoQueryOptions({
+      path: { clienteId: id },
+      query,
+    }) as unknown as OpcoesHistorico;
+  }
+  const args = { path: { id }, query };
   if (cadastro === 'cliente') {
     return historicoCadastroControllerDoClienteQueryOptions(args) as unknown as OpcoesHistorico;
   }
@@ -42,22 +52,26 @@ function opcoesDaConsulta(
 }
 
 /**
- * Aba "Histórico" dos painéis de médico, cliente e exame: uma linha por mudança, da mais recente
- * para a mais antiga, com quem fez e o que mudou. A API já tira o que quem consulta não pode ver.
+ * Aba "Histórico" dos painéis de médico, cliente e exame (e o histórico dos dados de faturamento
+ * do cliente): uma linha por mudança, da mais recente para a mais antiga, com quem fez e o que
+ * mudou. A API já tira o que quem consulta não pode ver.
  */
 export function HistoricoCadastro({
   cadastro,
   id,
   agora,
+  porPagina = POR_PAGINA,
 }: {
   cadastro: CadastroComHistorico;
   id: string;
   agora?: Date;
+  /** Mudanças por página; 10 por padrão. */
+  porPagina?: number;
 }) {
   const [referencia] = useState(() => agora ?? new Date());
   const [pagina, setPagina] = useState(1);
   const consulta = useQuery({
-    ...opcoesDaConsulta(cadastro, id, pagina),
+    ...opcoesDaConsulta(cadastro, id, pagina, porPagina),
     // Trocando de página, a anterior fica à vista (esmaecida) até a nova chegar.
     placeholderData: keepPreviousData,
   });
@@ -125,13 +139,8 @@ export function HistoricoCadastro({
           );
         })}
       </ul>
-      {dados.total > POR_PAGINA && (
-        <Paginacao
-          pagina={pagina}
-          porPagina={POR_PAGINA}
-          total={dados.total}
-          onIrPara={setPagina}
-        />
+      {dados.total > porPagina && (
+        <Paginacao pagina={pagina} porPagina={porPagina} total={dados.total} onIrPara={setPagina} />
       )}
     </div>
   );

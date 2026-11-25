@@ -1,6 +1,8 @@
 // Apresentação dos eventos do Histórico dos cadastros (médico, cliente, exame): o que aconteceu e
 // o que mudou, em português. Os ids viram o nome que a página da API traz em `nomes`.
 
+import { formatarCep, soDigitos } from '../../lib/documentos';
+import { aplicarMascara } from '../../lib/mascaras';
 import { type LinhaAlteracao, VAZIO } from '../escala-historico/historico';
 
 export type { LinhaAlteracao };
@@ -46,6 +48,7 @@ const FRASES: Record<string, Record<string, string>> = {
     unificacao_desfeita: 'Deixou de ser unidade',
   },
   exame: { criado: 'Exame criado', alterado: 'Cadastro alterado', excluido: 'Exame excluído' },
+  cliente_dados_fiscais: { alterado: 'Dados de faturamento alterados' },
   de_para_valor_exame: {
     criado: 'Valor fora do padrão criado',
     alterado: 'Valor fora do padrão alterado',
@@ -62,6 +65,7 @@ const NOME_DA_ENTIDADE: Record<string, string> = {
   cliente: 'Cliente',
   exame: 'Exame',
   de_para_valor_exame: 'Valor fora do padrão',
+  cliente_dados_fiscais: 'Dados de faturamento',
 };
 
 /** No médico, o evento da equipe diz o que mudou para ele; `nome` é o da equipe. */
@@ -143,6 +147,35 @@ const CAMPOS: Record<string, string> = {
   papelIds: 'Papéis',
 };
 
+/** Rótulos que mudam por entidade: na aba Faturamento, o e-mail e o telefone são do contato. */
+const CAMPOS_DA_ENTIDADE: Record<string, Record<string, string>> = {
+  cliente_dados_fiscais: {
+    email: 'E-mail do contato',
+    telefone: 'Telefone do contato',
+    contatoNome: 'Nome do contato',
+    cep: 'CEP',
+    logradouro: 'Logradouro',
+    numero: 'Número',
+    complemento: 'Complemento',
+    bairro: 'Bairro',
+    cidade: 'Cidade',
+    uf: 'UF',
+    bancoCodigo: 'Código do banco',
+    bancoAgencia: 'Agência',
+    bancoConta: 'Conta',
+    exclusaoFiscal: 'Exclusão fiscal',
+  },
+};
+
+/** Valores com formato próprio na aba Faturamento; fora do formato, aparecem como estão. */
+const FORMATOS_DA_ENTIDADE: Record<string, Record<string, (v: string) => string>> = {
+  cliente_dados_fiscais: {
+    cep: (v) => (/^\d{8}$/.test(v) ? formatarCep(v) : v),
+    telefone: (v) =>
+      v === soDigitos(v) && v.length >= 10 && v.length <= 11 ? aplicarMascara('telefone', v) : v,
+  },
+};
+
 /** Só nestes campos o valor é um código. */
 const VALORES: Record<string, Record<string, string>> = {
   funcao: { STAFF: 'Staff', FELLOW: 'Fellow (em formação)' },
@@ -176,14 +209,23 @@ const vazio = (v: unknown) =>
 const ehId = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 const nomeDe = (id: string, nomes: NomesHistorico) => nomes[id.toLowerCase()] ?? SEM_NOME;
 
-function rotuloDoCampo(campo: string) {
+function rotuloDoCampo(campo: string, entidade?: string) {
+  const daEntidade = entidade ? CAMPOS_DA_ENTIDADE[entidade]?.[campo] : undefined;
+  if (daEntidade) return daEntidade;
   if (CAMPOS[campo]) return CAMPOS[campo];
   const palavras = campo.replace(/([A-Z])/g, ' $1').toLowerCase();
   return palavras.charAt(0).toUpperCase() + palavras.slice(1);
 }
 
-function formatarValor(campo: string, v: unknown, nomes: NomesHistorico): string {
+function formatarValor(
+  campo: string,
+  v: unknown,
+  nomes: NomesHistorico,
+  entidade?: string,
+): string {
   if (vazio(v)) return VAZIO;
+  const formato = entidade ? FORMATOS_DA_ENTIDADE[entidade]?.[campo] : undefined;
+  if (formato && typeof v === 'string') return formato(v);
   if (ehId(v)) return nomeDe(v, nomes);
   if (Array.isArray(v)) return v.map((x) => (ehId(x) ? nomeDe(x, nomes) : String(x))).join(', ');
   if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
@@ -279,6 +321,31 @@ function alteracoesDosArranjos(evento: Evento, nomes: NomesHistorico): LinhaAlte
 }
 
 /**
+ * E-mails da NF: um item por e-mail que saiu ou entrou; só reordenados, a ordem antes e depois
+ * (a NF segue a ordem da lista).
+ */
+function alteracoesDosEmailsNf(antes: unknown, depois: unknown): LinhaAlteracao[] {
+  const de = (Array.isArray(antes) ? antes : []) as string[];
+  const para = (Array.isArray(depois) ? depois : []) as string[];
+  const linhas: LinhaAlteracao[] = [
+    ...de
+      .filter((e) => !para.includes(e))
+      .map((e) => ({ rotulo: 'E-mail da NF removido', antes: e, depois: null })),
+    ...para
+      .filter((e) => !de.includes(e))
+      .map((e) => ({ rotulo: 'E-mail da NF adicionado', antes: null, depois: e })),
+  ];
+  if (linhas.length === 0 && de.join() !== para.join()) {
+    linhas.push({
+      rotulo: 'Ordem dos e-mails da NF',
+      antes: de.join(', '),
+      depois: para.join(', '),
+    });
+  }
+  return linhas;
+}
+
+/**
  * Linhas "Campo: antes → depois" de um evento, só com o que mudou. Na criação só há o depois (com
  * os campos preenchidos); na exclusão, só o antes. Valores que a API gravou mascarados (CPF,
  * chave Pix) aparecem como vieram.
@@ -304,19 +371,23 @@ export function alteracoesDoCadastro(evento: Evento, nomes: NomesHistorico = {})
   for (const campo of campos) {
     const de = antes?.[campo];
     const para = depois?.[campo];
-    const rotulo = rotuloDoCampo(campo);
+    if (evento.entidade === 'cliente_dados_fiscais' && campo === 'emailsNf') {
+      linhas.push(...alteracoesDosEmailsNf(de, para));
+      continue;
+    }
+    const rotulo = rotuloDoCampo(campo, evento.entidade);
     if (antes && depois) {
       if (canonico(vazio(de) ? null : de) === canonico(vazio(para) ? null : para)) continue;
       linhas.push({
         rotulo,
-        antes: formatarValor(campo, de, nomes),
-        depois: formatarValor(campo, para, nomes),
+        antes: formatarValor(campo, de, nomes, evento.entidade),
+        depois: formatarValor(campo, para, nomes, evento.entidade),
       });
       continue;
     }
     const valor = depois ? para : de;
     if (vazio(valor)) continue;
-    const texto = formatarValor(campo, valor, nomes);
+    const texto = formatarValor(campo, valor, nomes, evento.entidade);
     linhas.push(
       depois ? { rotulo, antes: null, depois: texto } : { rotulo, antes: texto, depois: null },
     );

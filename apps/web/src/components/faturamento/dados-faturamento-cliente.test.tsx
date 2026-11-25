@@ -1,8 +1,9 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResponseError } from '../../gen/.kubb/client';
+import { dadosFiscaisControllerHistorico } from '../../gen/clients/dadosFiscaisControllerHistorico';
 import { dadosFiscaisControllerObter } from '../../gen/clients/dadosFiscaisControllerObter';
 import { dadosFiscaisControllerSalvar } from '../../gen/clients/dadosFiscaisControllerSalvar';
 import type { DadosFiscaisClienteDto } from '../../gen/types/DadosFiscaisClienteDto';
@@ -11,6 +12,9 @@ import { renderComRotas } from '../../test/render';
 import { escolherOpcao } from '../../test/select';
 import { DadosFaturamentoCliente } from './dados-faturamento-cliente';
 
+vi.mock('../../gen/clients/dadosFiscaisControllerHistorico', () => ({
+  dadosFiscaisControllerHistorico: vi.fn(),
+}));
 vi.mock('../../gen/clients/dadosFiscaisControllerObter', () => ({
   dadosFiscaisControllerObter: vi.fn(),
 }));
@@ -21,6 +25,22 @@ vi.mock('../../gen/clients/dadosFiscaisControllerSalvar', () => ({
 const AGORA = new Date('2026-11-24T15:00:00.000Z');
 const obter = vi.mocked(dadosFiscaisControllerObter);
 const salvar = vi.mocked(dadosFiscaisControllerSalvar);
+const historico = vi.mocked(dadosFiscaisControllerHistorico);
+
+const alteracao = (depois: Record<string, unknown>, antes: Record<string, unknown>) => ({
+  id: crypto.randomUUID(),
+  ocorridoEm: '2026-11-24T13:00:00.000Z',
+  ator: { tipo: 'usuario' as const, nome: 'Carla Lima' },
+  entidade: 'cliente_dados_fiscais',
+  entidadeId: 'c-1',
+  acao: 'alterado',
+  antes,
+  depois,
+});
+const comHistorico = (itens: ReturnType<typeof alteracao>[]) =>
+  historico.mockReturnValue({
+    unwrap: async () => ({ itens, total: itens.length, nomes: {}, pagina: 1, porPagina: 5 }),
+  } as never);
 
 const DADOS: DadosFiscaisClienteDto = {
   emailsNf: ['nf@cliente.com.br', 'administracao@teleimagem.com.br'],
@@ -65,6 +85,8 @@ const com = (dados: DadosFiscaisClienteDto) =>
 
 beforeEach(() => {
   com(DADOS);
+  historico.mockReset();
+  comHistorico([]);
   salvar.mockReset();
   salvar.mockReturnValue({ unwrap: async () => undefined } as never);
 });
@@ -251,5 +273,45 @@ describe('DadosFaturamentoCliente', () => {
     expect(await acharAviso()).toHaveTextContent('Dados de faturamento salvos.');
     await waitFor(() => expect(onAlterado).toHaveBeenLastCalledWith(false));
     expect(screen.getByLabelText('Telefone')).toHaveValue('(11) 3333-4444');
+  });
+
+  it('histórico de alterações abaixo dos dados: quem, quando e cada campo antes → depois', async () => {
+    comHistorico([
+      alteracao(
+        { cidade: 'Santos', emailsNf: ['a@x.com', 'b@x.com'] },
+        {
+          cidade: 'São Paulo',
+          emailsNf: ['a@x.com'],
+        },
+      ),
+    ]);
+    abrir({ podeEditar: false });
+
+    const secao = await screen.findByRole('region', { name: 'Histórico de alterações' });
+    const [linha] = await within(secao).findAllByRole('listitem', { name: /./ });
+    const item = within(linha as HTMLElement);
+    expect(item.getByText('Dados de faturamento alterados')).toBeInTheDocument();
+    expect(item.getByText('Carla Lima')).toBeInTheDocument();
+    expect(item.getByText('Hoje, 10:00')).toBeInTheDocument();
+    expect(item.getByText('Cidade:')).toBeInTheDocument();
+    expect(item.getByText('Santos')).toBeInTheDocument();
+    expect(item.getByText('E-mail da NF adicionado:')).toBeInTheDocument();
+    expect(historico).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { clienteId: 'c-1' }, query: { pagina: 1, porPagina: 5 } }),
+    );
+  });
+
+  it('salvar recarrega o histórico', async () => {
+    abrir();
+    const secao = await screen.findByRole('region', { name: 'Histórico de alterações' });
+    expect(
+      await within(secao).findByText('Sem mudanças registradas no redo-one.'),
+    ).toBeInTheDocument();
+    comHistorico([alteracao({ telefone: '1133334444' }, { telefone: '11999990000' })]);
+    const tel = screen.getByLabelText('Telefone');
+    await userEvent.clear(tel);
+    await userEvent.type(tel, '1133334444');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar dados de faturamento' }));
+    expect(await within(secao).findByText('Telefone do contato:')).toBeInTheDocument();
   });
 });

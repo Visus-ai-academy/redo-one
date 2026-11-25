@@ -3,12 +3,16 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { dadosFiscaisControllerHistorico } from '../../gen/clients/dadosFiscaisControllerHistorico';
 import { historicoCadastroControllerDoCliente } from '../../gen/clients/historicoCadastroControllerDoCliente';
 import { historicoCadastroControllerDoExame } from '../../gen/clients/historicoCadastroControllerDoExame';
 import { historicoCadastroControllerDoMedico } from '../../gen/clients/historicoCadastroControllerDoMedico';
 import type { ItemHistoricoCadastroDto } from '../../gen/types/ItemHistoricoCadastroDto';
 import { HistoricoCadastro } from './HistoricoCadastro';
 
+vi.mock('../../gen/clients/dadosFiscaisControllerHistorico', () => ({
+  dadosFiscaisControllerHistorico: vi.fn(),
+}));
 vi.mock('../../gen/clients/historicoCadastroControllerDoMedico', () => ({
   historicoCadastroControllerDoMedico: vi.fn(),
 }));
@@ -46,12 +50,20 @@ function responder(mock: typeof doMedico, itens: ItemHistoricoCadastroDto[], tot
   })) as never);
 }
 
-function montar(cadastro: 'medico' | 'cliente' | 'exame' = 'medico') {
+function montar(
+  cadastro: 'medico' | 'cliente' | 'exame' | 'dados-fiscais' = 'medico',
+  porPagina?: number,
+) {
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <HistoricoCadastro cadastro={cadastro} id="m-1" agora={new Date('2026-11-17T15:00:00Z')} />
+      <HistoricoCadastro
+        cadastro={cadastro}
+        id="m-1"
+        porPagina={porPagina}
+        agora={new Date('2026-11-17T15:00:00Z')}
+      />
     </QueryClientProvider>,
   );
 }
@@ -158,5 +170,34 @@ describe('HistoricoCadastro', () => {
     montar('exame');
     await screen.findAllByText('Sem mudanças registradas no redo-one.');
     expect(historicoCadastroControllerDoExame).toHaveBeenCalled();
+  });
+
+  it('dados de faturamento do cliente: rota do faturamento, com a página pedida', async () => {
+    const doFaturamento = vi.mocked(dadosFiscaisControllerHistorico);
+    responder(
+      doFaturamento as never,
+      [
+        item({
+          entidade: 'cliente_dados_fiscais',
+          antes: { emailsNf: ['a@x.com'] },
+          depois: { emailsNf: ['a@x.com', 'b@x.com'] },
+        }),
+      ],
+      7,
+    );
+    montar('dados-fiscais', 5);
+
+    const [linha] = await screen.findAllByRole('listitem', { name: /./ });
+    const dentro = within(linha as HTMLElement);
+    expect(dentro.getByText('Dados de faturamento alterados')).toBeInTheDocument();
+    expect(dentro.getByText('E-mail da NF adicionado:')).toBeInTheDocument();
+    expect(dentro.getByText('b@x.com')).toBeInTheDocument();
+    expect(screen.getByText('1–5 de 7')).toBeInTheDocument();
+    expect(doFaturamento).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: { clienteId: 'm-1' },
+        query: { pagina: 1, porPagina: 5 },
+      }),
+    );
   });
 });
