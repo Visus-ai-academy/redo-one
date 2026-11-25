@@ -92,7 +92,8 @@ export interface LaudosRepository {
   existentesNaJanela(janela: JanelaLaudos): Promise<Map<string, LaudoExistente>>;
   /**
    * Grava tudo numa transação: upsert dos laudos (com peças e linha crua), upsert dos pacientes, ids da conta MobileMed dos laudos iguais,
-   * marca os removidos e recalcula os totais dos dias da janela.
+   * marca os removidos e refaz os totais só dos dias afetados (o dia novo e o antigo de cada
+   * laudo gravado ou removido).
    */
   aplicar(
     importacaoId: string,

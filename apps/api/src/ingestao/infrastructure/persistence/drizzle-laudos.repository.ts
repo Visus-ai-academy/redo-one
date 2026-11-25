@@ -89,7 +89,21 @@ export class DrizzleLaudosRepository implements LaudosRepository {
       ? sql`excluded."competencia" not in ${j.competenciasBloqueadas}`
       : undefined;
     await this.db.transaction(async (tx) => {
+      // Dias cujos totais mudam: o novo e o antigo de cada laudo gravado ou removido.
+      const diasAfetados = new Set<string>();
+
       for (const lote of emLotes([...a.inserir, ...a.atualizar])) {
+        // O dia gravado antes do upsert, também fora da janela: o laudo pode ter mudado de dia.
+        const anteriores = await tx
+          .select({ identidade: laudos.identidade, dia: laudos.diaLaudo })
+          .from(laudos)
+          .where(
+            inArray(
+              laudos.identidade,
+              lote.map((l) => l.identidade),
+            ),
+          );
+        const diaAnterior = new Map(anteriores.map((l) => [l.identidade, l.dia]));
         const gravados = await tx
           .insert(laudos)
           .values(lote.map((l) => linhaDoLaudo(l, importacaoId)))
@@ -99,7 +113,12 @@ export class DrizzleLaudosRepository implements LaudosRepository {
             set: colunasAtualizadas,
             setWhere: and(desbloqueado, vaiParaDesbloqueada),
           })
-          .returning({ id: laudos.id, identidade: laudos.identidade });
+          .returning({ id: laudos.id, identidade: laudos.identidade, dia: laudos.diaLaudo });
+        for (const g of gravados) {
+          diasAfetados.add(g.dia);
+          const anterior = diaAnterior.get(g.identidade);
+          if (anterior) diasAfetados.add(anterior);
+        }
         const idPorIdentidade = new Map(gravados.map((g) => [g.identidade, g.id]));
 
         await tx
@@ -199,14 +218,20 @@ export class DrizzleLaudosRepository implements LaudosRepository {
       }
 
       for (const lote of emLotes(a.remover)) {
-        await tx
+        const removidos = await tx
           .update(laudos)
           .set({ removidoEm: agora, importacaoId })
-          .where(and(inArray(laudos.identidade, lote), desbloqueado));
+          .where(and(inArray(laudos.identidade, lote), desbloqueado))
+          .returning({ dia: laudos.diaLaudo });
+        for (const r of removidos) diasAfetados.add(r.dia);
       }
 
-      // Totais dos dias da janela, refeitos do zero: idempotente e sem conta incremental.
-      await tx.delete(totaisLaudosDia).where(between(totaisLaudosDia.dia, j.inicio, j.fim));
+      // Totais só dos dias afetados, refeitos do zero: idempotente e sem conta incremental.
+      if (!diasAfetados.size) return;
+      const dias = [...diasAfetados];
+      // A agregação de um mês de laudos derrama em disco com o work_mem padrão (4 MB).
+      await tx.execute(sql`set local work_mem = '32MB'`);
+      await tx.delete(totaisLaudosDia).where(inArray(totaisLaudosDia.dia, dias));
       await tx.execute(sql`
         insert into ${totaisLaudosDia} (dia, cliente_id, modalidade_id, especialidade_id,
           prioridade_id, medico_id, status, quantidade, volume, com_prazo, atrasados,
@@ -218,7 +243,7 @@ export class DrizzleLaudosRepository implements LaudosRepository {
           coalesce(sum(round(extract(epoch from data_laudo - data_prazo) / 60))
             filter (where data_laudo > data_prazo), 0)
         from ${laudos}
-        where dia_laudo between ${j.inicio} and ${j.fim} and removido_em is null
+        where ${inArray(laudos.diaLaudo, dias)} and removido_em is null
         group by dia_laudo, cliente_id, modalidade_id, especialidade_id, prioridade_id, medico_id,
           status
       `);

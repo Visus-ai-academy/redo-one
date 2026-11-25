@@ -504,6 +504,195 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     ]);
   });
 
+  describe('totais só dos dias afetados', () => {
+    const semana: JanelaLaudos = { ...janela, inicio: '2026-10-01', fim: '2026-10-10' };
+    const noDia = (dia: string) => ({
+      diaLaudo: dia,
+      dataLaudo: new Date(`${dia}T13:00:00Z`),
+      dataPrazo: new Date(`${dia}T12:00:00Z`),
+    });
+
+    /** Total de mentira num dia: se o dia for refeito, ele some. */
+    const sentinela = (dia: string) =>
+      db.insert(schema.totaisLaudosDia).values({
+        dia,
+        status: 'SENTINELA',
+        quantidade: 99,
+        volume: 99,
+        comPrazo: 0,
+        atrasados: 0,
+        somaTatMinutos: 0,
+        somaAtrasoMinutos: 0,
+      });
+
+    const totais = () =>
+      db
+        .select()
+        .from(schema.totaisLaudosDia)
+        .orderBy(schema.totaisLaudosDia.dia, schema.totaisLaudosDia.status);
+
+    const quantidadePorDia = async () =>
+      Object.fromEntries(
+        (await totais()).map((t) => [`${t.dia} ${t.status}`, t.quantidade] as const),
+      );
+
+    beforeEach(async () => {
+      await repo.aplicar(
+        importacaoId,
+        semana,
+        {
+          ...vazio,
+          inserir: [
+            laudo('a', noDia('2026-10-06')),
+            laudo('b', noDia('2026-10-06')),
+            laudo('c', noDia('2026-10-07')),
+          ],
+        },
+        agora,
+      );
+    });
+
+    it('refaz só os dias dos laudos gravados; os outros dias da janela ficam intactos', async () => {
+      await sentinela('2026-10-08');
+      await sentinela('2026-10-07');
+
+      await repo.aplicar(
+        importacaoId,
+        semana,
+        {
+          ...vazio,
+          atualizar: [laudo('a', { ...noDia('2026-10-06'), hashConteudo: 'novo', volume: 3 })],
+        },
+        agora,
+      );
+
+      expect(await quantidadePorDia()).toEqual({
+        '2026-10-06 Assinado': 2,
+        '2026-10-07 Assinado': 1,
+        '2026-10-07 SENTINELA': 99,
+        '2026-10-08 SENTINELA': 99,
+      });
+      expect((await totais())[0]?.volume).toBe(4);
+    });
+
+    it('laudo que mudou de dia atualiza o dia antigo e o novo, mesmo fora da janela', async () => {
+      // 'f' foi gravado num dia fora da janela que a importação seguinte cobre.
+      await repo.aplicar(
+        importacaoId,
+        { ...semana, inicio: '2026-09-30', fim: '2026-09-30' },
+        { ...vazio, inserir: [laudo('f', noDia('2026-09-30'))] },
+        agora,
+      );
+
+      await repo.aplicar(
+        importacaoId,
+        semana,
+        {
+          ...vazio,
+          atualizar: [laudo('a', { ...noDia('2026-10-09'), hashConteudo: 'novo' })],
+          // Fora da janela gravada, o plano o vê como novo; o upsert o move de dia.
+          inserir: [laudo('f', { ...noDia('2026-10-09'), hashConteudo: 'novo' })],
+        },
+        agora,
+      );
+
+      expect(await quantidadePorDia()).toEqual({
+        '2026-10-06 Assinado': 1,
+        '2026-10-07 Assinado': 1,
+        '2026-10-09 Assinado': 2,
+      });
+    });
+
+    it('laudo removido sai do total do seu dia, sem refazer os outros', async () => {
+      await sentinela('2026-10-07');
+
+      await repo.aplicar(importacaoId, semana, { ...vazio, remover: ['a'] }, agora);
+
+      expect(await quantidadePorDia()).toEqual({
+        '2026-10-06 Assinado': 1,
+        '2026-10-07 Assinado': 1,
+        '2026-10-07 SENTINELA': 99,
+      });
+    });
+
+    it('laudo de competência bloqueada não altera os totais', async () => {
+      await sentinela('2026-10-06');
+      await sentinela('2026-10-09');
+      const antes = await totais();
+
+      await repo.aplicar(
+        importacaoId,
+        { ...semana, competenciasBloqueadas: ['2026-10'] },
+        {
+          ...vazio,
+          atualizar: [laudo('a', { ...noDia('2026-10-09'), hashConteudo: 'novo' })],
+          remover: ['b'],
+        },
+        agora,
+      );
+
+      expect(await totais()).toEqual(antes);
+    });
+
+    it('importação sem mudanças nos laudos não toca os totais', async () => {
+      await sentinela('2026-10-06');
+      const antes = await totais();
+
+      await repo.aplicar(
+        importacaoId,
+        semana,
+        {
+          ...vazio,
+          pacientes: new Map([['a', { nome: 'Fulano', codigo: '1', conferencia: 'p1' }]]),
+          idsMedico: new Map([
+            ['b', { medicoIdMobilemed: 45, medicoReassinaturaIdMobilemed: null }],
+          ]),
+        },
+        agora,
+      );
+
+      expect(await totais()).toEqual(antes);
+    });
+
+    it('o resultado é igual ao recálculo completo dos laudos', async () => {
+      await repo.aplicar(
+        importacaoId,
+        semana,
+        {
+          ...vazio,
+          inserir: [laudo('d', { ...noDia('2026-10-02'), status: 'Reassinado', volume: 2 })],
+          atualizar: [
+            laudo('a', { ...noDia('2026-10-07'), hashConteudo: 'novo', dataPrazo: null }),
+            laudo('c', { ...noDia('2026-10-07'), hashConteudo: 'novo', volume: 5 }),
+          ],
+          remover: ['b'],
+        },
+        agora,
+      );
+
+      const recalculo = await db.execute(sql`
+        select dia_laudo::text dia, status, count(*)::int quantidade, sum(volume)::float volume,
+          count(data_prazo)::int com_prazo,
+          count(*) filter (where data_laudo > data_prazo)::int atrasados
+        from laudos where removido_em is null
+        group by dia_laudo, cliente_id, modalidade_id, especialidade_id, prioridade_id, medico_id,
+          status
+        order by 1, 2
+      `);
+      expect(
+        (await totais()).map((t) => ({
+          dia: t.dia,
+          status: t.status,
+          quantidade: t.quantidade,
+          volume: t.volume,
+          com_prazo: t.comPrazo,
+          atrasados: t.atrasados,
+        })),
+      ).toEqual(recalculo.rows);
+      expect(recalculo.rows).toHaveLength(2);
+    });
+  });
+
   it('o expurgo apaga só as linhas cruas gravadas antes do instante', async () => {
     await repo.aplicar(
       importacaoId,
