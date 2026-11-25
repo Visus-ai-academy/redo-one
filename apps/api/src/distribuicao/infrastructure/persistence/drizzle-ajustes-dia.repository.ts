@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
-
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import { DATABASE, type Database } from '../../../database/database';
 import {
   ajustesDiaDistribuicao,
@@ -8,14 +8,43 @@ import {
   alocacoes,
   clientes,
 } from '../../../database/schema';
+import {
+  gravarEventos,
+  type Transacao,
+} from '../../../escala/alocacoes/drizzle-alocacoes.repository';
 import type {
   AjusteDiaLido,
   AjustesDiaRepository,
   FiltroAjustesDia,
+  MudancaAjustesDia,
 } from '../../application/ports/ajustes-dia.repository';
 import type { AjusteDiaDistribuicao } from '../../domain/ajuste-dia';
 
 const a = ajustesDiaDistribuicao;
+
+/** Cria ou troca (pela alocação e o dia), com as prioridades inteiras. */
+async function gravar(tx: Transacao, ajuste: AjusteDiaDistribuicao) {
+  const { prioridadeIdsLiberadas, ...linha } = ajuste;
+  await tx
+    .insert(a)
+    .values(linha)
+    .onConflictDoUpdate({
+      target: [a.alocacaoId, a.data],
+      set: { segueSla: linha.segueSla, clienteId: linha.clienteId, laudosExtra: linha.laudosExtra },
+    });
+  const [gravado] = await tx
+    .select({ id: a.id })
+    .from(a)
+    .where(and(eq(a.alocacaoId, linha.alocacaoId), eq(a.data, linha.data)));
+  const ajusteId = gravado?.id ?? linha.id;
+  await tx
+    .delete(ajustesDiaDistribuicaoPrioridades)
+    .where(eq(ajustesDiaDistribuicaoPrioridades.ajusteId, ajusteId));
+  if (prioridadeIdsLiberadas.length)
+    await tx
+      .insert(ajustesDiaDistribuicaoPrioridades)
+      .values(prioridadeIdsLiberadas.map((prioridadeId) => ({ ajusteId, prioridadeId })));
+}
 
 @Injectable()
 export class DrizzleAjustesDiaRepository implements AjustesDiaRepository {
@@ -64,37 +93,12 @@ export class DrizzleAjustesDiaRepository implements AjustesDiaRepository {
     return lido ?? null;
   }
 
-  async salvar(ajuste: AjusteDiaDistribuicao): Promise<void> {
-    const { prioridadeIdsLiberadas, ...linha } = ajuste;
+  async aplicar(mudanca: MudancaAjustesDia, eventos: EventoAuditoria[]): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await tx
-        .insert(a)
-        .values(linha)
-        .onConflictDoUpdate({
-          target: [a.alocacaoId, a.data],
-          set: {
-            segueSla: linha.segueSla,
-            clienteId: linha.clienteId,
-            laudosExtra: linha.laudosExtra,
-          },
-        });
-      const [gravado] = await tx
-        .select({ id: a.id })
-        .from(a)
-        .where(and(eq(a.alocacaoId, linha.alocacaoId), eq(a.data, linha.data)));
-      const ajusteId = gravado?.id ?? linha.id;
-      await tx
-        .delete(ajustesDiaDistribuicaoPrioridades)
-        .where(eq(ajustesDiaDistribuicaoPrioridades.ajusteId, ajusteId));
-      if (prioridadeIdsLiberadas.length)
-        await tx
-          .insert(ajustesDiaDistribuicaoPrioridades)
-          .values(prioridadeIdsLiberadas.map((prioridadeId) => ({ ajusteId, prioridadeId })));
+      for (const ajuste of mudanca.gravar) await gravar(tx, ajuste);
+      if (mudanca.removerIds.length) await tx.delete(a).where(inArray(a.id, mudanca.removerIds));
+      await gravarEventos(tx, eventos);
     });
-  }
-
-  async remover(id: string): Promise<void> {
-    await this.db.delete(a).where(eq(a.id, id));
   }
 
   listar(f: FiltroAjustesDia): Promise<AjusteDiaLido[]> {
@@ -103,6 +107,7 @@ export class DrizzleAjustesDiaRepository implements AjustesDiaRepository {
         gte(a.data, f.de),
         lte(a.data, f.ate),
         f.medicoId ? eq(alocacoes.medicoId, f.medicoId) : undefined,
+        f.alocacaoId ? eq(a.alocacaoId, f.alocacaoId) : undefined,
       ),
     );
   }

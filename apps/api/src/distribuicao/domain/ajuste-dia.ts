@@ -1,4 +1,4 @@
-import { invalida, semRepetidos } from './validacao';
+import { invalida, semRepetidos, validarData } from './validacao';
 
 /**
  * Ajuste do dia da distribuição, por alocação da escala e dia (a "exceção do robô" do
@@ -50,3 +50,36 @@ export const canonicaAjuste = <T extends AjusteDiaEdicao>(a: T): T => ({
   ...a,
   prioridadeIdsLiberadas: [...a.prioridadeIdsLiberadas].sort(),
 });
+
+/**
+ * Até quantos dias (com o dia aberto) um ajuste pode ser gravado de uma vez pelo "Até". Proteção
+ * técnica, não regra do negócio: cada dia vira uma linha e um evento de auditoria numa transação
+ * só, e o ajuste é uma exceção (para mais tempo, a alocação ou o arranjo é que mudam). Um mês.
+ */
+export const MAX_DIAS_PERIODO_AJUSTE = 31;
+
+const DIA_MS = 86_400_000;
+const somarDias = (data: string, dias: number) =>
+  new Date(Date.parse(`${data}T00:00:00Z`) + dias * DIA_MS).toISOString().slice(0, 10);
+const formatar = (data: string) => data.split('-').reverse().join('/');
+
+/** O último "Até" aceito a partir do dia aberto. */
+export const ateMaximoDoAjuste = (data: string) => somarDias(data, MAX_DIAS_PERIODO_AJUSTE - 1);
+
+/**
+ * Os dias de [data, ate], com as duas pontas ("YYYY-MM-DD", calendário de Brasília). "Até" não
+ * vem antes do dia aberto nem passa do limite.
+ */
+export function diasDoPeriodoAjuste(data: string, ate: string): string[] {
+  validarData(data);
+  validarData(ate, 'Até');
+  if (ate < data) invalida(`"Até" não pode ser antes do dia aberto (${formatar(data)}).`);
+  if (ate > ateMaximoDoAjuste(data)) {
+    invalida(
+      `O ajuste vale por até ${MAX_DIAS_PERIODO_AJUSTE} dias de uma vez: escolha "Até" até ${formatar(ateMaximoDoAjuste(data))}.`,
+    );
+  }
+  const dias: string[] = [];
+  for (let d = data; d <= ate; d = somarDias(d, 1)) dias.push(d);
+  return dias;
+}

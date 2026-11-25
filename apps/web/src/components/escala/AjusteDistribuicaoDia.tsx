@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { ajustesDiaControllerObterQueryOptions } from '../../gen/hooks/useAjustesDiaControllerObter';
-import type { AjusteDiaEdicaoDto } from '../../gen/types/AjusteDiaEdicaoDto';
 import type { PrioridadeEscalaDto } from '../../gen/types/PrioridadeEscalaDto';
+import type { SalvarAjusteDiaDto } from '../../gen/types/SalvarAjusteDiaDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { useAppForm } from '../form/form';
@@ -20,7 +20,7 @@ type Props = {
   prioridades: PrioridadeEscalaDto[];
   buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
   /** Grava o ajuste; vazio (nada liberado, a Lista como sempre e sem extra) tira o do dia. */
-  onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
+  onSalvar: (ajuste: SalvarAjusteDiaDto) => Promise<void>;
   /** Há alteração não salva (o painel pergunta antes de fechar). */
   onAlterado?: (alterado: boolean) => void;
 };
@@ -143,7 +143,7 @@ function FormAjuste({
   temAjuste: boolean;
   prioridades: PrioridadeEscalaDto[];
   buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
-  onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
+  onSalvar: (ajuste: SalvarAjusteDiaDto) => Promise<void>;
   onAlterado?: (alterado: boolean) => void;
 }) {
   const form = useAppForm({

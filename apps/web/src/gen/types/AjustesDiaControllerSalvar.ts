@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { AjusteDiaEdicaoDto } from './AjusteDiaEdicaoDto'
+import type { SalvarAjusteDiaDto } from './SalvarAjusteDiaDto'
 
 export type AjustesDiaControllerSalvarPath = {
   alocacaoId: string;
@@ -16,7 +16,7 @@ export type AjustesDiaControllerSalvarStatus400 = unknown;
 
 export type AjustesDiaControllerSalvarStatus404 = unknown;
 
-export type AjustesDiaControllerSalvarBody = AjusteDiaEdicaoDto;
+export type AjustesDiaControllerSalvarBody = SalvarAjusteDiaDto;
 
 export type AjustesDiaControllerSalvarOptions = {
   body: AjustesDiaControllerSalvarBody;

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { ajusteVazio, canonicaAjuste, validarAjusteDia } from './ajuste-dia';
+import {
+  ajusteVazio,
+  ateMaximoDoAjuste,
+  canonicaAjuste,
+  diasDoPeriodoAjuste,
+  MAX_DIAS_PERIODO_AJUSTE,
+  validarAjusteDia,
+} from './ajuste-dia';
 
 const ajuste = (parcial = {}) => ({
   prioridadeIdsLiberadas: ['urg'],
@@ -46,5 +53,27 @@ describe('ajuste do dia da distribuição', () => {
     expect(
       canonicaAjuste(ajuste({ prioridadeIdsLiberadas: ['b', 'a'] })).prioridadeIdsLiberadas,
     ).toEqual(['a', 'b']);
+  });
+});
+
+describe('período do ajuste do dia ("Até")', () => {
+  it('vai do dia aberto até o "Até", com as duas pontas, virando o mês', () => {
+    expect(diasDoPeriodoAjuste('2026-11-29', '2026-12-02')).toEqual([
+      '2026-11-29',
+      '2026-11-30',
+      '2026-12-01',
+      '2026-12-02',
+    ]);
+    expect(diasDoPeriodoAjuste('2026-11-18', '2026-11-18')).toEqual(['2026-11-18']);
+  });
+
+  it('recusa "Até" antes do dia aberto ou além do limite', () => {
+    expect(() => diasDoPeriodoAjuste('2026-11-18', '2026-11-17')).toThrow(/antes do dia/);
+    expect(() => diasDoPeriodoAjuste('2026-11-18', '2026-11-31')).toThrow(/Até/);
+    const ultimo = ateMaximoDoAjuste('2026-11-18');
+    expect(diasDoPeriodoAjuste('2026-11-18', ultimo)).toHaveLength(MAX_DIAS_PERIODO_AJUSTE);
+    expect(() => diasDoPeriodoAjuste('2026-11-18', '2026-12-31')).toThrow(
+      new RegExp(`${MAX_DIAS_PERIODO_AJUSTE} dias`),
+    );
   });
 });

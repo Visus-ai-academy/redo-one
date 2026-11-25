@@ -2,10 +2,10 @@ import { Button } from '@base-ui/react/button';
 import { Link } from '@tanstack/react-router';
 import { type ReactNode, useCallback, useState } from 'react';
 import { z } from 'zod';
-import type { AjusteDiaEdicaoDto } from '../../gen/types/AjusteDiaEdicaoDto';
 import type { ConflitoEscalaDto } from '../../gen/types/ConflitoEscalaDto';
 import type { OcorrenciaDto } from '../../gen/types/OcorrenciaDto';
 import type { PrioridadeEscalaDto } from '../../gen/types/PrioridadeEscalaDto';
+import type { SalvarAjusteDiaDto } from '../../gen/types/SalvarAjusteDiaDto';
 import { plural } from '../../lib/formato';
 import type { PodeNaTela } from '../../lib/permissoes';
 import { Alerta } from '../alerta/Alerta';
@@ -38,7 +38,7 @@ export type PainelPlantaoProps = {
   distribuicao?: {
     prioridades: PrioridadeEscalaDto[];
     buscarClientes: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
-    onSalvar: (ajuste: AjusteDiaEdicaoDto) => Promise<void>;
+    onSalvar: (ajuste: SalvarAjusteDiaDto) => Promise<void>;
   };
   onFechar: () => void;
 };

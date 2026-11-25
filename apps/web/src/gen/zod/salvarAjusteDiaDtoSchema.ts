@@ -5,11 +5,12 @@
 
 import * as z from 'zod'
 
-export const ajusteDiaEdicaoDtoSchema = z.object({
+export const salvarAjusteDiaDtoSchema = z.object({
   prioridadeIdsLiberadas: z.array(z.uuid()).describe('Prioridades da operação liberadas no dia, além do arranjo e da alocação.'),
   segueSla: z.boolean().describe('Segue o SLA neste dia: o prazo mínimo da grade de recebimento não vale para ele.'),
   clienteId: z.uuid().nullable().describe('Só os exames deste cliente; nulo = todos.'),
   laudosExtra: z.number().min(0).max(500).describe('Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum.'),
+  ate: z.iso.date().optional().describe('Último dia em que o ajuste vale (de o dia da rota até ele, até 31 dias); ausente = só o dia. Grava em cada dia de plantão do período, substituindo o ajuste que o dia tinha; ajuste vazio tira os ajustes do período.'),
 })
 
-export type AjusteDiaEdicaoDtoSchemaType = z.infer<typeof ajusteDiaEdicaoDtoSchema>
+export type SalvarAjusteDiaDtoSchemaType = z.infer<typeof salvarAjusteDiaDtoSchema>

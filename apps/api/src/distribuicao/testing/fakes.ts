@@ -1,8 +1,10 @@
+import type { EventoAuditoria } from '../../auditoria/auditoria';
 import type { Segmento } from '../../comum/segmentos';
 import type {
   AjusteDiaLido,
   AjustesDiaRepository,
   FiltroAjustesDia,
+  MudancaAjustesDia,
 } from '../application/ports/ajustes-dia.repository';
 import type { ArranjosRepository, Dono } from '../application/ports/arranjos.repository';
 import type {
@@ -207,8 +209,8 @@ export class EscalaDoAjusteEmMemoria implements EscalaDoAjuste {
     return a && this.noRecorte(ator, a) ? { ...a } : null;
   }
 
-  async ehDiaDePlantao(alocacaoId: string, data: string) {
-    return this.plantoes.get(alocacaoId)?.has(data) ?? false;
+  async diasDePlantao(alocacaoId: string, de: string, ate: string) {
+    return [...(this.plantoes.get(alocacaoId) ?? [])].filter((d) => d >= de && d <= ate).sort();
   }
 
   async recorteDo(ator: AtorEscala) {
@@ -218,7 +220,11 @@ export class EscalaDoAjusteEmMemoria implements EscalaDoAjuste {
 
 export class AjustesDiaEmMemoria implements AjustesDiaRepository {
   readonly itens = new Map<string, AjusteDiaDistribuicao>();
+  /** Ajustes gravados ou removidos, somando todas as chamadas. */
   gravacoes = 0;
+  /** Chamadas de `aplicar` (cada uma é uma transação no repositório real). */
+  aplicacoes = 0;
+  readonly eventos: EventoAuditoria[] = [];
 
   constructor(
     private readonly escala: EscalaDoAjusteEmMemoria,
@@ -241,19 +247,23 @@ export class AjustesDiaEmMemoria implements AjustesDiaRepository {
     return a ? this.ler(a) : null;
   }
 
-  async salvar(ajuste: AjusteDiaDistribuicao) {
-    this.gravacoes++;
-    this.itens.set(`${ajuste.alocacaoId}|${ajuste.data}`, structuredClone(ajuste));
-  }
-
-  async remover(id: string) {
-    this.gravacoes++;
-    for (const [k, a] of this.itens) if (a.id === id) this.itens.delete(k);
+  async aplicar(mudanca: MudancaAjustesDia, eventos: EventoAuditoria[]) {
+    this.aplicacoes++;
+    for (const ajuste of mudanca.gravar) {
+      this.gravacoes++;
+      this.itens.set(`${ajuste.alocacaoId}|${ajuste.data}`, structuredClone(ajuste));
+    }
+    for (const id of mudanca.removerIds) {
+      this.gravacoes++;
+      for (const [k, a] of this.itens) if (a.id === id) this.itens.delete(k);
+    }
+    this.eventos.push(...structuredClone(eventos));
   }
 
   async listar(f: FiltroAjustesDia) {
     return [...this.itens.values()]
       .filter((a) => a.data >= f.de && a.data <= f.ate)
+      .filter((a) => !f.alocacaoId || a.alocacaoId === f.alocacaoId)
       .map((a) => this.ler(a))
       .filter((a) => !f.medicoId || a.medicoId === f.medicoId)
       .sort((a, b) => (a.data < b.data ? -1 : 1));

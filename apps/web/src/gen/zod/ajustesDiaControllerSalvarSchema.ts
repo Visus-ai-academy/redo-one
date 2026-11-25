@@ -4,7 +4,7 @@
 */
 
 import * as z from 'zod'
-import { ajusteDiaEdicaoDtoSchema } from './ajusteDiaEdicaoDtoSchema'
+import { salvarAjusteDiaDtoSchema } from './salvarAjusteDiaDtoSchema'
 
 export const ajustesDiaControllerSalvarPathAlocacaoIdSchema = z.string()
 
@@ -34,7 +34,7 @@ export const ajustesDiaControllerSalvarErrorSchema = z.union([ajustesDiaControll
 
 export type AjustesDiaControllerSalvarErrorSchemaType = z.infer<typeof ajustesDiaControllerSalvarErrorSchema>
 
-export const ajustesDiaControllerSalvarBodySchema = ajusteDiaEdicaoDtoSchema
+export const ajustesDiaControllerSalvarBodySchema = salvarAjusteDiaDtoSchema
 
 export type AjustesDiaControllerSalvarBodySchemaType = z.infer<typeof ajustesDiaControllerSalvarBodySchema>
 

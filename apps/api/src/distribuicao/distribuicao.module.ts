@@ -84,6 +84,7 @@ import {
   DefinirAjusteDia,
   ListarAjustesDia,
   ObterAjusteDia,
+  PreverPeriodoAjusteDia,
 } from './application/use-cases/ajuste-dia';
 import { ConsultarArranjos, SalvarArranjos } from './application/use-cases/arranjos';
 import {
@@ -395,13 +396,18 @@ const CASOS_RODADA = [
     },
     {
       provide: DefinirAjusteDia,
-      inject: [AJUSTES_DIA_REPOSITORY, ESCALA_DO_AJUSTE, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      inject: [AJUSTES_DIA_REPOSITORY, ESCALA_DO_AJUSTE, CADASTROS_DISTRIBUICAO],
       useFactory: (
         repo: AjustesDiaRepository,
         escala: EscalaDoAjuste,
         cadastros: CadastrosDistribuicao,
-        auditoria: Auditoria,
-      ) => new DefinirAjusteDia(repo, escala, cadastros, auditoria, agora),
+      ) => new DefinirAjusteDia(repo, escala, cadastros, agora),
+    },
+    {
+      provide: PreverPeriodoAjusteDia,
+      inject: [AJUSTES_DIA_REPOSITORY, ESCALA_DO_AJUSTE],
+      useFactory: (repo: AjustesDiaRepository, escala: EscalaDoAjuste) =>
+        new PreverPeriodoAjusteDia(repo, escala),
     },
     { provide: PRIORIDADES_CLIENTE_REPOSITORY, useClass: DrizzlePrioridadesClienteRepository },
     {

@@ -24,12 +24,15 @@ import {
   DefinirAjusteDia,
   ListarAjustesDia,
   ObterAjusteDia,
+  PreverPeriodoAjusteDia,
 } from '../../application/use-cases/ajuste-dia';
 import {
   AjusteDiaDto,
-  AjusteDiaEdicaoDto,
   AjustesDiaQueryDto,
+  PeriodoAjusteDiaDto,
+  PeriodoAjusteDiaQueryDto,
   RespostaAjusteDiaDto,
+  SalvarAjusteDiaDto,
 } from './dto/ajuste-dia.dto';
 
 const atorDe = (p: PrincipalUsuario): AtorEscala => ({
@@ -48,6 +51,7 @@ export class AjustesDiaController {
     private readonly obterAjuste: ObterAjusteDia,
     private readonly definir: DefinirAjusteDia,
     private readonly listarAjustes: ListarAjustesDia,
+    private readonly prever: PreverPeriodoAjusteDia,
   ) {}
 
   @Get('ajustes-dia')
@@ -73,18 +77,33 @@ export class AjustesDiaController {
     return { ajuste: await this.obterAjuste.executar(atorDe(principal), alocacaoId, data) };
   }
 
+  @Get('alocacoes/:alocacaoId/ajustes-dia/:data/periodo')
+  @Permissao('escala.ver')
+  @ApiOkResponse({ type: PeriodoAjusteDiaDto })
+  @ApiBadRequestResponse()
+  @ApiNotFoundResponse()
+  periodo(
+    @PrincipalAtual() principal: PrincipalUsuario,
+    @Param('alocacaoId', ParseUUIDPipe) alocacaoId: string,
+    @Param('data') data: string,
+    @Query() q: PeriodoAjusteDiaQueryDto,
+  ): Promise<PeriodoAjusteDiaDto> {
+    return this.prever.executar(atorDe(principal), alocacaoId, data, q.ate ?? data);
+  }
+
   @Put('alocacoes/:alocacaoId/ajustes-dia/:data')
   @Permissao('escala.editar')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse({ description: 'Ajuste vazio remove o do dia.' })
+  @ApiNoContentResponse({ description: 'Ajuste vazio remove os do período (ou o do dia).' })
   @ApiBadRequestResponse()
   @ApiNotFoundResponse()
   salvar(
     @PrincipalAtual() principal: PrincipalUsuario,
     @Param('alocacaoId', ParseUUIDPipe) alocacaoId: string,
     @Param('data') data: string,
-    @Body() corpo: AjusteDiaEdicaoDto,
+    @Body() corpo: SalvarAjusteDiaDto,
   ): Promise<void> {
-    return this.definir.executar(atorDe(principal), alocacaoId, data, corpo);
+    const { ate, ...ajuste } = corpo;
+    return this.definir.executar(atorDe(principal), alocacaoId, data, ajuste, ate ?? data);
   }
 }

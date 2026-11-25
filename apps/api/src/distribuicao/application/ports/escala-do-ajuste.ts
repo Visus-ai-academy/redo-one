@@ -19,8 +19,11 @@ export type NoRecorte = (alvo: { turnoId: string; frenteId: string }) => boolean
 export interface EscalaDoAjuste {
   /** A alocação, se existir e estiver no recorte do ator (fora dele, para a gestora, não existe). */
   alocacaoNoRecorte(ator: AtorEscala, alocacaoId: string): Promise<AlocacaoDoAjuste | null>;
-  /** O dia é de plantão do vínculo (na cobertura, também do titular)? */
-  ehDiaDePlantao(alocacaoId: string, data: string): Promise<boolean>;
+  /**
+   * Os dias de [de, ate] que são de plantão do vínculo (na cobertura, também do titular), em
+   * ordem. A regra é a da escala (`ehDiaDePlantao`), a mesma do ajuste de produtividade do dia.
+   */
+  diasDePlantao(alocacaoId: string, de: string, ate: string): Promise<string[]>;
   /** O recorte do ator, para filtrar listagens. */
   recorteDo(ator: AtorEscala): Promise<NoRecorte>;
 }

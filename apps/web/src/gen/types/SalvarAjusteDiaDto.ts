@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-export type AjusteDiaEdicaoDto = {
+export type SalvarAjusteDiaDto = {
   /**
    * @description Prioridades da operação liberadas no dia, além do arranjo e da alocação.
    * @type array
@@ -28,4 +28,11 @@ export type AjusteDiaEdicaoDto = {
    * @type number
    */
   laudosExtra: number;
+  /**
+   * @description Último dia em que o ajuste vale (de o dia da rota até ele, até 31 dias); ausente = só o dia. Grava em cada dia de plantão do período, substituindo o ajuste que o dia tinha; ajuste vazio tira os ajustes do período.
+   *
+   * Format: `date`
+   * @type string | undefined
+   */
+  ate?: string;
 };

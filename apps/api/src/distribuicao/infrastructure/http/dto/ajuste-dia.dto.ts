@@ -56,6 +56,21 @@ export class AjusteDiaEdicaoDto {
   laudosExtra!: number;
 }
 
+/** O ajuste e até quando ele vale (o mesmo ajuste em cada dia de plantão do período). */
+export class SalvarAjusteDiaDto extends AjusteDiaEdicaoDto {
+  @ApiPropertyOptional({
+    format: 'date',
+    description:
+      'Último dia em que o ajuste vale (de o dia da rota até ele, até 31 dias); ausente = só o dia. ' +
+      'Grava em cada dia de plantão do período, substituindo o ajuste que o dia tinha; ajuste vazio ' +
+      'tira os ajustes do período.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  ate?: string;
+}
+
 export class AjusteDiaDto extends AjusteDiaEdicaoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ format: 'uuid' }) alocacaoId!: string;
@@ -86,4 +101,31 @@ export class AjustesDiaQueryDto {
   @IsOptional()
   @IsUUID()
   medicoId?: string;
+}
+
+export class PeriodoAjusteDiaQueryDto {
+  @ApiPropertyOptional({ format: 'date', description: 'Ausente = só o dia da rota.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  ate?: string;
+}
+
+export class PeriodoAjusteDiaDto {
+  @ApiProperty({
+    type: [String],
+    format: 'date',
+    description: 'Dias de plantão do vínculo no período, onde o ajuste seria gravado.',
+  })
+  dias!: string[];
+
+  @ApiProperty({
+    type: [String],
+    format: 'date',
+    description: 'Dias do período que já têm ajuste (substituídos ao gravar, tirados ao remover).',
+  })
+  diasComAjuste!: string[];
+
+  @ApiProperty({ format: 'date', description: 'O último "Até" aceito a partir do dia da rota.' })
+  ateMaximo!: string;
 }

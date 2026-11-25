@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
@@ -318,14 +318,35 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       clienteId: null,
       laudosExtra: 0,
     };
-    await repo.salvar(base);
-    await repo.salvar({
-      ...base,
-      prioridadeIdsLiberadas: [id('opRot'), id('opInt')].sort(),
-      segueSla: true,
-      clienteId: id('cli'),
-      laudosExtra: 30,
+    const evento = (acao: string) => ({
+      ator: { tipo: 'usuario' as const, id: NENHUM },
+      entidade: 'ajuste_dia_distribuicao',
+      entidadeId: base.id,
+      acao,
+      em: new Date('2026-11-17T18:00:00Z'),
     });
+    await repo.aplicar({ gravar: [base], removerIds: [] }, [evento('criado')]);
+    await repo.aplicar(
+      {
+        gravar: [
+          {
+            ...base,
+            prioridadeIdsLiberadas: [id('opRot'), id('opInt')].sort(),
+            segueSla: true,
+            clienteId: id('cli'),
+            laudosExtra: 30,
+          },
+          { ...base, id: '22222222-2222-4222-8222-222222222222', data: '2026-11-25' },
+        ],
+        removerIds: [],
+      },
+      [evento('alterado'), evento('criado')],
+    );
+    const eventos = await db
+      .select({ acao: schema.eventosAuditoria.acao })
+      .from(schema.eventosAuditoria)
+      .where(eq(schema.eventosAuditoria.entidadeId, base.id));
+    expect(eventos.map((e) => e.acao).sort()).toEqual(['alterado', 'criado', 'criado']);
     const lido = await repo.obter(alocacao, '2026-11-18');
     expect(lido).toEqual({
       ...base,
@@ -338,13 +359,17 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       turnoId: id('tarde'),
       frenteId: frente,
     });
-    expect(await repo.listar({ de: '2026-11-01', ate: '2026-11-30' })).toHaveLength(1);
+    expect(await repo.listar({ de: '2026-11-01', ate: '2026-11-30' })).toHaveLength(2);
+    expect(await repo.listar({ de: '2026-11-01', ate: '2026-11-30', alocacaoId: NENHUM })).toEqual(
+      [],
+    );
     expect(await repo.listar({ de: '2026-11-01', ate: '2026-11-30', medicoId: NENHUM })).toEqual(
       [],
     );
-    expect(await repo.listar({ de: '2026-11-19', ate: '2026-11-30' })).toEqual([]);
-    await repo.remover(base.id);
+    expect(await repo.listar({ de: '2026-11-19', ate: '2026-11-24' })).toEqual([]);
+    await repo.aplicar({ gravar: [], removerIds: [base.id] }, [evento('excluido')]);
     expect(await repo.obter(alocacao, '2026-11-18')).toBeNull();
+    expect(await repo.obter(alocacao, '2026-11-25')).not.toBeNull();
 
     const escala = new EscalaDoAjusteAdapter(db);
     const admin = { usuarioId: NENHUM, acessoTotal: true };
@@ -354,8 +379,13 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       turnoId: id('tarde'),
       frenteId: frente,
     });
-    expect(await escala.ehDiaDePlantao(alocacao, '2026-11-18')).toBe(true);
-    expect(await escala.ehDiaDePlantao(alocacao, '2026-11-19')).toBe(false);
+    expect(await escala.diasDePlantao(alocacao, '2026-10-28', '2026-11-26')).toEqual([
+      '2026-11-04',
+      '2026-11-11',
+      '2026-11-18',
+      '2026-11-25',
+    ]);
+    expect(await escala.diasDePlantao(alocacao, '2026-11-19', '2026-11-24')).toEqual([]);
     const gestora = await primeiro(
       db.insert(schema.usuarios).values({ nome: 'G', email: 'g@x.com' }).returning(),
     );

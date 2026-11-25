@@ -10142,14 +10142,68 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AjusteDiaEdicaoDto"
+                "$ref": "#/components/schemas/SalvarAjusteDiaDto"
               }
             }
           }
         },
         "responses": {
           "204": {
-            "description": "Ajuste vazio remove o do dia."
+            "description": "Ajuste vazio remove os do período (ou o do dia)."
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/alocacoes/{alocacaoId}/ajustes-dia/{data}/periodo": {
+      "get": {
+        "operationId": "AjustesDiaController_periodo",
+        "parameters": [
+          {
+            "name": "alocacaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "data",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": false,
+            "in": "query",
+            "description": "Ausente = só o dia da rota.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodoAjusteDiaDto"
+                }
+              }
+            }
           },
           "400": {
             "description": ""
@@ -21616,7 +21670,38 @@
           "ajuste"
         ]
       },
-      "AjusteDiaEdicaoDto": {
+      "PeriodoAjusteDiaDto": {
+        "type": "object",
+        "properties": {
+          "dias": {
+            "description": "Dias de plantão do vínculo no período, onde o ajuste seria gravado.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "diasComAjuste": {
+            "description": "Dias do período que já têm ajuste (substituídos ao gravar, tirados ao remover).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "ateMaximo": {
+            "type": "string",
+            "format": "date",
+            "description": "O último \"Até\" aceito a partir do dia da rota."
+          }
+        },
+        "required": [
+          "dias",
+          "diasComAjuste",
+          "ateMaximo"
+        ]
+      },
+      "SalvarAjusteDiaDto": {
         "type": "object",
         "properties": {
           "prioridadeIdsLiberadas": {
@@ -21642,6 +21727,11 @@
             "minimum": 0,
             "maximum": 500,
             "description": "Laudos acima do teto só para os exames do cliente (exige o cliente); 0 = nenhum."
+          },
+          "ate": {
+            "type": "string",
+            "format": "date",
+            "description": "Último dia em que o ajuste vale (de o dia da rota até ele, até 31 dias); ausente = só o dia. Grava em cada dia de plantão do período, substituindo o ajuste que o dia tinha; ajuste vazio tira os ajustes do período."
           }
         },
         "required": [
