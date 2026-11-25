@@ -11,16 +11,25 @@ export function diaBrasilia(instante: Date): string {
   return emBrasilia(instante).toISOString().slice(0, 10);
 }
 
-const mesBrasilia = (instante: Date) => diaBrasilia(instante).slice(0, 7);
-
 export type DiaCorte = number | 'ultimo';
 
-/** Até que dia vai a competência M, medido pela data do laudo (ver a spec de competência e corte). */
-export interface Corte {
+/** Até que dia de que mês vai a competência M, medido por uma data. */
+export interface PeriodoCorte {
   dia: DiaCorte;
   /** `seguinte`: o corte cai no mês M+1; `proprio`: cai no próprio mês M. */
   mes: 'proprio' | 'seguinte';
+}
+
+/** Período da data do exame até o adendo de 25/11/2026: o mês cheio (dia 1 ao último). */
+export const EXAME_PADRAO: PeriodoCorte = { dia: 'ultimo', mes: 'proprio' };
+
+/**
+ * Corte da competência (ver a spec de competência e corte): o período da data do laudo (`dia` e
+ * `mes`) e, com `consideraExame`, o da data do exame (`exame`; ausente = `EXAME_PADRAO`).
+ */
+export interface Corte extends PeriodoCorte {
   consideraExame: boolean;
+  exame?: PeriodoCorte;
 }
 
 /** Corte efetivo a partir da competência `desde` ("YYYY-MM"). */
@@ -40,10 +49,13 @@ export interface TabelaCortes {
   porCliente: ReadonlyMap<string, VigenciaCliente[]>;
 }
 
-/** Linha inicial do corte padrão: dia 7, mês seguinte, considerando o exame (o que vale hoje). */
+/**
+ * Linha inicial do corte padrão: laudo até o dia 7 do mês seguinte, considerando o exame até o
+ * último dia do próprio mês (o que vale hoje).
+ */
 export const CORTE_PADRAO_INICIAL: VigenciaCorte = {
   desde: '2000-01',
-  corte: { dia: 7, mes: 'seguinte', consideraExame: true },
+  corte: { dia: 7, mes: 'seguinte', consideraExame: true, exame: EXAME_PADRAO },
 };
 
 // "YYYY-MM" compara como texto.
@@ -58,20 +70,28 @@ const ultimoDiaDoMes = (mes: string) =>
   new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).getUTCDate();
 
 /**
- * Competência (mês de faturamento) do laudo por um corte, em horário de Brasília: o mês do laudo
- * se o dia dele cabe até o dia do corte (dia maior que o mês vale o último dia), senão o seguinte;
- * com corte no mês seguinte, subtrai um mês. Com `consideraExame`, nunca antes do mês do exame.
+ * Mês em que uma data cai por um período de corte, em horário de Brasília: o mês da data se o dia
+ * dela cabe até o dia do corte (dia maior que o mês vale o último dia), senão o seguinte; com corte
+ * no mês seguinte, subtrai um mês.
+ */
+function mesPeloPeriodo(data: Date, periodo: PeriodoCorte): string {
+  const dia = diaBrasilia(data);
+  const mesDaData = dia.slice(0, 7);
+  const ultimoDia = ultimoDiaDoMes(mesDaData);
+  const limite = periodo.dia === 'ultimo' ? ultimoDia : Math.min(periodo.dia, ultimoDia);
+  const mes = Number(dia.slice(8, 10)) <= limite ? mesDaData : somaMeses(mesDaData, 1);
+  return periodo.mes === 'seguinte' ? somaMeses(mes, -1) : mes;
+}
+
+/**
+ * Competência (mês de faturamento) do laudo por um corte: o mês da data do laudo pelo período do
+ * laudo; com `consideraExame`, o maior entre ele e o mês da data do exame pelo período do exame.
  * Com o corte padrão dá o mesmo que a regra antiga (maior entre o mês do exame e o de laudo − 7 dias).
  */
 export function competenciaPeloCorte(realizacao: Date, laudo: Date, corte: Corte): string {
-  const diaLaudo = diaBrasilia(laudo);
-  const mesLaudo = diaLaudo.slice(0, 7);
-  const ultimoDia = ultimoDiaDoMes(mesLaudo);
-  const limite = corte.dia === 'ultimo' ? ultimoDia : Math.min(corte.dia, ultimoDia);
-  const noMesDoLaudo = Number(diaLaudo.slice(8, 10)) <= limite;
-  let mes = noMesDoLaudo ? mesLaudo : somaMeses(mesLaudo, 1);
-  if (corte.mes === 'seguinte') mes = somaMeses(mes, -1);
-  return corte.consideraExame ? maiorMes(mes, mesBrasilia(realizacao)) : mes;
+  const peloLaudo = mesPeloPeriodo(laudo, corte);
+  if (!corte.consideraExame) return peloLaudo;
+  return maiorMes(peloLaudo, mesPeloPeriodo(realizacao, corte.exame ?? EXAME_PADRAO));
 }
 
 const vigenteEm = <T extends { desde: string }>(cadeia: readonly T[], mes: string) =>
