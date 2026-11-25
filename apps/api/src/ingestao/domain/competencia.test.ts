@@ -281,7 +281,7 @@ describe('período da data do exame', () => {
         competenciaAntiga(exame, laudo),
       );
     }
-  });
+  }, 30_000); // 20 mil datas: sob carga (API e web juntos) passa dos 5 s padrão.
 
   it('com o exame considerado, vale o maior entre o mês do laudo e o do exame, cada um pelo seu corte', () => {
     // laudo: dia 7 do mês seguinte; exame: dia 25 do próprio mês
