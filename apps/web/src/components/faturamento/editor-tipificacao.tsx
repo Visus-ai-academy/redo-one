@@ -39,6 +39,7 @@ import {
   corpoDaConfiguracao,
   fraseDaLinha,
   type LinhaForm,
+  novaVersaoEm,
   ROTULO_MODO,
   ROTULO_TIPO,
   valoresDaConfiguracao,
@@ -105,7 +106,7 @@ export function EditorTipificacao({ clienteId, podeEditar, onAlterado }: EditorT
 
   const { cliente, configuracao, doPrincipal, regraPadraoId, medicos, versoes, mesAtual } =
     config.data;
-  const programada = versoes.find((v) => v.vigenciaDesde > mesAtual);
+  const programada = versoes.find((v) => v.vigenciaDesde !== null && v.vigenciaDesde > mesAtual);
   const nomesMedicos = new Map(medicos.map((m) => [m.id, m.nome]));
   const nomeRegra = (id: string | null) => regras.data.regras.find((r) => r.id === id)?.nome;
   const padrao = nomeRegra(regraPadraoId) ?? 'a padrão';
@@ -129,7 +130,7 @@ export function EditorTipificacao({ clienteId, podeEditar, onAlterado }: EditorT
       )}
       {programada && (
         <Alerta tom="info" role="note">
-          {`Há uma versão programada a partir de ${mesAno(programada.vigenciaDesde)} (veja o histórico). Abaixo, a configuração em vigor em ${mesAno(mesAtual)}.`}
+          {`Há uma versão programada a partir de ${mesAno(programada.vigenciaDesde ?? '')} (veja o histórico). Escolha em "Vale a partir de" a competência que quer mudar: o formulário mostra a configuração que vale nela.`}
         </Alerta>
       )}
       {podeEditar ? (
@@ -137,7 +138,6 @@ export function EditorTipificacao({ clienteId, podeEditar, onAlterado }: EditorT
           key={versoes.map((v) => `${v.id}:${v.vigenciaAte}`).join('|') || 'nova'}
           clienteId={clienteId}
           dados={config.data}
-          configuracao={configuracao}
           nomesMedicos={nomesMedicos}
           tipificacao={regras.data}
           opcoes={opcoes.data}
@@ -182,7 +182,7 @@ export function EditorTipificacao({ clienteId, podeEditar, onAlterado }: EditorT
                     .queryKey,
                 });
                 avisos.sucesso(
-                  `Versão de ${mesAno(v.vigenciaDesde)} excluída. Os laudos das competências abertas são reclassificados em seguida.`,
+                  `Versão de ${mesAno(v.vigenciaDesde ?? '')} excluída. Os laudos das competências abertas são reclassificados em seguida.`,
                 );
               }
             : undefined
@@ -302,7 +302,6 @@ const linhaNova = (): LinhaForm => ({
 function FormTipificacao({
   clienteId,
   dados,
-  configuracao,
   nomesMedicos,
   tipificacao,
   opcoes,
@@ -311,7 +310,6 @@ function FormTipificacao({
 }: Dados & {
   clienteId: string;
   dados: TipificacaoClienteDto;
-  configuracao: ConfiguracaoTipificacaoDto | null;
   onAlterado?: (alterado: boolean) => void;
 }) {
   const queryClient = useQueryClient();
@@ -321,12 +319,16 @@ function FormTipificacao({
   // Linhas abertas para editar; as outras mostram só a frase. Linha com erro abre sozinha.
   const [abertas, setAbertas] = useState<ReadonlySet<string>>(new Set());
   const [previa, setPrevia] = useState<{ chave: string; linhas: LinhaPreviaTipificacaoDto[] }>();
-  // Uma vez por montagem: as chaves das linhas não podem mudar a cada render (o painel remonta o
-  // formulário quando a configuração salva muda).
-  const [iniciais] = useState(() => ({
-    ...valoresDaConfiguracao(configuracao, nomesMedicos),
-    aPartirDe: dados.aPartirDeSugerido,
-  }));
+  // O formulário parte da versão vigente na competência do "Vale a partir de" (a que a nova
+  // versão substitui a partir dali). Trocar a competência para a de outra versão recarrega o
+  // formulário com ela. As chaves das linhas nascem uma vez por versão carregada.
+  const baseEm = (aPartirDe: string) => novaVersaoEm(dados.versoes, aPartirDe, dados.mesAtual).base;
+  const valoresDaBase = (aPartirDe: string) => ({
+    ...valoresDaConfiguracao(baseEm(aPartirDe)?.configuracao ?? null, nomesMedicos),
+    aPartirDe,
+  });
+  const [iniciais, setIniciais] = useState(() => valoresDaBase(dados.aPartirDeSugerido));
+  const [baseId, setBaseId] = useState(() => baseEm(dados.aPartirDeSugerido)?.id ?? null);
   const corpo = (v: ConfiguracaoForm & { aPartirDe: string }) => ({
     ...corpoDaConfiguracao(v),
     aPartirDe: v.aPartirDe,
@@ -401,6 +403,16 @@ function FormTipificacao({
     rotulo: mesAno(c),
   }));
   const temAlgo = Boolean(valores.regraId || valores.subregraDemaisId || valores.linhas.length);
+  const base = baseEm(valores.aPartirDe);
+  const baseTemAlgo = Boolean(
+    base &&
+      (base.configuracao.regraId ||
+        base.configuracao.subregraDemaisId ||
+        base.configuracao.linhas.length),
+  );
+  const periodo = valores.aPartirDe
+    ? novaVersaoEm(dados.versoes, valores.aPartirDe, dados.mesAtual).texto
+    : null;
   const previaAtual = previa?.chave === chaveAtual ? previa.linhas : undefined;
 
   return (
@@ -412,6 +424,36 @@ function FormTipificacao({
         void form.handleSubmit();
       }}
     >
+      <form.AppField
+        name="aPartirDe"
+        listeners={{
+          // Outra versão nessa competência: o formulário passa a mostrar a configuração dela.
+          onChange: ({ value }) => {
+            const nova = baseEm(value)?.id ?? null;
+            if (nova === baseId) return;
+            const valoresNovos = valoresDaBase(value);
+            setBaseId(nova);
+            setIniciais(valoresNovos);
+            form.reset(valoresNovos);
+          },
+        }}
+      >
+        {(field) => (
+          <field.SelectField
+            label="Vale a partir de"
+            required
+            placeholder="Escolha a competência"
+            opcoes={competencias}
+            description="Escolha primeiro: abaixo vem a configuração que vale nessa competência, para mudar a partir dela. Só competências abertas ou futuras; as anteriores não mudam."
+          />
+        )}
+      </form.AppField>
+      {periodo && (
+        <p aria-live="polite" className="bg-muted rounded-md px-3 py-2 text-[13px]">
+          {periodo}
+        </p>
+      )}
+
       <form.AppField name="regraId">
         {(field) => (
           <field.SelectField
@@ -586,7 +628,7 @@ function FormTipificacao({
         )}
       </form.AppField>
 
-      {configuracao && (
+      {baseTemAlgo && (
         <Button
           type="button"
           disabled={!temAlgo}
@@ -600,18 +642,6 @@ function FormTipificacao({
           Remover configuração própria
         </Button>
       )}
-
-      <form.AppField name="aPartirDe">
-        {(field) => (
-          <field.SelectField
-            label="Vale a partir de"
-            required
-            placeholder="Escolha a competência"
-            opcoes={competencias}
-            description="Só competências abertas ou futuras. As anteriores continuam com a versão de antes."
-          />
-        )}
-      </form.AppField>
 
       {previaAtual && (
         <TabelaPrevia

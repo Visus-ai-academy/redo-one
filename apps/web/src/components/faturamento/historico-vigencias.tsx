@@ -12,12 +12,15 @@ import { textoDaVigencia } from './precos';
 /** Uma versão com vigência por competência e quem a criou e encerrou (da auditoria). */
 export type VersaoComAutoria = {
   id: string;
-  vigenciaDesde: string;
+  /** Nulo = sem início (a versão inicial). */
+  vigenciaDesde: string | null;
   vigenciaAte: string | null;
   criadoPor: string | null;
   criadoEm: string | null;
   encerradoPor: string | null;
   encerradoEm: string | null;
+  reabertoPor: string | null;
+  reabertoEm: string | null;
 };
 
 export type HistoricoVigenciasProps<V extends VersaoComAutoria> = {
@@ -36,9 +39,13 @@ export type HistoricoVigenciasProps<V extends VersaoComAutoria> = {
   onExcluir?: (v: V) => Promise<void>;
 };
 
-const programada = (v: VersaoComAutoria, mesAtual: string) => v.vigenciaDesde > mesAtual;
+const programada = (v: VersaoComAutoria, mesAtual: string) =>
+  v.vigenciaDesde !== null && v.vigenciaDesde > mesAtual;
 const emVigor = (v: VersaoComAutoria, mesAtual: string) =>
-  v.vigenciaDesde <= mesAtual && (v.vigenciaAte === null || v.vigenciaAte >= mesAtual);
+  (v.vigenciaDesde === null || v.vigenciaDesde <= mesAtual) &&
+  (v.vigenciaAte === null || v.vigenciaAte >= mesAtual);
+const rotulo = (v: VersaoComAutoria) =>
+  v.vigenciaDesde === null ? 'Desde o início' : `A partir de ${mesAno(v.vigenciaDesde)}`;
 
 /**
  * "Histórico de vigências", no estilo do editor de corte: cada versão com o período, se está em
@@ -74,11 +81,7 @@ export function HistoricoVigencias<V extends VersaoComAutoria>({
         <>
           <ul className="flex flex-col divide-y rounded-md border">
             {paginacao.itensDaPagina.map((v) => (
-              <li
-                key={v.id}
-                aria-label={`A partir de ${mesAno(v.vigenciaDesde)}`}
-                className="flex flex-col gap-1 px-3 py-2"
-              >
+              <li key={v.id} aria-label={rotulo(v)} className="flex flex-col gap-1 px-3 py-2">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">
                     {textoDaVigencia(v.vigenciaDesde, v.vigenciaAte)}
@@ -93,12 +96,14 @@ export function HistoricoVigencias<V extends VersaoComAutoria>({
                     : 'Veio da carga do dashboards-one'}
                   {v.encerradoEm &&
                     `; encerrada em ${dataDeBrasilia(v.encerradoEm)}${v.encerradoPor ? ` por ${v.encerradoPor}` : ''}`}
+                  {v.reabertoEm &&
+                    `; reaberta em ${dataDeBrasilia(v.reabertoEm)}${v.reabertoPor ? ` por ${v.reabertoPor}` : ''}`}
                 </span>
                 {onExcluir && programada(v, mesAtual) && (
                   <span className="self-start">
                     <ConfirmarAcao
                       acao="Excluir versão programada"
-                      titulo={`Excluir a versão de ${mesAno(v.vigenciaDesde)}?`}
+                      titulo={`Excluir a versão de ${mesAno(v.vigenciaDesde ?? '')}?`}
                       consequencia="Ela nunca valeu: some do histórico, e a versão anterior volta a valer no lugar dela."
                       onConfirmar={() => onExcluir(v)}
                     />

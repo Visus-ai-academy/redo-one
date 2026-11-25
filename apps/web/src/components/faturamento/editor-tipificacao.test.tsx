@@ -96,6 +96,8 @@ const CONFIG: TipificacaoClienteDto = {
       criadoEm: null,
       encerradoPor: null,
       encerradoEm: null,
+      reabertoPor: null,
+      reabertoEm: null,
     },
   ],
 };
@@ -152,6 +154,7 @@ describe('EditorTipificacao', () => {
         ...CONFIG,
         cliente: { id: 'c-1', nome: 'CEDI_RJ', unificadoEmId: 'p', principalNome: 'CEDIDIAG' },
         configuracao: null,
+        versoes: [],
       }),
     );
     abrir();
@@ -256,6 +259,44 @@ describe('EditorTipificacao', () => {
     );
   });
 
+  it('"vale a partir de" carrega a versão daquela competência e diz até quando a nova vale', async () => {
+    const user = userEvent.setup();
+    vi.mocked(tipificacaoClienteControllerObter).mockReturnValue(
+      resolve({
+        ...CONFIG,
+        versoes: [
+          {
+            ...CONFIG.versoes[0],
+            id: 'v-2',
+            vigenciaDesde: '2026-12',
+            configuracao: { regraId: null, subregraDemaisId: null, linhas: [] },
+          },
+          { ...CONFIG.versoes[0], vigenciaDesde: null, vigenciaAte: '2026-11' },
+        ],
+      }),
+    );
+    abrir();
+    // O padrão (12/2026) é a competência da programada: o formulário mostra a dela (vazia).
+    expect(
+      await screen.findByText(
+        /^Substitui a versão programada de 12\/2026\. Esta versão vale de 12\/2026 em diante\.$/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Nenhuma linha:/)).toBeInTheDocument();
+    // Em 11/2026 vale a de antes: o formulário a carrega, e a nova vale só em 11/2026.
+    await user.click(screen.getByRole('combobox', { name: /Vale a partir de/ }));
+    await user.click(await screen.findByRole('option', { name: '11/2026' }));
+    expect(
+      await screen.findByText(
+        'Esta versão vale só em 11/2026; a partir de 12/2026 continua a versão programada.',
+      ),
+    ).toBeInTheDocument();
+    const linhas = within(screen.getByRole('list', { name: 'Linhas da tipificação' })).getAllByRole(
+      'listitem',
+    );
+    expect(linhas).toHaveLength(2);
+  });
+
   it('a versão programada aparece no histórico e pode ser excluída', async () => {
     const user = userEvent.setup();
     vi.mocked(tipificacaoClienteControllerRemoverVersao).mockReturnValue(resolve(undefined));
@@ -272,6 +313,8 @@ describe('EditorTipificacao', () => {
             criadoEm: '2026-11-20T12:00:00.000Z',
             encerradoPor: null,
             encerradoEm: null,
+            reabertoPor: null,
+            reabertoEm: null,
           },
           { ...CONFIG.versoes[0], vigenciaAte: '2026-11' },
         ],

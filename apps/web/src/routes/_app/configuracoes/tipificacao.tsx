@@ -21,7 +21,7 @@ import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { mesAno } from '../../../components/faturamento/competencias';
 import { HistoricoVigencias } from '../../../components/faturamento/historico-vigencias';
 import { opcoesAPartirDe } from '../../../components/faturamento/precos';
-import { pedidosDoPainel } from '../../../components/faturamento/tipificacao';
+import { novaVersaoEm, pedidosDoPainel } from '../../../components/faturamento/tipificacao';
 import { CampoSomenteLeitura } from '../../../components/form/CampoSomenteLeitura';
 import { useAppForm } from '../../../components/form/form';
 import { Paginacao } from '../../../components/paginacao/Paginacao';
@@ -91,12 +91,14 @@ function FaturaEmVigor({
   versoes: VersaoFaturaTipificacaoDto[];
   mesAtual: string;
 }) {
-  const muda = versoes.find((v) => v.vigenciaDesde > mesAtual && v.valor !== sim);
+  const muda = versoes.find(
+    (v) => v.vigenciaDesde !== null && v.vigenciaDesde > mesAtual && v.valor !== sim,
+  );
   return (
     <span className="flex flex-wrap items-center gap-2">
       <Fatura sim={sim} />
       {muda && (
-        <Etiqueta tom="info">{`${muda.valor ? 'Fatura' : 'Não fatura'} a partir de ${mesAno(muda.vigenciaDesde)}`}</Etiqueta>
+        <Etiqueta tom="info">{`${muda.valor ? 'Fatura' : 'Não fatura'} a partir de ${mesAno(muda.vigenciaDesde ?? '')}`}</Etiqueta>
       )}
     </span>
   );
@@ -372,9 +374,11 @@ async function salvarPainel<T extends { fatura: boolean; aPartirDe: string }>(
   dono: DonoFatura,
   iniciais: T,
   valores: T,
+  /** O "fatura" que vale na competência escolhida: só muda se for diferente dele. */
+  faturaNaCompetencia: boolean,
   alterar: () => Promise<unknown>,
 ) {
-  const pedidos = pedidosDoPainel(iniciais, valores);
+  const pedidos = pedidosDoPainel({ ...iniciais, fatura: faturaNaCompetencia }, valores);
   if (pedidos.dados) await alterar();
   if (pedidos.fatura)
     await tipificacaoControllerMudarFatura({
@@ -393,6 +397,14 @@ function mensagemDoSalvo(
     return `${oQue} salva; o "fatura" muda a partir de ${mesAno(pedidos.fatura.aPartirDe)}. Os laudos das competências abertas são reclassificados em seguida.`;
   return `${oQue} salva.`;
 }
+
+/** O "fatura" que vale na competência (a versão que a mudança substitui a partir dali). */
+const faturaEm = (
+  versoes: VersaoFaturaTipificacaoDto[],
+  emVigor: boolean,
+  aPartirDe: string,
+  mesAtual: string,
+) => novaVersaoEm(versoes, aPartirDe, mesAtual).base?.valor ?? emVigor;
 
 /** As competências do "Vale a partir de": abertas ou futuras, até um ano à frente. */
 const competenciasDe = (v: Vigencias) =>
@@ -427,7 +439,7 @@ function HistoricoFatura({
                 path: { tipo: dono.tipo, id: dono.id, versaoId: v.id },
               }).unwrap();
               await onVersaoExcluida(
-                `Versão de ${mesAno(v.vigenciaDesde)} excluída. Os laudos das competências abertas são reclassificados em seguida.`,
+                `Versão de ${mesAno(v.vigenciaDesde ?? '')} excluída. Os laudos das competências abertas são reclassificados em seguida.`,
               );
             }
           : undefined
@@ -460,7 +472,14 @@ function PainelRegra({
     nome: regra?.nome ?? '',
     descricao: regra?.descricao ?? '',
     cor: regra?.cor ?? '',
-    fatura: regra?.faturaSemSubregra ?? true,
+    fatura: regra
+      ? faturaEm(
+          regra.versoes,
+          regra.faturaSemSubregra,
+          vigencias.aPartirDeSugerido,
+          vigencias.mesAtual,
+        )
+      : true,
     ativo: regra?.ativo ?? true,
     aPartirDe: vigencias.aPartirDeSugerido,
   };
@@ -483,8 +502,12 @@ function PainelRegra({
           await onSalvo(mensagemDoSalvo('Regra', null));
           return;
         }
-        const pedidos = await salvarPainel({ tipo: 'regras', id: regra.id }, iniciais, value, () =>
-          tipificacaoControllerAlterarRegra({ path: { id: regra.id }, body }).unwrap(),
+        const pedidos = await salvarPainel(
+          { tipo: 'regras', id: regra.id },
+          iniciais,
+          value,
+          faturaEm(regra.versoes, regra.faturaSemSubregra, value.aPartirDe, vigencias.mesAtual),
+          () => tipificacaoControllerAlterarRegra({ path: { id: regra.id }, body }).unwrap(),
         );
         await onSalvo(mensagemDoSalvo('Regra', pedidos));
       } catch (falha) {
@@ -494,6 +517,7 @@ function PainelRegra({
   });
   const alterado = useAlterado(form, iniciais);
   const fatura = useStore(form.store, (s) => s.values.fatura);
+  const aPartirDeEscolhido = useStore(form.store, (s) => s.values.aPartirDe);
   const titulo = regra ? regra.nome : 'Nova regra';
   const historico = regra && (
     <HistoricoFatura
@@ -562,6 +586,29 @@ function PainelRegra({
               />
             )}
           </form.AppField>
+          {regra && (
+            <form.AppField
+              name="aPartirDe"
+              listeners={{
+                // O "fatura" que vale na competência escolhida: mudar parte dele.
+                onChange: ({ value }) =>
+                  form.setFieldValue(
+                    'fatura',
+                    faturaEm(regra.versoes, regra.faturaSemSubregra, value, vigencias.mesAtual),
+                  ),
+              }}
+            >
+              {(field) => (
+                <field.SelectField
+                  label="Vale a partir de (o fatura)"
+                  required
+                  placeholder="Escolha a competência"
+                  opcoes={competenciasDe(vigencias)}
+                  description="O fatura abaixo é o que vale nessa competência; mudar vale a partir dela. Nome, descrição e cor não dependem da competência."
+                />
+              )}
+            </form.AppField>
+          )}
           <form.AppField name="fatura">
             {(field) => (
               <field.CheckboxField
@@ -574,22 +621,21 @@ function PainelRegra({
               />
             )}
           </form.AppField>
-          {regra && fatura !== iniciais.fatura && (
-            <div className="flex flex-col gap-2 border-l-2 pl-3">
-              <form.AppField name="aPartirDe">
-                {(field) => (
-                  <field.SelectField
-                    label="Vale a partir de"
-                    required
-                    placeholder="Escolha a competência"
-                    opcoes={competenciasDe(vigencias)}
-                    description="Só competências abertas ou futuras."
-                  />
-                )}
-              </form.AppField>
-              <p className="text-muted-foreground text-[13px]">{AVISO_RECLASSIFICA}</p>
-            </div>
-          )}
+          {regra &&
+            fatura !==
+              faturaEm(
+                regra.versoes,
+                regra.faturaSemSubregra,
+                aPartirDeEscolhido,
+                vigencias.mesAtual,
+              ) && (
+              <div className="flex flex-col gap-1 border-l-2 pl-3 text-[13px]">
+                <p aria-live="polite">
+                  {novaVersaoEm(regra.versoes, aPartirDeEscolhido, vigencias.mesAtual).texto}
+                </p>
+                <p className="text-muted-foreground">{AVISO_RECLASSIFICA}</p>
+              </div>
+            )}
           <form.AppField name="ativo">
             {(field) => (
               <field.CheckboxField
@@ -639,7 +685,9 @@ function PainelSubregra({
     regraId: subregra?.regraId ?? '',
     nome: subregra?.nome ?? '',
     descricao: subregra?.descricao ?? '',
-    fatura: subregra?.fatura ?? true,
+    fatura: subregra
+      ? faturaEm(subregra.versoes, subregra.fatura, vigencias.aPartirDeSugerido, vigencias.mesAtual)
+      : true,
     ativo: subregra?.ativo ?? true,
     aPartirDe: vigencias.aPartirDeSugerido,
   };
@@ -666,6 +714,7 @@ function PainelSubregra({
           { tipo: 'subregras', id: subregra.id },
           iniciais,
           value,
+          faturaEm(subregra.versoes, subregra.fatura, value.aPartirDe, vigencias.mesAtual),
           () => tipificacaoControllerAlterarSubregra({ path: { id: subregra.id }, body }).unwrap(),
         );
         await onSalvo(mensagemDoSalvo('Sub-regra', pedidos));
@@ -676,6 +725,7 @@ function PainelSubregra({
   });
   const alterado = useAlterado(form, iniciais);
   const fatura = useStore(form.store, (s) => s.values.fatura);
+  const aPartirDeEscolhido = useStore(form.store, (s) => s.values.aPartirDe);
   const titulo = subregra ? subregra.nome : 'Nova sub-regra';
   const regra = regras.find((r) => r.id === subregra?.regraId);
   const historico = subregra && (
@@ -739,6 +789,29 @@ function PainelSubregra({
               <field.TextField label="Descrição" placeholder="Ex.: Não fatura" autoComplete="off" />
             )}
           </form.AppField>
+          {subregra && (
+            <form.AppField
+              name="aPartirDe"
+              listeners={{
+                // O "fatura" que vale na competência escolhida: mudar parte dele.
+                onChange: ({ value }) =>
+                  form.setFieldValue(
+                    'fatura',
+                    faturaEm(subregra.versoes, subregra.fatura, value, vigencias.mesAtual),
+                  ),
+              }}
+            >
+              {(field) => (
+                <field.SelectField
+                  label="Vale a partir de (o fatura)"
+                  required
+                  placeholder="Escolha a competência"
+                  opcoes={competenciasDe(vigencias)}
+                  description="O fatura abaixo é o que vale nessa competência; mudar vale a partir dela. Nome, descrição e cor não dependem da competência."
+                />
+              )}
+            </form.AppField>
+          )}
           <form.AppField name="fatura">
             {(field) => (
               <field.CheckboxField
@@ -751,22 +824,21 @@ function PainelSubregra({
               />
             )}
           </form.AppField>
-          {subregra && fatura !== iniciais.fatura && (
-            <div className="flex flex-col gap-2 border-l-2 pl-3">
-              <form.AppField name="aPartirDe">
-                {(field) => (
-                  <field.SelectField
-                    label="Vale a partir de"
-                    required
-                    placeholder="Escolha a competência"
-                    opcoes={competenciasDe(vigencias)}
-                    description="Só competências abertas ou futuras."
-                  />
-                )}
-              </form.AppField>
-              <p className="text-muted-foreground text-[13px]">{AVISO_RECLASSIFICA}</p>
-            </div>
-          )}
+          {subregra &&
+            fatura !==
+              faturaEm(
+                subregra.versoes,
+                subregra.fatura,
+                aPartirDeEscolhido,
+                vigencias.mesAtual,
+              ) && (
+              <div className="flex flex-col gap-1 border-l-2 pl-3 text-[13px]">
+                <p aria-live="polite">
+                  {novaVersaoEm(subregra.versoes, aPartirDeEscolhido, vigencias.mesAtual).texto}
+                </p>
+                <p className="text-muted-foreground">{AVISO_RECLASSIFICA}</p>
+              </div>
+            )}
           <form.AppField name="ativo">
             {(field) => (
               <field.CheckboxField

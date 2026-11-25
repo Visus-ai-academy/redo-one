@@ -5,6 +5,7 @@ import {
   fraseDaLinha,
   type LinhaForm,
   mover,
+  novaVersaoEm,
   pedidosDoPainel,
   valoresDaConfiguracao,
 } from './tipificacao';
@@ -121,6 +122,49 @@ describe('pedidosDoPainel', () => {
     expect(pedidosDoPainel(antes, { ...antes, aPartirDe: '2027-01' })).toEqual({
       dados: false,
       fatura: null,
+    });
+  });
+});
+
+describe('novaVersaoEm', () => {
+  const v = (id: string, desde: string | null, ate: string | null) => ({
+    id,
+    vigenciaDesde: desde,
+    vigenciaAte: ate,
+  });
+  const versoes = [v('c', '2027-03', null), v('b', '2026-12', '2027-02'), v('a', null, '2026-11')];
+
+  it('parte da versão vigente na competência e vai até onde ela ia; a seguinte continua', () => {
+    expect(novaVersaoEm(versoes, '2026-11', '2026-11')).toEqual({
+      base: versoes[2],
+      ate: '2026-11',
+      substitui: false,
+      texto: 'Esta versão vale só em 11/2026; a partir de 12/2026 continua a versão programada.',
+    });
+    expect(novaVersaoEm(versoes, '2026-10', '2026-11').texto).toBe(
+      'Esta versão vale de 10/2026 a 11/2026; a partir de 12/2026 continua a versão programada.',
+    );
+  });
+
+  it('na competência em que começa a programada, a substitui', () => {
+    expect(novaVersaoEm(versoes, '2026-12', '2026-11')).toEqual({
+      base: versoes[1],
+      ate: '2027-02',
+      substitui: true,
+      texto:
+        'Substitui a versão programada de 12/2026. Esta versão vale de 12/2026 a 02/2027; a partir de 03/2027 continua a versão programada.',
+    });
+  });
+
+  it('sem fim, vale dali em diante; sem versão nenhuma, também', () => {
+    expect(novaVersaoEm(versoes, '2027-05', '2026-11').texto).toBe(
+      'Esta versão vale de 05/2027 em diante.',
+    );
+    expect(novaVersaoEm([], '2026-12', '2026-11')).toEqual({
+      base: undefined,
+      ate: null,
+      substitui: false,
+      texto: 'Esta versão vale de 12/2026 em diante.',
     });
   });
 });

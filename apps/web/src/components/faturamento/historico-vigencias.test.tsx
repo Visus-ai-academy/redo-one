@@ -13,6 +13,8 @@ const versao = (p: Partial<VersaoComAutoria> & { valor?: string } = {}) => ({
   criadoEm: null,
   encerradoPor: null,
   encerradoEm: null,
+  reabertoPor: null,
+  reabertoEm: null,
   valor: 'Fatura',
   ...p,
 });
@@ -78,6 +80,32 @@ describe('HistoricoVigencias', () => {
       within(dialogo).getByRole('button', { name: 'Excluir versão programada' }),
     );
     expect(onExcluir).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }));
+  });
+
+  it('a versão inicial (sem início) e a reaberta, com quem reabriu', async () => {
+    renderComRotas(
+      <HistoricoVigencias
+        mesAtual="2026-11"
+        vazio="Nenhuma versão."
+        descrever={(v) => v.valor}
+        versoes={[
+          versao({
+            id: 'i',
+            vigenciaDesde: null,
+            criadoPor: 'Ana',
+            criadoEm: '2026-10-01T12:00:00.000Z',
+            reabertoPor: 'Bia',
+            reabertoEm: '2026-11-21T12:00:00.000Z',
+          }),
+        ]}
+      />,
+    );
+    const item = await screen.findByRole('listitem', { name: 'Desde o início' });
+    expect(within(item).getByText('Desde sempre')).toBeInTheDocument();
+    expect(within(item).getByText('Em vigor')).toBeInTheDocument();
+    expect(
+      within(item).getByText('Criada em 01/10/2026 por Ana; reaberta em 21/11/2026 por Bia'),
+    ).toBeInTheDocument();
   });
 
   it('sem versões, o texto do vazio', async () => {

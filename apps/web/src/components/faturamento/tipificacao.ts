@@ -126,3 +126,50 @@ export function pedidosDoPainel<T extends { fatura: boolean; aPartirDe: string }
         : { fatura: depois.fatura, aPartirDe: depois.aPartirDe },
   };
 }
+
+type ComVigencia = { id: string; vigenciaDesde: string | null; vigenciaAte: string | null };
+
+const mesAnoDe = (c: string) => `${c.slice(5, 7)}/${c.slice(0, 4)}`;
+const somarMes = (c: string, n: number) => {
+  const [a, m] = c.split('-').map(Number) as [number, number];
+  const t = a * 12 + (m - 1) + n;
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`;
+};
+
+/**
+ * A nova versão a partir de `aPartirDe`, como a API a grava: parte da versão vigente nessa
+ * competência (`base`, que o formulário carrega) e vai até onde ela ia; a versão seguinte fica como
+ * está. A programada que começa na mesma competência é substituída.
+ */
+export function novaVersaoEm<V extends ComVigencia>(
+  versoes: readonly V[],
+  aPartirDe: string,
+  mesAtual: string,
+): { base: V | undefined; ate: string | null; substitui: boolean; texto: string } {
+  const base = versoes.find(
+    (v) =>
+      (v.vigenciaDesde === null || v.vigenciaDesde <= aPartirDe) &&
+      (v.vigenciaAte === null || aPartirDe <= v.vigenciaAte),
+  );
+  const seguinte = [...versoes]
+    .filter((v) => v.vigenciaDesde !== null && v.vigenciaDesde > aPartirDe)
+    .sort((a, b) => (a.vigenciaDesde as string).localeCompare(b.vigenciaDesde as string))[0];
+  const ate = base
+    ? base.vigenciaAte
+    : seguinte?.vigenciaDesde
+      ? somarMes(seguinte.vigenciaDesde, -1)
+      : null;
+  const substitui = Boolean(base && base.vigenciaDesde === aPartirDe && aPartirDe > mesAtual);
+  const periodo =
+    ate === null
+      ? `vale de ${mesAnoDe(aPartirDe)} em diante.`
+      : ate === aPartirDe
+        ? `vale só em ${mesAnoDe(aPartirDe)}; a partir de ${mesAnoDe(somarMes(ate, 1))} continua a versão ${somarMes(ate, 1) > mesAtual ? 'programada' : 'seguinte'}.`
+        : `vale de ${mesAnoDe(aPartirDe)} a ${mesAnoDe(ate)}; a partir de ${mesAnoDe(somarMes(ate, 1))} continua a versão ${somarMes(ate, 1) > mesAtual ? 'programada' : 'seguinte'}.`;
+  return {
+    base,
+    ate,
+    substitui,
+    texto: `${substitui ? `Substitui a versão programada de ${mesAnoDe(aPartirDe)}. ` : ''}Esta versão ${periodo}`,
+  };
+}
