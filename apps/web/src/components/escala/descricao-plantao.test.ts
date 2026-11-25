@@ -32,12 +32,21 @@ describe('descreverPlantao', () => {
         produtividade: 5,
         produtividadeEscala: 12,
         ajustada: true,
+        vigencia: 'periodo',
         dataFim: '2026-12-20',
       }),
       { ...vazio, conflitos: [] },
     );
     expect(linha(itens, 'Produtividade')).toBe('5 registros neste dia (escala: 12)');
     expect(linha(itens, 'Vigência')).toBe('Período único até 20/12');
+  });
+
+  it('escala fixa com fim continua escala fixa, com o "até"', () => {
+    const itens = descreverPlantao(ocorrencia({ dataFim: '2026-12-31' }), {
+      ...vazio,
+      conflitos: [],
+    });
+    expect(linha(itens, 'Vigência')).toBe('Escala fixa até 31/12');
   });
 
   it('gratificado mostra a cota', () => {

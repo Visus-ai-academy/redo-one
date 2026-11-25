@@ -295,7 +295,7 @@ export function PainelAlocacao({
                         description={
                           vigencia === 'periodo'
                             ? 'Vale só entre o início e o fim. No mesmo turno e frente da escala fixa do médico, substitui a fixa nesses dias.'
-                            : 'Repete nos dias marcados, do início em diante. Para encerrar, remova a alocação.'
+                            : 'Repete nos dias marcados a partir do início. Com "Até", termina nesse dia; sem ele, não tem data de fim.'
                         }
                       />
                     )}
@@ -311,11 +311,15 @@ export function PainelAlocacao({
                       />
                     )}
                   </form.AppField>
-                  {comFim && (
-                    <form.AppField name="dataFim">
-                      {() => <DateField label="Fim" required className="flex-[1_1_150px]" />}
-                    </form.AppField>
-                  )}
+                  <form.AppField name="dataFim">
+                    {() =>
+                      comFim ? (
+                        <DateField label="Fim" required className="flex-[1_1_150px]" />
+                      ) : (
+                        <DateField label="Até" className="flex-[1_1_150px]" />
+                      )
+                    }
+                  </form.AppField>
                 </div>
                 <form.AppField name="diasSemana">
                   {() => <CaixasField label="Dias da semana" opcoes={OPCOES_DIAS} required />}

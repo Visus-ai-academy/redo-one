@@ -54,7 +54,9 @@ function vigencia(o: OcorrenciaDto) {
       o.produtividade === null ? 'cota não informada' : `cota de ${registros(o.produtividade)}`;
     return `Gratificado: ${cota}${o.dataFim ? `, até ${diaMes(o.dataFim)}` : ''}`;
   }
-  if (o.dataFim) return `Período único até ${diaMes(o.dataFim)}`;
+  if (o.vigencia === 'periodo') return `Período único até ${diaMes(o.dataFim ?? o.dataInicio)}`;
+  // A fixa com fim (marcada ou encerrada) continua escala fixa.
+  if (o.dataFim) return `Escala fixa até ${diaMes(o.dataFim)}`;
   return `Escala fixa desde ${diaMes(o.dataInicio)}`;
 }
 

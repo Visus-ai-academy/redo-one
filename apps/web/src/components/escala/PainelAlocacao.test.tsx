@@ -197,6 +197,34 @@ describe('PainelAlocacao', () => {
     expect(screen.queryByText(/não vê o catálogo/)).not.toBeInTheDocument();
   });
 
+  it('escala fixa tem "Até" opcional: vazio é sem fim, preenchido manda o fim', async () => {
+    const { onSalvar } = montar({ inicial: { frenteId: 'f-tc', turnoId: 't-manha' } });
+    await escolherMedico();
+    const ate = screen.getByLabelText('Até');
+    expect(ate).not.toBeRequired();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Segunda' }));
+    await userEvent.type(ate, '31/12/2026');
+    await userEvent.click(screen.getByRole('button', { name: 'Alocar médico' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ vigencia: 'fixa', dataFim: '2026-12-31' }),
+    );
+  });
+
+  it('na edição da fixa com fim, o "Até" vem preenchido e se pode apagar', async () => {
+    const { onSalvar } = montar({
+      alocacao: { ...ALOCACAO, dataFim: '2026-12-31' },
+      medicoNome: 'Ana Souza',
+    });
+    expect(screen.getByRole('radio', { name: 'Escala fixa' })).toBeChecked();
+    const ate = screen.getByLabelText('Até');
+    expect(ate).toHaveValue('31/12/2026');
+    await userEvent.clear(ate);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ vigencia: 'fixa', dataFim: null }),
+    );
+  });
+
   it('período único marca todos os dias e pede início e fim', async () => {
     const { onSalvar } = montar({ inicial: { frenteId: 'f-tc', turnoId: 't-manha' } });
     await escolherMedico();

@@ -38,11 +38,35 @@ describe('PainelPlantao', () => {
     expect(screen.getByRole('dialog', { name: 'Ana Souza' })).toHaveTextContent(
       'Segunda, 16/11/2026',
     );
-    expect(screen.getByText('Escala fixa desde 05/01/2026')).toBeInTheDocument();
+    expect(screen.getByText('Escala fixa desde 05/01/2026, sem data de fim')).toBeInTheDocument();
+    expect(screen.getByText('seg, toda semana')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Editar alocação' }));
     expect(acoes.onEditar).toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Cobertura' }));
     expect(acoes.onCobertura).toHaveBeenCalled();
+  });
+
+  it('fixa com fim e semanas do mês: diz até quando vai e quantas vezes repete', async () => {
+    await montar(
+      ocorrencia({ dataFim: '2026-12-31', diasSemana: [1, 3, 5], semanasDoMes: [1, 3] }),
+    );
+    expect(screen.getByText('Escala fixa de 05/01/2026 até 31/12/2026')).toBeInTheDocument();
+    expect(screen.getByText('seg, qua e sex, na 1ª e 3ª semana do mês')).toBeInTheDocument();
+  });
+
+  it('cobertura não mostra a repetição (é a do titular)', async () => {
+    await montar(
+      ocorrencia({
+        vigencia: 'periodo',
+        dataFim: '2026-11-20',
+        coberturaDeId: 'a0',
+        coberturaDe: { alocacaoId: 'a0', medicoId: 'm2', medicoNome: 'Carla Dias' },
+      }),
+    );
+    expect(
+      screen.getByText('Cobrindo Carla Dias de 05/01/2026 até 20/11/2026'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Repete')).not.toBeInTheDocument();
   });
 
   it('onde e ausência com as cores da frente, do turno e do tipo', async () => {
@@ -128,7 +152,9 @@ describe('PainelPlantao', () => {
     const acoes = await montar(
       ocorrencia({ coberturaDe: { alocacaoId: 'a0', medicoId: 'm0', medicoNome: 'Carla Dias' } }),
     );
-    expect(screen.getByText('Cobrindo Carla Dias')).toBeInTheDocument();
+    expect(
+      screen.getByText('Cobrindo Carla Dias desde 05/01/2026, sem data de fim'),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Editar cobertura' }));
     expect(acoes.onCobertura).toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Editar alocação' })).not.toBeInTheDocument();

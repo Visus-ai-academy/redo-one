@@ -19,6 +19,7 @@ import { AjusteDistribuicaoDia } from './AjusteDistribuicaoDia';
 import { dataCurta, diaDaSemana, NOMES_DIAS_LONGOS } from './calendario';
 import { ComCor } from './LinhaMedico';
 import { useAvisarAlterado } from './use-avisar-alterado';
+import { descreverRepeticao, descreverVigencia } from './vigencia-alocacao';
 
 export type PainelPlantaoProps = {
   ocorrencia: OcorrenciaDto;
@@ -45,15 +46,6 @@ export type PainelPlantaoProps = {
 
 const hora = (iso: string) => iso.slice(11, 16);
 const registros = (n: number) => plural(n, { um: 'registro', varios: 'registros' });
-
-function vigencia(o: OcorrenciaDto) {
-  if (o.coberturaDe) return `Cobrindo ${o.coberturaDe.medicoNome}`;
-  const periodo = o.dataFim
-    ? `de ${dataCurta(o.dataInicio)} a ${dataCurta(o.dataFim)}`
-    : `desde ${dataCurta(o.dataInicio)}`;
-  if (o.gratificado) return `Gratificado, ${periodo}`;
-  return o.dataFim ? `Período único, ${periodo}` : `Escala fixa ${periodo}`;
-}
 
 function produtividade(o: OcorrenciaDto) {
   if (o.produtividade === null) return 'Não informada';
@@ -140,7 +132,11 @@ export function PainelPlantao({
           <Linha rotulo="Produtividade">
             <span className="tabular-nums">{produtividade(o)}</span>
           </Linha>
-          <Linha rotulo="Vigência">{vigencia(o)}</Linha>
+          <Linha rotulo="Vigência">
+            <span className="tabular-nums">{descreverVigencia(o)}</span>
+          </Linha>
+          {/* Na cobertura, as semanas do mês são as do titular: a repetição seria enganosa. */}
+          {!ehCobertura && <Linha rotulo="Repete">{descreverRepeticao(o)}</Linha>}
           {o.cobertoPor && <Linha rotulo="Cobertura">Coberto por {o.cobertoPor.medicoNome}</Linha>}
           {o.ausente && (
             <Linha rotulo="Ausência">
