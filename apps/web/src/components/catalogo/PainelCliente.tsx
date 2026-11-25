@@ -48,6 +48,10 @@ export type PainelClienteProps = {
   faturamento?: ReactNode;
   /** Conteúdo da aba Preços; sem ele (sem permissão), a aba não aparece. */
   precos?: ReactNode;
+  /** A aba que abre primeiro (ex.: Preços, pelo atalho do aviso de preço repetido). */
+  abaInicial?: 'precos';
+  /** O selo dos avisos pendentes do cliente, ao lado do nome fantasia. */
+  selo?: ReactNode;
 };
 
 const TIPOS_APELIDO = {
@@ -100,6 +104,8 @@ export function PainelCliente({
   distribuicao,
   faturamento,
   precos,
+  abaInicial,
+  selo,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
   const iniciais = {
@@ -159,11 +165,19 @@ export function PainelCliente({
   return (
     <PainelLateral
       titulo={cliente?.nome ?? 'Novo cliente'}
-      subtitulo={cliente?.nomeFantasia ?? undefined}
+      subtitulo={
+        selo || cliente?.nomeFantasia ? (
+          <span className="flex flex-wrap items-center gap-2">
+            {cliente?.nomeFantasia}
+            {selo}
+          </span>
+        ) : undefined
+      }
       onFechar={onFechar}
       alterado={alterado}
     >
       <AbasComHistorico
+        inicial={abaInicial && precos ? abaInicial : undefined}
         historico={cliente ? historico : undefined}
         extras={
           cliente

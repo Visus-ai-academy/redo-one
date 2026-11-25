@@ -16,6 +16,7 @@ export const competenciaDtoSchema = z.object({
   importacaoTravadaEm: z.iso.datetime().nullable().describe('Importação travada em; vazio = destravada.'),
   importacaoTravadaPor: z.string().nullable().describe('Quem travou (nome ou texto).'),
   observacoes: z.string().nullable(),
+  fechadaComAvisosMotivo: z.string().nullable().describe('Fechada apesar de avisos pendentes que impediam: o motivo de quem fechou.'),
   laudos: z.int().describe('Laudos (não removidos) desta competência.'),
   volume: z.number().describe('Soma do volume desses laudos.'),
 })

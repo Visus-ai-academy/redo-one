@@ -1,4 +1,6 @@
+import { ResponseError } from '../../gen/.kubb/client';
 import type { CompetenciaDto } from '../../gen/types/CompetenciaDto';
+import type { FechamentoComAvisosDto } from '../../gen/types/FechamentoComAvisosDto';
 import { mesDeBrasilia } from '../../lib/datas';
 import { plural } from '../../lib/formato';
 import { pode } from '../../lib/permissoes';
@@ -102,4 +104,13 @@ export function acoesDaCompetencia(
     );
 
   return acoes;
+}
+
+/** A recusa de fechar com avisos pendentes que impedem (409 com `codigo: avisos_pendentes`). */
+export function recusaPorAvisos(erro: unknown): FechamentoComAvisosDto | null {
+  if (!ResponseError.is(erro) || erro.status !== 409) return null;
+  const corpo = erro.data as Partial<FechamentoComAvisosDto> | undefined;
+  return corpo?.codigo === 'avisos_pendentes' && corpo.avisos
+    ? (corpo as FechamentoComAvisosDto)
+    : null;
 }

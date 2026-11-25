@@ -3,6 +3,9 @@
 * Do not edit manually.
 */
 
+import type { CompetenciasAvisoDto } from './CompetenciasAvisoDto'
+import type { EntidadeAvisoDto } from './EntidadeAvisoDto'
+import type { OrigemAvisoKey } from './OrigemAviso'
 import type { PessoaResumoDto } from './PessoaResumoDto'
 import type { StatusAvisoKey } from './StatusAviso'
 import type { TipoAvisoKey } from './TipoAviso'
@@ -16,11 +19,22 @@ export type AvisoDto = {
   id: string;
   tipo: TipoAvisoKey;
   /**
-   * @description Como chegou da MobileMed na última importação ou rodada.
+   * @description Como chegou na última verificação (importação, rodada, carga).
    * @type string
    */
   valor: string;
   status: StatusAvisoKey;
+  origem: OrigemAvisoKey;
+  /**
+   * @description Competências a que se liga (a trava do fechamento).
+   * @type object
+   */
+  competencias: CompetenciasAvisoDto | null;
+  /**
+   * @description Itens a que se refere (selo e atalho).
+   * @type array
+   */
+  entidades: EntidadeAvisoDto[];
   /**
    * @description Laudos da última importação (ou exames da última rodada) em que apareceu.
    * @type integer

@@ -9,6 +9,7 @@ import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { Abas } from '../../components/abas/Abas';
+import { SeloAviso } from '../../components/avisos/SeloAviso';
 import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelExame } from '../../components/catalogo/PainelExame';
 import { PainelExameForaPadrao } from '../../components/catalogo/PainelExameForaPadrao';
@@ -46,6 +47,7 @@ import { quebrasControllerObterQueryOptions } from '../../gen/hooks/useQuebrasCo
 import type { DeParaValorItemDto } from '../../gen/types/DeParaValorItemDto';
 import type { ExameResumoDto } from '../../gen/types/ExameResumoDto';
 import type { QuebraResumoDto } from '../../gen/types/QuebraResumoDto';
+import { useSelosDeAviso } from '../../lib/avisos';
 import {
   invalidarCatalogo,
   subespecialidadeQueFica,
@@ -174,6 +176,7 @@ const coluna = createDataTableColumnHelper<ExameResumoDto>();
 const nome = (ref: { nome: string } | null) => ref?.nome ?? '—';
 
 function Exames({ permissoes }: { permissoes: PodeNaTela }) {
+  const { sessao } = Route.useRouteContext();
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const lista = useQuery({
@@ -181,6 +184,11 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
     placeholderData: keepPreviousData,
   });
   const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
+  const selos = useSelosDeAviso(
+    'exame',
+    pagina.itens.map((x) => x.id),
+    pode(sessao, 'avisos.ver'),
+  );
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
 
   const ir = useCallback(
@@ -197,20 +205,23 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
       coluna.accessor('nome', {
         header: 'Exame',
         cell: (info) => (
-          <LinkDaLinha
-            from={Route.fullPath}
-            to="."
-            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
-          >
-            <span className="flex flex-col leading-snug">
-              <span>{info.getValue()}</span>
-              {info.row.original.codigo && (
-                <span className="text-muted-foreground text-[13px] font-normal">
-                  {info.row.original.codigo}
-                </span>
-              )}
-            </span>
-          </LinkDaLinha>
+          <span className="flex items-start gap-2">
+            <LinkDaLinha
+              from={Route.fullPath}
+              to="."
+              search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+            >
+              <span className="flex flex-col leading-snug">
+                <span>{info.getValue()}</span>
+                {info.row.original.codigo && (
+                  <span className="text-muted-foreground text-[13px] font-normal">
+                    {info.row.original.codigo}
+                  </span>
+                )}
+              </span>
+            </LinkDaLinha>
+            <SeloAviso avisos={selos.get(info.row.original.id)} entidade="exame" />
+          </span>
         ),
       }),
       coluna.accessor((e) => nome(e.modalidade), { id: 'modalidade', header: 'Modalidade' }),
@@ -239,7 +250,7 @@ function Exames({ permissoes }: { permissoes: PodeNaTela }) {
         ),
       }),
     ],
-    [],
+    [selos],
   );
 
   const temFiltro = Boolean(

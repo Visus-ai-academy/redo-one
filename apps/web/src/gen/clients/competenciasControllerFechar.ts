@@ -14,5 +14,5 @@ import { competenciasControllerFecharResponseSchema, competenciasControllerFecha
 export function competenciasControllerFechar<ThrowOnError extends boolean = true>(options: Options<CompetenciasControllerFecharOptions, ThrowOnError>): Unwrappable<RequestResult<CompetenciasControllerFecharResponses, ThrowOnError>> {
   const { client: request = client, ...config } = options
 
-  return withUnwrap(request({ method: 'POST', url: '/faturamento/competencias/{competencia}/fechar', validator: { response: competenciasControllerFecharResponseSchema, error: competenciasControllerFecharErrorSchema }, ...config, throwOnError: config.throwOnError ?? true }) as Promise<RequestResult<CompetenciasControllerFecharResponses, ThrowOnError>>)
+  return withUnwrap(request({ method: 'POST', url: '/faturamento/competencias/{competencia}/fechar', validator: { response: competenciasControllerFecharResponseSchema, error: competenciasControllerFecharErrorSchema }, contentType: { request: 'application/json' }, ...config, throwOnError: config.throwOnError ?? true }) as Promise<RequestResult<CompetenciasControllerFecharResponses, ThrowOnError>>)
 }

@@ -1,3 +1,5 @@
+import { Button } from '@base-ui/react/button';
+import { X } from '@phosphor-icons/react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, Link, useRouter } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -25,7 +27,7 @@ import {
 import { avisosControllerObterQueryOptions } from '../../gen/hooks/useAvisosControllerObter';
 import type { AvisoDto } from '../../gen/types/AvisoDto';
 import { tipoAviso } from '../../gen/types/TipoAviso';
-import { ondeProcurar, situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
+import { competenciasDoAviso, ondeProcurar, situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
 import { dataHoraCurta } from '../../lib/datas';
 import { numero } from '../../lib/formato';
 import { pode } from '../../lib/permissoes';
@@ -40,6 +42,17 @@ const buscaSchema = z.object({
   situacao: z.enum(['ignorado', 'resolvido', 'todas']).optional().catch(undefined),
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   id: z.uuid().optional().catch(undefined),
+  /** Só os tipos de que algum papel do usuário é responsável (o link da faixa do topo). */
+  meus: z.literal(1).optional().catch(undefined),
+  /** Só os ligados a esta competência (o link do fechamento recusado). */
+  competencia: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+    .optional()
+    .catch(undefined),
+  /** Só os de um item (o link do selo com mais de um aviso). */
+  entidade: z.string().min(1).max(40).optional().catch(undefined),
+  entidadeId: z.uuid().optional().catch(undefined),
 });
 type Busca = z.infer<typeof buscaSchema>;
 
@@ -47,6 +60,9 @@ const consulta = (b: Busca) => ({
   query: {
     busca: b.busca,
     tipo: b.tipo,
+    meus: b.meus ? true : undefined,
+    competencia: b.competencia,
+    ...(b.entidade && b.entidadeId && { entidade: b.entidade, entidadeId: b.entidadeId }),
     status: b.situacao === 'todas' ? undefined : (b.situacao ?? ('pendente' as const)),
     pagina: b.pagina ?? 1,
     porPagina: POR_PAGINA,
@@ -67,7 +83,7 @@ export const Route = createFileRoute('/_app/avisos')({
     if (cause !== 'stay')
       await context.queryClient.ensureQueryData(avisosControllerListarQueryOptions(consulta(deps)));
   },
-  head: () => ({ meta: [{ title: 'Avisos de cadastro · One' }] }),
+  head: () => ({ meta: [{ title: 'Avisos · One' }] }),
   component: PaginaAvisos,
   errorComponent: ErroDaTela,
 });
@@ -77,7 +93,7 @@ function ErroDaTela({ error }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-[22px] leading-snug font-semibold">Avisos de cadastro</h1>
+      <h1 className="text-[22px] leading-snug font-semibold">Avisos</h1>
       <EstadoDoErro
         erro={error}
         oQue="os avisos"
@@ -90,7 +106,7 @@ function ErroDaTela({ error }: ErrorComponentProps) {
 
 function PaginaAvisos() {
   const { sessao } = Route.useRouteContext();
-  return pode(sessao, 'avisos.ver') ? <Avisos /> : <SemPermissao tela="Avisos de cadastro" />;
+  return pode(sessao, 'avisos.ver') ? <Avisos /> : <SemPermissao tela="Avisos" />;
 }
 
 const coluna = createDataTableColumnHelper<AvisoDto>();
@@ -116,7 +132,7 @@ function Avisos() {
   const colunas = useMemo(
     () => [
       coluna.accessor('valor', {
-        header: 'Como chegou',
+        header: 'Aviso',
         cell: (info) => (
           <LinkDaLinha
             from={Route.fullPath}
@@ -128,8 +144,16 @@ function Avisos() {
         ),
       }),
       coluna.accessor('tipo', { header: 'Tipo', cell: (info) => tipoDoAviso(info.getValue()) }),
+      coluna.accessor('competencias', {
+        header: 'Competência',
+        cell: (info) => (
+          <span className="whitespace-nowrap tabular-nums">
+            {competenciasDoAviso(info.getValue()) ?? '—'}
+          </span>
+        ),
+      }),
       coluna.accessor('ocorrencias', {
-        header: () => <span className="block text-right">Laudos</span>,
+        header: () => <span className="block text-right">Ocorrências</span>,
         cell: (info) => (
           <span className="block text-right tabular-nums">{numero(info.getValue())}</span>
         ),
@@ -153,15 +177,31 @@ function Avisos() {
 
   return (
     <ListaCadastro
-      titulo="Avisos de cadastro"
+      titulo="Avisos"
       busca={{
         valor: busca.busca,
         rotulo: 'Buscar avisos',
-        placeholder: 'Nome como chegou da MobileMed',
+        placeholder: 'Texto do aviso',
       }}
-      temFiltro={busca.tipo !== undefined || busca.situacao !== undefined}
+      temFiltro={
+        busca.tipo !== undefined ||
+        busca.situacao !== undefined ||
+        busca.meus !== undefined ||
+        busca.competencia !== undefined ||
+        busca.entidadeId !== undefined
+      }
       filtros={
         <>
+          <Select
+            aria-label="Filtrar por responsável"
+            value={busca.meus ? 'meus' : ''}
+            onValueChange={(valor) => filtrar({ meus: valor === 'meus' ? 1 : undefined })}
+            opcoes={[
+              { valor: '', rotulo: 'De todos' },
+              { valor: 'meus', rotulo: 'Só os meus' },
+            ]}
+            className="flex-[1_1_140px] md:flex-[0_1_160px]"
+          />
           <Select
             aria-label="Filtrar por tipo"
             value={busca.tipo ?? ''}
@@ -187,6 +227,18 @@ function Avisos() {
             ]}
             className="flex-[1_1_180px] md:flex-[0_1_200px]"
           />
+          {busca.competencia && (
+            <FiltroFixo
+              rotulo={`Competência ${competenciasDoAviso({ desde: busca.competencia, ate: busca.competencia })}`}
+              onRemover={() => filtrar({ competencia: undefined })}
+            />
+          )}
+          {busca.entidadeId && (
+            <FiltroFixo
+              rotulo="Só os do item"
+              onRemover={() => filtrar({ entidade: undefined, entidadeId: undefined })}
+            />
+          )}
         </>
       }
       colunas={colunas}
@@ -204,10 +256,21 @@ function Avisos() {
       total={pagina.total}
       vazio={{
         titulo: 'Nenhum aviso pendente.',
-        texto: 'Cliente, médico ou estudo que a importação não achar no cadastro aparece aqui.',
+        texto:
+          'Inconsistências achadas pela importação, pela rodada da distribuição ou pela carga do dashboards-one aparecem aqui.',
       }}
       onFiltrar={filtrar}
-      onLimparFiltros={() => filtrar({ busca: undefined, tipo: undefined, situacao: undefined })}
+      onLimparFiltros={() =>
+        filtrar({
+          busca: undefined,
+          tipo: undefined,
+          situacao: undefined,
+          meus: undefined,
+          competencia: undefined,
+          entidade: undefined,
+          entidadeId: undefined,
+        })
+      }
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
         busca.id ? (
@@ -292,5 +355,22 @@ function PainelDoAviso({ id, onFechar }: { id: string; onFechar: () => void }) {
         }}
       />
     </PainelLateral>
+  );
+}
+
+/** Filtro que veio de um link (competência, item): à vista, com o X para tirar. */
+function FiltroFixo({ rotulo, onRemover }: { rotulo: string; onRemover: () => void }) {
+  return (
+    <span className="bg-muted inline-flex h-9 items-center gap-1 rounded-md pr-1 pl-3 text-sm">
+      {rotulo}
+      <Button
+        type="button"
+        aria-label={`Tirar o filtro: ${rotulo}`}
+        onClick={onRemover}
+        className={buttonClassName({ variant: 'ghost', className: 'size-7 px-0' })}
+      >
+        <X size={14} aria-hidden />
+      </Button>
+    </span>
   );
 }

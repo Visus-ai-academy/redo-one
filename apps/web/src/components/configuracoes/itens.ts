@@ -1,5 +1,6 @@
 import {
   ArrowsLeftRight,
+  Bell,
   BookOpen,
   CalendarDots,
   Certificate,
@@ -129,6 +130,13 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: Robot,
         to: '/configuracoes/distribuicao',
         permissao: 'distribuicao-config.ver',
+      },
+      {
+        nome: 'Avisos',
+        descricao: 'Responsáveis por cada tipo de aviso e quais impedem fechar a competência',
+        icone: Bell,
+        to: '/configuracoes/avisos',
+        permissao: 'avisos-config.ver',
       },
     ],
   },

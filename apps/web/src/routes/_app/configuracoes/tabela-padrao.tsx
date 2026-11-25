@@ -77,6 +77,7 @@ function TabelaPadrao() {
           key={atual.id}
           tipo="contratado"
           donoId={atual.id}
+          veAvisos={pode(sessao, 'avisos.ver')}
           podeEditar={pode(sessao, 'faturamento.precos.editar')}
           onAlterado={setAlterado}
         />

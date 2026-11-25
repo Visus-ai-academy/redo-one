@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import type { AvisoDto } from '../../gen/types/AvisoDto';
-import { situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
+import { competenciasDoAviso, situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
 import { dataHoraCurta } from '../../lib/datas';
 import { numero } from '../../lib/formato';
 import { Alerta } from '../alerta/Alerta';
@@ -50,6 +50,39 @@ const TEXTOS: Partial<Record<AvisoDto['tipo'], typeof TEXTOS_IMPORTACAO>> = {
     oQueFazer:
       'O robô não entrega exames desta unidade a este médico, e nada mudou sozinho no cadastro. Libere a conta do médico nesta unidade na MobileMed ou, se ele usa outra conta lá, acrescente-a às outras contas dele. A próxima rodada que conferir a unidade resolve o aviso.',
   },
+  cliente_ambiguo: {
+    resolvido:
+      'Uma importação conseguiu decidir o cliente deste nome. O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'Os laudos deste nome ficam sem cliente. Acrescente o nome como apelido exato do cliente certo. A próxima importação resolve o aviso.',
+  },
+  preco_repetido: {
+    resolvido:
+      'O preço foi conferido (alterado ou encerrado na tela) ou a repetição sumiu do dashboards-one. O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'No dashboards-one havia mais de um valor para o mesmo arranjo, faixa e vigência; ficou o da alteração mais recente. Confira o valor na tabela de preços: alterar ou encerrar a versão resolve o aviso; se o valor está certo, ignore com o motivo.',
+  },
+  catalogo_criado_carga: {
+    resolvido: 'O item foi conferido. O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'A carga do dashboards-one criou este item no catálogo porque os preços de lá o usam. Confira o nome e as variações; se está certo, ignore com o motivo.',
+  },
+};
+
+const ORIGENS: Record<AvisoDto['origem'], string> = {
+  importacao: 'Importação de laudos',
+  rodada: 'Rodada da distribuição',
+  carga: 'Carga do dashboards-one',
+  tela: 'Tela',
+  job: 'Rotina automática',
+};
+
+const OCORRENCIAS: Record<AvisoDto['origem'], string> = {
+  importacao: 'Laudos na última importação',
+  rodada: 'Exames na última rodada',
+  carga: 'Linhas na última carga',
+  tela: 'Ocorrências',
+  job: 'Ocorrências',
 };
 
 /** Conteúdo do painel de um aviso de cadastro, com a triagem (ignorar ou reabrir). */
@@ -88,8 +121,7 @@ export function DetalheAviso({
     return () => onAlterado?.(false);
   }, [alterado, onAlterado]);
   const decisao = aviso.status === 'ignorado' ? 'Ignorado' : 'Resolvido';
-  // A grafia sem de-para e a conta não liberada na unidade vêm da rodada, não da importação.
-  const daRodada = aviso.tipo === 'prioridade_operacao' || aviso.tipo === 'conta_unidade';
+  const competencias = competenciasDoAviso(aviso.competencias);
   const textos = TEXTOS[aviso.tipo] ?? TEXTOS_IMPORTACAO;
 
   return (
@@ -107,9 +139,9 @@ export function DetalheAviso({
 
       <dl className="divide-y">
         <Campo rotulo={tipoDoAviso(aviso.tipo)}>{aviso.valor}</Campo>
-        <Campo rotulo={daRodada ? 'Exames na última rodada' : 'Laudos na última importação'}>
-          {numero(aviso.ocorrencias)}
-        </Campo>
+        <Campo rotulo="Encontrado por">{ORIGENS[aviso.origem]}</Campo>
+        <Campo rotulo={OCORRENCIAS[aviso.origem]}>{numero(aviso.ocorrencias)}</Campo>
+        {competencias && <Campo rotulo="Competência">{competencias}</Campo>}
         <Campo rotulo="Apareceu em">{dataHoraCurta(aviso.primeiraVezEm)}</Campo>
         <Campo rotulo="Visto por último em">{dataHoraCurta(aviso.ultimaVezEm)}</Campo>
         {aviso.decididoPor && <Campo rotulo={`${decisao} por`}>{aviso.decididoPor.nome}</Campo>}

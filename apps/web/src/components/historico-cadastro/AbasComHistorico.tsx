@@ -11,17 +11,20 @@ export type AbaExtra = { valor: string; rotulo: string; conteudo: ReactNode };
  */
 export function AbasComHistorico({
   historico,
+  inicial = 'cadastro',
   extras = [],
   'aria-label': ariaLabel,
   children,
 }: {
   historico?: ReactNode;
+  /** A aba que abre primeiro (o valor de uma das `extras`); sem ela, o cadastro. */
+  inicial?: string;
   extras?: AbaExtra[];
   'aria-label': string;
   /** O cadastro (formulário e seções). */
   children: ReactNode;
 }) {
-  const [aba, setAba] = useState('cadastro');
+  const [aba, setAba] = useState(inicial);
   if (!historico && extras.length === 0) return children;
   const extra = extras.find((e) => e.valor === aba);
   return (

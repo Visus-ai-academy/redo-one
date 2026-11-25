@@ -16,12 +16,15 @@ import { precosControllerListarQueryOptions } from '../../gen/hooks/usePrecosCon
 import { precosControllerOpcoesQueryOptions } from '../../gen/hooks/usePrecosControllerOpcoes';
 import type { ItemPrecoDto } from '../../gen/types/ItemPrecoDto';
 import type { OpcoesPrecoDto } from '../../gen/types/OpcoesPrecoDto';
+import type { SeloAvisoDto } from '../../gen/types/SeloAvisoDto';
 import type { TabelaPrecosDto } from '../../gen/types/TabelaPrecosDto';
+import { useSelosDeAviso } from '../../lib/avisos';
 import { dataDeBrasilia } from '../../lib/datas';
 import { moeda, plural } from '../../lib/formato';
 import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
+import { SeloAviso } from '../avisos/SeloAviso';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
@@ -62,12 +65,15 @@ export type TabelaPrecosProps = {
   porPagina?: number;
   /** Avisa quando o preço aberto tem algo digitado e não salvo. */
   onAlterado?: (alterado: boolean) => void;
+  /** `avisos.ver`: a linha com aviso pendente (ex.: preço repetido) mostra o selo. */
+  veAvisos?: boolean;
 };
 
 type Aberto = { modo: 'novo' } | { modo: 'editar'; item: ItemPrecoDto } | null;
 
 const coluna = createDataTableColumnHelper<ItemPrecoDto>();
-const COLUNAS = [
+/** As colunas, com o selo dos avisos pendentes de cada versão (`entidade`: a tabela do preço). */
+const colunasCom = (selos: ReadonlyMap<string, SeloAvisoDto[]>, entidade: string) => [
   coluna.display({
     id: 'arranjo',
     header: 'Arranjo',
@@ -101,6 +107,7 @@ const COLUNAS = [
         {textoDaVigencia(p.vigenciaDesde, p.vigenciaAte)}
         {!p.emVigor && <Etiqueta tom="info">Programado</Etiqueta>}
         {p.duplicado && <Etiqueta tom="atencao">Duplicado</Etiqueta>}
+        <SeloAviso avisos={selos.get(p.id)} entidade={entidade} />
       </span>
     ),
   }),
@@ -122,6 +129,7 @@ export function TabelaPrecos({
   podeEditar,
   porPagina = 10,
   onAlterado,
+  veAvisos = false,
 }: TabelaPrecosProps) {
   const [termo, setTermo] = useState('');
   const [busca, setBusca] = useState('');
@@ -147,6 +155,13 @@ export function TabelaPrecos({
     placeholderData: keepPreviousData,
   });
   const opcoes = useQuery(precosControllerOpcoesQueryOptions());
+  const entidade = tipo === 'cliente' ? 'preco_cliente' : 'preco_padrao_contratado';
+  const selos = useSelosDeAviso(
+    entidade,
+    (tabela.data?.itens ?? []).map((p) => p.id),
+    veAvisos,
+  );
+  const colunas = useMemo(() => colunasCom(selos, entidade), [selos, entidade]);
 
   if (tabela.isError || opcoes.isError)
     return (
@@ -237,7 +252,7 @@ export function TabelaPrecos({
         )}
       </div>
       <DataTable
-        columns={COLUNAS}
+        columns={colunas}
         data={dados.itens}
         getRowId={(p) => p.id}
         onRowClick={(item) => setAberto({ modo: 'editar', item })}
@@ -347,7 +362,12 @@ function EditorPreco({
     () => valoresDoPreco(item, tabela.aPartirDeSugerido),
     [item, tabela.aPartirDeSugerido],
   );
-  const recarregar = () => queryClient.invalidateQueries({ queryKey: chaveDoDono(tipo, donoId) });
+  // Mexer na versão pode resolver o aviso dela (preço repetido): o selo também recarrega.
+  const recarregar = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: chaveDoDono(tipo, donoId) }),
+      queryClient.invalidateQueries({ queryKey: [{ url: '/ingestao/avisos/selos' }] }),
+    ]);
   const form = useAppForm({
     defaultValues: iniciais,
     validators: { onSubmit: esquema },

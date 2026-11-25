@@ -2,8 +2,9 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 
 import { AppShell } from '../components/app-shell/AppShell';
+import { FaixaAvisos } from '../components/avisos/FaixaAvisos';
 import { useAusenciasPendentes } from '../components/escala-ausencias/use-ausencias-pendentes';
-import { useTotalAvisosPendentes } from '../lib/avisos';
+import { useResumoAvisosDoResponsavel, useTotalAvisosPendentes } from '../lib/avisos';
 import { exigirSessao } from '../lib/guarda';
 import { pode } from '../lib/permissoes';
 import { sessaoQueryOptions } from '../lib/sessao';
@@ -20,7 +21,9 @@ export const Route = createFileRoute('/_app')({
 function LayoutApp() {
   // Lê do cache, que a guarda acabou de preencher; atualiza sozinho se a sessão mudar.
   const { data: sessao } = useSuspenseQuery(sessaoQueryOptions());
-  const avisosPendentes = useTotalAvisosPendentes(Boolean(sessao && pode(sessao, 'avisos.ver')));
+  const veAvisos = Boolean(sessao && pode(sessao, 'avisos.ver'));
+  const avisosPendentes = useTotalAvisosPendentes(veAvisos);
+  const avisosDoResponsavel = useResumoAvisosDoResponsavel(veAvisos);
   const ausenciasPendentes = useAusenciasPendentes(
     Boolean(sessao && pode(sessao, 'ausencias.aprovar')),
   );
@@ -30,6 +33,7 @@ function LayoutApp() {
     <AppShell
       sessao={sessao}
       contadores={{ '/avisos': avisosPendentes, '/escala/ausencias': ausenciasPendentes }}
+      faixa={<FaixaAvisos resumo={avisosDoResponsavel} />}
     >
       <Outlet />
     </AppShell>

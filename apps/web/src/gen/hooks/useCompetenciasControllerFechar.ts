@@ -4,7 +4,7 @@
 */
 
 import type { RequestConfig, ResponseErrorConfig } from '../.kubb/client'
-import type { CompetenciasControllerFecharOptions, CompetenciasControllerFecharStatus204, CompetenciasControllerFecharStatus400, CompetenciasControllerFecharStatus404, CompetenciasControllerFecharStatus409 } from '../types/CompetenciasControllerFechar'
+import type { CompetenciasControllerFecharOptions, CompetenciasControllerFecharStatus204, CompetenciasControllerFecharStatus400, CompetenciasControllerFecharStatus403, CompetenciasControllerFecharStatus404, CompetenciasControllerFecharStatus409 } from '../types/CompetenciasControllerFechar'
 import type { UseMutationOptions, UseMutationResult, QueryClient } from '@tanstack/react-query'
 import { competenciasControllerFechar } from '../clients/competenciasControllerFechar'
 import { mutationOptions, useMutation } from '@tanstack/react-query'
@@ -13,10 +13,10 @@ export const competenciasControllerFecharMutationKey = () => [{ url: '/faturamen
 
 export function competenciasControllerFecharMutationOptions<TContext = unknown>(config: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>> = {}) {
   const mutationKey = competenciasControllerFecharMutationKey()
-  return mutationOptions<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>({
+  return mutationOptions<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus403 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>({
     mutationKey,
-    mutationFn: async({ path }) => {
-      return competenciasControllerFechar({ ...config, path, throwOnError: true }).unwrap()
+    mutationFn: async({ path, body }) => {
+      return competenciasControllerFechar({ ...config, path, body, throwOnError: true }).unwrap()
     },
   })
 }
@@ -25,18 +25,18 @@ export function competenciasControllerFecharMutationOptions<TContext = unknown>(
  * {@link /faturamento/competencias/:competencia/fechar}
  */
 export function useCompetenciasControllerFechar<TContext>(options: {
-  mutation?: UseMutationOptions<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext> & { client?: QueryClient },
+  mutation?: UseMutationOptions<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus403 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext> & { client?: QueryClient },
   client?: Partial<Omit<RequestConfig, 'path' | 'query' | 'body' | 'headers' | 'url'>>,
 } = {}) {
   const { mutation = {}, client: config = {} } = options ?? {}
   const { client: queryClient, ...mutationOptions } = mutation;
   const mutationKey = mutationOptions.mutationKey ?? competenciasControllerFecharMutationKey()
 
-  const baseOptions = competenciasControllerFecharMutationOptions(config) as UseMutationOptions<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>
+  const baseOptions = competenciasControllerFecharMutationOptions(config) as UseMutationOptions<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus403 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>
 
-  return useMutation<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>({
+  return useMutation<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus403 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>({
     ...baseOptions,
     mutationKey,
     ...mutationOptions,
-  }, queryClient) as UseMutationResult<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>
+  }, queryClient) as UseMutationResult<CompetenciasControllerFecharStatus204, ResponseErrorConfig<CompetenciasControllerFecharStatus400 | CompetenciasControllerFecharStatus403 | CompetenciasControllerFecharStatus404 | CompetenciasControllerFecharStatus409>, CompetenciasControllerFecharOptions, TContext>
 }

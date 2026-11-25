@@ -51,6 +51,11 @@ export type CompetenciaDto = {
   importacaoTravadaPor: string | null;
   observacoes: string | null;
   /**
+   * @description Fechada apesar de avisos pendentes que impediam: o motivo de quem fechou.
+   * @type string
+   */
+  fechadaComAvisosMotivo: string | null;
+  /**
    * @description Laudos (não removidos) desta competência.
    * @type integer
    */

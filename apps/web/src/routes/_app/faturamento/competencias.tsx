@@ -27,12 +27,14 @@ const consulta = (b: Busca) => ({ query: { pagina: b.pagina ?? 1, porPagina: POR
 
 const CHAMADAS: Record<
   TipoAcaoCompetencia,
-  (opcoes: { path: { competencia: string } }) => { unwrap: () => Promise<unknown> }
+  (opcoes: { path: { competencia: string }; body?: { motivoAvisos?: string } }) => {
+    unwrap: () => Promise<unknown>;
+  }
 > = {
-  fechar: competenciasControllerFechar,
-  reabrir: competenciasControllerReabrir,
-  travar: competenciasControllerTravar,
-  destravar: competenciasControllerDestravar,
+  fechar: (opcoes) => competenciasControllerFechar({ ...opcoes, body: opcoes.body ?? {} }),
+  reabrir: ({ path }) => competenciasControllerReabrir({ path }),
+  travar: ({ path }) => competenciasControllerTravar({ path }),
+  destravar: ({ path }) => competenciasControllerDestravar({ path }),
 };
 
 export const Route = createFileRoute('/_app/faturamento/competencias')({
@@ -97,9 +99,12 @@ function Competencias() {
             }
           : undefined
       }
-      onExecutar={async (tipo, competencia) => {
+      onExecutar={async (tipo, competencia, opcoes) => {
         try {
-          await CHAMADAS[tipo]({ path: { competencia } }).unwrap();
+          await CHAMADAS[tipo]({
+            path: { competencia },
+            ...(opcoes?.motivoAvisos && { body: { motivoAvisos: opcoes.motivoAvisos } }),
+          }).unwrap();
         } finally {
           // Deu certo ou foi recusada (outra pessoa mudou antes): a lista mostra o estado atual.
           await queryClient.invalidateQueries({ queryKey: competenciasControllerListarQueryKey() });

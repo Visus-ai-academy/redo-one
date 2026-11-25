@@ -4,6 +4,8 @@
 */
 
 import * as z from 'zod'
+import { fechamentoComAvisosDtoSchema } from './fechamentoComAvisosDtoSchema'
+import { fecharCompetenciaDtoSchema } from './fecharCompetenciaDtoSchema'
 
 export const competenciasControllerFecharPathCompetenciaSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).meta({ examples: ['2026-10'] })
 
@@ -17,11 +19,15 @@ export const competenciasControllerFecharStatus400Schema = z.unknown()
 
 export type CompetenciasControllerFecharStatus400SchemaType = z.infer<typeof competenciasControllerFecharStatus400Schema>
 
+export const competenciasControllerFecharStatus403Schema = z.unknown()
+
+export type CompetenciasControllerFecharStatus403SchemaType = z.infer<typeof competenciasControllerFecharStatus403Schema>
+
 export const competenciasControllerFecharStatus404Schema = z.unknown()
 
 export type CompetenciasControllerFecharStatus404SchemaType = z.infer<typeof competenciasControllerFecharStatus404Schema>
 
-export const competenciasControllerFecharStatus409Schema = z.unknown()
+export const competenciasControllerFecharStatus409Schema = fechamentoComAvisosDtoSchema
 
 export type CompetenciasControllerFecharStatus409SchemaType = z.infer<typeof competenciasControllerFecharStatus409Schema>
 
@@ -29,9 +35,13 @@ export const competenciasControllerFecharResponseSchema = competenciasController
 
 export type CompetenciasControllerFecharResponseSchemaType = z.infer<typeof competenciasControllerFecharResponseSchema>
 
-export const competenciasControllerFecharErrorSchema = z.union([competenciasControllerFecharStatus400Schema, competenciasControllerFecharStatus404Schema, competenciasControllerFecharStatus409Schema])
+export const competenciasControllerFecharErrorSchema = z.union([competenciasControllerFecharStatus400Schema, competenciasControllerFecharStatus403Schema, competenciasControllerFecharStatus404Schema, competenciasControllerFecharStatus409Schema])
 
 export type CompetenciasControllerFecharErrorSchemaType = z.infer<typeof competenciasControllerFecharErrorSchema>
+
+export const competenciasControllerFecharBodySchema = fecharCompetenciaDtoSchema
+
+export type CompetenciasControllerFecharBodySchemaType = z.infer<typeof competenciasControllerFecharBodySchema>
 
 export const competenciasControllerFecharPathSchema = z.object({
   competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).meta({ examples: ['2026-10'] }),
@@ -40,7 +50,7 @@ export const competenciasControllerFecharPathSchema = z.object({
 export type CompetenciasControllerFecharPathSchemaType = z.infer<typeof competenciasControllerFecharPathSchema>
 
 export const competenciasControllerFecharOptionsSchema = z.object({
-  body: z.never().optional(),
+  body: competenciasControllerFecharBodySchema,
   path: competenciasControllerFecharPathSchema,
   query: z.never().optional(),
   headers: z.never().optional(),
@@ -51,6 +61,7 @@ export type CompetenciasControllerFecharOptionsSchemaType = z.infer<typeof compe
 export const competenciasControllerFecharResponsesSchema = z.object({
   '204': competenciasControllerFecharStatus204Schema,
   '400': competenciasControllerFecharStatus400Schema,
+  '403': competenciasControllerFecharStatus403Schema,
   '404': competenciasControllerFecharStatus404Schema,
   '409': competenciasControllerFecharStatus409Schema,
 })

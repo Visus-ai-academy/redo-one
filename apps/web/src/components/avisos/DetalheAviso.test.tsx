@@ -10,6 +10,9 @@ const pendente: AvisoDto = {
   tipo: 'cliente',
   valor: 'CLINICA NOVA',
   status: 'pendente',
+  origem: 'importacao',
+  competencias: { desde: '2026-10', ate: '2026-11' },
+  entidades: [],
   ocorrencias: 42,
   primeiraVezEm: '2026-11-10T12:00:00Z',
   ultimaVezEm: '2026-11-16T12:00:00Z',
@@ -23,6 +26,10 @@ describe('DetalheAviso', () => {
     render(<DetalheAviso aviso={pendente} podeTriar={false} />);
     expect(screen.getByText('Cliente').nextSibling).toHaveTextContent('CLINICA NOVA');
     expect(screen.getByText('Laudos na última importação').nextSibling).toHaveTextContent('42');
+    expect(screen.getByText('Competência').nextSibling).toHaveTextContent('10/2026 a 11/2026');
+    expect(screen.getByText('Encontrado por').nextSibling).toHaveTextContent(
+      'Importação de laudos',
+    );
     expect(screen.queryByRole('button', { name: 'Ignorar aviso' })).not.toBeInTheDocument();
   });
 
@@ -90,7 +97,12 @@ describe('DetalheAviso', () => {
   });
 
   it('a grafia sem de-para da distribuição fala da rodada, não da importação', () => {
-    const daRodada = { ...pendente, tipo: 'prioridade_operacao' as const, valor: 'Eletivo' };
+    const daRodada = {
+      ...pendente,
+      tipo: 'prioridade_operacao' as const,
+      origem: 'rodada' as const,
+      valor: 'Eletivo',
+    };
     const { unmount } = render(
       <DetalheAviso aviso={daRodada} podeTriar={false} procurar={<a href="/x">Abrir</a>} />,
     );
@@ -107,6 +119,7 @@ describe('DetalheAviso', () => {
     const conta = {
       ...pendente,
       tipo: 'conta_unidade' as const,
+      origem: 'rodada' as const,
       valor: 'Dr. Fulano sem conta liberada na unidade CEDI_RJ',
       ocorrencias: 3,
     };

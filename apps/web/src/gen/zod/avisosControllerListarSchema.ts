@@ -28,6 +28,22 @@ export const avisosControllerListarQueryBuscaSchema = z.string().optional().desc
 
 export type AvisosControllerListarQueryBuscaSchemaType = z.infer<typeof avisosControllerListarQueryBuscaSchema>
 
+export const avisosControllerListarQueryMeusSchema = z.boolean().optional().describe('Só os tipos de que algum papel de quem consulta é responsável.')
+
+export type AvisosControllerListarQueryMeusSchemaType = z.infer<typeof avisosControllerListarQueryMeusSchema>
+
+export const avisosControllerListarQueryCompetenciaSchema = z.string().optional().describe('Só os ligados a esta competência.').meta({ examples: ['2026-10'] })
+
+export type AvisosControllerListarQueryCompetenciaSchemaType = z.infer<typeof avisosControllerListarQueryCompetenciaSchema>
+
+export const avisosControllerListarQueryEntidadeSchema = z.string().optional().describe('Só os que se referem a este item (com `entidadeId`): cliente, medico, exame...')
+
+export type AvisosControllerListarQueryEntidadeSchemaType = z.infer<typeof avisosControllerListarQueryEntidadeSchema>
+
+export const avisosControllerListarQueryEntidadeIdSchema = z.uuid().optional()
+
+export type AvisosControllerListarQueryEntidadeIdSchemaType = z.infer<typeof avisosControllerListarQueryEntidadeIdSchema>
+
 export const avisosControllerListarStatus200Schema = paginaAvisosDtoSchema
 
 export type AvisosControllerListarStatus200SchemaType = z.infer<typeof avisosControllerListarStatus200Schema>
@@ -42,6 +58,10 @@ export const avisosControllerListarQuerySchema = z.object({
   status: statusAvisoSchema.optional(),
   tipo: tipoAvisoSchema.optional(),
   busca: z.string().optional().describe('Parte do nome como chegou da MobileMed.'),
+  meus: z.boolean().optional().describe('Só os tipos de que algum papel de quem consulta é responsável.'),
+  competencia: z.string().optional().describe('Só os ligados a esta competência.').meta({ examples: ['2026-10'] }),
+  entidade: z.string().optional().describe('Só os que se referem a este item (com `entidadeId`): cliente, medico, exame...'),
+  entidadeId: z.uuid().optional(),
 })
 
 export type AvisosControllerListarQuerySchemaType = z.infer<typeof avisosControllerListarQuerySchema>

@@ -7,7 +7,7 @@ import {
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
-
+import { SeloAviso } from '../../components/avisos/SeloAviso';
 import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { PainelCliente } from '../../components/catalogo/PainelCliente';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
@@ -36,6 +36,7 @@ import { clientesControllerListarQueryOptions } from '../../gen/hooks/useCliente
 import { clientesControllerObterQueryOptions } from '../../gen/hooks/useClientesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
 import type { ClienteResumoDto } from '../../gen/types/ClienteResumoDto';
+import { useSelosDeAviso } from '../../lib/avisos';
 import { invalidarCatalogo, ordenarContratados } from '../../lib/catalogo';
 import { formatarCnpj } from '../../lib/documentos';
 import { numero } from '../../lib/formato';
@@ -50,6 +51,8 @@ const buscaSchema = z.object({
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   id: z.uuid().optional().catch(undefined),
   novo: z.literal(1).optional().catch(undefined),
+  /** Aba do painel que abre primeiro (o atalho do aviso de preço repetido abre em Preços). */
+  aba: z.enum(['precos']).optional().catch(undefined),
 });
 type Busca = z.infer<typeof buscaSchema>;
 
@@ -96,6 +99,7 @@ function PaginaClientes() {
 
 const coluna = createDataTableColumnHelper<ClienteResumoDto>();
 function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
+  const { sessao } = Route.useRouteContext();
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const lista = useQuery({
@@ -104,6 +108,11 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
   });
   const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
   const { data: opcoes } = useSuspenseQuery(opcoesControllerListasQueryOptions());
+  const selos = useSelosDeAviso(
+    'cliente',
+    pagina.itens.map((c) => c.id),
+    pode(sessao, 'avisos.ver'),
+  );
 
   const ir = useCallback(
     (mudar: (atual: Busca) => Busca, replace = false) => void navigate({ search: mudar, replace }),
@@ -119,26 +128,34 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
       coluna.accessor('nome', {
         header: 'Cliente',
         cell: (info) => (
-          <LinkDaLinha
-            from={Route.fullPath}
-            to="."
-            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
-          >
-            <span className="flex flex-col leading-snug">
-              <span>{info.getValue()}</span>
-              {info.row.original.unificadoEm ? (
-                <span className="text-muted-foreground text-[13px] font-normal">
-                  Unidade de {info.row.original.unificadoEm.nome}
-                </span>
-              ) : (
-                info.row.original.nomeFantasia && (
+          <span className="flex items-start gap-2">
+            <LinkDaLinha
+              from={Route.fullPath}
+              to="."
+              search={(a: Busca) => ({
+                ...a,
+                id: info.row.original.id,
+                novo: undefined,
+                aba: undefined,
+              })}
+            >
+              <span className="flex flex-col leading-snug">
+                <span>{info.getValue()}</span>
+                {info.row.original.unificadoEm ? (
                   <span className="text-muted-foreground text-[13px] font-normal">
-                    {info.row.original.nomeFantasia}
+                    Unidade de {info.row.original.unificadoEm.nome}
                   </span>
-                )
-              )}
-            </span>
-          </LinkDaLinha>
+                ) : (
+                  info.row.original.nomeFantasia && (
+                    <span className="text-muted-foreground text-[13px] font-normal">
+                      {info.row.original.nomeFantasia}
+                    </span>
+                  )
+                )}
+              </span>
+            </LinkDaLinha>
+            <SeloAviso avisos={selos.get(info.row.original.id)} entidade="cliente" />
+          </span>
         ),
       }),
       coluna.accessor('cnpj', {
@@ -169,7 +186,7 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
         ),
       }),
     ],
-    [],
+    [selos],
   );
 
   return (
@@ -243,6 +260,8 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
           <Painel
             key={busca.id ?? 'novo'}
             id={busca.id}
+            abaInicial={busca.aba}
+            veAvisos={pode(sessao, 'avisos.ver')}
             contratados={opcoes.contratados}
             permissoes={permissoes}
           />
@@ -256,7 +275,11 @@ function Painel({
   id,
   contratados,
   permissoes,
+  abaInicial,
+  veAvisos,
 }: {
+  abaInicial?: 'precos';
+  veAvisos: boolean;
   id?: string;
   contratados: { id: string; nome: string; padrao: boolean }[];
   permissoes: PodeNaTela;
@@ -273,7 +296,9 @@ function Painel({
   const veCorte = pode(sessao, 'faturamento.ver');
   const veDados = pode(sessao, 'clientes.faturamento.ver');
   const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
-  const fechar = () => void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined }) });
+  const fechar = () =>
+    void navigate({ search: (a) => ({ ...a, id: undefined, novo: undefined, aba: undefined }) });
+  const selos = useSelosDeAviso('cliente', id ? [id] : [], veAvisos);
   if (id && (!cliente || fase !== 'conteudo'))
     return (
       <PainelCarregando
@@ -288,6 +313,8 @@ function Painel({
   return (
     <PainelCliente
       cliente={cliente}
+      abaInicial={abaInicial}
+      selo={id ? <SeloAviso avisos={selos.get(id)} entidade="cliente" /> : undefined}
       contratados={contratados}
       podeEditar={id ? permissoes.editar : permissoes.criar}
       podeCriar={permissoes.criar}
@@ -347,6 +374,7 @@ function Painel({
           <div className="p-4">
             <TabelaPrecos
               key={id}
+              veAvisos={veAvisos}
               tipo="cliente"
               donoId={id}
               podeEditar={pode(sessao, 'faturamento.precos.editar')}

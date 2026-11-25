@@ -3,6 +3,9 @@
 * Do not edit manually.
 */
 
+import type { FechamentoComAvisosDto } from './FechamentoComAvisosDto'
+import type { FecharCompetenciaDto } from './FecharCompetenciaDto'
+
 export type CompetenciasControllerFecharPath = {
   /**
    * @pattern ^\d{4}-(0[1-9]|1[0-2])$
@@ -16,12 +19,16 @@ export type CompetenciasControllerFecharStatus204 = unknown;
 
 export type CompetenciasControllerFecharStatus400 = unknown;
 
+export type CompetenciasControllerFecharStatus403 = unknown;
+
 export type CompetenciasControllerFecharStatus404 = unknown;
 
-export type CompetenciasControllerFecharStatus409 = unknown;
+export type CompetenciasControllerFecharStatus409 = FechamentoComAvisosDto;
+
+export type CompetenciasControllerFecharBody = FecharCompetenciaDto;
 
 export type CompetenciasControllerFecharOptions = {
-  body?: never;
+  body: CompetenciasControllerFecharBody;
   path: CompetenciasControllerFecharPath;
   query?: never;
   headers?: never;
@@ -30,6 +37,7 @@ export type CompetenciasControllerFecharOptions = {
 export type CompetenciasControllerFecharResponses = {
   '204': CompetenciasControllerFecharStatus204;
   '400': CompetenciasControllerFecharStatus400;
+  '403': CompetenciasControllerFecharStatus403;
   '404': CompetenciasControllerFecharStatus404;
   '409': CompetenciasControllerFecharStatus409;
 };

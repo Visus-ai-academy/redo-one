@@ -12,6 +12,9 @@ export const tipoAviso = {
   prioridade: 'prioridade',
   prioridade_operacao: 'prioridade_operacao',
   conta_unidade: 'conta_unidade',
+  cliente_ambiguo: 'cliente_ambiguo',
+  preco_repetido: 'preco_repetido',
+  catalogo_criado_carga: 'catalogo_criado_carga',
 } as const;
 
 export type TipoAvisoKey = (typeof tipoAviso)[keyof typeof tipoAviso];

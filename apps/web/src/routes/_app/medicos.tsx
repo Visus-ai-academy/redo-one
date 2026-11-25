@@ -7,7 +7,7 @@ import {
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
-
+import { SeloAviso } from '../../components/avisos/SeloAviso';
 import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
 import { createDataTableColumnHelper } from '../../components/data-table/columns';
 import { LinkDaLinha } from '../../components/data-table/link-da-linha';
@@ -46,6 +46,7 @@ import { medicosControllerObterPagamentoQueryOptions } from '../../gen/hooks/use
 import { niveisMedicoControllerListarQueryOptions } from '../../gen/hooks/useNiveisMedicoControllerListar';
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import type { MedicoResumoDto } from '../../gen/types/MedicoResumoDto';
+import { useSelosDeAviso } from '../../lib/avisos';
 import { numero } from '../../lib/formato';
 import { abasDoMedico, invalidarMedicos } from '../../lib/medicos';
 import { pode } from '../../lib/permissoes';
@@ -115,6 +116,11 @@ function Medicos() {
     placeholderData: keepPreviousData,
   });
   const pagina = lista.data ?? { itens: [], pagina: 1, porPagina: POR_PAGINA, total: 0 };
+  const selos = useSelosDeAviso(
+    'medico',
+    pagina.itens.map((x) => x.id),
+    pode(sessao, 'avisos.ver'),
+  );
   const { data: niveis } = useSuspenseQuery(niveisAtivos());
 
   const ir = useCallback(
@@ -132,20 +138,23 @@ function Medicos() {
       coluna.accessor('nome', {
         header: 'Médico',
         cell: (info) => (
-          <LinkDaLinha
-            from={Route.fullPath}
-            to="."
-            search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
-          >
-            <span className="flex flex-col leading-snug">
-              <span>{info.getValue()}</span>
-              {info.row.original.crm && (
-                <span className="text-muted-foreground text-[13px] font-normal">
-                  CRM {info.row.original.crm}
-                </span>
-              )}
-            </span>
-          </LinkDaLinha>
+          <span className="flex items-start gap-2">
+            <LinkDaLinha
+              from={Route.fullPath}
+              to="."
+              search={(a: Busca) => ({ ...a, id: info.row.original.id, novo: undefined })}
+            >
+              <span className="flex flex-col leading-snug">
+                <span>{info.getValue()}</span>
+                {info.row.original.crm && (
+                  <span className="text-muted-foreground text-[13px] font-normal">
+                    CRM {info.row.original.crm}
+                  </span>
+                )}
+              </span>
+            </LinkDaLinha>
+            <SeloAviso avisos={selos.get(info.row.original.id)} entidade="medico" />
+          </span>
         ),
       }),
       coluna.accessor((m) => m.nivel?.nome ?? '—', { id: 'nivel', header: 'Nível' }),
@@ -173,7 +182,7 @@ function Medicos() {
         ),
       }),
     ],
-    [],
+    [selos],
   );
 
   return (

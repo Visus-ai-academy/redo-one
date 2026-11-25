@@ -21,6 +21,8 @@ type AppShellProps = {
   rodape?: ItemMenu[];
   /** Contador de pendências por destino do item (`to`), ex.: `{ '/avisos': 12 }`. */
   contadores?: Partial<Record<string, number>>;
+  /** Acima do conteúdo de todas as telas (ex.: a faixa dos avisos pendentes do responsável). */
+  faixa?: ReactNode;
 };
 
 /** Layout das telas autenticadas: menu verde à esquerda (gaveta no celular) e o conteúdo. */
@@ -30,6 +32,7 @@ export function AppShell({
   grupos = GRUPOS_MENU,
   rodape = RODAPE_MENU,
   contadores = {},
+  faixa,
 }: AppShellProps) {
   const comContador = (item: ItemMenu): ItemMenu => ({ ...item, contador: contadores[item.to] });
   const navigate = useNavigate();
@@ -130,7 +133,10 @@ export function AppShell({
           {menu({ recolhido, onAlternar: alternar })}
         </aside>
 
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {faixa}
+          <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        </div>
       </div>
     </Avisos>
   );

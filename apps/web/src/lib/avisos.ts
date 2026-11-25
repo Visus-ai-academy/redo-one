@@ -2,8 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { TomEtiqueta } from '../components/etiqueta/Etiqueta';
 import { avisosControllerListarQueryOptions } from '../gen/hooks/useAvisosControllerListar';
+import { avisosControllerResumoDoResponsavelQueryOptions } from '../gen/hooks/useAvisosControllerResumoDoResponsavel';
+import { avisosControllerSelosDosItensQueryOptions } from '../gen/hooks/useAvisosControllerSelosDosItens';
+import type { CompetenciasAvisoDto } from '../gen/types/CompetenciasAvisoDto';
+import type { EntidadeAvisoDto } from '../gen/types/EntidadeAvisoDto';
+import type { SeloAvisoDto } from '../gen/types/SeloAvisoDto';
 import type { StatusAvisoKey } from '../gen/types/StatusAviso';
 import type { TipoAvisoKey } from '../gen/types/TipoAviso';
+import { plural } from './formato';
 
 const TIPOS: Record<TipoAvisoKey, string> = {
   cliente: 'Cliente',
@@ -14,6 +20,9 @@ const TIPOS: Record<TipoAvisoKey, string> = {
   prioridade: 'Prioridade',
   prioridade_operacao: 'Prioridade da operação',
   conta_unidade: 'Conta na unidade',
+  cliente_ambiguo: 'Cliente com nome ambíguo',
+  preco_repetido: 'Preço repetido',
+  catalogo_criado_carga: 'Item criado pela carga',
 };
 
 export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
@@ -32,8 +41,46 @@ export const situacaoDoAviso = (status: StatusAvisoKey) => SITUACOES[status];
  * estudo). Quem vê o aviso vê a tela de destino: a API só mostra o tipo de aviso a quem tem o
  * `ver` dela.
  */
-export function ondeProcurar({ tipo, valor }: { tipo: TipoAvisoKey; valor: string }) {
+export function ondeProcurar({
+  tipo,
+  valor,
+  entidades = [],
+}: {
+  tipo: TipoAvisoKey;
+  valor: string;
+  entidades?: EntidadeAvisoDto[];
+}) {
+  const daEntidade = (t: string) => entidades.find((e) => e.tipo === t)?.id;
   switch (tipo) {
+    case 'cliente_ambiguo':
+      // Um apelido exato decide entre os clientes de mesmo nome.
+      return {
+        rotulo: 'Procurar em Clientes',
+        to: '/clientes' as const,
+        search: { busca: valor.replace(/\s*\(mais de um cliente com esse nome: .*\)\s*$/, '') },
+      };
+    case 'preco_repetido': {
+      const cliente = daEntidade('cliente');
+      if (cliente)
+        return {
+          rotulo: 'Abrir os preços do cliente',
+          to: '/clientes' as const,
+          search: { id: cliente, aba: 'precos' as const },
+        };
+      return {
+        rotulo: 'Abrir a tabela padrão do contratado',
+        to: '/configuracoes/tabela-padrao' as const,
+        search: { contratado: daEntidade('contratado') },
+      };
+    }
+    case 'catalogo_criado_carga': {
+      const aba = daEntidade('prioridade') ? 'prioridades' : 'categorias';
+      return {
+        rotulo: 'Abrir no Catálogo',
+        to: '/configuracoes/catalogo' as const,
+        search: { aba: aba as 'categorias' | 'prioridades', busca: valor },
+      };
+    }
     case 'cliente':
       return {
         rotulo: 'Procurar em Clientes',
@@ -94,3 +141,82 @@ export function useTotalAvisosPendentes(ativo: boolean): number | undefined {
     select: (pagina) => pagina.total,
   }).data;
 }
+
+/** Início das competências do que vale desde sempre (o mesmo da API). */
+const DESDE_SEMPRE = '0001-01';
+const mes = (c: string) => `${c.slice(5, 7)}/${c.slice(0, 4)}`;
+
+/** As competências a que o aviso se liga, por extenso; nulo se nenhuma. */
+export function competenciasDoAviso(c: CompetenciasAvisoDto | null): string | null {
+  if (!c) return null;
+  if (c.desde === DESDE_SEMPRE) return c.ate ? `Até ${mes(c.ate)}` : 'Todas';
+  if (!c.ate) return `De ${mes(c.desde)} em diante`;
+  return c.desde === c.ate ? mes(c.desde) : `${mes(c.desde)} a ${mes(c.ate)}`;
+}
+
+const DIA = 24 * 60 * 60 * 1000;
+
+/** A faixa do topo: "3 avisos seus pendentes; o mais antigo há 4 dias". */
+export function textoDaFaixa(
+  { total, maisAntigoEm }: { total: number; maisAntigoEm: string | null },
+  agora = new Date(),
+) {
+  const quantos = plural(total, { um: 'aviso seu pendente', varios: 'avisos seus pendentes' });
+  if (!maisAntigoEm) return quantos;
+  const dias = Math.max(0, Math.floor((agora.getTime() - new Date(maisAntigoEm).getTime()) / DIA));
+  if (dias === 0) return total === 1 ? `${quantos}, de hoje` : `${quantos}; o mais antigo de hoje`;
+  const ha = plural(dias, { um: 'dia', varios: 'dias' });
+  return total === 1 ? `${quantos} há ${ha}` : `${quantos}; o mais antigo há ${ha}`;
+}
+
+/**
+ * A faixa do topo para quem é responsável por algum tipo: a cada 2 min (como o contador do menu),
+ * nunca com a aba oculta.
+ */
+export function useResumoAvisosDoResponsavel(ativo: boolean) {
+  return useQuery({
+    ...avisosControllerResumoDoResponsavelQueryOptions(),
+    enabled: ativo,
+    refetchInterval: 2 * 60_000,
+    refetchIntervalInBackground: false,
+  }).data;
+}
+
+/**
+ * O selo dos itens de uma página (cliente, médico, exame, preço...): uma consulta só com os ids da
+ * página. Sem `avisos.ver` (ou sem itens), não consulta.
+ */
+export function useSelosDeAviso(
+  entidade: string,
+  ids: readonly string[],
+  ativo: boolean,
+): ReadonlyMap<string, SeloAvisoDto[]> {
+  const unicos = [...new Set(ids)].sort();
+  const { data } = useQuery({
+    ...avisosControllerSelosDosItensQueryOptions({ query: { entidade, ids: unicos } }),
+    enabled: ativo && unicos.length > 0,
+    staleTime: 60_000,
+  });
+  const mapa = new Map<string, SeloAvisoDto[]>();
+  for (const selo of data ?? [])
+    mapa.set(selo.entidadeId, [...(mapa.get(selo.entidadeId) ?? []), selo]);
+  return mapa;
+}
+
+/** O que o tipo de aviso significa, para quem escolhe os responsáveis. */
+const SIGNIFICADO: Record<TipoAvisoKey, string> = {
+  cliente: 'Nome de cliente que a importação não achou no cadastro: os laudos ficam sem cliente.',
+  medico: 'Médico que assinou laudos e não está no cadastro.',
+  estudo: 'Estudo que a importação não achou no catálogo de exames: o laudo fica sem exame.',
+  modalidade: 'Modalidade sem cadastro nem variação.',
+  especialidade: 'Especialidade sem cadastro nem variação.',
+  prioridade: 'Prioridade sem cadastro nem variação.',
+  prioridade_operacao: 'Grafia de prioridade da fila sem de-para nas prioridades da operação.',
+  conta_unidade: 'Médico escalado sem conta liberada na unidade do exame na MobileMed.',
+  cliente_ambiguo: 'Nome que casa com mais de um cliente: os laudos ficam sem cliente.',
+  preco_repetido:
+    'Preço repetido no dashboards-one com valores diferentes (mesmo arranjo, faixa e vigência).',
+  catalogo_criado_carga: 'Item do catálogo que a carga do dashboards-one criou.',
+};
+
+export const significadoDoTipo = (tipo: TipoAvisoKey) => SIGNIFICADO[tipo];

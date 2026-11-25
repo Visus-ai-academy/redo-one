@@ -4,6 +4,9 @@
 */
 
 import * as z from 'zod'
+import { competenciasAvisoDtoSchema } from './competenciasAvisoDtoSchema'
+import { entidadeAvisoDtoSchema } from './entidadeAvisoDtoSchema'
+import { origemAvisoSchema } from './origemAvisoSchema'
 import { pessoaResumoDtoSchema } from './pessoaResumoDtoSchema'
 import { statusAvisoSchema } from './statusAvisoSchema'
 import { tipoAvisoSchema } from './tipoAvisoSchema'
@@ -11,8 +14,11 @@ import { tipoAvisoSchema } from './tipoAvisoSchema'
 export const avisoDtoSchema = z.object({
   id: z.uuid(),
   tipo: tipoAvisoSchema,
-  valor: z.string().describe('Como chegou da MobileMed na última importação ou rodada.'),
+  valor: z.string().describe('Como chegou na última verificação (importação, rodada, carga).'),
   status: statusAvisoSchema,
+  origem: origemAvisoSchema,
+  competencias: competenciasAvisoDtoSchema.nullable().describe('Competências a que se liga (a trava do fechamento).'),
+  entidades: z.array(entidadeAvisoDtoSchema).describe('Itens a que se refere (selo e atalho).'),
   ocorrencias: z.int().describe('Laudos da última importação (ou exames da última rodada) em que apareceu.'),
   primeiraVezEm: z.iso.datetime(),
   ultimaVezEm: z.iso.datetime(),

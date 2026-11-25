@@ -3,6 +3,7 @@ import { DotsThree, Lock, LockOpen } from '@phosphor-icons/react';
 import { useMemo, useRef, useState } from 'react';
 
 import type { CompetenciaDto } from '../../gen/types/CompetenciaDto';
+import type { FechamentoComAvisosDto } from '../../gen/types/FechamentoComAvisosDto';
 import type { PaginaCompetenciasDto } from '../../gen/types/PaginaCompetenciasDto';
 import { dataHoraCurta } from '../../lib/datas';
 import { numero } from '../../lib/formato';
@@ -16,10 +17,12 @@ import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAvisos } from '../toast/use-avisos';
+import { AvisosDoFechamento } from './AvisosDoFechamento';
 import {
   type AcaoCompetencia,
   acoesDaCompetencia,
   mesAno,
+  recusaPorAvisos,
   type TipoAcaoCompetencia,
 } from './competencias';
 
@@ -33,8 +36,15 @@ export type ListaCompetenciasProps = {
   /** Buscando a página: as linhas de antes ficam à vista, esmaecidas. */
   recarregando?: boolean;
   erro?: { erro: unknown; oQue: string; onTentarDeNovo: () => void };
-  /** Chama a API; rejeita com o erro dela (ex.: 409, "o mês ainda não acabou"). */
-  onExecutar: (tipo: TipoAcaoCompetencia, competencia: string) => Promise<void>;
+  /**
+   * Chama a API; rejeita com o erro dela (ex.: 409, "o mês ainda não acabou", ou os avisos que
+   * impedem fechar). `motivoAvisos`: fechar mesmo assim, com a permissão própria.
+   */
+  onExecutar: (
+    tipo: TipoAcaoCompetencia,
+    competencia: string,
+    opcoes?: { motivoAvisos?: string },
+  ) => Promise<void>;
   onIrPara: (pagina: number) => void;
 };
 
@@ -75,6 +85,12 @@ export function ListaCompetencias({
   const [falha, setFalha] = useState<string | null>(null);
   /** A ação que está rodando e em qual linha. */
   const [emCurso, setEmCurso] = useState<{ competencia: string; andamento: string } | null>(null);
+  /** Fechamento recusado por avisos pendentes: o diálogo com a lista (e o "fechar mesmo assim"). */
+  const [comAvisos, setComAvisos] = useState<{
+    competencia: string;
+    acao: AcaoCompetencia;
+    recusa: FechamentoComAvisosDto;
+  } | null>(null);
 
   const executar = async (competencia: string, acao: AcaoCompetencia) => {
     setFalha(null);
@@ -83,7 +99,9 @@ export function ListaCompetencias({
       await onExecutar(acao.tipo, competencia);
       sucesso(acao.sucesso);
     } catch (e) {
-      setFalha(`${acao.falha} ${mensagemDaApi(e, 'Confira a conexão e tente de novo.')}`);
+      const recusa = acao.tipo === 'fechar' ? recusaPorAvisos(e) : null;
+      if (recusa) setComAvisos({ competencia, acao, recusa });
+      else setFalha(`${acao.falha} ${mensagemDaApi(e, 'Confira a conexão e tente de novo.')}`);
     } finally {
       setEmCurso(null);
     }
@@ -123,7 +141,17 @@ export function ListaCompetencias({
         id: 'fechada',
         header: 'Fechada em / por',
         cell: ({ row }) => (
-          <Marco em={row.original.fechadaEm} por={row.original.fechadaPor} agora={agora} />
+          <span className="flex flex-col gap-1">
+            <Marco em={row.original.fechadaEm} por={row.original.fechadaPor} agora={agora} />
+            {row.original.status === 'fechada' && row.original.fechadaComAvisosMotivo && (
+              <span
+                title={row.original.fechadaComAvisosMotivo}
+                className="text-warning max-w-56 truncate text-[13px]"
+              >
+                {`Com avisos: ${row.original.fechadaComAvisosMotivo}`}
+              </span>
+            )}
+          </span>
         ),
       }),
       coluna.display({
@@ -183,31 +211,47 @@ export function ListaCompetencias({
     [acesso, agora, emCurso],
   );
 
-  return (
-    <ListaCadastro
-      titulo="Competências"
-      totalNoTitulo={false}
-      acoes={falha ? <Alerta tom="erro">{falha}</Alerta> : undefined}
-      colunas={colunas}
-      itens={pagina.itens}
-      getRowId={(c) => c.competencia}
-      recarregando={recarregando}
-      erro={erro}
-      pagina={pagina.pagina}
-      porPagina={pagina.porPagina}
-      total={pagina.total}
-      vazio={{
-        titulo: 'Nenhuma competência ainda.',
-        texto: 'A competência aparece aqui quando a importação traz o primeiro laudo do mês.',
-      }}
-      onFiltrar={nada}
-      onLimparFiltros={nada}
-      onIrPara={(numero) => {
-        // O erro era de uma linha desta página; na outra, ele só atrapalha.
-        setFalha(null);
-        onIrPara(numero);
+  const dialogo = comAvisos && (
+    <AvisosDoFechamento
+      competencia={comAvisos.competencia}
+      recusa={comAvisos.recusa}
+      onFechar={() => setComAvisos(null)}
+      onFecharMesmoAssim={async (motivoAvisos) => {
+        await onExecutar('fechar', comAvisos.competencia, { motivoAvisos });
+        setComAvisos(null);
+        sucesso(comAvisos.acao.sucesso);
       }}
     />
+  );
+
+  return (
+    <>
+      {dialogo}
+      <ListaCadastro
+        titulo="Competências"
+        totalNoTitulo={false}
+        acoes={falha ? <Alerta tom="erro">{falha}</Alerta> : undefined}
+        colunas={colunas}
+        itens={pagina.itens}
+        getRowId={(c) => c.competencia}
+        recarregando={recarregando}
+        erro={erro}
+        pagina={pagina.pagina}
+        porPagina={pagina.porPagina}
+        total={pagina.total}
+        vazio={{
+          titulo: 'Nenhuma competência ainda.',
+          texto: 'A competência aparece aqui quando a importação traz o primeiro laudo do mês.',
+        }}
+        onFiltrar={nada}
+        onLimparFiltros={nada}
+        onIrPara={(numero) => {
+          // O erro era de uma linha desta página; na outra, ele só atrapalha.
+          setFalha(null);
+          onIrPara(numero);
+        }}
+      />
+    </>
   );
 }
 

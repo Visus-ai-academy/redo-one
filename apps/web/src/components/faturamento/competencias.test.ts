@@ -13,6 +13,7 @@ const base: CompetenciaDto = {
   importacaoTravadaEm: null,
   importacaoTravadaPor: null,
   observacoes: null,
+  fechadaComAvisosMotivo: null,
   laudos: 41230,
   volume: 45876,
 };

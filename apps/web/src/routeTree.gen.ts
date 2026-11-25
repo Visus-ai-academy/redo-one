@@ -21,6 +21,7 @@ import { Route as AppExamesRouteImport } from './routes/_app/exames'
 import { Route as AppImportacaoRouteImport } from './routes/_app/importacao'
 import { Route as AppMedicosRouteImport } from './routes/_app/medicos'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
+import { Route as AppConfiguracoesAvisosRouteImport } from './routes/_app/configuracoes/avisos'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
 import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
@@ -99,6 +100,11 @@ const AppMedicosRoute = AppMedicosRouteImport.update({
 const AppConfiguracoesIndexRoute = AppConfiguracoesIndexRouteImport.update({
   id: '/configuracoes/',
   path: '/configuracoes/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesAvisosRoute = AppConfiguracoesAvisosRouteImport.update({
+  id: '/configuracoes/avisos',
+  path: '/configuracoes/avisos',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConfiguracoesCatalogoRoute =
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/exames': typeof AppExamesRoute
   '/importacao': typeof AppImportacaoRoute
   '/medicos': typeof AppMedicosRoute
+  '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/importacao': typeof AppImportacaoRoute
   '/medicos': typeof AppMedicosRoute
   '/': typeof AppIndexRoute
+  '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/_app/importacao': typeof AppImportacaoRoute
   '/_app/medicos': typeof AppMedicosRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/exames'
     | '/importacao'
     | '/medicos'
+    | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
@@ -361,6 +371,7 @@ export interface FileRouteTypes {
     | '/importacao'
     | '/medicos'
     | '/'
+    | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
@@ -395,6 +406,7 @@ export interface FileRouteTypes {
     | '/_app/importacao'
     | '/_app/medicos'
     | '/_app/'
+    | '/_app/configuracoes/avisos'
     | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/contratados'
     | '/_app/configuracoes/de-paras'
@@ -509,6 +521,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes/'
       preLoaderRoute: typeof AppConfiguracoesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/configuracoes/avisos': {
+      id: '/_app/configuracoes/avisos'
+      path: '/configuracoes/avisos'
+      fullPath: '/configuracoes/avisos'
+      preLoaderRoute: typeof AppConfiguracoesAvisosRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/configuracoes/catalogo': {
@@ -662,6 +681,7 @@ interface AppRouteChildren {
   AppImportacaoRoute: typeof AppImportacaoRoute
   AppMedicosRoute: typeof AppMedicosRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppConfiguracoesAvisosRoute: typeof AppConfiguracoesAvisosRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
   AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
@@ -693,6 +713,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppImportacaoRoute: AppImportacaoRoute,
   AppMedicosRoute: AppMedicosRoute,
   AppIndexRoute: AppIndexRoute,
+  AppConfiguracoesAvisosRoute: AppConfiguracoesAvisosRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
   AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,

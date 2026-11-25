@@ -28,6 +28,28 @@ export type AvisosControllerListarQuery = {
    * @type string | undefined
    */
   busca?: string;
+  /**
+   * @description Só os tipos de que algum papel de quem consulta é responsável.
+   * @type boolean | undefined
+   */
+  meus?: boolean;
+  /**
+   * @description Só os ligados a esta competência.
+   * @example 2026-10
+   * @type string | undefined
+   */
+  competencia?: string;
+  /**
+   * @description Só os que se referem a este item (com `entidadeId`): cliente, medico, exame...
+   * @type string | undefined
+   */
+  entidade?: string;
+  /**
+   * @description
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  entidadeId?: string;
 };
 
 export type AvisosControllerListarStatus200 = PaginaAvisosDto;
