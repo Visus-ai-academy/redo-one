@@ -7,17 +7,22 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
+import { CaixasField } from '../escala/campos';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import type { OpcaoMarcar } from '../form/CheckboxListField';
+import { esquemaCaixasComTodas } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
-import { CampoDiasSemana, CampoMedicos } from './campos';
+import { DIAS_DA_SEMANA } from './ausencias';
+import { CampoMedicos } from './campos';
 
 type Opcao = { valor: string; rotulo: string };
 /** Tipo e turno levam a cor (a bolinha antes do nome). */
 type OpcaoComCor = Opcao & { cor?: string | null };
+
+const OPCOES_DIAS = DIAS_DA_SEMANA.map((d) => ({ valor: String(d.valor), rotulo: d.rotulo }));
 
 const FALHA_AO_SALVAR = 'Não foi possível salvar agora. Confira sua conexão e tente de novo.';
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -30,9 +35,9 @@ const schema = z
     tipoId: z.string().min(1, 'Escolha o tipo.'),
     dataInicio: z.string().regex(DIA, 'Informe o início.'),
     dataFim: z.string().regex(DIA, 'Informe o fim.'),
-    frenteIds: z.array(z.string()),
-    turnoIds: z.array(z.string()),
-    diasSemana: z.array(z.string()),
+    frenteIds: esquemaCaixasComTodas('Marque ao menos uma escala.'),
+    turnoIds: esquemaCaixasComTodas('Marque ao menos um turno.'),
+    diasSemana: esquemaCaixasComTodas('Marque ao menos um dia.'),
     observacoes: z.string().max(2000, 'Use até 2.000 caracteres.'),
   })
   .refine((v) => !DIA.test(v.dataInicio) || !DIA.test(v.dataFim) || v.dataFim >= v.dataInicio, {
@@ -178,11 +183,7 @@ export function FormAusencia({
         {frentes.length > 0 && (
           <form.AppField name="frenteIds">
             {(field) => (
-              <field.CheckboxListField
-                label="Escalas"
-                opcoes={frentes}
-                description="Nenhuma marcada: todas as escalas do médico."
-              />
+              <field.CheckboxListField label="Escalas" required todas="Todas" opcoes={frentes} />
             )}
           </form.AppField>
         )}
@@ -191,13 +192,23 @@ export function FormAusencia({
             {(field) => (
               <field.CheckboxListField
                 label="Turnos"
+                required
+                todas="O dia inteiro"
                 opcoes={turnos}
-                description="Nenhum marcado: o dia inteiro."
               />
             )}
           </form.AppField>
         )}
-        <form.AppField name="diasSemana">{() => <CampoDiasSemana />}</form.AppField>
+        <form.AppField name="diasSemana">
+          {() => (
+            <CaixasField
+              label="Dias da semana"
+              required
+              todas="Todos os dias"
+              opcoes={OPCOES_DIAS}
+            />
+          )}
+        </form.AppField>
         {observacoesOcultas ? (
           <div className="flex flex-col gap-1">
             <span className="font-medium">Observações</span>

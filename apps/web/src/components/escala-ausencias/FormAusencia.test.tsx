@@ -76,8 +76,12 @@ describe('FormAusencia', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Congresso' }));
     data('Início', '01/12/2026');
     data('Fim', '03/12/2026');
+    // Tudo começa em "Todas": desmarca a caixa-mãe e marca só o recorte.
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Todas' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'NEURO' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'O dia inteiro' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Tarde' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Todos os dias' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Qua' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Seg' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Observações' }), ' Viagem ');
@@ -95,11 +99,12 @@ describe('FormAusencia', () => {
     });
   });
 
-  it('nada marcado vale para todas as escalas, o dia inteiro e todos os dias', async () => {
+  it('começa em todas as escalas, o dia inteiro e todos os dias (enviados vazios)', async () => {
     const { onSalvar } = montar({ inicial: { medico: ana, de: '2026-12-05' } });
 
-    expect(screen.getByText('Nenhuma marcada: todas as escalas do médico.')).toBeInTheDocument();
-    expect(screen.getByText('Nenhum marcado: o dia inteiro.')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Todas' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'O dia inteiro' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Todos os dias' })).toBeChecked();
     expect(
       screen.getByText('visível para quem gere a escala; não escreva diagnóstico.', {
         exact: false,
@@ -157,6 +162,21 @@ describe('FormAusencia', () => {
     expect(onSalvar).not.toHaveBeenCalled();
     // O foco vai para o primeiro campo errado: a busca do médico.
     expect(screen.getByRole('combobox', { name: 'Adicionar médico' })).toHaveFocus();
+  });
+
+  it('desmarcar tudo num recorte pede ao menos uma opção e não lança', async () => {
+    const { onSalvar } = montar({ inicial: { medico: ana, de: '2026-12-05' } });
+    await userEvent.click(screen.getByRole('combobox', { name: 'Tipo' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Férias' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Todas' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'O dia inteiro' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Todos os dias' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lançar ausência' }));
+
+    expect(await screen.findByText('Marque ao menos uma escala.')).toBeInTheDocument();
+    expect(screen.getByText('Marque ao menos um turno.')).toBeInTheDocument();
+    expect(screen.getByText('Marque ao menos um dia.')).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
   });
 
   it('na edição o médico fica travado e o tipo inativo continua escolhido', async () => {

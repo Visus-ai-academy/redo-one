@@ -1,5 +1,4 @@
 import { Button } from '@base-ui/react/button';
-import { CheckboxGroup } from '@base-ui/react/checkbox-group';
 import { Field } from '@base-ui/react/field';
 import { Fieldset } from '@base-ui/react/fieldset';
 import { X } from '@phosphor-icons/react';
@@ -7,13 +6,11 @@ import { useState } from 'react';
 
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
-import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { useFieldContext } from '../form/context';
 import { FieldError } from '../form/field-parts';
 import { useCampo } from '../form/use-campo';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
-import { DIAS_DA_SEMANA } from './ausencias';
 
 function Legenda({ children, required }: { children: string; required?: boolean }) {
   return (
@@ -107,40 +104,6 @@ export function CampoMedicos({
         </Field.Description>
         <FieldError invalid={Boolean(erro)}>{erro}</FieldError>
       </Field.Root>
-    </Fieldset.Root>
-  );
-}
-
-/** Dias da semana numa linha (seg a dom), sobre o CheckboxGroup do Base UI. Valor: "0".."6". */
-export function CampoDiasSemana() {
-  const field = useFieldContext<string[]>();
-  const { aoSair, ref } = useCampo(field);
-  return (
-    <Fieldset.Root
-      ref={ref}
-      render={
-        <CheckboxGroup
-          value={field.state.value}
-          onValueChange={(valores) => {
-            field.handleChange(valores);
-            aoSair();
-          }}
-        />
-      }
-      className="flex flex-col gap-2"
-    >
-      <Legenda>Dias da semana</Legenda>
-      <div className="flex flex-wrap gap-x-4 gap-y-2">
-        {DIAS_DA_SEMANA.map((dia) => (
-          <Field.Root key={dia.valor}>
-            <Field.Label className="flex items-center gap-2">
-              <CaixaDeSelecao value={String(dia.valor)} />
-              {dia.rotulo}
-            </Field.Label>
-          </Field.Root>
-        ))}
-      </div>
-      <p className="text-muted-foreground text-[13px]">Nenhum marcado: todos os dias do período.</p>
     </Fieldset.Root>
   );
 }

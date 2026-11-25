@@ -3,6 +3,7 @@ import type { OpcaoComCorDto } from '../../gen/types/OpcaoComCorDto';
 import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
+import { esquemaCaixasComTodas } from '../form/caixas-todas';
 import {
   celulasParaApi,
   errosDaGrade,
@@ -191,7 +192,11 @@ const valoresSchema = z.object({
   listaDepoisDosFixos: z.boolean(),
   distribuiPeloRobo: z.boolean(),
   horariosSemRobo: z.array(
-    z.object({ diasSemana: z.array(z.string()), inicio: z.string(), fim: z.string() }),
+    z.object({
+      diasSemana: esquemaCaixasComTodas('Marque ao menos um dia.'),
+      inicio: z.string(),
+      fim: z.string(),
+    }),
   ),
   recolheAoFimDoTurno: z.boolean(),
   divisao: z.enum(['igualitaria', 'proporcao']),

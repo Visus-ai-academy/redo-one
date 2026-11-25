@@ -285,7 +285,8 @@ function FormRegras({
                               {() => (
                                 <CaixasField
                                   label="Dias"
-                                  description="Nada marcado: todos os dias."
+                                  required
+                                  todas="Todos os dias"
                                   opcoes={DIAS_DA_SEMANA}
                                 />
                               )}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
+import { NENHUMA } from '../form/caixas-todas';
 import {
   esquemaRegras,
   regrasParaApi,
@@ -139,6 +140,14 @@ describe('regras da frente no formulário', () => {
       'horariosSemRobo.0.inicio: Use HH:MM, como 19:00.',
       'horariosSemRobo.1.fim: O fim precisa ser diferente do início.',
     ]);
+  });
+
+  it('recusa horário com todos os dias desmarcados (nem "Todos os dias")', () => {
+    const v: ValoresRegras = {
+      ...valoresDasRegras(NEUTRAS),
+      horariosSemRobo: [{ diasSemana: [NENHUMA], inicio: '19:00', fim: '07:00' }],
+    };
+    expect(erros(v)).toEqual(['horariosSemRobo.0.diasSemana: Marque ao menos um dia.']);
   });
 
   it('a proporção precisa de duas modalidades diferentes somando 100', () => {
