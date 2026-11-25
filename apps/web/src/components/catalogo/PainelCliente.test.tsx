@@ -6,7 +6,7 @@ import type { ClienteDetalheDto } from '../../gen/types/ClienteDetalheDto';
 import { escolherOpcao } from '../../test/select';
 import { PainelCliente, type PainelClienteProps } from './PainelCliente';
 
-const contratados = [{ id: 'c-tele', nome: '001 TELEIMAGEM' }];
+const contratados = [{ id: 'c-tele', nome: '001 TELEIMAGEM', padrao: false }];
 const cliente: ClienteDetalheDto = {
   id: 'cl-1',
   nome: 'PRN',
@@ -45,6 +45,43 @@ function montar(props: Partial<PainelClienteProps> = {}) {
 }
 
 describe('PainelCliente', () => {
+  it('cliente novo já vem com o contratado padrão, listado primeiro', async () => {
+    const { onSalvar } = montar({
+      contratados: [
+        { id: 'c-rn', nome: 'CLINICA DE RADIOLOGIA NACIONAL', padrao: false },
+        { id: 'c-tele', nome: 'TELEIMAGEM', padrao: true },
+      ],
+    });
+
+    const campo = screen.getByRole('combobox', { name: /Empresa que fatura/ });
+    expect(campo).toHaveTextContent('TELEIMAGEM');
+    await userEvent.click(campo);
+    const opcoes = within(await screen.findByRole('listbox')).getAllByRole('option');
+    expect(opcoes.map((o) => o.textContent)).toEqual([
+      'TELEIMAGEM',
+      'CLINICA DE RADIOLOGIA NACIONAL',
+    ]);
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nome na MobileMed' }), 'CEDIDIAG');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar cliente' }));
+    expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ contratadoId: 'c-tele' }));
+  });
+
+  it('cliente existente mantém a empresa que fatura dele, mesmo com outro padrão', () => {
+    montar({
+      cliente: { ...cliente, contratado: { id: 'c-rn', razaoSocial: 'RADIOLOGIA NACIONAL' } },
+      contratados: [
+        { id: 'c-rn', nome: 'RADIOLOGIA NACIONAL', padrao: false },
+        { id: 'c-tele', nome: 'TELEIMAGEM', padrao: true },
+      ],
+    });
+
+    expect(screen.getByRole('combobox', { name: /Empresa que fatura/ })).toHaveTextContent(
+      'RADIOLOGIA NACIONAL',
+    );
+  });
+
   it('cria com a empresa que fatura obrigatória e o CNPJ só com dígitos', async () => {
     const { onSalvar } = montar();
 

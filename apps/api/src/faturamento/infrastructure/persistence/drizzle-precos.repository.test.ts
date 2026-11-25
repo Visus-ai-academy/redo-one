@@ -274,9 +274,13 @@ describe.skipIf(!url)('DrizzlePrecosRepository', () => {
     expect(await repo.eventos(cliente, [repetida.id])).toEqual(new Map());
   });
 
-  it('opções trazem os cadastros ativos', async () => {
+  it('opções trazem os cadastros ativos, e o contratado diz se é o padrão', async () => {
     const o = await repo.opcoes();
     expect(o.modalidades).toContainEqual({ id: dados.modalidadeId, nome: `M${sufixo}` });
-    expect(o.contratados).toContainEqual({ id: contratado.id, nome: `CT_${sufixo}` });
+    expect(o.contratados).toContainEqual({
+      id: contratado.id,
+      nome: `CT_${sufixo}`,
+      padrao: false,
+    });
   });
 });

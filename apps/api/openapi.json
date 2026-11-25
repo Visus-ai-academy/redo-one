@@ -12197,6 +12197,10 @@
           },
           "ativo": {
             "type": "boolean"
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Vem escolhido nos campos de contratado."
           }
         },
         "required": [
@@ -12209,7 +12213,8 @@
           "cep",
           "contratadoRepasseId",
           "contratadoRepasseNome",
-          "ativo"
+          "ativo",
+          "padrao"
         ]
       },
       "PaginaContratadosDto": {
@@ -12278,11 +12283,16 @@
           },
           "ativo": {
             "type": "boolean"
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Vem escolhido nos campos de contratado. Marcar desmarca o anterior; só ativo."
           }
         },
         "required": [
           "razaoSocial",
-          "ativo"
+          "ativo",
+          "padrao"
         ]
       },
       "ContratadoResumoDto": {
@@ -13591,7 +13601,7 @@
           "especialidadeIds"
         ]
       },
-      "OpcaoDto": {
+      "OpcaoContratadoDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -13600,11 +13610,16 @@
           },
           "nome": {
             "type": "string"
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Vem escolhido nos campos de contratado."
           }
         },
         "required": [
           "id",
-          "nome"
+          "nome",
+          "padrao"
         ]
       },
       "OpcoesCatalogoDto": {
@@ -13643,7 +13658,7 @@
           "contratados": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/OpcaoDto"
+              "$ref": "#/components/schemas/OpcaoContratadoDto"
             }
           }
         },
@@ -17824,6 +17839,27 @@
           "nome"
         ]
       },
+      "OpcaoContratadoPrecoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "Vem escolhido no campo de contratado."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "padrao"
+        ]
+      },
       "OpcoesPrecoDto": {
         "type": "object",
         "properties": {
@@ -17854,7 +17890,7 @@
           "contratados": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/OpcaoPrecoDto"
+              "$ref": "#/components/schemas/OpcaoContratadoPrecoDto"
             }
           }
         },

@@ -15,6 +15,10 @@ class OpcaoComCorDto extends OpcaoDto {
   @ApiProperty({ type: String, nullable: true }) cor!: string | null;
 }
 
+class OpcaoContratadoDto extends OpcaoDto {
+  @ApiProperty({ description: 'Vem escolhido nos campos de contratado.' }) padrao!: boolean;
+}
+
 class OpcaoSubespecialidadeDto extends OpcaoComCorDto {
   @ApiProperty({ type: [String], format: 'uuid' }) especialidadeIds!: string[];
 }
@@ -25,7 +29,7 @@ export class OpcoesCatalogoDto {
   @ApiProperty({ type: [OpcaoSubespecialidadeDto] }) subespecialidades!: OpcaoSubespecialidadeDto[];
   @ApiProperty({ type: [OpcaoComCorDto] }) categoriasExame!: OpcaoComCorDto[];
   @ApiProperty({ type: [OpcaoComCorDto] }) prioridades!: OpcaoComCorDto[];
-  @ApiProperty({ type: [OpcaoDto] }) contratados!: OpcaoDto[];
+  @ApiProperty({ type: [OpcaoContratadoDto] }) contratados!: OpcaoContratadoDto[];
 }
 
 export class OpcaoExameDto extends OpcaoDto {

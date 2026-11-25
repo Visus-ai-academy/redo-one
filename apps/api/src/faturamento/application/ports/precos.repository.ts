@@ -27,13 +27,18 @@ export interface OpcaoPreco {
   nome: string;
 }
 
+export interface OpcaoContratadoPreco extends OpcaoPreco {
+  /** Vem escolhido no campo de contratado. */
+  padrao: boolean;
+}
+
 /** Cadastros que a tela e a planilha usam (só os ativos, na ordem do catálogo). */
 export interface OpcoesPreco {
   modalidades: OpcaoPreco[];
   especialidades: OpcaoPreco[];
   categorias: OpcaoPreco[];
   prioridades: OpcaoPreco[];
-  contratados: OpcaoPreco[];
+  contratados: OpcaoContratadoPreco[];
 }
 
 /** Quem fez o quê numa versão, dos eventos de auditoria. */

@@ -18,6 +18,7 @@ const base = {
   cep: null,
   contratadoRepasseId: null,
   ativo: true,
+  padrao: false,
 };
 
 describe.skipIf(!url)('DrizzleContratadosRepository', () => {
@@ -64,6 +65,32 @@ describe.skipIf(!url)('DrizzleContratadosRepository', () => {
     ).toBe(1);
     expect(await repo.consolidadosEm(tele)).toEqual(['002 RADIOLOGIA NACIONAL']);
     expect((await repo.buscarPorRazaoSocial('001 teleimagem'))?.id).toBe(tele);
+  });
+
+  it('só um contratado padrão: marcar outro desmarca o anterior', async () => {
+    const tele = await repo.criar({ ...base, razaoSocial: 'TELE', padrao: true });
+    expect(await repo.buscarPadrao()).toEqual({ id: tele });
+
+    const rn = await repo.criar({ ...base, razaoSocial: 'RN', padrao: true });
+    expect(await repo.buscarPadrao()).toEqual({ id: rn });
+    expect((await repo.buscar(tele))?.padrao).toBe(false);
+
+    await repo.atualizar(tele, { ...base, razaoSocial: 'TELE', padrao: true });
+    expect((await repo.buscar(rn))?.padrao).toBe(false);
+    expect((await repo.listar({ pagina: 1, porPagina: 10 })).itens).toEqual([
+      expect.objectContaining({ razaoSocial: 'RN', padrao: false }),
+      expect.objectContaining({ razaoSocial: 'TELE', padrao: true }),
+    ]);
+
+    await repo.atualizar(tele, { ...base, razaoSocial: 'TELE', padrao: false });
+    expect(await repo.buscarPadrao()).toBeNull();
+  });
+
+  it('o banco recusa dois padrões', async () => {
+    await repo.criar({ ...base, razaoSocial: 'TELE', padrao: true });
+    await expect(
+      db.insert(schema.contratados).values({ razaoSocial: 'RN', padrao: true }),
+    ).rejects.toThrow();
   });
 
   it('não exclui contratado com cliente', async () => {

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, ne, or, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { contem, relevancia } from '../../database/busca';
@@ -10,6 +10,8 @@ import type { FiltroLista } from '../listas/lista.repository';
 import type { Contratado, ContratadosRepository, DadosContratado } from './contratados.repository';
 
 const repasse = alias(contratados, 'repasse');
+
+type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 @Injectable()
 export class DrizzleContratadosRepository implements ContratadosRepository {
@@ -28,6 +30,7 @@ export class DrizzleContratadosRepository implements ContratadosRepository {
         contratadoRepasseId: contratados.contratadoRepasseId,
         contratadoRepasseNome: repasse.razaoSocial,
         ativo: contratados.ativo,
+        padrao: contratados.padrao,
       })
       .from(contratados)
       .leftJoin(repasse, eq(repasse.id, contratados.contratadoRepasseId));
@@ -93,17 +96,37 @@ export class DrizzleContratadosRepository implements ContratadosRepository {
     return linhas.map((l) => l.razaoSocial);
   }
 
+  async buscarPadrao() {
+    const [linha] = await this.db
+      .select({ id: contratados.id })
+      .from(contratados)
+      .where(eq(contratados.padrao, true))
+      .limit(1);
+    return linha ?? null;
+  }
+
   async criar(dados: DadosContratado) {
-    const [criado] = await this.db
-      .insert(contratados)
-      .values(dados)
-      .returning({ id: contratados.id });
-    if (!criado) throw new Error('insert de contratado não devolveu o id');
-    return criado.id;
+    return this.db.transaction(async (tx) => {
+      if (dados.padrao) await this.desmarcarPadrao(tx);
+      const [criado] = await tx.insert(contratados).values(dados).returning({ id: contratados.id });
+      if (!criado) throw new Error('insert de contratado não devolveu o id');
+      return criado.id;
+    });
   }
 
   async atualizar(id: string, dados: DadosContratado) {
-    await this.db.update(contratados).set(dados).where(eq(contratados.id, id));
+    await this.db.transaction(async (tx) => {
+      if (dados.padrao) await this.desmarcarPadrao(tx, id);
+      await tx.update(contratados).set(dados).where(eq(contratados.id, id));
+    });
+  }
+
+  /** Antes de marcar outro: o índice único parcial aceita um só `padrao`. */
+  private async desmarcarPadrao(tx: Transacao, exceto?: string) {
+    await tx
+      .update(contratados)
+      .set({ padrao: false })
+      .where(and(eq(contratados.padrao, true), exceto ? ne(contratados.id, exceto) : undefined));
   }
 
   async excluir(id: string) {

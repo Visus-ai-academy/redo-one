@@ -172,12 +172,16 @@ export class OpcaoPrecoDto {
   @ApiProperty() nome!: string;
 }
 
+export class OpcaoContratadoPrecoDto extends OpcaoPrecoDto {
+  @ApiProperty({ description: 'Vem escolhido no campo de contratado.' }) padrao!: boolean;
+}
+
 export class OpcoesPrecoDto {
   @ApiProperty({ type: [OpcaoPrecoDto] }) modalidades!: OpcaoPrecoDto[];
   @ApiProperty({ type: [OpcaoPrecoDto] }) especialidades!: OpcaoPrecoDto[];
   @ApiProperty({ type: [OpcaoPrecoDto] }) categorias!: OpcaoPrecoDto[];
   @ApiProperty({ type: [OpcaoPrecoDto] }) prioridades!: OpcaoPrecoDto[];
-  @ApiProperty({ type: [OpcaoPrecoDto] }) contratados!: OpcaoPrecoDto[];
+  @ApiProperty({ type: [OpcaoContratadoPrecoDto] }) contratados!: OpcaoContratadoPrecoDto[];
 }
 
 export class PlanilhaPrecosDto {

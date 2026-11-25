@@ -12,6 +12,7 @@ import { useGuardaDeSaida } from '../../../components/painel/use-guarda-de-saida
 import { Select } from '../../../components/select/Select';
 import { CamposCarregando } from '../../../components/skeleton/CamposCarregando';
 import { precosControllerOpcoesQueryOptions } from '../../../gen/hooks/usePrecosControllerOpcoes';
+import { ordenarContratados } from '../../../lib/catalogo';
 import { pode } from '../../../lib/permissoes';
 
 export const Route = createFileRoute('/_app/configuracoes/tabela-padrao')({
@@ -56,7 +57,8 @@ function TabelaPadrao() {
     );
   else if (!opcoes.data) conteudo = <CamposCarregando quantidade={3} />;
   else {
-    const contratados = opcoes.data.contratados;
+    // O padrão vem primeiro: sem contratado na URL, é ele que abre.
+    const contratados = ordenarContratados(opcoes.data.contratados);
     const atual = contratados.find((c) => c.id === contratado) ?? contratados[0];
     conteudo = atual ? (
       <div className="flex flex-col gap-4">

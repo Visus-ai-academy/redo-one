@@ -30,6 +30,7 @@ describe('OpcoesService', () => {
       cep: null,
       contratadoRepasseId: null,
       ativo: true,
+      padrao: true,
     });
 
     const service = new OpcoesService(
@@ -50,7 +51,7 @@ describe('OpcoesService', () => {
     expect(opcoes.subespecialidades).toEqual([
       { id: expect.any(String), nome: 'AVC', cor: '#123456', especialidadeIds: [neuro] },
     ]);
-    expect(opcoes.contratados).toEqual([{ id: expect.any(String), nome: 'TELE' }]);
+    expect(opcoes.contratados).toEqual([{ id: expect.any(String), nome: 'TELE', padrao: true }]);
   });
 
   it('busca até 20 exames ativos pelo nome', async () => {

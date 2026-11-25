@@ -32,4 +32,9 @@ export type ContratadoItemDto = {
   contratadoRepasseId: string | null;
   contratadoRepasseNome: string | null;
   ativo: boolean;
+  /**
+   * @description Vem escolhido nos campos de contratado.
+   * @type boolean
+   */
+  padrao: boolean;
 };

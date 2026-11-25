@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-export type OpcaoDto = {
+export type OpcaoContratadoDto = {
   /**
    * @description
    * Format: `uuid`
@@ -11,4 +11,9 @@ export type OpcaoDto = {
    */
   id: string;
   nome: string;
+  /**
+   * @description Vem escolhido nos campos de contratado.
+   * @type boolean
+   */
+  padrao: boolean;
 };

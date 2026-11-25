@@ -59,7 +59,11 @@ export class OpcoesService {
       })),
       categoriasExame: categoriasExame.itens.map(opcao),
       prioridades: prioridades.itens.map(opcao),
-      contratados: contratados.itens.map((c) => ({ id: c.id, nome: c.razaoSocial })),
+      contratados: contratados.itens.map((c) => ({
+        id: c.id,
+        nome: c.razaoSocial,
+        padrao: c.padrao,
+      })),
     };
   }
 

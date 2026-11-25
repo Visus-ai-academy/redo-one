@@ -38,3 +38,17 @@ export function subespecialidadeQueFica(
     ? subespecialidadeId
     : undefined;
 }
+
+type ContratadoDeEscolha = { id: string; nome: string; padrao: boolean };
+
+/** Nos campos de contratado: o padrão primeiro, o resto em ordem alfabética. */
+export function ordenarContratados<T extends ContratadoDeEscolha>(contratados: T[]): T[] {
+  return [...contratados].sort(
+    (a, b) => Number(b.padrao) - Number(a.padrao) || a.nome.localeCompare(b.nome, 'pt-BR'),
+  );
+}
+
+/** O que vem escolhido num campo de contratado ainda sem valor; vazio sem padrão marcado. */
+export function idDoContratadoPadrao(contratados: ContratadoDeEscolha[]): string {
+  return contratados.find((c) => c.padrao)?.id ?? '';
+}

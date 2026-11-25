@@ -36,7 +36,7 @@ import { clientesControllerListarQueryOptions } from '../../gen/hooks/useCliente
 import { clientesControllerObterQueryOptions } from '../../gen/hooks/useClientesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
 import type { ClienteResumoDto } from '../../gen/types/ClienteResumoDto';
-import { invalidarCatalogo } from '../../lib/catalogo';
+import { invalidarCatalogo, ordenarContratados } from '../../lib/catalogo';
 import { formatarCnpj } from '../../lib/documentos';
 import { numero } from '../../lib/formato';
 import { type PodeNaTela, pode, podeNaTela } from '../../lib/permissoes';
@@ -194,7 +194,10 @@ function Clientes({ permissoes }: { permissoes: PodeNaTela }) {
             onValueChange={(v) => filtrar({ contratadoId: v || undefined })}
             opcoes={[
               { valor: '', rotulo: 'Todas as empresas' },
-              ...opcoes.contratados.map((c) => ({ valor: c.id, rotulo: c.nome })),
+              ...ordenarContratados(opcoes.contratados).map((c) => ({
+                valor: c.id,
+                rotulo: c.nome,
+              })),
             ]}
             className="flex-[1_1_180px] md:flex-[0_1_220px]"
           />
@@ -255,7 +258,7 @@ function Painel({
   permissoes,
 }: {
   id?: string;
-  contratados: { id: string; nome: string }[];
+  contratados: { id: string; nome: string; padrao: boolean }[];
   permissoes: PodeNaTela;
 }) {
   const navigate = Route.useNavigate();

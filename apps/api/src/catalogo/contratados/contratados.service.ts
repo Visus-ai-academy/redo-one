@@ -7,7 +7,12 @@ import { documentoOpcional, textoOpcional, ufOpcional } from '../comum/documento
 import type { Pagina } from '../comum/paginacao';
 import { type AtorCatalogo, RegistroAuditoria } from '../comum/registro-auditoria';
 import type { FiltroLista } from '../listas/lista.repository';
-import { CnpjEmUsoError, RepasseEmCadeiaError, RepasseInvalidoError } from './contratados.errors';
+import {
+  CnpjEmUsoError,
+  PadraoInativoError,
+  RepasseEmCadeiaError,
+  RepasseInvalidoError,
+} from './contratados.errors';
 import {
   CONTRATADOS_REPOSITORY,
   type Contratado,
@@ -42,16 +47,31 @@ export class ContratadosService {
 
   async criar(ator: AtorCatalogo, dados: DadosContratado): Promise<string> {
     const validos = await this.validar(dados, null);
+    const anterior = await this.padraoQueSai(validos, null);
     const id = await this.repo.criar(validos);
     await this.registro.criado(ator, id, validos);
+    await this.registrarPadraoDesmarcado(ator, anterior);
     return id;
   }
 
   async atualizar(ator: AtorCatalogo, id: string, dados: DadosContratado): Promise<void> {
     const { id: _, contratadoRepasseNome: __, ...atual } = await this.obter(id);
     const validos = await this.validar(dados, id);
+    const anterior = await this.padraoQueSai(validos, id);
     await this.repo.atualizar(id, validos);
     await this.registro.alterado(ator, id, atual, validos);
+    await this.registrarPadraoDesmarcado(ator, anterior);
+  }
+
+  /** O padrão atual, se marcar `dados` como padrão vai desmarcá-lo. */
+  private async padraoQueSai(dados: DadosContratado, idAtual: string | null) {
+    if (!dados.padrao) return null;
+    const atual = await this.repo.buscarPadrao();
+    return atual && atual.id !== idAtual ? atual.id : null;
+  }
+
+  private async registrarPadraoDesmarcado(ator: AtorCatalogo, id: string | null) {
+    if (id) await this.registro.alterado(ator, id, { padrao: true }, { padrao: false });
   }
 
   async excluir(ator: AtorCatalogo, id: string): Promise<void> {
@@ -71,6 +91,8 @@ export class ContratadosService {
       if (mesmoCnpj && mesmoCnpj.id !== idAtual) throw new CnpjEmUsoError();
     }
 
+    if (dados.padrao && !dados.ativo) throw new PadraoInativoError();
+
     const contratadoRepasseId = dados.contratadoRepasseId || null;
     if (contratadoRepasseId) await this.validarRepasse(contratadoRepasseId, idAtual, razaoSocial);
 
@@ -83,6 +105,7 @@ export class ContratadosService {
       cep: documentoOpcional(dados.cep, 8, 'O CEP tem 8 dígitos.'),
       contratadoRepasseId,
       ativo: dados.ativo,
+      padrao: dados.padrao,
     };
   }
 

@@ -1,0 +1,2 @@
+ALTER TABLE "contratados" ADD COLUMN "padrao" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "contratados_padrao_key" ON "contratados" USING btree ("padrao") WHERE "contratados"."padrao";

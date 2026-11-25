@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { OpcaoContratadoPrecoDto } from './OpcaoContratadoPrecoDto'
 import type { OpcaoPrecoDto } from './OpcaoPrecoDto'
 
 export type OpcoesPrecoDto = {
@@ -10,5 +11,5 @@ export type OpcoesPrecoDto = {
   especialidades: OpcaoPrecoDto[];
   categorias: OpcaoPrecoDto[];
   prioridades: OpcaoPrecoDto[];
-  contratados: OpcaoPrecoDto[];
+  contratados: OpcaoContratadoPrecoDto[];
 };

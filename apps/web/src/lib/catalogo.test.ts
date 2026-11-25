@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { subespecialidadeQueFica, subespecialidadesDaEspecialidade } from './catalogo';
+import {
+  idDoContratadoPadrao,
+  ordenarContratados,
+  subespecialidadeQueFica,
+  subespecialidadesDaEspecialidade,
+} from './catalogo';
 
 const avc = { id: 'avc', especialidadeIds: ['neuro'] };
 const colunas = { id: 'colunas', especialidadeIds: ['neuro', 'msk'] };
@@ -32,5 +37,24 @@ describe('subespecialidadeQueFica', () => {
 
   it('sem subespecialidade, continua sem', () => {
     expect(subespecialidadeQueFica(todas, undefined, 'msk')).toBeUndefined();
+  });
+});
+
+describe('contratado padrão', () => {
+  const rn = { id: 'rn', nome: 'CLINICA DE RADIOLOGIA NACIONAL LTDA', padrao: false };
+  const tele = { id: 'tele', nome: 'TELEIMAGEM - SERVIÇOS DE DADOS LTDA', padrao: true };
+  const alfa = { id: 'alfa', nome: 'ÁLFA LTDA', padrao: false };
+
+  it('lista o padrão primeiro e o resto em ordem alfabética', () => {
+    expect(ordenarContratados([rn, tele, alfa]).map((c) => c.id)).toEqual(['tele', 'alfa', 'rn']);
+  });
+
+  it('sem padrão, só a ordem alfabética', () => {
+    expect(ordenarContratados([rn, alfa]).map((c) => c.id)).toEqual(['alfa', 'rn']);
+  });
+
+  it('o id do padrão, ou vazio quando nenhum está marcado', () => {
+    expect(idDoContratadoPadrao([rn, tele])).toBe('tele');
+    expect(idDoContratadoPadrao([rn, alfa])).toBe('');
   });
 });

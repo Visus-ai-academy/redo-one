@@ -4,7 +4,7 @@
 */
 
 import type { OpcaoComCorDto } from './OpcaoComCorDto'
-import type { OpcaoDto } from './OpcaoDto'
+import type { OpcaoContratadoDto } from './OpcaoContratadoDto'
 import type { OpcaoSubespecialidadeDto } from './OpcaoSubespecialidadeDto'
 
 export type OpcoesCatalogoDto = {
@@ -13,5 +13,5 @@ export type OpcoesCatalogoDto = {
   subespecialidades: OpcaoSubespecialidadeDto[];
   categoriasExame: OpcaoComCorDto[];
   prioridades: OpcaoComCorDto[];
-  contratados: OpcaoDto[];
+  contratados: OpcaoContratadoDto[];
 };

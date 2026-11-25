@@ -51,6 +51,12 @@ export class ContratadoDto {
   @ApiProperty()
   @IsBoolean()
   ativo!: boolean;
+
+  @ApiProperty({
+    description: 'Vem escolhido nos campos de contratado. Marcar desmarca o anterior; só ativo.',
+  })
+  @IsBoolean()
+  padrao!: boolean;
 }
 
 export class ContratadoItemDto {
@@ -66,6 +72,7 @@ export class ContratadoItemDto {
     | null;
   @ApiProperty({ type: String, nullable: true }) contratadoRepasseNome!: string | null;
   @ApiProperty() ativo!: boolean;
+  @ApiProperty({ description: 'Vem escolhido nos campos de contratado.' }) padrao!: boolean;
 }
 
 export class PaginaContratadosDto {

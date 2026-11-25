@@ -238,7 +238,11 @@ export class DrizzlePrecosRepository implements PrecosRepository {
       categorias: await lista(categoriasExame),
       prioridades: await lista(prioridades),
       contratados: await this.db
-        .select({ id: contratados.id, nome: contratados.razaoSocial })
+        .select({
+          id: contratados.id,
+          nome: contratados.razaoSocial,
+          padrao: contratados.padrao,
+        })
         .from(contratados)
         .where(eq(contratados.ativo, true))
         .orderBy(asc(contratados.razaoSocial)),

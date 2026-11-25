@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { AliasDto } from '../../gen/types/AliasDto';
 import type { ClienteDetalheDto } from '../../gen/types/ClienteDetalheDto';
 import type { ClienteDto } from '../../gen/types/ClienteDto';
+import { idDoContratadoPadrao, ordenarContratados } from '../../lib/catalogo';
 import { formatarCnpj, formatarCpf, soDigitos } from '../../lib/documentos';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
@@ -25,7 +26,8 @@ export type PainelClienteProps = {
   /** Sem cliente, o painel cria um novo (os apelidos aparecem depois de criado). */
   cliente?: ClienteDetalheDto;
   /** Contratados ativos (empresa que fatura). */
-  contratados: { id: string; nome: string }[];
+  /** Contratados ativos; o padrão vem escolhido no cliente novo. */
+  contratados: { id: string; nome: string; padrao: boolean }[];
   /** Salvar o formulário: editar (cliente aberto) ou criar (novo). */
   podeEditar: boolean;
   /** Apelidos e unidades: adicionar (POST) e remover (DELETE). */
@@ -110,7 +112,7 @@ export function PainelCliente({
     tipoPessoa: (cliente?.tipoPessoa ?? 'PJ') as 'PJ' | 'PF',
     cnpj: cliente?.cnpj ? formatarCnpj(cliente.cnpj) : '',
     cpf: cliente?.cpf ? formatarCpf(cliente.cpf) : '',
-    contratadoId: cliente?.contratado?.id ?? '',
+    contratadoId: cliente ? (cliente.contratado?.id ?? '') : idDoContratadoPadrao(contratados),
     ativo: cliente?.ativo ?? true,
     ocultoDashboards: cliente?.ocultoDashboards ?? false,
     observacoes: cliente?.observacoes ?? '',
@@ -139,12 +141,12 @@ export function PainelCliente({
   const alterado = useAlterado(form, iniciais);
 
   // Contratado inativo que o cliente já usa continua na lista, para não sumir da tela.
-  const opcoesContratado = [
+  const opcoesContratado = ordenarContratados([
     ...contratados,
     ...(cliente?.contratado && !contratados.some((c) => c.id === cliente.contratado?.id)
-      ? [{ id: cliente.contratado.id, nome: cliente.contratado.razaoSocial }]
+      ? [{ id: cliente.contratado.id, nome: cliente.contratado.razaoSocial, padrao: false }]
       : []),
-  ];
+  ]);
 
   const excluir =
     cliente && onExcluir

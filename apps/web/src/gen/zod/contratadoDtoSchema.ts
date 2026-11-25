@@ -14,6 +14,7 @@ export const contratadoDtoSchema = z.object({
   cep: z.string().nullish().meta({ examples: ['01310-100'] }),
   contratadoRepasseId: z.uuid().nullish(),
   ativo: z.boolean(),
+  padrao: z.boolean().describe('Vem escolhido nos campos de contratado. Marcar desmarca o anterior; só ativo.'),
 })
 
 export type ContratadoDtoSchemaType = z.infer<typeof contratadoDtoSchema>

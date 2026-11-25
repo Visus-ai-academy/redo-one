@@ -41,6 +41,7 @@ describe('ClientesService', () => {
       cep: null,
       contratadoRepasseId: null,
       ativo: true,
+      padrao: false,
     });
     repo = new InMemoryClientesRepository(contratados);
     auditoria = new InMemoryAuditoria();

@@ -121,19 +121,31 @@ export class InMemoryContratadosRepository implements ContratadosRepository {
     return c ? { id: c.id } : null;
   }
 
+  async buscarPadrao() {
+    const c = [...this.itens.values()].find((i) => i.padrao);
+    return c ? { id: c.id } : null;
+  }
+
   async consolidadosEm(id: string) {
     return [...this.itens.values()]
       .filter((c) => c.contratadoRepasseId === id)
       .map((c) => c.razaoSocial);
   }
 
+  private desmarcarPadrao(dados: DadosContratado) {
+    if (!dados.padrao) return;
+    for (const c of this.itens.values()) c.padrao = false;
+  }
+
   async criar(dados: DadosContratado) {
     const id = randomUUID();
+    this.desmarcarPadrao(dados);
     this.itens.set(id, { ...dados, id });
     return id;
   }
 
   async atualizar(id: string, dados: DadosContratado) {
+    this.desmarcarPadrao(dados);
     this.itens.set(id, { ...dados, id });
   }
 

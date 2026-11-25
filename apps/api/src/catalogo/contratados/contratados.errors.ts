@@ -18,3 +18,12 @@ export class RepasseInvalidoError extends ErroDeDominio {
 export class RepasseEmCadeiaError extends ErroDeDominio {
   readonly tipo = 'invalido';
 }
+
+/** O padrão vem escolhido nos campos de contratado: precisa estar na lista dos ativos. */
+export class PadraoInativoError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor() {
+    super('Um contratado inativo não pode ser o contratado padrão.');
+  }
+}

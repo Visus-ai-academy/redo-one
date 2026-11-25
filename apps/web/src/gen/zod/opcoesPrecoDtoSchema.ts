@@ -4,6 +4,7 @@
 */
 
 import * as z from 'zod'
+import { opcaoContratadoPrecoDtoSchema } from './opcaoContratadoPrecoDtoSchema'
 import { opcaoPrecoDtoSchema } from './opcaoPrecoDtoSchema'
 
 export const opcoesPrecoDtoSchema = z.object({
@@ -11,7 +12,7 @@ export const opcoesPrecoDtoSchema = z.object({
   especialidades: z.array(opcaoPrecoDtoSchema),
   categorias: z.array(opcaoPrecoDtoSchema),
   prioridades: z.array(opcaoPrecoDtoSchema),
-  contratados: z.array(opcaoPrecoDtoSchema),
+  contratados: z.array(opcaoContratadoPrecoDtoSchema),
 })
 
 export type OpcoesPrecoDtoSchemaType = z.infer<typeof opcoesPrecoDtoSchema>

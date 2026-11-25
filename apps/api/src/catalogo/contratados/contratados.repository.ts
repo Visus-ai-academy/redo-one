@@ -15,6 +15,8 @@ export interface DadosContratado {
   /** Contratado que consolida o repasse deste; vazio = o próprio. */
   contratadoRepasseId: string | null;
   ativo: boolean;
+  /** Vem escolhido nos campos de contratado da tela; no máximo um. */
+  padrao: boolean;
 }
 
 export interface Contratado extends DadosContratado {
@@ -30,9 +32,12 @@ export interface ContratadosRepository {
   /** Comparação sem diferenciar maiúsculas. */
   buscarPorRazaoSocial(razaoSocial: string): Promise<{ id: string } | null>;
   buscarPorCnpj(cnpj: string): Promise<{ id: string } | null>;
+  buscarPadrao(): Promise<{ id: string } | null>;
   /** Razões sociais dos contratados que consolidam o repasse no contratado `id`. */
   consolidadosEm(id: string): Promise<string[]>;
+  /** Com `padrao`, desmarca o anterior na mesma transação. */
   criar(dados: DadosContratado): Promise<string>;
+  /** Com `padrao`, desmarca o anterior na mesma transação. */
   atualizar(id: string, dados: DadosContratado): Promise<void>;
   /** `false` quando um cliente ou outro contratado referencia este. */
   excluir(id: string): Promise<boolean>;

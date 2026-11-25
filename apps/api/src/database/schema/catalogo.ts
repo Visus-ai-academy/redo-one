@@ -12,6 +12,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -262,21 +263,29 @@ export const examesDeParaValores = pgTable(
 );
 
 /** Empresa própria que emite a nota (001 Teleimagem, 002 Radiologia Nacional). */
-export const contratados = pgTable('contratados', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  razaoSocial: text('razao_social').notNull().unique(),
-  /** Só dígitos. */
-  cnpj: text('cnpj').unique(),
-  endereco: text('endereco'),
-  cidade: text('cidade'),
-  uf: text('uf'),
-  cep: text('cep'),
-  /** Contratado que paga o repasse dos laudos emitidos por este; vazio = o próprio. */
-  contratadoRepasseId: uuid('contratado_repasse_id').references((): AnyPgColumn => contratados.id),
-  ativo: boolean('ativo').notNull().default(true),
-  criadoEm: criadoEm(),
-  atualizadoEm: atualizadoEm(),
-});
+export const contratados = pgTable(
+  'contratados',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    razaoSocial: text('razao_social').notNull().unique(),
+    /** Só dígitos. */
+    cnpj: text('cnpj').unique(),
+    endereco: text('endereco'),
+    cidade: text('cidade'),
+    uf: text('uf'),
+    cep: text('cep'),
+    /** Contratado que paga o repasse dos laudos emitidos por este; vazio = o próprio. */
+    contratadoRepasseId: uuid('contratado_repasse_id').references(
+      (): AnyPgColumn => contratados.id,
+    ),
+    ativo: boolean('ativo').notNull().default(true),
+    /** O que vem escolhido nos campos de contratado da tela. No máximo um; só ativo. */
+    padrao: boolean('padrao').notNull().default(false),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [uniqueIndex('contratados_padrao_key').on(t.padrao).where(sql`${t.padrao}`)],
+);
 
 export const tipoPessoa = pgEnum('tipo_pessoa', ['PJ', 'PF']);
 

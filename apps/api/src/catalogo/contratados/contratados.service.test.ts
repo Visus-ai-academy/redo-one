@@ -7,6 +7,7 @@ import { InMemoryContratadosRepository } from '../testing/fakes';
 import {
   CnpjEmUsoError,
   DocumentoInvalidoError,
+  PadraoInativoError,
   RepasseEmCadeiaError,
   RepasseInvalidoError,
 } from './contratados.errors';
@@ -23,6 +24,7 @@ const dados = (razaoSocial: string, extra: Partial<DadosContratado> = {}): Dados
   cep: null,
   contratadoRepasseId: null,
   ativo: true,
+  padrao: false,
   ...extra,
 });
 
@@ -112,6 +114,69 @@ describe('ContratadosService', () => {
       await expect(
         service.criar(ator, dados('A', { contratadoRepasseId: 'nao-existe' })),
       ).rejects.toThrow(RepasseInvalidoError);
+    });
+  });
+
+  describe('contratado padrão (o que vem escolhido nos campos de contratado)', () => {
+    it('marcar um desmarca o anterior e audita os dois', async () => {
+      const tele = await service.criar(ator, dados('TELE', { padrao: true }));
+      const rn = await service.criar(ator, dados('RN'));
+      auditoria.eventos.length = 0;
+
+      await service.atualizar(ator, rn, dados('RN', { padrao: true }));
+
+      expect((await service.obter(rn)).padrao).toBe(true);
+      expect((await service.obter(tele)).padrao).toBe(false);
+      expect(auditoria.eventos).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            entidadeId: rn,
+            acao: 'alterado',
+            antes: { padrao: false },
+            depois: { padrao: true },
+          }),
+          expect.objectContaining({
+            entidadeId: tele,
+            acao: 'alterado',
+            antes: { padrao: true },
+            depois: { padrao: false },
+          }),
+        ]),
+      );
+      expect(auditoria.eventos).toHaveLength(2);
+    });
+
+    it('criar já como padrão desmarca o anterior', async () => {
+      const tele = await service.criar(ator, dados('TELE', { padrao: true }));
+      const rn = await service.criar(ator, dados('RN', { padrao: true }));
+
+      expect((await service.obter(rn)).padrao).toBe(true);
+      expect((await service.obter(tele)).padrao).toBe(false);
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        entidadeId: tele,
+        acao: 'alterado',
+        depois: { padrao: false },
+      });
+    });
+
+    it('salvar o próprio padrão de novo não gera evento de desmarcar', async () => {
+      const tele = await service.criar(ator, dados('TELE', { padrao: true }));
+      auditoria.eventos.length = 0;
+
+      await service.atualizar(ator, tele, dados('TELE', { padrao: true, cidade: 'SP' }));
+
+      expect(auditoria.eventos).toHaveLength(1);
+      expect((await service.obter(tele)).padrao).toBe(true);
+    });
+
+    it('contratado inativo não pode ser o padrão', async () => {
+      await expect(
+        service.criar(ator, dados('TELE', { padrao: true, ativo: false })),
+      ).rejects.toThrow(PadraoInativoError);
+      const tele = await service.criar(ator, dados('TELE', { padrao: true }));
+      await expect(
+        service.atualizar(ator, tele, dados('TELE', { padrao: true, ativo: false })),
+      ).rejects.toThrow('Um contratado inativo não pode ser o contratado padrão.');
     });
   });
 

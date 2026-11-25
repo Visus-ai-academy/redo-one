@@ -6,8 +6,8 @@ import { escolherOpcao } from '../../test/select';
 import { PainelContratado } from './PainelContratado';
 
 const outros = [
-  { id: 'c-tele', nome: '001 TELEIMAGEM' },
-  { id: 'c-rn', nome: '002 RADIOLOGIA NACIONAL' },
+  { id: 'c-tele', nome: '001 TELEIMAGEM', padrao: false },
+  { id: 'c-rn', nome: '002 RADIOLOGIA NACIONAL', padrao: false },
 ];
 
 describe('PainelContratado', () => {
@@ -33,7 +33,30 @@ describe('PainelContratado', () => {
       cep: '01310100',
       contratadoRepasseId: 'c-tele',
       ativo: true,
+      padrao: false,
     });
+  });
+
+  it('marca como contratado padrão; inativo não pode ser o padrão', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(
+      <PainelContratado contratados={outros} podeEditar onSalvar={onSalvar} onFechar={vi.fn()} />,
+    );
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Razão social' }), 'TELEIMAGEM');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Contratado padrão' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
+    expect(
+      await screen.findByText('Um contratado inativo não pode ser o contratado padrão.'),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
+    await waitFor(() =>
+      expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ padrao: true, ativo: true })),
+    );
   });
 
   it('recusa CNPJ incompleto e não oferece o próprio contratado como repasse', async () => {
@@ -51,6 +74,7 @@ describe('PainelContratado', () => {
           contratadoRepasseId: null,
           contratadoRepasseNome: null,
           ativo: true,
+          padrao: false,
         }}
         contratados={outros}
         podeEditar
@@ -84,6 +108,7 @@ describe('PainelContratado', () => {
           contratadoRepasseId: null,
           contratadoRepasseNome: null,
           ativo: true,
+          padrao: false,
         }}
         contratados={outros}
         podeEditar={false}
@@ -117,6 +142,7 @@ describe('PainelContratado', () => {
           contratadoRepasseId: null,
           contratadoRepasseNome: null,
           ativo: true,
+          padrao: false,
         }}
         contratados={outros}
         podeEditar

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import type { ContratadoDto } from '../../gen/types/ContratadoDto';
 import type { ContratadoItemDto } from '../../gen/types/ContratadoItemDto';
+import { ordenarContratados } from '../../lib/catalogo';
 import { formatarCep, formatarCnpj, soDigitos } from '../../lib/documentos';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
@@ -26,13 +27,16 @@ const schema = z.object({
   cep: tamanho(8, 'O CEP tem 8 dígitos.'),
   contratadoRepasseId: z.string(),
   ativo: z.boolean(),
+  padrao: z.boolean(),
 });
+
+const PADRAO_INATIVO = 'Um contratado inativo não pode ser o contratado padrão.';
 
 type PainelContratadoProps = {
   /** Sem contratado, o painel cria um novo. */
   contratado?: ContratadoItemDto;
   /** Contratados ativos, para escolher onde consolidar o repasse. */
-  contratados: { id: string; nome: string }[];
+  contratados: { id: string; nome: string; padrao: boolean }[];
   podeEditar: boolean;
   onSalvar: (dados: ContratadoDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
@@ -62,6 +66,7 @@ export function PainelContratado({
     cep: contratado?.cep ? formatarCep(contratado.cep) : '',
     contratadoRepasseId: contratado?.contratadoRepasseId ?? '',
     ativo: contratado?.ativo ?? true,
+    padrao: contratado?.padrao ?? false,
   };
   const form = useAppForm({
     defaultValues: iniciais,
@@ -78,6 +83,7 @@ export function PainelContratado({
           cep: value.cep.trim() ? soDigitos(value.cep) : null,
           contratadoRepasseId: value.contratadoRepasseId || null,
           ativo: value.ativo,
+          padrao: value.padrao,
         });
       } catch (falha) {
         setErro(
@@ -133,6 +139,10 @@ export function PainelContratado({
             value={contratado.contratadoRepasseNome ?? 'Nele mesmo'}
           />
           <CampoSomenteLeitura label="Situação" value={contratado.ativo ? 'Ativo' : 'Inativo'} />
+          <CampoSomenteLeitura
+            label="Contratado padrão"
+            value={contratado.padrao ? 'Sim' : 'Não'}
+          />
           <RodapeSomenteLeitura excluir={excluir} />
         </div>
       </PainelLateral>
@@ -226,7 +236,7 @@ export function PainelContratado({
               description="Os laudos emitidos por este contratado têm o repasse pago pelo escolhido. Um passo só: o escolhido não pode consolidar em outro."
               opcoes={[
                 { valor: '', rotulo: 'Nele mesmo' },
-                ...contratados
+                ...ordenarContratados(contratados)
                   .filter((c) => c.id !== contratado?.id)
                   .map((c) => ({ valor: c.id, rotulo: c.nome })),
               ]}
@@ -238,6 +248,22 @@ export function PainelContratado({
             <field.CheckboxField
               label="Ativo"
               description="Inativo some da escolha da empresa que fatura, mas continua nos clientes que já o usam."
+            />
+          )}
+        </form.AppField>
+        <form.AppField
+          name="padrao"
+          validators={{
+            // Fica no campo (e não no schema) para sumir ao reativar o contratado.
+            onChangeListenTo: ['ativo'],
+            onChange: ({ value, fieldApi }) =>
+              value && !fieldApi.form.getFieldValue('ativo') ? PADRAO_INATIVO : undefined,
+          }}
+        >
+          {(field) => (
+            <field.CheckboxField
+              label="Contratado padrão"
+              description="Vem escolhido nos campos de contratado, como a empresa que fatura do cliente novo. Marcar este desmarca o anterior."
             />
           )}
         </form.AppField>

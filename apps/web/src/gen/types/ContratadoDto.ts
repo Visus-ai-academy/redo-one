@@ -42,4 +42,9 @@ export type ContratadoDto = {
    */
   contratadoRepasseId?: string | null;
   ativo: boolean;
+  /**
+   * @description Vem escolhido nos campos de contratado. Marcar desmarca o anterior; só ativo.
+   * @type boolean
+   */
+  padrao: boolean;
 };
