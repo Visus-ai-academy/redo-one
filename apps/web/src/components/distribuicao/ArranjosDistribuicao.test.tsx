@@ -10,6 +10,8 @@ import { ArranjosDistribuicao, type ArranjosDistribuicaoProps } from './Arranjos
 
 const arranjo = (mudar: Partial<ArranjoDto> = {}): ArranjoDto => ({
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,
@@ -35,10 +37,13 @@ const CATALOGO: ArranjosDistribuicaoProps['catalogo'] = {
   especialidades: [
     { id: 'e-neuro', nome: 'NEURO', cor: '#4E8C88' },
     { id: 'e-mama', nome: 'MAMA', cor: null },
+    { id: 'e-mi', nome: 'MI', cor: null },
+    { id: 'e-msk', nome: 'MSK', cor: null },
   ],
   modalidades: [
     { id: 'm-tc', nome: 'TC', cor: '#8A4A4A' },
     { id: 'm-rm', nome: 'RM', cor: null },
+    { id: 'm-rx', nome: 'RX', cor: null },
   ],
   subespecialidades: [{ id: 's-cab', nome: 'Cabeça', especialidadeIds: ['e-neuro'] }],
   prioridades: [
@@ -69,7 +74,7 @@ describe('ArranjosDistribuicao', () => {
   it('mostra cada arranjo em linhas legíveis', async () => {
     montar();
     const cartao = await screen.findByRole('button', { name: /NEURO/ });
-    expect(within(cartao).getByText('TC')).toBeInTheDocument();
+    expect(within(cartao).getByText('NEURO · TC')).toBeInTheDocument();
     expect(within(cartao).getByText('URGÊNCIA')).toBeInTheDocument();
     expect(within(cartao).getByText('Só Clínica Alfa')).toBeInTheDocument();
     expect(within(cartao).getByText('Clínicas exclusivas')).toBeInTheDocument();
@@ -77,7 +82,7 @@ describe('ArranjosDistribuicao', () => {
 
   it('sem permissão de editar, só lê', async () => {
     montar({ podeEditar: false });
-    expect(await screen.findByText('NEURO')).toBeInTheDocument();
+    expect(await screen.findByText('NEURO · TC')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /NEURO/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Novo arranjo' })).not.toBeInTheDocument();
   });
@@ -90,28 +95,75 @@ describe('ArranjosDistribuicao', () => {
   it('cria um arranjo e volta à lista com o aviso', async () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
-    await escolherOpcao('Especialidade', 'MAMA');
+    await escolherOpcao('Frente', 'MAMA');
+    // Começa em "Todas": desmarcar ROTINA deixa só a URGÊNCIA.
+    expect(screen.getByRole('checkbox', { name: 'Todas' })).toBeChecked();
     await userEvent.click(screen.getByRole('checkbox', { name: 'ROTINA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
     expect(onSalvar).toHaveBeenCalledWith([
       NEURO,
-      arranjo({ especialidadeId: 'e-mama', prioridadeIds: ['p-rot'] }),
+      arranjo({ especialidadeId: 'e-mama', prioridadeIds: ['p-urg'] }),
     ]);
     expect(await acharAviso()).toHaveTextContent('Arranjo criado.');
     expect(await screen.findByRole('button', { name: 'Novo arranjo' })).toBeInTheDocument();
   });
 
-  it('especialidade e modalidades com a cor do catálogo; "Todas" sem bolinha', async () => {
+  it('frente de modalidade: escolhe as especialidades ("RX de MI e MSK"), sem modalidades nem segmentos', async () => {
+    const { onSalvar } = montar({ arranjos: [] });
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    expect(screen.queryByRole('combobox', { name: 'Modalidades' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Especialidades' })).not.toBeInTheDocument();
+    await escolherOpcao('Frente', 'RX');
+    expect(screen.queryByRole('combobox', { name: 'Modalidades' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Especialidades' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'MI' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'MSK' }));
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
+    expect(onSalvar).toHaveBeenCalledWith([
+      arranjo({ modalidadeId: 'm-rx', especialidadeIds: ['e-mi', 'e-msk'] }),
+    ]);
+  });
+
+  it('trocar a frente tira o recorte da outra dimensão', async () => {
+    const { onSalvar } = montar();
+    await userEvent.click(await screen.findByRole('button', { name: /NEURO/ }));
+    await escolherOpcao('Frente', 'RX');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSalvar).toHaveBeenCalledWith([
+      { ...NEURO, especialidadeId: null, modalidadeId: 'm-rx', modalidadeIds: [] },
+    ]);
+  });
+
+  it('prioridades sem nenhuma marcada não salva', async () => {
+    const { onSalvar } = montar({ arranjos: [] });
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    await escolherOpcao('Frente', 'NEURO');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Todas' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
+    expect(await screen.findByText('Marque ao menos uma prioridade.')).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('sem frente não salva', async () => {
+    const { onSalvar } = montar({ arranjos: [] });
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
+    expect(await screen.findByText('Escolha a frente.')).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('frente com a cor do catálogo, em especialidades e modalidades', async () => {
     montar();
     await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
-    const especialidade = screen.getByRole('combobox', { name: 'Especialidade' });
-    expect(especialidade.querySelector('[data-cor]')).not.toBeInTheDocument();
-    await userEvent.click(especialidade);
+    await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
     expect(
       (await screen.findByRole('option', { name: 'NEURO' })).querySelector('[data-cor]'),
     ).toHaveStyle({ backgroundColor: '#4E8C88' });
-    expect(screen.getByRole('option', { name: 'Todas' }).querySelector('[data-cor]')).toBeNull();
-    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('option', { name: 'TC' }).querySelector('[data-cor]')).toHaveStyle({
+      backgroundColor: '#8A4A4A',
+    });
+    await userEvent.click(screen.getByRole('option', { name: 'NEURO' }));
     await userEvent.click(screen.getByRole('combobox', { name: 'Modalidades' }));
     expect(
       (await screen.findByRole('option', { name: 'TC' })).querySelector('[data-cor]'),
@@ -124,7 +176,8 @@ describe('ArranjosDistribuicao', () => {
     await userEvent.click(await screen.findByRole('button', { name: /NEURO/ }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'ROTINA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(onSalvar).toHaveBeenCalledWith([{ ...NEURO, prioridadeIds: ['p-urg', 'p-rot'] }, outro]);
+    // Marcar a que faltava é marcar todas: vira "Todas" (lista vazia).
+    expect(onSalvar).toHaveBeenCalledWith([{ ...NEURO, prioridadeIds: [] }, outro]);
     expect(await acharAviso()).toHaveTextContent('Arranjo salvo.');
   });
 
@@ -141,6 +194,7 @@ describe('ArranjosDistribuicao', () => {
   it('"só estes clientes" sem nenhum não salva', async () => {
     const { onSalvar } = montar({ arranjos: [] });
     await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
+    await escolherOpcao('Frente', 'NEURO');
     const clientes = screen.getByRole('radiogroup', { name: 'Clientes' });
     await userEvent.click(within(clientes).getByRole('radio', { name: 'Só estes' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
@@ -148,15 +202,33 @@ describe('ArranjosDistribuicao', () => {
     expect(onSalvar).not.toHaveBeenCalled();
   });
 
-  it('legenda do obrigatório só com campo obrigatório na tela', async () => {
+  it('a frente é obrigatória: asterisco e legenda', async () => {
     montar({ arranjos: [] });
     await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
-    expect(screen.queryByText('Campo obrigatório')).not.toBeInTheDocument();
-    const exames = screen.getByRole('radiogroup', { name: 'Exames' });
-    await userEvent.click(within(exames).getByRole('radio', { name: 'Todos, exceto estes' }));
-    expect(screen.queryByText('Campo obrigatório')).not.toBeInTheDocument();
-    await userEvent.click(within(exames).getByRole('radio', { name: 'Só estes' }));
+    expect(screen.getByRole('combobox', { name: 'Frente' })).toBeInTheDocument();
     expect(screen.getByText('Campo obrigatório')).toBeInTheDocument();
+  });
+
+  it('clientes de fora: um campo só, com os escolhidos como chips', async () => {
+    const { onSalvar } = montar();
+    await userEvent.click(await screen.findByRole('button', { name: /NEURO/ }));
+    const clientes = screen.getByRole('radiogroup', { name: 'Clientes' });
+    await userEvent.click(within(clientes).getByRole('radio', { name: 'Todos, exceto estes' }));
+    const campo = screen.getByRole('combobox', { name: 'Clientes de fora' });
+    // Alfa aparece como chip na lista de fora e na das exclusivas.
+    expect(screen.getAllByRole('button', { name: 'Remover Clínica Alfa' })).toHaveLength(2);
+    await userEvent.type(campo, 'bet');
+    await userEvent.click(await screen.findByRole('option', { name: 'Hospital Beta' }));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Remover Hospital Beta' })).toBeInTheDocument();
+    // A exclusiva tem de estar entre os atendidos: sai da lista de fora e das exclusivas.
+    for (const remover of screen.getAllByRole('button', { name: 'Remover Clínica Alfa' })) {
+      await userEvent.click(remover);
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSalvar).toHaveBeenCalledWith([
+      { ...NEURO, modoClientes: 'exceto', clienteIds: ['c2'], clientesExclusivosIds: [] },
+    ]);
   });
 
   it('mostra o erro da API sem sair do formulário', async () => {

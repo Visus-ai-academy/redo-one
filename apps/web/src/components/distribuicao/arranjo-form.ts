@@ -5,15 +5,19 @@ import type { ModoVinculoKey } from '../../gen/types/ModoVinculo';
 import type { RotuloDto } from '../../gen/types/RotuloDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { GERAL } from '../escala/alocacao-form';
+import { esquemaCaixasComTodas } from '../form/caixas-todas';
 
 /** Dono do arranjo: só o do médico tem clínica exclusiva. */
 export type DonoArranjo = 'medico' | 'equipe';
 
 export type ValoresArranjo = {
-  /** Vazio = todas as especialidades. */
-  especialidadeId: string;
+  /** A frente: `E:<especialidade>` ou `M:<modalidade>`; vazia até escolher (obrigatória). */
+  frente: string;
+  /** Só na frente de modalidade; vazia = todas. */
+  especialidadeIds: string[];
+  /** Só na frente de especialidade; vazia = todas. */
   modalidadeIds: string[];
-  /** Com `GERAL` para o exame sem subespecialidade. */
+  /** Só na frente de especialidade. Com `GERAL` para o exame sem subespecialidade. */
   subespecialidadeIds: string[];
   prioridadeIds: string[];
   modoClientes: ModoVinculoKey;
@@ -35,7 +39,8 @@ export type CatalogoDoArranjo = {
 };
 
 export const ARRANJO_VAZIO: ValoresArranjo = {
-  especialidadeId: '',
+  frente: '',
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   prioridadeIds: [],
@@ -52,6 +57,20 @@ export const OPCOES_MODO_CLIENTES = [
   { valor: 'exceto', rotulo: 'Todos, exceto estes' },
 ];
 
+export type FrenteDoArranjo = { tipo: 'especialidade' | 'modalidade'; id: string };
+
+/** Chave da frente no select (`E:` especialidade, `M:` modalidade), como na aba do cliente. */
+export const chaveDaFrente = (a: Pick<ArranjoDto, 'especialidadeId' | 'modalidadeId'>) =>
+  a.especialidadeId ? `E:${a.especialidadeId}` : a.modalidadeId ? `M:${a.modalidadeId}` : '';
+
+export function frenteDaChave(chave: string): FrenteDoArranjo | null {
+  const [tipo, id] = [chave.slice(0, 2), chave.slice(2)];
+  if (!id) return null;
+  if (tipo === 'E:') return { tipo: 'especialidade', id };
+  if (tipo === 'M:') return { tipo: 'modalidade', id };
+  return null;
+}
+
 const opcoes = (ids: string[], nomes: RotuloDto[]): OpcaoBusca[] =>
   ids.map((id) => ({ valor: id, rotulo: nomes.find((n) => n.id === id)?.nome ?? 'Inativo' }));
 
@@ -61,7 +80,8 @@ export function valoresDoArranjo(
 ): ValoresArranjo {
   if (!arranjo) return ARRANJO_VAZIO;
   return {
-    especialidadeId: arranjo.especialidadeId ?? '',
+    frente: chaveDaFrente(arranjo),
+    especialidadeIds: arranjo.especialidadeIds,
     modalidadeIds: arranjo.modalidadeIds,
     subespecialidadeIds: [
       ...arranjo.subespecialidadeIds,
@@ -78,13 +98,18 @@ export function valoresDoArranjo(
 
 const ids = (lista: OpcaoBusca[]) => lista.map((o) => o.valor);
 
-/** Do formulário para a API. */
+/** Do formulário para a API: só o recorte que vale na frente escolhida vai. */
 export function paraApi(v: ValoresArranjo, dono: DonoArranjo = 'medico'): ArranjoDto {
+  const frente = frenteDaChave(v.frente);
+  const daEspecialidade = frente?.tipo === 'especialidade';
+  const daModalidade = frente?.tipo === 'modalidade';
   return {
-    especialidadeId: v.especialidadeId || null,
-    modalidadeIds: v.modalidadeIds,
-    subespecialidadeIds: v.subespecialidadeIds.filter((id) => id !== GERAL),
-    subespecialidadeGeral: v.subespecialidadeIds.includes(GERAL),
+    especialidadeId: daEspecialidade ? frente.id : null,
+    modalidadeId: daModalidade ? frente.id : null,
+    especialidadeIds: daModalidade ? v.especialidadeIds : [],
+    modalidadeIds: daEspecialidade ? v.modalidadeIds : [],
+    subespecialidadeIds: daEspecialidade ? v.subespecialidadeIds.filter((id) => id !== GERAL) : [],
+    subespecialidadeGeral: daEspecialidade && v.subespecialidadeIds.includes(GERAL),
     prioridadeIds: v.prioridadeIds,
     modoClientes: v.modoClientes,
     clienteIds: v.modoClientes === 'todos' ? [] : ids(v.clientes),
@@ -106,10 +131,11 @@ const modo = z.enum(['todos', 'apenas', 'exceto']);
 
 export const esquemaArranjo = z
   .object({
-    especialidadeId: z.string(),
+    frente: z.string(),
+    especialidadeIds: z.array(z.string()),
     modalidadeIds: z.array(z.string()),
     subespecialidadeIds: z.array(z.string()),
-    prioridadeIds: z.array(z.string()),
+    prioridadeIds: esquemaCaixasComTodas('Marque ao menos uma prioridade.'),
     modoClientes: modo,
     clientes: z.array(opcao),
     modoExames: modo,
@@ -119,6 +145,7 @@ export const esquemaArranjo = z
   .superRefine((v, ctx) => {
     const erro = (path: string, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message });
+    if (!frenteDaChave(v.frente)) erro('frente', 'Escolha a frente.');
     if (v.modoClientes === 'apenas' && v.clientes.length === 0)
       erro('clientes', 'Escolha ao menos um cliente.');
     if (v.modoExames === 'apenas' && v.exames.length === 0)
@@ -157,19 +184,16 @@ function vinculo(modoAtual: ModoVinculoKey, nomes: string[]) {
   return modoAtual === 'apenas' ? `Só ${listar(nomes)}` : `Todos, exceto ${listar(nomes)}`;
 }
 
-/** O arranjo em linhas legíveis para o cartão: só os eixos recortados, além de modalidade e prioridade. */
+/**
+ * O arranjo em linhas legíveis para o cartão. O título é a frente com o recorte da outra dimensão
+ * ("RX · MI, MSK"); as linhas, só os eixos recortados, além da prioridade.
+ */
 export function resumoDoArranjo(
   a: ArranjoDto,
   catalogo: CatalogoDoArranjo,
   nomes: NomesDoArranjo,
 ): { titulo: string; linhas: { rotulo: string; valor: string }[] } {
   const linhas: { rotulo: string; valor: string }[] = [];
-  linhas.push({
-    rotulo: 'Modalidades',
-    valor: a.modalidadeIds.length
-      ? listar(nomesNaOrdemDe(a.modalidadeIds, catalogo.modalidades, 'Inativa'))
-      : 'Todas',
-  });
   if (a.subespecialidadeIds.length || a.subespecialidadeGeral) {
     linhas.push({
       rotulo: 'Segmentos',
@@ -206,9 +230,24 @@ export function resumoDoArranjo(
       valor: listar(nomesEmOrdemAlfabetica(a.clientesExclusivosIds, nomes.clientes, 'Inativo')),
     });
   }
-  const especialidade = a.especialidadeId
-    ? (catalogo.especialidades.find((e) => e.id === a.especialidadeId)?.nome ??
-      'Especialidade inativa')
-    : 'Todas as especialidades';
-  return { titulo: especialidade, linhas };
+  return { titulo: tituloDoArranjo(a, catalogo), linhas };
+}
+
+function tituloDoArranjo(a: ArranjoDto, catalogo: CatalogoDoArranjo): string {
+  if (a.modalidadeId) {
+    const frente =
+      catalogo.modalidades.find((m) => m.id === a.modalidadeId)?.nome ?? 'Modalidade inativa';
+    const recorte = a.especialidadeIds.length
+      ? listar(nomesNaOrdemDe(a.especialidadeIds, catalogo.especialidades, 'Inativa'))
+      : 'todas as especialidades';
+    return `${frente} · ${recorte}`;
+  }
+  if (!a.especialidadeId) return 'Sem frente';
+  const frente =
+    catalogo.especialidades.find((e) => e.id === a.especialidadeId)?.nome ??
+    'Especialidade inativa';
+  const recorte = a.modalidadeIds.length
+    ? listar(nomesNaOrdemDe(a.modalidadeIds, catalogo.modalidades, 'Inativa'))
+    : 'todas as modalidades';
+  return `${frente} · ${recorte}`;
 }

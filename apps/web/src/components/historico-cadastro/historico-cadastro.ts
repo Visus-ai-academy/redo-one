@@ -197,7 +197,11 @@ function formatarValor(campo: string, v: unknown, nomes: NomesHistorico): string
 }
 
 type Arranjo = {
+  /** Frente de especialidade (antes de 25/11/2026, nula = todas). */
   especialidadeId?: string | null;
+  /** Frente de modalidade (desde 25/11/2026). */
+  modalidadeId?: string | null;
+  especialidadeIds?: string[];
   modalidadeIds?: string[];
   subespecialidadeIds?: string[];
   subespecialidadeGeral?: boolean;
@@ -222,11 +226,13 @@ function canonico(valor: unknown): string {
   return JSON.stringify(valor ?? null);
 }
 
-/** "NEURO; modalidades: CT, MR; clientes: só CLINICA SOL". */
+/** "NEURO; modalidades: CT, MR; clientes: só CLINICA SOL" ou "RX; especialidades: MI, MSK". */
 export function descreverArranjo(a: Arranjo, nomes: NomesHistorico): string {
   const lista = (ids: string[] | undefined) =>
     (ids ?? []).map((id) => nomeDe(id, nomes)).join(', ');
-  const partes = [a.especialidadeId ? nomeDe(a.especialidadeId, nomes) : 'Todas as especialidades'];
+  const frente = a.modalidadeId ?? a.especialidadeId;
+  const partes = [frente ? nomeDe(frente, nomes) : 'Todas as especialidades'];
+  if (a.especialidadeIds?.length) partes.push(`especialidades: ${lista(a.especialidadeIds)}`);
   if (a.modalidadeIds?.length) partes.push(`modalidades: ${lista(a.modalidadeIds)}`);
   if (a.subespecialidadeIds?.length || a.subespecialidadeGeral) {
     const segmentos = [lista(a.subespecialidadeIds), a.subespecialidadeGeral ? 'geral' : '']

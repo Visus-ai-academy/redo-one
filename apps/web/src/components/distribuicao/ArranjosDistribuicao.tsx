@@ -13,6 +13,7 @@ import { buttonClassName } from '../button/button-class';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { GERAL } from '../escala/alocacao-form';
 import { CaixasField, OpcoesField } from '../escala/campos';
+import { BuscaMultiplaField } from '../form/BuscaMultiplaField';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -21,6 +22,7 @@ import {
   atendeCliente,
   type DonoArranjo,
   esquemaArranjo,
+  frenteDaChave,
   type NomesDoArranjo,
   OPCOES_MODO_CLIENTES,
   paraApi,
@@ -82,8 +84,7 @@ export function ArranjosDistribuicao(props: ArranjosDistribuicaoProps) {
             Arranjos
           </h3>
           <p className="text-muted-foreground text-[13px]">
-            O que {quem} lauda pelo robô. Basta um arranjo casar com o exame; em cada parte, nada
-            marcado é tudo.
+            O que {quem} lauda pelo robô, frente por frente. Basta um arranjo casar com o exame.
           </p>
         </div>
         {podeEditar && (
@@ -191,10 +192,38 @@ function FormArranjo({
     },
   });
 
-  const subsDa = (especialidadeId: string) =>
-    especialidadeId
-      ? catalogo.subespecialidades.filter((s) => s.especialidadeIds.includes(especialidadeId))
+  /** Segmentos da frente de especialidade (a de modalidade não tem segmento). */
+  const subsDa = (frente: string) => {
+    const f = frenteDaChave(frente);
+    return f?.tipo === 'especialidade'
+      ? catalogo.subespecialidades.filter((s) => s.especialidadeIds.includes(f.id))
       : [];
+  };
+
+  const opcoesFrente = [
+    ...catalogo.especialidades.map((e) => ({
+      valor: `E:${e.id}`,
+      rotulo: e.nome,
+      cor: e.cor,
+      grupo: 'Especialidades',
+    })),
+    ...catalogo.modalidades.map((m) => ({
+      valor: `M:${m.id}`,
+      rotulo: m.nome,
+      cor: m.cor,
+      grupo: 'Modalidades',
+    })),
+  ];
+  // Frente que saiu do catálogo ativo continua à vista no arranjo que a usa.
+  const frenteAtual = editando ? valoresDoArranjo(arranjos[indice], nomes).frente : '';
+  if (frenteAtual && !opcoesFrente.some((o) => o.valor === frenteAtual)) {
+    opcoesFrente.push({
+      valor: frenteAtual,
+      rotulo: '(fora do catálogo)',
+      cor: null,
+      grupo: 'Inativas',
+    });
+  }
 
   /** Exclusiva só entre os clientes que o arranjo atende. */
   const buscarExclusivas = async (termo: string) => {
@@ -211,14 +240,12 @@ function FormArranjo({
     eixo,
     campoModo,
     campoLista,
-    rotuloAdicionar,
     placeholder,
     buscar,
   }: {
     eixo: string;
     campoModo: 'modoClientes' | 'modoExames';
     campoLista: 'clientes' | 'exames';
-    rotuloAdicionar: string;
     placeholder: string;
     buscar: (termo: string) => Promise<OpcaoBusca[]>;
   }) => (
@@ -230,18 +257,12 @@ function FormArranjo({
         {(modo) =>
           modo !== 'todos' && (
             <form.AppField name={campoLista}>
-              {(field) => (
-                <field.EscolhaMultiplaField
+              {() => (
+                <BuscaMultiplaField
                   label={modo === 'apenas' ? `Só estes ${eixo.toLowerCase()}` : `${eixo} de fora`}
-                  rotuloAdicionar={rotuloAdicionar}
                   placeholder={placeholder}
                   chave={campoLista}
                   buscar={buscar}
-                  vazio={
-                    modo === 'apenas'
-                      ? 'Nenhum ainda: escolha ao menos um.'
-                      : `Nenhum: ${eixo.toLowerCase()} sem exceção.`
-                  }
                   required={modo === 'apenas'}
                 />
               )}
@@ -267,10 +288,15 @@ function FormArranjo({
         </h3>
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         <form.AppField
-          name="especialidadeId"
+          name="frente"
           listeners={{
             onChange: ({ value }) => {
-              // Subespecialidade é da especialidade: as de outra (e o geral, sem nenhuma) saem.
+              // O recorte é da frente: o da outra dimensão sai, e o segmento fica só se é dela.
+              const f = frenteDaChave(value);
+              if (f?.tipo !== 'modalidade' && form.getFieldValue('especialidadeIds').length)
+                form.setFieldValue('especialidadeIds', []);
+              if (f?.tipo !== 'especialidade' && form.getFieldValue('modalidadeIds').length)
+                form.setFieldValue('modalidadeIds', []);
               const daNova = subsDa(value);
               const marcadas = form.getFieldValue('subespecialidadeIds');
               const ficam = marcadas.filter((id) =>
@@ -283,52 +309,67 @@ function FormArranjo({
         >
           {(field) => (
             <field.SelectField
-              label="Especialidade"
-              placeholder="Todas"
-              opcoes={[
-                { valor: '', rotulo: 'Todas' },
-                ...catalogo.especialidades.map((e) => ({
-                  valor: e.id,
-                  rotulo: e.nome,
-                  cor: e.cor,
-                })),
-              ]}
+              label="Frente"
+              placeholder="Escolha a especialidade ou a modalidade"
+              opcoes={opcoesFrente}
+              required
             />
           )}
         </form.AppField>
-        <form.AppField name="modalidadeIds">
-          {(field) => (
-            <field.SelecaoMultiplaField
-              label="Modalidades"
-              placeholder="Todas"
-              opcoes={catalogo.modalidades.map((m) => ({
-                valor: m.id,
-                rotulo: m.nome,
-                cor: m.cor,
-              }))}
-            />
-          )}
-        </form.AppField>
-        <form.Subscribe selector={(estado) => estado.values.especialidadeId}>
-          {(especialidadeId) => (
-            <form.AppField name="subespecialidadeIds">
-              {(field) => {
-                const subs = subsDa(especialidadeId);
-                return (
-                  (subs.length > 0 || field.state.value.length > 0) && (
+        <form.Subscribe selector={(estado) => estado.values.frente}>
+          {(frente) => {
+            const tipo = frenteDaChave(frente)?.tipo;
+            if (tipo === 'modalidade') {
+              return (
+                <form.AppField name="especialidadeIds">
+                  {(field) => (
                     <field.SelecaoMultiplaField
-                      label="Segmentos"
+                      label="Especialidades"
                       placeholder="Todas"
-                      opcoes={[
-                        ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
-                        { valor: GERAL, rotulo: 'Geral (sem segmento)' },
-                      ]}
+                      opcoes={catalogo.especialidades.map((e) => ({
+                        valor: e.id,
+                        rotulo: e.nome,
+                        cor: e.cor,
+                      }))}
                     />
-                  )
-                );
-              }}
-            </form.AppField>
-          )}
+                  )}
+                </form.AppField>
+              );
+            }
+            if (tipo !== 'especialidade') return null;
+            const subs = subsDa(frente);
+            return (
+              <>
+                <form.AppField name="modalidadeIds">
+                  {(field) => (
+                    <field.SelecaoMultiplaField
+                      label="Modalidades"
+                      placeholder="Todas"
+                      opcoes={catalogo.modalidades.map((m) => ({
+                        valor: m.id,
+                        rotulo: m.nome,
+                        cor: m.cor,
+                      }))}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="subespecialidadeIds">
+                  {(field) =>
+                    (subs.length > 0 || field.state.value.length > 0) && (
+                      <field.SelecaoMultiplaField
+                        label="Segmentos"
+                        placeholder="Todos"
+                        opcoes={[
+                          ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
+                          { valor: GERAL, rotulo: 'Geral (sem segmento)' },
+                        ]}
+                      />
+                    )
+                  }
+                </form.AppField>
+              </>
+            );
+          }}
         </form.Subscribe>
         <form.AppField name="prioridadeIds">
           {() => (
@@ -339,7 +380,7 @@ function FormArranjo({
                 rotulo: p.nome,
                 cor: p.cor,
               }))}
-              description="Nada marcado: todas."
+              todas="Todas"
             />
           )}
         </form.AppField>
@@ -347,7 +388,6 @@ function FormArranjo({
           eixo: 'Clientes',
           campoModo: 'modoClientes',
           campoLista: 'clientes',
-          rotuloAdicionar: 'Adicionar cliente',
           placeholder: 'Digite o nome do cliente',
           buscar: buscarClientes,
         })}
@@ -355,7 +395,6 @@ function FormArranjo({
           eixo: 'Exames',
           campoModo: 'modoExames',
           campoLista: 'exames',
-          rotuloAdicionar: 'Adicionar exame',
           placeholder: 'Digite o nome do exame',
           buscar: buscarExames,
         })}
@@ -367,15 +406,13 @@ function FormArranjo({
           >
             {(recorte) => (
               <form.AppField name="clientesExclusivos">
-                {(field) => (
-                  <field.EscolhaMultiplaField
+                {() => (
+                  <BuscaMultiplaField
                     label="Clínicas exclusivas"
-                    rotuloAdicionar="Adicionar clínica exclusiva"
-                    placeholder="Digite o nome do cliente"
+                    placeholder="Nenhuma. Digite o nome do cliente"
                     // A busca muda com os clientes do arranjo: a chave também.
                     chave={`exclusivas:${recorte}`}
                     buscar={buscarExclusivas}
-                    vazio="Nenhuma."
                     description="Nestas clínicas, o que este arranjo cobre vai só para quem as tem como exclusivas; os outros médicos não recebem. Precisam estar entre os clientes do arranjo."
                   />
                 )}
@@ -384,35 +421,27 @@ function FormArranjo({
           </form.Subscribe>
         )}
         <form.AppForm>
-          <form.Subscribe
-            // Só a lista do "Só estes" é obrigatória.
-            selector={(estado) =>
-              estado.values.modoClientes === 'apenas' || estado.values.modoExames === 'apenas'
+          {/* A frente é sempre obrigatória: a legenda fica sempre. */}
+          <RodapePainel
+            legenda
+            rotuloCriar="Criar arranjo"
+            editando={editando}
+            excluir={
+              editando
+                ? {
+                    acao: 'Excluir arranjo',
+                    titulo: 'Excluir este arranjo?',
+                    consequencia: `O robô deixa de entregar ${dono === 'medico' ? 'ao médico' : 'à equipe'} o que só este arranjo cobre. Os outros arranjos continuam.`,
+                    onConfirmar: () =>
+                      salvar(
+                        arranjos.filter((_, i) => i !== indice),
+                        'Arranjo excluído.',
+                      ),
+                  }
+                : undefined
             }
-          >
-            {(temObrigatorio) => (
-              <RodapePainel
-                legenda={temObrigatorio}
-                rotuloCriar="Criar arranjo"
-                editando={editando}
-                excluir={
-                  editando
-                    ? {
-                        acao: 'Excluir arranjo',
-                        titulo: 'Excluir este arranjo?',
-                        consequencia: `O robô deixa de entregar ${dono === 'medico' ? 'ao médico' : 'à equipe'} o que só este arranjo cobre. Os outros arranjos continuam.`,
-                        onConfirmar: () =>
-                          salvar(
-                            arranjos.filter((_, i) => i !== indice),
-                            'Arranjo excluído.',
-                          ),
-                      }
-                    : undefined
-                }
-                onCancelar={onFechar}
-              />
-            )}
-          </form.Subscribe>
+            onCancelar={onFechar}
+          />
         </form.AppForm>
       </form>
     </section>

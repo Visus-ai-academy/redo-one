@@ -8,6 +8,7 @@ import { distribuicaoEquipeControllerSalvarUso } from '../../gen/clients/distrib
 import { opcoesControllerListas } from '../../gen/clients/opcoesControllerListas';
 import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
+import { escolherOpcao } from '../../test/select';
 import { AbaDistribuicaoEquipe } from './AbaDistribuicaoEquipe';
 
 vi.mock('../../gen/clients/distribuicaoEquipeControllerObter', () => ({
@@ -97,12 +98,14 @@ describe('AbaDistribuicaoEquipe', () => {
     renderComRotas(<AbaDistribuicaoEquipe equipeId="eq-1" podeEditar />);
     await userEvent.click(await screen.findByRole('button', { name: 'Novo arranjo' }));
     expect(screen.queryByText('Clínicas exclusivas')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'PLANTÃO' }));
+    await escolherOpcao('Frente', 'NEURO');
     await userEvent.click(screen.getByRole('button', { name: 'Criar arranjo' }));
     expect(salvar).toHaveBeenCalledWith(
       expect.objectContaining({
         path: { equipeId: 'eq-1' },
-        body: { arranjos: [expect.objectContaining({ prioridadeIds: ['p-pla'] })] },
+        body: {
+          arranjos: [expect.objectContaining({ especialidadeId: 'e-neuro', prioridadeIds: [] })],
+        },
       }),
     );
     expect(await acharAviso()).toHaveTextContent('Arranjo criado.');

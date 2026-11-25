@@ -7,12 +7,14 @@ const ID_SOL = '22222222-2222-4222-8222-222222222222';
 const ID_PLENO = '33333333-3333-4333-8333-333333333333';
 const ID_CONTA = '44444444-4444-4444-8444-444444444444';
 const ID_MEDICO = '55555555-5555-4555-8555-555555555555';
+const ID_RX = '66666666-6666-4666-8666-666666666666';
 const nomes = {
   [ID_NEURO]: 'NEURO',
   [ID_SOL]: 'CLINICA SOL',
   [ID_PLENO]: 'Pleno',
   [ID_CONTA]: 'Ana (portal)',
   [ID_MEDICO]: 'Ana Reis',
+  [ID_RX]: 'RX',
 };
 const evento = (
   entidade: string,
@@ -177,6 +179,25 @@ describe('alteracoesDoCadastro', () => {
         antes: null,
         depois: 'Todas as especialidades; clientes: só CLINICA SOL',
       },
+    ]);
+  });
+
+  it('arranjo de frente de modalidade: a modalidade e as especialidades dela', () => {
+    const linhas = alteracoesDoCadastro(
+      evento(
+        'arranjos_medico',
+        'alterado',
+        { arranjos: [] },
+        {
+          arranjos: [
+            arranjo({ especialidadeId: null, modalidadeId: ID_RX, especialidadeIds: [ID_NEURO] }),
+          ],
+        },
+      ),
+      nomes,
+    );
+    expect(linhas).toEqual([
+      { rotulo: 'Arranjo incluído', antes: null, depois: 'RX; especialidades: NEURO' },
     ]);
   });
 

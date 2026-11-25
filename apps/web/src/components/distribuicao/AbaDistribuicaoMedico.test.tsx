@@ -40,6 +40,8 @@ beforeEach(() => {
       arranjos: [
         {
           especialidadeId: 'e-neuro',
+          modalidadeId: null,
+          especialidadeIds: [],
           modalidadeIds: ['m-tc'],
           subespecialidadeIds: [],
           subespecialidadeGeral: false,
@@ -80,7 +82,7 @@ describe('AbaDistribuicaoMedico', () => {
 
   it('habilita o médico no robô na hora, com o aviso', async () => {
     renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar />);
-    expect(await screen.findByText('NEURO')).toBeInTheDocument();
+    expect(await screen.findByText('NEURO · TC')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Habilitado no robô' }));
     expect(salvarRobo).toHaveBeenCalledWith(
       expect.objectContaining({ path: { medicoId: 'm1' }, body: { habilitadoRobo: true } }),
@@ -102,7 +104,7 @@ describe('AbaDistribuicaoMedico', () => {
 
   it('sem permissão de editar, a chave e os arranjos ficam só para leitura', async () => {
     renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar={false} />);
-    expect(await screen.findByText('NEURO')).toBeInTheDocument();
+    expect(await screen.findByText('NEURO · TC')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Habilitado no robô' }));
     expect(salvarRobo).not.toHaveBeenCalled();
     expect(screen.getByRole('combobox', { name: 'Conta o teto por' })).toBeDisabled();

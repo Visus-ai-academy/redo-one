@@ -4,6 +4,7 @@ import type { ArranjoDto } from '../../gen/types/ArranjoDto';
 import {
   ARRANJO_VAZIO,
   esquemaArranjo,
+  frenteDaChave,
   paraApi,
   resumoDoArranjo,
   type ValoresArranjo,
@@ -11,7 +12,9 @@ import {
 } from './arranjo-form';
 
 const arranjo = (mudar: Partial<ArranjoDto> = {}): ArranjoDto => ({
-  especialidadeId: null,
+  especialidadeId: 'e-neuro',
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,
@@ -33,10 +36,15 @@ const NOMES = {
 };
 
 const CATALOGO = {
-  especialidades: [{ id: 'e-neuro', nome: 'NEURO' }],
+  especialidades: [
+    { id: 'e-neuro', nome: 'NEURO' },
+    { id: 'e-mi', nome: 'MI' },
+    { id: 'e-msk', nome: 'MSK' },
+  ],
   modalidades: [
     { id: 'm-tc', nome: 'TC' },
     { id: 'm-rm', nome: 'RM' },
+    { id: 'm-rx', nome: 'RX' },
   ],
   subespecialidades: [{ id: 's-cab', nome: 'Cabeça' }],
   prioridades: [
@@ -64,7 +72,7 @@ describe('valoresDoArranjo', () => {
       }),
       NOMES,
     );
-    expect(v.especialidadeId).toBe('e-neuro');
+    expect(v.frente).toBe('E:e-neuro');
     expect(v.subespecialidadeIds).toEqual(['s-cab', 'geral']);
     expect(v.clientes).toEqual([
       { valor: 'c1', rotulo: 'Clínica Alfa' },
@@ -75,18 +83,56 @@ describe('valoresDoArranjo', () => {
   });
 });
 
-describe('paraApi', () => {
-  const base: ValoresArranjo = { ...ARRANJO_VAZIO };
+describe('valoresDoArranjo (frente de modalidade)', () => {
+  it('a frente vira a chave M: e as especialidades vêm marcadas', () => {
+    const v = valoresDoArranjo(
+      arranjo({ especialidadeId: null, modalidadeId: 'm-rx', especialidadeIds: ['e-mi'] }),
+      NOMES,
+    );
+    expect(v.frente).toBe('M:m-rx');
+    expect(v.especialidadeIds).toEqual(['e-mi']);
+  });
+});
 
-  it('especialidade vazia vira null e o geral sai das subespecialidades', () => {
+describe('frenteDaChave', () => {
+  it('separa o tipo e o id; vazio não é frente', () => {
+    expect(frenteDaChave('E:e-neuro')).toEqual({ tipo: 'especialidade', id: 'e-neuro' });
+    expect(frenteDaChave('M:m-rx')).toEqual({ tipo: 'modalidade', id: 'm-rx' });
+    expect(frenteDaChave('')).toBeNull();
+  });
+});
+
+describe('paraApi', () => {
+  const base: ValoresArranjo = { ...ARRANJO_VAZIO, frente: 'E:e-neuro' };
+
+  it('frente de especialidade: modalidades e segmentos, com o geral à parte', () => {
     expect(
-      paraApi({ ...base, subespecialidadeIds: ['s-cab', 'geral'], modalidadeIds: ['m-tc'] }),
+      paraApi({
+        ...base,
+        subespecialidadeIds: ['s-cab', 'geral'],
+        modalidadeIds: ['m-tc'],
+        especialidadeIds: ['e-mi'],
+      }),
     ).toEqual(
       arranjo({
         modalidadeIds: ['m-tc'],
         subespecialidadeIds: ['s-cab'],
         subespecialidadeGeral: true,
       }),
+    );
+  });
+
+  it('frente de modalidade: só as especialidades ("RX de MI e MSK")', () => {
+    expect(
+      paraApi({
+        ...base,
+        frente: 'M:m-rx',
+        especialidadeIds: ['e-mi', 'e-msk'],
+        modalidadeIds: ['m-tc'],
+        subespecialidadeIds: ['s-cab', 'geral'],
+      }),
+    ).toEqual(
+      arranjo({ especialidadeId: null, modalidadeId: 'm-rx', especialidadeIds: ['e-mi', 'e-msk'] }),
     );
   });
 
@@ -117,12 +163,18 @@ describe('esquemaArranjo', () => {
     return r.success ? [] : r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
   };
 
-  it('aceita o arranjo sem recorte', () => {
-    expect(erros(ARRANJO_VAZIO)).toEqual([]);
+  const COM_FRENTE: ValoresArranjo = { ...ARRANJO_VAZIO, frente: 'M:m-rx' };
+
+  it('aceita o arranjo só com a frente', () => {
+    expect(erros(COM_FRENTE)).toEqual([]);
+  });
+
+  it('pede a frente', () => {
+    expect(erros(ARRANJO_VAZIO)).toEqual(['frente: Escolha a frente.']);
   });
 
   it('"só estes" pede ao menos um cliente e um exame', () => {
-    expect(erros({ ...ARRANJO_VAZIO, modoClientes: 'apenas', modoExames: 'apenas' })).toEqual([
+    expect(erros({ ...COM_FRENTE, modoClientes: 'apenas', modoExames: 'apenas' })).toEqual([
       'clientes: Escolha ao menos um cliente.',
       'exames: Escolha ao menos um exame.',
     ]);
@@ -132,7 +184,7 @@ describe('esquemaArranjo', () => {
     const alfa = { valor: 'c1', rotulo: 'Clínica Alfa' };
     expect(
       erros({
-        ...ARRANJO_VAZIO,
+        ...COM_FRENTE,
         modoClientes: 'exceto',
         clientes: [alfa],
         clientesExclusivos: [alfa],
@@ -140,25 +192,40 @@ describe('esquemaArranjo', () => {
     ).toEqual(['clientesExclusivos: Clínica Alfa não está entre os clientes deste arranjo.']);
     expect(
       erros({
-        ...ARRANJO_VAZIO,
+        ...COM_FRENTE,
         modoClientes: 'apenas',
         clientes: [{ valor: 'c2', rotulo: 'Hospital Beta' }],
         clientesExclusivos: [alfa],
       }),
     ).toHaveLength(1);
-    expect(erros({ ...ARRANJO_VAZIO, clientesExclusivos: [alfa] })).toEqual([]);
+    expect(erros({ ...COM_FRENTE, clientesExclusivos: [alfa] })).toEqual([]);
   });
 });
 
 describe('resumoDoArranjo', () => {
-  it('sem recorte: todas as especialidades, modalidades e prioridades', () => {
+  it('sem recorte: a frente com todas as modalidades (ou especialidades) e prioridades', () => {
     expect(resumoDoArranjo(arranjo(), CATALOGO, NOMES)).toEqual({
-      titulo: 'Todas as especialidades',
-      linhas: [
-        { rotulo: 'Modalidades', valor: 'Todas' },
-        { rotulo: 'Prioridades', valor: 'Todas' },
-      ],
+      titulo: 'NEURO · todas as modalidades',
+      linhas: [{ rotulo: 'Prioridades', valor: 'Todas' }],
     });
+    expect(
+      resumoDoArranjo(arranjo({ especialidadeId: null, modalidadeId: 'm-rx' }), CATALOGO, NOMES)
+        .titulo,
+    ).toBe('RX · todas as especialidades');
+  });
+
+  it('frente de modalidade com especialidades: "RX · MI, MSK"', () => {
+    expect(
+      resumoDoArranjo(
+        arranjo({
+          especialidadeId: null,
+          modalidadeId: 'm-rx',
+          especialidadeIds: ['e-msk', 'e-mi'],
+        }),
+        CATALOGO,
+        NOMES,
+      ).titulo,
+    ).toBe('RX · MI, MSK');
   });
 
   it('mostra só os eixos recortados, com os nomes', () => {
@@ -179,9 +246,8 @@ describe('resumoDoArranjo', () => {
       NOMES,
     );
     expect(r).toEqual({
-      titulo: 'NEURO',
+      titulo: 'NEURO · TC, RM',
       linhas: [
-        { rotulo: 'Modalidades', valor: 'TC, RM' },
         { rotulo: 'Segmentos', valor: 'Cabeça, Geral (sem segmento)' },
         { rotulo: 'Prioridades', valor: 'URGÊNCIA' },
         { rotulo: 'Clientes', valor: 'Só Clínica Alfa, Hospital Beta' },
@@ -217,8 +283,8 @@ describe('resumoDoArranjo', () => {
       },
       NOMES,
     );
+    expect(r.titulo).toBe('NEURO · TC, RM, Inativa');
     expect(r.linhas).toEqual([
-      { rotulo: 'Modalidades', valor: 'TC, RM, Inativa' },
       { rotulo: 'Segmentos', valor: 'Cabeça, Colunas' },
       { rotulo: 'Prioridades', valor: 'ROTINA, URGÊNCIA' },
     ]);
@@ -259,8 +325,13 @@ describe('resumoDoArranjo', () => {
     });
   });
 
-  it('item que saiu do catálogo aparece como removido', () => {
-    const r = resumoDoArranjo(arranjo({ modalidadeIds: ['m-velha'] }), CATALOGO, NOMES);
-    expect(r.linhas[0]).toEqual({ rotulo: 'Modalidades', valor: 'Inativa' });
+  it('item que saiu do catálogo aparece como inativo', () => {
+    expect(resumoDoArranjo(arranjo({ modalidadeIds: ['m-velha'] }), CATALOGO, NOMES).titulo).toBe(
+      'NEURO · Inativa',
+    );
+    expect(
+      resumoDoArranjo(arranjo({ especialidadeId: null, modalidadeId: 'm-velha' }), CATALOGO, NOMES)
+        .titulo,
+    ).toBe('Modalidade inativa · todas as especialidades');
   });
 });
