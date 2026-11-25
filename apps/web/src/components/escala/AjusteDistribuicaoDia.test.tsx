@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ajustesDiaControllerObter } from '../../gen/clients/ajustesDiaControllerObter';
+import { ajustesDiaControllerPeriodo } from '../../gen/clients/ajustesDiaControllerPeriodo';
 import type { AjusteDiaDto } from '../../gen/types/AjusteDiaDto';
 import { renderComRotas } from '../../test/render';
 import { AjusteDistribuicaoDia } from './AjusteDistribuicaoDia';
@@ -11,7 +12,26 @@ vi.mock('../../gen/clients/ajustesDiaControllerObter', () => ({
   ajustesDiaControllerObter: vi.fn(),
 }));
 
+vi.mock('../../gen/clients/ajustesDiaControllerPeriodo', () => ({
+  ajustesDiaControllerPeriodo: vi.fn(),
+}));
+
 const obter = vi.mocked(ajustesDiaControllerObter);
+const periodo = vi.mocked(ajustesDiaControllerPeriodo);
+/** Plantão às quartas e sextas; o dia 20 já tem ajuste. */
+const PLANTOES = ['2026-11-18', '2026-11-20', '2026-11-25', '2026-11-27'];
+function comPeriodo(diasComAjuste: string[] = []) {
+  periodo.mockImplementation((({ query }: { query?: { ate?: string } }) => {
+    const ate = query?.ate ?? '2026-11-18';
+    return {
+      unwrap: async () => ({
+        dias: PLANTOES.filter((d) => d <= ate),
+        diasComAjuste: diasComAjuste.filter((d) => d <= ate),
+        ateMaximo: '2026-12-18',
+      }),
+    };
+  }) as never);
+}
 const com = (ajuste: AjusteDiaDto | null) =>
   obter.mockReturnValue({ unwrap: async () => ({ ajuste }) } as never);
 
@@ -36,14 +56,23 @@ function montar() {
   return { onSalvar };
 }
 
-beforeEach(() => com(null));
+beforeEach(() => {
+  com(null);
+  comPeriodo();
+});
+
+async function escolherAte(valor: string) {
+  const campo = await screen.findByLabelText('Até');
+  await userEvent.clear(campo);
+  await userEvent.type(campo, valor);
+}
 
 describe('AjusteDistribuicaoDia', () => {
   it('libera uma prioridade e a Lista pelo SLA', async () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
     expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).not.toBeChecked();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Segue o SLA neste dia' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Segue o SLA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: ['p-urg'],
@@ -57,9 +86,7 @@ describe('AjusteDistribuicaoDia', () => {
   it('sem nada marcado, pede o que mudar', async () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('button', { name: 'Salvar ajuste' }));
-    expect(
-      await screen.findByText('Marque uma prioridade ou "Segue o SLA neste dia".'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Marque uma prioridade ou "Segue o SLA".')).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });
 
@@ -103,5 +130,64 @@ describe('AjusteDistribuicaoDia', () => {
       ),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('"Até" começa no próprio dia: só neste dia, sem aviso de período', async () => {
+    montar();
+    expect(await screen.findByLabelText('Até')).toHaveValue('2026-11-18');
+    expect(screen.getByText(/Só neste dia/)).toBeInTheDocument();
+    expect(screen.queryByText(/dias de plantão/)).not.toBeInTheDocument();
+  });
+
+  it('com "Até", diz quantos dias serão gravados e quantos já tinham ajuste, e manda o "Até"', async () => {
+    comPeriodo(['2026-11-20']);
+    const { onSalvar } = montar();
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
+    await escolherAte('2026-11-25');
+    expect(await screen.findByText(/De 18\/11 a 25\/11/)).toBeInTheDocument();
+    expect(
+      await screen.findByText('Grava em 3 dias de plantão; 1 já tinha ajuste e será substituído.'),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
+    expect(onSalvar).toHaveBeenCalledWith({
+      prioridadeIdsLiberadas: ['p-urg'],
+      segueSla: false,
+      clienteId: null,
+      laudosExtra: 0,
+      ate: '2026-11-25',
+    });
+  });
+
+  it('"Até" antes do dia ou além do limite não salva', async () => {
+    const { onSalvar } = montar();
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
+    await escolherAte('2026-11-17');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
+    expect(
+      await screen.findByText('"Até" não pode ser antes do dia aberto (18/11).'),
+    ).toBeInTheDocument();
+    await escolherAte('2026-12-19');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
+    expect(
+      await screen.findByText('Escolha "Até" até 18/12 (31 dias por vez).'),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('tirar ajuste com "Até" tira os do período e avisa quantos são', async () => {
+    comPeriodo(['2026-11-20', '2026-11-25']);
+    const { onSalvar } = montar();
+    await escolherAte('2026-11-27');
+    expect(
+      await screen.findByText('Tirar ajuste tira o de 2 dias do período.'),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar ajuste' }));
+    expect(onSalvar).toHaveBeenCalledWith({
+      prioridadeIdsLiberadas: [],
+      segueSla: false,
+      clienteId: null,
+      laudosExtra: 0,
+      ate: '2026-11-27',
+    });
   });
 });

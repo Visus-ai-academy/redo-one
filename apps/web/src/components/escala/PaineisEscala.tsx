@@ -23,6 +23,7 @@ import { PainelCarregando } from '../painel/PainelCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import type { InicialAlocacao } from './alocacao-form';
 import { buscarMedicosAtivos, buscarMedicosDaEscala } from './buscar-medicos';
+import { dataCurta } from './calendario';
 import { resumoDoResultado } from './escala-fixa';
 import { PainelAlocacao } from './PainelAlocacao';
 import { PainelCobertura } from './PainelCobertura';
@@ -164,7 +165,10 @@ function PlantaoAberto({
                 }).unwrap();
                 const vazio =
                   !ajuste.prioridadeIdsLiberadas.length && !ajuste.segueSla && !ajuste.laudosExtra;
-                await depois(vazio ? 'Ajuste do robô tirado.' : 'Ajuste do robô salvo.');
+                const ate = ajuste.ate ? ` até ${dataCurta(ajuste.ate).slice(0, 5)}` : '';
+                await depois(
+                  vazio ? `Ajuste do robô tirado${ate}.` : `Ajuste do robô salvo${ate}.`,
+                );
               },
             }
           : undefined
