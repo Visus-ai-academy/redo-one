@@ -241,6 +241,38 @@ export async function precosComHistoriaNoRedo(
  * fica como está: o relatório da carga o lista.
  */
 async function gravarPrecos(tx: Transacao, { tabelas }: PrecosMigrados) {
+  // A mesma trava por dono da tela (`DrizzlePrecosRepository.aplicar`), antes de ler quem tem
+  // história: uma mudança pela tela durante a carga espera, ou a carga espera por ela.
+  const donos = async (tipo: 'cliente' | 'contratado', coluna: AnyPgColumn, daCarga: string[]) => [
+    ...new Set([
+      ...daCarga,
+      ...(
+        await tx
+          .selectDistinct({ dono: coluna })
+          .from(tipo === 'cliente' ? schema.precosCliente : schema.precosPadraoContratado)
+      ).map((l) => String(l.dono)),
+    ]),
+  ];
+  for (const [tipo, ids] of [
+    [
+      'cliente',
+      await donos(
+        'cliente',
+        schema.precosCliente.clienteId,
+        tabelas.precosCliente.map((l) => l.clienteId),
+      ),
+    ],
+    [
+      'contratado',
+      await donos(
+        'contratado',
+        schema.precosPadraoContratado.contratadoId,
+        tabelas.precosPadraoContratado.map((l) => l.contratadoId),
+      ),
+    ],
+  ] as const)
+    for (const id of [...ids].sort())
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`precos:${tipo}:${id}`}))`);
   const protegidos = await precosComHistoriaNoRedo(tx);
   const trocar = async <
     T extends typeof schema.precosCliente | typeof schema.precosPadraoContratado,

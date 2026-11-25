@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { DATABASE, type Database } from '../../../database/database';
@@ -117,16 +117,19 @@ export class DrizzlePrecosRepository implements PrecosRepository {
         sql`select pg_advisory_xact_lock(hashtext(${`precos:${dono.tipo}:${dono.id}`}))`,
       );
       // A competência pode ter sido fechada ou travada depois da validação: confere de novo.
-      const bloqueadas = await tx
-        .select({ competencia: competencias.competencia })
-        .from(competencias)
-        .where(
-          and(
-            gte(competencias.competencia, opcoes.aPartirDe),
-            or(eq(competencias.status, 'fechada'), isNotNull(competencias.importacaoTravadaEm)),
-          ),
-        )
-        .for('share');
+      // Trava (para leitura) toda competência que a mudança alcança, aberta ou não: um fechamento
+      // ao mesmo tempo espera esta transação; depois confere o status.
+      const bloqueadas = (
+        await tx
+          .select({
+            competencia: competencias.competencia,
+            status: competencias.status,
+            travadaEm: competencias.importacaoTravadaEm,
+          })
+          .from(competencias)
+          .where(gte(competencias.competencia, opcoes.aPartirDe))
+          .for('share')
+      ).filter((c) => c.status === 'fechada' || c.travadaEm !== null);
       if (bloqueadas.length)
         throw new VigenciaPrecoInvalidaError(
           `A competência ${mesAno(bloqueadas[0]?.competencia as string)} acabou de ser fechada ou travada: o preço não muda nela. Recarregue e escolha outra competência.`,
@@ -156,6 +159,7 @@ export class DrizzlePrecosRepository implements PrecosRepository {
               and(
                 eq(t.id, m.id),
                 doDono,
+                sql`${t.vigenciaAte} is not distinct from ${m.vigenciaAteAntes}`,
                 sql`${t.vigenciaDesde} > to_char(now() at time zone 'America/Sao_Paulo', 'YYYY-MM')`,
               ),
             )

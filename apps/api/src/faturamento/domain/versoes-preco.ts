@@ -32,7 +32,8 @@ export interface ContextoVigencia {
 export type MudancaPreco =
   | { tipo: 'criar'; dados: DadosPreco; vigenciaDesde: string; vigenciaAte: string | null }
   | { tipo: 'encerrar'; id: string; vigenciaAteAntes: string | null; vigenciaAte: string }
-  | { tipo: 'remover'; id: string }
+  /** Confere o `vigencia_ate` lido: se outra pessoa encerrou a versão no meio, nada é gravado. */
+  | { tipo: 'remover'; id: string; vigenciaAteAntes: string | null }
   /** A versão encerrada para dar lugar à programada que saiu volta a valer até onde a programada ia. */
   | { tipo: 'reabrir'; id: string; vigenciaAteAntes: string; vigenciaAte: string | null };
 
@@ -93,14 +94,22 @@ export function aPartirDeMinimo(ctx: ContextoVigencia): string {
   return ultima !== undefined ? proxima(ultima) : ctx.mesAtual;
 }
 
+/** Limites das colunas (`numeric(12,2)` e `integer`): acima deles o banco recusaria. */
+const VALOR_MAXIMO = 9_999_999_999.99;
+const FAIXA_MAXIMA = 2_147_483_647;
+
 export function validarDados(d: DadosPreco): void {
   if (!(Number.isFinite(d.valor) && d.valor > 0))
     throw new PrecoInvalidoError('O valor tem de ser maior que zero.');
+  if (d.valor > VALOR_MAXIMO)
+    throw new PrecoInvalidoError('O valor passa do máximo (R$ 9.999.999.999,99).');
   if (Math.abs(d.valor * 100 - Math.round(d.valor * 100)) > 1e-6)
     throw new PrecoInvalidoError('O valor tem no máximo dois decimais.');
   for (const f of [d.faixaInicio, d.faixaFim])
-    if (f !== null && !(Number.isInteger(f) && f >= 0))
-      throw new PrecoInvalidoError('A faixa é de números inteiros a partir de zero.');
+    if (f !== null && !(Number.isInteger(f) && f >= 0 && f <= FAIXA_MAXIMA))
+      throw new PrecoInvalidoError(
+        'A faixa é de números inteiros de 0 a 2.147.483.647 (deixe o fim vazio para "sem limite").',
+      );
   if (d.faixaInicio !== null && d.faixaFim !== null && d.faixaFim < d.faixaInicio)
     throw new PrecoInvalidoError('O fim da faixa tem de ser maior ou igual ao início.');
 }
@@ -197,7 +206,7 @@ export function planejarAlteracao(
       throw new VigenciaPrecoInvalidaError(
         `Este preço vale desde ${mesAno(aPartirDe)} e não se reescreve: a alteração vale a partir de ${mesAno(proxima(aPartirDe))} ou depois.`,
       );
-    return [{ tipo: 'remover', id: v.id }, novo];
+    return [{ tipo: 'remover', id: v.id, vigenciaAteAntes: v.vigenciaAte }, novo];
   }
   return [
     {
@@ -239,7 +248,7 @@ export function planejarEncerramento(
         x.vigenciaAte === anterior(v.vigenciaDesde as string),
     );
     return [
-      { tipo: 'remover', id: v.id },
+      { tipo: 'remover', id: v.id, vigenciaAteAntes: v.vigenciaAte },
       ...(antecessora
         ? [
             {

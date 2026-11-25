@@ -63,6 +63,15 @@ describe('planejarInclusao', () => {
     expect(planejarInclusao(DADOS, '2026-11', [], { ...CTX, bloqueadas: [] })).toHaveLength(1);
   });
 
+  it('recusa valor e faixa acima do que o banco guarda', () => {
+    expect(() => planejarInclusao({ ...DADOS, valor: 10_000_000_000 }, '2026-12', [], CTX)).toThrow(
+      PrecoInvalidoError,
+    );
+    expect(() =>
+      planejarInclusao({ ...DADOS, faixaInicio: 2_147_483_648 }, '2026-12', [], CTX),
+    ).toThrow(PrecoInvalidoError);
+  });
+
   it('recusa valor zero ou negativo e faixa invertida', () => {
     expect(() => planejarInclusao({ ...DADOS, valor: 0 }, '2026-12', [], CTX)).toThrow(
       PrecoInvalidoError,
@@ -117,7 +126,7 @@ describe('planejarAlteracao', () => {
   it('a versão programada que nunca valeu e começa na mesma competência é trocada', () => {
     const v = versao({ vigenciaDesde: '2027-01' });
     expect(planejarAlteracao('v1', { ...DADOS, valor: 70 }, '2027-01', [v], CTX)).toEqual([
-      { tipo: 'remover', id: 'v1' },
+      { tipo: 'remover', id: 'v1', vigenciaAteAntes: null },
       {
         tipo: 'criar',
         dados: { ...DADOS, valor: 70 },
@@ -172,10 +181,10 @@ describe('planejarEncerramento', () => {
   it('só a versão programada que nunca valeu é apagada de vez', () => {
     expect(
       planejarEncerramento('v1', '2027-01', [versao({ vigenciaDesde: '2027-01' })], CTX),
-    ).toEqual([{ tipo: 'remover', id: 'v1' }]);
+    ).toEqual([{ tipo: 'remover', id: 'v1', vigenciaAteAntes: null }]);
     expect(
       planejarEncerramento('v1', '2026-12', [versao({ vigenciaDesde: '2027-03' })], CTX),
-    ).toEqual([{ tipo: 'remover', id: 'v1' }]);
+    ).toEqual([{ tipo: 'remover', id: 'v1', vigenciaAteAntes: null }]);
     // Programada, mas encerrada depois do início: só encerra.
     expect(
       planejarEncerramento('v1', '2027-02', [versao({ vigenciaDesde: '2027-01' })], CTX),
@@ -186,7 +195,7 @@ describe('planejarEncerramento', () => {
     const atual = versao({ id: 'a', vigenciaAte: '2026-12' });
     const programada = versao({ id: 'p', valor: 70, vigenciaDesde: '2027-01' });
     expect(planejarEncerramento('p', '2027-01', [atual, programada], CTX)).toEqual([
-      { tipo: 'remover', id: 'p' },
+      { tipo: 'remover', id: 'p', vigenciaAteAntes: null },
       { tipo: 'reabrir', id: 'a', vigenciaAteAntes: '2026-12', vigenciaAte: null },
     ]);
     // A programada seguida de outra: a anterior volta até onde a programada ia.

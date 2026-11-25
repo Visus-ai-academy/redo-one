@@ -463,10 +463,10 @@ export class PrecosEmMemoria implements PrecosRepository {
           if (!v || v.vigenciaAte !== m.vigenciaAteAntes) throw new VersaoAlteradaError();
           v.vigenciaAte = m.vigenciaAte;
         } else {
-          this.versoes.splice(
-            this.versoes.findIndex((x) => x.id === m.id),
-            1,
-          );
+          const i = this.versoes.findIndex((x) => x.id === m.id);
+          if (i < 0 || this.versoes[i]?.vigenciaAte !== m.vigenciaAteAntes)
+            throw new VersaoAlteradaError();
+          this.versoes.splice(i, 1);
         }
       }
     } catch (e) {

@@ -223,9 +223,30 @@ describe.skipIf(!url)('DrizzlePrecosRepository', () => {
     const futura = criar(dados, '2999-01');
     const atual = criar({ ...dados, faixaInicio: 300, faixaFim: null }, '2020-01');
     await repo.aplicar(contratado, [futura, atual], opcoes());
-    await repo.aplicar(contratado, [{ tipo: 'remover', id: futura.id }], opcoes());
+    // Quem leu a versão sem fim não a apaga depois que outra pessoa a encerrou.
+    await repo.aplicar(
+      contratado,
+      [{ tipo: 'encerrar', id: futura.id, vigenciaAteAntes: null, vigenciaAte: '2999-03' }],
+      opcoes(),
+    );
     await expect(
-      repo.aplicar(contratado, [{ tipo: 'remover', id: atual.id }], opcoes()),
+      repo.aplicar(
+        contratado,
+        [{ tipo: 'remover', id: futura.id, vigenciaAteAntes: null }],
+        opcoes(),
+      ),
+    ).rejects.toThrow(VersaoAlteradaError);
+    await repo.aplicar(
+      contratado,
+      [{ tipo: 'remover', id: futura.id, vigenciaAteAntes: '2999-03' }],
+      opcoes(),
+    );
+    await expect(
+      repo.aplicar(
+        contratado,
+        [{ tipo: 'remover', id: atual.id, vigenciaAteAntes: null }],
+        opcoes(),
+      ),
     ).rejects.toThrow(VersaoAlteradaError);
     expect((await repo.listarVersoes(contratado)).map((v) => v.id)).toContain(atual.id);
     expect((await repo.listarVersoes(contratado)).map((v) => v.id)).not.toContain(futura.id);
