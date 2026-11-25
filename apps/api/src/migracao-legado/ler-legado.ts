@@ -8,6 +8,7 @@ import type {
   LegadoDistribuicao,
   LegadoEscala,
   LegadoMedicos,
+  LegadoPrecos,
   LegadoTipificacao,
 } from './legado';
 
@@ -26,6 +27,7 @@ export async function lerLegado(url: string): Promise<{
   competencias: LegadoCompetencia[];
   dadosFiscais: LegadoDadosFiscais;
   tipificacao: LegadoTipificacao;
+  precos: LegadoPrecos;
 }> {
   const cliente = new Client({
     connectionString: url,
@@ -220,8 +222,24 @@ export async function lerLegado(url: string): Promise<{
       ),
       grupos: await ler('select id, nome, ativo from grupos_medicos order by ctid'),
     };
+    const colunasPreco = `id, modalidade, especialidade, categoria, prioridade,
+      "valorBase"::float8 as "valorBase", "condVolume", "volumeInicial", "volumeFinal",
+      ${instante('atualizadoEm')}`;
+    const precos: LegadoPrecos = {
+      clientes: await ler(
+        `select ${colunasPreco}, "clienteId" as "donoId", "clienteNome" as "donoNome",
+          "vigenciaDesde", "vigenciaAte"
+          from precos_servicos where ativo order by ctid`,
+      ),
+      padrao: await ler(
+        `select ${colunasPreco}, "contratadoId" as "donoId", null as "donoNome",
+          null as "vigenciaDesde", null as "vigenciaAte"
+          from tabela_precos_padrao where ativo order by ctid`,
+      ),
+    };
     await cliente.query('COMMIT');
     return {
+      precos,
       tipificacao,
       catalogo,
       medicos,

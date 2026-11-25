@@ -350,6 +350,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
           'Mudar as regras e sub-regras da tipificação e a configuração da tipificação de um cliente.',
         sensivel: true,
       },
+      // Decide quanto cada laudo vale na fatura: preços do cliente e a tabela padrão do contratado.
+      {
+        chave: 'faturamento.precos.editar',
+        rotulo: 'Editar preços',
+        descricao:
+          'Incluir, alterar, encerrar e importar os preços de um cliente e a tabela padrão de um contratado.',
+        sensivel: true,
+      },
     ],
   },
   {

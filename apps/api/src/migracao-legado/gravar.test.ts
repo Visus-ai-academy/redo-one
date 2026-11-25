@@ -24,6 +24,7 @@ import { mapearDadosFiscais } from './mapear-dados-fiscais';
 import { mapearDistribuicao } from './mapear-distribuicao';
 import { type EscalaMigrada, mapearEscala } from './mapear-escala';
 import { mapearMedicos } from './mapear-medicos';
+import { mapearPrecos } from './mapear-precos';
 import { cadastroDaCarga, mapearTipificacao } from './mapear-tipificacao';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -226,7 +227,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias, regras_tipificacao, subregras_tipificacao cascade`,
+      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias, regras_tipificacao, subregras_tipificacao, precos_cliente, precos_padrao_contratado, categorias_exame, prioridades cascade`,
     );
   });
 
@@ -547,6 +548,75 @@ describe.skipIf(!url)('gravarMigracao', () => {
     const segunda = await ler();
     expect(segunda.slice(0, 2)).toEqual(primeira);
     expect(segunda[2]).toMatchObject({ cliente: 'PRN TELE_MARABA', regra: 'CO', ordem: null });
+  });
+
+  it('grava os preços pelo id da linha do dashboards-one; rodar de novo não duplica', async () => {
+    await db.insert(schema.categoriasExame).values({ id: idDoLegado('t', 'sc'), nome: 'SC' });
+    await db.insert(schema.prioridades).values({ id: idDoLegado('t', 'ro'), nome: 'ROTINA' });
+    const linha = {
+      modalidade: 'CT',
+      especialidade: 'NEURO',
+      categoria: 'SC',
+      prioridade: 'ROTINA',
+      valorBase: 51,
+      condVolume: null,
+      volumeInicial: 1,
+      volumeFinal: 2147483647,
+      vigenciaDesde: null,
+      vigenciaAte: null,
+      atualizadoEm: '2026-08-01T00:00:00.000Z',
+    };
+    const precos = mapearPrecos(
+      {
+        clientes: [{ ...linha, id: 'p-1', donoId: 'cl-a', donoNome: 'PRN TELE_ARARAQUARA' }],
+        padrao: [{ ...linha, id: 'pp-1', donoId: 'ct-tele', donoNome: null, valorBase: 70 }],
+      },
+      {
+        clientes: catalogo.tabelas.clientes,
+        contratados: catalogo.tabelas.contratados.map((c) => ({
+          id: c.id as string,
+          razaoSocial: c.razaoSocial,
+        })),
+        modalidades: catalogo.tabelas.modalidades.map((m) => ({
+          id: m.id as string,
+          codigo: m.codigo,
+        })),
+        especialidades: catalogo.tabelas.especialidades.map((e) => ({
+          id: e.id as string,
+          nome: e.nome,
+        })),
+        categorias: [{ id: idDoLegado('t', 'sc'), nome: 'SC' }],
+        prioridades: [{ id: idDoLegado('t', 'ro'), nome: 'ROTINA' }],
+      },
+    );
+    expect(precos.naoResolvidas).toEqual([]);
+    const migrar = () =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        precos,
+      );
+    const ler = async () =>
+      (
+        await db.execute(sql`
+          select 'cliente' tabela, valor::float8 valor, faixa_inicio, faixa_fim from precos_cliente
+          union all
+          select 'padrao', valor::float8, faixa_inicio, faixa_fim from precos_padrao_contratado
+          order by 1`)
+      ).rows;
+    await migrar();
+    await migrar();
+    expect(await ler()).toEqual([
+      { tabela: 'cliente', valor: 51, faixa_inicio: null, faixa_fim: null },
+      { tabela: 'padrao', valor: 70, faixa_inicio: null, faixa_fim: null },
+    ]);
   });
 
   it('o principal que saiu da exclusão fiscal do dashboards-one é desmarcado; o resto dele fica', async () => {

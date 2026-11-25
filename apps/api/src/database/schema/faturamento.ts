@@ -1,9 +1,12 @@
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
   integer,
+  numeric,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -13,14 +16,22 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { clientes, especialidades, modalidades, prioridades } from './catalogo';
+import {
+  categoriasExame,
+  clientes,
+  contratados,
+  especialidades,
+  modalidades,
+  prioridades,
+} from './catalogo';
 import { usuarios } from './identidade';
 import { laudos } from './ingestao';
 import { equipes, medicos } from './medicos';
 
 // Contexto `faturamento`: as competências (meses de faturamento) com fechamento e trava da
 // importação, os cortes que decidem a competência de cada laudo (padrão e por cliente), os dados
-// fiscais do cliente e a tipificação (CO/NC/NC1 e sub-regras) que decide se o laudo fatura.
+// fiscais do cliente, a tipificação (CO/NC/NC1 e sub-regras) que decide se o laudo fatura e os
+// preços (do cliente e a tabela padrão do contratado).
 
 const quando = (nome: string) => timestamp(nome, { withTimezone: true });
 const quem = (nome: string) => uuid(nome).references(() => usuarios.id);
@@ -357,5 +368,103 @@ export const classificacoesLaudo = pgTable(
   (t) => [
     index('classificacoes_laudo_regra_idx').on(t.regraId),
     index('classificacoes_laudo_subregra_idx').on(t.subregraId),
+  ],
+);
+
+/**
+ * Dimensão em que se soma o volume do mês que escolhe a faixa de preço: só a modalidade, modalidade
+ * e especialidade, modalidade, especialidade e categoria, ou tudo do cliente. Sem efeito na linha
+ * sem faixa.
+ */
+export const condVolume = pgEnum('cond_volume', ['MOD', 'MOD_ESP', 'MOD_ESP_CAT', 'TOTAL']);
+
+/**
+ * Colunas de uma versão de preço: o arranjo (modalidade, especialidade, categoria, prioridade), a
+ * faixa opcional de volume, o valor e a vigência por competência. Nada se sobrescreve: mudar o
+ * preço encerra a versão (`vigencia_ate`) e cria outra; só a versão que nunca valeu (começa numa
+ * competência futura) pode ser apagada.
+ */
+const colunasPreco = () => ({
+  id: uuid('id').primaryKey().defaultRandom(),
+  modalidadeId: uuid('modalidade_id')
+    .notNull()
+    .references(() => modalidades.id),
+  especialidadeId: uuid('especialidade_id')
+    .notNull()
+    .references(() => especialidades.id),
+  categoriaId: uuid('categoria_id')
+    .notNull()
+    .references(() => categoriasExame.id),
+  prioridadeId: uuid('prioridade_id')
+    .notNull()
+    .references(() => prioridades.id),
+  /** Faixa de volume do mês; vazia = vale para qualquer volume. */
+  faixaInicio: integer('faixa_inicio'),
+  faixaFim: integer('faixa_fim'),
+  condVolume: condVolume('cond_volume').notNull().default('MOD_ESP_CAT'),
+  valor: numeric('valor', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+  /** "YYYY-MM"; vazio = desde sempre (carga do dashboards-one). */
+  vigenciaDesde: text('vigencia_desde'),
+  /** "YYYY-MM", inclusiva; vazio = sem fim. */
+  vigenciaAte: text('vigencia_ate'),
+  criadoEm: quando('criado_em').notNull().defaultNow(),
+  /** Nulo na carga do dashboards-one. */
+  criadoPorId: quem('criado_por_id'),
+});
+
+type ColunasPreco = ReturnType<typeof colunasPreco>;
+const checksPreco = (tabela: string, t: { [K in keyof ColunasPreco]: AnyPgColumn }) => [
+  check(`${tabela}_valor_check`, sql`${t.valor} > 0`),
+  check(
+    `${tabela}_faixa_check`,
+    sql`(${t.faixaInicio} is null or ${t.faixaInicio} >= 0) and (${t.faixaFim} is null or ${t.faixaFim} >= coalesce(${t.faixaInicio}, 0))`,
+  ),
+  check(
+    `${tabela}_vigencia_check`,
+    sql`(${t.vigenciaDesde} is null or ${t.vigenciaDesde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+      and (${t.vigenciaAte} is null or ${t.vigenciaAte} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+      and (${t.vigenciaDesde} is null or ${t.vigenciaAte} is null or ${t.vigenciaAte} >= ${t.vigenciaDesde})`,
+  ),
+];
+
+/** Preços do cliente ou da unidade, por arranjo. A unidade sem o preço usa o do principal. */
+export const precosCliente = pgTable(
+  'precos_cliente',
+  {
+    clienteId: uuid('cliente_id')
+      .notNull()
+      .references(() => clientes.id),
+    ...colunasPreco(),
+  },
+  (t) => [
+    index('precos_cliente_arranjo_idx').on(
+      t.clienteId,
+      t.modalidadeId,
+      t.especialidadeId,
+      t.categoriaId,
+      t.prioridadeId,
+    ),
+    ...checksPreco('precos_cliente', t),
+  ],
+);
+
+/** Tabela padrão do contratado: o preço do arranjo que o cliente não tem. */
+export const precosPadraoContratado = pgTable(
+  'precos_padrao_contratado',
+  {
+    contratadoId: uuid('contratado_id')
+      .notNull()
+      .references(() => contratados.id),
+    ...colunasPreco(),
+  },
+  (t) => [
+    index('precos_padrao_contratado_arranjo_idx').on(
+      t.contratadoId,
+      t.modalidadeId,
+      t.especialidadeId,
+      t.categoriaId,
+      t.prioridadeId,
+    ),
+    ...checksPreco('precos_padrao_contratado', t),
   ],
 );

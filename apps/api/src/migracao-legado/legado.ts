@@ -406,3 +406,32 @@ export interface LegadoTipificacao {
   }[];
   grupos: { id: string; nome: string; ativo: boolean }[];
 }
+
+/** Linha de preço do dashboards-one (`precos_servicos` ou `tabela_precos_padrao`), só as ativas. */
+export interface LegadoPreco {
+  id: string;
+  /** `clienteId` em `precos_servicos`; `contratadoId` em `tabela_precos_padrao`. */
+  donoId: string;
+  /** Como aparece lá (`clienteNome` ou a razão do contratado), só para o relatório. */
+  donoNome: string | null;
+  modalidade: string;
+  especialidade: string;
+  categoria: string | null;
+  prioridade: string | null;
+  valorBase: number;
+  /** MOD, MOD/ESP, MOD/ESP/CAT, TOTAL ou nulo. */
+  condVolume: string | null;
+  volumeInicial: number | null;
+  volumeFinal: number | null;
+  /** "YYYY-MM" ou nulo (só na tabela do cliente). */
+  vigenciaDesde: string | null;
+  vigenciaAte: string | null;
+  /** ISO em UTC: decide entre linhas repetidas com valores diferentes. */
+  atualizadoEm: string;
+}
+
+/** Preços do cliente e tabela padrão do contratado do dashboards-one. */
+export interface LegadoPrecos {
+  clientes: LegadoPreco[];
+  padrao: LegadoPreco[];
+}

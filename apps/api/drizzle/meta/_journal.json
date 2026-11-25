@@ -393,6 +393,13 @@
       "when": 1795565346841,
       "tag": "0055_revogar_ver_faturamento_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1795608891367,
+      "tag": "0056_precos_cliente",
+      "breakpoints": true
     }
   ]
 }

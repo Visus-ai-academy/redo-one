@@ -27,6 +27,7 @@ import type { DadosFiscaisMigrados } from './mapear-dados-fiscais';
 import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
+import type { PrecosMigrados } from './mapear-precos';
 import type { TipificacaoMigrada } from './mapear-tipificacao';
 
 /** Linhas por insert: fica longe do limite de parâmetros do Postgres. */
@@ -97,6 +98,7 @@ export async function gravarMigracao(
   competencias?: CompetenciasMigradas,
   dadosFiscais?: DadosFiscaisMigrados,
   tipificacao?: TipificacaoMigrada,
+  precos?: PrecosMigrados,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -196,6 +198,12 @@ export async function gravarMigracao(
           );
     }
     if (tipificacao) await gravarTipificacao(tx, tipificacao);
+    // Preços pelo id estável da linha do dashboards-one: a carga de novo atualiza as mesmas versões.
+    // As versões criadas no redo-one (com autor) ficam como estão.
+    if (precos) {
+      await upsert(tx, schema.precosCliente, precos.tabelas.precosCliente);
+      await upsert(tx, schema.precosPadraoContratado, precos.tabelas.precosPadraoContratado);
+    }
   });
 }
 

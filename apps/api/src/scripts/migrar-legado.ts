@@ -1,4 +1,4 @@
-// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências, os dados fiscais e a tipificação dos clientes do banco do dashboards-one para o banco do redo-one
+// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências, os dados fiscais, a tipificação e os preços dos clientes do banco do dashboards-one para o banco do redo-one
 // (DATABASE_URL). O banco do dashboards-one é aberto SÓ PARA LEITURA; do redo-one, sem --gravar, só
 // se leem os usuários (a escala casa autor, revisor e gestora com eles). Sem --gravar, só mostra o
 // que faria. Uso:
@@ -40,6 +40,7 @@ import { mapearDadosFiscais } from '../migracao-legado/mapear-dados-fiscais';
 import { mapearDistribuicao } from '../migracao-legado/mapear-distribuicao';
 import { mapearEscala } from '../migracao-legado/mapear-escala';
 import { mapearMedicos } from '../migracao-legado/mapear-medicos';
+import { mapearPrecos } from '../migracao-legado/mapear-precos';
 import { cadastroDaCarga, mapearTipificacao } from '../migracao-legado/mapear-tipificacao';
 
 function mostrarAvisos(avisos: Aviso[]) {
@@ -65,6 +66,23 @@ async function migrarLegado() {
   const catalogo = mapearCatalogo(legado.catalogo);
   const medicos = mapearMedicos(legado.medicos);
   const dadosFiscais = mapearDadosFiscais(legado.dadosFiscais, catalogo.tabelas);
+  const precos = mapearPrecos(legado.precos, {
+    clientes: catalogo.tabelas.clientes,
+    contratados: catalogo.tabelas.contratados.map((c) => ({
+      id: c.id as string,
+      razaoSocial: c.razaoSocial,
+    })),
+    modalidades: catalogo.tabelas.modalidades.map((m) => ({
+      id: m.id as string,
+      codigo: m.codigo,
+    })),
+    especialidades: catalogo.tabelas.especialidades.map((e) => ({
+      id: e.id as string,
+      nome: e.nome,
+    })),
+    categorias: catalogo.tabelas.categoriasExame.map((c) => ({ id: c.id as string, nome: c.nome })),
+    prioridades: catalogo.tabelas.prioridades.map((p) => ({ id: p.id as string, nome: p.nome })),
+  });
   // Os recortes de prioridade da escala e do arranjo são pelas prioridades da operação.
   const prioridadesOperacao = prioridadesOperacaoDaCarga();
   const distribuicao = mapearDistribuicao(legado.distribuicao, {
@@ -130,6 +148,7 @@ async function migrarLegado() {
       ...competencias.tabelas,
       ...dadosFiscais.tabelas,
       ...tipificacao.tabelas,
+      ...precos.tabelas,
     })) {
       console.log(`  ${tabela.padEnd(34)} ${String(linhas.length).padStart(5)}`);
     }
@@ -218,6 +237,20 @@ async function migrarLegado() {
       for (const e of tipificacao.erros) console.log(`  - ${e}`);
     }
 
+    console.log(
+      `\nPreços: ${precos.lidas} linhas ativas lidas; ${precos.repetidasIguais} repetidas com o mesmo valor viraram uma; ${precos.sentinelas} faixas sentinela viraram "sem faixa" ou faixa aberta.`,
+    );
+    console.log(
+      `Preços repetidos com valores diferentes (${precos.conflitos.length}): vale a alteração mais recente no dashboards-one.`,
+    );
+    for (const c of precos.conflitos)
+      console.log(`  - ${c.dono} | ${c.arranjo}: ${c.valores.join(' × ')} → ${c.escolhido}`);
+    console.log(`Preços que não entram (${precos.naoResolvidas.length} motivos):`);
+    for (const n of precos.naoResolvidas)
+      console.log(
+        `  - ${n.motivo}: ${n.linhas} linha(s) de ${n.donos.length} cliente(s) (${n.donos.slice(0, 10).join(', ')}${n.donos.length > 10 ? '…' : ''})`,
+      );
+
     if (!values.gravar) {
       console.log('\nNada gravado. Rode com --gravar para gravar no banco do redo-one.');
       return;
@@ -237,6 +270,7 @@ async function migrarLegado() {
       competencias,
       dadosFiscais,
       tipificacao,
+      precos,
     );
     console.log('\nGravado no banco do redo-one.');
   } finally {
