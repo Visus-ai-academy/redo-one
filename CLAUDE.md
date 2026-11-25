@@ -6,7 +6,7 @@ Monorepo TypeScript com pnpm workspaces e Turborepo. Visão geral, setup e conve
 
 **One** é a plataforma interna da TeleImagem (telerradiologia: laudos a distância de exames de imagem para clínicas e hospitais). Reescrita do `dashboards-one` (Next.js + Prisma), que tinha problemas de organização, desempenho, permissões e telas redundantes.
 
-- **O que faz:** recebe os laudos da MobileMed (via RPA), distribui exames aos médicos conforme a escala, mede SLA e qualidade, fatura os clientes (Omie), calcula o repasse dos médicos, controla o crédito dos clientes pré-pagos, gere contratos (ClickSign) e mostra painéis de volumetria e gestão.
+- **O que faz:** recebe os laudos da MobileMed (via RPA), distribui exames aos médicos conforme a escala, mede SLA e qualidade, fatura os clientes, calcula o repasse dos médicos, cuida do financeiro próprio do One (contas a pagar e a receber, NFS-e, banco), controla o crédito dos clientes pré-pagos, gere contratos (ClickSign) e mostra painéis de volumetria e gestão.
 - **Quem usa:** equipe interna (~20–50 pessoas: diretoria, coordenadores de especialidade, financeiro, operação, gestão de escala, CS/comercial); médicos (~250) pelo portal; robôs (RPA de importação, distribuição e comentários) como contas de serviço.
 - **Volume:** ~40 mil laudos/mês (~1,3 mil/dia, picos de 2–3 mil), ~1 milhão no histórico, fila pendente de ~2 mil exames, ~200 clientes.
 
@@ -26,12 +26,15 @@ Monorepo TypeScript com pnpm workspaces e Turborepo. Visão geral, setup e conve
 | Cadastros e catálogo | `catalogo` | Exames, modalidades, especialidades, de-paras e apelidos de cliente |
 | Médicos | `medicos` | Cadastro do médico (dados, CRM, especialidades, nomes na MobileMed), usado pelos outros contextos |
 | Identidade e acesso | `identidade` | Usuários, papéis, permissões, sessões e chaves dos robôs |
+| Financeiro (planejado) | `financeiro` | Contas a pagar e a receber, contas bancárias, conciliação, fluxo de caixa, DRE, orçamento, régua de cobrança, NFS-e (Focus NFe) e banco (Itaú) |
 
 Competência e fechamento são conceitos compartilhados entre ingestão, faturamento, repasse e pré-pago. O portal do médico é UI sobre repasse, escala e qualidade, não um contexto.
 
-**Cliente e contratado se dividem por contexto.** O `catalogo` guarda o cadastro básico do cliente (nome na MobileMed, nome fantasia, razão social, tipo de pessoa, CNPJ/CPF, contratado emissor, ativo, oculto nos painéis, observações e apelidos) e o do contratado (razão social, CNPJ, endereço, ativo, contratado de repasse). O resto entra com o contexto dono: endereço, contato, e-mail de NF, banco e códigos Omie no `faturamento`; representante e testemunha no `contratos`; pré-pago no `credito-pre-pago`; médicos permitidos no `distribuicao`. O painel do cliente ganha uma aba por contexto. Clientes que viraram um contrato só (PRN, CEDIDIAG) ficam como **unidades** de um cliente principal (`clientes.unificado_em_id`, um nível, reversível): a unidade mantém o cadastro e os laudos dela vão para o principal.
+**O redo-one não fala com o Omie** (decisão de 25/11/2026). O financeiro é do próprio One (`financeiro`, ainda não construído). Enquanto o redo-one é validado, o dashboards-one segue com o Omie em paralelo; na virada, saldos, títulos em aberto e cadastros do Omie entram uma vez como carga, casados pelo CNPJ (não pelos códigos do Omie).
 
-**O médico também se divide por contexto.** O `medicos` guarda o cadastro (nome, CRM, id na MobileMed, contato, ativo, oculto nos painéis, sênior, fellowship, função, nível, início do vínculo, observações), os apelidos, os dados de pagamento numa tabela à parte com permissão própria (CPF, CNPJ, razão social, Pix, sócio, optante do Simples, fornecedor no Omie), as equipes e o vínculo com o usuário do portal. O que ele lauda (arranjos) e os parâmetros do robô ficam na `distribuicao`; regras, restrições e adicionais de repasse no `repasse`; os grupos de médicos da tipificação no `faturamento`.
+**Cliente e contratado se dividem por contexto.** O `catalogo` guarda o cadastro básico do cliente (nome na MobileMed, nome fantasia, razão social, tipo de pessoa, CNPJ/CPF, contratado emissor, ativo, oculto nos painéis, observações e apelidos) e o do contratado (razão social, CNPJ, endereço, ativo, contratado de repasse). O resto entra com o contexto dono: endereço, contato, e-mail de NF, banco no `faturamento`; representante e testemunha no `contratos`; pré-pago no `credito-pre-pago`; médicos permitidos no `distribuicao`. O painel do cliente ganha uma aba por contexto. Clientes que viraram um contrato só (PRN, CEDIDIAG) ficam como **unidades** de um cliente principal (`clientes.unificado_em_id`, um nível, reversível): a unidade mantém o cadastro e os laudos dela vão para o principal.
+
+**O médico também se divide por contexto.** O `medicos` guarda o cadastro (nome, CRM, id na MobileMed, contato, ativo, oculto nos painéis, sênior, fellowship, função, nível, início do vínculo, observações), os apelidos, os dados de pagamento numa tabela à parte com permissão própria (CPF, CNPJ, razão social, Pix, sócio, optante do Simples), as equipes e o vínculo com o usuário do portal. O que ele lauda (arranjos) e os parâmetros do robô ficam na `distribuicao`; regras, restrições e adicionais de repasse no `repasse`; os grupos de médicos da tipificação no `faturamento`.
 
 ### Glossário
 

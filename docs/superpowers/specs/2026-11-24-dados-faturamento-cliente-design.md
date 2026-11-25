@@ -66,3 +66,13 @@ Nomes de arquivos, DTOs, forma do endpoint (GET/PUT por cliente), layout fino da
 ## Adendo 25/11/2026: histórico de alterações
 
 Aprovado pelo usuário ("Sim"). Os dados fiscais não entram no cálculo, então não ganham vigência: a aba Faturamento ganha a seção "Histórico de alterações", lida de `eventos_auditoria` (quem, quando, campo, antes e depois), visível a quem tem `clientes.faturamento.ver`. Seguir o padrão de leitura do histórico da escala (`apps/api/src/escala/historico/`).
+
+## Adendo de 25/11/2026: campos do Omie removidos
+
+Por decisão do usuário, o redo-one não fala com o Omie. O One terá o financeiro próprio (contexto `financeiro`, planejado: contas a pagar e a receber, NFS-e pela Focus NFe, boleto, Pix e conciliação pelo Itaú). Durante a validação, o dashboards-one segue com o Omie em paralelo; na virada, saldos, títulos em aberto e cadastros do Omie entram uma vez como carga, casados pelo CNPJ, e não pelos códigos do Omie.
+
+Com isso, o que este desenho dizia sobre o Omie deixa de valer:
+
+- `omie_codigo_cliente` e `omie_sincronizado_em` saíram de `clientes_dados_fiscais` (migration `0078`), da API, da carga do dashboards-one e da tela. A seção Omie da aba Faturamento não existe mais (decisão 5 e objetivo "seções ... e Omie" ficam sem efeito).
+- "Sincronização com o Omie" deixa de ser etapa seguinte; a emissão de NF passa a ser do financeiro do One.
+- A coluna "Uso no legado" da tabela de dados continua descrevendo o dashboards-one: e-mail, contato, endereço e banco seguem no `faturamento` e serão usados pela emissão da NFS-e do One.

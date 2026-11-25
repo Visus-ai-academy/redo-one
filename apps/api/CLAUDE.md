@@ -31,7 +31,7 @@ API em NestJS 12 (`@nestjs/platform-express`), CommonJS com `module: NodeNext`.
 
 | Nível | Contextos | Skill |
 | --- | --- | --- |
-| hexagonal | `ingestao`, `faturamento`, `repasse`, `credito-pre-pago`, `contratos`, `distribuicao` | `hexagonal-architecture` |
+| hexagonal | `ingestao`, `faturamento`, `repasse`, `credito-pre-pago`, `contratos`, `distribuicao`, `financeiro` (planejado) | `hexagonal-architecture` |
 | modular-ddd | `escala` | `nest-module` (variante modular-ddd) |
 | modular | `qualidade`, `catalogo`, `medicos`, `identidade` | `nest-module` |
 | vertical slice | `analytics` | convenção abaixo |
@@ -42,7 +42,7 @@ Critério para o nível de um contexto:
 2. Além disso, fala com 2 ou mais sistemas externos ou é disparado por várias entradas (tela, cron, webhook, robô)? Se sim, `hexagonal`: cada ação vira um caso de uso único, chamado igual por todas as entradas.
 3. Nenhum dos dois: `modular`.
 
-**Por quê:** no legado, a mesma ação (ex.: fechar competência, reprocessar laudos) era disparada por tela, cron, RPA e webhook, e cada caminho reimplementava parte da regra; faturamento, repasse e distribuição tinham contas duplicadas e regras espalhadas. Os seis contextos hexagonais concentram regra rica, integrações (Omie, ClickSign, Altis, MobileMed, MySuite) e várias entradas. Nos demais, hexagonal só acrescentaria cerimônia.
+**Por quê:** no legado, a mesma ação (ex.: fechar competência, reprocessar laudos) era disparada por tela, cron, RPA e webhook, e cada caminho reimplementava parte da regra; faturamento, repasse e distribuição tinham contas duplicadas e regras espalhadas. Os contextos hexagonais concentram regra rica, integrações (Focus NFe, Itaú, ClickSign, Altis, MobileMed, MySuite) e várias entradas. Nos demais, hexagonal só acrescentaria cerimônia.
 
 **Revisar se:** um contexto ganhar regra rica ou uma 2ª integração/entrada (sobe de nível) ou virar só CRUD (desce). A mudança vale só para aquele módulo; atualize esta tabela.
 
@@ -87,13 +87,13 @@ src/analytics/
   - **Links:** convite vale 7 dias, recuperação vale 1 hora; ambos de uso único, com só o hash do token no banco.
   - **Sessão:** expira após 7 dias sem uso (renovada a cada uso), com limite absoluto de 30 dias. Cookie `httpOnly`, `Secure`, `SameSite=Lax`; token novo a cada login; só o hash do token no banco.
   - **Chaves dos robôs:** enviadas em `Authorization: Bearer` (o `x-api-key` do legado é aceito durante a transição). Validade de 1 ano; até duas chaves ativas por robô durante a troca. No banco, só o prefixo (para identificar) e o hash SHA-256.
-  - **Credenciais de integrações de saída** (Altis, ServiceDesk, MobileMed, Omie, ClickSign...): só em variável de ambiente, uma por credencial, declarada sem valor no `apps/api/.env.example` e validada na subida (`src/config/ambiente.ts`). Nunca no banco nem editável por tela: menos superfície (backup, injeção, sessão de admin roubada) e sem chave de cifra para guardar. Trocar a credencial é trocar a variável e reiniciar a API. Revisar se surgir credencial por cliente ou troca frequente por quem não é técnico.
+  - **Credenciais de integrações de saída** (Altis, ServiceDesk, MobileMed, Focus NFe, Itaú, ClickSign...): só em variável de ambiente, uma por credencial, declarada sem valor no `apps/api/.env.example` e validada na subida (`src/config/ambiente.ts`). Nunca no banco nem editável por tela: menos superfície (backup, injeção, sessão de admin roubada) e sem chave de cifra para guardar. Trocar a credencial é trocar a variável e reiniciar a API. Revisar se surgir credencial por cliente ou troca frequente por quem não é técnico.
   - **E-mail:** envio atrás de interface com token de injeção; em produção, Amazon SES (ou Resend/Postmark se não houver AWS); em desenvolvimento, Mailpit.
 - **Permissões:** RBAC com papéis configuráveis e permissões `tela.ação`, checadas por guard em todo endpoint. Recortes por atributo ficam no service/domínio, com teste: médico só acessa os próprios dados; gestora de escala só os turnos e especialidades do seu escopo; coordenador só a sua especialidade. Acesso a dados de paciente exige permissão específica.
 - **Escala moderada:**
   - Toda listagem é paginada.
   - Índices são planejados junto com cada tabela, a partir das consultas que ela vai atender.
-  - Nada pesado dentro da requisição: importação, fechamento, geração de PDF/DOCX, e-mails e chamadas a Omie, ClickSign, Altis e MySuite vão para a fila de jobs.
+  - Nada pesado dentro da requisição: importação, fechamento, geração de PDF/DOCX, e-mails e chamadas a Focus NFe, Itaú, ClickSign, Altis e MySuite vão para a fila de jobs.
   - Dashboards leem tabelas de totais pré-somados (por dia × cliente × modalidade × especialidade × prioridade), atualizadas pela ingestão; nunca agregam sobre os laudos crus.
   - Listas de filtros vêm dos cadastros, não de `DISTINCT` sobre laudos. Exclusões (médico ou cliente oculto) são colunas booleanas indexadas, não `ILIKE`.
   - Importação incremental: upsert pela identidade do laudo, nunca apagar e reinserir o período. Dado bruto da planilha fica fora da tabela principal.
