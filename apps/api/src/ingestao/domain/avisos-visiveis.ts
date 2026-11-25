@@ -1,4 +1,4 @@
-import type { TipoAviso } from './preparar-laudo';
+import { TIPOS_AVISO, type TipoAviso } from '../../comum/avisos/registro-avisos';
 
 /** Quem consulta os avisos: as permissões do papel, ou acesso total (Administrador). */
 export interface AcessoAvisos {
@@ -22,9 +22,15 @@ const PERMISSAO_DO_TIPO: Readonly<Record<TipoAviso, string>> = {
   prioridade_operacao: 'distribuicao-config.ver',
   // A conta é liberada na MobileMed, ou a certa entra nas outras contas do médico (tela Médicos).
   conta_unidade: 'medicos.ver',
+  // Um apelido decide entre os clientes de mesmo nome (tela Clientes).
+  cliente_ambiguo: 'clientes.ver',
+  // Aba Preços do cliente, ou a tabela padrão do contratado.
+  preco_repetido: 'faturamento.ver',
+  // O item criado pela carga se confere (ou se junta a outro) na tela do Catálogo.
+  catalogo_criado_carga: 'catalogo.ver',
 };
 
-const TIPOS = Object.keys(PERMISSAO_DO_TIPO) as TipoAviso[];
+const TIPOS = TIPOS_AVISO;
 
 /** Os tipos de aviso que esse acesso pode ver, listar e triar. */
 export function tiposDeAvisoVisiveis(acesso: AcessoAvisos): TipoAviso[] {

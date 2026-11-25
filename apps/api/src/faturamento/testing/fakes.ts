@@ -74,6 +74,8 @@ export interface AcaoCompetencia {
   acao: 'fechar' | 'reabrir' | 'travar' | 'destravar';
   competencia: string;
   autor?: Autor;
+  /** Só no fechamento apesar de avisos pendentes. */
+  motivoAvisos?: string;
 }
 
 export class CompetenciasEmMemoria implements CompetenciasRepository {
@@ -110,6 +112,7 @@ export class CompetenciasEmMemoria implements CompetenciasRepository {
           importacaoTravadaEm: null,
           importacaoTravadaPor: null,
           observacoes: null,
+          fechadaComAvisosMotivo: null,
           laudos: 0,
           volume: 0,
         };
@@ -144,14 +147,17 @@ export class CompetenciasEmMemoria implements CompetenciasRepository {
     return true;
   }
 
-  async fechar(competencia: string, autor: Autor) {
-    return this.mudar(
+  async fechar(competencia: string, autor: Autor, motivoAvisos: string | null = null) {
+    const feito = this.mudar(
       'fechar',
       competencia,
       (c) => c.status === 'aberta',
       { status: 'fechada' },
       autor,
     );
+    const ultima = this.acoes.at(-1);
+    if (feito && motivoAvisos && ultima) ultima.motivoAvisos = motivoAvisos;
+    return feito;
   }
 
   async reabrir(competencia: string, autor: Autor) {

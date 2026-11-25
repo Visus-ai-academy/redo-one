@@ -6959,6 +6959,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FecharCompetenciaDto"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": ""
@@ -6966,11 +6976,21 @@
           "400": {
             "description": "Competência fora do formato AAAA-MM."
           },
+          "403": {
+            "description": "Motivo informado sem a permissão de fechar com avisos."
+          },
           "404": {
             "description": "Competência sem linha (nenhum laudo do mês ainda)."
           },
           "409": {
-            "description": "Já fechada, ou o mês ainda não acabou em Brasília."
+            "description": "Já fechada, o mês ainda não acabou em Brasília, ou há avisos pendentes que impedem (codigo avisos_pendentes, com a lista).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FechamentoComAvisosDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -8525,6 +8545,73 @@
         ]
       }
     },
+    "/ingestao/avisos/resumo-do-responsavel": {
+      "get": {
+        "operationId": "AvisosController_resumoDoResponsavel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A faixa do topo: pendentes dos tipos de que algum papel do usuário é responsável.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoAvisosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/avisos/selos": {
+      "get": {
+        "operationId": "AvisosController_selosDosItens",
+        "parameters": [
+          {
+            "name": "entidade",
+            "required": true,
+            "in": "query",
+            "description": "Entidade dos itens: cliente, medico, exame, preco_cliente...",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "required": true,
+            "in": "query",
+            "description": "Ids dos itens da página, separados por vírgula (até 200).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avisos pendentes dos itens de uma página (o selo na lista e no painel).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SeloAvisoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
     "/ingestao/avisos": {
       "get": {
         "operationId": "AvisosController_listar",
@@ -8572,6 +8659,43 @@
             "in": "query",
             "description": "Parte do nome como chegou da MobileMed.",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "meus",
+            "required": false,
+            "in": "query",
+            "description": "Só os tipos de que algum papel de quem consulta é responsável.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "competencia",
+            "required": false,
+            "in": "query",
+            "description": "Só os ligados a esta competência.",
+            "schema": {
+              "example": "2026-10",
+              "type": "string"
+            }
+          },
+          {
+            "name": "entidade",
+            "required": false,
+            "in": "query",
+            "description": "Só os que se referem a este item (com `entidadeId`): cliente, medico, exame...",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entidadeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
@@ -8687,6 +8811,66 @@
           },
           "409": {
             "description": "O aviso não está ignorado."
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/tipos-aviso": {
+      "get": {
+        "operationId": "TiposAvisoController_obter",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiposAvisoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ingestao"
+        ]
+      }
+    },
+    "/ingestao/tipos-aviso/{tipo}": {
+      "put": {
+        "operationId": "TiposAvisoController_atualizar",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/TipoAviso"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarTipoAvisoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Papel que não existe."
+          },
+          "404": {
+            "description": ""
           }
         },
         "tags": [
@@ -16674,6 +16858,11 @@
             "type": "string",
             "nullable": true
           },
+          "fechadaComAvisosMotivo": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fechada apesar de avisos pendentes que impediam: o motivo de quem fechou."
+          },
           "laudos": {
             "type": "integer",
             "description": "Laudos (não removidos) desta competência."
@@ -16693,6 +16882,7 @@
           "importacaoTravadaEm",
           "importacaoTravadaPor",
           "observacoes",
+          "fechadaComAvisosMotivo",
           "laudos",
           "volume"
         ]
@@ -16721,6 +16911,88 @@
           "total",
           "pagina",
           "porPagina"
+        ]
+      },
+      "FecharCompetenciaDto": {
+        "type": "object",
+        "properties": {
+          "motivoAvisos": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Fechar apesar de avisos pendentes que impedem (exige faturamento.competencia.fechar_com_avisos)."
+          }
+        }
+      },
+      "AvisoQueImpedeFecharDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo do aviso (o mesmo de Operação › Avisos)."
+          },
+          "valor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "valor"
+        ]
+      },
+      "AvisosQueImpedemFecharDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "itens": {
+            "description": "Os mais antigos (até 20).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoQueImpedeFecharDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "itens"
+        ]
+      },
+      "FechamentoComAvisosDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 409
+          },
+          "message": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string",
+            "enum": [
+              "avisos_pendentes"
+            ]
+          },
+          "avisos": {
+            "$ref": "#/components/schemas/AvisosQueImpedemFecharDto"
+          },
+          "podeFecharComAvisos": {
+            "type": "boolean",
+            "description": "Quem pediu pode fechar mesmo assim, informando o motivo."
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "codigo",
+          "avisos",
+          "podeFecharComAvisos"
         ]
       },
       "MesCorte": {
@@ -18976,14 +19248,6 @@
           "ids"
         ]
       },
-      "StatusAviso": {
-        "type": "string",
-        "enum": [
-          "pendente",
-          "resolvido",
-          "ignorado"
-        ]
-      },
       "TipoAviso": {
         "type": "string",
         "enum": [
@@ -18994,7 +19258,118 @@
           "especialidade",
           "prioridade",
           "prioridade_operacao",
-          "conta_unidade"
+          "conta_unidade",
+          "cliente_ambiguo",
+          "preco_repetido",
+          "catalogo_criado_carga"
+        ]
+      },
+      "ResumoAvisosDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Pendentes dos tipos de que é responsável."
+          },
+          "maisAntigoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "tipos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TipoAviso"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "maisAntigoEm",
+          "tipos"
+        ]
+      },
+      "SeloAvisoDto": {
+        "type": "object",
+        "properties": {
+          "entidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "O aviso."
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAviso"
+              }
+            ]
+          },
+          "valor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entidadeId",
+          "id",
+          "tipo",
+          "valor"
+        ]
+      },
+      "StatusAviso": {
+        "type": "string",
+        "enum": [
+          "pendente",
+          "resolvido",
+          "ignorado"
+        ]
+      },
+      "OrigemAviso": {
+        "type": "string",
+        "enum": [
+          "importacao",
+          "rodada",
+          "carga",
+          "tela",
+          "job"
+        ]
+      },
+      "CompetenciasAvisoDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "example": "2026-10"
+          },
+          "ate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vazio = dali em diante."
+          }
+        },
+        "required": [
+          "desde",
+          "ate"
+        ]
+      },
+      "EntidadeAvisoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Entidade no singular: cliente, medico, exame, preco_cliente..."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tipo",
+          "id"
         ]
       },
       "AvisoDto": {
@@ -19013,7 +19388,7 @@
           },
           "valor": {
             "type": "string",
-            "description": "Como chegou da MobileMed na última importação ou rodada."
+            "description": "Como chegou na última verificação (importação, rodada, carga)."
           },
           "status": {
             "allOf": [
@@ -19021,6 +19396,30 @@
                 "$ref": "#/components/schemas/StatusAviso"
               }
             ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemAviso"
+              }
+            ]
+          },
+          "competencias": {
+            "nullable": true,
+            "description": "Competências a que se liga (a trava do fechamento).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CompetenciasAvisoDto"
+              }
+            ]
+          },
+          "entidades": {
+            "description": "Itens a que se refere (selo e atalho).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntidadeAvisoDto"
+            }
           },
           "ocorrencias": {
             "type": "integer",
@@ -19058,6 +19457,9 @@
           "tipo",
           "valor",
           "status",
+          "origem",
+          "competencias",
+          "entidades",
           "ocorrencias",
           "primeiraVezEm",
           "ultimaVezEm",
@@ -19111,6 +19513,96 @@
         },
         "required": [
           "motivo"
+        ]
+      },
+      "PapelResponsavelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "ConfiguracaoTipoAvisoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAviso"
+              }
+            ]
+          },
+          "impedeFecharCompetencia": {
+            "type": "boolean",
+            "description": "Aviso pendente ligado à competência impede fechá-la."
+          },
+          "responsaveis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PapelResponsavelDto"
+            }
+          },
+          "pendentes": {
+            "type": "integer",
+            "description": "Pendentes agora."
+          }
+        },
+        "required": [
+          "tipo",
+          "impedeFecharCompetencia",
+          "responsaveis",
+          "pendentes"
+        ]
+      },
+      "TiposAvisoDto": {
+        "type": "object",
+        "properties": {
+          "tipos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfiguracaoTipoAvisoDto"
+            }
+          },
+          "papeis": {
+            "description": "Papéis que se pode escolher.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PapelResponsavelDto"
+            }
+          }
+        },
+        "required": [
+          "tipos",
+          "papeis"
+        ]
+      },
+      "AtualizarTipoAvisoDto": {
+        "type": "object",
+        "properties": {
+          "impedeFecharCompetencia": {
+            "type": "boolean"
+          },
+          "papeisIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "impedeFecharCompetencia",
+          "papeisIds"
         ]
       },
       "ParametrosIngestaoDto": {

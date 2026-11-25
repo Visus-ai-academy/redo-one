@@ -617,6 +617,27 @@
       "when": 1795633503599,
       "tag": "0087_horarios_sem_robo_todos_dias_dados",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795634261165,
+      "tag": "0088_avisos_genericos",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795634268088,
+      "tag": "0089_tipos_aviso_padrao",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1795634268698,
+      "tag": "0090_avisos_tipo_fk",
+      "breakpoints": true
     }
   ]
 }

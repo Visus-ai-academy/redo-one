@@ -19,7 +19,12 @@ import { CompetenciaParamDto } from './dto/competencia.dto';
 const reflector = new Reflector();
 const exigidas = (alvo: object) => reflector.get(PERMISSOES_EXIGIDAS, alvo as never);
 const caso = <T>(executar: (...a: never[]) => unknown) => ({ executar: vi.fn(executar) }) as T;
-const ator = { tipo: 'usuario', usuarioId: 'u1' } as PrincipalUsuario;
+const ator = {
+  tipo: 'usuario',
+  usuarioId: 'u1',
+  acessoTotal: false,
+  permissoes: new Set<string>(),
+} as unknown as PrincipalUsuario;
 
 describe('controller das competências', () => {
   it('listar pede faturamento.ver; cada ação pede a sua permissão', () => {
@@ -47,12 +52,33 @@ describe('controller das competências', () => {
       porPagina: 10,
     });
     await c.fechar(ator, { competencia: '2026-10' });
+    expect(fechar.executar).toHaveBeenCalledWith('u1', '2026-10', {
+      podeFecharComAvisos: false,
+      motivoAvisos: null,
+    });
     await c.reabrir(ator, { competencia: '2026-10' });
     await c.travar(ator, { competencia: '2026-10' });
     await c.destravar(ator, { competencia: '2026-10' });
-    for (const m of [fechar, reabrir, travar, destravar]) {
+    for (const m of [reabrir, travar, destravar]) {
       expect(m.executar).toHaveBeenCalledWith('u1', '2026-10');
     }
+  });
+
+  it('fechar com avisos: repassa o motivo e se quem pede tem a permissão própria', async () => {
+    const fechar = caso<FecharCompetencia>(async () => undefined);
+    const nada = caso<never>(async () => undefined);
+    const c = new CompetenciasController(nada, fechar, nada, nada, nada);
+    const comPermissao = {
+      ...ator,
+      permissoes: new Set(['faturamento.competencia.fechar_com_avisos']),
+    } as PrincipalUsuario;
+
+    await c.fechar(comPermissao, { competencia: '2026-10' }, { motivoAvisos: 'Urgente.' });
+
+    expect(fechar.executar).toHaveBeenCalledWith('u1', '2026-10', {
+      podeFecharComAvisos: true,
+      motivoAvisos: 'Urgente.',
+    });
   });
 
   it('a competência da rota tem de ser AAAA-MM com mês de 01 a 12', () => {

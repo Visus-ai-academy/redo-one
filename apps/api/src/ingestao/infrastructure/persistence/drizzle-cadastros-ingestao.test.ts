@@ -163,6 +163,9 @@ describe.skipIf(!url)('DrizzleCadastrosIngestao', () => {
     expect(cadastros.resolverCliente('RADI-IMAGEM')).toBe(radi['RADI-IMAGEM']);
     expect(cadastros.resolverCliente('RADI')).toBe(radi.RADI_IMAGEM);
     expect(cadastros.resolverCliente('RADI.IMAGEM')).toBeNull();
-    expect(cadastros.clientesAmbiguos?.('RADI.IMAGEM')).toEqual(['RADI-IMAGEM', 'RADI_IMAGEM']);
+    expect(cadastros.clientesAmbiguos?.('RADI.IMAGEM').map((c) => c.nome)).toEqual([
+      'RADI-IMAGEM',
+      'RADI_IMAGEM',
+    ]);
   });
 });

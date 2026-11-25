@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { normalizarNome } from '../../catalogo/comum/nomes';
+import type { EntidadeAviso, TipoAviso } from '../../comum/avisos/registro-avisos';
 import { normalizarNomeMedico } from '../../medicos/comum/nome-medico';
 import { classificarEstudo, type RetratoCatalogo, type TipoPendencia } from './classificar-estudo';
 import {
@@ -16,17 +17,17 @@ import { chaveEstudo } from './nome-estudo';
 export type OrigemLaudo = 'normal' | 'compartilhamento';
 
 type TipoDaImportacao = TipoPendencia | 'cliente' | 'medico' | 'prioridade';
-/**
- * Vistos pela rodada da distribuição: `prioridade_operacao` (grafia sem de-para nas prioridades da
- * operação) e `conta_unidade` (médico escalado sem conta liberada na unidade do exame na MobileMed).
- */
-export type TipoAviso = TipoDaImportacao | 'prioridade_operacao' | 'conta_unidade';
+
+/** Todos os tipos de aviso (os da importação, os da rodada da distribuição, os da carga...). */
+export type { TipoAviso };
 
 /** Cadastro que faltou, com a chave normalizada que identifica o aviso. */
 export interface PendenciaCadastro {
   tipo: TipoAviso;
   chave: string;
   valor: string;
+  /** Os itens do cadastro envolvidos (ex.: os clientes de mesmo nome), para o selo deles. */
+  entidades?: EntidadeAviso[];
 }
 
 export interface CadastrosIngestao {
@@ -38,7 +39,7 @@ export interface CadastrosIngestao {
    * Os clientes entre os quais a empresa fica ambígua (mesma chave normalizada, sem nome exato
    * nem apelido que decida); vazio quando resolve ou não casa.
    */
-  clientesAmbiguos?: (empresa: string) => string[];
+  clientesAmbiguos?: (empresa: string) => { id: string; nome: string }[];
   /** A unidade (`clientes.unificado_em_id`) com que a empresa casou; nulo se não é unidade. */
   resolverUnidade: (empresa: string) => string | null;
   /** Pelo id da conta MobileMed primeiro; sem id, ou com id desconhecido, pelo nome. */
@@ -166,14 +167,22 @@ export function prepararLaudo(
   conferidos.push(...estudo.conferidos.map((p) => comChave(p.tipo, p.valor)));
 
   const clienteId = cadastros.resolverCliente(l.empresa);
-  // O aviso é pelo nome; o valor diz quando o nome existe, mas casa com mais de um cliente.
+  // Nome que casa com mais de um cliente: aviso próprio, ligado a eles; o de cliente
+  // desconhecido (o nome existe) se resolve. Quando resolve (ou não casa), o de ambíguo é que some.
   const ambiguos = clienteId ? [] : (cadastros.clientesAmbiguos?.(l.empresa) ?? []);
+  const chaveCliente = CHAVE_DO_AVISO.cliente(l.empresa);
   if (ambiguos.length) {
     pendencias.push({
-      ...comChave('cliente', l.empresa),
-      valor: `${l.empresa} (mais de um cliente com esse nome: ${ambiguos.join(', ')})`,
+      tipo: 'cliente_ambiguo',
+      chave: chaveCliente,
+      valor: `${l.empresa} (mais de um cliente com esse nome: ${ambiguos.map((c) => c.nome).join(', ')})`,
+      entidades: ambiguos.map((c) => ({ tipo: 'cliente', id: c.id })),
     });
-  } else conferir('cliente', l.empresa, clienteId);
+    conferidos.push({ tipo: 'cliente', chave: chaveCliente, valor: l.empresa });
+  } else {
+    conferir('cliente', l.empresa, clienteId);
+    conferidos.push({ tipo: 'cliente_ambiguo', chave: chaveCliente, valor: l.empresa });
+  }
   const prioridadeId = conferir(
     'prioridade',
     l.prioridade,

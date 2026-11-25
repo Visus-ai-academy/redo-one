@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
+import { REGISTRO_AVISOS, type RegistroAvisos } from '../../../comum/avisos/registro-avisos';
 import { DATABASE, type Database } from '../../../database/database';
 import {
   categoriasExame,
@@ -40,7 +41,10 @@ const colunaDono = (dono: Dono) =>
   dono.tipo === 'cliente' ? precosCliente.clienteId : precosPadraoContratado.contratadoId;
 @Injectable()
 export class DrizzlePrecosRepository implements PrecosRepository {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    @Inject(REGISTRO_AVISOS) private readonly avisos: RegistroAvisos,
+  ) {}
 
   async obterDono(dono: Dono): Promise<InfoDono | null> {
     if (dono.tipo === 'contratado') {
@@ -204,6 +208,14 @@ export class DrizzlePrecosRepository implements PrecosRepository {
           limit 1`);
         if (cruzadas.rows.length) throw new VersaoConflitanteError();
       }
+
+      // A versão em que se mexeu foi conferida por alguém: o aviso de preço repetido dela some.
+      const mexidas = mudancas.filter((m) => m.tipo !== 'criar').map((m) => m.id);
+      await this.avisos.resolverDasEntidades(tx, {
+        tipos: ['preco_repetido'],
+        entidades: mexidas.map((id) => ({ tipo: ENTIDADE_PRECO[dono.tipo], id })),
+        agora: new Date(),
+      });
 
       if (opcoes.eventos.length)
         await tx.insert(eventosAuditoria).values(

@@ -3,13 +3,11 @@ import type { ArmazenamentoArquivos } from '../../../comum/armazenamento/armazen
 import { type Celula, texto } from '../../domain/celulas';
 import { converterLinha } from '../../domain/linha-planilha';
 import { planejarImportacao } from '../../domain/planejar-importacao';
-import {
-  type LaudoPreparado,
-  type PendenciaCadastro,
-  prepararLaudo,
-  type TipoAviso,
-} from '../../domain/preparar-laudo';
-import type { AvisosCadastroRepository } from '../ports/avisos-cadastro.repository';
+import { type LaudoPreparado, prepararLaudo, type TipoAviso } from '../../domain/preparar-laudo';
+import type {
+  AvisosCadastroRepository,
+  PendenciaRegistrada,
+} from '../ports/avisos-cadastro.repository';
 import type { LeitorCadastrosIngestao } from '../ports/cadastros-ingestao';
 import type { CompetenciasBloqueadas } from '../ports/competencias-bloqueadas';
 import type { LeitorCortesCompetencia } from '../ports/cortes-competencia';
@@ -113,7 +111,7 @@ export class ImportarLaudos {
 
     const preparados: LaudoPreparado[] = [];
     const linhasBrutas = new Map<string, Record<string, Celula>>();
-    const pendencias = new Map<string, PendenciaCadastro & { ocorrencias: number }>();
+    const pendencias = new Map<string, PendenciaRegistrada>();
     const conferidos = new Map<string, { tipo: TipoAviso; chave: string }>();
     const errosLinhas: { linha: number; mensagem: string }[] = [];
     let invalidas = 0;
@@ -137,9 +135,21 @@ export class ImportarLaudos {
       }
       preparados.push(preparo.laudo);
       linhasBrutas.set(preparo.laudo.identidade, registro);
+      const { competencia } = preparo.laudo;
       for (const p of preparo.pendencias) {
         const k = `${p.tipo}:${p.chave}`;
-        pendencias.set(k, { ...p, ocorrencias: (pendencias.get(k)?.ocorrencias ?? 0) + 1 });
+        const antes = pendencias.get(k);
+        // Da menor à maior competência dos laudos em que apareceu (a trava do fechamento).
+        const desde = antes?.competencias?.desde;
+        const ate = antes?.competencias?.ate;
+        pendencias.set(k, {
+          ...p,
+          ocorrencias: (antes?.ocorrencias ?? 0) + 1,
+          competencias: {
+            desde: desde && desde < competencia ? desde : competencia,
+            ate: ate && ate > competencia ? ate : competencia,
+          },
+        });
       }
       for (const c of preparo.conferidos) conferidos.set(`${c.tipo}:${c.chave}`, c);
     }

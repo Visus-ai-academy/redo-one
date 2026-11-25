@@ -7,6 +7,7 @@ import { DatabaseModule } from '../database/database.module';
 import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competencias-bloqueadas';
 import { CORTES_COMPETENCIA } from '../ingestao/application/ports/cortes-competencia';
 import { CORTE_PADRAO_INICIAL } from '../ingestao/domain/competencia';
+import { AvisosCompartilhadosModule } from '../ingestao/infrastructure/avisos/avisos-compartilhados.module';
 import { COMPETENCIAS_REPOSITORY } from './application/ports/competencias.repository';
 import { CORTES_REPOSITORY } from './application/ports/cortes.repository';
 import { CriarCorte } from './application/use-cases/criar-corte';
@@ -24,6 +25,7 @@ describe('FaturamentoModule', () => {
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [() => ({})] }),
         DatabaseModule,
         AuditoriaModule,
+        AvisosCompartilhadosModule,
         FaturamentoModule,
       ],
     })

@@ -155,12 +155,21 @@ export function montarResolvedorUnidadeCliente(cadastro: CadastroClientes) {
 }
 
 /**
- * Os nomes dos clientes entre os quais a empresa fica ambígua (mesma chave normalizada ou nome
- * fantasia, sem nome exato nem apelido que decida), em ordem; vazio quando resolve ou não casa.
+ * Os clientes (id e nome) entre os quais a empresa fica ambígua (mesma chave normalizada ou nome
+ * fantasia, sem nome exato nem apelido que decida), em ordem de nome; vazio quando resolve ou não
+ * casa.
  */
-export function montarClientesAmbiguos(cadastro: CadastroClientes) {
+export function montarClientesAmbiguosComId(cadastro: CadastroClientes) {
   const casar = montarCasamento(cadastro);
   const nomeDe = new Map(cadastro.clientes.map((c) => [c.id, c.nome]));
-  return (empresa: string): string[] =>
-    (casar(empresa)?.ambiguos ?? []).map((id) => nomeDe.get(id) ?? id).sort();
+  return (empresa: string): { id: string; nome: string }[] =>
+    (casar(empresa)?.ambiguos ?? [])
+      .map((id) => ({ id, nome: nomeDe.get(id) ?? id }))
+      .sort((a, b) => (a.nome < b.nome ? -1 : a.nome > b.nome ? 1 : 0));
+}
+
+/** Os nomes dos clientes entre os quais a empresa fica ambígua, em ordem. */
+export function montarClientesAmbiguos(cadastro: CadastroClientes) {
+  const comId = montarClientesAmbiguosComId(cadastro);
+  return (empresa: string): string[] => comId(empresa).map((c) => c.nome);
 }

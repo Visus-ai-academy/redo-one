@@ -69,6 +69,7 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
           importacaoTravadaEm: competencias.importacaoTravadaEm,
           importacaoTravadaPor: autor(travou.nome, competencias.importacaoTravadaPorLegado),
           observacoes: competencias.observacoes,
+          fechadaComAvisosMotivo: competencias.fechadaComAvisosMotivo,
         })
         .from(competencias)
         .leftJoin(fechou, eq(fechou.id, competencias.fechadaPorId))
@@ -142,12 +143,17 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
     return linhas.length > 0;
   }
 
-  fechar(competencia: string, { usuarioId, em }: Autor): Promise<boolean> {
+  fechar(
+    competencia: string,
+    { usuarioId, em }: Autor,
+    motivoAvisos: string | null = null,
+  ): Promise<boolean> {
     return this.atualizar(competencia, eq(competencias.status, 'aberta'), {
       status: 'fechada',
       fechadaEm: em,
       fechadaPorId: usuarioId,
       fechadaPorLegado: null,
+      fechadaComAvisosMotivo: motivoAvisos,
     });
   }
 

@@ -2,15 +2,18 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { InMemoryAuditoria } from '../../../auditoria/testing';
 import {
+  CompetenciaComAvisosError,
   CompetenciaEmAndamentoError,
   CompetenciaJaAbertaError,
   CompetenciaJaFechadaError,
   CompetenciaNaoEncontradaError,
+  FecharComAvisosProibidoError,
   ImportacaoJaTravadaError,
   ImportacaoNaoTravadaError,
 } from '../../domain/competencia-status';
 import { CompetenciaInvalidaError } from '../../domain/vigencia-corte';
 import { CompetenciasEmMemoria } from '../../testing/fakes';
+import type { AvisosDoFechamento } from '../ports/avisos-do-fechamento';
 import { FecharCompetencia } from './fechar-competencia';
 import { ListarCompetencias } from './listar-competencias';
 import { ReabrirCompetencia } from './reabrir-competencia';
@@ -40,7 +43,21 @@ describe('competências', () => {
   });
 
   describe('fechar', () => {
-    const fechar = () => new FecharCompetencia(competencias, auditoria, () => agora);
+    /** Avisos pendentes que impedem fechar, por competência. */
+    let pendentes: Record<
+      string,
+      { id: string; tipo: 'cliente' | 'preco_repetido'; valor: string }[]
+    >;
+    const avisos: AvisosDoFechamento = {
+      queImpedem: async (competencia, limite) => {
+        const lista = pendentes[competencia] ?? [];
+        return { total: lista.length, itens: lista.slice(0, limite) };
+      },
+    };
+    const fechar = () => new FecharCompetencia(competencias, avisos, auditoria, () => agora);
+    beforeEach(() => {
+      pendentes = {};
+    });
 
     it('fecha a aberta cujo mês já acabou, com autor e auditoria', async () => {
       await fechar().executar('u1', '2026-10');
@@ -65,6 +82,7 @@ describe('competências', () => {
       // 30/11 23:59 em Brasília (01/12 02:59 UTC): novembro ainda não acabou.
       const quase = new FecharCompetencia(
         competencias,
+        avisos,
         auditoria,
         () => new Date('2026-12-01T02:59:00Z'),
       );
@@ -90,6 +108,81 @@ describe('competências', () => {
       competencias.fechar = async () => false;
       await expect(fechar().executar('u1', '2026-10')).rejects.toThrow(CompetenciaJaFechadaError);
       expect(auditoria.eventos).toEqual([]);
+    });
+
+    describe('com avisos que impedem fechar', () => {
+      beforeEach(() => {
+        pendentes['2026-10'] = [
+          { id: 'a1', tipo: 'cliente', valor: 'CLINICA NOVA' },
+          { id: 'a2', tipo: 'preco_repetido', valor: 'CLINICA X | CT' },
+        ];
+      });
+
+      it('recusa listando os avisos e se quem pede pode fechar mesmo assim', async () => {
+        const erro = await fechar()
+          .executar('u1', '2026-10')
+          .catch((e: unknown) => e);
+
+        expect(erro).toBeInstanceOf(CompetenciaComAvisosError);
+        expect((erro as CompetenciaComAvisosError).detalhes).toEqual({
+          codigo: 'avisos_pendentes',
+          avisos: { total: 2, itens: pendentes['2026-10'] },
+          podeFecharComAvisos: false,
+        });
+        expect(competencias.competencias.get('2026-10')?.status).toBe('aberta');
+        expect(auditoria.eventos).toEqual([]);
+      });
+
+      it('com a permissão mas sem motivo, recusa (e diz que pode)', async () => {
+        const erro = await fechar()
+          .executar('u1', '2026-10', { podeFecharComAvisos: true, motivoAvisos: '   ' })
+          .catch((e: unknown) => e);
+        expect((erro as CompetenciaComAvisosError).detalhes).toMatchObject({
+          podeFecharComAvisos: true,
+        });
+      });
+
+      it('motivo sem a permissão é proibido', async () => {
+        await expect(
+          fechar().executar('u1', '2026-10', { motivoAvisos: 'Fatura urgente.' }),
+        ).rejects.toThrow(FecharComAvisosProibidoError);
+      });
+
+      it('com a permissão e o motivo, fecha e guarda o motivo no fechamento e na auditoria', async () => {
+        await fechar().executar('u1', '2026-10', {
+          podeFecharComAvisos: true,
+          motivoAvisos: '  Cliente novo cadastrado amanhã; fatura não espera.  ',
+        });
+
+        expect(competencias.competencias.get('2026-10')?.status).toBe('fechada');
+        expect(competencias.acoes).toEqual([
+          {
+            acao: 'fechar',
+            competencia: '2026-10',
+            autor,
+            motivoAvisos: 'Cliente novo cadastrado amanhã; fatura não espera.',
+          },
+        ]);
+        expect(auditoria.eventos).toEqual([
+          expect.objectContaining({
+            acao: 'fechada',
+            depois: {
+              status: 'fechada',
+              comAvisos: {
+                motivo: 'Cliente novo cadastrado amanhã; fatura não espera.',
+                total: 2,
+                avisos: ['a1', 'a2'],
+              },
+            },
+          }),
+        ]);
+      });
+
+      it('aviso de outra competência não impede', async () => {
+        pendentes = { '2026-09': pendentes['2026-10'] ?? [] };
+        await fechar().executar('u1', '2026-10');
+        expect(competencias.competencias.get('2026-10')?.status).toBe('fechada');
+      });
     });
   });
 

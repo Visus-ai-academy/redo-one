@@ -5,6 +5,10 @@ import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competenc
 import { CORTES_COMPETENCIA } from '../ingestao/application/ports/cortes-competencia';
 import { TIPIFICACAO_LAUDOS } from '../ingestao/application/ports/tipificacao-laudos';
 import {
+  AVISOS_DO_FECHAMENTO,
+  type AvisosDoFechamento,
+} from './application/ports/avisos-do-fechamento';
+import {
   COMPETENCIAS_REPOSITORY,
   type CompetenciasRepository,
 } from './application/ports/competencias.repository';
@@ -76,12 +80,7 @@ import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizz
 const agora = () => new Date();
 
 /** Casos de uso de uma ação sobre a competência: repositório, auditoria e relógio. */
-const ACOES_COMPETENCIA = [
-  FecharCompetencia,
-  ReabrirCompetencia,
-  TravarImportacao,
-  DestravarImportacao,
-] as const;
+const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImportacao] as const;
 
 /**
  * Contexto `faturamento` (hexagonal): competências, cortes, dados fiscais do cliente, tipificação e preços. Implementa as portas da `ingestao`
@@ -157,6 +156,16 @@ const ACOES_COMPETENCIA = [
       provide: ListarCompetencias,
       inject: [COMPETENCIAS_REPOSITORY],
       useFactory: (competencias: CompetenciasRepository) => new ListarCompetencias(competencias),
+    },
+    {
+      // Os avisos que impedem fechar vêm da ingestão, pelo módulo global de avisos.
+      provide: FecharCompetencia,
+      inject: [COMPETENCIAS_REPOSITORY, AVISOS_DO_FECHAMENTO, AUDITORIA],
+      useFactory: (
+        competencias: CompetenciasRepository,
+        avisos: AvisosDoFechamento,
+        auditoria: Auditoria,
+      ) => new FecharCompetencia(competencias, avisos, auditoria, agora),
     },
     ...ACOES_COMPETENCIA.map((Caso) => ({
       provide: Caso,

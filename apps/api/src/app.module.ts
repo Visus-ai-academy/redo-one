@@ -15,6 +15,7 @@ import { EscalaModule } from './escala/escala.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
 import { GatilhosTipificacaoModule } from './faturamento/infrastructure/jobs/gatilhos-tipificacao.module';
 import { IdentidadeModule } from './identidade/identidade.module';
+import { AvisosCompartilhadosModule } from './ingestao/infrastructure/avisos/avisos-compartilhados.module';
 import { GatilhosIngestaoModule } from './ingestao/infrastructure/jobs/gatilhos-ingestao.module';
 import { IngestaoModule } from './ingestao/ingestao.module';
 import { MedicosModule } from './medicos/medicos.module';
@@ -29,6 +30,7 @@ import { MedicosModule } from './medicos/medicos.module';
     CatalogoModule,
     GatilhosTipificacaoModule,
     GatilhosIngestaoModule,
+    AvisosCompartilhadosModule,
     MedicosModule,
     EscalaModule,
     FaturamentoModule,

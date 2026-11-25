@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -10,7 +11,7 @@ import {
 
 import { PaginacaoDto } from '../../../catalogo/comum/dto';
 import { Permissao, PrincipalAtual } from '../../../identidade/acesso/decorators';
-import type { PrincipalUsuario } from '../../../identidade/principal';
+import { type PrincipalUsuario, temPermissao } from '../../../identidade/principal';
 import { FecharCompetencia } from '../../application/use-cases/fechar-competencia';
 import { ListarCompetencias } from '../../application/use-cases/listar-competencias';
 import { ReabrirCompetencia } from '../../application/use-cases/reabrir-competencia';
@@ -18,7 +19,15 @@ import {
   DestravarImportacao,
   TravarImportacao,
 } from '../../application/use-cases/travar-importacao';
-import { CompetenciaParamDto, PaginaCompetenciasDto } from './dto/competencia.dto';
+import {
+  CompetenciaParamDto,
+  FechamentoComAvisosDto,
+  FecharCompetenciaDto,
+  PaginaCompetenciasDto,
+} from './dto/competencia.dto';
+
+/** Fecha apesar de avisos pendentes que impedem, informando o motivo. */
+export const PERMISSAO_FECHAR_COM_AVISOS = 'faturamento.competencia.fechar_com_avisos';
 
 /** Faturamento › Competências: lista, fechamento, reabertura e trava da importação. */
 @ApiTags('faturamento')
@@ -46,12 +55,21 @@ export class CompetenciasController {
   @ApiNoContentResponse()
   @ApiBadRequestResponse({ description: 'Competência fora do formato AAAA-MM.' })
   @ApiNotFoundResponse({ description: 'Competência sem linha (nenhum laudo do mês ainda).' })
-  @ApiConflictResponse({ description: 'Já fechada, ou o mês ainda não acabou em Brasília.' })
+  @ApiConflictResponse({
+    type: FechamentoComAvisosDto,
+    description:
+      'Já fechada, o mês ainda não acabou em Brasília, ou há avisos pendentes que impedem (codigo avisos_pendentes, com a lista).',
+  })
+  @ApiForbiddenResponse({ description: 'Motivo informado sem a permissão de fechar com avisos.' })
   fechar(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param() { competencia }: CompetenciaParamDto,
+    @Body() corpo: FecharCompetenciaDto = {},
   ): Promise<void> {
-    return this.fecharCaso.executar(ator.usuarioId, competencia);
+    return this.fecharCaso.executar(ator.usuarioId, competencia, {
+      podeFecharComAvisos: temPermissao(ator, PERMISSAO_FECHAR_COM_AVISOS),
+      motivoAvisos: corpo?.motivoAvisos ?? null,
+    });
   }
 
   @Post(':competencia/reabrir')

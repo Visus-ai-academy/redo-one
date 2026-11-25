@@ -6,12 +6,22 @@ import { describe, expect, it, vi } from 'vitest';
 import { PERMISSOES_EXIGIDAS } from '../../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../../identidade/principal';
 import type { AtualizarParametros } from '../../application/use-cases/atualizar-parametros';
-import type { ListarAvisos, ObterParametros } from '../../application/use-cases/consultas-simples';
+import type {
+  ListarAvisos,
+  ObterParametros,
+  ResumoAvisosDoResponsavel,
+  SelosDeAviso,
+} from '../../application/use-cases/consultas-simples';
 import type { TriarAviso } from '../../application/use-cases/triar-aviso';
 import { AvisosController, ParametrosIngestaoController } from './avisos.controller';
-import { IgnorarAvisoDto } from './dto/aviso.dto';
+import { IgnorarAvisoDto, SelosAvisoQueryDto } from './dto/aviso.dto';
 
-const ator = { tipo: 'usuario', usuarioId: 'u1' } as PrincipalUsuario;
+const ator = {
+  tipo: 'usuario',
+  usuarioId: 'u1',
+  papeis: [{ id: 'p1', nome: 'Financeiro' }],
+} as PrincipalUsuario;
+const comPapeis = { ...ator, papeisIds: ['p1'] };
 const reflector = new Reflector();
 
 describe('AvisosController', () => {
@@ -24,6 +34,8 @@ describe('AvisosController', () => {
     expect(exigidas('obter')).toEqual(['avisos.ver']);
     expect(exigidas('ignorar')).toEqual(['avisos.triar']);
     expect(exigidas('reabrir')).toEqual(['avisos.triar']);
+    expect(exigidas('resumoDoResponsavel')).toEqual(['avisos.ver']);
+    expect(exigidas('selosDosItens')).toEqual(['avisos.ver']);
   });
 
   it('lista, abre e tria com o acesso de quem está logado', async () => {
@@ -32,9 +44,13 @@ describe('AvisosController', () => {
       obter: vi.fn(async () => ({ id: 'a1' })),
     };
     const triar = { ignorar: vi.fn(async () => undefined), reabrir: vi.fn(async () => undefined) };
+    const resumo = { executar: vi.fn(async () => ({ total: 0, maisAntigoEm: null, tipos: [] })) };
+    const selos = { executar: vi.fn(async () => []) };
     const controller = new AvisosController(
       listar as unknown as ListarAvisos,
       triar as unknown as TriarAviso,
+      resumo as unknown as ResumoAvisosDoResponsavel,
+      selos as unknown as SelosDeAviso,
     );
 
     expect(
@@ -44,18 +60,51 @@ describe('AvisosController', () => {
         status: 'pendente',
         tipo: 'cliente',
         busca: 'x',
+        meus: true,
+        competencia: '2026-10',
+        entidade: 'cliente',
+        entidadeId: 'c1',
       }),
     ).toEqual({ itens: [], total: 0, tipos: ['cliente'], pagina: 1, porPagina: 25 });
     expect(listar.executar).toHaveBeenCalledWith(
-      { pagina: 1, porPagina: 25, status: 'pendente', tipo: 'cliente', busca: 'x' },
-      ator,
+      {
+        pagina: 1,
+        porPagina: 25,
+        status: 'pendente',
+        tipo: 'cliente',
+        busca: 'x',
+        meus: true,
+        competencia: '2026-10',
+        entidade: { tipo: 'cliente', id: 'c1' },
+      },
+      comPapeis,
     );
+    await controller.resumoDoResponsavel(ator);
+    expect(resumo.executar).toHaveBeenCalledWith(comPapeis);
+    await controller.selosDosItens(ator, { entidade: 'cliente', ids: ['c1'] });
+    expect(selos.executar).toHaveBeenCalledWith('cliente', ['c1'], ator);
     expect(await controller.obter(ator, 'a1')).toEqual({ id: 'a1' });
     expect(listar.obter).toHaveBeenCalledWith('a1', ator);
     await controller.ignorar(ator, 'a1', { motivo: 'teste' });
     expect(triar.ignorar).toHaveBeenCalledWith(ator, 'a1', 'teste');
     await controller.reabrir(ator, 'a1');
     expect(triar.reabrir).toHaveBeenCalledWith(ator, 'a1');
+  });
+});
+
+describe('SelosAvisoQueryDto', () => {
+  it('lê os ids separados por vírgula e recusa id que não é uuid', async () => {
+    const pipe = new ValidationPipe({ whitelist: true, transform: true });
+    const validar = (valor: unknown) =>
+      pipe.transform(valor, { type: 'query', metatype: SelosAvisoQueryDto });
+    const id = '6f1c1a52-5d1c-4f6a-9a37-0a0a0a0a0a0a';
+
+    await expect(validar({ entidade: 'cliente', ids: `${id}, ${id}` })).resolves.toMatchObject({
+      ids: [id, id],
+    });
+    await expect(validar({ entidade: 'cliente', ids: 'x' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });
 

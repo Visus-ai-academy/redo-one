@@ -57,6 +57,10 @@ import {
 } from './application/ports/relatorio-mobilemed';
 import { type LeitorTipificacao, TIPIFICACAO_LAUDOS } from './application/ports/tipificacao-laudos';
 import {
+  TIPOS_AVISO_REPOSITORY,
+  type TiposAvisoRepository,
+} from './application/ports/tipos-aviso.repository';
+import {
   TAREFA_AGENDAR_MOBILEMED,
   TAREFA_EXPURGAR_LINHAS_BRUTAS,
   TAREFA_IMPORTAR_LAUDOS,
@@ -66,7 +70,12 @@ import {
 } from './application/tarefas';
 import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
-import { ListarAvisos, ObterParametros } from './application/use-cases/consultas-simples';
+import {
+  ListarAvisos,
+  ObterParametros,
+  ResumoAvisosDoResponsavel,
+  SelosDeAviso,
+} from './application/use-cases/consultas-simples';
 import { CriarImportacaoMobileMed } from './application/use-cases/criar-importacao-mobilemed';
 import { ConfirmarEnvio, PrepararEnvio } from './application/use-cases/envio-planilha';
 import { ExpurgarLinhasBrutas } from './application/use-cases/expurgar-linhas-brutas';
@@ -75,10 +84,12 @@ import { LerPacientesDosLaudos } from './application/use-cases/ler-pacientes-dos
 import { RecalcularCompetencias } from './application/use-cases/recalcular-competencias';
 import { ReclassificarTipificacao } from './application/use-cases/reclassificar-tipificacao';
 import { ReresolverClientes } from './application/use-cases/reresolver-clientes';
+import { ConfigurarTipoAviso, ListarTiposAviso } from './application/use-cases/tipos-aviso';
 import { TriarAviso } from './application/use-cases/triar-aviso';
 import {
   AvisosController,
   ParametrosIngestaoController,
+  TiposAvisoController,
 } from './infrastructure/http/avisos.controller';
 import { ImportacaoMobileMedController } from './infrastructure/http/importacao-mobilemed.controller';
 import { ImportacoesController } from './infrastructure/http/importacoes.controller';
@@ -97,6 +108,7 @@ import { DrizzleLaudosRepository } from './infrastructure/persistence/drizzle-la
 import { DrizzleLinhasBrutasRepository } from './infrastructure/persistence/drizzle-linhas-brutas.repository';
 import { DrizzlePacientesLaudos } from './infrastructure/persistence/drizzle-pacientes-laudos';
 import { DrizzleParametrosIngestaoRepository } from './infrastructure/persistence/drizzle-parametros-ingestao.repository';
+import { DrizzleTiposAvisoRepository } from './infrastructure/persistence/drizzle-tipos-aviso.repository';
 import { HmacPseudonimizador } from './infrastructure/seguranca/hmac-pseudonimizador';
 import { XlsxLeitorPlanilha } from './infrastructure/xlsx/xlsx-leitor-planilha';
 
@@ -117,14 +129,39 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
     ImportacoesController,
     ImportacaoMobileMedController,
     AvisosController,
+    TiposAvisoController,
     ParametrosIngestaoController,
   ],
   providers: [
     { provide: CONSULTA_AVISOS, useClass: DrizzleConsultaAvisos },
+    { provide: TIPOS_AVISO_REPOSITORY, useClass: DrizzleTiposAvisoRepository },
     {
       provide: ListarAvisos,
+      inject: [CONSULTA_AVISOS, TIPOS_AVISO_REPOSITORY],
+      useFactory: (avisos: ConsultaAvisos, tipos: TiposAvisoRepository) =>
+        new ListarAvisos(avisos, tipos),
+    },
+    {
+      provide: ResumoAvisosDoResponsavel,
+      inject: [CONSULTA_AVISOS, TIPOS_AVISO_REPOSITORY],
+      useFactory: (avisos: ConsultaAvisos, tipos: TiposAvisoRepository) =>
+        new ResumoAvisosDoResponsavel(avisos, tipos),
+    },
+    {
+      provide: SelosDeAviso,
       inject: [CONSULTA_AVISOS],
-      useFactory: (avisos: ConsultaAvisos) => new ListarAvisos(avisos),
+      useFactory: (avisos: ConsultaAvisos) => new SelosDeAviso(avisos),
+    },
+    {
+      provide: ListarTiposAviso,
+      inject: [TIPOS_AVISO_REPOSITORY],
+      useFactory: (tipos: TiposAvisoRepository) => new ListarTiposAviso(tipos),
+    },
+    {
+      provide: ConfigurarTipoAviso,
+      inject: [TIPOS_AVISO_REPOSITORY, AUDITORIA],
+      useFactory: (tipos: TiposAvisoRepository, auditoria: Auditoria) =>
+        new ConfigurarTipoAviso(tipos, auditoria, () => new Date()),
     },
     {
       provide: TriarAviso,

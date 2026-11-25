@@ -16,6 +16,7 @@ import { DatabaseModule } from '../database/database.module';
 import * as schema from '../database/schema';
 import { IdentidadeModule } from '../identidade/identidade.module';
 import { Argon2PasswordHasher } from '../identidade/senha/argon2-password-hasher';
+import { AvisosCompartilhadosModule } from '../ingestao/infrastructure/avisos/avisos-compartilhados.module';
 import { FaturamentoModule } from './faturamento.module';
 
 // De ponta a ponta: login real, guard de permissão e as rotas do faturamento contra o Postgres de
@@ -44,6 +45,7 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
         ConfigModule.forRoot({ isGlobal: true }),
         DatabaseModule,
         AuditoriaModule,
+        AvisosCompartilhadosModule,
         IdentidadeModule,
         FaturamentoModule,
       ],

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
+import { DrizzleRegistroAvisos } from '../../../ingestao/infrastructure/persistence/drizzle-registro-avisos';
 import type { Dono } from '../../application/ports/precos.repository';
 import {
   type DadosPreco,
@@ -37,7 +38,7 @@ describe.skipIf(!url)('DrizzlePrecosRepository', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../../drizzle') });
-    repo = new DrizzlePrecosRepository(db);
+    repo = new DrizzlePrecosRepository(db, new DrizzleRegistroAvisos());
     const um = async <T extends { id: string }>(p: Promise<T[]>) => (await p)[0] as T;
     usuarioId = (
       await um(
@@ -171,6 +172,51 @@ describe.skipIf(!url)('DrizzlePrecosRepository', () => {
       },
     ]);
     expect(await repo.listarVersoes(unidade)).toEqual([]);
+  });
+
+  it('mexer na versão (encerrar) resolve o aviso de preço repetido dela, na mesma transação', async () => {
+    const d = { ...dados, faixaInicio: 1900, faixaFim: null };
+    const versao = criar(d, '2026-11');
+    const outra = criar({ ...d, faixaInicio: 1950 }, '2026-11');
+    await repo.aplicar(cliente, [versao, outra], opcoes());
+    const avisos = await db
+      .insert(schema.avisosCadastro)
+      .values(
+        [versao, outra].map((v) => ({
+          tipo: 'preco_repetido' as const,
+          chave: `preco-${v.id}`,
+          valor: 'Repetido',
+          origem: 'carga' as const,
+        })),
+      )
+      .returning();
+    await db.insert(schema.avisosEntidades).values(
+      avisos.map((a, i) => ({
+        avisoId: a.id,
+        entidade: 'preco_cliente',
+        entidadeId: (i === 0 ? versao : outra).id,
+      })),
+    );
+
+    await repo.aplicar(
+      cliente,
+      [{ tipo: 'encerrar', id: versao.id, vigenciaAteAntes: null, vigenciaAte: '2026-12' }],
+      opcoes(),
+    );
+
+    const status = await db
+      .select({ chave: schema.avisosCadastro.chave, status: schema.avisosCadastro.status })
+      .from(schema.avisosCadastro)
+      .where(
+        inArray(
+          schema.avisosCadastro.id,
+          avisos.map((a) => a.id),
+        ),
+      );
+    expect(Object.fromEntries(status.map((x) => [x.chave, x.status]))).toEqual({
+      [`preco-${versao.id}`]: 'resolvido',
+      [`preco-${outra.id}`]: 'pendente',
+    });
   });
 
   it('duas inclusões ao mesmo tempo do mesmo arranjo e faixa: só uma entra', async () => {

@@ -18,6 +18,9 @@ describe('tiposDeAvisoVisiveis', () => {
       'prioridade',
       'prioridade_operacao',
       'conta_unidade',
+      'cliente_ambiguo',
+      'preco_repetido',
+      'catalogo_criado_carga',
     ]);
   });
 
@@ -26,13 +29,16 @@ describe('tiposDeAvisoVisiveis', () => {
   });
 
   it('cada tipo segue o ver da tela onde o aviso se resolve', () => {
-    expect(tiposDeAvisoVisiveis(acesso('clientes.ver'))).toEqual(['cliente']);
+    expect(tiposDeAvisoVisiveis(acesso('clientes.ver'))).toEqual(['cliente', 'cliente_ambiguo']);
+    // O preço se resolve na aba Preços do cliente (ou na tabela padrão do contratado).
+    expect(tiposDeAvisoVisiveis(acesso('faturamento.ver'))).toEqual(['preco_repetido']);
     expect(tiposDeAvisoVisiveis(acesso('medicos.ver'))).toEqual(['medico', 'conta_unidade']);
     expect(tiposDeAvisoVisiveis(acesso('exames.ver'))).toEqual(['estudo']);
     expect(tiposDeAvisoVisiveis(acesso('catalogo.ver'))).toEqual([
       'modalidade',
       'especialidade',
       'prioridade',
+      'catalogo_criado_carga',
     ]);
     expect(tiposDeAvisoVisiveis(acesso('distribuicao-config.ver'))).toEqual([
       'prioridade_operacao',
@@ -43,6 +49,7 @@ describe('tiposDeAvisoVisiveis', () => {
     expect(tiposDeAvisoVisiveis(acesso('clientes.ver', 'exames.ver'))).toEqual([
       'cliente',
       'estudo',
+      'cliente_ambiguo',
     ]);
   });
 });

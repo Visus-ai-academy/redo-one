@@ -8,6 +8,7 @@ import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { DatabaseModule } from '../database/database.module';
 import { CORTES_REPOSITORY } from '../faturamento/application/ports/cortes.repository';
 import { CortesEmMemoria } from '../faturamento/testing/fakes';
+import { AvisosCompartilhadosModule } from '../ingestao/infrastructure/avisos/avisos-compartilhados.module';
 import { RELATORIO_MOBILEMED } from './application/ports/relatorio-mobilemed';
 import {
   TAREFA_AGENDAR_MOBILEMED,
@@ -37,6 +38,7 @@ async function montar(env: Record<string, string>) {
       ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [() => env] }),
       DatabaseModule,
       AuditoriaModule,
+      AvisosCompartilhadosModule,
       ComumModule,
       IngestaoModule,
     ],
@@ -56,6 +58,7 @@ describe('IngestaoModule', () => {
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [() => ({})] }),
         DatabaseModule,
         AuditoriaModule,
+        AvisosCompartilhadosModule,
         ComumModule,
         IngestaoModule,
       ],
@@ -90,6 +93,7 @@ describe('IngestaoModule', () => {
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [() => ({})] }),
         DatabaseModule,
         AuditoriaModule,
+        AvisosCompartilhadosModule,
         ComumModule,
         IngestaoModule,
       ],

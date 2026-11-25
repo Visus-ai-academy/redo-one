@@ -49,6 +49,11 @@ export const competencias = pgTable(
     fechadaEm: quando('fechada_em'),
     fechadaPorId: quem('fechada_por_id'),
     fechadaPorLegado: text('fechada_por_legado'),
+    /**
+     * Fechada apesar de avisos pendentes que impedem fechar: o motivo de quem tem a permissão
+     * própria. Nulo no fechamento sem avisos; o fechamento seguinte sobrescreve.
+     */
+    fechadaComAvisosMotivo: text('fechada_com_avisos_motivo'),
     reabertaEm: quando('reaberta_em'),
     reabertaPorId: quem('reaberta_por_id'),
     reabertaPorLegado: text('reaberta_por_legado'),

@@ -507,8 +507,28 @@ describe('ImportarLaudos', () => {
       chave: 'clinica nova',
       valor: 'CLINICA NOVA',
       ocorrencias: 2,
+      competencias: { desde: '2026-10', ate: '2026-10' },
     });
     expect(chamada?.conferidos).toContainEqual({ tipo: 'cliente', chave: 'clinica x' });
+  });
+
+  it('liga o aviso às competências dos laudos em que apareceu (da menor à maior)', async () => {
+    await importar('i1', [
+      registro('1', {
+        EMPRESA: 'Clinica Nova',
+        DATA_REALIZACAO: '05/09/2026',
+        DATA_LAUDO: '06/09/2026',
+      }),
+      registro('2', { EMPRESA: 'Clinica Nova' }),
+    ]);
+
+    expect(avisos.chamadas[0]?.pendencias).toContainEqual(
+      expect.objectContaining({
+        tipo: 'cliente',
+        ocorrencias: 2,
+        competencias: { desde: '2026-09', ate: '2026-10' },
+      }),
+    );
   });
 
   describe('pela MobileMed', () => {

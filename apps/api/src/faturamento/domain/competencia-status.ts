@@ -57,6 +57,27 @@ export class CompetenciaEmAndamentoError extends ErroDeDominio {
   }
 }
 
+/** Fechar com avisos pendentes que impedem: a tela lista os avisos e, com a permissão, pede o motivo. */
+export class CompetenciaComAvisosError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor(
+    avisos: { total: number; itens: { id: string; tipo: string; valor: string }[] },
+    podeFecharComAvisos: boolean,
+  ) {
+    super(
+      `${avisos.total === 1 ? 'Há 1 aviso pendente que impede' : `Há ${avisos.total} avisos pendentes que impedem`} fechar a competência. Resolva ${avisos.total === 1 ? 'o aviso' : 'os avisos'} em Operação › Avisos${podeFecharComAvisos ? ' ou feche mesmo assim informando o motivo' : ''}.`,
+      { codigo: 'avisos_pendentes', avisos, podeFecharComAvisos },
+    );
+  }
+}
+
+export class FecharComAvisosProibidoError extends ErroDeDominio {
+  readonly tipo = 'proibido';
+  constructor() {
+    super('Você não tem permissão para fechar a competência com avisos pendentes.');
+  }
+}
+
 /** Trava a importação da competência (mesmo aberta); recusa a já travada. */
 export function travar(travada: boolean): void {
   if (travada) throw new ImportacaoJaTravadaError();

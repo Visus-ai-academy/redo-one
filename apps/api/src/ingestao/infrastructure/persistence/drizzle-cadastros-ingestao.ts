@@ -31,7 +31,7 @@ import { chaveEstudo, chaveEstudoLimpo } from '../../domain/nome-estudo';
 import type { CadastrosIngestao } from '../../domain/preparar-laudo';
 import {
   type CadastroClientes,
-  montarClientesAmbiguos,
+  montarClientesAmbiguosComId,
   montarResolvedorCliente,
   montarResolvedorUnidadeCliente,
 } from '../../domain/resolver-cliente';
@@ -200,7 +200,7 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
         ]),
       ]),
       resolverCliente,
-      clientesAmbiguos: montarClientesAmbiguos(cadastroClientes),
+      clientesAmbiguos: montarClientesAmbiguosComId(cadastroClientes),
       resolverUnidade: (empresa) => {
         const unidade = resolverUnidadeCliente(empresa);
         return unidade && unidade !== resolverCliente(empresa) ? unidade : null;

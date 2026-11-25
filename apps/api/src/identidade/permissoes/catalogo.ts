@@ -324,6 +324,15 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Fechar a competência para faturar.',
         sensivel: true,
       },
+      // Ninguém tem por padrão: o aviso pendente que impede fechar existe para ser resolvido.
+      {
+        chave: 'faturamento.competencia.fechar_com_avisos',
+        rotulo: 'Fechar competência com avisos',
+        descricao:
+          'Fechar a competência apesar de avisos pendentes que impedem, informando o motivo.',
+        sensivel: true,
+        implica: ['faturamento.competencia.fechar'],
+      },
       {
         chave: 'faturamento.competencia.reabrir',
         rotulo: 'Reabrir competência',
@@ -476,6 +485,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     especiais: [],
     // Os turnos posteriores da configuração global vêm de GET /escala/turnos (escala.ver).
     exige: ['escala'],
+  },
+  {
+    // Configurações › Avisos: responsáveis por tipo e "impede fechar a competência".
+    tela: 'avisos-config',
+    rotulo: 'Avisos (responsáveis e trava do fechamento)',
+    area: 'Configurações',
+    padrao: [{ acao: 'ver' }, { acao: 'editar', sensivel: true }],
+    especiais: [],
   },
   {
     tela: 'chaves-robo',

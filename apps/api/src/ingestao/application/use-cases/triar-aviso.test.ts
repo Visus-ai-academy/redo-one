@@ -18,6 +18,9 @@ describe('TriarAviso', () => {
     const base = {
       tipo: 'cliente' as const,
       valor: 'CLINICA NOVA',
+      origem: 'importacao' as const,
+      competencias: null,
+      entidades: [],
       ocorrencias: 3,
       primeiraVezEm: agora,
       ultimaVezEm: agora,
@@ -37,6 +40,8 @@ describe('TriarAviso', () => {
         const aviso = avisos.get(id);
         if (aviso) Object.assign(aviso, { status: d.status, motivo: d.motivo, decididoEm: d.em });
       },
+      resumoPendentes: async () => ({ total: 0, maisAntigoEm: null }),
+      pendentesDasEntidades: async () => [],
     };
     auditoria = new InMemoryAuditoria();
     triar = new TriarAviso(consulta, auditoria, () => agora);

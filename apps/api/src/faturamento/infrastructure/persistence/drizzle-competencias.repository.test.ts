@@ -151,6 +151,7 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
           importacaoTravadaEm: null,
           importacaoTravadaPor: null,
           observacoes: null,
+          fechadaComAvisosMotivo: null,
           laudos: 0,
           volume: 0,
         },
@@ -164,6 +165,7 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
           importacaoTravadaEm: null,
           importacaoTravadaPor: null,
           observacoes: null,
+          fechadaComAvisosMotivo: null,
           laudos: 2,
           volume: 3.5,
         },
@@ -229,6 +231,21 @@ describe.skipIf(!url)('DrizzleCompetenciasRepository', () => {
         reabertaPorId: ana,
       });
       expect(await repo.fechar('2026-09', { usuarioId: ana, em })).toBe(false);
+    });
+
+    it('guarda o motivo do fechamento com avisos; o fechamento seguinte sem avisos o limpa', async () => {
+      const ana = await usuario('Ana');
+      const em = new Date('2026-11-24T15:00:00Z');
+      await db.insert(schema.competencias).values({ competencia: '2026-10', status: 'aberta' });
+
+      await repo.fechar('2026-10', { usuarioId: ana, em }, 'Fatura urgente.');
+      expect(await linha('2026-10')).toMatchObject({ fechadaComAvisosMotivo: 'Fatura urgente.' });
+      const [resumo] = (await repo.listarPagina({ pagina: 1, porPagina: 10 })).itens;
+      expect(resumo).toMatchObject({ fechadaComAvisosMotivo: 'Fatura urgente.' });
+
+      await repo.reabrir('2026-10', { usuarioId: ana, em });
+      await repo.fechar('2026-10', { usuarioId: ana, em });
+      expect(await linha('2026-10')).toMatchObject({ fechadaComAvisosMotivo: null });
     });
 
     it('fechar de novo troca o autor do texto do dashboards-one pelo usuário', async () => {

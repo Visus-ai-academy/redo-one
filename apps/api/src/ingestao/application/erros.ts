@@ -45,3 +45,14 @@ export class LeituraDePacienteProibidaError extends ErroDeDominio {
     );
   }
 }
+
+export class TipoAvisoNaoEncontradoError extends ErroDeDominio {
+  readonly tipo = 'nao_encontrado';
+  constructor() {
+    super('Tipo de aviso não encontrado.');
+  }
+}
+
+export class ConfiguracaoTipoInvalidaError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+}

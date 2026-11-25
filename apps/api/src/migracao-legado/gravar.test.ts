@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { runMigrations } from 'graphile-worker';
@@ -835,6 +835,123 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect((await db.execute(sql`select count(*)::int n from precos_cliente`)).rows[0]).toEqual({
       n: 2,
     });
+  });
+
+  it('preço repetido e item criado pela carga viram avisos; o preço que deixa de repetir resolve o dele', async () => {
+    await db.execute(sql`truncate table avisos_cadastro cascade`);
+    await db.insert(schema.categoriasExame).values({ id: idDoLegado('t', 'sc'), nome: 'SC' });
+    await db.insert(schema.prioridades).values({ id: idDoLegado('t', 'ro'), nome: 'ROTINA' });
+    const linha = {
+      modalidade: 'CT',
+      especialidade: 'NEURO',
+      categoria: 'SC',
+      prioridade: 'ROTINA',
+      condVolume: null,
+      volumeInicial: null,
+      volumeFinal: null,
+      vigenciaDesde: '2026-01',
+      vigenciaAte: null,
+      donoId: 'cl-a',
+      donoNome: 'PRN TELE_ARARAQUARA',
+    };
+    const cadastro = async () => ({
+      clientes: catalogo.tabelas.clientes,
+      contratados: [],
+      modalidades: catalogo.tabelas.modalidades.map((m) => ({
+        id: m.id as string,
+        codigo: m.codigo,
+      })),
+      especialidades: catalogo.tabelas.especialidades.map((e) => ({
+        id: e.id as string,
+        nome: e.nome,
+      })),
+      categorias: [{ id: idDoLegado('t', 'sc'), nome: 'SC' }],
+      prioridades: [{ id: idDoLegado('t', 'ro'), nome: 'ROTINA' }],
+      especialidadesDePara: [],
+      noRedo: {
+        categorias: await db
+          .select({ id: schema.categoriasExame.id, nome: schema.categoriasExame.nome })
+          .from(schema.categoriasExame),
+        prioridades: await db
+          .select({ id: schema.prioridades.id, nome: schema.prioridades.nome })
+          .from(schema.prioridades),
+      },
+    });
+    const carga = async (linhas: Record<string, unknown>[]) =>
+      gravarMigracao(
+        db,
+        catalogo,
+        medicos,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mapearPrecos(
+          { clientes: linhas.map((l) => ({ ...linha, ...l })) as never, padrao: [] },
+          await cadastro(),
+        ),
+      );
+    const avisos = (tipo: 'preco_repetido' | 'catalogo_criado_carga') =>
+      db
+        .select({
+          chave: schema.avisosCadastro.chave,
+          valor: schema.avisosCadastro.valor,
+          status: schema.avisosCadastro.status,
+          origem: schema.avisosCadastro.origem,
+          desde: schema.avisosCadastro.competenciaDesde,
+        })
+        .from(schema.avisosCadastro)
+        .where(eq(schema.avisosCadastro.tipo, tipo));
+
+    await carga([
+      { id: 'p-1', valorBase: 50, atualizadoEm: '2026-07-01T00:00:00.000Z' },
+      { id: 'p-2', valorBase: 60, atualizadoEm: '2026-09-01T00:00:00.000Z' },
+      {
+        id: 'p-3',
+        valorBase: 70,
+        atualizadoEm: '2026-09-01T00:00:00.000Z',
+        categoria: 'SUBCLAVIA',
+      },
+    ]);
+    const escolhido = idDoLegado('precos_servicos', 'p-2');
+    expect(await avisos('preco_repetido')).toEqual([
+      expect.objectContaining({
+        chave: `precos_cliente:${escolhido}`,
+        status: 'pendente',
+        origem: 'carga',
+        desde: '2026-01',
+      }),
+    ]);
+    const [subclavia] = await db
+      .select({ id: schema.categoriasExame.id })
+      .from(schema.categoriasExame)
+      .where(eq(schema.categoriasExame.nome, 'SUBCLAVIA'));
+    expect(await avisos('catalogo_criado_carga')).toEqual([
+      expect.objectContaining({ chave: `categoria:${subclavia?.id}`, status: 'pendente' }),
+    ]);
+    const entidades = await db.select().from(schema.avisosEntidades);
+    expect(entidades.map((e) => [e.entidade, e.entidadeId]).sort()).toEqual(
+      [
+        ['categoria', subclavia?.id],
+        ['cliente', idDoLegado('clientes', 'cl-a')],
+        ['preco_cliente', escolhido],
+      ].sort(),
+    );
+
+    // Corrigido no dashboards-one: a carga seguinte não acha mais a repetição.
+    await carga([
+      { id: 'p-2', valorBase: 60, atualizadoEm: '2026-09-01T00:00:00.000Z' },
+      {
+        id: 'p-3',
+        valorBase: 70,
+        atualizadoEm: '2026-09-01T00:00:00.000Z',
+        categoria: 'SUBCLAVIA',
+      },
+    ]);
+    expect((await avisos('preco_repetido')).map((a) => a.status)).toEqual(['resolvido']);
+    expect((await avisos('catalogo_criado_carga')).map((a) => a.status)).toEqual(['pendente']);
   });
 
   it('o principal que saiu da exclusão fiscal do dashboards-one é desmarcado; o resto dele fica', async () => {

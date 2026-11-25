@@ -84,6 +84,7 @@ describe('catálogo de permissões', () => {
       'de-para': ['Configurações', crud],
       'escala-config': ['Configurações', crud],
       'distribuicao-config': ['Configurações', ['ver', 'editar']],
+      'avisos-config': ['Configurações', ['ver', 'editar']],
       'chaves-robo': ['Configurações', ['ver']],
     });
   });
@@ -124,6 +125,7 @@ describe('catálogo de permissões', () => {
     expect(especiais('faturamento')).toEqual([
       'faturamento.demonstrativo.gerar',
       'faturamento.competencia.fechar',
+      'faturamento.competencia.fechar_com_avisos',
       'faturamento.competencia.reabrir',
       'faturamento.competencia.travar',
       'faturamento.corte.editar',
@@ -151,10 +153,12 @@ describe('catálogo de permissões', () => {
       'importacao.paciente.ver',
     ]);
     expect(sensiveis('distribuicao-config')).toEqual(['distribuicao-config.editar']);
+    expect(sensiveis('avisos-config')).toEqual(['avisos-config.editar']);
     expect(sensiveis('ausencias')).toEqual(['ausencias.observacoes.ver']);
     expect(sensiveis('exames')).toEqual(['exames.editar', 'exames.excluir']);
     expect(sensiveis('faturamento')).toEqual([
       'faturamento.competencia.fechar',
+      'faturamento.competencia.fechar_com_avisos',
       'faturamento.competencia.reabrir',
       'faturamento.competencia.travar',
       'faturamento.corte.editar',

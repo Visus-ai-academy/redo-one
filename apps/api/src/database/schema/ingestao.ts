@@ -17,6 +17,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import type { TipoAviso } from '../../comum/avisos/registro-avisos';
 import { arquivos } from './arquivos';
 import {
   categoriasExame,
@@ -26,7 +27,7 @@ import {
   modalidades,
   prioridades,
 } from './catalogo';
-import { usuarios } from './identidade';
+import { papeis, usuarios } from './identidade';
 import { medicos } from './medicos';
 
 // Contexto `ingestao`: importações de laudos da MobileMed, os laudos com os cadastros resolvidos,
@@ -278,41 +279,74 @@ export const totaisLaudosDia = pgTable(
   ],
 );
 
-export const tipoAvisoCadastro = pgEnum('tipo_aviso_cadastro', [
-  'cliente',
-  'medico',
-  'estudo',
-  'modalidade',
-  'especialidade',
-  'prioridade',
-  /** Grafia sem de-para nas prioridades da operação, vista pela rodada da distribuição. */
-  'prioridade_operacao',
-  /** Médico escalado sem conta liberada na unidade do exame na MobileMed, visto pela rodada. */
-  'conta_unidade',
-]);
-
 export const statusAvisoCadastro = pgEnum('status_aviso_cadastro', [
   'pendente',
-  /** Uma importação posterior resolveu (o cadastro foi feito). */
+  /** A verificação seguinte da origem não achou mais a causa (o cadastro foi feito). */
   'resolvido',
-  /** Triado: não precisa de cadastro. Volta a pendente só por "reabrir". */
+  /** Triado: não precisa de ação. Volta a pendente só por "reabrir". */
   'ignorado',
 ]);
 
 /**
- * Pendência de cadastro encontrada na importação (cliente, médico, estudo... desconhecido) ou na
- * rodada da distribuição (grafia de prioridade sem de-para, conta não liberada na unidade).
+ * Configuração de cada tipo de aviso (Configurações › Avisos), uma linha por tipo, criada pela
+ * migration que traz o tipo: os papéis responsáveis e se o aviso pendente impede fechar a
+ * competência a que se liga. Editável por tela, com auditoria.
+ */
+export const tiposAviso = pgTable('tipos_aviso', {
+  /** Um de `TIPOS_AVISO` (`comum/avisos/registro-avisos.ts`). */
+  tipo: text('tipo').$type<TipoAviso>().primaryKey(),
+  impedeFecharCompetencia: boolean('impede_fechar_competencia').notNull().default(false),
+  atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Papéis responsáveis pelo tipo: o aviso pendente aparece na faixa de quem tem um deles. */
+export const tiposAvisoResponsaveis = pgTable(
+  'tipos_aviso_responsaveis',
+  {
+    tipo: text('tipo')
+      .$type<TipoAviso>()
+      .notNull()
+      .references(() => tiposAviso.tipo, { onDelete: 'cascade' }),
+    papelId: uuid('papel_id')
+      .notNull()
+      .references(() => papeis.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.tipo, t.papelId] }),
+    index('tipos_aviso_responsaveis_papel_idx').on(t.papelId),
+  ],
+);
+
+/**
+ * Inconsistência encontrada por qualquer contexto (Operação › Avisos): cadastro que falta na
+ * importação (cliente, médico, estudo... desconhecido), grafia ou conta vista pela rodada da
+ * distribuição, preço repetido e item do catálogo criados pela carga do dashboards-one, nome de
+ * cliente ambíguo. A mesma chave no tipo é um aviso só.
  */
 export const avisosCadastro = pgTable(
   'avisos_cadastro',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    tipo: tipoAvisoCadastro('tipo').notNull(),
+    /** Um de `TIPOS_AVISO`, com a linha em `tipos_aviso`. */
+    tipo: text('tipo')
+      .$type<TipoAviso>()
+      .notNull()
+      .references(() => tiposAviso.tipo),
     /** Grafia normalizada: a mesma pendência em grafias parecidas é um aviso só. */
     chave: text('chave').notNull(),
     /** Como chegou na última vez. */
     valor: text('valor').notNull(),
     status: statusAvisoCadastro('status').notNull().default('pendente'),
+    /** Quem encontrou: importação, rodada, carga, tela ou job. */
+    origem: text('origem', { enum: ['importacao', 'rodada', 'carga', 'tela', 'job'] })
+      .notNull()
+      .default('importacao'),
+    /**
+     * Competências "AAAA-MM" a que o aviso se liga (as dos laudos, ou as em que o preço vale), para
+     * a trava do fechamento; `ate` nulo = dali em diante. Sem `desde`, não se liga a nenhuma.
+     */
+    competenciaDesde: text('competencia_desde'),
+    competenciaAte: text('competencia_ate'),
     /** Laudos da última importação (ou exames da última rodada) em que apareceu. */
     ocorrencias: integer('ocorrencias').notNull().default(0),
     primeiraVezEm: timestamp('primeira_vez_em', { withTimezone: true }).notNull().defaultNow(),
@@ -331,7 +365,36 @@ export const avisosCadastro = pgTable(
       'avisos_cadastro_ignorado_motivo_check',
       sql`${t.status} <> 'ignorado' or btrim(coalesce(${t.motivo}, '')) <> ''`,
     ),
+    check(
+      'avisos_cadastro_origem_check',
+      sql`${t.origem} in ('importacao', 'rodada', 'carga', 'tela', 'job')`,
+    ),
+    check(
+      'avisos_cadastro_competencias_check',
+      sql`${t.competenciaAte} is null or (${t.competenciaDesde} is not null and ${t.competenciaAte} >= ${t.competenciaDesde})`,
+    ),
     index('avisos_cadastro_status_idx').on(t.status, t.tipo),
+    // A faixa do responsável (o mais antigo pendente) e a trava do fechamento.
+    index('avisos_cadastro_pendentes_idx')
+      .on(t.tipo, t.primeiraVezEm)
+      .where(sql`${t.status} = 'pendente'`),
+  ],
+);
+
+/** Itens do cadastro a que o aviso se refere (selo na lista e no painel, atalho do aviso). */
+export const avisosEntidades = pgTable(
+  'avisos_entidades',
+  {
+    avisoId: uuid('aviso_id')
+      .notNull()
+      .references(() => avisosCadastro.id, { onDelete: 'cascade' }),
+    /** Entidade no singular, como na auditoria: `cliente`, `medico`, `exame`, `preco_cliente`... */
+    entidade: text('entidade').notNull(),
+    entidadeId: uuid('entidade_id').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.avisoId, t.entidade, t.entidadeId] }),
+    index('avisos_entidades_entidade_idx').on(t.entidade, t.entidadeId),
   ],
 );
 

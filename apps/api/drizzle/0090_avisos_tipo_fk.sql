@@ -1,0 +1,1 @@
+ALTER TABLE "avisos_cadastro" ADD CONSTRAINT "avisos_cadastro_tipo_tipos_aviso_tipo_fk" FOREIGN KEY ("tipo") REFERENCES "public"."tipos_aviso"("tipo") ON DELETE no action ON UPDATE no action;

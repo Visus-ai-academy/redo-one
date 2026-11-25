@@ -3,31 +3,30 @@ import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
   ValidateIf,
 } from 'class-validator';
 
-import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
+import { aparar, booleanoDaQuery, PaginacaoDto } from '../../../../catalogo/comum/dto';
+import { ORIGENS_AVISO, TIPOS_AVISO } from '../../../../comum/avisos/registro-avisos';
+import {
+  MENSAGEM_COMPETENCIA,
+  PADRAO_COMPETENCIA,
+} from '../../../../faturamento/infrastructure/http/dto/competencia.dto';
 import { PessoaResumoDto } from './importacao.dto';
 
-const TIPOS = [
-  'cliente',
-  'medico',
-  'estudo',
-  'modalidade',
-  'especialidade',
-  'prioridade',
-  'prioridade_operacao',
-  'conta_unidade',
-] as const;
+const TIPOS = TIPOS_AVISO;
 const STATUS = ['pendente', 'resolvido', 'ignorado'] as const;
 
 export class ListarAvisosDto extends PaginacaoDto {
@@ -47,14 +46,62 @@ export class ListarAvisosDto extends PaginacaoDto {
   @IsString()
   @MaxLength(100)
   busca?: string;
+
+  @ApiPropertyOptional({
+    description: 'Só os tipos de que algum papel de quem consulta é responsável.',
+  })
+  @Transform(booleanoDaQuery)
+  @IsOptional()
+  @IsBoolean()
+  meus?: boolean;
+
+  @ApiPropertyOptional({ example: '2026-10', description: 'Só os ligados a esta competência.' })
+  @IsOptional()
+  @Matches(PADRAO_COMPETENCIA, { message: `competencia: ${MENSAGEM_COMPETENCIA}` })
+  competencia?: string;
+
+  @ApiPropertyOptional({
+    description: 'Só os que se referem a este item (com `entidadeId`): cliente, medico, exame...',
+  })
+  @ValidateIf((o: ListarAvisosDto) => o.entidadeId !== undefined || o.entidade !== undefined)
+  @IsString()
+  @MaxLength(40)
+  entidade?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @ValidateIf((o: ListarAvisosDto) => o.entidadeId !== undefined || o.entidade !== undefined)
+  @IsUUID()
+  entidadeId?: string;
+}
+
+export class EntidadeAvisoDto {
+  @ApiProperty({ description: 'Entidade no singular: cliente, medico, exame, preco_cliente...' })
+  tipo!: string;
+  @ApiProperty({ format: 'uuid' }) id!: string;
+}
+
+export class CompetenciasAvisoDto {
+  @ApiProperty({ example: '2026-10' }) desde!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Vazio = dali em diante.' })
+  ate!: string | null;
 }
 
 export class AvisoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso' }) tipo!: (typeof TIPOS)[number];
-  @ApiProperty({ description: 'Como chegou da MobileMed na última importação ou rodada.' })
+  @ApiProperty({ description: 'Como chegou na última verificação (importação, rodada, carga).' })
   valor!: string;
   @ApiProperty({ enum: STATUS, enumName: 'StatusAviso' }) status!: (typeof STATUS)[number];
+  @ApiProperty({ enum: ORIGENS_AVISO, enumName: 'OrigemAviso' })
+  origem!: (typeof ORIGENS_AVISO)[number];
+  @ApiProperty({
+    type: CompetenciasAvisoDto,
+    nullable: true,
+    description: 'Competências a que se liga (a trava do fechamento).',
+  })
+  competencias!: CompetenciasAvisoDto | null;
+  @ApiProperty({ type: [EntidadeAvisoDto], description: 'Itens a que se refere (selo e atalho).' })
+  entidades!: EntidadeAvisoDto[];
   @ApiProperty({
     type: 'integer',
     description: 'Laudos da última importação (ou exames da última rodada) em que apareceu.',
@@ -79,6 +126,78 @@ export class PaginaAvisosDto {
   @ApiProperty({ type: 'integer' }) total!: number;
   @ApiProperty({ type: 'integer' }) pagina!: number;
   @ApiProperty({ type: 'integer' }) porPagina!: number;
+}
+
+export class ResumoAvisosDto {
+  @ApiProperty({ type: 'integer', description: 'Pendentes dos tipos de que é responsável.' })
+  total!: number;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  maisAntigoEm!: Date | null;
+  @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso', isArray: true })
+  tipos!: (typeof TIPOS)[number][];
+}
+
+export class SelosAvisoQueryDto {
+  @ApiProperty({ description: 'Entidade dos itens: cliente, medico, exame, preco_cliente...' })
+  @IsString()
+  @MaxLength(40)
+  entidade!: string;
+
+  @ApiProperty({
+    type: [String],
+    description: 'Ids dos itens da página, separados por vírgula (até 200).',
+  })
+  @Transform(({ value }) =>
+    (Array.isArray(value) ? value : String(value ?? '').split(','))
+      .map((v: unknown) => String(v).trim())
+      .filter(Boolean),
+  )
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsUUID('all', { each: true })
+  ids!: string[];
+}
+
+export class SeloAvisoDto {
+  @ApiProperty({ format: 'uuid' }) entidadeId!: string;
+  @ApiProperty({ format: 'uuid', description: 'O aviso.' }) id!: string;
+  @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso' }) tipo!: (typeof TIPOS)[number];
+  @ApiProperty() valor!: string;
+}
+
+export class PapelResponsavelDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() nome!: string;
+}
+
+export class ConfiguracaoTipoAvisoDto {
+  @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso' }) tipo!: (typeof TIPOS)[number];
+  @ApiProperty({ description: 'Aviso pendente ligado à competência impede fechá-la.' })
+  impedeFecharCompetencia!: boolean;
+  @ApiProperty({ type: [PapelResponsavelDto] }) responsaveis!: PapelResponsavelDto[];
+  @ApiProperty({ type: 'integer', description: 'Pendentes agora.' }) pendentes!: number;
+}
+
+export class TiposAvisoDto {
+  @ApiProperty({ type: [ConfiguracaoTipoAvisoDto] }) tipos!: ConfiguracaoTipoAvisoDto[];
+  @ApiProperty({ type: [PapelResponsavelDto], description: 'Papéis que se pode escolher.' })
+  papeis!: PapelResponsavelDto[];
+}
+
+export class TipoAvisoParamDto {
+  @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso' })
+  @IsIn(TIPOS)
+  tipo!: (typeof TIPOS)[number];
+}
+
+export class AtualizarTipoAvisoDto {
+  @ApiProperty() @IsBoolean() impedeFecharCompetencia!: boolean;
+
+  @ApiProperty({ type: [String], format: 'uuid', maxItems: 50 })
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  papeisIds!: string[];
 }
 
 export class IgnorarAvisoDto {

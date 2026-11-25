@@ -15,6 +15,8 @@ export interface CompetenciaResumo {
   importacaoTravadaEm: Date | null;
   importacaoTravadaPor: string | null;
   observacoes: string | null;
+  /** Fechada apesar de avisos pendentes que impediam: o motivo de quem fechou. */
+  fechadaComAvisosMotivo: string | null;
   /** Laudos não removidos com esta competência. */
   laudos: number;
   /** Soma do volume desses laudos. */
@@ -43,8 +45,11 @@ export interface CompetenciasRepository extends CompetenciasBloqueadas {
   obter(competencia: string): Promise<SituacaoCompetencia | null>;
   /** A mais recente com status fechada; nulo se nenhuma. */
   ultimaFechada(): Promise<string | null>;
-  /** Só se ainda estiver aberta; `false` se outra requisição mudou antes. */
-  fechar(competencia: string, autor: Autor): Promise<boolean>;
+  /**
+   * Só se ainda estiver aberta; `false` se outra requisição mudou antes. `motivoAvisos`: fechada
+   * apesar de avisos pendentes que impedem fechar (nulo no fechamento normal).
+   */
+  fechar(competencia: string, autor: Autor, motivoAvisos?: string | null): Promise<boolean>;
   /** Só se ainda estiver fechada; não mexe na trava. */
   reabrir(competencia: string, autor: Autor): Promise<boolean>;
   /** Só se ainda não estiver travada. */

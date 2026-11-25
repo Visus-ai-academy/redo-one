@@ -1,6 +1,13 @@
+import type { CompetenciasAviso } from '../../../comum/avisos/registro-avisos';
 import type { PendenciaCadastro, TipoAviso } from '../../domain/preparar-laudo';
 
 export const AVISOS_CADASTRO_REPOSITORY = Symbol('AVISOS_CADASTRO_REPOSITORY');
+
+/** Pendência da importação com quantos laudos e quais competências ela pegou. */
+export type PendenciaRegistrada = PendenciaCadastro & {
+  ocorrencias: number;
+  competencias?: CompetenciasAviso | null;
+};
 
 export interface AvisosCadastroRepository {
   /**
@@ -10,7 +17,7 @@ export interface AvisosCadastroRepository {
    */
   registrar(
     importacaoId: string | null,
-    pendencias: (PendenciaCadastro & { ocorrencias: number })[],
+    pendencias: PendenciaRegistrada[],
     conferidos: { tipo: TipoAviso; chave: string }[],
     agora: Date,
   ): Promise<void>;

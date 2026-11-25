@@ -186,25 +186,46 @@ describe('prepararLaudo', () => {
     );
   });
 
-  it('cliente de nome ambíguo vira aviso de cliente que diz entre quais', () => {
+  it('cliente de nome ambíguo vira aviso próprio, ligado aos clientes, e resolve o de desconhecido', () => {
     const { laudo, pendencias, conferidos } = prepararLaudo(
       linha({ empresa: 'RADI.IMAGEM' }),
       'normal',
       {
         ...cadastros,
         clientesAmbiguos: (empresa) =>
-          empresa === 'RADI.IMAGEM' ? ['RADI-IMAGEM', 'RADI_IMAGEM'] : [],
+          empresa === 'RADI.IMAGEM'
+            ? [
+                { id: 'c-hifen', nome: 'RADI-IMAGEM' },
+                { id: 'c-sub', nome: 'RADI_IMAGEM' },
+              ]
+            : [],
       },
       pseudonimo,
       cortes,
     );
     expect(laudo.clienteId).toBeNull();
     expect(pendencias).toContainEqual({
-      tipo: 'cliente',
+      tipo: 'cliente_ambiguo',
       chave: 'radi imagem',
       valor: 'RADI.IMAGEM (mais de um cliente com esse nome: RADI-IMAGEM, RADI_IMAGEM)',
+      entidades: [
+        { tipo: 'cliente', id: 'c-hifen' },
+        { tipo: 'cliente', id: 'c-sub' },
+      ],
     });
-    expect(conferidos).not.toContainEqual(expect.objectContaining({ tipo: 'cliente' }));
+    expect(pendencias).not.toContainEqual(expect.objectContaining({ tipo: 'cliente' }));
+    // O nome existe: o aviso de cliente desconhecido (de antes) se resolve.
+    expect(conferidos).toContainEqual({ tipo: 'cliente', chave: 'radi imagem' });
+  });
+
+  it('cliente que resolve confere também o aviso de nome ambíguo', () => {
+    const { conferidos } = prepararLaudo(linha(), 'normal', cadastros, pseudonimo, cortes);
+    expect(conferidos).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tipo: 'cliente' }),
+        expect.objectContaining({ tipo: 'cliente_ambiguo' }),
+      ]),
+    );
   });
 
   it('a pendência de estudo usa a chave do estudo sem o sufixo X', () => {

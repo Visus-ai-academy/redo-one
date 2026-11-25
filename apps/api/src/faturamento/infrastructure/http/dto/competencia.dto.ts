@@ -1,5 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+
+import { aparar } from '../../../../catalogo/comum/dto';
 
 /** "YYYY-MM" com mês de 01 a 12. */
 export const PADRAO_COMPETENCIA = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -38,6 +41,12 @@ export class CompetenciaDto {
   @ApiProperty({ type: String, nullable: true, description: 'Quem travou (nome ou texto).' })
   importacaoTravadaPor!: string | null;
   @ApiProperty({ type: String, nullable: true }) observacoes!: string | null;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Fechada apesar de avisos pendentes que impediam: o motivo de quem fechou.',
+  })
+  fechadaComAvisosMotivo!: string | null;
   @ApiProperty({ type: 'integer', description: 'Laudos (não removidos) desta competência.' })
   laudos!: number;
   @ApiProperty({ type: Number, description: 'Soma do volume desses laudos.' })
@@ -49,4 +58,39 @@ export class PaginaCompetenciasDto {
   @ApiProperty({ type: 'integer' }) total!: number;
   @ApiProperty({ type: 'integer' }) pagina!: number;
   @ApiProperty({ type: 'integer' }) porPagina!: number;
+}
+
+export class FecharCompetenciaDto {
+  @ApiPropertyOptional({
+    maxLength: 500,
+    description:
+      'Fechar apesar de avisos pendentes que impedem (exige faturamento.competencia.fechar_com_avisos).',
+  })
+  @Transform(aparar)
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  motivoAvisos?: string;
+}
+
+export class AvisoQueImpedeFecharDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ description: 'Tipo do aviso (o mesmo de Operação › Avisos).' }) tipo!: string;
+  @ApiProperty() valor!: string;
+}
+
+export class AvisosQueImpedemFecharDto {
+  @ApiProperty({ type: 'integer' }) total!: number;
+  @ApiProperty({ type: [AvisoQueImpedeFecharDto], description: 'Os mais antigos (até 20).' })
+  itens!: AvisoQueImpedeFecharDto[];
+}
+
+/** O 409 de fechar com avisos pendentes que impedem. */
+export class FechamentoComAvisosDto {
+  @ApiProperty({ type: 'integer', example: 409 }) statusCode!: number;
+  @ApiProperty() message!: string;
+  @ApiProperty({ enum: ['avisos_pendentes'] }) codigo!: 'avisos_pendentes';
+  @ApiProperty({ type: AvisosQueImpedemFecharDto }) avisos!: AvisosQueImpedemFecharDto;
+  @ApiProperty({ description: 'Quem pediu pode fechar mesmo assim, informando o motivo.' })
+  podeFecharComAvisos!: boolean;
 }

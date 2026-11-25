@@ -198,9 +198,9 @@ describe.skipIf(!url)('importar laudos (integração)', () => {
       .select()
       .from(schema.avisosCadastro)
       .orderBy(schema.avisosCadastro.tipo);
-    expect(avisos.map((a) => [a.tipo, a.chave, a.ocorrencias])).toEqual([
-      ['medico', 'desconhecido', 3],
-      ['estudo', 'tc estudo novo', 1],
+    expect(avisos.map((a) => [a.tipo, a.chave, a.ocorrencias, a.competenciaDesde])).toEqual([
+      ['estudo', 'tc estudo novo', 1, '2026-10'],
+      ['medico', 'desconhecido', 3, '2026-10'],
     ]);
     const [laudo] = await db.select().from(schema.laudos).limit(1);
     // A competência do laudo gravado passa a existir, aberta.

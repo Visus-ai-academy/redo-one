@@ -21,6 +21,8 @@ import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastruc
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import { enfileirarReclassificacaoTipificacao } from '../ingestao/infrastructure/jobs/enfileirar-reclassificacao-tipificacao';
 import { enfileirarReresolucaoClientes } from '../ingestao/infrastructure/jobs/enfileirar-reresolucao-clientes';
+import { DrizzleRegistroAvisos } from '../ingestao/infrastructure/persistence/drizzle-registro-avisos';
+import { avisosDosItensCriados, avisosDosPrecosRepetidos } from './avisos-da-carga';
 import type { CatalogoMigrado } from './mapear-catalogo';
 import type { CompetenciasMigradas } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
@@ -243,7 +245,10 @@ export async function precosComHistoriaNoRedo(
  * nunca deixa duas versões valendo. Quem já tem história no redo-one (`precosComHistoriaNoRedo`)
  * fica como está: o relatório da carga o lista.
  */
-async function gravarPrecos(tx: Transacao, { tabelas, catalogo }: PrecosMigrados) {
+async function gravarPrecos(
+  tx: Transacao,
+  { tabelas, catalogo, precosRepetidos, itensCriados }: PrecosMigrados,
+) {
   // Categorias e prioridades que só os preços do dashboards-one usam: entram antes dos preços. Só
   // vêm as que ainda não estão no redo-one, então o que a tela mudou nelas fica.
   await upsert(tx, schema.categoriasExame, catalogo.categoriasExame);
@@ -281,6 +286,22 @@ async function gravarPrecos(tx: Transacao, { tabelas, catalogo }: PrecosMigrados
     for (const id of [...ids].sort())
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`precos:${tipo}:${id}`}))`);
   const protegidos = await precosComHistoriaNoRedo(tx);
+  // Cada preço repetido com valores diferentes e cada item do catálogo que só os preços usam vira
+  // aviso; o que esta carga não acha mais se resolve.
+  const registro = new DrizzleRegistroAvisos();
+  const agora = new Date();
+  await registro.sincronizar(tx, {
+    tipo: 'preco_repetido',
+    origem: 'carga',
+    levantados: avisosDosPrecosRepetidos(precosRepetidos, protegidos),
+    agora,
+  });
+  await registro.sincronizar(tx, {
+    tipo: 'catalogo_criado_carga',
+    origem: 'carga',
+    levantados: avisosDosItensCriados(itensCriados),
+    agora,
+  });
   const trocar = async <
     T extends typeof schema.precosCliente | typeof schema.precosPadraoContratado,
   >(
