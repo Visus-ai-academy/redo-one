@@ -95,8 +95,8 @@ export async function lerLegado(url: string): Promise<{
       medicos: await ler(
         `select id, nome, crm, "idMobilemed", email, telefone, ativo, senior, fellowship, funcao,
           nivel, to_char("dataInicioVinculo", 'YYYY-MM-DD') as "dataInicioVinculo", observacoes,
-          cpf, cnpj, "nomeEmpresa", "tipoChavePix", "chavePix", socio, "optanteSimples",
-          "omieCodigoFornecedor" from medicos order by ctid`,
+          cpf, cnpj, "nomeEmpresa", "tipoChavePix", "chavePix", socio, "optanteSimples"
+          from medicos order by ctid`,
       ),
       aliases: await ler(
         'select id, "medicoId", "nomeOrigem", "tipoOrigem", "verificadoManualmente", observacoes from medico_nome_aliases order by ctid',
@@ -198,8 +198,8 @@ export async function lerLegado(url: string): Promise<{
     const dadosFiscais: LegadoDadosFiscais = {
       clientes: await ler(
         `select id, contato, email, "emailEnvioNf", telefone, "bancoCodigo", "bancoAgencia",
-          "bancoConta", endereco, "enderecoNumero", complemento, bairro, cidade, estado, cep,
-          "omieCodigoCliente", ${instante('omieDataSincronizacao')} from clientes order by ctid`,
+          "bancoConta", endereco, "enderecoNumero", complemento, bairro, cidade, estado, cep
+          from clientes order by ctid`,
       ),
       exclusaoFiscal: exclusao?.faturamentoExclusaoFiscal ?? [],
     };

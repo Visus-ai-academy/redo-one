@@ -26,8 +26,6 @@ const salvo = (extra: Partial<DadosFiscaisClienteDto> = {}): DadosFiscaisCliente
   bancoAgencia: null,
   bancoConta: null,
   exclusaoFiscal: false,
-  omieCodigoCliente: null,
-  omieSincronizadoEm: null,
   atualizadoEm: null,
   atualizadoPor: null,
   ...extra,

@@ -22,10 +22,9 @@ describe('dados de faturamento do cliente', () => {
     definir = new DefinirDadosFiscais(repo, auditoria, () => agora);
   });
 
-  it('cliente sem dados: tudo vazio, sem Omie', async () => {
+  it('cliente sem dados: tudo vazio', async () => {
     expect(await obter.executar('c1')).toEqual({
       dados: DADOS_FISCAIS_VAZIOS,
-      omie: { codigoCliente: null, sincronizadoEm: null },
       atualizadoEm: null,
       atualizadoPor: null,
     });
@@ -68,15 +67,6 @@ describe('dados de faturamento do cliente', () => {
     await definir.executar('u1', 'c1', dados);
     expect(repo.autores).toHaveLength(1);
     expect(auditoria.eventos).toHaveLength(1);
-  });
-
-  it('mantém o que veio do Omie ao salvar', async () => {
-    repo.omie.set('c1', { codigoCliente: '8556006877', sincronizadoEm: agora });
-    await definir.executar('u1', 'c1', { ...DADOS_FISCAIS_VAZIOS, email: 'a@b.com' });
-    expect((await obter.executar('c1')).omie).toEqual({
-      codigoCliente: '8556006877',
-      sincronizadoEm: agora,
-    });
   });
 
   it('dado inválido não grava nada', async () => {

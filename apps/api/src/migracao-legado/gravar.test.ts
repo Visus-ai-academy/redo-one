@@ -128,7 +128,6 @@ const medicos = mapearMedicos({
       chavePix: null,
       socio: 'SIM',
       optanteSimples: null,
-      omieCodigoFornecedor: null,
     },
   ],
   aliases: [],
@@ -363,8 +362,6 @@ describe.skipIf(!url)('gravarMigracao', () => {
       cidade: 'Araraquara',
       estado: 'SP',
       cep: '4553010',
-      omieCodigoCliente: '855',
-      omieDataSincronizacao: '2026-03-11T03:23:09.850Z',
     };
     const migrar = () =>
       gravarMigracao(
@@ -380,7 +377,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
     const ler = async () =>
       (
         await db.execute(
-          sql`select c.nome, d.emails_nf, d.cep, d.omie_codigo_cliente, d.exclusao_fiscal
+          sql`select c.nome, d.emails_nf, d.cep, d.exclusao_fiscal
             from clientes_dados_fiscais d join clientes c on c.id = d.cliente_id order by c.nome`,
         )
       ).rows;
@@ -392,14 +389,12 @@ describe.skipIf(!url)('gravarMigracao', () => {
         nome: 'PRN',
         emails_nf: [],
         cep: null,
-        omie_codigo_cliente: null,
         exclusao_fiscal: true,
       },
       {
         nome: 'PRN TELE_ARARAQUARA',
         emails_nf: ['nf@prn.com.br', 'administracao@teleimagem.com.br'],
         cep: '04553010',
-        omie_codigo_cliente: '855',
         exclusao_fiscal: false,
       },
     ]);

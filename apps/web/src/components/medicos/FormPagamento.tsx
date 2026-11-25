@@ -40,7 +40,6 @@ const schema = z
     razaoSocial: z.string(),
     tipoChavePix: z.string(),
     chavePix: z.string(),
-    omieCodigoFornecedor: z.string(),
   })
   .refine((v) => !v.chavePix.trim() || v.tipoChavePix, {
     message: 'Escolha o tipo da chave Pix.',
@@ -75,7 +74,6 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
       razaoSocial: dados.razaoSocial ?? '',
       tipoChavePix: dados.tipoChavePix ?? '',
       chavePix: dados.chavePix ?? '',
-      omieCodigoFornecedor: dados.omieCodigoFornecedor ?? '',
     },
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
@@ -91,7 +89,6 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
             : opcional(value.chavePix),
           socio: paraBooleano(value.socio),
           optanteSimples: paraBooleano(value.optanteSimples),
-          omieCodigoFornecedor: opcional(value.omieCodigoFornecedor),
         }),
       ),
   });
@@ -121,10 +118,6 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
               : '—'
           }
         />
-        <CampoSomenteLeitura
-          label="Código do fornecedor no Omie"
-          value={dados.omieCodigoFornecedor ?? '—'}
-        />
       </div>
     );
   }
@@ -146,7 +139,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
           <field.SelectField
             label="Sócio"
             placeholder="Não informado"
-            description="Sócio e não sócio recebem em categorias diferentes do contas a pagar no Omie."
+            description="Sócio e não sócio recebem o repasse de formas diferentes."
             opcoes={SIM_NAO}
           />
         )}
@@ -226,15 +219,6 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
           )}
         </form.Subscribe>
       </div>
-      <form.AppField name="omieCodigoFornecedor">
-        {(field) => (
-          <field.TextField
-            label="Código do fornecedor no Omie"
-            placeholder="Ex.: 4214859321"
-            autoComplete="off"
-          />
-        )}
-      </form.AppField>
       <form.AppForm>
         <form.SubmitButton pendingLabel="Salvando…" className="self-end">
           Salvar pagamento

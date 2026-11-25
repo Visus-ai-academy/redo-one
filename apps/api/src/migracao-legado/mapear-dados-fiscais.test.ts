@@ -22,8 +22,6 @@ const ficha = (extra: Partial<FichaLegada> = {}): FichaLegada => ({
   cidade: null,
   estado: null,
   cep: null,
-  omieCodigoCliente: null,
-  omieDataSincronizacao: null,
   ...extra,
 });
 
@@ -75,8 +73,6 @@ describe('mapearDadosFiscais', () => {
         bancoCodigo: null,
         bancoAgencia: null,
         bancoConta: null,
-        omieCodigoCliente: null,
-        omieSincronizadoEm: null,
         exclusaoFiscal: false,
         atualizadoPorId: null,
       },
@@ -84,7 +80,7 @@ describe('mapearDadosFiscais', () => {
     expect(avisos).toEqual([]);
   });
 
-  it('campos como estão, aparados; endereço, banco e Omie', () => {
+  it('campos como estão, aparados; endereço e banco', () => {
     const [linha] = mapear([
       ficha({
         contato: ' Ana ',
@@ -100,8 +96,6 @@ describe('mapearDadosFiscais', () => {
         bancoCodigo: '341',
         bancoAgencia: '0001',
         bancoConta: '12345-6',
-        omieCodigoCliente: '8556006877',
-        omieDataSincronizacao: '2026-03-11T03:23:09.850Z',
       }),
     ]).tabelas.clientesDadosFiscais;
     expect(linha).toMatchObject({
@@ -118,8 +112,6 @@ describe('mapearDadosFiscais', () => {
       bancoCodigo: '341',
       bancoAgencia: '0001',
       bancoConta: '12345-6',
-      omieCodigoCliente: '8556006877',
-      omieSincronizadoEm: new Date('2026-03-11T03:23:09.850Z'),
     });
   });
 

@@ -32,8 +32,8 @@ export const UFS = [
 ] as const;
 
 /**
- * Dados de faturamento do cliente que a tela edita: para onde vai a NF, endereço e contato do
- * cadastro no Omie, banco e a exclusão fiscal. O código no Omie fica de fora (vem da sincronização).
+ * Dados de faturamento do cliente que a tela edita: para onde vai a NF, endereço, contato, banco e
+ * a exclusão fiscal.
  */
 export interface DadosFiscais {
   emailsNf: string[];
@@ -82,7 +82,7 @@ const CAMPOS_ENDERECO = [
   'uf',
 ] as const satisfies (keyof DadosFiscais)[];
 
-/** Endereço começado: sem estes, o cadastro no Omie sairia incompleto. */
+/** Endereço começado: sem estes, o cadastro do cliente para a NF sairia incompleto. */
 const OBRIGATORIOS_ENDERECO = {
   cep: 'Informe o CEP.',
   logradouro: 'Informe o logradouro.',

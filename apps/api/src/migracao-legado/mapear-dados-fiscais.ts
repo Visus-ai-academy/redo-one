@@ -74,8 +74,6 @@ const vazia = (clienteId: string): Linha => ({
   bancoCodigo: null,
   bancoAgencia: null,
   bancoConta: null,
-  omieCodigoCliente: null,
-  omieSincronizadoEm: null,
   exclusaoFiscal: false,
   atualizadoPorId: null,
 });
@@ -127,8 +125,6 @@ export function mapearDadosFiscais(
       bancoCodigo: texto(f.bancoCodigo),
       bancoAgencia: texto(f.bancoAgencia),
       bancoConta: texto(f.bancoConta),
-      omieCodigoCliente: texto(f.omieCodigoCliente),
-      omieSincronizadoEm: f.omieDataSincronizacao ? new Date(f.omieDataSincronizacao) : null,
     });
   }
 

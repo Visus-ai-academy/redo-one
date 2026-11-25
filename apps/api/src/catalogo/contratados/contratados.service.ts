@@ -22,7 +22,7 @@ import {
 
 const ROTULO = { entidade: 'contratado', singular: 'Contratado', genero: 'm' } as const;
 
-/** Cadastro básico do contratado (emissora). Omie e signatários entram com faturamento e contratos. */
+/** Cadastro básico do contratado (emissora). Signatários entram com contratos. */
 @Injectable()
 export class ContratadosService {
   private readonly registro: RegistroAuditoria;

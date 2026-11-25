@@ -22,7 +22,6 @@ const VAZIO: DadosPagamento = {
   chavePix: null,
   socio: null,
   optanteSimples: null,
-  omieCodigoFornecedor: null,
 };
 
 describe('PagamentoMedicoService', () => {
@@ -78,7 +77,6 @@ describe('PagamentoMedicoService', () => {
       chavePix: ' augusto@pix.com ',
       socio: true,
       optanteSimples: false,
-      omieCodigoFornecedor: ' 4214859321 ',
     });
 
     expect(repo.dados.get(medicoId)).toEqual({
@@ -89,7 +87,6 @@ describe('PagamentoMedicoService', () => {
       chavePix: 'augusto@pix.com',
       socio: true,
       optanteSimples: false,
-      omieCodigoFornecedor: '4214859321',
     });
   });
 

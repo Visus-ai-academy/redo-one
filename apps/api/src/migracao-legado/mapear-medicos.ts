@@ -105,7 +105,6 @@ export function mapearMedicos(legado: LegadoMedicos): MedicosMigrados {
       chavePix: texto(m.chavePix),
       socio: simNao(m.socio),
       optanteSimples: simNao(m.optanteSimples),
-      omieCodigoFornecedor: texto(m.omieCodigoFornecedor),
     };
     const { medicoId: _, ...dados } = pagamento;
     if (Object.values(dados).some((v) => v !== null)) tabPagamento.push(pagamento);

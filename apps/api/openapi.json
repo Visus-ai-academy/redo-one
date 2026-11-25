@@ -14171,16 +14171,11 @@
           "socio": {
             "type": "boolean",
             "nullable": true,
-            "description": "Decide a categoria do contas a pagar no Omie; nulo = não informado."
+            "description": "Sócio da empresa ou não (o financeiro paga sócio e não sócio de formas diferentes); nulo = não informado."
           },
           "optanteSimples": {
             "type": "boolean",
             "nullable": true
-          },
-          "omieCodigoFornecedor": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 30
           }
         },
         "required": [
@@ -16909,7 +16904,7 @@
             "type": "string",
             "nullable": true,
             "maxLength": 254,
-            "description": "E-mail do cadastro no Omie."
+            "description": "E-mail de contato do cliente."
           },
           "contatoNome": {
             "type": "string",
@@ -16981,16 +16976,6 @@
             "type": "boolean",
             "description": "Os laudos do cliente saem do faturamento."
           },
-          "omieCodigoCliente": {
-            "type": "string",
-            "nullable": true,
-            "description": "Código do cliente no Omie; vem da sincronização (só leitura)."
-          },
-          "omieSincronizadoEm": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "atualizadoEm": {
             "type": "string",
             "format": "date-time",
@@ -17019,8 +17004,6 @@
           "bancoAgencia",
           "bancoConta",
           "exclusaoFiscal",
-          "omieCodigoCliente",
-          "omieSincronizadoEm",
           "atualizadoEm",
           "atualizadoPor"
         ]
@@ -17044,7 +17027,7 @@
             "type": "string",
             "nullable": true,
             "maxLength": 254,
-            "description": "E-mail do cadastro no Omie."
+            "description": "E-mail de contato do cliente."
           },
           "contatoNome": {
             "type": "string",

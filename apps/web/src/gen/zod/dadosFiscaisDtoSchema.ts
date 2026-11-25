@@ -7,7 +7,7 @@ import * as z from 'zod'
 
 export const dadosFiscaisDtoSchema = z.object({
   emailsNf: z.array(z.string()).max(20).describe('Recebem a NF e os demonstrativos, na ordem; repetidos e vazios saem.').meta({ examples: [["financeiro@cliente.com.br","administracao@teleimagem.com.br"]] }),
-  email: z.string().max(254).nullable().describe('E-mail do cadastro no Omie.'),
+  email: z.string().max(254).nullable().describe('E-mail de contato do cliente.'),
   contatoNome: z.string().max(200).nullable(),
   telefone: z.string().max(60).nullable(),
   cep: z.string().max(9).nullable().describe('Só os dígitos são guardados; 8 dígitos.').meta({ examples: ['01310-100'] }),

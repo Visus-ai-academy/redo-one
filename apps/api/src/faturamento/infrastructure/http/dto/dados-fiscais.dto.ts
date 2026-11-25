@@ -31,7 +31,7 @@ export class DadosFiscaisDto {
   @MaxLength(254, { each: true })
   emailsNf!: string[];
 
-  @TextoOpcional(254, 'E-mail do cadastro no Omie.') email!: string | null;
+  @TextoOpcional(254, 'E-mail de contato do cliente.') email!: string | null;
   @TextoOpcional(200) contatoNome!: string | null;
   @TextoOpcional(60) telefone!: string | null;
   @TextoOpcional(9, 'Só os dígitos são guardados; 8 dígitos.', '01310-100') cep!: string | null;
@@ -51,16 +51,6 @@ export class DadosFiscaisDto {
 }
 
 export class DadosFiscaisClienteDto extends DadosFiscaisDto {
-  @ApiProperty({
-    type: String,
-    nullable: true,
-    description: 'Código do cliente no Omie; vem da sincronização (só leitura).',
-  })
-  omieCodigoCliente!: string | null;
-
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  omieSincronizadoEm!: Date | null;
-
   @ApiProperty({
     type: String,
     format: 'date-time',

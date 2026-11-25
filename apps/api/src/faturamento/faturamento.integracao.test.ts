@@ -203,7 +203,9 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
         string,
         unknown
       >;
-      expect(lido).toMatchObject({ ...dados, cep: '01310100', omieCodigoCliente: null });
+      expect(lido).toMatchObject({ ...dados, cep: '01310100' });
+      expect(lido).not.toHaveProperty('omieCodigoCliente');
+      expect(lido).not.toHaveProperty('omieSincronizadoEm');
       expect(lido.atualizadoPor).toBe('Usuário de teste');
       const db = drizzle({ client: pool, schema });
       const eventos = await db

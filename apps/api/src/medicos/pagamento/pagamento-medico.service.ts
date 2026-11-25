@@ -22,7 +22,6 @@ const VAZIO: DadosPagamento = {
   chavePix: null,
   socio: null,
   optanteSimples: null,
-  omieCodigoFornecedor: null,
 };
 
 /** Na auditoria, CPF e chave Pix aparecem só pelos dois últimos caracteres. */
@@ -95,6 +94,5 @@ function validar(dados: DadosPagamento): DadosPagamento {
     chavePix,
     socio: dados.socio,
     optanteSimples: dados.optanteSimples,
-    omieCodigoFornecedor: textoOpcional(dados.omieCodigoFornecedor),
   };
 }

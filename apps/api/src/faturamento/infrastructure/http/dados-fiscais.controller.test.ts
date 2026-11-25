@@ -28,12 +28,11 @@ describe('controller dos dados de faturamento do cliente', () => {
     expect(reflector.get(PATH_METADATA, p.historico)).toBe('historico');
   });
 
-  it('devolve os dados com o Omie achatado; grava em nome de quem está logado', async () => {
+  it('devolve os dados achatados, sem nada do Omie; grava em nome de quem está logado', async () => {
     const em = new Date('2026-03-11T03:23:09.850Z');
     const obter = {
       executar: vi.fn(async () => ({
         dados: { ...DADOS_FISCAIS_VAZIOS, emailsNf: ['a@x.com'] },
-        omie: { codigoCliente: '855', sincronizadoEm: em },
         atualizadoEm: em,
         atualizadoPor: 'Ana',
       })),
@@ -48,8 +47,6 @@ describe('controller dos dados de faturamento do cliente', () => {
     expect(await c.obter('c1')).toEqual({
       ...DADOS_FISCAIS_VAZIOS,
       emailsNf: ['a@x.com'],
-      omieCodigoCliente: '855',
-      omieSincronizadoEm: em,
       atualizadoEm: em,
       atualizadoPor: 'Ana',
     });

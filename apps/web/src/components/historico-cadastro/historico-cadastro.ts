@@ -121,7 +121,6 @@ const CAMPOS: Record<string, string> = {
   chavePix: 'Chave Pix',
   socio: 'Sócio',
   optanteSimples: 'Optante do Simples',
-  omieCodigoFornecedor: 'Fornecedor no Omie',
   habilitadoRobo: 'Habilitado no robô',
   unidadeTeto: 'Conta o teto por',
   nomeFantasia: 'Nome fantasia',

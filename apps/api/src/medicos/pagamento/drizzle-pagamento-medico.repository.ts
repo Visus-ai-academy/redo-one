@@ -19,7 +19,6 @@ export class DrizzlePagamentoMedicoRepository implements PagamentoMedicoReposito
         chavePix: medicosDadosPagamento.chavePix,
         socio: medicosDadosPagamento.socio,
         optanteSimples: medicosDadosPagamento.optanteSimples,
-        omieCodigoFornecedor: medicosDadosPagamento.omieCodigoFornecedor,
       })
       .from(medicosDadosPagamento)
       .where(eq(medicosDadosPagamento.medicoId, medicoId))

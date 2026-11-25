@@ -7,7 +7,7 @@ import * as z from 'zod'
 
 export const dadosFiscaisClienteDtoSchema = z.object({
   emailsNf: z.array(z.string()).max(20).describe('Recebem a NF e os demonstrativos, na ordem; repetidos e vazios saem.').meta({ examples: [["financeiro@cliente.com.br","administracao@teleimagem.com.br"]] }),
-  email: z.string().max(254).nullable().describe('E-mail do cadastro no Omie.'),
+  email: z.string().max(254).nullable().describe('E-mail de contato do cliente.'),
   contatoNome: z.string().max(200).nullable(),
   telefone: z.string().max(60).nullable(),
   cep: z.string().max(9).nullable().describe('Só os dígitos são guardados; 8 dígitos.').meta({ examples: ['01310-100'] }),
@@ -21,8 +21,6 @@ export const dadosFiscaisClienteDtoSchema = z.object({
   bancoAgencia: z.string().max(20).nullable(),
   bancoConta: z.string().max(30).nullable(),
   exclusaoFiscal: z.boolean().describe('Os laudos do cliente saem do faturamento.'),
-  omieCodigoCliente: z.string().nullable().describe('Código do cliente no Omie; vem da sincronização (só leitura).'),
-  omieSincronizadoEm: z.iso.datetime().nullable(),
   atualizadoEm: z.iso.datetime().nullable().describe('Vazio se o cliente ainda não tem dados de faturamento.'),
   atualizadoPor: z.string().nullable().describe('Quem salvou por último; vazio na carga do dashboards-one.'),
 })

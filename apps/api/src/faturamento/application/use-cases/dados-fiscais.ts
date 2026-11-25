@@ -26,7 +26,7 @@ async function exigirCliente(repo: DadosFiscaisRepository, clienteId: string) {
   if (!(await repo.clienteExiste(clienteId))) throw new ClienteNaoEncontradoError();
 }
 
-/** Aba Faturamento do cliente: e-mails da NF, endereço, contato, banco e Omie. */
+/** Aba Faturamento do cliente: e-mails da NF, endereço, contato e banco. */
 export class ObterDadosFiscais {
   constructor(private readonly repo: DadosFiscaisRepository) {}
 
@@ -35,7 +35,6 @@ export class ObterDadosFiscais {
     return (
       (await this.repo.obter(clienteId)) ?? {
         dados: DADOS_FISCAIS_VAZIOS,
-        omie: { codigoCliente: null, sincronizadoEm: null },
         atualizadoEm: null,
         atualizadoPor: null,
       }

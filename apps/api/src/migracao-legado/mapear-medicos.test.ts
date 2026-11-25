@@ -27,7 +27,6 @@ const medico = (id: string, nome: string, extra: Partial<Medico> = {}): Medico =
   chavePix: null,
   socio: null,
   optanteSimples: null,
-  omieCodigoFornecedor: null,
   ...extra,
 });
 

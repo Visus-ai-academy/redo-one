@@ -29,7 +29,7 @@ import {
 } from '../../application/use-cases/dados-fiscais';
 import { DadosFiscaisClienteDto, DadosFiscaisDto } from './dto/dados-fiscais.dto';
 
-/** Aba Faturamento do cliente: e-mails da NF, endereço, contato, banco e Omie. */
+/** Aba Faturamento do cliente: e-mails da NF, endereço, contato e banco. */
 @ApiTags('faturamento')
 @Controller('faturamento/clientes/:clienteId/dados-fiscais')
 export class DadosFiscaisController {
@@ -46,11 +46,9 @@ export class DadosFiscaisController {
   async obter(
     @Param('clienteId', ParseUUIDPipe) clienteId: string,
   ): Promise<DadosFiscaisClienteDto> {
-    const { dados, omie, atualizadoEm, atualizadoPor } = await this.obterCaso.executar(clienteId);
+    const { dados, atualizadoEm, atualizadoPor } = await this.obterCaso.executar(clienteId);
     return {
       ...dados,
-      omieCodigoCliente: omie.codigoCliente,
-      omieSincronizadoEm: omie.sincronizadoEm,
       atualizadoEm,
       atualizadoPor,
     };

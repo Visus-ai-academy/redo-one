@@ -11,10 +11,9 @@ export interface DadosPagamento {
   razaoSocial: string | null;
   tipoChavePix: TipoChavePix | null;
   chavePix: string | null;
-  /** Decide a categoria do contas a pagar no Omie; nulo = não informado. */
+  /** Sócio da empresa ou não (o financeiro paga sócio e não sócio de formas diferentes); nulo = não informado. */
   socio: boolean | null;
   optanteSimples: boolean | null;
-  omieCodigoFornecedor: string | null;
 }
 
 export interface PagamentoMedicoRepository {

@@ -36,14 +36,9 @@ export type PagamentoMedicoDto = {
    */
   chavePix?: string | null;
   /**
-   * @description Decide a categoria do contas a pagar no Omie; nulo = não informado.
+   * @description Sócio da empresa ou não (o financeiro paga sócio e não sócio de formas diferentes); nulo = não informado.
    * @type boolean
    */
   socio: boolean | null;
   optanteSimples: boolean | null;
-  /**
-   * @maxLength 30
-   * @type string | undefined
-   */
-  omieCodigoFornecedor?: string | null;
 };

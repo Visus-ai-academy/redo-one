@@ -58,8 +58,6 @@ const DADOS: DadosFiscaisClienteDto = {
   bancoAgencia: null,
   bancoConta: null,
   exclusaoFiscal: false,
-  omieCodigoCliente: '8556006877',
-  omieSincronizadoEm: '2026-03-11T03:23:09.850Z',
   atualizadoEm: null,
   atualizadoPor: null,
 };
@@ -76,8 +74,6 @@ const VAZIO: DadosFiscaisClienteDto = {
   bairro: null,
   cidade: null,
   uf: null,
-  omieCodigoCliente: null,
-  omieSincronizadoEm: null,
 };
 
 const com = (dados: DadosFiscaisClienteDto) =>
@@ -95,15 +91,21 @@ const abrir = (props: Partial<Parameters<typeof DadosFaturamentoCliente>[0]> = {
   renderComRotas(<DadosFaturamentoCliente clienteId="c-1" podeEditar agora={AGORA} {...props} />);
 
 describe('DadosFaturamentoCliente', () => {
-  it('sem editar: mostra os dados e o Omie, sem salvar', async () => {
-    abrir({ podeEditar: false });
+  it('sem editar: mostra os dados, sem salvar e sem nada do Omie', async () => {
+    const { container } = abrir({ podeEditar: false });
     expect(await screen.findByText('nf@cliente.com.br')).toBeInTheDocument();
     expect(screen.getByLabelText('CEP')).toHaveValue('01310-100');
     expect(screen.getByLabelText('Telefone')).toHaveValue('(11) 99999-0000');
-    expect(screen.getByLabelText('Código do cliente no Omie')).toHaveValue('8556006877');
+    expect(container).not.toHaveTextContent(/omie/i);
     expect(
       screen.queryByRole('button', { name: 'Salvar dados de faturamento' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('editando: nenhuma seção nem texto do Omie', async () => {
+    const { container } = abrir();
+    await screen.findByLabelText('E-mail da NF 1');
+    expect(container).not.toHaveTextContent(/omie/i);
   });
 
   it('unidade: avisa que a NF usa os dados do cliente principal', async () => {

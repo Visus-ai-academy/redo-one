@@ -11,9 +11,8 @@ export const pagamentoMedicoDtoSchema = z.object({
   razaoSocial: z.string().max(200).nullish(),
   tipoChavePix: z.enum(['CPF', 'CNPJ', 'EMAIL', 'TELEFONE', 'ALEATORIA']).nullish(),
   chavePix: z.string().max(140).nullish(),
-  socio: z.boolean().nullable().describe('Decide a categoria do contas a pagar no Omie; nulo = não informado.'),
+  socio: z.boolean().nullable().describe('Sócio da empresa ou não (o financeiro paga sócio e não sócio de formas diferentes); nulo = não informado.'),
   optanteSimples: z.boolean().nullable(),
-  omieCodigoFornecedor: z.string().max(30).nullish(),
 })
 
 export type PagamentoMedicoDtoSchemaType = z.infer<typeof pagamentoMedicoDtoSchema>

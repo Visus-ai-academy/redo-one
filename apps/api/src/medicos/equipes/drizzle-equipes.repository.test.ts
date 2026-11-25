@@ -124,7 +124,6 @@ describe.skipIf(!url)('repositórios de equipes, níveis e pagamento', () => {
       chavePix: null,
       socio: null,
       optanteSimples: null,
-      omieCodigoFornecedor: null,
     };
 
     expect(await repo.buscar(ana)).toBeNull();

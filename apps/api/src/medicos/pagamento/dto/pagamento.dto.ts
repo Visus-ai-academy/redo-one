@@ -39,7 +39,8 @@ export class PagamentoMedicoDto {
   @ApiProperty({
     type: Boolean,
     nullable: true,
-    description: 'Decide a categoria do contas a pagar no Omie; nulo = não informado.',
+    description:
+      'Sócio da empresa ou não (o financeiro paga sócio e não sócio de formas diferentes); nulo = não informado.',
   })
   @IsOptional()
   @IsBoolean()
@@ -49,10 +50,4 @@ export class PagamentoMedicoDto {
   @IsOptional()
   @IsBoolean()
   optanteSimples: boolean | null = null;
-
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 30 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(30)
-  omieCodigoFornecedor: string | null = null;
 }

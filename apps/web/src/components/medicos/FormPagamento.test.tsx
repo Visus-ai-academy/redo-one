@@ -14,7 +14,6 @@ const vazio: PagamentoMedicoDto = {
   chavePix: null,
   socio: null,
   optanteSimples: null,
-  omieCodigoFornecedor: null,
 };
 
 describe('FormPagamento', () => {
@@ -38,6 +37,15 @@ describe('FormPagamento', () => {
       tipoChavePix: 'EMAIL',
       chavePix: 'a@pix.com',
     });
+  });
+
+  it('não tem nada do Omie, nem editando nem só lendo', () => {
+    const { container, rerender } = render(
+      <FormPagamento dados={vazio} podeEditar onSalvar={vi.fn()} />,
+    );
+    expect(container).not.toHaveTextContent(/omie/i);
+    rerender(<FormPagamento dados={vazio} podeEditar={false} onSalvar={vi.fn()} />);
+    expect(container).not.toHaveTextContent(/omie/i);
   });
 
   it('exige o tipo junto com a chave Pix e confere o CPF', async () => {

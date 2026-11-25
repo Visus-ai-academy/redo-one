@@ -37,6 +37,10 @@ describe('catálogo de permissões', () => {
     }
   });
 
+  it('nenhum texto cita o Omie: o redo-one não fala com ele', () => {
+    expect(JSON.stringify(CATALOGO_PERMISSOES)).not.toMatch(/omie/i);
+  });
+
   it('as especiais são da própria tela, não repetem uma padrão e todas as chaves são únicas', () => {
     for (const t of CATALOGO_PERMISSOES) {
       for (const e of t.especiais) {

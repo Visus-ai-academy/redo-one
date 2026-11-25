@@ -66,8 +66,7 @@ const Linha = ({ children }: { children: ReactNode }) => (
 
 /**
  * Dados de faturamento do cliente na aba Faturamento: para onde vai a NF (e a exclusão fiscal),
- * endereço e contato do cadastro no Omie, banco e o código no Omie (só leitura, vem da
- * sincronização). Nada é obrigatório, mas o endereço começado pede CEP, logradouro, cidade e UF.
+ * endereço, contato e banco. Nada é obrigatório, mas o endereço começado pede CEP, logradouro, cidade e UF.
  */
 export function DadosFaturamentoCliente({
   clienteId,
@@ -128,26 +127,6 @@ function HistoricoAlteracoes({ clienteId, agora }: { clienteId: string; agora: D
         <HistoricoCadastro cadastro="dados-fiscais" id={clienteId} porPagina={5} agora={agora} />
       </div>
     </section>
-  );
-}
-
-function Omie({ dados, agora }: { dados: DadosFiscaisClienteDto; agora: Date }) {
-  return (
-    <Grupo titulo="Omie">
-      <Linha>
-        <CampoSomenteLeitura
-          label="Código do cliente no Omie"
-          value={dados.omieCodigoCliente ?? 'Ainda não sincronizado'}
-          description="Preenchido pela sincronização com o Omie."
-          className="flex-[1_1_200px]"
-        />
-        <CampoSomenteLeitura
-          label="Sincronizado em"
-          value={dados.omieSincronizadoEm ? dataHoraCurta(dados.omieSincronizadoEm, agora) : '—'}
-          className="flex-[1_1_160px]"
-        />
-      </Linha>
-    </Grupo>
   );
 }
 
@@ -217,7 +196,6 @@ function Leitura({ dados, agora }: { dados: DadosFiscaisClienteDto; agora: Date 
           {campo('Conta', ou(dados.bancoConta), 'flex-[1_1_160px]')}
         </Linha>
       </Grupo>
-      <Omie dados={dados} agora={agora} />
       <Rodape dados={dados} agora={agora} />
     </div>
   );
@@ -472,7 +450,6 @@ function FormDados({
                 label="E-mail"
                 placeholder="financeiro@empresa.com.br"
                 type="email"
-                description="Do cadastro no Omie."
                 className="flex-[1_1_200px]"
               />
             )}
@@ -533,8 +510,6 @@ function FormDados({
           </form.AppField>
         </Linha>
       </Grupo>
-
-      <Omie dados={dados} agora={agora} />
 
       <div className="flex flex-col items-end gap-2 border-t pt-4">
         {erro && (

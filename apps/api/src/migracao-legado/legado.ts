@@ -126,7 +126,6 @@ export interface LegadoMedicos {
     chavePix: string | null;
     socio: string | null;
     optanteSimples: string | null;
-    omieCodigoFornecedor: string | null;
   }[];
   aliases: {
     id: string;
@@ -344,9 +343,6 @@ export interface LegadoDadosFiscais {
     cidade: string | null;
     estado: string | null;
     cep: string | null;
-    omieCodigoCliente: string | null;
-    /** ISO em UTC. */
-    omieDataSincronizacao: string | null;
   }[];
   /** `configuracoes.faturamentoExclusaoFiscal`: nomes de cliente como chegam da MobileMed. */
   exclusaoFiscal: string[];

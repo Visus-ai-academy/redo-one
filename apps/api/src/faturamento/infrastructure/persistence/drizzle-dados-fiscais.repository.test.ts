@@ -67,27 +67,8 @@ describe.skipIf(!url)('DrizzleDadosFiscaisRepository', () => {
     );
     expect(await repo.obter(clienteId)).toEqual({
       dados: { ...DADOS_FISCAIS_VAZIOS, emailsNf: ['b@x.com', 'a@x.com'], exclusaoFiscal: true },
-      omie: { codigoCliente: null, sincronizadoEm: null },
       atualizadoEm: em,
       atualizadoPor: 'Ana',
-    });
-  });
-
-  it('salvar não mexe no que veio do Omie', async () => {
-    const sincronizadoEm = new Date('2026-03-11T03:23:09.850Z');
-    await db.insert(schema.clientesDadosFiscais).values({
-      clienteId,
-      omieCodigoCliente: '8556006877',
-      omieSincronizadoEm: sincronizadoEm,
-    });
-    await repo.salvar(
-      clienteId,
-      { ...DADOS_FISCAIS_VAZIOS, email: 'a@x.com' },
-      { usuarioId: anaId, em: new Date() },
-    );
-    expect((await repo.obter(clienteId))?.omie).toEqual({
-      codigoCliente: '8556006877',
-      sincronizadoEm,
     });
   });
 

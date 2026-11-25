@@ -11,7 +11,7 @@ export type DadosFiscaisClienteDto = {
    */
   emailsNf: string[];
   /**
-   * @description E-mail do cadastro no Omie.
+   * @description E-mail de contato do cliente.
    * @maxLength 254
    * @type string
    */
@@ -87,17 +87,6 @@ export type DadosFiscaisClienteDto = {
    * @type boolean
    */
   exclusaoFiscal: boolean;
-  /**
-   * @description Código do cliente no Omie; vem da sincronização (só leitura).
-   * @type string
-   */
-  omieCodigoCliente: string | null;
-  /**
-   * @description
-   * Format: `date-time`
-   * @type string
-   */
-  omieSincronizadoEm: string | null;
   /**
    * @description Vazio se o cliente ainda não tem dados de faturamento.
    *

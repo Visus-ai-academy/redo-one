@@ -19,7 +19,6 @@ import type {
 import type {
   DadosFiscaisRegistrados,
   DadosFiscaisRepository,
-  OmieDoCliente,
 } from '../application/ports/dados-fiscais.repository';
 import type { EquipesMedicos } from '../application/ports/equipes-medicos';
 import type {
@@ -59,7 +58,7 @@ import type {
   VersaoGravada,
 } from '../application/ports/tipificacao.repository';
 import type { StatusCompetencia } from '../domain/competencia-status';
-import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
+import type { DadosFiscais } from '../domain/dados-fiscais';
 import type { Arranjo } from '../domain/preco';
 import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
 import { VersaoTipificacaoAlteradaError } from '../domain/versoes-tipificacao';
@@ -261,8 +260,6 @@ export class LaudosCompetenciaEmMemoria implements LaudosCompetencia {
 export class DadosFiscaisEmMemoria implements DadosFiscaisRepository {
   readonly clientes = new Set<string>();
   readonly linhas = new Map<string, { dados: DadosFiscais; atualizadoEm: Date }>();
-  /** O que a sincronização com o Omie teria gravado. */
-  readonly omie = new Map<string, OmieDoCliente>();
   readonly autores: Autor[] = [];
 
   async clienteExiste(clienteId: string) {
@@ -271,13 +268,11 @@ export class DadosFiscaisEmMemoria implements DadosFiscaisRepository {
 
   async obter(clienteId: string): Promise<DadosFiscaisRegistrados | null> {
     const linha = this.linhas.get(clienteId);
-    const omie = this.omie.get(clienteId);
-    if (!linha && !omie) return null;
+    if (!linha) return null;
     return {
-      dados: structuredClone(linha?.dados ?? DADOS_FISCAIS_VAZIOS),
-      omie: omie ?? { codigoCliente: null, sincronizadoEm: null },
-      atualizadoEm: linha?.atualizadoEm ?? new Date(0),
-      atualizadoPor: linha ? 'Ana' : null,
+      dados: structuredClone(linha.dados),
+      atualizadoEm: linha.atualizadoEm,
+      atualizadoPor: 'Ana',
     };
   }
 

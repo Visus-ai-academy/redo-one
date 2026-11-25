@@ -131,8 +131,8 @@ export const cortesCompetencia = pgTable(
 );
 
 /**
- * Dados de faturamento do cliente (1:1 com `clientes`): para onde vai a NF, endereço e contato do
- * cadastro no Omie, banco e o código do cliente no Omie. Nada é obrigatório no banco (o
+ * Dados de faturamento do cliente (1:1 com `clientes`): para onde vai a NF, endereço, contato e
+ * banco. Nada é obrigatório no banco (o
  * dashboards-one tem clientes sem endereço); a tela exige o endereço mínimo quando ele é preenchido.
  */
 export const clientesDadosFiscais = pgTable(
@@ -157,9 +157,6 @@ export const clientesDadosFiscais = pgTable(
     bancoCodigo: text('banco_codigo'),
     bancoAgencia: text('banco_agencia'),
     bancoConta: text('banco_conta'),
-    /** Preenchido pela sincronização com o Omie; não é único (unidades do mesmo CNPJ repetem). */
-    omieCodigoCliente: text('omie_codigo_cliente'),
-    omieSincronizadoEm: quando('omie_sincronizado_em'),
     /** Os laudos do cliente saem do faturamento (`faturamentoExclusaoFiscal` do dashboards-one). */
     exclusaoFiscal: boolean('exclusao_fiscal').notNull().default(false),
     atualizadoEm: quando('atualizado_em')

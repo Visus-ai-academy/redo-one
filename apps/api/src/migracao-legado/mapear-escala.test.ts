@@ -75,7 +75,6 @@ const medico = (id: string, nome: string, ativo = true): Medico => ({
   chavePix: null,
   socio: null,
   optanteSimples: null,
-  omieCodigoFornecedor: null,
 });
 
 const contexto: ContextoEscala = {

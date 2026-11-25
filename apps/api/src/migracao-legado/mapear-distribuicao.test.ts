@@ -94,7 +94,6 @@ const medico = (id: string, nome: string): LegadoMedicos['medicos'][number] => (
   chavePix: null,
   socio: null,
   optanteSimples: null,
-  omieCodigoFornecedor: null,
 });
 
 const catalogo = mapearCatalogo(legadoCatalogo).tabelas;

@@ -50,7 +50,6 @@ export class DrizzleDadosFiscaisRepository implements DadosFiscaisRepository {
         bancoConta: linha.bancoConta,
         exclusaoFiscal: linha.exclusaoFiscal,
       },
-      omie: { codigoCliente: linha.omieCodigoCliente, sincronizadoEm: linha.omieSincronizadoEm },
       atualizadoEm: linha.atualizadoEm,
       atualizadoPor: l.atualizadoPor,
     };

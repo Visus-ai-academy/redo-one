@@ -223,9 +223,9 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         chave: 'clientes.faturamento.ver',
         rotulo: 'Ver faturamento',
         descricao:
-          'Abrir os dados de faturamento do cliente: e-mails da NF, endereço, contato, banco e código no Omie.',
+          'Abrir os dados de faturamento do cliente: e-mails da NF, endereço, contato e banco.',
       },
-      // Define para onde vai a NF e o cadastro do cliente no Omie.
+      // Define para onde vai a NF e o cadastro do cliente na emissão.
       {
         chave: 'clientes.faturamento.editar',
         rotulo: 'Editar faturamento',

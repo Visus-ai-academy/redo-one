@@ -11,7 +11,7 @@ export type DadosFiscaisDto = {
    */
   emailsNf: string[];
   /**
-   * @description E-mail do cadastro no Omie.
+   * @description E-mail de contato do cliente.
    * @maxLength 254
    * @type string
    */

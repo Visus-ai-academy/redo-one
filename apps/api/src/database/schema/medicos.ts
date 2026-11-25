@@ -103,10 +103,9 @@ export const medicosDadosPagamento = pgTable('medicos_dados_pagamento', {
   razaoSocial: text('razao_social'),
   tipoChavePix: tipoChavePix('tipo_chave_pix'),
   chavePix: text('chave_pix'), // LGPD: pessoal
-  /** Decide a categoria financeira do contas a pagar no Omie; nulo = não informado. */
+  /** Sócio da empresa ou não (o financeiro paga sócio e não sócio de formas diferentes); nulo = não informado. */
   socio: boolean('socio'),
   optanteSimples: boolean('optante_simples'),
-  omieCodigoFornecedor: text('omie_codigo_fornecedor'),
   atualizadoEm: atualizadoEm(),
 });
 
