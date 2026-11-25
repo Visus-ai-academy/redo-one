@@ -27,6 +27,14 @@ import type {
   LotePrevia,
 } from '../application/ports/laudos-competencia';
 import type {
+  Dono,
+  EventoVersao,
+  InfoDono,
+  OpcoesPreco,
+  PrecosRepository,
+  VersaoComNomes,
+} from '../application/ports/precos.repository';
+import type {
   ClienteDaTipificacao,
   ConfiguracaoRegistrada,
   DadosRegra,
@@ -39,7 +47,9 @@ import type {
 } from '../application/ports/tipificacao.repository';
 import type { StatusCompetencia } from '../domain/competencia-status';
 import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
+import type { Arranjo } from '../domain/preco';
 import type { ConfiguracaoCliente } from '../domain/tipificacao';
+import { type MudancaPreco, VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
 import type { NovaVigencia } from '../domain/vigencia-corte';
 
 export interface CompetenciaGuardada {
@@ -393,5 +403,83 @@ export class EquipesMedicosEmMemoria implements EquipesMedicos {
   }
   async nomesMedicos(ids: string[]) {
     return this.medicos.filter((m) => ids.includes(m.id));
+  }
+}
+
+/** Preços em memória: as versões por dono, com os nomes do arranjo iguais aos ids. */
+export class PrecosEmMemoria implements PrecosRepository {
+  readonly donos = new Map<string, InfoDono>();
+  readonly versoes: (VersaoPreco & { dono: string })[] = [];
+  readonly eventosPorId = new Map<string, EventoVersao[]>();
+  private seq = 0;
+
+  private chave = (d: Dono) => `${d.tipo}:${d.id}`;
+
+  async obterDono(dono: Dono) {
+    return this.donos.get(this.chave(dono)) ?? null;
+  }
+
+  async listarVersoes(dono: Dono, arranjo?: Arranjo): Promise<VersaoComNomes[]> {
+    return this.versoes
+      .filter(
+        (v) =>
+          v.dono === this.chave(dono) &&
+          (!arranjo ||
+            (v.modalidadeId === arranjo.modalidadeId &&
+              v.especialidadeId === arranjo.especialidadeId &&
+              v.categoriaId === arranjo.categoriaId &&
+              v.prioridadeId === arranjo.prioridadeId)),
+      )
+      .map(({ dono: _, ...v }) => ({
+        ...v,
+        nomes: {
+          modalidade: v.modalidadeId,
+          especialidade: v.especialidadeId,
+          categoria: v.categoriaId,
+          prioridade: v.prioridadeId,
+        },
+      }));
+  }
+
+  async aplicar(dono: Dono, mudancas: MudancaPreco[]) {
+    const criadas: string[] = [];
+    for (const m of mudancas) {
+      if (m.tipo === 'criar') {
+        const id = `p${++this.seq}`;
+        this.versoes.push({
+          id,
+          dono: this.chave(dono),
+          ...m.dados,
+          vigenciaDesde: m.vigenciaDesde,
+          vigenciaAte: m.vigenciaAte,
+        });
+        criadas.push(id);
+      } else if (m.tipo === 'encerrar') {
+        const v = this.versoes.find((x) => x.id === m.id);
+        if (!v || v.vigenciaAte !== m.vigenciaAteAntes) throw new VersaoAlteradaError();
+        v.vigenciaAte = m.vigenciaAte;
+      } else {
+        this.versoes.splice(
+          this.versoes.findIndex((x) => x.id === m.id),
+          1,
+        );
+      }
+    }
+    return criadas;
+  }
+
+  async opcoes(): Promise<OpcoesPreco> {
+    const lista = (ids: string[]) => ids.map((id) => ({ id, nome: id }));
+    return {
+      modalidades: lista(['MR', 'CT']),
+      especialidades: lista(['NEURO']),
+      categorias: lista(['SC']),
+      prioridades: lista(['ROTINA', 'URGÊNCIA']),
+      contratados: [],
+    };
+  }
+
+  async eventos(_dono: Dono, ids: string[]) {
+    return new Map(ids.map((id) => [id, this.eventosPorId.get(id) ?? []]));
   }
 }

@@ -7616,6 +7616,489 @@
         ]
       }
     },
+    "/faturamento/precos/opcoes": {
+      "get": {
+        "operationId": "PrecosController_opcoes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cadastros ativos para o editor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpcoesPrecoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/precos/{tipo}/{donoId}": {
+      "get": {
+        "operationId": "PrecosController_listar",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome da modalidade, especialidade, categoria ou prioridade.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versões em vigor e programadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TabelaPrecosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente ou contratado não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "post": {
+        "operationId": "PrecosController_incluir",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarPrecoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Valor, faixa ou \"vale a partir de\" inválido: só competência aberta ou futura, depois de toda fechada ou travada."
+          },
+          "404": {
+            "description": "Cliente ou contratado não encontrado."
+          },
+          "409": {
+            "description": "Arranjo e faixa já com preço no período, ou alterado por outra pessoa no meio."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/precos/{tipo}/{donoId}/historico": {
+      "get": {
+        "operationId": "PrecosController_historico",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "modalidadeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "especialidadeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoriaId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "prioridadeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Todas as versões do arranjo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VersaoHistoricoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente ou contratado não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/precos/{tipo}/{donoId}/exportar": {
+      "get": {
+        "operationId": "PrecosController_exportar",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A tabela em vigor no mês atual.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanilhaPrecosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente ou contratado não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/precos/{tipo}/{donoId}/{precoId}": {
+      "put": {
+        "operationId": "PrecosController_alterar",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "precoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarPrecoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A versão nova; a anterior foi encerrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Valor, faixa ou \"vale a partir de\" inválido: só competência aberta ou futura, depois de toda fechada ou travada."
+          },
+          "404": {
+            "description": "Preço, cliente ou contratado não encontrado."
+          },
+          "409": {
+            "description": "Arranjo e faixa já com preço no período, ou alterado por outra pessoa no meio."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/precos/{tipo}/{donoId}/{precoId}/encerrar": {
+      "post": {
+        "operationId": "PrecosController_encerrar",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "precoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncerrarPrecoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Encerrado (a versão programada que nunca valeu é apagada)."
+          },
+          "400": {
+            "description": "Valor, faixa ou \"vale a partir de\" inválido: só competência aberta ou futura, depois de toda fechada ou travada."
+          },
+          "404": {
+            "description": "Preço, cliente ou contratado não encontrado."
+          },
+          "409": {
+            "description": "Arranjo e faixa já com preço no período, ou alterado por outra pessoa no meio."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/precos/{tipo}/{donoId}/importar": {
+      "post": {
+        "operationId": "PrecosController_importar",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "description": "Tabela do cliente ou padrão do contratado.",
+            "schema": {
+              "enum": [
+                "cliente",
+                "contratado"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "donoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportarPrecosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoImportacaoPrecosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Planilha com problema (`erros` traz a linha e o motivo); nada foi importado."
+          },
+          "404": {
+            "description": "Cliente ou contratado não encontrado."
+          },
+          "409": {
+            "description": "Arranjo e faixa já com preço no período, ou alterado por outra pessoa no meio."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -16643,6 +17126,484 @@
           "fatura",
           "antes",
           "depois"
+        ]
+      },
+      "OpcaoPrecoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "OpcoesPrecoDto": {
+        "type": "object",
+        "properties": {
+          "modalidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoPrecoDto"
+            }
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoPrecoDto"
+            }
+          },
+          "categorias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoPrecoDto"
+            }
+          },
+          "prioridades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoPrecoDto"
+            }
+          },
+          "contratados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpcaoPrecoDto"
+            }
+          }
+        },
+        "required": [
+          "modalidades",
+          "especialidades",
+          "categorias",
+          "prioridades",
+          "contratados"
+        ]
+      },
+      "PrincipalPrecoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ]
+      },
+      "DonoPrecoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "principal": {
+            "nullable": true,
+            "description": "Só na unidade: o principal, de onde vem o preço que faltar.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PrincipalPrecoDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "nome",
+          "principal"
+        ]
+      },
+      "CondVolume": {
+        "type": "string",
+        "enum": [
+          "MOD",
+          "MOD_ESP",
+          "MOD_ESP_CAT",
+          "TOTAL"
+        ]
+      },
+      "NomesArranjoDto": {
+        "type": "object",
+        "properties": {
+          "modalidade": {
+            "type": "string"
+          },
+          "especialidade": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "prioridade": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "modalidade",
+          "especialidade",
+          "categoria",
+          "prioridade"
+        ]
+      },
+      "ItemPrecoDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "faixaInicio": {
+            "type": "integer",
+            "nullable": true
+          },
+          "faixaFim": {
+            "type": "integer",
+            "nullable": true
+          },
+          "condVolume": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CondVolume"
+              }
+            ]
+          },
+          "valor": {
+            "type": "number"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vazio = desde sempre (carga)."
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vazio = sem fim."
+          },
+          "nomes": {
+            "$ref": "#/components/schemas/NomesArranjoDto"
+          },
+          "duplicado": {
+            "type": "boolean",
+            "description": "Outra versão do mesmo arranjo cruza a faixa e a vigência."
+          },
+          "emVigor": {
+            "type": "boolean",
+            "description": "Vale no mês atual; as outras estão programadas."
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "id",
+          "faixaInicio",
+          "faixaFim",
+          "condVolume",
+          "valor",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "nomes",
+          "duplicado",
+          "emVigor"
+        ]
+      },
+      "TabelaPrecosDto": {
+        "type": "object",
+        "properties": {
+          "dono": {
+            "$ref": "#/components/schemas/DonoPrecoDto"
+          },
+          "mesAtual": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "aPartirDeMinimo": {
+            "type": "string",
+            "description": "Primeira competência em que uma mudança pode valer."
+          },
+          "aPartirDeSugerido": {
+            "type": "string",
+            "description": "A próxima competência (a sugerida no \"Vale a partir de\")."
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemPrecoDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "dono",
+          "mesAtual",
+          "aPartirDeMinimo",
+          "aPartirDeSugerido",
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "VersaoHistoricoDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "faixaInicio": {
+            "type": "integer",
+            "nullable": true
+          },
+          "faixaFim": {
+            "type": "integer",
+            "nullable": true
+          },
+          "condVolume": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CondVolume"
+              }
+            ]
+          },
+          "valor": {
+            "type": "number"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vazio = desde sempre (carga)."
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vazio = sem fim."
+          },
+          "nomes": {
+            "$ref": "#/components/schemas/NomesArranjoDto"
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "id",
+          "faixaInicio",
+          "faixaFim",
+          "condVolume",
+          "valor",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "nomes",
+          "criadoPor",
+          "criadoEm",
+          "encerradoPor",
+          "encerradoEm"
+        ]
+      },
+      "PlanilhaPrecosDto": {
+        "type": "object",
+        "properties": {
+          "nomeArquivo": {
+            "type": "string",
+            "example": "precos-CLINICA-2026-11.csv"
+          },
+          "conteudo": {
+            "type": "string",
+            "description": "CSV com `;`, BOM e vírgula decimal."
+          }
+        },
+        "required": [
+          "nomeArquivo",
+          "conteudo"
+        ]
+      },
+      "MudarPrecoDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "faixaInicio": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Início da faixa de volume do mês; vazio = sem faixa."
+          },
+          "faixaFim": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Fim da faixa; vazio = sem limite."
+          },
+          "condVolume": {
+            "description": "Em que dimensão o volume da faixa é somado (sem efeito sem faixa).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CondVolume"
+              }
+            ]
+          },
+          "valor": {
+            "type": "number",
+            "example": 63.5,
+            "description": "Maior que zero, até dois decimais."
+          },
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "faixaInicio",
+          "faixaFim",
+          "condVolume",
+          "valor",
+          "aPartirDe"
+        ]
+      },
+      "EncerrarPrecoDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "aPartirDe"
+        ]
+      },
+      "ImportarPrecosDto": {
+        "type": "object",
+        "properties": {
+          "conteudo": {
+            "type": "string",
+            "maxLength": 100000,
+            "description": "Planilha CSV (`;`) no modelo da exportação."
+          },
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "conteudo",
+          "aPartirDe"
+        ]
+      },
+      "ResultadoImportacaoPrecosDto": {
+        "type": "object",
+        "properties": {
+          "incluidos": {
+            "type": "number"
+          },
+          "alterados": {
+            "type": "number"
+          },
+          "iguais": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "incluidos",
+          "alterados",
+          "iguais"
         ]
       },
       "StatusImportacao": {

@@ -15,6 +15,7 @@ import {
 } from './application/ports/dados-fiscais.repository';
 import { EQUIPES_MEDICOS, type EquipesMedicos } from './application/ports/equipes-medicos';
 import { LAUDOS_COMPETENCIA, type LaudosCompetencia } from './application/ports/laudos-competencia';
+import { PRECOS_REPOSITORY, type PrecosRepository } from './application/ports/precos.repository';
 import {
   TIPIFICACAO_REPOSITORY,
   type TipificacaoRepository,
@@ -25,6 +26,13 @@ import { DefinirDadosFiscais, ObterDadosFiscais } from './application/use-cases/
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
 import { ListarCompetencias } from './application/use-cases/listar-competencias';
 import { ListarCortes } from './application/use-cases/listar-cortes';
+import {
+  ExportarPrecos,
+  HistoricoPreco,
+  ListarPrecos,
+  MudarPrecos,
+  OpcoesPrecos,
+} from './application/use-cases/precos';
 import { PreviaCorte } from './application/use-cases/previa-corte';
 import { ReabrirCompetencia } from './application/use-cases/reabrir-competencia';
 import {
@@ -41,6 +49,7 @@ import { DestravarImportacao, TravarImportacao } from './application/use-cases/t
 import { CompetenciasController } from './infrastructure/http/competencias.controller';
 import { CortesController } from './infrastructure/http/cortes.controller';
 import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.controller';
+import { PrecosController } from './infrastructure/http/precos.controller';
 import {
   TipificacaoClienteController,
   TipificacaoController,
@@ -50,6 +59,7 @@ import { DrizzleCortesRepository } from './infrastructure/persistence/drizzle-co
 import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/drizzle-dados-fiscais.repository';
 import { DrizzleEquipesMedicos } from './infrastructure/persistence/drizzle-equipes-medicos';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
+import { DrizzlePrecosRepository } from './infrastructure/persistence/drizzle-precos.repository';
 import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizzle-tipificacao.repository';
 
 const agora = () => new Date();
@@ -63,7 +73,7 @@ const ACOES_COMPETENCIA = [
 ] as const;
 
 /**
- * Contexto `faturamento` (hexagonal): competências, cortes, dados fiscais do cliente e tipificação. Implementa as portas da `ingestao`
+ * Contexto `faturamento` (hexagonal): competências, cortes, dados fiscais do cliente, tipificação e preços. Implementa as portas da `ingestao`
  * (`COMPETENCIAS_BLOQUEADAS`, `CORTES_COMPETENCIA`, `TIPIFICACAO_LAUDOS`); não importa o `IngestaoModule`, para não
  * criar ciclo.
  */
@@ -74,6 +84,7 @@ const ACOES_COMPETENCIA = [
     DadosFiscaisController,
     TipificacaoController,
     TipificacaoClienteController,
+    PrecosController,
   ],
   providers: [
     { provide: COMPETENCIAS_REPOSITORY, useClass: DrizzleCompetenciasRepository },
@@ -161,6 +172,32 @@ const ACOES_COMPETENCIA = [
         auditoria: Auditoria,
       ) => new CriarCorte(cortes, competencias, auditoria, agora),
     },
+    { provide: PRECOS_REPOSITORY, useClass: DrizzlePrecosRepository },
+    {
+      provide: ListarPrecos,
+      inject: [PRECOS_REPOSITORY, COMPETENCIAS_REPOSITORY],
+      useFactory: (repo: PrecosRepository, competencias: CompetenciasRepository) =>
+        new ListarPrecos(repo, competencias, agora),
+    },
+    {
+      provide: MudarPrecos,
+      inject: [PRECOS_REPOSITORY, COMPETENCIAS_REPOSITORY, AUDITORIA],
+      useFactory: (
+        repo: PrecosRepository,
+        competencias: CompetenciasRepository,
+        auditoria: Auditoria,
+      ) => new MudarPrecos(repo, competencias, auditoria, agora),
+    },
+    {
+      provide: ExportarPrecos,
+      inject: [PRECOS_REPOSITORY],
+      useFactory: (repo: PrecosRepository) => new ExportarPrecos(repo, agora),
+    },
+    ...[HistoricoPreco, OpcoesPrecos].map((Caso) => ({
+      provide: Caso,
+      inject: [PRECOS_REPOSITORY],
+      useFactory: (repo: PrecosRepository) => new Caso(repo),
+    })),
     {
       provide: ObterDadosFiscais,
       inject: [DADOS_FISCAIS_REPOSITORY],

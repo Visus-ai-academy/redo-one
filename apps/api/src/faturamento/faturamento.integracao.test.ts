@@ -242,4 +242,38 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
       expect(lido.configuracao).toBeNull();
     });
   });
+  describe('preços', () => {
+    it('só ver: lê a tabela e as opções; incluir, encerrar e importar respondem 403', async () => {
+      const cookie = await entrarCom(['faturamento.ver']);
+      const caminho = `/faturamento/precos/cliente/${clienteId}`;
+      expect((await pedir(cookie, 'GET', '/faturamento/precos/opcoes')).status).toBe(200);
+      expect((await pedir(cookie, 'GET', caminho)).status).toBe(200);
+      expect((await pedir(cookie, 'GET', `${caminho}/exportar`)).status).toBe(200);
+      expect((await pedir(cookie, 'POST', caminho, {})).status).toBe(403);
+      expect(
+        (await pedir(cookie, 'POST', `${caminho}/importar`, { conteudo: '', aPartirDe: '2099-01' }))
+          .status,
+      ).toBe(403);
+    });
+
+    it('com editar: "vale a partir de" fora do formato é 400; tipo de tabela desconhecido é 400', async () => {
+      const cookie = await entrarCom(['faturamento.ver', 'faturamento.precos.editar']);
+      const caminho = `/faturamento/precos/cliente/${clienteId}`;
+      const ruim = {
+        modalidadeId: clienteId,
+        especialidadeId: clienteId,
+        categoriaId: clienteId,
+        prioridadeId: clienteId,
+        faixaInicio: null,
+        faixaFim: null,
+        condVolume: 'MOD_ESP_CAT',
+        valor: 10,
+        aPartirDe: '2026-13',
+      };
+      expect((await pedir(cookie, 'POST', caminho, ruim)).status).toBe(400);
+      expect((await pedir(cookie, 'GET', `/faturamento/precos/outro/${clienteId}`)).status).toBe(
+        400,
+      );
+    });
+  });
 });
