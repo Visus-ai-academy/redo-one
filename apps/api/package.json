@@ -18,6 +18,7 @@
     "admin:criar": "nest build && node dist/scripts/criar-admin.js",
     "migrar:legado": "nest build && JOBS_WORKER=false node dist/scripts/migrar-legado.js",
     "paridade:tipificacao": "nest build && JOBS_WORKER=false node dist/scripts/paridade-tipificacao.js",
+    "paridade:precos": "nest build && JOBS_WORKER=false node dist/scripts/paridade-precos.js",
     "comparar:rodadas-legado": "nest build && JOBS_WORKER=false node dist/scripts/comparar-rodadas-legado.js",
     "mobilemed:mapear-medicos": "nest build && JOBS_WORKER=false node dist/scripts/mapear-medicos-mobilemed.js",
     "storage:preparar": "nest build && node dist/scripts/preparar-storage.js",
