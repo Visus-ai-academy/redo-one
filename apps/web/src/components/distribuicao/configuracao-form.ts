@@ -50,8 +50,10 @@ export type ValoresConfiguracao = {
   turnoIds: string[];
   cheiaEm: string;
   recolhe: boolean;
+  /** O prazo padrão do recolhimento. */
   recolhimentoAposTurnoMin: string;
-  recolhimentoAposListaMin: string;
+  /** Prazo próprio de alguns turnos, no lugar do padrão. */
+  recolhimentoPorTurno: { turnoId: string; minutos: string }[];
   diasJaEntregue: string;
   escalaRestringeEspecialidade: boolean;
   /** Separados por vírgula. */
@@ -90,7 +92,10 @@ export function valoresDaConfiguracao(
     recolhe: c.recolhimentoAposTurnoMin !== null,
     recolhimentoAposTurnoMin:
       c.recolhimentoAposTurnoMin === null ? '' : String(c.recolhimentoAposTurnoMin),
-    recolhimentoAposListaMin: String(c.recolhimentoAposListaMin ?? 1440),
+    recolhimentoPorTurno: c.recolhimentoPorTurno.map((p) => ({
+      turnoId: p.turnoId,
+      minutos: String(p.minutos),
+    })),
     diasJaEntregue: String(c.diasJaEntregue),
     escalaRestringeEspecialidade: c.escalaRestringeEspecialidade,
     marcadores: c.marcadoresEquilibrio.join(', '),
@@ -113,6 +118,19 @@ const marcadoresDe = (texto: string) =>
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean);
+
+const PRAZO_TURNO_MAX = 10_080;
+
+const inteiroEntre = (t: string, min: number, max: number) =>
+  /^\d+$/.test(t.trim()) && Number(t) >= min && Number(t) <= max;
+
+/** Os minutos em horas, para a dica ao lado do prazo ("24 h", "1 h 30 min"); null abaixo de 1 h. */
+export function emHoras(minutos: number): string | null {
+  if (!Number.isInteger(minutos) || minutos < 60) return null;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
 
 const hora = (t: string) => {
   const limpo = t.trim();
@@ -137,7 +155,10 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
       ? { turnoIds: v.turnoIds, cheiaEm: hora(v.cheiaEm) }
       : null,
     recolhimentoAposTurnoMin: v.recolhe ? Number(v.recolhimentoAposTurnoMin) : null,
-    recolhimentoAposListaMin: Number(v.recolhimentoAposListaMin),
+    // Desligado, as linhas ficam escondidas: vão só as completas (as gravadas não se perdem).
+    recolhimentoPorTurno: v.recolhimentoPorTurno
+      .filter((p) => v.recolhe || (p.turnoId && inteiroEntre(p.minutos, 0, PRAZO_TURNO_MAX)))
+      .map((p) => ({ turnoId: p.turnoId, minutos: Number(p.minutos) })),
     roboAtivo: v.roboAtivo,
     expiracaoPropostaMin: Number(v.expiracaoPropostaMin),
     tetoPorRodada: v.temTeto ? Number(v.tetoPorRodada) : null,
@@ -168,7 +189,7 @@ const valoresSchema = z.object({
   cheiaEm: z.string(),
   recolhe: z.boolean(),
   recolhimentoAposTurnoMin: z.string(),
-  recolhimentoAposListaMin: z.string(),
+  recolhimentoPorTurno: z.array(z.object({ turnoId: z.string(), minutos: z.string() })),
   diasJaEntregue: z.string(),
   escalaRestringeEspecialidade: z.boolean(),
   marcadores: z.string(),
@@ -199,8 +220,8 @@ const FAIXAS: [keyof ValoresConfiguracao, number, number][] = [
 ];
 
 export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
-  const erro = (path: string, message: string) =>
-    ctx.addIssue({ code: 'custom', path: [path], message });
+  const erro = (path: string | (string | number)[], message: string) =>
+    ctx.addIssue({ code: 'custom', path: Array.isArray(path) ? path : [path], message });
   const faixa = (campo: keyof ValoresConfiguracao, min: number, max: number) => {
     const t = String(v[campo]).trim();
     if (!/^\d+$/.test(t) || Number(t) < min || Number(t) > max) {
@@ -224,7 +245,19 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
   }
   if (v.recolhe) {
     faixa('recolhimentoAposTurnoMin', 0, 1440);
-    faixa('recolhimentoAposListaMin', 0, 10_080);
+    const vistos = new Set<string>();
+    v.recolhimentoPorTurno.forEach((p, i) => {
+      if (!p.turnoId) erro(['recolhimentoPorTurno', i, 'turnoId'], 'Escolha o turno.');
+      else if (vistos.has(p.turnoId))
+        erro(['recolhimentoPorTurno', i, 'turnoId'], 'Turno repetido.');
+      vistos.add(p.turnoId);
+      if (!inteiroEntre(p.minutos, 0, PRAZO_TURNO_MAX)) {
+        erro(
+          ['recolhimentoPorTurno', i, 'minutos'],
+          `Use um número inteiro de 0 a ${PRAZO_TURNO_MAX}.`,
+        );
+      }
+    });
   }
   faixa('diasJaEntregue', 0, 90);
   const marcadores = marcadoresDe(v.marcadores).map((m) => m.toUpperCase());
@@ -245,6 +278,10 @@ export function resumoConfiguracao(
   ref: { turnos: RotuloDto[] },
 ): GrupoResumo[] {
   const minutos = (n: number) => `${n} min`;
+  const comHoras = (n: number) => {
+    const horas = emHoras(n);
+    return horas ? `${n} min (${horas})` : `${n} min`;
+  };
   return [
     {
       titulo: 'Robô',
@@ -321,7 +358,11 @@ export function resumoConfiguracao(
           valor:
             c.recolhimentoAposTurnoMin === null
               ? 'Desligado'
-              : `${c.recolhimentoAposTurnoMin} min depois do fim do turno; ${c.recolhimentoAposListaMin} min depois do fim da Lista`,
+              : c.recolhimentoPorTurno.length === 0
+                ? `${comHoras(c.recolhimentoAposTurnoMin)} depois do fim do turno, em todos os turnos`
+                : `${comHoras(c.recolhimentoAposTurnoMin)} depois do fim do turno; prazo próprio: ${c.recolhimentoPorTurno
+                    .map((p) => `${nomes(ref.turnos, [p.turnoId])}, ${comHoras(p.minutos)}`)
+                    .join('; ')}`,
         },
         { rotulo: 'Não volta ao mesmo médico por', valor: `${c.diasJaEntregue} dias` },
         {

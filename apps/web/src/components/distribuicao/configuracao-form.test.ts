@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ConfiguracaoDistribuicaoDto } from '../../gen/types/ConfiguracaoDistribuicaoDto';
 import {
   configuracaoParaApi,
+  emHoras,
   esquemaConfiguracao,
   resumoConfiguracao,
   type ValoresConfiguracao,
@@ -28,7 +29,7 @@ const PRODUCAO: ConfiguracaoDistribuicaoDto = {
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
   recolhimentoAposTurnoMin: 60,
-  recolhimentoAposListaMin: 1440,
+  recolhimentoPorTurno: [{ turnoId: 't-lista', minutos: 1440 }],
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
@@ -59,14 +60,49 @@ describe('configuração global no formulário', () => {
     expect(api.recolhimentoAposTurnoMin).toBeNull();
   });
 
-  it('carência da Lista no recolhimento: ida e volta e faixa de 0 a 10080', () => {
-    const v = valoresDaConfiguracao({ ...PRODUCAO, recolhimentoAposListaMin: 720 });
-    expect(v.recolhimentoAposListaMin).toBe('720');
-    expect(configuracaoParaApi(v).recolhimentoAposListaMin).toBe(720);
-    expect(erros({ ...v, recolhimentoAposListaMin: '10081' })).toEqual([
-      'recolhimentoAposListaMin: Use um número inteiro de 0 a 10080.',
+  it('prazo do recolhimento por turno: ida e volta, turno obrigatório e sem repetir, 0 a 10080', () => {
+    const v = valoresDaConfiguracao({
+      ...PRODUCAO,
+      recolhimentoPorTurno: [
+        { turnoId: 't-lista', minutos: 1440 },
+        { turnoId: 't-tarde', minutos: 30 },
+      ],
+    });
+    expect(v.recolhimentoPorTurno).toEqual([
+      { turnoId: 't-lista', minutos: '1440' },
+      { turnoId: 't-tarde', minutos: '30' },
     ]);
-    expect(erros({ ...v, recolhe: false, recolhimentoAposListaMin: '10081' })).toEqual([]);
+    expect(configuracaoParaApi(v).recolhimentoPorTurno).toEqual([
+      { turnoId: 't-lista', minutos: 1440 },
+      { turnoId: 't-tarde', minutos: 30 },
+    ]);
+    const ruins = {
+      ...v,
+      recolhimentoPorTurno: [
+        { turnoId: 't-lista', minutos: '10081' },
+        { turnoId: '', minutos: '30' },
+        { turnoId: 't-lista', minutos: '' },
+      ],
+    };
+    expect(erros(ruins)).toEqual([
+      'recolhimentoPorTurno.0.minutos: Use um número inteiro de 0 a 10080.',
+      'recolhimentoPorTurno.1.turnoId: Escolha o turno.',
+      'recolhimentoPorTurno.2.turnoId: Turno repetido.',
+      'recolhimentoPorTurno.2.minutos: Use um número inteiro de 0 a 10080.',
+    ]);
+    // Desligado, as linhas ficam escondidas: não barram e só as completas vão (as gravadas ficam).
+    expect(erros({ ...ruins, recolhe: false })).toEqual([]);
+    expect(configuracaoParaApi({ ...ruins, recolhe: false }).recolhimentoPorTurno).toEqual([]);
+    expect(configuracaoParaApi({ ...v, recolhe: false }).recolhimentoPorTurno).toEqual([
+      { turnoId: 't-lista', minutos: 1440 },
+      { turnoId: 't-tarde', minutos: 30 },
+    ]);
+  });
+
+  it('minutos em horas para a dica do prazo', () => {
+    expect(emHoras(1440)).toBe('24 h');
+    expect(emHoras(90)).toBe('1 h 30 min');
+    expect(emHoras(30)).toBeNull();
   });
 
   it('marcadores separados por vírgula, aparados e sem vazios', () => {
@@ -148,7 +184,10 @@ describe('configuração global no formulário', () => {
 describe('resumo da configuração (só leitura)', () => {
   it('descreve cada grupo com os nomes', () => {
     const grupos = resumoConfiguracao(PRODUCAO, {
-      turnos: [{ id: 't-tarde', nome: 'Tarde' }],
+      turnos: [
+        { id: 't-tarde', nome: 'Tarde' },
+        { id: 't-lista', nome: 'Lista' },
+      ],
     });
     const tudo = Object.fromEntries(
       grupos.flatMap((g) => g.linhas.map((l) => [`${g.titulo} › ${l.rotulo}`, l.valor])),
@@ -159,7 +198,14 @@ describe('resumo da configuração (só leitura)', () => {
     expect(Object.keys(tudo).some((k) => k.startsWith('Lista padrão'))).toBe(false);
     expect(tudo['Rodada › Turnos posteriores']).toBe('Tarde, cheios na rodada das 10:50');
     expect(tudo['Rodada › Recolhimento']).toBe(
-      '60 min depois do fim do turno; 1440 min depois do fim da Lista',
+      '60 min (1 h) depois do fim do turno; prazo próprio: Lista, 1440 min (24 h)',
+    );
+    const semProprio = resumoConfiguracao(
+      { ...PRODUCAO, recolhimentoPorTurno: [] },
+      { turnos: [] },
+    ).flatMap((g) => g.linhas);
+    expect(semProprio.find((l) => l.rotulo === 'Recolhimento')?.valor).toBe(
+      '60 min (1 h) depois do fim do turno, em todos os turnos',
     );
     expect(tudo['Equilíbrio › Marcadores no nome do exame']).toBe('ONCO');
     expect(tudo['Robô › Robô']).toBe('Ligado');

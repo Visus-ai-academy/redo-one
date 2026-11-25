@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ConfiguracaoDistribuicaoDto } from '../../gen/types/ConfiguracaoDistribuicaoDto';
 import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
+import { escolherOpcao } from '../../test/select';
 import { FormConfiguracaoDistribuicao } from './FormConfiguracaoDistribuicao';
 
 const CONFIG: ConfiguracaoDistribuicaoDto = {
@@ -24,7 +25,7 @@ const CONFIG: ConfiguracaoDistribuicaoDto = {
   diasJaEntregue: 7,
   turnosPosteriores: { turnoIds: ['t-tarde'], cheiaEm: '10:50' },
   recolhimentoAposTurnoMin: 60,
-  recolhimentoAposListaMin: 1440,
+  recolhimentoPorTurno: [{ turnoId: 't-tarde', minutos: 30 }],
   roboAtivo: true,
   expiracaoPropostaMin: 45,
   tetoPorRodada: null,
@@ -52,6 +53,7 @@ const REF = {
   turnos: [
     { id: 't-manha', nome: 'Manhã' },
     { id: 't-tarde', nome: 'Tarde' },
+    { id: 't-lista', nome: 'Lista' },
   ],
   prioridades: [ROTINA],
   // A célula de uma prioridade já excluída não volta para a API.
@@ -194,6 +196,66 @@ describe('FormConfiguracaoDistribuicao', () => {
       await screen.findByText('Escolha ao menos um turno, ou desmarque os turnos posteriores.'),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('prazo do recolhimento por turno: acrescenta um turno com o prazo dele e mostra em horas', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(
+      <FormConfiguracaoDistribuicao
+        configuracao={CONFIG}
+        {...REF}
+        podeEditar
+        onSalvar={onSalvar}
+      />,
+    );
+    expect(
+      screen.getByRole('textbox', { name: /Prazo para recolher, depois do fim do turno/ }),
+    ).toHaveValue('60');
+    await userEvent.click(screen.getByRole('button', { name: 'Turno' }));
+    // O turno que já tem prazo não pode ser escolhido de novo.
+    await userEvent.click(screen.getByRole('combobox', { name: 'Turno 2' }));
+    expect(await screen.findByRole('option', { name: 'Tarde' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await userEvent.keyboard('{Escape}');
+    await escolherOpcao('Turno 2', 'Lista');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Prazo do turno 2 (minutos)' }),
+      '1440',
+    );
+    expect(screen.getByText('(24 h)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      {
+        ...CONFIG,
+        recolhimentoPorTurno: [
+          { turnoId: 't-tarde', minutos: 30 },
+          { turnoId: 't-lista', minutos: 1440 },
+        ],
+      },
+      [TARDE_24],
+    );
+  });
+
+  it('prazo por turno sem turno não salva; remover a linha volta ao prazo padrão', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(
+      <FormConfiguracaoDistribuicao
+        configuracao={CONFIG}
+        {...REF}
+        podeEditar
+        onSalvar={onSalvar}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Turno' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+    expect(await screen.findByText('Escolha o turno.')).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Remover prazo do turno 2' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover prazo do turno 1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+    expect(onSalvar).toHaveBeenCalledWith({ ...CONFIG, recolhimentoPorTurno: [] }, [TARDE_24]);
   });
 
   it('sem editar, mostra o resumo', () => {

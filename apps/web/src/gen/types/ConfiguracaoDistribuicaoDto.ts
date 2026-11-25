@@ -4,6 +4,7 @@
 */
 
 import type { ItemOrdemFilaDto } from './ItemOrdemFilaDto'
+import type { PrazoRecolhimentoTurnoDto } from './PrazoRecolhimentoTurnoDto'
 import type { TurnosPosterioresDto } from './TurnosPosterioresDto'
 
 export type ConfiguracaoDistribuicaoDto = {
@@ -73,15 +74,15 @@ export type ConfiguracaoDistribuicaoDto = {
    */
   turnosPosteriores: TurnosPosterioresDto | null;
   /**
-   * @description Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado.
+   * @description Prazo padrão (minutos) para recolher o exame não aberto depois do fim do turno; nulo = recolhimento desligado.
    * @type number
    */
   recolhimentoAposTurnoMin: number | null;
   /**
-   * @description Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080).
-   * @type integer
+   * @description Prazo próprio de alguns turnos, no lugar do padrão (um por turno). Os outros usam o padrão.
+   * @type array
    */
-  recolhimentoAposListaMin: number;
+  recolhimentoPorTurno: PrazoRecolhimentoTurnoDto[];
   /**
    * @description Robô ligado: desligado, ninguém inicia rodada. Ausente = mantém o gravado.
    * @type boolean | undefined

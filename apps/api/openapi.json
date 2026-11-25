@@ -20739,6 +20739,24 @@
           "cheiaEm"
         ]
       },
+      "PrazoRecolhimentoTurnoDto": {
+        "type": "object",
+        "properties": {
+          "turnoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Turno da escala."
+          },
+          "minutos": {
+            "type": "integer",
+            "description": "Minutos depois do fim do turno (0 a 10080), no lugar do prazo padrão."
+          }
+        },
+        "required": [
+          "turnoId",
+          "minutos"
+        ]
+      },
       "ConfiguracaoDistribuicaoRespostaDto": {
         "type": "object",
         "properties": {
@@ -20809,11 +20827,14 @@
           "recolhimentoAposTurnoMin": {
             "type": "number",
             "nullable": true,
-            "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
+            "description": "Prazo padrão (minutos) para recolher o exame não aberto depois do fim do turno; nulo = recolhimento desligado."
           },
-          "recolhimentoAposListaMin": {
-            "type": "integer",
-            "description": "Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080)."
+          "recolhimentoPorTurno": {
+            "description": "Prazo próprio de alguns turnos, no lugar do padrão (um por turno). Os outros usam o padrão.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrazoRecolhimentoTurnoDto"
+            }
           },
           "roboAtivo": {
             "type": "boolean",
@@ -20854,7 +20875,7 @@
           "diasJaEntregue",
           "turnosPosteriores",
           "recolhimentoAposTurnoMin",
-          "recolhimentoAposListaMin",
+          "recolhimentoPorTurno",
           "roboAtivo",
           "expiracaoPropostaMin",
           "tetoPorRodada",
@@ -20932,11 +20953,14 @@
           "recolhimentoAposTurnoMin": {
             "type": "number",
             "nullable": true,
-            "description": "Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado."
+            "description": "Prazo padrão (minutos) para recolher o exame não aberto depois do fim do turno; nulo = recolhimento desligado."
           },
-          "recolhimentoAposListaMin": {
-            "type": "integer",
-            "description": "Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080)."
+          "recolhimentoPorTurno": {
+            "description": "Prazo próprio de alguns turnos, no lugar do padrão (um por turno). Os outros usam o padrão.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrazoRecolhimentoTurnoDto"
+            }
           },
           "roboAtivo": {
             "type": "boolean",
@@ -20977,7 +21001,7 @@
           "diasJaEntregue",
           "turnosPosteriores",
           "recolhimentoAposTurnoMin",
-          "recolhimentoAposListaMin"
+          "recolhimentoPorTurno"
         ]
       },
       "TipoUrgencia": {

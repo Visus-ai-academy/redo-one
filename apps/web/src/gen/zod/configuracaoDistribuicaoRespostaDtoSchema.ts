@@ -5,6 +5,7 @@
 
 import * as z from 'zod'
 import { itemOrdemFilaDtoSchema } from './itemOrdemFilaDtoSchema'
+import { prazoRecolhimentoTurnoDtoSchema } from './prazoRecolhimentoTurnoDtoSchema'
 import { turnosPosterioresDtoSchema } from './turnosPosterioresDtoSchema'
 
 export const configuracaoDistribuicaoRespostaDtoSchema = z.object({
@@ -21,8 +22,8 @@ export const configuracaoDistribuicaoRespostaDtoSchema = z.object({
   escalaRestringeEspecialidade: z.boolean().describe('A frente da escala limita o que o médico recebe no período.'),
   diasJaEntregue: z.number().describe('Exame entregue a um médico nos últimos N dias e de volta à fila não volta para ele.'),
   turnosPosteriores: turnosPosterioresDtoSchema.nullable().describe('Nulo = nenhum turno posterior (a Lista não guarda nada).'),
-  recolhimentoAposTurnoMin: z.number().nullable().describe('Carência (minutos) do recolhimento depois do fim do turno; nulo = recolhimento desligado.'),
-  recolhimentoAposListaMin: z.int().describe('Carência (minutos) do recolhimento depois do fim da Lista, no lugar da de cima (0 a 10080).'),
+  recolhimentoAposTurnoMin: z.number().nullable().describe('Prazo padrão (minutos) para recolher o exame não aberto depois do fim do turno; nulo = recolhimento desligado.'),
+  recolhimentoPorTurno: z.array(prazoRecolhimentoTurnoDtoSchema).describe('Prazo próprio de alguns turnos, no lugar do padrão (um por turno). Os outros usam o padrão.'),
   roboAtivo: z.boolean().describe('Robô ligado: desligado, ninguém inicia rodada.'),
   expiracaoPropostaMin: z.number().describe('Minutos que a proposta vale sem aprovação; depois expira.'),
   tetoPorRodada: z.number().nullable().describe('Máximo de exames propostos por rodada; nulo = sem teto.'),

@@ -16,6 +16,7 @@ import {
   CRITERIOS_FILA,
   configuracaoParaApi,
   DIRECAO_PADRAO,
+  emHoras,
   esquemaConfiguracao,
   ORDEM_CRITERIOS,
   resumoConfiguracao,
@@ -72,6 +73,13 @@ function PainelGrade({
       )}
     </Painel>
   );
+}
+
+/** "(24 h)" ao lado de um prazo em minutos; nada abaixo de 1 h ou sem número. */
+function dicaDoPrazo(valor: string): string | undefined {
+  const t = valor.trim();
+  const horas = /^\d+$/.test(t) ? emHoras(Number(t)) : null;
+  return horas ? `(${horas})` : undefined;
 }
 
 /** O que vale para todas as frentes do robô (Configurações › Distribuição). */
@@ -131,12 +139,14 @@ export function FormConfiguracaoDistribuicao({
   }
 
   // Turno já escolhido que ficou inativo continua à vista para poder ser tirado.
-  const opcoesTurno = [
+  const comInativos = (escolhidos: readonly string[]) => [
     ...turnos.map((t) => ({ valor: t.id, rotulo: t.nome })),
-    ...(configuracao.turnosPosteriores?.turnoIds ?? [])
-      .filter((id) => !turnos.some((t) => t.id === id))
+    ...escolhidos
+      .filter((id, i) => !turnos.some((t) => t.id === id) && escolhidos.indexOf(id) === i)
       .map((id) => ({ valor: id, rotulo: '(turno inativo)' })),
   ];
+  const opcoesTurno = comInativos(configuracao.turnosPosteriores?.turnoIds ?? []);
+  const turnosDoPrazo = comInativos(configuracao.recolhimentoPorTurno.map((p) => p.turnoId));
 
   return (
     <form
@@ -469,14 +479,17 @@ export function FormConfiguracaoDistribuicao({
               )
             }
           </form.Subscribe>
-          <form.AppField name="recolhe">
-            {(field) => (
-              <field.CheckboxField
-                label="Recolher depois do fim do turno"
-                description="O exame que o médico não abriu volta para a fila (nas frentes que recolhem)."
-              />
-            )}
-          </form.AppField>
+          <div className="flex flex-col gap-3">
+            <span className="font-medium">Recolher exames não abertos</span>
+            <form.AppField name="recolhe">
+              {(field) => (
+                <field.CheckboxField
+                  label="Devolver à fila o exame que o médico não abriu depois que o turno acabou"
+                  description="Só nas frentes que recolhem."
+                />
+              )}
+            </form.AppField>
+          </div>
           <form.Subscribe selector={(s) => s.values.recolhe}>
             {(recolhe) =>
               recolhe && (
@@ -484,25 +497,91 @@ export function FormConfiguracaoDistribuicao({
                   <form.AppField name="recolhimentoAposTurnoMin">
                     {(field) => (
                       <field.NumberField
-                        label="Minutos depois do fim do turno"
+                        label="Prazo para recolher, depois do fim do turno (minutos)"
                         placeholder="Ex.: 60"
+                        description={dicaDoPrazo(field.state.value)}
                         min={0}
                         max={1440}
                         required
                       />
                     )}
                   </form.AppField>
-                  <form.AppField name="recolhimentoAposListaMin">
-                    {(field) => (
-                      <field.NumberField
-                        label="Minutos depois do fim da Lista"
-                        placeholder="Ex.: 1440"
-                        description="O exame entregue numa Lista fica com o médico até este tempo depois do fim dela (1440 = 24 horas)."
-                        min={0}
-                        max={10080}
-                        required
-                      />
-                    )}
+                  <form.AppField name="recolhimentoPorTurno" mode="array">
+                    {(lista) => {
+                      const escolhidos = lista.state.value.map((p) => p.turnoId);
+                      const livres = turnos.filter((t) => !escolhidos.includes(t.id));
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">Prazo diferente por turno</span>
+                            <p className="text-muted-foreground text-[13px]">
+                              Os turnos sem prazo próprio usam o prazo padrão.
+                            </p>
+                          </div>
+                          {lista.state.value.length > 0 && (
+                            <ul className="flex flex-col divide-y rounded-md border">
+                              {lista.state.value.map((_, i) => (
+                                <li
+                                  // biome-ignore lint/suspicious/noArrayIndexKey: as linhas não têm id.
+                                  key={i}
+                                  className="flex flex-wrap items-start gap-3 p-3"
+                                >
+                                  <form.AppField name={`recolhimentoPorTurno[${i}].turnoId`}>
+                                    {(field) => (
+                                      <field.SelectField
+                                        label={`Turno ${i + 1}`}
+                                        placeholder="Escolha o turno"
+                                        required
+                                        opcoes={turnosDoPrazo.map((o) => ({
+                                          ...o,
+                                          desabilitada:
+                                            o.valor !== field.state.value &&
+                                            escolhidos.includes(o.valor),
+                                        }))}
+                                        className="flex-[2_1_180px]"
+                                      />
+                                    )}
+                                  </form.AppField>
+                                  <form.AppField name={`recolhimentoPorTurno[${i}].minutos`}>
+                                    {(field) => (
+                                      <field.NumberField
+                                        label={`Prazo do turno ${i + 1} (minutos)`}
+                                        placeholder="Ex.: 1440"
+                                        description={dicaDoPrazo(field.state.value)}
+                                        min={0}
+                                        max={10080}
+                                        required
+                                        className="flex-[1_1_140px]"
+                                      />
+                                    )}
+                                  </form.AppField>
+                                  <span className="self-start pt-7">
+                                    <AcoesDaLinha
+                                      nome={`prazo do turno ${i + 1}`}
+                                      indice={i}
+                                      total={lista.state.value.length}
+                                      onRemover={() => lista.removeValue(i)}
+                                    />
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <Button
+                            type="button"
+                            disabled={livres.length === 0}
+                            onClick={() => lista.pushValue({ turnoId: '', minutos: '' })}
+                            className={buttonClassName({
+                              variant: 'secondary',
+                              className: 'self-start',
+                            })}
+                          >
+                            <Plus size={16} aria-hidden />
+                            Turno
+                          </Button>
+                        </div>
+                      );
+                    }}
                   </form.AppField>
                 </>
               )
