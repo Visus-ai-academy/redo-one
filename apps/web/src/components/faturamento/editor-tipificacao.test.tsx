@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tipificacaoClienteControllerObter } from '../../gen/clients/tipificacaoClienteControllerObter';
 import { tipificacaoClienteControllerPrevia } from '../../gen/clients/tipificacaoClienteControllerPrevia';
+import { tipificacaoClienteControllerRemoverVersao } from '../../gen/clients/tipificacaoClienteControllerRemoverVersao';
 import { tipificacaoClienteControllerSalvar } from '../../gen/clients/tipificacaoClienteControllerSalvar';
 import { tipificacaoControllerListar } from '../../gen/clients/tipificacaoControllerListar';
 import { tipificacaoControllerOpcoes } from '../../gen/clients/tipificacaoControllerOpcoes';
@@ -17,6 +18,9 @@ vi.mock('../../gen/clients/tipificacaoClienteControllerObter', () => ({
 }));
 vi.mock('../../gen/clients/tipificacaoClienteControllerPrevia', () => ({
   tipificacaoClienteControllerPrevia: vi.fn(),
+}));
+vi.mock('../../gen/clients/tipificacaoClienteControllerRemoverVersao', () => ({
+  tipificacaoClienteControllerRemoverVersao: vi.fn(),
 }));
 vi.mock('../../gen/clients/tipificacaoClienteControllerSalvar', () => ({
   tipificacaoClienteControllerSalvar: vi.fn(),
@@ -59,21 +63,41 @@ const LINHA = {
   equipes: [],
   subregraId: 'nc-nf',
 };
+const EM_VIGOR = {
+  regraId: 'nc',
+  subregraDemaisId: 'nc-ft',
+  linhas: [
+    LINHA,
+    {
+      ...LINHA,
+      valores: ['cardio'],
+      modoMedico: 'todos' as const,
+      medicos: [],
+      subregraId: 'co-ft',
+    },
+  ],
+};
 const CONFIG: TipificacaoClienteDto = {
   cliente: { id: 'c-1', nome: 'RMPADUA', unificadoEmId: null, principalNome: null },
-  configuracao: {
-    regraId: 'nc',
-    subregraDemaisId: 'nc-ft',
-    linhas: [
-      LINHA,
-      { ...LINHA, valores: ['cardio'], modoMedico: 'todos', medicos: [], subregraId: 'co-ft' },
-    ],
-    atualizadoEm: '2026-11-20T12:00:00.000Z',
-    atualizadoPor: null,
-  },
+  configuracao: EM_VIGOR,
   doPrincipal: null,
   regraPadraoId: 'co',
   medicos: [{ id: 'rodrigo', nome: 'Rodrigo Vaz de Lima' }],
+  mesAtual: '2026-11',
+  aPartirDeMinimo: '2026-11',
+  aPartirDeSugerido: '2026-12',
+  versoes: [
+    {
+      id: 'v-1',
+      vigenciaDesde: '2025-03',
+      vigenciaAte: null,
+      configuracao: EM_VIGOR,
+      criadoPor: null,
+      criadoEm: null,
+      encerradoPor: null,
+      encerradoEm: null,
+    },
+  ],
 };
 
 beforeEach(() => {
@@ -113,7 +137,12 @@ describe('EditorTipificacao', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Se especialidade for CARDIO → CO-FT')).toBeInTheDocument();
     expect(screen.getByText('NC-FT')).toBeInTheDocument();
-    expect(screen.getByText(/na carga do dashboards-one/)).toBeInTheDocument();
+    const historico = screen.getByRole('listitem', { name: 'A partir de 03/2025' });
+    expect(within(historico).getByText('Em vigor')).toBeInTheDocument();
+    expect(
+      within(historico).getByText('Regra principal NC; 2 linhas; todos os demais: NC-FT.'),
+    ).toBeInTheDocument();
+    expect(within(historico).getByText('Veio da carga do dashboards-one')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ver prévia' })).not.toBeInTheDocument();
   });
 
@@ -171,6 +200,7 @@ describe('EditorTipificacao', () => {
     expect(vi.mocked(tipificacaoClienteControllerSalvar).mock.calls[0]?.[0]).toMatchObject({
       path: { clienteId: 'c-1' },
       body: {
+        aPartirDe: '2026-12',
         regraId: 'nc',
         subregraDemaisId: 'nc-ft',
         linhas: [
@@ -179,7 +209,92 @@ describe('EditorTipificacao', () => {
         ],
       },
     });
-    expect(await acharAviso()).toHaveTextContent(/Tipificação salva/);
+    expect(await acharAviso()).toHaveTextContent(
+      'Tipificação salva a partir de 12/2026. Os laudos das competências abertas são reclassificados em seguida.',
+    );
+  });
+
+  it('"vale a partir de" vai na prévia; a competência antes dela aparece como sem mudança', async () => {
+    const user = userEvent.setup();
+    vi.mocked(tipificacaoClienteControllerPrevia).mockReturnValue(
+      resolve([
+        {
+          competencia: '2026-11',
+          regraId: 'nc',
+          subregraId: 'nc-nf',
+          fatura: false,
+          antes: { laudos: 3, volume: 3 },
+          depois: { laudos: 3, volume: 3 },
+        },
+      ]),
+    );
+    abrir();
+    await user.click(await screen.findByRole('combobox', { name: /Vale a partir de/ }));
+    const opcoes = (await screen.findAllByRole('option')).map((o) => o.textContent);
+    expect(opcoes[0]).toBe('11/2026');
+    await user.click(screen.getByRole('option', { name: '01/2027' }));
+    await user.click(screen.getByRole('button', { name: 'Ver prévia' }));
+    expect(await screen.findByText(/antes da nova versão, não muda/)).toBeInTheDocument();
+    expect(vi.mocked(tipificacaoClienteControllerPrevia).mock.calls[0]?.[0]).toMatchObject({
+      body: { aPartirDe: '2027-01' },
+    });
+  });
+
+  it('remover a configuração própria salva uma versão vazia', async () => {
+    const user = userEvent.setup();
+    vi.mocked(tipificacaoClienteControllerPrevia).mockReturnValue(resolve([]));
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Remover configuração própria' }));
+    await user.click(screen.getByRole('button', { name: 'Ver prévia' }));
+    await user.click(await screen.findByRole('button', { name: 'Salvar tipificação' }));
+    await waitFor(() => expect(tipificacaoClienteControllerSalvar).toHaveBeenCalled());
+    expect(vi.mocked(tipificacaoClienteControllerSalvar).mock.calls[0]?.[0]).toMatchObject({
+      body: { aPartirDe: '2026-12', regraId: null, subregraDemaisId: null, linhas: [] },
+    });
+    expect(await acharAviso()).toHaveTextContent(
+      /Configuração própria removida a partir de 12\/2026/,
+    );
+  });
+
+  it('a versão programada aparece no histórico e pode ser excluída', async () => {
+    const user = userEvent.setup();
+    vi.mocked(tipificacaoClienteControllerRemoverVersao).mockReturnValue(resolve(undefined));
+    vi.mocked(tipificacaoClienteControllerObter).mockReturnValue(
+      resolve({
+        ...CONFIG,
+        versoes: [
+          {
+            id: 'v-2',
+            vigenciaDesde: '2026-12',
+            vigenciaAte: null,
+            configuracao: { regraId: null, subregraDemaisId: null, linhas: [] },
+            criadoPor: 'Ana',
+            criadoEm: '2026-11-20T12:00:00.000Z',
+            encerradoPor: null,
+            encerradoEm: null,
+          },
+          { ...CONFIG.versoes[0], vigenciaAte: '2026-11' },
+        ],
+      }),
+    );
+    abrir();
+    expect(
+      await screen.findByText(/Há uma versão programada a partir de 12\/2026/),
+    ).toBeInTheDocument();
+    const programada = screen.getByRole('listitem', { name: 'A partir de 12/2026' });
+    expect(
+      within(programada).getByText('Sem configuração própria: vale a regra padrão (CO).'),
+    ).toBeInTheDocument();
+    await user.click(within(programada).getByRole('button', { name: 'Excluir versão programada' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Excluir versão programada',
+      }),
+    );
+    expect(tipificacaoClienteControllerRemoverVersao).toHaveBeenCalledWith({
+      path: { clienteId: 'c-1', versaoId: 'v-2' },
+    });
+    expect(await acharAviso()).toHaveTextContent(/Versão de 12\/2026 excluída/);
   });
 
   it('linha nova incompleta não pede prévia: mostra o que falta', async () => {

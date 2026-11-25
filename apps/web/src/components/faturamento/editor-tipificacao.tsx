@@ -7,17 +7,19 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import { tipificacaoClienteControllerPrevia } from '../../gen/clients/tipificacaoClienteControllerPrevia';
+import { tipificacaoClienteControllerRemoverVersao } from '../../gen/clients/tipificacaoClienteControllerRemoverVersao';
 import { tipificacaoClienteControllerSalvar } from '../../gen/clients/tipificacaoClienteControllerSalvar';
 import { tipificacaoControllerMedicos } from '../../gen/clients/tipificacaoControllerMedicos';
 import { tipificacaoClienteControllerObterQueryOptions } from '../../gen/hooks/useTipificacaoClienteControllerObter';
 import { tipificacaoControllerListarQueryOptions } from '../../gen/hooks/useTipificacaoControllerListar';
 import { tipificacaoControllerOpcoesQueryOptions } from '../../gen/hooks/useTipificacaoControllerOpcoes';
-import type { ConfiguracaoTipificacaoRegistradaDto } from '../../gen/types/ConfiguracaoTipificacaoRegistradaDto';
+import type { ConfiguracaoTipificacaoDto } from '../../gen/types/ConfiguracaoTipificacaoDto';
 import type { LinhaPreviaTipificacaoDto } from '../../gen/types/LinhaPreviaTipificacaoDto';
 import type { OpcoesTipificacaoDto } from '../../gen/types/OpcoesTipificacaoDto';
+import type { TipificacaoClienteDto } from '../../gen/types/TipificacaoClienteDto';
 import type { TipificacaoDto } from '../../gen/types/TipificacaoDto';
+import type { VersaoConfiguracaoTipificacaoDto } from '../../gen/types/VersaoConfiguracaoTipificacaoDto';
 import { cn } from '../../lib/cn';
-import { dataHoraCurta } from '../../lib/datas';
 import { numero, plural } from '../../lib/formato';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
@@ -29,6 +31,9 @@ import { RequiredLegend } from '../form/RequiredLegend';
 import { useArrastarParaOrdenar } from '../ordenar/use-arrastar-para-ordenar';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
+import { mesAno } from './competencias';
+import { HistoricoVigencias } from './historico-vigencias';
+import { opcoesAPartirDe } from './precos';
 import {
   type ConfiguracaoForm,
   corpoDaConfiguracao,
@@ -45,10 +50,12 @@ export type EditorTipificacaoProps = {
   podeEditar: boolean;
   /** Avisa quando há algo digitado e não salvo (o painel pergunta antes de fechar). */
   onAlterado?: (alterado: boolean) => void;
+  /** Só para os testes: o resto da tela usa o mês atual que a API devolve. */
   agora?: Date;
 };
 
 const esquema = z.object({
+  aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual a configuração vale.'),
   regraId: z.string(),
   subregraDemaisId: z.string(),
   linhas: z.array(
@@ -74,12 +81,9 @@ const esquema = z.object({
 });
 
 /** Tipificação do cliente na aba Faturamento: regra principal, linhas e "todos os demais". */
-export function EditorTipificacao({
-  clienteId,
-  podeEditar,
-  onAlterado,
-  agora = new Date(),
-}: EditorTipificacaoProps) {
+export function EditorTipificacao({ clienteId, podeEditar, onAlterado }: EditorTipificacaoProps) {
+  const queryClient = useQueryClient();
+  const avisos = useAvisos();
   const config = useQuery(tipificacaoClienteControllerObterQueryOptions({ path: { clienteId } }));
   const regras = useQuery(tipificacaoControllerListarQueryOptions());
   const opcoes = useQuery(tipificacaoControllerOpcoesQueryOptions());
@@ -99,7 +103,9 @@ export function EditorTipificacao({
     );
   if (!config.data || !regras.data || !opcoes.data) return <CamposCarregando quantidade={4} />;
 
-  const { cliente, configuracao, doPrincipal, regraPadraoId, medicos } = config.data;
+  const { cliente, configuracao, doPrincipal, regraPadraoId, medicos, versoes, mesAtual } =
+    config.data;
+  const programada = versoes.find((v) => v.vigenciaDesde > mesAtual);
   const nomesMedicos = new Map(medicos.map((m) => [m.id, m.nome]));
   const nomeRegra = (id: string | null) => regras.data.regras.find((r) => r.id === id)?.nome;
   const padrao = nomeRegra(regraPadraoId) ?? 'a padrão';
@@ -121,10 +127,16 @@ export function EditorTipificacao({
             : `Esta unidade de ${cliente.principalNome} não tem configuração própria: os laudos dela seguem a do principal. Para mudar só esta unidade, configure abaixo.`}
         </Alerta>
       )}
+      {programada && (
+        <Alerta tom="info" role="note">
+          {`Há uma versão programada a partir de ${mesAno(programada.vigenciaDesde)} (veja o histórico). Abaixo, a configuração em vigor em ${mesAno(mesAtual)}.`}
+        </Alerta>
+      )}
       {podeEditar ? (
         <FormTipificacao
-          key={configuracao?.atualizadoEm ?? 'nova'}
+          key={versoes.map((v) => `${v.id}:${v.vigenciaAte}`).join('|') || 'nova'}
           clienteId={clienteId}
+          dados={config.data}
           configuracao={configuracao}
           nomesMedicos={nomesMedicos}
           tipificacao={regras.data}
@@ -141,16 +153,80 @@ export function EditorTipificacao({
           herdada={herdada}
         />
       )}
-      {configuracao && (
-        <p className="text-muted-foreground text-[13px]">
-          Salva {dataHoraCurta(configuracao.atualizadoEm, agora)}
-          {configuracao.atualizadoPor
-            ? ` por ${configuracao.atualizadoPor}`
-            : ' na carga do dashboards-one'}
-          .
-        </p>
-      )}
+      <HistoricoVigencias
+        versoes={versoes}
+        mesAtual={mesAtual}
+        vazio="Nenhuma configuração própria até hoje."
+        descrever={(v) => (
+          <ResumoDaVersao
+            versao={v}
+            nomesMedicos={nomesMedicos}
+            tipificacao={regras.data}
+            opcoes={opcoes.data}
+            herdada={herdada}
+            semPropria={
+              cliente.unificadoEmId
+                ? `Sem configuração própria: segue a de ${cliente.principalNome}.`
+                : `Sem configuração própria: vale a regra padrão (${padrao}).`
+            }
+          />
+        )}
+        onExcluir={
+          podeEditar
+            ? async (v) => {
+                await tipificacaoClienteControllerRemoverVersao({
+                  path: { clienteId, versaoId: v.id },
+                }).unwrap();
+                await queryClient.invalidateQueries({
+                  queryKey: tipificacaoClienteControllerObterQueryOptions({ path: { clienteId } })
+                    .queryKey,
+                });
+                avisos.sucesso(
+                  `Versão de ${mesAno(v.vigenciaDesde)} excluída. Os laudos das competências abertas são reclassificados em seguida.`,
+                );
+              }
+            : undefined
+        }
+      />
     </div>
+  );
+}
+
+/** A versão no histórico: a regra principal, quantas linhas e o "todos os demais", com as frases. */
+function ResumoDaVersao({
+  versao,
+  nomesMedicos,
+  tipificacao,
+  opcoes,
+  herdada,
+  semPropria,
+}: Dados & { versao: VersaoConfiguracaoTipificacaoDto; semPropria: string }) {
+  const c = versao.configuracao;
+  const nomes = nomesDa(tipificacao, opcoes);
+  if (!c.regraId && !c.subregraDemaisId && !c.linhas.length) return <span>{semPropria}</span>;
+  const valores = valoresDaConfiguracao(c, nomesMedicos, () => crypto.randomUUID());
+  const regra = tipificacao.regras.find((r) => r.id === c.regraId)?.nome ?? herdada;
+  const demais = nomes.subregras.get(c.subregraDemaisId ?? '') ?? 'ficam na regra principal';
+  return (
+    <Collapsible.Root className="flex flex-col gap-1">
+      <span>
+        {`Regra principal ${regra}; ${plural(c.linhas.length, { um: 'linha', varios: 'linhas', nenhum: 'nenhuma linha' })}; todos os demais: ${demais}.`}
+      </span>
+      {c.linhas.length > 0 && (
+        <>
+          <Collapsible.Trigger className="text-primary focus-visible:outline-ring self-start rounded-sm text-[13px] underline underline-offset-2 focus-visible:outline-2">
+            Ver as linhas
+          </Collapsible.Trigger>
+          <Collapsible.Panel>
+            <ol className="text-muted-foreground flex list-decimal flex-col gap-1 pl-5">
+              {valores.linhas.map((l) => (
+                <li key={l.chave}>{fraseDaLinha(l, nomes)}</li>
+              ))}
+            </ol>
+          </Collapsible.Panel>
+        </>
+      )}
+    </Collapsible.Root>
   );
 }
 
@@ -180,7 +256,7 @@ function Leitura({
   tipificacao,
   opcoes,
   herdada,
-}: Dados & { configuracao: ConfiguracaoTipificacaoRegistradaDto | null }) {
+}: Dados & { configuracao: ConfiguracaoTipificacaoDto | null }) {
   const valores = valoresDaConfiguracao(configuracao, nomesMedicos);
   const nomes = nomesDa(tipificacao, opcoes);
   const regra = tipificacao.regras.find((r) => r.id === valores.regraId)?.nome ?? herdada;
@@ -225,6 +301,7 @@ const linhaNova = (): LinhaForm => ({
 
 function FormTipificacao({
   clienteId,
+  dados,
   configuracao,
   nomesMedicos,
   tipificacao,
@@ -233,7 +310,8 @@ function FormTipificacao({
   onAlterado,
 }: Dados & {
   clienteId: string;
-  configuracao: ConfiguracaoTipificacaoRegistradaDto | null;
+  dados: TipificacaoClienteDto;
+  configuracao: ConfiguracaoTipificacaoDto | null;
   onAlterado?: (alterado: boolean) => void;
 }) {
   const queryClient = useQueryClient();
@@ -245,13 +323,20 @@ function FormTipificacao({
   const [previa, setPrevia] = useState<{ chave: string; linhas: LinhaPreviaTipificacaoDto[] }>();
   // Uma vez por montagem: as chaves das linhas não podem mudar a cada render (o painel remonta o
   // formulário quando a configuração salva muda).
-  const [iniciais] = useState(() => valoresDaConfiguracao(configuracao, nomesMedicos));
+  const [iniciais] = useState(() => ({
+    ...valoresDaConfiguracao(configuracao, nomesMedicos),
+    aPartirDe: dados.aPartirDeSugerido,
+  }));
+  const corpo = (v: ConfiguracaoForm & { aPartirDe: string }) => ({
+    ...corpoDaConfiguracao(v),
+    aPartirDe: v.aPartirDe,
+  });
   const form = useAppForm({
-    defaultValues: iniciais as ConfiguracaoForm,
+    defaultValues: iniciais as ConfiguracaoForm & { aPartirDe: string },
     validators: { onSubmit: esquema },
     // Primeiro a prévia da configuração digitada; com ela à vista, salvar.
     onSubmit: ({ value }) => {
-      const body = corpoDaConfiguracao(value);
+      const body = corpo(value);
       const chave = JSON.stringify(body);
       if (previa?.chave !== chave)
         return tentar(async () => {
@@ -260,7 +345,7 @@ function FormTipificacao({
             body,
           }).unwrap();
           // Chegou depois de a pessoa mudar um campo: é a prévia de outra configuração.
-          if (JSON.stringify(corpoDaConfiguracao(form.state.values)) !== chave) return;
+          if (JSON.stringify(corpo(form.state.values)) !== chave) return;
           setPrevia({ chave, linhas });
         }, 'Não foi possível calcular a prévia agora. Confira sua conexão e tente de novo.');
       return tentar(async () => {
@@ -274,8 +359,9 @@ function FormTipificacao({
             queryKey: tipificacaoControllerListarQueryOptions().queryKey,
           }),
         ]);
+        const vazia = !body.regraId && !body.subregraDemaisId && !body.linhas.length;
         avisos.sucesso(
-          'Tipificação salva. Os laudos das competências abertas são reclassificados em seguida.',
+          `${vazia ? 'Configuração própria removida' : 'Tipificação salva'} a partir de ${mesAno(body.aPartirDe)}. Os laudos das competências abertas são reclassificados em seguida.`,
         );
       });
     },
@@ -309,7 +395,12 @@ function FormTipificacao({
         : opcoes.prioridades
     ).map((o) => ({ valor: o.id, rotulo: o.nome, cor: o.cor }));
 
-  const chaveAtual = JSON.stringify(corpoDaConfiguracao(valores));
+  const chaveAtual = JSON.stringify(corpo(valores));
+  const competencias = opcoesAPartirDe(dados.aPartirDeMinimo, dados.mesAtual).map((c) => ({
+    valor: c,
+    rotulo: mesAno(c),
+  }));
+  const temAlgo = Boolean(valores.regraId || valores.subregraDemaisId || valores.linhas.length);
   const previaAtual = previa?.chave === chaveAtual ? previa.linhas : undefined;
 
   return (
@@ -495,7 +586,40 @@ function FormTipificacao({
         )}
       </form.AppField>
 
-      {previaAtual && <TabelaPrevia linhas={previaAtual} tipificacao={tipificacao} />}
+      {configuracao && (
+        <Button
+          type="button"
+          disabled={!temAlgo}
+          onClick={() => {
+            form.setFieldValue('regraId', '');
+            form.setFieldValue('subregraDemaisId', '');
+            form.setFieldValue('linhas', []);
+          }}
+          className={buttonClassName({ variant: 'secondary', className: 'self-start' })}
+        >
+          Remover configuração própria
+        </Button>
+      )}
+
+      <form.AppField name="aPartirDe">
+        {(field) => (
+          <field.SelectField
+            label="Vale a partir de"
+            required
+            placeholder="Escolha a competência"
+            opcoes={competencias}
+            description="Só competências abertas ou futuras. As anteriores continuam com a versão de antes."
+          />
+        )}
+      </form.AppField>
+
+      {previaAtual && (
+        <TabelaPrevia
+          linhas={previaAtual}
+          tipificacao={tipificacao}
+          aPartirDe={valores.aPartirDe}
+        />
+      )}
       {erro && <Alerta tom="erro">{erro}</Alerta>}
       <form.AppForm>
         <RequiredLegend />
@@ -609,9 +733,11 @@ function ListaDeLinhas({
 function TabelaPrevia({
   linhas,
   tipificacao,
+  aPartirDe,
 }: {
   linhas: LinhaPreviaTipificacaoDto[];
   tipificacao: TipificacaoDto;
+  aPartirDe: string;
 }) {
   const nome = (l: LinhaPreviaTipificacaoDto) =>
     tipificacao.subregras.find((s) => s.id === l.subregraId)?.nome ??
@@ -654,7 +780,13 @@ function TabelaPrevia({
             <tbody key={competencia} className="divide-y border-b last:border-b-0">
               <tr className="bg-muted/50">
                 <th scope="rowgroup" colSpan={3} className="px-3 py-1.5 font-medium">
-                  Competência {competencia}
+                  Competência {mesAno(competencia)}
+                  {competencia < aPartirDe && (
+                    <span className="text-muted-foreground font-normal">
+                      {' '}
+                      · antes da nova versão, não muda
+                    </span>
+                  )}
                 </th>
               </tr>
               {linhas

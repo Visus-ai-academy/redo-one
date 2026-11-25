@@ -5,6 +5,7 @@ import {
   fraseDaLinha,
   type LinhaForm,
   mover,
+  pedidosDoPainel,
   valoresDaConfiguracao,
 } from './tipificacao';
 
@@ -101,6 +102,25 @@ describe('tipificação (tela)', () => {
       regraId: '',
       subregraDemaisId: '',
       linhas: [],
+    });
+  });
+});
+
+describe('pedidosDoPainel', () => {
+  const antes = { nome: 'NC', ativo: true, fatura: false, aPartirDe: '2026-12' };
+  it('nome e afins vão no PUT; o "fatura" mudado vai como versão nova, a partir da competência', () => {
+    expect(pedidosDoPainel(antes, { ...antes, nome: 'NC2' })).toEqual({
+      dados: true,
+      fatura: null,
+    });
+    expect(pedidosDoPainel(antes, { ...antes, fatura: true, aPartirDe: '2027-01' })).toEqual({
+      dados: false,
+      fatura: { fatura: true, aPartirDe: '2027-01' },
+    });
+    // Só trocar a competência, sem mudar o "fatura", não pede nada.
+    expect(pedidosDoPainel(antes, { ...antes, aPartirDe: '2027-01' })).toEqual({
+      dados: false,
+      fatura: null,
     });
   });
 });

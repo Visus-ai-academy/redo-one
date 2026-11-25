@@ -107,3 +107,22 @@ export function corpoDaConfiguracao(f: ConfiguracaoForm): ConfiguracaoTipificaca
     }),
   };
 }
+
+/**
+ * O que salvar no painel da regra ou da sub-regra: o que não muda o cálculo (nome, descrição, cor,
+ * situação) vai como alteração; o "fatura" mudado vai como versão nova, a partir da competência.
+ */
+export function pedidosDoPainel<T extends { fatura: boolean; aPartirDe: string }>(
+  antes: T,
+  depois: T,
+): { dados: boolean; fatura: { fatura: boolean; aPartirDe: string } | null } {
+  const { fatura: _fa, aPartirDe: _aa, ...dadosAntes } = antes;
+  const { fatura: _fd, aPartirDe: _ad, ...dadosDepois } = depois;
+  return {
+    dados: JSON.stringify(dadosAntes) !== JSON.stringify(dadosDepois),
+    fatura:
+      antes.fatura === depois.fatura
+        ? null
+        : { fatura: depois.fatura, aPartirDe: depois.aPartirDe },
+  };
+}
