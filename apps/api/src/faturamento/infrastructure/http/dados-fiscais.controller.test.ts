@@ -6,6 +6,7 @@ import { PERMISSOES_EXIGIDAS } from '../../../identidade/acesso/decorators';
 import type { PrincipalUsuario } from '../../../identidade/principal';
 import type {
   DefinirDadosFiscais,
+  HistoricoDadosFiscais,
   ObterDadosFiscais,
 } from '../../application/use-cases/dados-fiscais';
 import { DADOS_FISCAIS_VAZIOS } from '../../domain/dados-fiscais';
@@ -23,6 +24,8 @@ describe('controller dos dados de faturamento do cliente', () => {
     );
     expect(exigidas(p.obter)).toEqual(['clientes.faturamento.ver']);
     expect(exigidas(p.salvar)).toEqual(['clientes.faturamento.editar']);
+    expect(exigidas(p.historico)).toEqual(['clientes.faturamento.ver']);
+    expect(reflector.get(PATH_METADATA, p.historico)).toBe('historico');
   });
 
   it('devolve os dados com o Omie achatado; grava em nome de quem está logado', async () => {
@@ -39,6 +42,7 @@ describe('controller dos dados de faturamento do cliente', () => {
     const c = new DadosFiscaisController(
       obter as unknown as ObterDadosFiscais,
       definir as unknown as DefinirDadosFiscais,
+      {} as HistoricoDadosFiscais,
     );
 
     expect(await c.obter('c1')).toEqual({
@@ -52,5 +56,50 @@ describe('controller dos dados de faturamento do cliente', () => {
     const corpo = { ...DADOS_FISCAIS_VAZIOS, cidade: 'X' };
     await c.salvar(ator, 'c1', corpo);
     expect(definir.executar).toHaveBeenCalledWith('u1', 'c1', corpo);
+  });
+
+  it('histórico: a página da auditoria no formato do histórico dos cadastros', async () => {
+    const em = new Date('2026-11-25T12:00:00Z');
+    const historico = {
+      executar: vi.fn(async () => ({
+        itens: [
+          {
+            id: 'e1',
+            clienteId: 'c1',
+            ocorridoEm: em,
+            ator: { tipo: 'usuario' as const, nome: 'Ana' },
+            acao: 'alterado',
+            antes: { cidade: null },
+            depois: { cidade: 'Santos' },
+          },
+        ],
+        total: 1,
+      })),
+    };
+    const c = new DadosFiscaisController(
+      {} as ObterDadosFiscais,
+      {} as DefinirDadosFiscais,
+      historico as unknown as HistoricoDadosFiscais,
+    );
+
+    expect(await c.historico('c1', { pagina: 2, porPagina: 5 })).toEqual({
+      itens: [
+        {
+          id: 'e1',
+          ocorridoEm: em,
+          ator: { tipo: 'usuario', nome: 'Ana' },
+          entidade: 'cliente_dados_fiscais',
+          entidadeId: 'c1',
+          acao: 'alterado',
+          antes: { cidade: null },
+          depois: { cidade: 'Santos' },
+        },
+      ],
+      total: 1,
+      nomes: {},
+      pagina: 2,
+      porPagina: 5,
+    });
+    expect(historico.executar).toHaveBeenCalledWith('c1', { pagina: 2, porPagina: 5 });
   });
 });

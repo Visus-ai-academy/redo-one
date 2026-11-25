@@ -14,6 +14,10 @@ import {
   type DadosFiscaisRepository,
 } from './application/ports/dados-fiscais.repository';
 import { EQUIPES_MEDICOS, type EquipesMedicos } from './application/ports/equipes-medicos';
+import {
+  HISTORICO_DADOS_FISCAIS,
+  type HistoricoDadosFiscaisRepository,
+} from './application/ports/historico-dados-fiscais';
 import { LAUDOS_COMPETENCIA, type LaudosCompetencia } from './application/ports/laudos-competencia';
 import { PRECOS_REPOSITORY, type PrecosRepository } from './application/ports/precos.repository';
 import {
@@ -22,7 +26,11 @@ import {
 } from './application/ports/tipificacao.repository';
 import { CarregarTipificador } from './application/use-cases/carregar-tipificador';
 import { CriarCorte } from './application/use-cases/criar-corte';
-import { DefinirDadosFiscais, ObterDadosFiscais } from './application/use-cases/dados-fiscais';
+import {
+  DefinirDadosFiscais,
+  HistoricoDadosFiscais,
+  ObterDadosFiscais,
+} from './application/use-cases/dados-fiscais';
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
 import { ListarCompetencias } from './application/use-cases/listar-competencias';
 import { ListarCortes } from './application/use-cases/listar-cortes';
@@ -60,6 +68,7 @@ import { DrizzleCompetenciasRepository } from './infrastructure/persistence/driz
 import { DrizzleCortesRepository } from './infrastructure/persistence/drizzle-cortes.repository';
 import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/drizzle-dados-fiscais.repository';
 import { DrizzleEquipesMedicos } from './infrastructure/persistence/drizzle-equipes-medicos';
+import { DrizzleHistoricoDadosFiscais } from './infrastructure/persistence/drizzle-historico-dados-fiscais';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
 import { DrizzlePrecosRepository } from './infrastructure/persistence/drizzle-precos.repository';
 import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizzle-tipificacao.repository';
@@ -93,6 +102,7 @@ const ACOES_COMPETENCIA = [
     { provide: CORTES_REPOSITORY, useClass: DrizzleCortesRepository },
     { provide: LAUDOS_COMPETENCIA, useClass: DrizzleLaudosCompetencia },
     { provide: DADOS_FISCAIS_REPOSITORY, useClass: DrizzleDadosFiscaisRepository },
+    { provide: HISTORICO_DADOS_FISCAIS, useClass: DrizzleHistoricoDadosFiscais },
     { provide: COMPETENCIAS_BLOQUEADAS, useExisting: COMPETENCIAS_REPOSITORY },
     { provide: CORTES_COMPETENCIA, useExisting: CORTES_REPOSITORY },
     { provide: TIPIFICACAO_REPOSITORY, useClass: DrizzleTipificacaoRepository },
@@ -215,6 +225,12 @@ const ACOES_COMPETENCIA = [
       inject: [DADOS_FISCAIS_REPOSITORY, AUDITORIA],
       useFactory: (repo: DadosFiscaisRepository, auditoria: Auditoria) =>
         new DefinirDadosFiscais(repo, auditoria, agora),
+    },
+    {
+      provide: HistoricoDadosFiscais,
+      inject: [DADOS_FISCAIS_REPOSITORY, HISTORICO_DADOS_FISCAIS],
+      useFactory: (repo: DadosFiscaisRepository, historico: HistoricoDadosFiscaisRepository) =>
+        new HistoricoDadosFiscais(repo, historico),
     },
   ],
   exports: [COMPETENCIAS_BLOQUEADAS, CORTES_COMPETENCIA, TIPIFICACAO_LAUDOS],

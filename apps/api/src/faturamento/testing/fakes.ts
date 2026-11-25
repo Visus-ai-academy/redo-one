@@ -23,6 +23,10 @@ import type {
 } from '../application/ports/dados-fiscais.repository';
 import type { EquipesMedicos } from '../application/ports/equipes-medicos';
 import type {
+  AlteracaoDadosFiscais,
+  HistoricoDadosFiscaisRepository,
+} from '../application/ports/historico-dados-fiscais';
+import type {
   LaudoParaPrevia,
   LaudosCompetencia,
   LotePrevia,
@@ -279,6 +283,19 @@ export class DadosFiscaisEmMemoria implements DadosFiscaisRepository {
   async salvar(clienteId: string, dados: DadosFiscais, autor: Autor) {
     this.linhas.set(clienteId, { dados: structuredClone(dados), atualizadoEm: autor.em });
     this.autores.push(autor);
+  }
+}
+
+/** Eventos de auditoria dos dados de faturamento, como o leitor real os devolve. */
+export class HistoricoDadosFiscaisEmMemoria implements HistoricoDadosFiscaisRepository {
+  readonly eventos: AlteracaoDadosFiscais[] = [];
+
+  async listar(clienteId: string, { pagina, porPagina }: Paginacao) {
+    const doCliente = this.eventos
+      .filter((e) => e.clienteId === clienteId)
+      .sort((a, b) => b.ocorridoEm.getTime() - a.ocorridoEm.getTime());
+    const inicio = (pagina - 1) * porPagina;
+    return { itens: doCliente.slice(inicio, inicio + porPagina), total: doCliente.length };
   }
 }
 

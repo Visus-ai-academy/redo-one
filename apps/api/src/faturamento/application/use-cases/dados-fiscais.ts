@@ -1,4 +1,5 @@
 import type { Auditoria } from '../../../auditoria/auditoria';
+import type { Pagina, Paginacao } from '../../../catalogo/comum/paginacao';
 import {
   camposAlterados,
   DADOS_FISCAIS_VAZIOS,
@@ -10,6 +11,11 @@ import type {
   DadosFiscaisRegistrados,
   DadosFiscaisRepository,
 } from '../ports/dados-fiscais.repository';
+import {
+  type AlteracaoDadosFiscais,
+  ENTIDADE_DADOS_FISCAIS,
+  type HistoricoDadosFiscaisRepository,
+} from '../ports/historico-dados-fiscais';
 
 /** Dados de faturamento do cliente; o cliente sem a linha devolve tudo vazio. */
 export interface DadosFiscaisDoCliente extends Omit<DadosFiscaisRegistrados, 'atualizadoEm'> {
@@ -58,12 +64,28 @@ export class DefinirDadosFiscais {
     await this.repo.salvar(clienteId, novos, { usuarioId, em });
     await this.auditoria.registrar({
       ator: { tipo: 'usuario', id: usuarioId },
-      entidade: 'cliente_dados_fiscais',
+      entidade: ENTIDADE_DADOS_FISCAIS,
       entidadeId: clienteId,
       acao: 'alterado',
       antes: mudanca.antes,
       depois: mudanca.depois,
       em,
     });
+  }
+}
+
+/**
+ * Histórico de alterações dos dados de faturamento (lido da auditoria): os dados fiscais não
+ * entram no cálculo, então não têm vigência; o histórico mostra quem mudou o quê e quando.
+ */
+export class HistoricoDadosFiscais {
+  constructor(
+    private readonly repo: DadosFiscaisRepository,
+    private readonly historico: HistoricoDadosFiscaisRepository,
+  ) {}
+
+  async executar(clienteId: string, paginacao: Paginacao): Promise<Pagina<AlteracaoDadosFiscais>> {
+    await exigirCliente(this.repo, clienteId);
+    return this.historico.listar(clienteId, paginacao);
   }
 }

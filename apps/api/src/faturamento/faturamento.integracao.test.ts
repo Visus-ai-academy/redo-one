@@ -183,9 +183,10 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
       exclusaoFiscal: false,
     };
 
-    it('sem clientes.faturamento.ver: 403 ao ler', async () => {
+    it('sem clientes.faturamento.ver: 403 ao ler e no histórico', async () => {
       const cookie = await entrarCom(['clientes.ver', 'faturamento.ver']);
       expect((await pedir(cookie, 'GET', caminho())).status).toBe(403);
+      expect((await pedir(cookie, 'GET', `${caminho()}/historico`)).status).toBe(403);
     });
 
     it('só ver: lê, mas salvar responde 403', async () => {
@@ -212,6 +213,24 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
       expect(eventos.map((e) => [e.entidade, e.acao])).toEqual([
         ['cliente_dados_fiscais', 'alterado'],
       ]);
+
+      // Quem só vê lê o histórico: quem, e cada campo antes e depois.
+      const soVer = await entrarCom(['clientes.faturamento.ver']);
+      const resposta = await pedir(soVer, 'GET', `${caminho()}/historico?porPagina=5`);
+      expect(resposta.status).toBe(200);
+      const pagina = (await resposta.json()) as {
+        total: number;
+        itens: Array<Record<string, unknown>>;
+      };
+      expect(pagina.total).toBe(1);
+      expect(pagina.itens[0]).toMatchObject({
+        entidade: 'cliente_dados_fiscais',
+        entidadeId: clienteId,
+        acao: 'alterado',
+        ator: { tipo: 'usuario', nome: 'Usuário de teste' },
+        antes: { emailsNf: [], cep: null, cidade: null },
+        depois: { emailsNf: dados.emailsNf, cep: '01310100', cidade: 'São Paulo' },
+      });
     });
 
     it('corpo fora do contrato: 400', async () => {

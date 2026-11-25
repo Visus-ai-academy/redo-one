@@ -7263,6 +7263,60 @@
         ]
       }
     },
+    "/faturamento/clientes/{clienteId}/dados-fiscais/historico": {
+      "get": {
+        "operationId": "DadosFiscaisController_historico",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alterações dos dados de faturamento, da mais nova para a mais antiga (quem, quando e cada campo antes e depois). `entidade` é sempre `cliente_dados_fiscais`; `nomes` vem vazio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaHistoricoCadastroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/faturamento/tipificacao": {
       "get": {
         "operationId": "TipificacaoController_listar",
@@ -17081,6 +17135,93 @@
           "exclusaoFiscal"
         ]
       },
+      "ItemHistoricoCadastroDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ocorridoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "ator": {
+            "$ref": "#/components/schemas/AtorHistoricoDto"
+          },
+          "entidade": {
+            "type": "string",
+            "example": "medico",
+            "description": "`medico`, `medico_distribuicao`, `arranjos_medico`, `usuario` (conta do portal do médico), `equipe` (no médico, com a ação `membro_entrou`, `membro_saiu` ou `equipe_excluida`), `cliente`, `exame` ou `de_para_valor_exame`."
+          },
+          "entidadeId": {
+            "type": "string"
+          },
+          "acao": {
+            "type": "string",
+            "example": "alterado"
+          },
+          "antes": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Campos antes da mudança (sensíveis já mascarados); `null` na criação."
+          },
+          "depois": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Campos depois da mudança (sensíveis já mascarados); `null` na remoção."
+          }
+        },
+        "required": [
+          "id",
+          "ocorridoEm",
+          "ator",
+          "entidade",
+          "entidadeId",
+          "acao",
+          "antes",
+          "depois"
+        ]
+      },
+      "PaginaHistoricoCadastroDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemHistoricoCadastroDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "nomes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Nome legível de cada id citado nos itens da página (médico, nível, equipe, usuário, papel, cliente, contratado, exame, modalidade, especialidade, segmento, categoria, prioridade). Id sem par fica de fora.",
+            "example": {
+              "3f1c…": "NEURO"
+            }
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "nomes",
+          "pagina",
+          "porPagina"
+        ]
+      },
       "VersaoFaturaTipificacaoDto": {
         "type": "object",
         "properties": {
@@ -22510,93 +22651,6 @@
           "segueSla",
           "clienteId",
           "laudosExtra"
-        ]
-      },
-      "ItemHistoricoCadastroDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "ocorridoEm": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "ator": {
-            "$ref": "#/components/schemas/AtorHistoricoDto"
-          },
-          "entidade": {
-            "type": "string",
-            "example": "medico",
-            "description": "`medico`, `medico_distribuicao`, `arranjos_medico`, `usuario` (conta do portal do médico), `equipe` (no médico, com a ação `membro_entrou`, `membro_saiu` ou `equipe_excluida`), `cliente`, `exame` ou `de_para_valor_exame`."
-          },
-          "entidadeId": {
-            "type": "string"
-          },
-          "acao": {
-            "type": "string",
-            "example": "alterado"
-          },
-          "antes": {
-            "type": "object",
-            "additionalProperties": true,
-            "nullable": true,
-            "description": "Campos antes da mudança (sensíveis já mascarados); `null` na criação."
-          },
-          "depois": {
-            "type": "object",
-            "additionalProperties": true,
-            "nullable": true,
-            "description": "Campos depois da mudança (sensíveis já mascarados); `null` na remoção."
-          }
-        },
-        "required": [
-          "id",
-          "ocorridoEm",
-          "ator",
-          "entidade",
-          "entidadeId",
-          "acao",
-          "antes",
-          "depois"
-        ]
-      },
-      "PaginaHistoricoCadastroDto": {
-        "type": "object",
-        "properties": {
-          "itens": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ItemHistoricoCadastroDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "nomes": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "Nome legível de cada id citado nos itens da página (médico, nível, equipe, usuário, papel, cliente, contratado, exame, modalidade, especialidade, segmento, categoria, prioridade). Id sem par fica de fora.",
-            "example": {
-              "3f1c…": "NEURO"
-            }
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "porPagina": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "itens",
-          "total",
-          "nomes",
-          "pagina",
-          "porPagina"
         ]
       }
     }
