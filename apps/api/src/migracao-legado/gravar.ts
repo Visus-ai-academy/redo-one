@@ -380,19 +380,9 @@ export async function tipificacaoComHistoriaNoRedo(
   };
 }
 
-/** A primeira competência dos laudos (ou das competências; sem nenhuma, o mês atual em Brasília). */
-async function primeiraCompetencia(tx: Transacao): Promise<string> {
-  const r = await tx.execute<{ desde: string }>(sql`
-    select coalesce(
-      least((select min(competencia) from laudos), (select min(competencia) from competencias)),
-      to_char(now() at time zone 'America/Sao_Paulo', 'YYYY-MM')
-    ) desde`);
-  return r.rows[0]?.desde as string;
-}
-
 /**
  * Tipificação: regras e sub-regras pelo id. A configuração de hoje de cada cliente e o "fatura" de
- * cada regra e sub-regra entram como versão inicial, desde a primeira competência dos laudos; o
+ * cada regra e sub-regra entram como versão inicial, sem início (vale para tudo o que veio antes); o
  * histórico de quem não tem história no redo-one é trocado inteiro pelo da carga (o dashboards-one
  * é a fonte até a virada), então rodar de novo dá o mesmo. Quem tem história no redo-one
  * (`tipificacaoComHistoriaNoRedo`) fica como está: o relatório da carga o lista. Na mesma
@@ -400,7 +390,6 @@ async function primeiraCompetencia(tx: Transacao): Promise<string> {
  */
 async function gravarTipificacao(tx: Transacao, { tabelas: t }: TipificacaoMigrada) {
   const protegidos = await tipificacaoComHistoriaNoRedo(tx);
-  const desde = await primeiraCompetencia(tx);
   await upsert(tx, schema.regrasTipificacao, t.regrasTipificacao);
   await upsert(tx, schema.subregrasTipificacao, t.subregrasTipificacao);
 
@@ -426,7 +415,7 @@ async function gravarTipificacao(tx: Transacao, { tabelas: t }: TipificacaoMigra
     if (trocados.length) await tx.delete(tabela as PgTable).where(inArray(coluna, trocados));
     const novas = linhas
       .filter((l) => !pulados.has(donoDe(l)))
-      .map((l) => ({ ...l, vigenciaDesde: desde }));
+      .map((l) => ({ ...l, vigenciaDesde: null }));
     return novas as unknown as T['$inferInsert'][];
   };
   const faturaRegras = await trocar(

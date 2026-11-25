@@ -133,7 +133,8 @@ export function montarTipificador(config: ConfiguracaoTipificacao): Tipificador 
 
 /** Um valor com vigência por competência ("YYYY-MM" inclusivos; até nulo = sem fim). */
 export interface ValorVigente<T> {
-  vigenciaDesde: string;
+  /** Nulo = sem início (a versão inicial). */
+  vigenciaDesde: string | null;
   vigenciaAte: string | null;
   valor: T;
 }
@@ -146,15 +147,19 @@ export interface ConfiguracaoTipificacaoVersionada {
   regras: { id: string; padrao: boolean; faturaSemSubregra: ValorVigente<boolean>[] }[];
   subregras: { id: string; regraId: string; fatura: ValorVigente<boolean>[] }[];
   equipes: { id: string; medicos: string[] }[];
-  clientes: (ConfiguracaoCliente & { vigenciaDesde: string; vigenciaAte: string | null })[];
+  clientes: (ConfiguracaoCliente & { vigenciaDesde: string | null; vigenciaAte: string | null })[];
 }
 
 export type TipificadorPorCompetencia = (
   laudo: LaudoParaTipificar & { competencia: string },
 ) => Tipificacao;
 
-const contem = (v: { vigenciaDesde: string; vigenciaAte: string | null }, competencia: string) =>
-  v.vigenciaDesde <= competencia && (v.vigenciaAte === null || competencia <= v.vigenciaAte);
+const contem = (
+  v: { vigenciaDesde: string | null; vigenciaAte: string | null },
+  competencia: string,
+) =>
+  (v.vigenciaDesde === null || v.vigenciaDesde <= competencia) &&
+  (v.vigenciaAte === null || competencia <= v.vigenciaAte);
 
 /**
  * O valor vigente na competência. Antes da primeira versão vale a primeira (o valor de antes de
@@ -163,10 +168,12 @@ const contem = (v: { vigenciaDesde: string; vigenciaAte: string | null }, compet
 export function valorEm(versoes: ValorVigente<boolean>[], competencia: string, semVersao: boolean) {
   const achada = versoes.find((v) => contem(v, competencia));
   if (achada) return achada.valor;
-  const ordenadas = [...versoes].sort((a, b) => a.vigenciaDesde.localeCompare(b.vigenciaDesde));
+  const ordenadas = [...versoes].sort((a, b) =>
+    (a.vigenciaDesde ?? '').localeCompare(b.vigenciaDesde ?? ''),
+  );
   const primeira = ordenadas[0];
   if (!primeira) return semVersao;
-  return competencia < primeira.vigenciaDesde
+  return primeira.vigenciaDesde !== null && competencia < primeira.vigenciaDesde
     ? primeira.valor
     : (ordenadas.at(-1)?.valor ?? semVersao);
 }

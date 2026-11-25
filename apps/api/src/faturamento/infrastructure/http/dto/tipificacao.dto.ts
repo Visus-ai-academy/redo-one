@@ -45,13 +45,26 @@ function APartirDe(): PropertyDecorator {
 /** Quem criou e quem encerrou a versão, dos eventos de auditoria (vazios na carga do dashboards-one). */
 class AutoriaVersaoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ example: '2026-12' }) vigenciaDesde!: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '2026-12',
+    description: 'Vazia = sem início (a versão inicial: vale para tudo antes da próxima).',
+  })
+  vigenciaDesde!: string | null;
   @ApiProperty({ type: String, nullable: true, description: 'Inclusiva; vazia = sem fim.' })
   vigenciaAte!: string | null;
   @ApiProperty({ type: String, nullable: true }) criadoPor!: string | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) criadoEm!: Date | null;
   @ApiProperty({ type: String, nullable: true }) encerradoPor!: string | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) encerradoEm!: Date | null;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Quem reabriu (a versão programada que a encerrava foi apagada).',
+  })
+  reabertoPor!: string | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) reabertoEm!: Date | null;
 }
 
 /** Uma versão do "fatura" (da sub-regra) ou do "fatura sem sub-regra" (da regra). */

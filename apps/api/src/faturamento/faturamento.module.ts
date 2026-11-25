@@ -131,16 +131,12 @@ const ACOES_COMPETENCIA = [
         ) => new Caso(repo, equipes, competencias, agora),
       }),
     ),
-    ...[SalvarRegraTipificacao, SalvarSubregraTipificacao].map((Caso) => ({
-      provide: Caso,
-      inject: [TIPIFICACAO_REPOSITORY, AUDITORIA, COMPETENCIAS_REPOSITORY],
-      useFactory: (
-        repo: TipificacaoRepository,
-        auditoria: Auditoria,
-        competencias: CompetenciasRepository,
-      ) => new Caso(repo, auditoria, competencias, agora),
-    })),
-    ...[MudarFaturaTipificacao, RemoverVersaoTipificacaoCliente].map((Caso) => ({
+    ...[
+      SalvarRegraTipificacao,
+      SalvarSubregraTipificacao,
+      MudarFaturaTipificacao,
+      RemoverVersaoTipificacaoCliente,
+    ].map((Caso) => ({
       provide: Caso,
       inject: [TIPIFICACAO_REPOSITORY, COMPETENCIAS_REPOSITORY],
       useFactory: (repo: TipificacaoRepository, competencias: CompetenciasRepository) =>

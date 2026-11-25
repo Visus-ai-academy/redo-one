@@ -6,6 +6,7 @@ import {
   NadaMudouError,
   planejarMudanca,
   planejarRemocao,
+  UnicaVersaoError,
   VersaoTipificacaoNaoEncontradaError,
   type VersaoVigente,
   VigenciaTipificacaoInvalidaError,
@@ -146,5 +147,50 @@ describe('aplicarMudancas', () => {
     expect(aplicarMudancas(outras, planejarRemocao(outras, 'b', CTX), () => 'x')).toEqual([
       v('a', '2024-01', null, 'A'),
     ]);
+  });
+});
+
+describe('versão inicial sem início ("desde sempre")', () => {
+  const inicial = (ate: string | null = null): VersaoVigente<string> => ({
+    id: 'i',
+    vigenciaDesde: null,
+    vigenciaAte: ate,
+    valor: 'A',
+  });
+
+  it('vale para qualquer competência até o fim dela', () => {
+    expect(vigenteEm([inicial()], '1999-01')?.id).toBe('i');
+    expect(vigenteEm([inicial('2026-11')], '2026-12')).toBeUndefined();
+  });
+
+  it('mudar encerra a inicial na competência anterior; ela nunca é apagada', () => {
+    expect(planejarMudanca([inicial()], 'B', '2026-12', CTX, igual)).toEqual([
+      { tipo: 'encerrar', id: 'i', vigenciaAteAntes: null, vigenciaAte: '2026-11' },
+      { tipo: 'criar', vigenciaDesde: '2026-12', vigenciaAte: null, valor: 'B' },
+    ]);
+    expect(() => planejarRemocao([inicial()], 'i', CTX)).toThrow(VigenciaTipificacaoInvalidaError);
+  });
+
+  it('apagar a programada reabre a inicial', () => {
+    const versoes = [inicial('2026-11'), v('b', '2026-12', null, 'B')];
+    expect(planejarRemocao(versoes, 'b', CTX)).toEqual([
+      { tipo: 'remover', id: 'b' },
+      { tipo: 'reabrir', id: 'i', vigenciaAteAntes: '2026-11', vigenciaAte: null },
+    ]);
+    expect(
+      aplicarMudancas(
+        versoes,
+        [{ tipo: 'criar', vigenciaDesde: '2027-01', vigenciaAte: null, valor: 'C' }],
+        () => 'c',
+      ).map((x) => x.id),
+    ).toEqual(['i', 'b', 'c']);
+  });
+});
+
+describe('a única versão', () => {
+  it('não se apaga quando não há herança (o "fatura")', () => {
+    expect(() =>
+      planejarRemocao([v('b', '2026-12', null, 'B')], 'b', CTX, { exigirOutra: true }),
+    ).toThrow(UnicaVersaoError);
   });
 });

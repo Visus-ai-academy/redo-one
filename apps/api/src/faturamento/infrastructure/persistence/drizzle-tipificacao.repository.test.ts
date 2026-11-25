@@ -91,12 +91,12 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     ids.ncnf = ncnf?.id ?? '';
     ids.ncft = ncft?.id ?? '';
     await db.insert(schema.regrasTipificacaoFatura).values([
-      { regraId: ids.co, vigenciaDesde: '2024-01', faturaSemSubregra: true },
-      { regraId: ids.nc, vigenciaDesde: '2024-01', faturaSemSubregra: false },
+      { regraId: ids.co, vigenciaDesde: null, faturaSemSubregra: true },
+      { regraId: ids.nc, vigenciaDesde: null, faturaSemSubregra: false },
     ]);
     await db.insert(schema.subregrasTipificacaoFatura).values([
-      { subregraId: ids.ncnf, vigenciaDesde: '2024-01', fatura: false },
-      { subregraId: ids.ncft, vigenciaDesde: '2024-01', fatura: true },
+      { subregraId: ids.ncnf, vigenciaDesde: null, fatura: false },
+      { subregraId: ids.ncft, vigenciaDesde: null, fatura: true },
     ]);
     const [p] = await db
       .insert(schema.clientes)
@@ -165,6 +165,8 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
   });
   const V1 = '00000000-0000-4000-8000-000000000001';
   const V2 = '00000000-0000-4000-8000-000000000002';
+  /** A versão gravada pela Carla (o usuário do cenário), em qualquer data. */
+  const CARLA = { criadoPor: 'Carla', criadoEm: expect.any(Date) };
   /** Versão programada: começa depois do mês atual em qualquer data em que o teste rodar. */
   const FUTURA = '2099-01';
 
@@ -186,7 +188,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       ]),
     );
     expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([
-      { id: V1, vigenciaDesde: '2024-01', vigenciaAte: null, valor: configUnidade() },
+      { ...CARLA, id: V1, vigenciaDesde: '2024-01', vigenciaAte: null, valor: configUnidade() },
     ]);
     expect(await jobs()).toEqual([{ clienteIds: [ids.principal] }]);
     expect(await repo.eventos('cliente_tipificacao_versao', [V1])).toEqual(
@@ -204,8 +206,14 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       opcoes(FUTURA),
     );
     expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([
-      { id: V1, vigenciaDesde: '2024-01', vigenciaAte: '2098-12', valor: configUnidade() },
-      { id: V2, vigenciaDesde: FUTURA, vigenciaAte: null, valor: vazia },
+      {
+        ...CARLA,
+        id: V1,
+        vigenciaDesde: '2024-01',
+        vigenciaAte: '2098-12',
+        valor: configUnidade(),
+      },
+      { ...CARLA, id: V2, vigenciaDesde: FUTURA, vigenciaAte: null, valor: vazia },
     ]);
     const tipificacao = await repo.carregarConfiguracao();
     expect(tipificacao?.clientes.map((c) => [c.vigenciaDesde, c.linhas.length])).toEqual([
@@ -251,7 +259,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       opcoes(FUTURA),
     );
     expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([
-      { id: V1, vigenciaDesde: '2024-01', vigenciaAte: null, valor: configUnidade() },
+      { ...CARLA, id: V1, vigenciaDesde: '2024-01', vigenciaAte: null, valor: configUnidade() },
     ]);
   });
 
@@ -267,6 +275,25 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       ),
     ).rejects.toBeInstanceOf(VigenciaTipificacaoInvalidaError);
     expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([]);
+  });
+
+  it('duas versões com o mesmo início ao mesmo tempo: a segunda é conflito (409), não erro do servidor', async () => {
+    await cenario();
+    const vazia = { regraId: null, subregraDemaisId: null, linhas: [] };
+    await repo.aplicarConfiguracaoCliente(
+      ids.unidade,
+      ids.principal,
+      [criar(V1, FUTURA, vazia)],
+      opcoes(FUTURA),
+    );
+    await expect(
+      repo.aplicarConfiguracaoCliente(
+        ids.unidade,
+        ids.principal,
+        [criar(V2, FUTURA, vazia)],
+        opcoes(FUTURA),
+      ),
+    ).rejects.toBeInstanceOf(VersaoTipificacaoAlteradaError);
   });
 
   it('lista regras e sub-regras com o "fatura" por versão e quantos clientes usam; mudar o "fatura" reclassifica todos', async () => {
@@ -288,21 +315,37 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     expect(await repo.subregraComNome('nc-nf')).toBe(ids.ncnf);
 
     await db.execute(sql`delete from graphile_worker._private_jobs`);
+    const V3 = '00000000-0000-4000-8000-000000000003';
+    const evento = {
+      ator: { tipo: 'usuario' as const, id: ids.usuario },
+      entidade: 'subregra_tipificacao_fatura',
+      entidadeId: V2,
+      acao: 'criada',
+      depois: { subregraId: V3 },
+      em: agora,
+    };
     const nova = await repo.salvarSubregra(
-      null,
+      { id: V3, nova: true },
       { regraId: ids.nc, nome: 'NC-X', descricao: null, ativo: true },
       { id: V2, vigenciaDesde: '2026-11', valor: true, usuarioId: ids.usuario },
       false,
+      [evento],
+    );
+    expect(nova).toBe(V3);
+    // O evento da criação vai na mesma transação.
+    expect(await repo.eventos('subregra_tipificacao_fatura', [V2])).toEqual(
+      new Map([[V2, [{ acao: 'criada', quem: 'Carla', em: agora }]]]),
     );
     await repo.salvarRegra(
-      ids.nc,
+      { id: ids.nc, nova: false },
       { nome: 'NC', descricao: 'Não consolidada', cor: '#ff0000', ativo: true },
       null,
+      [],
     );
     const subNova = (await repo.listarSubregras()).find((s) => s.id === nova);
     expect(subNova?.ordem).toBe(2);
     expect(subNova?.fatura).toEqual([
-      { id: V2, vigenciaDesde: '2026-11', vigenciaAte: null, valor: true },
+      { ...CARLA, id: V2, vigenciaDesde: '2026-11', vigenciaAte: null, valor: true },
     ]);
     // Nome, descrição e cor não mudam o cálculo.
     expect(await jobs()).toEqual([]);
@@ -326,7 +369,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
         .find((r) => r.id === ids.nc)
         ?.fatura.map((f) => [f.vigenciaDesde, f.vigenciaAte, f.valor]),
     ).toEqual([
-      ['2024-01', '2098-12', false],
+      [null, '2098-12', false],
       [FUTURA, null, true],
     ]);
     expect(await jobs()).toEqual([{ clienteIds: null }]);
@@ -383,7 +426,12 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
         laudo('principal', 'CEDIDIAG', ids.ana, '2026-11'),
         laudo('fechado', 'CEDI_RJ', ids.ana, '2026-10'),
         laudo('rj-dezembro', 'CEDI_RJ', ids.ana, '2026-12'),
+        laudo('rj-antigo', 'CEDI_RJ', ids.ana, '2019-05'),
       ]);
+    // A versão inicial (da carga) não tem início: vale também para o laudo de antes de tudo.
+    await db.execute(
+      sql`update clientes_tipificacao_versoes set vigencia_desde = null where id = ${V1}`,
+    );
     await db.insert(schema.competencias).values({ competencia: '2026-10', status: 'fechada' });
 
     const reclassificar = new ReclassificarTipificacao(
@@ -394,8 +442,8 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       () => agora,
     );
     expect(await reclassificar.executar({ clienteIds: [ids.principal] })).toEqual({
-      lidos: 4,
-      alterados: 4,
+      lidos: 5,
+      alterados: 5,
     });
     const r = await db.execute<{
       identidade: string;
@@ -410,10 +458,11 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       { identidade: 'fechado', unidade: false, sub: null, fatura: null },
       { identidade: 'principal', unidade: false, sub: null, fatura: true },
       { identidade: 'rj-ana', unidade: true, sub: 'NC-NF', fatura: false },
+      { identidade: 'rj-antigo', unidade: true, sub: 'NC-NF', fatura: false },
       { identidade: 'rj-dezembro', unidade: true, sub: null, fatura: true },
       { identidade: 'rj-sem', unidade: true, sub: 'NC-FT', fatura: true },
     ]);
-    expect(await reclassificar.executar({ clienteIds: null })).toEqual({ lidos: 4, alterados: 0 });
+    expect(await reclassificar.executar({ clienteIds: null })).toEqual({ lidos: 5, alterados: 0 });
 
     const previa = await repo.lerParaPrevia({
       clienteId: ids.principal,
@@ -423,6 +472,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       limite: 10,
     });
     expect(previa.map((l) => [l.volume, l.unidadeId === ids.unidade])).toEqual([
+      [2, true],
       [2, true],
       [2, true],
       [2, true],

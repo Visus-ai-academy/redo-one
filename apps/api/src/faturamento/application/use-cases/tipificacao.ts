@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { Auditoria, EventoAuditoria } from '../../../auditoria/auditoria';
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import type { CompetenciasBloqueadas } from '../../../ingestao/application/ports/competencias-bloqueadas';
 import { diaBrasilia } from '../../../ingestao/domain/competencia';
 import {
@@ -34,12 +34,14 @@ import type {
   DadosRegra,
   DadosSubregra,
   DonoFatura,
+  EventoVersao,
   MudancaGravada,
   Opcao,
   OpcoesTipificacao,
   RegraRegistrada,
   SubregraRegistrada,
   TipificacaoRepository,
+  VersaoGravada,
 } from '../ports/tipificacao.repository';
 
 /** Entidade dos eventos de auditoria das versões. */
@@ -94,36 +96,41 @@ function vigencias(ctx: ContextoVigencia): Vigencias {
   return { mesAtual: ctx.mesAtual, aPartirDeMinimo: minimo, aPartirDeSugerido: sugerido };
 }
 
-/** Uma versão no histórico, com quem criou e quem encerrou (dos eventos de auditoria). */
+/** Uma versão no histórico, com quem criou, encerrou e reabriu (da auditoria ou da própria linha). */
 export type VersaoHistorico<T> = VersaoVigente<T> & {
   criadoPor: string | null;
   criadoEm: Date | null;
   encerradoPor: string | null;
   encerradoEm: Date | null;
+  reabertoPor: string | null;
+  reabertoEm: Date | null;
 };
 
-/** As versões da mais nova para a mais antiga, com quem e quando. */
-async function historico<T>(
-  repo: TipificacaoRepository,
-  entidade: string,
-  versoes: VersaoVigente<T>[],
-): Promise<VersaoHistorico<T>[]> {
-  const eventos = await repo.eventos(
-    entidade,
-    versoes.map((v) => v.id),
-  );
+/**
+ * As versões da mais nova para a mais antiga, com quem e quando. Sem o evento "criada" (a versão
+ * de antes do histórico), vale o autor gravado na linha; sem autor, veio da carga. O encerramento
+ * só conta se a versão está encerrada (`vigencia_ate`) e não foi reaberta depois dele.
+ */
+function historico<T>(
+  versoes: VersaoGravada<T>[],
+  eventos: Map<string, EventoVersao[]>,
+): VersaoHistorico<T>[] {
   return [...versoes]
-    .sort((a, b) => b.vigenciaDesde.localeCompare(a.vigenciaDesde))
-    .map((v) => {
+    .sort((a, b) => (b.vigenciaDesde ?? '').localeCompare(a.vigenciaDesde ?? ''))
+    .map(({ criadoPor: autor, criadoEm: gravadaEm, ...v }) => {
       const doId = eventos.get(v.id) ?? [];
       const criado = doId.find((e) => e.acao === 'criada');
-      const encerrado = doId.filter((e) => e.acao === 'encerrada').at(-1);
+      const ultimo = doId.filter((e) => e.acao === 'encerrada' || e.acao === 'reaberta').at(-1);
+      const encerrado = v.vigenciaAte !== null && ultimo?.acao === 'encerrada' ? ultimo : undefined;
+      const reaberto = ultimo?.acao === 'reaberta' ? ultimo : undefined;
       return {
         ...v,
-        criadoPor: criado?.quem ?? null,
-        criadoEm: criado?.em ?? null,
+        criadoPor: criado ? criado.quem : autor,
+        criadoEm: criado ? criado.em : autor ? gravadaEm : null,
         encerradoPor: encerrado?.quem ?? null,
         encerradoEm: encerrado?.em ?? null,
+        reabertoPor: reaberto?.quem ?? null,
+        reabertoEm: reaberto?.em ?? null,
       };
     });
 }
@@ -212,24 +219,70 @@ export class ListarTipificacao {
       this.repo.listarSubregras(),
       contexto(this.competencias, this.agora),
     ]);
+    const [eventosRegras, eventosSubs] = await Promise.all([
+      this.repo.eventos(
+        ENTIDADE_VERSAO.regra,
+        regras.flatMap((r) => r.fatura.map((v) => v.id)),
+      ),
+      this.repo.eventos(
+        ENTIDADE_VERSAO.subregra,
+        subregras.flatMap((r) => r.fatura.map((v) => v.id)),
+      ),
+    ]);
     return {
       ...vigencias(ctx),
-      regras: await Promise.all(
-        regras.map(async ({ fatura, ...r }) => ({
-          ...r,
-          faturaSemSubregra: valorEm(fatura, ctx.mesAtual, true),
-          versoes: await historico(this.repo, ENTIDADE_VERSAO.regra, fatura),
-        })),
-      ),
-      subregras: await Promise.all(
-        subregras.map(async ({ fatura, ...s }) => ({
-          ...s,
-          fatura: valorEm(fatura, ctx.mesAtual, true),
-          versoes: await historico(this.repo, ENTIDADE_VERSAO.subregra, fatura),
-        })),
-      ),
+      regras: regras.map(({ fatura, ...r }) => ({
+        ...r,
+        faturaSemSubregra: valorEm(fatura, ctx.mesAtual, true),
+        versoes: historico(fatura, eventosRegras),
+      })),
+      subregras: subregras.map(({ fatura, ...s }) => ({
+        ...s,
+        fatura: valorEm(fatura, ctx.mesAtual, true),
+        versoes: historico(fatura, eventosSubs),
+      })),
     };
   }
+}
+
+/**
+ * Eventos de criar ou alterar uma regra ou sub-regra (e da versão inicial do "fatura" dela), para
+ * gravar na mesma transação.
+ */
+function eventosDoCadastro(
+  usuarioId: string,
+  em: Date,
+  c: {
+    entidade: string;
+    id: string;
+    diferenca: ReturnType<typeof mudanca>;
+    dados: object;
+    fatura: { entidade: string; id: string; depois: Record<string, unknown> } | null;
+  },
+): EventoAuditoria[] {
+  const ator = { tipo: 'usuario' as const, id: usuarioId };
+  return [
+    {
+      ator,
+      entidade: c.entidade,
+      entidadeId: c.id,
+      acao: c.diferenca ? 'alterada' : 'criada',
+      ...(c.diferenca ?? { depois: { ...c.dados } }),
+      em,
+    },
+    ...(c.fatura
+      ? [
+          {
+            ator,
+            entidade: c.fatura.entidade,
+            entidadeId: c.fatura.id,
+            acao: 'criada',
+            depois: c.fatura.depois,
+            em,
+          },
+        ]
+      : []),
+  ];
 }
 
 /** Versão inicial do "fatura" de quem é criado: desde a primeira competência que pode mudar. */
@@ -252,7 +305,6 @@ async function faturaInicial(
 export class SalvarRegraTipificacao {
   constructor(
     private readonly repo: TipificacaoRepository,
-    private readonly auditoria: Auditoria,
     private readonly competencias: CompetenciasBloqueadas,
     private readonly agora: () => Date,
     private readonly novoId: () => string = randomUUID,
@@ -286,31 +338,28 @@ export class SalvarRegraTipificacao {
           faturaSemSubregra,
           this.novoId,
         );
-    const salvo = await this.repo.salvarRegra(id, dados, fatura);
-    const em = this.agora();
-    const ator = { tipo: 'usuario' as const, id: usuarioId };
-    await this.auditoria.registrar({
-      ator,
-      entidade: 'regra_tipificacao',
-      entidadeId: salvo,
-      acao: antes ? 'alterada' : 'criada',
-      ...(diferenca ?? { depois: { ...dados } }),
-      em,
-    });
-    if (fatura)
-      await this.auditoria.registrar({
-        ator,
-        entidade: ENTIDADE_VERSAO.regra,
-        entidadeId: fatura.id,
-        acao: 'criada',
-        depois: {
-          regraId: salvo,
-          vigenciaDesde: fatura.vigenciaDesde,
-          vigenciaAte: null,
-          faturaSemSubregra: fatura.valor,
+    const salvo = id ?? this.novoId();
+    await this.repo.salvarRegra(
+      { id: salvo, nova: !antes },
+      dados,
+      fatura,
+      eventosDoCadastro(usuarioId, this.agora(), {
+        entidade: 'regra_tipificacao',
+        id: salvo,
+        diferenca,
+        dados,
+        fatura: fatura && {
+          entidade: ENTIDADE_VERSAO.regra,
+          id: fatura.id,
+          depois: {
+            regraId: salvo,
+            vigenciaDesde: fatura.vigenciaDesde,
+            vigenciaAte: null,
+            faturaSemSubregra: fatura.valor,
+          },
         },
-        em,
-      });
+      }),
+    );
     return salvo;
   }
 }
@@ -322,7 +371,6 @@ export class SalvarRegraTipificacao {
 export class SalvarSubregraTipificacao {
   constructor(
     private readonly repo: TipificacaoRepository,
-    private readonly auditoria: Auditoria,
     private readonly competencias: CompetenciasBloqueadas,
     private readonly agora: () => Date,
     private readonly novoId: () => string = randomUUID,
@@ -357,31 +405,29 @@ export class SalvarSubregraTipificacao {
     const fatura = antes
       ? null
       : await faturaInicial(this.competencias, this.agora, usuarioId, faturaNova, this.novoId);
-    const salvo = await this.repo.salvarSubregra(id, dados, fatura, reclassificar);
-    const em = this.agora();
-    const ator = { tipo: 'usuario' as const, id: usuarioId };
-    await this.auditoria.registrar({
-      ator,
-      entidade: 'subregra_tipificacao',
-      entidadeId: salvo,
-      acao: antes ? 'alterada' : 'criada',
-      ...(diferenca ?? { depois: { ...dados } }),
-      em,
-    });
-    if (fatura)
-      await this.auditoria.registrar({
-        ator,
-        entidade: ENTIDADE_VERSAO.subregra,
-        entidadeId: fatura.id,
-        acao: 'criada',
-        depois: {
-          subregraId: salvo,
-          vigenciaDesde: fatura.vigenciaDesde,
-          vigenciaAte: null,
-          fatura: fatura.valor,
+    const salvo = id ?? this.novoId();
+    await this.repo.salvarSubregra(
+      { id: salvo, nova: !antes },
+      dados,
+      fatura,
+      reclassificar,
+      eventosDoCadastro(usuarioId, this.agora(), {
+        entidade: 'subregra_tipificacao',
+        id: salvo,
+        diferenca,
+        dados,
+        fatura: fatura && {
+          entidade: ENTIDADE_VERSAO.subregra,
+          id: fatura.id,
+          depois: {
+            subregraId: salvo,
+            vigenciaDesde: fatura.vigenciaDesde,
+            vigenciaAte: null,
+            fatura: fatura.valor,
+          },
         },
-        em,
-      });
+      }),
+    );
     return salvo;
   }
 }
@@ -411,7 +457,12 @@ export class MudarFaturaTipificacao {
 
   async remover(usuarioId: string, dono: DonoFatura, versaoId: string) {
     const { versoes, ctx } = await this.carregar(dono);
-    await this.gravar(usuarioId, dono, planejarRemocao(versoes, versaoId, ctx), versoes);
+    await this.gravar(
+      usuarioId,
+      dono,
+      planejarRemocao(versoes, versaoId, ctx, { exigirOutra: true }),
+      versoes,
+    );
   }
 
   private async carregar(dono: DonoFatura) {
@@ -531,7 +582,13 @@ export class ObterTipificacaoCliente {
       doPrincipal: principalEmVigor,
       regraPadraoId: regras.find((r) => r.padrao)?.id ?? null,
       medicos: await this.equipes.nomesMedicos([...new Set(ids)]),
-      versoes: await historico(this.repo, ENTIDADE_VERSAO.cliente, versoes),
+      versoes: historico(
+        versoes,
+        await this.repo.eventos(
+          ENTIDADE_VERSAO.cliente,
+          versoes.map((v) => v.id),
+        ),
+      ),
     };
   }
 }
@@ -760,8 +817,7 @@ export class PreviaTipificacaoCliente {
         (c) =>
           c.clienteId === unidade &&
           !configuracaoVazia(c) &&
-          c.vigenciaDesde <= competencia &&
-          (c.vigenciaAte === null || competencia <= c.vigenciaAte),
+          vigenteEm([c], competencia) !== undefined,
       );
 
     const linhas = new Map<string, LinhaPrevia>();

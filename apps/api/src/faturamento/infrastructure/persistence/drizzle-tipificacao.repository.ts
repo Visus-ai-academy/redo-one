@@ -13,7 +13,7 @@ import {
   sql,
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import { DATABASE, type Database } from '../../../database/database';
 import {
   clientes,
@@ -53,11 +53,11 @@ import type {
   RegraRegistrada,
   SubregraRegistrada,
   TipificacaoRepository,
+  VersaoGravada,
 } from '../../application/ports/tipificacao.repository';
 import type { ConfiguracaoTipificacaoVersionada, LinhaTipificacao } from '../../domain/tipificacao';
 import {
   VersaoTipificacaoAlteradaError,
-  type VersaoVigente,
   VigenciaTipificacaoInvalidaError,
 } from '../../domain/versoes-tipificacao';
 import { mesAno } from '../../domain/vigencia-corte';
@@ -166,11 +166,14 @@ async function versoesFatura(db: Executor, tipo: DonoFatura['tipo'], donoId?: st
       vigenciaDesde: c.tabela.vigenciaDesde,
       vigenciaAte: c.tabela.vigenciaAte,
       valor: c.valor,
+      criadoPor: usuarios.nome,
+      criadoEm: c.tabela.criadoEm,
     })
     .from(c.tabela)
+    .leftJoin(usuarios, eq(usuarios.id, c.tabela.criadoPorId))
     .where(donoId ? eq(c.dono, donoId) : undefined)
-    .orderBy(asc(c.tabela.vigenciaDesde));
-  const porDono = new Map<string, VersaoVigente<boolean>[]>();
+    .orderBy(sql`${c.tabela.vigenciaDesde} asc nulls first`);
+  const porDono = new Map<string, VersaoGravada<boolean>[]>();
   for (const { dono, ...v } of linhas) porDono.set(dono, [...(porDono.get(dono) ?? []), v]);
   return porDono;
 }
@@ -179,19 +182,22 @@ async function versoesFatura(db: Executor, tipo: DonoFatura['tipo'], donoId?: st
 async function versoesClientes(db: Executor, clienteIds: string[] | null) {
   if (clienteIds?.length === 0) return [];
   const versoes = await db
-    .select()
+    .select({ v: clientesTipificacaoVersoes, criadoPor: usuarios.nome })
     .from(clientesTipificacaoVersoes)
+    .leftJoin(usuarios, eq(usuarios.id, clientesTipificacaoVersoes.criadoPorId))
     .where(clienteIds ? inArray(clientesTipificacaoVersoes.clienteId, clienteIds) : undefined)
     .orderBy(
       asc(clientesTipificacaoVersoes.clienteId),
-      asc(clientesTipificacaoVersoes.vigenciaDesde),
+      sql`${clientesTipificacaoVersoes.vigenciaDesde} asc nulls first`,
     );
-  const linhas = await lerLinhas(db, clienteIds ? versoes.map((v) => v.id) : null);
-  return versoes.map((v) => ({
+  const linhas = await lerLinhas(db, clienteIds ? versoes.map(({ v }) => v.id) : null);
+  return versoes.map(({ v, criadoPor }) => ({
     id: v.id,
     clienteId: v.clienteId,
     vigenciaDesde: v.vigenciaDesde,
     vigenciaAte: v.vigenciaAte,
+    criadoPor,
+    criadoEm: v.criadoEm,
     valor: {
       regraId: v.regraId,
       subregraDemaisId: v.subregraDemaisId,
@@ -223,10 +229,10 @@ async function travarEConferir(tx: Transacao, chave: string, aPartirDe: string) 
     );
 }
 
-async function gravarEventos(tx: Transacao, opcoes: OpcoesAplicar) {
-  if (!opcoes.eventos.length) return;
+async function gravarEventos(tx: Transacao, eventos: EventoAuditoria[]) {
+  if (!eventos.length) return;
   await tx.insert(eventosAuditoria).values(
-    opcoes.eventos.map((e) => ({
+    eventos.map((e) => ({
       ocorridoEm: e.em,
       atorTipo: e.ator.tipo,
       atorId: e.ator.id ?? null,
@@ -273,9 +279,23 @@ async function aplicarNaTabela<T>(
         .where(and(eq(t.id, m.id), doDono, sql`${t.vigenciaDesde} > ${MES_ATUAL}`))
         .returning({ id: t.id });
       if (!r.length) throw new VersaoTipificacaoAlteradaError();
-    } else await criar(m);
+    } else {
+      try {
+        await criar(m);
+      } catch (erro) {
+        // Outra requisição criou a versão do mesmo início antes da trava: conflito, não 500.
+        if (violouUnica(erro)) throw new VersaoTipificacaoAlteradaError();
+        throw erro;
+      }
+    }
   }
 }
+
+/** Violação de índice único (23505), direta ou embrulhada pelo Drizzle. */
+const violouUnica = (erro: unknown) => {
+  const e = erro as { code?: string; cause?: { code?: string } };
+  return e?.code === '23505' || e?.cause?.code === '23505';
+};
 
 /** Nenhuma versão do dono se cruza com outra (o que outra requisição gravou antes da trava entra aqui). */
 async function exigirSemCruzamento(
@@ -406,62 +426,64 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
     return r?.id ?? null;
   }
 
-  salvarRegra(id: string | null, dados: DadosRegra, fatura: FaturaInicial | null): Promise<string> {
+  salvarRegra(
+    regra: { id: string; nova: boolean },
+    dados: DadosRegra,
+    fatura: FaturaInicial | null,
+    eventos: EventoAuditoria[],
+  ): Promise<string> {
     return this.db.transaction(async (tx) => {
-      if (id) {
-        await tx.update(regrasTipificacao).set(dados).where(eq(regrasTipificacao.id, id));
-        return id;
-      }
-      const [criada] = await tx
-        .insert(regrasTipificacao)
-        .values({
+      if (!regra.nova)
+        await tx.update(regrasTipificacao).set(dados).where(eq(regrasTipificacao.id, regra.id));
+      else
+        await tx.insert(regrasTipificacao).values({
           ...dados,
+          id: regra.id,
           ordem: sql`(select coalesce(max(ordem), -1) + 1 from regras_tipificacao)`,
-        })
-        .returning({ id: regrasTipificacao.id });
-      const salvo = criada?.id ?? '';
+        });
       if (fatura)
         await tx.insert(regrasTipificacaoFatura).values({
           id: fatura.id,
-          regraId: salvo,
+          regraId: regra.id,
           vigenciaDesde: fatura.vigenciaDesde,
           faturaSemSubregra: fatura.valor,
           criadoPorId: fatura.usuarioId,
         });
-      return salvo;
+      await gravarEventos(tx, eventos);
+      return regra.id;
     });
   }
 
   salvarSubregra(
-    id: string | null,
+    subregra: { id: string; nova: boolean },
     dados: DadosSubregra,
     fatura: FaturaInicial | null,
     reclassificar: boolean,
+    eventos: EventoAuditoria[],
   ): Promise<string> {
     return this.db.transaction(async (tx) => {
-      let salvo = id;
-      if (salvo) {
-        await tx.update(subregrasTipificacao).set(dados).where(eq(subregrasTipificacao.id, salvo));
-      } else {
-        const [criada] = await tx
-          .insert(subregrasTipificacao)
-          .values({
-            ...dados,
-            ordem: sql`(select coalesce(max(ordem), -1) + 1 from subregras_tipificacao)`,
-          })
-          .returning({ id: subregrasTipificacao.id });
-        salvo = criada?.id ?? '';
-        if (fatura)
-          await tx.insert(subregrasTipificacaoFatura).values({
-            id: fatura.id,
-            subregraId: salvo,
-            vigenciaDesde: fatura.vigenciaDesde,
-            fatura: fatura.valor,
-            criadoPorId: fatura.usuarioId,
-          });
-      }
+      if (!subregra.nova)
+        await tx
+          .update(subregrasTipificacao)
+          .set(dados)
+          .where(eq(subregrasTipificacao.id, subregra.id));
+      else
+        await tx.insert(subregrasTipificacao).values({
+          ...dados,
+          id: subregra.id,
+          ordem: sql`(select coalesce(max(ordem), -1) + 1 from subregras_tipificacao)`,
+        });
+      if (fatura)
+        await tx.insert(subregrasTipificacaoFatura).values({
+          id: fatura.id,
+          subregraId: subregra.id,
+          vigenciaDesde: fatura.vigenciaDesde,
+          fatura: fatura.valor,
+          criadoPorId: fatura.usuarioId,
+        });
+      await gravarEventos(tx, eventos);
       if (reclassificar) await enfileirarReclassificacaoTipificacao(tx, null);
-      return salvo;
+      return subregra.id;
     });
   }
 
@@ -490,7 +512,7 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
             .values({ ...comum, subregraId: dono.id, fatura: m.valor });
       });
       await exigirSemCruzamento(tx, c.nome, c.colunaDono, dono.id);
-      await gravarEventos(tx, opcoes);
+      await gravarEventos(tx, opcoes.eventos);
       await enfileirarReclassificacaoTipificacao(tx, null);
     });
   }
@@ -509,7 +531,7 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
     return c ?? null;
   }
 
-  async listarVersoesCliente(clienteId: string): Promise<VersaoVigente<Configuracao>[]> {
+  async listarVersoesCliente(clienteId: string): Promise<VersaoGravada<Configuracao>[]> {
     return (await versoesClientes(this.db, [clienteId])).map(({ clienteId: _, ...v }) => v);
   }
 
@@ -537,7 +559,7 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
           }),
       );
       await exigirSemCruzamento(tx, 'clientes_tipificacao_versoes', 'cliente_id', clienteId);
-      await gravarEventos(tx, opcoes);
+      await gravarEventos(tx, opcoes.eventos);
       await enfileirarReclassificacaoTipificacao(tx, [principalId]);
     });
   }

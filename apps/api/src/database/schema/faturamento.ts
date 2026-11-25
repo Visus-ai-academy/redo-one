@@ -225,8 +225,9 @@ export const subregrasTipificacao = pgTable(
 const vigenciaCheck = (tabela: string, desde: AnyPgColumn, ate: AnyPgColumn) =>
   check(
     `${tabela}_vigencia_check`,
-    sql`${desde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'
-      and (${ate} is null or (${ate} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$' and ${ate} >= ${desde}))`,
+    sql`(${desde} is null or ${desde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+      and (${ate} is null or ${ate} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+      and (${desde} is null or ${ate} is null or ${ate} >= ${desde})`,
   );
 
 /**
@@ -240,8 +241,8 @@ export const regrasTipificacaoFatura = pgTable(
     regraId: uuid('regra_id')
       .notNull()
       .references(() => regrasTipificacao.id),
-    /** "YYYY-MM". */
-    vigenciaDesde: text('vigencia_desde').notNull(),
+    /** "YYYY-MM"; vazio = sem início (a versão inicial, da carga ou de antes do histórico). */
+    vigenciaDesde: text('vigencia_desde'),
     /** "YYYY-MM", inclusiva; vazio = sem fim. */
     vigenciaAte: text('vigencia_ate'),
     faturaSemSubregra: boolean('fatura_sem_subregra').notNull(),
@@ -263,7 +264,7 @@ export const subregrasTipificacaoFatura = pgTable(
     subregraId: uuid('subregra_id')
       .notNull()
       .references(() => subregrasTipificacao.id),
-    vigenciaDesde: text('vigencia_desde').notNull(),
+    vigenciaDesde: text('vigencia_desde'),
     vigenciaAte: text('vigencia_ate'),
     fatura: boolean('fatura').notNull(),
     criadoEm: quando('criado_em').notNull().defaultNow(),
@@ -288,7 +289,7 @@ export const clientesTipificacaoVersoes = pgTable(
     clienteId: uuid('cliente_id')
       .notNull()
       .references(() => clientes.id),
-    vigenciaDesde: text('vigencia_desde').notNull(),
+    vigenciaDesde: text('vigencia_desde'),
     vigenciaAte: text('vigencia_ate'),
     /** Regra do laudo que nenhuma linha casou; vazio = a do principal ou a padrão. */
     regraId: uuid('regra_id').references(() => regrasTipificacao.id),

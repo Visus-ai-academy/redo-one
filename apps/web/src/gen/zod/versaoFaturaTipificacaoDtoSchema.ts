@@ -7,12 +7,14 @@ import * as z from 'zod'
 
 export const versaoFaturaTipificacaoDtoSchema = z.object({
   id: z.uuid(),
-  vigenciaDesde: z.string().meta({ examples: ['2026-12'] }),
+  vigenciaDesde: z.string().nullable().describe('Vazia = sem início (a versão inicial: vale para tudo antes da próxima).').meta({ examples: ['2026-12'] }),
   vigenciaAte: z.string().nullable().describe('Inclusiva; vazia = sem fim.'),
   criadoPor: z.string().nullable(),
   criadoEm: z.iso.datetime().nullable(),
   encerradoPor: z.string().nullable(),
   encerradoEm: z.iso.datetime().nullable(),
+  reabertoPor: z.string().nullable().describe('Quem reabriu (a versão programada que a encerrava foi apagada).'),
+  reabertoEm: z.iso.datetime().nullable(),
   valor: z.boolean(),
 })
 

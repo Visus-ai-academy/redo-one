@@ -11,10 +11,11 @@ export type VersaoFaturaTipificacaoDto = {
    */
   id: string;
   /**
+   * @description Vazia = sem início (a versão inicial: vale para tudo antes da próxima).
    * @example 2026-12
    * @type string
    */
-  vigenciaDesde: string;
+  vigenciaDesde: string | null;
   /**
    * @description Inclusiva; vazia = sem fim.
    * @type string
@@ -34,5 +35,16 @@ export type VersaoFaturaTipificacaoDto = {
    * @type string
    */
   encerradoEm: string | null;
+  /**
+   * @description Quem reabriu (a versão programada que a encerrava foi apagada).
+   * @type string
+   */
+  reabertoPor: string | null;
+  /**
+   * @description
+   * Format: `date-time`
+   * @type string
+   */
+  reabertoEm: string | null;
   valor: boolean;
 };

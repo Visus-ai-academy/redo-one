@@ -10,8 +10,8 @@ import { mesAno } from './vigencia-corte';
  */
 export interface VersaoVigente<T> {
   id: string;
-  /** "YYYY-MM", inclusivo. */
-  vigenciaDesde: string;
+  /** "YYYY-MM", inclusivo; nulo = sem início (a versão inicial, da carga: vale para tudo antes). */
+  vigenciaDesde: string | null;
   /** "YYYY-MM", inclusivo; nulo = sem fim. */
   vigenciaAte: string | null;
   valor: T;
@@ -42,6 +42,16 @@ export class VersaoTipificacaoNaoEncontradaError extends ErroDeDominio {
   }
 }
 
+/** O "fatura" não tem herança: sem versão nenhuma, não haveria o que valer. */
+export class UnicaVersaoError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+  constructor() {
+    super(
+      'Esta é a única versão: sem ela não haveria o que valer. Para mudar, crie outra versão a partir de uma competência.',
+    );
+  }
+}
+
 /** Outra pessoa mudou a versão entre a leitura e a gravação. */
 export class VersaoTipificacaoAlteradaError extends ErroDeDominio {
   readonly tipo = 'conflito';
@@ -53,15 +63,22 @@ export class VersaoTipificacaoAlteradaError extends ErroDeDominio {
 const COMPETENCIA = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /** A versão cujo período contém a competência. */
-export function vigenteEm<V extends { vigenciaDesde: string; vigenciaAte: string | null }>(
+export function vigenteEm<V extends { vigenciaDesde: string | null; vigenciaAte: string | null }>(
   versoes: readonly V[],
   competencia: string,
 ): V | undefined {
   return versoes.find(
     (v) =>
-      v.vigenciaDesde <= competencia && (v.vigenciaAte === null || competencia <= v.vigenciaAte),
+      (v.vigenciaDesde === null || v.vigenciaDesde <= competencia) &&
+      (v.vigenciaAte === null || competencia <= v.vigenciaAte),
   );
 }
+
+/** Pelo início, a sem início primeiro. */
+export const pelaVigencia = (
+  a: { vigenciaDesde: string | null },
+  b: { vigenciaDesde: string | null },
+) => (a.vigenciaDesde ?? '').localeCompare(b.vigenciaDesde ?? '');
 
 /** A mudança vale a partir de uma competência aberta ou futura, depois de toda fechada ou travada. */
 export function validarAPartirDe(aPartirDe: string, ctx: ContextoVigencia): void {
@@ -81,7 +98,7 @@ export function validarAPartirDe(aPartirDe: string, ctx: ContextoVigencia): void
 }
 
 const nuncaValeu = (v: VersaoVigente<unknown>, ctx: ContextoVigencia) =>
-  v.vigenciaDesde > ctx.mesAtual;
+  v.vigenciaDesde !== null && v.vigenciaDesde > ctx.mesAtual;
 
 /**
  * Mudar a partir de `aPartirDe`: a versão vigente nela passa a valer até a competência anterior e
@@ -101,13 +118,13 @@ export function planejarMudanca<T>(
   if (igual(v ? v.valor : null, valor)) throw new NadaMudouError();
   if (!v) {
     const seguinte = versoes
-      .filter((x) => x.vigenciaDesde > aPartirDe)
-      .sort((a, b) => a.vigenciaDesde.localeCompare(b.vigenciaDesde))[0];
+      .filter((x) => x.vigenciaDesde !== null && x.vigenciaDesde > aPartirDe)
+      .sort(pelaVigencia)[0];
     return [
       {
         tipo: 'criar',
         vigenciaDesde: aPartirDe,
-        vigenciaAte: seguinte ? anterior(seguinte.vigenciaDesde) : null,
+        vigenciaAte: seguinte?.vigenciaDesde ? anterior(seguinte.vigenciaDesde) : null,
         valor,
       },
     ];
@@ -136,22 +153,26 @@ export function planejarMudanca<T>(
   ];
 }
 
-/** Apagar a versão programada que nunca valeu: a anterior volta a valer até onde ela ia. */
+/**
+ * Apagar a versão programada que nunca valeu: a anterior volta a valer até onde ela ia. Com
+ * `exigirOutra` (o "fatura", que não tem herança), a única versão não se apaga.
+ */
 export function planejarRemocao<T>(
   versoes: readonly VersaoVigente<T>[],
   id: string,
   ctx: ContextoVigencia,
+  opcoes: { exigirOutra?: boolean } = {},
 ): MudancaVersao<T>[] {
   const v = versoes.find((x) => x.id === id);
   if (!v) throw new VersaoTipificacaoNaoEncontradaError();
-  if (!nuncaValeu(v, ctx))
+  if (v.vigenciaDesde === null || !nuncaValeu(v, ctx))
     throw new VigenciaTipificacaoInvalidaError(
       `Esta versão já valeu e não se apaga: para mudar, crie outra a partir de uma competência aberta ou futura.`,
     );
-  validarAPartirDe(v.vigenciaDesde, ctx);
-  const antecessora = versoes.find(
-    (x) => x.id !== v.id && x.vigenciaAte === anterior(v.vigenciaDesde),
-  );
+  if (opcoes.exigirOutra && versoes.length === 1) throw new UnicaVersaoError();
+  const desde = v.vigenciaDesde;
+  validarAPartirDe(desde, ctx);
+  const antecessora = versoes.find((x) => x.id !== v.id && x.vigenciaAte === anterior(desde));
   return [
     { tipo: 'remover', id: v.id },
     ...(antecessora
@@ -185,5 +206,5 @@ export function aplicarMudancas<T>(
     else if (m.tipo === 'remover') r = r.filter((v) => v.id !== m.id);
     else r = r.map((v) => (v.id === m.id ? { ...v, vigenciaAte: m.vigenciaAte } : v));
   }
-  return r.sort((a, b) => a.vigenciaDesde.localeCompare(b.vigenciaDesde));
+  return r.sort(pelaVigencia);
 }

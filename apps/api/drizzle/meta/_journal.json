@@ -533,6 +533,20 @@
       "when": 1795617449916,
       "tag": "0075_arranjos_frente_obrigatoria",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1795618718201,
+      "tag": "0076_tipificacao_versao_inicial_sem_inicio",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795618728119,
+      "tag": "0077_tipificacao_versao_inicial_dados",
+      "breakpoints": true
     }
   ]
 }

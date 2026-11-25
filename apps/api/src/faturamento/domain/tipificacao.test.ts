@@ -309,6 +309,21 @@ describe('montarTipificadorPorCompetencia', () => {
     expect(tipificar({ ...daUnidade, competencia: '2026-12' }).regraId).toBe('CO');
   });
 
+  it('a versão inicial (sem início) vale para laudo de competência anterior a tudo o que foi carregado', () => {
+    const tipificar = montarTipificadorPorCompetencia(
+      versionada([
+        naConfig(null as unknown as string, '2026-11'),
+        naConfig('2026-12', null, { regraId: 'CO' }),
+      ]),
+    );
+    expect(tipificar({ ...laudo(), competencia: '2019-03' })).toEqual({
+      regraId: 'NC',
+      subregraId: null,
+      fatura: false,
+    });
+    expect(tipificar({ ...laudo(), competencia: '2026-12' }).regraId).toBe('CO');
+  });
+
   it('o "fatura" da sub-regra e o "fatura sem sub-regra" da regra também seguem a versão', () => {
     const tipificar = montarTipificadorPorCompetencia(
       versionada(

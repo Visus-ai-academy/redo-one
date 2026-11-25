@@ -56,12 +56,13 @@ import type {
   RegraRegistrada,
   SubregraRegistrada,
   TipificacaoRepository,
+  VersaoGravada,
 } from '../application/ports/tipificacao.repository';
 import type { StatusCompetencia } from '../domain/competencia-status';
 import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
 import type { Arranjo } from '../domain/preco';
 import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
-import { VersaoTipificacaoAlteradaError, type VersaoVigente } from '../domain/versoes-tipificacao';
+import { VersaoTipificacaoAlteradaError } from '../domain/versoes-tipificacao';
 import type { NovaVigencia } from '../domain/vigencia-corte';
 
 export interface CompetenciaGuardada {
@@ -301,9 +302,9 @@ export class HistoricoDadosFiscaisEmMemoria implements HistoricoDadosFiscaisRepo
 
 /** Aplica as mudanças nas versões, como o repositório real (confere o `vigencia_ate` de antes). */
 function aplicarEmMemoria<T>(
-  versoes: VersaoVigente<T>[],
+  versoes: VersaoGravada<T>[],
   mudancas: MudancaGravadaTipificacao<T>[],
-) {
+): VersaoGravada<T>[] {
   const r = versoes.map((v) => ({ ...v }));
   for (const m of mudancas) {
     if (m.tipo === 'criar')
@@ -312,6 +313,8 @@ function aplicarEmMemoria<T>(
         vigenciaDesde: m.vigenciaDesde,
         vigenciaAte: m.vigenciaAte,
         valor: m.valor,
+        criadoPor: 'Ana',
+        criadoEm: new Date('2026-11-20T12:00:00Z'),
       });
     else if (m.tipo === 'remover') {
       const i = r.findIndex((v) => v.id === m.id);
@@ -323,7 +326,7 @@ function aplicarEmMemoria<T>(
       v.vigenciaAte = m.vigenciaAte;
     }
   }
-  return r.sort((a, b) => a.vigenciaDesde.localeCompare(b.vigenciaDesde));
+  return r.sort((a, b) => (a.vigenciaDesde ?? '').localeCompare(b.vigenciaDesde ?? ''));
 }
 
 /** Tipificação em memória: regras, sub-regras, versões dos clientes e laudos para a prévia. */
@@ -332,7 +335,7 @@ export class TipificacaoEmMemoria implements TipificacaoRepository {
   readonly subregras = new Map<string, SubregraRegistrada>();
   readonly clientes = new Map<string, ClienteDaTipificacao>();
   /** Versões da configuração por cliente. */
-  readonly versoes = new Map<string, VersaoVigente<Configuracao>[]>();
+  readonly versoes = new Map<string, VersaoGravada<Configuracao>[]>();
   readonly laudos: LaudoParaPreviaTipificacao[] = [];
   /** Escopos de reclassificação enfileirados (nulo = todos). */
   readonly reclassificacoes: (string[] | null)[] = [];
@@ -341,12 +344,18 @@ export class TipificacaoEmMemoria implements TipificacaoRepository {
   readonly eventosPorId = new Map<string, EventoVersaoTipificacao[]>();
   /** A competência a partir da qual cada aplicação foi pedida. */
   readonly aPartirDes: string[] = [];
-  private proximo = 1;
 
   /** Atalho dos testes: a configuração como versão única desde 2024-01. */
-  configurar(clienteId: string, c: Configuracao, desde = '2024-01') {
+  configurar(clienteId: string, c: Configuracao, desde: string | null = '2024-01') {
     this.versoes.set(clienteId, [
-      { id: `v-${clienteId}-${desde}`, vigenciaDesde: desde, vigenciaAte: null, valor: c },
+      {
+        id: `v-${clienteId}-${desde}`,
+        vigenciaDesde: desde,
+        vigenciaAte: null,
+        valor: c,
+        criadoPor: null,
+        criadoEm: new Date('2026-11-01T12:00:00Z'),
+      },
     ]);
   }
 
@@ -390,43 +399,58 @@ export class TipificacaoEmMemoria implements TipificacaoRepository {
       null
     );
   }
-  private faturaDe(f: FaturaInicial | null) {
+  private faturaDe(f: FaturaInicial | null): VersaoGravada<boolean>[] {
     return f
-      ? [{ id: f.id, vigenciaDesde: f.vigenciaDesde, vigenciaAte: null, valor: f.valor }]
+      ? [
+          {
+            id: f.id,
+            vigenciaDesde: f.vigenciaDesde,
+            vigenciaAte: null,
+            valor: f.valor,
+            criadoPor: 'Ana',
+            criadoEm: new Date('2026-11-20T12:00:00Z'),
+          },
+        ]
       : [];
   }
-  async salvarRegra(id: string | null, dados: DadosRegra, fatura: FaturaInicial | null) {
-    const salvo = id ?? `regra-${this.proximo++}`;
-    const atual = this.regras.get(salvo);
-    this.regras.set(salvo, {
+  async salvarRegra(
+    regra: { id: string; nova: boolean },
+    dados: DadosRegra,
+    fatura: FaturaInicial | null,
+    eventos: EventoAuditoria[],
+  ) {
+    const atual = this.regras.get(regra.id);
+    this.regras.set(regra.id, {
       ordem: 0,
       padrao: false,
       clientes: 0,
       fatura: this.faturaDe(fatura),
       ...atual,
       ...dados,
-      id: salvo,
+      id: regra.id,
     });
-    return salvo;
+    this.eventosGravados.push(...eventos);
+    return regra.id;
   }
   async salvarSubregra(
-    id: string | null,
+    subregra: { id: string; nova: boolean },
     dados: DadosSubregra,
     fatura: FaturaInicial | null,
     reclassificar: boolean,
+    eventos: EventoAuditoria[],
   ) {
-    const salvo = id ?? `sub-${this.proximo++}`;
-    const atual = this.subregras.get(salvo);
-    this.subregras.set(salvo, {
+    const atual = this.subregras.get(subregra.id);
+    this.subregras.set(subregra.id, {
       ordem: 0,
       clientes: 0,
       fatura: this.faturaDe(fatura),
       ...atual,
       ...dados,
-      id: salvo,
+      id: subregra.id,
     });
+    this.eventosGravados.push(...eventos);
     if (reclassificar) this.reclassificacoes.push(null);
-    return salvo;
+    return subregra.id;
   }
   async aplicarFatura(
     dono: DonoFatura,

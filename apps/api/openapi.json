@@ -17231,7 +17231,9 @@
           },
           "vigenciaDesde": {
             "type": "string",
-            "example": "2026-12"
+            "nullable": true,
+            "example": "2026-12",
+            "description": "Vazia = sem início (a versão inicial: vale para tudo antes da próxima)."
           },
           "vigenciaAte": {
             "type": "string",
@@ -17256,6 +17258,16 @@
             "format": "date-time",
             "nullable": true
           },
+          "reabertoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem reabriu (a versão programada que a encerrava foi apagada)."
+          },
+          "reabertoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "valor": {
             "type": "boolean"
           }
@@ -17268,6 +17280,8 @@
           "criadoEm",
           "encerradoPor",
           "encerradoEm",
+          "reabertoPor",
+          "reabertoEm",
           "valor"
         ]
       },
@@ -17763,7 +17777,9 @@
           },
           "vigenciaDesde": {
             "type": "string",
-            "example": "2026-12"
+            "nullable": true,
+            "example": "2026-12",
+            "description": "Vazia = sem início (a versão inicial: vale para tudo antes da próxima)."
           },
           "vigenciaAte": {
             "type": "string",
@@ -17788,6 +17804,16 @@
             "format": "date-time",
             "nullable": true
           },
+          "reabertoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem reabriu (a versão programada que a encerrava foi apagada)."
+          },
+          "reabertoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "configuracao": {
             "description": "Vazia (sem regra, linhas nem \"todos os demais\") = segue a do principal ou a padrão.",
             "allOf": [
@@ -17805,6 +17831,8 @@
           "criadoEm",
           "encerradoPor",
           "encerradoEm",
+          "reabertoPor",
+          "reabertoEm",
           "configuracao"
         ]
       },

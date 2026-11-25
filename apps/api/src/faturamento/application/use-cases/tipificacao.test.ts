@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { InMemoryAuditoria } from '../../../auditoria/testing';
 import {
   NomeTipificacaoEmUsoError,
   RegraTipificacaoNaoEncontradaError,
   TipificacaoInvalidaError,
 } from '../../domain/configuracao-tipificacao';
-import { NadaMudouError, VigenciaTipificacaoInvalidaError } from '../../domain/versoes-tipificacao';
+import {
+  NadaMudouError,
+  UnicaVersaoError,
+  VigenciaTipificacaoInvalidaError,
+} from '../../domain/versoes-tipificacao';
 import { ClienteNaoEncontradoError } from '../../domain/vigencia-corte';
 import {
   CompetenciasEmMemoria,
@@ -27,8 +30,12 @@ import {
 /** Mês atual 11/2026; 10/2026 fechada. */
 const agora = new Date('2026-11-24T18:00:00Z');
 const relogio = () => agora;
+/** Gravada sem autor (a carga) num dia qualquer. */
+const G = { criadoPor: null, criadoEm: new Date('2026-11-01T12:00:00Z') };
+/** O que o fake grava como autor das versões novas. */
+const ANA = { criadoPor: 'Ana', criadoEm: new Date('2026-11-20T12:00:00Z') };
 const sempre = (id: string, valor: boolean) => [
-  { id, vigenciaDesde: '2024-01', vigenciaAte: null, valor },
+  { ...G, id, vigenciaDesde: null as string | null, vigenciaAte: null, valor },
 ];
 const regra = (id: string, faturaSemSubregra: boolean, padrao = false) => ({
   id,
@@ -77,7 +84,6 @@ describe('tipificação', () => {
   let repo: TipificacaoEmMemoria;
   let equipes: EquipesMedicosEmMemoria;
   let competencias: CompetenciasEmMemoria;
-  let auditoria: InMemoryAuditoria;
   let ids: number;
   const novoId = () => `novo-${++ids}`;
 
@@ -87,7 +93,6 @@ describe('tipificação', () => {
     equipes = new EquipesMedicosEmMemoria();
     competencias = new CompetenciasEmMemoria();
     competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
-    auditoria = new InMemoryAuditoria();
     repo.regras.set('CO', regra('CO', true, true));
     repo.regras.set('NC', regra('NC', false));
     repo.subregras.set('NC-NF', sub('NC-NF', 'NC', false));
@@ -109,7 +114,7 @@ describe('tipificação', () => {
 
   describe('regras e sub-regras', () => {
     it('cria com a versão inicial do "fatura"; nome, cor, descrição e situação só auditam', async () => {
-      const salvar = new SalvarRegraTipificacao(repo, auditoria, competencias, relogio, novoId);
+      const salvar = new SalvarRegraTipificacao(repo, competencias, relogio, novoId);
       const id = await salvar.executar(
         'u1',
         null,
@@ -117,7 +122,7 @@ describe('tipificação', () => {
         false,
       );
       expect(repo.regras.get(id)?.fatura).toEqual([
-        { id: 'novo-1', vigenciaDesde: '2026-11', vigenciaAte: null, valor: false },
+        { ...ANA, id: 'novo-1', vigenciaDesde: '2026-11', vigenciaAte: null, valor: false },
       ]);
       await salvar.executar('u1', id, {
         nome: 'NC2',
@@ -125,7 +130,8 @@ describe('tipificação', () => {
         cor: '#aabbcc',
         ativo: false,
       });
-      expect(auditoria.eventos.map((e) => [e.entidade, e.acao, e.antes, e.depois])).toEqual([
+      // Os eventos vão na transação da gravação.
+      expect(repo.eventosGravados.map((e) => [e.entidade, e.acao, e.antes, e.depois])).toEqual([
         [
           'regra_tipificacao',
           'criada',
@@ -150,16 +156,16 @@ describe('tipificação', () => {
     });
 
     it('sem mudança, não grava; nome repetido e id ou regra inexistentes são recusados', async () => {
-      const salvar = new SalvarRegraTipificacao(repo, auditoria, competencias, relogio);
+      const salvar = new SalvarRegraTipificacao(repo, competencias, relogio);
       await salvar.executar('u1', 'NC', { nome: 'NC', descricao: null, cor: null, ativo: true });
-      expect(auditoria.eventos).toEqual([]);
+      expect(repo.eventosGravados).toEqual([]);
       await expect(
         salvar.executar('u1', null, { nome: 'co', descricao: null, cor: null, ativo: true }),
       ).rejects.toBeInstanceOf(NomeTipificacaoEmUsoError);
       await expect(
         salvar.executar('u1', 'X', { nome: 'X', descricao: null, cor: null, ativo: true }),
       ).rejects.toBeInstanceOf(RegraTipificacaoNaoEncontradaError);
-      const salvarSub = new SalvarSubregraTipificacao(repo, auditoria, competencias, relogio);
+      const salvarSub = new SalvarSubregraTipificacao(repo, competencias, relogio);
       await expect(
         salvarSub.executar('u1', null, {
           regraId: 'X',
@@ -182,8 +188,8 @@ describe('tipificação', () => {
       const mudar = new MudarFaturaTipificacao(repo, competencias, relogio, novoId);
       await mudar.mudar('u1', { tipo: 'subregra', id: 'NC-NF' }, true, '2026-12');
       expect(repo.subregras.get('NC-NF')?.fatura).toEqual([
-        { id: 'f-NC-NF', vigenciaDesde: '2024-01', vigenciaAte: '2026-11', valor: false },
-        { id: 'novo-1', vigenciaDesde: '2026-12', vigenciaAte: null, valor: true },
+        { ...G, id: 'f-NC-NF', vigenciaDesde: null, vigenciaAte: '2026-11', valor: false },
+        { ...ANA, id: 'novo-1', vigenciaDesde: '2026-12', vigenciaAte: null, valor: true },
       ]);
       expect(repo.reclassificacoes).toEqual([null]);
       expect(repo.aPartirDes).toEqual(['2026-12']);
@@ -223,8 +229,8 @@ describe('tipificação', () => {
       repo.subregras.set('NC-NF', {
         ...sub('NC-NF', 'NC', false),
         fatura: [
-          { id: 'a', vigenciaDesde: '2024-01', vigenciaAte: '2026-11', valor: false },
-          { id: 'b', vigenciaDesde: '2026-12', vigenciaAte: null, valor: true },
+          { ...G, id: 'a', vigenciaDesde: null, vigenciaAte: '2026-11', valor: false },
+          { ...G, id: 'b', vigenciaDesde: '2026-12', vigenciaAte: null, valor: true },
         ],
       });
       const em = new Date('2026-11-20T12:00:00Z');
@@ -238,8 +244,10 @@ describe('tipificação', () => {
       });
       const nf = r.subregras.find((s) => s.id === 'NC-NF');
       expect(nf?.fatura).toBe(false);
+      const sem = { reabertoPor: null, reabertoEm: null };
       expect(nf?.versoes).toEqual([
         {
+          ...sem,
           id: 'b',
           vigenciaDesde: '2026-12',
           vigenciaAte: null,
@@ -250,8 +258,9 @@ describe('tipificação', () => {
           encerradoEm: null,
         },
         {
+          ...sem,
           id: 'a',
-          vigenciaDesde: '2024-01',
+          vigenciaDesde: null,
           vigenciaAte: '2026-11',
           valor: false,
           criadoPor: null,
@@ -260,6 +269,44 @@ describe('tipificação', () => {
           encerradoEm: em,
         },
       ]);
+    });
+
+    it('histórico: sem o evento "criada", vale o autor gravado na versão; a reaberta não aparece encerrada', async () => {
+      const em = new Date('2026-11-21T12:00:00Z');
+      repo.subregras.set('NC-NF', {
+        ...sub('NC-NF', 'NC', false),
+        fatura: [{ ...ANA, id: 'a', vigenciaDesde: null, vigenciaAte: null, valor: false }],
+      });
+      repo.eventosPorId.set('a', [
+        { acao: 'encerrada', quem: 'Ana', em: new Date('2026-11-20T12:00:00Z') },
+        { acao: 'reaberta', quem: 'Bia', em },
+      ]);
+      const r = await new ListarTipificacao(repo, competencias, relogio).executar();
+      expect(r.subregras.find((s) => s.id === 'NC-NF')?.versoes).toEqual([
+        {
+          id: 'a',
+          vigenciaDesde: null,
+          vigenciaAte: null,
+          valor: false,
+          criadoPor: 'Ana',
+          criadoEm: ANA.criadoEm,
+          encerradoPor: null,
+          encerradoEm: null,
+          reabertoPor: 'Bia',
+          reabertoEm: em,
+        },
+      ]);
+    });
+
+    it('a única versão do "fatura" não se apaga (não há herança)', async () => {
+      repo.subregras.set('NC-NF', {
+        ...sub('NC-NF', 'NC', false),
+        fatura: [{ ...ANA, id: 'p', vigenciaDesde: '2026-12', vigenciaAte: null, valor: false }],
+      });
+      const mudar = new MudarFaturaTipificacao(repo, competencias, relogio, novoId);
+      await expect(
+        mudar.remover('u1', { tipo: 'subregra', id: 'NC-NF' }, 'p'),
+      ).rejects.toBeInstanceOf(UnicaVersaoError);
     });
   });
 
@@ -288,12 +335,13 @@ describe('tipificação', () => {
     it('a configuração em vigor é a do mês atual; a vazia conta como nenhuma', async () => {
       repo.versoes.set('cedidiag', [
         {
+          ...G,
           id: 'a',
           vigenciaDesde: '2024-01',
           vigenciaAte: '2026-10',
           valor: { regraId: 'NC', subregraDemaisId: null, linhas: [] },
         },
-        { id: 'b', vigenciaDesde: '2026-11', vigenciaAte: null, valor: VAZIA },
+        { ...G, id: 'b', vigenciaDesde: '2026-11', vigenciaAte: null, valor: VAZIA },
       ]);
       const obter = new ObterTipificacaoCliente(repo, equipes, competencias, relogio);
       expect((await obter.executar('cedidiag')).configuracao).toBeNull();
@@ -306,12 +354,13 @@ describe('tipificação', () => {
       await salvar.executar('u1', 'cedi-rj', nova, '2026-12');
       expect(repo.versoes.get('cedi-rj')).toEqual([
         {
+          ...G,
           id: 'v-cedi-rj-2024-01',
           vigenciaDesde: '2024-01',
           vigenciaAte: '2026-11',
           valor: { regraId: 'NC', subregraDemaisId: null, linhas: [] },
         },
-        { id: 'novo-1', vigenciaDesde: '2026-12', vigenciaAte: null, valor: nova },
+        { ...ANA, id: 'novo-1', vigenciaDesde: '2026-12', vigenciaAte: null, valor: nova },
       ]);
       expect(repo.reclassificacoes).toEqual([['cedidiag']]);
       expect(repo.eventosGravados.map((e) => [e.entidade, e.acao])).toEqual([
@@ -359,8 +408,9 @@ describe('tipificação', () => {
 
     it('apagar a versão programada reabre a anterior; a que já valeu não se apaga', async () => {
       repo.versoes.set('cedidiag', [
-        { id: 'a', vigenciaDesde: '2024-01', vigenciaAte: '2026-11', valor: VAZIA },
+        { ...G, id: 'a', vigenciaDesde: '2024-01', vigenciaAte: '2026-11', valor: VAZIA },
         {
+          ...G,
           id: 'b',
           vigenciaDesde: '2026-12',
           vigenciaAte: null,
@@ -373,7 +423,7 @@ describe('tipificação', () => {
       );
       await remover.executar('u1', 'cedidiag', 'b');
       expect(repo.versoes.get('cedidiag')).toEqual([
-        { id: 'a', vigenciaDesde: '2024-01', vigenciaAte: null, valor: VAZIA },
+        { ...G, id: 'a', vigenciaDesde: '2024-01', vigenciaAte: null, valor: VAZIA },
       ]);
       expect(repo.aPartirDes).toEqual(['2026-12']);
       expect(repo.reclassificacoes).toEqual([['cedidiag']]);

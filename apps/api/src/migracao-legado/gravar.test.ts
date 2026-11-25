@@ -497,7 +497,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
       ).rows;
 
     await db.execute(sql`delete from graphile_worker._private_jobs`);
-    // A versão inicial começa na primeira competência (sem laudos, a das competências).
+    // A versão inicial não tem início: vale para tudo o que veio antes (inclusive o que ainda chegar).
     await db.insert(schema.competencias).values([
       { competencia: '2025-03', status: 'fechada' },
       { competencia: '2026-10', status: 'aberta' },
@@ -519,7 +519,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
         mods: 0,
         meds: 1,
         eqs: 1,
-        desde: '2025-03',
+        desde: null,
         ate: null,
       },
       {
@@ -534,7 +534,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
         mods: 1,
         meds: 0,
         eqs: 0,
-        desde: '2025-03',
+        desde: null,
         ate: null,
       },
     ]);
@@ -543,8 +543,8 @@ describe.skipIf(!url)('gravarMigracao', () => {
         join regras_tipificacao_fatura f on f.regra_id = r.id order by r.nome`,
     );
     expect(regras.rows).toEqual([
-      { nome: 'CO', fatura_sem_subregra: true, vigencia_desde: '2025-03', padrao: true },
-      { nome: 'NC', fatura_sem_subregra: false, vigencia_desde: '2025-03', padrao: false },
+      { nome: 'CO', fatura_sem_subregra: true, vigencia_desde: null, padrao: true },
+      { nome: 'NC', fatura_sem_subregra: false, vigencia_desde: null, padrao: false },
     ]);
 
     // Linha a mais gravada sem autor (não é história do redo-one): a carga a troca pela lista do
@@ -597,10 +597,10 @@ describe.skipIf(!url)('gravarMigracao', () => {
     });
     const fatura = await db.execute(
       sql`select vigencia_desde, vigencia_ate, fatura from subregras_tipificacao_fatura
-        where subregra_id = ${ncnf} order by vigencia_desde`,
+        where subregra_id = ${ncnf} order by vigencia_desde nulls first`,
     );
     expect(fatura.rows).toEqual([
-      { vigencia_desde: '2025-03', vigencia_ate: '2026-11', fatura: false },
+      { vigencia_desde: null, vigencia_ate: '2026-11', fatura: false },
       { vigencia_desde: '2026-12', vigencia_ate: null, fatura: true },
     ]);
   });

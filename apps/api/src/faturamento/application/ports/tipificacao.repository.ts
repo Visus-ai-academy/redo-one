@@ -19,12 +19,15 @@ export interface DadosRegra {
   ativo: boolean;
 }
 
+/** A versão como está gravada: com quem a criou (nulo na carga) e quando. */
+export type VersaoGravada<T> = VersaoVigente<T> & { criadoPor: string | null; criadoEm: Date };
+
 export interface RegraRegistrada extends DadosRegra {
   id: string;
   ordem: number;
   padrao: boolean;
   /** Versões do "fatura sem sub-regra". */
-  fatura: VersaoVigente<boolean>[];
+  fatura: VersaoGravada<boolean>[];
   /** Clientes e unidades com esta regra principal (na versão em vigor ou programada). */
   clientes: number;
 }
@@ -40,7 +43,7 @@ export interface SubregraRegistrada extends DadosSubregra {
   id: string;
   ordem: number;
   /** Versões do "fatura". */
-  fatura: VersaoVigente<boolean>[];
+  fatura: VersaoGravada<boolean>[];
   /** Clientes e unidades que usam a sub-regra numa linha ou no "todos os demais" (em vigor ou programada). */
   clientes: number;
 }
@@ -126,14 +129,23 @@ export interface TipificacaoRepository {
   /** Id da regra ou sub-regra com o nome (sem diferenciar maiúsculas), para recusar repetido. */
   regraComNome(nome: string): Promise<string | null>;
   subregraComNome(nome: string): Promise<string | null>;
-  /** Cria (com a versão inicial do "fatura") ou atualiza o que não muda o cálculo. */
-  salvarRegra(id: string | null, dados: DadosRegra, fatura: FaturaInicial | null): Promise<string>;
-  /** Cria ou atualiza; com `reclassificar`, enfileira a reclassificação de todos na mesma transação. */
+  /**
+   * Cria (com o id dado e a versão inicial do "fatura") ou atualiza o que não muda o cálculo, com
+   * os eventos de auditoria na mesma transação.
+   */
+  salvarRegra(
+    regra: { id: string; nova: boolean },
+    dados: DadosRegra,
+    fatura: FaturaInicial | null,
+    eventos: EventoAuditoria[],
+  ): Promise<string>;
+  /** Como o `salvarRegra`; com `reclassificar`, enfileira a reclassificação de todos na mesma transação. */
   salvarSubregra(
-    id: string | null,
+    subregra: { id: string; nova: boolean },
     dados: DadosSubregra,
     fatura: FaturaInicial | null,
     reclassificar: boolean,
+    eventos: EventoAuditoria[],
   ): Promise<string>;
   /**
    * Grava as mudanças das versões do "fatura" e os eventos numa transação, com o dono travado:
@@ -148,7 +160,7 @@ export interface TipificacaoRepository {
   ): Promise<void>;
   obterCliente(clienteId: string): Promise<ClienteDaTipificacao | null>;
   /** Versões da configuração do cliente ou unidade, pelo início. */
-  listarVersoesCliente(clienteId: string): Promise<VersaoVigente<Configuracao>[]>;
+  listarVersoesCliente(clienteId: string): Promise<VersaoGravada<Configuracao>[]>;
   /** Como o `aplicarFatura`, para a configuração do cliente; reclassifica os laudos do principal. */
   aplicarConfiguracaoCliente(
     clienteId: string,
