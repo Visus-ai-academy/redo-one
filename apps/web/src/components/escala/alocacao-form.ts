@@ -4,6 +4,7 @@ import type { AlocacaoDto } from '../../gen/types/AlocacaoDto';
 import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { horarioValido, normalizarHorario } from '../escala-config/horario';
+import { esquemaCaixasComTodas } from '../form/caixas-todas';
 import { diaDaSemana } from './calendario';
 
 /** Marca "Geral (sem segmento)" entre as subespecialidades do formulário. */
@@ -134,13 +135,14 @@ export const esquemaAlocacao = z
     dataInicio: z.string(),
     dataFim: z.string(),
     diasSemana: z.array(z.string()),
-    semanasDoMes: z.array(z.string()),
+    // Vazio = "Toda semana" / "Sem restrição" (a caixa "Todas" marcada).
+    semanasDoMes: esquemaCaixasComTodas('Marque ao menos uma semana.'),
     horarioInicio: z.string(),
     horarioFim: z.string(),
     produtividade: z.string(),
     gratificado: z.boolean(),
-    prioridadeIds: z.array(z.string()),
-    subespecialidadeIds: z.array(z.string()),
+    prioridadeIds: esquemaCaixasComTodas('Marque ao menos uma prioridade.'),
+    subespecialidadeIds: esquemaCaixasComTodas('Marque ao menos um segmento.'),
     observacoes: z.string().max(500, 'Use até 500 caracteres.'),
   })
   .superRefine((v, ctx) => {

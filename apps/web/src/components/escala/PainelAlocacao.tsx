@@ -12,6 +12,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { NENHUMA } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
@@ -53,8 +54,6 @@ export type PainelAlocacaoProps = {
   onSalvar: (dados: AlocacaoDto) => Promise<void>;
   onFechar: () => void;
 };
-
-const AJUDA_RESTRICAO = 'Nada marcado: sem restrição.';
 
 /** Alocar um médico num turno e frente, ou editar a alocação, no painel ao lado da escala. */
 export function PainelAlocacao({
@@ -131,8 +130,8 @@ export function PainelAlocacao({
   });
   const ajuda = (campo: CampoSugerido) =>
     sugerido.has(campo) && !form.getFieldMeta(campo)?.isTouched
-      ? `${AJUDA_RESTRICAO} Veio dos arranjos do médico.`
-      : AJUDA_RESTRICAO;
+      ? 'Veio dos arranjos do médico.'
+      : undefined;
 
   return (
     <PainelLateral
@@ -181,8 +180,13 @@ export function PainelAlocacao({
               // se ela não tem nenhuma) saem.
               const daFrente = subsDaFrente(frentes.find((f) => f.id === value));
               const marcadas = form.getFieldValue('subespecialidadeIds');
+              // "Nenhuma marcada" continua inválido (não vira "Sem restrição" calado).
               const ficam = marcadas.filter((id) =>
-                id === GERAL ? daFrente.length > 0 : daFrente.some((s) => s.id === id),
+                id === NENHUMA
+                  ? daFrente.length > 0
+                  : id === GERAL
+                    ? daFrente.length > 0
+                    : daFrente.some((s) => s.id === id),
               );
               // Sem marcar o campo como mexido: a sugestão do médico ainda pode preenchê-lo.
               if (ficam.length !== marcadas.length)
@@ -330,7 +334,8 @@ export function PainelAlocacao({
                       <CaixasField
                         label="Semanas do mês"
                         opcoes={OPCOES_SEMANAS}
-                        description="Nada marcado: toda semana."
+                        todas="Toda semana"
+                        required
                       />
                     )}
                   </form.AppField>
@@ -385,6 +390,8 @@ export function PainelAlocacao({
                     <CaixasField
                       label="Prioridades"
                       opcoes={prioridades.map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor }))}
+                      todas="Sem restrição"
+                      required
                       description={ajuda('prioridadeIds')}
                     />
                   )}
@@ -399,6 +406,8 @@ export function PainelAlocacao({
                           ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
                           { valor: GERAL, rotulo: 'Geral (sem segmento)' },
                         ]}
+                        todas="Sem restrição"
+                        required
                         description={ajuda('subespecialidadeIds')}
                       />
                     )

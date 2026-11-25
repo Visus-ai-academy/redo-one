@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
+import { NENHUMA } from '../form/caixas-todas';
 import { esquemaAlocacao, GERAL, paraApi, valoresIniciais } from './alocacao-form';
 
 const alocacao: AlocacaoItemDto = {
@@ -129,6 +130,22 @@ describe('esquemaAlocacao', () => {
     expect(erros({ ...validos, dataFim: '' })).toEqual([]);
     expect(erros({ ...validos, dataFim: '2026-11-01' })).toEqual([
       'O fim não pode ser antes do início.',
+    ]);
+  });
+
+  it('semanas, prioridades e segmentos: vazio é "todas"; desmarcar tudo pede ao menos uma', () => {
+    expect(erros({ ...validos, semanasDoMes: [], prioridadeIds: [] })).toEqual([]);
+    expect(
+      erros({
+        ...validos,
+        semanasDoMes: [NENHUMA],
+        prioridadeIds: [NENHUMA],
+        subespecialidadeIds: [NENHUMA],
+      }),
+    ).toEqual([
+      'Marque ao menos uma semana.',
+      'Marque ao menos uma prioridade.',
+      'Marque ao menos um segmento.',
     ]);
   });
 

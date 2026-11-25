@@ -10,6 +10,12 @@ import { escolherOpcao } from '../../test/select';
 import { PainelAlocacao, type PainelAlocacaoProps } from './PainelAlocacao';
 import { frenteDoTurno, turno } from './teste-dados';
 
+/** A caixa "Sem restrição" de um campo de recorte (Prioridades ou Segmentos). */
+const semRestricao = (campo: 'Prioridades' | 'Segmentos') =>
+  within(screen.getByRole('group', { name: campo })).getByRole('checkbox', {
+    name: 'Sem restrição',
+  });
+
 const frente = (
   id: string,
   rotulo: string,
@@ -105,6 +111,7 @@ describe('PainelAlocacao', () => {
     await escolherOpcao('Turno', 'Manhã');
     expect(screen.getByRole('textbox', { name: 'Horário início' })).toHaveValue('07:00');
     await userEvent.click(screen.getByRole('checkbox', { name: 'Segunda' }));
+    await userEvent.click(semRestricao('Prioridades'));
     await userEvent.click(screen.getByRole('checkbox', { name: 'URGÊNCIA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Alocar médico' }));
 
@@ -147,12 +154,15 @@ describe('PainelAlocacao', () => {
 
   it('trocar a frente desmarca as subespecialidades que não são dela', async () => {
     montar({ inicial: { frenteId: 'f-tc' } });
+    await userEvent.click(semRestricao('Segmentos'));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Cabeça' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Geral (sem segmento)' }));
     await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
     await userEvent.click(await screen.findByRole('option', { name: 'RM Geral' }));
     await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
     await userEvent.click(await screen.findByRole('option', { name: 'TC Neuro' }));
-    expect(screen.getByRole('checkbox', { name: 'Cabeça' })).not.toBeChecked();
+    // RM Geral não tem segmentos: os marcados saem e o recorte volta a "Sem restrição".
+    expect(semRestricao('Segmentos')).toBeChecked();
   });
 
   it('turno fica desativado até escolher uma frente que algum turno tenha', () => {
@@ -195,6 +205,24 @@ describe('PainelAlocacao', () => {
   it('não mostra mais o aviso de catálogo', () => {
     montar();
     expect(screen.queryByText(/não vê o catálogo/)).not.toBeInTheDocument();
+  });
+
+  it('semanas do mês e recortes começam com a caixa "Todas" marcada, sem "Nada marcado"', async () => {
+    montar({ inicial: { frenteId: 'f-tc', turnoId: 't-manha' } });
+    expect(screen.getByRole('checkbox', { name: 'Toda semana' })).toBeChecked();
+    expect(semRestricao('Prioridades')).toBeChecked();
+    expect(semRestricao('Segmentos')).toBeChecked();
+    expect(screen.queryByText(/Nada marcado/)).not.toBeInTheDocument();
+  });
+
+  it('desmarcar "Toda semana" pede ao menos uma semana', async () => {
+    const { onSalvar } = montar({ inicial: { frenteId: 'f-tc', turnoId: 't-manha' } });
+    await escolherMedico();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Segunda' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Toda semana' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Alocar médico' }));
+    expect(await screen.findByText('Marque ao menos uma semana.')).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
   });
 
   it('escala fixa tem "Até" opcional: vazio é sem fim, preenchido manda o fim', async () => {
@@ -303,6 +331,7 @@ describe('PainelAlocacao', () => {
     it('não sobrescreve o que a pessoa já marcou', async () => {
       const buscarSugestao = vi.fn(async () => sugestao);
       montar({ buscarSugestao, inicial: { frenteId: 'f-tc' } });
+      await userEvent.click(semRestricao('Segmentos'));
       await userEvent.click(screen.getByRole('checkbox', { name: 'Geral (sem segmento)' }));
       await escolherMedico();
       expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
@@ -320,9 +349,8 @@ describe('PainelAlocacao', () => {
       expect(await screen.findByRole('checkbox', { name: 'URGÊNCIA' })).toBeChecked();
       await escolherOpcao('Frente', 'RM Geral');
       await escolherOpcao('Frente', 'TC Neuro');
-      await vi.waitFor(() =>
-        expect(screen.getByRole('checkbox', { name: 'URGÊNCIA' })).not.toBeChecked(),
-      );
+      // Sem a sugestão, volta a "Sem restrição" (todas marcadas).
+      await vi.waitFor(() => expect(semRestricao('Prioridades')).toBeChecked());
     });
 
     it('na edição não busca sugestão', async () => {
