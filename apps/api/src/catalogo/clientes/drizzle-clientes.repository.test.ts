@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Database } from '../../database/database';
 import * as schema from '../../database/schema';
+import type { CadastroClientesAlterado } from './cadastro-clientes-alterado';
 import type { DadosCliente } from './clientes.repository';
 import { DrizzleClientesRepository } from './drizzle-clientes.repository';
 
@@ -17,6 +18,14 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
   let db: Database;
   let repo: DrizzleClientesRepository;
   let tele: string;
+  /** Avisos de que a resolução do cliente pode ter mudado; `falhar` desfaz a gravação. */
+  const alterado = { vezes: 0, falhar: false };
+  const avisar: CadastroClientesAlterado = {
+    aoAlterar: async () => {
+      alterado.vezes++;
+      if (alterado.falhar) throw new Error('aviso falhou');
+    },
+  };
 
   const dados = (nome: string, extra: Partial<DadosCliente> = {}) => ({
     nome,
@@ -37,13 +46,15 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../drizzle') });
-    repo = new DrizzleClientesRepository(db);
+    repo = new DrizzleClientesRepository(db, avisar);
   });
 
   beforeEach(async () => {
     await db.execute(sql`truncate table clientes, contratados cascade`);
     const [c] = await db.insert(schema.contratados).values({ razaoSocial: 'TELE' }).returning();
     tele = c?.id ?? '';
+    alterado.vezes = 0;
+    alterado.falhar = false;
   });
 
   afterAll(async () => {
@@ -163,5 +174,54 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
 
     await repo.definirPrincipal(unidade, null);
     expect((await repo.buscar(unidade))?.unificadoEm).toBeNull();
+  });
+
+  describe('avisa na mesma transação quando o que decide a resolução do cliente muda', () => {
+    it('criar, apagar, apelidos e unificação avisam', async () => {
+      const prn = await repo.criar(dados('PRN'));
+      const unidade = await repo.criar(dados('PRN TELE_A'));
+      const alias = await repo.criarAlias(prn, {
+        tipo: 'exato',
+        padrao: 'P',
+        chave: 'P',
+        observacoes: null,
+      });
+      await repo.excluirAlias(alias);
+      await repo.definirPrincipal(unidade, prn);
+      await repo.definirPrincipal(unidade, null);
+      await repo.excluir(unidade);
+
+      expect(alterado.vezes).toBe(7);
+    });
+
+    it('atualizar avisa só quando muda nome, chave ou nome fantasia', async () => {
+      const id = await repo.criar(dados('PRN'));
+      alterado.vezes = 0;
+
+      await repo.atualizar(id, dados('PRN', { observacoes: 'só observação', ativo: false }));
+      expect(alterado.vezes).toBe(0);
+      await repo.atualizar(id, dados('PRN', { nomeFantasia: 'Rede' }));
+      expect(alterado.vezes).toBe(1);
+      await repo.atualizar(id, dados('PRN2', { nomeFantasia: 'Rede' }));
+      expect(alterado.vezes).toBe(2);
+    });
+
+    it('se o aviso falha, a mudança não fica gravada', async () => {
+      const prn = await repo.criar(dados('PRN'));
+      const unidade = await repo.criar(dados('PRN TELE_A'));
+      alterado.falhar = true;
+
+      await expect(repo.definirPrincipal(unidade, prn)).rejects.toThrow('aviso falhou');
+      await expect(
+        repo.criarAlias(prn, { tipo: 'exato', padrao: 'P', chave: 'P', observacoes: null }),
+      ).rejects.toThrow('aviso falhou');
+      await expect(repo.atualizar(prn, dados('OUTRO'))).rejects.toThrow('aviso falhou');
+      await expect(repo.criar(dados('NOVO'))).rejects.toThrow('aviso falhou');
+
+      expect((await repo.buscarVinculo(unidade))?.unificadoEm).toBeNull();
+      expect(await db.select().from(schema.clientesAliases)).toEqual([]);
+      expect((await repo.buscar(prn))?.nome).toBe('PRN');
+      expect(await repo.buscarPorNome('NOVO')).toBeNull();
+    });
   });
 });

@@ -148,4 +148,25 @@ describe.skipIf(!url)('DrizzleDeParaRepository', () => {
     await repo.excluir(id);
     expect(await repo.buscar(id)).toBeNull();
   });
+
+  it('sufixo: criar, atualizar e excluir avisam na mesma transação', async () => {
+    let vezes = 0;
+    let falhar = false;
+    const repo = new DrizzleDeParaRepository(db, TABELA_SUFIXO, async () => {
+      vezes++;
+      if (falhar) throw new Error('aviso falhou');
+    });
+
+    const id = await repo.criar({ sufixo: '_RMX', ativo: true, observacoes: null });
+    await repo.atualizar(id, { sufixo: '_RMX', ativo: false, observacoes: null });
+    expect(vezes).toBe(2);
+
+    falhar = true;
+    await expect(repo.excluir(id)).rejects.toThrow('aviso falhou');
+    expect(await repo.buscar(id)).toMatchObject({ sufixo: '_RMX', ativo: false });
+    falhar = false;
+    await repo.excluir(id);
+    expect(vezes).toBe(4);
+    expect(await repo.buscar(id)).toBeNull();
+  });
 });

@@ -5,6 +5,10 @@ import { DATABASE, type Database } from '../database/database';
 import { CLOCK, type Clock, systemClock } from '../identidade/clock';
 import { ALIASES_CLIENTE_REPOSITORY } from './clientes/aliases-cliente.repository';
 import { AliasesClienteService } from './clientes/aliases-cliente.service';
+import {
+  CADASTRO_CLIENTES_ALTERADO,
+  type CadastroClientesAlterado,
+} from './clientes/cadastro-clientes-alterado';
 import { ClientesController } from './clientes/clientes.controller';
 import { CLIENTES_REPOSITORY, type ClientesRepository } from './clientes/clientes.repository';
 import { ClientesService } from './clientes/clientes.service';
@@ -102,6 +106,25 @@ function dePara<D extends object>(
   };
 }
 
+/** Os sufixos decidem a resolução do cliente dos laudos: cada gravação avisa a `ingestao`. */
+const sufixosCliente: Provider = {
+  provide: SUFIXOS_CLIENTE,
+  // CADASTRO_CLIENTES_ALTERADO vem de fora (a ingestão), pelo módulo global de gatilhos.
+  inject: [DATABASE, AUDITORIA, CLOCK, CADASTRO_CLIENTES_ALTERADO],
+  useFactory: (
+    db: Database,
+    auditoria: Auditoria,
+    clock: Clock,
+    alterado: CadastroClientesAlterado,
+  ) =>
+    new DeParaService(
+      REGRA_SUFIXO,
+      criarRepoDePara(db, TABELA_SUFIXO, (executor) => alterado.aoAlterar(executor)),
+      auditoria,
+      clock,
+    ),
+};
+
 /** Contexto `catalogo`: listas do domínio, exames e quebras, de-paras, contratados e clientes. */
 @Module({
   controllers: [
@@ -175,7 +198,7 @@ function dePara<D extends object>(
       TABELA_DE_PARA_ESPECIALIDADE,
     ),
     dePara(DE_PARA_VALOR, () => REGRA_VALOR_EXAME, TABELA_DE_PARA_VALOR),
-    dePara(SUFIXOS_CLIENTE, () => REGRA_SUFIXO, TABELA_SUFIXO),
+    sufixosCliente,
     {
       provide: OpcoesService,
       inject: [DATABASE, CONTRATADOS_REPOSITORY, EXAMES_REPOSITORY, CLIENTES_REPOSITORY],

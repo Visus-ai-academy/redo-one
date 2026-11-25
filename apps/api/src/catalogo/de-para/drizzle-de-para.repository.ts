@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ilike, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
-
+import type { ExecutorSql } from '../../comum/jobs/adicionar-job';
 import { contem, relevancia } from '../../database/busca';
 import type { Database } from '../../database/database';
 import {
@@ -46,10 +46,17 @@ export interface TabelaDePara<D> {
   valores(dados: D): Record<string, unknown>;
 }
 
+type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
+
 export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
+  /**
+   * `aoAlterar`, quando há, roda na mesma transação de cada gravação (os sufixos avisam a
+   * `ingestao`, que resolve o cliente dos laudos por eles).
+   */
   constructor(
     private readonly db: Database,
     private readonly t: TabelaDePara<D>,
+    private readonly aoAlterar?: (executor: ExecutorSql) => Promise<void>,
   ) {}
 
   async listar(filtro: FiltroDePara) {
@@ -95,8 +102,8 @@ export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
   }
 
   async criar(dados: D) {
-    return this.gravando(async () => {
-      const [criado] = await this.db
+    return this.gravando(async (tx) => {
+      const [criado] = await tx
         .insert(this.t.tabela)
         .values(this.t.valores(dados) as never)
         .returning({ id: this.t.id });
@@ -106,8 +113,8 @@ export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
   }
 
   async atualizar(id: string, dados: D) {
-    await this.gravando(() =>
-      this.db
+    await this.gravando((tx) =>
+      tx
         .update(this.t.tabela)
         .set(this.t.valores(dados) as never)
         .where(eq(this.t.id, id)),
@@ -115,12 +122,20 @@ export class DrizzleDeParaRepository<D> implements DeParaRepository<D> {
   }
 
   async excluir(id: string) {
-    await this.db.delete(this.t.tabela).where(eq(this.t.id, id));
+    await this.naTransacao((tx) => tx.delete(this.t.tabela).where(eq(this.t.id, id)));
   }
 
-  private async gravando<T>(acao: () => Promise<T>): Promise<T> {
+  private naTransacao<T>(acao: (tx: Transacao) => Promise<T>): Promise<T> {
+    return this.db.transaction(async (tx) => {
+      const resultado = await acao(tx);
+      await this.aoAlterar?.(tx);
+      return resultado;
+    });
+  }
+
+  private async gravando<T>(acao: (tx: Transacao) => Promise<T>): Promise<T> {
     try {
-      return await acao();
+      return await this.naTransacao(acao);
     } catch (erro) {
       if (violouChaveEstrangeira(erro)) throw new ReferenciaInexistenteError();
       throw erro;
@@ -245,5 +260,8 @@ export const TABELA_SUFIXO: TabelaDePara<DadosSufixo> = {
   valores: (d) => ({ sufixo: d.sufixo, ativo: d.ativo, observacoes: d.observacoes }),
 };
 
-export const criarRepoDePara = <D>(db: Database, tabela: TabelaDePara<D>) =>
-  new DrizzleDeParaRepository<D>(db, tabela);
+export const criarRepoDePara = <D>(
+  db: Database,
+  tabela: TabelaDePara<D>,
+  aoAlterar?: (executor: ExecutorSql) => Promise<void>,
+) => new DrizzleDeParaRepository<D>(db, tabela, aoAlterar);

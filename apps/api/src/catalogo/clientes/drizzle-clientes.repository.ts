@@ -7,6 +7,10 @@ import { DATABASE, type Database } from '../../database/database';
 import { clientes, clientesAliases, contratados } from '../../database/schema';
 import { violouChaveEstrangeira } from '../comum/erros-do-banco';
 import type { AliasesClienteRepository, NovoAlias } from './aliases-cliente.repository';
+import {
+  CADASTRO_CLIENTES_ALTERADO,
+  type CadastroClientesAlterado,
+} from './cadastro-clientes-alterado';
 import type {
   ClienteDetalhe,
   ClientesRepository,
@@ -34,7 +38,10 @@ const unificadoEm = sql<{ id: string; nome: string } | null>`case
 export class DrizzleClientesRepository
   implements ClientesRepository, AliasesClienteRepository, UnidadesClienteRepository
 {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    @Inject(CADASTRO_CLIENTES_ALTERADO) private readonly alterado: CadastroClientesAlterado,
+  ) {}
 
   async listar(filtro: FiltroClientes) {
     const condicoes: (SQL | undefined)[] = [];
@@ -134,18 +141,41 @@ export class DrizzleClientesRepository
   }
 
   async criar(dados: DadosCliente & { chaveNormalizada: string }) {
-    const [criado] = await this.db.insert(clientes).values(dados).returning({ id: clientes.id });
-    if (!criado) throw new Error('insert de cliente não devolveu o id');
-    return criado.id;
+    return this.db.transaction(async (tx) => {
+      const [criado] = await tx.insert(clientes).values(dados).returning({ id: clientes.id });
+      if (!criado) throw new Error('insert de cliente não devolveu o id');
+      await this.alterado.aoAlterar(tx);
+      return criado.id;
+    });
   }
 
   async atualizar(id: string, dados: DadosCliente & { chaveNormalizada: string }) {
-    await this.db.update(clientes).set(dados).where(eq(clientes.id, id));
+    await this.db.transaction(async (tx) => {
+      const [antes] = await tx
+        .select({
+          nome: clientes.nome,
+          chaveNormalizada: clientes.chaveNormalizada,
+          nomeFantasia: clientes.nomeFantasia,
+        })
+        .from(clientes)
+        .where(eq(clientes.id, id))
+        .for('update');
+      await tx.update(clientes).set(dados).where(eq(clientes.id, id));
+      const resolucaoMudou =
+        antes &&
+        (antes.nome !== dados.nome ||
+          antes.chaveNormalizada !== dados.chaveNormalizada ||
+          antes.nomeFantasia !== dados.nomeFantasia);
+      if (resolucaoMudou) await this.alterado.aoAlterar(tx);
+    });
   }
 
   async excluir(id: string) {
     try {
-      await this.db.delete(clientes).where(eq(clientes.id, id));
+      await this.db.transaction(async (tx) => {
+        await tx.delete(clientes).where(eq(clientes.id, id));
+        await this.alterado.aoAlterar(tx);
+      });
       return true;
     } catch (erro) {
       if (violouChaveEstrangeira(erro)) return false;
@@ -177,12 +207,15 @@ export class DrizzleClientesRepository
   }
 
   async criarAlias(clienteId: string, alias: NovoAlias) {
-    const [criado] = await this.db
-      .insert(clientesAliases)
-      .values({ ...alias, clienteId })
-      .returning({ id: clientesAliases.id });
-    if (!criado) throw new Error('insert de apelido não devolveu o id');
-    return criado.id;
+    return this.db.transaction(async (tx) => {
+      const [criado] = await tx
+        .insert(clientesAliases)
+        .values({ ...alias, clienteId })
+        .returning({ id: clientesAliases.id });
+      if (!criado) throw new Error('insert de apelido não devolveu o id');
+      await this.alterado.aoAlterar(tx);
+      return criado.id;
+    });
   }
 
   async buscarAliasDoCliente(clienteId: string, aliasId: string) {
@@ -200,7 +233,10 @@ export class DrizzleClientesRepository
   }
 
   async excluirAlias(aliasId: string) {
-    await this.db.delete(clientesAliases).where(eq(clientesAliases.id, aliasId));
+    await this.db.transaction(async (tx) => {
+      await tx.delete(clientesAliases).where(eq(clientesAliases.id, aliasId));
+      await this.alterado.aoAlterar(tx);
+    });
   }
 
   async buscarVinculo(id: string) {
@@ -220,9 +256,12 @@ export class DrizzleClientesRepository
   }
 
   async definirPrincipal(unidadeId: string, principalId: string | null) {
-    await this.db
-      .update(clientes)
-      .set({ unificadoEmId: principalId })
-      .where(eq(clientes.id, unidadeId));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(clientes)
+        .set({ unificadoEmId: principalId })
+        .where(eq(clientes.id, unidadeId));
+      await this.alterado.aoAlterar(tx);
+    });
   }
 }

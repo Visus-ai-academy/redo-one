@@ -498,8 +498,12 @@ describe.skipIf(!url)('gravarMigracao', () => {
       { competencia: '2026-10', status: 'aberta' },
     ]);
     await migrar();
-    const job = await db.execute(sql`select key from graphile_worker.jobs`);
-    expect(job.rows).toEqual([{ key: 'ingestao.reclassificar-tipificacao:todos' }]);
+    const job = await db.execute(sql`select key from graphile_worker.jobs order by key`);
+    // O catálogo carregado resolve de novo o cliente dos laudos; a tipificação os reclassifica.
+    expect(job.rows).toEqual([
+      { key: 'ingestao.reclassificar-tipificacao:todos' },
+      { key: 'ingestao.reresolver-clientes' },
+    ]);
     const primeira = await ler();
     expect(primeira).toEqual([
       {

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { DatabaseModule } from '../database/database.module';
+import { GatilhosIngestaoModule } from '../ingestao/infrastructure/jobs/gatilhos-ingestao.module';
 import { CatalogoModule } from './catalogo.module';
 import { ClientesController } from './clientes/clientes.controller';
 import { ContratadosController } from './contratados/contratados.controller';
@@ -21,6 +22,7 @@ const MODULOS = [
   ConfigModule.forRoot({ isGlobal: true }),
   DatabaseModule,
   AuditoriaModule,
+  GatilhosIngestaoModule,
   CatalogoModule,
 ];
 

@@ -20,6 +20,7 @@ import { DrizzlePrioridadesClienteRepository } from '../distribuicao/infrastruct
 import { DrizzlePrioridadesOperacaoRepository } from '../distribuicao/infrastructure/persistence/drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from '../distribuicao/infrastructure/persistence/drizzle-regras-frente.repository';
 import { enfileirarReclassificacaoTipificacao } from '../ingestao/infrastructure/jobs/enfileirar-reclassificacao-tipificacao';
+import { enfileirarReresolucaoClientes } from '../ingestao/infrastructure/jobs/enfileirar-reresolucao-clientes';
 import type { CatalogoMigrado } from './mapear-catalogo';
 import type { CompetenciasMigradas } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
@@ -170,6 +171,8 @@ export async function gravarMigracao(
     }
     await upsert(tx, schema.clientesAliases, c.clientesAliases);
     await upsert(tx, schema.sufixosNomeCliente, c.sufixosNomeCliente);
+    // Os laudos das competências abertas passam a seguir os clientes, apelidos e unificações da carga.
+    await enfileirarReresolucaoClientes(tx);
 
     await upsert(tx, schema.medicos, m.medicos);
     await upsert(tx, schema.medicosDadosPagamento, m.medicosDadosPagamento, ['medicoId']);
