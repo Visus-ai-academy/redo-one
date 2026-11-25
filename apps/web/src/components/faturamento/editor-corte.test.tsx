@@ -125,6 +125,9 @@ describe('EditorCorte (padrão)', () => {
     expect(await screen.findByText('120 laudos mudam de competência.')).toBeInTheDocument();
     const movimento = screen.getByRole('listitem', { name: /11\/2026 para 12\/2026/ });
     expect(within(movimento).getByText('120 laudos')).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Pelas datas do laudo e do exame, cada uma pelo seu corte/),
+    ).toBeInTheDocument();
     expect(criar).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar vigência' }));
@@ -133,6 +136,17 @@ describe('EditorCorte (padrão)', () => {
       'Corte salvo a partir de 12/2026. Os laudos das competências abertas são recalculados em seguida.',
     );
     expect(screen.queryByRole('button', { name: 'Salvar vigência' })).not.toBeInTheDocument();
+  });
+
+  it('sem a data do exame, a nota da prévia fala só da data do laudo', async () => {
+    editor();
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
+    await escolherOpcao('A partir de', '12/2026');
+    await userEvent.click(screen.getByRole('checkbox', { name: /Considerar a data do exame/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
+    expect(
+      await screen.findByText(/^Pela data do laudo, só nas competências abertas/),
+    ).toBeInTheDocument();
   });
 
   it('mudar um campo depois da prévia pede a prévia de novo', async () => {

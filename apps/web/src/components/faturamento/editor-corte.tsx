@@ -514,7 +514,12 @@ function NovaVigencia({
         )}
 
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        {previaAtual && <Previa previa={previaAtual} />}
+        {previaAtual && (
+          <Previa
+            previa={previaAtual}
+            consideraExame={!valores.usaPadrao && valores.consideraExame}
+          />
+        )}
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
           <form.AppForm>
@@ -539,7 +544,7 @@ function NovaVigencia({
   );
 }
 
-function Previa({ previa }: { previa: PreviaCorteDto }) {
+function Previa({ previa, consideraExame }: { previa: PreviaCorteDto; consideraExame: boolean }) {
   return (
     <section aria-label="Prévia" className="flex flex-col gap-2">
       <p className="font-medium">{textoDaPrevia(previa.alterados)}</p>
@@ -563,8 +568,10 @@ function Previa({ previa }: { previa: PreviaCorteDto }) {
         </ul>
       )}
       <p className="text-muted-foreground text-[13px]">
-        Pela data do laudo, só nas competências abertas; as fechadas não mudam. Salvar grava a
-        vigência e recalcula esses laudos.
+        {consideraExame
+          ? 'Pelas datas do laudo e do exame, cada uma pelo seu corte (vale a competência mais tarde), só nas competências abertas; as fechadas não mudam.'
+          : 'Pela data do laudo, só nas competências abertas; as fechadas não mudam.'}{' '}
+        Salvar grava a vigência e recalcula esses laudos.
       </p>
     </section>
   );
