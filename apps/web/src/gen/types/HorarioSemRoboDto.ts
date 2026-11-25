@@ -5,7 +5,12 @@
 
 export type HorarioSemRoboDto = {
   /**
-   * @description Dias da semana (0 = domingo … 6 = sábado); vazio = todos os dias.
+   * @description Vale todos os dias. Sem ele, `diasSemana` precisa de ao menos um.
+   * @type boolean
+   */
+  todosDias: boolean;
+  /**
+   * @description Sem `todosDias`: dias da semana (0 = domingo … 6 = sábado).
    * @type array
    */
   diasSemana: number[];

@@ -1,0 +1,1 @@
+ALTER TABLE "regras_frente_horarios_sem_robo" ADD COLUMN "todos_dias" boolean DEFAULT false NOT NULL;

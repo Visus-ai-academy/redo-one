@@ -11,7 +11,7 @@ import {
 const br = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
 
 describe('horário sem robô', () => {
-  const plantaoTc = { diasSemana: [], inicio: '19:00', fim: '07:00' };
+  const plantaoTc = { todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' };
 
   it('a faixa pode cruzar a meia-noite', () => {
     expect(naFaixa(plantaoTc, minutosDoHorario('23:00'))).toBe(true);
@@ -25,13 +25,25 @@ describe('horário sem robô', () => {
     expect(horarioSemRoboVigente(plantaoTc, br('2026-10-16T06:42'))).toBe(true);
   });
 
-  it('respeita os dias da semana (sexta = 5)', () => {
-    expect(horarioSemRoboVigente({ ...plantaoTc, diasSemana: [6] }, br('2026-10-16T23:00'))).toBe(
+  it('sem "todos os dias" e sem dia marcado, não vale em dia nenhum (vazio nunca é "todos")', () => {
+    expect(horarioSemRoboVigente({ ...plantaoTc, todosDias: false }, br('2026-10-16T23:00'))).toBe(
       false,
     );
-    expect(horarioSemRoboVigente({ ...plantaoTc, diasSemana: [5] }, br('2026-10-16T23:00'))).toBe(
-      true,
-    );
+  });
+
+  it('respeita os dias da semana (sexta = 5)', () => {
+    expect(
+      horarioSemRoboVigente(
+        { ...plantaoTc, todosDias: false, diasSemana: [6] },
+        br('2026-10-16T23:00'),
+      ),
+    ).toBe(false);
+    expect(
+      horarioSemRoboVigente(
+        { ...plantaoTc, todosDias: false, diasSemana: [5] },
+        br('2026-10-16T23:00'),
+      ),
+    ).toBe(true);
   });
 });
 

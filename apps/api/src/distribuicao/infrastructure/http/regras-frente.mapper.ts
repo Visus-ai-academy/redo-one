@@ -22,6 +22,7 @@ export function regrasDoDto(dto: RegrasFrenteDto): Omit<RegrasFrente, 'frente'> 
     recolheAoFimDoTurno: dto.recolheAoFimDoTurno,
     distribuiPeloRobo: dto.distribuiPeloRobo,
     horariosSemRobo: dto.horariosSemRobo.map((h) => ({
+      todosDias: h.todosDias,
       diasSemana: h.diasSemana,
       inicio: h.inicio,
       fim: h.fim,

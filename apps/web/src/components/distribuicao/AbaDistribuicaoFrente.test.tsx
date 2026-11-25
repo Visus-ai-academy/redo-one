@@ -200,7 +200,7 @@ describe('AbaDistribuicaoFrente', () => {
       path: { modalidadeId: 'm-ct' },
       body: {
         ...NEUTRAS,
-        horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+        horariosSemRobo: [{ todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' }],
       },
     });
   });

@@ -22330,8 +22330,12 @@
       "HorarioSemRoboDto": {
         "type": "object",
         "properties": {
+          "todosDias": {
+            "type": "boolean",
+            "description": "Vale todos os dias. Sem ele, `diasSemana` precisa de ao menos um."
+          },
           "diasSemana": {
-            "description": "Dias da semana (0 = domingo … 6 = sábado); vazio = todos os dias.",
+            "description": "Sem `todosDias`: dias da semana (0 = domingo … 6 = sábado).",
             "type": "array",
             "items": {
               "type": "number"
@@ -22349,6 +22353,7 @@
           }
         },
         "required": [
+          "todosDias",
           "diasSemana",
           "inicio",
           "fim"

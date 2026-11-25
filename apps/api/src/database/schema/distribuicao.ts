@@ -501,7 +501,9 @@ export const regrasFrenteHorariosSemRobo = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     regraFrenteId: daRegra(),
-    /** 0 = domingo … 6 = sábado; vazio = todos os dias. */
+    /** Vale todos os dias (com `dias_semana` vazio). Vazio nunca é "todos os dias". */
+    todosDias: boolean('todos_dias').notNull().default(false),
+    /** 0 = domingo … 6 = sábado, sem `todos_dias`. */
     diasSemana: integer('dias_semana').array().notNull(),
     inicio: text('inicio').notNull(),
     fim: text('fim').notNull(),

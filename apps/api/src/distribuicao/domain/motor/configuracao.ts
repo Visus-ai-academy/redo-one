@@ -63,7 +63,9 @@ export interface ConfiguracaoDistribuicao {
 
 /** Faixa em que a frente não é distribuída pelo robô; pode cruzar a meia-noite. */
 export interface HorarioSemRobo {
-  /** 0 = domingo … 6 = sábado; vazio = todos os dias. */
+  /** Vale todos os dias. Sem ele, `diasSemana` precisa de ao menos um. */
+  todosDias: boolean;
+  /** 0 = domingo … 6 = sábado, sem `todosDias`. */
   diasSemana: number[];
   inicio: Horario;
   fim: Horario;
@@ -199,6 +201,6 @@ export function naFaixa(faixa: { inicio: Horario; fim: Horario }, minutos: numbe
 
 /** O horário sem robô vale agora (dia da semana e hora de Brasília)? */
 export function horarioSemRoboVigente(h: HorarioSemRobo, agora: Date): boolean {
-  if (h.diasSemana.length && !h.diasSemana.includes(diaSemanaEmBrasilia(agora))) return false;
+  if (!h.todosDias && !h.diasSemana.includes(diaSemanaEmBrasilia(agora))) return false;
   return naFaixa(h, minutosEmBrasilia(agora));
 }

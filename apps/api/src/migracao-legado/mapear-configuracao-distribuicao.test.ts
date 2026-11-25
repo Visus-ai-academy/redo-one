@@ -294,7 +294,7 @@ describe('mapearConfiguracaoDistribuicao', () => {
 
   it('janela sem automação de CT vira horário sem robô da frente CT', () => {
     expect(regrasDa(mapear(), mod('CT'))?.horariosSemRobo).toEqual([
-      { diasSemana: [], inicio: '19:00', fim: '07:00' },
+      { todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' },
     ]);
   });
 

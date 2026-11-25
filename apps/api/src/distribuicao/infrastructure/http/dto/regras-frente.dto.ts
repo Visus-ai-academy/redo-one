@@ -23,9 +23,13 @@ const uuidNulo = (descricao: string) =>
   ApiProperty({ type: String, format: 'uuid', nullable: true, description: descricao });
 
 export class HorarioSemRoboDto {
+  @ApiProperty({ description: 'Vale todos os dias. Sem ele, `diasSemana` precisa de ao menos um.' })
+  @IsBoolean()
+  todosDias!: boolean;
+
   @ApiProperty({
     type: [Number],
-    description: 'Dias da semana (0 = domingo … 6 = sábado); vazio = todos os dias.',
+    description: 'Sem `todosDias`: dias da semana (0 = domingo … 6 = sábado).',
   })
   @IsArray()
   @ArrayMaxSize(7)

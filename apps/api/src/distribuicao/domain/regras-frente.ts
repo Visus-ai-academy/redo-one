@@ -26,6 +26,13 @@ export function validarRegrasFrente(r: RegrasFrente): void {
     if (new Set(h.diasSemana).size !== h.diasSemana.length) {
       invalida('Há dia da semana repetido no horário sem robô.');
     }
+    // Vazio nunca é "todos os dias" (25/11/2026): ou "todos os dias", ou ao menos um.
+    if (h.todosDias && h.diasSemana.length) {
+      invalida('Horário sem robô: escolha "todos os dias" ou os dias, não as duas coisas.');
+    }
+    if (!h.todosDias && !h.diasSemana.length) {
+      invalida('Horário sem robô: marque ao menos um dia (ou "todos os dias").');
+    }
   }
 
   if (r.divisao.metodo === 'proporcao') {

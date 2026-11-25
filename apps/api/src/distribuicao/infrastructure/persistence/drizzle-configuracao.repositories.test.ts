@@ -137,7 +137,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
       ],
       recolheAoFimDoTurno: false,
       distribuiPeloRobo: true,
-      horariosSemRobo: [{ diasSemana: [1, 5], inicio: '19:00', fim: '07:00' }],
+      horariosSemRobo: [{ todosDias: false, diasSemana: [1, 5], inicio: '19:00', fim: '07:00' }],
       divisao: {
         metodo: 'proporcao',
         proporcoes: [
@@ -179,7 +179,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
           regra: { tipo: 'nao_recebe' as const },
         },
       ],
-      horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+      horariosSemRobo: [{ todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' }],
     };
     await repo.salvar(plantao);
     expect(await repo.obter(ct)).toEqual(plantao);

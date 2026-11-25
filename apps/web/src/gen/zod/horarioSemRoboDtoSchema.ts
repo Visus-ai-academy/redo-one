@@ -6,7 +6,8 @@
 import * as z from 'zod'
 
 export const horarioSemRoboDtoSchema = z.object({
-  diasSemana: z.array(z.number()).describe('Dias da semana (0 = domingo … 6 = sábado); vazio = todos os dias.'),
+  todosDias: z.boolean().describe('Vale todos os dias. Sem ele, `diasSemana` precisa de ao menos um.'),
+  diasSemana: z.array(z.number()).describe('Sem `todosDias`: dias da semana (0 = domingo … 6 = sábado).'),
   inicio: z.string().describe('HH:MM (Brasília).').meta({ examples: ['19:00'] }),
   fim: z.string().describe('HH:MM (Brasília); antes do início = vira a meia-noite.').meta({ examples: ['07:00'] }),
 })

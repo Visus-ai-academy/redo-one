@@ -578,7 +578,7 @@ describe('montarMedicosDisponiveis: elegibilidade', () => {
       {
         ...REGRAS_NEUTRAS,
         frente: FRENTE_CT,
-        horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+        horariosSemRobo: [{ todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' }],
       },
     ]);
     const agora = br('2026-11-17T06:42');

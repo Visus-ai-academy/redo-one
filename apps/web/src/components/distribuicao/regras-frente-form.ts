@@ -114,6 +114,7 @@ export function regrasParaApi(v: ValoresRegras, tipo: TipoFrente): RegrasFrenteD
     recolheAoFimDoTurno: v.recolheAoFimDoTurno,
     distribuiPeloRobo: v.distribuiPeloRobo,
     horariosSemRobo: v.horariosSemRobo.map((h) => ({
+      todosDias: caixasParaApi(h.diasSemana).todas,
       diasSemana: caixasParaApi(h.diasSemana)
         .ids.map(Number)
         .sort((a, b) => a - b),
@@ -342,8 +343,9 @@ export const DIAS_DA_SEMANA = [1, 2, 3, 4, 5, 6, 0].map((d) => ({
   rotulo: DIAS[d] as string,
 }));
 
-export function resumoDias(dias: readonly number[]) {
-  if (dias.length === 0 || dias.length === 7) return 'Todos os dias';
+export function resumoDias(dias: readonly number[], todosDias = false) {
+  if (todosDias || dias.length === 7) return 'Todos os dias';
+  if (dias.length === 0) return 'Nenhum dia';
   return [...dias]
     .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
     .map((d) => DIAS[d])
@@ -446,7 +448,7 @@ export function resumoRegras(
               rotulo: 'Horários sem robô',
               valor: r.horariosSemRobo.length
                 ? r.horariosSemRobo
-                    .map((h) => `${resumoDias(h.diasSemana)}, ${h.inicio}–${h.fim}`)
+                    .map((h) => `${resumoDias(h.diasSemana, h.todosDias)}, ${h.inicio}–${h.fim}`)
                     .join('; ')
                 : 'Nenhum',
             },

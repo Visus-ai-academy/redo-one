@@ -1277,7 +1277,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
         {
           frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: ct },
           ...REGRAS_NEUTRAS,
-          horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+          horariosSemRobo: [{ todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' }],
         },
         {
           frente: { tipo: 'especialidade', especialidadeId: neuro, modalidadeId: null },

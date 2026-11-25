@@ -112,6 +112,7 @@ export class DrizzleRegrasFrenteRepository implements RegrasFrenteRepository {
         recolheAoFimDoTurno: l.recolheAoFimDoTurno,
         distribuiPeloRobo: l.distribuiPeloRobo,
         horariosSemRobo: horariosDe(l.id).map((h) => ({
+          todosDias: h.todosDias,
           diasSemana: h.diasSemana,
           inicio: h.inicio,
           fim: h.fim,

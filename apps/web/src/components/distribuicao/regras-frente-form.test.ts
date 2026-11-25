@@ -70,7 +70,7 @@ describe('regras da frente no formulário', () => {
           regra: { tipo: 'segue_sla', horas: null },
         },
       ],
-      horariosSemRobo: [{ diasSemana: [1, 2], inicio: '19:00', fim: '07:00' }],
+      horariosSemRobo: [{ todosDias: false, diasSemana: [1, 2], inicio: '19:00', fim: '07:00' }],
       divisao: 'proporcao',
       proporcoes: [
         { modalidadeId: 'm-mr', percentual: 60 },
@@ -257,7 +257,7 @@ describe('resumo das regras (só leitura)', () => {
           },
         ],
         distribuiPeloRobo: true,
-        horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+        horariosSemRobo: [{ todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' }],
         recolheAoFimDoTurno: false,
         divisao: 'proporcao',
         proporcoes: [

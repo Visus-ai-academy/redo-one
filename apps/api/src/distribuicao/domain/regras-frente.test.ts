@@ -70,10 +70,23 @@ describe('regras da frente', () => {
 
   it('horários sem robô: HH:MM, início diferente do fim, dias de 0 a 6 sem repetir', () => {
     const h = (inicio: string, fim: string, diasSemana: number[] = []) =>
-      regras({ horariosSemRobo: [{ inicio, fim, diasSemana }] });
+      regras({ horariosSemRobo: [{ inicio, fim, todosDias: !diasSemana.length, diasSemana }] });
     expect(() => validarRegrasFrente(h('19:00', '07:00'))).not.toThrow();
     falha(h('19:00', '7h'), /HH:MM/);
     falha(h('19:00', '19:00'), /início e fim iguais/);
+    // Vazio nunca é "todos os dias".
+    falha(
+      regras({
+        horariosSemRobo: [{ inicio: '19:00', fim: '07:00', todosDias: false, diasSemana: [] }],
+      }),
+      /ao menos um dia/,
+    );
+    falha(
+      regras({
+        horariosSemRobo: [{ inicio: '19:00', fim: '07:00', todosDias: true, diasSemana: [1] }],
+      }),
+      /não as duas/,
+    );
     falha(h('19:00', '07:00', [7]), /Dia da semana inválido/);
     falha(h('19:00', '07:00', [1, 1]), /dia da semana repetido/);
   });
@@ -166,7 +179,7 @@ describe('regras da frente', () => {
           { prioridadeOperacaoId: 'a', turnoId: 't2', regra: { tipo: 'nao_recebe' } },
           { prioridadeOperacaoId: 'a', turnoId: 't1', regra: { tipo: 'nao_recebe' } },
         ],
-        horariosSemRobo: [{ inicio: '19:00', fim: '07:00', diasSemana: [5, 1] }],
+        horariosSemRobo: [{ inicio: '19:00', fim: '07:00', todosDias: false, diasSemana: [5, 1] }],
         divisao: {
           metodo: 'proporcao',
           proporcoes: [

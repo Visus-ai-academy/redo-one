@@ -775,7 +775,7 @@ describe('o que o robô não distribui', () => {
     {
       ...REGRAS_NEUTRAS,
       frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: CT },
-      horariosSemRobo: [{ diasSemana: [], inicio: '19:00', fim: '07:00' }],
+      horariosSemRobo: [{ todosDias: true, diasSemana: [], inicio: '19:00', fim: '07:00' }],
     },
   ]);
   const madrugada = new Date('2026-10-16T09:42:00Z'); // 06:42 em Brasília

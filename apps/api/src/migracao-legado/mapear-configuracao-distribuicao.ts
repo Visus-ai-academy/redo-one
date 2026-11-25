@@ -401,6 +401,8 @@ export function mapearConfiguracaoDistribuicao(
       continue;
     }
     regrasDe(mid ? frenteMod(mid) : frenteEsp(eid as string)).horariosSemRobo.push({
+      // Vazio no dashboards-one = todos os dias: no redo-one, "todos os dias" explícito.
+      todosDias: j.diasSemana.length === 0,
       diasSemana: [...j.diasSemana].sort((a, b) => a - b),
       inicio: j.horaInicio,
       fim: j.horaFim,
