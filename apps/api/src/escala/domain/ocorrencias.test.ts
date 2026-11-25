@@ -43,6 +43,11 @@ function alocacao(over: Partial<AlocacaoEscala> & { id: string }): AlocacaoEscal
     ...over,
     // Como os dados antigos: sem fim é fixa, com fim é período (salvo quando o teste diz).
     vigencia: over.vigencia ?? (over.dataFim ? 'periodo' : 'fixa'),
+    // Sem o "todas" explícito, o recorte que não veio é "todas" (só nos testes).
+    todasSemanas: over.todasSemanas ?? !over.semanasDoMes?.length,
+    todasPrioridades: over.todasPrioridades ?? !over.prioridadeIds?.length,
+    todosSegmentos:
+      over.todosSegmentos ?? (!over.subespecialidadeIds?.length && !over.subespecialidadeGeral),
   };
 }
 
@@ -128,7 +133,10 @@ describe('expandirOcorrencias', () => {
       dataFim: null,
       vigencia: 'fixa',
       diasSemana: [1, 3],
+      todasSemanas: true,
       semanasDoMes: [],
+      todasPrioridades: false,
+      todosSegmentos: false,
       prioridadeIds: ['urgente'],
       subespecialidadeIds: ['coluna'],
       subespecialidadeGeral: true,

@@ -4,10 +4,7 @@ import type { AlocacaoDto } from '../../gen/types/AlocacaoDto';
 import type { AlocacaoItemDto } from '../../gen/types/AlocacaoItemDto';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { horarioValido, normalizarHorario } from '../escala-config/horario';
-import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
-
-/** Da API (vazio = todas) para o formulário. */
-const ouTodas = (ids: string[]) => (ids.length ? ids : [TODAS]);
+import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 
 import { diaDaSemana } from './calendario';
 
@@ -66,9 +63,9 @@ export type InicialAlocacao = {
   horarioInicio?: string;
   horarioFim?: string;
   produtividade?: number | null;
+  /** Valores do formulário (`[TODAS]` = "Sem restrição"). */
   prioridadeIds?: string[];
   subespecialidadeIds?: string[];
-  subespecialidadeGeral?: boolean;
 };
 
 const texto = (n: number | null | undefined) => (n === null || n === undefined ? '' : String(n));
@@ -93,13 +90,13 @@ export function valoresIniciais({
       dataInicio: alocacao.dataInicio,
       dataFim: alocacao.dataFim ?? '',
       diasSemana: alocacao.diasSemana.map(String),
-      semanasDoMes: ouTodas(alocacao.semanasDoMes.map(String)),
+      semanasDoMes: caixasDaApi(alocacao.todasSemanas, alocacao.semanasDoMes.map(String)),
       horarioInicio: alocacao.horarioInicio,
       horarioFim: alocacao.horarioFim,
       produtividade: texto(alocacao.produtividade),
       gratificado: alocacao.gratificado,
-      prioridadeIds: ouTodas(alocacao.prioridadeIds),
-      subespecialidadeIds: ouTodas([
+      prioridadeIds: caixasDaApi(alocacao.todasPrioridades, alocacao.prioridadeIds),
+      subespecialidadeIds: caixasDaApi(alocacao.todosSegmentos, [
         ...alocacao.subespecialidadeIds,
         ...(alocacao.subespecialidadeGeral ? [GERAL] : []),
       ]),
@@ -119,11 +116,8 @@ export function valoresIniciais({
     horarioFim: inicial.horarioFim ?? '',
     produtividade: texto(inicial.produtividade),
     gratificado: false,
-    prioridadeIds: ouTodas(inicial.prioridadeIds ?? []),
-    subespecialidadeIds: ouTodas([
-      ...(inicial.subespecialidadeIds ?? []),
-      ...(inicial.subespecialidadeGeral ? [GERAL] : []),
-    ]),
+    prioridadeIds: inicial.prioridadeIds ?? [TODAS],
+    subespecialidadeIds: inicial.subespecialidadeIds ?? [TODAS],
     observacoes: '',
   };
 }
@@ -177,22 +171,29 @@ export function paraApi(v: ValoresAlocacao): AlocacaoDto {
   // Gratificado é sempre período único (o campo Vigência fica escondido nele).
   const vigencia = v.gratificado ? 'periodo' : v.vigencia;
   const horario = (h: string) => (h.trim() ? normalizarHorario(h) : null);
+  const semanas = caixasParaApi(v.semanasDoMes);
+  const prioridades = caixasParaApi(v.prioridadeIds);
+  const segmentos = caixasParaApi(v.subespecialidadeIds);
   return {
     medicoId: v.medico?.valor ?? '',
     frenteId: v.frenteId,
     turnoId: v.turnoId,
     vigencia,
     diasSemana: v.diasSemana.map(Number).sort((a, b) => a - b),
-    semanasDoMes: v.gratificado ? [] : caixasParaApi(v.semanasDoMes).ids.map(Number),
+    // Gratificado é período fechado: vale toda semana.
+    todasSemanas: v.gratificado || semanas.todas,
+    semanasDoMes: v.gratificado ? [] : semanas.ids.map(Number),
     horarioInicio: horario(v.horarioInicio),
     horarioFim: horario(v.horarioFim),
     dataInicio: v.dataInicio,
     dataFim: v.dataFim || null,
     produtividade: v.produtividade.trim() ? Number(v.produtividade) : null,
     gratificado: v.gratificado,
-    prioridadeIds: caixasParaApi(v.prioridadeIds).ids,
-    subespecialidadeIds: caixasParaApi(v.subespecialidadeIds).ids.filter((id) => id !== GERAL),
-    subespecialidadeGeral: v.subespecialidadeIds.includes(GERAL),
+    todasPrioridades: prioridades.todas,
+    prioridadeIds: prioridades.ids,
+    todosSegmentos: segmentos.todas,
+    subespecialidadeIds: segmentos.ids.filter((id) => id !== GERAL),
+    subespecialidadeGeral: segmentos.ids.includes(GERAL),
     observacoes: v.observacoes.trim() || null,
   };
 }

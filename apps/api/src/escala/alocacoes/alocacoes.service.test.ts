@@ -61,6 +61,11 @@ const entrada = (campos: Partial<EntradaAlocacao> = {}): EntradaAlocacao => ({
   dataInicio: '2026-11-01',
   ...campos,
   vigencia: campos.vigencia ?? (campos.dataFim ? 'periodo' : 'fixa'),
+  // Sem o "todas" explícito, o recorte que não veio é "todas" (só nos testes).
+  todasSemanas: campos.todasSemanas ?? !campos.semanasDoMes?.length,
+  todasPrioridades: campos.todasPrioridades ?? !campos.prioridadeIds?.length,
+  todosSegmentos:
+    campos.todosSegmentos ?? (!campos.subespecialidadeIds?.length && !campos.subespecialidadeGeral),
 });
 
 function conflito(a: string, b: string): ConflitoEscala {
@@ -102,6 +107,7 @@ describe('AlocacoesService', () => {
         frenteId: 'f-neuro',
         vigencia: 'fixa',
         diasSemana: [1, 3, 5],
+        todasSemanas: true,
         semanasDoMes: [],
         horarioInicio: '07:00',
         horarioFim: '13:00',
@@ -109,6 +115,8 @@ describe('AlocacoesService', () => {
         dataFim: null,
         produtividade: 20,
         gratificado: false,
+        todasPrioridades: false,
+        todosSegmentos: false,
         subespecialidadeGeral: true,
         prioridadeIds: ['p-urgente'],
         subespecialidadeIds: ['s-avc'],
@@ -425,7 +433,7 @@ describe('AlocacoesService', () => {
       expect(repo.eventos).toEqual([
         expect.objectContaining({
           acao: 'alterado',
-          antes: { diasSemana: [1, 3, 5], semanasDoMes: [], dataFim: null },
+          antes: { diasSemana: [1, 3, 5], todasSemanas: true, semanasDoMes: [], dataFim: null },
           depois: expect.objectContaining({
             diasSemana: [1, 3],
             semanasDoMes: [1, 3],
@@ -487,6 +495,7 @@ describe('AlocacoesService', () => {
       const { service } = montar();
       const { id } = await service.criar(admin, entrada());
       const cob = await service.criarCobertura(admin, id, {
+        todosOsDias: true,
         medicoId: 'm-bruno',
         dataInicio: '2026-11-16',
         dataFim: '2026-11-16',
@@ -498,6 +507,7 @@ describe('AlocacoesService', () => {
       const { service } = montar();
       const { id } = await service.criar(admin, entrada());
       await service.criarCobertura(admin, id, {
+        todosOsDias: true,
         medicoId: 'm-bruno',
         dataInicio: '2026-11-16',
         dataFim: '2026-11-20',
@@ -537,6 +547,7 @@ describe('AlocacoesService', () => {
       const { repo, service } = montar();
       const { id } = await service.criar(admin, entrada());
       const cob = await service.criarCobertura(admin, id, {
+        todosOsDias: true,
         medicoId: 'm-bruno',
         dataInicio: '2026-11-16',
         dataFim: '2026-11-16',
@@ -588,6 +599,7 @@ describe('AlocacoesService', () => {
       const { repo, service, titularId } = await comTitular();
 
       const { id, avisos } = await service.criarCobertura(admin, titularId, {
+        todosOsDias: false,
         medicoId: 'm-bruno',
         dataInicio: '2026-11-16',
         dataFim: '2026-11-20',
@@ -597,6 +609,9 @@ describe('AlocacoesService', () => {
 
       expect(avisos).toEqual([]);
       expect(await repo.buscar(id)).toEqual<AlocacaoGravada>({
+        todosSegmentos: true,
+        todasPrioridades: true,
+        todasSemanas: true,
         id,
         medicoId: 'm-bruno',
         turnoId: 't-manha',
@@ -631,7 +646,12 @@ describe('AlocacoesService', () => {
 
     it('recusa médico inativo, titular inexistente e cobertura sobreposta', async () => {
       const { service, titularId } = await comTitular();
-      const dados = { medicoId: 'm-bruno', dataInicio: '2026-11-16', dataFim: '2026-11-20' };
+      const dados = {
+        todosOsDias: true,
+        medicoId: 'm-bruno',
+        dataInicio: '2026-11-16',
+        dataFim: '2026-11-20',
+      };
 
       await expect(
         service.criarCobertura(admin, titularId, { ...dados, medicoId: 'm-inativo' }),
@@ -648,6 +668,7 @@ describe('AlocacoesService', () => {
     it('edita a cobertura sem conflitar com ela mesma', async () => {
       const { repo, service, titularId } = await comTitular();
       const { id } = await service.criarCobertura(admin, titularId, {
+        todosOsDias: true,
         medicoId: 'm-bruno',
         dataInicio: '2026-11-16',
         dataFim: '2026-11-20',
@@ -655,6 +676,7 @@ describe('AlocacoesService', () => {
       repo.eventos.length = 0;
 
       await service.atualizarCobertura(admin, id, {
+        todosOsDias: true,
         medicoId: 'm-bruno',
         dataInicio: '2026-11-16',
         dataFim: '2026-11-18',
@@ -675,6 +697,7 @@ describe('AlocacoesService', () => {
       ]);
       await expect(
         service.atualizarCobertura(admin, titularId, {
+          todosOsDias: true,
           medicoId: 'm-bruno',
           dataInicio: '2026-11-16',
           dataFim: '2026-11-18',
@@ -687,6 +710,7 @@ describe('AlocacoesService', () => {
       await escopos.definir('u-gestora', { turnoIds: [], frenteIds: ['f-tc'] });
       await expect(
         service.criarCobertura(gestora, titularId, {
+          todosOsDias: true,
           medicoId: 'm-bruno',
           dataInicio: '2026-11-16',
           dataFim: '2026-11-20',

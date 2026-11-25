@@ -71,6 +71,7 @@ export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
           lista: o.turnoTipo === 'lista',
           ausente: o.ausente,
           frente,
+          todosSegmentos: o.todosSegmentos,
           subespecialidadeIds: o.subespecialidadeIds,
           subespecialidadeGeral: o.subespecialidadeGeral,
         },

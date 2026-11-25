@@ -119,6 +119,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     const { repo, alocacoes, ajustes } = montar();
 
     const criada = await alocacoes.criar(ator(), {
+      todosSegmentos: false,
+      todasPrioridades: false,
+      todasSemanas: true,
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
@@ -130,6 +133,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
       subespecialidadeIds: [id('avc')],
     });
     expect(await repo.buscar(criada.id)).toEqual<AlocacaoGravada>({
+      todosSegmentos: false,
+      todasPrioridades: false,
+      todasSemanas: true,
       id: criada.id,
       medicoId: id('ana'),
       turnoId: id('manha'),
@@ -151,6 +157,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     });
 
     await alocacoes.atualizar(ator(), criada.id, {
+      todosSegmentos: false,
+      todasPrioridades: true,
+      todasSemanas: true,
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
@@ -171,6 +180,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     });
 
     const cobertura = await alocacoes.criarCobertura(ator(), criada.id, {
+      todosOsDias: true,
       medicoId: id('bruno'),
       dataInicio: '2026-11-16',
       dataFim: '2026-11-20',
@@ -229,6 +239,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
   it('remover o ajuste do dia apaga a linha e registra o evento', async () => {
     const { repo, alocacoes, ajustes } = montar();
     const { id: alocacaoId } = await alocacoes.criar(ator(), {
+      todosSegmentos: true,
+      todasPrioridades: true,
+      todasSemanas: true,
       medicoId: id('ana'),
       turnoId: id('manha'),
       frenteId: id('neuro'),
@@ -252,6 +265,9 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
   const titular = async () =>
     (
       await montar().alocacoes.criar(ator(), {
+        todosSegmentos: true,
+        todasPrioridades: true,
+        todasSemanas: true,
         medicoId: id('ana'),
         turnoId: id('manha'),
         frenteId: id('neuro'),
@@ -265,6 +281,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
     const titularId = await titular();
     const cobrir = (dataInicio: string) =>
       montar().alocacoes.criarCobertura(ator(), titularId, {
+        todosOsDias: true,
         medicoId: id('bruno'),
         dataInicio,
         dataFim: '2026-11-20',
@@ -337,6 +354,7 @@ describe.skipIf(!url)('repositório das alocações (banco)', () => {
 
       await Promise.allSettled([
         montar().alocacoes.criarCobertura(ator(), titularId, {
+          todosOsDias: true,
           medicoId: id('bruno'),
           dataInicio: '2026-11-16',
           dataFim: '2026-11-20',

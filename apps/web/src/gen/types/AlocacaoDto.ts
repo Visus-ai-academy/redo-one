@@ -36,7 +36,12 @@ export type AlocacaoDto = {
    */
   diasSemana: number[];
   /**
-   * @description 1–5 e -1 (última). Vazio ou ausente = toda semana.
+   * @description Repete toda semana do mês. Sem ele, `semanasDoMes` precisa de ao menos uma (vazio nunca é "toda semana").
+   * @type boolean
+   */
+  todasSemanas: boolean;
+  /**
+   * @description 1–5 e -1 (última), sem `todasSemanas`.
    * @type array | undefined
    */
   semanasDoMes?: number[];
@@ -77,12 +82,22 @@ export type AlocacaoDto = {
    */
   gratificado?: boolean;
   /**
-   * @description Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.
+   * @description Prioridades da operação (`GET /escala/classificacoes`), sem `todasPrioridades`: ao menos uma.
    * @type array | undefined
    */
   prioridadeIds?: string[];
   /**
-   * @description Vazio = sem recorte.
+   * @description Sem recorte de prioridade ("sem restrição").
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
+   * @description Sem recorte de segmento ("sem restrição").
+   * @type boolean
+   */
+  todosSegmentos: boolean;
+  /**
+   * @description Sem `todosSegmentos`: os segmentos (ou só o geral).
    * @type array | undefined
    */
   subespecialidadeIds?: string[];

@@ -52,10 +52,14 @@ export class AlocacaoDto {
   @IsInt({ each: true })
   diasSemana!: number[];
 
-  @ApiPropertyOptional({
-    type: [Number],
-    description: '1–5 e -1 (última). Vazio ou ausente = toda semana.',
+  @ApiProperty({
+    description:
+      'Repete toda semana do mês. Sem ele, `semanasDoMes` precisa de ao menos uma (vazio nunca é "toda semana").',
   })
+  @IsBoolean()
+  todasSemanas!: boolean;
+
+  @ApiPropertyOptional({ type: [Number], description: '1–5 e -1 (última), sem `todasSemanas`.' })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(6)
@@ -119,7 +123,8 @@ export class AlocacaoDto {
   @ApiPropertyOptional({
     type: [String],
     format: 'uuid',
-    description: 'Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.',
+    description:
+      'Prioridades da operação (`GET /escala/classificacoes`), sem `todasPrioridades`: ao menos uma.',
   })
   @IsOptional()
   @IsArray()
@@ -127,7 +132,19 @@ export class AlocacaoDto {
   @IsUUID('all', { each: true })
   prioridadeIds?: string[];
 
-  @ApiPropertyOptional({ type: [String], format: 'uuid', description: 'Vazio = sem recorte.' })
+  @ApiProperty({ description: 'Sem recorte de prioridade ("sem restrição").' })
+  @IsBoolean()
+  todasPrioridades!: boolean;
+
+  @ApiProperty({ description: 'Sem recorte de segmento ("sem restrição").' })
+  @IsBoolean()
+  todosSegmentos!: boolean;
+
+  @ApiPropertyOptional({
+    type: [String],
+    format: 'uuid',
+    description: 'Sem `todosSegmentos`: os segmentos (ou só o geral).',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(100)
@@ -163,9 +180,13 @@ export class CoberturaDto {
   @IsISO8601({ strict: true }, { message: 'Data inválida.' })
   dataFim!: string;
 
+  @ApiProperty({ description: 'Assume todos os dias do titular.' })
+  @IsBoolean()
+  todosOsDias!: boolean;
+
   @ApiPropertyOptional({
     type: [Number],
-    description: 'Dias do titular que a cobertura assume. Vazio ou ausente = todos os dele.',
+    description: 'Sem `todosOsDias`: os dias do titular que a cobertura assume (ao menos um).',
   })
   @IsOptional()
   @IsArray()
@@ -231,6 +252,7 @@ export class AlocacaoItemDto {
   @ApiProperty({ enum: VIGENCIAS, enumName: 'VigenciaAlocacao', description: DESCRICAO_VIGENCIA })
   vigencia!: (typeof VIGENCIAS)[number];
   @ApiProperty({ type: [Number] }) diasSemana!: number[];
+  @ApiProperty({ description: 'Toda semana do mês.' }) todasSemanas!: boolean;
   @ApiProperty({ type: [Number] }) semanasDoMes!: number[];
   @ApiProperty({ example: '07:00' }) horarioInicio!: string;
   @ApiProperty({ example: '13:00' }) horarioFim!: string;
@@ -238,6 +260,8 @@ export class AlocacaoItemDto {
   @ApiProperty({ type: String, format: 'date', nullable: true }) dataFim!: string | null;
   @ApiProperty({ type: Number, nullable: true }) produtividade!: number | null;
   @ApiProperty() gratificado!: boolean;
+  @ApiProperty({ description: 'Sem recorte de prioridade.' }) todasPrioridades!: boolean;
+  @ApiProperty({ description: 'Sem recorte de segmento.' }) todosSegmentos!: boolean;
   @ApiProperty() subespecialidadeGeral!: boolean;
   @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })
   prioridadeIds!: string[];

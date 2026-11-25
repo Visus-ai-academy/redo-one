@@ -45,10 +45,9 @@ export interface AlocacaoCandidata extends FaixaHorario {
   dataFim: Data | null;
   coberturaDeId: string | null;
   gratificado: boolean;
-  semanasDoMes: readonly number[];
-  prioridadeIds: readonly string[];
-  subespecialidadeIds: readonly string[];
-  subespecialidadeGeral: boolean;
+  todasSemanas: boolean;
+  todasPrioridades: boolean;
+  todosSegmentos: boolean;
 }
 
 /**
@@ -61,12 +60,11 @@ export function ehAlocacaoDaGrade(alocacao: AlocacaoCandidata, turno: FaixaHorar
     alocacao.dataFim === null &&
     alocacao.coberturaDeId === null &&
     !alocacao.gratificado &&
-    alocacao.semanasDoMes.length === 0 &&
+    alocacao.todasSemanas &&
     alocacao.horarioInicio === turno.horarioInicio &&
     alocacao.horarioFim === turno.horarioFim &&
-    alocacao.prioridadeIds.length === 0 &&
-    alocacao.subespecialidadeIds.length === 0 &&
-    !alocacao.subespecialidadeGeral
+    alocacao.todasPrioridades &&
+    alocacao.todosSegmentos
   );
 }
 

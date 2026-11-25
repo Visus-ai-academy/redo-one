@@ -30,7 +30,9 @@ export class DrizzleCarregadorEscala implements CarregadorEscala {
   async carregar(de: string, ate: string): Promise<DadosEscala> {
     const alocacao = sql`json_build_object(
       'id', a.id, 'medicoId', a.medico_id, 'turnoId', a.turno_id, 'frenteId', a.frente_id,
-      'vigencia', a.vigencia, 'diasSemana', a.dias_semana, 'semanasDoMes', a.semanas_do_mes,
+      'vigencia', a.vigencia, 'diasSemana', a.dias_semana, 'todasSemanas', a.todas_semanas,
+      'semanasDoMes', a.semanas_do_mes, 'todasPrioridades', a.todas_prioridades,
+      'todosSegmentos', a.todos_segmentos,
       'horarioInicio', a.horario_inicio, 'horarioFim', a.horario_fim,
       'dataInicio', a.data_inicio, 'dataFim', a.data_fim, 'produtividade', a.produtividade,
       'gratificado', a.gratificado, 'subespecialidadeGeral', a.subespecialidade_geral,

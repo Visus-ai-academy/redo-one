@@ -45,7 +45,11 @@ export interface OcorrenciaRodada {
   /** A do dia (com o ajuste de produtividade); null = desconhecida. */
   produtividade: number | null;
   gratificado: boolean;
+  /** Sem recorte de prioridade (explícito). */
+  todasPrioridades: boolean;
   prioridadeIds: readonly string[];
+  /** Sem recorte de segmento (explícito). */
+  todosSegmentos: boolean;
   subespecialidadeIds: readonly string[];
   subespecialidadeGeral: boolean;
   coberturaDeId: string | null;
@@ -418,9 +422,9 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
       lista: o.turnoTipo === 'lista' && !o.gratificado,
       gratificado: o.gratificado,
       frente: o.frente,
-      todasPrioridades: o.prioridadeIds.length === 0,
+      todasPrioridades: o.todasPrioridades,
       prioridadeIds: o.prioridadeIds,
-      todosSegmentos: !o.subespecialidadeIds.length && !o.subespecialidadeGeral,
+      todosSegmentos: o.todosSegmentos,
       subespecialidadeIds: o.subespecialidadeIds,
       subespecialidadeGeral: o.subespecialidadeGeral,
       coberturaDeId: o.coberturaDeId,

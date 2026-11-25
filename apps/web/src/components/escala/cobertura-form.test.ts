@@ -69,6 +69,7 @@ describe('paraApiCobertura', () => {
       medicoId: 'm2',
       dataInicio: '2026-11-18',
       dataFim: '2026-11-18',
+      todosOsDias: false,
       diasSemana: [1, 3],
       horarioInicio: '07:00',
       horarioFim: '13:00',

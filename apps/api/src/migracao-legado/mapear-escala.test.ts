@@ -263,6 +263,9 @@ describe('mapearEscala: alocações', () => {
         frenteId: frenteNeuro(),
         diasSemana: [1, 2],
         dataFim: null,
+        todasSemanas: true,
+        todasPrioridades: false,
+        todosSegmentos: false,
         subespecialidadeGeral: true,
         coberturaDeId: null,
       }),
@@ -279,6 +282,33 @@ describe('mapearEscala: alocações', () => {
     ]);
     expect(resumo).toMatchObject({ prioridadesSemPar: 1, subespecialidadesSemPar: 1 });
     expect(avisos).toContainEqual(expect.objectContaining({ item: 'Sobreaviso' }));
+  });
+
+  it('recorte vazio no dashboards-one ("todos") vira "todas" explícito; a cobertura não recorta', () => {
+    const { tabelas } = mapearEscala(
+      escala({
+        alocacoes: [
+          alocacao('a1', { semanasDoMes: [], prioridades: [], subespecialidades: [] }),
+          alocacao('a2', { semanasDoMes: [2] }),
+          alocacao('c1', {
+            medicoId: 'm2',
+            coberturaDeId: 'a1',
+            dataFim: '2026-02-01',
+            prioridades: ['Rotina'],
+            criadoEm: '2026-01-02T00:00:00.000Z',
+          }),
+        ],
+      }),
+      contexto,
+    );
+    const de = (id: string) => tabelas.alocacoes.find((a) => a.id === idAlocacao(id));
+    expect(de('a1')).toMatchObject({
+      todasSemanas: true,
+      todasPrioridades: true,
+      todosSegmentos: true,
+    });
+    expect(de('a2')).toMatchObject({ todasSemanas: false, semanasDoMes: [2] });
+    expect(de('c1')).toMatchObject({ todasPrioridades: true, todosSegmentos: true });
   });
 
   it('cobertura aponta o titular e não copia recortes', () => {

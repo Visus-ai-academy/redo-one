@@ -363,10 +363,10 @@ export class ConsultarFilaDoMomento {
           x.especialidadeId === f.especialidadeId &&
           x.modalidadeId === f.modalidadeId,
       )?.[0] ?? null;
-    // Recorte de segmento: vazio sem o geral = todos; com ele, só os recortados (o geral é o exame
-    // sem segmento, que não casa com nenhum filtro de segmento).
+    // Recorte de segmento: "todos" explícito = todos os da especialidade; senão, só os recortados
+    // (o geral é o exame sem segmento, que não casa com nenhum filtro de segmento).
     const segmentosDe = (o: (typeof insumos.ocorrencias)[number]) => {
-      const recortado = o.subespecialidadeIds.length > 0 || o.subespecialidadeGeral;
+      const recortado = !o.todosSegmentos;
       if (o.frente.tipo !== 'especialidade' || !o.frente.especialidadeId) {
         return { segmentos: [], recortado };
       }

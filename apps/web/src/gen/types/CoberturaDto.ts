@@ -25,7 +25,12 @@ export type CoberturaDto = {
    */
   dataFim: string;
   /**
-   * @description Dias do titular que a cobertura assume. Vazio ou ausente = todos os dele.
+   * @description Assume todos os dias do titular.
+   * @type boolean
+   */
+  todosOsDias: boolean;
+  /**
+   * @description Sem `todosOsDias`: os dias do titular que a cobertura assume (ao menos um).
    * @type array | undefined
    */
   diasSemana?: number[];

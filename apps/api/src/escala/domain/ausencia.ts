@@ -60,7 +60,13 @@ export function validarAusencia(dados: DadosAusencia): AusenciaValidada {
   // Ausência em dias que não existem no período ficaria registrada sem tirar o médico de nada.
   if (
     diasSemana.length > 0 &&
-    !existeDiaNoPeriodo({ diasSemana, semanasDoMes: [], dataInicio, dataFim: dataFim as Data })
+    !existeDiaNoPeriodo({
+      diasSemana,
+      todasSemanas: true,
+      semanasDoMes: [],
+      dataInicio,
+      dataFim: dataFim as Data,
+    })
   ) {
     throw new EscalaInvalidaError('Nenhum dos dias da semana escolhidos cai no período.');
   }

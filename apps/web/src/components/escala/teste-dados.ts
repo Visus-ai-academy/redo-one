@@ -73,6 +73,9 @@ export function ocorrencia(dados: Partial<OcorrenciaDto> = {}): OcorrenciaDto {
     tipoAusenciaCor: null,
     coberturaDe: null,
     cobertoPor: null,
+    todasSemanas: !dados.semanasDoMes?.length,
+    todasPrioridades: !dados.prioridadeIds?.length,
+    todosSegmentos: !dados.subespecialidadeIds?.length && !dados.subespecialidadeGeral,
     doDiaAnterior: false,
     ...dados,
   };

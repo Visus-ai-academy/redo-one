@@ -81,6 +81,7 @@ const ALOCACAO: AlocacaoItemDto = {
   frenteId: 'f-tc',
   vigencia: 'fixa',
   diasSemana: [1],
+  todasSemanas: true,
   semanasDoMes: [],
   horarioInicio: '07:00',
   horarioFim: '13:00',
@@ -88,6 +89,8 @@ const ALOCACAO: AlocacaoItemDto = {
   dataFim: null,
   produtividade: null,
   gratificado: false,
+  todasPrioridades: true,
+  todosSegmentos: true,
   subespecialidadeGeral: false,
   prioridadeIds: [],
   subespecialidadeIds: [],
@@ -189,7 +192,13 @@ describe('PainelAlocacao', () => {
 
   it('na edição mantém marcadas a prioridade e a subespecialidade inativa já gravadas', async () => {
     const { onSalvar } = montar({
-      alocacao: { ...ALOCACAO, prioridadeIds: ['p-int'], subespecialidadeIds: ['s-avc'] },
+      alocacao: {
+        ...ALOCACAO,
+        todasPrioridades: false,
+        prioridadeIds: ['p-int'],
+        todosSegmentos: false,
+        subespecialidadeIds: ['s-avc'],
+      },
       medicoNome: 'Ana Souza',
     });
     expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).toBeChecked();

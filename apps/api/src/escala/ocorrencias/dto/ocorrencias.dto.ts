@@ -103,15 +103,19 @@ export class OcorrenciaDto {
   vigencia!: 'fixa' | 'periodo';
   @ApiProperty({ type: [Number], description: 'Da alocação: 0 = domingo … 6 = sábado.' })
   diasSemana!: number[];
+  @ApiProperty({ description: 'Da alocação: repete toda semana do mês.' })
+  todasSemanas!: boolean;
   @ApiProperty({
     type: [Number],
-    description: 'Da alocação: 1–5 e -1 (última); vazio = toda semana.',
+    description: 'Da alocação: 1–5 e -1 (última), sem `todasSemanas`.',
   })
   semanasDoMes!: number[];
   @ApiProperty({ format: 'date' }) dataInicio!: string;
   @ApiProperty({ type: String, format: 'date', nullable: true }) dataFim!: string | null;
+  @ApiProperty({ description: 'Sem recorte de prioridade.' }) todasPrioridades!: boolean;
   @ApiProperty({ type: [String], format: 'uuid', description: 'Prioridades da operação.' })
   prioridadeIds!: string[];
+  @ApiProperty({ description: 'Sem recorte de segmento.' }) todosSegmentos!: boolean;
   @ApiProperty({ type: [String], format: 'uuid' }) subespecialidadeIds!: string[];
   @ApiProperty() subespecialidadeGeral!: boolean;
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) coberturaDeId!: string | null;

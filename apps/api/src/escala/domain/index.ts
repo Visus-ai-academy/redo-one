@@ -11,6 +11,7 @@ export {
   validarHorarioNoTurno,
   validarPeriodo,
   validarProdutividade,
+  validarRecortesAlocacao,
 } from './alocacao';
 export {
   type AusenciaEscala,

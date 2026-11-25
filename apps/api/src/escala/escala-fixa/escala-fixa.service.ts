@@ -99,7 +99,13 @@ export class EscalaFixaService {
             medicoId,
             turnoId: grupo.turnoId,
             frenteId: entrada.frenteId,
-            ...validarAlocacao({ ...grupo, vigencia: 'fixa', dataInicio: aPartirDe }, turno),
+            ...validarAlocacao(
+              { ...grupo, vigencia: 'fixa', todasSemanas: true, dataInicio: aPartirDe },
+              turno,
+            ),
+            // A grade só tem alocação sem recorte (ver `ehAlocacaoDaGrade`).
+            todasPrioridades: true,
+            todosSegmentos: true,
             subespecialidadeGeral: false,
             prioridadeIds: [],
             subespecialidadeIds: [],

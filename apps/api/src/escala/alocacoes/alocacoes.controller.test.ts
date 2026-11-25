@@ -89,6 +89,9 @@ describe('AlocacoesController', () => {
           frenteId: UUID,
           vigencia: 'fixa',
           diasSemana: [1],
+          todasSemanas: true,
+          todasPrioridades: true,
+          todosSegmentos: true,
           dataInicio: '2026-11-01',
         }),
       ).toEqual([]);
@@ -102,6 +105,9 @@ describe('AlocacoesController', () => {
           dataInicio: '2026-02-30',
           horarioInicio: '7h',
           produtividade: -1,
+          todasSemanas: true,
+          todasPrioridades: true,
+          todosSegmentos: true,
         }),
       ).toEqual([
         'dataInicio',
@@ -114,9 +120,29 @@ describe('AlocacoesController', () => {
     });
 
     it('cobertura exige data de fim', async () => {
-      expect(await erros(CoberturaDto, { medicoId: UUID, dataInicio: '2026-11-01' })).toEqual([
-        'dataFim',
-      ]);
+      expect(
+        await erros(CoberturaDto, { medicoId: UUID, dataInicio: '2026-11-01', todosOsDias: true }),
+      ).toEqual(['dataFim']);
+    });
+
+    it('"todas" é explícito: sem os booleanos, o corpo é recusado', async () => {
+      expect(
+        await erros(AlocacaoDto, {
+          medicoId: UUID,
+          turnoId: UUID,
+          frenteId: UUID,
+          vigencia: 'fixa',
+          diasSemana: [1],
+          dataInicio: '2026-11-01',
+        }),
+      ).toEqual(['todasPrioridades', 'todasSemanas', 'todosSegmentos']);
+      expect(
+        await erros(CoberturaDto, {
+          medicoId: UUID,
+          dataInicio: '2026-11-01',
+          dataFim: '2026-11-02',
+        }),
+      ).toEqual(['todosOsDias']);
     });
 
     it('ajuste: número ≥ 0 ou nulo, nunca ausente', async () => {

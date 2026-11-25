@@ -50,6 +50,8 @@ const periodo = (
   subespecialidadeIds: [],
   subespecialidadeGeral: false,
   ...extra,
+  todosSegmentos:
+    extra.todosSegmentos ?? (!extra.subespecialidadeIds?.length && !extra.subespecialidadeGeral),
 });
 
 const MANHA_ANA = periodo('ana', h('07:00'), h('13:00'));

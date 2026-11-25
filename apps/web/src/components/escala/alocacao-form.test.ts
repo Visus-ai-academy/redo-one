@@ -11,6 +11,7 @@ const alocacao: AlocacaoItemDto = {
   frenteId: 'f1',
   vigencia: 'fixa',
   diasSemana: [1, 3],
+  todasSemanas: false,
   semanasDoMes: [-1],
   horarioInicio: '07:00',
   horarioFim: '13:00',
@@ -18,6 +19,8 @@ const alocacao: AlocacaoItemDto = {
   dataFim: null,
   produtividade: 40,
   gratificado: false,
+  todasPrioridades: false,
+  todosSegmentos: false,
   subespecialidadeGeral: true,
   prioridadeIds: ['p1'],
   subespecialidadeIds: ['s1'],
@@ -187,6 +190,7 @@ describe('paraApi', () => {
       turnoId: 't1',
       vigencia: 'fixa',
       diasSemana: [1],
+      todasSemanas: false,
       semanasDoMes: [2, -1],
       horarioInicio: '07:00',
       horarioFim: '13:00',
@@ -194,10 +198,24 @@ describe('paraApi', () => {
       dataFim: null,
       produtividade: null,
       gratificado: false,
+      todasPrioridades: true,
       prioridadeIds: [],
+      todosSegmentos: false,
       subespecialidadeIds: ['s1'],
       subespecialidadeGeral: true,
       observacoes: null,
+    });
+  });
+
+  it('"Toda semana" e "Sem restrição" viram o "todas" explícito, com a lista vazia', () => {
+    expect(paraApi(validos)).toMatchObject({
+      todasSemanas: true,
+      semanasDoMes: [],
+      todasPrioridades: true,
+      prioridadeIds: [],
+      todosSegmentos: true,
+      subespecialidadeIds: [],
+      subespecialidadeGeral: false,
     });
   });
 

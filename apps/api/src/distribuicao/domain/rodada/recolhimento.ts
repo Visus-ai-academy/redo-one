@@ -49,7 +49,8 @@ export interface PeriodoDoMedico {
   /** Ocorrência com ausência: não protege ninguém. */
   ausente: boolean;
   frente: FrenteEscala;
-  /** Recorte de segmento da alocação; vazio sem o geral = todos. */
+  /** Recorte de segmento da alocação, com o "todos" explícito. */
+  todosSegmentos: boolean;
   subespecialidadeIds: readonly string[];
   subespecialidadeGeral: boolean;
 }
@@ -148,11 +149,7 @@ export function protegidoPelaEscala(
       j.inicio.getTime() - p.antecedenciaMin * MIN <= t &&
       t < j.fim.getTime() + (p.carenciaPorTurno.get(j.turnoId) ?? p.carenciaMin) * MIN &&
       (!j.lista || (j.inicio.getTime() - p.antecedenciaMin * MIN <= e && e < j.fim.getTime())) &&
-      periodoCobreExame(
-        { ...j, todosSegmentos: !j.subespecialidadeIds.length && !j.subespecialidadeGeral },
-        exame,
-        p.escalaRestringeEspecialidade,
-      ),
+      periodoCobreExame(j, exame, p.escalaRestringeEspecialidade),
   );
 }
 

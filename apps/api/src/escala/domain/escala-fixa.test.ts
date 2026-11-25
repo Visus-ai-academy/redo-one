@@ -21,12 +21,11 @@ const fixa = (campos: Partial<Parameters<typeof ehAlocacaoDaGrade>[0]> = {}) => 
   dataFim: null,
   coberturaDeId: null,
   gratificado: false,
-  semanasDoMes: [],
+  todasSemanas: true,
   horarioInicio: '07:00',
   horarioFim: '13:00',
-  prioridadeIds: [],
-  subespecialidadeIds: [],
-  subespecialidadeGeral: false,
+  todasPrioridades: true,
+  todosSegmentos: true,
   ...campos,
 });
 
@@ -111,11 +110,10 @@ describe('ehAlocacaoDaGrade', () => {
     ['com fim', { dataFim: '2026-12-31' }],
     ['cobertura', { coberturaDeId: 'x' }],
     ['gratificada', { gratificado: true }],
-    ['por semana do mês', { semanasDoMes: [1] }],
+    ['por semana do mês', { todasSemanas: false }],
     ['com horário próprio', { horarioFim: '12:00' }],
-    ['com prioridades', { prioridadeIds: ['p'] }],
-    ['com subespecialidades', { subespecialidadeIds: ['s'] }],
-    ['com o geral marcado', { subespecialidadeGeral: true }],
+    ['com prioridades', { todasPrioridades: false }],
+    ['com segmentos (ou o geral)', { todosSegmentos: false }],
   ])('%s fica fora da grade', (_, campos) => {
     expect(ehAlocacaoDaGrade(fixa(campos), turnoManha)).toBe(false);
   });

@@ -13,6 +13,7 @@ export interface AlocacaoGravada {
   /** Escala fixa (fim opcional) ou período único; a cobertura e a gratificada são períodos. */
   vigencia: Vigencia;
   diasSemana: number[];
+  todasSemanas: boolean;
   semanasDoMes: number[];
   horarioInicio: string;
   horarioFim: string;
@@ -20,6 +21,8 @@ export interface AlocacaoGravada {
   dataFim: Data | null;
   produtividade: number | null;
   gratificado: boolean;
+  todasPrioridades: boolean;
+  todosSegmentos: boolean;
   subespecialidadeGeral: boolean;
   prioridadeIds: string[];
   subespecialidadeIds: string[];

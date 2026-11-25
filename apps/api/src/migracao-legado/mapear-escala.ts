@@ -506,6 +506,9 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       // No dashboards-one a fixa é a sem fim lá; a encerrada aqui (médico inativo) segue fixa.
       vigencia: a.dataFim ? 'periodo' : 'fixa',
       diasSemana,
+      // Lista vazia no dashboards-one queria dizer "toda semana": no redo-one é explícito. Só a
+      // lista vazia de lá vira "toda semana" (uma lista só com valores inválidos não alarga).
+      todasSemanas: a.semanasDoMes.length === 0,
       semanasDoMes: semanasValidas(a.semanasDoMes),
       horarioInicio: a.horarioInicio,
       horarioFim,
@@ -513,6 +516,10 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       dataFim,
       produtividade: a.produtividade,
       gratificado: a.gratificado,
+      // Idem: recorte vazio lá = "sem restrição". Se a lista de lá tinha itens e nenhum casou, o
+      // recorte fica vazio SEM "todas" (não alarga calado; o aviso abaixo diz o que faltou).
+      todasPrioridades: a.prioridades.length === 0,
+      todosSegmentos: a.subespecialidades.length === 0,
       subespecialidadeGeral: false,
       coberturaDeId: null,
       observacoes: texto(a.observacoes),
@@ -546,6 +553,9 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
   for (const { legado: a, ...linha } of mapeadas.values()) {
     tabAlocacoes.push(linha);
     if (linha.coberturaDeId) {
+      // A cobertura não recorta nada além do titular.
+      linha.todasPrioridades = true;
+      linha.todosSegmentos = true;
       contar('coberturas');
       // A cobertura lê os recortes do titular.
       if (a.prioridades.length > 0 || a.subespecialidades.length > 0) {

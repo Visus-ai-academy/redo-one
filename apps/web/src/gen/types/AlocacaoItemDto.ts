@@ -37,6 +37,11 @@ export type AlocacaoItemDto = {
    */
   vigencia: VigenciaAlocacaoKey;
   diasSemana: number[];
+  /**
+   * @description Toda semana do mês.
+   * @type boolean
+   */
+  todasSemanas: boolean;
   semanasDoMes: number[];
   /**
    * @example 07:00
@@ -62,6 +67,16 @@ export type AlocacaoItemDto = {
   dataFim: string | null;
   produtividade: number | null;
   gratificado: boolean;
+  /**
+   * @description Sem recorte de prioridade.
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
+   * @description Sem recorte de segmento.
+   * @type boolean
+   */
+  todosSegmentos: boolean;
   subespecialidadeGeral: boolean;
   /**
    * @description Prioridades da operação.

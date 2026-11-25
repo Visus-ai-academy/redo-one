@@ -14,6 +14,7 @@ const titular: TitularDaCobertura = {
   id: 'titular',
   medicoId: 'medico-a',
   diasSemana: [1, 3, 5],
+  todasSemanas: true,
   semanasDoMes: [],
   dataInicio: '2026-11-02',
   dataFim: null,
@@ -26,17 +27,28 @@ const titular: TitularDaCobertura = {
 
 // Semana de 09/11/2026 (segunda) a 13/11 (sexta)
 const dados: DadosCobertura = {
+  todosOsDias: true,
   medicoId: 'medico-b',
   dataInicio: '2026-11-09',
   dataFim: '2026-11-13',
 };
 
 describe('validarCobertura', () => {
+  it('dias: "todos os dias" ou ao menos um, nunca vazio', () => {
+    expect(() => validarCobertura({ ...dados, todosOsDias: false }, titular, tarde, [])).toThrow(
+      /ao menos um dia/,
+    );
+    expect(() =>
+      validarCobertura({ ...dados, todosOsDias: true, diasSemana: [1] }, titular, tarde, []),
+    ).toThrow(/não as duas/);
+  });
+
   it('assume os dias, o horário e a produtividade do titular por padrão', () => {
     expect(validarCobertura(dados, titular, tarde, [])).toEqual({
       medicoId: 'medico-b',
       coberturaDeId: 'titular',
       diasSemana: [1, 3, 5],
+      todasSemanas: true,
       semanasDoMes: [],
       horarioInicio: '13:00',
       horarioFim: '19:00',
@@ -49,14 +61,15 @@ describe('validarCobertura', () => {
 
   it('usa só os dias pedidos que são do titular', () => {
     expect(
-      validarCobertura({ ...dados, diasSemana: [3, 4] }, titular, tarde, []).diasSemana,
+      validarCobertura({ ...dados, todosOsDias: false, diasSemana: [3, 4] }, titular, tarde, [])
+        .diasSemana,
     ).toEqual([3]);
   });
 
   it('recusa quando nenhum dia pedido é do titular', () => {
-    expect(() => validarCobertura({ ...dados, diasSemana: [2, 4] }, titular, tarde, [])).toThrow(
-      'Nenhum dia marcado é dia do vínculo coberto.',
-    );
+    expect(() =>
+      validarCobertura({ ...dados, todosOsDias: false, diasSemana: [2, 4] }, titular, tarde, []),
+    ).toThrow('Nenhum dia marcado é dia do vínculo coberto.');
   });
 
   it('não cobre uma cobertura', () => {
@@ -87,7 +100,7 @@ describe('validarCobertura', () => {
 
   it('pelo menos um plantão do titular cai no período, contando as semanas do mês dele', () => {
     // titular só na 1ª segunda do mês; 09/11 é a 2ª
-    const primeiraSegunda = { ...titular, diasSemana: [1], semanasDoMes: [1] };
+    const primeiraSegunda = { ...titular, diasSemana: [1], todasSemanas: false, semanasDoMes: [1] };
     expect(() =>
       validarCobertura({ ...dados, dataFim: '2026-11-10' }, primeiraSegunda, tarde, []),
     ).toThrow('Nenhum plantão do vínculo cai no período escolhido.');
@@ -138,7 +151,9 @@ describe('validarCobertura', () => {
 
     it('aceita quando os dias da semana não se cruzam', () => {
       expect(() =>
-        validarCobertura({ ...dados, diasSemana: [1, 5] }, titular, tarde, [outra]),
+        validarCobertura({ ...dados, todosOsDias: false, diasSemana: [1, 5] }, titular, tarde, [
+          outra,
+        ]),
       ).not.toThrow();
     });
 

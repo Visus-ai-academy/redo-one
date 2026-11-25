@@ -73,6 +73,11 @@ const alocacao = (campos: Partial<AlocacaoGravada> & { id: string }): AlocacaoGr
   observacoes: null,
   ...campos,
   vigencia: campos.vigencia ?? (campos.dataFim ? 'periodo' : 'fixa'),
+  // Sem o "todas" explícito, o recorte que não veio é "todas" (só nos testes).
+  todasSemanas: campos.todasSemanas ?? !campos.semanasDoMes?.length,
+  todasPrioridades: campos.todasPrioridades ?? !campos.prioridadeIds?.length,
+  todosSegmentos:
+    campos.todosSegmentos ?? (!campos.subespecialidadeIds?.length && !campos.subespecialidadeGeral),
 });
 
 const celula = (turnoId: string, diaSemana: number, produtividade: number | null) => ({

@@ -5,6 +5,7 @@ import {
   type DadosAlocacao,
   validarAlocacao,
   validarProdutividade,
+  validarRecortesAlocacao,
 } from './alocacao';
 import { EscalaInvalidaError } from './errors';
 
@@ -18,6 +19,7 @@ const lista = {
 
 const fixa: DadosAlocacao = {
   vigencia: 'fixa',
+  todasSemanas: true,
   diasSemana: [3, 1],
   dataInicio: '2026-11-02',
 };
@@ -26,6 +28,7 @@ describe('validarAlocacao', () => {
   it('normaliza a escala fixa e usa o horário do turno quando não informado', () => {
     expect(validarAlocacao(fixa, manha)).toEqual({
       diasSemana: [1, 3],
+      todasSemanas: true,
       semanasDoMes: [],
       horarioInicio: '07:00',
       horarioFim: '13:00',
@@ -66,7 +69,13 @@ describe('validarAlocacao', () => {
 
   it('normaliza horário e semanas do mês', () => {
     const v = validarAlocacao(
-      { ...fixa, horarioInicio: '9:00', horarioFim: '13:00', semanasDoMes: [-1, 1] },
+      {
+        ...fixa,
+        horarioInicio: '9:00',
+        horarioFim: '13:00',
+        todasSemanas: false,
+        semanasDoMes: [-1, 1],
+      },
       manha,
     );
     expect(v.horarioInicio).toBe('09:00');
@@ -118,6 +127,7 @@ describe('validarAlocacao', () => {
   describe('gratificado', () => {
     const gratificada: DadosAlocacao = {
       vigencia: 'periodo',
+      todasSemanas: false,
       diasSemana: [0, 6],
       semanasDoMes: [3],
       dataInicio: '2026-11-01',
@@ -155,6 +165,38 @@ describe('validarAlocacao', () => {
         'Escala gratificada precisa da cota de registros.',
       );
     });
+  });
+});
+
+describe('vazio nunca é "todas"', () => {
+  it('semanas do mês: "toda semana" ou ao menos uma, nunca as duas', () => {
+    expect(() => validarAlocacao({ ...fixa, todasSemanas: false }, manha)).toThrow(
+      /ao menos uma semana/,
+    );
+    expect(() =>
+      validarAlocacao({ ...fixa, todasSemanas: true, semanasDoMes: [1] }, manha),
+    ).toThrow(/não as duas/);
+  });
+
+  it('prioridades e segmentos: "sem restrição" ou a lista', () => {
+    const todas = {
+      todasPrioridades: true,
+      prioridadeIds: [],
+      todosSegmentos: true,
+      subespecialidadeIds: [],
+      subespecialidadeGeral: false,
+    };
+    expect(() => validarRecortesAlocacao(todas)).not.toThrow();
+    expect(() => validarRecortesAlocacao({ ...todas, todasPrioridades: false })).toThrow(
+      /prioridade/,
+    );
+    expect(() => validarRecortesAlocacao({ ...todas, todosSegmentos: false })).toThrow(/segmento/);
+    expect(() =>
+      validarRecortesAlocacao({ ...todas, todosSegmentos: false, subespecialidadeGeral: true }),
+    ).not.toThrow();
+    expect(() => validarRecortesAlocacao({ ...todas, prioridadeIds: ['p'] })).toThrow(
+      /não as duas/,
+    );
   });
 });
 

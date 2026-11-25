@@ -34,11 +34,16 @@ export interface AlocacaoEscala extends FaixaHorario {
   turnoId: string;
   frenteId: string;
   diasSemana: readonly number[];
+  todasSemanas: boolean;
   semanasDoMes: readonly number[];
   dataInicio: Data;
   dataFim: Data | null;
   produtividade: number | null;
   gratificado: boolean;
+  /** Sem recorte de prioridade (explícito: lista vazia nunca é "todas"). */
+  todasPrioridades: boolean;
+  /** Sem recorte de segmento. */
+  todosSegmentos: boolean;
   subespecialidadeGeral: boolean;
   prioridadeIds: readonly string[];
   subespecialidadeIds: readonly string[];
@@ -110,10 +115,13 @@ export interface Ocorrencia {
   /** Vigência e repetição da alocação do plantão (na cobertura, as da cobertura). */
   vigencia: Vigencia;
   diasSemana: readonly number[];
+  todasSemanas: boolean;
   semanasDoMes: readonly number[];
   dataInicio: Data;
   dataFim: Data | null;
+  todasPrioridades: boolean;
   prioridadeIds: readonly string[];
+  todosSegmentos: boolean;
   subespecialidadeIds: readonly string[];
   subespecialidadeGeral: boolean;
   coberturaDeId: string | null;
@@ -271,8 +279,11 @@ export function expandirOcorrencias(entrada: EntradaExpansao): Ocorrencia[] {
         dataFim: alocacao.dataFim,
         vigencia: alocacao.vigencia,
         diasSemana: alocacao.diasSemana,
+        todasSemanas: alocacao.todasSemanas,
         semanasDoMes: alocacao.semanasDoMes,
+        todasPrioridades: vinculo.todasPrioridades,
         prioridadeIds: vinculo.prioridadeIds,
+        todosSegmentos: vinculo.todosSegmentos,
         subespecialidadeIds: vinculo.subespecialidadeIds,
         subespecialidadeGeral: vinculo.subespecialidadeGeral,
         coberturaDeId: alocacao.coberturaDeId,

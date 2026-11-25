@@ -143,7 +143,9 @@ export const alocacoes = pgTable(
       .references(() => frentesEscala.id),
     /** 0 = domingo … 6 = sábado. Nunca vazio. */
     diasSemana: integer('dias_semana').array().notNull(),
-    /** 1–5 e -1 (última). Vazio = toda semana. */
+    /** Repete toda semana do mês (com `semanas_do_mes` vazio). Vazio nunca é "toda semana". */
+    todasSemanas: boolean('todas_semanas').notNull().default(false),
+    /** 1–5 e -1 (última), sem `todas_semanas`. */
     semanasDoMes: integer('semanas_do_mes').array().notNull().default(sql`'{}'::integer[]`),
     /** Horário do vínculo, dentro da caixa do turno. */
     horarioInicio: text('horario_inicio').notNull(),
@@ -155,6 +157,10 @@ export const alocacoes = pgTable(
     produtividade: integer('produtividade'),
     /** Só em turno `lista`: cota do período, fora do teto do robô. */
     gratificado: boolean('gratificado').notNull().default(false),
+    /** Sem recorte de prioridade (sem linhas em `alocacoes_prioridades`). */
+    todasPrioridades: boolean('todas_prioridades').notNull().default(false),
+    /** Sem recorte de segmento (sem linhas em `alocacoes_subespecialidades`). */
+    todosSegmentos: boolean('todos_segmentos').notNull().default(false),
     /** Recorte de subespecialidade inclui o geral (exame sem subespecialidade). */
     subespecialidadeGeral: boolean('subespecialidade_geral').notNull().default(false),
     coberturaDeId: uuid('cobertura_de_id').references((): AnyPgColumn => alocacoes.id, {
@@ -183,8 +189,8 @@ export const alocacoes = pgTable(
 
 /**
  * Recorte de prioridade da alocação, pelas prioridades da operação da distribuição (decisão de
- * 19/11/2026: só recebe Internado quem marca Internado), não pelas do catálogo. Nenhuma linha =
- * sem recorte. Sem cascata: excluir uma prioridade em uso alargaria o recorte calado.
+ * 19/11/2026: só recebe Internado quem marca Internado), não pelas do catálogo; sem recorte é
+ * `alocacoes.todas_prioridades`. Sem cascata: excluir uma prioridade em uso estreitaria o recorte calado.
  */
 export const alocacoesPrioridades = pgTable(
   'alocacoes_prioridades',
@@ -200,8 +206,7 @@ export const alocacoesPrioridades = pgTable(
 );
 
 /**
- * Recorte de subespecialidade (segmento) da alocação. Nenhuma linha e sem
- * `subespecialidade_geral` = sem recorte.
+ * Recorte de subespecialidade (segmento) da alocação; sem recorte é `alocacoes.todos_segmentos`.
  */
 export const alocacoesSubespecialidades = pgTable(
   'alocacoes_subespecialidades',

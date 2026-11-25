@@ -39,7 +39,9 @@ export interface DadosCobertura {
   medicoId: string;
   dataInicio: string;
   dataFim?: string | null;
-  /** Dias do titular que a cobertura assume. Vazio ou ausente = todos os dele. */
+  /** Assume todos os dias do titular. Sem ele, `diasSemana` precisa de ao menos um. */
+  todosOsDias: boolean;
+  /** Dias do titular que a cobertura assume (sem `todosOsDias`). */
   diasSemana?: readonly number[];
   /** Ausente = o do titular. */
   horarioInicio?: string | null;
@@ -53,9 +55,10 @@ export interface CoberturaValidada {
   coberturaDeId: string;
   diasSemana: number[];
   /**
-   * Sempre vazio: a cobertura só existe nos dias em que o titular tem plantão, e as semanas do mês
-   * são as dele, lidas na expansão.
+   * Sempre "todas" (e `semanasDoMes` vazio): a cobertura só existe nos dias em que o titular tem
+   * plantão, e as semanas do mês são as dele, lidas na expansão.
    */
+  todasSemanas: true;
   semanasDoMes: number[];
   horarioInicio: Horario;
   horarioFim: Horario;
@@ -100,10 +103,15 @@ export function validarCobertura(
   }
 
   const pedidos = normalizarDiasSemana(dados.diasSemana ?? []);
-  const diasSemana =
-    pedidos.length === 0
-      ? [...titular.diasSemana]
-      : pedidos.filter((d) => titular.diasSemana.includes(d));
+  if (dados.todosOsDias && pedidos.length) {
+    throw new EscalaInvalidaError('Escolha "todos os dias" ou os dias da cobertura, não as duas.');
+  }
+  if (!dados.todosOsDias && !pedidos.length) {
+    throw new EscalaInvalidaError('Selecione ao menos um dia da cobertura (ou "todos os dias").');
+  }
+  const diasSemana = dados.todosOsDias
+    ? [...titular.diasSemana]
+    : pedidos.filter((d) => titular.diasSemana.includes(d));
   if (diasSemana.length === 0) {
     throw new EscalaInvalidaError('Nenhum dia marcado é dia do vínculo coberto.');
   }
@@ -151,6 +159,7 @@ export function validarCobertura(
     medicoId: dados.medicoId,
     coberturaDeId: titular.id,
     diasSemana,
+    todasSemanas: true,
     semanasDoMes: [],
     ...faixa,
     dataInicio,

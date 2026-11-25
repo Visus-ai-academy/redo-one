@@ -95,6 +95,9 @@ const oc = (medicoId: string, p: Partial<OcorrenciaRodada> = {}): OcorrenciaRoda
   coberturaDeId: null,
   ausente: false,
   ...p,
+  // Sem o "todas" explícito, o recorte que não veio é "todas" (só nos testes).
+  todasPrioridades: p.todasPrioridades ?? !p.prioridadeIds?.length,
+  todosSegmentos: p.todosSegmentos ?? (!p.subespecialidadeIds?.length && !p.subespecialidadeGeral),
 });
 
 const insumos = (p: Partial<InsumosRodada> = {}): InsumosRodada => ({

@@ -14363,6 +14363,10 @@
               "type": "number"
             }
           },
+          "todasSemanas": {
+            "type": "boolean",
+            "description": "Toda semana do mês."
+          },
           "semanasDoMes": {
             "type": "array",
             "items": {
@@ -14392,6 +14396,14 @@
           },
           "gratificado": {
             "type": "boolean"
+          },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Sem recorte de prioridade."
+          },
+          "todosSegmentos": {
+            "type": "boolean",
+            "description": "Sem recorte de segmento."
           },
           "subespecialidadeGeral": {
             "type": "boolean"
@@ -14435,6 +14447,7 @@
           "frenteId",
           "vigencia",
           "diasSemana",
+          "todasSemanas",
           "semanasDoMes",
           "horarioInicio",
           "horarioFim",
@@ -14442,6 +14455,8 @@
           "dataFim",
           "produtividade",
           "gratificado",
+          "todasPrioridades",
+          "todosSegmentos",
           "subespecialidadeGeral",
           "prioridadeIds",
           "subespecialidadeIds",
@@ -14481,8 +14496,12 @@
               "type": "number"
             }
           },
+          "todasSemanas": {
+            "type": "boolean",
+            "description": "Repete toda semana do mês. Sem ele, `semanasDoMes` precisa de ao menos uma (vazio nunca é \"toda semana\")."
+          },
           "semanasDoMes": {
-            "description": "1–5 e -1 (última). Vazio ou ausente = toda semana.",
+            "description": "1–5 e -1 (última), sem `todasSemanas`.",
             "type": "array",
             "items": {
               "type": "number"
@@ -14521,15 +14540,23 @@
             "description": "Só em turno lista. Ausente: falso ao criar; na edição, mantém o atual."
           },
           "prioridadeIds": {
-            "description": "Prioridades da operação (`GET /escala/classificacoes`). Vazio = sem recorte.",
+            "description": "Prioridades da operação (`GET /escala/classificacoes`), sem `todasPrioridades`: ao menos uma.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Sem recorte de prioridade (\"sem restrição\")."
+          },
+          "todosSegmentos": {
+            "type": "boolean",
+            "description": "Sem recorte de segmento (\"sem restrição\")."
+          },
           "subespecialidadeIds": {
-            "description": "Vazio = sem recorte.",
+            "description": "Sem `todosSegmentos`: os segmentos (ou só o geral).",
             "type": "array",
             "items": {
               "type": "string",
@@ -14552,7 +14579,10 @@
           "frenteId",
           "vigencia",
           "diasSemana",
-          "dataInicio"
+          "todasSemanas",
+          "dataInicio",
+          "todasPrioridades",
+          "todosSegmentos"
         ]
       },
       "PlantaoDoAvisoDto": {
@@ -14678,8 +14708,12 @@
             "format": "date",
             "description": "Dentro da vigência do titular."
           },
+          "todosOsDias": {
+            "type": "boolean",
+            "description": "Assume todos os dias do titular."
+          },
           "diasSemana": {
-            "description": "Dias do titular que a cobertura assume. Vazio ou ausente = todos os dele.",
+            "description": "Sem `todosOsDias`: os dias do titular que a cobertura assume (ao menos um).",
             "type": "array",
             "items": {
               "type": "number"
@@ -14710,7 +14744,8 @@
         "required": [
           "medicoId",
           "dataInicio",
-          "dataFim"
+          "dataFim",
+          "todosOsDias"
         ]
       },
       "AjusteDto": {
@@ -14864,8 +14899,12 @@
               "type": "number"
             }
           },
+          "todasSemanas": {
+            "type": "boolean",
+            "description": "Da alocação: repete toda semana do mês."
+          },
           "semanasDoMes": {
-            "description": "Da alocação: 1–5 e -1 (última); vazio = toda semana.",
+            "description": "Da alocação: 1–5 e -1 (última), sem `todasSemanas`.",
             "type": "array",
             "items": {
               "type": "number"
@@ -14880,6 +14919,10 @@
             "format": "date",
             "nullable": true
           },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Sem recorte de prioridade."
+          },
           "prioridadeIds": {
             "description": "Prioridades da operação.",
             "type": "array",
@@ -14887,6 +14930,10 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "todosSegmentos": {
+            "type": "boolean",
+            "description": "Sem recorte de segmento."
           },
           "subespecialidadeIds": {
             "type": "array",
@@ -14974,10 +15021,13 @@
           "gratificado",
           "vigencia",
           "diasSemana",
+          "todasSemanas",
           "semanasDoMes",
           "dataInicio",
           "dataFim",
+          "todasPrioridades",
           "prioridadeIds",
+          "todosSegmentos",
           "subespecialidadeIds",
           "subespecialidadeGeral",
           "coberturaDeId",

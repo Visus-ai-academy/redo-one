@@ -62,43 +62,44 @@ describe('normalizarSemanasDoMes', () => {
 
 describe('caiNasSemanas', () => {
   it('sem semanas marcadas vale toda semana', () => {
-    expect(caiNasSemanas('2026-10-30', [], [5])).toBe(true);
+    expect(caiNasSemanas('2026-10-30', true, [], [5])).toBe(true);
   });
 
   it('a semana é a ordem do dia entre os mesmos dias da semana do mês', () => {
     // 17/10/2026 é o 3º sábado
-    expect(caiNasSemanas('2026-10-17', [3], [6])).toBe(true);
-    expect(caiNasSemanas('2026-10-10', [3], [6])).toBe(false);
+    expect(caiNasSemanas('2026-10-17', false, [3], [6])).toBe(true);
+    expect(caiNasSemanas('2026-10-10', false, [3], [6])).toBe(false);
   });
 
   it('a 5ª semana só existe nos dias 29 a 31', () => {
-    expect(caiNasSemanas('2026-10-31', [5], [6])).toBe(true);
-    expect(caiNasSemanas('2026-10-28', [5], [3])).toBe(false);
+    expect(caiNasSemanas('2026-10-31', false, [5], [6])).toBe(true);
+    expect(caiNasSemanas('2026-10-28', false, [5], [3])).toBe(false);
   });
 
   it('a última é o dia cuja próxima semana já é outro mês', () => {
-    expect(caiNasSemanas('2026-10-31', [-1], [6])).toBe(true);
-    expect(caiNasSemanas('2026-10-24', [-1], [6])).toBe(false);
+    expect(caiNasSemanas('2026-10-31', false, [-1], [6])).toBe(true);
+    expect(caiNasSemanas('2026-10-24', false, [-1], [6])).toBe(false);
     // fevereiro de 28 dias: o dia 22 é o último daquele dia da semana
-    expect(caiNasSemanas('2026-02-22', [-1], [0])).toBe(true);
-    expect(caiNasSemanas('2026-02-21', [-1], [6])).toBe(false);
+    expect(caiNasSemanas('2026-02-22', false, [-1], [0])).toBe(true);
+    expect(caiNasSemanas('2026-02-21', false, [-1], [6])).toBe(false);
   });
 
   it('com sábado na regra, o domingo conta pelo sábado da véspera', () => {
     // 01/11/2026 é domingo: fecha o fim de semana de 31/10 (5º e último sábado de outubro)
-    expect(caiNasSemanas('2026-11-01', [1], [0, 6])).toBe(false);
-    expect(caiNasSemanas('2026-11-01', [5], [0, 6])).toBe(true);
-    expect(caiNasSemanas('2026-11-01', [-1], [0, 6])).toBe(true);
+    expect(caiNasSemanas('2026-11-01', false, [1], [0, 6])).toBe(false);
+    expect(caiNasSemanas('2026-11-01', false, [5], [0, 6])).toBe(true);
+    expect(caiNasSemanas('2026-11-01', false, [-1], [0, 6])).toBe(true);
   });
 
   it('sem sábado na regra, o domingo conta por ele mesmo', () => {
-    expect(caiNasSemanas('2026-11-01', [1], [0])).toBe(true);
+    expect(caiNasSemanas('2026-11-01', false, [1], [0])).toBe(true);
   });
 });
 
 describe('caiNoDia', () => {
   const regra = {
     diasSemana: [1, 3],
+    todasSemanas: true,
     semanasDoMes: [],
     dataInicio: '2026-11-02',
     dataFim: null,
@@ -122,7 +123,7 @@ describe('caiNoDia', () => {
   });
 
   it('respeita as semanas do mês', () => {
-    const terceiroFds = { ...regra, diasSemana: [0, 6], semanasDoMes: [3] };
+    const terceiroFds = { ...regra, diasSemana: [0, 6], todasSemanas: false, semanasDoMes: [3] };
     expect(caiNoDia(terceiroFds, '2026-11-21')).toBe(true);
     expect(caiNoDia(terceiroFds, '2026-11-22')).toBe(true);
     expect(caiNoDia(terceiroFds, '2026-11-14')).toBe(false);
@@ -130,7 +131,13 @@ describe('caiNoDia', () => {
 
   it('conta as semanas por outros dias quando pedido (cobertura usa os do titular)', () => {
     // cobertura só do domingo de um "5º fim de semana": o domingo 01/11 é o do sábado 31/10
-    const soDomingo = { ...regra, diasSemana: [0], semanasDoMes: [5], dataInicio: '2026-10-01' };
+    const soDomingo = {
+      ...regra,
+      diasSemana: [0],
+      todasSemanas: false,
+      semanasDoMes: [5],
+      dataInicio: '2026-10-01',
+    };
     expect(caiNoDia(soDomingo, '2026-11-01')).toBe(false);
     expect(caiNoDia(soDomingo, '2026-11-01', [0, 6])).toBe(true);
   });
@@ -140,6 +147,7 @@ describe('existeDiaNoPeriodo', () => {
   it('acha um dia da regra dentro da vigência fechada', () => {
     const regra = {
       diasSemana: [1],
+      todasSemanas: true,
       semanasDoMes: [],
       dataInicio: '2026-11-02',
       dataFim: '2026-11-02',
@@ -151,6 +159,7 @@ describe('existeDiaNoPeriodo', () => {
     // 03 a 07/11/2026: terça a sábado, sem segunda
     const regra = {
       diasSemana: [1],
+      todasSemanas: true,
       semanasDoMes: [],
       dataInicio: '2026-11-03',
       dataFim: '2026-11-07',
@@ -162,6 +171,7 @@ describe('existeDiaNoPeriodo', () => {
     // 1ª segunda de novembro/2026 é 02/11; o período só pega a 2ª
     const regra = {
       diasSemana: [1],
+      todasSemanas: false,
       semanasDoMes: [1],
       dataInicio: '2026-11-08',
       dataFim: '2026-11-14',
@@ -170,7 +180,13 @@ describe('existeDiaNoPeriodo', () => {
   });
 
   it('sem fim sempre acha (a regra repete para sempre)', () => {
-    const regra = { diasSemana: [1], semanasDoMes: [5], dataInicio: '2026-11-03', dataFim: null };
+    const regra = {
+      diasSemana: [1],
+      todasSemanas: false,
+      semanasDoMes: [5],
+      dataInicio: '2026-11-03',
+      dataFim: null,
+    };
     expect(existeDiaNoPeriodo(regra)).toBe(true);
   });
 });

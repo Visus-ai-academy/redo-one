@@ -87,11 +87,12 @@ export function descreverPlantao(o: OcorrenciaDto, contexto: ContextoDescricao):
     ),
     ...(o.subespecialidadeGeral ? ['Geral'] : []),
   ];
-  if (prioridades.length === 0 && subs.length === 0) {
+  if (o.todasPrioridades && o.todosSegmentos) {
     itens.push({ rotulo: 'Recortes', valor: 'Sem restrição' });
   } else {
-    if (prioridades.length > 0) itens.push({ rotulo: 'Prioridades', valor: emLista(prioridades) });
-    if (subs.length > 0) itens.push({ rotulo: 'Segmentos', valor: emLista(subs) });
+    if (!o.todasPrioridades)
+      itens.push({ rotulo: 'Prioridades', valor: emLista(prioridades) || 'Nenhuma' });
+    if (!o.todosSegmentos) itens.push({ rotulo: 'Segmentos', valor: emLista(subs) || 'Nenhum' });
   }
 
   if (o.coberturaDe)

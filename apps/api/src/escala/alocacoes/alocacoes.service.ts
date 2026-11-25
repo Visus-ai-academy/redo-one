@@ -15,6 +15,7 @@ import {
   type Vigencia,
   validarAlocacao,
   validarCobertura,
+  validarRecortesAlocacao,
 } from '../domain';
 import {
   ESCOPO_ESCALA_REPOSITORY,
@@ -46,7 +47,8 @@ export interface EntradaAlocacao {
   /** Escala fixa (fim opcional) ou período único (fim obrigatório). */
   vigencia: Vigencia;
   diasSemana: number[];
-  /** Vazio ou ausente = toda semana. */
+  /** Toda semana do mês; sem ele, `semanasDoMes` precisa de ao menos uma. */
+  todasSemanas: boolean;
   semanasDoMes?: number[];
   /** Ausente = o do turno. */
   horarioInicio?: string | null;
@@ -56,7 +58,11 @@ export interface EntradaAlocacao {
   produtividade?: number | null;
   /** Ausente: falso ao criar; na edição, mantém o atual. */
   gratificado?: boolean;
+  /** Sem recorte de prioridade; sem ele, `prioridadeIds` precisa de ao menos uma. */
+  todasPrioridades: boolean;
   prioridadeIds?: string[];
+  /** Sem recorte de segmento; sem ele, os segmentos ou o geral. */
+  todosSegmentos: boolean;
   subespecialidadeIds?: string[];
   subespecialidadeGeral?: boolean;
   observacoes?: string | null;
@@ -209,6 +215,14 @@ export class AlocacoesService {
     const validada = validarAlocacao({ ...entrada, gratificado }, turno);
     const prioridadeIds = [...new Set(entrada.prioridadeIds ?? [])];
     const subespecialidadeIds = [...new Set(entrada.subespecialidadeIds ?? [])];
+    const subespecialidadeGeral = entrada.subespecialidadeGeral === true;
+    validarRecortesAlocacao({
+      todasPrioridades: entrada.todasPrioridades,
+      prioridadeIds,
+      todosSegmentos: entrada.todosSegmentos,
+      subespecialidadeIds,
+      subespecialidadeGeral,
+    });
     if ((await this.repo.prioridadesExistentes(prioridadeIds)).length !== prioridadeIds.length) {
       throw new EscalaInvalidaError(
         'Prioridade não encontrada. Atualize a tela e escolha de novo.',
@@ -227,7 +241,9 @@ export class AlocacoesService {
       turnoId: entrada.turnoId,
       frenteId: entrada.frenteId,
       ...validada,
-      subespecialidadeGeral: entrada.subespecialidadeGeral === true,
+      todasPrioridades: entrada.todasPrioridades,
+      todosSegmentos: entrada.todosSegmentos,
+      subespecialidadeGeral,
       prioridadeIds,
       subespecialidadeIds,
       coberturaDeId: null,
@@ -263,6 +279,9 @@ export class AlocacoesService {
       // A cobertura é sempre um período (tem fim) e não substitui a fixa de quem cobre.
       vigencia: 'periodo',
       ...validada,
+      // Os recortes são os do titular, lidos na expansão: a cobertura não recorta nada além.
+      todasPrioridades: true,
+      todosSegmentos: true,
       subespecialidadeGeral: false,
       prioridadeIds: [],
       subespecialidadeIds: [],

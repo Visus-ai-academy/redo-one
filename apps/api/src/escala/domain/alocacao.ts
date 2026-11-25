@@ -31,7 +31,8 @@ export const VIGENCIAS: readonly Vigencia[] = ['fixa', 'periodo'];
 export interface DadosAlocacao {
   vigencia: Vigencia;
   diasSemana: readonly number[];
-  /** Vazio ou ausente = toda semana. */
+  /** Toda semana do mês. Sem ele, `semanasDoMes` precisa de ao menos uma. */
+  todasSemanas: boolean;
   semanasDoMes?: readonly number[];
   /** Ausente = o do turno. */
   horarioInicio?: string | null;
@@ -46,6 +47,7 @@ export interface DadosAlocacao {
 export interface AlocacaoValidada {
   vigencia: Vigencia;
   diasSemana: number[];
+  todasSemanas: boolean;
   semanasDoMes: number[];
   horarioInicio: Horario;
   horarioFim: Horario;
@@ -68,6 +70,35 @@ export function validarProdutividade(valor: number | null | undefined): number |
     );
   }
   return valor;
+}
+
+/** Recortes de prioridade e de segmento da alocação, com o "todas" explícito. */
+export interface RecortesAlocacao {
+  todasPrioridades: boolean;
+  prioridadeIds: readonly string[];
+  todosSegmentos: boolean;
+  subespecialidadeIds: readonly string[];
+  subespecialidadeGeral: boolean;
+}
+
+/**
+ * Cada recorte é "todas" OU uma lista com ao menos um (o segmento aceita só o geral): lista vazia
+ * nunca quer dizer "sem recorte" (decisão de 25/11/2026).
+ */
+export function validarRecortesAlocacao(r: RecortesAlocacao): void {
+  if (r.todasPrioridades && r.prioridadeIds.length) {
+    throw new EscalaInvalidaError('Escolha "sem restrição" ou as prioridades, não as duas.');
+  }
+  if (!r.todasPrioridades && !r.prioridadeIds.length) {
+    throw new EscalaInvalidaError('Selecione ao menos uma prioridade (ou "sem restrição").');
+  }
+  const temSegmento = r.subespecialidadeIds.length > 0 || r.subespecialidadeGeral;
+  if (r.todosSegmentos && temSegmento) {
+    throw new EscalaInvalidaError('Escolha "sem restrição" ou os segmentos, não as duas.');
+  }
+  if (!r.todosSegmentos && !temSegmento) {
+    throw new EscalaInvalidaError('Selecione ao menos um segmento (ou "sem restrição").');
+  }
 }
 
 /** Valida o período: datas reais e fim ≥ início. */
@@ -137,16 +168,27 @@ export function validarAlocacao(dados: DadosAlocacao, turno: TurnoDaAlocacao): A
   if (vigencia === 'periodo' && dataFim === null) {
     throw new EscalaInvalidaError('Período único precisa de data de fim.');
   }
-  // Período fechado gratificado não repete por semana do mês.
+  // Período fechado gratificado não repete por semana do mês: vale toda semana.
+  const todasSemanas = gratificado || dados.todasSemanas;
   const semanasDoMes = gratificado ? [] : normalizarSemanasDoMes(dados.semanasDoMes ?? []);
+  if (todasSemanas && semanasDoMes.length) {
+    throw new EscalaInvalidaError('Escolha "toda semana" ou as semanas do mês, não as duas.');
+  }
+  if (!todasSemanas && !semanasDoMes.length) {
+    throw new EscalaInvalidaError('Selecione ao menos uma semana do mês (ou "toda semana").');
+  }
 
-  if (dataFim !== null && !existeDiaNoPeriodo({ diasSemana, semanasDoMes, dataInicio, dataFim })) {
+  if (
+    dataFim !== null &&
+    !existeDiaNoPeriodo({ diasSemana, todasSemanas, semanasDoMes, dataInicio, dataFim })
+  ) {
     throw new EscalaInvalidaError('Nenhum dia marcado cai no período.');
   }
 
   return {
     vigencia,
     diasSemana,
+    todasSemanas,
     semanasDoMes,
     ...faixa,
     dataInicio,

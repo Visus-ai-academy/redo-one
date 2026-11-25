@@ -108,6 +108,8 @@ export function paraApiCobertura(v: ValoresCobertura): CoberturaDto {
     medicoId: v.medico?.valor ?? '',
     dataInicio: v.dataInicio,
     dataFim: v.dataFim,
+    // A tela marca os dias um a um (começa com os do titular): nunca "todos" implícito.
+    todosOsDias: false,
     diasSemana: v.diasSemana.map(Number).sort((a, b) => a - b),
     horarioInicio: horario(v.horarioInicio),
     horarioFim: horario(v.horarioFim),

@@ -94,7 +94,12 @@ export type OcorrenciaDto = {
    */
   diasSemana: number[];
   /**
-   * @description Da alocação: 1–5 e -1 (última); vazio = toda semana.
+   * @description Da alocação: repete toda semana do mês.
+   * @type boolean
+   */
+  todasSemanas: boolean;
+  /**
+   * @description Da alocação: 1–5 e -1 (última), sem `todasSemanas`.
    * @type array
    */
   semanasDoMes: number[];
@@ -111,10 +116,20 @@ export type OcorrenciaDto = {
    */
   dataFim: string | null;
   /**
+   * @description Sem recorte de prioridade.
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
    * @description Prioridades da operação.
    * @type array
    */
   prioridadeIds: string[];
+  /**
+   * @description Sem recorte de segmento.
+   * @type boolean
+   */
+  todosSegmentos: boolean;
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
   /**

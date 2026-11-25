@@ -56,7 +56,7 @@ export function normalizarSemanasDoMes(semanas: readonly number[]): number[] {
 }
 
 /**
- * O dia cai numa das semanas do mês marcadas? Vazio = toda semana. A semana do dia é a ordem dele
+ * O dia cai numa das semanas do mês marcadas? `todas` = toda semana (vazio não). A semana do dia é a ordem dele
  * entre os mesmos dias da semana do mês (ceil(dia/7)); a última é o dia cuja semana seguinte já é
  * outro mês. Fim de semana não se parte: com sábado em `diasSemanaReferencia`, o domingo conta pelo
  * sábado da véspera (o 01/11/2026 fecha o fim de semana de 31/10).
@@ -64,10 +64,11 @@ export function normalizarSemanasDoMes(semanas: readonly number[]): number[] {
  */
 export function caiNasSemanas(
   data: Data,
+  todas: boolean,
   semanas: readonly number[],
   diasSemanaReferencia: readonly number[],
 ): boolean {
-  if (semanas.length === 0) return true;
+  if (todas) return true;
   const ancora =
     diaDaSemana(data) === 0 && diasSemanaReferencia.includes(6) ? adicionarDias(data, -1) : data;
   const d = new Date(paraUtc(ancora));
@@ -79,6 +80,8 @@ export function caiNasSemanas(
 /** Recorrência de uma alocação: dias da semana, semanas do mês e vigência. */
 export interface RegraRecorrencia {
   diasSemana: readonly number[];
+  /** Toda semana do mês; sem ele, só as `semanasDoMes`. */
+  todasSemanas: boolean;
   semanasDoMes: readonly number[];
   dataInicio: Data;
   /** Nulo = sem fim. */
@@ -99,7 +102,7 @@ export function caiNoDia(
   if (regra.dataFim !== null && data > regra.dataFim) return false;
   return (
     regra.diasSemana.includes(diaDaSemana(data)) &&
-    caiNasSemanas(data, regra.semanasDoMes, diasSemanaDasSemanas)
+    caiNasSemanas(data, regra.todasSemanas, regra.semanasDoMes, diasSemanaDasSemanas)
   );
 }
 
