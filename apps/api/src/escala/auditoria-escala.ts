@@ -22,7 +22,8 @@ export type EntidadeEscala = (typeof ENTIDADES_ESCALA)[number];
 /**
  * Chaves de contexto que todo evento de alocação, ajuste e ausência carrega no JSON:
  * - alocação e ajustes (produtividade e distribuição do dia): `medicoId`, `turnoId`, `frenteId`;
- * - ausência: `medicoId`, `turnoIds`, `frenteIds` (vazios = todos).
+ * - ausência: `medicoId`, `turnoIds`, `frenteIds`, `todosTurnos`, `todasFrentes` (eventos antigos,
+ *   sem o "todos" explícito: lista vazia = todos).
  * Turno, frente, tipo de ausência e escopo não têm médico: só gestor sem recorte os vê.
  */
 export interface ContextoEventoEscala {
@@ -31,4 +32,6 @@ export interface ContextoEventoEscala {
   frenteId?: string;
   turnoIds?: string[];
   frenteIds?: string[];
+  todosTurnos?: boolean;
+  todasFrentes?: boolean;
 }

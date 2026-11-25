@@ -219,7 +219,8 @@ export type AusenciaDaSemana = {
   tipo: { id: string; nome: string; cor: string | null };
   dataInicio: string;
   dataFim: string;
-  /** Vazio: todos os dias do período. */
+  /** Todos os dias do período; sem ele, só os de `diasSemana`. */
+  todosDias: boolean;
   diasSemana: number[];
 };
 
@@ -250,7 +251,7 @@ export function barrasDeAusencia(
       (dia) =>
         dia >= a.dataInicio &&
         dia <= a.dataFim &&
-        (a.diasSemana.length === 0 || a.diasSemana.includes(diaDaSemana(dia))),
+        (a.todosDias || a.diasSemana.includes(diaDaSemana(dia))),
     );
     const barras: BarraDeAusencia[] = [];
     ausenteEm.forEach((ausente, i) => {

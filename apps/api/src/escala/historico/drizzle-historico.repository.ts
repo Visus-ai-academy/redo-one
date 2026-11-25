@@ -48,16 +48,24 @@ function listaToca(campo: 'turnoIds' | 'frenteIds', ids: string[]): SQL {
   return sql`exists (select 1 from jsonb_array_elements_text(coalesce(${ctx}->${campo}, '[]'::jsonb)) as x(id) where x.id in (${lista(ids)}))`;
 }
 
-/** A lista JSON `campo` do contexto está vazia (= todos) ou contém a coluna. */
-const listaCobre = (campo: 'turnoIds' | 'frenteIds', coluna: SQL) =>
-  sql`(jsonb_array_length(coalesce(${ctx}->${campo}, '[]'::jsonb)) = 0 or ${ctx}->${campo} @> to_jsonb(${coluna}::text))`;
+/**
+ * A ausência do contexto cobre a coluna: com o "todos" explícito (`todos`), ou com a coluna na
+ * lista `campo`. Evento anterior ao "todos" explícito (25/11/2026), sem a chave `todos`: lá, lista
+ * vazia queria dizer "todos".
+ */
+const listaCobre = (
+  campo: 'turnoIds' | 'frenteIds',
+  todos: 'todosTurnos' | 'todasFrentes',
+  coluna: SQL,
+) =>
+  sql`(coalesce((${ctx}->>${todos})::boolean, jsonb_array_length(coalesce(${ctx}->${campo}, '[]'::jsonb)) = 0) or ${ctx}->${campo} @> to_jsonb(${coluna}::text))`;
 
 /**
  * Recorte da gestora sobre os eventos:
  * - alocação e ajuste: `estaNoEscopo` com `turnoId`/`frenteId` do JSON;
  * - ausência: algum dos `turnoIds`/`frenteIds` explícitos está no recorte, OU o médico tem alguma
- *   alocação (de qualquer período, existente hoje) no recorte que a ausência cobre (lista vazia =
- *   todos). Assim a ausência "todas as escalas" só aparece para a gestora de quem trabalha no
+ *   alocação (de qualquer período, existente hoje) no recorte que a ausência cobre (ver
+ *   `listaCobre`). Assim a ausência "todas as escalas" só aparece para a gestora de quem trabalha no
  *   recorte dela;
  * - turno, frente, tipo de ausência e escopo: nunca (só quem não tem recorte).
  */
@@ -86,8 +94,8 @@ function noRecorte(escopo: EscopoEscala): SQL {
         select 1 from ${alocacoes}
         where ${alocacoes.medicoId}::text = ${ctx}->>'medicoId'
           and (${alocacaoNoRecorte})
-          and ${listaCobre('turnoIds', sql`${alocacoes.turnoId}`)}
-          and ${listaCobre('frenteIds', sql`${alocacoes.frenteId}`)}
+          and ${listaCobre('turnoIds', 'todosTurnos', sql`${alocacoes.turnoId}`)}
+          and ${listaCobre('frenteIds', 'todasFrentes', sql`${alocacoes.frenteId}`)}
       )
     ))
   )`;

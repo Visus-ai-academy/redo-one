@@ -74,11 +74,19 @@ function montar() {
   return { repo, escopos, service };
 }
 
+/** "Todos" explícito onde o recorte não veio (vazio nunca é "todos"). */
+const todosOnde = (e: { frenteIds?: string[]; turnoIds?: string[]; diasSemana?: number[] }) => ({
+  todasFrentes: !e.frenteIds?.length,
+  todosTurnos: !e.turnoIds?.length,
+  todosDias: !e.diasSemana?.length,
+});
+
 const entrada = (extra: Partial<EntradaAusencias> = {}): EntradaAusencias => ({
   medicoIds: ['m-ana'],
   tipoId: 't-ferias',
   dataInicio: '2026-12-01',
   dataFim: '2026-12-10',
+  ...todosOnde(extra),
   ...extra,
 });
 
@@ -330,6 +338,9 @@ describe('AusenciasService', () => {
         tipoId: 't-dispensa',
         dataInicio: '2026-12-01',
         dataFim: '2026-12-20',
+        todasFrentes: true,
+        todosDias: true,
+        todosTurnos: false,
         turnoIds: ['tu-manha'],
       });
 
@@ -342,10 +353,17 @@ describe('AusenciasService', () => {
       });
       expect(repo.eventos.at(-1)).toMatchObject({
         acao: 'alterada',
-        antes: { tipoId: 't-ferias', dataFim: '2026-12-10', turnoIds: [], medicoId: 'm-ana' },
+        antes: {
+          tipoId: 't-ferias',
+          dataFim: '2026-12-10',
+          todosTurnos: true,
+          turnoIds: [],
+          medicoId: 'm-ana',
+        },
         depois: {
           tipoId: 't-dispensa',
           dataFim: '2026-12-20',
+          todosTurnos: false,
           turnoIds: ['tu-manha'],
           medicoId: 'm-ana',
         },
@@ -375,33 +393,15 @@ describe('AusenciasService', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('sem frentes e turnos no corpo, mantém os que a ausência já tem', async () => {
-      const { service, repo } = ctx;
-      const [id = ''] = await service.criar(
-        admin,
-        entrada({ frenteIds: ['f-neuro'], turnoIds: ['tu-manha'] }),
-      );
-
-      await service.atualizar(admin, id, {
-        tipoId: 't-ferias',
-        dataInicio: '2026-12-01',
-        dataFim: '2026-12-10',
-        observacoes: 'nova',
-      });
-
-      expect(await repo.buscar(id)).toMatchObject({
-        frentes: [{ id: 'f-neuro' }],
-        turnos: [{ id: 'tu-manha' }],
-        observacoes: 'nova',
-      });
-    });
-
     it('gestora edita a ausência inteira no recorte sem mexer nas frentes e turnos', async () => {
       const { service, escopos, repo } = ctx;
       await escopos.definir('u-gestora', { turnoIds: [], frenteIds: ['f-neuro', 'f-tc'] });
       const [id = ''] = await service.criar(admin, entrada({ frenteIds: ['f-neuro'] }));
 
-      await service.atualizar(gestora, id, { ...entrada(), observacoes: 'só a observação' });
+      await service.atualizar(gestora, id, {
+        ...entrada({ frenteIds: ['f-neuro'] }),
+        observacoes: 'só a observação',
+      });
 
       expect(await repo.buscar(id)).toMatchObject({ frentes: [{ id: 'f-neuro' }], turnos: [] });
       expect(repo.eventos.at(-1)).toMatchObject({
@@ -435,7 +435,7 @@ describe('AusenciasService', () => {
       const [id = ''] = await service.criar(gestora, entrada());
 
       await expect(
-        service.atualizar(gestora, id, { ...entrada(), turnoIds: ['tu-manha', 'tu-tarde'] }),
+        service.atualizar(gestora, id, entrada({ turnoIds: ['tu-manha', 'tu-tarde'] })),
       ).rejects.toThrow(/recorte/);
     });
 
@@ -537,8 +537,11 @@ describe('AusenciasService', () => {
         tipoId: 't-ferias',
         dataInicio: '2026-12-01',
         dataFim: '2026-12-05',
+        todosDias: true,
         diasSemana: [],
+        todasFrentes: true,
         frenteIds: [],
+        todosTurnos: true,
         turnoIds: [],
         observacoes: 'consulta',
         situacao: 'pendente',
@@ -597,7 +600,7 @@ describe('AusenciasService', () => {
       await expect(service.recusar(gestora, 'p-1', 'não')).rejects.toThrow(/não encontrada/);
       await escopos.definir('u-gestora', { turnoIds: ['tu-manha'], frenteIds: [] });
       const p1 = ctx.repo.ausencias.get('p-1');
-      if (p1) p1.turnoIds = ['tu-manha'];
+      if (p1) Object.assign(p1, { todosTurnos: false, turnoIds: ['tu-manha'] });
       await expect(service.aprovar(gestora, 'p-1')).resolves.toBeUndefined();
     });
   });

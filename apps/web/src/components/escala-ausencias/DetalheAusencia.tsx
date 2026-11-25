@@ -103,13 +103,25 @@ export function DetalheAusencia({
         </Campo>
         <Campo rotulo="Período">{periodo}</Campo>
         <Campo rotulo="Dias da semana">
-          {dias.length > 0 ? diasDaSemana(dias) : 'Todos os dias do período'}
+          {ausencia.todosDias || (ausencia.diasSemana.length > 0 && dias.length === 0)
+            ? 'Todos os dias do período'
+            : dias.length > 0
+              ? diasDaSemana(dias)
+              : 'Nenhum dia'}
         </Campo>
         <Campo rotulo="Turnos">
-          {ausencia.turnos.length > 0 ? nomes(ausencia.turnos) : 'Dia inteiro'}
+          {ausencia.todosTurnos
+            ? 'Dia inteiro'
+            : ausencia.turnos.length > 0
+              ? nomes(ausencia.turnos)
+              : 'Nenhum turno'}
         </Campo>
         <Campo rotulo="Escalas">
-          {ausencia.frentes.length > 0 ? nomes(ausencia.frentes) : 'Todas as escalas do médico'}
+          {ausencia.todasFrentes
+            ? 'Todas as escalas do médico'
+            : ausencia.frentes.length > 0
+              ? nomes(ausencia.frentes)
+              : 'Nenhuma escala'}
         </Campo>
         {ausencia.solicitadaPor && (
           <Campo rotulo={ausencia.origem === 'medico' ? 'Pedida por' : 'Lançada por'}>

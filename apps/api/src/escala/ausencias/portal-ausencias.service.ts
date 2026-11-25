@@ -23,12 +23,19 @@ import {
 import { fotoDe } from './ausencias.service';
 import { camposDeCriacao, camposDoEvento, eventoAusencia } from './evento-ausencia';
 
-/** Pedido do médico: sem recorte de frente (vale para todas); turno e dias da semana, sim. */
+/**
+ * Pedido do médico: sem recorte de frente (vale para todas, explícito); turno e dias da semana,
+ * sim, com o "todos" explícito.
+ */
 export interface PedidoAusencia {
   tipoId: string;
   dataInicio: string;
   dataFim: string;
+  /** O dia inteiro; sem ele, `turnoIds` precisa de ao menos um. */
+  todosTurnos: boolean;
   turnoIds?: string[];
+  /** Todos os dias do período; sem ele, `diasSemana` precisa de ao menos um. */
+  todosDias: boolean;
   diasSemana?: number[];
   /** O motivo, obrigatório (mínimo de 3 caracteres). */
   observacoes: string;
@@ -55,7 +62,13 @@ export class PortalAusenciasService {
     const tipo = await this.repo.tipo(pedido.tipoId);
     if (!tipo) throw new CadastroInexistenteError('tipo');
     if (!tipo.ativo) throw new TipoAusenciaInativoError();
-    const validada = validarAusencia({ ...pedido, frenteIds: [], origem: 'medico', tipo });
+    const validada = validarAusencia({
+      ...pedido,
+      todasFrentes: true,
+      frenteIds: [],
+      origem: 'medico',
+      tipo,
+    });
     if ((await this.repo.turnosExistentes(validada.turnoIds)).length !== validada.turnoIds.length) {
       throw new CadastroInexistenteError('turno');
     }
@@ -66,8 +79,11 @@ export class PortalAusenciasService {
       tipoId: tipo.id,
       dataInicio: validada.dataInicio,
       dataFim: validada.dataFim,
+      todosDias: validada.todosDias,
       diasSemana: validada.diasSemana,
+      todasFrentes: true,
       frenteIds: [],
+      todosTurnos: validada.todosTurnos,
       turnoIds: [...validada.turnoIds].sort(),
       observacoes: pedido.observacoes.trim(),
       situacao: validada.situacao,

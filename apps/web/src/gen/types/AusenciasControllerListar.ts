@@ -28,7 +28,7 @@ export type AusenciasControllerListarQuery = {
    */
   tipoId?: string;
   /**
-   * @description Ausências dessa frente, incluindo as que valem para todas as frentes.
+   * @description Ausências dessa frente, incluindo as de "todas as frentes".
    *
    * Format: `uuid`
    * @type string | undefined

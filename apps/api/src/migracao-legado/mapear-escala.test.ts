@@ -503,6 +503,9 @@ describe('mapearEscala: ausências e escopo', () => {
         observacoes: 'cirurgia',
         solicitadaPorId: 'aaaaaaaa-0000-4000-8000-000000000001',
         revisadaPorId: null,
+        todasFrentes: false,
+        todosTurnos: false,
+        todosDias: true,
       }),
     ]);
     expect(tabelas.ausenciasFrentes).toEqual([
@@ -515,6 +518,18 @@ describe('mapearEscala: ausências e escopo', () => {
       },
     ]);
     expect(resumo).toMatchObject({ ausenciasFrentesOrfas: 1, ausenciasTurnosOrfaos: 1 });
+  });
+
+  it('recorte vazio do dashboards-one vira o "todos" explícito', () => {
+    const { tabelas } = mapearEscala(
+      escala({ ausencias: [ausencia('au1'), ausencia('au2', { diasSemana: [1, 3] })] }),
+      contexto,
+    );
+
+    expect(tabelas.ausencias).toEqual([
+      expect.objectContaining({ todosDias: true, todasFrentes: true, todosTurnos: true }),
+      expect.objectContaining({ todosDias: false, diasSemana: [1, 3] }),
+    ]);
   });
 
   it('escopo só da usuária que existe no redo-one; a que não existe é contada pelo nome', () => {

@@ -494,7 +494,7 @@ function Conteudo({
                 a.tipo.id === o.tipoAusenciaId &&
                 a.dataInicio <= o.data &&
                 o.data <= a.dataFim &&
-                (a.diasSemana.length === 0 || a.diasSemana.includes(o.diaSemana)),
+                (a.todosDias || a.diasSemana.includes(o.diaSemana)),
             )
           : undefined,
       }),

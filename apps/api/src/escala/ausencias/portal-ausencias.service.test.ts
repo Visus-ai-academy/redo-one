@@ -44,6 +44,8 @@ const pedido = (extra: Partial<PedidoAusencia> = {}): PedidoAusencia => ({
   dataInicio: '2026-12-01',
   dataFim: '2026-12-05',
   observacoes: 'Congresso',
+  todosTurnos: !extra.turnoIds?.length,
+  todosDias: !extra.diasSemana?.length,
   ...extra,
 });
 
@@ -71,8 +73,11 @@ describe('PortalAusenciasService', () => {
       medico: { id: 'm-ana' },
       situacao: 'pendente',
       origem: 'medico',
+      todasFrentes: true,
       frentes: [],
+      todosTurnos: false,
       turnos: [{ id: 'tu-manha' }],
+      todosDias: false,
       diasSemana: [1, 2],
       observacoes: 'Congresso',
       solicitadaPor: { id: 'u-ana' },

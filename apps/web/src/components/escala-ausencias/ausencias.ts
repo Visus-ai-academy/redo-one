@@ -72,16 +72,27 @@ export function diasRecortados(dias: readonly number[]): readonly number[] {
   return new Set(dias).size >= DIAS_DA_SEMANA.length ? [] : dias;
 }
 
-/** Onde a ausência vale além do período: "só seg, qua", "só Tarde", "só NEURO". */
+/**
+ * Onde a ausência vale além do período: "só seg, qua", "só Tarde", "só NEURO". Com o "todos"
+ * explícito, nada; recorte vazio sem "todos" (não vale em nada) aparece como "nenhum".
+ */
 export function recorteDaAusencia(
-  a: Pick<AusenciaItemDto, 'diasSemana' | 'turnos' | 'frentes'>,
+  a: Pick<
+    AusenciaItemDto,
+    'todosDias' | 'diasSemana' | 'todosTurnos' | 'turnos' | 'todasFrentes' | 'frentes'
+  >,
 ): string[] {
   const nomes = (lista: { nome: string }[]) => lista.map((item) => item.nome).join(', ');
-  const dias = diasRecortados(a.diasSemana);
+  const so = (todos: boolean, texto: string, vazio: string) =>
+    todos ? '' : texto ? `só ${texto}` : vazio;
+  const dias =
+    a.todosDias || a.diasSemana.length === 0 ? '' : diasDaSemana(diasRecortados(a.diasSemana));
+  // Os 7 dias marcados valem como todos.
+  const todosOsDias = a.todosDias || (a.diasSemana.length > 0 && !dias);
   return [
-    dias.length > 0 && `só ${diasDaSemana(dias)}`,
-    a.turnos.length > 0 && `só ${nomes(a.turnos)}`,
-    a.frentes.length > 0 && `só ${nomes(a.frentes)}`,
+    so(todosOsDias, dias, 'nenhum dia'),
+    so(a.todosTurnos, nomes(a.turnos), 'nenhum turno'),
+    so(a.todasFrentes, nomes(a.frentes), 'nenhuma escala'),
   ].filter((texto): texto is string => Boolean(texto));
 }
 

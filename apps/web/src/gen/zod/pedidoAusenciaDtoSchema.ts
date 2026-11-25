@@ -9,8 +9,10 @@ export const pedidoAusenciaDtoSchema = z.object({
   tipoId: z.uuid(),
   dataInicio: z.iso.date().meta({ examples: ['2026-12-01'] }),
   dataFim: z.iso.date().meta({ examples: ['2026-12-10'] }),
-  turnoIds: z.array(z.uuid()).optional().describe('Turnos em que vale. Vazio = o dia inteiro.'),
-  diasSemana: z.array(z.number()).optional().describe('Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.'),
+  todosTurnos: z.boolean().describe('Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um.'),
+  turnoIds: z.array(z.uuid()).optional().describe('Sem `todosTurnos`: turnos em que vale.'),
+  todosDias: z.boolean().describe('Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um.'),
+  diasSemana: z.array(z.number()).optional().describe('Sem `todosDias`: dias da semana em que vale (0 = domingo … 6 = sábado).'),
   observacoes: z.string().min(3).max(2000).describe('Motivo do pedido. Dado de saúde (LGPD).'),
 })
 

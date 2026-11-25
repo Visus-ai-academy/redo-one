@@ -569,8 +569,11 @@ describe('expandirOcorrencias', () => {
       tipoId: 'ferias',
       dataInicio: '2026-11-04',
       dataFim: '2026-11-04',
+      todosDias: true,
       diasSemana: [],
+      todasFrentes: true,
       frenteIds: [],
+      todosTurnos: true,
       turnoIds: [],
       situacao: 'aprovada',
     };
@@ -621,7 +624,7 @@ describe('expandirOcorrencias', () => {
         horarioFim: '19:00',
         diasSemana: [3],
       });
-      const soManha = { ...ferias, turnoIds: ['manha'] };
+      const soManha = { ...ferias, todosTurnos: false, turnoIds: ['manha'] };
       const ocorrencias = expandirOcorrencias(
         entrada({ alocacoes: [a, tarde], ausencias: [soManha], tiposAusencia }),
       );

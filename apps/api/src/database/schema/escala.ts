@@ -259,8 +259,8 @@ export const situacaoAusencia = pgEnum('situacao_ausencia', ['pendente', 'aprova
 export const origemAusencia = pgEnum('origem_ausencia', ['gestor', 'medico']);
 
 /**
- * Ausência do médico. Só a aprovada tira o médico da escala. Recortes (frentes, turnos, dias
- * da semana) vazios = todos; sem turno = dia inteiro.
+ * Ausência do médico. Só a aprovada tira o médico da escala. Cada recorte (frentes, turnos, dias
+ * da semana) tem o "todos" explícito; recorte vazio nunca é "todos" (25/11/2026).
  */
 export const ausencias = pgTable(
   'ausencias',
@@ -274,8 +274,14 @@ export const ausencias = pgTable(
       .references(() => tiposAusencia.id),
     dataInicio: date('data_inicio').notNull(),
     dataFim: date('data_fim').notNull(),
-    /** 0 = domingo … 6 = sábado. Vazio = todos os dias do período. */
+    /** Vale todos os dias do período (com `dias_semana` vazio). */
+    todosDias: boolean('todos_dias').notNull().default(false),
+    /** 0 = domingo … 6 = sábado, sem `todos_dias`. */
     diasSemana: integer('dias_semana').array().notNull().default(sql`'{}'::integer[]`),
+    /** Vale todas as frentes (sem linhas em `ausencias_frentes`). */
+    todasFrentes: boolean('todas_frentes').notNull().default(false),
+    /** Vale o dia inteiro, todos os turnos (sem linhas em `ausencias_turnos`). */
+    todosTurnos: boolean('todos_turnos').notNull().default(false),
     situacao: situacaoAusencia('situacao').notNull().default('aprovada'),
     origem: origemAusencia('origem').notNull().default('gestor'),
     observacoes: text('observacoes'), // LGPD: saúde

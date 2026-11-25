@@ -687,7 +687,7 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
     const id = idDoLegado('ausencias_medico', a.id);
 
     // Recortes sem FK no dashboards-one: id que não casa sai do recorte, a ausência fica. Se
-    // nenhum casa, a ausência sai: recorte vazio quer dizer "todos", e ampliá-la seria errado.
+    // nenhum casa, a ausência sai: lá, recorte vazio queria dizer "todos", e ampliá-la seria errado.
     const recorte = (
       ids: string[],
       mapa: Map<string, string>,
@@ -742,7 +742,11 @@ export function mapearEscala(legado: LegadoEscala, ctx: ContextoEscala): EscalaM
       tipoId,
       dataInicio: a.dataInicio,
       dataFim: a.dataFim,
+      // Vazio no dashboards-one = todos: no redo-one, o "todos" explícito.
+      todosDias: diasValidos(a.diasSemana).length === 0,
       diasSemana: diasValidos(a.diasSemana),
+      todasFrentes: frentesDaAusencia.length === 0,
+      todosTurnos: turnosDaAusencia.length === 0,
       situacao: situacao as 'pendente' | 'aprovada' | 'recusada',
       origem: origem === 'medico' ? 'medico' : 'gestor',
       observacoes: texto(a.observacoes),

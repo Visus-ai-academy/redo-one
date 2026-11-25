@@ -30,17 +30,32 @@ export type AusenciaItemDto = {
    */
   dataFim: string;
   /**
-   * @description Vazio = todos os dias.
+   * @description Todos os dias do período (com `diasSemana` vazio).
+   * @type boolean
+   */
+  todosDias: boolean;
+  /**
+   * @description Sem `todosDias`: os dias da semana.
    * @type array
    */
   diasSemana: number[];
   /**
-   * @description Vazio = todas. `nome` é o rótulo.
+   * @description Todas as frentes (com `frentes` vazio).
+   * @type boolean
+   */
+  todasFrentes: boolean;
+  /**
+   * @description Sem `todasFrentes`: as frentes. `nome` é o rótulo.
    * @type array
    */
   frentes: ReferenciaAusenciaDto[];
   /**
-   * @description Vazio = o dia inteiro.
+   * @description O dia inteiro (com `turnos` vazio).
+   * @type boolean
+   */
+  todosTurnos: boolean;
+  /**
+   * @description Sem `todosTurnos`: os turnos.
    * @type array
    */
   turnos: ReferenciaAusenciaDto[];

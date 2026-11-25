@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsISO8601,
@@ -38,7 +39,7 @@ export class ListarAusenciasDto extends PaginacaoDto {
 
   @ApiPropertyOptional({
     format: 'uuid',
-    description: 'Ausências dessa frente, incluindo as que valem para todas as frentes.',
+    description: 'Ausências dessa frente, incluindo as de "todas as frentes".',
   })
   @IsOptional()
   @IsUUID()
@@ -88,10 +89,17 @@ class PeriodoAusenciaDto {
   @Matches(DIA, { message: 'Data no formato AAAA-MM-DD.' })
   dataFim!: string;
 
+  @ApiProperty({
+    description:
+      'Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um.',
+  })
+  @IsBoolean()
+  todosTurnos!: boolean;
+
   @ApiPropertyOptional({
     type: [String],
     format: 'uuid',
-    description: 'Turnos em que vale. Vazio = o dia inteiro.',
+    description: 'Sem `todosTurnos`: turnos em que vale.',
   })
   @IsOptional()
   @IsArray()
@@ -99,9 +107,15 @@ class PeriodoAusenciaDto {
   @IsUUID('all', { each: true })
   turnoIds?: string[];
 
+  @ApiProperty({
+    description: 'Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um.',
+  })
+  @IsBoolean()
+  todosDias!: boolean;
+
   @ApiPropertyOptional({
     type: [Number],
-    description: 'Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.',
+    description: 'Sem `todosDias`: dias da semana em que vale (0 = domingo … 6 = sábado).',
   })
   @IsOptional()
   @IsArray()
@@ -114,13 +128,18 @@ class PeriodoAusenciaDto {
 
 /** Corpo de editar uma ausência (o médico não muda). */
 export class AusenciaDto extends PeriodoAusenciaDto {
+  @ApiProperty({
+    description:
+      'Vale todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma. Para a gestora com recorte, a ausência ' +
+      'fica inteira no recorte: "todas" ou "o dia inteiro" podem virar as frentes ou os turnos do recorte.',
+  })
+  @IsBoolean()
+  todasFrentes!: boolean;
+
   @ApiPropertyOptional({
     type: [String],
     format: 'uuid',
-    description:
-      'Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) ' +
-      'mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: "todas" ou "o dia inteiro" ' +
-      'podem virar as frentes ou os turnos do recorte.',
+    description: 'Sem `todasFrentes`: frentes em que vale.',
   })
   @IsOptional()
   @IsArray()
@@ -189,13 +208,20 @@ export class AusenciaPortalDto {
   @ApiProperty({ type: TipoDaAusenciaDto }) tipo!: TipoDaAusenciaDto;
   @ApiProperty({ format: 'date' }) dataInicio!: string;
   @ApiProperty({ format: 'date' }) dataFim!: string;
-  @ApiProperty({ type: [Number], description: 'Vazio = todos os dias.' }) diasSemana!: number[];
+  @ApiProperty({ description: 'Todos os dias do período (com `diasSemana` vazio).' })
+  todosDias!: boolean;
+  @ApiProperty({ type: [Number], description: 'Sem `todosDias`: os dias da semana.' })
+  diasSemana!: number[];
+  @ApiProperty({ description: 'Todas as frentes (com `frentes` vazio).' })
+  todasFrentes!: boolean;
   @ApiProperty({
     type: [ReferenciaAusenciaDto],
-    description: 'Vazio = todas. `nome` é o rótulo.',
+    description: 'Sem `todasFrentes`: as frentes. `nome` é o rótulo.',
   })
   frentes!: ReferenciaAusenciaDto[];
-  @ApiProperty({ type: [ReferenciaAusenciaDto], description: 'Vazio = o dia inteiro.' })
+  @ApiProperty({ description: 'O dia inteiro (com `turnos` vazio).' })
+  todosTurnos!: boolean;
+  @ApiProperty({ type: [ReferenciaAusenciaDto], description: 'Sem `todosTurnos`: os turnos.' })
   turnos!: ReferenciaAusenciaDto[];
   @ApiProperty({ enum: SITUACOES, enumName: 'SituacaoAusencia' }) situacao!: SituacaoAusencia;
   @ApiProperty({ enum: ORIGENS, enumName: 'OrigemAusencia' }) origem!: OrigemAusencia;

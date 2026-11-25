@@ -18,11 +18,15 @@ export interface TipoAusencia {
 export interface DadosAusencia {
   dataInicio: string;
   dataFim: string;
-  /** 0 = domingo … 6 = sábado. Vazio ou ausente = todos os dias do período. */
+  /** Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um. */
+  todosDias: boolean;
+  /** 0 = domingo … 6 = sábado, sem `todosDias`. */
   diasSemana?: readonly number[];
-  /** Vazio ou ausente = todas as frentes. */
+  /** Vale todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma. */
+  todasFrentes: boolean;
   frenteIds?: readonly string[];
-  /** Vazio ou ausente = o dia inteiro. */
+  /** Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um. */
+  todosTurnos: boolean;
   turnoIds?: readonly string[];
   origem: OrigemAusencia;
   tipo: { soGestor: boolean };
@@ -32,10 +36,32 @@ export interface DadosAusencia {
 export interface AusenciaValidada {
   dataInicio: Data;
   dataFim: Data;
+  todosDias: boolean;
+  todasFrentes: boolean;
+  todosTurnos: boolean;
   diasSemana: number[];
   frenteIds: string[];
   turnoIds: string[];
   situacao: SituacaoAusencia;
+}
+
+/**
+ * Vazio nunca é "todos" (25/11/2026): ou "todos", ou ao menos um item; as duas coisas, erro.
+ */
+function exigirRecorte(
+  todos: boolean,
+  itens: readonly unknown[],
+  oQue: string,
+  todosRotulo: string,
+) {
+  if (todos && itens.length) {
+    throw new EscalaInvalidaError(
+      `Ausência: escolha "${todosRotulo}" ou marque os itens, não as duas coisas.`,
+    );
+  }
+  if (!todos && !itens.length) {
+    throw new EscalaInvalidaError(`Ausência: marque ${oQue} (ou "${todosRotulo}").`);
+  }
 }
 
 /** Tamanho mínimo do motivo que o médico escreve no pedido (dashboards-one `solicitarAusencia`). */
@@ -57,9 +83,14 @@ export function validarAusencia(dados: DadosAusencia): AusenciaValidada {
     throw new EscalaInvalidaError('Descreva o motivo da ausência.');
   }
   const diasSemana = normalizarDiasSemana(dados.diasSemana ?? []);
+  const frenteIds = [...new Set(dados.frenteIds ?? [])];
+  const turnoIds = [...new Set(dados.turnoIds ?? [])];
+  exigirRecorte(dados.todosDias, diasSemana, 'ao menos um dia', 'todos os dias');
+  exigirRecorte(dados.todasFrentes, frenteIds, 'ao menos uma escala', 'todas');
+  exigirRecorte(dados.todosTurnos, turnoIds, 'ao menos um turno', 'o dia inteiro');
   // Ausência em dias que não existem no período ficaria registrada sem tirar o médico de nada.
   if (
-    diasSemana.length > 0 &&
+    !dados.todosDias &&
     !existeDiaNoPeriodo({
       diasSemana,
       todasSemanas: true,
@@ -73,9 +104,12 @@ export function validarAusencia(dados: DadosAusencia): AusenciaValidada {
   return {
     dataInicio,
     dataFim: dataFim as Data,
+    todosDias: dados.todosDias,
+    todasFrentes: dados.todasFrentes,
+    todosTurnos: dados.todosTurnos,
     diasSemana,
-    frenteIds: [...new Set(dados.frenteIds ?? [])],
-    turnoIds: [...new Set(dados.turnoIds ?? [])],
+    frenteIds,
+    turnoIds,
     situacao: doMedico ? 'pendente' : 'aprovada',
   };
 }
@@ -87,6 +121,10 @@ export interface AusenciaEscala {
   tipoId: string;
   dataInicio: Data;
   dataFim: Data;
+  todosDias: boolean;
+  todasFrentes: boolean;
+  /** O dia inteiro. */
+  todosTurnos: boolean;
   diasSemana: readonly number[];
   frenteIds: readonly string[];
   turnoIds: readonly string[];
@@ -94,22 +132,23 @@ export interface AusenciaEscala {
 }
 
 /**
- * A ausência tira o médico desta ocorrência? Só a aprovada; recortes vazios = todos; sem turno =
- * o dia inteiro. Fonte: dashboards-one `escala-hierarquica.ts` `ausenciaNoDia` (:1468-1484).
+ * A ausência tira o médico desta ocorrência? Só a aprovada; cada recorte vale com o "todos"
+ * explícito ou com o item na lista (lista vazia sem "todos" não casa nada). Fonte: dashboards-one `escala-hierarquica.ts` `ausenciaNoDia` (:1468-1484).
  */
 export function aplicaNaOcorrencia(
   ausencia: AusenciaEscala,
   ocorrencia: { medicoId: string; data: Data; frenteId: string; turnoId: string },
 ): boolean {
-  const recorte = <T>(lista: readonly T[], valor: T) => lista.length === 0 || lista.includes(valor);
+  const recorte = <T>(todos: boolean, lista: readonly T[], valor: T) =>
+    todos || lista.includes(valor);
   return (
     ausencia.situacao === 'aprovada' &&
     ausencia.medicoId === ocorrencia.medicoId &&
     ocorrencia.data >= ausencia.dataInicio &&
     ocorrencia.data <= ausencia.dataFim &&
-    recorte(ausencia.diasSemana, diaDaSemana(ocorrencia.data)) &&
-    recorte(ausencia.frenteIds, ocorrencia.frenteId) &&
-    recorte(ausencia.turnoIds, ocorrencia.turnoId)
+    recorte(ausencia.todosDias, ausencia.diasSemana, diaDaSemana(ocorrencia.data)) &&
+    recorte(ausencia.todasFrentes, ausencia.frenteIds, ocorrencia.frenteId) &&
+    recorte(ausencia.todosTurnos, ausencia.turnoIds, ocorrencia.turnoId)
   );
 }
 

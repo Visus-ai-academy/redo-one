@@ -638,6 +638,20 @@
       "when": 1795634268698,
       "tag": "0090_avisos_tipo_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1795638118070,
+      "tag": "0091_ausencias_todas_explicito",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1795638118592,
+      "tag": "0092_ausencias_todas_dados",
+      "breakpoints": true
     }
   ]
 }

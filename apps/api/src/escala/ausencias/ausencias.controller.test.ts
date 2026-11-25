@@ -19,15 +19,25 @@ const gestora = {
   permissoes: new Set(['ausencias.ver']) as ReadonlySet<string>,
 } as PrincipalUsuario;
 const quem = { usuarioId: 'u-g', acessoTotal: false, veObservacoes: false };
-const corpo = { tipoId: 't-1', dataInicio: '2026-12-01', dataFim: '2026-12-02' };
+const corpo = {
+  tipoId: 't-1',
+  dataInicio: '2026-12-01',
+  dataFim: '2026-12-02',
+  todasFrentes: true,
+  todosTurnos: true,
+  todosDias: true,
+};
 const item = {
   id: 'a-1',
   medico: { id: 'm-1', nome: 'Ana' },
   tipo: { id: 't-1', nome: 'Férias', cor: null },
   dataInicio: '2026-12-01',
   dataFim: '2026-12-02',
+  todosDias: true,
   diasSemana: [],
+  todasFrentes: true,
   frentes: [],
+  todosTurnos: true,
   turnos: [],
   situacao: 'pendente' as const,
   origem: 'medico' as const,

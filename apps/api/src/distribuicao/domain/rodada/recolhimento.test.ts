@@ -94,7 +94,10 @@ describe('recolhimento: exame entregue pelo robô, não aberto, com o turno ence
 
   it('desligado (carência nula): nada é recolhido, nem por ausência', () => {
     const r = recolher(
-      entrada({ parametros: null, ausencias: [{ medicoId: 'ana', frentes: [] }] }),
+      entrada({
+        parametros: null,
+        ausencias: [{ medicoId: 'ana', todasFrentes: true, frentes: [] }],
+      }),
     );
     expect(r.recolhidos).toEqual([]);
   });
@@ -259,7 +262,7 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
       entrada({
         agora: h('10:00'),
         exames: [exame('e1'), exame('e2'), exame('e3', { status: 'LAUDANDO' })],
-        ausencias: [{ medicoId: 'ana', frentes: [] }],
+        ausencias: [{ medicoId: 'ana', todasFrentes: true, frentes: [] }],
       }),
     );
     expect(r.recolhidos).toEqual([
@@ -277,10 +280,21 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
           exame('e2', { especialidadeId: 'abdome', modalidadeId: 'rx' }),
           exame('e3', { especialidadeId: 'abdome', modalidadeId: 'tc' }),
         ],
-        ausencias: [{ medicoId: 'ana', frentes: [NEURO, RX] }],
+        ausencias: [{ medicoId: 'ana', todasFrentes: false, frentes: [NEURO, RX] }],
       }),
     );
     expect(ids(r)).toEqual(['e1', 'e2']);
+  });
+
+  it('ausência sem "todas" e sem frente não recolhe nada (vazio nunca é "todas")', () => {
+    const r = recolher(
+      entrada({
+        entregas: new Map(),
+        exames: [exame('e1')],
+        ausencias: [{ medicoId: 'ana', todasFrentes: false, frentes: [] }],
+      }),
+    );
+    expect(ids(r)).toEqual([]);
   });
 
   it('pacote laudando e frente que não recolhe seguem as regras de sempre', () => {
@@ -292,7 +306,7 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
           exame('e2', { pacienteChave: 'p', status: 'LAUDANDO' }),
           exame('e3', { especialidadeId: 'cardio' }),
         ],
-        ausencias: [{ medicoId: 'ana', frentes: [] }],
+        ausencias: [{ medicoId: 'ana', todasFrentes: true, frentes: [] }],
         recolhe: (e) => e.especialidadeId !== 'cardio',
       }),
     );
@@ -303,7 +317,10 @@ describe('recolhimento: médico com ausência aprovada que cobre hoje', () => {
 
   it('a ausência de outro médico não mexe nos exames deste', () => {
     const r = recolher(
-      entrada({ agora: h('10:00'), ausencias: [{ medicoId: 'bia', frentes: [] }] }),
+      entrada({
+        agora: h('10:00'),
+        ausencias: [{ medicoId: 'bia', todasFrentes: true, frentes: [] }],
+      }),
     );
     expect(r.recolhidos).toEqual([]);
   });
@@ -336,7 +353,7 @@ describe('recolhimento: médico com outras contas na MobileMed', () => {
       entrada({
         exames: [exame('e1', { medicoIdMobilemed: 11 })],
         entregas: new Map(),
-        ausencias: [{ medicoId: 'ana', frentes: [] }],
+        ausencias: [{ medicoId: 'ana', todasFrentes: true, frentes: [] }],
       }),
     );
     expect(r.recolhidos).toEqual([

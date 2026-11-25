@@ -77,8 +77,11 @@ const selecao = {
   tipoCor: tiposAusencia.cor,
   dataInicio: ausencias.dataInicio,
   dataFim: ausencias.dataFim,
+  todosDias: ausencias.todosDias,
   diasSemana: ausencias.diasSemana,
+  todasFrentes: ausencias.todasFrentes,
   frentes: frentesDaAusencia,
+  todosTurnos: ausencias.todosTurnos,
   turnos: turnosDaAusencia,
   situacao: ausencias.situacao,
   origem: ausencias.origem,
@@ -115,8 +118,11 @@ function detalhar(l: Linha): AusenciaDetalhada {
     tipo: { id: l.tipoId, nome: l.tipoNome, cor: l.tipoCor },
     dataInicio: l.dataInicio,
     dataFim: l.dataFim,
+    todosDias: l.todosDias,
     diasSemana: l.diasSemana,
+    todasFrentes: l.todasFrentes,
     frentes: l.frentes,
+    todosTurnos: l.todosTurnos,
     turnos: l.turnos,
     situacao: l.situacao,
     origem: l.origem,
@@ -173,7 +179,7 @@ export class DrizzleAusenciasRepository implements AusenciasRepository {
       filtro.medicoId ? eq(ausencias.medicoId, filtro.medicoId) : undefined,
       filtro.busca ? ilike(medicos.nome, contem(filtro.busca)) : undefined,
       filtro.frenteId
-        ? sql`(not exists (select 1 from ${ausenciasFrentes} where ${eq(ausenciasFrentes.ausenciaId, ausencias.id)})
+        ? sql`(${ausencias.todasFrentes}
             or exists (select 1 from ${ausenciasFrentes} where ${and(
               eq(ausenciasFrentes.ausenciaId, ausencias.id),
               eq(ausenciasFrentes.frenteId, filtro.frenteId),
@@ -299,7 +305,10 @@ export class DrizzleAusenciasRepository implements AusenciasRepository {
           tipoId: n.tipoId,
           dataInicio: n.dataInicio,
           dataFim: n.dataFim,
+          todosDias: n.todosDias,
           diasSemana: n.diasSemana,
+          todasFrentes: n.todasFrentes,
+          todosTurnos: n.todosTurnos,
           situacao: n.situacao,
           origem: n.origem,
           observacoes: n.observacoes,
@@ -319,7 +328,10 @@ export class DrizzleAusenciasRepository implements AusenciasRepository {
           tipoId: dados.tipoId,
           dataInicio: dados.dataInicio,
           dataFim: dados.dataFim,
+          todosDias: dados.todosDias,
           diasSemana: dados.diasSemana,
+          todasFrentes: dados.todasFrentes,
+          todosTurnos: dados.todosTurnos,
           observacoes: dados.observacoes,
         })
         .where(eq(ausencias.id, id));

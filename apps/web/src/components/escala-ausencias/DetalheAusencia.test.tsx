@@ -11,8 +11,11 @@ const PEDIDO: AusenciaItemDto = {
   tipo: { id: 't-1', nome: 'Congresso', cor: '#1F7A4D' },
   dataInicio: '2026-12-01',
   dataFim: '2026-12-03',
+  todosDias: false,
   diasSemana: [1, 3],
+  todasFrentes: false,
   frentes: [{ id: 'f-1', nome: 'NEURO' }],
+  todosTurnos: false,
   turnos: [{ id: 'tu-1', nome: 'Tarde' }],
   situacao: 'pendente',
   origem: 'medico',
@@ -52,7 +55,17 @@ describe('DetalheAusencia', () => {
   });
 
   it('sem recorte, diz que vale em tudo', () => {
-    montar({ ausencia: { ...PEDIDO, diasSemana: [], frentes: [], turnos: [] } });
+    montar({
+      ausencia: {
+        ...PEDIDO,
+        todosDias: true,
+        diasSemana: [],
+        todasFrentes: true,
+        frentes: [],
+        todosTurnos: true,
+        turnos: [],
+      },
+    });
 
     expect(screen.getByText('Todos os dias do período')).toBeInTheDocument();
     expect(screen.getByText('Dia inteiro')).toBeInTheDocument();

@@ -116,16 +116,19 @@ describe.skipIf(!url)('DrizzleEscalaRecolhimento', () => {
       dataInicio: '2026-11-16',
       dataFim: '2026-11-20',
       situacao: 'aprovada' as const,
+      todosDias: true,
+      todasFrentes: true,
+      todosTurnos: true,
     };
     const criadas = await db
       .insert(schema.ausencias)
       .values([
         { ...base, medicoId: id('toda') },
-        { ...base, medicoId: id('frente') },
+        { ...base, medicoId: id('frente'), todasFrentes: false },
         { ...base, medicoId: id('pendente'), situacao: 'pendente' },
-        { ...base, medicoId: id('turno') },
-        { ...base, medicoId: id('outro-dia'), diasSemana: [1, 2] },
-        { ...base, medicoId: id('quarta'), diasSemana: [3] },
+        { ...base, medicoId: id('turno'), todosTurnos: false },
+        { ...base, medicoId: id('outro-dia'), todosDias: false, diasSemana: [1, 2] },
+        { ...base, medicoId: id('quarta'), todosDias: false, diasSemana: [3] },
         { ...base, medicoId: id('passada'), dataFim: '2026-11-17' },
       ])
       .returning();
@@ -142,12 +145,13 @@ describe.skipIf(!url)('DrizzleEscalaRecolhimento', () => {
     expect(minhas).toHaveLength(3);
     expect(minhas).toEqual(
       expect.arrayContaining([
-        { medicoId: id('toda'), frentes: [] },
+        { medicoId: id('toda'), todasFrentes: true, frentes: [] },
         {
           medicoId: id('frente'),
+          todasFrentes: false,
           frentes: [{ tipo: 'especialidade', especialidadeId: esp?.id, modalidadeId: null }],
         },
-        { medicoId: id('quarta'), frentes: [] },
+        { medicoId: id('quarta'), todasFrentes: true, frentes: [] },
       ]),
     );
   });

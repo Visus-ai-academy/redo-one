@@ -25,17 +25,32 @@ export type CriarAusenciasDto = {
    */
   dataFim: string;
   /**
-   * @description Turnos em que vale. Vazio = o dia inteiro.
+   * @description Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um.
+   * @type boolean
+   */
+  todosTurnos: boolean;
+  /**
+   * @description Sem `todosTurnos`: turnos em que vale.
    * @type array | undefined
    */
   turnoIds?: string[];
   /**
-   * @description Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.
+   * @description Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um.
+   * @type boolean
+   */
+  todosDias: boolean;
+  /**
+   * @description Sem `todosDias`: dias da semana em que vale (0 = domingo … 6 = sábado).
    * @type array | undefined
    */
   diasSemana?: number[];
   /**
-   * @description Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: "todas" ou "o dia inteiro" podem virar as frentes ou os turnos do recorte.
+   * @description Vale todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma. Para a gestora com recorte, a ausência fica inteira no recorte: "todas" ou "o dia inteiro" podem virar as frentes ou os turnos do recorte.
+   * @type boolean
+   */
+  todasFrentes: boolean;
+  /**
+   * @description Sem `todasFrentes`: frentes em que vale.
    * @type array | undefined
    */
   frenteIds?: string[];

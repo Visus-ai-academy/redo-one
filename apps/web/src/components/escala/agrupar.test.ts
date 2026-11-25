@@ -326,6 +326,7 @@ describe('barrasDeAusencia', () => {
     tipo: { id: 'tp', nome: 'Férias', cor: '#2F6FB2' },
     dataInicio: '2026-11-10',
     dataFim: '2026-11-18',
+    todosDias: !dados.diasSemana?.length,
     diasSemana: [],
     ...dados,
   });

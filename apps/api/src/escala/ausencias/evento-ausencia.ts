@@ -19,8 +19,8 @@ export interface FotoAusencia extends DadosAusenciaGravada {
 
 /**
  * Campos do evento. LGPD: `observacoes` (saúde) e o motivo da recusa nunca vão para o histórico,
- * que quem tem `escala.historico.ver` lê; só a marca de que mudaram. `medicoId`, `frenteIds` e
- * `turnoIds` vão sempre (o histórico filtra e recorta por eles; ver `auditoria-escala.ts`).
+ * que quem tem `escala.historico.ver` lê; só a marca de que mudaram. `medicoId`, `frenteIds`,
+ * `turnoIds`, `todasFrentes` e `todosTurnos` vão sempre (o histórico filtra e recorta por eles; ver `auditoria-escala.ts`).
  */
 export function camposDoEvento({ observacoes: _, ...foto }: FotoAusencia): Record<string, unknown> {
   return { ...foto };
@@ -28,7 +28,9 @@ export function camposDoEvento({ observacoes: _, ...foto }: FotoAusencia): Recor
 
 const contexto = (foto: FotoAusencia) => ({
   medicoId: foto.medicoId,
+  todasFrentes: foto.todasFrentes,
   frenteIds: foto.frenteIds,
+  todosTurnos: foto.todosTurnos,
   turnoIds: foto.turnoIds,
 });
 

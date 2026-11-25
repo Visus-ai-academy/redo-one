@@ -21,8 +21,11 @@ const base: AusenciaItemDto = {
   tipo: { id: 't-1', nome: 'Férias', cor: '#1F7A4D' },
   dataInicio: '2026-12-01',
   dataFim: '2026-12-10',
+  todosDias: true,
   diasSemana: [],
+  todasFrentes: true,
   frentes: [],
+  todosTurnos: true,
   turnos: [],
   situacao: 'aprovada',
   origem: 'gestor',
@@ -82,6 +85,9 @@ describe('recorteDaAusencia', () => {
     expect(
       recorteDaAusencia({
         ...base,
+        todosDias: false,
+        todosTurnos: false,
+        todasFrentes: false,
         diasSemana: [3, 1],
         turnos: [{ id: 'tu-1', nome: 'Tarde' }],
         frentes: [
@@ -90,6 +96,11 @@ describe('recorteDaAusencia', () => {
         ],
       }),
     ).toEqual(['só seg, qua', 'só Tarde', 'só NEURO, TC']);
+  });
+  it('sem "todos" e com o recorte vazio, diz que não vale em nada', () => {
+    expect(
+      recorteDaAusencia({ ...base, todosDias: false, todosTurnos: false, todasFrentes: false }),
+    ).toEqual(['nenhum dia', 'nenhum turno', 'nenhuma escala']);
   });
   it('os 7 dias marcados valem todos os dias: sem recorte de dia', () => {
     expect(recorteDaAusencia({ ...base, diasSemana: [0, 1, 2, 3, 4, 5, 6] })).toEqual([]);

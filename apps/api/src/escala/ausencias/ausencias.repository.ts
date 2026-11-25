@@ -17,11 +17,15 @@ export interface AusenciaDetalhada {
   tipo: Referencia & { cor: string | null };
   dataInicio: string;
   dataFim: string;
-  /** Vazio = todos os dias do período. */
+  /** Todos os dias do período (com `diasSemana` vazio). */
+  todosDias: boolean;
   diasSemana: number[];
-  /** Vazio = todas as frentes. `nome` é o rótulo da frente. */
+  /** Todas as frentes (com `frentes` vazio). */
+  todasFrentes: boolean;
+  /** `nome` é o rótulo da frente. */
   frentes: Referencia[];
-  /** Vazio = o dia inteiro. */
+  /** O dia inteiro (com `turnos` vazio). */
+  todosTurnos: boolean;
   turnos: Referencia[];
   situacao: SituacaoAusencia;
   origem: OrigemAusencia;
@@ -39,8 +43,11 @@ export interface DadosAusenciaGravada {
   tipoId: string;
   dataInicio: string;
   dataFim: string;
+  todosDias: boolean;
   diasSemana: number[];
+  todasFrentes: boolean;
   frenteIds: string[];
+  todosTurnos: boolean;
   turnoIds: string[];
   observacoes: string | null;
 }
@@ -62,7 +69,7 @@ export interface RevisaoGravada {
 export interface FiltroAusencias extends Paginacao {
   situacao?: SituacaoAusencia;
   tipoId?: string;
-  /** Ausências dessa frente, incluindo as de todas as frentes. */
+  /** Ausências dessa frente, incluindo as de "todas as frentes". */
   frenteId?: string;
   medicoId?: string;
   /** Parte do nome do médico. */

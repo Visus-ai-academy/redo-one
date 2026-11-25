@@ -11,8 +11,11 @@ const AUSENCIA: AusenciaItemDto = {
   tipo: { id: 't-1', nome: 'Licença', cor: '#7C3AED' },
   dataInicio: '2026-12-01',
   dataFim: '2026-12-03',
+  todosDias: false,
   diasSemana: [1, 3],
+  todasFrentes: false,
   frentes: [{ id: 'f-1', nome: 'NEURO' }],
+  todosTurnos: false,
   turnos: [{ id: 'tu-1', nome: 'Tarde' }],
   situacao: 'aprovada',
   origem: 'gestor',
@@ -60,7 +63,15 @@ describe('CelulaPeriodo', () => {
   it('sem recorte, só o período', () => {
     render(
       <CelulaPeriodo
-        ausencia={{ ...AUSENCIA, diasSemana: [], frentes: [], turnos: [] }}
+        ausencia={{
+          ...AUSENCIA,
+          todosDias: true,
+          diasSemana: [],
+          todasFrentes: true,
+          frentes: [],
+          todosTurnos: true,
+          turnos: [],
+        }}
         hoje="2026-11-16"
       />,
     );

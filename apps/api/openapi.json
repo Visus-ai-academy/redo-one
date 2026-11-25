@@ -5629,7 +5629,7 @@
             "name": "frenteId",
             "required": false,
             "in": "query",
-            "description": "Ausências dessa frente, incluindo as que valem para todas as frentes.",
+            "description": "Ausências dessa frente, incluindo as de \"todas as frentes\".",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -15392,22 +15392,34 @@
             "type": "string",
             "format": "date"
           },
+          "todosDias": {
+            "type": "boolean",
+            "description": "Todos os dias do período (com `diasSemana` vazio)."
+          },
           "diasSemana": {
-            "description": "Vazio = todos os dias.",
+            "description": "Sem `todosDias`: os dias da semana.",
             "type": "array",
             "items": {
               "type": "number"
             }
           },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Todas as frentes (com `frentes` vazio)."
+          },
           "frentes": {
-            "description": "Vazio = todas. `nome` é o rótulo.",
+            "description": "Sem `todasFrentes`: as frentes. `nome` é o rótulo.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReferenciaAusenciaDto"
             }
           },
+          "todosTurnos": {
+            "type": "boolean",
+            "description": "O dia inteiro (com `turnos` vazio)."
+          },
           "turnos": {
-            "description": "Vazio = o dia inteiro.",
+            "description": "Sem `todosTurnos`: os turnos.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReferenciaAusenciaDto"
@@ -15473,8 +15485,11 @@
           "tipo",
           "dataInicio",
           "dataFim",
+          "todosDias",
           "diasSemana",
+          "todasFrentes",
           "frentes",
+          "todosTurnos",
           "turnos",
           "situacao",
           "origem",
@@ -15541,23 +15556,35 @@
             "format": "date",
             "example": "2026-12-10"
           },
+          "todosTurnos": {
+            "type": "boolean",
+            "description": "Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um."
+          },
           "turnoIds": {
-            "description": "Turnos em que vale. Vazio = o dia inteiro.",
+            "description": "Sem `todosTurnos`: turnos em que vale.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
+          "todosDias": {
+            "type": "boolean",
+            "description": "Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um."
+          },
           "diasSemana": {
-            "description": "Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.",
+            "description": "Sem `todosDias`: dias da semana em que vale (0 = domingo … 6 = sábado).",
             "type": "array",
             "items": {
               "type": "number"
             }
           },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Vale todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma. Para a gestora com recorte, a ausência fica inteira no recorte: \"todas\" ou \"o dia inteiro\" podem virar as frentes ou os turnos do recorte."
+          },
           "frenteIds": {
-            "description": "Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: \"todas\" ou \"o dia inteiro\" podem virar as frentes ou os turnos do recorte.",
+            "description": "Sem `todasFrentes`: frentes em que vale.",
             "type": "array",
             "items": {
               "type": "string",
@@ -15584,6 +15611,9 @@
           "tipoId",
           "dataInicio",
           "dataFim",
+          "todosTurnos",
+          "todosDias",
+          "todasFrentes",
           "medicoIds"
         ]
       },
@@ -15620,23 +15650,35 @@
             "format": "date",
             "example": "2026-12-10"
           },
+          "todosTurnos": {
+            "type": "boolean",
+            "description": "Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um."
+          },
           "turnoIds": {
-            "description": "Turnos em que vale. Vazio = o dia inteiro.",
+            "description": "Sem `todosTurnos`: turnos em que vale.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
+          "todosDias": {
+            "type": "boolean",
+            "description": "Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um."
+          },
           "diasSemana": {
-            "description": "Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.",
+            "description": "Sem `todosDias`: dias da semana em que vale (0 = domingo … 6 = sábado).",
             "type": "array",
             "items": {
               "type": "number"
             }
           },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Vale todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma. Para a gestora com recorte, a ausência fica inteira no recorte: \"todas\" ou \"o dia inteiro\" podem virar as frentes ou os turnos do recorte."
+          },
           "frenteIds": {
-            "description": "Frentes em que vale. Vazio = todas. Na edição, `frenteIds` ou `turnoIds` sem o campo (ou igual ao gravado) mantém o gravado. Para a gestora com recorte, a ausência fica inteira no recorte: \"todas\" ou \"o dia inteiro\" podem virar as frentes ou os turnos do recorte.",
+            "description": "Sem `todasFrentes`: frentes em que vale.",
             "type": "array",
             "items": {
               "type": "string",
@@ -15653,7 +15695,10 @@
         "required": [
           "tipoId",
           "dataInicio",
-          "dataFim"
+          "dataFim",
+          "todosTurnos",
+          "todosDias",
+          "todasFrentes"
         ]
       },
       "RecusarAusenciaDto": {
@@ -15690,22 +15735,34 @@
             "type": "string",
             "format": "date"
           },
+          "todosDias": {
+            "type": "boolean",
+            "description": "Todos os dias do período (com `diasSemana` vazio)."
+          },
           "diasSemana": {
-            "description": "Vazio = todos os dias.",
+            "description": "Sem `todosDias`: os dias da semana.",
             "type": "array",
             "items": {
               "type": "number"
             }
           },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Todas as frentes (com `frentes` vazio)."
+          },
           "frentes": {
-            "description": "Vazio = todas. `nome` é o rótulo.",
+            "description": "Sem `todasFrentes`: as frentes. `nome` é o rótulo.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReferenciaAusenciaDto"
             }
           },
+          "todosTurnos": {
+            "type": "boolean",
+            "description": "O dia inteiro (com `turnos` vazio)."
+          },
           "turnos": {
-            "description": "Vazio = o dia inteiro.",
+            "description": "Sem `todosTurnos`: os turnos.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReferenciaAusenciaDto"
@@ -15749,8 +15806,11 @@
           "tipo",
           "dataInicio",
           "dataFim",
+          "todosDias",
           "diasSemana",
+          "todasFrentes",
           "frentes",
+          "todosTurnos",
           "turnos",
           "situacao",
           "origem",
@@ -15803,16 +15863,24 @@
             "format": "date",
             "example": "2026-12-10"
           },
+          "todosTurnos": {
+            "type": "boolean",
+            "description": "Vale o dia inteiro (todos os turnos). Sem ele, `turnoIds` precisa de ao menos um."
+          },
           "turnoIds": {
-            "description": "Turnos em que vale. Vazio = o dia inteiro.",
+            "description": "Sem `todosTurnos`: turnos em que vale.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
+          "todosDias": {
+            "type": "boolean",
+            "description": "Vale todos os dias do período. Sem ele, `diasSemana` precisa de ao menos um."
+          },
           "diasSemana": {
-            "description": "Dias da semana em que vale (0 = domingo … 6 = sábado). Vazio = todos.",
+            "description": "Sem `todosDias`: dias da semana em que vale (0 = domingo … 6 = sábado).",
             "type": "array",
             "items": {
               "type": "number"
@@ -15829,6 +15897,8 @@
           "tipoId",
           "dataInicio",
           "dataFim",
+          "todosTurnos",
+          "todosDias",
           "observacoes"
         ]
       },

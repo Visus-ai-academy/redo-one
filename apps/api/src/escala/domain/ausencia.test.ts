@@ -21,15 +21,21 @@ const dispensado = { soGestor: true };
 const pelaGestao: DadosAusencia = {
   dataInicio: '2026-11-09',
   dataFim: '2026-11-13',
+  todosDias: true,
+  todasFrentes: true,
+  todosTurnos: true,
   origem: 'gestor',
   tipo: ferias,
 };
 
 describe('validarAusencia', () => {
-  it('lançada pelo gestor já nasce aprovada; recortes vazios = todos', () => {
+  it('lançada pelo gestor já nasce aprovada; "todos" explícito nos recortes', () => {
     expect(validarAusencia(pelaGestao)).toEqual({
       dataInicio: '2026-11-09',
       dataFim: '2026-11-13',
+      todosDias: true,
+      todasFrentes: true,
+      todosTurnos: true,
       diasSemana: [],
       frenteIds: [],
       turnoIds: [],
@@ -61,6 +67,9 @@ describe('validarAusencia', () => {
   it('normaliza os recortes', () => {
     const v = validarAusencia({
       ...pelaGestao,
+      todosDias: false,
+      todasFrentes: false,
+      todosTurnos: false,
       diasSemana: [3, 1, 3],
       frenteIds: ['f1', 'f1'],
       turnoIds: ['t2', 't1'],
@@ -70,9 +79,25 @@ describe('validarAusencia', () => {
 
   it('pelo menos um dia da semana marcado cai no período', () => {
     // 09 a 13/11/2026 é segunda a sexta
-    expect(() => validarAusencia({ ...pelaGestao, diasSemana: [0, 6] })).toThrow(
+    expect(() => validarAusencia({ ...pelaGestao, todosDias: false, diasSemana: [0, 6] })).toThrow(
       'Nenhum dos dias da semana escolhidos cai no período.',
     );
+  });
+
+  it('vazio nunca é "todos": sem "todos" o recorte pede ao menos um item', () => {
+    expect(() => validarAusencia({ ...pelaGestao, todosDias: false })).toThrow(/ao menos um dia/);
+    expect(() => validarAusencia({ ...pelaGestao, todasFrentes: false })).toThrow(
+      /ao menos uma escala/,
+    );
+    expect(() => validarAusencia({ ...pelaGestao, todosTurnos: false })).toThrow(
+      /ao menos um turno/,
+    );
+  });
+
+  it('"todos" e a lista juntos é erro', () => {
+    expect(() => validarAusencia({ ...pelaGestao, diasSemana: [1] })).toThrow(/não as duas/);
+    expect(() => validarAusencia({ ...pelaGestao, frenteIds: ['f1'] })).toThrow(/não as duas/);
+    expect(() => validarAusencia({ ...pelaGestao, turnoIds: ['t1'] })).toThrow(/não as duas/);
   });
 });
 
@@ -83,6 +108,9 @@ describe('aplicaNaOcorrencia', () => {
     tipoId: 'ferias',
     dataInicio: '2026-11-09',
     dataFim: '2026-11-13',
+    todosDias: true,
+    todasFrentes: true,
+    todosTurnos: true,
     diasSemana: [],
     frenteIds: [],
     turnoIds: [],
@@ -106,12 +134,21 @@ describe('aplicaNaOcorrencia', () => {
   });
 
   it('respeita os recortes de dias da semana, frentes e turnos', () => {
-    expect(aplicaNaOcorrencia({ ...ausencia, diasSemana: [3] }, ocorrencia)).toBe(false);
-    expect(aplicaNaOcorrencia({ ...ausencia, diasSemana: [2] }, ocorrencia)).toBe(true);
-    expect(aplicaNaOcorrencia({ ...ausencia, frenteIds: ['f2'] }, ocorrencia)).toBe(false);
-    expect(aplicaNaOcorrencia({ ...ausencia, frenteIds: ['f1'] }, ocorrencia)).toBe(true);
-    expect(aplicaNaOcorrencia({ ...ausencia, turnoIds: ['t2'] }, ocorrencia)).toBe(false);
-    expect(aplicaNaOcorrencia({ ...ausencia, turnoIds: ['t1'] }, ocorrencia)).toBe(true);
+    const dias = (diasSemana: number[]) => ({ ...ausencia, todosDias: false, diasSemana });
+    const frentes = (frenteIds: string[]) => ({ ...ausencia, todasFrentes: false, frenteIds });
+    const turnos = (turnoIds: string[]) => ({ ...ausencia, todosTurnos: false, turnoIds });
+    expect(aplicaNaOcorrencia(dias([3]), ocorrencia)).toBe(false);
+    expect(aplicaNaOcorrencia(dias([2]), ocorrencia)).toBe(true);
+    expect(aplicaNaOcorrencia(frentes(['f2']), ocorrencia)).toBe(false);
+    expect(aplicaNaOcorrencia(frentes(['f1']), ocorrencia)).toBe(true);
+    expect(aplicaNaOcorrencia(turnos(['t2']), ocorrencia)).toBe(false);
+    expect(aplicaNaOcorrencia(turnos(['t1']), ocorrencia)).toBe(true);
+  });
+
+  it('sem "todos" e com o recorte vazio, não aplica em nada (vazio nunca é "todos")', () => {
+    expect(aplicaNaOcorrencia({ ...ausencia, todosDias: false }, ocorrencia)).toBe(false);
+    expect(aplicaNaOcorrencia({ ...ausencia, todasFrentes: false }, ocorrencia)).toBe(false);
+    expect(aplicaNaOcorrencia({ ...ausencia, todosTurnos: false }, ocorrencia)).toBe(false);
   });
 });
 

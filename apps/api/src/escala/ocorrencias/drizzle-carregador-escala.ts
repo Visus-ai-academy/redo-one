@@ -43,6 +43,7 @@ export class DrizzleCarregadorEscala implements CarregadorEscala {
     const ausencia = sql`json_build_object(
       'id', au.id, 'medicoId', au.medico_id, 'tipoId', au.tipo_id,
       'dataInicio', au.data_inicio, 'dataFim', au.data_fim, 'diasSemana', au.dias_semana,
+      'todosDias', au.todos_dias, 'todasFrentes', au.todas_frentes, 'todosTurnos', au.todos_turnos,
       'situacao', au.situacao,
       'frenteIds', ${idsDoRecorte('ausencias_frentes', 'frente_id', 'ausencia_id', 'au')},
       'turnoIds', ${idsDoRecorte('ausencias_turnos', 'turno_id', 'ausencia_id', 'au')}

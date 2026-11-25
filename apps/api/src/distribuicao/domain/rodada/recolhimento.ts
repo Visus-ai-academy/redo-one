@@ -55,9 +55,11 @@ export interface PeriodoDoMedico {
   subespecialidadeGeral: boolean;
 }
 
-/** Ausência aprovada que cobre hoje (o dia inteiro). `frentes` vazio = todas. */
+/** Ausência aprovada que cobre hoje (o dia inteiro). */
 export interface AusenciaDoDia {
   medicoId: string;
+  /** Vale todas as frentes. Sem ele, só as de `frentes` (vazio nunca é "todas"). */
+  todasFrentes: boolean;
   frentes: readonly FrenteEscala[];
 }
 
@@ -187,7 +189,8 @@ export function recolher(entrada: EntradaRecolhimento): Recolhimento {
   const ausenteEm = new Map<string, FrenteEscala[] | null>();
   for (const a of entrada.ausencias) {
     if (ausenteEm.get(a.medicoId) === null) continue;
-    if (!a.frentes.length) ausenteEm.set(a.medicoId, null);
+    if (a.todasFrentes) ausenteEm.set(a.medicoId, null);
+    else if (!a.frentes.length) continue;
     else ausenteEm.set(a.medicoId, [...(ausenteEm.get(a.medicoId) ?? []), ...a.frentes]);
   }
   const ausenteNoExame = (medicoId: string, e: ExameComMedico) => {

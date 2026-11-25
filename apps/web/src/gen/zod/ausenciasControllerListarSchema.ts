@@ -23,7 +23,7 @@ export const ausenciasControllerListarQueryTipoIdSchema = z.uuid().optional()
 
 export type AusenciasControllerListarQueryTipoIdSchemaType = z.infer<typeof ausenciasControllerListarQueryTipoIdSchema>
 
-export const ausenciasControllerListarQueryFrenteIdSchema = z.uuid().optional().describe('Ausências dessa frente, incluindo as que valem para todas as frentes.')
+export const ausenciasControllerListarQueryFrenteIdSchema = z.uuid().optional().describe('Ausências dessa frente, incluindo as de "todas as frentes".')
 
 export type AusenciasControllerListarQueryFrenteIdSchemaType = z.infer<typeof ausenciasControllerListarQueryFrenteIdSchema>
 
@@ -64,7 +64,7 @@ export const ausenciasControllerListarQuerySchema = z.object({
   porPagina: z.int().min(1).max(100).optional().default(25),
   situacao: situacaoAusenciaSchema.optional(),
   tipoId: z.uuid().optional(),
-  frenteId: z.uuid().optional().describe('Ausências dessa frente, incluindo as que valem para todas as frentes.'),
+  frenteId: z.uuid().optional().describe('Ausências dessa frente, incluindo as de "todas as frentes".'),
   medicoId: z.uuid().optional(),
   busca: z.string().optional().describe('Parte do nome do médico.'),
   de: z.iso.date().optional().describe('Ausências que terminam neste dia ou depois. Padrão: hoje − 30 dias.'),

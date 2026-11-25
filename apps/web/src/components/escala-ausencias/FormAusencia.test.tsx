@@ -30,8 +30,11 @@ const EXISTENTE: AusenciaItemDto = {
   tipo: { id: 't-antigo', nome: 'Licença antiga', cor: null },
   dataInicio: '2026-12-01',
   dataFim: '2026-12-10',
+  todosDias: false,
   diasSemana: [1],
+  todasFrentes: false,
   frentes: [{ id: 'f-tc', nome: 'TC' }],
+  todosTurnos: true,
   turnos: [],
   situacao: 'aprovada',
   origem: 'gestor',
@@ -92,14 +95,17 @@ describe('FormAusencia', () => {
       tipoId: 't-congresso',
       dataInicio: '2026-12-01',
       dataFim: '2026-12-03',
+      todasFrentes: false,
       frenteIds: ['f-neuro'],
+      todosTurnos: false,
       turnoIds: ['tu-tarde'],
+      todosDias: false,
       diasSemana: [1, 3],
       observacoes: 'Viagem',
     });
   });
 
-  it('começa em todas as escalas, o dia inteiro e todos os dias (enviados vazios)', async () => {
+  it('começa em todas as escalas, o dia inteiro e todos os dias ("todos" explícito)', async () => {
     const { onSalvar } = montar({ inicial: { medico: ana, de: '2026-12-05' } });
 
     expect(screen.getByRole('checkbox', { name: 'Todas' })).toBeChecked();
@@ -122,8 +128,11 @@ describe('FormAusencia', () => {
       tipoId: 't-ferias',
       dataInicio: '2026-12-05',
       dataFim: '2026-12-05',
+      todasFrentes: true,
       frenteIds: [],
+      todosTurnos: true,
       turnoIds: [],
+      todosDias: true,
       diasSemana: [],
       observacoes: null,
     });
@@ -195,8 +204,11 @@ describe('FormAusencia', () => {
       tipoId: 't-antigo',
       dataInicio: '2026-12-01',
       dataFim: '2026-12-10',
+      todasFrentes: false,
       frenteIds: ['f-tc'],
+      todosTurnos: true,
       turnoIds: [],
+      todosDias: false,
       diasSemana: [1],
       observacoes: 'Combinado com a coordenação',
     });

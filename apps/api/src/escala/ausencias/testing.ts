@@ -43,10 +43,7 @@ export class FakeAusenciasRepository implements AusenciasRepository {
       .filter((a) => !filtro.situacao || a.situacao === filtro.situacao)
       .filter((a) => !filtro.tipoId || a.tipoId === filtro.tipoId)
       .filter((a) => !filtro.medicoId || a.medicoId === filtro.medicoId)
-      .filter(
-        (a) =>
-          !filtro.frenteId || a.frenteIds.length === 0 || a.frenteIds.includes(filtro.frenteId),
-      )
+      .filter((a) => !filtro.frenteId || a.todasFrentes || a.frenteIds.includes(filtro.frenteId))
       .filter((a) => !termo || (this.medicos.get(a.medicoId) ?? '').toLowerCase().includes(termo))
       .filter((a) => a.dataFim >= filtro.de && (!filtro.ate || a.dataInicio <= filtro.ate))
       .sort(
@@ -174,8 +171,11 @@ export class FakeAusenciasRepository implements AusenciasRepository {
       tipo: { id: a.tipoId, nome: tipo?.nome ?? '', cor: tipo?.cor ?? null },
       dataInicio: a.dataInicio,
       dataFim: a.dataFim,
+      todosDias: a.todosDias,
       diasSemana: a.diasSemana,
+      todasFrentes: a.todasFrentes,
       frentes: a.frenteIds.map((id) => ({ id, nome: this.frentes.get(id) ?? '' })),
+      todosTurnos: a.todosTurnos,
       turnos: a.turnoIds.map((id) => ({ id, nome: this.turnos.get(id) ?? '' })),
       situacao: a.situacao,
       origem: a.origem,

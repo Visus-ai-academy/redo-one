@@ -71,14 +71,14 @@ export interface EntradaAusencia {
   tipoId: string;
   dataInicio: string;
   dataFim: string;
-  /**
-   * Vazio = todas as frentes. Na edição, ausente (ou igual ao gravado) mantém o que está gravado.
-   * Para a gestora com recorte, ver `recortar`.
-   */
+  /** Todas as frentes; sem ele, `frenteIds` precisa de ao menos uma. Com recorte, `recortar`. */
+  todasFrentes: boolean;
   frenteIds?: string[];
-  /** Vazio = o dia inteiro. Na edição, ausente (ou igual ao gravado) mantém o que está gravado. */
+  /** O dia inteiro; sem ele, `turnoIds` precisa de ao menos um. */
+  todosTurnos: boolean;
   turnoIds?: string[];
-  /** 0 = domingo … 6 = sábado. Vazio = todos. */
+  /** Todos os dias do período; sem ele, `diasSemana` (0 = domingo … 6 = sábado). */
+  todosDias: boolean;
   diasSemana?: number[];
   observacoes?: string | null;
 }
@@ -108,31 +108,34 @@ const hojeEmBrasilia = (agora: Date) =>
 
 const texto = (valor: string | null | undefined) => valor?.trim() || null;
 const ordenados = (ids: readonly string[]) => [...ids].sort();
-const mesmos = (a: readonly string[], b: readonly string[]) =>
-  new Set(a).size === new Set(b).size && a.every((id) => b.includes(id));
 
-/** Turnos e frentes de uma ausência. Lista vazia = todos / todas. */
+/** Turnos e frentes de uma ausência, com o "todos" / "todas" explícito. */
 interface Alcance {
+  todosTurnos: boolean;
   turnoIds: string[];
+  todasFrentes: boolean;
   frenteIds: string[];
 }
 
 /**
- * A ausência cobre os pares turno × frente das duas listas (vazia = todos), e o par está no
- * recorte se o turno OU a frente estiver (`estaNoEscopo`). Todos os pares estão no recorte se, e só
- * se, todos os turnos estão no recorte ou todas as frentes estão. "Todos" / "todas" nunca está
- * contido num recorte (vale também para turno ou frente que a gestora não coordena).
+ * A ausência cobre os pares turno × frente das duas listas, e o par está no recorte se o turno OU
+ * a frente estiver (`estaNoEscopo`). Todos os pares estão no recorte se, e só se, todos os turnos
+ * estão no recorte ou todas as frentes estão. "Todos" / "todas" nunca está contido num recorte
+ * (vale também para turno ou frente que a gestora não coordena).
  */
 export function inteiraNoRecorte(escopo: EscopoEscala, alcance: Alcance): boolean {
-  const contida = (ids: string[], recorte: ReadonlySet<string>) =>
-    ids.length > 0 && ids.every((id) => recorte.has(id));
-  return contida(alcance.turnoIds, escopo.turnoIds) || contida(alcance.frenteIds, escopo.frenteIds);
+  const contida = (todos: boolean, ids: string[], recorte: ReadonlySet<string>) =>
+    !todos && ids.length > 0 && ids.every((id) => recorte.has(id));
+  return (
+    contida(alcance.todosTurnos, alcance.turnoIds, escopo.turnoIds) ||
+    contida(alcance.todasFrentes, alcance.frenteIds, escopo.frenteIds)
+  );
 }
 
 /**
  * Ajusta o pedido da gestora com recorte para a ausência ficar inteira no recorte, sem nunca
- * ampliar o pedido: só uma lista vazia ("todos" / "todas") é estreitada, e o que foi escolhido à
- * mão nunca muda (se não couber, recusa).
+ * ampliar o pedido: só o "todos" / "todas" é estreitado, e o que foi escolhido à mão nunca muda
+ * (se não couber, recusa).
  *
  * - Já inteira no recorte: fica como pedida.
  * - Turnos vazios e o recorte tem turnos: os turnos viram todos os turnos do recorte (sem cruzar
@@ -149,13 +152,13 @@ export function recortar(
   alocacoesNoRecorte: readonly AlocacaoDoMedico[],
 ): Alcance {
   if (inteiraNoRecorte(escopo, pedido)) return pedido;
-  const pelosTurnos =
-    !pedido.turnoIds.length && escopo.turnoIds.size
-      ? { turnoIds: ordenados([...escopo.turnoIds]), frenteIds: pedido.frenteIds }
+  const pelosTurnos: Alcance | null =
+    pedido.todosTurnos && escopo.turnoIds.size
+      ? { ...pedido, todosTurnos: false, turnoIds: ordenados([...escopo.turnoIds]) }
       : null;
-  const pelasFrentes =
-    !pedido.frenteIds.length && escopo.frenteIds.size
-      ? { turnoIds: pedido.turnoIds, frenteIds: ordenados([...escopo.frenteIds]) }
+  const pelasFrentes: Alcance | null =
+    pedido.todasFrentes && escopo.frenteIds.size
+      ? { ...pedido, todasFrentes: false, frenteIds: ordenados([...escopo.frenteIds]) }
       : null;
   const nosTurnos = alocacoesNoRecorte.some((a) => escopo.turnoIds.has(a.turnoId));
   const ajustado = nosTurnos ? (pelosTurnos ?? pelasFrentes) : (pelasFrentes ?? pelosTurnos);
@@ -163,8 +166,10 @@ export function recortar(
   return ajustado;
 }
 
-const ordenado = ({ turnoIds, frenteIds }: Alcance): Alcance => ({
+const ordenado = ({ todosTurnos, turnoIds, todasFrentes, frenteIds }: Alcance): Alcance => ({
+  todosTurnos,
   turnoIds: ordenados(turnoIds),
+  todasFrentes,
   frenteIds: ordenados(frenteIds),
 });
 
@@ -175,8 +180,11 @@ export function fotoDe(a: AusenciaDetalhada): FotoAusencia {
     tipoId: a.tipo.id,
     dataInicio: a.dataInicio,
     dataFim: a.dataFim,
+    todosDias: a.todosDias,
     diasSemana: [...a.diasSemana],
+    todasFrentes: a.todasFrentes,
     frenteIds: ordenados(a.frentes.map((f) => f.id)),
+    todosTurnos: a.todosTurnos,
     turnoIds: ordenados(a.turnos.map((t) => t.id)),
     observacoes: a.observacoes,
     situacao: a.situacao,
@@ -248,6 +256,7 @@ export class AusenciasService {
       tipoId: tipo.id,
       dataInicio: validada.dataInicio,
       dataFim: validada.dataFim,
+      todosDias: validada.todosDias,
       diasSemana: validada.diasSemana,
       ...ordenado(alcances.get(medicoId) ?? validada),
       observacoes: texto(entrada.observacoes),
@@ -267,20 +276,15 @@ export class AusenciasService {
   }
 
   /**
-   * Edita uma ausência; o médico, a situação e a origem não mudam. Frentes e turnos que não vieram
-   * (ou vieram iguais) ficam como estão. A gestora com recorte só edita a ausência inteira no
+   * Edita uma ausência; o médico, a situação e a origem não mudam. A gestora com recorte só edita a ausência inteira no
    * recorte, e o resultado também tem de ficar inteiro nele.
    */
   async atualizar(gestor: Gestor, id: string, entrada: EntradaAusencia): Promise<void> {
     const { ausencia: atual, escopo } = await this.inteiraVisivel(gestor, id);
     const antes = fotoDe(atual);
     const tipo = await this.tipoParaEdicao(entrada.tipoId, atual.tipo.id);
-    const manter = (pedido: string[] | undefined, gravado: string[]) =>
-      pedido === undefined || mesmos(pedido, gravado) ? gravado : pedido;
     const validada = validarAusencia({
       ...entrada,
-      frenteIds: manter(entrada.frenteIds, antes.frenteIds),
-      turnoIds: manter(entrada.turnoIds, antes.turnoIds),
       origem: 'gestor',
       tipo,
     });
@@ -292,6 +296,7 @@ export class AusenciasService {
       tipoId: tipo.id,
       dataInicio: validada.dataInicio,
       dataFim: validada.dataFim,
+      todosDias: validada.todosDias,
       diasSemana: validada.diasSemana,
       ...ordenado(alcances.get(atual.medico.id) ?? validada),
       // Quem não vê as observações recebeu `null` na tela: mantém a gravada.
@@ -366,7 +371,9 @@ export class AusenciasService {
     if (
       escopo &&
       !inteiraNoRecorte(escopo, {
+        todosTurnos: ausencia.todosTurnos,
         turnoIds: ausencia.turnos.map((t) => t.id),
+        todasFrentes: ausencia.todasFrentes,
         frenteIds: ausencia.frentes.map((f) => f.id),
       })
     ) {

@@ -10,7 +10,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { CaixasField } from '../escala/campos';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import type { OpcaoMarcar } from '../form/CheckboxListField';
-import { caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
+import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
@@ -26,7 +26,7 @@ const OPCOES_DIAS = DIAS_DA_SEMANA.map((d) => ({ valor: String(d.valor), rotulo:
 
 const FALHA_AO_SALVAR = 'Não foi possível salvar agora. Confira sua conexão e tente de novo.';
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
-/** Da API (vazio = todas) para o formulário. */
+/** O pré-preenchimento da Escala: sem recorte pedido, começa em "Todas". */
 const ouTodas = (ids: string[]) => (ids.length ? ids : [TODAS]);
 
 const schema = z
@@ -107,9 +107,21 @@ export function FormAusencia({
     tipoId: ausencia?.tipo.id ?? '',
     dataInicio: ausencia?.dataInicio ?? inicial.de ?? '',
     dataFim: ausencia?.dataFim ?? inicial.de ?? '',
-    frenteIds: ouTodas(ausencia?.frentes.map((f) => f.id) ?? inicial.frenteIds ?? []),
-    turnoIds: ouTodas(ausencia?.turnos.map((t) => t.id) ?? inicial.turnoIds ?? []),
-    diasSemana: ouTodas(ausencia?.diasSemana.map(String) ?? []),
+    frenteIds: ausencia
+      ? caixasDaApi(
+          ausencia.todasFrentes,
+          ausencia.frentes.map((f) => f.id),
+        )
+      : ouTodas(inicial.frenteIds ?? []),
+    turnoIds: ausencia
+      ? caixasDaApi(
+          ausencia.todosTurnos,
+          ausencia.turnos.map((t) => t.id),
+        )
+      : ouTodas(inicial.turnoIds ?? []),
+    diasSemana: ausencia
+      ? caixasDaApi(ausencia.todosDias, ausencia.diasSemana.map(String))
+      : [TODAS],
     observacoes: ausencia?.observacoes ?? '',
   };
   const form = useAppForm({
@@ -123,8 +135,11 @@ export function FormAusencia({
           tipoId: value.tipoId,
           dataInicio: value.dataInicio,
           dataFim: value.dataFim,
+          todasFrentes: caixasParaApi(value.frenteIds).todas,
           frenteIds: caixasParaApi(value.frenteIds).ids,
+          todosTurnos: caixasParaApi(value.turnoIds).todas,
           turnoIds: caixasParaApi(value.turnoIds).ids,
+          todosDias: caixasParaApi(value.diasSemana).todas,
           diasSemana: caixasParaApi(value.diasSemana)
             .ids.map(Number)
             .sort((a, b) => a - b),

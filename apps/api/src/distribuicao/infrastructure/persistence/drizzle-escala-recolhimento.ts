@@ -1,13 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, gte, inArray, lte, notExists, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../../database/database';
-import {
-  ausencias,
-  ausenciasFrentes,
-  ausenciasTurnos,
-  frentesEscala,
-} from '../../../database/schema';
+import { ausencias, ausenciasFrentes, frentesEscala } from '../../../database/schema';
 import {
   adicionarDias,
   diaDaSemana,
@@ -82,21 +77,20 @@ export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
   async ausenciasDoDia(agora: Date): Promise<AusenciaDoDia[]> {
     const hoje = diaEmBrasilia(agora);
     const linhas = await this.db
-      .select({ id: ausencias.id, medicoId: ausencias.medicoId })
+      .select({
+        id: ausencias.id,
+        medicoId: ausencias.medicoId,
+        todasFrentes: ausencias.todasFrentes,
+      })
       .from(ausencias)
       .where(
         and(
           eq(ausencias.situacao, 'aprovada'),
           lte(ausencias.dataInicio, hoje),
           gte(ausencias.dataFim, hoje),
-          sql`(cardinality(${ausencias.diasSemana}) = 0 or ${diaDaSemana(hoje)} = any(${ausencias.diasSemana}))`,
-          // A de alguns turnos não tira o dia: o turno ausente já sai da escala.
-          notExists(
-            this.db
-              .select({ um: sql`1` })
-              .from(ausenciasTurnos)
-              .where(eq(ausenciasTurnos.ausenciaId, ausencias.id)),
-          ),
+          sql`(${ausencias.todosDias} or ${diaDaSemana(hoje)} = any(${ausencias.diasSemana}))`,
+          // Só a do dia inteiro: a de alguns turnos não tira o dia (o turno ausente já sai da escala).
+          eq(ausencias.todosTurnos, true),
         ),
       );
     if (!linhas.length) return [];
@@ -117,6 +111,7 @@ export class DrizzleEscalaRecolhimento implements EscalaRecolhimento {
       );
     return linhas.map((l) => ({
       medicoId: l.medicoId,
+      todasFrentes: l.todasFrentes,
       frentes: frentes.filter((f) => f.ausenciaId === l.id).flatMap((f) => frenteDaLinha(f) ?? []),
     }));
   }

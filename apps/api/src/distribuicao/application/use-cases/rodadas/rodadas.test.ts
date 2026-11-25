@@ -1585,7 +1585,7 @@ describe('rodada do robô (casos de uso)', () => {
         semMedico: [],
         emMaos: [{ ...exame({ idExame: 'm1' }), medicoIdMobilemed: 101 }],
       };
-      escalaRecolhimento.ausencias = [{ medicoId: 'A', frentes: [] }];
+      escalaRecolhimento.ausencias = [{ medicoId: 'A', todasFrentes: true, frentes: [] }];
       insumos.insumos = { ...insumosBase(), ocorrencias: [oc('B')] };
       const id = await criarELer();
       expect(daRodada(id, 'm1')).toMatchObject({
@@ -1652,7 +1652,7 @@ describe('rodada do robô (casos de uso)', () => {
     it('prévia do "Distribuir agora": quantos seriam recolhidos, sem gravar nada', async () => {
       await entregarAoA('r1');
       mobilemed.leitura.emMaos.push({ ...exame({ idExame: 'm9' }), medicoIdMobilemed: 102 });
-      escalaRecolhimento.ausencias = [{ medicoId: 'B', frentes: [] }];
+      escalaRecolhimento.ausencias = [{ medicoId: 'B', todasFrentes: true, frentes: [] }];
       const antes = repo.rodadas.size;
       expect(await casos.recolhimentoPrevisto.executar()).toEqual({
         ligado: true,
