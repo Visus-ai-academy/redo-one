@@ -62,21 +62,22 @@ describe('FormParametrosImportacao', () => {
     });
   });
 
-  it('as unidades do compartilhamento vão separadas por vírgula; vazio não traz nenhuma', async () => {
+  it('as unidades do compartilhamento são etiquetas: Enter adiciona, × tira; sem nenhuma, lista vazia', async () => {
     const onSalvar = vi.fn(async () => undefined);
     render(<FormParametrosImportacao parametros={atuais} podeEditar onSalvar={onSalvar} />);
 
-    const unidades = screen.getByRole('textbox', { name: /Unidades do compartilhamento/ });
-    expect(unidades).toHaveValue('CRD_APOIO');
-    await userEvent.clear(unidades);
-    await userEvent.type(unidades, 'CRD_APOIO, OUTRA ,');
+    const unidades = screen.getByRole('combobox', { name: /Unidades do compartilhamento/ });
+    expect(screen.getByRole('button', { name: 'Remover CRD_APOIO' })).toBeInTheDocument();
+    await userEvent.type(unidades, 'OUTRA{enter}CRD_APOIO{enter}');
+    expect(screen.getByRole('status')).toHaveTextContent('“CRD_APOIO” já está na lista.');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
     expect(onSalvar).toHaveBeenLastCalledWith({
       ...atuais,
       mobilemedCompartilhamentoUnidades: ['CRD_APOIO', 'OUTRA'],
     });
 
-    await userEvent.clear(unidades);
+    await userEvent.click(screen.getByRole('button', { name: 'Remover CRD_APOIO' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover OUTRA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
     expect(onSalvar).toHaveBeenLastCalledWith({ ...atuais, mobilemedCompartilhamentoUnidades: [] });
   });

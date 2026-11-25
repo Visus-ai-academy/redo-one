@@ -27,14 +27,19 @@ const ROTINA: PrioridadeOperacaoDto = {
   cor: null,
 };
 
-const montar = (podeEditar = true) => {
+const montar = (podeEditar = true, grafiasVistas?: string[]) => {
   const props = {
     onCriar: vi.fn(async () => undefined),
     onEditar: vi.fn(async () => undefined),
     onExcluir: vi.fn(async () => undefined),
   };
   render(
-    <PrioridadesOperacao prioridades={[AMBULATORIO, ROTINA]} podeEditar={podeEditar} {...props} />,
+    <PrioridadesOperacao
+      prioridades={[AMBULATORIO, ROTINA]}
+      podeEditar={podeEditar}
+      grafiasVistas={grafiasVistas}
+      {...props}
+    />,
   );
   return props;
 };
@@ -53,7 +58,7 @@ describe('PrioridadesOperacao', () => {
     );
   });
 
-  it('cria uma prioridade com as grafias por linha', async () => {
+  it('cria uma prioridade com as grafias como etiquetas (Enter, vírgula)', async () => {
     const { onCriar } = montar();
     await userEvent.click(screen.getByRole('button', { name: 'Nova prioridade' }));
     await userEvent.type(await screen.findByRole('textbox', { name: /Nome/ }), 'TESTE');
@@ -63,7 +68,7 @@ describe('PrioridadesOperacao', () => {
       await screen.findByRole('textbox', { name: /Urgência com menos de quantas horas/ }),
       '6',
     );
-    await userEvent.type(screen.getByRole('textbox', { name: /Grafias/ }), 'P9{enter}p9.Teste');
+    await userEvent.type(screen.getByRole('combobox', { name: /Grafias/ }), 'P9{enter}p9.Teste,');
     await userEvent.type(screen.getByRole('textbox', { name: /Cor/ }), ' #8A8A45 ');
     await userEvent.click(screen.getByRole('checkbox', { name: /a urgência fura a grade/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar prioridade' }));
@@ -76,6 +81,30 @@ describe('PrioridadesOperacao', () => {
       grafias: ['P9', 'p9.Teste'],
       cor: '#8A8A45',
     });
+  });
+
+  it('grafia repetida (sem acento e sem maiúsculas) não entra e o campo avisa', async () => {
+    const { onEditar } = montar();
+    await userEvent.click(screen.getByRole('button', { name: /AMBULATÓRIO/ }));
+    const grafias = await screen.findByRole('combobox', { name: /Grafias/ });
+    await userEvent.click(grafias);
+    await userEvent.paste('AMBULATORIO\nP7');
+    expect(screen.getByRole('status')).toHaveTextContent('“AMBULATORIO” já está na lista.');
+    await userEvent.click(screen.getByRole('button', { name: 'Remover Ambulatório' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onEditar).toHaveBeenCalledWith('op-amb', expect.objectContaining({ grafias: ['P7'] }));
+  });
+
+  it('sugere as grafias vistas sem de-para, sem as que já estão em alguma prioridade', async () => {
+    montar(true, ['P8.Urgente', 'rotina', 'P9']);
+    await userEvent.click(screen.getByRole('button', { name: 'Nova prioridade' }));
+    await userEvent.type(await screen.findByRole('combobox', { name: /Grafias/ }), 'p');
+    const lista = await screen.findByRole('listbox');
+    expect(
+      within(lista)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['P8.Urgente', 'P9']);
   });
 
   it('a cor fora do formato #RRGGBB não salva; vazia salva sem cor', async () => {

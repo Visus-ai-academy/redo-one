@@ -14,6 +14,7 @@ import { CheckboxListField } from './CheckboxListField';
 import { fieldContext, formContext } from './context';
 import { EscolhaMultiplaField } from './EscolhaMultiplaField';
 import { EscolhidosField } from './EscolhidosField';
+import { EtiquetasField } from './EtiquetasField';
 import { NumberField } from './NumberField';
 import { PasswordField } from './PasswordField';
 import { RequiredLegend } from './RequiredLegend';
@@ -40,6 +41,7 @@ const kit = createFormHook({
     SelecaoMultiplaField,
     CaixasComContagemField,
     EscolhidosField,
+    EtiquetasField,
   },
   formComponents: { SubmitButton, RequiredLegend },
 });

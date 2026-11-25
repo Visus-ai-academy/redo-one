@@ -56,8 +56,7 @@ export type ValoresConfiguracao = {
   recolhimentoPorTurno: { turnoId: string; minutos: string }[];
   diasJaEntregue: string;
   escalaRestringeEspecialidade: boolean;
-  /** Separados por vírgula. */
-  marcadores: string;
+  marcadores: string[];
   /** A grade geral de recebimento (salva junto, no mesmo botão). */
   recebimento: Grade;
   roboAtivo: boolean;
@@ -98,7 +97,7 @@ export function valoresDaConfiguracao(
     })),
     diasJaEntregue: String(c.diasJaEntregue),
     escalaRestringeEspecialidade: c.escalaRestringeEspecialidade,
-    marcadores: c.marcadoresEquilibrio.join(', '),
+    marcadores: [...c.marcadoresEquilibrio],
     recebimento: gradeDasCelulas(celulas),
     roboAtivo: c.roboAtivo ?? true,
     expiracaoPropostaMin: String(c.expiracaoPropostaMin ?? 45),
@@ -112,12 +111,6 @@ export function valoresDaConfiguracao(
     contasUnidadeValidadeMin: String(c.contasUnidadeValidadeMin ?? 240),
   };
 }
-
-const marcadoresDe = (texto: string) =>
-  texto
-    .split(',')
-    .map((m) => m.trim())
-    .filter(Boolean);
 
 const PRAZO_TURNO_MAX = 10_080;
 
@@ -148,7 +141,7 @@ export function configuracaoParaApi(v: ValoresConfiguracao): ConfiguracaoDistrib
     prazoCriticoMin: Number(v.prazoCriticoMin),
     antecedenciaPeriodoMin: Number(v.antecedenciaPeriodoMin),
     cicloMinutos: Number(v.cicloMinutos),
-    marcadoresEquilibrio: marcadoresDe(v.marcadores),
+    marcadoresEquilibrio: v.marcadores.map((m) => m.trim()).filter(Boolean),
     escalaRestringeEspecialidade: v.escalaRestringeEspecialidade,
     diasJaEntregue: Number(v.diasJaEntregue),
     turnosPosteriores: v.temTurnosPosteriores
@@ -192,7 +185,7 @@ const valoresSchema = z.object({
   recolhimentoPorTurno: z.array(z.object({ turnoId: z.string(), minutos: z.string() })),
   diasJaEntregue: z.string(),
   escalaRestringeEspecialidade: z.boolean(),
-  marcadores: z.string(),
+  marcadores: z.array(z.string()),
   recebimento: z.record(
     z.string(),
     z.object({
@@ -260,7 +253,7 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
     });
   }
   faixa('diasJaEntregue', 0, 90);
-  const marcadores = marcadoresDe(v.marcadores).map((m) => m.toUpperCase());
+  const marcadores = v.marcadores.map((m) => m.trim().toUpperCase());
   if (marcadores.some((m) => m.length > 40)) erro('marcadores', 'Use até 40 letras por marcador.');
   if (new Set(marcadores).size !== marcadores.length) erro('marcadores', 'Há marcador repetido.');
   if (Object.keys(errosDaGrade(v.recebimento)).length) {

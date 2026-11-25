@@ -10,6 +10,7 @@ import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CaixasField } from '../escala/campos';
+import { iguaisSemMaiusculas } from '../form/etiquetas';
 import { useAppForm } from '../form/form';
 import { Painel } from '../painel/Painel';
 import {
@@ -616,11 +617,11 @@ export function FormConfiguracaoDistribuicao({
       >
         <form.AppField name="marcadores">
           {(field) => (
-            <field.TextField
+            <field.EtiquetasField
               label="Marcadores no nome do exame"
-              placeholder="Ex.: ONCO, PEDIATRIA"
-              description="Separados por vírgula. Vazio: nenhum."
-              autoComplete="off"
+              placeholder="Ex.: ONCO"
+              description="Exame com um destes no nome é dividido por igual. Maiúsculas não importam. Sem nenhum, nenhum exame é dividido."
+              iguais={iguaisSemMaiusculas}
             />
           )}
         </form.AppField>

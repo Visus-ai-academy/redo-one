@@ -105,8 +105,9 @@ describe('configuração global no formulário', () => {
     expect(emHoras(30)).toBeNull();
   });
 
-  it('marcadores separados por vírgula, aparados e sem vazios', () => {
-    const v = { ...valoresDaConfiguracao(PRODUCAO), marcadores: ' ONCO, PED ,, ' };
+  it('marcadores vão e voltam como lista', () => {
+    expect(valoresDaConfiguracao(PRODUCAO).marcadores).toEqual(['ONCO']);
+    const v = { ...valoresDaConfiguracao(PRODUCAO), marcadores: ['ONCO', 'PED'] };
     expect(configuracaoParaApi(v).marcadoresEquilibrio).toEqual(['ONCO', 'PED']);
   });
 
@@ -167,7 +168,7 @@ describe('configuração global no formulário', () => {
       margemUrgenciaPct: '101',
       turnoIds: [],
       cheiaEm: '1050',
-      marcadores: 'ONCO, onco',
+      marcadores: ['ONCO', 'onco'],
       ordemFila: [],
     };
     expect(erros(v)).toEqual([

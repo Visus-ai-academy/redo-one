@@ -12,10 +12,11 @@ import { buttonClassName } from '../button/button-class';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
+import { mesmaGrafia } from '../form/etiquetas';
 import { useAppForm } from '../form/form';
 import { Painel } from '../painel/Painel';
 import { PainelLateral } from '../painel/PainelLateral';
-import { grafiasDoTexto, OPCOES_URGENCIA, rotuloUrgencia } from './recebimento';
+import { OPCOES_URGENCIA, rotuloUrgencia } from './recebimento';
 
 type Props = {
   prioridades: readonly PrioridadeOperacaoDto[];
@@ -23,6 +24,8 @@ type Props = {
   onCriar: (dados: PrioridadeOperacaoEdicaoDto) => Promise<void>;
   onEditar: (id: string, dados: PrioridadeOperacaoEdicaoDto) => Promise<void>;
   onExcluir: (id: string) => Promise<void>;
+  /** Grafias vistas na MobileMed sem de-para (avisos pendentes), sugeridas ao digitar. */
+  grafiasVistas?: readonly string[];
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -36,7 +39,7 @@ const schema = z
     horas: z.string(),
     furaGradeNaAlocacao: z.boolean(),
     padrao: z.boolean(),
-    grafias: z.string(),
+    grafias: z.array(z.string()),
     cor: z
       .string()
       .refine(
@@ -62,9 +65,11 @@ function PainelPrioridade({
   onSalvar,
   onExcluir,
   onFechar,
+  sugestoesGrafias,
 }: {
   prioridade?: PrioridadeOperacaoDto;
   podeEditar: boolean;
+  sugestoesGrafias: readonly string[];
   onSalvar: (dados: PrioridadeOperacaoEdicaoDto) => Promise<void>;
   onExcluir?: () => Promise<void>;
   onFechar: () => void;
@@ -78,7 +83,7 @@ function PainelPrioridade({
       horas: prioridade?.urgencia.horas === null ? '' : String(prioridade?.urgencia.horas ?? ''),
       furaGradeNaAlocacao: prioridade?.furaGradeNaAlocacao ?? false,
       padrao: prioridade?.padrao ?? false,
-      grafias: (prioridade?.grafias ?? []).join('\n'),
+      grafias: [...(prioridade?.grafias ?? [])],
       cor: prioridade?.cor ?? '',
     },
     validators: { onSubmit: schema },
@@ -94,7 +99,7 @@ function PainelPrioridade({
               : { tipo: value.urgencia, horas: null },
           furaGradeNaAlocacao: value.furaGradeNaAlocacao,
           padrao: value.padrao,
-          grafias: grafiasDoTexto(value.grafias),
+          grafias: value.grafias,
           cor: value.cor.trim() || null,
         });
       } catch (falha) {
@@ -230,10 +235,12 @@ function PainelPrioridade({
         </form.AppField>
         <form.AppField name="grafias">
           {(field) => (
-            <field.TextAreaField
+            <field.EtiquetasField
               label="Grafias da MobileMed"
-              placeholder={'Ambulatório\nP6'}
-              description="Uma por linha (ou separadas por vírgula). Acento e maiúsculas não importam: Urgência e URGENCIA são a mesma."
+              placeholder="Ex.: Ambulatório"
+              description="Como a prioridade chega da MobileMed. Acento e maiúsculas não importam: Urgência e URGENCIA são a mesma."
+              iguais={mesmaGrafia}
+              sugestoes={sugestoesGrafias}
             />
           )}
         </form.AppField>
@@ -265,10 +272,14 @@ export function PrioridadesOperacao({
   onCriar,
   onEditar,
   onExcluir,
+  grafiasVistas = [],
 }: Props) {
   // null = fechado; 'nova' = criando; senão, o id aberto.
   const [aberto, setAberto] = useState<string | null>(null);
   const atual = prioridades.find((p) => p.id === aberto);
+  // A grafia que já tem de-para (em qualquer prioridade) não é sugerida.
+  const comDePara = prioridades.flatMap((p) => p.grafias);
+  const sugestoesGrafias = grafiasVistas.filter((g) => !comDePara.some((d) => mesmaGrafia(d, g)));
 
   return (
     <Painel
@@ -332,6 +343,7 @@ export function PrioridadesOperacao({
           key={aberto}
           prioridade={atual}
           podeEditar={podeEditar}
+          sugestoesGrafias={sugestoesGrafias}
           onFechar={() => setAberto(null)}
           onSalvar={async (dados) => {
             if (atual) await onEditar(atual.id, dados);

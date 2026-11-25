@@ -153,10 +153,3 @@ export function urgenciasParaApi(v: Record<string, ValorUrgencia>): UrgenciaFren
     .filter(([, u]) => u.tipo !== 'geral')
     .map(([prioridadeOperacaoId, u]) => ({ prioridadeOperacaoId, urgencia: urgenciaParaApi(u) }));
 }
-
-/** Grafias separadas por vírgula ou por linha. */
-export const grafiasDoTexto = (texto: string) =>
-  texto
-    .split(/[,\n]/)
-    .map((g) => g.trim())
-    .filter(Boolean);

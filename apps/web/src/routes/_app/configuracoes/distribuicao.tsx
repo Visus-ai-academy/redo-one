@@ -13,11 +13,17 @@ import { gradeRecebimentoControllerSalvar } from '../../../gen/clients/gradeRece
 import { prioridadesOperacaoControllerCriar } from '../../../gen/clients/prioridadesOperacaoControllerCriar';
 import { prioridadesOperacaoControllerEditar } from '../../../gen/clients/prioridadesOperacaoControllerEditar';
 import { prioridadesOperacaoControllerExcluir } from '../../../gen/clients/prioridadesOperacaoControllerExcluir';
+import { avisosControllerListarQueryOptions } from '../../../gen/hooks/useAvisosControllerListar';
 import { configuracaoDistribuicaoControllerObterQueryOptions } from '../../../gen/hooks/useConfiguracaoDistribuicaoControllerObter';
 import { gradeRecebimentoControllerObterQueryOptions } from '../../../gen/hooks/useGradeRecebimentoControllerObter';
 import { prioridadesOperacaoControllerListarQueryOptions } from '../../../gen/hooks/usePrioridadesOperacaoControllerListar';
 import { turnosControllerListarQueryOptions } from '../../../gen/hooks/useTurnosControllerListar';
 import { pode } from '../../../lib/permissoes';
+
+/** Grafias de prioridade vistas na MobileMed sem de-para: as sugestões do campo de grafias. */
+const GRAFIAS_SEM_DE_PARA = {
+  query: { tipo: 'prioridade_operacao', status: 'pendente', porPagina: 100 },
+} as const;
 
 /** Turnos ativos (são poucos): a escolha dos turnos posteriores. */
 const TURNOS = { query: { ativo: true, porPagina: 100 } };
@@ -70,6 +76,11 @@ function Configuracao() {
   };
   // Os turnos vêm da escala (`escala.ver`, que a tela exige no catálogo de permissões).
   const turnos = useQuery(turnosControllerListarQueryOptions(TURNOS));
+  // Só sugestão: sem `avisos.ver` (ou com erro), o campo segue sem sugerir.
+  const grafiasSemDePara = useQuery({
+    ...avisosControllerListarQueryOptions(GRAFIAS_SEM_DE_PARA),
+    enabled: podeEditar && pode(sessao, 'avisos.ver'),
+  });
 
   return (
     <div className="flex max-w-[920px] flex-col gap-6">
@@ -91,6 +102,7 @@ function Configuracao() {
           <PrioridadesOperacao
             prioridades={prioridades}
             podeEditar={podeEditar}
+            grafiasVistas={grafiasSemDePara.data?.itens.map((a) => a.valor)}
             onCriar={async (dados) => {
               await prioridadesOperacaoControllerCriar({ body: dados }).unwrap();
               await recarregarPrioridades();

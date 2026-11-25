@@ -86,6 +86,26 @@ describe('FormConfiguracaoDistribuicao', () => {
     );
   });
 
+  it('marcadores como etiquetas: vírgula cria; maiúsculas não fazem outro', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(
+      <FormConfiguracaoDistribuicao
+        configuracao={CONFIG}
+        {...REF}
+        podeEditar
+        onSalvar={onSalvar}
+      />,
+    );
+    const marcadores = screen.getByRole('combobox', { name: /Marcadores no nome do exame/ });
+    await userEvent.type(marcadores, 'ONCO,PED,onco,');
+    expect(screen.getByRole('status')).toHaveTextContent('“onco” já está na lista.');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ marcadoresEquilibrio: ['ONCO', 'PED'] }),
+      expect.anything(),
+    );
+  });
+
   it('desliga o robô e põe teto por rodada', async () => {
     const onSalvar = vi.fn(async () => undefined);
     render(
