@@ -177,15 +177,16 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         const valores = sql.join(
           lote.map(
             ([identidade, t]) =>
-              sql`(${identidade}::text, ${t.regraId}::uuid, ${t.subregraId}::uuid, ${t.fatura}::boolean)`,
+              sql`(${identidade}::text, ${t.regraId}::uuid, ${t.subregraId}::uuid, ${t.fatura}::boolean, ${t.competencia}::text)`,
           ),
           sql`, `,
         );
         await tx.execute(sql`
           insert into ${classificacoesLaudo} (laudo_id, regra_id, subregra_id, fatura, calculado_em)
           select ${laudos.id}, v.regra, v.subregra, v.fatura, ${agora}
-          from (values ${valores}) as v(identidade, regra, subregra, fatura)
+          from (values ${valores}) as v(identidade, regra, subregra, fatura, competencia)
           join ${laudos} on ${laudos.identidade} = v.identidade
+            and ${laudos.competencia} = v.competencia
           ${desbloqueado ? sql`where ${desbloqueado}` : sql``}
           on conflict (laudo_id) do update set
             regra_id = excluded.regra_id,

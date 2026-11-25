@@ -300,18 +300,18 @@ export class TipificacaoEmMemoria implements TipificacaoRepository {
       null
     );
   }
-  async salvarRegra(id: string | null, dados: DadosRegra) {
+  async salvarRegra(id: string | null, dados: DadosRegra, reclassificar: boolean) {
     const salvo = id ?? `regra-${this.proximo++}`;
     const atual = this.regras.get(salvo);
     this.regras.set(salvo, { ordem: 0, padrao: false, clientes: 0, ...atual, ...dados, id: salvo });
-    this.reclassificacoes.push(null);
+    if (reclassificar) this.reclassificacoes.push(null);
     return salvo;
   }
-  async salvarSubregra(id: string | null, dados: DadosSubregra) {
+  async salvarSubregra(id: string | null, dados: DadosSubregra, reclassificar: boolean) {
     const salvo = id ?? `sub-${this.proximo++}`;
     const atual = this.subregras.get(salvo);
     this.subregras.set(salvo, { ordem: 0, clientes: 0, ...atual, ...dados, id: salvo });
-    this.reclassificacoes.push(null);
+    if (reclassificar) this.reclassificacoes.push(null);
     return salvo;
   }
   async obterCliente(clienteId: string) {
@@ -352,6 +352,25 @@ export class TipificacaoEmMemoria implements TipificacaoRepository {
   async listarOpcoes() {
     return { modalidades: [], especialidades: [], prioridades: [] };
   }
+  /** Ids do catálogo que existem; vazio = todos os pedidos existem. */
+  readonly catalogo = {
+    modalidades: [] as string[],
+    especialidades: [] as string[],
+    prioridades: [] as string[],
+  };
+  async catalogoExistente(ids: {
+    modalidades: string[];
+    especialidades: string[];
+    prioridades: string[];
+  }) {
+    const filtrar = (pedidos: string[], existentes: string[]) =>
+      existentes.length ? pedidos.filter((i) => existentes.includes(i)) : pedidos;
+    return {
+      modalidades: filtrar(ids.modalidades, this.catalogo.modalidades),
+      especialidades: filtrar(ids.especialidades, this.catalogo.especialidades),
+      prioridades: filtrar(ids.prioridades, this.catalogo.prioridades),
+    };
+  }
 }
 
 /** Equipes e médicos em memória. */
@@ -360,6 +379,9 @@ export class EquipesMedicosEmMemoria implements EquipesMedicos {
   readonly medicos: { id: string; nome: string }[] = [];
   async membros() {
     return this.equipes.map((e) => ({ id: e.id, medicos: e.medicos }));
+  }
+  async equipesExistentes(ids: string[]) {
+    return ids.filter((i) => this.equipes.some((e) => e.id === i));
   }
   async listarEquipes() {
     return this.equipes.map((e) => ({ id: e.id, nome: e.nome, cor: null }));

@@ -93,6 +93,26 @@ describe('ReclassificarTipificacao', () => {
     });
   });
 
+  it('relê as bloqueadas a cada lote: a competência fechada no meio do job não muda mais', async () => {
+    laudos.laudos.clear();
+    // Dois lotes (5.000 + 1) de 2026-11; fecha 2026-11 depois de ler o primeiro.
+    guardar(...Array.from({ length: 5001 }, (_, i) => laudo(`n${String(i).padStart(5, '0')}`)));
+    const listar = competencias.listar.bind(competencias);
+    let chamadas = 0;
+    competencias.listar = async () => {
+      chamadas += 1;
+      if (chamadas === 2)
+        competencias.competencias.set('2026-11', { status: 'fechada', importacaoTravada: false });
+      return listar();
+    };
+
+    const r = await reclassificar.executar({ clienteIds: null });
+
+    // O primeiro lote foi lido com 2026-11 aberta, mas a lista relida já a traz fechada: nada grava.
+    expect(r).toEqual({ lidos: 5000, alterados: 0 });
+    expect(laudos.classificacoes.size).toBe(0);
+  });
+
   it('sem regras de tipificação, não faz nada', async () => {
     tipificar = null;
     expect(await reclassificar.executar({ clienteIds: null })).toEqual({ lidos: 0, alterados: 0 });

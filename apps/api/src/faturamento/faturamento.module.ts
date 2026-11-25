@@ -96,14 +96,18 @@ const ACOES_COMPETENCIA = [
       inject: [TIPIFICACAO_REPOSITORY],
       useFactory: (repo: TipificacaoRepository) => new ListarTipificacao(repo),
     },
-    ...[SalvarRegraTipificacao, SalvarSubregraTipificacao, SalvarTipificacaoCliente].map(
-      (Caso) => ({
-        provide: Caso,
-        inject: [TIPIFICACAO_REPOSITORY, AUDITORIA],
-        useFactory: (repo: TipificacaoRepository, auditoria: Auditoria) =>
-          new Caso(repo, auditoria, agora),
-      }),
-    ),
+    {
+      provide: SalvarTipificacaoCliente,
+      inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS, AUDITORIA],
+      useFactory: (repo: TipificacaoRepository, equipes: EquipesMedicos, auditoria: Auditoria) =>
+        new SalvarTipificacaoCliente(repo, equipes, auditoria, agora),
+    },
+    ...[SalvarRegraTipificacao, SalvarSubregraTipificacao].map((Caso) => ({
+      provide: Caso,
+      inject: [TIPIFICACAO_REPOSITORY, AUDITORIA],
+      useFactory: (repo: TipificacaoRepository, auditoria: Auditoria) =>
+        new Caso(repo, auditoria, agora),
+    })),
     ...[ListarOpcoesTipificacao, ObterTipificacaoCliente].map((Caso) => ({
       provide: Caso,
       inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS],

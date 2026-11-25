@@ -47,7 +47,7 @@ const linhaMi = {
   valores: ['MI'],
   modoMedico: 'apenas' as const,
   medicos: ['rodrigo'],
-  equipes: [],
+  equipes: [] as string[],
   subregraId: 'NC-NF',
 };
 const laudo = (id: string, campos: Record<string, unknown> = {}) => ({
@@ -94,7 +94,7 @@ describe('tipificação', () => {
   });
 
   describe('regras e sub-regras', () => {
-    it('cria e altera com auditoria; a mudança reclassifica todos', async () => {
+    it('cria e altera com auditoria; só mudar o "fatura" reclassifica todos', async () => {
       const salvar = new SalvarRegraTipificacao(repo, auditoria, () => agora);
       const id = await salvar.executar('u1', null, {
         nome: ' NC2 ',
@@ -125,7 +125,16 @@ describe('tipificação', () => {
           { faturaSemSubregra: false },
         ],
       ]);
-      expect(repo.reclassificacoes).toEqual([null, null]);
+      expect(repo.reclassificacoes).toEqual([null]);
+      // Só a descrição: não reclassifica.
+      await salvar.executar('u1', id, {
+        nome: 'NC2',
+        descricao: 'Outra',
+        cor: '#aabbcc',
+        faturaSemSubregra: false,
+        ativo: false,
+      });
+      expect(repo.reclassificacoes).toEqual([null]);
     });
 
     it('sem mudança, não grava; nome repetido e id ou regra inexistentes são recusados', async () => {
@@ -208,7 +217,7 @@ describe('tipificação', () => {
     });
 
     it('salva com auditoria e reclassifica os laudos do principal; vazia apaga a configuração', async () => {
-      const salvar = new SalvarTipificacaoCliente(repo, auditoria, () => agora);
+      const salvar = new SalvarTipificacaoCliente(repo, equipes, auditoria, () => agora);
       await salvar.executar('u1', 'cedi-rj', {
         regraId: 'NC',
         subregraDemaisId: 'NC-FT',
@@ -235,6 +244,31 @@ describe('tipificação', () => {
       await salvar.executar('u1', 'cedi-rj', { regraId: null, subregraDemaisId: null, linhas: [] });
       expect(repo.configuracoes.has('cedi-rj')).toBe(false);
       expect(auditoria.eventos.at(-1)).toMatchObject({ acao: 'removida' });
+    });
+
+    it('id de outro tipo, médico ou equipe inexistente, ou sub-regra inativa nova: 400, nada gravado', async () => {
+      const salvar = new SalvarTipificacaoCliente(repo, equipes, auditoria, () => agora);
+      repo.catalogo.especialidades.push('MI');
+      const tentar = (linha: typeof linhaMi) =>
+        salvar.executar('u1', 'cedidiag', {
+          regraId: null,
+          subregraDemaisId: null,
+          linhas: [linha],
+        });
+      await expect(tentar({ ...linhaMi, valores: ['CT'] })).rejects.toThrow(
+        'Linha 1: especialidade não encontrada.',
+      );
+      await expect(tentar({ ...linhaMi, medicos: ['ninguem'] })).rejects.toThrow(
+        'Linha 1: médico não encontrado.',
+      );
+      await expect(tentar({ ...linhaMi, equipes: ['eq-x'] })).rejects.toBeInstanceOf(
+        TipificacaoInvalidaError,
+      );
+      repo.subregras.set('NC-NF', { ...sub('NC-NF', 'NC', false), ativo: false });
+      await expect(tentar(linhaMi)).rejects.toThrow(
+        'Linha 1: sub-regra inativa: escolha uma ativa.',
+      );
+      expect(repo.reclassificacoes).toEqual([]);
     });
 
     it('prévia: laudos e volume por resultado, antes e depois, só nas competências abertas', async () => {

@@ -1,16 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type Conhecidos,
   prepararConfiguracao,
   prepararRegra,
   TipificacaoInvalidaError,
 } from './configuracao-tipificacao';
+import type { LinhaTipificacao } from './tipificacao';
 
-const conhecidos = { regras: new Set(['CO', 'NC']), subregras: new Set(['NC-NF', 'CO-FT']) };
-const linha = {
-  tipo: 'especialidade' as const,
+const conhecidos: Conhecidos = {
+  regras: new Set(['CO', 'NC', 'NC2']),
+  subregras: new Set(['NC-NF', 'CO-FT', 'NC-X']),
+  inativas: new Set(['NC2', 'NC-X']),
+  jaGravados: new Set(),
+  valores: {
+    modalidade: new Set(['rx']),
+    especialidade: new Set(['MI', 'CARDIO']),
+    prioridade: new Set(['plantao']),
+  },
+  medicos: new Set(['ana', 'bia']),
+  equipes: new Set(['eq2']),
+};
+const linha: LinhaTipificacao = {
+  tipo: 'especialidade',
   valores: ['MI', 'MI'],
-  modoMedico: 'todos' as const,
+  modoMedico: 'todos',
   medicos: ['ana'],
   equipes: [],
   subregraId: 'NC-NF',
@@ -25,6 +39,58 @@ describe('prepararConfiguracao', () => {
       subregraDemaisId: null,
       linhas: [{ ...linha, valores: ['MI'], medicos: [] }],
     });
+  });
+
+  it('ordena valores, médicos e equipes (comparar com a gravada não depende da ordem)', () => {
+    const c = prepararConfiguracao(
+      {
+        regraId: null,
+        subregraDemaisId: null,
+        linhas: [
+          { ...linha, valores: ['MI', 'CARDIO'], modoMedico: 'apenas', medicos: ['bia', 'ana'] },
+        ],
+      },
+      conhecidos,
+    );
+    expect(c?.linhas[0]).toMatchObject({ valores: ['CARDIO', 'MI'], medicos: ['ana', 'bia'] });
+  });
+
+  it('recusa id do catálogo de outro tipo, médico ou equipe inexistente', () => {
+    const erro = (l: Partial<typeof linha>) => {
+      try {
+        prepararConfiguracao(
+          { regraId: null, subregraDemaisId: null, linhas: [{ ...linha, ...l }] },
+          conhecidos,
+        );
+      } catch (e) {
+        return (e as Error).message;
+      }
+      return null;
+    };
+    expect(erro({ tipo: 'modalidade', valores: ['MI'] })).toBe(
+      'Linha 1: modalidade não encontrada.',
+    );
+    expect(erro({ modoMedico: 'apenas', medicos: ['zé'] })).toBe('Linha 1: médico não encontrado.');
+    expect(erro({ modoMedico: 'exceto', medicos: [], equipes: ['eq9'] })).toBe(
+      'Linha 1: equipe não encontrada.',
+    );
+  });
+
+  it('regra ou sub-regra inativa só vale onde já estava gravada', () => {
+    const inativa = {
+      regraId: 'NC2',
+      subregraDemaisId: null,
+      linhas: [{ ...linha, subregraId: 'NC-X' }],
+    };
+    expect(() => prepararConfiguracao(inativa, conhecidos)).toThrow(
+      'Regra principal inativa: escolha uma ativa.',
+    );
+    expect(() => prepararConfiguracao({ ...inativa, regraId: null }, conhecidos)).toThrow(
+      'Linha 1: sub-regra inativa: escolha uma ativa.',
+    );
+    expect(
+      prepararConfiguracao(inativa, { ...conhecidos, jaGravados: new Set(['NC2', 'NC-X']) }),
+    ).not.toBeNull();
   });
 
   it('configuração vazia vira nula (segue a do principal ou a padrão)', () => {

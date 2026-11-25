@@ -165,9 +165,13 @@ export class LaudosEmMemoria implements LaudosRepository {
       const l = this.laudos.get(identidade);
       if (l) l.removido = true;
     }
-    for (const [identidade, t] of a.classificacoes) {
+    for (const [identidade, { competencia, ...t }] of a.classificacoes) {
       const l = this.laudos.get(identidade);
-      if (l && !janela.competenciasBloqueadas.includes(l.competencia))
+      if (
+        l &&
+        l.competencia === competencia &&
+        !janela.competenciasBloqueadas.includes(l.competencia)
+      )
         this.classificacoes.set(identidade, t);
     }
   }

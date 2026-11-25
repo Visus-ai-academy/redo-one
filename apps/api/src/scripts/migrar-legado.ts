@@ -8,7 +8,9 @@
 // que depende do dia da carga é o fim (ontem, em Brasília) das alocações de médico inativo e das
 // que vieram do dashboards-one e foram apagadas lá; as ausências apagadas lá são recusadas (tudo
 // listado antes de gravar). Roda com
-// JOBS_WORKER=false: este processo não pega jobs da fila.
+// JOBS_WORKER=false: este processo não pega jobs da fila. A tipificação traduz valores crus do
+// dashboards-one (COLUNAS) pela especialidade que a importação deu aos laudos: rode a carga
+// depois de a importação ter trazido laudos.
 import { parseArgs } from 'node:util';
 
 import { NestFactory } from '@nestjs/core';
@@ -208,6 +210,9 @@ async function migrarLegado() {
     ];
     console.log(`\nAvisos (${avisos.length}): o que não migrou como estava.`);
     mostrarAvisos(avisos);
+    console.log(
+      `\nTipificação: ${tipificacao.unidadesComCoExplicita} unidade(s) sem configuração no dashboards-one ganharam a regra padrão explícita.`,
+    );
     if (tipificacao.erros.length) {
       console.log(`\nTipificação: ${tipificacao.erros.length} erro(s) que impedem gravar.`);
       for (const e of tipificacao.erros) console.log(`  - ${e}`);

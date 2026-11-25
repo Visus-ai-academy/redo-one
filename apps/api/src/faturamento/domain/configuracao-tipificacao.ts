@@ -1,5 +1,5 @@
 import { ErroDeDominio } from '../../comum/erro-de-dominio';
-import type { ConfiguracaoCliente } from './tipificacao';
+import type { ConfiguracaoCliente, TipoLinha } from './tipificacao';
 
 export class TipificacaoInvalidaError extends ErroDeDominio {
   readonly tipo = 'invalido';
@@ -22,20 +22,49 @@ export class RegraTipificacaoNaoEncontradaError extends ErroDeDominio {
 type Configuracao = Omit<ConfiguracaoCliente, 'clienteId'>;
 
 const MAXIMO_LINHAS = 100;
-const unicos = (lista: string[]) => [...new Set(lista)];
+/** Ids ordenados e sem repetidos: a configuração gravada e a nova se comparam sem depender da ordem. */
+const unicos = (lista: string[]) => [...new Set(lista)].sort();
+
+/** O que a configuração pode citar. */
+export interface Conhecidos {
+  regras: ReadonlySet<string>;
+  subregras: ReadonlySet<string>;
+  /** Regras e sub-regras inativas: não entram em linha nova, mas seguem onde já estavam. */
+  inativas: ReadonlySet<string>;
+  /** Regras e sub-regras da configuração gravada do cliente. */
+  jaGravados: ReadonlySet<string>;
+  /** Ids do catálogo por tipo de linha (inclusive inativos). */
+  valores: Record<TipoLinha, ReadonlySet<string>>;
+  medicos: ReadonlySet<string>;
+  equipes: ReadonlySet<string>;
+}
+
+const ROTULO_VALOR: Record<TipoLinha, string> = {
+  modalidade: 'modalidade não encontrada',
+  especialidade: 'especialidade não encontrada',
+  prioridade: 'prioridade não encontrada',
+};
 
 /**
- * Confere e normaliza a configuração do cliente antes de gravar: valores sem repetidos, filtro de
- * médico coerente com o modo, ids conhecidos. A vazia vira nula (segue a do principal ou a padrão).
+ * Confere e normaliza a configuração do cliente antes de gravar: valores sem repetidos e
+ * ordenados, filtro de médico coerente com o modo, ids conhecidos e do tipo certo, e nada inativo
+ * que já não estivesse gravado. A vazia vira nula (segue a do principal ou a padrão).
  */
-export function prepararConfiguracao(
-  c: Configuracao,
-  conhecidos: { regras: ReadonlySet<string>; subregras: ReadonlySet<string> },
-): Configuracao | null {
-  if (c.regraId && !conhecidos.regras.has(c.regraId))
-    throw new TipificacaoInvalidaError('Regra principal não encontrada.');
-  if (c.subregraDemaisId && !conhecidos.subregras.has(c.subregraDemaisId))
-    throw new TipificacaoInvalidaError('Sub-regra de "todos os demais" não encontrada.');
+export function prepararConfiguracao(c: Configuracao, conhecidos: Conhecidos): Configuracao | null {
+  const ativa = (id: string, onde: string) => {
+    if (conhecidos.inativas.has(id) && !conhecidos.jaGravados.has(id))
+      throw new TipificacaoInvalidaError(`${onde} inativa: escolha uma ativa.`);
+  };
+  if (c.regraId) {
+    if (!conhecidos.regras.has(c.regraId))
+      throw new TipificacaoInvalidaError('Regra principal não encontrada.');
+    ativa(c.regraId, 'Regra principal');
+  }
+  if (c.subregraDemaisId) {
+    if (!conhecidos.subregras.has(c.subregraDemaisId))
+      throw new TipificacaoInvalidaError('Sub-regra de "todos os demais" não encontrada.');
+    ativa(c.subregraDemaisId, 'Sub-regra de "todos os demais"');
+  }
   if (c.linhas.length > MAXIMO_LINHAS)
     throw new TipificacaoInvalidaError(`No máximo ${MAXIMO_LINHAS} linhas.`);
   const linhas = c.linhas.map((l, i) => {
@@ -43,13 +72,20 @@ export function prepararConfiguracao(
     const valores = unicos(l.valores);
     if (!valores.length)
       throw new TipificacaoInvalidaError(`${onde}: escolha pelo menos um valor.`);
+    if (valores.some((v) => !conhecidos.valores[l.tipo].has(v)))
+      throw new TipificacaoInvalidaError(`${onde}: ${ROTULO_VALOR[l.tipo]}.`);
     if (!conhecidos.subregras.has(l.subregraId))
       throw new TipificacaoInvalidaError(`${onde}: sub-regra não encontrada.`);
+    ativa(l.subregraId, `${onde}: sub-regra`);
     const todos = l.modoMedico === 'todos';
     const medicos = todos ? [] : unicos(l.medicos);
     const equipes = todos ? [] : unicos(l.equipes);
     if (!todos && !medicos.length && !equipes.length)
       throw new TipificacaoInvalidaError(`${onde}: escolha os médicos ou equipes do filtro.`);
+    if (medicos.some((m) => !conhecidos.medicos.has(m)))
+      throw new TipificacaoInvalidaError(`${onde}: médico não encontrado.`);
+    if (equipes.some((e) => !conhecidos.equipes.has(e)))
+      throw new TipificacaoInvalidaError(`${onde}: equipe não encontrada.`);
     return { ...l, valores, medicos, equipes };
   });
   if (!c.regraId && !c.subregraDemaisId && !linhas.length) return null;

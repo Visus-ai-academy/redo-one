@@ -360,6 +360,93 @@ describe('mapearTipificacao', () => {
     expect(r.tabelas.clientesTipificacao.map((c) => c.clienteId)).toEqual(['c-cedi-rj']);
   });
 
+  describe('sem configuração no dashboards-one = CO: a unidade não pode herdar outra', () => {
+    const cadastroCedi: CadastroParaTipificacao = {
+      ...cadastro,
+      clientes: [
+        ...cadastro.clientes,
+        {
+          id: 'c-cedi-ro',
+          nome: 'CEDI_RO',
+          chaveNormalizada: 'cedi ro',
+          nomeFantasia: null,
+          unificadoEmId: 'c-cedidiag',
+        },
+      ],
+      clientesAliases: [
+        ...cadastro.clientesAliases,
+        { tipo: 'exato', chave: 'CEDIDIAG MATRIZ', clienteId: 'c-cedidiag' },
+      ],
+    };
+
+    it('unidade sem configuração cujo principal tem outra ganha CO explícita; com a do principal igual à padrão, nada', () => {
+      const r = mapearTipificacao(
+        base({ clienteRegras: [{ empresa: 'CEDIDIAG', regraId: NC, principal: true }] }),
+        cadastroCedi,
+      );
+      expect(r.tabelas.clientesTipificacao).toEqual([
+        {
+          clienteId: 'c-cedidiag',
+          regraId: regra(NC),
+          subregraDemaisId: null,
+          atualizadoPorId: null,
+        },
+        {
+          clienteId: 'c-cedi-rj',
+          regraId: regra(CO),
+          subregraDemaisId: null,
+          atualizadoPorId: null,
+        },
+        {
+          clienteId: 'c-cedi-ro',
+          regraId: regra(CO),
+          subregraDemaisId: null,
+          atualizadoPorId: null,
+        },
+      ]);
+      expect(r.unidadesComCoExplicita).toBe(2);
+      // Grafia (apelido exato) sem configuração de um cliente fora da padrão: só aviso.
+      expect(r.avisos).toContainEqual({
+        tabela: 'clientes_tipificacao',
+        item: 'CEDIDIAG MATRIZ',
+        motivo:
+          'Grafia de CEDIDIAG sem configuração no dashboards-one (lá era CO): no redo-one segue a de CEDIDIAG.',
+      });
+
+      const padrao = mapearTipificacao(
+        base({ clienteRegras: [{ empresa: 'CEDIDIAG', regraId: CO, principal: true }] }),
+        cadastroCedi,
+      );
+      expect(padrao.tabelas.clientesTipificacao.map((c) => c.clienteId)).toEqual(['c-cedidiag']);
+      expect(padrao.unidadesComCoExplicita).toBe(0);
+    });
+
+    it('unidade com linhas e sem regra principal fica com a padrão, não com a do principal', () => {
+      const r = mapearTipificacao(
+        base({
+          clienteRegras: [{ empresa: 'CEDIDIAG', regraId: NC, principal: true }],
+          clienteSubRegras: [
+            {
+              empresa: 'CEDI_RJ',
+              subRegraId: NC_FT,
+              catchAll: true,
+              modalidadeMedicos: {},
+              especialidadeMedicos: {},
+              prioridades: [],
+            },
+          ],
+        }),
+        cadastroCedi,
+      );
+      expect(r.tabelas.clientesTipificacao.find((c) => c.clienteId === 'c-cedi-rj')).toEqual({
+        clienteId: 'c-cedi-rj',
+        regraId: regra(CO),
+        subregraDemaisId: sub(NC_FT),
+        atualizadoPorId: null,
+      });
+    });
+  });
+
   it('duas grafias do mesmo cliente com configurações diferentes: vale a preferida; sem decisão, para', () => {
     const legado = base({
       clienteRegras: [
@@ -465,7 +552,7 @@ describe('mapearTipificacao', () => {
       'Empresa "NAO_EXISTE" não casa com nenhum cliente do redo-one.',
       'CBU, linha 1: grupo "Neurologistas" não existe como equipe no redo-one.',
       'CBU, linha 1: médico "fulano de tal" não tem cadastro no redo-one.',
-      'CBU, linha 2: especialidade "ODONTO" não existe no redo-one.',
+      'CBU, linha 2: especialidade "ODONTO" não existe no redo-one. Se é um valor cru da MobileMed (COLUNAS), importe os laudos antes da carga.',
     ]);
   });
 });

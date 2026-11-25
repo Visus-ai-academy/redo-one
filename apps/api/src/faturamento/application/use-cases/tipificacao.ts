@@ -1,5 +1,6 @@
 import type { Auditoria } from '../../../auditoria/auditoria';
 import {
+  type Conhecidos,
   NomeTipificacaoEmUsoError,
   prepararConfiguracao,
   prepararRegra,
@@ -76,7 +77,10 @@ export class SalvarRegraTipificacao {
     };
     const diferenca = antes ? mudanca(antes, dados) : null;
     if (antes && !diferenca) return id as string;
-    const salvo = await this.repo.salvarRegra(id, dados);
+    // Nome, cor, descrição e situação não mudam a tipificação de nenhum laudo (inativa segue
+    // classificando onde já está, como no dashboards-one); regra nova ainda não é usada.
+    const reclassificar = Boolean(antes && antes.faturaSemSubregra !== dados.faturaSemSubregra);
+    const salvo = await this.repo.salvarRegra(id, dados, reclassificar);
     await this.auditoria.registrar({
       ator: { tipo: 'usuario', id: usuarioId },
       entidade: 'regra_tipificacao',
@@ -118,7 +122,10 @@ export class SalvarSubregraTipificacao {
     };
     const diferenca = antes ? mudanca(antes, dados) : null;
     if (antes && !diferenca) return id as string;
-    const salvo = await this.repo.salvarSubregra(id, dados);
+    const reclassificar = Boolean(
+      antes && (antes.fatura !== dados.fatura || antes.regraId !== dados.regraId),
+    );
+    const salvo = await this.repo.salvarSubregra(id, dados, reclassificar);
     await this.auditoria.registrar({
       ator: { tipo: 'usuario', id: usuarioId },
       entidade: 'subregra_tipificacao',
@@ -206,11 +213,46 @@ export class ObterTipificacaoCliente {
 const semAutor = (c: ConfiguracaoRegistrada | null): Configuracao | null =>
   c && { regraId: c.regraId, subregraDemaisId: c.subregraDemaisId, linhas: c.linhas };
 
-async function conhecidos(repo: TipificacaoRepository) {
-  const [regras, subregras] = await Promise.all([repo.listarRegras(), repo.listarSubregras()]);
+/** O que a configuração pode citar, conferido no banco (ids de catálogo, médicos e equipes). */
+async function conhecidos(
+  repo: TipificacaoRepository,
+  equipes: EquipesMedicos,
+  entrada: Configuracao,
+  gravada: Configuracao | null,
+): Promise<Conhecidos> {
+  const doTipo = (tipo: Configuracao['linhas'][number]['tipo']) =>
+    entrada.linhas.filter((l) => l.tipo === tipo).flatMap((l) => l.valores);
+  const [regras, subregras, catalogo, medicos, equipesExistentes] = await Promise.all([
+    repo.listarRegras(),
+    repo.listarSubregras(),
+    repo.catalogoExistente({
+      modalidades: doTipo('modalidade'),
+      especialidades: doTipo('especialidade'),
+      prioridades: doTipo('prioridade'),
+    }),
+    equipes.nomesMedicos([...new Set(entrada.linhas.flatMap((l) => l.medicos))]),
+    equipes.equipesExistentes([...new Set(entrada.linhas.flatMap((l) => l.equipes))]),
+  ]);
   return {
     regras: new Set(regras.map((r) => r.id)),
     subregras: new Set(subregras.map((s) => s.id)),
+    inativas: new Set([...regras, ...subregras].filter((r) => !r.ativo).map((r) => r.id)),
+    jaGravados: new Set(
+      gravada
+        ? [
+            gravada.regraId,
+            gravada.subregraDemaisId,
+            ...gravada.linhas.map((l) => l.subregraId),
+          ].filter((id): id is string => Boolean(id))
+        : [],
+    ),
+    valores: {
+      modalidade: new Set(catalogo.modalidades),
+      especialidade: new Set(catalogo.especialidades),
+      prioridade: new Set(catalogo.prioridades),
+    },
+    medicos: new Set(medicos.map((m) => m.id)),
+    equipes: new Set(equipesExistentes),
   };
 }
 
@@ -221,14 +263,18 @@ async function conhecidos(repo: TipificacaoRepository) {
 export class SalvarTipificacaoCliente {
   constructor(
     private readonly repo: TipificacaoRepository,
+    private readonly equipes: EquipesMedicos,
     private readonly auditoria: Auditoria,
     private readonly agora: () => Date,
   ) {}
 
   async executar(usuarioId: string, clienteId: string, entrada: Configuracao): Promise<void> {
     const cliente = await exigirCliente(this.repo, clienteId);
-    const nova = prepararConfiguracao(entrada, await conhecidos(this.repo));
     const atual = semAutor(await this.repo.obterConfiguracaoCliente(clienteId));
+    const nova = prepararConfiguracao(
+      entrada,
+      await conhecidos(this.repo, this.equipes, entrada, atual),
+    );
     if (JSON.stringify(atual) === JSON.stringify(nova)) return;
     const em = this.agora();
     await this.repo.salvarConfiguracaoCliente(
@@ -279,7 +325,11 @@ export class PreviaTipificacaoCliente {
 
   async executar(clienteId: string, entrada: Configuracao): Promise<LinhaPrevia[]> {
     const cliente = await exigirCliente(this.repo, clienteId);
-    const nova = prepararConfiguracao(entrada, await conhecidos(this.repo));
+    const gravada = semAutor(await this.repo.obterConfiguracaoCliente(clienteId));
+    const nova = prepararConfiguracao(
+      entrada,
+      await conhecidos(this.repo, this.equipes, entrada, gravada),
+    );
     const [atual, membros, bloqueadas] = await Promise.all([
       this.repo.carregarConfiguracao(),
       this.equipes.membros(),

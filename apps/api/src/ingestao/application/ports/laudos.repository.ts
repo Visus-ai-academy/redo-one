@@ -35,9 +35,11 @@ export interface AlteracoesLaudos {
   idsMedico: ReadonlyMap<string, IdsMedicoMobilemed>;
   /**
    * Tipificação de cada laudo da janela, por identidade, inclusive dos que não mudaram (a
-   * configuração nova chega a eles na importação seguinte). Só grava a que mudou.
+   * configuração nova chega a eles na importação seguinte). Só grava a que mudou, e só no laudo
+   * gravado com a mesma competência da linha lida (o que a gravação pulou não ganha tipificação
+   * de dados que não foram gravados).
    */
-  classificacoes: ReadonlyMap<string, Tipificacao>;
+  classificacoes: ReadonlyMap<string, Tipificacao & { competencia: string }>;
 }
 
 export interface IdsMedicoMobilemed {

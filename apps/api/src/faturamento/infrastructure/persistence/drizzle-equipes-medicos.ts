@@ -14,7 +14,9 @@ export class DrizzleEquipesMedicos implements EquipesMedicos {
   async membros() {
     const linhas = await this.db
       .select({ equipeId: equipesMembros.equipeId, medicoId: equipesMembros.medicoId })
-      .from(equipesMembros);
+      .from(equipesMembros)
+      .innerJoin(equipes, eq(equipes.id, equipesMembros.equipeId))
+      .where(eq(equipes.ativo, true));
     const porEquipe = new Map<string, string[]>();
     for (const l of linhas)
       porEquipe.set(l.equipeId, [...(porEquipe.get(l.equipeId) ?? []), l.medicoId]);
@@ -36,6 +38,15 @@ export class DrizzleEquipesMedicos implements EquipesMedicos {
       .where(and(eq(medicos.ativo, true), busca ? ilike(medicos.nome, contem(busca)) : undefined))
       .orderBy(...(busca ? relevancia(medicos.nome, busca) : []), asc(medicos.nome))
       .limit(limite);
+  }
+
+  async equipesExistentes(ids: string[]) {
+    if (!ids.length) return [];
+    const linhas = await this.db
+      .select({ id: equipes.id })
+      .from(equipes)
+      .where(inArray(equipes.id, ids));
+    return linhas.map((l) => l.id);
   }
 
   async nomesMedicos(ids: string[]) {

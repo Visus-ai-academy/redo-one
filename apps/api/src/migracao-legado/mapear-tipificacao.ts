@@ -71,6 +71,8 @@ export interface TipificacaoMigrada {
   avisos: Aviso[];
   /** O que impede gravar: a carga para e relata (não cria cadastro por conta própria). */
   erros: string[];
+  /** Unidades sem configuração lá que ganharam a padrão explícita (o principal tem outra). */
+  unidadesComCoExplicita: number;
 }
 
 /** Uma linha antes de resolver para o redo-one: o critério e o filtro como estão lá. */
@@ -429,7 +431,9 @@ export function mapearTipificacao(
         const id = resolver(v);
         if (id) valores.add(id);
         else {
-          cfg.erros.push(`${item}: ${tipo} "${v}" não existe no redo-one.`);
+          cfg.erros.push(
+            `${item}: ${tipo} "${v}" não existe no redo-one.${tipo === 'especialidade' ? ' Se é um valor cru da MobileMed (COLUNAS), importe os laudos antes da carga.' : ''}`,
+          );
           falhou = true;
         }
       }
@@ -534,7 +538,54 @@ export function mapearTipificacao(
     });
   }
 
-  return { tabelas, avisos, erros };
+  // No dashboards-one, empresa sem configuração é CO. A unidade sem configuração própria, no
+  // redo-one, seguiria a do principal: quando ela não é a padrão, a unidade ganha a padrão
+  // explícita. Unidade com linhas e sem regra principal também fica na padrão (não herda).
+  const padraoId = tabRegras.find((r) => r.padrao)?.id ?? null;
+  const configPorCliente = new Map(tabelas.clientesTipificacao.map((c) => [c.clienteId, c]));
+  const comLinhas = new Set(tabelas.clientesTipificacaoLinhas.map((l) => l.clienteId));
+  const foraDaPadrao = (id: string) => {
+    const c = configPorCliente.get(id);
+    return Boolean(
+      c && ((c.regraId && c.regraId !== padraoId) || c.subregraDemaisId || comLinhas.has(id)),
+    );
+  };
+  let unidadesComCoExplicita = 0;
+  for (const cl of padraoId ? cadastro.clientes : []) {
+    if (!cl.unificadoEmId) continue;
+    const propria = configPorCliente.get(cl.id);
+    if (propria) {
+      propria.regraId ??= padraoId;
+      continue;
+    }
+    if (!foraDaPadrao(cl.unificadoEmId)) continue;
+    tabelas.clientesTipificacao.push({
+      clienteId: cl.id,
+      regraId: padraoId,
+      subregraDemaisId: null,
+      atualizadoPorId: null,
+    });
+    unidadesComCoExplicita += 1;
+    avisar(
+      'clientes_tipificacao',
+      cl.nome,
+      `Unidade sem configuração no dashboards-one (lá era CO): gravada a padrão explícita, para não seguir a de ${clientePorId.get(cl.unificadoEmId)?.nome ?? 'principal'}.`,
+    );
+  }
+  // Grafia (apelido) sem configuração lá de um cliente fora da padrão: aqui segue a do cliente.
+  const empresasComConfiguracao = new Set(empresas.map((e) => chaveCadastro(e)));
+  for (const a of cadastro.clientesAliases) {
+    if (a.tipo === 'prefixo' || empresasComConfiguracao.has(chaveCadastro(a.chave))) continue;
+    if (!foraDaPadrao(a.clienteId)) continue;
+    const nome = clientePorId.get(a.clienteId)?.nome ?? '';
+    avisar(
+      'clientes_tipificacao',
+      a.chave,
+      `Grafia de ${nome} sem configuração no dashboards-one (lá era CO): no redo-one segue a de ${nome}.`,
+    );
+  }
+
+  return { tabelas, avisos, erros, unidadesComCoExplicita };
 }
 
 /** O cadastro da carga a partir do catálogo e dos médicos migrados (ids estáveis). */

@@ -68,6 +68,9 @@ async function lerLinhas(db: Executor, clienteIds: string[] | null) {
     if (!ids.length) return porLinha;
     const rows = (await db.select().from(tabela).where(inArray(tabela.linhaId, ids))) as T[];
     for (const r of rows) porLinha.set(r.linhaId, [...(porLinha.get(r.linhaId) ?? []), valor(r)]);
+    // Ordenados: a configuração gravada se compara com a nova (também ordenada) sem depender da
+    // ordem em que o banco devolve as linhas.
+    for (const lista of porLinha.values()) lista.sort();
     return porLinha;
   };
   const [mods, esps, pris, meds, eqs] = await Promise.all([
@@ -212,7 +215,7 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
     return r?.id ?? null;
   }
 
-  salvarRegra(id: string | null, dados: DadosRegra): Promise<string> {
+  salvarRegra(id: string | null, dados: DadosRegra, reclassificar: boolean): Promise<string> {
     return this.db.transaction(async (tx) => {
       let salvo = id;
       if (salvo) {
@@ -227,12 +230,12 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
           .returning({ id: regrasTipificacao.id });
         salvo = criada?.id ?? '';
       }
-      await enfileirarReclassificacaoTipificacao(tx, null);
+      if (reclassificar) await enfileirarReclassificacaoTipificacao(tx, null);
       return salvo;
     });
   }
 
-  salvarSubregra(id: string | null, dados: DadosSubregra): Promise<string> {
+  salvarSubregra(id: string | null, dados: DadosSubregra, reclassificar: boolean): Promise<string> {
     return this.db.transaction(async (tx) => {
       let salvo = id;
       if (salvo) {
@@ -247,7 +250,7 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
           .returning({ id: subregrasTipificacao.id });
         salvo = criada?.id ?? '';
       }
-      await enfileirarReclassificacaoTipificacao(tx, null);
+      if (reclassificar) await enfileirarReclassificacaoTipificacao(tx, null);
       return salvo;
     });
   }
@@ -345,6 +348,28 @@ export class DrizzleTipificacaoRepository implements TipificacaoRepository {
         .orderBy(asc(prioridades.ordem), asc(prioridades.nome)),
     ]);
     return { modalidades: mods, especialidades: esps, prioridades: pris };
+  }
+
+  async catalogoExistente(ids: {
+    modalidades: string[];
+    especialidades: string[];
+    prioridades: string[];
+  }) {
+    const existentes = async (
+      tabela: typeof modalidades | typeof especialidades | typeof prioridades,
+      lista: string[],
+    ) =>
+      lista.length
+        ? (
+            await this.db.select({ id: tabela.id }).from(tabela).where(inArray(tabela.id, lista))
+          ).map((l) => l.id)
+        : [];
+    const [m, e, p] = await Promise.all([
+      existentes(modalidades, ids.modalidades),
+      existentes(especialidades, ids.especialidades),
+      existentes(prioridades, ids.prioridades),
+    ]);
+    return { modalidades: m, especialidades: e, prioridades: p };
   }
 }
 

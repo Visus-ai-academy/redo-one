@@ -187,20 +187,28 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     expect(await repo.subregraComNome('nc-nf')).toBe(ids.ncnf);
 
     await db.execute(sql`delete from graphile_worker._private_jobs`);
-    const nova = await repo.salvarSubregra(null, {
-      regraId: ids.nc,
-      nome: 'NC-X',
-      descricao: null,
-      fatura: true,
-      ativo: true,
-    });
-    await repo.salvarRegra(ids.nc, {
-      nome: 'NC',
-      descricao: 'Não consolidada',
-      cor: '#ff0000',
-      faturaSemSubregra: false,
-      ativo: true,
-    });
+    const nova = await repo.salvarSubregra(
+      null,
+      {
+        regraId: ids.nc,
+        nome: 'NC-X',
+        descricao: null,
+        fatura: true,
+        ativo: true,
+      },
+      false,
+    );
+    await repo.salvarRegra(
+      ids.nc,
+      {
+        nome: 'NC',
+        descricao: 'Não consolidada',
+        cor: '#ff0000',
+        faturaSemSubregra: false,
+        ativo: true,
+      },
+      true,
+    );
     expect((await repo.listarSubregras()).find((s) => s.id === nova)?.ordem).toBe(2);
     expect(await jobs()).toEqual([{ clienteIds: null }]);
   });

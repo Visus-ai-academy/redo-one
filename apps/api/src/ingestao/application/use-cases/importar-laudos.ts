@@ -220,7 +220,11 @@ export class ImportarLaudos {
         ),
         // Todos os da janela: a configuração mudada chega também aos laudos que não mudaram.
         classificacoes: new Map(
-          tipificar ? preparados.map((l) => [l.identidade, tipificar(l)] as const) : [],
+          tipificar
+            ? preparados.map(
+                (l) => [l.identidade, { ...tipificar(l), competencia: l.competencia }] as const,
+              )
+            : [],
         ),
       },
       this.agora(),

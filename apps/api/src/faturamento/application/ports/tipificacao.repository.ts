@@ -91,9 +91,9 @@ export interface TipificacaoRepository {
   /** Id da regra ou sub-regra com o nome (sem diferenciar maiúsculas), para recusar repetido. */
   regraComNome(nome: string): Promise<string | null>;
   subregraComNome(nome: string): Promise<string | null>;
-  /** Cria ou atualiza; a mudança enfileira a reclassificação de todos na mesma transação. */
-  salvarRegra(id: string | null, dados: DadosRegra): Promise<string>;
-  salvarSubregra(id: string | null, dados: DadosSubregra): Promise<string>;
+  /** Cria ou atualiza; com `reclassificar`, enfileira a reclassificação de todos na mesma transação. */
+  salvarRegra(id: string | null, dados: DadosRegra, reclassificar: boolean): Promise<string>;
+  salvarSubregra(id: string | null, dados: DadosSubregra, reclassificar: boolean): Promise<string>;
   obterCliente(clienteId: string): Promise<ClienteDaTipificacao | null>;
   obterConfiguracaoCliente(clienteId: string): Promise<ConfiguracaoRegistrada | null>;
   /**
@@ -108,4 +108,10 @@ export interface TipificacaoRepository {
   ): Promise<void>;
   lerParaPrevia(lote: LotePreviaTipificacao): Promise<LaudoParaPreviaTipificacao[]>;
   listarOpcoes(): Promise<OpcoesTipificacao>;
+  /** Dos ids pedidos, os que existem no catálogo (ativos ou não), por tipo. */
+  catalogoExistente(ids: {
+    modalidades: string[];
+    especialidades: string[];
+    prioridades: string[];
+  }): Promise<{ modalidades: string[]; especialidades: string[]; prioridades: string[] }>;
 }

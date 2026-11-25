@@ -252,8 +252,8 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
         ...vazio,
         inserir: [laudo('a'), laudo('b', { competencia: '2026-09' })],
         classificacoes: new Map([
-          ['a', CO],
-          ['b', CO],
+          ['a', { ...CO, competencia: '2026-10' }],
+          ['b', { ...CO, competencia: '2026-09' }],
         ]),
       },
       agora,
@@ -277,8 +277,8 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
       {
         ...vazio,
         classificacoes: new Map([
-          ['a', CO],
-          ['b', NCNF],
+          ['a', { ...CO, competencia: '2026-10' }],
+          ['b', { ...NCNF, competencia: '2026-09' }],
         ]),
       },
       depois,
@@ -293,7 +293,14 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     await repo.aplicar(
       importacaoId,
       janela,
-      { ...vazio, classificacoes: new Map([['b', NCNF]]) },
+      { ...vazio, classificacoes: new Map([['b', { ...NCNF, competencia: '2026-09' }]]) },
+      depois,
+    );
+    // A linha nova levaria "a" para outra competência e a gravação a pulou: a tipificação também.
+    await repo.aplicar(
+      importacaoId,
+      janela,
+      { ...vazio, classificacoes: new Map([['a', { ...NCNF, competencia: '2026-11' }]]) },
       depois,
     );
     expect((await ler()).map((r) => [r.identidade, r.fatura])).toEqual([
