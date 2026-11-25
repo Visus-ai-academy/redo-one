@@ -70,7 +70,18 @@ export function valoresDoPreco(
   };
 }
 
-const inteiro = (t: string) => (t.trim() === '' ? null : Number(t.replace(',', '.')));
+/**
+ * Número em pt-BR (ponto só no milhar, vírgula nos centavos): "1.200" = 1200, "1.200,50" = 1200,5,
+ * "57,00" = 57. Fora disso, nulo. O mesmo da planilha na API.
+ */
+export function numeroPtBr(texto: string, casas: 0 | 2): number | null {
+  const t = texto.trim();
+  const decimais = casas ? `(,\\d{1,${casas}})?` : '';
+  if (!new RegExp(`^(\\d{1,3}(\\.\\d{3})+|\\d+)${decimais}$`).test(t)) return null;
+  return Number(t.replace(/\./g, '').replace(',', '.'));
+}
+
+const inteiro = (t: string) => (t.trim() === '' ? null : numeroPtBr(t, 0));
 
 export function corpoDoPreco(v: ValoresPreco): MudarPrecoDto {
   return {
@@ -81,7 +92,8 @@ export function corpoDoPreco(v: ValoresPreco): MudarPrecoDto {
     faixaInicio: inteiro(v.faixaInicio),
     faixaFim: inteiro(v.faixaFim),
     condVolume: v.condVolume,
-    valor: Number(v.valor.replace(',', '.')),
+    // O campo numérico guarda o número do JavaScript ("1200.5"), já lido em pt-BR pelo Base UI.
+    valor: Number(v.valor),
     aPartirDe: v.aPartirDe,
   };
 }

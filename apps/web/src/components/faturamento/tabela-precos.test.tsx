@@ -11,7 +11,7 @@ import { precosControllerOpcoes } from '../../gen/clients/precosControllerOpcoes
 import type { ItemPrecoDto } from '../../gen/types/ItemPrecoDto';
 import { renderComRotas } from '../../test/render';
 import { escolherOpcao } from '../../test/select';
-import { opcoesAPartirDe, textoDaFaixa, textoDaVigencia } from './precos';
+import { numeroPtBr, opcoesAPartirDe, textoDaFaixa, textoDaVigencia } from './precos';
 import { TabelaPrecos } from './tabela-precos';
 
 vi.mock('../../gen/clients/precosControllerListar', () => ({ precosControllerListar: vi.fn() }));
@@ -107,6 +107,12 @@ describe('textos dos preços', () => {
     expect(textoDaVigencia(null, null)).toBe('Desde sempre');
     expect(textoDaVigencia('2026-11', '2026-12')).toBe('11/2026 a 12/2026');
     expect(opcoesAPartirDe('2026-11', '2026-11')).toHaveLength(13);
+    expect(numeroPtBr('1.200', 2)).toBe(1200);
+    expect(numeroPtBr('1.200,50', 2)).toBe(1200.5);
+    expect(numeroPtBr('57,00', 2)).toBe(57);
+    expect(numeroPtBr('1.000', 0)).toBe(1000);
+    expect(numeroPtBr('1.2', 2)).toBeNull();
+    expect(numeroPtBr('10,5', 0)).toBeNull();
   });
 });
 
@@ -120,7 +126,7 @@ describe('TabelaPrecos', () => {
     expect(screen.queryByRole('button', { name: 'Incluir preço' })).not.toBeInTheDocument();
   });
 
-  it('incluir pede os campos obrigatórios e envia com a próxima competência sugerida', async () => {
+  it('incluir pede os campos obrigatórios, lê número em pt-BR (1.200,50) e envia com a próxima competência', async () => {
     renderComRotas(<TabelaPrecos tipo="contratado" donoId="ct" podeEditar />);
     await userEvent.click(await screen.findByRole('button', { name: 'Incluir preço' }));
     await userEvent.click(screen.getByRole('button', { name: 'Incluir preço' }));
@@ -129,12 +135,13 @@ describe('TabelaPrecos', () => {
     await escolherOpcao('Especialidade', 'NEURO');
     await escolherOpcao('Categoria', 'SC');
     await escolherOpcao('Prioridade', 'ROTINA');
-    await userEvent.type(screen.getByRole('textbox', { name: /Valor/ }), '70');
+    await userEvent.type(screen.getByRole('textbox', { name: /Valor/ }), '1.200,50');
+    await userEvent.type(screen.getByRole('textbox', { name: /Faixa: de/ }), '1.000');
     await userEvent.click(screen.getByRole('button', { name: 'Incluir preço' }));
     await waitFor(() =>
       expect(precosControllerIncluir).toHaveBeenCalledWith({
         path: { tipo: 'contratado', donoId: 'ct' },
-        body: expect.objectContaining({ valor: 70, aPartirDe: '2026-12', faixaInicio: null }),
+        body: expect.objectContaining({ valor: 1200.5, aPartirDe: '2026-12', faixaInicio: 1000 }),
       }),
     );
   });

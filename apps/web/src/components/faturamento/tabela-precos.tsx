@@ -43,6 +43,7 @@ import { mesAno } from './competencias';
 import {
   baixarArquivo,
   corpoDoPreco,
+  numeroPtBr,
   opcoesAPartirDe,
   ROTULO_COND,
   textoDaFaixa,
@@ -291,8 +292,18 @@ const esquema = z
         path: ['valor'],
         message: 'O valor tem de ser maior que zero.',
       });
-    const ini = v.faixaInicio ? Number(v.faixaInicio) : null;
-    const fim = v.faixaFim ? Number(v.faixaFim) : null;
+    const ini = v.faixaInicio.trim() ? numeroPtBr(v.faixaInicio, 0) : null;
+    const fim = v.faixaFim.trim() ? numeroPtBr(v.faixaFim, 0) : null;
+    for (const [campo, texto, n] of [
+      ['faixaInicio', v.faixaInicio, ini],
+      ['faixaFim', v.faixaFim, fim],
+    ] as const)
+      if (texto.trim() && n === null)
+        ctx.addIssue({
+          code: 'custom',
+          path: [campo],
+          message: 'Use um número inteiro (ex.: 300 ou 1.000).',
+        });
     if (ini !== null && fim !== null && fim < ini)
       ctx.addIssue({
         code: 'custom',
@@ -461,16 +472,18 @@ function EditorPreco({
             </form.AppField>
             <form.AppField name="faixaInicio">
               {(f) => (
-                <f.NumberField
+                <f.TextField
                   label="Faixa: de"
                   placeholder="Sem faixa"
-                  min={0}
+                  spellCheck={false}
                   description="Volume do mês; vazio vale para qualquer volume."
                 />
               )}
             </form.AppField>
             <form.AppField name="faixaFim">
-              {(f) => <f.NumberField label="Faixa: até" placeholder="Sem limite" min={0} />}
+              {(f) => (
+                <f.TextField label="Faixa: até" placeholder="Sem limite" spellCheck={false} />
+              )}
             </form.AppField>
             {temFaixa && (
               <form.AppField name="condVolume">
@@ -521,7 +534,7 @@ function EditorPreco({
                 titulo={`Encerrar a partir de ${mesAno(aPartirDe)}?`}
                 consequencia={
                   apagaDeVez
-                    ? 'Este preço é programado e nunca valeu: ele sai da tabela. O histórico fica na auditoria.'
+                    ? 'Este preço é programado e nunca valeu: ele sai da tabela, e o preço que ele substituiria volta a valer. O histórico fica na auditoria.'
                     : `O preço deixa de valer a partir de ${mesAno(aPartirDe)}; as competências anteriores continuam com ele. Sem outro preço, o arranjo passa para a tabela seguinte.`
                 }
                 onConfirmar={() =>
@@ -733,7 +746,8 @@ function ImportarPlanilha({
         />
         <p className="text-muted-foreground text-[13px]">
           No modelo da exportação: Modalidade; Especialidade; Categoria; Prioridade; Faixa início;
-          Faixa fim; Volume por; Valor.
+          Faixa fim; Volume por; Valor; Vale a partir de. A linha com "Vale a partir de" é o preço
+          programado daquela competência; as outras mudam a partir da competência abaixo.
         </p>
         {faltaArquivo && <p className="text-destructive text-[13px]">Escolha a planilha.</p>}
       </div>
