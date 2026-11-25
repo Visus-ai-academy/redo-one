@@ -130,3 +130,86 @@ export function montarTipificador(config: ConfiguracaoTipificacao): Tipificador 
     return { regraId, subregraId: null, fatura: faturaSemSub.get(regraId) ?? true };
   };
 }
+
+/** Um valor com vigência por competência ("YYYY-MM" inclusivos; até nulo = sem fim). */
+export interface ValorVigente<T> {
+  vigenciaDesde: string;
+  vigenciaAte: string | null;
+  valor: T;
+}
+
+/**
+ * A tipificação com o histórico: as versões da configuração de cada cliente (a vazia volta a
+ * herdar) e as do "fatura" de cada sub-regra e do "fatura sem sub-regra" de cada regra.
+ */
+export interface ConfiguracaoTipificacaoVersionada {
+  regras: { id: string; padrao: boolean; faturaSemSubregra: ValorVigente<boolean>[] }[];
+  subregras: { id: string; regraId: string; fatura: ValorVigente<boolean>[] }[];
+  equipes: { id: string; medicos: string[] }[];
+  clientes: (ConfiguracaoCliente & { vigenciaDesde: string; vigenciaAte: string | null })[];
+}
+
+export type TipificadorPorCompetencia = (
+  laudo: LaudoParaTipificar & { competencia: string },
+) => Tipificacao;
+
+const contem = (v: { vigenciaDesde: string; vigenciaAte: string | null }, competencia: string) =>
+  v.vigenciaDesde <= competencia && (v.vigenciaAte === null || competencia <= v.vigenciaAte);
+
+/**
+ * O valor vigente na competência. Antes da primeira versão vale a primeira (o valor de antes de
+ * qualquer mudança); depois da última, a última.
+ */
+export function valorEm(versoes: ValorVigente<boolean>[], competencia: string, semVersao: boolean) {
+  const achada = versoes.find((v) => contem(v, competencia));
+  if (achada) return achada.valor;
+  const ordenadas = [...versoes].sort((a, b) => a.vigenciaDesde.localeCompare(b.vigenciaDesde));
+  const primeira = ordenadas[0];
+  if (!primeira) return semVersao;
+  return competencia < primeira.vigenciaDesde
+    ? primeira.valor
+    : (ordenadas.at(-1)?.valor ?? semVersao);
+}
+
+export const configuracaoVazia = (c: Omit<ConfiguracaoCliente, 'clienteId'>) =>
+  !c.regraId && !c.subregraDemaisId && !c.linhas.length;
+
+/** A tipificação como vale numa competência. */
+export function naCompetencia(
+  config: ConfiguracaoTipificacaoVersionada,
+  competencia: string,
+): ConfiguracaoTipificacao {
+  return {
+    regras: config.regras.map((r) => ({
+      id: r.id,
+      padrao: r.padrao,
+      faturaSemSubregra: valorEm(r.faturaSemSubregra, competencia, true),
+    })),
+    subregras: config.subregras.map((s) => ({
+      id: s.id,
+      regraId: s.regraId,
+      fatura: valorEm(s.fatura, competencia, true),
+    })),
+    equipes: config.equipes,
+    clientes: config.clientes
+      .filter((c) => contem(c, competencia) && !configuracaoVazia(c))
+      .map(({ vigenciaDesde: _d, vigenciaAte: _a, ...c }) => c),
+  };
+}
+
+/** O laudo usa a tipificação vigente na competência dele (montada uma vez por competência). */
+export function montarTipificadorPorCompetencia(
+  config: ConfiguracaoTipificacaoVersionada,
+): TipificadorPorCompetencia {
+  if (!config.regras.some((r) => r.padrao))
+    throw new Error('Nenhuma regra de tipificação marcada como padrão.');
+  const porCompetencia = new Map<string, Tipificador>();
+  return (laudo) => {
+    let tipificar = porCompetencia.get(laudo.competencia);
+    if (!tipificar) {
+      tipificar = montarTipificador(naCompetencia(config, laudo.competencia));
+      porCompetencia.set(laudo.competencia, tipificar);
+    }
+    return tipificar(laudo);
+  };
+}

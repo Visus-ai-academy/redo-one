@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type ConfiguracaoCliente,
   type ConfiguracaoTipificacao,
+  type ConfiguracaoTipificacaoVersionada,
   type LaudoParaTipificar,
   type LinhaTipificacao,
   montarTipificador,
+  montarTipificadorPorCompetencia,
 } from './tipificacao';
 
 // Cenário do dashboards-one (RMPADUA, CEDI_RJ, RADI_IMAGEM): CO é a padrão; sem sub-regra só NC
@@ -234,5 +237,125 @@ describe('montarTipificador', () => {
     expect(() =>
       montarTipificador({ regras: [], subregras: [], equipes: [], clientes: [] }),
     ).toThrow('Nenhuma regra de tipificação marcada como padrão.');
+  });
+});
+
+describe('montarTipificadorPorCompetencia', () => {
+  const sempre = (valor: boolean) => [{ vigenciaDesde: '2024-01', vigenciaAte: null, valor }];
+  const versionada = (
+    clientes: ConfiguracaoTipificacaoVersionada['clientes'],
+    mudancas: Partial<Pick<ConfiguracaoTipificacaoVersionada, 'regras' | 'subregras'>> = {},
+  ): ConfiguracaoTipificacaoVersionada => ({
+    regras: [
+      { id: 'CO', padrao: true, faturaSemSubregra: sempre(true) },
+      { id: 'NC', padrao: false, faturaSemSubregra: sempre(false) },
+    ],
+    subregras: [
+      { id: 'CO-FT', regraId: 'CO', fatura: sempre(true) },
+      { id: 'NC-NF', regraId: 'NC', fatura: sempre(false) },
+    ],
+    equipes: [],
+    clientes,
+    ...mudancas,
+  });
+  const naConfig = (desde: string, ate: string | null, c: Partial<ConfiguracaoCliente> = {}) => ({
+    clienteId: 'rmpadua',
+    regraId: 'NC',
+    subregraDemaisId: null,
+    linhas: [],
+    vigenciaDesde: desde,
+    vigenciaAte: ate,
+    ...c,
+  });
+
+  it('o laudo usa a versão da configuração vigente na competência dele', () => {
+    const tipificar = montarTipificadorPorCompetencia(
+      versionada([
+        naConfig('2024-01', '2026-11'),
+        naConfig('2026-12', null, {
+          linhas: [linha({ valores: ['MI'], subregraId: 'CO-FT' })],
+        }),
+      ]),
+    );
+    expect(tipificar({ ...laudo(), competencia: '2026-11' })).toEqual({
+      regraId: 'NC',
+      subregraId: null,
+      fatura: false,
+    });
+    expect(tipificar({ ...laudo(), competencia: '2026-12' })).toEqual({
+      regraId: 'CO',
+      subregraId: 'CO-FT',
+      fatura: true,
+    });
+  });
+
+  it('sem versão na competência (ou versão vazia), herda: do principal ou a padrão', () => {
+    const tipificar = montarTipificadorPorCompetencia(
+      versionada([
+        naConfig('2026-11', '2026-11'),
+        naConfig('2026-12', null, { regraId: null }),
+        naConfig('2024-01', null, { clienteId: 'principal', regraId: 'NC' }),
+        naConfig('2024-01', null, { clienteId: 'unidade', regraId: 'CO' }),
+        naConfig('2026-12', null, { clienteId: 'unidade2', regraId: null }),
+      ]),
+    );
+    expect(tipificar({ ...laudo(), competencia: '2026-10' }).regraId).toBe('CO');
+    expect(tipificar({ ...laudo(), competencia: '2026-11' }).regraId).toBe('NC');
+    // Versão vazia = "remover a configuração": volta a herdar (aqui, a padrão).
+    expect(tipificar({ ...laudo(), competencia: '2026-12' }).regraId).toBe('CO');
+    const daUnidade2 = laudo({ clienteId: 'principal', unidadeId: 'unidade2' });
+    expect(tipificar({ ...daUnidade2, competencia: '2026-12' }).regraId).toBe('NC');
+    const daUnidade = laudo({ clienteId: 'principal', unidadeId: 'unidade' });
+    expect(tipificar({ ...daUnidade, competencia: '2026-12' }).regraId).toBe('CO');
+  });
+
+  it('o "fatura" da sub-regra e o "fatura sem sub-regra" da regra também seguem a versão', () => {
+    const tipificar = montarTipificadorPorCompetencia(
+      versionada(
+        [
+          naConfig('2024-01', null, {
+            linhas: [linha({ valores: ['MI'], subregraId: 'NC-NF' })],
+          }),
+        ],
+        {
+          regras: [
+            { id: 'CO', padrao: true, faturaSemSubregra: sempre(true) },
+            {
+              id: 'NC',
+              padrao: false,
+              faturaSemSubregra: [
+                { vigenciaDesde: '2024-01', vigenciaAte: '2026-11', valor: false },
+                { vigenciaDesde: '2026-12', vigenciaAte: null, valor: true },
+              ],
+            },
+          ],
+          subregras: [
+            {
+              id: 'NC-NF',
+              regraId: 'NC',
+              fatura: [
+                { vigenciaDesde: '2024-01', vigenciaAte: '2026-11', valor: false },
+                { vigenciaDesde: '2026-12', vigenciaAte: null, valor: true },
+              ],
+            },
+          ],
+        },
+      ),
+    );
+    expect(tipificar({ ...laudo(), competencia: '2026-11' }).fatura).toBe(false);
+    expect(tipificar({ ...laudo(), competencia: '2026-12' }).fatura).toBe(true);
+    const semLinha = { ...laudo({ especialidadeId: 'CARDIO' }) };
+    expect(tipificar({ ...semLinha, competencia: '2026-11' })).toEqual({
+      regraId: 'NC',
+      subregraId: null,
+      fatura: false,
+    });
+    expect(tipificar({ ...semLinha, competencia: '2026-12' }).fatura).toBe(true);
+    // Antes da primeira versão do "fatura", vale a primeira (o valor de antes de qualquer mudança).
+    expect(tipificar({ ...semLinha, competencia: '2023-05' })).toEqual({
+      regraId: 'CO',
+      subregraId: null,
+      fatura: true,
+    });
   });
 });
