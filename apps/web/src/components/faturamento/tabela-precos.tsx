@@ -720,7 +720,7 @@ function ImportarPlanilha({
   return (
     <Dialogo
       titulo="Importar planilha de preços"
-      descricao="Inclui os arranjos novos e altera os que mudaram, a partir da competência escolhida. O que a planilha não traz fica como está."
+      descricao="Inclui os arranjos novos e altera os que mudaram. O que a planilha não traz fica como está."
       onFechar={onFechar}
       onEnviar={() => void importar()}
       alterado={Boolean(arquivo)}
@@ -751,9 +751,10 @@ function ImportarPlanilha({
           className="file:border-input file:bg-card text-[14px] file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5"
         />
         <p className="text-muted-foreground text-[13px]">
-          No modelo da exportação: Modalidade; Especialidade; Categoria; Prioridade; Faixa início;
-          Faixa fim; Volume por; Valor; Vale a partir de. A linha com "Vale a partir de" é o preço
-          programado daquela competência; as outras mudam a partir da competência abaixo.
+          No modelo da exportação, com "Vale a partir de" em cada linha: a linha exportada traz o
+          início do preço (MM/AAAA ou "desde sempre") e muda só ele; a linha com a coluna vazia é
+          preço novo ou alterado a partir da competência abaixo. Se a tabela mudou depois da
+          exportação, a linha é recusada: exporte de novo.
         </p>
         {faltaArquivo && <p className="text-destructive text-[13px]">Escolha a planilha.</p>}
       </div>
