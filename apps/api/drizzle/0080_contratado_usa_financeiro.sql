@@ -1,0 +1,1 @@
+ALTER TABLE "contratados" ADD COLUMN "usa_financeiro" boolean DEFAULT false NOT NULL;

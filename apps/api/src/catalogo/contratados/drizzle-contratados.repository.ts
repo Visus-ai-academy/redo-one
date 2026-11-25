@@ -31,6 +31,7 @@ export class DrizzleContratadosRepository implements ContratadosRepository {
         contratadoRepasseNome: repasse.razaoSocial,
         ativo: contratados.ativo,
         padrao: contratados.padrao,
+        usaFinanceiro: contratados.usaFinanceiro,
       })
       .from(contratados)
       .leftJoin(repasse, eq(repasse.id, contratados.contratadoRepasseId));

@@ -47,4 +47,9 @@ export type ContratadoDto = {
    * @type boolean
    */
   padrao: boolean;
+  /**
+   * @description Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One. Só ativo.
+   * @type boolean
+   */
+  usaFinanceiro: boolean;
 };

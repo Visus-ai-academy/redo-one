@@ -31,6 +31,7 @@ describe('OpcoesService', () => {
       contratadoRepasseId: null,
       ativo: true,
       padrao: true,
+      usaFinanceiro: false,
     });
 
     const service = new OpcoesService(

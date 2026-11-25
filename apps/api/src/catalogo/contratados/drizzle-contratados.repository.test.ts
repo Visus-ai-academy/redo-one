@@ -19,6 +19,7 @@ const base = {
   contratadoRepasseId: null,
   ativo: true,
   padrao: false,
+  usaFinanceiro: false,
 };
 
 describe.skipIf(!url)('DrizzleContratadosRepository', () => {
@@ -84,6 +85,20 @@ describe.skipIf(!url)('DrizzleContratadosRepository', () => {
 
     await repo.atualizar(tele, { ...base, razaoSocial: 'TELE', padrao: false });
     expect(await repo.buscarPadrao()).toBeNull();
+  });
+
+  it('grava e lê se usa o financeiro do One', async () => {
+    const tele = await repo.criar({ ...base, razaoSocial: 'TELE', usaFinanceiro: true });
+    expect((await repo.buscar(tele))?.usaFinanceiro).toBe(true);
+    await repo.atualizar(tele, { ...base, razaoSocial: 'TELE', usaFinanceiro: false });
+    expect((await repo.listar({ pagina: 1, porPagina: 10 })).itens).toEqual([
+      expect.objectContaining({ razaoSocial: 'TELE', usaFinanceiro: false }),
+    ]);
+    const [rn] = await db
+      .insert(schema.contratados)
+      .values({ razaoSocial: 'RN' })
+      .returning({ usaFinanceiro: schema.contratados.usaFinanceiro });
+    expect(rn?.usaFinanceiro).toBe(false);
   });
 
   it('o banco recusa dois padrões', async () => {

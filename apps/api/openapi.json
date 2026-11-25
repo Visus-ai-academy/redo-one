@@ -12255,6 +12255,10 @@
           "padrao": {
             "type": "boolean",
             "description": "Vem escolhido nos campos de contratado."
+          },
+          "usaFinanceiro": {
+            "type": "boolean",
+            "description": "Contas a pagar e a receber, nota fiscal e cobrança ficam no One."
           }
         },
         "required": [
@@ -12268,7 +12272,8 @@
           "contratadoRepasseId",
           "contratadoRepasseNome",
           "ativo",
-          "padrao"
+          "padrao",
+          "usaFinanceiro"
         ]
       },
       "PaginaContratadosDto": {
@@ -12341,12 +12346,17 @@
           "padrao": {
             "type": "boolean",
             "description": "Vem escolhido nos campos de contratado. Marcar desmarca o anterior; só ativo."
+          },
+          "usaFinanceiro": {
+            "type": "boolean",
+            "description": "Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One. Só ativo."
           }
         },
         "required": [
           "razaoSocial",
           "ativo",
-          "padrao"
+          "padrao",
+          "usaFinanceiro"
         ]
       },
       "ContratadoResumoDto": {

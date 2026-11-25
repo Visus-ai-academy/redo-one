@@ -17,6 +17,7 @@ export const contratadoItemDtoSchema = z.object({
   contratadoRepasseNome: z.string().nullable(),
   ativo: z.boolean(),
   padrao: z.boolean().describe('Vem escolhido nos campos de contratado.'),
+  usaFinanceiro: z.boolean().describe('Contas a pagar e a receber, nota fiscal e cobrança ficam no One.'),
 })
 
 export type ContratadoItemDtoSchemaType = z.infer<typeof contratadoItemDtoSchema>

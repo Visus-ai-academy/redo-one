@@ -27,3 +27,12 @@ export class PadraoInativoError extends ErroDeDominio {
     super('Um contratado inativo não pode ser o contratado padrão.');
   }
 }
+
+/** O financeiro do One emite nota e cobra em nome do contratado: só para quem está ativo. */
+export class FinanceiroInativoError extends ErroDeDominio {
+  readonly tipo = 'invalido';
+
+  constructor() {
+    super('Um contratado inativo não pode usar o financeiro do One.');
+  }
+}

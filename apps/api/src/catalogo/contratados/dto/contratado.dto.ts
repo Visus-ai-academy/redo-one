@@ -57,6 +57,13 @@ export class ContratadoDto {
   })
   @IsBoolean()
   padrao!: boolean;
+
+  @ApiProperty({
+    description:
+      'Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One. Só ativo.',
+  })
+  @IsBoolean()
+  usaFinanceiro!: boolean;
 }
 
 export class ContratadoItemDto {
@@ -73,6 +80,8 @@ export class ContratadoItemDto {
   @ApiProperty({ type: String, nullable: true }) contratadoRepasseNome!: string | null;
   @ApiProperty() ativo!: boolean;
   @ApiProperty({ description: 'Vem escolhido nos campos de contratado.' }) padrao!: boolean;
+  @ApiProperty({ description: 'Contas a pagar e a receber, nota fiscal e cobrança ficam no One.' })
+  usaFinanceiro!: boolean;
 }
 
 export class PaginaContratadosDto {

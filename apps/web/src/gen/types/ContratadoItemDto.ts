@@ -37,4 +37,9 @@ export type ContratadoItemDto = {
    * @type boolean
    */
   padrao: boolean;
+  /**
+   * @description Contas a pagar e a receber, nota fiscal e cobrança ficam no One.
+   * @type boolean
+   */
+  usaFinanceiro: boolean;
 };

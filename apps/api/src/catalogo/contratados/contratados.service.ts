@@ -9,6 +9,7 @@ import { type AtorCatalogo, RegistroAuditoria } from '../comum/registro-auditori
 import type { FiltroLista } from '../listas/lista.repository';
 import {
   CnpjEmUsoError,
+  FinanceiroInativoError,
   PadraoInativoError,
   RepasseEmCadeiaError,
   RepasseInvalidoError,
@@ -92,6 +93,7 @@ export class ContratadosService {
     }
 
     if (dados.padrao && !dados.ativo) throw new PadraoInativoError();
+    if (dados.usaFinanceiro && !dados.ativo) throw new FinanceiroInativoError();
 
     const contratadoRepasseId = dados.contratadoRepasseId || null;
     if (contratadoRepasseId) await this.validarRepasse(contratadoRepasseId, idAtual, razaoSocial);
@@ -106,6 +108,7 @@ export class ContratadosService {
       contratadoRepasseId,
       ativo: dados.ativo,
       padrao: dados.padrao,
+      usaFinanceiro: dados.usaFinanceiro,
     };
   }
 

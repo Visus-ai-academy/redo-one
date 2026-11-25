@@ -34,7 +34,41 @@ describe('PainelContratado', () => {
       contratadoRepasseId: 'c-tele',
       ativo: true,
       padrao: false,
+      usaFinanceiro: false,
     });
+  });
+
+  it('marca que usa o financeiro do One; inativo não pode usar', async () => {
+    const onSalvar = vi.fn(async () => undefined);
+    render(
+      <PainelContratado contratados={outros} podeEditar onSalvar={onSalvar} onFechar={vi.fn()} />,
+    );
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Razão social' }), 'TELEIMAGEM');
+    const financeiro = screen.getByRole('checkbox', { name: 'Usa o financeiro do One' });
+    expect(financeiro).toHaveAccessibleDescription(
+      'Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One.',
+    );
+    await userEvent.click(financeiro);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
+    expect(
+      await screen.findByText('Um contratado inativo não pode usar o financeiro do One.'),
+    ).toBeInTheDocument();
+    expect(onSalvar).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Um contratado inativo não pode usar o financeiro do One.'),
+      ).not.toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
+    await waitFor(() =>
+      expect(onSalvar).toHaveBeenCalledWith(
+        expect.objectContaining({ usaFinanceiro: true, ativo: true }),
+      ),
+    );
   });
 
   it('marca como contratado padrão; inativo não pode ser o padrão', async () => {
@@ -75,6 +109,7 @@ describe('PainelContratado', () => {
           contratadoRepasseNome: null,
           ativo: true,
           padrao: false,
+          usaFinanceiro: false,
         }}
         contratados={outros}
         podeEditar
@@ -109,6 +144,7 @@ describe('PainelContratado', () => {
           contratadoRepasseNome: null,
           ativo: true,
           padrao: false,
+          usaFinanceiro: true,
         }}
         contratados={outros}
         podeEditar={false}
@@ -119,6 +155,8 @@ describe('PainelContratado', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Usa o financeiro do One' })).toHaveValue('Sim');
+    expect(screen.getByRole('textbox', { name: 'Contratado padrão' })).toHaveValue('Não');
     await userEvent.click(screen.getByRole('button', { name: 'Excluir contratado' }));
     await userEvent.click(
       screen.getAllByRole('button', { name: 'Excluir contratado' }).at(-1) as HTMLElement,
@@ -143,6 +181,7 @@ describe('PainelContratado', () => {
           contratadoRepasseNome: null,
           ativo: true,
           padrao: false,
+          usaFinanceiro: false,
         }}
         contratados={outros}
         podeEditar

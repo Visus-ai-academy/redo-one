@@ -561,6 +561,20 @@
       "when": 1795627448874,
       "tag": "0079_laudos_dia_vigentes",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795628338187,
+      "tag": "0080_contratado_usa_financeiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795628338714,
+      "tag": "0081_contratado_usa_financeiro_padrao",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import { InMemoryContratadosRepository } from '../testing/fakes';
 import {
   CnpjEmUsoError,
   DocumentoInvalidoError,
+  FinanceiroInativoError,
   PadraoInativoError,
   RepasseEmCadeiaError,
   RepasseInvalidoError,
@@ -25,6 +26,7 @@ const dados = (razaoSocial: string, extra: Partial<DadosContratado> = {}): Dados
   contratadoRepasseId: null,
   ativo: true,
   padrao: false,
+  usaFinanceiro: false,
   ...extra,
 });
 
@@ -177,6 +179,49 @@ describe('ContratadosService', () => {
       await expect(
         service.atualizar(ator, tele, dados('TELE', { padrao: true, ativo: false })),
       ).rejects.toThrow('Um contratado inativo não pode ser o contratado padrão.');
+    });
+  });
+
+  describe('usa o financeiro do One', () => {
+    it('liga e desliga com auditoria do campo', async () => {
+      const tele = await service.criar(ator, dados('TELE', { usaFinanceiro: true }));
+      expect((await service.obter(tele)).usaFinanceiro).toBe(true);
+      expect(auditoria.eventos.at(-1)).toMatchObject({
+        entidadeId: tele,
+        acao: 'criado',
+        depois: expect.objectContaining({ usaFinanceiro: true }),
+      });
+      auditoria.eventos.length = 0;
+
+      await service.atualizar(ator, tele, dados('TELE', { usaFinanceiro: false }));
+
+      expect((await service.obter(tele)).usaFinanceiro).toBe(false);
+      expect(auditoria.eventos).toEqual([
+        expect.objectContaining({
+          entidadeId: tele,
+          acao: 'alterado',
+          antes: { usaFinanceiro: true },
+          depois: { usaFinanceiro: false },
+        }),
+      ]);
+    });
+
+    it('mais de um contratado pode usar', async () => {
+      const tele = await service.criar(ator, dados('TELE', { usaFinanceiro: true }));
+      const rn = await service.criar(ator, dados('RN', { usaFinanceiro: true }));
+
+      expect((await service.obter(tele)).usaFinanceiro).toBe(true);
+      expect((await service.obter(rn)).usaFinanceiro).toBe(true);
+    });
+
+    it('contratado inativo não pode usar', async () => {
+      await expect(
+        service.criar(ator, dados('TELE', { usaFinanceiro: true, ativo: false })),
+      ).rejects.toThrow(FinanceiroInativoError);
+      const tele = await service.criar(ator, dados('TELE', { usaFinanceiro: true }));
+      await expect(
+        service.atualizar(ator, tele, dados('TELE', { usaFinanceiro: true, ativo: false })),
+      ).rejects.toThrow('Um contratado inativo não pode usar o financeiro do One.');
     });
   });
 

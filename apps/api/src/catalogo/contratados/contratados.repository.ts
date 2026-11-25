@@ -17,6 +17,8 @@ export interface DadosContratado {
   ativo: boolean;
   /** Vem escolhido nos campos de contratado da tela; no máximo um. */
   padrao: boolean;
+  /** Contas a pagar e a receber, nota fiscal e cobrança ficam no financeiro do One. */
+  usaFinanceiro: boolean;
 }
 
 export interface Contratado extends DadosContratado {

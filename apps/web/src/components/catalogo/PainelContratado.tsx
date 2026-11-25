@@ -28,9 +28,11 @@ const schema = z.object({
   contratadoRepasseId: z.string(),
   ativo: z.boolean(),
   padrao: z.boolean(),
+  usaFinanceiro: z.boolean(),
 });
 
 const PADRAO_INATIVO = 'Um contratado inativo não pode ser o contratado padrão.';
+const FINANCEIRO_INATIVO = 'Um contratado inativo não pode usar o financeiro do One.';
 
 type PainelContratadoProps = {
   /** Sem contratado, o painel cria um novo. */
@@ -67,6 +69,7 @@ export function PainelContratado({
     contratadoRepasseId: contratado?.contratadoRepasseId ?? '',
     ativo: contratado?.ativo ?? true,
     padrao: contratado?.padrao ?? false,
+    usaFinanceiro: contratado?.usaFinanceiro ?? false,
   };
   const form = useAppForm({
     defaultValues: iniciais,
@@ -84,6 +87,7 @@ export function PainelContratado({
           contratadoRepasseId: value.contratadoRepasseId || null,
           ativo: value.ativo,
           padrao: value.padrao,
+          usaFinanceiro: value.usaFinanceiro,
         });
       } catch (falha) {
         setErro(
@@ -142,6 +146,10 @@ export function PainelContratado({
           <CampoSomenteLeitura
             label="Contratado padrão"
             value={contratado.padrao ? 'Sim' : 'Não'}
+          />
+          <CampoSomenteLeitura
+            label="Usa o financeiro do One"
+            value={contratado.usaFinanceiro ? 'Sim' : 'Não'}
           />
           <RodapeSomenteLeitura excluir={excluir} />
         </div>
@@ -264,6 +272,22 @@ export function PainelContratado({
             <field.CheckboxField
               label="Contratado padrão"
               description="Vem escolhido nos campos de contratado, como a empresa que fatura do cliente novo. Marcar este desmarca o anterior."
+            />
+          )}
+        </form.AppField>
+        <form.AppField
+          name="usaFinanceiro"
+          validators={{
+            // Fica no campo (e não no schema) para sumir ao reativar o contratado.
+            onChangeListenTo: ['ativo'],
+            onChange: ({ value, fieldApi }) =>
+              value && !fieldApi.form.getFieldValue('ativo') ? FINANCEIRO_INATIVO : undefined,
+          }}
+        >
+          {(field) => (
+            <field.CheckboxField
+              label="Usa o financeiro do One"
+              description="Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One."
             />
           )}
         </form.AppField>

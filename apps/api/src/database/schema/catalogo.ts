@@ -281,6 +281,8 @@ export const contratados = pgTable(
     ativo: boolean('ativo').notNull().default(true),
     /** O que vem escolhido nos campos de contratado da tela. No máximo um; só ativo. */
     padrao: boolean('padrao').notNull().default(false),
+    /** Contas a pagar e a receber, nota fiscal e cobrança ficam no financeiro do One. Só ativo. */
+    usaFinanceiro: boolean('usa_financeiro').notNull().default(false),
     criadoEm: criadoEm(),
     atualizadoEm: atualizadoEm(),
   },
