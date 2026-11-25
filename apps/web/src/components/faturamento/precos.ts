@@ -65,7 +65,7 @@ export function valoresDoPreco(
     faixaInicio: v?.faixaInicio == null ? '' : String(v.faixaInicio),
     faixaFim: v?.faixaFim == null ? '' : String(v.faixaFim),
     condVolume: v?.condVolume ?? 'MOD_ESP_CAT',
-    valor: v ? String(v.valor) : '',
+    valor: v ? v.valor.toFixed(2).replace('.', ',') : '',
     aPartirDe,
   };
 }
@@ -92,8 +92,7 @@ export function corpoDoPreco(v: ValoresPreco): MudarPrecoDto {
     faixaInicio: inteiro(v.faixaInicio),
     faixaFim: inteiro(v.faixaFim),
     condVolume: v.condVolume,
-    // O campo numérico guarda o número do JavaScript ("1200.5"), já lido em pt-BR pelo Base UI.
-    valor: Number(v.valor),
+    valor: numeroPtBr(v.valor, 2) as number,
     aPartirDe: v.aPartirDe,
   };
 }

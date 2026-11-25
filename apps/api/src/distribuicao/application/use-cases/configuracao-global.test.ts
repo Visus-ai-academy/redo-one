@@ -136,4 +136,37 @@ describe('configuração global da distribuição', () => {
     ).rejects.toThrow(/turno não encontrado/i);
     expect(repo.gravacoes).toBe(0);
   });
+
+  it('prazo do recolhimento por turno: salva, audita a troca e ignora a ordem', async () => {
+    await definir.executar(ator, producao());
+    const prazos = [
+      { turnoId: 'tarde', minutos: 30 },
+      { turnoId: 'noite', minutos: 1440 },
+    ];
+    await definir.executar(ator, producao({ recolhimentoPorTurno: prazos }));
+    expect((await obter.executar()).recolhimentoPorTurno).toEqual([
+      { turnoId: 'noite', minutos: 1440 },
+      { turnoId: 'tarde', minutos: 30 },
+    ]);
+    expect(auditoria.eventos[1]).toMatchObject({
+      antes: { recolhimentoPorTurno: [] },
+      depois: {
+        recolhimentoPorTurno: [
+          { turnoId: 'noite', minutos: 1440 },
+          { turnoId: 'tarde', minutos: 30 },
+        ],
+      },
+    });
+    const gravacoes = repo.gravacoes;
+    await definir.executar(ator, producao({ recolhimentoPorTurno: [...prazos].reverse() }));
+    expect(repo.gravacoes).toBe(gravacoes);
+    expect(auditoria.eventos).toHaveLength(2);
+  });
+
+  it('recusa prazo de recolhimento de turno que não existe', async () => {
+    await expect(
+      definir.executar(ator, producao({ recolhimentoPorTurno: [{ turnoId: 'x', minutos: 30 }] })),
+    ).rejects.toThrow(/turno não encontrado/i);
+    expect(repo.gravacoes).toBe(0);
+  });
 });

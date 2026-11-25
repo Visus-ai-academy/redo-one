@@ -137,11 +137,32 @@ describe('TabelaPrecos', () => {
     await escolherOpcao('Prioridade', 'ROTINA');
     await userEvent.type(screen.getByRole('textbox', { name: /Valor/ }), '1.200,50');
     await userEvent.type(screen.getByRole('textbox', { name: /Faixa: de/ }), '1.000');
+
     await userEvent.click(screen.getByRole('button', { name: 'Incluir preço' }));
     await waitFor(() =>
       expect(precosControllerIncluir).toHaveBeenCalledWith({
         path: { tipo: 'contratado', donoId: 'ct' },
         body: expect.objectContaining({ valor: 1200.5, aPartirDe: '2026-12', faixaInicio: 1000 }),
+      }),
+    );
+  });
+
+  it('alterar lê "1.300" como mil e trezentos e recusa "1.2"', async () => {
+    renderComRotas(<TabelaPrecos tipo="cliente" donoId="c1" podeEditar />);
+    await userEvent.click((await screen.findAllByText('Desde sempre'))[0] as HTMLElement);
+    const valor = await screen.findByRole('textbox', { name: /Valor/ });
+    expect(valor).toHaveValue('63,00');
+    await userEvent.clear(valor);
+    await userEvent.type(valor, '1.2');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar alteração' }));
+    expect(await screen.findByText('Use vírgula nos centavos, como 1.200,50.')).toBeInTheDocument();
+    await userEvent.clear(valor);
+    await userEvent.type(valor, '1.300');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar alteração' }));
+    await waitFor(() =>
+      expect(precosControllerAlterar).toHaveBeenCalledWith({
+        path: { tipo: 'cliente', donoId: 'c1', precoId: 'p1' },
+        body: expect.objectContaining({ valor: 1300, aPartirDe: '2026-12' }),
       }),
     );
   });

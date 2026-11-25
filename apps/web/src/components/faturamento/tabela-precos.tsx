@@ -285,8 +285,14 @@ const esquema = z
     aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual o preço vale.'),
   })
   .superRefine((v, ctx) => {
-    const valor = Number(v.valor.replace(',', '.'));
-    if (v.valor && !(valor > 0))
+    const valor = numeroPtBr(v.valor, 2);
+    if (v.valor.trim() && valor === null)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['valor'],
+        message: 'Use vírgula nos centavos, como 1.200,50.',
+      });
+    else if (v.valor.trim() && !((valor ?? 0) > 0))
       ctx.addIssue({
         code: 'custom',
         path: ['valor'],
@@ -504,12 +510,12 @@ function EditorPreco({
             )}
             <form.AppField name="valor">
               {(f) => (
-                <f.NumberField
+                <f.TextField
                   label="Valor (R$)"
                   required
                   placeholder="0,00"
-                  min={0.01}
-                  step={0.01}
+                  spellCheck={false}
+                  description="Vírgula nos centavos, como 1.200,50."
                 />
               )}
             </form.AppField>
