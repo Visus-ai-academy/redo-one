@@ -32,9 +32,18 @@ export interface LinhaPlanilhaPreco {
   faixaFim: number | null;
   condVolume: CondVolume;
   valor: number;
-  /** "YYYY-MM" da versão programada (começa depois do mês atual); vazio = a que vale hoje. */
-  valeAPartirDe: string | null;
+  /** "YYYY-MM" do início da versão; nulo = desde sempre (carga do dashboards-one). */
+  desde: string | null;
 }
+
+/** Texto do "Vale a partir de" da versão que vale desde sempre. */
+export const DESDE_SEMPRE = 'desde sempre';
+
+/**
+ * O "Vale a partir de" da linha: a versão exportada (com o início dela; nulo = desde sempre) ou,
+ * com a coluna vazia, um preço novo ou alterado a partir da competência escolhida na importação.
+ */
+export type VigenciaDaLinha = { nova: true } | { nova: false; desde: string | null };
 
 type Opcao = { id: string; nome: string };
 export interface CatalogoPlanilha {
@@ -45,8 +54,7 @@ export interface CatalogoPlanilha {
 }
 
 export interface PlanilhaLida {
-  /** `valeAPartirDe` ("YYYY-MM") só na linha de uma versão programada. */
-  linhas: { linha: number; dados: DadosPreco; valeAPartirDe: string | null }[];
+  linhas: { linha: number; dados: DadosPreco; vigencia: VigenciaDaLinha }[];
   erros: { linha: number; erro: string }[];
 }
 
@@ -67,7 +75,7 @@ export function gerarPlanilhaPrecos(linhas: readonly LinhaPlanilhaPreco[]): stri
       l.faixaFim === null ? '' : String(l.faixaFim),
       ROTULO_COND[l.condVolume],
       l.valor.toFixed(2).replace('.', ','),
-      l.valeAPartirDe ? `${l.valeAPartirDe.slice(5, 7)}/${l.valeAPartirDe.slice(0, 4)}` : '',
+      l.desde ? `${l.desde.slice(5, 7)}/${l.desde.slice(0, 4)}` : DESDE_SEMPRE,
     ]
       .map(celula)
       .join(';'),
@@ -109,11 +117,13 @@ export function numeroPtBr(v: string, casas: 0 | 2): number | null {
   return Number(t.replace(/\./g, '').replace(',', '.'));
 }
 
-/** "12/2026" → "2026-12"; vazio → nulo; outro formato → undefined. */
-function competenciaDaCelula(v: string): string | null | undefined {
-  if (!v) return null;
-  const m = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(v.trim());
-  return m ? `${m[2]}-${m[1]}` : undefined;
+/** "12/2026" → a versão de 2026-12; "desde sempre" → a versão sem início; vazio → preço novo. */
+function vigenciaDaCelula(v: string): VigenciaDaLinha | undefined {
+  const t = v.trim();
+  if (!t) return { nova: true };
+  if (t.toLowerCase() === DESDE_SEMPRE) return { nova: false, desde: null };
+  const m = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(t);
+  return m ? { nova: false, desde: `${m[2]}-${m[1]}` } : undefined;
 }
 
 /**
@@ -142,9 +152,7 @@ export function lerPlanilhaPrecos(texto: string, catalogo: CatalogoPlanilha): Pl
   );
 
   /** Os dados da linha, ou o problema dela. */
-  const lerLinha = (
-    texto: string,
-  ): { dados: DadosPreco; valeAPartirDe: string | null } | string => {
+  const lerLinha = (texto: string): { dados: DadosPreco; vigencia: VigenciaDaLinha } | string => {
     const c = celulas(texto);
     if (c.length !== CABECALHO.length)
       return `A linha tem de ter ${CABECALHO.length} colunas separadas por ";".`;
@@ -183,10 +191,11 @@ export function lerPlanilhaPrecos(texto: string, catalogo: CatalogoPlanilha): Pl
     if (!condVolume) return `Volume por "${vol}" tem de ser MOD, MOD/ESP, MOD/ESP/CAT ou TOTAL.`;
     const v = valor ? numeroPtBr(valor, 2) : null;
     if (v === null) return `Valor "${valor}" inválido: use vírgula nos centavos, como 1.200,50.`;
-    const valeAPartirDe = competenciaDaCelula(desde);
-    if (valeAPartirDe === undefined) return `Vale a partir de "${desde}" tem de ser MM/AAAA.`;
+    const vigencia = vigenciaDaCelula(desde);
+    if (vigencia === undefined)
+      return `Vale a partir de "${desde}" tem de ser MM/AAAA, "${DESDE_SEMPRE}" ou vazio.`;
     return {
-      valeAPartirDe,
+      vigencia,
       dados: {
         modalidadeId: arranjo.Modalidade as string,
         especialidadeId: arranjo.Especialidade as string,

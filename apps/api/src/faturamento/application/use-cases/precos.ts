@@ -5,7 +5,11 @@ import type { Paginacao } from '../../../catalogo/comum/paginacao';
 import { ErroDeDominio } from '../../../comum/erro-de-dominio';
 import type { CompetenciasBloqueadas } from '../../../ingestao/application/ports/competencias-bloqueadas';
 import { diaBrasilia } from '../../../ingestao/domain/competencia';
-import { gerarPlanilhaPrecos, lerPlanilhaPrecos } from '../../domain/planilha-precos';
+import {
+  gerarPlanilhaPrecos,
+  lerPlanilhaPrecos,
+  type VigenciaDaLinha,
+} from '../../domain/planilha-precos';
 import { type Arranjo, vigenteEm } from '../../domain/preco';
 import {
   arranjosDuplicados,
@@ -185,6 +189,17 @@ export interface ResultadoImportacao {
   iguais: number;
 }
 
+/** Arranjo e faixa: o que identifica as versões de um mesmo preço. */
+const chaveDe = (d: DadosPreco) =>
+  [
+    d.modalidadeId,
+    d.especialidadeId,
+    d.categoriaId,
+    d.prioridadeId,
+    d.faixaInicio,
+    d.faixaFim,
+  ].join('|');
+
 const mesmaChave = (a: DadosPreco, b: DadosPreco) =>
   a.modalidadeId === b.modalidadeId &&
   a.especialidadeId === b.especialidadeId &&
@@ -242,11 +257,13 @@ export class MudarPrecos {
   }
 
   /**
-   * A planilha inteira ou nada, no modelo da exportação. A linha sem "Vale a partir de" é o preço
-   * que vale hoje: igual, fica; diferente, é alterado a partir de `aPartirDe`; inexistente, é
-   * incluído a partir de `aPartirDe`. A linha com "Vale a partir de" é a versão programada daquela
-   * competência: igual, fica; diferente, é trocada; inexistente, é incluída nela. A versão
-   * programada que a planilha não traz nunca é mexida, e nada que falta na planilha é encerrado.
+   * A planilha inteira ou nada, no modelo da exportação, em que cada linha traz o início da versão
+   * ("Vale a partir de": MM/AAAA ou "desde sempre"). A linha casa com a versão desse início: igual,
+   * fica; diferente, a programada é trocada na própria competência e a que já vale muda a partir de
+   * `aPartirDe`. A linha com a coluna vazia é preço novo ou alterado a partir de `aPartirDe`. Se o
+   * arranjo e faixa ganhou versão depois da exportação (mais nova que a da linha e fora da planilha;
+   * na linha vazia, qualquer versão começando no mês atual ou depois), a linha é recusada: exporte de
+   * novo. Nada que falta na planilha é encerrado.
    */
   async importar(
     usuarioId: string,
@@ -260,37 +277,74 @@ export class MudarPrecos {
     const erros = [...lida.erros];
     const mudancas: MudancaPreco[] = [];
     const r: ResultadoImportacao = { incluidos: 0, alterados: 0, iguais: 0 };
-    const vistas: { linha: number; dados: DadosPreco; valeAPartirDe: string | null }[] = [];
+    // As versões que a planilha traz (arranjo, faixa e início): o que veio da exportação.
+    const naPlanilha = new Set(
+      lida.linhas.flatMap((l) =>
+        l.vigencia.nova ? [] : [JSON.stringify([chaveDe(l.dados), l.vigencia.desde])],
+      ),
+    );
+    const MUDOU =
+      'A tabela mudou depois da exportação (há preço mais novo para este arranjo e faixa): exporte de novo.';
+    const vistas: { linha: number; dados: DadosPreco; vigencia: VigenciaDaLinha }[] = [];
     let menor = aPartirDe;
-    for (const { linha, dados, valeAPartirDe } of lida.linhas) {
+    for (const { linha, dados, vigencia } of lida.linhas) {
       const repetida = vistas.find(
-        (v) => mesmaChave(v.dados, dados) && v.valeAPartirDe === valeAPartirDe,
+        (v) =>
+          mesmaChave(v.dados, dados) && JSON.stringify(v.vigencia) === JSON.stringify(vigencia),
       );
       if (repetida) {
         erros.push({ linha, erro: `Mesmo arranjo, faixa e vigência da linha ${repetida.linha}.` });
         continue;
       }
-      vistas.push({ linha, dados, valeAPartirDe });
+      vistas.push({ linha, dados, vigencia });
+      const daChave = versoes.filter((v) => mesmaChave(v, dados));
       try {
-        const desde = valeAPartirDe ?? aPartirDe;
-        const atual = versoes.find(
-          (v) =>
-            mesmaChave(v, dados) &&
-            (valeAPartirDe ? v.vigenciaDesde === valeAPartirDe : vigenteEm(v, ctx.mesAtual)),
-        );
-        if (atual && atual.valor === dados.valor && atual.condVolume === dados.condVolume) {
+        let alvo: VersaoPreco | undefined;
+        let desde: string;
+        if (vigencia.nova) {
+          // Preço novo ou alterado a partir da competência escolhida. Se já há versão começando no
+          // mês atual ou depois, quem exportou não a viu.
+          if (daChave.some((v) => v.vigenciaDesde !== null && v.vigenciaDesde >= ctx.mesAtual)) {
+            erros.push({ linha, erro: MUDOU });
+            continue;
+          }
+          alvo = daChave.find((v) => vigenteEm(v, ctx.mesAtual));
+          desde = aPartirDe;
+        } else {
+          alvo = daChave.find((v) => v.vigenciaDesde === vigencia.desde);
+          // Uma versão mais nova que a da linha e que não está na planilha: veio depois da exportação.
+          const inicio = (v: { vigenciaDesde: string | null }) => v.vigenciaDesde ?? '';
+          const maisNova = daChave.some(
+            (v) =>
+              v.id !== alvo?.id &&
+              inicio(v) > (vigencia.desde ?? '') &&
+              !naPlanilha.has(JSON.stringify([chaveDe(dados), v.vigenciaDesde])),
+          );
+          if (maisNova || (!alvo && (vigencia.desde === null || vigencia.desde <= ctx.mesAtual))) {
+            erros.push({ linha, erro: MUDOU });
+            continue;
+          }
+          // A programada é trocada na própria competência; a que já vale muda a partir da escolhida.
+          desde =
+            alvo && alvo.vigenciaDesde !== null && alvo.vigenciaDesde > ctx.mesAtual
+              ? alvo.vigenciaDesde
+              : vigencia.desde !== null && !alvo
+                ? vigencia.desde
+                : aPartirDe;
+        }
+        if (alvo && alvo.valor === dados.valor && alvo.condVolume === dados.condVolume) {
           r.iguais += 1;
           continue;
         }
-        if (atual && !valeAPartirDe && atual.vigenciaAte !== null && atual.vigenciaAte < desde) {
+        if (alvo && alvo.vigenciaAte !== null && alvo.vigenciaAte < desde) {
           erros.push({
             linha,
-            erro: `O preço de hoje vale só até ${mesAno(atual.vigenciaAte)}: para mudar o que vem depois, altere a linha com "Vale a partir de".`,
+            erro: `Este preço vale só até ${mesAno(alvo.vigenciaAte)}: para mudar o que vem depois, altere a linha do preço seguinte.`,
           });
           continue;
         }
-        if (atual) {
-          mudancas.push(...planejarAlteracao(atual.id, dados, desde, versoes, ctx));
+        if (alvo) {
+          mudancas.push(...planejarAlteracao(alvo.id, dados, desde, versoes, ctx));
           r.alterados += 1;
         } else {
           mudancas.push(...planejarInclusao(dados, desde, versoes, ctx));
@@ -366,8 +420,9 @@ export class MudarPrecos {
 }
 
 /**
- * A tabela em vigor no mês atual e as versões programadas (com o "Vale a partir de"), na planilha
- * do modelo da importação: importar o arquivo sem mudar nada não muda nada.
+ * A tabela em vigor no mês atual e as versões programadas, cada linha com o início da versão ("Vale
+ * a partir de"), na planilha do modelo da importação: importar o arquivo sem mudar nada não muda
+ * nada, mesmo depois da virada do mês.
  */
 export class ExportarPrecos {
   constructor(
@@ -391,7 +446,7 @@ export class ExportarPrecos {
           faixaFim: v.faixaFim,
           condVolume: v.condVolume,
           valor: v.valor,
-          valeAPartirDe: vigenteEm(v, mes) ? null : v.vigenciaDesde,
+          desde: v.vigenciaDesde,
         })),
       ),
     };

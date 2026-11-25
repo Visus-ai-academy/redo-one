@@ -24,7 +24,7 @@ describe('planilha de preços (CSV com ;)', () => {
         faixaFim: null,
         condVolume: 'MOD_ESP',
         valor: 63.5,
-        valeAPartirDe: null,
+        desde: null,
       },
       {
         modalidade: 'MR',
@@ -35,12 +35,12 @@ describe('planilha de preços (CSV com ;)', () => {
         faixaFim: null,
         condVolume: 'MOD_ESP_CAT',
         valor: 1200,
-        valeAPartirDe: '2027-01',
+        desde: '2027-01',
       },
     ]);
     expect(csv).toBe(
       '﻿Modalidade;Especialidade;Categoria;Prioridade;Faixa início;Faixa fim;Volume por;Valor;Vale a partir de\r\n' +
-        'MR;MUSCULO ESQUELETICO;CABEÇA;URGÊNCIA;1;;MOD/ESP;63,50;\r\n' +
+        'MR;MUSCULO ESQUELETICO;CABEÇA;URGÊNCIA;1;;MOD/ESP;63,50;desde sempre\r\n' +
         'MR;MUSCULO ESQUELETICO;SC;URGÊNCIA;;;MOD/ESP/CAT;1200,00;01/2027\r\n',
     );
   });
@@ -54,7 +54,7 @@ describe('planilha de preços (CSV com ;)', () => {
       linhas: [
         {
           linha: 2,
-          valeAPartirDe: null,
+          vigencia: { nova: true },
           dados: {
             modalidadeId: 'mr',
             especialidadeId: 'msk',
@@ -68,7 +68,7 @@ describe('planilha de preços (CSV com ;)', () => {
         },
         {
           linha: 3,
-          valeAPartirDe: '2027-02',
+          vigencia: { nova: false, desde: '2027-02' },
           dados: {
             modalidadeId: 'mr',
             especialidadeId: 'msk',
@@ -103,7 +103,10 @@ describe('planilha de preços (CSV com ;)', () => {
       { linha: 6, erro: 'Valor "" inválido: use vírgula nos centavos, como 1.200,50.' },
       { linha: 7, erro: 'A linha tem de ter 9 colunas separadas por ";".' },
       { linha: 8, erro: 'Valor "1.2" inválido: use vírgula nos centavos, como 1.200,50.' },
-      { linha: 9, erro: 'Vale a partir de "2027-01" tem de ser MM/AAAA.' },
+      {
+        linha: 9,
+        erro: 'Vale a partir de "2027-01" tem de ser MM/AAAA, "desde sempre" ou vazio.',
+      },
     ]);
   });
 
@@ -114,6 +117,16 @@ describe('planilha de preços (CSV com ;)', () => {
         erro: 'Cabeçalho diferente do modelo: Modalidade;Especialidade;Categoria;Prioridade;Faixa início;Faixa fim;Volume por;Valor;Vale a partir de.',
       },
     ]);
+  });
+
+  it('"desde sempre" é a versão sem início', () => {
+    const csv =
+      'Modalidade;Especialidade;Categoria;Prioridade;Faixa início;Faixa fim;Volume por;Valor;Vale a partir de\n' +
+      'MR;MUSCULO ESQUELETICO;SC;URGÊNCIA;;;;10;Desde sempre\n';
+    expect(lerPlanilhaPrecos(csv, CATALOGO).linhas[0]?.vigencia).toEqual({
+      nova: false,
+      desde: null,
+    });
   });
 
   it('números em pt-BR: ponto só no milhar, vírgula nos centavos', () => {
