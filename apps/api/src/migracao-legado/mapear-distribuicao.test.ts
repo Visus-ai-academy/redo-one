@@ -175,6 +175,7 @@ describe('mapearDistribuicao', () => {
         medicoId: id.m1,
         equipeId: null,
         especialidadeId: id.neuro,
+        modalidadeId: null,
         subespecialidadeGeral: true,
         modoClientes: 'apenas',
         modoExames: 'exceto',
@@ -226,10 +227,39 @@ describe('mapearDistribuicao', () => {
     expect(r.avisos).toHaveLength(2);
   });
 
-  it('especialidade que era frente de modalidade (RX) vira arranjo sem especialidade com a modalidade', () => {
+  it('especialidade que era frente de modalidade (RX) vira arranjo de frente de modalidade', () => {
     const r = mapear({ arranjosMedico: [doMedico({ especialidadeId: 'es-rx' })] });
-    expect(r.tabelas.arranjos[0]?.especialidadeId).toBeNull();
-    expect(r.tabelas.arranjosModalidades.map((m) => m.modalidadeId)).toEqual([id.rx]);
+    expect(r.tabelas.arranjos[0]).toMatchObject({ especialidadeId: null, modalidadeId: id.rx });
+    expect(r.tabelas.arranjosModalidades).toEqual([]);
+  });
+
+  it('sem especialidade e com uma modalidade só: frente de modalidade (todas as especialidades)', () => {
+    const r = mapear({
+      arranjosMedico: [doMedico({ especialidadeId: null, modalidades: ['CT'] })],
+    });
+    expect(r.tabelas.arranjos[0]).toMatchObject({ especialidadeId: null, modalidadeId: id.ct });
+    expect(r.tabelas.arranjosModalidades).toEqual([]);
+    expect(r.avisos).toEqual([]);
+  });
+
+  it('sem frente clara (sem especialidade, com 0 ou 2+ modalidades, ou com segmento) fica de fora com aviso', () => {
+    const r = mapear({
+      arranjosMedico: [
+        doMedico({ id: 'r1', especialidadeId: null }),
+        doMedico({ id: 'r2', especialidadeId: null, modalidades: ['CT', 'RX'] }),
+        doMedico({ id: 'r3', especialidadeId: 'es-rx', modalidades: ['CT'] }),
+        doMedico({
+          id: 'r4',
+          especialidadeId: null,
+          modalidades: ['CT'],
+          subespecialidades: ['CRÂNIO'],
+        }),
+      ],
+    });
+    expect(r.tabelas.arranjos).toEqual([]);
+    expect(r.avisos).toHaveLength(4);
+    expect(r.avisos[0]?.motivo).toMatch(/frente/);
+    expect(r.resumo.arranjosSemFrente).toBe(4);
   });
 
   it('arranjo com valor que não existe no redo-one fica de fora com aviso (não alarga o recorte)', () => {

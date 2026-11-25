@@ -21,20 +21,44 @@ const lista = (descricao: string): ApiPropertyOptions => ({
   description: descricao,
 });
 
-/** Um arranjo: em cada eixo, lista vazia = todos. */
+/**
+ * Um arranjo: a frente (uma especialidade OU uma modalidade) e o recorte da outra dimensão; em
+ * cada eixo, lista vazia = todos.
+ */
 export class ArranjoDto {
-  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Nula = todas.' })
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Frente de especialidade. Exatamente uma das frentes (esta ou `modalidadeId`).',
+  })
   @ValidateIf((_, v) => v !== null)
   @IsUUID()
   especialidadeId!: string | null;
 
-  @ApiProperty(lista('Modalidades; vazia = todas.'))
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Frente de modalidade. Exatamente uma das frentes (esta ou `especialidadeId`).',
+  })
+  @ValidateIf((_, v) => v !== null)
+  @IsUUID()
+  modalidadeId!: string | null;
+
+  @ApiProperty(lista('Só na frente de modalidade: especialidades; vazia = todas.'))
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  especialidadeIds!: string[];
+
+  @ApiProperty(lista('Só na frente de especialidade: modalidades; vazia = todas.'))
   @IsArray()
   @ArrayMaxSize(50)
   @IsUUID('all', { each: true })
   modalidadeIds!: string[];
 
-  @ApiProperty(lista('Segmentos; vazia e sem o geral = todos.'))
+  @ApiProperty(lista('Só na frente de especialidade: segmentos; vazia e sem o geral = todos.'))
   @IsArray()
   @ArrayMaxSize(100)
   @IsUUID('all', { each: true })

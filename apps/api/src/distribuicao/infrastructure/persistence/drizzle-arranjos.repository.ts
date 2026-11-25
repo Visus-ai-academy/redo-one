@@ -6,6 +6,7 @@ import {
   arranjos,
   arranjosClientes,
   arranjosClientesExclusivos,
+  arranjosEspecialidades,
   arranjosExames,
   arranjosModalidades,
   arranjosPrioridades,
@@ -36,7 +37,11 @@ export class DrizzleArranjosRepository implements ArranjosRepository {
       .orderBy(asc(arranjos.ordem), asc(arranjos.criadoEm));
     if (!linhas.length) return [];
     const ids = linhas.map((a) => a.id);
-    const [mods, subs, prios, clis, exs, excl] = await Promise.all([
+    const [esps, mods, subs, prios, clis, exs, excl] = await Promise.all([
+      this.db
+        .select()
+        .from(arranjosEspecialidades)
+        .where(inArray(arranjosEspecialidades.arranjoId, ids)),
       this.db.select().from(arranjosModalidades).where(inArray(arranjosModalidades.arranjoId, ids)),
       this.db
         .select()
@@ -50,6 +55,7 @@ export class DrizzleArranjosRepository implements ArranjosRepository {
         .from(arranjosClientesExclusivos)
         .where(inArray(arranjosClientesExclusivos.arranjoId, ids)),
     ]);
+    const especialidadesDe = porArranjo(esps, (l) => l.especialidadeId);
     const modalidadesDe = porArranjo(mods, (l) => l.modalidadeId);
     const subsDe = porArranjo(subs, (l) => l.subespecialidadeId);
     const priosDe = porArranjo(prios, (l) => l.prioridadeId);
@@ -58,6 +64,8 @@ export class DrizzleArranjosRepository implements ArranjosRepository {
     const exclusivosDe = porArranjo(excl, (l) => l.clienteId);
     return linhas.map((a) => ({
       especialidadeId: a.especialidadeId,
+      modalidadeId: a.modalidadeId,
+      especialidadeIds: especialidadesDe(a.id),
       modalidadeIds: modalidadesDe(a.id),
       subespecialidadeIds: subsDe(a.id),
       subespecialidadeGeral: a.subespecialidadeGeral,
@@ -82,6 +90,7 @@ export class DrizzleArranjosRepository implements ArranjosRepository {
             medicoId: dono.tipo === 'medico' ? dono.id : null,
             equipeId: dono.tipo === 'equipe' ? dono.id : null,
             especialidadeId: a.especialidadeId,
+            modalidadeId: a.modalidadeId,
             subespecialidadeGeral: a.subespecialidadeGeral,
             modoClientes: a.modoClientes,
             modoExames: a.modoExames,
@@ -91,6 +100,9 @@ export class DrizzleArranjosRepository implements ArranjosRepository {
         .returning({ id: arranjos.id });
       const eixo = <T>(montar: (arranjoId: string, a: Arranjo) => T[]) =>
         lista.flatMap((a, i) => montar(criados[i]?.id ?? '', a));
+      const esps = eixo((arranjoId, a) =>
+        a.especialidadeIds.map((especialidadeId) => ({ arranjoId, especialidadeId })),
+      );
       const mods = eixo((arranjoId, a) =>
         a.modalidadeIds.map((modalidadeId) => ({ arranjoId, modalidadeId })),
       );
@@ -107,6 +119,7 @@ export class DrizzleArranjosRepository implements ArranjosRepository {
       const excl = eixo((arranjoId, a) =>
         a.clientesExclusivosIds.map((clienteId) => ({ arranjoId, clienteId })),
       );
+      if (esps.length) await tx.insert(arranjosEspecialidades).values(esps);
       if (mods.length) await tx.insert(arranjosModalidades).values(mods);
       if (subs.length) await tx.insert(arranjosSubespecialidades).values(subs);
       if (prios.length) await tx.insert(arranjosPrioridades).values(prios);

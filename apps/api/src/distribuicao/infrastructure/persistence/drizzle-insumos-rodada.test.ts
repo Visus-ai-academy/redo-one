@@ -82,6 +82,8 @@ describe.skipIf(!url)('insumos da rodada (banco)', () => {
     await new DrizzleArranjosRepository(db).substituir({ tipo: 'medico', id: ids.ana }, [
       {
         especialidadeId: ids.mi,
+        modalidadeId: null,
+        especialidadeIds: [],
         modalidadeIds: [ids.ct],
         subespecialidadeIds: [],
         subespecialidadeGeral: false,

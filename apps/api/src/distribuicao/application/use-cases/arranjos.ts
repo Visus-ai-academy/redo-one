@@ -23,6 +23,7 @@ async function exigirDono(cadastros: CadastrosDistribuicao, dono: Dono) {
 /** Um arranjo comparável: as listas de cada eixo são conjuntos. */
 const umCanonico = (a: Arranjo) => ({
   ...a,
+  especialidadeIds: [...a.especialidadeIds].sort(),
   modalidadeIds: [...a.modalidadeIds].sort(),
   subespecialidadeIds: [...a.subespecialidadeIds].sort(),
   prioridadeIds: [...a.prioridadeIds].sort(),
@@ -35,9 +36,8 @@ const umCanonico = (a: Arranjo) => ({
 const canonico = (arranjos: Arranjo[]) => JSON.stringify(arranjos.map(umCanonico));
 
 /**
- * Segmento é recorte da especialidade: o arranjo de uma especialidade só marca segmento que ela
- * tem. O arranjo sem especialidade vale para todas, então aceita qualquer segmento (o recorte é
- * "esse segmento em qualquer especialidade que o tenha"). Só o arranjo novo ou mudado passa pela
+ * Segmento é recorte da especialidade: o arranjo de frente de especialidade só marca segmento que
+ * ela tem (o de frente de modalidade não marca segmento). Só o arranjo novo ou mudado passa pela
  * regra: um já gravado fora dela, se segue igual, não trava a edição dos outros.
  */
 async function exigirSegmentosDaEspecialidade(

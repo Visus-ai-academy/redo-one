@@ -45,9 +45,11 @@ const atualizadoEm = () =>
 export const modoVinculo = pgEnum('modo_vinculo', ['todos', 'apenas', 'exceto']);
 
 /**
- * Um arranjo: especialidade (nula = todas) × modalidades × segmentos × prioridades × clientes ×
- * exames. É de um médico ou de uma equipe; o da equipe não dá permissão a ninguém, só direciona
- * o recorte aos membros (e, na equipe de plantão, tira o recorte do robô).
+ * Um arranjo: a FRENTE (uma especialidade OU uma modalidade do catálogo) × o recorte da outra
+ * dimensão (modalidades na frente de especialidade, especialidades na de modalidade) × segmentos
+ * (só na de especialidade) × prioridades × clientes × exames. É de um médico ou de uma equipe; o
+ * da equipe não dá permissão a ninguém, só direciona o recorte aos membros (e, na equipe de
+ * plantão, tira o recorte do robô).
  */
 export const arranjos = pgTable(
   'arranjos',
@@ -55,7 +57,10 @@ export const arranjos = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     medicoId: uuid('medico_id').references(() => medicos.id, { onDelete: 'cascade' }),
     equipeId: uuid('equipe_id').references(() => equipes.id, { onDelete: 'cascade' }),
+    /** Frente de especialidade (exatamente uma das duas frentes). */
     especialidadeId: uuid('especialidade_id').references(() => especialidades.id),
+    /** Frente de modalidade. */
+    modalidadeId: uuid('modalidade_id').references(() => modalidades.id),
     /** Recorte de segmento inclui o geral (exame sem subespecialidade). */
     subespecialidadeGeral: boolean('subespecialidade_geral').notNull().default(false),
     modoClientes: modoVinculo('modo_clientes').notNull().default('todos'),
@@ -68,6 +73,10 @@ export const arranjos = pgTable(
     index('arranjos_medico_idx').on(t.medicoId),
     index('arranjos_equipe_idx').on(t.equipeId),
     check('arranjos_dono_check', sql`(${t.medicoId} is null) <> (${t.equipeId} is null)`),
+    check(
+      'arranjos_frente_check',
+      sql`(${t.especialidadeId} is null) <> (${t.modalidadeId} is null)`,
+    ),
   ],
 );
 
@@ -76,7 +85,19 @@ const doArranjo = () =>
     .notNull()
     .references(() => arranjos.id, { onDelete: 'cascade' });
 
-/** Modalidades do arranjo. Nenhuma linha = todas. */
+/** Especialidades do arranjo de frente de modalidade ("RX de MI e MSK"). Nenhuma linha = todas. */
+export const arranjosEspecialidades = pgTable(
+  'arranjos_especialidades',
+  {
+    arranjoId: doArranjo(),
+    especialidadeId: uuid('especialidade_id')
+      .notNull()
+      .references(() => especialidades.id),
+  },
+  (t) => [primaryKey({ columns: [t.arranjoId, t.especialidadeId] })],
+);
+
+/** Modalidades do arranjo de frente de especialidade. Nenhuma linha = todas. */
 export const arranjosModalidades = pgTable(
   'arranjos_modalidades',
   {

@@ -1,0 +1,1 @@
+ALTER TABLE "arranjos" ADD CONSTRAINT "arranjos_frente_check" CHECK (("arranjos"."especialidade_id" is null) <> ("arranjos"."modalidade_id" is null));

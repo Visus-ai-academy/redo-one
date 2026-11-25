@@ -21044,10 +21044,24 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Nula = todas."
+            "description": "Frente de especialidade. Exatamente uma das frentes (esta ou `modalidadeId`)."
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Frente de modalidade. Exatamente uma das frentes (esta ou `especialidadeId`)."
+          },
+          "especialidadeIds": {
+            "description": "Só na frente de modalidade: especialidades; vazia = todas.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "modalidadeIds": {
-            "description": "Modalidades; vazia = todas.",
+            "description": "Só na frente de especialidade: modalidades; vazia = todas.",
             "type": "array",
             "items": {
               "type": "string",
@@ -21055,7 +21069,7 @@
             }
           },
           "subespecialidadeIds": {
-            "description": "Segmentos; vazia e sem o geral = todos.",
+            "description": "Só na frente de especialidade: segmentos; vazia e sem o geral = todos.",
             "type": "array",
             "items": {
               "type": "string",
@@ -21115,6 +21129,8 @@
         },
         "required": [
           "especialidadeId",
+          "modalidadeId",
+          "especialidadeIds",
           "modalidadeIds",
           "subespecialidadeIds",
           "subespecialidadeGeral",

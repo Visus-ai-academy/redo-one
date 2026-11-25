@@ -80,6 +80,8 @@ const exame = (p: Partial<ExameFilaRodada> = {}): ExameFilaRodada => {
 };
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,

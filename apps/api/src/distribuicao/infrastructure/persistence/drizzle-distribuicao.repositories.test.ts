@@ -95,7 +95,7 @@ describe.skipIf(!url)('repositórios da distribuição (banco)', () => {
         exameIds: [id('exame')],
         clientesExclusivosIds: [id('cli')],
       }),
-      arranjoVazio({ modalidadeIds: [id('rx')] }),
+      arranjoVazio({ modalidadeId: id('rx'), especialidadeIds: [id('neuro')] }),
     ];
     await repo.substituir({ tipo: 'medico', id: id('medico') }, lista);
     expect(await repo.listar({ tipo: 'medico', id: id('medico') })).toEqual(lista);
@@ -105,7 +105,7 @@ describe.skipIf(!url)('repositórios da distribuição (banco)', () => {
   it('a prioridade da operação marcada num arranjo não se exclui (alargaria o recorte)', async () => {
     const repo = new DrizzleArranjosRepository(db);
     await repo.substituir({ tipo: 'medico', id: id('medico') }, [
-      arranjoVazio({ prioridadeIds: [id('rotina')] }),
+      arranjoVazio({ especialidadeId: id('neuro'), prioridadeIds: [id('rotina')] }),
     ]);
     const prioridades = new DrizzlePrioridadesOperacaoRepository(db);
     await expect(prioridades.excluir(id('rotina'))).rejects.toBeInstanceOf(
@@ -116,15 +116,28 @@ describe.skipIf(!url)('repositórios da distribuição (banco)', () => {
     expect(await prioridades.listar()).toEqual([]);
   });
 
+  it('o arranjo tem exatamente uma frente (o banco recusa sem nenhuma ou com as duas)', async () => {
+    const repo = new DrizzleArranjosRepository(db);
+    await expect(
+      repo.substituir({ tipo: 'medico', id: id('medico') }, [arranjoVazio()]),
+    ).rejects.toThrow();
+    await expect(
+      repo.substituir({ tipo: 'medico', id: id('medico') }, [
+        arranjoVazio({ especialidadeId: id('neuro'), modalidadeId: id('rx') }),
+      ]),
+    ).rejects.toThrow();
+  });
+
   it('substituir troca a lista inteira e só a do dono', async () => {
     const repo = new DrizzleArranjosRepository(db);
-    await repo.substituir({ tipo: 'equipe', id: id('equipe') }, [arranjoVazio()]);
+    const daEquipe = arranjoVazio({ modalidadeId: id('rx') });
+    await repo.substituir({ tipo: 'equipe', id: id('equipe') }, [daEquipe]);
     await repo.substituir({ tipo: 'medico', id: id('medico') }, [
-      arranjoVazio({ modalidadeIds: [id('ct')] }),
+      arranjoVazio({ especialidadeId: id('neuro'), modalidadeIds: [id('ct')] }),
     ]);
     await repo.substituir({ tipo: 'medico', id: id('medico') }, []);
     expect(await repo.listar({ tipo: 'medico', id: id('medico') })).toEqual([]);
-    expect(await repo.listar({ tipo: 'equipe', id: id('equipe') })).toEqual([arranjoVazio()]);
+    expect(await repo.listar({ tipo: 'equipe', id: id('equipe') })).toEqual([daEquipe]);
   });
 
   it('parâmetros do médico: padrão sem linha, depois grava e atualiza', async () => {

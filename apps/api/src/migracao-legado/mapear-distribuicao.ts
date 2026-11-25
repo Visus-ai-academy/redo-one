@@ -153,8 +153,8 @@ export function mapearDistribuicao(
       }
       return ids;
     };
-    const modalidadeIds = resolver(modalidades, modalidadePorCodigo, 'Modalidade');
-    if (typeof modalidadeIds === 'string') return sair(modalidadeIds);
+    const resolvidas = resolver(modalidades, modalidadePorCodigo, 'Modalidade');
+    if (typeof resolvidas === 'string') return sair(resolvidas);
     const geral = a.subespecialidades.some((s) => chaveCadastro(s) === SEM_SUBESPECIALIDADE);
     const subIds = resolver(
       a.subespecialidades.filter((s) => chaveCadastro(s) !== SEM_SUBESPECIALIDADE),
@@ -162,6 +162,23 @@ export function mapearDistribuicao(
       'Segmento',
     );
     if (typeof subIds === 'string') return sair(subIds);
+
+    // Frente: a especialidade; sem ela, a modalidade única (o "RX" que lá era especialidade).
+    // Sem especialidade e com 0 ou 2+ modalidades, ou com segmento, não há frente que dê o mesmo
+    // recorte: fica de fora com aviso, em vez de alargar ou estreitar calado.
+    let modalidadeId: string | null = null;
+    let modalidadeIds = resolvidas;
+    if (!especialidadeId) {
+      const [unica] = resolvidas;
+      if (resolvidas.length !== 1 || !unica || subIds.length || geral) {
+        contar('arranjosSemFrente');
+        return sair(
+          'Sem especialidade e sem uma modalidade única (ou com segmento): o arranjo não tem frente clara.',
+        );
+      }
+      modalidadeId = unica;
+      modalidadeIds = [];
+    }
     const prioridadeIds = resolver(a.prioridades, prioridadePorGrafia, 'Prioridade');
     if (typeof prioridadeIds === 'string') return sair(prioridadeIds);
 
@@ -215,6 +232,7 @@ export function mapearDistribuicao(
       medicoId: dono.medicoId,
       equipeId: dono.equipeId,
       especialidadeId,
+      modalidadeId,
       subespecialidadeGeral: geral,
       modoClientes,
       modoExames,

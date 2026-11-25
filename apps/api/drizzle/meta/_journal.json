@@ -512,6 +512,27 @@
       "when": 1795616973569,
       "tag": "0072_contratado_padrao_teleimagem",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1795617440499,
+      "tag": "0073_arranjos_frente",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795617449265,
+      "tag": "0074_arranjos_frente_dados",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795617449916,
+      "tag": "0075_arranjos_frente_obrigatoria",
+      "breakpoints": true
     }
   ]
 }

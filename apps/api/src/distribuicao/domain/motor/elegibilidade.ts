@@ -97,7 +97,12 @@ export interface OpcoesCasamento {
  * restrita, exceto cliente e exame (não se barra pelo que não se sabe).
  */
 export function casaArranjo(a: Arranjo, alvo: AlvoExame, opcoes: OpcoesCasamento = {}): boolean {
+  // Frente: a especialidade ou a modalidade do arranjo; depois, o recorte da outra dimensão.
   if (a.especialidadeId !== null && !daEspecialidade(a.especialidadeId, alvo)) return false;
+  if (a.modalidadeId !== null && alvo.modalidadeId !== a.modalidadeId) return false;
+  if (a.especialidadeIds.length && !a.especialidadeIds.some((e) => daEspecialidade(e, alvo))) {
+    return false;
+  }
   if (
     a.modalidadeIds.length &&
     (alvo.modalidadeId === null || !a.modalidadeIds.includes(alvo.modalidadeId))

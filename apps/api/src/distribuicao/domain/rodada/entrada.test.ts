@@ -64,6 +64,8 @@ const op = (id: string, posicao: number, urg: PrioridadeOperacao['urgencia'], gr
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,

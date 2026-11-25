@@ -53,6 +53,8 @@ const CONFIG: ConfiguracaoDistribuicao = {
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,

@@ -7,19 +7,31 @@ import type { ModoVinculoKey } from './ModoVinculo'
 
 export type ArranjoDto = {
   /**
-   * @description Nula = todas.
+   * @description Frente de especialidade. Exatamente uma das frentes (esta ou `modalidadeId`).
    *
    * Format: `uuid`
    * @type string
    */
   especialidadeId: string | null;
   /**
-   * @description Modalidades; vazia = todas.
+   * @description Frente de modalidade. Exatamente uma das frentes (esta ou `especialidadeId`).
+   *
+   * Format: `uuid`
+   * @type string
+   */
+  modalidadeId: string | null;
+  /**
+   * @description Só na frente de modalidade: especialidades; vazia = todas.
+   * @type array
+   */
+  especialidadeIds: string[];
+  /**
+   * @description Só na frente de especialidade: modalidades; vazia = todas.
    * @type array
    */
   modalidadeIds: string[];
   /**
-   * @description Segmentos; vazia e sem o geral = todos.
+   * @description Só na frente de especialidade: segmentos; vazia e sem o geral = todos.
    * @type array
    */
   subespecialidadeIds: string[];

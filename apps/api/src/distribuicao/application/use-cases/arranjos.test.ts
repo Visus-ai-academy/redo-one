@@ -98,21 +98,27 @@ describe('arranjos', () => {
     cadastros.existentes.set('prioridadeOperacao', new Set(['op-rotina']));
     await expect(
       salvar.executar(ator, { tipo: 'medico', id: 'm1' }, [
-        arranjoVazio({ prioridadeIds: ['pri-rotina-do-catalogo'] }),
+        arranjoVazio({ especialidadeId: 'neuro', prioridadeIds: ['pri-rotina-do-catalogo'] }),
       ]),
     ).rejects.toThrow(/Prioridade da operação não encontrada/);
     expect(repo.porDono.get('medico:m1')).toBeUndefined();
   });
 
   it('na equipe, audita como arranjos_equipe', async () => {
-    await salvar.executar(ator, { tipo: 'equipe', id: 'e1' }, [arranjoVazio()]);
+    await salvar.executar(ator, { tipo: 'equipe', id: 'e1' }, [
+      arranjoVazio({ modalidadeId: 'rx', especialidadeIds: ['mi', 'msk'] }),
+    ]);
     expect(auditoria.eventos[0]?.entidade).toBe('arranjos_equipe');
   });
 
   it('sem mudança, não grava nem audita (a ordem das listas não conta)', async () => {
-    repo.porDono.set('medico:m1', [arranjoVazio({ modalidadeIds: ['ct', 'mr'] })]);
+    repo.porDono.set('medico:m1', [
+      arranjoVazio({ especialidadeId: 'mi', modalidadeIds: ['ct', 'mr'] }),
+      arranjoVazio({ modalidadeId: 'rx', especialidadeIds: ['mi', 'msk'] }),
+    ]);
     await salvar.executar(ator, { tipo: 'medico', id: 'm1' }, [
-      arranjoVazio({ modalidadeIds: ['mr', 'ct'] }),
+      arranjoVazio({ especialidadeId: 'mi', modalidadeIds: ['mr', 'ct'] }),
+      arranjoVazio({ modalidadeId: 'rx', especialidadeIds: ['msk', 'mi'] }),
     ]);
     expect(repo.substituicoes).toBe(0);
     expect(auditoria.eventos).toEqual([]);
@@ -149,9 +155,11 @@ describe('arranjos', () => {
       expect(repo.substituicoes).toBe(0);
     });
 
-    it('arranjo sem especialidade (todas) aceita qualquer segmento', async () => {
-      await salvar.executar(ator, dono, [arranjoVazio({ subespecialidadeIds: ['s-avc'] })]);
-      expect(repo.substituicoes).toBe(1);
+    it('recusa arranjo sem frente, sem gravar', async () => {
+      await expect(
+        salvar.executar(ator, dono, [arranjoVazio({ subespecialidadeIds: ['s-avc'] })]),
+      ).rejects.toThrow(/frente/);
+      expect(repo.substituicoes).toBe(0);
     });
 
     it('não barra arranjo já gravado fora da regra que segue igual', async () => {

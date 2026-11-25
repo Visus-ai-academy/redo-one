@@ -133,6 +133,8 @@ export class CadastrosEmMemoria implements CadastrosDistribuicao {
 
 export const arranjoVazio = (parcial: Partial<Arranjo> = {}): Arranjo => ({
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,

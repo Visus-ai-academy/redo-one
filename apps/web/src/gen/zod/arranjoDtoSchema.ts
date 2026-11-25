@@ -7,9 +7,11 @@ import * as z from 'zod'
 import { modoVinculoSchema } from './modoVinculoSchema'
 
 export const arranjoDtoSchema = z.object({
-  especialidadeId: z.uuid().nullable().describe('Nula = todas.'),
-  modalidadeIds: z.array(z.uuid()).describe('Modalidades; vazia = todas.'),
-  subespecialidadeIds: z.array(z.uuid()).describe('Segmentos; vazia e sem o geral = todos.'),
+  especialidadeId: z.uuid().nullable().describe('Frente de especialidade. Exatamente uma das frentes (esta ou `modalidadeId`).'),
+  modalidadeId: z.uuid().nullable().describe('Frente de modalidade. Exatamente uma das frentes (esta ou `especialidadeId`).'),
+  especialidadeIds: z.array(z.uuid()).describe('Só na frente de modalidade: especialidades; vazia = todas.'),
+  modalidadeIds: z.array(z.uuid()).describe('Só na frente de especialidade: modalidades; vazia = todas.'),
+  subespecialidadeIds: z.array(z.uuid()).describe('Só na frente de especialidade: segmentos; vazia e sem o geral = todos.'),
   subespecialidadeGeral: z.boolean().describe('O recorte de segmento inclui o exame sem segmento (geral).'),
   prioridadeIds: z.array(z.uuid()).describe('Prioridades da operação (Configurações › Distribuição); vazia = todas.'),
   modoClientes: modoVinculoSchema,

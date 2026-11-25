@@ -7,6 +7,7 @@ import {
   arranjos,
   arranjosClientes,
   arranjosClientesExclusivos,
+  arranjosEspecialidades,
   arranjosExames,
   arranjosModalidades,
   arranjosPrioridades,
@@ -134,7 +135,13 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
     const eixo = async <T extends { arranjoId: string }>(
       ler: (ids: string[]) => Promise<T[]>,
     ): Promise<T[]> => (ids.length ? ler(ids) : []);
-    const [mods, subs, prios, clis, exs, excl] = await Promise.all([
+    const [esps, mods, subs, prios, clis, exs, excl] = await Promise.all([
+      eixo((i) =>
+        db
+          .select()
+          .from(arranjosEspecialidades)
+          .where(inArray(arranjosEspecialidades.arranjoId, i)),
+      ),
       eixo((i) =>
         db.select().from(arranjosModalidades).where(inArray(arranjosModalidades.arranjoId, i)),
       ),
@@ -156,6 +163,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
           .where(inArray(arranjosClientesExclusivos.arranjoId, i)),
       ),
     ]);
+    const especialidadesDe = porArranjo(esps, (l) => l.especialidadeId);
     const modalidadesDe = porArranjo(mods, (l) => l.modalidadeId);
     const subsDe = porArranjo(subs, (l) => l.subespecialidadeId);
     const priosDe = porArranjo(prios, (l) => l.prioridadeId);
@@ -170,6 +178,8 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         ...(arranjosDo.get(dono) ?? []),
         {
           especialidadeId: a.especialidadeId,
+          modalidadeId: a.modalidadeId,
+          especialidadeIds: especialidadesDe(a.id),
           modalidadeIds: modalidadesDe(a.id),
           subespecialidadeIds: subsDe(a.id),
           subespecialidadeGeral: a.subespecialidadeGeral,

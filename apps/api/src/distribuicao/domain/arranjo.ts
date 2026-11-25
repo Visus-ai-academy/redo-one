@@ -1,13 +1,21 @@
 /**
  * O que um médico (ou uma equipe) lauda. Os arranjos são uma união: o médico pega o exame se
- * QUALQUER arranjo dele casar por inteiro. Em cada eixo, lista vazia significa "todos"; nos
- * segmentos, lista vazia SEM `subespecialidadeGeral` é "todos", e com ela é "só o geral".
+ * QUALQUER arranjo dele casar por inteiro. Cada arranjo começa pela FRENTE, uma especialidade OU
+ * uma modalidade do catálogo (a mesma ideia de frente da escala e das regras da frente): na de
+ * especialidade, recorta-se por modalidades e segmentos; na de modalidade, por especialidades
+ * ("RX de MI e MSK"). Em cada eixo, lista vazia significa "todos"; nos segmentos, lista vazia
+ * SEM `subespecialidadeGeral` é "todos", e com ela é "só o geral".
  */
 export type ModoVinculo = 'todos' | 'apenas' | 'exceto';
 
 export interface Arranjo {
-  /** Nula = todas as especialidades ("faz todo RX" numa linha só). */
+  /** Frente de especialidade. Exatamente uma das duas frentes vem preenchida. */
   especialidadeId: string | null;
+  /** Frente de modalidade. */
+  modalidadeId: string | null;
+  /** Só na frente de modalidade: as especialidades dela que ele lauda; vazia = todas. */
+  especialidadeIds: string[];
+  /** Só na frente de especialidade: as modalidades dela que ele lauda; vazia = todas. */
   modalidadeIds: string[];
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
@@ -43,8 +51,33 @@ function atendeCliente(a: Arranjo, clienteId: string): boolean {
   return a.modoClientes === 'apenas' ? naLista : !naLista;
 }
 
+/** O recorte de cada eixo tem de ser o da frente do arranjo. */
+function validarFrente(a: Arranjo): void {
+  if ((a.especialidadeId === null) === (a.modalidadeId === null)) {
+    throw new ArranjoInvalidoError(
+      'Escolha a frente do arranjo: uma especialidade ou uma modalidade.',
+    );
+  }
+  if (a.modalidadeId !== null) {
+    if (a.modalidadeIds.length) {
+      throw new ArranjoInvalidoError(
+        'Na frente de modalidade, o recorte é por especialidades, não por modalidades.',
+      );
+    }
+    if (a.subespecialidadeIds.length || a.subespecialidadeGeral) {
+      throw new ArranjoInvalidoError('Segmento só vale na frente de especialidade.');
+    }
+  } else if (a.especialidadeIds.length) {
+    throw new ArranjoInvalidoError(
+      'Na frente de especialidade, o recorte é por modalidades, não por especialidades.',
+    );
+  }
+}
+
 export function validarArranjos(arranjos: Arranjo[], dono: DonoArranjo): void {
   for (const a of arranjos) {
+    validarFrente(a);
+    semRepetidos(a.especialidadeIds, 'especialidade');
     semRepetidos(a.modalidadeIds, 'modalidade');
     semRepetidos(a.subespecialidadeIds, 'segmento');
     semRepetidos(a.prioridadeIds, 'prioridade');
@@ -89,10 +122,11 @@ function unir(listas: string[][]): string[] {
 }
 
 /**
- * Pré-preenchimento da alocação a partir dos arranjos que cobrem a frente. Na frente de
- * especialidade, os arranjos dela (ou sem especialidade); na de modalidade, os que marcam a
- * modalidade (o arranjo sem modalidade não é "da" frente de RX, embora a cubra). Sugestão: a
- * gestora pode mudar tudo no formulário. Null = nenhum arranjo da frente, nada a sugerir.
+ * Pré-preenchimento da alocação a partir dos arranjos da frente. Na frente de especialidade, os
+ * arranjos dela; na de modalidade, os dela e os de especialidade que marcam a modalidade ("MI em
+ * RX"). O arranjo sem modalidade marcada não é "da" frente de RX, embora a cubra, e o de RX não é
+ * "da" frente de MI. Sugestão: a gestora pode mudar tudo no formulário. Null = nenhum arranjo da
+ * frente, nada a sugerir.
  */
 export function sugestaoAlocacao(
   arranjos: Arranjo[],
@@ -100,8 +134,8 @@ export function sugestaoAlocacao(
 ): SugestaoAlocacao | null {
   const daFrente = arranjos.filter((a) =>
     frente.tipo === 'especialidade'
-      ? a.especialidadeId === null || a.especialidadeId === frente.especialidadeId
-      : a.modalidadeIds.includes(frente.modalidadeId),
+      ? a.especialidadeId === frente.especialidadeId
+      : a.modalidadeId === frente.modalidadeId || a.modalidadeIds.includes(frente.modalidadeId),
   );
   if (!daFrente.length) return null;
   const prioridadeIds = unir(daFrente.map((a) => a.prioridadeIds));

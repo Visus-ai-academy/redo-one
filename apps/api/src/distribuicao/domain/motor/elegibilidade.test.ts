@@ -39,6 +39,8 @@ const CARDIO = 'esp-cardio';
 
 const arranjo = (p: Partial<Arranjo> = {}): Arranjo => ({
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,
@@ -69,6 +71,29 @@ describe('casaArranjo', () => {
     const todoRx = arranjo({ modalidadeIds: [RX] });
     expect(casaArranjo(todoRx, alvo({ especialidadeId: NEURO }))).toBe(true);
     expect(casaArranjo(todoRx, alvo({ especialidadeId: MSK }))).toBe(true);
+    expect(casaArranjo(todoRx, alvo({ modalidadeId: CT }))).toBe(false);
+  });
+
+  it('frente de modalidade com especialidades: "RX de MI e MSK" numa linha só', () => {
+    const rxMiMsk = arranjo({ modalidadeId: RX, especialidadeIds: [MI, MSK] });
+    expect(casaArranjo(rxMiMsk, alvo({ especialidadeId: MI }))).toBe(true);
+    expect(casaArranjo(rxMiMsk, alvo({ especialidadeId: MSK }))).toBe(true);
+    expect(casaArranjo(rxMiMsk, alvo({ especialidadeId: NEURO }))).toBe(false);
+    expect(casaArranjo(rxMiMsk, alvo({ especialidadeId: MI, modalidadeId: CT }))).toBe(false);
+    expect(casaArranjo(rxMiMsk, alvo({ especialidadeId: MI, modalidadeId: null }))).toBe(false);
+    // O segmento alcança a especialidade (COLUNAS é de NEURO e de MSK).
+    expect(
+      casaArranjo(
+        rxMiMsk,
+        alvo({ especialidadeId: NEURO, especialidadesDoSegmento: [NEURO, MSK] }),
+      ),
+    ).toBe(true);
+  });
+
+  it('frente de modalidade sem especialidades: toda a modalidade', () => {
+    const todoRx = arranjo({ modalidadeId: RX });
+    expect(casaArranjo(todoRx, alvo({ especialidadeId: CARDIO }))).toBe(true);
+    expect(casaArranjo(todoRx, alvo({ especialidadeId: null }))).toBe(true);
     expect(casaArranjo(todoRx, alvo({ modalidadeId: CT }))).toBe(false);
   });
 

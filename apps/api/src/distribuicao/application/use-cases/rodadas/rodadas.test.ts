@@ -109,6 +109,8 @@ const catalogo: CatalogoDaFila = {
 };
 const arranjo: Arranjo = {
   especialidadeId: null,
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,

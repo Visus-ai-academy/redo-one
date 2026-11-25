@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { type Arranjo, ArranjoInvalidoError, sugestaoAlocacao, validarArranjos } from './arranjo';
 
 const arranjo = (parcial: Partial<Arranjo> = {}): Arranjo => ({
-  especialidadeId: null,
+  especialidadeId: 'esp',
+  modalidadeId: null,
+  especialidadeIds: [],
   modalidadeIds: [],
   subespecialidadeIds: [],
   subespecialidadeGeral: false,
@@ -17,8 +19,45 @@ const arranjo = (parcial: Partial<Arranjo> = {}): Arranjo => ({
 });
 
 describe('validarArranjos', () => {
-  it('aceita arranjo sem recorte nenhum (lauda tudo)', () => {
+  it('aceita arranjo só com a frente (lauda tudo dela)', () => {
     expect(() => validarArranjos([arranjo()], 'medico')).not.toThrow();
+    expect(() =>
+      validarArranjos([arranjo({ especialidadeId: null, modalidadeId: 'rx' })], 'medico'),
+    ).not.toThrow();
+  });
+
+  it('recusa arranjo sem frente ou com as duas', () => {
+    expect(() => validarArranjos([arranjo({ especialidadeId: null })], 'medico')).toThrow(/frente/);
+    expect(() => validarArranjos([arranjo({ modalidadeId: 'rx' })], 'medico')).toThrow(/frente/);
+  });
+
+  it('frente de modalidade: recorta por especialidades, nunca por modalidades nem segmentos', () => {
+    const rx = (p: Partial<Arranjo>) =>
+      arranjo({ especialidadeId: null, modalidadeId: 'rx', ...p });
+    expect(() =>
+      validarArranjos([rx({ especialidadeIds: ['mi', 'msk'] })], 'medico'),
+    ).not.toThrow();
+    expect(() => validarArranjos([rx({ modalidadeIds: ['ct'] })], 'medico')).toThrow(
+      ArranjoInvalidoError,
+    );
+    expect(() => validarArranjos([rx({ subespecialidadeIds: ['avc'] })], 'medico')).toThrow(
+      ArranjoInvalidoError,
+    );
+    expect(() => validarArranjos([rx({ subespecialidadeGeral: true })], 'medico')).toThrow(
+      ArranjoInvalidoError,
+    );
+    expect(() => validarArranjos([rx({ especialidadeIds: ['mi', 'mi'] })], 'medico')).toThrow(
+      /repetid/,
+    );
+  });
+
+  it('frente de especialidade: recorta por modalidades, nunca por especialidades', () => {
+    expect(() =>
+      validarArranjos([arranjo({ modalidadeIds: ['ct', 'mr'] })], 'medico'),
+    ).not.toThrow();
+    expect(() => validarArranjos([arranjo({ especialidadeIds: ['mi'] })], 'medico')).toThrow(
+      ArranjoInvalidoError,
+    );
   });
 
   it('recusa lista de clientes vazia quando o modo é "apenas"', () => {
@@ -139,15 +178,16 @@ describe('sugestaoAlocacao', () => {
     ).toEqual({ prioridadeIds: [], subespecialidadeIds: [], subespecialidadeGeral: false });
   });
 
-  it('arranjo sem especialidade cobre a frente de especialidade', () => {
-    expect(sugestaoAlocacao([arranjo({ prioridadeIds: ['rotina'] })], neuro)).toEqual({
-      prioridadeIds: ['rotina'],
-      subespecialidadeIds: [],
-      subespecialidadeGeral: false,
-    });
+  it('frente de especialidade não é coberta por arranjo de frente de modalidade', () => {
+    expect(
+      sugestaoAlocacao(
+        [arranjo({ especialidadeId: null, modalidadeId: 'rx', especialidadeIds: ['neuro'] })],
+        neuro,
+      ),
+    ).toBeNull();
   });
 
-  it('frente de modalidade: arranjos com a modalidade, só as prioridades', () => {
+  it('frente de modalidade: os arranjos dela e os de especialidade que a marcam, só as prioridades', () => {
     expect(
       sugestaoAlocacao(
         [
@@ -159,11 +199,18 @@ describe('sugestaoAlocacao', () => {
           }),
           arranjo({ especialidadeId: 'msk', modalidadeIds: ['rx'], prioridadeIds: ['urgencia'] }),
           arranjo({ especialidadeId: 'mi', modalidadeIds: ['ct'], prioridadeIds: ['plantao'] }),
+          arranjo({
+            especialidadeId: null,
+            modalidadeId: 'rx',
+            especialidadeIds: ['neuro'],
+            prioridadeIds: ['internado'],
+          }),
+          arranjo({ especialidadeId: null, modalidadeId: 'ct', prioridadeIds: ['ambulatorio'] }),
         ],
         rx,
       ),
     ).toEqual({
-      prioridadeIds: ['rotina', 'urgencia'],
+      prioridadeIds: ['rotina', 'urgencia', 'internado'],
       subespecialidadeIds: [],
       subespecialidadeGeral: false,
     });
