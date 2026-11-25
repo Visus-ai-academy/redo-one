@@ -62,3 +62,7 @@ Minhas (o usuário pode corrigir):
 ## Fica para o construtor
 
 Nomes de arquivos, DTOs, forma do endpoint (GET/PUT por cliente), layout fino da aba dentro do padrão Base UI do projeto.
+
+## Adendo 25/11/2026: histórico de alterações
+
+Aprovado pelo usuário ("Sim"). Os dados fiscais não entram no cálculo, então não ganham vigência: a aba Faturamento ganha a seção "Histórico de alterações", lida de `eventos_auditoria` (quem, quando, campo, antes e depois), visível a quem tem `clientes.faturamento.ver`. Seguir o padrão de leitura do histórico da escala (`apps/api/src/escala/historico/`).

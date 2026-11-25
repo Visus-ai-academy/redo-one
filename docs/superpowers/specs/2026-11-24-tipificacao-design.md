@@ -55,3 +55,13 @@ Significado de FT/NF; se os `_DIAGNOSTICA` são dos sócios.
 1. Tabelas, carga do legado (regras, sub-regras, configuração por cliente/unidade, equipes) e permissões.
 2. Classificação pura (TDD com os casos de borda), aplicação na importação, job de reclassificação das abertas e teste de paridade com set/out.
 3. Telas, validadas num Chromium real.
+
+## Adendo 25/11/2026: histórico por vigência
+
+Aprovado pelo usuário ("Sim"): quase tudo do faturamento precisa de histórico; nada se sobrescreve nem se apaga.
+
+- **Versionado por competência ("Vale a partir de \*", só competência aberta ou futura, padrão a próxima):** a configuração do cliente ou unidade (regra principal + lista ordenada de linhas, como um todo) e o que decide se fatura (`fatura` da sub-regra e `fatura_sem_subregra` da regra). Alterar cria uma versão nova e encerra a anterior na competência anterior; "remover a configuração" é uma versão vazia (volta a herdar), não um apagar.
+- **Classificação:** o laudo usa a versão vigente na competência dele. O job de reclassificação continua só nas competências abertas; as fechadas e travadas não mudam.
+- **Só auditoria (sem versão):** nome, descrição e cor da regra e da sub-regra (não mudam o cálculo).
+- **Carga do legado:** a configuração atual entra como versão inicial (desde a primeira competência dos laudos).
+- **Telas:** seção "Histórico de vigências" na configuração do cliente e nas sub-regras, no estilo do editor de corte (`editor-corte.tsx`), com quem e quando.
