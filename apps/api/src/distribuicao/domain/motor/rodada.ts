@@ -74,11 +74,15 @@ export interface ExameFilaRodada {
   naoLiberados?: ReadonlySet<string>;
 }
 
+/**
+ * Recortes da rodada para o motor: eixo ausente = sem recorte ("todos"); eixo presente filtra,
+ * e a lista vazia não casa nada (vazio nunca é "todos").
+ */
 export interface FiltroRodada {
   turnoIds?: readonly string[];
   /** Prioridades da operação (o recorte da tela da rodada); o pacote do paciente não se parte. */
   prioridadeOperacaoIds?: readonly string[];
-  /** Segmentos do catálogo; o pacote do paciente não se parte. Vazio sem o geral = sem recorte. */
+  /** Segmentos do catálogo; o pacote do paciente não se parte. Vazio sem o geral = nenhum. */
   subespecialidadeIds?: readonly string[];
   /** O recorte de segmento inclui o exame sem segmento. */
   subespecialidadeGeral?: boolean;
@@ -294,27 +298,36 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
   }
   const filtro = entrada.filtro ?? {};
   const naoRecusados = () => lidos.filter((l) => !recusas.has(l.fila.id));
+  /** "A rodada distribui só X, Y."; sem nenhum, "A rodada não distribui nenhum(a) …". */
+  const so = (nomes: string[], nenhum: string) =>
+    nomes.length
+      ? `A rodada distribui só ${nomes.join(', ')}.`
+      : `A rodada não distribui ${nenhum}.`;
   const prioridadeOperacaoIds = filtro.prioridadeOperacaoIds ?? [];
-  for (const id of recortarPrioridades(
-    naoRecusados().map((l) => ({ ...l.fila, prioridadeId: l.prioridadeOperacaoId })),
-    prioridadeOperacaoIds,
-    regras,
-  )) {
+  const foraDasPrioridades = !filtro.prioridadeOperacaoIds
+    ? []
+    : prioridadeOperacaoIds.length
+      ? recortarPrioridades(
+          naoRecusados().map((l) => ({ ...l.fila, prioridadeId: l.prioridadeOperacaoId })),
+          prioridadeOperacaoIds,
+          regras,
+        )
+      : naoRecusados().map((l) => l.fila.id);
+  for (const id of foraDasPrioridades) {
     recusas.set(
       id,
-      semItem(
-        id,
-        'fora_da_prioridade',
-        `A rodada distribui só ${prioridadeOperacaoIds.map(nome).join(', ')}.`,
-      ),
+      semItem(id, 'fora_da_prioridade', so(prioridadeOperacaoIds.map(nome), 'nenhuma prioridade')),
     );
   }
   const subespecialidadeIds = filtro.subespecialidadeIds ?? [];
-  if (subespecialidadeIds.length || filtro.subespecialidadeGeral) {
-    const detalhe = `A rodada distribui só ${[
-      ...subespecialidadeIds.map(nome),
-      ...(filtro.subespecialidadeGeral ? ['Sem subespecialidade'] : []),
-    ].join(', ')}.`;
+  if (filtro.subespecialidadeIds || filtro.subespecialidadeGeral) {
+    const detalhe = so(
+      [
+        ...subespecialidadeIds.map(nome),
+        ...(filtro.subespecialidadeGeral ? ['Sem subespecialidade'] : []),
+      ],
+      'nenhuma subespecialidade',
+    );
     const fora = recortarPacotes(
       naoRecusados().map((l) => l.fila),
       (e) =>
@@ -328,24 +341,27 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     }
   }
   const frentes = filtro.frentes ?? [];
-  if (frentes.length) {
-    const detalhe = `A rodada distribui só ${frentes
-      .map((f) => nome(f.especialidadeId ?? f.modalidadeId ?? ''))
-      .join(', ')}.`;
+  if (filtro.frentes) {
+    const detalhe = so(
+      frentes.map((f) => nome(f.especialidadeId ?? f.modalidadeId ?? '')),
+      'nenhuma frente',
+    );
     for (const l of naoRecusados()) {
       if (!frentes.some((f) => exameNaFrente(f, l.fila)))
         recusas.set(l.fila.id, semItem(l.fila.id, 'fora_da_frente', detalhe));
     }
   }
   const clienteIds = filtro.clienteIds ?? [];
-  for (const id of recortarClinicas(
-    naoRecusados().map((l) => l.fila),
-    clienteIds,
-  )) {
-    recusas.set(
-      id,
-      semItem(id, 'fora_da_clinica', `A rodada distribui só ${clienteIds.map(nome).join(', ')}.`),
-    );
+  const foraDasClinicas = !filtro.clienteIds
+    ? []
+    : clienteIds.length
+      ? recortarClinicas(
+          naoRecusados().map((l) => l.fila),
+          clienteIds,
+        )
+      : naoRecusados().map((l) => l.fila.id);
+  for (const id of foraDasClinicas) {
+    recusas.set(id, semItem(id, 'fora_da_clinica', so(clienteIds.map(nome), 'nenhum cliente')));
   }
   const validos = naoRecusados();
 
@@ -381,7 +397,7 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
     prioridadeIdsQueFuramGrade,
     cotaEntregue: entrada.cotaEntregue,
     ...(filtro.turnoIds ? { filtroTurnoIds: filtro.turnoIds } : {}),
-    ...(frentes.length ? { filtroFrentes: frentes } : {}),
+    ...(filtro.frentes ? { filtroFrentes: frentes } : {}),
     ...(filtro.medicosIncluidos ? { medicosIncluidos: filtro.medicosIncluidos } : {}),
   });
 

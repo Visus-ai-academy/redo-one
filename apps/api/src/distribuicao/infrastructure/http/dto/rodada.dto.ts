@@ -34,40 +34,66 @@ const STATUS_DESIGNACAO = ['prevista', 'executada', 'pulada', 'falhou', 'recusad
 const ids = (descricao: string) =>
   ApiProperty({ type: [String], format: 'uuid', description: descricao });
 
-/** Recortes da rodada; lista vazia = sem recorte naquele eixo. */
+/**
+ * Recortes da rodada. Cada eixo tem o "todos" explícito ao lado da lista: com ele a lista vai
+ * vazia; sem ele, a lista precisa de ao menos um item (vazio nunca é "todos").
+ */
 export class RecortesRodadaDto {
-  @ids('Turnos da escala.')
+  @ApiProperty({ description: 'Todos os turnos. Sem ele, `turnoIds` precisa de ao menos um.' })
+  @IsBoolean()
+  todosTurnos!: boolean;
+
+  @ids('Sem `todosTurnos`: turnos da escala.')
   @IsArray()
   @ArrayMaxSize(500)
   @IsUUID('all', { each: true })
   turnoIds!: string[];
 
-  @ids('Frentes da escala (`/escala/frentes`).')
+  @ApiProperty({ description: 'Todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma.' })
+  @IsBoolean()
+  todasFrentes!: boolean;
+
+  @ids('Sem `todasFrentes`: frentes da escala (`/escala/frentes`).')
   @IsArray()
   @ArrayMaxSize(500)
   @IsUUID('all', { each: true })
   frenteIds!: string[];
 
-  @ids('Prioridades da operação (Configurações › Distribuição).')
+  @ApiProperty({
+    description: 'Todas as prioridades. Sem ele, `prioridadeOperacaoIds` precisa de ao menos uma.',
+  })
+  @IsBoolean()
+  todasPrioridades!: boolean;
+
+  @ids('Sem `todasPrioridades`: prioridades da operação (Configurações › Distribuição).')
   @IsArray()
   @ArrayMaxSize(500)
   @IsUUID('all', { each: true })
   prioridadeOperacaoIds!: string[];
 
-  @ids('Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.')
+  @ApiProperty({ description: 'Todos os segmentos. Sem ele, `subespecialidadeIds` ou o geral.' })
+  @IsBoolean()
+  todosSegmentos!: boolean;
+
+  @ids(
+    'Sem `todosSegmentos`: segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.',
+  )
   @IsArray()
   @ArrayMaxSize(500)
   @IsUUID('all', { each: true })
   subespecialidadeIds!: string[];
 
   @ApiProperty({
-    description:
-      'O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte.',
+    description: 'Sem `todosSegmentos`: o recorte de segmento inclui o exame sem segmento.',
   })
   @IsBoolean()
   subespecialidadeGeral!: boolean;
 
-  @ids('Clientes: só os exames deles são distribuídos.')
+  @ApiProperty({ description: 'Todos os clientes. Sem ele, `clienteIds` precisa de ao menos um.' })
+  @IsBoolean()
+  todosClientes!: boolean;
+
+  @ids('Sem `todosClientes`: só os exames destes clientes são distribuídos.')
   @IsArray()
   @ArrayMaxSize(500)
   @IsUUID('all', { each: true })

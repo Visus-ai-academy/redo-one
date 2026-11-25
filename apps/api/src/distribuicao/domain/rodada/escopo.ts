@@ -3,8 +3,8 @@ import type { RecortesRodada } from './entrada';
 
 /**
  * A gestora de escala com recorte (`usuarios_escopos_escala`: turnos OU frentes) só mexe na rodada
- * que fica dentro dele. A rodada admite o plantão que está num turno E numa frente dela (vazio =
- * todos); o escopo admite o plantão que está num turno OU numa frente dele. Logo a rodada cabe no
+ * que fica dentro dele. A rodada admite o plantão que está num turno E numa frente dela (com o
+ * "todos" explícito); o escopo admite o plantão que está num turno OU numa frente dele. Logo a rodada cabe no
  * escopo quando todos os turnos dela são do escopo, ou todas as frentes; e médico incluído escapa
  * dos dois recortes, então a gestora com escopo não inclui médico.
  */
@@ -17,16 +17,22 @@ export class RecorteForaDoEscopoError extends ErroDeDominio {
   readonly tipo = 'proibido';
 }
 
-const contido = (ids: readonly string[], escopo: ReadonlySet<string>) =>
-  ids.length > 0 && ids.every((id) => escopo.has(id));
+const contido = (todos: boolean, ids: readonly string[], escopo: ReadonlySet<string>) =>
+  !todos && ids.length > 0 && ids.every((id) => escopo.has(id));
 
 export function rodadaNoEscopo(escopo: EscopoGestora | null, r: RecortesRodada): boolean {
   if (!escopo) return true;
   if (r.medicosIncluidos.length) return false;
-  return contido(r.turnoIds, escopo.turnoIds) || contido(r.frenteIds, escopo.frenteIds);
+  return (
+    contido(r.todosTurnos, r.turnoIds, escopo.turnoIds) ||
+    contido(r.todasFrentes, r.frenteIds, escopo.frenteIds)
+  );
 }
 
-/** O recorte pedido pela gestora; sem turnos nem frentes, o escopo dela quando dá para dizer. */
+/**
+ * O recorte pedido pela gestora; com "todos os turnos" e "todas as frentes", o escopo dela quando
+ * dá para dizer.
+ */
 export function recorteDaGestora(escopo: EscopoGestora | null, r: RecortesRodada): RecortesRodada {
   if (!escopo) return r;
   if (r.medicosIncluidos.length) {
@@ -35,11 +41,11 @@ export function recorteDaGestora(escopo: EscopoGestora | null, r: RecortesRodada
     );
   }
   let pedido = r;
-  if (!r.turnoIds.length && !r.frenteIds.length) {
+  if (r.todosTurnos && r.todasFrentes) {
     if (escopo.turnoIds.size && !escopo.frenteIds.size) {
-      pedido = { ...r, turnoIds: [...escopo.turnoIds] };
+      pedido = { ...r, todosTurnos: false, turnoIds: [...escopo.turnoIds] };
     } else if (escopo.frenteIds.size && !escopo.turnoIds.size) {
-      pedido = { ...r, frenteIds: [...escopo.frenteIds] };
+      pedido = { ...r, todasFrentes: false, frenteIds: [...escopo.frenteIds] };
     } else {
       throw new RecorteForaDoEscopoError(
         'Escolha os turnos ou as frentes do seu recorte na escala para iniciar a rodada.',

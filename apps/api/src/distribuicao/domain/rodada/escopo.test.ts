@@ -28,17 +28,26 @@ describe('recorte da gestora de escala na rodada', () => {
       /Escolha os turnos ou as frentes/,
     );
     expect(
-      recorteDaGestora(escopo(['t1'], ['f1']), { ...RECORTES_VAZIOS, frenteIds: ['f1'] }).frenteIds,
+      recorteDaGestora(escopo(['t1'], ['f1']), {
+        ...RECORTES_VAZIOS,
+        todasFrentes: false,
+        frenteIds: ['f1'],
+      }).frenteIds,
     ).toEqual(['f1']);
   });
 
   it('recusa turno ou frente fora do escopo e médico incluído (que escaparia do recorte)', () => {
     expect(() =>
-      recorteDaGestora(escopo(['t1'], []), { ...RECORTES_VAZIOS, turnoIds: ['t1', 't2'] }),
+      recorteDaGestora(escopo(['t1'], []), {
+        ...RECORTES_VAZIOS,
+        todosTurnos: false,
+        turnoIds: ['t1', 't2'],
+      }),
     ).toThrow(RecorteForaDoEscopoError);
     expect(() =>
       recorteDaGestora(escopo(['t1'], []), {
         ...RECORTES_VAZIOS,
+        todosTurnos: false,
         turnoIds: ['t1'],
         medicosIncluidos: ['m'],
       }),
@@ -47,13 +56,26 @@ describe('recorte da gestora de escala na rodada', () => {
 
   it('a rodada está no escopo se todos os turnos (ou todas as frentes) dela são do escopo', () => {
     const e = escopo(['t1'], ['f1']);
-    expect(rodadaNoEscopo(e, { ...RECORTES_VAZIOS, turnoIds: ['t1'], frenteIds: ['f9'] })).toBe(
+    expect(
+      rodadaNoEscopo(e, {
+        ...RECORTES_VAZIOS,
+        todosTurnos: false,
+        turnoIds: ['t1'],
+        todasFrentes: false,
+        frenteIds: ['f9'],
+      }),
+    ).toBe(true);
+    expect(rodadaNoEscopo(e, { ...RECORTES_VAZIOS, todasFrentes: false, frenteIds: ['f1'] })).toBe(
       true,
     );
-    expect(rodadaNoEscopo(e, { ...RECORTES_VAZIOS, frenteIds: ['f1'] })).toBe(true);
     expect(rodadaNoEscopo(e, RECORTES_VAZIOS)).toBe(false);
     expect(
-      rodadaNoEscopo(e, { ...RECORTES_VAZIOS, turnoIds: ['t1'], medicosIncluidos: ['m'] }),
+      rodadaNoEscopo(e, {
+        ...RECORTES_VAZIOS,
+        todosTurnos: false,
+        turnoIds: ['t1'],
+        medicosIncluidos: ['m'],
+      }),
     ).toBe(false);
   });
 });

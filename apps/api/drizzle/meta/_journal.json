@@ -680,6 +680,20 @@
       "when": 1795638148370,
       "tag": "0096_ajustes_dia_todos_clientes_dados",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1795638158171,
+      "tag": "0097_rodadas_todos_explicito",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1795638158710,
+      "tag": "0098_rodadas_todos_dados",
+      "breakpoints": true
     }
   ]
 }

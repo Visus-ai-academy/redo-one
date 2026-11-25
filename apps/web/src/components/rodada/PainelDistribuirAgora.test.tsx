@@ -65,11 +65,16 @@ describe('PainelDistribuirAgora', () => {
     expect(screen.getByText(/Cerca de 30 exames/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
     expect(onDistribuir).toHaveBeenCalledWith({
+      todosTurnos: false,
       turnoIds: ['t1'],
+      todasFrentes: true,
       frenteIds: [],
+      todasPrioridades: true,
       prioridadeOperacaoIds: [],
+      todosSegmentos: true,
       subespecialidadeIds: [],
       subespecialidadeGeral: false,
+      todosClientes: true,
       clienteIds: [],
       medicosExcluidos: [],
       medicosIncluidos: [],
@@ -83,8 +88,31 @@ describe('PainelDistribuirAgora', () => {
     expect(screen.getByText(/Cerca de 5 exames/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
     expect(onDistribuir).toHaveBeenCalledWith(
-      expect.objectContaining({ turnoIds: [], prioridadeOperacaoIds: ['p-urg'] }),
+      expect.objectContaining({
+        todosTurnos: true,
+        turnoIds: [],
+        todasPrioridades: false,
+        prioridadeOperacaoIds: ['p-urg'],
+      }),
     );
+  });
+
+  it('vazio nunca é "todos": sem prioridade marcada, pede ao menos uma', async () => {
+    const onDistribuir = abrir();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Rotina/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Urgência/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
+    expect(await screen.findByText('Marque ao menos uma prioridade.')).toBeInTheDocument();
+    expect(onDistribuir).not.toHaveBeenCalled();
+  });
+
+  it('"Só alguns clientes" pede ao menos um cliente', async () => {
+    const onDistribuir = abrir();
+    await userEvent.click(await screen.findByRole('combobox', { name: /^Clientes/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Só alguns clientes' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Distribuir agora' }));
+    expect(await screen.findByText('Escolha ao menos um cliente.')).toBeInTheDocument();
+    expect(onDistribuir).not.toHaveBeenCalled();
   });
 
   it('recorte por subespecialidade: o "Sem subespecialidade" vai à parte', async () => {

@@ -252,31 +252,52 @@ export function etapasDaRodada(r: RodadaDasEtapas): Etapa[] {
   });
 }
 
+/** Com o "todos" explícito, `todos`; lista vazia sem ele, `nenhum` (vazio nunca é "todos"). */
 const resumirIds = (
   ids: readonly string[],
   nomes: ReadonlyMap<string, string>,
-  todos: string,
+  todos: string | false,
   unidade: [string, string],
+  nenhum = '',
 ) => {
-  if (!ids.length) return todos;
+  if (todos !== false) return todos;
+  if (!ids.length) return nenhum;
   if (ids.every((id) => nomes.has(id))) return juntarNomes(ids.map((id) => nomes.get(id) ?? ''));
   return `${ids.length} ${ids.length === 1 ? unidade[0] : unidade[1]}`;
 };
 
-/** Os recortes da rodada em texto (lista vazia = sem recorte naquele eixo). */
+/** Os recortes da rodada em texto. */
 export function descreverRecortes(r: RecortesRodadaDto, nomes: ReadonlyMap<string, string>) {
   const medicos = [
     r.medicosExcluidos.length &&
-      `Sem ${resumirIds(r.medicosExcluidos, nomes, '', ['médico', 'médicos'])}`,
+      `Sem ${resumirIds(r.medicosExcluidos, nomes, false, ['médico', 'médicos'])}`,
     r.medicosIncluidos.length &&
-      `Com ${resumirIds(r.medicosIncluidos, nomes, '', ['médico', 'médicos'])} fora de turno`,
+      `Com ${resumirIds(r.medicosIncluidos, nomes, false, ['médico', 'médicos'])} fora de turno`,
   ].filter(Boolean);
   return [
-    { rotulo: 'Turnos', valor: resumirIds(r.turnoIds, nomes, 'Todos', ['turno', 'turnos']) },
-    { rotulo: 'Frentes', valor: resumirIds(r.frenteIds, nomes, 'Todas', ['frente', 'frentes']) },
+    {
+      rotulo: 'Turnos',
+      valor: resumirIds(r.turnoIds, nomes, r.todosTurnos && 'Todos', ['turno', 'turnos'], 'Nenhum'),
+    },
+    {
+      rotulo: 'Frentes',
+      valor: resumirIds(
+        r.frenteIds,
+        nomes,
+        r.todasFrentes && 'Todas',
+        ['frente', 'frentes'],
+        'Nenhuma',
+      ),
+    },
     {
       rotulo: 'Prioridades',
-      valor: resumirIds(r.prioridadeOperacaoIds, nomes, 'Todas', ['prioridade', 'prioridades']),
+      valor: resumirIds(
+        r.prioridadeOperacaoIds,
+        nomes,
+        r.todasPrioridades && 'Todas',
+        ['prioridade', 'prioridades'],
+        'Nenhuma',
+      ),
     },
     {
       rotulo: 'Subespecialidades',
@@ -284,13 +305,20 @@ export function descreverRecortes(r: RecortesRodadaDto, nomes: ReadonlyMap<strin
       valor: resumirIds(
         r.subespecialidadeGeral ? [...r.subespecialidadeIds, ''] : r.subespecialidadeIds,
         new Map(nomes).set('', 'Sem subespecialidade'),
-        'Todas',
+        r.todosSegmentos && 'Todas',
         ['subespecialidade', 'subespecialidades'],
+        'Nenhuma',
       ),
     },
     {
       rotulo: 'Clientes',
-      valor: resumirIds(r.clienteIds, nomes, 'Todos', ['cliente', 'clientes']),
+      valor: resumirIds(
+        r.clienteIds,
+        nomes,
+        r.todosClientes && 'Todos',
+        ['cliente', 'clientes'],
+        'Nenhum',
+      ),
     },
     { rotulo: 'Médicos', valor: medicos.length ? medicos.join('; ') : 'Os em turno' },
   ];
@@ -522,12 +550,12 @@ export type Periodo = (typeof PERIODOS)[number]['valor'];
 /** "2 turno(s), 3 cliente(s)": o que a rodada recortou, em poucas palavras. */
 export function recortesEmPoucasPalavras(r: RecortesRodadaDto) {
   const partes = [
-    r.turnoIds.length ? `${r.turnoIds.length} turno(s)` : 'Todos os turnos',
-    r.frenteIds.length && `${r.frenteIds.length} frente(s)`,
-    r.prioridadeOperacaoIds.length && `${r.prioridadeOperacaoIds.length} prioridade(s)`,
-    (r.subespecialidadeIds.length || r.subespecialidadeGeral) &&
+    r.todosTurnos ? 'Todos os turnos' : `${r.turnoIds.length} turno(s)`,
+    !r.todasFrentes && `${r.frenteIds.length} frente(s)`,
+    !r.todasPrioridades && `${r.prioridadeOperacaoIds.length} prioridade(s)`,
+    !r.todosSegmentos &&
       `${r.subespecialidadeIds.length + Number(r.subespecialidadeGeral)} subespecialidade(s)`,
-    r.clienteIds.length && `${r.clienteIds.length} cliente(s)`,
+    !r.todosClientes && `${r.clienteIds.length} cliente(s)`,
     r.medicosExcluidos.length && `sem ${r.medicosExcluidos.length} médico(s)`,
     r.medicosIncluidos.length && `com ${r.medicosIncluidos.length} fora de turno`,
   ].filter(Boolean);

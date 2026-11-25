@@ -5,32 +5,57 @@
 
 export type RecortesRodadaDto = {
   /**
-   * @description Turnos da escala.
+   * @description Todos os turnos. Sem ele, `turnoIds` precisa de ao menos um.
+   * @type boolean
+   */
+  todosTurnos: boolean;
+  /**
+   * @description Sem `todosTurnos`: turnos da escala.
    * @type array
    */
   turnoIds: string[];
   /**
-   * @description Frentes da escala (`/escala/frentes`).
+   * @description Todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma.
+   * @type boolean
+   */
+  todasFrentes: boolean;
+  /**
+   * @description Sem `todasFrentes`: frentes da escala (`/escala/frentes`).
    * @type array
    */
   frenteIds: string[];
   /**
-   * @description Prioridades da operação (Configurações › Distribuição).
+   * @description Todas as prioridades. Sem ele, `prioridadeOperacaoIds` precisa de ao menos uma.
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
+   * @description Sem `todasPrioridades`: prioridades da operação (Configurações › Distribuição).
    * @type array
    */
   prioridadeOperacaoIds: string[];
   /**
-   * @description Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.
+   * @description Todos os segmentos. Sem ele, `subespecialidadeIds` ou o geral.
+   * @type boolean
+   */
+  todosSegmentos: boolean;
+  /**
+   * @description Sem `todosSegmentos`: segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.
    * @type array
    */
   subespecialidadeIds: string[];
   /**
-   * @description O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte.
+   * @description Sem `todosSegmentos`: o recorte de segmento inclui o exame sem segmento.
    * @type boolean
    */
   subespecialidadeGeral: boolean;
   /**
-   * @description Clientes: só os exames deles são distribuídos.
+   * @description Todos os clientes. Sem ele, `clienteIds` precisa de ao menos um.
+   * @type boolean
+   */
+  todosClientes: boolean;
+  /**
+   * @description Sem `todosClientes`: só os exames destes clientes são distribuídos.
    * @type array
    */
   clienteIds: string[];

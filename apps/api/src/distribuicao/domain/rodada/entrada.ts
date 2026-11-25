@@ -25,6 +25,7 @@ import {
   urgente,
 } from '../motor/prioridades-operacao';
 import type { EntradaRodada, FiltroRodada } from '../motor/rodada';
+import { invalida } from '../validacao';
 import type { EscalaDoMedico } from './proposta';
 
 /**
@@ -167,29 +168,63 @@ export interface Entregas {
   cotaEntregue: Readonly<Record<string, { exames: number; laudos: number }>>;
 }
 
+/**
+ * Recortes da rodada. Cada eixo tem o "todos" explícito ao lado da lista: vazio nunca é "todos"
+ * (25/11/2026). Com o "todos", a lista vai vazia; sem ele, a lista precisa de ao menos um item
+ * (`validarRecortesRodada`), e lista vazia sem "todos" não distribui nada naquele eixo.
+ */
 export interface RecortesRodada {
+  todosTurnos: boolean;
   turnoIds: string[];
+  todasFrentes: boolean;
   /** Frentes da escala (`frentes_escala.id`). */
   frenteIds: string[];
+  todasPrioridades: boolean;
   prioridadeOperacaoIds: string[];
+  /** Todos os segmentos (sem `subespecialidadeIds` nem o geral). */
+  todosSegmentos: boolean;
   /** Segmentos do catálogo; com `subespecialidadeGeral`, o exame sem segmento também passa. */
   subespecialidadeIds: string[];
   subespecialidadeGeral: boolean;
+  todosClientes: boolean;
   clienteIds: string[];
   medicosExcluidos: string[];
   medicosIncluidos: string[];
 }
 
+/** Sem recorte em eixo nenhum: "todos" explícito em cada um. */
 export const RECORTES_VAZIOS: RecortesRodada = {
+  todosTurnos: true,
   turnoIds: [],
+  todasFrentes: true,
   frenteIds: [],
+  todasPrioridades: true,
   prioridadeOperacaoIds: [],
+  todosSegmentos: true,
   subespecialidadeIds: [],
   subespecialidadeGeral: false,
+  todosClientes: true,
   clienteIds: [],
   medicosExcluidos: [],
   medicosIncluidos: [],
 };
+
+/** "Todos" ou ao menos um em cada eixo; as duas coisas juntas, erro. */
+export function validarRecortesRodada(r: RecortesRodada): void {
+  const eixo = (todos: boolean, n: number, oQue: string) => {
+    if (todos && n) invalida(`Recorte de ${oQue}: escolha "todos" ou a lista, não as duas.`);
+    if (!todos && !n) invalida(`Recorte de ${oQue}: marque ao menos um (ou "todos").`);
+  };
+  eixo(r.todosTurnos, r.turnoIds.length, 'turnos');
+  eixo(r.todasFrentes, r.frenteIds.length, 'frentes');
+  eixo(r.todasPrioridades, r.prioridadeOperacaoIds.length, 'prioridades');
+  eixo(
+    r.todosSegmentos,
+    r.subespecialidadeIds.length + Number(r.subespecialidadeGeral),
+    'subespecialidades',
+  );
+  eixo(r.todosClientes, r.clienteIds.length, 'clientes');
+}
 
 /** O exame como a rodada o grava (sem o nome do paciente). */
 export interface ExameLido extends ClassificacaoEstudo {
@@ -437,21 +472,21 @@ export function montarEntrada(p: {
     semContaMobilemed: m.idMobilemed === null,
   }));
 
+  // Sem o "todos", o eixo filtra, mesmo com a lista vazia (que não casa nada).
   const filtro: FiltroRodada = {};
-  if (recortes.turnoIds.length) filtro.turnoIds = recortes.turnoIds;
-  const frentes = recortes.frenteIds.flatMap((id) => {
-    const f = insumos.frentes[id];
-    return f ? [f] : [];
-  });
-  if (frentes.length) filtro.frentes = frentes;
-  if (recortes.prioridadeOperacaoIds.length) {
-    filtro.prioridadeOperacaoIds = recortes.prioridadeOperacaoIds;
+  if (!recortes.todosTurnos) filtro.turnoIds = recortes.turnoIds;
+  if (!recortes.todasFrentes) {
+    filtro.frentes = recortes.frenteIds.flatMap((id) => {
+      const f = insumos.frentes[id];
+      return f ? [f] : [];
+    });
   }
-  if (recortes.subespecialidadeIds.length || recortes.subespecialidadeGeral) {
+  if (!recortes.todasPrioridades) filtro.prioridadeOperacaoIds = recortes.prioridadeOperacaoIds;
+  if (!recortes.todosSegmentos) {
     filtro.subespecialidadeIds = recortes.subespecialidadeIds;
     filtro.subespecialidadeGeral = recortes.subespecialidadeGeral;
   }
-  if (recortes.clienteIds.length) filtro.clienteIds = recortes.clienteIds;
+  if (!recortes.todosClientes) filtro.clienteIds = recortes.clienteIds;
   if (recortes.medicosIncluidos.length) filtro.medicosIncluidos = recortes.medicosIncluidos;
 
   return {

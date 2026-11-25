@@ -1,5 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Play } from '@phosphor-icons/react';
+import { useStore } from '@tanstack/react-form';
 import type { ReactNode } from 'react';
 import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
 import type { RecolhimentoPrevistoDto } from '../../gen/types/RecolhimentoPrevistoDto';
@@ -22,6 +23,11 @@ import {
   recortesDoFormulario,
   type ValoresDistribuir,
 } from './distribuir-agora';
+
+const OPCOES_CLIENTES = [
+  { valor: 'todos', rotulo: 'Todos os clientes' },
+  { valor: 'alguns', rotulo: 'Só alguns clientes' },
+];
 
 /**
  * "Distribuir agora": os recortes da rodada num painel lateral (a fila continua à vista). Vêm
@@ -59,13 +65,25 @@ export function PainelDistribuirAgora({
         p.prioridadeOperacaoId ? [p.prioridadeOperacaoId] : [],
       ),
       subespecialidadeIds: subespecialidades.map((o) => o.valor),
+      clientesDaRodada: 'todos',
       clientes: [],
       tirar: [],
       incluir: [],
     } as ValoresDistribuir,
-    validators: { onSubmit: esquemaDistribuir(temTurnos) },
+    validators: {
+      onSubmit: esquemaDistribuir({
+        temTurnos,
+        temFrentes: frentesEspecialidade.length + frentesModalidade.length > 0,
+        temPrioridades: fila.prioridades.some((p) => p.prioridadeOperacaoId),
+        temSubespecialidades: subespecialidades.length > 0,
+      }),
+    },
     onSubmit: ({ value }) => tentar(() => onDistribuir(recortesDoFormulario(value, fila))),
   });
+  const soAlgunsClientes = useStore(
+    form.store,
+    (estado) => estado.values.clientesDaRodada === 'alguns',
+  );
   const medicosEmTurno = [...new Map(fila.medicosEmTurno.map((m) => [m.medicoId, m])).values()];
 
   return (
@@ -88,14 +106,12 @@ export function PainelDistribuirAgora({
               Nada é atribuído antes da aprovação. O paciente não se divide: se um exame dele entra,
               os outros da mesma frente vão junto.
             </p>
-            {temTurnos && (
-              <p className="text-subtle-foreground text-xs">
-                <span aria-hidden className="text-destructive">
-                  *
-                </span>{' '}
-                Campo obrigatório
-              </p>
-            )}
+            <p className="text-subtle-foreground text-xs">
+              <span aria-hidden className="text-destructive">
+                *
+              </span>{' '}
+              Campo obrigatório
+            </p>
           </div>
           {temTurnos ? (
             <form.AppField name="turnoIds">
@@ -136,6 +152,7 @@ export function PainelDistribuirAgora({
               {(field) => (
                 <field.CaixasComContagemField
                   label="Frentes de especialidade"
+                  required
                   todos={{
                     rotulo: 'Todas as especialidades',
                     contagem: num(
@@ -159,6 +176,7 @@ export function PainelDistribuirAgora({
               {(field) => (
                 <field.CaixasComContagemField
                   label="Frentes de modalidade"
+                  required={frentesEspecialidade.length === 0}
                   colunas={2}
                   todos={{
                     rotulo: 'Todas as modalidades',
@@ -187,6 +205,7 @@ export function PainelDistribuirAgora({
             {(field) => (
               <field.CaixasComContagemField
                 label="Prioridades da operação"
+                required
                 opcoes={fila.prioridades.flatMap((p) =>
                   p.prioridadeOperacaoId
                     ? [
@@ -206,6 +225,7 @@ export function PainelDistribuirAgora({
               {(field) => (
                 <field.CaixasComContagemField
                   label="Subespecialidades"
+                  required
                   colunas={2}
                   todos={{ rotulo: 'Todas as subespecialidades' }}
                   opcoes={subespecialidades.map((o) => ({
@@ -217,18 +237,31 @@ export function PainelDistribuirAgora({
               )}
             </form.AppField>
           )}
-          <form.AppField name="clientes">
+          <form.AppField name="clientesDaRodada">
             {(field) => (
-              <field.EscolhidosField
+              <field.SelectField
                 label="Clientes"
-                chave="clientes-da-rodada"
-                buscar={buscarClientes}
-                placeholder="Buscar cliente"
-                vazio="Todos os clientes"
+                placeholder="Escolha"
+                required
+                opcoes={OPCOES_CLIENTES}
                 description="Escolha clientes só para distribuir parte da fila."
               />
             )}
           </form.AppField>
+          {soAlgunsClientes && (
+            <form.AppField name="clientes">
+              {(field) => (
+                <field.EscolhidosField
+                  label="Só estes clientes"
+                  required
+                  chave="clientes-da-rodada"
+                  buscar={buscarClientes}
+                  placeholder="Buscar cliente"
+                  vazio="Nenhum cliente escolhido"
+                />
+              )}
+            </form.AppField>
+          )}
           <div className="flex flex-col gap-4">
             <span className="font-medium">Médicos</span>
             <form.AppField name="tirar">

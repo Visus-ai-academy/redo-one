@@ -19833,32 +19833,48 @@
       "RecortesRodadaDto": {
         "type": "object",
         "properties": {
+          "todosTurnos": {
+            "type": "boolean",
+            "description": "Todos os turnos. Sem ele, `turnoIds` precisa de ao menos um."
+          },
           "turnoIds": {
-            "description": "Turnos da escala.",
+            "description": "Sem `todosTurnos`: turnos da escala.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
+          },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Todas as frentes. Sem ele, `frenteIds` precisa de ao menos uma."
           },
           "frenteIds": {
-            "description": "Frentes da escala (`/escala/frentes`).",
+            "description": "Sem `todasFrentes`: frentes da escala (`/escala/frentes`).",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
+          },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Todas as prioridades. Sem ele, `prioridadeOperacaoIds` precisa de ao menos uma."
           },
           "prioridadeOperacaoIds": {
-            "description": "Prioridades da operação (Configurações › Distribuição).",
+            "description": "Sem `todasPrioridades`: prioridades da operação (Configurações › Distribuição).",
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
+          "todosSegmentos": {
+            "type": "boolean",
+            "description": "Todos os segmentos. Sem ele, `subespecialidadeIds` ou o geral."
+          },
           "subespecialidadeIds": {
-            "description": "Segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.",
+            "description": "Sem `todosSegmentos`: segmentos (subespecialidades) do catálogo; o pacote do paciente não se parte.",
             "type": "array",
             "items": {
               "type": "string",
@@ -19867,10 +19883,14 @@
           },
           "subespecialidadeGeral": {
             "type": "boolean",
-            "description": "O recorte de segmento inclui o exame sem segmento; vazio e sem o geral = sem recorte."
+            "description": "Sem `todosSegmentos`: o recorte de segmento inclui o exame sem segmento."
+          },
+          "todosClientes": {
+            "type": "boolean",
+            "description": "Todos os clientes. Sem ele, `clienteIds` precisa de ao menos um."
           },
           "clienteIds": {
-            "description": "Clientes: só os exames deles são distribuídos.",
+            "description": "Sem `todosClientes`: só os exames destes clientes são distribuídos.",
             "type": "array",
             "items": {
               "type": "string",
@@ -19895,11 +19915,16 @@
           }
         },
         "required": [
+          "todosTurnos",
           "turnoIds",
+          "todasFrentes",
           "frenteIds",
+          "todasPrioridades",
           "prioridadeOperacaoIds",
+          "todosSegmentos",
           "subespecialidadeIds",
           "subespecialidadeGeral",
+          "todosClientes",
           "clienteIds",
           "medicosExcluidos",
           "medicosIncluidos"

@@ -697,14 +697,21 @@ export const rodadas = pgTable(
     }),
     aprovadaEm: timestamp('aprovada_em', { withTimezone: true }),
     // Recortes: foto do pedido, em arrays de ids SEM chave estrangeira de propósito (o histórico
-    // não pode sumir nem travar a exclusão de um turno ou cliente). Vazio = sem recorte.
+    // não pode sumir nem travar a exclusão de um turno ou cliente). Cada eixo tem o "todos"
+    // explícito; vazio nunca é "todos" (25/11/2026).
+    todosTurnos: boolean('todos_turnos').notNull().default(false),
     turnoIds: uuid('turno_ids').array().notNull().default(sql`'{}'`),
+    todasFrentes: boolean('todas_frentes').notNull().default(false),
     /** Frentes da escala (`frentes_escala`). */
     frenteIds: uuid('frente_ids').array().notNull().default(sql`'{}'`),
+    todasPrioridades: boolean('todas_prioridades').notNull().default(false),
     prioridadeOperacaoIds: uuid('prioridade_operacao_ids').array().notNull().default(sql`'{}'`),
+    /** Todos os segmentos (sem ids nem o geral). */
+    todosSegmentos: boolean('todos_segmentos').notNull().default(false),
     /** Segmentos do catálogo; com o geral, o exame sem segmento também passa. */
     subespecialidadeIds: uuid('subespecialidade_ids').array().notNull().default(sql`'{}'`),
     subespecialidadeGeral: boolean('subespecialidade_geral').notNull().default(false),
+    todosClientes: boolean('todos_clientes').notNull().default(false),
     clienteIds: uuid('cliente_ids').array().notNull().default(sql`'{}'`),
     medicosExcluidos: uuid('medicos_excluidos').array().notNull().default(sql`'{}'`),
     /** Entram mesmo fora dos turnos e das frentes do recorte. */

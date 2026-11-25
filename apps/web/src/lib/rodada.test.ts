@@ -121,11 +121,16 @@ describe('rodada do robô na tela', () => {
 
   it('recortes em texto: vazio = todos; médicos tirados e incluídos pelo nome', () => {
     const recortes = {
+      todosTurnos: false,
       turnoIds: ['t1', 't2'],
+      todasFrentes: true,
       frenteIds: [],
+      todasPrioridades: false,
       prioridadeOperacaoIds: ['p1'],
+      todosSegmentos: false,
       subespecialidadeIds: ['s1'],
       subespecialidadeGeral: true,
+      todosClientes: false,
       clienteIds: ['c1', 'c2', 'c3'],
       medicosExcluidos: ['m1'],
       medicosIncluidos: [],
@@ -145,6 +150,11 @@ describe('rodada do robô na tela', () => {
       { rotulo: 'Clientes', valor: '3 clientes' },
       { rotulo: 'Médicos', valor: 'Sem Gustavo Vilela' },
     ]);
+    // Sem o "todos" e com a lista vazia, o eixo não distribui nada.
+    expect(descreverRecortes({ ...recortes, todasFrentes: false }, nomes)[1]).toEqual({
+      rotulo: 'Frentes',
+      valor: 'Nenhuma',
+    });
   });
 
   it('funil dos médicos: dos habilitados aos que receberam, com o portão da conta na MobileMed', () => {

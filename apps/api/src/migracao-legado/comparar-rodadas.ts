@@ -166,8 +166,13 @@ export function recortesDaRodada(
   return {
     recortes: {
       ...RECORTES_VAZIOS,
+      // Vazio no dashboards-one = todos: no redo-one, o "todos" explícito. Recorte que existia lá
+      // e não casou nada aqui fica sem "todos" (não distribui nada), nunca alargado.
+      todosTurnos: r.turnoIds.length === 0,
       turnoIds: r.turnoIds.map((t) => idDoLegado('turnos', t)),
+      todasFrentes: r.frentes.length === 0,
       frenteIds,
+      todasPrioridades: r.prioridades.length === 0,
       prioridadeOperacaoIds,
       medicosExcluidos: r.medicosExcluidos.map((m) => idDoLegado('medicos', m)),
       medicosIncluidos: r.medicosIncluidos.map((m) => idDoLegado('medicos', m)),

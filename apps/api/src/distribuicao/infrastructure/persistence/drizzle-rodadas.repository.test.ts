@@ -151,7 +151,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
   it('cria a rodada com o evento e enfileira a leitura na fila da distribuição', async () => {
     const id = await repo.criar({
       solicitadaPorId: usuarioId,
-      recortes: { ...RECORTES_VAZIOS, turnoIds: [medicoId] },
+      recortes: { ...RECORTES_VAZIOS, todosTurnos: false, turnoIds: [medicoId] },
       evento: 'Rodada pedida.',
       agora,
     });
@@ -318,7 +318,7 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
       .returning();
     const id = await criarComProposta(
       [designacao('r1', { especialidadeId: neuro?.id, modalidadeId: rx?.id })],
-      { ...RECORTES_VAZIOS, frenteIds: [fRx?.id ?? ''] },
+      { ...RECORTES_VAZIOS, todasFrentes: false, frenteIds: [fRx?.id ?? ''] },
     );
     const { itens } = await repo.designacoes(id, { pagina: 1, porPagina: 10 });
     expect(itens[0]?.frente).toEqual({ id: fRx?.id, nome: `RX${sufixo}`, cor: '#8A6FB0' });

@@ -6,6 +6,8 @@ import { type ReactNode, useId, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { useFieldContext } from './context';
+import { FieldError } from './field-parts';
+import { useCampo } from './use-campo';
 
 /**
  * Vários itens de uma lista grande que vem da API por busca (clientes, médicos): a busca do kit
@@ -18,6 +20,7 @@ export function EscolhidosField({
   placeholder,
   description,
   vazio,
+  required = false,
   className,
 }: {
   label: string;
@@ -27,9 +30,12 @@ export function EscolhidosField({
   description?: ReactNode;
   /** Texto com nada escolhido ("Todos os clientes"). */
   vazio?: string;
+  /** Pede ao menos um escolhido (o `*` no rótulo; a regra fica no esquema do formulário). */
+  required?: boolean;
   className?: string;
 }) {
   const field = useFieldContext<OpcaoBusca[]>();
+  const { erros, invalido, ref } = useCampo(field);
   const id = useId();
   const [busca, setBusca] = useState<OpcaoBusca | null>(null);
   const escolhidos = field.state.value;
@@ -39,9 +45,20 @@ export function EscolhidosField({
   };
 
   return (
-    <Field.Root name={field.name} className={cn('flex flex-col gap-2', className)}>
+    <Field.Root
+      ref={ref}
+      name={field.name}
+      invalid={invalido}
+      className={cn('flex flex-col gap-2', className)}
+    >
       <label htmlFor={id} className="text-foreground font-medium">
         {label}
+        {required && (
+          <span aria-hidden className="text-destructive">
+            {' '}
+            *
+          </span>
+        )}
       </label>
       <BuscaSelecao
         id={id}
@@ -84,6 +101,7 @@ export function EscolhidosField({
           {description}
         </Field.Description>
       )}
+      <FieldError invalid={invalido}>{erros.join(', ')}</FieldError>
     </Field.Root>
   );
 }

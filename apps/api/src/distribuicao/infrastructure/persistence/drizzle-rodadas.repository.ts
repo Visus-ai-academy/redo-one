@@ -120,11 +120,16 @@ const comoRodada = (r: LinhaRodada): Rodada => ({
   recolhidos: r.recolhidos,
   urgentes: r.urgentes,
   recortes: {
+    todosTurnos: r.todosTurnos,
     turnoIds: r.turnoIds,
+    todasFrentes: r.todasFrentes,
     frenteIds: r.frenteIds,
+    todasPrioridades: r.todasPrioridades,
     prioridadeOperacaoIds: r.prioridadeOperacaoIds,
+    todosSegmentos: r.todosSegmentos,
     subespecialidadeIds: r.subespecialidadeIds,
     subespecialidadeGeral: r.subespecialidadeGeral,
+    todosClientes: r.todosClientes,
     clienteIds: r.clienteIds,
     medicosExcluidos: r.medicosExcluidos,
     medicosIncluidos: r.medicosIncluidos,
@@ -190,11 +195,16 @@ const linhaDaDesignacao = (rodadaId: string, d: DesignacaoNova) => ({
 });
 
 const recortesComoLinha = (r: RecortesRodada) => ({
+  todosTurnos: r.todosTurnos,
   turnoIds: r.turnoIds,
+  todasFrentes: r.todasFrentes,
   frenteIds: r.frenteIds,
+  todasPrioridades: r.todasPrioridades,
   prioridadeOperacaoIds: r.prioridadeOperacaoIds,
+  todosSegmentos: r.todosSegmentos,
   subespecialidadeIds: r.subespecialidadeIds,
   subespecialidadeGeral: r.subespecialidadeGeral,
+  todosClientes: r.todosClientes,
   clienteIds: r.clienteIds,
   medicosExcluidos: r.medicosExcluidos,
   medicosIncluidos: r.medicosIncluidos,

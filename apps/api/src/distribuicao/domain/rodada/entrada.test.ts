@@ -12,6 +12,7 @@ import {
   type InsumosRodada,
   montarEntrada,
   RECORTES_VAZIOS,
+  validarRecortesRodada,
 } from './entrada';
 
 const EM_MAOS = {
@@ -423,14 +424,48 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
     ]);
   });
 
+  it('sem o "todos" e com a lista vazia, o eixo vai ao filtro vazio (não casa nada)', () => {
+    const { entrada } = montar({
+      recortes: {
+        ...RECORTES_VAZIOS,
+        todosTurnos: false,
+        todasFrentes: false,
+        todosClientes: false,
+      },
+    });
+    expect(entrada.filtro).toEqual({ turnoIds: [], frentes: [], clienteIds: [] });
+  });
+
+  it('valida os recortes: "todos" ou ao menos um, nunca as duas coisas', () => {
+    expect(() => validarRecortesRodada(RECORTES_VAZIOS)).not.toThrow();
+    expect(() => validarRecortesRodada({ ...RECORTES_VAZIOS, todosTurnos: false })).toThrow(
+      /ao menos um/,
+    );
+    expect(() => validarRecortesRodada({ ...RECORTES_VAZIOS, clienteIds: ['c'] })).toThrow(
+      /não as duas/,
+    );
+    expect(() =>
+      validarRecortesRodada({
+        ...RECORTES_VAZIOS,
+        todosSegmentos: false,
+        subespecialidadeGeral: true,
+      }),
+    ).not.toThrow();
+  });
+
   it('aplica os recortes: médicos excluídos saem; turnos, frentes, prioridades, subespecialidades, clientes e incluídos vão ao filtro', () => {
     const { entrada } = montar({
       recortes: {
+        todosTurnos: false,
         turnoIds: ['manha'],
+        todasFrentes: false,
         frenteIds: ['f-mi', 'f-inexistente'],
+        todasPrioridades: false,
         prioridadeOperacaoIds: ['op-urg'],
+        todosSegmentos: false,
         subespecialidadeIds: ['seg-neuro'],
         subespecialidadeGeral: true,
+        todosClientes: false,
         clienteIds: ['cli-a'],
         medicosExcluidos: ['B'],
         medicosIncluidos: ['A'],

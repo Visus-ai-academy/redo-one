@@ -304,7 +304,11 @@ describe('rodada do robô (casos de uso)', () => {
       expect(repo.rodadas.get(id)?.recortes.turnoIds).toEqual(['manha']);
       await casos.cancelar.executar(gestora, id);
       await expect(
-        casos.criar.executar(gestora, { ...RECORTES_VAZIOS, turnoIds: ['tarde'] }),
+        casos.criar.executar(gestora, {
+          ...RECORTES_VAZIOS,
+          todosTurnos: false,
+          turnoIds: ['tarde'],
+        }),
       ).rejects.toBeInstanceOf(RecorteForaDoEscopoError);
     });
   });
@@ -873,7 +877,7 @@ describe('rodada do robô (casos de uso)', () => {
           }),
         ],
       };
-      const id = await criarELer({ ...RECORTES_VAZIOS, turnoIds: ['manha'] });
+      const id = await criarELer({ ...RECORTES_VAZIOS, todosTurnos: false, turnoIds: ['manha'] });
       expect((await casos.resumo.executar(id)).foraDaRodada).toEqual([
         {
           medicoId: 'B',

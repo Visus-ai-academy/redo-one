@@ -140,11 +140,16 @@ describe('controller das rodadas', () => {
   it('cria em nome de quem está logado, com o recorte dele', async () => {
     const c = casos();
     const recortes = {
+      todosTurnos: true,
       turnoIds: [],
+      todasFrentes: true,
       frenteIds: [],
+      todasPrioridades: true,
       prioridadeOperacaoIds: [],
+      todosSegmentos: true,
       subespecialidadeIds: [],
       subespecialidadeGeral: false,
+      todosClientes: true,
       clienteIds: [],
       medicosExcluidos: [],
       medicosIncluidos: [],

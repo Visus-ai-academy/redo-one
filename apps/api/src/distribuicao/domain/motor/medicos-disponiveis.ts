@@ -158,10 +158,10 @@ export interface EntradaMedicos {
   prioridadeIdsQueFuramGrade: readonly string[];
   /** Alocação gratificada → o que já foi executado por ela (abate a cota). */
   cotaEntregue: Readonly<Record<string, number>>;
-  /** Turnos que a rodada atende; vazio ou ausente = todos. */
+  /** Turnos que a rodada atende; ausente = todos (vazio = nenhum). */
   filtroTurnoIds?: readonly string[];
   /**
-   * Frentes que a rodada atende; vazio ou ausente = todas. O período de frente de modalidade fica
+   * Frentes que a rodada atende; ausente = todas (vazio = nenhuma). O período de frente de modalidade fica
    * quando a rodada marca alguma especialidade (o RX de MI vai a quem está no RX).
    */
   filtroFrentes?: readonly FrenteEscala[];
@@ -324,11 +324,13 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
   const { agora, config, regras } = entrada;
   const filtroTurnos = entrada.filtroTurnoIds ?? [];
   const filtroFrentes = entrada.filtroFrentes ?? [];
+  const filtraTurnos = entrada.filtroTurnoIds !== undefined;
+  const filtraFrentes = entrada.filtroFrentes !== undefined;
   const incluidos = new Set(entrada.medicosIncluidos ?? []);
   const frentesDoFiltro = new Set(filtroFrentes.map(chaveFrente));
   const filtroTemEspecialidade = filtroFrentes.some((f) => f.tipo === 'especialidade');
   const naFrenteDoFiltro = (o: OcorrenciaRodada) =>
-    !filtroFrentes.length ||
+    !filtraFrentes ||
     frentesDoFiltro.has(chaveFrente(o.frente)) ||
     (o.frente.tipo === 'modalidade' && filtroTemEspecialidade);
   const medicosPorId = new Map(entrada.medicos.map((m) => [m.id, m]));
@@ -384,7 +386,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     // A Lista de quem está num turno marcado entra junto e soma (30/10, Jainy).
     const foraDoFiltro =
       !incluidos.has(o.medicoId) &&
-      ((filtroTurnos.length > 0 &&
+      ((filtraTurnos &&
         !filtroTurnos.includes(o.turnoId) &&
         !(o.turnoTipo === 'lista' && noTurnoMarcado.has(o.medicoId))) ||
         !naFrenteDoFiltro(o));
@@ -409,8 +411,7 @@ export function montarMedicosDisponiveis(entrada: EntradaMedicos): MedicosMontad
     funilMedicos.noTurno.add(o.medicoId);
     const cap = capacidadeNoInstante(o, agora, {
       antecedenciaMin: config.antecedenciaPeriodoMin,
-      turnoEscolhido:
-        filtroTurnos.length > 0 || filtroFrentes.length > 0 || incluidos.has(o.medicoId),
+      turnoEscolhido: filtraTurnos || filtraFrentes || incluidos.has(o.medicoId),
     });
     if (!cap.entra) {
       fora(o, agora >= o.fim ? 'turno_encerrado' : 'turno_a_comecar');

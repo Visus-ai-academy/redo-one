@@ -1,4 +1,4 @@
-import type { RecortesRodada } from '../../../domain/rodada/entrada';
+import { type RecortesRodada, validarRecortesRodada } from '../../../domain/rodada/entrada';
 import { recorteDaGestora } from '../../../domain/rodada/escopo';
 import {
   type AtorRodada,
@@ -49,17 +49,24 @@ export class CriarRodada {
 
     const incluidos = unicos(pedido.medicosIncluidos);
     const excluidos = unicos(pedido.medicosExcluidos);
-    const recortes = recorteDaGestora(await escopoDo(this.d, ator), {
+    const pedidoLimpo: RecortesRodada = {
+      todosTurnos: pedido.todosTurnos,
       turnoIds: unicos(pedido.turnoIds),
+      todasFrentes: pedido.todasFrentes,
       frenteIds: unicos(pedido.frenteIds),
+      todasPrioridades: pedido.todasPrioridades,
       prioridadeOperacaoIds: unicos(pedido.prioridadeOperacaoIds),
+      todosSegmentos: pedido.todosSegmentos,
       subespecialidadeIds: unicos(pedido.subespecialidadeIds),
       subespecialidadeGeral: pedido.subespecialidadeGeral,
+      todosClientes: pedido.todosClientes,
       clienteIds: unicos(pedido.clienteIds),
       medicosExcluidos: excluidos,
       // Quem foi tirado não fica incluído.
       medicosIncluidos: incluidos.filter((m) => !excluidos.includes(m)),
-    });
+    };
+    validarRecortesRodada(pedidoLimpo);
+    const recortes = recorteDaGestora(await escopoDo(this.d, ator), pedidoLimpo);
     const id = await this.d.rodadas.criar({
       solicitadaPorId: ator.usuarioId,
       recortes,

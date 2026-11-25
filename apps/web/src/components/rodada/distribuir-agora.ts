@@ -4,19 +4,54 @@ import type { FilaDoMomentoDto } from '../../gen/types/FilaDoMomentoDto';
 import type { RecortesRodadaDto } from '../../gen/types/RecortesRodadaDto';
 
 const opcao = z.object({ valor: z.string(), rotulo: z.string() });
-export const esquemaDistribuir = (temTurnos: boolean) =>
-  z.object({
-    turnoIds: temTurnos
-      ? z.array(z.string()).min(1, 'Marque ao menos um turno.')
-      : z.array(z.string()),
-    frentesEspecialidade: z.array(z.string()),
-    frentesModalidade: z.array(z.string()),
-    prioridadeIds: z.array(z.string()),
-    subespecialidadeIds: z.array(z.string()),
-    clientes: z.array(opcao),
-    tirar: z.array(z.string()),
-    incluir: z.array(opcao),
-  });
+
+/** Os eixos que a fila oferece: sem opção nenhuma, o eixo não se marca (fica "todos"). */
+export type EixosDaFila = {
+  temTurnos: boolean;
+  temFrentes: boolean;
+  temPrioridades: boolean;
+  temSubespecialidades: boolean;
+};
+
+/**
+ * Vazio nunca é "todos" (25/11/2026): com opções na tela, cada eixo pede ao menos uma marcada (as
+ * caixas "Todas as ..." marcam todas); os clientes, "Todos os clientes" ou ao menos um.
+ */
+export const esquemaDistribuir = (eixos: EixosDaFila) =>
+  z
+    .object({
+      turnoIds: eixos.temTurnos
+        ? z.array(z.string()).min(1, 'Marque ao menos um turno.')
+        : z.array(z.string()),
+      frentesEspecialidade: z.array(z.string()),
+      frentesModalidade: z.array(z.string()),
+      prioridadeIds: eixos.temPrioridades
+        ? z.array(z.string()).min(1, 'Marque ao menos uma prioridade.')
+        : z.array(z.string()),
+      subespecialidadeIds: eixos.temSubespecialidades
+        ? z.array(z.string()).min(1, 'Marque ao menos uma subespecialidade.')
+        : z.array(z.string()),
+      clientesDaRodada: z.enum(['todos', 'alguns']),
+      clientes: z.array(opcao),
+      tirar: z.array(z.string()),
+      incluir: z.array(opcao),
+    })
+    .superRefine((v, ctx) => {
+      if (eixos.temFrentes && !v.frentesEspecialidade.length && !v.frentesModalidade.length) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['frentesEspecialidade'],
+          message: 'Marque ao menos uma frente.',
+        });
+      }
+      if (v.clientesDaRodada === 'alguns' && !v.clientes.length) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['clientes'],
+          message: 'Escolha ao menos um cliente.',
+        });
+      }
+    });
 export type ValoresDistribuir = z.infer<ReturnType<typeof esquemaDistribuir>>;
 
 /** Valor da caixa "Sem subespecialidade" no formulário; na API vira `subespecialidadeGeral`. */
@@ -82,9 +117,14 @@ export function examesNasFrentes(fila: FilaDoMomentoDto, frenteIds: readonly str
     .reduce((s, g) => s + g.exames, 0);
 }
 
-/** Tudo marcado = sem recorte naquele eixo (lista vazia na API). */
+/**
+ * Tudo marcado (ou o eixo sem opção na tela) = "todos" explícito, com a lista vazia na API; senão,
+ * o que foi marcado (vazio = nenhum, que o esquema já recusa).
+ */
 const recorte = (marcados: readonly string[], todos: readonly string[]) =>
-  todos.length > 0 && todos.every((id) => marcados.includes(id)) ? [] : [...marcados];
+  todos.every((id) => marcados.includes(id))
+    ? { todos: true, ids: [] as string[] }
+    : { todos: false, ids: [...marcados] };
 
 export function recortesDoFormulario(
   v: ValoresDistribuir,
@@ -97,16 +137,25 @@ export function recortesDoFormulario(
     v.subespecialidadeIds,
     opcoesSubespecialidade(fila).map((o) => o.valor),
   );
+  const turnos = recorte(
+    v.turnoIds,
+    fila.turnos.map((t) => t.turnoId),
+  );
+  const frentes = recorte(frentesMarcadas(v), idsDasFrentes(fila));
+  const prioridadesMarcadas = recorte(v.prioridadeIds, prioridades);
+  const todosClientes = v.clientesDaRodada === 'todos';
   return {
-    turnoIds: recorte(
-      v.turnoIds,
-      fila.turnos.map((t) => t.turnoId),
-    ),
-    frenteIds: recorte(frentesMarcadas(v), idsDasFrentes(fila)),
-    prioridadeOperacaoIds: recorte(v.prioridadeIds, prioridades),
-    subespecialidadeIds: subespecialidades.filter((id) => id !== SEM_SUBESPECIALIDADE),
-    subespecialidadeGeral: subespecialidades.includes(SEM_SUBESPECIALIDADE),
-    clienteIds: v.clientes.map((c) => c.valor),
+    todosTurnos: turnos.todos,
+    turnoIds: turnos.ids,
+    todasFrentes: frentes.todos,
+    frenteIds: frentes.ids,
+    todasPrioridades: prioridadesMarcadas.todos,
+    prioridadeOperacaoIds: prioridadesMarcadas.ids,
+    todosSegmentos: subespecialidades.todos,
+    subespecialidadeIds: subespecialidades.ids.filter((id) => id !== SEM_SUBESPECIALIDADE),
+    subespecialidadeGeral: subespecialidades.ids.includes(SEM_SUBESPECIALIDADE),
+    todosClientes,
+    clienteIds: todosClientes ? [] : v.clientes.map((c) => c.valor),
     medicosExcluidos: v.tirar,
     medicosIncluidos: v.incluir.map((m) => m.valor).filter((id) => !v.tirar.includes(id)),
   };
@@ -121,7 +170,7 @@ export function recortesDoFormulario(
  */
 export function estimativa(v: ValoresDistribuir, fila: FilaDoMomentoDto) {
   const frentes = frentesMarcadas(v);
-  const semRecorteDeFrente = recorte(frentes, idsDasFrentes(fila)).length === 0;
+  const semRecorteDeFrente = recorte(frentes, idsDasFrentes(fila)).todos;
   const subs = opcoesSubespecialidade(fila).map((o) => o.valor);
   const todasSubs = subs.every((id) => v.subespecialidadeIds.includes(id));
   const exames = fila.grupos

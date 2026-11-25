@@ -362,6 +362,21 @@ describe('rodarMotor', () => {
     });
   });
 
+  it('recorte presente e vazio não distribui nada naquele eixo (vazio nunca é "todos")', () => {
+    const exames = [exame({ id: 'x', clienteId: 'X' })];
+    expect(item(rodar({ exames, filtro: { clienteIds: [] } }), 'x')).toMatchObject({
+      motivo: 'fora_da_clinica',
+      detalhe: 'A rodada não distribui nenhum cliente.',
+    });
+    expect(item(rodar({ exames, filtro: { prioridadeOperacaoIds: [] } }), 'x')).toMatchObject({
+      motivo: 'fora_da_prioridade',
+    });
+    expect(item(rodar({ exames, filtro: { frentes: [] } }), 'x')).toMatchObject({
+      motivo: 'fora_da_frente',
+    });
+    expect(item(rodar({ exames, filtro: { turnoIds: [] } }), 'x')?.medicoId).toBeNull();
+  });
+
   it('recorte pela prioridade da operação, sem partir o pacote do paciente', () => {
     const r = rodar({
       exames: [
