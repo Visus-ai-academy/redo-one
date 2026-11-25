@@ -29,7 +29,7 @@ import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
-import { useDescartarAlteracoes } from '../painel/fechamento';
+import { useDescartarAlteracoes, useInformarAlterado } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import { mesAno } from './competencias';
@@ -379,6 +379,7 @@ function NovaVigencia({
   const chaveAtual = JSON.stringify(corpoDaVigencia(valores, clienteId));
   const previaAtual = previa?.chave === chaveAtual ? previa.resultado : undefined;
   const alterado = JSON.stringify(valores) !== JSON.stringify(iniciais);
+  useInformarAlterado(alterado);
   useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
   // Saiu da tela (fechou, trocou de aba): não há mais nada digitado aqui.
   useEffect(() => () => onAlterado?.(false), [onAlterado]);

@@ -5,7 +5,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { ListaCadastro } from '../../components/cadastro/ListaCadastro';
@@ -270,12 +270,6 @@ function Painel({
   });
   const cliente = consulta.data;
   const avisos = useAvisos();
-  // Vigência do corte ou dados de faturamento digitados na aba Faturamento: fechar o painel
-  // pergunta antes de descartar.
-  const [corteAlterado, setCorteAlterado] = useState(false);
-  const [dadosAlterados, setDadosAlterados] = useState(false);
-  const [tipificacaoAlterada, setTipificacaoAlterada] = useState(false);
-  const [precoAlterado, setPrecoAlterado] = useState(false);
   const veCorte = pode(sessao, 'faturamento.ver');
   const veDados = pode(sessao, 'clientes.faturamento.ver');
   const fase = useFaseDoCarregamento(Boolean(id) && !cliente);
@@ -299,7 +293,6 @@ function Painel({
       podeCriar={permissoes.criar}
       podeExcluir={permissoes.excluir}
       onFechar={fechar}
-      faturamentoAlterado={corteAlterado || dadosAlterados || tipificacaoAlterada || precoAlterado}
       historico={id ? <HistoricoCadastro key={id} cadastro="cliente" id={id} /> : undefined}
       distribuicao={
         id && pode(sessao, 'clientes.distribuicao.ver') ? (
@@ -323,7 +316,6 @@ function Painel({
                   porPagina={5}
                   unidadeDe={cliente?.unificadoEm?.nome}
                   nivelTitulos={4}
-                  onAlterado={setCorteAlterado}
                 />
               </section>
             )}
@@ -334,7 +326,6 @@ function Painel({
                   key={id}
                   clienteId={id}
                   podeEditar={pode(sessao, 'faturamento.tipificacao.editar')}
-                  onAlterado={setTipificacaoAlterada}
                 />
               </section>
             )}
@@ -345,7 +336,6 @@ function Painel({
                   clienteId={id}
                   podeEditar={pode(sessao, 'clientes.faturamento.editar')}
                   unidadeDe={cliente?.unificadoEm?.nome}
-                  onAlterado={setDadosAlterados}
                 />
               </section>
             )}
@@ -360,7 +350,6 @@ function Painel({
               tipo="cliente"
               donoId={id}
               podeEditar={pode(sessao, 'faturamento.precos.editar')}
-              onAlterado={setPrecoAlterado}
             />
           </div>
         ) : undefined

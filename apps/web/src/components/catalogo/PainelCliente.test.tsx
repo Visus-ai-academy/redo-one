@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ClienteDetalheDto } from '../../gen/types/ClienteDetalheDto';
 import { escolherOpcao } from '../../test/select';
+import { useAppForm } from '../form/form';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { PainelCliente, type PainelClienteProps } from './PainelCliente';
 
 const contratados = [{ id: 'c-tele', nome: '001 TELEIMAGEM', padrao: false }];
@@ -23,6 +25,17 @@ const cliente: ClienteDetalheDto = {
   unificadoEm: null,
   unidades: [],
 };
+
+/** Formulário de outra aba (corte, preço…), que avisa numa linha o que tem digitado. */
+function FormDaAba({ rotulo }: { rotulo: string }) {
+  const form = useAppForm({ defaultValues: { texto: '' }, onSubmit: () => {} });
+  useInformarAlterado(useAlterado(form, { texto: '' }));
+  return (
+    <form.AppField name="texto">
+      {(field) => <field.TextField label={rotulo} placeholder="Ex.: 01/2026" />}
+    </form.AppField>
+  );
+}
 
 function montar(props: Partial<PainelClienteProps> = {}) {
   const handlers = {
@@ -217,11 +230,67 @@ describe('PainelCliente', () => {
   });
 
   it('com a vigência do corte digitada na aba Faturamento, fechar pergunta antes de descartar', async () => {
-    const { onFechar } = montar({ cliente, faturamento: <p>corte</p>, faturamentoAlterado: true });
+    const { onFechar } = montar({ cliente, faturamento: <FormDaAba rotulo="Vigência" /> });
+    await userEvent.click(screen.getByRole('tab', { name: 'Faturamento' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Vigência' }), '01/2026');
 
     await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
 
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
     await waitFor(() => expect(onFechar).not.toHaveBeenCalled());
+  });
+
+  describe('trocar de aba com algo digitado e não salvo', () => {
+    const abrirFaturamentoDigitado = async () => {
+      montar({
+        cliente,
+        faturamento: <FormDaAba rotulo="Vigência" />,
+        precos: <FormDaAba rotulo="Preço" />,
+      });
+      await userEvent.click(screen.getByRole('tab', { name: 'Faturamento' }));
+      await userEvent.type(screen.getByRole('textbox', { name: 'Vigência' }), '01/2026');
+    };
+
+    it('pergunta; "Continuar editando" fica na aba com o texto', async () => {
+      await abrirFaturamentoDigitado();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Preços' }));
+
+      expect(
+        await screen.findByRole('alertdialog', { name: 'Descartar as alterações?' }),
+      ).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(screen.getByRole('tab', { name: 'Faturamento' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      expect(screen.getByRole('textbox', { name: 'Vigência' })).toHaveValue('01/2026');
+    });
+
+    it('"Descartar" troca de aba', async () => {
+      await abrirFaturamentoDigitado();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Cadastro' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('tab', { name: 'Cadastro' })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        ),
+      );
+      expect(screen.queryByRole('textbox', { name: 'Vigência' })).not.toBeInTheDocument();
+    });
+
+    it('sem nada digitado, troca direto', async () => {
+      montar({ cliente, faturamento: <FormDaAba rotulo="Vigência" />, precos: <p>preços</p> });
+      await userEvent.click(screen.getByRole('tab', { name: 'Faturamento' }));
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Preços' }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.getByText('preços')).toBeInTheDocument();
+    });
   });
 });

@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import { escolherOpcao } from '../../test/select';
+import { useAppForm } from '../form/form';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { PainelMedico, type PainelMedicoProps } from './PainelMedico';
 
 const niveis = [
@@ -45,6 +47,17 @@ const medico: MedicoDetalheDto = {
   ],
   equipes: [{ id: 'eq-1', nome: 'Equipe 1' }],
 };
+
+/** Formulário de outra aba (pagamento, acesso…), que avisa numa linha o que tem digitado. */
+function FormDaAba({ rotulo }: { rotulo: string }) {
+  const form = useAppForm({ defaultValues: { texto: '' }, onSubmit: () => {} });
+  useInformarAlterado(useAlterado(form, { texto: '' }));
+  return (
+    <form.AppField name="texto">
+      {(field) => <field.TextField label={rotulo} placeholder="Ex.: 01/2026" />}
+    </form.AppField>
+  );
+}
 
 function montar(props: Partial<PainelMedicoProps> = {}) {
   const handlers = {
@@ -259,5 +272,60 @@ describe('PainelMedico', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Cadastro' }));
 
     expect(screen.getByRole('textbox', { name: 'Telefone' })).toHaveValue('(9');
+  });
+
+  describe('trocar de aba com algo digitado e não salvo', () => {
+    const abrirPagamentoDigitado = async () => {
+      const handlers = montar({
+        medico,
+        pagamento: <FormDaAba rotulo="Chave Pix" />,
+        historico: <p>histórico</p>,
+      });
+      await userEvent.click(screen.getByRole('tab', { name: 'Pagamento' }));
+      await userEvent.type(screen.getByRole('textbox', { name: 'Chave Pix' }), 'pix@x.com');
+      return handlers;
+    };
+
+    it('pergunta; "Continuar editando" fica na aba com o texto', async () => {
+      await abrirPagamentoDigitado();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Continuar editando' }));
+
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(screen.getByRole('tab', { name: 'Pagamento' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      expect(screen.getByRole('textbox', { name: 'Chave Pix' })).toHaveValue('pix@x.com');
+    });
+
+    it('"Descartar" troca de aba', async () => {
+      await abrirPagamentoDigitado();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+
+      expect(await screen.findByText('histórico')).toBeInTheDocument();
+    });
+
+    it('sem nada digitado, troca direto', async () => {
+      montar({ medico, pagamento: <FormDaAba rotulo="Chave Pix" />, historico: <p>histórico</p> });
+      await userEvent.click(screen.getByRole('tab', { name: 'Pagamento' }));
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.getByText('histórico')).toBeInTheDocument();
+    });
+
+    it('fechar o painel com o pagamento digitado pergunta antes', async () => {
+      const { onFechar } = await abrirPagamentoDigitado();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+
+      expect(await screen.findByRole('alertdialog')).toHaveTextContent('Descartar as alterações?');
+      expect(onFechar).not.toHaveBeenCalled();
+    });
   });
 });

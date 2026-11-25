@@ -7,7 +7,7 @@ import type { AliasMedicoDto } from '../../gen/types/AliasMedicoDto';
 import type { MedicoDetalheDto } from '../../gen/types/MedicoDetalheDto';
 import type { MedicoDto } from '../../gen/types/MedicoDto';
 import type { OutraContaMedicoDto } from '../../gen/types/OutraContaMedicoDto';
-import { Abas } from '../abas/Abas';
+import { AbaMantida, Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { buttonClassName } from '../button/button-class';
@@ -18,7 +18,7 @@ import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
-import { useAlterado } from '../painel/fechamento';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 
 export type PainelMedicoProps = {
@@ -169,7 +169,7 @@ export function PainelMedico({
           className="gap-0 pt-2"
         >
           {/* O cadastro fica montado (escondido) nas outras abas: voltar a ele não perde o digitado. */}
-          <div hidden={aba !== 'cadastro'}>{cadastro}</div>
+          <AbaMantida ativa={aba === 'cadastro'}>{cadastro}</AbaMantida>
           {aba === 'pagamento'
             ? pagamento
             : aba === 'acesso'
@@ -457,6 +457,7 @@ function CadastroSomenteLeitura({
 }
 
 const POR_PAGINA_APELIDOS = 5;
+const APELIDO_VAZIO = { nomeOrigem: '' };
 
 function Apelidos({
   apelidos,
@@ -475,7 +476,7 @@ function Apelidos({
   const [erro, setErro] = useState<string>();
   const pagina = usePaginaLocal(apelidos, POR_PAGINA_APELIDOS);
   const form = useAppForm({
-    defaultValues: { nomeOrigem: '' },
+    defaultValues: APELIDO_VAZIO,
     validators: {
       onSubmit: z.object({
         nomeOrigem: z.string().trim().min(1, 'Informe a grafia que chega da MobileMed.'),
@@ -491,6 +492,7 @@ function Apelidos({
       }
     },
   });
+  useInformarAlterado(useAlterado(form, APELIDO_VAZIO));
 
   return (
     <section aria-labelledby={tituloId} className="flex flex-col gap-3 border-t p-4">
@@ -584,6 +586,7 @@ function Apelidos({
 }
 
 const POR_PAGINA_CONTAS = 5;
+const CONTA_VAZIA = { idMobilemed: '', observacao: '' };
 const ERRO_ID_CONTA = 'Informe o ID da conta na MobileMed, um número inteiro positivo.';
 
 /**
@@ -605,7 +608,7 @@ function OutrasContas({
   const [erro, setErro] = useState<string>();
   const pagina = usePaginaLocal(contas, POR_PAGINA_CONTAS);
   const form = useAppForm({
-    defaultValues: { idMobilemed: '', observacao: '' },
+    defaultValues: CONTA_VAZIA,
     validators: {
       onSubmit: z.object({
         idMobilemed: z
@@ -630,6 +633,7 @@ function OutrasContas({
       }
     },
   });
+  useInformarAlterado(useAlterado(form, CONTA_VAZIA));
 
   return (
     <section aria-labelledby={tituloId} className="flex flex-col gap-3 border-t p-4">

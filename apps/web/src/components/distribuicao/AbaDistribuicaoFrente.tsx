@@ -16,6 +16,7 @@ import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CaixasField, OpcoesField } from '../escala/campos';
 import { useAppForm } from '../form/form';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { Select } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
 import { limparErrosDasListas } from './erros-das-listas';
@@ -146,8 +147,9 @@ function FormRegras({
   const { erro, tentar } = useErroDoPainel();
   const ehEspecialidade = tipo === 'especialidade';
 
+  const iniciais = valoresDasRegras(regras);
   const form = useAppForm({
-    defaultValues: valoresDasRegras(regras),
+    defaultValues: iniciais,
     validators: { onSubmit: esquemaRegras(tipo) },
     // O erro de uma lista inteira (ex.: a soma) sai quando qualquer item dela muda.
     listeners: {
@@ -171,6 +173,7 @@ function FormRegras({
         avisos.sucesso('Regras da distribuição salvas.');
       }),
   });
+  useInformarAlterado(useAlterado(form, iniciais));
 
   // Segmentos: os da especialidade (na modalidade, qualquer um).
   const segmentosDaFrente = ehEspecialidade

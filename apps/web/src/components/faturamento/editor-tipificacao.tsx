@@ -29,6 +29,7 @@ import { AcoesDaLinha } from '../distribuicao/partes-form';
 import { useAppForm } from '../form/form';
 import { RequiredLegend } from '../form/RequiredLegend';
 import { useArrastarParaOrdenar } from '../ordenar/use-arrastar-para-ordenar';
+import { useInformarAlterado } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import { mesAno } from './competencias';
@@ -377,6 +378,7 @@ function FormTipificacao({
   );
   const comErro = (i: number) => erros.split('|').some((n) => n.startsWith(`linhas[${i}]`));
   const alterado = JSON.stringify(valores) !== JSON.stringify(iniciais);
+  useInformarAlterado(alterado);
   useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
   useEffect(() => () => onAlterado?.(false), [onAlterado]);
 

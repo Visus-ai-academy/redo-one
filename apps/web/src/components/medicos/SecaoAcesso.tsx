@@ -8,10 +8,12 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { useAppForm } from '../form/form';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { EtiquetaSituacao } from '../usuarios/EtiquetaSituacao';
 
 /** Nome fixo do papel do sistema para médicos (a API também o acha pelo nome). */
 const PAPEL_MEDICO = 'Médico';
+const SEM_CONTA: { conta: OpcaoBusca | null } = { conta: null };
 
 export type SecaoAcessoProps = {
   medico: { nome: string; email: string | null };
@@ -123,12 +125,13 @@ function Convite({
   papeis: PapelAtribuivelDto[];
   onConvidar: SecaoAcessoProps['onConvidar'];
 }) {
+  const iniciais = {
+    nome: medico.nome,
+    email: medico.email ?? '',
+    papelId: papeis.find((p) => p.nome === PAPEL_MEDICO)?.id ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      nome: medico.nome,
-      email: medico.email ?? '',
-      papelId: papeis.find((p) => p.nome === PAPEL_MEDICO)?.id ?? '',
-    },
+    defaultValues: iniciais,
     validators: {
       onSubmit: z.object({
         nome: z.string().trim().min(1, 'Informe o nome.'),
@@ -143,6 +146,7 @@ function Convite({
         papelId: value.papelId,
       }),
   });
+  useInformarAlterado(useAlterado(form, iniciais));
 
   return (
     <form
@@ -201,7 +205,7 @@ function Ligar({
   onLigar: (usuarioId: string) => Promise<void>;
 }) {
   const form = useAppForm({
-    defaultValues: { conta: null as OpcaoBusca | null },
+    defaultValues: SEM_CONTA,
     validators: {
       onSubmit: z.object({
         conta: z.custom<OpcaoBusca | null>((v) => v !== null, 'Escolha a conta.'),
@@ -209,6 +213,7 @@ function Ligar({
     },
     onSubmit: ({ value }) => (value.conta ? onLigar(value.conta.valor) : undefined),
   });
+  useInformarAlterado(useAlterado(form, SEM_CONTA));
 
   return (
     <form

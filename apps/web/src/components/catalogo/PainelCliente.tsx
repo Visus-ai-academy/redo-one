@@ -16,7 +16,7 @@ import { useAppForm } from '../form/form';
 import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
-import { useAlterado } from '../painel/fechamento';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
 import { UnidadesCliente, type UnidadesClienteProps } from './UnidadesCliente';
@@ -48,8 +48,6 @@ export type PainelClienteProps = {
   faturamento?: ReactNode;
   /** Conteúdo da aba Preços; sem ele (sem permissão), a aba não aparece. */
   precos?: ReactNode;
-  /** A aba Faturamento tem algo digitado e não salvo (corte ou dados): fechar pergunta antes. */
-  faturamentoAlterado?: boolean;
 };
 
 const TIPOS_APELIDO = {
@@ -102,7 +100,6 @@ export function PainelCliente({
   distribuicao,
   faturamento,
   precos,
-  faturamentoAlterado = false,
 }: PainelClienteProps) {
   const { erro, tentar } = useErroDoPainel();
   const iniciais = {
@@ -164,7 +161,7 @@ export function PainelCliente({
       titulo={cliente?.nome ?? 'Novo cliente'}
       subtitulo={cliente?.nomeFantasia ?? undefined}
       onFechar={onFechar}
-      alterado={alterado || faturamentoAlterado}
+      alterado={alterado}
     >
       <AbasComHistorico
         historico={cliente ? historico : undefined}
@@ -357,6 +354,7 @@ export function PainelCliente({
 }
 
 const POR_PAGINA_APELIDOS = 5;
+const APELIDO_VAZIO = { tipo: 'exato' as AliasDto['tipo'], padrao: '' };
 
 function Apelidos({
   apelidos,
@@ -375,7 +373,7 @@ function Apelidos({
   const [erro, setErro] = useState<string>();
   const pagina = usePaginaLocal(apelidos, POR_PAGINA_APELIDOS);
   const form = useAppForm({
-    defaultValues: { tipo: 'exato' as AliasDto['tipo'], padrao: '' },
+    defaultValues: APELIDO_VAZIO,
     validators: {
       onSubmit: z.object({
         tipo: z.enum(['exato', 'prefixo', 'normalizado']),
@@ -392,6 +390,7 @@ function Apelidos({
       }
     },
   });
+  useInformarAlterado(useAlterado(form, APELIDO_VAZIO));
 
   return (
     <section aria-labelledby={tituloId} className="flex flex-col gap-3 border-t p-4">

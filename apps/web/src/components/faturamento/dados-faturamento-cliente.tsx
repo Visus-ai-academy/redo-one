@@ -19,7 +19,7 @@ import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { mostrarErrosDoServidor } from '../form/erros-do-servidor';
 import { useAppForm } from '../form/form';
 import { HistoricoCadastro } from '../historico-cadastro/HistoricoCadastro';
-import { useAlterado } from '../painel/fechamento';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import {
@@ -244,6 +244,7 @@ function FormDados({
     },
   });
   const alterado = useAlterado(form, iniciais);
+  useInformarAlterado(alterado);
   // Os dados chegaram de novo (outra pessoa salvou, a janela voltou ao foco): sem nada digitado,
   // o formulário passa a mostrá-los; com algo digitado, o rascunho fica (o TanStack Form já faz
   // isso enquanto nenhum campo foi tocado; aqui, para o campo tocado que voltou ao valor salvo).

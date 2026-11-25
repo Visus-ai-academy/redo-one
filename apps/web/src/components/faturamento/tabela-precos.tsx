@@ -35,7 +35,7 @@ import { useAppForm } from '../form/form';
 import { RequiredLegend } from '../form/RequiredLegend';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
-import { useAlterado } from '../painel/fechamento';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { Select } from '../select/Select';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
@@ -370,6 +370,7 @@ function EditorPreco({
       }),
   });
   const alterado = useAlterado(form, iniciais);
+  useInformarAlterado(alterado);
   useEffect(() => onAlterado?.(alterado), [alterado, onAlterado]);
   const aPartirDe = useStore(form.store, (s) => s.values.aPartirDe);
   const temFaixa = useStore(form.store, (s) => Boolean(s.values.faixaInicio || s.values.faixaFim));

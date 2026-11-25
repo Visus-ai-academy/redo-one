@@ -7,6 +7,7 @@ import { Alerta } from '../alerta/Alerta';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 
 type FormPagamentoProps = {
   dados: PagamentoMedicoDto;
@@ -65,16 +66,17 @@ const MASCARA_PIX: Record<string, Mascara | undefined> = {
 
 export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProps) {
   const { erro, tentar } = useErroDoPainel();
+  const iniciais = {
+    socio: paraTexto(dados.socio),
+    optanteSimples: paraTexto(dados.optanteSimples),
+    cpf: dados.cpf ? formatarCpf(dados.cpf) : '',
+    cnpj: dados.cnpj ? formatarCnpj(dados.cnpj) : '',
+    razaoSocial: dados.razaoSocial ?? '',
+    tipoChavePix: dados.tipoChavePix ?? '',
+    chavePix: dados.chavePix ?? '',
+  };
   const form = useAppForm({
-    defaultValues: {
-      socio: paraTexto(dados.socio),
-      optanteSimples: paraTexto(dados.optanteSimples),
-      cpf: dados.cpf ? formatarCpf(dados.cpf) : '',
-      cnpj: dados.cnpj ? formatarCnpj(dados.cnpj) : '',
-      razaoSocial: dados.razaoSocial ?? '',
-      tipoChavePix: dados.tipoChavePix ?? '',
-      chavePix: dados.chavePix ?? '',
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: schema },
     onSubmit: ({ value }) =>
       tentar(() =>
@@ -92,6 +94,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
         }),
       ),
   });
+  useInformarAlterado(useAlterado(form, iniciais));
 
   const aviso = (
     <p className="text-muted-foreground text-[13px]">

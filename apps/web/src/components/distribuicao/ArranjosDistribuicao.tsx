@@ -17,6 +17,7 @@ import { BuscaMultiplaField } from '../form/BuscaMultiplaField';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { useAvisos } from '../toast/use-avisos';
 import {
   atendeCliente,
@@ -178,8 +179,9 @@ function FormArranjo({
     }
   };
 
+  const iniciais = valoresDoArranjo(editando ? arranjos[indice] : undefined, nomes);
   const form = useAppForm({
-    defaultValues: valoresDoArranjo(editando ? arranjos[indice] : undefined, nomes),
+    defaultValues: iniciais,
     validators: { onSubmit: esquemaArranjo },
     onSubmit: ({ value }) => {
       const dto = paraApi(value, dono);
@@ -191,6 +193,7 @@ function FormArranjo({
         : salvar([...arranjos, dto], 'Arranjo criado.');
     },
   });
+  useInformarAlterado(useAlterado(form, iniciais));
 
   /** Segmentos da frente de especialidade (a de modalidade não tem segmento). */
   const subsDa = (frente: string) => {

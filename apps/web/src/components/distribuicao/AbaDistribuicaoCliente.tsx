@@ -14,6 +14,7 @@ import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
+import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import type { OpcaoSelect } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
 import { AbaCarregando, AbaComErro } from './estados';
@@ -169,10 +170,11 @@ function FormPrioridades({
     }
   }
 
+  const iniciais = {
+    itens: prioridades.map((p) => ({ frente: chaveDa(p), nivel: String(p.nivel) as '1' | '2' })),
+  };
   const form = useAppForm({
-    defaultValues: {
-      itens: prioridades.map((p) => ({ frente: chaveDa(p), nivel: String(p.nivel) as '1' | '2' })),
-    },
+    defaultValues: iniciais,
     validators: { onSubmit: esquema },
     onSubmit: ({ value }) =>
       tentar(async () => {
@@ -194,6 +196,7 @@ function FormPrioridades({
         avisos.sucesso('Prioridades do cliente salvas.');
       }),
   });
+  useInformarAlterado(useAlterado(form, iniciais));
 
   return (
     <form
