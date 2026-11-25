@@ -32,6 +32,10 @@ import {
 import { CONSULTA_RODADAS, type ConsultaRodadas } from './application/ports/consulta-rodadas';
 import { CONTAS_POR_UNIDADE, type ContasPorUnidade } from './application/ports/contas-por-unidade';
 import { ESCALA_DO_AJUSTE, type EscalaDoAjuste } from './application/ports/escala-do-ajuste';
+import {
+  EXCECOES_RECEBIMENTO_REPOSITORY,
+  type ExcecoesRecebimentoRepository,
+} from './application/ports/excecoes-recebimento.repository';
 import { FILA_EXAMES, type FilaExames } from './application/ports/fila-exames';
 import {
   ESCALA_RECOLHIMENTO,
@@ -92,6 +96,13 @@ import {
   ObterConfiguracaoGlobal,
 } from './application/use-cases/configuracao-global';
 import {
+  CriarExcecaoRecebimento,
+  EditarExcecaoRecebimento,
+  EncerrarExcecaoRecebimento,
+  ExcluirExcecaoRecebimento,
+  ListarExcecoesRecebimento,
+} from './application/use-cases/excecoes-recebimento';
+import {
   DefinirPrioridadesCliente,
   ObterPrioridadesCliente,
 } from './application/use-cases/prioridades-cliente';
@@ -148,6 +159,7 @@ import {
   SugestaoAlocacaoController,
 } from './infrastructure/http/arranjos.controller';
 import { ConfiguracaoDistribuicaoController } from './infrastructure/http/configuracao.controller';
+import { ExcecoesRecebimentoController } from './infrastructure/http/excecoes-recebimento.controller';
 import { PrioridadesClienteController } from './infrastructure/http/prioridades-cliente.controller';
 import {
   GradeRecebimentoController,
@@ -170,6 +182,7 @@ import { DrizzleArranjosRepository } from './infrastructure/persistence/drizzle-
 import { DrizzleCadastrosDistribuicao } from './infrastructure/persistence/drizzle-cadastros-distribuicao';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './infrastructure/persistence/drizzle-configuracao-distribuicao.repository';
 import { DrizzleEscalaRecolhimento } from './infrastructure/persistence/drizzle-escala-recolhimento';
+import { DrizzleExcecoesRecebimentoRepository } from './infrastructure/persistence/drizzle-excecoes-recebimento.repository';
 import { DrizzleInsumosRodada } from './infrastructure/persistence/drizzle-insumos-rodada';
 import { DrizzleMedicosRodada } from './infrastructure/persistence/drizzle-medicos-rodada';
 import { DrizzleParametrosEquipeRepository } from './infrastructure/persistence/drizzle-parametros-equipe.repository';
@@ -225,6 +238,7 @@ const CASOS_RODADA = [
     ConfiguracaoDistribuicaoController,
     PrioridadesOperacaoController,
     GradeRecebimentoController,
+    ExcecoesRecebimentoController,
     RegrasFrenteController,
     PrioridadesClienteController,
     AjustesDiaController,
@@ -474,6 +488,28 @@ const CASOS_RODADA = [
         auditoria: Auditoria,
       ) => new DefinirGradeRecebimento(repo, cadastros, auditoria, agora),
     },
+    { provide: EXCECOES_RECEBIMENTO_REPOSITORY, useClass: DrizzleExcecoesRecebimentoRepository },
+    {
+      provide: ListarExcecoesRecebimento,
+      inject: [EXCECOES_RECEBIMENTO_REPOSITORY],
+      useFactory: (repo: ExcecoesRecebimentoRepository) =>
+        new ListarExcecoesRecebimento(repo, agora),
+    },
+    ...[CriarExcecaoRecebimento, EditarExcecaoRecebimento].map((Caso) => ({
+      provide: Caso,
+      inject: [EXCECOES_RECEBIMENTO_REPOSITORY, CADASTROS_DISTRIBUICAO, AUDITORIA],
+      useFactory: (
+        repo: ExcecoesRecebimentoRepository,
+        cadastros: CadastrosDistribuicao,
+        auditoria: Auditoria,
+      ) => new Caso(repo, cadastros, auditoria, agora),
+    })),
+    ...[EncerrarExcecaoRecebimento, ExcluirExcecaoRecebimento].map((Caso) => ({
+      provide: Caso,
+      inject: [EXCECOES_RECEBIMENTO_REPOSITORY, AUDITORIA],
+      useFactory: (repo: ExcecoesRecebimentoRepository, auditoria: Auditoria) =>
+        new Caso(repo, auditoria, agora),
+    })),
     {
       provide: CONFIGURACAO_DISTRIBUICAO_REPOSITORY,
       useClass: DrizzleConfiguracaoDistribuicaoRepository,

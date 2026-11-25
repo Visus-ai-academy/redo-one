@@ -491,6 +491,13 @@
       "when": 1795615389501,
       "tag": "0069_alocacoes_vigencia_obrigatoria",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1795616050181,
+      "tag": "0070_excecoes_recebimento",
+      "breakpoints": true
     }
   ]
 }

@@ -9936,6 +9936,157 @@
         ]
       }
     },
+    "/distribuicao/recebimento/excecoes": {
+      "get": {
+        "operationId": "ExcecoesRecebimentoController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExcecaoRecebimentoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "post": {
+        "operationId": "ExcecoesRecebimentoController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcecaoRecebimentoEdicaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/recebimento/excecoes/{id}": {
+      "put": {
+        "operationId": "ExcecoesRecebimentoController_editar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcecaoRecebimentoEdicaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      },
+      "delete": {
+        "operationId": "ExcecoesRecebimentoController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
+    "/distribuicao/recebimento/excecoes/{id}/encerrar": {
+      "post": {
+        "operationId": "ExcecoesRecebimentoController_encerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "distribuicao"
+        ]
+      }
+    },
     "/distribuicao/regras-frente": {
       "get": {
         "operationId": "RegrasFrenteController_listar",
@@ -21689,6 +21840,145 @@
         },
         "required": [
           "celulas"
+        ]
+      },
+      "SituacaoExcecaoRecebimento": {
+        "type": "string",
+        "enum": [
+          "futura",
+          "vigente",
+          "encerrada"
+        ]
+      },
+      "ExcecaoRecebimentoDto": {
+        "type": "object",
+        "properties": {
+          "turnoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Turno da escala."
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só esta especialidade (frente); null = todas. Não junto com a modalidade."
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só esta modalidade (frente); null = todas. Não junto com a especialidade."
+          },
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só esta prioridade da operação; null = todas."
+          },
+          "regra": {
+            "$ref": "#/components/schemas/RegraRecebimentoDto"
+          },
+          "de": {
+            "type": "string",
+            "format": "date",
+            "description": "Primeiro dia (Brasília), inclusivo."
+          },
+          "ate": {
+            "type": "string",
+            "format": "date",
+            "description": "Último dia (Brasília), inclusivo."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoExcecaoRecebimento"
+              }
+            ]
+          },
+          "podeExcluir": {
+            "type": "boolean",
+            "description": "Ainda não valeu em dia passado: pode ser excluída."
+          },
+          "empatesIds": {
+            "description": "Exceções que empatam com esta em algum exame (mesmo turno, período e especificidade): vale a criada por último.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "turnoId",
+          "especialidadeId",
+          "modalidadeId",
+          "prioridadeOperacaoId",
+          "regra",
+          "de",
+          "ate",
+          "id",
+          "criadoEm",
+          "situacao",
+          "podeExcluir",
+          "empatesIds"
+        ]
+      },
+      "ExcecaoRecebimentoEdicaoDto": {
+        "type": "object",
+        "properties": {
+          "turnoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Turno da escala."
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só esta especialidade (frente); null = todas. Não junto com a modalidade."
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só esta modalidade (frente); null = todas. Não junto com a especialidade."
+          },
+          "prioridadeOperacaoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Só esta prioridade da operação; null = todas."
+          },
+          "regra": {
+            "$ref": "#/components/schemas/RegraRecebimentoDto"
+          },
+          "de": {
+            "type": "string",
+            "format": "date",
+            "description": "Primeiro dia (Brasília), inclusivo."
+          },
+          "ate": {
+            "type": "string",
+            "format": "date",
+            "description": "Último dia (Brasília), inclusivo."
+          }
+        },
+        "required": [
+          "turnoId",
+          "especialidadeId",
+          "modalidadeId",
+          "prioridadeOperacaoId",
+          "regra",
+          "de",
+          "ate"
         ]
       },
       "TipoFrenteCatalogo": {

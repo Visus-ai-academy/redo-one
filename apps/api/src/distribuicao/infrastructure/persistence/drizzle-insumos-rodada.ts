@@ -39,6 +39,7 @@ import type { AjusteDia, OcorrenciaRodada } from '../../domain/motor/medicos-dis
 import type { CatalogoDaFila, InsumosRodada } from '../../domain/rodada/entrada';
 import { DrizzleAjustesDiaRepository } from './drizzle-ajustes-dia.repository';
 import { DrizzleConfiguracaoDistribuicaoRepository } from './drizzle-configuracao-distribuicao.repository';
+import { DrizzleExcecoesRecebimentoRepository } from './drizzle-excecoes-recebimento.repository';
 import { DrizzlePrioridadesClienteRepository } from './drizzle-prioridades-cliente.repository';
 import { DrizzlePrioridadesOperacaoRepository } from './drizzle-prioridades-operacao.repository';
 import { DrizzleRegrasFrenteRepository } from './drizzle-regras-frente.repository';
@@ -72,6 +73,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       regrasFrente,
       prioridadesOperacao,
       gradeRecebimento,
+      excecoesRecebimento,
       prioridadesCliente,
       ajustesLidos,
       escala,
@@ -90,6 +92,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       new DrizzleRegrasFrenteRepository(db).listar(),
       new DrizzlePrioridadesOperacaoRepository(db).listar(),
       new DrizzlePrioridadesOperacaoRepository(db).obterGrade(),
+      new DrizzleExcecoesRecebimentoRepository(db).terminandoDesde(hoje),
       new DrizzlePrioridadesClienteRepository(db).todas(),
       new DrizzleAjustesDiaRepository(db).listar({ de: adicionarDias(hoje, -1), ate: amanha }),
       this.ocorrencias.listar(hoje, amanha),
@@ -300,6 +303,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         regrasFrente,
         prioridadesOperacao,
         gradeRecebimento,
+        excecoesRecebimento,
         prioridadesCliente,
         nomes,
         cores,

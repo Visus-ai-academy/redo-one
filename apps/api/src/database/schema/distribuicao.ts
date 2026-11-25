@@ -342,6 +342,50 @@ export const recebimentoGeral = pgTable(
   ],
 );
 
+/**
+ * Exceções temporárias da grade de recebimento: num turno, opcionalmente só numa frente
+ * (especialidade OU modalidade) e/ou só numa prioridade da operação, de `de` a `ate` (dias em
+ * Brasília, inclusivos). Sobrepõem a grade geral e a da frente no período; fora dele, a grade
+ * volta sozinha. Encerrar = trazer o fim para ontem (nunca apagar o que já valeu). Histórico em
+ * `eventos_auditoria` (entidade `excecao_recebimento`).
+ */
+export const excecoesRecebimento = pgTable(
+  'excecoes_recebimento',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    turnoId: uuid('turno_id')
+      .notNull()
+      .references(() => turnos.id, { onDelete: 'cascade' }),
+    especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
+      onDelete: 'cascade',
+    }),
+    modalidadeId: uuid('modalidade_id').references(() => modalidades.id, { onDelete: 'cascade' }),
+    prioridadeOperacaoId: uuid('prioridade_operacao_id').references(() => prioridadesOperacao.id, {
+      onDelete: 'cascade',
+    }),
+    regra: tipoRecebimento('regra').notNull(),
+    /** Só com "prazo_minimo". */
+    prazoMinimoHoras: integer('prazo_minimo_horas'),
+    de: date('de', { mode: 'string' }).notNull(),
+    ate: date('ate', { mode: 'string' }).notNull(),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    // A rodada lê as que terminam hoje ou depois.
+    index('excecoes_recebimento_ate_idx').on(t.ate),
+    check(
+      'excecoes_recebimento_prazo_check',
+      sql`(${t.regra} = 'prazo_minimo') = (${t.prazoMinimoHoras} is not null)`,
+    ),
+    check(
+      'excecoes_recebimento_frente_check',
+      sql`${t.especialidadeId} is null or ${t.modalidadeId} is null`,
+    ),
+    check('excecoes_recebimento_periodo_check', sql`${t.de} <= ${t.ate}`),
+  ],
+);
+
 // ---------------------------------------------------------------------------------------------
 // Regras da frente: comportamento de uma especialidade OU modalidade do catálogo na distribuição
 // (aba Distribuição no painel dela). Frente sem linha = regras neutras. Histórico em
