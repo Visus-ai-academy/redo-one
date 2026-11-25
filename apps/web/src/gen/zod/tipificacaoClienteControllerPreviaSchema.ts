@@ -4,8 +4,8 @@
 */
 
 import * as z from 'zod'
-import { configuracaoTipificacaoDtoSchema } from './configuracaoTipificacaoDtoSchema'
 import { linhaPreviaTipificacaoDtoSchema } from './linhaPreviaTipificacaoDtoSchema'
+import { salvarConfiguracaoTipificacaoDtoSchema } from './salvarConfiguracaoTipificacaoDtoSchema'
 
 export const tipificacaoClienteControllerPreviaPathClienteIdSchema = z.string()
 
@@ -31,7 +31,7 @@ export const tipificacaoClienteControllerPreviaErrorSchema = z.union([tipificaca
 
 export type TipificacaoClienteControllerPreviaErrorSchemaType = z.infer<typeof tipificacaoClienteControllerPreviaErrorSchema>
 
-export const tipificacaoClienteControllerPreviaBodySchema = configuracaoTipificacaoDtoSchema
+export const tipificacaoClienteControllerPreviaBodySchema = salvarConfiguracaoTipificacaoDtoSchema
 
 export type TipificacaoClienteControllerPreviaBodySchemaType = z.infer<typeof tipificacaoClienteControllerPreviaBodySchema>
 

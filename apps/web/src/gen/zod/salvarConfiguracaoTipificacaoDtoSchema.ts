@@ -6,12 +6,11 @@
 import * as z from 'zod'
 import { linhaTipificacaoDtoSchema } from './linhaTipificacaoDtoSchema'
 
-export const configuracaoTipificacaoRegistradaDtoSchema = z.object({
+export const salvarConfiguracaoTipificacaoDtoSchema = z.object({
   regraId: z.uuid().nullable().describe('Vazio = a do principal (na unidade) ou a padrão.'),
   subregraDemaisId: z.uuid().nullable().describe('"Todos os demais".'),
   linhas: z.array(linhaTipificacaoDtoSchema).describe('Vale a primeira que casar.'),
-  atualizadoEm: z.iso.datetime(),
-  atualizadoPor: z.string().nullable().describe('Vazio na carga do dashboards-one.'),
+  aPartirDe: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).describe('Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada.').meta({ examples: ['2026-12'] }),
 })
 
-export type ConfiguracaoTipificacaoRegistradaDtoSchemaType = z.infer<typeof configuracaoTipificacaoRegistradaDtoSchema>
+export type SalvarConfiguracaoTipificacaoDtoSchemaType = z.infer<typeof salvarConfiguracaoTipificacaoDtoSchema>

@@ -29,6 +29,7 @@ import {
   ausenciasSumidasDoLegado,
   gravarMigracao,
   precosComHistoriaNoRedo,
+  tipificacaoComHistoriaNoRedo,
 } from '../migracao-legado/gravar';
 import { lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
@@ -237,6 +238,21 @@ async function migrarLegado() {
       console.log(`\nTipificação: ${tipificacao.erros.length} erro(s) que impedem gravar.`);
       for (const e of tipificacao.erros) console.log(`  - ${e}`);
     }
+    const tipificacaoProtegida = await tipificacaoComHistoriaNoRedo(db);
+    const nomeDaTipificacao = new Map<string, string>([
+      ...catalogo.tabelas.clientes.map((c) => [c.id, c.nome] as [string, string]),
+      ...tipificacao.tabelas.regrasTipificacao.map((r) => [r.id, r.nome] as [string, string]),
+      ...tipificacao.tabelas.subregrasTipificacao.map((r) => [r.id, r.nome] as [string, string]),
+    ]);
+    const tipificacaoIntocada = [
+      ...tipificacaoProtegida.clientes,
+      ...tipificacaoProtegida.regras,
+      ...tipificacaoProtegida.subregras,
+    ];
+    console.log(
+      `Tipificação com história no redo-one (versões criadas pela tela): a carga não mexe nelas (${tipificacaoIntocada.length}):`,
+    );
+    for (const id of tipificacaoIntocada) console.log(`  - ${nomeDaTipificacao.get(id) ?? id}`);
 
     console.log(
       `\nPreços: ${precos.lidas} linhas ativas lidas; ${precos.repetidasIguais} repetidas com o mesmo valor viraram uma; ${precos.sentinelas} faixas sentinela viraram "sem faixa" ou faixa aberta.`,

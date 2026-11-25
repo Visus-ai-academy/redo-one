@@ -325,46 +325,151 @@ async function gravarPrecos(tx: Transacao, { tabelas }: PrecosMigrados) {
 }
 
 /**
- * Tipificação: regras e sub-regras pelo id; a configuração de cada cliente da carga é trocada
- * inteira (o dashboards-one é a fonte até a virada). O cliente configurado só no redo-one fica.
- * Na mesma transação, a reclassificação de todos os laudos das competências abertas.
+ * Clientes (e regras e sub-regras) cuja tipificação já tem história no redo-one: alguma versão
+ * criada, encerrada, reaberta ou apagada por alguém pela tela (a carga não grava auditoria nem
+ * autor), ou a configuração salva pela tela antes do histórico por vigência. A carga não mexe neles.
+ */
+export async function tipificacaoComHistoriaNoRedo(
+  db: Executor,
+): Promise<{ clientes: string[]; regras: string[]; subregras: string[] }> {
+  const donos = async (
+    tabela: string,
+    coluna: string,
+    campo: string,
+    entidade: string,
+    antiga: { entidade: string; campo: string | null },
+  ) => {
+    const col = sql.raw(coluna);
+    const r = await db.execute<{ dono: string }>(sql`
+      select ${col}::text dono from ${sql.raw(tabela)} where criado_por_id is not null
+      union
+      select coalesce(e.depois->>${campo}, e.antes->>${campo}) from eventos_auditoria e
+        where e.entidade = ${entidade} and coalesce(e.depois->>${campo}, e.antes->>${campo}) is not null
+      union
+      select v.${col}::text from eventos_auditoria e
+        join ${sql.raw(tabela)} v on v.id::text = e.entidade_id
+        where e.entidade = ${entidade}
+      union
+      select e.entidade_id from eventos_auditoria e
+        where e.entidade = ${antiga.entidade}
+          and (${antiga.campo}::text is null or e.depois ? ${antiga.campo ?? ''})`);
+    return r.rows.map((l) => l.dono).sort();
+  };
+  return {
+    clientes: await donos(
+      'clientes_tipificacao_versoes',
+      'cliente_id',
+      'clienteId',
+      'cliente_tipificacao_versao',
+      { entidade: 'cliente_tipificacao', campo: null },
+    ),
+    regras: await donos(
+      'regras_tipificacao_fatura',
+      'regra_id',
+      'regraId',
+      'regra_tipificacao_fatura',
+      { entidade: 'regra_tipificacao', campo: 'faturaSemSubregra' },
+    ),
+    subregras: await donos(
+      'subregras_tipificacao_fatura',
+      'subregra_id',
+      'subregraId',
+      'subregra_tipificacao_fatura',
+      { entidade: 'subregra_tipificacao', campo: 'fatura' },
+    ),
+  };
+}
+
+/** A primeira competência dos laudos (ou das competências; sem nenhuma, o mês atual em Brasília). */
+async function primeiraCompetencia(tx: Transacao): Promise<string> {
+  const r = await tx.execute<{ desde: string }>(sql`
+    select coalesce(
+      least((select min(competencia) from laudos), (select min(competencia) from competencias)),
+      to_char(now() at time zone 'America/Sao_Paulo', 'YYYY-MM')
+    ) desde`);
+  return r.rows[0]?.desde as string;
+}
+
+/**
+ * Tipificação: regras e sub-regras pelo id. A configuração de hoje de cada cliente e o "fatura" de
+ * cada regra e sub-regra entram como versão inicial, desde a primeira competência dos laudos; o
+ * histórico de quem não tem história no redo-one é trocado inteiro pelo da carga (o dashboards-one
+ * é a fonte até a virada), então rodar de novo dá o mesmo. Quem tem história no redo-one
+ * (`tipificacaoComHistoriaNoRedo`) fica como está: o relatório da carga o lista. Na mesma
+ * transação, a reclassificação de todos os laudos das competências abertas.
  */
 async function gravarTipificacao(tx: Transacao, { tabelas: t }: TipificacaoMigrada) {
+  const protegidos = await tipificacaoComHistoriaNoRedo(tx);
+  const desde = await primeiraCompetencia(tx);
   await upsert(tx, schema.regrasTipificacao, t.regrasTipificacao);
   await upsert(tx, schema.subregrasTipificacao, t.subregrasTipificacao);
-  const clientes = t.clientesTipificacao.map((c) => c.clienteId);
-  if (clientes.length > 0)
-    await tx
-      .delete(schema.clientesTipificacaoLinhas)
-      .where(inArray(schema.clientesTipificacaoLinhas.clienteId, clientes));
-  await upsert(tx, schema.clientesTipificacao, t.clientesTipificacao, ['clienteId']);
-  await upsert(tx, schema.clientesTipificacaoLinhas, t.clientesTipificacaoLinhas);
-  await upsert(
-    tx,
-    schema.clientesTipificacaoLinhasModalidades,
-    t.clientesTipificacaoLinhasModalidades,
-    ['linhaId', 'modalidadeId'],
+
+  const trocar = async <
+    T extends
+      | typeof schema.regrasTipificacaoFatura
+      | typeof schema.subregrasTipificacaoFatura
+      | typeof schema.clientesTipificacaoVersoes,
+  >(
+    tabela: T,
+    coluna: AnyPgColumn,
+    linhas: (Omit<T['$inferInsert'], 'vigenciaDesde'> & { id: string })[],
+    donoDe: (l: Omit<T['$inferInsert'], 'vigenciaDesde'>) => string,
+    fora: string[],
+  ) => {
+    const pulados = new Set(fora);
+    const existentes = (await tx.selectDistinct({ dono: coluna }).from(tabela as PgTable)).map(
+      (l) => String(l.dono),
+    );
+    const trocados = [...new Set([...linhas.map(donoDe), ...existentes])].filter(
+      (d) => !pulados.has(d),
+    );
+    if (trocados.length) await tx.delete(tabela as PgTable).where(inArray(coluna, trocados));
+    const novas = linhas
+      .filter((l) => !pulados.has(donoDe(l)))
+      .map((l) => ({ ...l, vigenciaDesde: desde }));
+    return novas as unknown as T['$inferInsert'][];
+  };
+  const faturaRegras = await trocar(
+    schema.regrasTipificacaoFatura,
+    schema.regrasTipificacaoFatura.regraId,
+    t.regrasTipificacaoFatura,
+    (l) => l.regraId as string,
+    protegidos.regras,
   );
-  await upsert(
-    tx,
-    schema.clientesTipificacaoLinhasEspecialidades,
-    t.clientesTipificacaoLinhasEspecialidades,
-    ['linhaId', 'especialidadeId'],
+  if (faturaRegras.length) await tx.insert(schema.regrasTipificacaoFatura).values(faturaRegras);
+  const faturaSubs = await trocar(
+    schema.subregrasTipificacaoFatura,
+    schema.subregrasTipificacaoFatura.subregraId,
+    t.subregrasTipificacaoFatura,
+    (l) => l.subregraId as string,
+    protegidos.subregras,
   );
-  await upsert(
-    tx,
-    schema.clientesTipificacaoLinhasPrioridades,
-    t.clientesTipificacaoLinhasPrioridades,
-    ['linhaId', 'prioridadeId'],
+  if (faturaSubs.length) await tx.insert(schema.subregrasTipificacaoFatura).values(faturaSubs);
+  // As linhas saem junto com a versão (cascade).
+  const versoes = await trocar(
+    schema.clientesTipificacaoVersoes,
+    schema.clientesTipificacaoVersoes.clienteId,
+    t.clientesTipificacaoVersoes,
+    (l) => l.clienteId as string,
+    protegidos.clientes,
   );
-  await upsert(tx, schema.clientesTipificacaoLinhasMedicos, t.clientesTipificacaoLinhasMedicos, [
-    'linhaId',
-    'medicoId',
-  ]);
-  await upsert(tx, schema.clientesTipificacaoLinhasEquipes, t.clientesTipificacaoLinhasEquipes, [
-    'linhaId',
-    'equipeId',
-  ]);
+  if (versoes.length) await tx.insert(schema.clientesTipificacaoVersoes).values(versoes);
+  const gravadas = new Set(versoes.map((v) => v.id));
+  const linhas = t.clientesTipificacaoLinhas.filter((l) => gravadas.has(l.versaoId));
+  const dasLinhas = new Set(linhas.map((l) => l.id));
+  const filhas = <L extends { linhaId: string }>(lista: L[]) =>
+    lista.filter((x) => dasLinhas.has(x.linhaId));
+  if (linhas.length) await tx.insert(schema.clientesTipificacaoLinhas).values(linhas);
+  const mods = filhas(t.clientesTipificacaoLinhasModalidades);
+  const esps = filhas(t.clientesTipificacaoLinhasEspecialidades);
+  const pris = filhas(t.clientesTipificacaoLinhasPrioridades);
+  const meds = filhas(t.clientesTipificacaoLinhasMedicos);
+  const eqs = filhas(t.clientesTipificacaoLinhasEquipes);
+  if (mods.length) await tx.insert(schema.clientesTipificacaoLinhasModalidades).values(mods);
+  if (esps.length) await tx.insert(schema.clientesTipificacaoLinhasEspecialidades).values(esps);
+  if (pris.length) await tx.insert(schema.clientesTipificacaoLinhasPrioridades).values(pris);
+  if (meds.length) await tx.insert(schema.clientesTipificacaoLinhasMedicos).values(meds);
+  if (eqs.length) await tx.insert(schema.clientesTipificacaoLinhasEquipes).values(eqs);
   // Os laudos das competências abertas passam a seguir a configuração carregada.
   await enfileirarReclassificacaoTipificacao(tx, null);
 }

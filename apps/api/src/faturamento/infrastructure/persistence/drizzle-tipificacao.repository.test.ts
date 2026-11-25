@@ -7,12 +7,17 @@ import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import type { Database } from '../../../database/database';
 import * as schema from '../../../database/schema';
 import { ReclassificarTipificacao } from '../../../ingestao/application/use-cases/reclassificar-tipificacao';
 import { DrizzleCadastrosIngestao } from '../../../ingestao/infrastructure/persistence/drizzle-cadastros-ingestao';
 import { DrizzleLaudosRepository } from '../../../ingestao/infrastructure/persistence/drizzle-laudos.repository';
 import { CarregarTipificador } from '../../application/use-cases/carregar-tipificador';
+import {
+  VersaoTipificacaoAlteradaError,
+  VigenciaTipificacaoInvalidaError,
+} from '../../domain/versoes-tipificacao';
 import { DrizzleCompetenciasRepository } from './drizzle-competencias.repository';
 import { DrizzleEquipesMedicos } from './drizzle-equipes-medicos';
 import { DrizzleTipificacaoRepository } from './drizzle-tipificacao.repository';
@@ -56,7 +61,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table regras_tipificacao, subregras_tipificacao, clientes_tipificacao, laudos, importacoes, competencias, clientes, medicos, equipes, especialidades cascade`,
+      sql`truncate table regras_tipificacao, subregras_tipificacao, clientes_tipificacao_versoes, eventos_auditoria, laudos, importacoes, competencias, clientes, medicos, equipes, especialidades cascade`,
     );
     await db.execute(sql`delete from graphile_worker._private_jobs`);
   });
@@ -70,8 +75,8 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     const [co, nc] = await db
       .insert(schema.regrasTipificacao)
       .values([
-        { nome: 'CO', faturaSemSubregra: true, padrao: true, ordem: 0 },
-        { nome: 'NC', faturaSemSubregra: false, ordem: 1 },
+        { nome: 'CO', padrao: true, ordem: 0 },
+        { nome: 'NC', ordem: 1 },
       ])
       .returning();
     ids.co = co?.id ?? '';
@@ -79,12 +84,20 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     const [ncnf, ncft] = await db
       .insert(schema.subregrasTipificacao)
       .values([
-        { regraId: ids.nc, nome: 'NC-NF', fatura: false },
-        { regraId: ids.nc, nome: 'NC-FT', fatura: true, ordem: 1 },
+        { regraId: ids.nc, nome: 'NC-NF' },
+        { regraId: ids.nc, nome: 'NC-FT', ordem: 1 },
       ])
       .returning();
     ids.ncnf = ncnf?.id ?? '';
     ids.ncft = ncft?.id ?? '';
+    await db.insert(schema.regrasTipificacaoFatura).values([
+      { regraId: ids.co, vigenciaDesde: '2024-01', faturaSemSubregra: true },
+      { regraId: ids.nc, vigenciaDesde: '2024-01', faturaSemSubregra: false },
+    ]);
+    await db.insert(schema.subregrasTipificacaoFatura).values([
+      { subregraId: ids.ncnf, vigenciaDesde: '2024-01', fatura: false },
+      { subregraId: ids.ncft, vigenciaDesde: '2024-01', fatura: true },
+    ]);
     const [p] = await db
       .insert(schema.clientes)
       .values({ nome: 'CEDIDIAG', chaveNormalizada: 'cedidiag' })
@@ -138,44 +151,132 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     expect(await repo.carregarConfiguracao()).toBeNull();
   });
 
-  it('grava e lê a configuração do cliente; trocar apaga as linhas antigas e enfileira a reclassificação do principal', async () => {
+  const opcoes = (aPartirDe: string, eventos: EventoAuditoria[] = []) => ({
+    usuarioId: ids.usuario,
+    aPartirDe,
+    eventos,
+  });
+  const criar = <T>(id: string, desde: string, valor: T, ate: string | null = null) => ({
+    tipo: 'criar' as const,
+    id,
+    vigenciaDesde: desde,
+    vigenciaAte: ate,
+    valor,
+  });
+  const V1 = '00000000-0000-4000-8000-000000000001';
+  const V2 = '00000000-0000-4000-8000-000000000002';
+  /** Versão programada: começa depois do mês atual em qualquer data em que o teste rodar. */
+  const FUTURA = '2099-01';
+
+  it('grava e lê as versões da configuração; encerra, apaga a programada e reabre, com eventos e reclassificação', async () => {
     await cenario();
-    await repo.salvarConfiguracaoCliente(ids.unidade, configUnidade(), ids.principal, {
-      usuarioId: ids.usuario,
-      em: agora,
-    });
-
-    expect(await repo.obterConfiguracaoCliente(ids.unidade)).toEqual({
-      clienteId: ids.unidade,
-      ...configUnidade(),
-      atualizadoEm: agora,
-      atualizadoPor: 'Carla',
-    });
-    expect(await jobs()).toEqual([{ clienteIds: [ids.principal] }]);
-
-    await repo.salvarConfiguracaoCliente(
+    await repo.aplicarConfiguracaoCliente(
       ids.unidade,
-      { regraId: null, subregraDemaisId: null, linhas: [] },
       ids.principal,
-      { usuarioId: ids.usuario, em: agora },
+      [criar(V1, '2024-01', configUnidade())],
+      opcoes('2024-01', [
+        {
+          ator: { tipo: 'usuario', id: ids.usuario },
+          entidade: 'cliente_tipificacao_versao',
+          entidadeId: V1,
+          acao: 'criada',
+          depois: { clienteId: ids.unidade },
+          em: agora,
+        },
+      ]),
     );
-    expect((await repo.obterConfiguracaoCliente(ids.unidade))?.linhas).toEqual([]);
-    const linhas = await db.select().from(schema.clientesTipificacaoLinhas);
-    expect(linhas).toEqual([]);
+    expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([
+      { id: V1, vigenciaDesde: '2024-01', vigenciaAte: null, valor: configUnidade() },
+    ]);
+    expect(await jobs()).toEqual([{ clienteIds: [ids.principal] }]);
+    expect(await repo.eventos('cliente_tipificacao_versao', [V1])).toEqual(
+      new Map([[V1, [{ acao: 'criada', quem: 'Carla', em: agora }]]]),
+    );
 
-    await repo.salvarConfiguracaoCliente(ids.unidade, null, ids.principal, {
-      usuarioId: ids.usuario,
-      em: agora,
-    });
-    expect(await repo.obterConfiguracaoCliente(ids.unidade)).toBeNull();
+    const vazia = { regraId: null, subregraDemaisId: null, linhas: [] };
+    await repo.aplicarConfiguracaoCliente(
+      ids.unidade,
+      ids.principal,
+      [
+        { tipo: 'encerrar', id: V1, vigenciaAteAntes: null, vigenciaAte: '2098-12' },
+        criar(V2, FUTURA, vazia),
+      ],
+      opcoes(FUTURA),
+    );
+    expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([
+      { id: V1, vigenciaDesde: '2024-01', vigenciaAte: '2098-12', valor: configUnidade() },
+      { id: V2, vigenciaDesde: FUTURA, vigenciaAte: null, valor: vazia },
+    ]);
+    const tipificacao = await repo.carregarConfiguracao();
+    expect(tipificacao?.clientes.map((c) => [c.vigenciaDesde, c.linhas.length])).toEqual([
+      ['2024-01', 1],
+      [FUTURA, 0],
+    ]);
+
+    // Edição simultânea: o `vigencia_ate` de antes não confere; nada é gravado.
+    await expect(
+      repo.aplicarConfiguracaoCliente(
+        ids.unidade,
+        ids.principal,
+        [{ tipo: 'encerrar', id: V1, vigenciaAteAntes: null, vigenciaAte: '2026-12' }],
+        opcoes('2027-01'),
+      ),
+    ).rejects.toBeInstanceOf(VersaoTipificacaoAlteradaError);
+    // Versão que cruza outra: recusada.
+    await expect(
+      repo.aplicarConfiguracaoCliente(
+        ids.unidade,
+        ids.principal,
+        [criar('00000000-0000-4000-8000-000000000003', '2099-05', vazia)],
+        opcoes('2099-05'),
+      ),
+    ).rejects.toBeInstanceOf(VersaoTipificacaoAlteradaError);
+    // A que já valeu não se apaga.
+    await expect(
+      repo.aplicarConfiguracaoCliente(
+        ids.unidade,
+        ids.principal,
+        [{ tipo: 'remover', id: V1 }],
+        opcoes(FUTURA),
+      ),
+    ).rejects.toBeInstanceOf(VersaoTipificacaoAlteradaError);
+
+    await repo.aplicarConfiguracaoCliente(
+      ids.unidade,
+      ids.principal,
+      [
+        { tipo: 'remover', id: V2 },
+        { tipo: 'reabrir', id: V1, vigenciaAteAntes: '2098-12', vigenciaAte: null },
+      ],
+      opcoes(FUTURA),
+    );
+    expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([
+      { id: V1, vigenciaDesde: '2024-01', vigenciaAte: null, valor: configUnidade() },
+    ]);
   });
 
-  it('lista regras e sub-regras com quantos clientes usam; salvar enfileira a reclassificação de todos', async () => {
+  it('não muda a partir de uma competência que acabou de ser fechada ou travada', async () => {
     await cenario();
-    await repo.salvarConfiguracaoCliente(ids.unidade, configUnidade(), ids.principal, {
-      usuarioId: ids.usuario,
-      em: agora,
-    });
+    await db.insert(schema.competencias).values({ competencia: '2099-02', status: 'fechada' });
+    await expect(
+      repo.aplicarConfiguracaoCliente(
+        ids.unidade,
+        ids.principal,
+        [criar(V1, FUTURA, configUnidade())],
+        opcoes(FUTURA),
+      ),
+    ).rejects.toBeInstanceOf(VigenciaTipificacaoInvalidaError);
+    expect(await repo.listarVersoesCliente(ids.unidade)).toEqual([]);
+  });
+
+  it('lista regras e sub-regras com o "fatura" por versão e quantos clientes usam; mudar o "fatura" reclassifica todos', async () => {
+    await cenario();
+    await repo.aplicarConfiguracaoCliente(
+      ids.unidade,
+      ids.principal,
+      [criar(V1, '2024-01', configUnidade())],
+      opcoes('2024-01'),
+    );
     expect((await repo.listarRegras()).map((r) => [r.nome, r.padrao, r.clientes])).toEqual([
       ['CO', true, 0],
       ['NC', false, 1],
@@ -189,36 +290,62 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
     await db.execute(sql`delete from graphile_worker._private_jobs`);
     const nova = await repo.salvarSubregra(
       null,
-      {
-        regraId: ids.nc,
-        nome: 'NC-X',
-        descricao: null,
-        fatura: true,
-        ativo: true,
-      },
+      { regraId: ids.nc, nome: 'NC-X', descricao: null, ativo: true },
+      { id: V2, vigenciaDesde: '2026-11', valor: true, usuarioId: ids.usuario },
       false,
     );
     await repo.salvarRegra(
       ids.nc,
-      {
-        nome: 'NC',
-        descricao: 'Não consolidada',
-        cor: '#ff0000',
-        faturaSemSubregra: false,
-        ativo: true,
-      },
-      true,
+      { nome: 'NC', descricao: 'Não consolidada', cor: '#ff0000', ativo: true },
+      null,
     );
-    expect((await repo.listarSubregras()).find((s) => s.id === nova)?.ordem).toBe(2);
+    const subNova = (await repo.listarSubregras()).find((s) => s.id === nova);
+    expect(subNova?.ordem).toBe(2);
+    expect(subNova?.fatura).toEqual([
+      { id: V2, vigenciaDesde: '2026-11', vigenciaAte: null, valor: true },
+    ]);
+    // Nome, descrição e cor não mudam o cálculo.
+    expect(await jobs()).toEqual([]);
+
+    const [atual] = (await repo.listarRegras()).filter((r) => r.id === ids.nc).map((r) => r.fatura);
+    await repo.aplicarFatura(
+      { tipo: 'regra', id: ids.nc },
+      [
+        {
+          tipo: 'encerrar',
+          id: atual?.[0]?.id as string,
+          vigenciaAteAntes: null,
+          vigenciaAte: '2098-12',
+        },
+        criar(V1, FUTURA, true),
+      ],
+      opcoes(FUTURA),
+    );
+    expect(
+      (await repo.listarRegras())
+        .find((r) => r.id === ids.nc)
+        ?.fatura.map((f) => [f.vigenciaDesde, f.vigenciaAte, f.valor]),
+    ).toEqual([
+      ['2024-01', '2098-12', false],
+      [FUTURA, null, true],
+    ]);
     expect(await jobs()).toEqual([{ clienteIds: null }]);
+    const config = await repo.carregarConfiguracao();
+    expect(config?.regras.find((r) => r.id === ids.nc)?.faturaSemSubregra).toHaveLength(2);
   });
 
-  it('reclassifica os laudos abertos pela configuração gravada, com a unidade de origem pela empresa', async () => {
+  it('reclassifica os laudos abertos pela versão vigente na competência, com a unidade de origem pela empresa', async () => {
     await cenario();
-    await repo.salvarConfiguracaoCliente(ids.unidade, configUnidade(), ids.principal, {
-      usuarioId: ids.usuario,
-      em: agora,
-    });
+    // Até 11/2026 a configuração da unidade; a partir de 12/2026, nenhuma (a do principal).
+    await repo.aplicarConfiguracaoCliente(
+      ids.unidade,
+      ids.principal,
+      [
+        criar(V1, '2024-01', configUnidade(), '2026-11'),
+        criar(V2, '2026-12', { regraId: null, subregraDemaisId: null, linhas: [] }),
+      ],
+      opcoes('2024-01'),
+    );
     const [importacao] = await db
       .insert(schema.importacoes)
       .values({ origem: 'mobilemed' })
@@ -255,6 +382,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
         laudo('rj-sem', 'CEDI_RJ', null, '2026-11'),
         laudo('principal', 'CEDIDIAG', ids.ana, '2026-11'),
         laudo('fechado', 'CEDI_RJ', ids.ana, '2026-10'),
+        laudo('rj-dezembro', 'CEDI_RJ', ids.ana, '2026-12'),
       ]);
     await db.insert(schema.competencias).values({ competencia: '2026-10', status: 'fechada' });
 
@@ -266,8 +394,8 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       () => agora,
     );
     expect(await reclassificar.executar({ clienteIds: [ids.principal] })).toEqual({
-      lidos: 3,
-      alterados: 3,
+      lidos: 4,
+      alterados: 4,
     });
     const r = await db.execute<{
       identidade: string;
@@ -282,9 +410,10 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       { identidade: 'fechado', unidade: false, sub: null, fatura: null },
       { identidade: 'principal', unidade: false, sub: null, fatura: true },
       { identidade: 'rj-ana', unidade: true, sub: 'NC-NF', fatura: false },
+      { identidade: 'rj-dezembro', unidade: true, sub: null, fatura: true },
       { identidade: 'rj-sem', unidade: true, sub: 'NC-FT', fatura: true },
     ]);
-    expect(await reclassificar.executar({ clienteIds: null })).toEqual({ lidos: 3, alterados: 0 });
+    expect(await reclassificar.executar({ clienteIds: null })).toEqual({ lidos: 4, alterados: 0 });
 
     const previa = await repo.lerParaPrevia({
       clienteId: ids.principal,
@@ -294,6 +423,7 @@ describe.skipIf(!url)('DrizzleTipificacaoRepository', () => {
       limite: 10,
     });
     expect(previa.map((l) => [l.volume, l.unidadeId === ids.unidade])).toEqual([
+      [2, true],
       [2, true],
       [2, true],
     ]);

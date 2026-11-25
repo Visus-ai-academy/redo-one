@@ -21,10 +21,5 @@ export type DadosRegraTipificacaoDto = {
    * @type string
    */
   cor: string | null;
-  /**
-   * @description O laudo que nenhuma linha casou, sem sub-regra, fatura.
-   * @type boolean
-   */
-  faturaSemSubregra: boolean;
   ativo: boolean;
 };

@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { VersaoFaturaTipificacaoDto } from './VersaoFaturaTipificacaoDto'
+
 export type RegraTipificacaoDto = {
   /**
    * @maxLength 40
@@ -21,11 +23,6 @@ export type RegraTipificacaoDto = {
    * @type string
    */
   cor: string | null;
-  /**
-   * @description O laudo que nenhuma linha casou, sem sub-regra, fatura.
-   * @type boolean
-   */
-  faturaSemSubregra: boolean;
   ativo: boolean;
   /**
    * @description
@@ -40,8 +37,18 @@ export type RegraTipificacaoDto = {
    */
   padrao: boolean;
   /**
-   * @description Clientes e unidades com esta regra principal.
+   * @description Clientes e unidades com esta regra principal (em vigor ou programada).
    * @type number
    */
   clientes: number;
+  /**
+   * @description O "fatura sem sub-regra" em vigor no mês atual.
+   * @type boolean
+   */
+  faturaSemSubregra: boolean;
+  /**
+   * @description Da mais nova para a mais antiga.
+   * @type array
+   */
+  versoes: VersaoFaturaTipificacaoDto[];
 };

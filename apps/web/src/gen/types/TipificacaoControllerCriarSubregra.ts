@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { DadosSubregraTipificacaoDto } from './DadosSubregraTipificacaoDto'
+import type { CriarSubregraTipificacaoDto } from './CriarSubregraTipificacaoDto'
 import type { IdCriadoDto } from './IdCriadoDto'
 
 export type TipificacaoControllerCriarSubregraStatus201 = IdCriadoDto;
@@ -12,7 +12,7 @@ export type TipificacaoControllerCriarSubregraStatus400 = unknown;
 
 export type TipificacaoControllerCriarSubregraStatus409 = unknown;
 
-export type TipificacaoControllerCriarSubregraBody = DadosSubregraTipificacaoDto;
+export type TipificacaoControllerCriarSubregraBody = CriarSubregraTipificacaoDto;
 
 export type TipificacaoControllerCriarSubregraOptions = {
   body: TipificacaoControllerCriarSubregraBody;

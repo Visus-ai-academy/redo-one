@@ -4,21 +4,42 @@
 */
 
 import type { ClienteTipificacaoDto } from './ClienteTipificacaoDto'
-import type { ConfiguracaoTipificacaoRegistradaDto } from './ConfiguracaoTipificacaoRegistradaDto'
+import type { ConfiguracaoTipificacaoDto } from './ConfiguracaoTipificacaoDto'
 import type { NomeDto } from './NomeDto'
+import type { VersaoConfiguracaoTipificacaoDto } from './VersaoConfiguracaoTipificacaoDto'
 
 export type TipificacaoClienteDto = {
+  /**
+   * @example 2026-11
+   * @type string
+   */
+  mesAtual: string;
+  /**
+   * @description Primeira competência em que uma mudança pode valer.
+   * @type string
+   */
+  aPartirDeMinimo: string;
+  /**
+   * @description A próxima competência (a sugerida no "Vale a partir de").
+   * @type string
+   */
+  aPartirDeSugerido: string;
   cliente: ClienteTipificacaoDto;
   /**
-   * @description Vazia = segue a do principal (na unidade) ou a padrão.
+   * @description A própria em vigor no mês atual. Vazia = segue a do principal (na unidade) ou a padrão.
    * @type object
    */
-  configuracao: ConfiguracaoTipificacaoRegistradaDto | null;
+  configuracao: ConfiguracaoTipificacaoDto | null;
   /**
-   * @description Só na unidade: a do principal.
+   * @description Só na unidade: a do principal em vigor.
    * @type object
    */
-  doPrincipal: ConfiguracaoTipificacaoRegistradaDto | null;
+  doPrincipal: ConfiguracaoTipificacaoDto | null;
+  /**
+   * @description Histórico de vigências, da mais nova para a mais antiga.
+   * @type array
+   */
+  versoes: VersaoConfiguracaoTipificacaoDto[];
   /**
    * @description
    * Format: `uuid`
@@ -26,7 +47,7 @@ export type TipificacaoClienteDto = {
    */
   regraPadraoId: string | null;
   /**
-   * @description Nome dos médicos citados nas linhas.
+   * @description Nome dos médicos citados nas linhas (de todas as versões).
    * @type array
    */
   medicos: NomeDto[];

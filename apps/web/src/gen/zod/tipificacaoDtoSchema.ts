@@ -8,6 +8,9 @@ import { regraTipificacaoDtoSchema } from './regraTipificacaoDtoSchema'
 import { subregraTipificacaoDtoSchema } from './subregraTipificacaoDtoSchema'
 
 export const tipificacaoDtoSchema = z.object({
+  mesAtual: z.string().meta({ examples: ['2026-11'] }),
+  aPartirDeMinimo: z.string().describe('Primeira competência em que uma mudança pode valer.'),
+  aPartirDeSugerido: z.string().describe('A próxima competência (a sugerida no "Vale a partir de").'),
   regras: z.array(regraTipificacaoDtoSchema),
   subregras: z.array(subregraTipificacaoDtoSchema),
 })

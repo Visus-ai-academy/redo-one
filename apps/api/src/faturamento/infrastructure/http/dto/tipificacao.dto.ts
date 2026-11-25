@@ -8,10 +8,13 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+
+import { MENSAGEM_COMPETENCIA, PADRAO_COMPETENCIA } from './competencia.dto';
 
 const TIPOS = ['modalidade', 'especialidade', 'prioridade'] as const;
 const MODOS = ['todos', 'apenas', 'exceto'] as const;
@@ -25,6 +28,44 @@ function UuidOpcional(descricao?: string): PropertyDecorator {
     ValidateIf((_, v) => v !== null)(alvo, chave);
     IsUUID()(alvo, chave);
   };
+}
+
+function APartirDe(): PropertyDecorator {
+  return (alvo, chave) => {
+    ApiProperty({
+      example: '2026-12',
+      pattern: PADRAO_COMPETENCIA.source,
+      description:
+        'Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada.',
+    })(alvo, chave);
+    Matches(PADRAO_COMPETENCIA, { message: `aPartirDe: ${MENSAGEM_COMPETENCIA}` })(alvo, chave);
+  };
+}
+
+/** Quem criou e quem encerrou a versão, dos eventos de auditoria (vazios na carga do dashboards-one). */
+class AutoriaVersaoDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ example: '2026-12' }) vigenciaDesde!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Inclusiva; vazia = sem fim.' })
+  vigenciaAte!: string | null;
+  @ApiProperty({ type: String, nullable: true }) criadoPor!: string | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) criadoEm!: Date | null;
+  @ApiProperty({ type: String, nullable: true }) encerradoPor!: string | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) encerradoEm!: Date | null;
+}
+
+/** Uma versão do "fatura" (da sub-regra) ou do "fatura sem sub-regra" (da regra). */
+export class VersaoFaturaTipificacaoDto extends AutoriaVersaoDto {
+  @ApiProperty() valor!: boolean;
+}
+
+/** Datas da vigência: o mês atual e de quando a mudança pode e deve valer. */
+class VigenciasTipificacaoDto {
+  @ApiProperty({ example: '2026-11' }) mesAtual!: string;
+  @ApiProperty({ description: 'Primeira competência em que uma mudança pode valer.' })
+  aPartirDeMinimo!: string;
+  @ApiProperty({ description: 'A próxima competência (a sugerida no "Vale a partir de").' })
+  aPartirDeSugerido!: string;
 }
 
 function ListaDeIds(descricao: string, maximo = 300): PropertyDecorator {
@@ -54,20 +95,35 @@ export class DadosRegraTipificacaoDto {
   @MaxLength(7)
   cor!: string | null;
 
-  @ApiProperty({ description: 'O laudo que nenhuma linha casou, sem sub-regra, fatura.' })
-  @IsBoolean()
-  faturaSemSubregra!: boolean;
-
   @ApiProperty()
   @IsBoolean()
   ativo!: boolean;
+}
+
+export class CriarRegraTipificacaoDto extends DadosRegraTipificacaoDto {
+  @ApiProperty({
+    description:
+      'O laudo que nenhuma linha casou, sem sub-regra, fatura. Vale desde a primeira competência aberta; depois muda por versão.',
+  })
+  @IsBoolean()
+  faturaSemSubregra!: boolean;
 }
 
 export class RegraTipificacaoDto extends DadosRegraTipificacaoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() ordem!: number;
   @ApiProperty({ description: 'Regra do cliente sem configuração.' }) padrao!: boolean;
-  @ApiProperty({ description: 'Clientes e unidades com esta regra principal.' }) clientes!: number;
+  @ApiProperty({
+    description: 'Clientes e unidades com esta regra principal (em vigor ou programada).',
+  })
+  clientes!: number;
+  @ApiProperty({ description: 'O "fatura sem sub-regra" em vigor no mês atual.' })
+  faturaSemSubregra!: boolean;
+  @ApiProperty({
+    type: [VersaoFaturaTipificacaoDto],
+    description: 'Da mais nova para a mais antiga.',
+  })
+  versoes!: VersaoFaturaTipificacaoDto[];
 }
 
 export class DadosSubregraTipificacaoDto {
@@ -86,24 +142,47 @@ export class DadosSubregraTipificacaoDto {
   @MaxLength(500)
   descricao!: string | null;
 
-  @ApiProperty({ description: 'O laudo nesta sub-regra fatura.' })
-  @IsBoolean()
-  fatura!: boolean;
-
   @ApiProperty()
   @IsBoolean()
   ativo!: boolean;
 }
 
+export class CriarSubregraTipificacaoDto extends DadosSubregraTipificacaoDto {
+  @ApiProperty({
+    description:
+      'O laudo nesta sub-regra fatura. Vale desde a primeira competência aberta; depois muda por versão.',
+  })
+  @IsBoolean()
+  fatura!: boolean;
+}
+
 export class SubregraTipificacaoDto extends DadosSubregraTipificacaoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() ordem!: number;
-  @ApiProperty({ description: 'Clientes e unidades que usam a sub-regra.' }) clientes!: number;
+  @ApiProperty({
+    description: 'Clientes e unidades que usam a sub-regra (em vigor ou programada).',
+  })
+  clientes!: number;
+  @ApiProperty({ description: 'O "fatura" em vigor no mês atual.' }) fatura!: boolean;
+  @ApiProperty({
+    type: [VersaoFaturaTipificacaoDto],
+    description: 'Da mais nova para a mais antiga.',
+  })
+  versoes!: VersaoFaturaTipificacaoDto[];
 }
 
-export class TipificacaoDto {
+export class TipificacaoDto extends VigenciasTipificacaoDto {
   @ApiProperty({ type: [RegraTipificacaoDto] }) regras!: RegraTipificacaoDto[];
   @ApiProperty({ type: [SubregraTipificacaoDto] }) subregras!: SubregraTipificacaoDto[];
+}
+
+/** Nova versão do "fatura" (sub-regra) ou do "fatura sem sub-regra" (regra). */
+export class MudarFaturaTipificacaoDto {
+  @ApiProperty()
+  @IsBoolean()
+  fatura!: boolean;
+
+  @APartirDe() aPartirDe!: string;
 }
 
 export class LinhaTipificacaoDto {
@@ -142,10 +221,19 @@ export class ConfiguracaoTipificacaoDto {
   linhas!: LinhaTipificacaoDto[];
 }
 
-export class ConfiguracaoTipificacaoRegistradaDto extends ConfiguracaoTipificacaoDto {
-  @ApiProperty({ type: String, format: 'date-time' }) atualizadoEm!: Date;
-  @ApiProperty({ type: String, nullable: true, description: 'Vazio na carga do dashboards-one.' })
-  atualizadoPor!: string | null;
+/** Nova versão da configuração (vazia = "remover": volta a herdar). */
+export class SalvarConfiguracaoTipificacaoDto extends ConfiguracaoTipificacaoDto {
+  @APartirDe() aPartirDe!: string;
+}
+
+/** Uma versão da configuração do cliente, no histórico de vigências. */
+export class VersaoConfiguracaoTipificacaoDto extends AutoriaVersaoDto {
+  @ApiProperty({
+    type: ConfiguracaoTipificacaoDto,
+    description:
+      'Vazia (sem regra, linhas nem "todos os demais") = segue a do principal ou a padrão.',
+  })
+  configuracao!: ConfiguracaoTipificacaoDto;
 }
 
 export class ClienteTipificacaoDto {
@@ -160,22 +248,31 @@ export class NomeDto {
   @ApiProperty() nome!: string;
 }
 
-export class TipificacaoClienteDto {
+export class TipificacaoClienteDto extends VigenciasTipificacaoDto {
   @ApiProperty({ type: ClienteTipificacaoDto }) cliente!: ClienteTipificacaoDto;
   @ApiProperty({
-    type: ConfiguracaoTipificacaoRegistradaDto,
+    type: ConfiguracaoTipificacaoDto,
     nullable: true,
-    description: 'Vazia = segue a do principal (na unidade) ou a padrão.',
+    description:
+      'A própria em vigor no mês atual. Vazia = segue a do principal (na unidade) ou a padrão.',
   })
-  configuracao!: ConfiguracaoTipificacaoRegistradaDto | null;
+  configuracao!: ConfiguracaoTipificacaoDto | null;
   @ApiProperty({
-    type: ConfiguracaoTipificacaoRegistradaDto,
+    type: ConfiguracaoTipificacaoDto,
     nullable: true,
-    description: 'Só na unidade: a do principal.',
+    description: 'Só na unidade: a do principal em vigor.',
   })
-  doPrincipal!: ConfiguracaoTipificacaoRegistradaDto | null;
+  doPrincipal!: ConfiguracaoTipificacaoDto | null;
+  @ApiProperty({
+    type: [VersaoConfiguracaoTipificacaoDto],
+    description: 'Histórico de vigências, da mais nova para a mais antiga.',
+  })
+  versoes!: VersaoConfiguracaoTipificacaoDto[];
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) regraPadraoId!: string | null;
-  @ApiProperty({ type: [NomeDto], description: 'Nome dos médicos citados nas linhas.' })
+  @ApiProperty({
+    type: [NomeDto],
+    description: 'Nome dos médicos citados nas linhas (de todas as versões).',
+  })
   medicos!: NomeDto[];
 }
 

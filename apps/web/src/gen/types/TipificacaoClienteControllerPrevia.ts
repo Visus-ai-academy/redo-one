@@ -3,8 +3,8 @@
 * Do not edit manually.
 */
 
-import type { ConfiguracaoTipificacaoDto } from './ConfiguracaoTipificacaoDto'
 import type { LinhaPreviaTipificacaoDto } from './LinhaPreviaTipificacaoDto'
+import type { SalvarConfiguracaoTipificacaoDto } from './SalvarConfiguracaoTipificacaoDto'
 
 export type TipificacaoClienteControllerPreviaPath = {
   clienteId: string;
@@ -16,7 +16,7 @@ export type TipificacaoClienteControllerPreviaStatus400 = unknown;
 
 export type TipificacaoClienteControllerPreviaStatus404 = unknown;
 
-export type TipificacaoClienteControllerPreviaBody = ConfiguracaoTipificacaoDto;
+export type TipificacaoClienteControllerPreviaBody = SalvarConfiguracaoTipificacaoDto;
 
 export type TipificacaoClienteControllerPreviaOptions = {
   body: TipificacaoClienteControllerPreviaBody;

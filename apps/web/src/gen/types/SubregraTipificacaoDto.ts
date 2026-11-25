@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { VersaoFaturaTipificacaoDto } from './VersaoFaturaTipificacaoDto'
+
 export type SubregraTipificacaoDto = {
   /**
    * @description
@@ -21,11 +23,6 @@ export type SubregraTipificacaoDto = {
    * @type string
    */
   descricao: string | null;
-  /**
-   * @description O laudo nesta sub-regra fatura.
-   * @type boolean
-   */
-  fatura: boolean;
   ativo: boolean;
   /**
    * @description
@@ -35,8 +32,18 @@ export type SubregraTipificacaoDto = {
   id: string;
   ordem: number;
   /**
-   * @description Clientes e unidades que usam a sub-regra.
+   * @description Clientes e unidades que usam a sub-regra (em vigor ou programada).
    * @type number
    */
   clientes: number;
+  /**
+   * @description O "fatura" em vigor no mês atual.
+   * @type boolean
+   */
+  fatura: boolean;
+  /**
+   * @description Da mais nova para a mais antiga.
+   * @type array
+   */
+  versoes: VersaoFaturaTipificacaoDto[];
 };

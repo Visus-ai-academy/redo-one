@@ -4,16 +4,18 @@
 */
 
 import * as z from 'zod'
+import { versaoFaturaTipificacaoDtoSchema } from './versaoFaturaTipificacaoDtoSchema'
 
 export const subregraTipificacaoDtoSchema = z.object({
   regraId: z.uuid(),
   nome: z.string().max(40).meta({ examples: ['NC-NF'] }),
   descricao: z.string().max(500).nullable(),
-  fatura: z.boolean().describe('O laudo nesta sub-regra fatura.'),
   ativo: z.boolean(),
   id: z.uuid(),
   ordem: z.number(),
-  clientes: z.number().describe('Clientes e unidades que usam a sub-regra.'),
+  clientes: z.number().describe('Clientes e unidades que usam a sub-regra (em vigor ou programada).'),
+  fatura: z.boolean().describe('O "fatura" em vigor no mês atual.'),
+  versoes: z.array(versaoFaturaTipificacaoDtoSchema).describe('Da mais nova para a mais antiga.'),
 })
 
 export type SubregraTipificacaoDtoSchemaType = z.infer<typeof subregraTipificacaoDtoSchema>

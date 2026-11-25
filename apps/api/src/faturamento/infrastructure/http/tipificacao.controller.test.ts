@@ -30,17 +30,46 @@ describe('controllers da tipificação', () => {
         t.criarSubregra,
         t.alterarSubregra,
         t.medicos,
+        t.mudarFatura,
+        t.removerFatura,
         c.salvar,
         c.previa,
+        c.removerVersao,
       ].map(exigidas),
-    ).toEqual(Array(7).fill(['faturamento.tipificacao.editar']));
+    ).toEqual(Array(10).fill(['faturamento.tipificacao.editar']));
   });
 
-  it('grava em nome de quem está logado', async () => {
+  it('grava em nome de quem está logado, a partir da competência pedida', async () => {
     const salvar = { executar: vi.fn(async () => undefined) };
-    const c = new TipificacaoClienteController({} as never, salvar as never, {} as never);
-    const corpo = { regraId: null, subregraDemaisId: null, linhas: [] };
-    await c.salvar(ator, 'c1', corpo);
-    expect(salvar.executar).toHaveBeenCalledWith('u1', 'c1', corpo);
+    const c = new TipificacaoClienteController(
+      {} as never,
+      salvar as never,
+      {} as never,
+      {} as never,
+    );
+    const configuracao = { regraId: null, subregraDemaisId: null, linhas: [] };
+    await c.salvar(ator, 'c1', { ...configuracao, aPartirDe: '2026-12' });
+    expect(salvar.executar).toHaveBeenCalledWith('u1', 'c1', configuracao, '2026-12');
+  });
+
+  it('o "fatura" muda pela regra ou pela sub-regra do caminho', async () => {
+    const fatura = { mudar: vi.fn(async () => undefined), remover: vi.fn(async () => undefined) };
+    const t = new TipificacaoController(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      fatura as never,
+    );
+    await t.mudarFatura(ator, 'subregras', 's1', { fatura: true, aPartirDe: '2026-12' });
+    expect(fatura.mudar).toHaveBeenCalledWith(
+      'u1',
+      { tipo: 'subregra', id: 's1' },
+      true,
+      '2026-12',
+    );
+    await t.removerFatura(ator, 'regras', 'r1', 'v1');
+    expect(fatura.remover).toHaveBeenCalledWith('u1', { tipo: 'regra', id: 'r1' }, 'v1');
   });
 });

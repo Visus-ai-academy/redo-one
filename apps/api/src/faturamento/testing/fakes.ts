@@ -39,11 +39,16 @@ import type {
 } from '../application/ports/precos.repository';
 import type {
   ClienteDaTipificacao,
-  ConfiguracaoRegistrada,
+  Configuracao,
   DadosRegra,
   DadosSubregra,
+  DonoFatura,
+  EventoVersao as EventoVersaoTipificacao,
+  FaturaInicial,
   LaudoParaPreviaTipificacao,
   LotePreviaTipificacao,
+  MudancaGravada as MudancaGravadaTipificacao,
+  OpcoesAplicar as OpcoesAplicarTipificacao,
   RegraRegistrada,
   SubregraRegistrada,
   TipificacaoRepository,
@@ -51,8 +56,8 @@ import type {
 import type { StatusCompetencia } from '../domain/competencia-status';
 import { DADOS_FISCAIS_VAZIOS, type DadosFiscais } from '../domain/dados-fiscais';
 import type { Arranjo } from '../domain/preco';
-import type { ConfiguracaoCliente } from '../domain/tipificacao';
 import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
+import { VersaoTipificacaoAlteradaError, type VersaoVigente } from '../domain/versoes-tipificacao';
 import type { NovaVigencia } from '../domain/vigencia-corte';
 
 export interface CompetenciaGuardada {
@@ -277,30 +282,85 @@ export class DadosFiscaisEmMemoria implements DadosFiscaisRepository {
   }
 }
 
-/** Tipificação em memória: regras, sub-regras, clientes e laudos para a prévia. */
+/** Aplica as mudanças nas versões, como o repositório real (confere o `vigencia_ate` de antes). */
+function aplicarEmMemoria<T>(
+  versoes: VersaoVigente<T>[],
+  mudancas: MudancaGravadaTipificacao<T>[],
+) {
+  const r = versoes.map((v) => ({ ...v }));
+  for (const m of mudancas) {
+    if (m.tipo === 'criar')
+      r.push({
+        id: m.id,
+        vigenciaDesde: m.vigenciaDesde,
+        vigenciaAte: m.vigenciaAte,
+        valor: m.valor,
+      });
+    else if (m.tipo === 'remover') {
+      const i = r.findIndex((v) => v.id === m.id);
+      if (i < 0) throw new VersaoTipificacaoAlteradaError();
+      r.splice(i, 1);
+    } else {
+      const v = r.find((x) => x.id === m.id);
+      if (!v || v.vigenciaAte !== m.vigenciaAteAntes) throw new VersaoTipificacaoAlteradaError();
+      v.vigenciaAte = m.vigenciaAte;
+    }
+  }
+  return r.sort((a, b) => a.vigenciaDesde.localeCompare(b.vigenciaDesde));
+}
+
+/** Tipificação em memória: regras, sub-regras, versões dos clientes e laudos para a prévia. */
 export class TipificacaoEmMemoria implements TipificacaoRepository {
   readonly regras = new Map<string, RegraRegistrada>();
   readonly subregras = new Map<string, SubregraRegistrada>();
   readonly clientes = new Map<string, ClienteDaTipificacao>();
-  readonly configuracoes = new Map<string, ConfiguracaoRegistrada>();
+  /** Versões da configuração por cliente. */
+  readonly versoes = new Map<string, VersaoVigente<Configuracao>[]>();
   readonly laudos: LaudoParaPreviaTipificacao[] = [];
   /** Escopos de reclassificação enfileirados (nulo = todos). */
   readonly reclassificacoes: (string[] | null)[] = [];
+  /** Eventos gravados junto com as mudanças (a transação do repositório real). */
+  readonly eventosGravados: EventoAuditoria[] = [];
+  readonly eventosPorId = new Map<string, EventoVersaoTipificacao[]>();
+  /** A competência a partir da qual cada aplicação foi pedida. */
+  readonly aPartirDes: string[] = [];
   private proximo = 1;
+
+  /** Atalho dos testes: a configuração como versão única desde 2024-01. */
+  configurar(clienteId: string, c: Configuracao, desde = '2024-01') {
+    this.versoes.set(clienteId, [
+      { id: `v-${clienteId}-${desde}`, vigenciaDesde: desde, vigenciaAte: null, valor: c },
+    ]);
+  }
 
   async carregarConfiguracao() {
     if (!this.regras.size) return null;
     return {
-      regras: [...this.regras.values()],
-      subregras: [...this.subregras.values()],
-      clientes: [...this.configuracoes.values()],
+      regras: [...this.regras.values()].map((r) => ({
+        id: r.id,
+        padrao: r.padrao,
+        faturaSemSubregra: r.fatura,
+      })),
+      subregras: [...this.subregras.values()].map((s) => ({
+        id: s.id,
+        regraId: s.regraId,
+        fatura: s.fatura,
+      })),
+      clientes: [...this.versoes.entries()].flatMap(([clienteId, vs]) =>
+        vs.map((v) => ({
+          clienteId,
+          ...structuredClone(v.valor),
+          vigenciaDesde: v.vigenciaDesde,
+          vigenciaAte: v.vigenciaAte,
+        })),
+      ),
     };
   }
   async listarRegras() {
-    return [...this.regras.values()];
+    return [...this.regras.values()].map((r) => structuredClone(r));
   }
   async listarSubregras() {
-    return [...this.subregras.values()];
+    return [...this.subregras.values()].map((s) => structuredClone(s));
   }
   async regraComNome(nome: string) {
     return (
@@ -313,42 +373,78 @@ export class TipificacaoEmMemoria implements TipificacaoRepository {
       null
     );
   }
-  async salvarRegra(id: string | null, dados: DadosRegra, reclassificar: boolean) {
+  private faturaDe(f: FaturaInicial | null) {
+    return f
+      ? [{ id: f.id, vigenciaDesde: f.vigenciaDesde, vigenciaAte: null, valor: f.valor }]
+      : [];
+  }
+  async salvarRegra(id: string | null, dados: DadosRegra, fatura: FaturaInicial | null) {
     const salvo = id ?? `regra-${this.proximo++}`;
     const atual = this.regras.get(salvo);
-    this.regras.set(salvo, { ordem: 0, padrao: false, clientes: 0, ...atual, ...dados, id: salvo });
+    this.regras.set(salvo, {
+      ordem: 0,
+      padrao: false,
+      clientes: 0,
+      fatura: this.faturaDe(fatura),
+      ...atual,
+      ...dados,
+      id: salvo,
+    });
+    return salvo;
+  }
+  async salvarSubregra(
+    id: string | null,
+    dados: DadosSubregra,
+    fatura: FaturaInicial | null,
+    reclassificar: boolean,
+  ) {
+    const salvo = id ?? `sub-${this.proximo++}`;
+    const atual = this.subregras.get(salvo);
+    this.subregras.set(salvo, {
+      ordem: 0,
+      clientes: 0,
+      fatura: this.faturaDe(fatura),
+      ...atual,
+      ...dados,
+      id: salvo,
+    });
     if (reclassificar) this.reclassificacoes.push(null);
     return salvo;
   }
-  async salvarSubregra(id: string | null, dados: DadosSubregra, reclassificar: boolean) {
-    const salvo = id ?? `sub-${this.proximo++}`;
-    const atual = this.subregras.get(salvo);
-    this.subregras.set(salvo, { ordem: 0, clientes: 0, ...atual, ...dados, id: salvo });
-    if (reclassificar) this.reclassificacoes.push(null);
-    return salvo;
+  async aplicarFatura(
+    dono: DonoFatura,
+    mudancas: MudancaGravadaTipificacao<boolean>[],
+    opcoes: OpcoesAplicarTipificacao,
+  ) {
+    const mapa = dono.tipo === 'regra' ? this.regras : this.subregras;
+    const item = mapa.get(dono.id) as RegraRegistrada | SubregraRegistrada;
+    item.fatura = aplicarEmMemoria(item.fatura, mudancas);
+    this.eventosGravados.push(...opcoes.eventos);
+    this.aPartirDes.push(opcoes.aPartirDe);
+    this.reclassificacoes.push(null);
   }
   async obterCliente(clienteId: string) {
     return this.clientes.get(clienteId) ?? null;
   }
-  async obterConfiguracaoCliente(clienteId: string) {
-    const c = this.configuracoes.get(clienteId);
-    return c ? structuredClone(c) : null;
+  async listarVersoesCliente(clienteId: string) {
+    return structuredClone(this.versoes.get(clienteId) ?? []);
   }
-  async salvarConfiguracaoCliente(
+  async aplicarConfiguracaoCliente(
     clienteId: string,
-    configuracao: Omit<ConfiguracaoCliente, 'clienteId'> | null,
     principalId: string,
-    autor: Autor,
+    mudancas: MudancaGravadaTipificacao<Configuracao>[],
+    opcoes: OpcoesAplicarTipificacao,
   ) {
-    if (configuracao)
-      this.configuracoes.set(clienteId, {
-        clienteId,
-        ...structuredClone(configuracao),
-        atualizadoEm: autor.em,
-        atualizadoPor: 'Ana',
-      });
-    else this.configuracoes.delete(clienteId);
+    this.versoes.set(
+      clienteId,
+      aplicarEmMemoria(this.versoes.get(clienteId) ?? [], structuredClone(mudancas)),
+    );
+    this.eventosGravados.push(...opcoes.eventos);
+    this.aPartirDes.push(opcoes.aPartirDe);
     this.reclassificacoes.push([principalId]);
+  }
+  async eventos(_entidade: string, ids: string[]) {
+    return new Map([...this.eventosPorId].filter(([id]) => ids.includes(id)));
   }
   async lerParaPrevia(lote: LotePreviaTipificacao) {
     return this.laudos

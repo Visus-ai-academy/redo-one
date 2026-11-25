@@ -109,11 +109,16 @@ const todos: LegadoFiltroMedico = { modo: 'todos', medicos: [] };
 const exceto = (...medicos: string[]): LegadoFiltroMedico => ({ modo: 'exceto', medicos });
 const apenas = (...medicos: string[]): LegadoFiltroMedico => ({ modo: 'apenas', medicos });
 
+/** A versão inicial de cada cliente, sem o id (estável, pelo cliente). */
+const configs = (r: ReturnType<typeof mapearTipificacao>) =>
+  r.tabelas.clientesTipificacaoVersoes.map(({ id: _, ...c }) => c);
+
 /** Linhas do cliente como a tela as lê: tipo, valores, modo, médicos, equipes → sub-regra. */
 function linhasDe(r: ReturnType<typeof mapearTipificacao>, clienteId: string) {
   const t = r.tabelas;
+  const versao = t.clientesTipificacaoVersoes.find((v) => v.clienteId === clienteId)?.id;
   return t.clientesTipificacaoLinhas
-    .filter((l) => l.clienteId === clienteId)
+    .filter((l) => l.versaoId === versao)
     .sort((a, b) => a.ordem - b.ordem)
     .map((l) => ({
       tipo: l.tipo,
@@ -144,22 +149,44 @@ describe('mapearTipificacao', () => {
     const r = mapearTipificacao(base(), cadastro);
 
     expect(r.erros).toEqual([]);
+    const faturaDa = (id: string) =>
+      r.tabelas.regrasTipificacaoFatura.find((f) => f.regraId === id)?.faturaSemSubregra;
     expect(
-      r.tabelas.regrasTipificacao.map((x) => [x.nome, x.faturaSemSubregra, x.padrao, x.cor]),
+      r.tabelas.regrasTipificacao.map((x) => [x.nome, faturaDa(x.id), x.padrao, x.cor]),
     ).toEqual([
       ['NC', false, false, '#dc2626'],
       ['CO', true, true, '#16a34a'],
       ['NC1', true, false, '#d97706'],
     ]);
     expect(r.tabelas.regrasTipificacao[0]?.id).toBe(regra(NC));
+    const faturaDaSub = (id: string) =>
+      r.tabelas.subregrasTipificacaoFatura.find((f) => f.subregraId === id)?.fatura;
     expect(
-      r.tabelas.subregrasTipificacao.map((s) => [s.nome, s.regraId, s.fatura, s.ordem]),
+      r.tabelas.subregrasTipificacao.map((s) => [s.nome, s.regraId, faturaDaSub(s.id), s.ordem]),
     ).toEqual([
       ['NC-FT', regra(NC), true, 1],
       ['CO-FT', regra(CO), true, 1],
       ['NC-NF', regra(NC), false, 0],
       ['NC1-NF', regra(NC1), true, 0],
     ]);
+  });
+
+  it('a configuração e o "fatura" de hoje viram a versão inicial, com id estável e sem autor', () => {
+    const entrada = base({ clienteRegras: [{ empresa: 'CBU', regraId: NC, principal: true }] });
+    const r = mapearTipificacao(entrada, cadastro);
+    const deNovo = mapearTipificacao(entrada, cadastro);
+    expect(r.tabelas.clientesTipificacaoVersoes.map((v) => v.id)).toEqual(
+      deNovo.tabelas.clientesTipificacaoVersoes.map((v) => v.id),
+    );
+    expect(r.tabelas.regrasTipificacaoFatura.map((f) => f.id)).toEqual(
+      deNovo.tabelas.regrasTipificacaoFatura.map((f) => f.id),
+    );
+    for (const t of [
+      r.tabelas.clientesTipificacaoVersoes,
+      r.tabelas.regrasTipificacaoFatura,
+      r.tabelas.subregrasTipificacaoFatura,
+    ])
+      expect(t.every((x) => x.criadoPorId === null && !('vigenciaDesde' in x))).toBe(true);
   });
 
   it('regra principal vira a do cliente; a secundária (sem efeito no dashboards-one) não migra', () => {
@@ -173,8 +200,8 @@ describe('mapearTipificacao', () => {
       cadastro,
     );
 
-    expect(r.tabelas.clientesTipificacao).toEqual([
-      { clienteId: 'c-cbu', regraId: regra(NC), subregraDemaisId: null, atualizadoPorId: null },
+    expect(configs(r)).toEqual([
+      { clienteId: 'c-cbu', regraId: regra(NC), subregraDemaisId: null, criadoPorId: null },
     ]);
     expect(r.avisos.map((a) => a.motivo)).toContain(
       'Regra secundária "CO" não tem efeito no dashboards-one: não migra.',
@@ -273,7 +300,7 @@ describe('mapearTipificacao', () => {
         subregraId: sub(CO_FT),
       },
     ]);
-    expect(r.tabelas.clientesTipificacao[0]?.subregraDemaisId).toBe(sub(NC_FT));
+    expect(configs(r)[0]?.subregraDemaisId).toBe(sub(NC_FT));
   });
 
   it('ordem personalizada: linhas na ordem salva, grupo vira equipe, COLUNAS vira a especialidade dos exames, "todos os demais" vira o fim', () => {
@@ -346,7 +373,7 @@ describe('mapearTipificacao', () => {
         subregraId: sub(NC_NF),
       },
     ]);
-    expect(r.tabelas.clientesTipificacao[0]?.subregraDemaisId).toBe(sub(NC_FT));
+    expect(configs(r)[0]?.subregraDemaisId).toBe(sub(NC_FT));
     expect(r.avisos.map((a) => a.motivo)).toContain(
       'Linha 5 vem depois de "todos os demais" e nunca casava: não migra.',
     );
@@ -357,7 +384,7 @@ describe('mapearTipificacao', () => {
       base({ clienteRegras: [{ empresa: 'CEDI_RJ', regraId: NC, principal: true }] }),
       cadastro,
     );
-    expect(r.tabelas.clientesTipificacao.map((c) => c.clienteId)).toEqual(['c-cedi-rj']);
+    expect(configs(r).map((c) => c.clienteId)).toEqual(['c-cedi-rj']);
   });
 
   describe('sem configuração no dashboards-one = CO: a unidade não pode herdar outra', () => {
@@ -384,24 +411,24 @@ describe('mapearTipificacao', () => {
         base({ clienteRegras: [{ empresa: 'CEDIDIAG', regraId: NC, principal: true }] }),
         cadastroCedi,
       );
-      expect(r.tabelas.clientesTipificacao).toEqual([
+      expect(configs(r)).toEqual([
         {
           clienteId: 'c-cedidiag',
           regraId: regra(NC),
           subregraDemaisId: null,
-          atualizadoPorId: null,
+          criadoPorId: null,
         },
         {
           clienteId: 'c-cedi-rj',
           regraId: regra(CO),
           subregraDemaisId: null,
-          atualizadoPorId: null,
+          criadoPorId: null,
         },
         {
           clienteId: 'c-cedi-ro',
           regraId: regra(CO),
           subregraDemaisId: null,
-          atualizadoPorId: null,
+          criadoPorId: null,
         },
       ]);
       expect(r.unidadesComCoExplicita).toBe(2);
@@ -417,7 +444,7 @@ describe('mapearTipificacao', () => {
         base({ clienteRegras: [{ empresa: 'CEDIDIAG', regraId: CO, principal: true }] }),
         cadastroCedi,
       );
-      expect(padrao.tabelas.clientesTipificacao.map((c) => c.clienteId)).toEqual(['c-cedidiag']);
+      expect(configs(padrao).map((c) => c.clienteId)).toEqual(['c-cedidiag']);
       expect(padrao.unidadesComCoExplicita).toBe(0);
     });
 
@@ -438,11 +465,11 @@ describe('mapearTipificacao', () => {
         }),
         cadastroCedi,
       );
-      expect(r.tabelas.clientesTipificacao.find((c) => c.clienteId === 'c-cedi-rj')).toEqual({
+      expect(configs(r).find((c) => c.clienteId === 'c-cedi-rj')).toEqual({
         clienteId: 'c-cedi-rj',
         regraId: regra(CO),
         subregraDemaisId: sub(NC_FT),
-        atualizadoPorId: null,
+        criadoPorId: null,
       });
     });
   });
@@ -456,8 +483,8 @@ describe('mapearTipificacao', () => {
     });
     const r = mapearTipificacao(legado, cadastro, { grafiasPreferidas: ['RADI-IMAGEM'] });
     expect(r.erros).toEqual([]);
-    expect(r.tabelas.clientesTipificacao).toEqual([
-      { clienteId: 'c-radi', regraId: regra(CO), subregraDemaisId: null, atualizadoPorId: null },
+    expect(configs(r)).toEqual([
+      { clienteId: 'c-radi', regraId: regra(CO), subregraDemaisId: null, criadoPorId: null },
     ]);
     expect(r.avisos).toContainEqual({
       tabela: 'clientes_tipificacao',
@@ -482,7 +509,7 @@ describe('mapearTipificacao', () => {
       cadastro,
     );
     expect(r.erros).toEqual([]);
-    expect(r.tabelas.clientesTipificacao.map((c) => c.clienteId)).toEqual(['c-cedidiag']);
+    expect(configs(r).map((c) => c.clienteId)).toEqual(['c-cedidiag']);
   });
 
   it('filtros sem efeito: "exceto ninguém" casa com todos; "apenas ninguém" e categoria nunca casavam e saem', () => {
@@ -521,7 +548,7 @@ describe('mapearTipificacao', () => {
       base({ ordens: [{ empresa: 'CBU', personalizada: false, linhas: [] }] }),
       cadastro,
     );
-    expect(r.tabelas.clientesTipificacao).toEqual([]);
+    expect(configs(r)).toEqual([]);
     expect(r.erros).toEqual([]);
   });
 

@@ -235,14 +235,21 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
       expect((await pedir(cookie, 'GET', '/faturamento/tipificacao/medicos')).status).toBe(403);
     });
 
-    it('com editar: linha fora do contrato é 400; a vazia salva (sem configuração própria)', async () => {
+    it('com editar: linha fora do contrato ou sem "vale a partir de" válido é 400; nada é gravado', async () => {
       const cookie = await entrarCom(['faturamento.ver', 'faturamento.tipificacao.editar']);
       const caminho = `/faturamento/clientes/${clienteId}/tipificacao`;
-      const ruim = { ...configuracao, linhas: [{ tipo: 'categoria', valores: [] }] };
+      const ruim = {
+        ...configuracao,
+        aPartirDe: '2099-01',
+        linhas: [{ tipo: 'categoria', valores: [] }],
+      };
       expect((await pedir(cookie, 'PUT', caminho, ruim)).status).toBe(400);
-      expect((await pedir(cookie, 'PUT', caminho, configuracao)).status).toBe(204);
+      expect((await pedir(cookie, 'PUT', caminho, configuracao)).status).toBe(400);
+      expect(
+        (await pedir(cookie, 'PUT', caminho, { ...configuracao, aPartirDe: '2026-13' })).status,
+      ).toBe(400);
       const lido = (await (await pedir(cookie, 'GET', caminho)).json()) as Record<string, unknown>;
-      expect(lido.configuracao).toBeNull();
+      expect(lido).toMatchObject({ configuracao: null, versoes: [] });
     });
   });
   describe('preços', () => {

@@ -4,7 +4,7 @@
 */
 
 import * as z from 'zod'
-import { dadosRegraTipificacaoDtoSchema } from './dadosRegraTipificacaoDtoSchema'
+import { criarRegraTipificacaoDtoSchema } from './criarRegraTipificacaoDtoSchema'
 import { idCriadoDtoSchema } from './idCriadoDtoSchema'
 
 export const tipificacaoControllerCriarRegraStatus201Schema = idCriadoDtoSchema
@@ -27,7 +27,7 @@ export const tipificacaoControllerCriarRegraErrorSchema = z.union([tipificacaoCo
 
 export type TipificacaoControllerCriarRegraErrorSchemaType = z.infer<typeof tipificacaoControllerCriarRegraErrorSchema>
 
-export const tipificacaoControllerCriarRegraBodySchema = dadosRegraTipificacaoDtoSchema
+export const tipificacaoControllerCriarRegraBodySchema = criarRegraTipificacaoDtoSchema
 
 export type TipificacaoControllerCriarRegraBodySchemaType = z.infer<typeof tipificacaoControllerCriarRegraBodySchema>
 

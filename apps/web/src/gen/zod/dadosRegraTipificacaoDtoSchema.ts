@@ -9,7 +9,6 @@ export const dadosRegraTipificacaoDtoSchema = z.object({
   nome: z.string().max(40).meta({ examples: ['NC'] }),
   descricao: z.string().max(500).nullable(),
   cor: z.string().nullable().describe('`#RRGGBB`.').meta({ examples: ['#dc2626'] }),
-  faturaSemSubregra: z.boolean().describe('O laudo que nenhuma linha casou, sem sub-regra, fatura.'),
   ativo: z.boolean(),
 })
 

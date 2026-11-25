@@ -5,7 +5,7 @@
 
 import type { LinhaTipificacaoDto } from './LinhaTipificacaoDto'
 
-export type ConfiguracaoTipificacaoRegistradaDto = {
+export type SalvarConfiguracaoTipificacaoDto = {
   /**
    * @description Vazio = a do principal (na unidade) ou a padrão.
    *
@@ -26,14 +26,10 @@ export type ConfiguracaoTipificacaoRegistradaDto = {
    */
   linhas: LinhaTipificacaoDto[];
   /**
-   * @description
-   * Format: `date-time`
+   * @description Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada.
+   * @pattern ^\d{4}-(0[1-9]|1[0-2])$
+   * @example 2026-12
    * @type string
    */
-  atualizadoEm: string;
-  /**
-   * @description Vazio na carga do dashboards-one.
-   * @type string
-   */
-  atualizadoPor: string | null;
+  aPartirDe: string;
 };

@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -76,6 +77,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../../drizzle') });
+    await runMigrations({ pgPool: pool });
     repo = new DrizzleLaudosRepository(db);
   });
 
@@ -234,14 +236,11 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
   it('grava a tipificação dos laudos da janela, só a que mudou, e nunca na competência bloqueada', async () => {
     const [co, nc] = await db
       .insert(schema.regrasTipificacao)
-      .values([
-        { nome: 'CO', faturaSemSubregra: true, padrao: true },
-        { nome: 'NC', faturaSemSubregra: false },
-      ])
+      .values([{ nome: 'CO', padrao: true }, { nome: 'NC' }])
       .returning();
     const [ncnf] = await db
       .insert(schema.subregrasTipificacao)
-      .values({ regraId: nc?.id ?? '', nome: 'NC-NF', fatura: false })
+      .values({ regraId: nc?.id ?? '', nome: 'NC-NF' })
       .returning();
     const CO: Tipificacao = { regraId: co?.id ?? '', subregraId: null, fatura: true };
     const NCNF = { regraId: nc?.id ?? '', subregraId: ncnf?.id ?? '', fatura: false };
@@ -596,7 +595,7 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     it('reclassificação: lê com a tipificação gravada e grava unidade e tipificação fora das bloqueadas', async () => {
       const [co] = await db
         .insert(schema.regrasTipificacao)
-        .values({ nome: 'CO', faturaSemSubregra: true, padrao: true })
+        .values({ nome: 'CO', padrao: true })
         .returning();
       const CO = { regraId: co?.id ?? '', subregraId: null, fatura: true };
       const identidades = await idsPorIdentidade();
@@ -632,6 +631,22 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
       const depois = new Map((await ler()).map((l) => [identidades.get(l.id), l]));
       expect(depois.get('x1')).toMatchObject({ unidadeId: clienteY, tipificacao: CO });
       expect(depois.get('x2')).toMatchObject({ unidadeId: null, tipificacao: null });
+    });
+
+    it('a competência que muda reclassifica a tipificação dos clientes desses laudos (a versão vale pela competência)', async () => {
+      await db.execute(sql`delete from graphile_worker._private_jobs`);
+      const [x1] = await db
+        .select()
+        .from(schema.laudos)
+        .where(sql`${schema.laudos.identidade} = 'x1'`);
+      await repo.atualizarCompetencias([{ id: x1?.id ?? '', competencia: '2026-11' }], agora);
+      const jobs = await db.execute<{ task: string; payload: unknown }>(
+        sql`select t.identifier task, j.payload from graphile_worker._private_jobs j
+          join graphile_worker._private_tasks t on t.id = j.task_id`,
+      );
+      expect(jobs.rows).toEqual([
+        { task: 'ingestao.reclassificar-tipificacao', payload: { clienteIds: [clienteX] } },
+      ]);
     });
 
     it('atualiza só a competência dos laudos indicados', async () => {

@@ -1,13 +1,15 @@
 import type {
-  clientesTipificacao,
   clientesTipificacaoLinhas,
   clientesTipificacaoLinhasEquipes,
   clientesTipificacaoLinhasEspecialidades,
   clientesTipificacaoLinhasMedicos,
   clientesTipificacaoLinhasModalidades,
   clientesTipificacaoLinhasPrioridades,
+  clientesTipificacaoVersoes,
   regrasTipificacao,
+  regrasTipificacaoFatura,
   subregrasTipificacao,
+  subregrasTipificacaoFatura,
 } from '../database/schema';
 import { montarResolvedorUnidadeCliente } from '../ingestao/domain/resolver-cliente';
 import { normalizarNomeMedico } from '../medicos/comum/nome-medico';
@@ -52,11 +54,18 @@ export interface CadastroParaTipificacao {
 type Tipo = 'modalidade' | 'especialidade' | 'prioridade';
 type Modo = 'todos' | 'apenas' | 'exceto';
 
+/** A versão inicial: o `vigencia_desde` (a primeira competência dos laudos) entra na gravação. */
+type SemDesde<T> = Omit<T, 'vigenciaDesde'> & { id: string };
+
 export interface TipificacaoMigrada {
   tabelas: {
     regrasTipificacao: (typeof regrasTipificacao.$inferInsert & { id: string })[];
     subregrasTipificacao: (typeof subregrasTipificacao.$inferInsert & { id: string })[];
-    clientesTipificacao: (typeof clientesTipificacao.$inferInsert)[];
+    /** O "fatura sem sub-regra" e o "fatura" de hoje, como versão inicial. */
+    regrasTipificacaoFatura: SemDesde<typeof regrasTipificacaoFatura.$inferInsert>[];
+    subregrasTipificacaoFatura: SemDesde<typeof subregrasTipificacaoFatura.$inferInsert>[];
+    /** A configuração de hoje de cada cliente ou unidade, como versão inicial. */
+    clientesTipificacaoVersoes: SemDesde<typeof clientesTipificacaoVersoes.$inferInsert>[];
     clientesTipificacaoLinhas: (typeof clientesTipificacaoLinhas.$inferInsert & {
       id: string;
       tipo: Tipo;
@@ -169,6 +178,8 @@ export function mapearTipificacao(
     avisos.push({ tabela, item, motivo });
 
   const regraId = (id: string) => idDoLegado('regras_categorias', id);
+  /** Uma versão inicial por cliente ou unidade, com id estável (a carga de novo dá o mesmo). */
+  const versaoDe = (clienteId: string) => idDoLegado('clientes_tipificacao_versoes', clienteId);
   const subId = (id: string) => idDoLegado('sub_regras', id);
   const nomeRegra = new Map(legado.regras.map((r) => [r.id, r.nome]));
   const subsLegado = new Set(legado.subRegras.map((s) => s.id));
@@ -180,17 +191,27 @@ export function mapearTipificacao(
     cor: texto(r.cor),
     ordem: r.ordem,
     ativo: r.ativo,
-    faturaSemSubregra: chaveCadastro(r.nome) !== REGRA_QUE_NAO_FATURA_SEM_SUBREGRA,
     padrao: chaveCadastro(r.nome) === REGRA_PADRAO,
+  }));
+  const tabFaturaRegras = legado.regras.map((r) => ({
+    id: idDoLegado('regras_tipificacao_fatura', r.id),
+    regraId: regraId(r.id),
+    faturaSemSubregra: chaveCadastro(r.nome) !== REGRA_QUE_NAO_FATURA_SEM_SUBREGRA,
+    criadoPorId: null,
   }));
   const tabSubregras = legado.subRegras.map((s) => ({
     id: subId(s.id),
     regraId: regraId(s.regraId),
     nome: s.nome.trim(),
     descricao: texto(s.descricao),
-    fatura: s.fatura,
     ordem: s.ordem,
     ativo: s.ativo,
+  }));
+  const tabFaturaSubs = legado.subRegras.map((s) => ({
+    id: idDoLegado('subregras_tipificacao_fatura', s.id),
+    subregraId: subId(s.id),
+    fatura: s.fatura,
+    criadoPorId: null,
   }));
 
   // Resolvedores do cadastro do redo-one.
@@ -294,7 +315,9 @@ export function mapearTipificacao(
   const tabelas: TipificacaoMigrada['tabelas'] = {
     regrasTipificacao: tabRegras,
     subregrasTipificacao: tabSubregras,
-    clientesTipificacao: [],
+    regrasTipificacaoFatura: tabFaturaRegras,
+    subregrasTipificacaoFatura: tabFaturaSubs,
+    clientesTipificacaoVersoes: [],
     clientesTipificacaoLinhas: [],
     clientesTipificacaoLinhasModalidades: [],
     clientesTipificacaoLinhasEspecialidades: [],
@@ -507,12 +530,13 @@ export function mapearTipificacao(
     erros.push(...cfg.erros);
     if (cfg.erros.length || vazia(cfg)) continue;
 
+    const versaoId = versaoDe(clienteId);
     cfg.linhas.forEach((l, i) => {
       const ordemLinha = i + 1;
       const id = idDoLegado('tipificacao_linha', `${clienteId}:${ordemLinha}`);
       tabelas.clientesTipificacaoLinhas.push({
         id,
-        clienteId,
+        versaoId,
         ordem: ordemLinha,
         tipo: l.tipo,
         modoMedico: l.modo,
@@ -530,11 +554,12 @@ export function mapearTipificacao(
       for (const e of l.equipes)
         tabelas.clientesTipificacaoLinhasEquipes.push({ linhaId: id, equipeId: e });
     });
-    tabelas.clientesTipificacao.push({
+    tabelas.clientesTipificacaoVersoes.push({
+      id: versaoId,
       clienteId,
       regraId: cfg.regraId,
       subregraDemaisId: cfg.demaisId,
-      atualizadoPorId: null,
+      criadoPorId: null,
     });
   }
 
@@ -542,8 +567,15 @@ export function mapearTipificacao(
   // redo-one, seguiria a do principal: quando ela não é a padrão, a unidade ganha a padrão
   // explícita. Unidade com linhas e sem regra principal também fica na padrão (não herda).
   const padraoId = tabRegras.find((r) => r.padrao)?.id ?? null;
-  const configPorCliente = new Map(tabelas.clientesTipificacao.map((c) => [c.clienteId, c]));
-  const comLinhas = new Set(tabelas.clientesTipificacaoLinhas.map((l) => l.clienteId));
+  const configPorCliente = new Map(tabelas.clientesTipificacaoVersoes.map((c) => [c.clienteId, c]));
+  const comLinhas = new Set(
+    tabelas.clientesTipificacaoLinhas
+      .map((l) => l.versaoId)
+      .flatMap((v) => {
+        const c = tabelas.clientesTipificacaoVersoes.find((x) => x.id === v);
+        return c ? [c.clienteId] : [];
+      }),
+  );
   const foraDaPadrao = (id: string) => {
     const c = configPorCliente.get(id);
     return Boolean(
@@ -559,11 +591,12 @@ export function mapearTipificacao(
       continue;
     }
     if (!foraDaPadrao(cl.unificadoEmId)) continue;
-    tabelas.clientesTipificacao.push({
+    tabelas.clientesTipificacaoVersoes.push({
+      id: versaoDe(cl.id),
       clienteId: cl.id,
       regraId: padraoId,
       subregraDemaisId: null,
-      atualizadoPorId: null,
+      criadoPorId: null,
     });
     unidadesComCoExplicita += 1;
     avisar(

@@ -4,7 +4,7 @@
 */
 
 import * as z from 'zod'
-import { configuracaoTipificacaoDtoSchema } from './configuracaoTipificacaoDtoSchema'
+import { salvarConfiguracaoTipificacaoDtoSchema } from './salvarConfiguracaoTipificacaoDtoSchema'
 
 export const tipificacaoClienteControllerSalvarPathClienteIdSchema = z.string()
 
@@ -22,15 +22,19 @@ export const tipificacaoClienteControllerSalvarStatus404Schema = z.unknown()
 
 export type TipificacaoClienteControllerSalvarStatus404SchemaType = z.infer<typeof tipificacaoClienteControllerSalvarStatus404Schema>
 
+export const tipificacaoClienteControllerSalvarStatus409Schema = z.unknown()
+
+export type TipificacaoClienteControllerSalvarStatus409SchemaType = z.infer<typeof tipificacaoClienteControllerSalvarStatus409Schema>
+
 export const tipificacaoClienteControllerSalvarResponseSchema = tipificacaoClienteControllerSalvarStatus204Schema
 
 export type TipificacaoClienteControllerSalvarResponseSchemaType = z.infer<typeof tipificacaoClienteControllerSalvarResponseSchema>
 
-export const tipificacaoClienteControllerSalvarErrorSchema = z.union([tipificacaoClienteControllerSalvarStatus400Schema, tipificacaoClienteControllerSalvarStatus404Schema])
+export const tipificacaoClienteControllerSalvarErrorSchema = z.union([tipificacaoClienteControllerSalvarStatus400Schema, tipificacaoClienteControllerSalvarStatus404Schema, tipificacaoClienteControllerSalvarStatus409Schema])
 
 export type TipificacaoClienteControllerSalvarErrorSchemaType = z.infer<typeof tipificacaoClienteControllerSalvarErrorSchema>
 
-export const tipificacaoClienteControllerSalvarBodySchema = configuracaoTipificacaoDtoSchema
+export const tipificacaoClienteControllerSalvarBodySchema = salvarConfiguracaoTipificacaoDtoSchema
 
 export type TipificacaoClienteControllerSalvarBodySchemaType = z.infer<typeof tipificacaoClienteControllerSalvarBodySchema>
 
@@ -53,6 +57,7 @@ export const tipificacaoClienteControllerSalvarResponsesSchema = z.object({
   '204': tipificacaoClienteControllerSalvarStatus204Schema,
   '400': tipificacaoClienteControllerSalvarStatus400Schema,
   '404': tipificacaoClienteControllerSalvarStatus404Schema,
+  '409': tipificacaoClienteControllerSalvarStatus409Schema,
 })
 
 export type TipificacaoClienteControllerSalvarResponsesSchemaType = z.infer<typeof tipificacaoClienteControllerSalvarResponsesSchema>

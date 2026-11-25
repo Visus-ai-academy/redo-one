@@ -9,7 +9,6 @@ export const dadosSubregraTipificacaoDtoSchema = z.object({
   regraId: z.uuid(),
   nome: z.string().max(40).meta({ examples: ['NC-NF'] }),
   descricao: z.string().max(500).nullable(),
-  fatura: z.boolean().describe('O laudo nesta sub-regra fatura.'),
   ativo: z.boolean(),
 })
 

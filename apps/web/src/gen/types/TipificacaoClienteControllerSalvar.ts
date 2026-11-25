@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { ConfiguracaoTipificacaoDto } from './ConfiguracaoTipificacaoDto'
+import type { SalvarConfiguracaoTipificacaoDto } from './SalvarConfiguracaoTipificacaoDto'
 
 export type TipificacaoClienteControllerSalvarPath = {
   clienteId: string;
@@ -15,7 +15,9 @@ export type TipificacaoClienteControllerSalvarStatus400 = unknown;
 
 export type TipificacaoClienteControllerSalvarStatus404 = unknown;
 
-export type TipificacaoClienteControllerSalvarBody = ConfiguracaoTipificacaoDto;
+export type TipificacaoClienteControllerSalvarStatus409 = unknown;
+
+export type TipificacaoClienteControllerSalvarBody = SalvarConfiguracaoTipificacaoDto;
 
 export type TipificacaoClienteControllerSalvarOptions = {
   body: TipificacaoClienteControllerSalvarBody;
@@ -28,6 +30,7 @@ export type TipificacaoClienteControllerSalvarResponses = {
   '204': TipificacaoClienteControllerSalvarStatus204;
   '400': TipificacaoClienteControllerSalvarStatus400;
   '404': TipificacaoClienteControllerSalvarStatus404;
+  '409': TipificacaoClienteControllerSalvarStatus409;
 };
 
 /**

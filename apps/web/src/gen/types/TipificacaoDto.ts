@@ -7,6 +7,21 @@ import type { RegraTipificacaoDto } from './RegraTipificacaoDto'
 import type { SubregraTipificacaoDto } from './SubregraTipificacaoDto'
 
 export type TipificacaoDto = {
+  /**
+   * @example 2026-11
+   * @type string
+   */
+  mesAtual: string;
+  /**
+   * @description Primeira competência em que uma mudança pode valer.
+   * @type string
+   */
+  aPartirDeMinimo: string;
+  /**
+   * @description A próxima competência (a sugerida no "Vale a partir de").
+   * @type string
+   */
+  aPartirDeSugerido: string;
   regras: RegraTipificacaoDto[];
   subregras: SubregraTipificacaoDto[];
 };

@@ -442,6 +442,34 @@
       "when": 1795613132091,
       "tag": "0062_recolhimento_sem_coluna_lista",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1795613564413,
+      "tag": "0063_tipificacao_vigencias",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1795613572293,
+      "tag": "0064_tipificacao_vigencias_dados",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1795613621921,
+      "tag": "0065_tipificacao_linhas_por_versao",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1795613626335,
+      "tag": "0066_tipificacao_sem_configuracao_antiga",
+      "breakpoints": true
     }
   ]
 }

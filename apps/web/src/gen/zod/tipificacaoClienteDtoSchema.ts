@@ -5,15 +5,20 @@
 
 import * as z from 'zod'
 import { clienteTipificacaoDtoSchema } from './clienteTipificacaoDtoSchema'
-import { configuracaoTipificacaoRegistradaDtoSchema } from './configuracaoTipificacaoRegistradaDtoSchema'
+import { configuracaoTipificacaoDtoSchema } from './configuracaoTipificacaoDtoSchema'
 import { nomeDtoSchema } from './nomeDtoSchema'
+import { versaoConfiguracaoTipificacaoDtoSchema } from './versaoConfiguracaoTipificacaoDtoSchema'
 
 export const tipificacaoClienteDtoSchema = z.object({
+  mesAtual: z.string().meta({ examples: ['2026-11'] }),
+  aPartirDeMinimo: z.string().describe('Primeira competência em que uma mudança pode valer.'),
+  aPartirDeSugerido: z.string().describe('A próxima competência (a sugerida no "Vale a partir de").'),
   cliente: clienteTipificacaoDtoSchema,
-  configuracao: configuracaoTipificacaoRegistradaDtoSchema.nullable().describe('Vazia = segue a do principal (na unidade) ou a padrão.'),
-  doPrincipal: configuracaoTipificacaoRegistradaDtoSchema.nullable().describe('Só na unidade: a do principal.'),
+  configuracao: configuracaoTipificacaoDtoSchema.nullable().describe('A própria em vigor no mês atual. Vazia = segue a do principal (na unidade) ou a padrão.'),
+  doPrincipal: configuracaoTipificacaoDtoSchema.nullable().describe('Só na unidade: a do principal em vigor.'),
+  versoes: z.array(versaoConfiguracaoTipificacaoDtoSchema).describe('Histórico de vigências, da mais nova para a mais antiga.'),
   regraPadraoId: z.uuid().nullable(),
-  medicos: z.array(nomeDtoSchema).describe('Nome dos médicos citados nas linhas.'),
+  medicos: z.array(nomeDtoSchema).describe('Nome dos médicos citados nas linhas (de todas as versões).'),
 })
 
 export type TipificacaoClienteDtoSchemaType = z.infer<typeof tipificacaoClienteDtoSchema>

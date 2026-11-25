@@ -39,8 +39,10 @@ import {
   BuscarMedicosTipificacao,
   ListarOpcoesTipificacao,
   ListarTipificacao,
+  MudarFaturaTipificacao,
   ObterTipificacaoCliente,
   PreviaTipificacaoCliente,
+  RemoverVersaoTipificacaoCliente,
   SalvarRegraTipificacao,
   SalvarSubregraTipificacao,
   SalvarTipificacaoCliente,
@@ -104,39 +106,46 @@ const ACOES_COMPETENCIA = [
     },
     {
       provide: ListarTipificacao,
-      inject: [TIPIFICACAO_REPOSITORY],
-      useFactory: (repo: TipificacaoRepository) => new ListarTipificacao(repo),
+      inject: [TIPIFICACAO_REPOSITORY, COMPETENCIAS_REPOSITORY],
+      useFactory: (repo: TipificacaoRepository, competencias: CompetenciasRepository) =>
+        new ListarTipificacao(repo, competencias, agora),
     },
-    {
-      provide: SalvarTipificacaoCliente,
-      inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS, AUDITORIA],
-      useFactory: (repo: TipificacaoRepository, equipes: EquipesMedicos, auditoria: Auditoria) =>
-        new SalvarTipificacaoCliente(repo, equipes, auditoria, agora),
-    },
+    ...[SalvarTipificacaoCliente, ObterTipificacaoCliente, PreviaTipificacaoCliente].map(
+      (Caso) => ({
+        provide: Caso,
+        inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS, COMPETENCIAS_REPOSITORY],
+        useFactory: (
+          repo: TipificacaoRepository,
+          equipes: EquipesMedicos,
+          competencias: CompetenciasRepository,
+        ) => new Caso(repo, equipes, competencias, agora),
+      }),
+    ),
     ...[SalvarRegraTipificacao, SalvarSubregraTipificacao].map((Caso) => ({
       provide: Caso,
-      inject: [TIPIFICACAO_REPOSITORY, AUDITORIA],
-      useFactory: (repo: TipificacaoRepository, auditoria: Auditoria) =>
-        new Caso(repo, auditoria, agora),
+      inject: [TIPIFICACAO_REPOSITORY, AUDITORIA, COMPETENCIAS_REPOSITORY],
+      useFactory: (
+        repo: TipificacaoRepository,
+        auditoria: Auditoria,
+        competencias: CompetenciasRepository,
+      ) => new Caso(repo, auditoria, competencias, agora),
     })),
-    ...[ListarOpcoesTipificacao, ObterTipificacaoCliente].map((Caso) => ({
+    ...[MudarFaturaTipificacao, RemoverVersaoTipificacaoCliente].map((Caso) => ({
       provide: Caso,
-      inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS],
-      useFactory: (repo: TipificacaoRepository, equipes: EquipesMedicos) => new Caso(repo, equipes),
+      inject: [TIPIFICACAO_REPOSITORY, COMPETENCIAS_REPOSITORY],
+      useFactory: (repo: TipificacaoRepository, competencias: CompetenciasRepository) =>
+        new Caso(repo, competencias, agora),
     })),
+    {
+      provide: ListarOpcoesTipificacao,
+      inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS],
+      useFactory: (repo: TipificacaoRepository, equipes: EquipesMedicos) =>
+        new ListarOpcoesTipificacao(repo, equipes),
+    },
     {
       provide: BuscarMedicosTipificacao,
       inject: [EQUIPES_MEDICOS],
       useFactory: (equipes: EquipesMedicos) => new BuscarMedicosTipificacao(equipes),
-    },
-    {
-      provide: PreviaTipificacaoCliente,
-      inject: [TIPIFICACAO_REPOSITORY, EQUIPES_MEDICOS, COMPETENCIAS_REPOSITORY],
-      useFactory: (
-        repo: TipificacaoRepository,
-        equipes: EquipesMedicos,
-        competencias: CompetenciasRepository,
-      ) => new PreviaTipificacaoCliente(repo, equipes, competencias),
     },
     {
       provide: ListarCompetencias,

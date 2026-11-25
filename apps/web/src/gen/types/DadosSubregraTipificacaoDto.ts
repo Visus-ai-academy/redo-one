@@ -21,10 +21,5 @@ export type DadosSubregraTipificacaoDto = {
    * @type string
    */
   descricao: string | null;
-  /**
-   * @description O laudo nesta sub-regra fatura.
-   * @type boolean
-   */
-  fatura: boolean;
   ativo: boolean;
 };

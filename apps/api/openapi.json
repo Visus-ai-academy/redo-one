@@ -7348,7 +7348,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DadosRegraTipificacaoDto"
+                "$ref": "#/components/schemas/CriarRegraTipificacaoDto"
               }
             }
           }
@@ -7427,7 +7427,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DadosSubregraTipificacaoDto"
+                "$ref": "#/components/schemas/CriarSubregraTipificacaoDto"
               }
             }
           }
@@ -7497,6 +7497,112 @@
         ]
       }
     },
+    "/faturamento/tipificacao/{tipo}/{id}/fatura": {
+      "post": {
+        "operationId": "TipificacaoController_mudarFatura",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "regras",
+                "subregras"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarFaturaTipificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Nova versão do \"fatura\" (sub-regra) ou do \"fatura sem sub-regra\" (regra); a anterior é encerrada na competência anterior. Salvo; a reclassificação das competências abertas vai para a fila."
+          },
+          "400": {
+            "description": "Competência fechada, travada ou anterior a uma delas, ou nada mudou em relação ao que vale nela."
+          },
+          "404": {
+            "description": "Regra ou sub-regra não encontrada."
+          },
+          "409": {
+            "description": "Outra pessoa mudou as versões ao mesmo tempo: recarregue."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/tipificacao/{tipo}/{id}/fatura/{versaoId}": {
+      "delete": {
+        "operationId": "TipificacaoController_removerFatura",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "regras",
+                "subregras"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Versão programada apagada; a anterior volta a valer até onde ela ia. Salvo; a reclassificação das competências abertas vai para a fila."
+          },
+          "400": {
+            "description": "Só a versão programada que nunca valeu pode ser apagada."
+          },
+          "404": {
+            "description": "Regra, sub-regra ou versão não encontrada."
+          },
+          "409": {
+            "description": "Outra pessoa mudou as versões ao mesmo tempo: recarregue."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/faturamento/clientes/{clienteId}/tipificacao": {
       "get": {
         "operationId": "TipificacaoClienteController_obter",
@@ -7546,20 +7652,63 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+                "$ref": "#/components/schemas/SalvarConfiguracaoTipificacaoDto"
               }
             }
           }
         },
         "responses": {
           "204": {
-            "description": "Salvo; a reclassificação das competências abertas vai para a fila. Vazia (sem regra, linhas nem \"todos os demais\") apaga a configuração."
+            "description": "Nova versão a partir de `aPartirDe`; a anterior é encerrada na competência anterior. Vazia (sem regra, linhas nem \"todos os demais\") volta a herdar. Salvo; a reclassificação das competências abertas vai para a fila."
           },
           "400": {
-            "description": "Linha sem valores, \"apenas\"/\"exceto\" sem médico nem equipe, ou regra/sub-regra inexistente."
+            "description": "Linha sem valores, \"apenas\"/\"exceto\" sem médico nem equipe, ou regra/sub-regra inexistente. Competência fechada, travada ou anterior a uma delas, ou nada mudou em relação ao que vale nela."
           },
           "404": {
             "description": "Cliente não encontrado."
+          },
+          "409": {
+            "description": "Outra pessoa mudou as versões ao mesmo tempo: recarregue."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/clientes/{clienteId}/tipificacao/versoes/{versaoId}": {
+      "delete": {
+        "operationId": "TipificacaoClienteController_removerVersao",
+        "parameters": [
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versaoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Versão programada apagada; a anterior volta a valer até onde ela ia. Salvo; a reclassificação das competências abertas vai para a fila."
+          },
+          "400": {
+            "description": "Só a versão programada que nunca valeu pode ser apagada."
+          },
+          "404": {
+            "description": "Cliente ou versão não encontrada."
+          },
+          "409": {
+            "description": "Outra pessoa mudou as versões ao mesmo tempo: recarregue."
           }
         },
         "tags": [
@@ -7585,14 +7734,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+                "$ref": "#/components/schemas/SalvarConfiguracaoTipificacaoDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Laudos e volume das competências abertas em cada resultado, com a configuração gravada e com a nova, sem gravar.",
+            "description": "Laudos e volume das competências abertas em cada resultado, com as versões gravadas e com a nova (a partir de `aPartirDe`), sem gravar.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7605,7 +7754,7 @@
             }
           },
           "400": {
-            "description": "Linha sem valores, \"apenas\"/\"exceto\" sem médico nem equipe, ou regra/sub-regra inexistente."
+            "description": "Linha sem valores, \"apenas\"/\"exceto\" sem médico nem equipe, ou regra/sub-regra inexistente. Competência fechada, travada ou anterior a uma delas, ou nada mudou em relação ao que vale nela."
           },
           "404": {
             "description": "Cliente não encontrado."
@@ -16715,6 +16864,55 @@
           "exclusaoFiscal"
         ]
       },
+      "VersaoFaturaTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true,
+            "description": "Inclusiva; vazia = sem fim."
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "valor": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "criadoPor",
+          "criadoEm",
+          "encerradoPor",
+          "encerradoEm",
+          "valor"
+        ]
+      },
       "RegraTipificacaoDto": {
         "type": "object",
         "properties": {
@@ -16734,10 +16932,6 @@
             "example": "#dc2626",
             "description": "`#RRGGBB`."
           },
-          "faturaSemSubregra": {
-            "type": "boolean",
-            "description": "O laudo que nenhuma linha casou, sem sub-regra, fatura."
-          },
           "ativo": {
             "type": "boolean"
           },
@@ -16754,19 +16948,31 @@
           },
           "clientes": {
             "type": "number",
-            "description": "Clientes e unidades com esta regra principal."
+            "description": "Clientes e unidades com esta regra principal (em vigor ou programada)."
+          },
+          "faturaSemSubregra": {
+            "type": "boolean",
+            "description": "O \"fatura sem sub-regra\" em vigor no mês atual."
+          },
+          "versoes": {
+            "description": "Da mais nova para a mais antiga.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersaoFaturaTipificacaoDto"
+            }
           }
         },
         "required": [
           "nome",
           "descricao",
           "cor",
-          "faturaSemSubregra",
           "ativo",
           "id",
           "ordem",
           "padrao",
-          "clientes"
+          "clientes",
+          "faturaSemSubregra",
+          "versoes"
         ]
       },
       "SubregraTipificacaoDto": {
@@ -16786,10 +16992,6 @@
             "nullable": true,
             "maxLength": 500
           },
-          "fatura": {
-            "type": "boolean",
-            "description": "O laudo nesta sub-regra fatura."
-          },
           "ativo": {
             "type": "boolean"
           },
@@ -16802,23 +17004,47 @@
           },
           "clientes": {
             "type": "number",
-            "description": "Clientes e unidades que usam a sub-regra."
+            "description": "Clientes e unidades que usam a sub-regra (em vigor ou programada)."
+          },
+          "fatura": {
+            "type": "boolean",
+            "description": "O \"fatura\" em vigor no mês atual."
+          },
+          "versoes": {
+            "description": "Da mais nova para a mais antiga.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersaoFaturaTipificacaoDto"
+            }
           }
         },
         "required": [
           "regraId",
           "nome",
           "descricao",
-          "fatura",
           "ativo",
           "id",
           "ordem",
-          "clientes"
+          "clientes",
+          "fatura",
+          "versoes"
         ]
       },
       "TipificacaoDto": {
         "type": "object",
         "properties": {
+          "mesAtual": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "aPartirDeMinimo": {
+            "type": "string",
+            "description": "Primeira competência em que uma mudança pode valer."
+          },
+          "aPartirDeSugerido": {
+            "type": "string",
+            "description": "A próxima competência (a sugerida no \"Vale a partir de\")."
+          },
           "regras": {
             "type": "array",
             "items": {
@@ -16833,6 +17059,9 @@
           }
         },
         "required": [
+          "mesAtual",
+          "aPartirDeMinimo",
+          "aPartirDeSugerido",
           "regras",
           "subregras"
         ]
@@ -16909,6 +17138,41 @@
           "nome"
         ]
       },
+      "CriarRegraTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "NC"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#dc2626",
+            "description": "`#RRGGBB`."
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "faturaSemSubregra": {
+            "type": "boolean",
+            "description": "O laudo que nenhuma linha casou, sem sub-regra, fatura. Vale desde a primeira competência aberta; depois muda por versão."
+          }
+        },
+        "required": [
+          "nome",
+          "descricao",
+          "cor",
+          "ativo",
+          "faturaSemSubregra"
+        ]
+      },
       "DadosRegraTipificacaoDto": {
         "type": "object",
         "properties": {
@@ -16928,10 +17192,6 @@
             "example": "#dc2626",
             "description": "`#RRGGBB`."
           },
-          "faturaSemSubregra": {
-            "type": "boolean",
-            "description": "O laudo que nenhuma linha casou, sem sub-regra, fatura."
-          },
           "ativo": {
             "type": "boolean"
           }
@@ -16940,8 +17200,40 @@
           "nome",
           "descricao",
           "cor",
-          "faturaSemSubregra",
           "ativo"
+        ]
+      },
+      "CriarSubregraTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "regraId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "NC-NF"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "fatura": {
+            "type": "boolean",
+            "description": "O laudo nesta sub-regra fatura. Vale desde a primeira competência aberta; depois muda por versão."
+          }
+        },
+        "required": [
+          "regraId",
+          "nome",
+          "descricao",
+          "ativo",
+          "fatura"
         ]
       },
       "DadosSubregraTipificacaoDto": {
@@ -16961,10 +17253,6 @@
             "nullable": true,
             "maxLength": 500
           },
-          "fatura": {
-            "type": "boolean",
-            "description": "O laudo nesta sub-regra fatura."
-          },
           "ativo": {
             "type": "boolean"
           }
@@ -16973,8 +17261,25 @@
           "regraId",
           "nome",
           "descricao",
-          "fatura",
           "ativo"
+        ]
+      },
+      "MudarFaturaTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "fatura": {
+            "type": "boolean"
+          },
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "fatura",
+          "aPartirDe"
         ]
       },
       "ClienteTipificacaoDto": {
@@ -17062,93 +17367,6 @@
           "subregraId"
         ]
       },
-      "ConfiguracaoTipificacaoRegistradaDto": {
-        "type": "object",
-        "properties": {
-          "regraId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Vazio = a do principal (na unidade) ou a padrão."
-          },
-          "subregraDemaisId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "\"Todos os demais\"."
-          },
-          "linhas": {
-            "description": "Vale a primeira que casar.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LinhaTipificacaoDto"
-            }
-          },
-          "atualizadoEm": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "atualizadoPor": {
-            "type": "string",
-            "nullable": true,
-            "description": "Vazio na carga do dashboards-one."
-          }
-        },
-        "required": [
-          "regraId",
-          "subregraDemaisId",
-          "linhas",
-          "atualizadoEm",
-          "atualizadoPor"
-        ]
-      },
-      "TipificacaoClienteDto": {
-        "type": "object",
-        "properties": {
-          "cliente": {
-            "$ref": "#/components/schemas/ClienteTipificacaoDto"
-          },
-          "configuracao": {
-            "nullable": true,
-            "description": "Vazia = segue a do principal (na unidade) ou a padrão.",
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ConfiguracaoTipificacaoRegistradaDto"
-              }
-            ]
-          },
-          "doPrincipal": {
-            "nullable": true,
-            "description": "Só na unidade: a do principal.",
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ConfiguracaoTipificacaoRegistradaDto"
-              }
-            ]
-          },
-          "regraPadraoId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "medicos": {
-            "description": "Nome dos médicos citados nas linhas.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NomeDto"
-            }
-          }
-        },
-        "required": [
-          "cliente",
-          "configuracao",
-          "doPrincipal",
-          "regraPadraoId",
-          "medicos"
-        ]
-      },
       "ConfiguracaoTipificacaoDto": {
         "type": "object",
         "properties": {
@@ -17176,6 +17394,166 @@
           "regraId",
           "subregraDemaisId",
           "linhas"
+        ]
+      },
+      "VersaoConfiguracaoTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true,
+            "description": "Inclusiva; vazia = sem fim."
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "configuracao": {
+            "description": "Vazia (sem regra, linhas nem \"todos os demais\") = segue a do principal ou a padrão.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "criadoPor",
+          "criadoEm",
+          "encerradoPor",
+          "encerradoEm",
+          "configuracao"
+        ]
+      },
+      "TipificacaoClienteDto": {
+        "type": "object",
+        "properties": {
+          "mesAtual": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "aPartirDeMinimo": {
+            "type": "string",
+            "description": "Primeira competência em que uma mudança pode valer."
+          },
+          "aPartirDeSugerido": {
+            "type": "string",
+            "description": "A próxima competência (a sugerida no \"Vale a partir de\")."
+          },
+          "cliente": {
+            "$ref": "#/components/schemas/ClienteTipificacaoDto"
+          },
+          "configuracao": {
+            "nullable": true,
+            "description": "A própria em vigor no mês atual. Vazia = segue a do principal (na unidade) ou a padrão.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+              }
+            ]
+          },
+          "doPrincipal": {
+            "nullable": true,
+            "description": "Só na unidade: a do principal em vigor.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConfiguracaoTipificacaoDto"
+              }
+            ]
+          },
+          "versoes": {
+            "description": "Histórico de vigências, da mais nova para a mais antiga.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersaoConfiguracaoTipificacaoDto"
+            }
+          },
+          "regraPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "medicos": {
+            "description": "Nome dos médicos citados nas linhas (de todas as versões).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NomeDto"
+            }
+          }
+        },
+        "required": [
+          "mesAtual",
+          "aPartirDeMinimo",
+          "aPartirDeSugerido",
+          "cliente",
+          "configuracao",
+          "doPrincipal",
+          "versoes",
+          "regraPadraoId",
+          "medicos"
+        ]
+      },
+      "SalvarConfiguracaoTipificacaoDto": {
+        "type": "object",
+        "properties": {
+          "regraId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Vazio = a do principal (na unidade) ou a padrão."
+          },
+          "subregraDemaisId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "\"Todos os demais\"."
+          },
+          "linhas": {
+            "description": "Vale a primeira que casar.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaTipificacaoDto"
+            }
+          },
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "regraId",
+          "subregraDemaisId",
+          "linhas",
+          "aPartirDe"
         ]
       },
       "ContagemPreviaDto": {

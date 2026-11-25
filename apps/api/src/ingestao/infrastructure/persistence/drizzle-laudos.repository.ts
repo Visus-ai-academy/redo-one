@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, between, eq, getTableColumns, gt, inArray, notInArray, sql } from 'drizzle-orm';
-
 import { DATABASE, type Database } from '../../../database/database';
 import {
   classificacoesLaudo,
@@ -21,6 +20,7 @@ import type {
 } from '../../application/ports/laudos.repository';
 import type { LaudoExistente } from '../../domain/planejar-importacao';
 import type { LaudoPreparado } from '../../domain/preparar-laudo';
+import { enfileirarReclassificacaoTipificacao } from '../jobs/enfileirar-reclassificacao-tipificacao';
 
 /** Linhas por comando (o Postgres aceita até 65 mil parâmetros; o laudo tem ~35 colunas). */
 const LOTE = 500;
@@ -323,11 +323,22 @@ export class DrizzleLaudosRepository implements LaudosRepository {
         lote.map(({ id, competencia }) => sql`(${id}::uuid, ${competencia}::text)`),
         sql`, `,
       );
-      await this.db.execute(sql`
-        update ${laudos} set competencia = v.competencia, atualizado_em = ${agora}
-        from (values ${valores}) as v(id, competencia)
-        where ${laudos.id} = v.id
-      `);
+      await this.db.transaction(async (tx) => {
+        const r = await tx.execute<{ cliente_id: string | null }>(sql`
+          update ${laudos} set competencia = v.competencia, atualizado_em = ${agora}
+          from (values ${valores}) as v(id, competencia)
+          where ${laudos.id} = v.id
+          returning ${laudos.clienteId} cliente_id
+        `);
+        // A tipificação vale pela versão da competência do laudo: a competência nova pode ter
+        // outra. Os laudos sem cliente seguem a regra padrão, que também tem versões.
+        const clientes = r.rows.map((l) => l.cliente_id);
+        if (clientes.length)
+          await enfileirarReclassificacaoTipificacao(
+            tx,
+            clientes.includes(null) ? null : (clientes as string[]),
+          );
+      });
     }
   }
 }

@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { DadosRegraTipificacaoDto } from './DadosRegraTipificacaoDto'
+import type { CriarRegraTipificacaoDto } from './CriarRegraTipificacaoDto'
 import type { IdCriadoDto } from './IdCriadoDto'
 
 export type TipificacaoControllerCriarRegraStatus201 = IdCriadoDto;
@@ -12,7 +12,7 @@ export type TipificacaoControllerCriarRegraStatus400 = unknown;
 
 export type TipificacaoControllerCriarRegraStatus409 = unknown;
 
-export type TipificacaoControllerCriarRegraBody = DadosRegraTipificacaoDto;
+export type TipificacaoControllerCriarRegraBody = CriarRegraTipificacaoDto;
 
 export type TipificacaoControllerCriarRegraOptions = {
   body: TipificacaoControllerCriarRegraBody;

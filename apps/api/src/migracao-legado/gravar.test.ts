@@ -20,6 +20,7 @@ import {
   ausenciasSumidasDoLegado,
   gravarMigracao,
   precosComHistoriaNoRedo,
+  tipificacaoComHistoriaNoRedo,
 } from './gravar';
 import type { LegadoCatalogo } from './legado';
 import { mapearCatalogo } from './mapear-catalogo';
@@ -232,7 +233,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias, regras_tipificacao, subregras_tipificacao, precos_cliente, precos_padrao_contratado, categorias_exame, prioridades cascade`,
+      sql`truncate table configuracao_distribuicao, regras_frente, prioridades_cliente, prioridades_operacao, arranjos, medicos_distribuicao, clientes, contratados, exames, modalidades, especialidades, medicos, equipes, turnos, frentes_escala, tipos_ausencia, eventos_auditoria, competencias, regras_tipificacao, subregras_tipificacao, usuarios, precos_cliente, precos_padrao_contratado, categorias_exame, prioridades cascade`,
     );
   });
 
@@ -410,7 +411,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(await ler()).toEqual(primeira);
   });
 
-  it('grava a tipificação; rodar de novo troca as linhas do cliente da carga e mantém a do cliente fora dela', async () => {
+  it('grava a tipificação como versão inicial; rodar de novo troca a da carga e não mexe na história do redo-one', async () => {
     const tipificacao = mapearTipificacao(
       {
         regras: [
@@ -486,15 +487,21 @@ describe.skipIf(!url)('gravarMigracao', () => {
             (select count(*)::int from clientes_tipificacao_linhas_modalidades x where x.linha_id = l.id) mods,
             (select count(*)::int from clientes_tipificacao_linhas_medicos x where x.linha_id = l.id) meds,
             (select count(*)::int from clientes_tipificacao_linhas_equipes x where x.linha_id = l.id) eqs
-          from clientes_tipificacao t join clientes c on c.id = t.cliente_id
+            , t.vigencia_desde desde, t.vigencia_ate ate
+          from clientes_tipificacao_versoes t join clientes c on c.id = t.cliente_id
           left join regras_tipificacao r on r.id = t.regra_id
           left join subregras_tipificacao d on d.id = t.subregra_demais_id
-          left join clientes_tipificacao_linhas l on l.cliente_id = t.cliente_id
+          left join clientes_tipificacao_linhas l on l.versao_id = t.id
           left join subregras_tipificacao s on s.id = l.subregra_id
-          order by c.nome, l.ordem`)
+          order by c.nome, t.vigencia_desde, l.ordem`)
       ).rows;
 
     await db.execute(sql`delete from graphile_worker._private_jobs`);
+    // A versão inicial começa na primeira competência (sem laudos, a das competências).
+    await db.insert(schema.competencias).values([
+      { competencia: '2025-03', status: 'fechada' },
+      { competencia: '2026-10', status: 'aberta' },
+    ]);
     await migrar();
     const job = await db.execute(sql`select key from graphile_worker.jobs`);
     expect(job.rows).toEqual([{ key: 'ingestao.reclassificar-tipificacao:todos' }]);
@@ -512,6 +519,8 @@ describe.skipIf(!url)('gravarMigracao', () => {
         mods: 0,
         meds: 1,
         eqs: 1,
+        desde: '2025-03',
+        ate: null,
       },
       {
         cliente: 'PRN TELE_ARARAQUARA',
@@ -525,34 +534,75 @@ describe.skipIf(!url)('gravarMigracao', () => {
         mods: 1,
         meds: 0,
         eqs: 0,
+        desde: '2025-03',
+        ate: null,
       },
     ]);
     const regras = await db.execute(
-      sql`select nome, fatura_sem_subregra, padrao from regras_tipificacao order by nome`,
+      sql`select r.nome, f.fatura_sem_subregra, f.vigencia_desde, r.padrao from regras_tipificacao r
+        join regras_tipificacao_fatura f on f.regra_id = r.id order by r.nome`,
     );
     expect(regras.rows).toEqual([
-      { nome: 'CO', fatura_sem_subregra: true, padrao: true },
-      { nome: 'NC', fatura_sem_subregra: false, padrao: false },
+      { nome: 'CO', fatura_sem_subregra: true, vigencia_desde: '2025-03', padrao: true },
+      { nome: 'NC', fatura_sem_subregra: false, vigencia_desde: '2025-03', padrao: false },
     ]);
 
-    // Linha a mais na tela do redo-one: a carga a troca pela lista do dashboards-one.
+    // Linha a mais gravada sem autor (não é história do redo-one): a carga a troca pela lista do
+    // dashboards-one.
     const unidade = idDoLegado('clientes', 'cl-a');
+    const [versao] = await db
+      .select({ id: schema.clientesTipificacaoVersoes.id })
+      .from(schema.clientesTipificacaoVersoes)
+      .where(sql`${schema.clientesTipificacaoVersoes.clienteId} = ${unidade}`);
     await db.insert(schema.clientesTipificacaoLinhas).values({
-      clienteId: unidade,
+      versaoId: versao?.id as string,
       ordem: 3,
       tipo: 'prioridade',
       subregraId: idDoLegado('sub_regras', 's-ncft'),
     });
-    // Cliente configurado só no redo-one: fica.
+    // Cliente com versão criada pela tela, e sub-regra com o "fatura" mudado pela tela: ficam.
+    const [ana] = await db
+      .insert(schema.usuarios)
+      .values({ nome: 'Ana', email: 'ana@x.com' })
+      .returning({ id: schema.usuarios.id });
     const outro = idDoLegado('clientes', 'cl-b');
-    await db.insert(schema.clientesTipificacao).values({
+    await db.insert(schema.clientesTipificacaoVersoes).values({
       clienteId: outro,
+      vigenciaDesde: '2026-12',
       regraId: idDoLegado('regras_categorias', 'r-co'),
+      criadoPorId: ana?.id,
+    });
+    const ncnf = idDoLegado('sub_regras', 's-ncnf');
+    await db.execute(sql`update subregras_tipificacao_fatura set vigencia_ate = '2026-11'
+      where subregra_id = ${ncnf}`);
+    await db.insert(schema.subregrasTipificacaoFatura).values({
+      subregraId: ncnf,
+      vigenciaDesde: '2026-12',
+      fatura: true,
+      criadoPorId: ana?.id,
+    });
+    expect(await tipificacaoComHistoriaNoRedo(db)).toEqual({
+      clientes: [outro],
+      regras: [],
+      subregras: [ncnf],
     });
     await migrar();
     const segunda = await ler();
     expect(segunda.slice(0, 2)).toEqual(primeira);
-    expect(segunda[2]).toMatchObject({ cliente: 'PRN TELE_MARABA', regra: 'CO', ordem: null });
+    expect(segunda[2]).toMatchObject({
+      cliente: 'PRN TELE_MARABA',
+      regra: 'CO',
+      ordem: null,
+      desde: '2026-12',
+    });
+    const fatura = await db.execute(
+      sql`select vigencia_desde, vigencia_ate, fatura from subregras_tipificacao_fatura
+        where subregra_id = ${ncnf} order by vigencia_desde`,
+    );
+    expect(fatura.rows).toEqual([
+      { vigencia_desde: '2025-03', vigencia_ate: '2026-11', fatura: false },
+      { vigencia_desde: '2026-12', vigencia_ate: null, fatura: true },
+    ]);
   });
 
   it('grava os preços pelo id da linha do dashboards-one; rodar de novo não duplica', async () => {

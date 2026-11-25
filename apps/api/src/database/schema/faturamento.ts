@@ -174,7 +174,8 @@ export const clientesDadosFiscais = pgTable(
 
 /**
  * Regra da tipificação (CO, NC, NC1). O laudo que nenhuma linha do cliente casou fica na regra
- * principal do cliente, sem sub-regra, e fatura conforme `fatura_sem_subregra`. A regra `padrao` é
+ * principal do cliente, sem sub-regra, e fatura conforme o "fatura sem sub-regra" vigente
+ * (`regras_tipificacao_fatura`). A regra `padrao` é
  * a do cliente sem configuração (uma só).
  */
 export const regrasTipificacao = pgTable(
@@ -187,7 +188,6 @@ export const regrasTipificacao = pgTable(
     cor: text('cor'),
     ordem: integer('ordem').notNull().default(0),
     ativo: boolean('ativo').notNull().default(true),
-    faturaSemSubregra: boolean('fatura_sem_subregra').notNull(),
     padrao: boolean('padrao').notNull().default(false),
     criadoEm: quando('criado_em').notNull().defaultNow(),
     atualizadoEm: quando('atualizado_em')
@@ -198,7 +198,10 @@ export const regrasTipificacao = pgTable(
   (t) => [uniqueIndex('regras_tipificacao_padrao_key').on(t.padrao).where(sql`${t.padrao}`)],
 );
 
-/** Sub-regra (CO-FT, NC-NF...): o resultado de uma linha da configuração do cliente. */
+/**
+ * Sub-regra (CO-FT, NC-NF...): o resultado de uma linha da configuração do cliente. Se fatura, pela
+ * versão vigente em `subregras_tipificacao_fatura`.
+ */
 export const subregrasTipificacao = pgTable(
   'subregras_tipificacao',
   {
@@ -208,8 +211,6 @@ export const subregrasTipificacao = pgTable(
       .references(() => regrasTipificacao.id),
     nome: text('nome').notNull().unique(),
     descricao: text('descricao'),
-    /** O laudo nesta sub-regra fatura. */
-    fatura: boolean('fatura').notNull().default(true),
     ordem: integer('ordem').notNull().default(0),
     ativo: boolean('ativo').notNull().default(true),
     criadoEm: quando('criado_em').notNull().defaultNow(),
@@ -221,44 +222,101 @@ export const subregrasTipificacao = pgTable(
   (t) => [index('subregras_tipificacao_regra_idx').on(t.regraId)],
 );
 
+const vigenciaCheck = (tabela: string, desde: AnyPgColumn, ate: AnyPgColumn) =>
+  check(
+    `${tabela}_vigencia_check`,
+    sql`${desde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'
+      and (${ate} is null or (${ate} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$' and ${ate} >= ${desde}))`,
+  );
+
 /**
- * Configuração da tipificação do cliente ou da unidade. A unidade sem linha aqui segue a do
- * principal; sem nenhuma, vale a regra padrão. Regra principal vazia na unidade = a do principal.
+ * "Fatura sem sub-regra" da regra por competência: mudar encerra a versão e cria outra (nada se
+ * sobrescreve); a programada que nunca valeu pode ser apagada.
  */
-export const clientesTipificacao = pgTable(
-  'clientes_tipificacao',
+export const regrasTipificacaoFatura = pgTable(
+  'regras_tipificacao_fatura',
   {
-    clienteId: uuid('cliente_id')
-      .primaryKey()
-      .references(() => clientes.id, { onDelete: 'cascade' }),
-    /** Regra do laudo que nenhuma linha casou; vazio = a do principal ou a padrão. */
-    regraId: uuid('regra_id').references(() => regrasTipificacao.id),
-    /** "Todos os demais": sub-regra do laudo que nenhuma linha casou; vazio = só a regra. */
-    subregraDemaisId: uuid('subregra_demais_id').references(() => subregrasTipificacao.id),
-    atualizadoEm: quando('atualizado_em')
+    id: uuid('id').primaryKey().defaultRandom(),
+    regraId: uuid('regra_id')
       .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+      .references(() => regrasTipificacao.id),
+    /** "YYYY-MM". */
+    vigenciaDesde: text('vigencia_desde').notNull(),
+    /** "YYYY-MM", inclusiva; vazio = sem fim. */
+    vigenciaAte: text('vigencia_ate'),
+    faturaSemSubregra: boolean('fatura_sem_subregra').notNull(),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
     /** Nulo na carga do dashboards-one. */
-    atualizadoPorId: quem('atualizado_por_id'),
+    criadoPorId: quem('criado_por_id'),
   },
   (t) => [
-    index('clientes_tipificacao_regra_idx').on(t.regraId),
-    index('clientes_tipificacao_subregra_demais_idx').on(t.subregraDemaisId),
+    uniqueIndex('regras_tipificacao_fatura_desde_key').on(t.regraId, t.vigenciaDesde),
+    vigenciaCheck('regras_tipificacao_fatura', t.vigenciaDesde, t.vigenciaAte),
+  ],
+);
+
+/** "Fatura" da sub-regra por competência, como o da regra. */
+export const subregrasTipificacaoFatura = pgTable(
+  'subregras_tipificacao_fatura',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subregraId: uuid('subregra_id')
+      .notNull()
+      .references(() => subregrasTipificacao.id),
+    vigenciaDesde: text('vigencia_desde').notNull(),
+    vigenciaAte: text('vigencia_ate'),
+    fatura: boolean('fatura').notNull(),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    criadoPorId: quem('criado_por_id'),
+  },
+  (t) => [
+    uniqueIndex('subregras_tipificacao_fatura_desde_key').on(t.subregraId, t.vigenciaDesde),
+    vigenciaCheck('subregras_tipificacao_fatura', t.vigenciaDesde, t.vigenciaAte),
   ],
 );
 
 /**
- * Linha da configuração: "se a modalidade/especialidade/prioridade for uma destas e o médico for
+ * Versão da configuração da tipificação do cliente ou da unidade (regra principal, "todos os
+ * demais" e as linhas, como um todo), por competência. A versão vazia (sem regra, demais nem
+ * linhas) é o "remover a configuração": volta a seguir a do principal ou a padrão. Nada se
+ * sobrescreve nem se apaga, salvo a programada que nunca valeu.
+ */
+export const clientesTipificacaoVersoes = pgTable(
+  'clientes_tipificacao_versoes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clienteId: uuid('cliente_id')
+      .notNull()
+      .references(() => clientes.id),
+    vigenciaDesde: text('vigencia_desde').notNull(),
+    vigenciaAte: text('vigencia_ate'),
+    /** Regra do laudo que nenhuma linha casou; vazio = a do principal ou a padrão. */
+    regraId: uuid('regra_id').references(() => regrasTipificacao.id),
+    /** "Todos os demais": sub-regra do laudo que nenhuma linha casou; vazio = só a regra. */
+    subregraDemaisId: uuid('subregra_demais_id').references(() => subregrasTipificacao.id),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    /** Nulo na carga do dashboards-one. */
+    criadoPorId: quem('criado_por_id'),
+  },
+  (t) => [
+    uniqueIndex('clientes_tipificacao_versoes_desde_key').on(t.clienteId, t.vigenciaDesde),
+    index('clientes_tipificacao_versoes_regra_idx').on(t.regraId),
+    index('clientes_tipificacao_versoes_subregra_demais_idx').on(t.subregraDemaisId),
+    vigenciaCheck('clientes_tipificacao_versoes', t.vigenciaDesde, t.vigenciaAte),
+  ],
+);
+
+/**
+ * Linha de uma versão da configuração: "se a modalidade/especialidade/prioridade for uma destas e o médico for
  * (todos | apenas | exceto) estes → sub-regra". Vale a primeira linha que casar, pela `ordem`.
  */
 export const clientesTipificacaoLinhas = pgTable(
   'clientes_tipificacao_linhas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    clienteId: uuid('cliente_id')
+    versaoId: uuid('versao_id')
       .notNull()
-      .references(() => clientesTipificacao.clienteId, { onDelete: 'cascade' }),
+      .references(() => clientesTipificacaoVersoes.id, { onDelete: 'cascade' }),
     ordem: integer('ordem').notNull(),
     tipo: text('tipo', { enum: ['modalidade', 'especialidade', 'prioridade'] }).notNull(),
     /** `apenas` nunca casa com laudo sem médico; `exceto` sempre casa. */
@@ -270,7 +328,7 @@ export const clientesTipificacaoLinhas = pgTable(
       .references(() => subregrasTipificacao.id),
   },
   (t) => [
-    unique('clientes_tipificacao_linhas_ordem_key').on(t.clienteId, t.ordem),
+    unique('clientes_tipificacao_linhas_versao_ordem_key').on(t.versaoId, t.ordem),
     index('clientes_tipificacao_linhas_subregra_idx').on(t.subregraId),
     check(
       'clientes_tipificacao_linhas_tipo_check',
