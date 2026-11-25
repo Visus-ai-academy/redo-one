@@ -38,10 +38,19 @@ export interface PedidoPreco {
   competencia: string;
   /** Na ordem em que se procura: unidade (se o laudo é de uma), principal, padrão do contratado. */
   tabelas: { origem: OrigemPreco; linhas: readonly LinhaPreco[] }[];
-  /** Prioridade que se tenta quando a do laudo não tem o arranjo (no dashboards-one, PLANTÃO ↔ URGÊNCIA). */
+  /**
+   * Prioridade que se tenta quando a do laudo não tem o arranjo (no dashboards-one, PLANTÃO ↔
+   * URGÊNCIA, cravado no código). Onde o par fica configurado depende de decisão do usuário
+   * (pendente): até lá, só o script de paridade o monta; a busca de produção não recebe par.
+   */
   alternativas: ReadonlyMap<string, string>;
   /** Volume do mês do cliente do laudo na dimensão pedida (ver `volumeDaFaixa`). */
   volume: (cond: CondVolume) => number;
+  /**
+   * Só para comparar com o dashboards-one, que soma o volume com um condVolume só por arranjo: com
+   * ele, toda linha usa esta dimensão no lugar da própria.
+   */
+  condFixo?: CondVolume;
 }
 
 /** A versão vale na competência (desde e até inclusivos). */
@@ -64,41 +73,66 @@ const contem = (l: LinhaPreco, volume: number) =>
 
 /** Início da faixa para ordenar: sem faixa conta como a menor (antes de 0). */
 const inicio = (l: LinhaPreco) => l.faixaInicio ?? -1;
+/** Largura da faixa para desempatar: a mais estreita é a mais específica. */
+const largura = (l: LinhaPreco) => (l.faixaFim ?? Number.MAX_SAFE_INTEGER) - inicio(l);
+/** Entre faixas que casam: a de maior início, depois a mais estreita, depois o id (determinístico). */
+const porEspecifica = (a: LinhaPreco, b: LinhaPreco) =>
+  inicio(b) - inicio(a) || largura(a) - largura(b) || a.id.localeCompare(b.id);
+/** Último recurso: a menor faixa, depois a mais estreita, depois o id. */
+const porMenor = (a: LinhaPreco, b: LinhaPreco) =>
+  inicio(a) - inicio(b) || largura(a) - largura(b) || a.id.localeCompare(b.id);
 
 /**
- * Preço unitário do laudo. Em cada tabela, na ordem (unidade → principal → padrão): o arranjo com
- * a faixa que contém o volume (a de maior início, se várias); sem ele, o mesmo na prioridade
- * alternativa; sem ele, a menor faixa do arranjo (prioridade exata antes da alternativa), como o
- * "último recurso" do dashboards-one. Sem nada em nenhuma tabela, "sem preço".
+ * Preço unitário do laudo, na ordem do dashboards-one (`resolverRpc`):
+ * 1. arranjo exato com a faixa que contém o volume, na unidade e depois no principal;
+ * 2. o mesmo na prioridade alternativa (quando há par configurado), na unidade e depois no principal;
+ * 3. último recurso: a menor faixa do arranjo (prioridade exata antes da alternativa), na unidade e
+ *    depois no principal;
+ * 4. a tabela padrão do contratado: arranjo exato e depois a alternativa, sem último recurso.
+ * Sem nada, "sem preço" explícito.
  */
 export function buscarPreco(pedido: PedidoPreco): ResultadoPreco {
-  const { arranjo, competencia, alternativas, volume } = pedido;
+  const { arranjo, competencia, alternativas, volume, condFixo } = pedido;
   const alternativa = alternativas.get(arranjo.prioridadeId) ?? null;
   const volumes = new Map<CondVolume, number>();
   const volumeDe = (c: CondVolume) => {
     if (!volumes.has(c)) volumes.set(c, volume(c));
     return volumes.get(c) as number;
   };
+  const vigentes = pedido.tabelas.map(({ origem, linhas }) => ({
+    origem,
+    linhas: linhas.filter((l) => vigenteEm(l, competencia)),
+  }));
+  const doCliente = vigentes.filter((t) => t.origem !== 'padrao');
+  const padrao = vigentes.filter((t) => t.origem === 'padrao');
+  const achou = (l: LinhaPreco, origem: OrigemPreco, como: ComoAchou): ResultadoPreco => ({
+    encontrado: true,
+    valor: l.valor,
+    linhaId: l.id,
+    origem,
+    como,
+  });
+  const naFaixa = (linhas: LinhaPreco[], prioridadeId: string) =>
+    linhas
+      .filter(
+        (l) =>
+          mesmoArranjo(l, arranjo, prioridadeId) && contem(l, volumeDe(condFixo ?? l.condVolume)),
+      )
+      .sort(porEspecifica)[0];
+  const porFaixa = (tabelas: typeof vigentes, prioridadeId: string, como: ComoAchou) => {
+    for (const t of tabelas) {
+      const l = naFaixa(t.linhas, prioridadeId);
+      if (l) return achou(l, t.origem, como);
+    }
+    return null;
+  };
 
-  for (const { origem, linhas } of pedido.tabelas) {
-    const vigentes = linhas.filter((l) => vigenteEm(l, competencia));
-    const naFaixa = (prioridadeId: string) =>
-      vigentes
-        .filter((l) => mesmoArranjo(l, arranjo, prioridadeId) && contem(l, volumeDe(l.condVolume)))
-        .sort((a, b) => inicio(b) - inicio(a))[0];
-    const achou = (l: LinhaPreco, como: ComoAchou): ResultadoPreco => ({
-      encontrado: true,
-      valor: l.valor,
-      linhaId: l.id,
-      origem,
-      como,
-    });
-
-    const exata = naFaixa(arranjo.prioridadeId);
-    if (exata) return achou(exata, 'exato');
-    const alt = alternativa ? naFaixa(alternativa) : undefined;
-    if (alt) return achou(alt, 'prioridade_alternativa');
-    const menor = vigentes
+  const exato = porFaixa(doCliente, arranjo.prioridadeId, 'exato');
+  if (exato) return exato;
+  const alt = alternativa ? porFaixa(doCliente, alternativa, 'prioridade_alternativa') : null;
+  if (alt) return alt;
+  for (const t of doCliente) {
+    const menor = t.linhas
       .filter(
         (l) =>
           mesmoArranjo(l, arranjo, arranjo.prioridadeId) ||
@@ -107,11 +141,16 @@ export function buscarPreco(pedido: PedidoPreco): ResultadoPreco {
       .sort(
         (a, b) =>
           Number(a.prioridadeId !== arranjo.prioridadeId) -
-            Number(b.prioridadeId !== arranjo.prioridadeId) || inicio(a) - inicio(b),
+            Number(b.prioridadeId !== arranjo.prioridadeId) || porMenor(a, b),
       )[0];
-    if (menor) return achou(menor, 'menor_faixa');
+    if (menor) return achou(menor, t.origem, 'menor_faixa');
   }
-  return { encontrado: false };
+  return (
+    porFaixa(padrao, arranjo.prioridadeId, 'exato') ??
+    (alternativa ? porFaixa(padrao, alternativa, 'prioridade_alternativa') : null) ?? {
+      encontrado: false,
+    }
+  );
 }
 
 /** O que o volume da faixa lê de cada laudo do cliente na competência (sem filtrar a tipificação). */

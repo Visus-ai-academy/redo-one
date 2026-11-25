@@ -74,6 +74,22 @@ describe('precificarLaudos', () => {
     expect(r.get('l-2')).toMatchObject({ valor: 99, origem: 'padrao' });
   });
 
+  it('com condVolume por arranjo (como o dashboards-one), a faixa usa o da primeira linha', () => {
+    const faixas = [
+      preco({ id: 'a', faixaInicio: 1, faixaFim: 2, valor: 70, condVolume: 'MOD_ESP_CAT' }),
+      preco({ id: 'b', faixaInicio: 3, valor: 60, condVolume: 'TOTAL' }),
+    ];
+    const laudos = [
+      laudo({ id: 'x' }),
+      laudo({ id: 'y', categoriaId: 'angio' }),
+      laudo({ id: 'z', categoriaId: 'angio' }),
+    ];
+    const t = tabelas({ porCliente: new Map([['cli', faixas]]) });
+    // Por linha: a de TOTAL (3 laudos) casa → 60. Por arranjo (MOD_ESP_CAT, 1 laudo) → 70.
+    expect(precificarLaudos(laudos, t).get('x')).toMatchObject({ valor: 60 });
+    expect(precificarLaudos(laudos, t, true).get('x')).toMatchObject({ valor: 70 });
+  });
+
   it('laudo sem arranjo completo fica sem preço', () => {
     const r = precificarLaudos([laudo({ categoriaId: null })], tabelas());
     expect(r.get('l-1')).toEqual({ encontrado: false });

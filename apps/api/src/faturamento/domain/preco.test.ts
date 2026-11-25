@@ -120,7 +120,7 @@ describe('buscarPreco', () => {
     expect(busca({ principal: [urgencia] })).toEqual({ encontrado: false });
   });
 
-  it('a alternativa da própria tabela vem antes da tabela seguinte', () => {
+  it('ordem do dashboards-one: o exato no principal vem antes da alternativa na unidade', () => {
     const urgenciaUnidade = linha({ prioridadeId: 'urgencia', valor: 75 });
     const plantaoPrincipal = linha({ prioridadeId: 'plantao', valor: 99 });
     expect(
@@ -128,7 +128,65 @@ describe('buscarPreco', () => {
         { unidade: [urgenciaUnidade], principal: [plantaoPrincipal] },
         { arranjo: { prioridadeId: 'plantao' } },
       ),
-    ).toMatchObject({ valor: 75, origem: 'unidade' });
+    ).toMatchObject({ valor: 99, origem: 'principal', como: 'exato' });
+    // A alternativa (unidade, depois principal) vem antes do último recurso de qualquer tabela.
+    const zeroUnidade = linha({ prioridadeId: 'plantao', faixaInicio: 0, faixaFim: 0, valor: 10 });
+    expect(
+      busca(
+        { unidade: [zeroUnidade], principal: [urgenciaUnidade] },
+        { arranjo: { prioridadeId: 'plantao' } },
+      ),
+    ).toMatchObject({ valor: 75, origem: 'principal', como: 'prioridade_alternativa' });
+  });
+
+  it('o último recurso da unidade vem antes do último recurso do principal e da tabela padrão', () => {
+    const daUnidade = linha({ faixaInicio: 0, faixaFim: 0, valor: 11 });
+    const doPrincipal = linha({ faixaInicio: 0, faixaFim: 0, valor: 22 });
+    expect(
+      busca({ unidade: [daUnidade], principal: [doPrincipal], padrao: [linha({ valor: 90 })] }),
+    ).toMatchObject({ valor: 11, origem: 'unidade', como: 'menor_faixa' });
+  });
+
+  it('a tabela padrão: exato e depois a alternativa, sem último recurso', () => {
+    expect(busca({ padrao: [linha({ faixaInicio: 0, faixaFim: 0 })] })).toEqual({
+      encontrado: false,
+    });
+    expect(
+      busca(
+        { padrao: [linha({ prioridadeId: 'urgencia', valor: 88 })] },
+        { arranjo: { prioridadeId: 'plantao' } },
+      ),
+    ).toMatchObject({ valor: 88, origem: 'padrao', como: 'prioridade_alternativa' });
+  });
+
+  it('empate de faixa: a mais estreita, depois o id (nunca a ordem do banco)', () => {
+    const semFaixa = linha({ id: 'b', valor: 64 });
+    const ate100 = linha({ id: 'a', faixaFim: 100, valor: 60 });
+    expect(busca({ principal: [semFaixa, ate100] }, { volume: volume(50) })).toMatchObject({
+      valor: 60,
+    });
+    expect(busca({ principal: [ate100, semFaixa] }, { volume: volume(50) })).toMatchObject({
+      valor: 60,
+    });
+    const gemeas = [linha({ id: 'z', valor: 1 }), linha({ id: 'y', valor: 2 })];
+    expect(busca({ principal: gemeas })).toMatchObject({ valor: 2 });
+  });
+
+  it('com condFixo, toda linha soma o volume pela mesma dimensão (como o dashboards-one)', () => {
+    const total = linha({ faixaInicio: 100, condVolume: 'TOTAL', valor: 50 });
+    const base = linha({ faixaInicio: 1, faixaFim: 99, condVolume: 'TOTAL', valor: 60 });
+    const porCond = (c: CondVolume) => (c === 'TOTAL' ? 150 : 5);
+    expect(busca({ principal: [total, base] }, { volume: porCond })).toMatchObject({ valor: 50 });
+    expect(
+      buscarPreco({
+        arranjo: ARRANJO,
+        competencia: '2026-10',
+        tabelas: [{ origem: 'principal', linhas: [total, base] }],
+        alternativas: ALTERNATIVAS,
+        volume: porCond,
+        condFixo: 'MOD_ESP_CAT',
+      }),
+    ).toMatchObject({ valor: 60 });
   });
 
   it('nenhuma faixa contém o volume: último recurso, a menor faixa (prioridade exata primeiro)', () => {

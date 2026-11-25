@@ -23,7 +23,8 @@ import {
 const FUSO_LEGADO = '-03:00';
 /**
  * Prioridades que se substituem quando a do laudo não tem preço (no dashboards-one, cravado em
- * `prioridadeFallback`). Aqui só para a paridade: a busca recebe o par como dado.
+ * `prioridadeFallback`). Só aqui, para a paridade: onde o par fica configurado no redo-one espera
+ * a decisão do usuário (pendente); até lá a busca de produção não recebe par.
  */
 const ALTERNATIVAS = [['PLANTÃO', 'URGÊNCIA']] as const;
 
@@ -135,6 +136,12 @@ async function paridade() {
     if (ia && ib) alternativas.set(ia, ib).set(ib, ia);
   }
   const precos = precificarLaudos(laudos, { porCliente, porContratado, alternativas });
+  // Quanto mudaria com um condVolume só por arranjo, como o dashboards-one.
+  const porArranjo = precificarLaudos(laudos, { porCliente, porContratado, alternativas }, true);
+  const valorDe = (p: ReturnType<typeof precos.get>) => (p?.encontrado ? p.valor : null);
+  const mudamComCondPorArranjo = laudos.filter(
+    (l) => l.fatura && valorDe(precos.get(l.id)) !== valorDe(porArranjo.get(l.id)),
+  ).length;
 
   // dashboards-one: os laudos (para a chave natural), os clientes (para o id) e os demonstrativos.
   const inicio = new Date(`${competencias[0]}-01T00:00:00Z`);
@@ -256,6 +263,9 @@ async function paridade() {
   console.log(`  mesmo unitário do dashboards-one: ${r.iguais}`);
   console.log(`  divergentes: ${r.divergentes}`);
   console.log(`  sem o mesmo laudo no dashboards-one: ${r.semPar}`);
+  console.log(
+    `  mudariam de preço com condVolume por arranjo (como o dashboards-one): ${mudamComCondPorArranjo}`,
+  );
   console.log('  como o redo-one achou o preço:');
   for (const [k, n] of [...comoAchou].sort((a, b) => b[1] - a[1]))
     console.log(`    ${k.padEnd(36)} ${n}`);

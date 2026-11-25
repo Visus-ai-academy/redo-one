@@ -42,6 +42,11 @@ export interface TabelasParidade {
 export function precificarLaudos(
   laudos: readonly LaudoParidadePreco[],
   tabelas: TabelasParidade,
+  /**
+   * Como o dashboards-one: um condVolume só por arranjo, o da primeira linha (pelo id) do arranjo
+   * exato na tabela do membro (a da unidade, se ela tem preços, senão a do principal).
+   */
+  condPorArranjo = false,
 ): Map<string, ResultadoPreco> {
   const membro = (l: LaudoParidadePreco) => `${l.competencia}|${l.unidadeId ?? l.clienteId}`;
   const porMembro = new Map<string, LaudoParidadePreco[]>();
@@ -65,9 +70,25 @@ export function precificarLaudos(
       origem,
       linhas: linhas ?? [],
     });
+    const doMembro =
+      (l.unidadeId && tabelas.porCliente.get(l.unidadeId)?.length
+        ? tabelas.porCliente.get(l.unidadeId)
+        : tabelas.porCliente.get(l.clienteId)) ?? [];
+    const condFixo = condPorArranjo
+      ? doMembro
+          .filter(
+            (p) =>
+              p.modalidadeId === arranjo.modalidadeId &&
+              p.especialidadeId === arranjo.especialidadeId &&
+              p.categoriaId === arranjo.categoriaId &&
+              p.prioridadeId === arranjo.prioridadeId,
+          )
+          .sort((a, b) => a.id.localeCompare(b.id))[0]?.condVolume
+      : undefined;
     r.set(
       l.id,
       buscarPreco({
+        condFixo,
         arranjo,
         competencia: l.competencia,
         tabelas: [
