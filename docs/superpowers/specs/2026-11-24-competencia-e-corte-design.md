@@ -153,3 +153,14 @@ Toda tela com o texto explícito de qual data cada número usa ("data do laudo",
 - O estilo de arquitetura do `faturamento` (o CLAUDE.md diz: regra rica + integrações → hexagonal).
 - Como o job de recálculo divide o trabalho (lotes) e como evita corrida com a importação a cada 15 minutos.
 - TDD em tudo, e os casos de borda das datas vindos do `competencia.ts` do dashboards-one (virada às 21h de Brasília, dia 08, dia 31, fevereiro).
+
+## Adendo 25/11/2026: período da data do exame configurável
+
+Aprovado pelo usuário ("Sim" sobre o esboço). Até aqui o exame só tinha a chave "considerar" e o período fixo do mês cheio (dia 1 ao último), como no dashboards-one.
+
+- O corte ganha uma segunda parte com a mesma forma da do laudo: **data do exame**, com dia (número ou último) e mês (próprio | seguinte), além da chave "considerar".
+- Competência: com o exame considerado, cada data dá um mês pelo seu corte (a mesma função de hoje) e vale o maior dos dois; sem considerar, só o laudo.
+- Padrão: exame até o último dia do próprio mês; laudo até o dia 7 do mês seguinte. É a regra de hoje, então nenhuma competência muda; as vigências existentes ganham esse corte do exame na migration.
+- SROSALIA e as demais vigências continuam como estão.
+- Vigência, travas e recálculo por job: os mesmos do corte do laudo.
+- Tela: o editor de corte mostra as duas partes ("Data do laudo \*" e "Data do exame") e o resumo descreve os dois períodos ("laudos assinados de 08 de um mês a 07 do seguinte; exames realizados de 01 a 31 do mês").
