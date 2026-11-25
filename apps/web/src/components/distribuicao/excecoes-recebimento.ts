@@ -4,7 +4,7 @@ import type { ExcecaoRecebimentoDto } from '../../gen/types/ExcecaoRecebimentoDt
 import type { ExcecaoRecebimentoEdicaoDto } from '../../gen/types/ExcecaoRecebimentoEdicaoDto';
 import type { TipoRecebimentoKey } from '../../gen/types/TipoRecebimento';
 
-/** Valor do Select para "todas" (sem recorte). */
+/** Valor do Select para "todas" (o `todasFrentes` / `todasPrioridades` explícito na API). */
 export const TODAS = 'todas';
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,8 +14,8 @@ export const esquemaExcecao = z
     turnoId: z.string().min(1, 'Escolha o turno.'),
     regra: z.enum(['segue_sla', 'prazo_minimo', 'nao_recebe']),
     horas: z.string(),
-    frente: z.string(),
-    prioridadeOperacaoId: z.string(),
+    frente: z.string().min(1, 'Escolha a frente (ou "Todas").'),
+    prioridadeOperacaoId: z.string().min(1, 'Escolha a prioridade (ou "Todas").'),
     de: z.string().regex(DIA, 'Informe o primeiro dia.'),
     ate: z.string().regex(DIA, 'Informe o último dia.'),
   })
@@ -35,8 +35,16 @@ export const esquemaExcecao = z
 
 export type ValoresExcecao = z.infer<typeof esquemaExcecao>;
 
-const frenteDe = (e: Pick<ExcecaoRecebimentoDto, 'especialidadeId' | 'modalidadeId'>) =>
-  e.especialidadeId ? `E|${e.especialidadeId}` : e.modalidadeId ? `M|${e.modalidadeId}` : TODAS;
+const frenteDe = (
+  e: Pick<ExcecaoRecebimentoDto, 'todasFrentes' | 'especialidadeId' | 'modalidadeId'>,
+) =>
+  e.todasFrentes
+    ? TODAS
+    : e.especialidadeId
+      ? `E|${e.especialidadeId}`
+      : e.modalidadeId
+        ? `M|${e.modalidadeId}`
+        : '';
 
 export function valoresDaExcecao(
   e: ExcecaoRecebimentoDto | undefined,
@@ -47,7 +55,7 @@ export function valoresDaExcecao(
     regra: (e?.regra.tipo ?? 'segue_sla') as TipoRecebimentoKey,
     horas: e?.regra.horas == null ? '' : String(e.regra.horas),
     frente: e ? frenteDe(e) : TODAS,
-    prioridadeOperacaoId: e?.prioridadeOperacaoId ?? TODAS,
+    prioridadeOperacaoId: !e || e.todasPrioridades ? TODAS : (e.prioridadeOperacaoId ?? ''),
     de: e?.de ?? hoje,
     ate: e?.ate ?? '',
   };
@@ -57,8 +65,10 @@ export function excecaoParaApi(v: ValoresExcecao): ExcecaoRecebimentoEdicaoDto {
   const [tipo, id] = v.frente.split('|');
   return {
     turnoId: v.turnoId,
+    todasFrentes: v.frente === TODAS,
     especialidadeId: tipo === 'E' ? (id ?? null) : null,
     modalidadeId: tipo === 'M' ? (id ?? null) : null,
+    todasPrioridades: v.prioridadeOperacaoId === TODAS,
     prioridadeOperacaoId: v.prioridadeOperacaoId === TODAS ? null : v.prioridadeOperacaoId,
     regra:
       v.regra === 'prazo_minimo'
@@ -71,15 +81,28 @@ export function excecaoParaApi(v: ValoresExcecao): ExcecaoRecebimentoEdicaoDto {
 
 /** "Só NEURO, só ROTINA", "Todas as frentes e prioridades"... */
 export function recorteExcecao(
-  e: Pick<ExcecaoRecebimentoDto, 'especialidadeId' | 'modalidadeId' | 'prioridadeOperacaoId'>,
+  e: Pick<
+    ExcecaoRecebimentoDto,
+    | 'todasFrentes'
+    | 'especialidadeId'
+    | 'modalidadeId'
+    | 'todasPrioridades'
+    | 'prioridadeOperacaoId'
+  >,
   nome: (id: string) => string,
 ): string {
   const frenteId = e.especialidadeId ?? e.modalidadeId;
-  if (!frenteId && !e.prioridadeOperacaoId) return 'Todas as frentes e prioridades';
-  const frente = frenteId ? `Só ${nome(frenteId)}` : 'Todas as frentes';
-  const prioridade = e.prioridadeOperacaoId
-    ? `só ${nome(e.prioridadeOperacaoId)}`
-    : 'todas as prioridades';
+  if (e.todasFrentes && e.todasPrioridades) return 'Todas as frentes e prioridades';
+  const frente = e.todasFrentes
+    ? 'Todas as frentes'
+    : frenteId
+      ? `Só ${nome(frenteId)}`
+      : 'Nenhuma frente';
+  const prioridade = e.todasPrioridades
+    ? 'todas as prioridades'
+    : e.prioridadeOperacaoId
+      ? `só ${nome(e.prioridadeOperacaoId)}`
+      : 'nenhuma prioridade';
   return `${frente}, ${prioridade}`;
 }
 

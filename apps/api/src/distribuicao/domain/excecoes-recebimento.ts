@@ -1,4 +1,3 @@
-import type { FrenteEscala } from './arranjo';
 import { type ExcecaoRecebimento, especificidade } from './motor/prioridades-operacao';
 import { validarRegraRecebimento } from './prioridades-operacao';
 import { invalida, validarData } from './validacao';
@@ -34,6 +33,15 @@ export function validarExcecao(e: EdicaoExcecaoRecebimento): void {
     invalida(`A exceção vale por até ${LIMITE_DIAS} dias; para mais, mude a grade.`);
   }
   validarRegraRecebimento(e.regra);
+  // Vazio nunca é "todas" (25/11/2026): ou "todas", ou uma escolhida; as duas coisas, erro.
+  if (e.todasFrentes && e.frente)
+    invalida('Escolha "todas as frentes" ou uma frente, não as duas.');
+  if (!e.todasFrentes && !e.frente) invalida('Escolha a frente (ou "todas").');
+  if (e.todasPrioridades && e.prioridadeOperacaoId) {
+    invalida('Escolha "todas as prioridades" ou uma prioridade, não as duas.');
+  }
+  if (!e.todasPrioridades && !e.prioridadeOperacaoId)
+    invalida('Escolha a prioridade (ou "todas").');
 }
 
 export function situacaoExcecao(
@@ -71,12 +79,17 @@ export function validarEdicaoExcecao(
 /** Só a que ainda não valeu em dia passado (futura ou que começa hoje); as outras se encerram. */
 export const podeExcluir = (e: Pick<ExcecaoRecebimento, 'de'>, hoje: string) => e.de >= hoje;
 
-const frentesSeCruzam = (a: FrenteEscala | null, b: FrenteEscala | null) =>
-  a === null ||
-  b === null ||
-  (a.tipo === b.tipo &&
-    a.especialidadeId === b.especialidadeId &&
-    a.modalidadeId === b.modalidadeId);
+const frentesSeCruzam = (
+  a: Pick<ExcecaoRecebimento, 'todasFrentes' | 'frente'>,
+  b: Pick<ExcecaoRecebimento, 'todasFrentes' | 'frente'>,
+) =>
+  a.todasFrentes ||
+  b.todasFrentes ||
+  (a.frente !== null &&
+    b.frente !== null &&
+    a.frente.tipo === b.frente.tipo &&
+    a.frente.especialidadeId === b.frente.especialidadeId &&
+    a.frente.modalidadeId === b.frente.modalidadeId);
 
 /**
  * As outras que empatam com esta em algum exame: mesmo turno, períodos que se tocam, recortes que
@@ -93,9 +106,9 @@ export function empates(
       o.de <= e.ate &&
       e.de <= o.ate &&
       especificidade(o) === especificidade(e) &&
-      frentesSeCruzam(o.frente, e.frente) &&
-      (o.prioridadeOperacaoId === null ||
-        e.prioridadeOperacaoId === null ||
+      frentesSeCruzam(o, e) &&
+      (o.todasPrioridades ||
+        e.todasPrioridades ||
         o.prioridadeOperacaoId === e.prioridadeOperacaoId),
   );
 }

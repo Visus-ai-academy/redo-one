@@ -54,7 +54,9 @@ describe.skipIf(!url)('exceções da grade de recebimento (banco)', () => {
     const criadoEm = new Date('2026-11-25T12:00:00Z');
     const toda = await repo.criar({
       turnoId: lista,
+      todasFrentes: true,
       frente: null,
+      todasPrioridades: true,
       prioridadeOperacaoId: null,
       regra: { tipo: 'segue_sla' },
       de: '2026-11-25',
@@ -63,7 +65,9 @@ describe.skipIf(!url)('exceções da grade de recebimento (banco)', () => {
     });
     const neuroRot = await repo.criar({
       turnoId: lista,
+      todasFrentes: false,
       frente: { tipo: 'especialidade', especialidadeId: neuro, modalidadeId: null },
+      todasPrioridades: false,
       prioridadeOperacaoId: rot,
       regra: { tipo: 'prazo_minimo', horas: 12 },
       de: '2026-11-01',
@@ -74,7 +78,9 @@ describe.skipIf(!url)('exceções da grade de recebimento (banco)', () => {
     expect(await repo.obter(neuroRot)).toEqual({
       id: neuroRot,
       turnoId: lista,
+      todasFrentes: false,
       frente: { tipo: 'especialidade', especialidadeId: neuro, modalidadeId: null },
+      todasPrioridades: false,
       prioridadeOperacaoId: rot,
       regra: { tipo: 'prazo_minimo', horas: 12 },
       de: '2026-11-01',
@@ -87,7 +93,9 @@ describe.skipIf(!url)('exceções da grade de recebimento (banco)', () => {
     await repo.salvar({
       id: toda,
       turnoId: lista,
+      todasFrentes: false,
       frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: ct },
+      todasPrioridades: true,
       prioridadeOperacaoId: null,
       regra: { tipo: 'nao_recebe' },
       de: '2026-11-25',

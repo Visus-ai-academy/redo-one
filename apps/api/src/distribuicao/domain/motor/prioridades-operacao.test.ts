@@ -184,13 +184,24 @@ describe('GradeRecebimento com exceções temporárias', () => {
   const excecao = (p: Partial<ExcecaoRecebimento> = {}): ExcecaoRecebimento => ({
     id: `exc-${++seq}`,
     turnoId: LISTA,
+    todasFrentes: !p.frente,
     frente: null,
+    todasPrioridades: !p.prioridadeOperacaoId,
     prioridadeOperacaoId: null,
     regra: { tipo: 'segue_sla' },
     de: '2026-11-25',
     ate: '2026-12-22',
     criadoEm: new Date('2026-11-25T12:00:00Z'),
     ...p,
+  });
+
+  it('sem "todas" e sem frente ou prioridade, a exceção não vale para nada', () => {
+    const excecoes = [
+      excecao({ todasFrentes: false, regra: { tipo: 'nao_recebe' } }),
+      excecao({ todasPrioridades: false, regra: { tipo: 'nao_recebe' } }),
+    ];
+    const grade = new GradeRecebimento(geral, regrasCardio, { excecoes, dia: '2026-12-01' });
+    expect(grade.regra(ROTINA.id, LISTA, frenteEsp(MI))).not.toEqual({ tipo: 'nao_recebe' });
   });
 
   it('toda a Lista segue o SLA até 22/12: sobrepõe a grade geral e a da frente no período', () => {

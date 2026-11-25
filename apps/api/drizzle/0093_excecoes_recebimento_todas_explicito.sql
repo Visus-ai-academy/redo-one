@@ -1,0 +1,2 @@
+ALTER TABLE "excecoes_recebimento" ADD COLUMN "todas_frentes" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "excecoes_recebimento" ADD COLUMN "todas_prioridades" boolean DEFAULT false NOT NULL;

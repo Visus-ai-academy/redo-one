@@ -23,8 +23,10 @@ const FRENTES = [
 const excecao = (p: Partial<ExcecaoRecebimentoDto> = {}): ExcecaoRecebimentoDto => ({
   id: 'x1',
   turnoId: 'lista',
+  todasFrentes: !p.especialidadeId && !p.modalidadeId,
   especialidadeId: null,
   modalidadeId: null,
+  todasPrioridades: !p.prioridadeOperacaoId,
   prioridadeOperacaoId: null,
   regra: { tipo: 'segue_sla', horas: null },
   de: '2026-11-20',
@@ -106,8 +108,10 @@ describe('ExcecoesRecebimento', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Criar exceção' }));
     expect(onCriar).toHaveBeenCalledWith({
       turnoId: 'lista',
+      todasFrentes: true,
       especialidadeId: null,
       modalidadeId: null,
+      todasPrioridades: true,
       prioridadeOperacaoId: null,
       regra: { tipo: 'segue_sla', horas: null },
       de: HOJE,
@@ -130,8 +134,10 @@ describe('ExcecoesRecebimento', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Criar exceção' }));
     expect(onCriar).toHaveBeenCalledWith({
       turnoId: 'manha',
+      todasFrentes: false,
       especialidadeId: null,
       modalidadeId: 'ct',
+      todasPrioridades: false,
       prioridadeOperacaoId: 'op-rot',
       regra: { tipo: 'prazo_minimo', horas: 12 },
       de: HOJE,

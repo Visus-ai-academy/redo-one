@@ -18,7 +18,9 @@ const criadoEm = new Date('2026-11-25T12:00:00Z');
 const LISTADA = {
   id: 'x1',
   turnoId: 't-lista',
+  todasFrentes: false,
   frente: { tipo: 'especialidade' as const, especialidadeId: 'neuro', modalidadeId: null },
+  todasPrioridades: true,
   prioridadeOperacaoId: null,
   regra: { tipo: 'prazo_minimo' as const, horas: 12 },
   de: '2026-11-25',
@@ -64,8 +66,10 @@ describe('controller das exceções da grade de recebimento', () => {
       {
         id: 'x1',
         turnoId: 't-lista',
+        todasFrentes: false,
         especialidadeId: 'neuro',
         modalidadeId: null,
+        todasPrioridades: true,
         prioridadeOperacaoId: null,
         regra: { tipo: 'prazo_minimo', horas: 12 },
         de: '2026-11-25',
@@ -78,8 +82,10 @@ describe('controller das exceções da grade de recebimento', () => {
     ]);
     const corpo = {
       turnoId: 't-lista',
+      todasFrentes: false,
       especialidadeId: null,
       modalidadeId: 'ct',
+      todasPrioridades: false,
       prioridadeOperacaoId: 'op-rot',
       regra: { tipo: 'segue_sla' as const, horas: null },
       de: '2026-11-25',
@@ -88,17 +94,19 @@ describe('controller das exceções da grade de recebimento', () => {
     expect(await c.criar(ator, corpo)).toEqual({ id: 'x9' });
     expect(casos.criar.executar).toHaveBeenCalledWith(quem, {
       turnoId: 't-lista',
+      todasFrentes: false,
       frente: { tipo: 'modalidade', especialidadeId: null, modalidadeId: 'ct' },
+      todasPrioridades: false,
       prioridadeOperacaoId: 'op-rot',
       regra: { tipo: 'segue_sla' },
       de: '2026-11-25',
       ate: '2026-12-22',
     });
-    await c.editar(ator, 'x1', { ...corpo, modalidadeId: null });
+    await c.editar(ator, 'x1', { ...corpo, todasFrentes: true, modalidadeId: null });
     expect(casos.editar.executar).toHaveBeenCalledWith(
       quem,
       'x1',
-      expect.objectContaining({ frente: null }),
+      expect.objectContaining({ todasFrentes: true, frente: null }),
     );
     expect(() => c.criar(ator, { ...corpo, especialidadeId: 'neuro' })).toThrow(
       ConfiguracaoInvalidaError,

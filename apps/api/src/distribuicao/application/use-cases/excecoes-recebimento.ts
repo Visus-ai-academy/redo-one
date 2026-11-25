@@ -21,7 +21,9 @@ const ENTIDADE = 'excecao_recebimento';
 /** Os campos editáveis, na ordem da tela (para o evento de auditoria). */
 const foto = (e: EdicaoExcecaoRecebimento): Record<string, unknown> => ({
   turnoId: e.turnoId,
+  todasFrentes: e.todasFrentes,
   frente: e.frente,
+  todasPrioridades: e.todasPrioridades,
   prioridadeOperacaoId: e.prioridadeOperacaoId,
   regra: e.regra,
   de: e.de,

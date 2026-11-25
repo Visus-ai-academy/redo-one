@@ -8,9 +8,11 @@ import { regraRecebimentoDtoSchema } from './regraRecebimentoDtoSchema'
 
 export const excecaoRecebimentoEdicaoDtoSchema = z.object({
   turnoId: z.uuid().describe('Turno da escala.'),
-  especialidadeId: z.uuid().nullable().describe('Só esta especialidade (frente); null = todas. Não junto com a modalidade.'),
-  modalidadeId: z.uuid().nullable().describe('Só esta modalidade (frente); null = todas. Não junto com a especialidade.'),
-  prioridadeOperacaoId: z.uuid().nullable().describe('Só esta prioridade da operação; null = todas.'),
+  todasFrentes: z.boolean().describe('Vale todas as frentes (especialidade e modalidade null). Sem ele, uma das duas é obrigatória.'),
+  especialidadeId: z.uuid().nullable().describe('Sem `todasFrentes`: só esta especialidade (frente). Não junto com a modalidade.'),
+  modalidadeId: z.uuid().nullable().describe('Sem `todasFrentes`: só esta modalidade (frente). Não junto com a especialidade.'),
+  todasPrioridades: z.boolean().describe('Vale todas as prioridades (prioridade null). Sem ele, a prioridade é obrigatória.'),
+  prioridadeOperacaoId: z.uuid().nullable().describe('Sem `todasPrioridades`: só esta prioridade da operação.'),
   regra: regraRecebimentoDtoSchema,
   de: z.iso.date().describe('Primeiro dia (Brasília), inclusivo.'),
   ate: z.iso.date().describe('Último dia (Brasília), inclusivo.'),

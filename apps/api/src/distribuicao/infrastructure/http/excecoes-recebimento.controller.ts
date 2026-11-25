@@ -52,7 +52,9 @@ function frenteDoDto(d: ExcecaoRecebimentoEdicaoDto): FrenteEscala | null {
 
 const edicaoDoDto = (d: ExcecaoRecebimentoEdicaoDto): EdicaoExcecaoRecebimento => ({
   turnoId: d.turnoId,
+  todasFrentes: d.todasFrentes,
   frente: frenteDoDto(d),
+  todasPrioridades: d.todasPrioridades,
   prioridadeOperacaoId: d.prioridadeOperacaoId,
   regra: recebimentoDoDto(d.regra),
   de: d.de,
@@ -79,8 +81,10 @@ export class ExcecoesRecebimentoController {
     return (await this.listarCaso.executar()).map((e) => ({
       id: e.id,
       turnoId: e.turnoId,
+      todasFrentes: e.todasFrentes,
       especialidadeId: e.frente?.especialidadeId ?? null,
       modalidadeId: e.frente?.modalidadeId ?? null,
+      todasPrioridades: e.todasPrioridades,
       prioridadeOperacaoId: e.prioridadeOperacaoId,
       regra: recebimentoParaDto(e.regra),
       de: e.de,

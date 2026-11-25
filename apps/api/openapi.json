@@ -22714,23 +22714,31 @@
             "format": "uuid",
             "description": "Turno da escala."
           },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Vale todas as frentes (especialidade e modalidade null). Sem ele, uma das duas é obrigatória."
+          },
           "especialidadeId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só esta especialidade (frente); null = todas. Não junto com a modalidade."
+            "description": "Sem `todasFrentes`: só esta especialidade (frente). Não junto com a modalidade."
           },
           "modalidadeId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só esta modalidade (frente); null = todas. Não junto com a especialidade."
+            "description": "Sem `todasFrentes`: só esta modalidade (frente). Não junto com a especialidade."
+          },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Vale todas as prioridades (prioridade null). Sem ele, a prioridade é obrigatória."
           },
           "prioridadeOperacaoId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só esta prioridade da operação; null = todas."
+            "description": "Sem `todasPrioridades`: só esta prioridade da operação."
           },
           "regra": {
             "$ref": "#/components/schemas/RegraRecebimentoDto"
@@ -22774,8 +22782,10 @@
         },
         "required": [
           "turnoId",
+          "todasFrentes",
           "especialidadeId",
           "modalidadeId",
+          "todasPrioridades",
           "prioridadeOperacaoId",
           "regra",
           "de",
@@ -22795,23 +22805,31 @@
             "format": "uuid",
             "description": "Turno da escala."
           },
+          "todasFrentes": {
+            "type": "boolean",
+            "description": "Vale todas as frentes (especialidade e modalidade null). Sem ele, uma das duas é obrigatória."
+          },
           "especialidadeId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só esta especialidade (frente); null = todas. Não junto com a modalidade."
+            "description": "Sem `todasFrentes`: só esta especialidade (frente). Não junto com a modalidade."
           },
           "modalidadeId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só esta modalidade (frente); null = todas. Não junto com a especialidade."
+            "description": "Sem `todasFrentes`: só esta modalidade (frente). Não junto com a especialidade."
+          },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Vale todas as prioridades (prioridade null). Sem ele, a prioridade é obrigatória."
           },
           "prioridadeOperacaoId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "Só esta prioridade da operação; null = todas."
+            "description": "Sem `todasPrioridades`: só esta prioridade da operação."
           },
           "regra": {
             "$ref": "#/components/schemas/RegraRecebimentoDto"
@@ -22829,8 +22847,10 @@
         },
         "required": [
           "turnoId",
+          "todasFrentes",
           "especialidadeId",
           "modalidadeId",
+          "todasPrioridades",
           "prioridadeOperacaoId",
           "regra",
           "de",

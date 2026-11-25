@@ -21,8 +21,10 @@ const nome = (id: string) => nomes.get(id) ?? id;
 const excecao = (p: Partial<ExcecaoRecebimentoDto> = {}): ExcecaoRecebimentoDto => ({
   id: 'x1',
   turnoId: 'lista',
+  todasFrentes: !p.especialidadeId && !p.modalidadeId,
   especialidadeId: null,
   modalidadeId: null,
+  todasPrioridades: !p.prioridadeOperacaoId,
   prioridadeOperacaoId: null,
   regra: { tipo: 'segue_sla', horas: null },
   de: '2026-11-25',
@@ -59,8 +61,10 @@ describe('exceções da grade: formulário', () => {
     expect(v).toMatchObject({ frente: 'M|ct', prioridadeOperacaoId: 'op-rot', horas: '12' });
     expect(excecaoParaApi(v)).toEqual({
       turnoId: 'lista',
+      todasFrentes: false,
       especialidadeId: null,
       modalidadeId: 'ct',
+      todasPrioridades: false,
       prioridadeOperacaoId: 'op-rot',
       regra: { tipo: 'prazo_minimo', horas: 12 },
       de: '2026-11-25',
@@ -69,11 +73,19 @@ describe('exceções da grade: formulário', () => {
     expect(
       excecaoParaApi({ ...v, frente: 'E|neuro', prioridadeOperacaoId: TODAS, regra: 'nao_recebe' }),
     ).toMatchObject({
+      todasFrentes: false,
       especialidadeId: 'neuro',
       modalidadeId: null,
+      todasPrioridades: true,
       prioridadeOperacaoId: null,
       regra: { tipo: 'nao_recebe', horas: null },
     });
+  });
+
+  it('"Todas" vira o todasFrentes / todasPrioridades explícito, e volta', () => {
+    const v = valoresDaExcecao(excecao(), '2026-11-25');
+    expect(v).toMatchObject({ frente: TODAS, prioridadeOperacaoId: TODAS });
+    expect(excecaoParaApi(v)).toMatchObject({ todasFrentes: true, todasPrioridades: true });
   });
 
   it('valida obrigatórios, horas do prazo mínimo e fim antes do início', () => {

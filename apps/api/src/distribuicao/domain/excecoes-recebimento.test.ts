@@ -17,7 +17,9 @@ const HOJE = '2026-11-25';
 
 const edicao = (p: Partial<EdicaoExcecaoRecebimento> = {}): EdicaoExcecaoRecebimento => ({
   turnoId: 'lista',
+  todasFrentes: !p.frente,
   frente: null,
+  todasPrioridades: !p.prioridadeOperacaoId,
   prioridadeOperacaoId: null,
   regra: { tipo: 'segue_sla' },
   de: HOJE,
@@ -28,7 +30,7 @@ let seq = 0;
 const excecao = (p: Partial<ExcecaoRecebimento> = {}): ExcecaoRecebimento => ({
   id: `x${++seq}`,
   criadoEm: new Date('2026-11-20T12:00:00Z'),
-  ...edicao(),
+  ...edicao(p),
   ...p,
 });
 
@@ -48,6 +50,19 @@ describe('validarExcecao', () => {
     expect(() => validarExcecao(edicao({ regra: { tipo: 'prazo_minimo', horas: 0 } }))).toThrow(
       /prazo mínimo/,
     );
+  });
+
+  it('vazio nunca é "todas": sem "todas", a frente e a prioridade são obrigatórias', () => {
+    expect(() => validarExcecao(edicao({ todasFrentes: false }))).toThrow(/Escolha a frente/);
+    expect(() => validarExcecao(edicao({ todasPrioridades: false }))).toThrow(
+      /Escolha a prioridade/,
+    );
+    expect(() => validarExcecao(edicao({ todasFrentes: true, frente: NEURO }))).toThrow(
+      /não as duas/,
+    );
+    expect(() =>
+      validarExcecao(edicao({ todasPrioridades: true, prioridadeOperacaoId: 'rotina' })),
+    ).toThrow(/não as duas/);
   });
 
   it('recusa período longo demais (mais de um ano)', () => {
@@ -94,7 +109,11 @@ describe('validarEdicaoExcecao', () => {
   it('futura: pode mudar tudo, mas não para o passado', () => {
     const futura = excecao({ de: '2026-12-01', ate: '2026-12-10' });
     expect(() =>
-      validarEdicaoExcecao(futura, { ...futura, de: '2026-11-26', frente: CT }, HOJE),
+      validarEdicaoExcecao(
+        futura,
+        { ...futura, de: '2026-11-26', todasFrentes: false, frente: CT },
+        HOJE,
+      ),
     ).not.toThrow();
     expect(() => validarEdicaoExcecao(futura, { ...futura, de: '2026-11-24' }, HOJE)).toThrow(
       /não pode começar antes de hoje/,

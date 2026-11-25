@@ -323,7 +323,9 @@ describe('rodarMotor', () => {
     const excecao = {
       id: 'x1',
       turnoId: 'lista',
+      todasFrentes: true,
       frente: null,
+      todasPrioridades: true,
       prioridadeOperacaoId: null,
       regra: { tipo: 'segue_sla' as const },
       de: '2026-11-10',

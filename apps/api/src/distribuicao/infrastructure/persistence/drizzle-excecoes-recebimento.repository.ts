@@ -26,7 +26,9 @@ function frenteDa(l: Pick<Linha, 'especialidadeId' | 'modalidadeId'>): FrenteEsc
 const excecaoDa = (l: Linha): ExcecaoRecebimento => ({
   id: l.id,
   turnoId: l.turnoId,
+  todasFrentes: l.todasFrentes,
   frente: frenteDa(l),
+  todasPrioridades: l.todasPrioridades,
   prioridadeOperacaoId: l.prioridadeOperacaoId,
   regra: regraRecebimentoDa(l),
   de: l.de,
@@ -36,6 +38,8 @@ const excecaoDa = (l: Linha): ExcecaoRecebimento => ({
 
 const linhaDa = (e: Omit<ExcecaoRecebimento, 'id' | 'criadoEm'>) => ({
   turnoId: e.turnoId,
+  todasFrentes: e.todasFrentes,
+  todasPrioridades: e.todasPrioridades,
   especialidadeId: e.frente?.especialidadeId ?? null,
   modalidadeId: e.frente?.modalidadeId ?? null,
   prioridadeOperacaoId: e.prioridadeOperacaoId,

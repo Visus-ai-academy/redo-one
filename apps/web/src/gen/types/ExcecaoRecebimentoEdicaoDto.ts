@@ -14,21 +14,31 @@ export type ExcecaoRecebimentoEdicaoDto = {
    */
   turnoId: string;
   /**
-   * @description Só esta especialidade (frente); null = todas. Não junto com a modalidade.
+   * @description Vale todas as frentes (especialidade e modalidade null). Sem ele, uma das duas é obrigatória.
+   * @type boolean
+   */
+  todasFrentes: boolean;
+  /**
+   * @description Sem `todasFrentes`: só esta especialidade (frente). Não junto com a modalidade.
    *
    * Format: `uuid`
    * @type string
    */
   especialidadeId: string | null;
   /**
-   * @description Só esta modalidade (frente); null = todas. Não junto com a especialidade.
+   * @description Sem `todasFrentes`: só esta modalidade (frente). Não junto com a especialidade.
    *
    * Format: `uuid`
    * @type string
    */
   modalidadeId: string | null;
   /**
-   * @description Só esta prioridade da operação; null = todas.
+   * @description Vale todas as prioridades (prioridade null). Sem ele, a prioridade é obrigatória.
+   * @type boolean
+   */
+  todasPrioridades: boolean;
+  /**
+   * @description Sem `todasPrioridades`: só esta prioridade da operação.
    *
    * Format: `uuid`
    * @type string

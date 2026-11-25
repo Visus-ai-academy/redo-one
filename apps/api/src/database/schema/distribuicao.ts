@@ -386,10 +386,14 @@ export const excecoesRecebimento = pgTable(
     turnoId: uuid('turno_id')
       .notNull()
       .references(() => turnos.id, { onDelete: 'cascade' }),
+    /** Vale todas as frentes (sem especialidade nem modalidade). Vazio nunca é "todas". */
+    todasFrentes: boolean('todas_frentes').notNull().default(false),
     especialidadeId: uuid('especialidade_id').references(() => especialidades.id, {
       onDelete: 'cascade',
     }),
     modalidadeId: uuid('modalidade_id').references(() => modalidades.id, { onDelete: 'cascade' }),
+    /** Vale todas as prioridades (sem `prioridade_operacao_id`). */
+    todasPrioridades: boolean('todas_prioridades').notNull().default(false),
     prioridadeOperacaoId: uuid('prioridade_operacao_id').references(() => prioridadesOperacao.id, {
       onDelete: 'cascade',
     }),

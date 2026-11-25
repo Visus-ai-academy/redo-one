@@ -117,9 +117,13 @@ export function urgenciaNaFrente(
 export interface ExcecaoRecebimento {
   id: string;
   turnoId: string;
-  /** Null = todas as frentes. */
+  /** Vale todas as frentes (com `frente` null). Vazio nunca é "todas" (25/11/2026). */
+  todasFrentes: boolean;
+  /** Sem `todasFrentes`: a frente. */
   frente: FrenteEscala | null;
-  /** Null = todas as prioridades. */
+  /** Vale todas as prioridades (com `prioridadeOperacaoId` null). */
+  todasPrioridades: boolean;
+  /** Sem `todasPrioridades`: a prioridade da operação. */
   prioridadeOperacaoId: string | null;
   regra: RegraRecebimento;
   /** `AAAA-MM-DD`, em Brasília, inclusivo. */
@@ -138,8 +142,8 @@ const mesmaFrente = (a: FrenteEscala, b: FrenteEscala) =>
   a.tipo === b.tipo && a.especialidadeId === b.especialidadeId && a.modalidadeId === b.modalidadeId;
 
 /** Frente + prioridade (2) > só a frente ou só a prioridade (1) > só o turno (0). */
-export const especificidade = (e: Pick<ExcecaoRecebimento, 'frente' | 'prioridadeOperacaoId'>) =>
-  (e.frente ? 1 : 0) + (e.prioridadeOperacaoId ? 1 : 0);
+export const especificidade = (e: Pick<ExcecaoRecebimento, 'todasFrentes' | 'todasPrioridades'>) =>
+  (e.todasFrentes ? 0 : 1) + (e.todasPrioridades ? 0 : 1);
 
 /**
  * A grade de recebimento (precedência registrada no cortex em 25/11/2026): a exceção temporária
@@ -175,8 +179,9 @@ export class GradeRecebimento {
     const excecao = this.excecoes.find(
       (e) =>
         e.turnoId === turnoId &&
-        (e.frente === null || mesmaFrente(e.frente, frente)) &&
-        (e.prioridadeOperacaoId === null || e.prioridadeOperacaoId === prioridadeOperacaoId),
+        (e.todasFrentes || (e.frente !== null && mesmaFrente(e.frente, frente))) &&
+        (e.todasPrioridades ||
+          (e.prioridadeOperacaoId !== null && e.prioridadeOperacaoId === prioridadeOperacaoId)),
     );
     if (excecao) return excecao.regra;
     if (prioridadeOperacaoId === null) return SEGUE_SLA;

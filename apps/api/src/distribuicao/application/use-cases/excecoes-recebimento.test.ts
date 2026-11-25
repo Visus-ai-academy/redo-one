@@ -19,7 +19,9 @@ const ator = { tipo: 'usuario' as const, id: 'u1' };
 
 const edicao = (p: Partial<EdicaoExcecaoRecebimento> = {}): EdicaoExcecaoRecebimento => ({
   turnoId: 'lista',
+  todasFrentes: !p.frente,
   frente: null,
+  todasPrioridades: !p.prioridadeOperacaoId,
   prioridadeOperacaoId: null,
   regra: { tipo: 'segue_sla' },
   de: '2026-11-24',

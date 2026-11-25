@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsObject, IsString, IsUUID, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsObject,
+  IsString,
+  IsUUID,
+  MaxLength,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
 
 import { RegraRecebimentoDto } from './prioridades-operacao.dto';
 
@@ -13,10 +21,17 @@ export class ExcecaoRecebimentoEdicaoDto {
   turnoId!: string;
 
   @ApiProperty({
+    description:
+      'Vale todas as frentes (especialidade e modalidade null). Sem ele, uma das duas é obrigatória.',
+  })
+  @IsBoolean()
+  todasFrentes!: boolean;
+
+  @ApiProperty({
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'Só esta especialidade (frente); null = todas. Não junto com a modalidade.',
+    description: 'Sem `todasFrentes`: só esta especialidade (frente). Não junto com a modalidade.',
   })
   @ValidateIf((_, v) => v !== null)
   @IsUUID()
@@ -26,17 +41,24 @@ export class ExcecaoRecebimentoEdicaoDto {
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'Só esta modalidade (frente); null = todas. Não junto com a especialidade.',
+    description: 'Sem `todasFrentes`: só esta modalidade (frente). Não junto com a especialidade.',
   })
   @ValidateIf((_, v) => v !== null)
   @IsUUID()
   modalidadeId!: string | null;
 
   @ApiProperty({
+    description:
+      'Vale todas as prioridades (prioridade null). Sem ele, a prioridade é obrigatória.',
+  })
+  @IsBoolean()
+  todasPrioridades!: boolean;
+
+  @ApiProperty({
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'Só esta prioridade da operação; null = todas.',
+    description: 'Sem `todasPrioridades`: só esta prioridade da operação.',
   })
   @ValidateIf((_, v) => v !== null)
   @IsUUID()
