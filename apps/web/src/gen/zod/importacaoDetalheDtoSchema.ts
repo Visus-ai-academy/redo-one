@@ -13,7 +13,7 @@ import { statusImportacaoSchema } from './statusImportacaoSchema'
 export const importacaoDetalheDtoSchema = z.object({
   id: z.uuid(),
   status: statusImportacaoSchema,
-  origem: origemImportacaoSchema,
+  origem: origemImportacaoSchema.describe('carga_legado: laudos copiados do dashboards-one pela carga.'),
   formato: z.union([formatoImportacaoSchema, z.null()]).describe('Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.'),
   nomeArquivo: z.string().nullable().describe('Planilha enviada; vazio na importação da MobileMed.'),
   enviadaPor: pessoaResumoDtoSchema.nullable(),

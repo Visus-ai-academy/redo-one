@@ -10,8 +10,12 @@ export class PessoaResumoDto {
 export class ImportacaoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ enum: STATUS, enumName: 'StatusImportacao' }) status!: (typeof STATUS)[number];
-  @ApiProperty({ enum: ['upload_manual', 'mobilemed'], enumName: 'OrigemImportacao' })
-  origem!: 'upload_manual' | 'mobilemed';
+  @ApiProperty({
+    enum: ['upload_manual', 'mobilemed', 'carga_legado'],
+    enumName: 'OrigemImportacao',
+    description: 'carga_legado: laudos copiados do dashboards-one pela carga.',
+  })
+  origem!: 'upload_manual' | 'mobilemed' | 'carga_legado';
   @ApiProperty({
     enum: ['laudos', 'compartilhamento'],
     enumName: 'FormatoImportacao',

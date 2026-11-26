@@ -21721,8 +21721,10 @@
         "type": "string",
         "enum": [
           "upload_manual",
-          "mobilemed"
-        ]
+          "mobilemed",
+          "carga_legado"
+        ],
+        "description": "carga_legado: laudos copiados do dashboards-one pela carga."
       },
       "FormatoImportacao": {
         "type": "string",
@@ -21763,6 +21765,7 @@
             ]
           },
           "origem": {
+            "description": "carga_legado: laudos copiados do dashboards-one pela carga.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/OrigemImportacao"
@@ -21931,6 +21934,7 @@
             ]
           },
           "origem": {
+            "description": "carga_legado: laudos copiados do dashboards-one pela carga.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/OrigemImportacao"

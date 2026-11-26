@@ -1,0 +1,1 @@
+ALTER TYPE "public"."origem_importacao" ADD VALUE 'carga_legado';

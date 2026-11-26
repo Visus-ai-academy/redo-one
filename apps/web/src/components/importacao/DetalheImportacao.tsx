@@ -77,7 +77,11 @@ export function DetalheImportacao({
             <span className="break-all">{i.nomeArquivo}</span>
           </Campo>
         ) : (
-          <Campo rotulo="Origem">Relatório da MobileMed</Campo>
+          <Campo rotulo="Origem">
+            {i.origem === 'carga_legado'
+              ? 'Laudos copiados do dashboards-one'
+              : 'Relatório da MobileMed'}
+          </Campo>
         )}
         {i.formato && (
           <Campo rotulo="Relatório">

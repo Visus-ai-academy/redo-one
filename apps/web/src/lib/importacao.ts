@@ -54,12 +54,14 @@ export function textoDoFim(i: {
   return `Importação concluída: ${novos} e ${alterados}.`;
 }
 
-/** O que a importação leu: a planilha enviada ou o relatório da MobileMed. */
+/** O que a importação leu: a planilha enviada, o relatório da MobileMed ou a carga do dashboards-one. */
 export function origemDaImportacao(i: {
+  origem: 'upload_manual' | 'mobilemed' | 'carga_legado';
   nomeArquivo: string | null;
   formato: 'laudos' | 'compartilhamento' | null;
 }): string {
   if (i.nomeArquivo) return i.nomeArquivo;
+  if (i.origem === 'carga_legado') return 'Carga do dashboards-one';
   return i.formato === 'compartilhamento' ? 'MobileMed: compartilhamento' : 'MobileMed: laudos';
 }
 

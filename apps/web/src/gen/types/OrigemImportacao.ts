@@ -6,6 +6,7 @@
 export const origemImportacao = {
   upload_manual: 'upload_manual',
   mobilemed: 'mobilemed',
+  carga_legado: 'carga_legado',
 } as const;
 
 export type OrigemImportacaoKey = (typeof origemImportacao)[keyof typeof origemImportacao];

@@ -17,6 +17,10 @@ export type ImportacaoDetalheDto = {
    */
   id: string;
   status: StatusImportacaoKey;
+  /**
+   * @description carga_legado: laudos copiados do dashboards-one pela carga.
+   * @type string
+   */
   origem: OrigemImportacaoKey;
   /**
    * @description Relatório de laudos ou de compartilhamento (CRD_APOIO); vazio antes da leitura.

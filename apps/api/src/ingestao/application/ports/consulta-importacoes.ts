@@ -8,7 +8,7 @@ export type StatusImportacao = 'na_fila' | 'processando' | 'concluida' | 'recusa
 export interface ImportacaoResumo {
   id: string;
   status: StatusImportacao;
-  origem: 'upload_manual' | 'mobilemed';
+  origem: 'upload_manual' | 'mobilemed' | 'carga_legado';
   formato: FormatoPlanilha | null;
   /** Nulo na importação da MobileMed (sem planilha). */
   nomeArquivo: string | null;

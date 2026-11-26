@@ -5,6 +5,6 @@
 
 import * as z from 'zod'
 
-export const origemImportacaoSchema = z.enum(['upload_manual', 'mobilemed'])
+export const origemImportacaoSchema = z.enum(['upload_manual', 'mobilemed', 'carga_legado']).describe('carga_legado: laudos copiados do dashboards-one pela carga.')
 
 export type OrigemImportacaoSchemaType = z.infer<typeof origemImportacaoSchema>

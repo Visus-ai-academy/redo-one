@@ -40,8 +40,12 @@ const atualizadoEm = () =>
     .defaultNow()
     .$onUpdate(() => new Date());
 
-/** Por onde a planilha chegou. */
-export const origemImportacao = pgEnum('origem_importacao', ['upload_manual', 'mobilemed']);
+/** Por onde os laudos chegaram; `carga_legado` é a cópia dos laudos do dashboards-one. */
+export const origemImportacao = pgEnum('origem_importacao', [
+  'upload_manual',
+  'mobilemed',
+  'carga_legado',
+]);
 
 /** Relatório "Descritivo Especialidades" ou "Compartilhamento de exames" (CRD_APOIO). */
 export const formatoImportacao = pgEnum('formato_importacao', ['laudos', 'compartilhamento']);

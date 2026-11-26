@@ -29,14 +29,23 @@ describe('situacaoDaImportacao', () => {
 });
 
 describe('origemDaImportacao', () => {
-  it('o nome da planilha no upload; o relatório na MobileMed', () => {
-    expect(origemDaImportacao({ nomeArquivo: 'laudos.xlsx', formato: 'laudos' })).toBe(
-      'laudos.xlsx',
+  it('o nome da planilha no upload; o relatório na MobileMed; a carga do dashboards-one', () => {
+    expect(
+      origemDaImportacao({
+        origem: 'upload_manual',
+        nomeArquivo: 'laudos.xlsx',
+        formato: 'laudos',
+      }),
+    ).toBe('laudos.xlsx');
+    expect(origemDaImportacao({ origem: 'mobilemed', nomeArquivo: null, formato: 'laudos' })).toBe(
+      'MobileMed: laudos',
     );
-    expect(origemDaImportacao({ nomeArquivo: null, formato: 'laudos' })).toBe('MobileMed: laudos');
-    expect(origemDaImportacao({ nomeArquivo: null, formato: 'compartilhamento' })).toBe(
-      'MobileMed: compartilhamento',
-    );
+    expect(
+      origemDaImportacao({ origem: 'mobilemed', nomeArquivo: null, formato: 'compartilhamento' }),
+    ).toBe('MobileMed: compartilhamento');
+    expect(
+      origemDaImportacao({ origem: 'carga_legado', nomeArquivo: null, formato: 'laudos' }),
+    ).toBe('Carga do dashboards-one');
   });
 });
 
