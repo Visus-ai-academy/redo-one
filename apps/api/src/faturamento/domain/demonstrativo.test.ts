@@ -335,4 +335,34 @@ describe('montar os demonstrativos da competência', () => {
       ['c2', true, 0],
     ]);
   });
+
+  it('rastro do laudo pedido: a situação e cada parcela com o preço achado', () => {
+    const l = laudo({ id: 'alvo', volume: 2 });
+    const r = montarDemonstrativos(
+      entrada({ laudos: [l, laudo({ id: 'outro', tipificacao: { fatura: false } })] }),
+      new Set(['alvo', 'outro', 'nao-existe']),
+    );
+    expect(r.rastro.get('alvo')).toEqual({
+      situacao: 'fatura',
+      membroId: 'c1',
+      parcelas: [
+        {
+          arranjo: {
+            modalidadeId: 'MR',
+            especialidadeId: 'NEURO',
+            categoriaId: 'SC',
+            prioridadeId: 'ROTINA',
+          },
+          quantidade: 2,
+          unitarioCentavos: 6350,
+          valorCentavos: 12700,
+          origem: 'principal',
+          como: 'exato',
+          linhaPrecoId: 'p1',
+        },
+      ],
+    });
+    expect(r.rastro.get('outro')).toEqual({ situacao: 'nao_fatura', membroId: 'c1', parcelas: [] });
+    expect(r.rastro.has('nao-existe')).toBe(false);
+  });
 });

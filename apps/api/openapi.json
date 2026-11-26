@@ -8718,6 +8718,149 @@
         ]
       }
     },
+    "/faturamento/demonstrativos": {
+      "get": {
+        "operationId": "DemonstrativosController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-11",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Os vigentes, pelo nome do cliente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDemonstrativosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/demonstrativos/laudos/{laudoId}": {
+      "get": {
+        "operationId": "DemonstrativosController_laudo",
+        "parameters": [
+          {
+            "name": "laudoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "O cálculo do laudo feito agora (situação e cada parcela com o preço); na fechada, o que o recálculo daria.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheLaudoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/demonstrativos/{competencia}/clientes/{clienteId}": {
+      "get": {
+        "operationId": "DemonstrativosController_cliente",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-11",
+              "type": "string"
+            }
+          },
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "versao",
+            "required": false,
+            "in": "query",
+            "description": "Sem ela, a vigente.",
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemonstrativoClienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/repasse/competencias/{competencia}/recalcular": {
       "post": {
         "operationId": "RepasseController_recalcular",
@@ -20349,6 +20492,569 @@
         },
         "required": [
           "motivo"
+        ]
+      },
+      "OrigemDemonstrativo": {
+        "type": "string",
+        "enum": [
+          "previa",
+          "fechamento",
+          "recalculo"
+        ]
+      },
+      "ResumoDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "versao": {
+            "type": "integer"
+          },
+          "vigente": {
+            "type": "boolean"
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemDemonstrativo"
+              }
+            ]
+          },
+          "recalculoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "laudos": {
+            "type": "integer",
+            "description": "Laudos que faturam."
+          },
+          "quantidade": {
+            "type": "number",
+            "description": "Soma do volume (e das peças da quebra)."
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Valor dos exames, em centavos."
+          },
+          "quantidadeSemPreco": {
+            "type": "number"
+          },
+          "nadaAFaturar": {
+            "type": "boolean",
+            "description": "Nada a faturar: R$ 0."
+          },
+          "geradoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "competencia",
+          "clienteId",
+          "cliente",
+          "versao",
+          "vigente",
+          "origem",
+          "recalculoId",
+          "laudos",
+          "quantidade",
+          "valorCentavos",
+          "quantidadeSemPreco",
+          "nadaAFaturar",
+          "geradoEm"
+        ]
+      },
+      "TotaisCompetenciaDto": {
+        "type": "object",
+        "properties": {
+          "clientes": {
+            "type": "integer"
+          },
+          "laudos": {
+            "type": "integer"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "quantidadeSemPreco": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "clientes",
+          "laudos",
+          "quantidade",
+          "valorCentavos",
+          "quantidadeSemPreco"
+        ]
+      },
+      "PaginaDemonstrativosDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumoDemonstrativoDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          },
+          "totais": {
+            "$ref": "#/components/schemas/TotaisCompetenciaDto"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina",
+          "totais"
+        ]
+      },
+      "LaudoDoDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "unidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estudo": {
+            "type": "string"
+          },
+          "diaLaudo": {
+            "type": "string"
+          },
+          "volume": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "competencia",
+          "clienteId",
+          "unidadeId",
+          "estudo",
+          "diaLaudo",
+          "volume",
+          "status"
+        ]
+      },
+      "SituacaoLaudoDemonstrativo": {
+        "type": "string",
+        "enum": [
+          "fatura",
+          "nao_fatura",
+          "sem_tipificacao",
+          "arranjo_incompleto",
+          "excluido_ajuste",
+          "nao_assinado",
+          "duplicado",
+          "cliente_inativo"
+        ]
+      },
+      "AjusteDoDetalheDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAjusteLaudo"
+              }
+            ]
+          },
+          "unitarioCentavos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tipo"
+        ]
+      },
+      "ArranjoDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId"
+        ]
+      },
+      "OrigemPrecoItem": {
+        "type": "string",
+        "enum": [
+          "unidade",
+          "principal",
+          "padrao",
+          "ajuste"
+        ]
+      },
+      "ComoAchouPreco": {
+        "type": "string",
+        "enum": [
+          "exato",
+          "prioridade_alternativa",
+          "menor_faixa"
+        ]
+      },
+      "ParcelaLaudoDto": {
+        "type": "object",
+        "properties": {
+          "arranjo": {
+            "$ref": "#/components/schemas/ArranjoDemonstrativoDto"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "unitarioCentavos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "origem": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemPrecoItem"
+              }
+            ]
+          },
+          "como": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComoAchouPreco"
+              }
+            ]
+          },
+          "linhaPrecoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "arranjo",
+          "quantidade",
+          "unitarioCentavos",
+          "valorCentavos",
+          "origem",
+          "como",
+          "linhaPrecoId"
+        ]
+      },
+      "DetalheLaudoDto": {
+        "type": "object",
+        "properties": {
+          "laudo": {
+            "$ref": "#/components/schemas/LaudoDoDetalheDto"
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoLaudoDemonstrativo"
+              }
+            ]
+          },
+          "membroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ajuste": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDoDetalheDto"
+              }
+            ]
+          },
+          "parcelas": {
+            "description": "O laudo inteiro, ou cada peça da quebra.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParcelaLaudoDto"
+            }
+          }
+        },
+        "required": [
+          "laudo",
+          "situacao",
+          "membroId",
+          "ajuste",
+          "parcelas"
+        ]
+      },
+      "NomesItemDto": {
+        "type": "object",
+        "properties": {
+          "membro": {
+            "type": "string"
+          },
+          "modalidade": {
+            "type": "string"
+          },
+          "especialidade": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "prioridade": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "membro",
+          "modalidade",
+          "especialidade",
+          "categoria",
+          "prioridade"
+        ]
+      },
+      "ItemDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "membroId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unidade de origem ou o próprio cliente."
+          },
+          "dia": {
+            "type": "string",
+            "example": "2026-11-03"
+          },
+          "unitarioCentavos": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Vazio = sem preço."
+          },
+          "linhaPrecoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "origem": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemPrecoItem"
+              }
+            ]
+          },
+          "como": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComoAchouPreco"
+              }
+            ]
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "laudos": {
+            "type": "integer"
+          },
+          "nomes": {
+            "$ref": "#/components/schemas/NomesItemDto"
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "membroId",
+          "dia",
+          "unitarioCentavos",
+          "linhaPrecoId",
+          "origem",
+          "como",
+          "quantidade",
+          "valorCentavos",
+          "laudos",
+          "nomes"
+        ]
+      },
+      "DemonstrativoDetalhadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "versao": {
+            "type": "integer"
+          },
+          "vigente": {
+            "type": "boolean"
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemDemonstrativo"
+              }
+            ]
+          },
+          "recalculoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "laudos": {
+            "type": "integer",
+            "description": "Laudos que faturam."
+          },
+          "quantidade": {
+            "type": "number",
+            "description": "Soma do volume (e das peças da quebra)."
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Valor dos exames, em centavos."
+          },
+          "quantidadeSemPreco": {
+            "type": "number"
+          },
+          "nadaAFaturar": {
+            "type": "boolean",
+            "description": "Nada a faturar: R$ 0."
+          },
+          "geradoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDemonstrativoDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "competencia",
+          "clienteId",
+          "cliente",
+          "versao",
+          "vigente",
+          "origem",
+          "recalculoId",
+          "laudos",
+          "quantidade",
+          "valorCentavos",
+          "quantidadeSemPreco",
+          "nadaAFaturar",
+          "geradoEm",
+          "itens"
+        ]
+      },
+      "DemonstrativoClienteDto": {
+        "type": "object",
+        "properties": {
+          "demonstrativo": {
+            "$ref": "#/components/schemas/DemonstrativoDetalhadoDto"
+          },
+          "versoes": {
+            "description": "Todas as versões, a mais nova primeiro.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumoDemonstrativoDto"
+            }
+          }
+        },
+        "required": [
+          "demonstrativo",
+          "versoes"
         ]
       },
       "MotivoDto": {

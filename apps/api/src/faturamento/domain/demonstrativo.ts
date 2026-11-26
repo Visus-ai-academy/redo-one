@@ -109,7 +109,35 @@ export interface SemPreco {
   quantidade: number;
 }
 
+/** Por que o laudo está (ou não) no valor do demonstrativo. */
+export type SituacaoLaudo =
+  | 'fatura'
+  | 'nao_fatura'
+  | 'sem_tipificacao'
+  | 'arranjo_incompleto'
+  | 'excluido_ajuste'
+  | 'nao_assinado'
+  | 'duplicado'
+  | 'cliente_inativo';
+
+/** O cálculo de um laudo, parcela a parcela (o laudo inteiro ou cada peça da quebra). */
+export interface RastroLaudo {
+  situacao: SituacaoLaudo;
+  membroId: string;
+  parcelas: {
+    arranjo: Arranjo;
+    quantidade: number;
+    unitarioCentavos: number | null;
+    valorCentavos: number;
+    origem: ItemDemonstrativo['origem'];
+    como: ComoAchou | null;
+    linhaPrecoId: string | null;
+  }[];
+}
+
 export interface ResultadoDemonstrativos {
+  /** Só dos laudos pedidos em `rastrear`. */
+  rastro: Map<string, RastroLaudo>;
   demonstrativos: Demonstrativo[];
   semPreco: SemPreco[];
   semTipificacao: { clienteId: string; laudoId: string }[];
@@ -147,9 +175,14 @@ const centavos = (valor: number) => Math.round(valor * 100);
  * O cliente com laudos e nada a faturar, e o cliente ativo sem laudos, aparecem com R$ 0 e
  * `nadaAFaturar`.
  */
-export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstrativos {
+export function montarDemonstrativos(
+  e: EntradaDemonstrativo,
+  /** Laudos cujo cálculo se quer ver, parcela a parcela (o detalhe calculado na hora). */
+  rastrear: ReadonlySet<string> = new Set(),
+): ResultadoDemonstrativos {
   const { parametros: p } = e;
   const r: ResultadoDemonstrativos = {
+    rastro: new Map(),
     demonstrativos: [],
     semPreco: [],
     semTipificacao: [],
@@ -159,13 +192,24 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
   const ativo = (id: string | null) => id === null || e.clientes.get(id)?.ativo !== false;
 
   const entram: LaudoDoDemonstrativo[] = [];
+  const marcar = (l: LaudoDoDemonstrativo, situacao: SituacaoLaudo) => {
+    if (rastrear.has(l.id))
+      r.rastro.set(l.id, { situacao, membroId: l.unidadeId ?? l.clienteId, parcelas: [] });
+  };
   for (const l of e.laudos) {
-    if (e.ajustes.get(l.id)?.tipo === 'excluir') r.excluidos.ajuste++;
-    else if (!l.assinado) r.excluidos.naoAssinado++;
-    else if (l.duplicado && !p.cobraDuplicados) r.excluidos.duplicado++;
-    else if (!p.cobraClientesInativos && !(ativo(l.clienteId) && ativo(l.unidadeId)))
+    if (e.ajustes.get(l.id)?.tipo === 'excluir') {
+      r.excluidos.ajuste++;
+      marcar(l, 'excluido_ajuste');
+    } else if (!l.assinado) {
+      r.excluidos.naoAssinado++;
+      marcar(l, 'nao_assinado');
+    } else if (l.duplicado && !p.cobraDuplicados) {
+      r.excluidos.duplicado++;
+      marcar(l, 'duplicado');
+    } else if (!p.cobraClientesInativos && !(ativo(l.clienteId) && ativo(l.unidadeId))) {
       r.excluidos.clienteInativo++;
-    else entram.push(l);
+      marcar(l, 'cliente_inativo');
+    } else entram.push(l);
   }
 
   /** Categoria padrão e reclassificação: o arranjo com que o laudo (ou a peça) é precificado. */
@@ -230,9 +274,13 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     clientesVistos.add(l.clienteId);
     if (!l.tipificacao) {
       r.semTipificacao.push({ clienteId: l.clienteId, laudoId: l.id });
+      marcar(l, 'sem_tipificacao');
       continue;
     }
-    if (!l.tipificacao.fatura) continue;
+    if (!l.tipificacao.fatura) {
+      marcar(l, 'nao_fatura');
+      continue;
+    }
     const brutos = l.pecas.length
       ? l.pecas.map((pc) => ({
           modalidadeId: pc.modalidadeId ?? l.modalidadeId,
@@ -256,8 +304,10 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     }));
     if (arranjos.some((a) => !a.arranjo)) {
       r.arranjoIncompleto.push({ clienteId: l.clienteId, laudoId: l.id });
+      marcar(l, 'arranjo_incompleto');
       continue;
     }
+    marcar(l, 'fatura');
     const lista = porCliente.get(l.clienteId) ?? [];
     for (const a of arranjos) {
       lista.push({
@@ -323,6 +373,15 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
       item.valorCentavos += unitario === null ? 0 : Math.round(unitario * pc.quantidade);
       item.ids.add(pc.laudoId);
       item.laudos = item.ids.size;
+      r.rastro.get(pc.laudoId)?.parcelas.push({
+        arranjo: pc.arranjo,
+        quantidade: pc.quantidade,
+        unitarioCentavos: unitario,
+        valorCentavos: unitario === null ? 0 : Math.round(unitario * pc.quantidade),
+        origem: item.origem,
+        como: item.como,
+        linhaPrecoId: item.linhaPrecoId,
+      });
       itens.set(k, item);
       if (unitario === null) {
         const s = semPreco.get(kPreco) ?? {

@@ -64,6 +64,11 @@ import {
   ListarAjustesLaudo,
 } from './application/use-cases/ajustes-laudo';
 import { CarregarTipificador } from './application/use-cases/carregar-tipificador';
+import {
+  DetalharLaudoDemonstrativo,
+  ListarDemonstrativos,
+  ObterDemonstrativo,
+} from './application/use-cases/consultar-demonstrativos';
 import { CriarCorte } from './application/use-cases/criar-corte';
 import {
   DefinirDadosFiscais,
@@ -116,6 +121,7 @@ import { AjustesLaudoController } from './infrastructure/http/ajustes-laudo.cont
 import { CompetenciasController } from './infrastructure/http/competencias.controller';
 import { CortesController } from './infrastructure/http/cortes.controller';
 import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.controller';
+import { DemonstrativosController } from './infrastructure/http/demonstrativos.controller';
 import { ParametrosDemonstrativoController } from './infrastructure/http/parametros-demonstrativo.controller';
 import { PrecosController } from './infrastructure/http/precos.controller';
 import {
@@ -162,6 +168,7 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
     PrecosController,
     ParametrosDemonstrativoController,
     AjustesLaudoController,
+    DemonstrativosController,
   ],
   providers: [
     { provide: COMPETENCIAS_REPOSITORY, useClass: DrizzleCompetenciasRepository },
@@ -307,6 +314,16 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
       useFactory: (repo: AjustesLaudoRepository, auditoria: Auditoria) =>
         new Caso(repo, auditoria, agora),
     })),
+    ...[ListarDemonstrativos, ObterDemonstrativo].map((Caso) => ({
+      provide: Caso,
+      inject: [DEMONSTRATIVOS_REPOSITORY],
+      useFactory: (repo: DemonstrativosRepository) => new Caso(repo),
+    })),
+    {
+      provide: DetalharLaudoDemonstrativo,
+      inject: [ENTRADAS_DEMONSTRATIVO],
+      useFactory: (entradas: EntradasDemonstrativo) => new DetalharLaudoDemonstrativo(entradas),
+    },
     // Um registro só para todos os contextos (faturamento, repasse): cada um registra o seu.
     { provide: RegistroRecalculadores, useFactory: () => new RegistroRecalculadores() },
     { provide: RECALCULOS_COMPETENCIA, useClass: DrizzleRecalculosCompetencia },

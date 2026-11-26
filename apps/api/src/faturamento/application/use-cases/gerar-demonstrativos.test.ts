@@ -85,6 +85,7 @@ describe('gerar os demonstrativos', () => {
   let registrados: AvisoLevantado[][];
   const entradas: EntradasDemonstrativo = {
     carregar: async (competencia) => ({ entrada: entrada(competencia), nomes }),
+    localizarLaudo: async () => null,
   };
   const avisos: AvisosDoDemonstrativo = {
     sincronizar: async (l) => {

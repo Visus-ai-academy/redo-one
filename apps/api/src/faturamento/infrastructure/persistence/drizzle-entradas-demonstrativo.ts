@@ -21,6 +21,7 @@ import {
 } from '../../../database/schema';
 import type {
   EntradasDemonstrativo,
+  LaudoLocalizado,
   NomesDemonstrativo,
 } from '../../application/ports/entradas-demonstrativo';
 import type {
@@ -41,11 +42,28 @@ const NAO_ASSINADO = 'Não Assinado';
 export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async carregar(competencia: string) {
+  async localizarLaudo(laudoId: string): Promise<LaudoLocalizado | null> {
+    const [l] = await this.db
+      .select({
+        id: laudos.id,
+        competencia: laudos.competencia,
+        clienteId: laudos.clienteId,
+        unidadeId: laudos.unidadeId,
+        estudo: laudos.estudo,
+        diaLaudo: laudos.diaLaudo,
+        volume: laudos.volume,
+        status: laudos.status,
+      })
+      .from(laudos)
+      .where(and(eq(laudos.id, laudoId), isNull(laudos.removidoEm)));
+    return l ?? null;
+  }
+
+  async carregar(competencia: string, opcoes: { clienteId?: string } = {}) {
     const onde = and(
       eq(laudos.competencia, competencia),
       isNull(laudos.removidoEm),
-      isNotNull(laudos.clienteId),
+      opcoes.clienteId ? eq(laudos.clienteId, opcoes.clienteId) : isNotNull(laudos.clienteId),
     );
     const precoCols = {
       id: precosCliente.id,

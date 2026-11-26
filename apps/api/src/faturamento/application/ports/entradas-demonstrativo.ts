@@ -17,7 +17,22 @@ export interface NomesDemonstrativo {
  * parâmetros e as prioridades alternativas que valem na competência.
  */
 export interface EntradasDemonstrativo {
+  /** `clienteId`: só os laudos desse principal (o detalhe de um laudo). */
   carregar(
     competencia: string,
+    opcoes?: { clienteId?: string },
   ): Promise<{ entrada: EntradaDemonstrativo; nomes: NomesDemonstrativo }>;
+  localizarLaudo(laudoId: string): Promise<LaudoLocalizado | null>;
+}
+
+/** O que o detalhe do laudo mostra dele (nada do paciente). */
+export interface LaudoLocalizado {
+  id: string;
+  competencia: string;
+  clienteId: string | null;
+  unidadeId: string | null;
+  estudo: string;
+  diaLaudo: string;
+  volume: number;
+  status: string;
 }
