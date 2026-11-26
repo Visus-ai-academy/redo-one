@@ -19,6 +19,7 @@ import { AvisosCompartilhadosModule } from './ingestao/infrastructure/avisos/avi
 import { GatilhosIngestaoModule } from './ingestao/infrastructure/jobs/gatilhos-ingestao.module';
 import { IngestaoModule } from './ingestao/ingestao.module';
 import { MedicosModule } from './medicos/medicos.module';
+import { RepasseModule } from './repasse/repasse.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MedicosModule } from './medicos/medicos.module';
     MedicosModule,
     EscalaModule,
     FaturamentoModule,
+    RepasseModule,
     IngestaoModule,
     DistribuicaoModule,
     HistoricoCadastroModule,

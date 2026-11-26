@@ -8414,6 +8414,398 @@
         ]
       }
     },
+    "/repasse/competencias/{competencia}/recalcular": {
+      "post": {
+        "operationId": "RepasseController_recalcular",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido gravado com o motivo (histórico em /faturamento/competencias/:c/recalculos); o repasse é refeito em segundo plano como versão nova.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecalculoRepasseCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Competência fora do formato ou motivo vazio."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "A competência está aberta (ela se recalcula sozinha)."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/parametros": {
+      "get": {
+        "operationId": "RepasseController_parametros",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Versões, a mais antiga primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParametrosRepasseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      },
+      "post": {
+        "operationId": "RepasseController_criarParametros",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarParametrosRepasseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Nova versão, que vale a partir de `aPartirDe`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/regras": {
+      "get": {
+        "operationId": "RepasseController_regras",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reclassificações e alternativas, todas as versões.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegrasDoRepasseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/reclassificacoes": {
+      "post": {
+        "operationId": "RepasseController_criarReclassificacao",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarReclassificacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/reclassificacoes/{id}/encerrar": {
+      "post": {
+        "operationId": "RepasseController_encerrarReclassificacao",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APartirDeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deixa de valer a partir de `aPartirDe`."
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/alternativas-preco": {
+      "post": {
+        "operationId": "RepasseController_criarAlternativa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarAlternativaPrecoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/alternativas-preco/{id}/encerrar": {
+      "post": {
+        "operationId": "RepasseController_encerrarAlternativa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APartirDeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/adicionais": {
+      "get": {
+        "operationId": "RepasseController_adicionais",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Da competência, os cancelados também.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdicionalDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      },
+      "post": {
+        "operationId": "RepasseController_lancar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LancarAdicionalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdicionalLancadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "403": {
+            "description": "Lançar na fechada sem a permissão própria."
+          },
+          "404": {
+            "description": "Médico não encontrado."
+          },
+          "409": {
+            "description": "Peer Review de mês já pago."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/adicionais/{id}/cancelar": {
+      "post": {
+        "operationId": "RepasseController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Cancelado (fica registrado); a prévia é refeita."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já cancelado, ou a competência está fechada."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -19060,6 +19452,656 @@
           "incluidos",
           "alterados",
           "iguais"
+        ]
+      },
+      "MotivoDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Obrigatório; fica no histórico."
+          }
+        },
+        "required": [
+          "motivo"
+        ]
+      },
+      "RecalculoRepasseCriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Pedido em `recalculos_competencia`."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "FaixaListaAtrasoDto": {
+        "type": "object",
+        "properties": {
+          "exames": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Centavos."
+          }
+        },
+        "required": [
+          "exames",
+          "valorCentavos"
+        ]
+      },
+      "ParametrosRepasseDto": {
+        "type": "object",
+        "properties": {
+          "tarifaPeerReviewCentavos": {
+            "type": "integer",
+            "description": "Centavos."
+          },
+          "tarifaPlantaoCentavos": {
+            "type": "integer",
+            "description": "Centavos."
+          },
+          "contratadoRegistroId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Contratado do registro."
+          },
+          "pagaDuplicados": {
+            "type": "boolean",
+            "description": "Laudo duplicado entra no repasse."
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28
+          },
+          "diaCorteAntecipacao": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28
+          },
+          "categoriaFinanceiraSocio": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "categoriaFinanceiraNaoSocio": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "faixasListaAtraso": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaixaListaAtrasoDto"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "example": "0001-01",
+            "description": "Vale desta competência até a próxima versão."
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tarifaPeerReviewCentavos",
+          "tarifaPlantaoCentavos",
+          "contratadoRegistroId",
+          "pagaDuplicados",
+          "diaVencimento",
+          "diaCorteAntecipacao",
+          "categoriaFinanceiraSocio",
+          "categoriaFinanceiraNaoSocio",
+          "faixasListaAtraso",
+          "id",
+          "vigenciaDesde",
+          "criadoEm"
+        ]
+      },
+      "CriarParametrosRepasseDto": {
+        "type": "object",
+        "properties": {
+          "tarifaPeerReviewCentavos": {
+            "type": "integer",
+            "description": "Centavos."
+          },
+          "tarifaPlantaoCentavos": {
+            "type": "integer",
+            "description": "Centavos."
+          },
+          "contratadoRegistroId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Contratado do registro."
+          },
+          "pagaDuplicados": {
+            "type": "boolean",
+            "description": "Laudo duplicado entra no repasse."
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28
+          },
+          "diaCorteAntecipacao": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28
+          },
+          "categoriaFinanceiraSocio": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "categoriaFinanceiraNaoSocio": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "faixasListaAtraso": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaixaListaAtrasoDto"
+            }
+          },
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "description": "Vale a partir de (aberta ou futura)."
+          }
+        },
+        "required": [
+          "tarifaPeerReviewCentavos",
+          "tarifaPlantaoCentavos",
+          "contratadoRegistroId",
+          "pagaDuplicados",
+          "diaVencimento",
+          "diaCorteAntecipacao",
+          "categoriaFinanceiraSocio",
+          "categoriaFinanceiraNaoSocio",
+          "faixasListaAtraso",
+          "aPartirDe"
+        ]
+      },
+      "CriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ReclassificacaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ordem": {
+            "type": "integer"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "modalidadeIds": {
+            "nullable": true,
+            "description": "Vazio (nulo) = todas.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "especialidadeIds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categoriaIds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "equipeIds": {
+            "nullable": true,
+            "description": "Nulo = todos os médicos.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "especialidadeDestinoId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoriaDestinoId": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "ordem",
+          "descricao",
+          "modalidadeIds",
+          "especialidadeIds",
+          "categoriaIds",
+          "equipeIds",
+          "especialidadeDestinoId",
+          "categoriaDestinoId",
+          "vigenciaDesde",
+          "vigenciaAte"
+        ]
+      },
+      "AlternativaPrecoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ordem": {
+            "type": "integer"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nulo = todas."
+          },
+          "semCategoria": {
+            "type": "boolean"
+          },
+          "categoriaOrigemId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoriaDestinoId": {
+            "type": "string"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "ordem",
+          "especialidadeId",
+          "semCategoria",
+          "categoriaOrigemId",
+          "categoriaDestinoId",
+          "vigenciaDesde",
+          "vigenciaAte"
+        ]
+      },
+      "RegrasDoRepasseDto": {
+        "type": "object",
+        "properties": {
+          "reclassificacoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReclassificacaoDto"
+            }
+          },
+          "alternativas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlternativaPrecoDto"
+            }
+          }
+        },
+        "required": [
+          "reclassificacoes",
+          "alternativas"
+        ]
+      },
+      "RecorteDto": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "boolean"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "todos",
+          "ids"
+        ]
+      },
+      "CriarReclassificacaoDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "ordem": {
+            "type": "integer",
+            "description": "Ordem: a primeira que casa vale."
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "modalidades": {
+            "$ref": "#/components/schemas/RecorteDto"
+          },
+          "especialidades": {
+            "$ref": "#/components/schemas/RecorteDto"
+          },
+          "categorias": {
+            "$ref": "#/components/schemas/RecorteDto"
+          },
+          "equipes": {
+            "description": "Equipes (grupos de médicos); todos = todos os médicos.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecorteDto"
+              }
+            ]
+          },
+          "especialidadeDestinoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaDestinoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "ordem",
+          "descricao",
+          "modalidades",
+          "especialidades",
+          "categorias",
+          "equipes"
+        ]
+      },
+      "APartirDeDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "description": "Vale a partir de: competência aberta ou futura (AAAA-MM)."
+          }
+        },
+        "required": [
+          "aPartirDe"
+        ]
+      },
+      "CriarAlternativaPrecoDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "ordem": {
+            "type": "integer"
+          },
+          "todasEspecialidades": {
+            "type": "boolean",
+            "description": "Vale para todas as especialidades."
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "semCategoria": {
+            "type": "boolean",
+            "description": "Vale para o laudo sem categoria."
+          },
+          "categoriaOrigemId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaDestinoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "ordem",
+          "todasEspecialidades",
+          "semCategoria",
+          "categoriaDestinoId"
+        ]
+      },
+      "TipoAdicionalRepasse": {
+        "type": "string",
+        "enum": [
+          "avulso",
+          "peer_review",
+          "plantao"
+        ]
+      },
+      "AdicionalDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medico": {
+            "type": "string"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAdicionalRepasse"
+              }
+            ]
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "integer",
+            "nullable": true
+          },
+          "valorUnitarioCentavos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "referenciaDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "referenciaAte": {
+            "type": "string",
+            "nullable": true
+          },
+          "recalculoId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lancadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lancadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "canceladoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canceladoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "motivoCancelamento": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "medicoId",
+          "medico",
+          "tipo",
+          "competencia",
+          "data",
+          "valorCentavos",
+          "descricao",
+          "quantidade",
+          "valorUnitarioCentavos",
+          "referenciaDesde",
+          "referenciaAte",
+          "recalculoId",
+          "lancadoEm",
+          "lancadoPor",
+          "canceladoEm",
+          "canceladoPor",
+          "motivoCancelamento"
+        ]
+      },
+      "LancarAdicionalDto": {
+        "type": "object",
+        "properties": {
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAdicionalRepasse"
+              }
+            ]
+          },
+          "competencia": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "data": {
+            "type": "string",
+            "example": "2026-11-05"
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Avulso: centavos, ≠ 0 (negativo = desconto)."
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "valorUnitarioCentavos": {
+            "type": "integer",
+            "description": "Sem ela, a tarifa padrão."
+          },
+          "referenciaDesde": {
+            "type": "string",
+            "example": "2026-08"
+          },
+          "referenciaAte": {
+            "type": "string",
+            "example": "2026-09"
+          },
+          "lancarNaFechada": {
+            "type": "boolean",
+            "description": "Na competência fechada: lançar nela (exige repasse.adicional.lancar_fechada e motivo) em vez da próxima aberta."
+          },
+          "motivo": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "medicoId",
+          "tipo",
+          "competencia",
+          "data"
+        ]
+      },
+      "AdicionalLancadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "competencia": {
+            "type": "string",
+            "description": "Onde entrou (a próxima aberta, se o pedido era de uma fechada)."
+          },
+          "recalculoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Recálculo pedido."
+          }
+        },
+        "required": [
+          "id",
+          "competencia",
+          "recalculoId"
         ]
       },
       "StatusImportacao": {
