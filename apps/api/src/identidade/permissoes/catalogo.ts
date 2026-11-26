@@ -347,6 +347,13 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         sensivel: true,
       },
       {
+        chave: 'faturamento.parametros.editar',
+        rotulo: 'Editar parâmetros do demonstrativo',
+        descricao:
+          'Mudar o que entra no demonstrativo (duplicados, clientes inativos, categoria e prioridade padrão) e a prioridade alternativa do preço.',
+        sensivel: true,
+      },
+      {
         chave: 'faturamento.competencia.travar',
         rotulo: 'Travar importação',
         descricao: 'Travar e destravar a importação dos laudos de uma competência.',

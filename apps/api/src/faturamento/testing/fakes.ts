@@ -31,6 +31,11 @@ import type {
   LotePrevia,
 } from '../application/ports/laudos-competencia';
 import type {
+  ParametrosDemonstrativoRepository,
+  VersaoAlternativaRegistrada,
+  VersaoParametrosRegistrada,
+} from '../application/ports/parametros-demonstrativo.repository';
+import type {
   Dono,
   EventoVersao,
   InfoDono,
@@ -65,6 +70,7 @@ import type {
 import type { RecalculadorCompetencia } from '../application/recalculadores';
 import type { StatusCompetencia } from '../domain/competencia-status';
 import type { DadosFiscais } from '../domain/dados-fiscais';
+import type { ParametrosDemonstrativo } from '../domain/parametros-demonstrativo';
 import type { Arranjo } from '../domain/preco';
 import type { PedidoRecalculo } from '../domain/recalculo-competencia';
 import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
@@ -668,5 +674,47 @@ export class RecalculosEmMemoria implements RecalculosCompetencia {
   async concluir(id: string, em: Date) {
     const p = this.pedidos.find((x) => x.id === id);
     if (p && !p.concluidoEm) p.concluidoEm = em;
+  }
+}
+
+export class ParametrosDemonstrativoEmMemoria implements ParametrosDemonstrativoRepository {
+  readonly parametros: VersaoParametrosRegistrada[] = [];
+  readonly alternativas: VersaoAlternativaRegistrada[] = [];
+  readonly categorias = new Set<string>();
+  readonly prioridades = new Set<string>();
+  private proximo = 1;
+
+  async listarParametros() {
+    return [...this.parametros];
+  }
+
+  async criarParametros(desde: string, dados: ParametrosDemonstrativo, autor: Autor) {
+    const id = `parametros-${this.proximo++}`;
+    this.parametros.push({ id, desde, criadoEm: autor.em, criadoPor: null, ...dados });
+    return id;
+  }
+
+  async listarAlternativas() {
+    return [...this.alternativas];
+  }
+
+  async criarAlternativa(
+    desde: string,
+    dados: { prioridadeId: string; alternativaId: string | null },
+    autor: Autor,
+  ) {
+    const id = `alternativa-${this.proximo++}`;
+    // Criadas em sequência: o relógio fixo dos testes não desempata, o milissegundo a mais sim.
+    const criadoEm = new Date(autor.em.getTime() + this.proximo);
+    this.alternativas.push({ id, desde, criadoEm, criadoPor: null, ...dados });
+    return id;
+  }
+
+  async categoriaExiste(id: string) {
+    return this.categorias.has(id);
+  }
+
+  async prioridadeExiste(id: string) {
+    return this.prioridades.has(id);
   }
 }

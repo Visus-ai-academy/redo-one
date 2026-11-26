@@ -32,7 +32,7 @@ function FaixaOpcional(descricao: string): PropertyDecorator {
   };
 }
 
-function APartirDe(): PropertyDecorator {
+export function APartirDe(): PropertyDecorator {
   return (alvo, chave) => {
     ApiProperty({
       example: '2026-12',

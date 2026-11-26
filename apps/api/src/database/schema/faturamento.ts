@@ -574,3 +574,63 @@ export const precosPadraoContratado = pgTable(
     ...checksPreco('precos_padrao_contratado', t),
   ],
 );
+
+/**
+ * Parâmetros do demonstrativo de faturamento, por vigência: vale a versão de maior `desde` até a
+ * competência (nulo = desde sempre); no mesmo `desde`, a criada por último. Só se cria versão
+ * nova; nenhuma se edita nem se apaga.
+ */
+export const parametrosDemonstrativo = pgTable(
+  'parametros_demonstrativo',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    desde: text('desde'),
+    /** Laudo marcado DUPLICADO pela MobileMed é cobrado. */
+    cobraDuplicados: boolean('cobra_duplicados').notNull(),
+    /** Laudo de cliente inativo é cobrado. */
+    cobraClientesInativos: boolean('cobra_clientes_inativos').notNull(),
+    /** Categoria de quem chega sem categoria; nula = o arranjo fica incompleto (aviso). */
+    categoriaPadraoId: uuid('categoria_padrao_id').references(() => categoriasExame.id),
+    /** Prioridade de quem chega sem prioridade; nula = o arranjo fica incompleto (aviso). */
+    prioridadePadraoId: uuid('prioridade_padrao_id').references(() => prioridades.id),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    /** Nulo na carga do dashboards-one. */
+    criadoPorId: quem('criado_por_id'),
+  },
+  (t) => [
+    check(
+      'parametros_demonstrativo_desde_check',
+      sql`${t.desde} is null or ${t.desde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`,
+    ),
+  ],
+);
+
+/**
+ * Prioridade que a busca do preço tenta quando a do laudo não tem o arranjo (no dashboards-one,
+ * PLANTÃO ↔ URGÊNCIA fixo no código). Uma cadeia por prioridade, no mesmo modelo de vigência dos
+ * parâmetros; `alternativa_id` nulo = sem alternativa a partir do `desde`.
+ */
+export const prioridadesAlternativasPreco = pgTable(
+  'prioridades_alternativas_preco',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    prioridadeId: uuid('prioridade_id')
+      .notNull()
+      .references(() => prioridades.id),
+    alternativaId: uuid('alternativa_id').references(() => prioridades.id),
+    desde: text('desde'),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    criadoPorId: quem('criado_por_id'),
+  },
+  (t) => [
+    index('prioridades_alternativas_preco_prioridade_idx').on(t.prioridadeId),
+    check(
+      'prioridades_alternativas_preco_desde_check',
+      sql`${t.desde} is null or ${t.desde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`,
+    ),
+    check(
+      'prioridades_alternativas_preco_outra_check',
+      sql`${t.alternativaId} is null or ${t.alternativaId} <> ${t.prioridadeId}`,
+    ),
+  ],
+);

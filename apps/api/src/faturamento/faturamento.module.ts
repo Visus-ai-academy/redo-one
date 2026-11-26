@@ -23,6 +23,10 @@ import {
   type HistoricoDadosFiscaisRepository,
 } from './application/ports/historico-dados-fiscais';
 import { LAUDOS_COMPETENCIA, type LaudosCompetencia } from './application/ports/laudos-competencia';
+import {
+  PARAMETROS_DEMONSTRATIVO_REPOSITORY,
+  type ParametrosDemonstrativoRepository,
+} from './application/ports/parametros-demonstrativo.repository';
 import { PRECOS_REPOSITORY, type PrecosRepository } from './application/ports/precos.repository';
 import {
   RECALCULOS_COMPETENCIA,
@@ -43,6 +47,12 @@ import {
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
 import { ListarCompetencias } from './application/use-cases/listar-competencias';
 import { ListarCortes } from './application/use-cases/listar-cortes';
+import {
+  ListarAlternativasPreco,
+  ListarParametrosDemonstrativo,
+  MudarAlternativaPreco,
+  MudarParametrosDemonstrativo,
+} from './application/use-cases/parametros-demonstrativo';
 import {
   ExportarPrecos,
   HistoricoPreco,
@@ -72,6 +82,7 @@ import { DestravarImportacao, TravarImportacao } from './application/use-cases/t
 import { CompetenciasController } from './infrastructure/http/competencias.controller';
 import { CortesController } from './infrastructure/http/cortes.controller';
 import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.controller';
+import { ParametrosDemonstrativoController } from './infrastructure/http/parametros-demonstrativo.controller';
 import { PrecosController } from './infrastructure/http/precos.controller';
 import {
   TipificacaoClienteController,
@@ -83,6 +94,7 @@ import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/driz
 import { DrizzleEquipesMedicos } from './infrastructure/persistence/drizzle-equipes-medicos';
 import { DrizzleHistoricoDadosFiscais } from './infrastructure/persistence/drizzle-historico-dados-fiscais';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
+import { DrizzleParametrosDemonstrativoRepository } from './infrastructure/persistence/drizzle-parametros-demonstrativo.repository';
 import { DrizzlePrecosRepository } from './infrastructure/persistence/drizzle-precos.repository';
 import { DrizzleRecalculosCompetencia } from './infrastructure/persistence/drizzle-recalculos-competencia';
 import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizzle-tipificacao.repository';
@@ -105,6 +117,7 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
     TipificacaoController,
     TipificacaoClienteController,
     PrecosController,
+    ParametrosDemonstrativoController,
   ],
   providers: [
     { provide: COMPETENCIAS_REPOSITORY, useClass: DrizzleCompetenciasRepository },
@@ -182,6 +195,25 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
       inject: [COMPETENCIAS_REPOSITORY, AUDITORIA],
       useFactory: (competencias: CompetenciasRepository, auditoria: Auditoria) =>
         new Caso(competencias, auditoria, agora),
+    })),
+    {
+      provide: PARAMETROS_DEMONSTRATIVO_REPOSITORY,
+      useClass: DrizzleParametrosDemonstrativoRepository,
+    },
+    ...[ListarParametrosDemonstrativo, ListarAlternativasPreco].map((Caso) => ({
+      provide: Caso,
+      inject: [PARAMETROS_DEMONSTRATIVO_REPOSITORY, COMPETENCIAS_REPOSITORY],
+      useFactory: (repo: ParametrosDemonstrativoRepository, competencias: CompetenciasRepository) =>
+        new Caso(repo, competencias, agora),
+    })),
+    ...[MudarParametrosDemonstrativo, MudarAlternativaPreco].map((Caso) => ({
+      provide: Caso,
+      inject: [PARAMETROS_DEMONSTRATIVO_REPOSITORY, COMPETENCIAS_REPOSITORY, AUDITORIA],
+      useFactory: (
+        repo: ParametrosDemonstrativoRepository,
+        competencias: CompetenciasRepository,
+        auditoria: Auditoria,
+      ) => new Caso(repo, competencias, auditoria, agora),
     })),
     // Um registro só para todos os contextos (faturamento, repasse): cada um registra o seu.
     { provide: RegistroRecalculadores, useValue: new RegistroRecalculadores() },

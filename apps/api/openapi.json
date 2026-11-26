@@ -8414,6 +8414,112 @@
         ]
       }
     },
+    "/faturamento/parametros-demonstrativo": {
+      "get": {
+        "operationId": "ParametrosDemonstrativoController_parametros",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuadroParametrosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "post": {
+        "operationId": "ParametrosDemonstrativoController_mudarParametros",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarParametrosDemonstrativoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Versão nova a partir de aPartirDe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Competência fechada ou item do catálogo inexistente."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/prioridades-alternativas": {
+      "get": {
+        "operationId": "ParametrosDemonstrativoController_alternativas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuadroAlternativasDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "post": {
+        "operationId": "ParametrosDemonstrativoController_mudarAlternativa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarAlternativaPrecoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Competência fechada, prioridade inexistente ou repetida."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/repasse/competencias/{competencia}/recalcular": {
       "post": {
         "operationId": "RepasseController_recalcular",
@@ -19452,6 +19558,283 @@
           "incluidos",
           "alterados",
           "iguais"
+        ]
+      },
+      "ParametrosDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "cobraDuplicados": {
+            "type": "boolean",
+            "description": "Laudo marcado DUPLICADO pela MobileMed é cobrado."
+          },
+          "cobraClientesInativos": {
+            "type": "boolean",
+            "description": "Laudo de cliente inativo é cobrado."
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Categoria de quem chega sem categoria; vazio = o arranjo fica incompleto (aviso)."
+          },
+          "prioridadePadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Prioridade de quem chega sem prioridade; vazio = o arranjo fica incompleto (aviso)."
+          }
+        },
+        "required": [
+          "cobraDuplicados",
+          "cobraClientesInativos",
+          "categoriaPadraoId",
+          "prioridadePadraoId"
+        ]
+      },
+      "VersaoParametrosDto": {
+        "type": "object",
+        "properties": {
+          "cobraDuplicados": {
+            "type": "boolean",
+            "description": "Laudo marcado DUPLICADO pela MobileMed é cobrado."
+          },
+          "cobraClientesInativos": {
+            "type": "boolean",
+            "description": "Laudo de cliente inativo é cobrado."
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Categoria de quem chega sem categoria; vazio = o arranjo fica incompleto (aviso)."
+          },
+          "prioridadePadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Prioridade de quem chega sem prioridade; vazio = o arranjo fica incompleto (aviso)."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "nullable": true,
+            "description": "AAAA-MM; vazio = desde sempre."
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quem criou; vazio = carga."
+          }
+        },
+        "required": [
+          "cobraDuplicados",
+          "cobraClientesInativos",
+          "categoriaPadraoId",
+          "prioridadePadraoId",
+          "id",
+          "desde",
+          "criadoEm",
+          "criadoPor"
+        ]
+      },
+      "QuadroParametrosDto": {
+        "type": "object",
+        "properties": {
+          "mesAtual": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "aPartirDeMinimo": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "aPartirDeSugerido": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "vigente": {
+            "description": "O que vale no mês atual.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParametrosDemonstrativoDto"
+              }
+            ]
+          },
+          "historico": {
+            "description": "A mais nova primeiro.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersaoParametrosDto"
+            }
+          }
+        },
+        "required": [
+          "mesAtual",
+          "aPartirDeMinimo",
+          "aPartirDeSugerido",
+          "vigente",
+          "historico"
+        ]
+      },
+      "MudarParametrosDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "cobraDuplicados": {
+            "type": "boolean",
+            "description": "Laudo marcado DUPLICADO pela MobileMed é cobrado."
+          },
+          "cobraClientesInativos": {
+            "type": "boolean",
+            "description": "Laudo de cliente inativo é cobrado."
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Categoria de quem chega sem categoria; vazio = o arranjo fica incompleto (aviso)."
+          },
+          "prioridadePadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Prioridade de quem chega sem prioridade; vazio = o arranjo fica incompleto (aviso)."
+          },
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "cobraDuplicados",
+          "cobraClientesInativos",
+          "categoriaPadraoId",
+          "prioridadePadraoId",
+          "aPartirDe"
+        ]
+      },
+      "ParAlternativaDto": {
+        "type": "object",
+        "properties": {
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativaId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "prioridadeId",
+          "alternativaId"
+        ]
+      },
+      "VersaoAlternativaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "desde": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "prioridadeId",
+          "alternativaId",
+          "desde",
+          "criadoEm",
+          "criadoPor"
+        ]
+      },
+      "QuadroAlternativasDto": {
+        "type": "object",
+        "properties": {
+          "mesAtual": {
+            "type": "string"
+          },
+          "aPartirDeMinimo": {
+            "type": "string"
+          },
+          "aPartirDeSugerido": {
+            "type": "string"
+          },
+          "vigentes": {
+            "description": "Os pares que valem no mês atual.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParAlternativaDto"
+            }
+          },
+          "historico": {
+            "description": "A mais nova primeiro.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersaoAlternativaDto"
+            }
+          }
+        },
+        "required": [
+          "mesAtual",
+          "aPartirDeMinimo",
+          "aPartirDeSugerido",
+          "vigentes",
+          "historico"
+        ]
+      },
+      "MudarAlternativaPrecoDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alternativaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Prioridade tentada quando a do laudo não tem preço; vazio = sem alternativa."
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "prioridadeId",
+          "alternativaId"
         ]
       },
       "MotivoDto": {
