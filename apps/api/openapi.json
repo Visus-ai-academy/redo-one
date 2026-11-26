@@ -20560,7 +20560,9 @@
           "cliente_ambiguo",
           "preco_repetido",
           "catalogo_criado_carga",
-          "cliente_inativo"
+          "cliente_inativo",
+          "repasse_sem_preco",
+          "preco_repasse_repetido"
         ]
       },
       "ResumoAvisosDto": {

@@ -34,6 +34,19 @@ describe('situacaoDoAviso', () => {
 });
 
 describe('ondeProcurar', () => {
+  it('aviso do repasse leva ao médico pelo nome', () => {
+    expect(
+      ondeProcurar({
+        tipo: 'repasse_sem_preco',
+        valor: 'Dra. Reia Pinheiro | RX|MEDICINA INTERNA|SC|ROTINA sem preço de repasse em 2026-11',
+      }),
+    ).toEqual({
+      rotulo: 'Procurar em Médicos',
+      to: '/medicos',
+      search: { busca: 'Reia Pinheiro' },
+    });
+  });
+
   it('leva ao cadastro certo com a busca já preenchida', () => {
     expect(ondeProcurar({ tipo: 'cliente', valor: 'CLINICA NOVA' })).toEqual({
       rotulo: 'Procurar em Clientes',

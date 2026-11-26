@@ -11,6 +11,7 @@ import { parseArgs } from 'node:util';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';
+import { REGISTRO_AVISOS, type RegistroAvisos } from '../comum/avisos/registro-avisos';
 import { DATABASE, type Database } from '../database/database';
 import {
   categoriasExame,
@@ -22,6 +23,7 @@ import {
   modalidades,
   prioridades,
 } from '../database/schema';
+import { avisosDoRepasse } from '../migracao-legado/avisos-repasse';
 import { gravarRepasse } from '../migracao-legado/gravar-repasse';
 import { lerLegadoRepasse } from '../migracao-legado/ler-legado-repasse';
 import { mapearRepasse } from '../migracao-legado/mapear-repasse';
@@ -113,6 +115,13 @@ async function migrarRepasse() {
       return;
     }
     await gravarRepasse(db, carga, catalogo);
+    // Cada preço repetido com valores diferentes vira aviso (vale o mais recente).
+    await app.get<RegistroAvisos>(REGISTRO_AVISOS, { strict: false }).sincronizar(db, {
+      tipo: 'preco_repasse_repetido',
+      origem: 'carga',
+      levantados: avisosDoRepasse(carga.repetidos),
+      agora: new Date(),
+    });
     console.log('\nGravado no banco do redo-one.');
   } finally {
     await app.close();

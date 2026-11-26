@@ -30,6 +30,9 @@ const PERMISSAO_DO_TIPO: Readonly<Record<TipoAviso, string>> = {
   catalogo_criado_carga: 'catalogo.ver',
   // O cliente é reativado (ou conferido) na tela Clientes.
   cliente_inativo: 'clientes.ver',
+  // O preço de repasse entra pelo médico (os preços de repasse dele).
+  repasse_sem_preco: 'repasse.ver',
+  preco_repasse_repetido: 'repasse.ver',
 };
 
 const TIPOS = TIPOS_AVISO;

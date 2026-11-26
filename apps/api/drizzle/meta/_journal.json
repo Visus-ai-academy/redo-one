@@ -757,6 +757,13 @@
       "when": 1795715185110,
       "tag": "0107_repasse_parametros_padrao",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1795715233480,
+      "tag": "0108_repasse_tipos_aviso",
+      "breakpoints": true
     }
   ]
 }

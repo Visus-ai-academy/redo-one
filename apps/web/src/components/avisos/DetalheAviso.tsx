@@ -38,6 +38,7 @@ function Campo({
 const ROTULO_DOS_ITENS: Partial<Record<AvisoDto['tipo'], string>> = {
   catalogo_criado_carga: 'Tabelas de preço que o usam',
   cliente_inativo: 'Exames parados na fila',
+  repasse_sem_preco: 'Clientes dos laudos',
 };
 
 /** Rótulo das ocorrências quando o tipo conta outra coisa que a origem. */
@@ -90,6 +91,17 @@ const TEXTOS: Partial<Record<AvisoDto['tipo'], typeof TEXTOS_IMPORTACAO>> = {
       'A leitura da fila não encontrou mais exames deste cliente inativo (ele foi reativado ou os exames saíram da fila). O aviso saiu da lista de pendentes.',
     oQueFazer:
       'O robô não distribui os exames de cliente inativo. Se o cliente segue atendido, reative o cliente no cadastro; a próxima leitura da fila resolve o aviso. Se não, os exames ficam para a distribuição à mão.',
+  },
+  repasse_sem_preco: {
+    resolvido:
+      'O arranjo ganhou preço de repasse (ou os laudos saíram da competência). O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'Os laudos deste médico neste arranjo estão sendo pagos a zero. Cadastre o preço de repasse do médico para o arranjo; a próxima geração do repasse resolve o aviso. Enquanto pendente, impede fechar a competência.',
+  },
+  preco_repasse_repetido: {
+    resolvido: 'O preço de repasse foi conferido. O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'No dashboards-one havia mais de um valor para o mesmo médico, arranjo e cliente, e ele usava um deles sem critério; no One ficou o da alteração mais recente. Confira o valor; se está certo, ignore com o motivo.',
   },
   catalogo_criado_carga: {
     resolvido: 'O item foi conferido. O aviso saiu da lista de pendentes.',

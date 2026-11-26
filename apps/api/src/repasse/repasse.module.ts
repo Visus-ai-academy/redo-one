@@ -43,6 +43,7 @@ import { RecalcularRepasse } from './application/use-cases/recalcular-repasse';
 import { RepasseController } from './infrastructure/http/repasse.controller';
 import { AgendadorRepasseFila } from './infrastructure/jobs/agendador-repasse-fila';
 import { enfileirarRepasse } from './infrastructure/jobs/enfileirar-repasse';
+import { AvisosDaGeracao } from './infrastructure/persistence/avisos-da-geracao';
 import { DrizzleAdicionaisRepository } from './infrastructure/persistence/drizzle-adicionais.repository';
 import { DrizzleConfiguracaoRepasseRepository } from './infrastructure/persistence/drizzle-configuracao-repasse.repository';
 import { DrizzleDadosRepasse } from './infrastructure/persistence/drizzle-dados-repasse';
@@ -71,8 +72,16 @@ const CONFIGURACAO = [
   controllers: [RepasseController],
   providers: [
     { provide: DADOS_REPASSE, useClass: DrizzleDadosRepasse },
-    // O registro dos avisos entra no passo dos avisos; por ora nada depois de gravar.
-    { provide: AO_GRAVAR_GERACAO, useValue: (async () => undefined) satisfies AoGravarGeracao },
+    AvisosDaGeracao,
+    {
+      // Os avisos de laudo sem preço, na transação da geração.
+      provide: AO_GRAVAR_GERACAO,
+      inject: [AvisosDaGeracao],
+      useFactory:
+        (avisos: AvisosDaGeracao): AoGravarGeracao =>
+        (tx, g) =>
+          avisos.registrar(tx, g),
+    },
     { provide: GERACOES_REPASSE, useClass: DrizzleGeracoesRepasse },
     { provide: ADICIONAIS_REPOSITORY, useClass: DrizzleAdicionaisRepository },
     { provide: CONFIGURACAO_REPASSE, useClass: DrizzleConfiguracaoRepasseRepository },

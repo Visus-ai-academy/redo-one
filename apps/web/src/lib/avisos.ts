@@ -24,6 +24,8 @@ const TIPOS: Record<TipoAvisoKey, string> = {
   preco_repetido: 'Preço repetido',
   catalogo_criado_carga: 'Item criado pela carga',
   cliente_inativo: 'Cliente inativo',
+  repasse_sem_preco: 'Sem preço de repasse',
+  preco_repasse_repetido: 'Preço de repasse repetido',
 };
 
 export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
@@ -88,6 +90,14 @@ export function ondeProcurar({
         rotulo: 'Abrir o cliente',
         to: '/clientes' as const,
         search: { id: daEntidade('cliente') },
+      };
+    case 'repasse_sem_preco':
+    case 'preco_repasse_repetido':
+      // O preço de repasse é do médico (o texto começa pelo nome dele).
+      return {
+        rotulo: 'Procurar em Médicos',
+        to: '/medicos' as const,
+        search: { busca: (valor.split(' | ')[0] ?? valor).replace(/^dra?\.?\s+/i, '') },
       };
     case 'cliente':
       return {
@@ -226,6 +236,10 @@ const SIGNIFICADO: Record<TipoAvisoKey, string> = {
     'Preço repetido no dashboards-one com valores diferentes (mesmo arranjo, faixa e vigência).',
   catalogo_criado_carga: 'Item do catálogo que a carga do dashboards-one criou.',
   cliente_inativo: 'Cliente inativo com exames na fila: o robô não os distribui.',
+  repasse_sem_preco:
+    'Laudos de um médico num arranjo sem preço de repasse: são pagos a zero até o preço existir.',
+  preco_repasse_repetido:
+    'Preço de repasse repetido no dashboards-one com valores diferentes (mesmo médico, arranjo e cliente).',
 };
 
 export const significadoDoTipo = (tipo: TipoAvisoKey) => SIGNIFICADO[tipo];

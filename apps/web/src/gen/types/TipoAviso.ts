@@ -16,6 +16,8 @@ export const tipoAviso = {
   preco_repetido: 'preco_repetido',
   catalogo_criado_carga: 'catalogo_criado_carga',
   cliente_inativo: 'cliente_inativo',
+  repasse_sem_preco: 'repasse_sem_preco',
+  preco_repasse_repetido: 'preco_repasse_repetido',
 } as const;
 
 export type TipoAvisoKey = (typeof tipoAviso)[keyof typeof tipoAviso];

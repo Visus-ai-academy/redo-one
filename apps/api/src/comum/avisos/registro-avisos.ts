@@ -23,6 +23,10 @@ export const TIPOS_AVISO = [
   'catalogo_criado_carga',
   /** Cliente inativo no cadastro com exames na fila: o robô não os distribui (leitura da fila). */
   'cliente_inativo',
+  /** Laudos do médico num arranjo sem preço de repasse (pagos a zero), vistos pela geração do repasse. */
+  'repasse_sem_preco',
+  /** Mesmo médico, arranjo e cliente com preços de repasse diferentes no dashboards-one; vale o mais recente. */
+  'preco_repasse_repetido',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 

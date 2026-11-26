@@ -22,6 +22,15 @@ describe('tiposDeAvisoVisiveis', () => {
       'preco_repetido',
       'catalogo_criado_carga',
       'cliente_inativo',
+      'repasse_sem_preco',
+      'preco_repasse_repetido',
+    ]);
+  });
+
+  it('os avisos do repasse seguem o ver do repasse', () => {
+    expect(tiposDeAvisoVisiveis(acesso('repasse.ver'))).toEqual([
+      'repasse_sem_preco',
+      'preco_repasse_repetido',
     ]);
   });
 

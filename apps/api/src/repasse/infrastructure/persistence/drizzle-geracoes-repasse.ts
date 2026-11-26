@@ -23,7 +23,7 @@ const emLotes = <T>(linhas: T[]) =>
   );
 
 /** Executor da transação (o `tx` do Drizzle). */
-type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
+export type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /** Depois de gravar a geração (na mesma transação): ex.: os avisos de laudo sem preço. */
 export type AoGravarGeracao = (tx: Tx, geracao: NovaGeracao) => Promise<void>;
