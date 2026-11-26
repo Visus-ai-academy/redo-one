@@ -62,9 +62,13 @@ describe('ListarAvisos', () => {
       pagina: 1,
       porPagina: 25,
       status: 'pendente',
-      tipos: ['cliente', 'estudo', 'cliente_ambiguo'],
+      tipos: ['cliente', 'estudo', 'cliente_ambiguo', 'cliente_inativo'],
     });
-    expect(r).toEqual({ itens: [], total: 0, tipos: ['cliente', 'estudo', 'cliente_ambiguo'] });
+    expect(r).toEqual({
+      itens: [],
+      total: 0,
+      tipos: ['cliente', 'estudo', 'cliente_ambiguo', 'cliente_inativo'],
+    });
   });
 
   it('o filtro de tipo estreita a lista; tipo que o acesso não vê dá lista vazia', async () => {
@@ -117,7 +121,7 @@ describe('ListarAvisos', () => {
       ...pagina,
       competencia: '2026-10',
       entidade,
-      tipos: ['cliente', 'cliente_ambiguo'],
+      tipos: ['cliente', 'cliente_ambiguo', 'cliente_inativo'],
     });
   });
 });
@@ -158,7 +162,7 @@ describe('SelosDeAviso', () => {
     expect(pendentesDasEntidades).toHaveBeenCalledWith(
       'cliente',
       ['c1', 'c2'],
-      ['cliente', 'cliente_ambiguo'],
+      ['cliente', 'cliente_ambiguo', 'cliente_inativo'],
     );
   });
 
