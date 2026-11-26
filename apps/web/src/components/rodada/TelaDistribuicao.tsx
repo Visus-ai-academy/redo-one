@@ -37,6 +37,7 @@ import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useAvisos } from '../toast/use-avisos';
+import { AlertaClientesInativos } from './AlertaClientesInativos';
 import { Execucao, LendoFila, Parcial } from './Andamento';
 import { type AcoesRodada, invalidarRodadas, useAcoesRodada } from './acoes';
 import { buscarClientes, buscarMedicos } from './buscas';
@@ -353,10 +354,15 @@ function SemRodada({
     );
   }
   const emTurno = new Set(dados.medicosEmTurno.map((m) => m.medicoId)).size;
+  const clientesInativos = dados.clientesInativos ?? [];
   const proximo = dados.turnos.find((t) => !t.emAndamento && t.medicos > 0);
   return (
     <div className="flex flex-col gap-6">
-      {(dados.roboAtivo === false || emTurno === 0 || problema || acoes.erro) && (
+      {(dados.roboAtivo === false ||
+        emTurno === 0 ||
+        problema ||
+        acoes.erro ||
+        clientesInativos.length > 0) && (
         <div className="flex flex-col gap-2">
           {acoes.erro && <Alerta tom="erro">{acoes.erro}</Alerta>}
           {problema && ultima && (
@@ -406,6 +412,11 @@ function SemRodada({
               )}
             </Alerta>
           )}
+          <AlertaClientesInativos
+            clientes={clientesInativos}
+            verAvisos={pode(sessao, 'avisos.ver')}
+            verClientes={pode(sessao, 'clientes.ver')}
+          />
           {emTurno === 0 && (
             <Alerta tom="info" role="note">
               <strong className="block font-semibold">

@@ -15,6 +15,7 @@ export const tipoAviso = {
   cliente_ambiguo: 'cliente_ambiguo',
   preco_repetido: 'preco_repetido',
   catalogo_criado_carga: 'catalogo_criado_carga',
+  cliente_inativo: 'cliente_inativo',
 } as const;
 
 export type TipoAvisoKey = (typeof tipoAviso)[keyof typeof tipoAviso];

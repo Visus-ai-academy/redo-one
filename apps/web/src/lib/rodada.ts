@@ -88,6 +88,7 @@ const MOTIVOS: Record<string, string> = {
   sem_espaco: 'Todos que laudam estavam no teto',
   teto_do_segmento: 'Todos que laudam atingiram o máximo do segmento',
   nao_novo: 'Já aberto por um médico',
+  cliente_inativo: 'Cliente inativo no cadastro',
   fora_da_prioridade: 'Fora das prioridades da rodada',
   fora_da_clinica: 'Fora dos clientes da rodada',
   fora_da_frente: 'Fora das frentes da rodada',

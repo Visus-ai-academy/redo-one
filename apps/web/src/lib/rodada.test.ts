@@ -72,6 +72,7 @@ describe('rodada do robô na tela', () => {
       expect(rotuloMotivo(m)).not.toMatch(/_/);
     }
     expect(rotuloMotivo('removido_na_conferencia')).toBe('Tirado na conferência');
+    expect(rotuloMotivo('cliente_inativo')).toBe('Cliente inativo no cadastro');
     expect(rotuloMotivo('medico_fora_da_unidade')).toBe(
       'Conta do médico não liberada nesta unidade na MobileMed',
     );

@@ -19517,7 +19517,8 @@
           "conta_unidade",
           "cliente_ambiguo",
           "preco_repetido",
-          "catalogo_criado_carga"
+          "catalogo_criado_carga",
+          "cliente_inativo"
         ]
       },
       "ResumoAvisosDto": {
@@ -20371,6 +20372,36 @@
           "porPagina"
         ]
       },
+      "ClienteInativoNaFilaDto": {
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "O cliente (ou a unidade de um principal) inativo."
+          },
+          "nome": {
+            "type": "string"
+          },
+          "exames": {
+            "type": "integer",
+            "description": "Exames NOVO dele na fila, que não são distribuídos."
+          },
+          "itens": {
+            "description": "Os exames, sem nada do paciente: \"ESTUDO · exame ID na MobileMed\".",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "clienteId",
+          "nome",
+          "exames",
+          "itens"
+        ]
+      },
       "PrioridadeDaFilaDto": {
         "type": "object",
         "properties": {
@@ -20852,7 +20883,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Exames NOVO sem médico."
+            "description": "Exames NOVO sem médico, sem os de cliente inativo (ver `clientesInativos`)."
           },
           "urgentes": {
             "type": "integer"
@@ -20862,6 +20893,13 @@
           },
           "semCliente": {
             "type": "integer"
+          },
+          "clientesInativos": {
+            "description": "Clientes inativos com exames NOVO na fila: não são distribuídos e ficam fora das contagens (a tela mostra o alerta).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClienteInativoNaFilaDto"
+            }
           },
           "vencidos": {
             "type": "integer",
@@ -20951,6 +20989,7 @@
           "urgentes",
           "semCatalogo",
           "semCliente",
+          "clientesInativos",
           "vencidos",
           "vencemProximaHora",
           "primeiroVencimento",

@@ -21,6 +21,7 @@ describe('tipoDoAviso', () => {
     expect(tipoDoAviso('cliente_ambiguo')).toBe('Cliente com nome ambíguo');
     expect(tipoDoAviso('preco_repetido')).toBe('Preço repetido');
     expect(tipoDoAviso('catalogo_criado_carga')).toBe('Item criado pela carga');
+    expect(tipoDoAviso('cliente_inativo')).toBe('Cliente inativo');
   });
 });
 
@@ -103,6 +104,16 @@ describe('ondeProcurar dos avisos ligados a itens', () => {
       to: '/configuracoes/tabela-padrao',
       search: { contratado: 'ct1' },
     });
+  });
+
+  it('cliente inativo abre o painel do cliente (onde se reativa)', () => {
+    expect(
+      ondeProcurar({
+        tipo: 'cliente_inativo',
+        valor: 'HOSPITAL A está inativo: os exames dele na fila não estão sendo distribuídos',
+        entidades: [{ tipo: 'cliente', id: 'c1' }],
+      }),
+    ).toEqual({ rotulo: 'Abrir o cliente', to: '/clientes', search: { id: 'c1' } });
   });
 
   it('nome ambíguo procura em Clientes sem a lista de clientes; item da carga, no Catálogo', () => {

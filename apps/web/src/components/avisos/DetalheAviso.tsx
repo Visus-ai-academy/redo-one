@@ -37,6 +37,12 @@ function Campo({
 /** Do que são os nomes citados pelo aviso (`itens`), por tipo. */
 const ROTULO_DOS_ITENS: Partial<Record<AvisoDto['tipo'], string>> = {
   catalogo_criado_carga: 'Tabelas de preço que o usam',
+  cliente_inativo: 'Exames parados na fila',
+};
+
+/** Rótulo das ocorrências quando o tipo conta outra coisa que a origem. */
+const OCORRENCIAS_DO_TIPO: Partial<Record<AvisoDto['tipo'], string>> = {
+  cliente_inativo: 'Exames na última leitura da fila',
 };
 
 const schema = z.object({
@@ -78,6 +84,12 @@ const TEXTOS: Partial<Record<AvisoDto['tipo'], typeof TEXTOS_IMPORTACAO>> = {
       'O preço foi conferido (alterado ou encerrado na tela) ou a repetição sumiu do dashboards-one. O aviso saiu da lista de pendentes.',
     oQueFazer:
       'No dashboards-one havia mais de um valor para o mesmo arranjo, faixa e vigência; ficou o da alteração mais recente. Confira o valor na tabela de preços: alterar ou encerrar a versão resolve o aviso; se o valor está certo, ignore com o motivo.',
+  },
+  cliente_inativo: {
+    resolvido:
+      'A leitura da fila não encontrou mais exames deste cliente inativo (ele foi reativado ou os exames saíram da fila). O aviso saiu da lista de pendentes.',
+    oQueFazer:
+      'O robô não distribui os exames de cliente inativo. Se o cliente segue atendido, reative o cliente no cadastro; a próxima leitura da fila resolve o aviso. Se não, os exames ficam para a distribuição à mão.',
   },
   catalogo_criado_carga: {
     resolvido: 'O item foi conferido. O aviso saiu da lista de pendentes.',
@@ -157,7 +169,9 @@ export function DetalheAviso({
       {/* O texto do aviso é o título do painel; aqui ficam os dados dele. */}
       <dl className="divide-y">
         <Campo rotulo="Encontrado por">{ORIGENS[aviso.origem]}</Campo>
-        <Campo rotulo={OCORRENCIAS[aviso.origem]}>{numero(aviso.ocorrencias)}</Campo>
+        <Campo rotulo={OCORRENCIAS_DO_TIPO[aviso.tipo] ?? OCORRENCIAS[aviso.origem]}>
+          {numero(aviso.ocorrencias)}
+        </Campo>
         {competencias && <Campo rotulo="Competência">{competencias}</Campo>}
         <Campo rotulo="Apareceu em">{dataHoraCurta(aviso.primeiraVezEm)}</Campo>
         <Campo rotulo="Visto por último em">{dataHoraCurta(aviso.ultimaVezEm)}</Campo>

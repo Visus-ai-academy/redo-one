@@ -138,6 +138,30 @@ describe('DetalheAviso', () => {
     );
   });
 
+  it('o cliente inativo diz que os exames não são distribuídos, com os exames da fila', () => {
+    const inativo = {
+      ...pendente,
+      tipo: 'cliente_inativo' as const,
+      origem: 'rodada' as const,
+      valor: 'HOSPITAL A está inativo: os exames dele na fila não estão sendo distribuídos',
+      ocorrencias: 2,
+      itens: ['TC TORAX · exame 1', 'RM CRANIO · exame 2'],
+    };
+    const { unmount } = render(
+      <DetalheAviso aviso={inativo} podeTriar={false} procurar={<a href="/x">Abrir</a>} />,
+    );
+    expect(screen.getByText('Exames na última leitura da fila').nextSibling).toHaveTextContent('2');
+    expect(screen.getByRole('list', { name: 'Exames parados na fila' })).toHaveTextContent(
+      'RM CRANIO · exame 2',
+    );
+    expect(screen.getByText(/reative o cliente no cadastro/)).toBeInTheDocument();
+    unmount();
+    render(<DetalheAviso aviso={{ ...inativo, status: 'resolvido' }} podeTriar={false} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'A leitura da fila não encontrou mais exames deste cliente inativo',
+    );
+  });
+
   it('o item criado pela carga lista as tabelas de preço que o usam, recolhidas', async () => {
     const tabelas = Array.from({ length: 40 }, (_, i) => `CLIENTE ${i + 1}`);
     render(

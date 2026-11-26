@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { ClienteInativoNaFilaDto } from './ClienteInativoNaFilaDto'
 import type { ContagemEspecialidadeDto } from './ContagemEspecialidadeDto'
 import type { ContagemModalidadeDto } from './ContagemModalidadeDto'
 import type { ContagemPrioridadeDto } from './ContagemPrioridadeDto'
@@ -20,13 +21,18 @@ export type FilaDoMomentoDto = {
    */
   lidaEm: string;
   /**
-   * @description Exames NOVO sem médico.
+   * @description Exames NOVO sem médico, sem os de cliente inativo (ver `clientesInativos`).
    * @type integer
    */
   total: number;
   urgentes: number;
   semCatalogo: number;
   semCliente: number;
+  /**
+   * @description Clientes inativos com exames NOVO na fila: não são distribuídos e ficam fora das contagens (a tela mostra o alerta).
+   * @type array
+   */
+  clientesInativos: ClienteInativoNaFilaDto[];
   /**
    * @description Prazo já passou.
    * @type integer

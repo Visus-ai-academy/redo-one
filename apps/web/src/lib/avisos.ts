@@ -23,6 +23,7 @@ const TIPOS: Record<TipoAvisoKey, string> = {
   cliente_ambiguo: 'Cliente com nome ambíguo',
   preco_repetido: 'Preço repetido',
   catalogo_criado_carga: 'Item criado pela carga',
+  cliente_inativo: 'Cliente inativo',
 };
 
 export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
@@ -81,6 +82,13 @@ export function ondeProcurar({
         search: { aba: aba as 'categorias' | 'prioridades', busca: valor },
       };
     }
+    case 'cliente_inativo':
+      // O cliente se reativa no cadastro (ou os exames seguem para a distribuição à mão).
+      return {
+        rotulo: 'Abrir o cliente',
+        to: '/clientes' as const,
+        search: { id: daEntidade('cliente') },
+      };
     case 'cliente':
       return {
         rotulo: 'Procurar em Clientes',
@@ -217,6 +225,7 @@ const SIGNIFICADO: Record<TipoAvisoKey, string> = {
   preco_repetido:
     'Preço repetido no dashboards-one com valores diferentes (mesmo arranjo, faixa e vigência).',
   catalogo_criado_carga: 'Item do catálogo que a carga do dashboards-one criou.',
+  cliente_inativo: 'Cliente inativo com exames na fila: o robô não os distribui.',
 };
 
 export const significadoDoTipo = (tipo: TipoAvisoKey) => SIGNIFICADO[tipo];

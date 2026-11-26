@@ -4,6 +4,7 @@
 */
 
 import * as z from 'zod'
+import { clienteInativoNaFilaDtoSchema } from './clienteInativoNaFilaDtoSchema'
 import { contagemEspecialidadeDtoSchema } from './contagemEspecialidadeDtoSchema'
 import { contagemModalidadeDtoSchema } from './contagemModalidadeDtoSchema'
 import { contagemPrioridadeDtoSchema } from './contagemPrioridadeDtoSchema'
@@ -15,10 +16,11 @@ import { turnoDaFilaDtoSchema } from './turnoDaFilaDtoSchema'
 
 export const filaDoMomentoDtoSchema = z.object({
   lidaEm: z.iso.datetime(),
-  total: z.int().describe('Exames NOVO sem médico.'),
+  total: z.int().describe('Exames NOVO sem médico, sem os de cliente inativo (ver `clientesInativos`).'),
   urgentes: z.int(),
   semCatalogo: z.int(),
   semCliente: z.int(),
+  clientesInativos: z.array(clienteInativoNaFilaDtoSchema).describe('Clientes inativos com exames NOVO na fila: não são distribuídos e ficam fora das contagens (a tela mostra o alerta).'),
   vencidos: z.int().describe('Prazo já passou.'),
   vencemProximaHora: z.int().describe('Prazo na próxima hora, sem os já vencidos.'),
   primeiroVencimento: z.iso.datetime().nullable().describe('O prazo mais antigo da fila (o vencido mais antigo, se houver).'),
