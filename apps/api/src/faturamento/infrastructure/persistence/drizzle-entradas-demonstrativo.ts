@@ -6,6 +6,7 @@ import {
   categoriasExame,
   classificacoesLaudo,
   clientes,
+  equipesMembros,
   especialidades,
   exames,
   laudos,
@@ -28,6 +29,8 @@ import type {
 } from '../../domain/demonstrativo';
 import { alternativasEm, parametrosEm } from '../../domain/parametros-demonstrativo';
 import type { LinhaPreco } from '../../domain/preco';
+import { reclassificacoesEm } from '../../domain/reclassificacao';
+import { lerReclassificacoes } from './drizzle-reclassificacoes.repository';
 
 /** STATUS da MobileMed do laudo que não foi assinado: não é laudo, nunca fatura. */
 const NAO_ASSINADO = 'Não Assinado';
@@ -80,6 +83,8 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
       esps,
       cats,
       pris,
+      reclassificacoes,
+      membros,
     ] = await Promise.all([
       this.db
         .select({
@@ -93,6 +98,7 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
           prioridadeId: laudos.prioridadeId,
           volume: laudos.volume,
           duplicado: laudos.duplicado,
+          medicoId: laudos.medicoId,
           assinado: ne(laudos.status, NAO_ASSINADO).mapWith(Boolean),
           fatura: classificacoesLaudo.fatura,
           classificado: isNotNull(classificacoesLaudo.laudoId).mapWith(Boolean),
@@ -130,7 +136,17 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
       this.db.select({ id: especialidades.id, nome: especialidades.nome }).from(especialidades),
       this.db.select({ id: categoriasExame.id, nome: categoriasExame.nome }).from(categoriasExame),
       this.db.select({ id: prioridades.id, nome: prioridades.nome }).from(prioridades),
+      lerReclassificacoes(this.db),
+      this.db
+        .select({ medicoId: equipesMembros.medicoId, equipeId: equipesMembros.equipeId })
+        .from(equipesMembros),
     ]);
+    const equipesDoMedico = new Map<string, Set<string>>();
+    for (const m of membros)
+      equipesDoMedico.set(
+        m.medicoId,
+        (equipesDoMedico.get(m.medicoId) ?? new Set()).add(m.equipeId),
+      );
 
     const pecasDe = new Map<string, (PecaDoDemonstrativo & { ordem: number })[]>();
     for (const p of pecas) pecasDe.set(p.laudoId, [...(pecasDe.get(p.laudoId) ?? []), p]);
@@ -157,6 +173,7 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
           prioridadeId: l.prioridadeId,
           volume: l.volume,
           duplicado: l.duplicado,
+          medicoId: l.medicoId,
           assinado: l.assinado,
           tipificacao: l.classificado ? { fatura: l.fatura === true } : null,
           pecas: (pecasDe.get(l.id) ?? [])
@@ -168,6 +185,8 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
       precosPorContratado: agrupar(doContratado),
       parametros: parametrosEm(parametros, competencia),
       alternativas: alternativasEm(alternativas, competencia),
+      reclassificacoes: reclassificacoesEm(reclassificacoes, competencia),
+      equipesDoMedico,
     };
     const mapa = (ls: { id: string; nome: string }[]) => new Map(ls.map((x) => [x.id, x.nome]));
     const nomes: NomesDemonstrativo = {

@@ -46,6 +46,10 @@ import {
   type RecalculosCompetencia,
 } from './application/ports/recalculos-competencia';
 import {
+  RECLASSIFICACOES_REPOSITORY,
+  type ReclassificacoesRepository,
+} from './application/ports/reclassificacoes.repository';
+import {
   TIPIFICACAO_REPOSITORY,
   type TipificacaoRepository,
 } from './application/ports/tipificacao.repository';
@@ -80,6 +84,11 @@ import {
   ListarRecalculos,
   RecalcularCompetenciaFechada,
 } from './application/use-cases/recalcular-competencia';
+import {
+  CriarReclassificacaoFaturamento,
+  EncerrarReclassificacaoFaturamento,
+  ListarReclassificacoesFaturamento,
+} from './application/use-cases/reclassificacoes';
 import {
   BuscarMedicosTipificacao,
   ListarOpcoesTipificacao,
@@ -119,6 +128,7 @@ import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-l
 import { DrizzleParametrosDemonstrativoRepository } from './infrastructure/persistence/drizzle-parametros-demonstrativo.repository';
 import { DrizzlePrecosRepository } from './infrastructure/persistence/drizzle-precos.repository';
 import { DrizzleRecalculosCompetencia } from './infrastructure/persistence/drizzle-recalculos-competencia';
+import { DrizzleReclassificacoesRepository } from './infrastructure/persistence/drizzle-reclassificacoes.repository';
 import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizzle-tipificacao.repository';
 
 const agora = () => new Date();
@@ -258,6 +268,21 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
       ) =>
         new GerarDemonstrativos(competencias, entradas, demonstrativos, recalculos, avisos, agora),
     },
+    { provide: RECLASSIFICACOES_REPOSITORY, useClass: DrizzleReclassificacoesRepository },
+    {
+      provide: ListarReclassificacoesFaturamento,
+      inject: [RECLASSIFICACOES_REPOSITORY],
+      useFactory: (repo: ReclassificacoesRepository) => new ListarReclassificacoesFaturamento(repo),
+    },
+    ...[CriarReclassificacaoFaturamento, EncerrarReclassificacaoFaturamento].map((Caso) => ({
+      provide: Caso,
+      inject: [RECLASSIFICACOES_REPOSITORY, COMPETENCIAS_REPOSITORY, AUDITORIA],
+      useFactory: (
+        repo: ReclassificacoesRepository,
+        competencias: CompetenciasRepository,
+        auditoria: Auditoria,
+      ) => new Caso(repo, competencias, auditoria, agora),
+    })),
     // Um registro só para todos os contextos (faturamento, repasse): cada um registra o seu.
     { provide: RegistroRecalculadores, useFactory: () => new RegistroRecalculadores() },
     { provide: RECALCULOS_COMPETENCIA, useClass: DrizzleRecalculosCompetencia },

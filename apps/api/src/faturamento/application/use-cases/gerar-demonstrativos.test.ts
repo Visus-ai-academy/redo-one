@@ -38,6 +38,7 @@ const laudoBase = {
   assinado: true,
   tipificacao: { fatura: true },
   pecas: [],
+  medicoId: null,
 };
 
 const entrada = (competencia: string): EntradaDemonstrativo => ({
@@ -71,6 +72,8 @@ const entrada = (competencia: string): EntradaDemonstrativo => ({
   precosPorContratado: new Map(),
   parametros: { ...PARAMETROS_INICIAIS },
   alternativas: new Map(),
+  reclassificacoes: [],
+  equipesDoMedico: new Map(),
 });
 
 describe('gerar os demonstrativos', () => {

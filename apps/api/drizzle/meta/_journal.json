@@ -785,6 +785,20 @@
       "when": 1795716180406,
       "tag": "0111_tipos_aviso_demonstrativo",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1795718069307,
+      "tag": "0112_reclassificacoes_faturamento",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1795718094288,
+      "tag": "0113_reclassificacoes_faturamento_coluna",
+      "breakpoints": true
     }
   ]
 }

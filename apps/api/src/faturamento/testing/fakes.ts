@@ -55,6 +55,10 @@ import type {
   RecalculosCompetencia,
 } from '../application/ports/recalculos-competencia';
 import type {
+  NovaReclassificacao,
+  ReclassificacoesRepository,
+} from '../application/ports/reclassificacoes.repository';
+import type {
   ClienteDaTipificacao,
   Configuracao,
   DadosRegra,
@@ -77,6 +81,7 @@ import type { DadosFiscais } from '../domain/dados-fiscais';
 import type { ParametrosDemonstrativo } from '../domain/parametros-demonstrativo';
 import type { Arranjo } from '../domain/preco';
 import type { PedidoRecalculo } from '../domain/recalculo-competencia';
+import type { ReclassificacaoFaturamento } from '../domain/reclassificacao';
 import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
 import { VersaoTipificacaoAlteradaError } from '../domain/versoes-tipificacao';
 import type { NovaVigencia } from '../domain/vigencia-corte';
@@ -757,5 +762,27 @@ export class DemonstrativosEmMemoria implements DemonstrativosRepository {
 
   async versoes() {
     return [];
+  }
+}
+
+export class ReclassificacoesEmMemoria implements ReclassificacoesRepository {
+  readonly regras: ReclassificacaoFaturamento[] = [];
+  private proximo = 1;
+
+  async listar() {
+    return [...this.regras];
+  }
+
+  async criar(r: NovaReclassificacao) {
+    const id = `reclassificacao-${this.proximo++}`;
+    this.regras.push({ ...r, id, vigenciaAte: null });
+    return id;
+  }
+
+  async encerrar(id: string, ate: string) {
+    const r = this.regras.find((x) => x.id === id);
+    if (!r || (r.vigenciaAte !== null && r.vigenciaAte <= ate)) return false;
+    r.vigenciaAte = ate;
+    return true;
   }
 }

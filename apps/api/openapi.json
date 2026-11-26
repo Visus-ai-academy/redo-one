@@ -8520,6 +8520,98 @@
         ]
       }
     },
+    "/faturamento/reclassificacoes": {
+      "get": {
+        "operationId": "ParametrosDemonstrativoController_reclassificacoes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Todas as versões, pela ordem (a primeira que casa vale).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReclassificacaoFaturamentoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "post": {
+        "operationId": "ParametrosDemonstrativoController_criarReclassificacao",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarReclassificacaoFaturamentoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vale a partir de aPartirDe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Competência fechada, recorte vazio ou sem destino."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/reclassificacoes/{id}/encerrar": {
+      "post": {
+        "operationId": "ParametrosDemonstrativoController_encerrarReclassificacao",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncerrarReclassificacaoFaturamentoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deixa de valer a partir de aPartirDe."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/repasse/competencias/{competencia}/recalcular": {
       "post": {
         "operationId": "RepasseController_recalcular",
@@ -19835,6 +19927,172 @@
           "aPartirDe",
           "prioridadeId",
           "alternativaId"
+        ]
+      },
+      "ReclassificacaoFaturamentoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ordem": {
+            "type": "integer"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "modalidadeIds": {
+            "nullable": true,
+            "description": "Nulo = todas.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "especialidadeIds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categoriaIds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "equipeIds": {
+            "nullable": true,
+            "description": "Nulo = todos os médicos.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "especialidadeDestinoId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoriaDestinoId": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "ordem",
+          "descricao",
+          "modalidadeIds",
+          "especialidadeIds",
+          "categoriaIds",
+          "equipeIds",
+          "especialidadeDestinoId",
+          "categoriaDestinoId",
+          "vigenciaDesde",
+          "vigenciaAte"
+        ]
+      },
+      "RecorteReclassificacaoDto": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "boolean"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "todos",
+          "ids"
+        ]
+      },
+      "CriarReclassificacaoFaturamentoDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          },
+          "ordem": {
+            "type": "integer",
+            "description": "Ordem: a primeira que casa vale."
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "modalidades": {
+            "$ref": "#/components/schemas/RecorteReclassificacaoDto"
+          },
+          "especialidades": {
+            "$ref": "#/components/schemas/RecorteReclassificacaoDto"
+          },
+          "categorias": {
+            "$ref": "#/components/schemas/RecorteReclassificacaoDto"
+          },
+          "equipes": {
+            "description": "Equipes; todos = todos os médicos.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecorteReclassificacaoDto"
+              }
+            ]
+          },
+          "especialidadeDestinoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Especialidade de destino; vazio = mantém a do laudo."
+          },
+          "categoriaDestinoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Categoria de destino; vazio = mantém a do laudo."
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "ordem",
+          "descricao",
+          "modalidades",
+          "especialidades",
+          "categorias",
+          "equipes",
+          "especialidadeDestinoId",
+          "categoriaDestinoId"
+        ]
+      },
+      "EncerrarReclassificacaoFaturamentoDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "Competência a partir da qual a mudança vale: aberta ou futura, depois de toda fechada ou travada."
+          }
+        },
+        "required": [
+          "aPartirDe"
         ]
       },
       "MotivoDto": {

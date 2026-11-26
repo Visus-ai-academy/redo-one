@@ -786,3 +786,63 @@ export const demonstrativosFaturamentoLegadoItens = pgTable(
   },
   (t) => [primaryKey({ columns: [t.demonstrativoId, t.ordem] })],
 );
+
+/**
+ * Reclassificação do arranjo do laudo para o preço do faturamento, em ordem (a primeira que casa
+ * vale): ex.: coluna laudada por médico da equipe "Neurologistas" vira NEURO|SC (no dashboards-one,
+ * fixo no código). Destino vazio mantém o do laudo. Mudar = encerrar (`vigencia_ate`) e criar outra.
+ */
+export const reclassificacoesFaturamento = pgTable(
+  'reclassificacoes_faturamento',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ordem: integer('ordem').notNull(),
+    descricao: text('descricao').notNull(),
+    todasModalidades: boolean('todas_modalidades').notNull(),
+    todasEspecialidades: boolean('todas_especialidades').notNull(),
+    todasCategorias: boolean('todas_categorias').notNull(),
+    todosMedicos: boolean('todos_medicos').notNull(),
+    especialidadeDestinoId: uuid('especialidade_destino_id').references(() => especialidades.id),
+    categoriaDestinoId: uuid('categoria_destino_id').references(() => categoriasExame.id),
+    /** "YYYY-MM" inclusivos; vazio = sem limite. */
+    vigenciaDesde: text('vigencia_desde'),
+    vigenciaAte: text('vigencia_ate'),
+    criadoEm: quando('criado_em').notNull().defaultNow(),
+    criadoPorId: quem('criado_por_id'),
+  },
+  (t) => [
+    check(
+      'reclassificacoes_faturamento_destino_check',
+      sql`${t.especialidadeDestinoId} is not null or ${t.categoriaDestinoId} is not null`,
+    ),
+    check(
+      'reclassificacoes_faturamento_vigencia_check',
+      sql`(${t.vigenciaDesde} is null or ${t.vigenciaDesde} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+        and (${t.vigenciaAte} is null or ${t.vigenciaAte} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
+        and (${t.vigenciaDesde} is null or ${t.vigenciaAte} is null or ${t.vigenciaAte} >= ${t.vigenciaDesde})`,
+    ),
+  ],
+);
+
+/** Recortes da reclassificação (uma dimensão por linha); a dimensão sem "todas" tem ao menos um. */
+export const reclassificacoesFaturamentoRecortes = pgTable(
+  'reclassificacoes_faturamento_recortes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    reclassificacaoId: uuid('reclassificacao_id')
+      .notNull()
+      .references(() => reclassificacoesFaturamento.id, { onDelete: 'cascade' }),
+    modalidadeId: uuid('modalidade_id').references(() => modalidades.id),
+    especialidadeId: uuid('especialidade_id').references(() => especialidades.id),
+    categoriaId: uuid('categoria_id').references(() => categoriasExame.id),
+    /** Médicos da equipe (contexto `medicos`). */
+    equipeId: uuid('equipe_id').references(() => equipes.id),
+  },
+  (t) => [
+    index('reclassificacoes_faturamento_recortes_regra_idx').on(t.reclassificacaoId),
+    check(
+      'reclassificacoes_faturamento_recortes_uma_check',
+      sql`num_nonnulls(${t.modalidadeId}, ${t.especialidadeId}, ${t.categoriaId}, ${t.equipeId}) = 1`,
+    ),
+  ],
+);

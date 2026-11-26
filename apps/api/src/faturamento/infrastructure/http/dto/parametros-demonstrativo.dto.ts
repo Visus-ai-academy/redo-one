@@ -1,5 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsUUID, ValidateIf } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
+
+import { aparar } from '../../../../catalogo/comum/dto';
 
 import { APartirDe } from './precos.dto';
 
@@ -83,4 +97,70 @@ export class QuadroAlternativasDto {
 
 export class IdCriadoDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
+}
+
+/** "Todos" explícito; sem ele, a lista (que não pode ser vazia). */
+export class RecorteReclassificacaoDto {
+  @ApiProperty() @IsBoolean() todos!: boolean;
+  @ApiProperty({ type: [String], format: 'uuid' })
+  @IsArray()
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  ids!: string[];
+}
+
+export class CriarReclassificacaoFaturamentoDto {
+  @APartirDe() aPartirDe!: string;
+  @ApiProperty({ type: 'integer', description: 'Ordem: a primeira que casa vale.' })
+  @IsInt()
+  @Min(0)
+  ordem!: number;
+  @ApiProperty({ maxLength: 300 })
+  @Transform(aparar)
+  @IsString()
+  @MaxLength(300)
+  descricao!: string;
+  @ApiProperty({ type: RecorteReclassificacaoDto })
+  @ValidateNested()
+  @Type(() => RecorteReclassificacaoDto)
+  modalidades!: RecorteReclassificacaoDto;
+  @ApiProperty({ type: RecorteReclassificacaoDto })
+  @ValidateNested()
+  @Type(() => RecorteReclassificacaoDto)
+  especialidades!: RecorteReclassificacaoDto;
+  @ApiProperty({ type: RecorteReclassificacaoDto })
+  @ValidateNested()
+  @Type(() => RecorteReclassificacaoDto)
+  categorias!: RecorteReclassificacaoDto;
+  @ApiProperty({
+    type: RecorteReclassificacaoDto,
+    description: 'Equipes; todos = todos os médicos.',
+  })
+  @ValidateNested()
+  @Type(() => RecorteReclassificacaoDto)
+  equipes!: RecorteReclassificacaoDto;
+  @UuidOuNulo('Especialidade de destino; vazio = mantém a do laudo.')
+  especialidadeDestinoId!: string | null;
+  @UuidOuNulo('Categoria de destino; vazio = mantém a do laudo.')
+  categoriaDestinoId!: string | null;
+}
+
+export class EncerrarReclassificacaoFaturamentoDto {
+  @APartirDe() aPartirDe!: string;
+}
+
+export class ReclassificacaoFaturamentoDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ type: 'integer' }) ordem!: number;
+  @ApiProperty() descricao!: string;
+  @ApiProperty({ type: [String], nullable: true, description: 'Nulo = todas.' })
+  modalidadeIds!: string[] | null;
+  @ApiProperty({ type: [String], nullable: true }) especialidadeIds!: string[] | null;
+  @ApiProperty({ type: [String], nullable: true }) categoriaIds!: string[] | null;
+  @ApiProperty({ type: [String], nullable: true, description: 'Nulo = todos os médicos.' })
+  equipeIds!: string[] | null;
+  @ApiProperty({ type: String, nullable: true }) especialidadeDestinoId!: string | null;
+  @ApiProperty({ type: String, nullable: true }) categoriaDestinoId!: string | null;
+  @ApiProperty({ type: String, nullable: true }) vigenciaDesde!: string | null;
+  @ApiProperty({ type: String, nullable: true }) vigenciaAte!: string | null;
 }

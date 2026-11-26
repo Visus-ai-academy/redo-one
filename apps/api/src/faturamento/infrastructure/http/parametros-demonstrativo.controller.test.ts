@@ -17,6 +17,9 @@ describe('controller dos parâmetros do demonstrativo', () => {
     expect(exigidas(p.alternativas)).toEqual(['faturamento.ver']);
     expect(exigidas(p.mudarParametros)).toEqual(['faturamento.parametros.editar']);
     expect(exigidas(p.mudarAlternativa)).toEqual(['faturamento.parametros.editar']);
+    expect(exigidas(p.reclassificacoes)).toEqual(['faturamento.ver']);
+    expect(exigidas(p.criarReclassificacao)).toEqual(['faturamento.parametros.editar']);
+    expect(exigidas(p.encerrarReclassificacao)).toEqual(['faturamento.parametros.editar']);
   });
 
   it('padrões aceitam vazio ou uuid; as marcas são obrigatórias', () => {

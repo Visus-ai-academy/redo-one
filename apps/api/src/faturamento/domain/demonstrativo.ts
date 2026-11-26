@@ -7,6 +7,7 @@ import {
   type OrigemPreco,
   volumeDaFaixa,
 } from './preco';
+import { type ReclassificacaoFaturamento, reclassificar } from './reclassificacao';
 
 /** Peça da quebra do estudo: vale 1, com o arranjo do exame da peça. */
 export interface PecaDoDemonstrativo {
@@ -37,6 +38,8 @@ export interface LaudoDoDemonstrativo {
   tipificacao: { fatura: boolean } | null;
   /** Vazio = o laudo vale `volume` no próprio arranjo. */
   pecas: PecaDoDemonstrativo[];
+  /** Quem assinou: a reclassificação pode depender das equipes dele. */
+  medicoId: string | null;
 }
 
 export interface ClienteDoDemonstrativo {
@@ -57,6 +60,10 @@ export interface EntradaDemonstrativo {
   parametros: ParametrosDemonstrativo;
   /** Prioridade → alternativa que valem na competência. */
   alternativas: ReadonlyMap<string, string>;
+  /** Reclassificações do arranjo que valem na competência, na ordem. */
+  reclassificacoes: readonly ReclassificacaoFaturamento[];
+  /** Médico → equipes dele (o recorte de médicos da reclassificação). */
+  equipesDoMedico: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
 export interface ItemDemonstrativo extends Arranjo {
@@ -122,7 +129,9 @@ const centavos = (valor: number) => Math.round(valor * 100);
  * 2. a faixa de preço soma `laudos.volume` de todos os que entram, por membro (unidade ou
  *    cliente), faturem ou não;
  * 3. só os que faturam pela tipificação viram itens: o laudo vale `volume` no próprio arranjo, ou
- *    cada peça da quebra vale 1 no arranjo dela; categoria e prioridade que faltam vêm dos padrões;
+ *    cada peça da quebra vale 1 no arranjo dela; categoria e prioridade que faltam vêm dos padrões,
+ *    e a reclassificação configurada (ex.: coluna do neurologista → NEURO|SC) muda o arranjo, na
+ *    faixa e no preço;
  * 4. o preço é o da busca (`buscarPreco`): unidade, principal, padrão do contratado. Sem preço, o
  *    item fica sem unitário e entra em `semPreco`. Valores em centavos inteiros.
  * O cliente com laudos e nada a faturar aparece com R$ 0 e `nadaAFaturar`.
@@ -147,6 +156,24 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     else entram.push(l);
   }
 
+  /** Categoria padrão e reclassificação: o arranjo com que o laudo (ou a peça) é precificado. */
+  const efetivo = <
+    T extends {
+      modalidadeId: string | null;
+      especialidadeId: string | null;
+      categoriaId: string | null;
+    },
+  >(
+    a: T,
+    medicoId: string | null,
+  ): T =>
+    reclassificar(
+      { ...a, categoriaId: a.categoriaId ?? p.categoriaPadraoId },
+      medicoId,
+      e.reclassificacoes,
+      e.equipesDoMedico,
+    );
+
   const membro = (l: LaudoDoDemonstrativo) => l.unidadeId ?? l.clienteId;
   const doMembro = new Map<string, LaudoDoDemonstrativo[]>();
   for (const l of entram) doMembro.set(membro(l), [...(doMembro.get(membro(l)) ?? []), l]);
@@ -155,9 +182,14 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
       m,
       volumeDaFaixa(
         ls.map((l) => ({
-          modalidadeId: l.modalidadeId,
-          especialidadeId: l.especialidadeId,
-          categoriaId: l.categoriaId ?? p.categoriaPadraoId,
+          ...efetivo(
+            {
+              modalidadeId: l.modalidadeId,
+              especialidadeId: l.especialidadeId,
+              categoriaId: l.categoriaId,
+            },
+            l.medicoId,
+          ),
           volume: l.volume,
         })),
       ),
@@ -202,7 +234,10 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
             quantidade: l.volume,
           },
         ];
-    const arranjos = brutos.map((b) => ({ arranjo: completar(b), quantidade: b.quantidade }));
+    const arranjos = brutos.map((b) => ({
+      arranjo: completar(efetivo(b, l.medicoId)),
+      quantidade: b.quantidade,
+    }));
     if (arranjos.some((a) => !a.arranjo)) {
       r.arranjoIncompleto.push({ clienteId: l.clienteId, laudoId: l.id });
       continue;

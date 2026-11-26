@@ -37,6 +37,7 @@ const laudo = (over: Partial<LaudoDoDemonstrativo> = {}): LaudoDoDemonstrativo =
   assinado: true,
   tipificacao: { fatura: true },
   pecas: [],
+  medicoId: null,
   ...over,
 });
 
@@ -51,6 +52,8 @@ const entrada = (over: Partial<EntradaDemonstrativo> = {}): EntradaDemonstrativo
   precosPorContratado: new Map(),
   parametros: { ...PARAMETROS_INICIAIS },
   alternativas: new Map(),
+  reclassificacoes: [],
+  equipesDoMedico: new Map(),
   ...over,
 });
 
@@ -255,5 +258,44 @@ describe('montar os demonstrativos da competência', () => {
       entrada({ laudos: [laudo({ volume: 3 })], precosPorCliente: new Map([['c1', faixas]]) }),
     ).demonstrativos;
     expect(d?.itens[0]?.unitarioCentavos).toBe(800);
+  });
+
+  it('reclassifica a coluna do médico da equipe antes do preço e da faixa', () => {
+    const neuro = {
+      id: 'neuro',
+      ordem: 1,
+      descricao: 'coluna do neurologista',
+      modalidadeIds: null,
+      especialidadeIds: null,
+      categoriaIds: ['COLUNAS'],
+      equipeIds: ['neuros'],
+      especialidadeDestinoId: 'NEURO',
+      categoriaDestinoId: 'SC',
+      vigenciaDesde: null,
+      vigenciaAte: null,
+    };
+    const [d] = montarDemonstrativos(
+      entrada({
+        laudos: [
+          laudo({ especialidadeId: 'MSK', categoriaId: 'COLUNAS', medicoId: 'm1' }),
+          laudo({ especialidadeId: 'MSK', categoriaId: 'COLUNAS', medicoId: 'm2' }),
+        ],
+        precosPorCliente: new Map([
+          [
+            'c1',
+            [
+              preco({ valor: 63.5 }),
+              preco({ especialidadeId: 'MSK', categoriaId: 'COLUNAS', valor: 50 }),
+            ],
+          ],
+        ]),
+        reclassificacoes: [neuro],
+        equipesDoMedico: new Map([['m1', new Set(['neuros'])]]),
+      }),
+    ).demonstrativos;
+    expect(d?.itens.map((i) => [i.especialidadeId, i.categoriaId, i.unitarioCentavos])).toEqual([
+      ['MSK', 'COLUNAS', 5000],
+      ['NEURO', 'SC', 6350],
+    ]);
   });
 });
