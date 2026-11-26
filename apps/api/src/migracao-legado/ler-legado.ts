@@ -325,6 +325,7 @@ export async function lerLaudosDoLegado(url: string, dias: PeriodoDias): Promise
       connectionString: url,
       application_name: 'redo-one-carga-laudos',
       keepAlive: true,
+      connectionTimeoutMillis: 30_000,
       query_timeout: 90_000,
     });
     c.on('error', () => undefined);
@@ -355,7 +356,8 @@ export async function lerLaudosDoLegado(url: string, dias: PeriodoDias): Promise
           laudos.push(...(await lerDia(dia)));
           break;
         } catch (erro) {
-          await cliente.end().catch(() => undefined);
+          // Sem esperar: numa conexão morta, o `end` nunca volta.
+          void cliente.end().catch(() => undefined);
           if (tentativa >= TENTATIVAS_POR_DIA) throw erro;
           cliente = await conectar();
         }
@@ -363,6 +365,6 @@ export async function lerLaudosDoLegado(url: string, dias: PeriodoDias): Promise
     }
     return laudos;
   } finally {
-    await cliente.end().catch(() => undefined);
+    void cliente.end().catch(() => undefined);
   }
 }
