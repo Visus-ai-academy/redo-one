@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from 
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -16,6 +17,10 @@ import { FecharCompetencia } from '../../application/use-cases/fechar-competenci
 import { ListarCompetencias } from '../../application/use-cases/listar-competencias';
 import { ReabrirCompetencia } from '../../application/use-cases/reabrir-competencia';
 import {
+  ListarRecalculos,
+  RecalcularCompetenciaFechada,
+} from '../../application/use-cases/recalcular-competencia';
+import {
   DestravarImportacao,
   TravarImportacao,
 } from '../../application/use-cases/travar-importacao';
@@ -24,6 +29,9 @@ import {
   FechamentoComAvisosDto,
   FecharCompetenciaDto,
   PaginaCompetenciasDto,
+  RecalcularCompetenciaDto,
+  RecalculoCompetenciaDto,
+  RecalculoCriadoDto,
 } from './dto/competencia.dto';
 
 /** Fecha apesar de avisos pendentes que impedem, informando o motivo. */
@@ -39,6 +47,8 @@ export class CompetenciasController {
     private readonly reabrirCaso: ReabrirCompetencia,
     private readonly travarCaso: TravarImportacao,
     private readonly destravarCaso: DestravarImportacao,
+    private readonly recalcularCaso: RecalcularCompetenciaFechada,
+    private readonly listarRecalculosCaso: ListarRecalculos,
   ) {}
 
   @Get()
@@ -112,5 +122,41 @@ export class CompetenciasController {
     @Param() { competencia }: CompetenciaParamDto,
   ): Promise<void> {
     return this.destravarCaso.executar(ator.usuarioId, competencia);
+  }
+
+  @Post(':competencia/recalcular')
+  @Permissao('faturamento.competencia.recalcular')
+  @ApiCreatedResponse({
+    type: RecalculoCriadoDto,
+    description:
+      'Pedido gravado com o motivo; o demonstrativo é refeito em segundo plano como versão nova (a anterior fica guardada).',
+  })
+  @ApiBadRequestResponse({ description: 'Competência fora do formato ou motivo vazio.' })
+  @ApiNotFoundResponse()
+  @ApiConflictResponse({ description: 'A competência está aberta (ela se recalcula sozinha).' })
+  async recalcular(
+    @PrincipalAtual() ator: PrincipalUsuario,
+    @Param() { competencia }: CompetenciaParamDto,
+    @Body() corpo: RecalcularCompetenciaDto,
+  ): Promise<RecalculoCriadoDto> {
+    const id = await this.recalcularCaso.executar(
+      ator.usuarioId,
+      competencia,
+      'faturamento',
+      corpo.motivo,
+    );
+    return { id };
+  }
+
+  @Get(':competencia/recalculos')
+  @Permissao('faturamento.ver')
+  @ApiOkResponse({
+    type: [RecalculoCompetenciaDto],
+    description: 'Recálculos da competência fechada (faturamento e repasse), o mais novo primeiro.',
+  })
+  @ApiBadRequestResponse()
+  @ApiNotFoundResponse()
+  recalculos(@Param() { competencia }: CompetenciaParamDto): Promise<RecalculoCompetenciaDto[]> {
+    return this.listarRecalculosCaso.executar(competencia);
   }
 }

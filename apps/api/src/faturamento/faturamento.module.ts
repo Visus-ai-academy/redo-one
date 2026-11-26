@@ -25,9 +25,14 @@ import {
 import { LAUDOS_COMPETENCIA, type LaudosCompetencia } from './application/ports/laudos-competencia';
 import { PRECOS_REPOSITORY, type PrecosRepository } from './application/ports/precos.repository';
 import {
+  RECALCULOS_COMPETENCIA,
+  type RecalculosCompetencia,
+} from './application/ports/recalculos-competencia';
+import {
   TIPIFICACAO_REPOSITORY,
   type TipificacaoRepository,
 } from './application/ports/tipificacao.repository';
+import { RegistroRecalculadores } from './application/recalculadores';
 import { CarregarTipificador } from './application/use-cases/carregar-tipificador';
 import { CriarCorte } from './application/use-cases/criar-corte';
 import {
@@ -47,6 +52,10 @@ import {
 } from './application/use-cases/precos';
 import { PreviaCorte } from './application/use-cases/previa-corte';
 import { ReabrirCompetencia } from './application/use-cases/reabrir-competencia';
+import {
+  ListarRecalculos,
+  RecalcularCompetenciaFechada,
+} from './application/use-cases/recalcular-competencia';
 import {
   BuscarMedicosTipificacao,
   ListarOpcoesTipificacao,
@@ -75,6 +84,7 @@ import { DrizzleEquipesMedicos } from './infrastructure/persistence/drizzle-equi
 import { DrizzleHistoricoDadosFiscais } from './infrastructure/persistence/drizzle-historico-dados-fiscais';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
 import { DrizzlePrecosRepository } from './infrastructure/persistence/drizzle-precos.repository';
+import { DrizzleRecalculosCompetencia } from './infrastructure/persistence/drizzle-recalculos-competencia';
 import { DrizzleTipificacaoRepository } from './infrastructure/persistence/drizzle-tipificacao.repository';
 
 const agora = () => new Date();
@@ -173,6 +183,25 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
       useFactory: (competencias: CompetenciasRepository, auditoria: Auditoria) =>
         new Caso(competencias, auditoria, agora),
     })),
+    // Um registro só para todos os contextos (faturamento, repasse): cada um registra o seu.
+    { provide: RegistroRecalculadores, useValue: new RegistroRecalculadores() },
+    { provide: RECALCULOS_COMPETENCIA, useClass: DrizzleRecalculosCompetencia },
+    {
+      provide: RecalcularCompetenciaFechada,
+      inject: [COMPETENCIAS_REPOSITORY, RECALCULOS_COMPETENCIA, RegistroRecalculadores, AUDITORIA],
+      useFactory: (
+        competencias: CompetenciasRepository,
+        recalculos: RecalculosCompetencia,
+        registro: RegistroRecalculadores,
+        auditoria: Auditoria,
+      ) => new RecalcularCompetenciaFechada(competencias, recalculos, registro, auditoria, agora),
+    },
+    {
+      provide: ListarRecalculos,
+      inject: [COMPETENCIAS_REPOSITORY, RECALCULOS_COMPETENCIA],
+      useFactory: (competencias: CompetenciasRepository, recalculos: RecalculosCompetencia) =>
+        new ListarRecalculos(competencias, recalculos),
+    },
     {
       provide: ListarCortes,
       inject: [CORTES_REPOSITORY],
@@ -238,7 +267,14 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
         new HistoricoDadosFiscais(repo, historico),
     },
   ],
-  exports: [COMPETENCIAS_BLOQUEADAS, CORTES_COMPETENCIA, TIPIFICACAO_LAUDOS],
+  // O registro e o histórico dos recálculos servem também ao `repasse` (fechamento único).
+  exports: [
+    COMPETENCIAS_BLOQUEADAS,
+    CORTES_COMPETENCIA,
+    TIPIFICACAO_LAUDOS,
+    RegistroRecalculadores,
+    RECALCULOS_COMPETENCIA,
+  ],
 })
 export class FaturamentoModule implements OnModuleInit {
   constructor(@Inject(CORTES_REPOSITORY) private readonly cortes: CortesRepository) {}

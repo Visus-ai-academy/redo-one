@@ -41,6 +41,11 @@ import type {
   VersaoComNomes,
 } from '../application/ports/precos.repository';
 import type {
+  NovoRecalculo,
+  RecalculoComAutor,
+  RecalculosCompetencia,
+} from '../application/ports/recalculos-competencia';
+import type {
   ClienteDaTipificacao,
   Configuracao,
   DadosRegra,
@@ -57,9 +62,11 @@ import type {
   TipificacaoRepository,
   VersaoGravada,
 } from '../application/ports/tipificacao.repository';
+import type { RecalculadorCompetencia } from '../application/recalculadores';
 import type { StatusCompetencia } from '../domain/competencia-status';
 import type { DadosFiscais } from '../domain/dados-fiscais';
 import type { Arranjo } from '../domain/preco';
+import type { PedidoRecalculo } from '../domain/recalculo-competencia';
 import { VersaoAlteradaError, type VersaoPreco } from '../domain/versoes-preco';
 import { VersaoTipificacaoAlteradaError } from '../domain/versoes-tipificacao';
 import type { NovaVigencia } from '../domain/vigencia-corte';
@@ -627,5 +634,39 @@ export class PrecosEmMemoria implements PrecosRepository {
 
   async eventos(_dono: Dono, ids: string[]) {
     return new Map(ids.map((id) => [id, this.eventosPorId.get(id) ?? []]));
+  }
+}
+
+export class RecalculosEmMemoria implements RecalculosCompetencia {
+  readonly pedidos: PedidoRecalculo[] = [];
+  private proximo = 1;
+
+  async solicitar(pedido: NovoRecalculo, recalculador: RecalculadorCompetencia) {
+    const id = `recalculo-${this.proximo++}`;
+    this.pedidos.push({ id, ...pedido, concluidoEm: null });
+    await recalculador.enfileirar(
+      { execute: async () => undefined },
+      {
+        recalculoId: id,
+        competencia: pedido.competencia,
+      },
+    );
+    return id;
+  }
+
+  async listar(competencia: string): Promise<RecalculoComAutor[]> {
+    return this.pedidos
+      .filter((p) => p.competencia === competencia)
+      .reverse()
+      .map((p) => ({ ...p, solicitadoPor: null }));
+  }
+
+  async obter(id: string) {
+    return this.pedidos.find((p) => p.id === id) ?? null;
+  }
+
+  async concluir(id: string, em: Date) {
+    const p = this.pedidos.find((x) => x.id === id);
+    if (p && !p.concluidoEm) p.concluidoEm = em;
   }
 }

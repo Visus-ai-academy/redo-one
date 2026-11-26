@@ -340,6 +340,13 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         sensivel: true,
       },
       {
+        chave: 'faturamento.competencia.recalcular',
+        rotulo: 'Recalcular competência fechada',
+        descricao:
+          'Refazer o demonstrativo de uma competência fechada, sem reabri-la, informando o motivo. O resultado anterior fica guardado.',
+        sensivel: true,
+      },
+      {
         chave: 'faturamento.competencia.travar',
         rotulo: 'Travar importação',
         descricao: 'Travar e destravar a importação dos laudos de uma competência.',

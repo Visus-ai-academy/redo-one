@@ -7100,6 +7100,98 @@
         ]
       }
     },
+    "/faturamento/competencias/{competencia}/recalcular": {
+      "post": {
+        "operationId": "CompetenciasController_recalcular",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecalcularCompetenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido gravado com o motivo; o demonstrativo é refeito em segundo plano como versão nova (a anterior fica guardada).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecalculoCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Competência fora do formato ou motivo vazio."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "A competência está aberta (ela se recalcula sozinha)."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/competencias/{competencia}/recalculos": {
+      "get": {
+        "operationId": "CompetenciasController_recalculos",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recálculos da competência fechada (faturamento e repasse), o mais novo primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecalculoCompetenciaDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/faturamento/cortes": {
       "get": {
         "operationId": "CortesController_listar",
@@ -17073,6 +17165,90 @@
           "codigo",
           "avisos",
           "podeFecharComAvisos"
+        ]
+      },
+      "RecalcularCompetenciaDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Por que a competência fechada é recalculada (obrigatório; fica no histórico)."
+          }
+        },
+        "required": [
+          "motivo"
+        ]
+      },
+      "RecalculoCriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ContextoRecalculo": {
+        "type": "string",
+        "enum": [
+          "faturamento",
+          "repasse"
+        ]
+      },
+      "RecalculoCompetenciaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "competencia": {
+            "type": "string",
+            "example": "2026-10"
+          },
+          "contexto": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContextoRecalculo"
+              }
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "solicitadoPorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "solicitadoPor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nome de quem pediu."
+          },
+          "solicitadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "concluidoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Quando o resultado novo ficou gravado; vazio = na fila ou rodando."
+          }
+        },
+        "required": [
+          "id",
+          "competencia",
+          "contexto",
+          "motivo",
+          "solicitadoPorId",
+          "solicitadoPor",
+          "solicitadoEm",
+          "concluidoEm"
         ]
       },
       "MesCorte": {

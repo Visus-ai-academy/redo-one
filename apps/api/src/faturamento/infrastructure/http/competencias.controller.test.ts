@@ -9,6 +9,7 @@ import type { PrincipalUsuario } from '../../../identidade/principal';
 import type { FecharCompetencia } from '../../application/use-cases/fechar-competencia';
 import type { ListarCompetencias } from '../../application/use-cases/listar-competencias';
 import type { ReabrirCompetencia } from '../../application/use-cases/reabrir-competencia';
+import type { RecalcularCompetenciaFechada } from '../../application/use-cases/recalcular-competencia';
 import type {
   DestravarImportacao,
   TravarImportacao,
@@ -35,6 +36,8 @@ describe('controller das competências', () => {
     expect(exigidas(p.reabrir)).toEqual(['faturamento.competencia.reabrir']);
     expect(exigidas(p.travar)).toEqual(['faturamento.competencia.travar']);
     expect(exigidas(p.destravar)).toEqual(['faturamento.competencia.travar']);
+    expect(exigidas(p.recalcular)).toEqual(['faturamento.competencia.recalcular']);
+    expect(exigidas(p.recalculos)).toEqual(['faturamento.ver']);
   });
 
   it('devolve a página com a paginação pedida e age em nome de quem está logado', async () => {
@@ -43,7 +46,8 @@ describe('controller das competências', () => {
     const reabrir = caso<ReabrirCompetencia>(async () => undefined);
     const travar = caso<TravarImportacao>(async () => undefined);
     const destravar = caso<DestravarImportacao>(async () => undefined);
-    const c = new CompetenciasController(listar, fechar, reabrir, travar, destravar);
+    const nada = caso<never>(async () => undefined);
+    const c = new CompetenciasController(listar, fechar, reabrir, travar, destravar, nada, nada);
 
     expect(await c.listar({ pagina: 2, porPagina: 10 })).toEqual({
       itens: [],
@@ -67,7 +71,7 @@ describe('controller das competências', () => {
   it('fechar com avisos: repassa o motivo e se quem pede tem a permissão própria', async () => {
     const fechar = caso<FecharCompetencia>(async () => undefined);
     const nada = caso<never>(async () => undefined);
-    const c = new CompetenciasController(nada, fechar, nada, nada, nada);
+    const c = new CompetenciasController(nada, fechar, nada, nada, nada, nada, nada);
     const comPermissao = {
       ...ator,
       permissoes: new Set(['faturamento.competencia.fechar_com_avisos']),
@@ -79,6 +83,22 @@ describe('controller das competências', () => {
       podeFecharComAvisos: true,
       motivoAvisos: 'Urgente.',
     });
+  });
+
+  it('recalcular pede o recálculo do faturamento com o motivo, em nome de quem está logado', async () => {
+    const recalcular = caso<RecalcularCompetenciaFechada>(async () => 'r1');
+    const nada = caso<never>(async () => undefined);
+    const c = new CompetenciasController(nada, nada, nada, nada, nada, recalcular, nada);
+
+    expect(
+      await c.recalcular(ator, { competencia: '2026-09' }, { motivo: 'valor errado' }),
+    ).toEqual({ id: 'r1' });
+    expect(recalcular.executar).toHaveBeenCalledWith(
+      'u1',
+      '2026-09',
+      'faturamento',
+      'valor errado',
+    );
   });
 
   it('a competência da rota tem de ser AAAA-MM com mês de 01 a 12', () => {

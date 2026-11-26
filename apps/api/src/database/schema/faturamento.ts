@@ -75,6 +75,35 @@ export const competencias = pgTable(
 );
 
 /**
+ * Recálculo de uma competência fechada por um contexto (faturamento, repasse), sem reabri-la: o
+ * motivo é obrigatório e fica com quem pediu e quando. O contexto grava o resultado como versão
+ * nova (a anterior fica guardada) e marca `concluido_em`.
+ */
+export const recalculosCompetencia = pgTable(
+  'recalculos_competencia',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    competencia: text('competencia')
+      .notNull()
+      .references(() => competencias.competencia),
+    /** Um de `CONTEXTOS_RECALCULO`. */
+    contexto: text('contexto', { enum: ['faturamento', 'repasse'] }).notNull(),
+    motivo: text('motivo').notNull(),
+    solicitadoPorId: quem('solicitado_por_id').notNull(),
+    solicitadoEm: quando('solicitado_em').notNull(),
+    concluidoEm: quando('concluido_em'),
+  },
+  (t) => [
+    index('recalculos_competencia_competencia_idx').on(t.competencia, t.solicitadoEm),
+    check('recalculos_competencia_motivo_check', sql`btrim(${t.motivo}) <> ''`),
+    check(
+      'recalculos_competencia_contexto_check',
+      sql`${t.contexto} in ('faturamento', 'repasse')`,
+    ),
+  ],
+);
+
+/**
  * Vigência do corte da competência a partir de `desde` ("YYYY-MM"). Sem cliente = o corte padrão;
  * com cliente, um corte próprio ou "usa o padrão". Só se cria vigência nova; a passada não se edita.
  */

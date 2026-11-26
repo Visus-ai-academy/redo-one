@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 import { aparar } from '../../../../catalogo/comum/dto';
+import { CONTEXTOS_RECALCULO, type ContextoRecalculo } from '../../../domain/recalculo-competencia';
 
 /** "YYYY-MM" com mês de 01 a 12. */
 export const PADRAO_COMPETENCIA = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -93,4 +94,38 @@ export class FechamentoComAvisosDto {
   @ApiProperty({ type: AvisosQueImpedemFecharDto }) avisos!: AvisosQueImpedemFecharDto;
   @ApiProperty({ description: 'Quem pediu pode fechar mesmo assim, informando o motivo.' })
   podeFecharComAvisos!: boolean;
+}
+
+export class RecalcularCompetenciaDto {
+  @ApiProperty({
+    maxLength: 1000,
+    description: 'Por que a competência fechada é recalculada (obrigatório; fica no histórico).',
+  })
+  @Transform(aparar)
+  @IsString()
+  @MaxLength(1000)
+  motivo!: string;
+}
+
+export class RecalculoCriadoDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+}
+
+export class RecalculoCompetenciaDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ example: '2026-10' }) competencia!: string;
+  @ApiProperty({ enum: CONTEXTOS_RECALCULO, enumName: 'ContextoRecalculo' })
+  contexto!: ContextoRecalculo;
+  @ApiProperty() motivo!: string;
+  @ApiProperty({ format: 'uuid' }) solicitadoPorId!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Nome de quem pediu.' })
+  solicitadoPor!: string | null;
+  @ApiProperty({ type: String, format: 'date-time' }) solicitadoEm!: Date;
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'Quando o resultado novo ficou gravado; vazio = na fila ou rodando.',
+  })
+  concluidoEm!: Date | null;
 }
