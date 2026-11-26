@@ -108,6 +108,18 @@ export interface LaudosRepository {
     alteracoes: AlteracoesLaudos,
     agora: Date,
   ): Promise<void>;
+  /** Quais dessas identidades já têm laudo gravado (removido inclusive), em qualquer competência. */
+  identidadesGravadas(identidades: string[]): Promise<Set<string>>;
+  /**
+   * Só insere, numa transação: o laudo cuja identidade já existe fica como está, em qualquer
+   * competência (aberta, fechada ou travada). Dos inseridos, grava peças, linha crua, paciente e
+   * tipificação, e refaz os totais dos dias deles. Devolve quantos entraram.
+   */
+  inserirNovos(
+    importacaoId: string,
+    novos: Pick<AlteracoesLaudos, 'inserir' | 'linhasBrutas' | 'pacientes' | 'classificacoes'>,
+    agora: Date,
+  ): Promise<number>;
   /** Lote de laudos para recalcular a competência, removidos inclusive. */
   lerParaRecalculo(lote: LoteRecalculo): Promise<LaudoParaRecalculo[]>;
   /** Lote de laudos para reclassificar a tipificação, removidos inclusive. */

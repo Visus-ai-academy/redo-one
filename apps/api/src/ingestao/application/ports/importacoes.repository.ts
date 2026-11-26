@@ -42,6 +42,11 @@ export interface ImportacoesRepository {
     enviadaPorId: string | null;
     agora: Date;
   }): Promise<string[] | null>;
+  /**
+   * Registra, já em processamento e sem job, a carga dos laudos do dashboards-one (origem
+   * `carga_legado`) dos dias do laudo pedidos. Devolve o id; `finalizar` fecha.
+   */
+  registrarCargaLegado(dados: { janela: PeriodoDias; agora: Date }): Promise<string>;
   /** Quando foi criada a última importação da MobileMed (para o intervalo do agendamento). */
   ultimaMobileMedEm(): Promise<Date | null>;
   /**

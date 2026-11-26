@@ -188,6 +188,34 @@ describe.skipIf(!url)('repositórios Drizzle da importação', () => {
       expect(await repo.ultimaMobileMedEm()).toEqual(agora);
     });
 
+    it('registrarCargaLegado registra a carga em processamento, sem job, e não conta como MobileMed', async () => {
+      const repo = new DrizzleImportacoesRepository(db);
+
+      const id = await repo.registrarCargaLegado({
+        janela: { inicio: '2026-09-01', fim: '2026-10-31' },
+        agora,
+      });
+
+      const [linha] = await db
+        .select()
+        .from(schema.importacoes)
+        .where(eq(schema.importacoes.id, id));
+      expect(linha).toMatchObject({
+        origem: 'carga_legado',
+        formato: 'laudos',
+        status: 'processando',
+        arquivoId: null,
+        janelaInicio: '2026-09-01',
+        janelaFim: '2026-10-31',
+        iniciadaEm: agora,
+      });
+      const jobs = await db.execute(sql`select 1 from graphile_worker.jobs`);
+      expect(jobs.rows).toHaveLength(0);
+      expect(await repo.ultimaMobileMedEm()).toBeNull();
+      // Nenhum job a processa.
+      expect(await repo.iniciar(id, agora)).toBeNull();
+    });
+
     it('criarMobileMed não cria nada com uma da MobileMed em curso, nem em paralelo', async () => {
       const repo = new DrizzleImportacoesRepository(db);
       const dados = {

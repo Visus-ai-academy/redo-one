@@ -74,6 +74,7 @@ import {
   TAREFA_RERESOLVER_CLIENTES,
 } from './application/tarefas';
 import { AtualizarParametros } from './application/use-cases/atualizar-parametros';
+import { CarregarLaudosLegado } from './application/use-cases/carregar-laudos-legado';
 import { ConsultarImportacoes } from './application/use-cases/consultar-importacoes';
 import {
   ListarAvisos,
@@ -355,6 +356,44 @@ const inteiro = (config: ConfigService, nome: string, padrao: number) => {
           parametros,
           pseudonimizador,
           relatorio,
+          () => new Date(),
+        ),
+    },
+    {
+      // Só o comando da carga do dashboards-one usa (sem tela nem job).
+      provide: CarregarLaudosLegado,
+      inject: [
+        IMPORTACOES_REPOSITORY,
+        CADASTROS_INGESTAO,
+        COMPETENCIAS_BLOQUEADAS,
+        CORTES_COMPETENCIA,
+        TIPIFICACAO_LAUDOS,
+        LAUDOS_REPOSITORY,
+        AVISOS_CADASTRO_REPOSITORY,
+        PARAMETROS_INGESTAO_REPOSITORY,
+        PSEUDONIMIZADOR,
+      ],
+      useFactory: (
+        importacoes: ImportacoesRepository,
+        cadastros: LeitorCadastrosIngestao,
+        competencias: CompetenciasBloqueadas,
+        cortes: LeitorCortesCompetencia,
+        tipificacao: LeitorTipificacao,
+        laudos: LaudosRepository,
+        avisos: AvisosCadastroRepository,
+        parametros: ParametrosIngestaoRepository,
+        pseudonimizador: Pseudonimizador,
+      ) =>
+        new CarregarLaudosLegado(
+          importacoes,
+          cadastros,
+          competencias,
+          cortes,
+          tipificacao,
+          laudos,
+          avisos,
+          parametros,
+          pseudonimizador,
           () => new Date(),
         ),
     },

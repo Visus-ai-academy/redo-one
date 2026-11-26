@@ -467,6 +467,64 @@ describe.skipIf(!url)('DrizzleLaudosRepository', () => {
     });
   });
 
+  it('inserirNovos só insere: o gravado fica como está, também em competência fechada; tipifica e soma os inseridos', async () => {
+    const [co] = await db
+      .insert(schema.regrasTipificacao)
+      .values([{ nome: 'CO', padrao: true }])
+      .returning();
+    const CO = { regraId: co?.id ?? '', subregraId: null, fatura: true };
+    // Gravado antes (pela importação), em competência que depois foi fechada.
+    await repo.aplicar(importacaoId, janela, { ...vazio, inserir: [laudo('a')] }, agora);
+    const paciente = { nome: 'Fulano', codigo: '1', conferencia: 'c1' };
+
+    const inseridos = await repo.inserirNovos(
+      importacaoId,
+      {
+        inserir: [
+          laudo('a', { hashConteudo: 'outro', status: 'Revisado' }),
+          laudo('b', { competencia: '2026-09', pecas: [] }),
+        ],
+        linhasBrutas: new Map([
+          ['a', { EMPRESA: 'NAO' }],
+          ['b', { EMPRESA: 'CLINICA X' }],
+        ]),
+        pacientes: new Map([
+          ['a', paciente],
+          ['b', paciente],
+        ]),
+        classificacoes: new Map([
+          ['a', { ...CO, competencia: '2026-10' }],
+          ['b', { ...CO, competencia: '2026-09' }],
+        ]),
+      },
+      agora,
+    );
+
+    expect(inseridos).toBe(1);
+    expect(await repo.identidadesGravadas(['a', 'b', 'c'])).toEqual(new Set(['a', 'b']));
+    const gravados = await db.execute<{ identidade: string; status: string; hash: string }>(
+      sql`select identidade, status, hash_conteudo hash from laudos order by identidade`,
+    );
+    expect(gravados.rows).toEqual([
+      { identidade: 'a', status: 'Assinado', hash: 'h-a' },
+      { identidade: 'b', status: 'Assinado', hash: 'h-b' },
+    ]);
+    const filhos = await db.execute<{ identidade: string; t: string }>(sql`
+      select l.identidade, 'bruta' t from laudos_linhas_brutas b join laudos l on l.id = b.laudo_id
+      union all
+      select l.identidade, 'paciente' from laudos_pacientes p join laudos l on l.id = p.laudo_id
+      union all
+      select l.identidade, 'tipificacao' from classificacoes_laudo c join laudos l on l.id = c.laudo_id
+      order by 1, 2`);
+    expect(filhos.rows).toEqual([
+      { identidade: 'b', t: 'bruta' },
+      { identidade: 'b', t: 'paciente' },
+      { identidade: 'b', t: 'tipificacao' },
+    ]);
+    const totais = await db.select().from(schema.totaisLaudosDia);
+    expect(totais).toEqual([expect.objectContaining({ dia: '2026-10-06', quantidade: 2 })]);
+  });
+
   it('recalcula os totais dos dias da janela, sem os removidos', async () => {
     await repo.aplicar(
       importacaoId,

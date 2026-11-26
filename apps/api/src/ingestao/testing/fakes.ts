@@ -81,6 +81,18 @@ export class ImportacoesEmMemoria implements ImportacoesRepository {
     });
   }
 
+  /** As cargas do dashboards-one registradas (fora de `itens`, que só tem as que um job processa). */
+  readonly cargas = new Map<
+    string,
+    { janela: PeriodoDias; status: Status; resultado?: ResultadoImportacao }
+  >();
+
+  async registrarCargaLegado(dados: { janela: PeriodoDias; agora: Date }) {
+    const id = crypto.randomUUID();
+    this.cargas.set(id, { janela: dados.janela, status: 'processando' });
+    return id;
+  }
+
   async ultimaMobileMedEm() {
     const datas = [...this.itens.values()]
       .filter((i) => i.fonte.origem === 'mobilemed')
@@ -96,7 +108,7 @@ export class ImportacoesEmMemoria implements ImportacoesRepository {
   }
 
   async finalizar(id: string, status: StatusFinal, resultado: ResultadoImportacao) {
-    const item = this.itens.get(id);
+    const item = this.itens.get(id) ?? this.cargas.get(id);
     if (item) Object.assign(item, { status, resultado });
   }
 }
@@ -175,6 +187,32 @@ export class LaudosEmMemoria implements LaudosRepository {
       )
         this.classificacoes.set(identidade, t);
     }
+  }
+
+  async identidadesGravadas(identidades: string[]) {
+    return new Set(identidades.filter((i) => this.laudos.has(i)));
+  }
+
+  async inserirNovos(
+    importacaoId: string,
+    a: Pick<AlteracoesLaudos, 'inserir' | 'linhasBrutas' | 'pacientes' | 'classificacoes'>,
+  ) {
+    let inseridos = 0;
+    for (const l of a.inserir) {
+      if (this.laudos.has(l.identidade)) continue;
+      inseridos++;
+      this.laudos.set(l.identidade, { ...l, removido: false, importacaoId });
+      if (a.linhasBrutas.has(l.identidade))
+        this.linhasBrutas.push({ identidade: l.identidade, importacaoId });
+      const paciente = a.pacientes.get(l.identidade);
+      if (paciente) this.pacientes.set(l.identidade, paciente);
+      const t = a.classificacoes.get(l.identidade);
+      if (t && t.competencia === l.competencia) {
+        const { competencia: _, ...tipificacao } = t;
+        this.classificacoes.set(l.identidade, tipificacao);
+      }
+    }
+    return inseridos;
   }
 
   /** O id do laudo no fake é a identidade. */

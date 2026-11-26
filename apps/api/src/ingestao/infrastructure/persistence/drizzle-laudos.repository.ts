@@ -257,6 +257,74 @@ export class DrizzleLaudosRepository implements LaudosRepository {
     });
   }
 
+  async identidadesGravadas(identidades: string[]): Promise<Set<string>> {
+    const gravadas = new Set<string>();
+    for (const lote of emLotes(identidades)) {
+      const linhas = await this.db
+        .select({ identidade: laudos.identidade })
+        .from(laudos)
+        .where(inArray(laudos.identidade, lote));
+      for (const l of linhas) gravadas.add(l.identidade);
+    }
+    return gravadas;
+  }
+
+  async inserirNovos(
+    importacaoId: string,
+    a: Pick<AlteracoesLaudos, 'inserir' | 'linhasBrutas' | 'pacientes' | 'classificacoes'>,
+    agora: Date,
+  ): Promise<number> {
+    return this.db.transaction(async (tx) => {
+      const dias = new Set<string>();
+      let inseridos = 0;
+      for (const lote of emLotes(a.inserir)) {
+        // Sem atualizar no conflito: o laudo já gravado, em qualquer competência, fica como está.
+        const gravados = await tx
+          .insert(laudos)
+          .values(lote.map((l) => linhaDoLaudo(l, importacaoId)))
+          .onConflictDoNothing({ target: laudos.identidade })
+          .returning({ id: laudos.id, identidade: laudos.identidade, dia: laudos.diaLaudo });
+        inseridos += gravados.length;
+        const id = new Map(gravados.map((g) => [g.identidade, g.id]));
+        for (const g of gravados) dias.add(g.dia);
+        const deles = lote.filter((l) => id.has(l.identidade));
+        const laudoId = (l: LaudoPreparado) => id.get(l.identidade) as string;
+
+        const pecas = deles.flatMap((l) =>
+          l.pecas.map((p, ordem) => ({ laudoId: laudoId(l), ordem, ...p })),
+        );
+        if (pecas.length) await tx.insert(laudosPecasQuebra).values(pecas);
+        const brutas = deles.flatMap((l) => {
+          const dados = a.linhasBrutas.get(l.identidade);
+          return dados ? [{ laudoId: laudoId(l), importacaoId, dados }] : [];
+        });
+        if (brutas.length) await tx.insert(laudosLinhasBrutas).values(brutas);
+        const pacientes = deles.flatMap((l) => {
+          const p = a.pacientes.get(l.identidade);
+          return p ? [{ laudoId: laudoId(l), ...p }] : [];
+        });
+        if (pacientes.length) await tx.insert(laudosPacientes).values(pacientes);
+        const tipificacoes = deles.flatMap((l) => {
+          const t = a.classificacoes.get(l.identidade);
+          return t && t.competencia === l.competencia
+            ? [
+                {
+                  laudoId: laudoId(l),
+                  regraId: t.regraId,
+                  subregraId: t.subregraId,
+                  fatura: t.fatura,
+                  calculadoEm: agora,
+                },
+              ]
+            : [];
+        });
+        if (tipificacoes.length) await tx.insert(classificacoesLaudo).values(tipificacoes);
+      }
+      await refazerTotais(tx, [...dias]);
+      return inseridos;
+    });
+  }
+
   async lerParaRecalculo(lote: LoteRecalculo): Promise<LaudoParaRecalculo[]> {
     if (lote.clienteIds?.length === 0) return [];
     return this.db

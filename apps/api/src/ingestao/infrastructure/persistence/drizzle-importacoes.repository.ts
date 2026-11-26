@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import { adicionarJob } from '../../../comum/jobs/adicionar-job';
 import { DATABASE, type Database } from '../../../database/database';
@@ -79,6 +79,23 @@ export class DrizzleImportacoesRepository implements ImportacoesRepository {
     });
   }
 
+  async registrarCargaLegado(dados: { janela: PeriodoDias; agora: Date }) {
+    const [importacao] = await this.db
+      .insert(importacoes)
+      .values({
+        origem: 'carga_legado',
+        formato: 'laudos',
+        status: 'processando',
+        criadaEm: dados.agora,
+        iniciadaEm: dados.agora,
+        janelaInicio: dados.janela.inicio,
+        janelaFim: dados.janela.fim,
+      })
+      .returning({ id: importacoes.id });
+    if (!importacao) throw new Error('Carga não foi gravada.');
+    return importacao.id;
+  }
+
   async ultimaMobileMedEm() {
     const [linha] = await this.db
       .select({ criadaEm: importacoes.criadaEm })
@@ -93,7 +110,14 @@ export class DrizzleImportacoesRepository implements ImportacoesRepository {
     const [linha] = await this.db
       .update(importacoes)
       .set({ status: 'processando', iniciadaEm: agora })
-      .where(and(eq(importacoes.id, id), inArray(importacoes.status, EM_CURSO)))
+      .where(
+        and(
+          eq(importacoes.id, id),
+          inArray(importacoes.status, EM_CURSO),
+          // A carga do dashboards-one não tem job: quem a registra é que a processa.
+          ne(importacoes.origem, 'carga_legado'),
+        ),
+      )
       .returning();
     if (!linha) return null;
     if (linha.origem === 'mobilemed') {
