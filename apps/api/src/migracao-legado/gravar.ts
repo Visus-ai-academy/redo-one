@@ -28,6 +28,7 @@ import type { CatalogoMigrado } from './mapear-catalogo';
 import type { CompetenciasMigradas } from './mapear-competencias';
 import type { ConfiguracaoDistribuicaoMigrada } from './mapear-configuracao-distribuicao';
 import type { DadosFiscaisMigrados } from './mapear-dados-fiscais';
+import type { DemonstrativosMigrados } from './mapear-demonstrativos';
 import type { DistribuicaoMigrada } from './mapear-distribuicao';
 import type { EscalaMigrada } from './mapear-escala';
 import type { MedicosMigrados } from './mapear-medicos';
@@ -103,6 +104,7 @@ export async function gravarMigracao(
   dadosFiscais?: DadosFiscaisMigrados,
   tipificacao?: TipificacaoMigrada,
   precos?: PrecosMigrados,
+  demonstrativos?: DemonstrativosMigrados,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await upsert(tx, schema.modalidades, c.modalidades);
@@ -205,7 +207,72 @@ export async function gravarMigracao(
     }
     if (tipificacao) await gravarTipificacao(tx, tipificacao);
     if (precos) await gravarPrecos(tx, precos);
+    if (demonstrativos) await gravarDemonstrativosLegado(tx, demonstrativos);
+    await semearParametrosDemonstrativo(tx);
   });
+}
+
+/**
+ * O retrato dos demonstrativos fechados do dashboards-one: cópia do que foi faturado lá, refeita a
+ * cada carga (membros e itens trocados pelos de lá).
+ */
+async function gravarDemonstrativosLegado(tx: Transacao, { tabelas: d }: DemonstrativosMigrados) {
+  await upsert(tx, schema.demonstrativosFaturamentoLegado, d.demonstrativos);
+  const ids = d.demonstrativos.map((x) => x.id as string);
+  if (ids.length === 0) return;
+  await tx
+    .delete(schema.demonstrativosFaturamentoLegadoMembros)
+    .where(inArray(schema.demonstrativosFaturamentoLegadoMembros.demonstrativoId, ids));
+  await tx
+    .delete(schema.demonstrativosFaturamentoLegadoItens)
+    .where(inArray(schema.demonstrativosFaturamentoLegadoItens.demonstrativoId, ids));
+  for (let i = 0; i < d.membros.length; i += 1000)
+    await tx
+      .insert(schema.demonstrativosFaturamentoLegadoMembros)
+      .values(d.membros.slice(i, i + 1000));
+  for (let i = 0; i < d.itens.length; i += 1000)
+    await tx.insert(schema.demonstrativosFaturamentoLegadoItens).values(d.itens.slice(i, i + 1000));
+}
+
+/**
+ * O que o dashboards-one tinha fixo no código vira a primeira versão (desde sempre) dos parâmetros
+ * do demonstrativo e das prioridades alternativas: duplicados entram, cliente inativo fica fora,
+ * categoria SC e prioridade ROTINA quando faltam, PLANTÃO ↔ URGÊNCIA. Só se a tabela estiver
+ * vazia: o que a tela gravou fica.
+ */
+async function semearParametrosDemonstrativo(tx: Transacao) {
+  const id = async (
+    tabela: typeof schema.categoriasExame | typeof schema.prioridades,
+    nome: string,
+  ) =>
+    (await tx.select({ id: tabela.id }).from(tabela).where(eq(tabela.nome, nome)))[0]?.id ?? null;
+  const [parametros] = await tx
+    .select({ id: schema.parametrosDemonstrativo.id })
+    .from(schema.parametrosDemonstrativo)
+    .limit(1);
+  if (!parametros) {
+    await tx.insert(schema.parametrosDemonstrativo).values({
+      desde: null,
+      cobraDuplicados: true,
+      cobraClientesInativos: false,
+      categoriaPadraoId: await id(schema.categoriasExame, 'SC'),
+      prioridadePadraoId: await id(schema.prioridades, 'ROTINA'),
+    });
+  }
+  const [alternativa] = await tx
+    .select({ id: schema.prioridadesAlternativasPreco.id })
+    .from(schema.prioridadesAlternativasPreco)
+    .limit(1);
+  const [plantao, urgencia] = [
+    await id(schema.prioridades, 'PLANTÃO'),
+    await id(schema.prioridades, 'URGÊNCIA'),
+  ];
+  if (!alternativa && plantao && urgencia) {
+    await tx.insert(schema.prioridadesAlternativasPreco).values([
+      { prioridadeId: plantao, alternativaId: urgencia, desde: null },
+      { prioridadeId: urgencia, alternativaId: plantao, desde: null },
+    ]);
+  }
 }
 
 type Executor = Database | Transacao;

@@ -5,6 +5,7 @@ import type {
   LegadoCompetencia,
   LegadoConfiguracaoDistribuicao,
   LegadoDadosFiscais,
+  LegadoDemonstrativo,
   LegadoDistribuicao,
   LegadoEscala,
   LegadoMedicos,
@@ -25,6 +26,7 @@ export async function lerLegado(url: string): Promise<{
   distribuicao: LegadoDistribuicao;
   configuracaoDistribuicao: LegadoConfiguracaoDistribuicao;
   competencias: LegadoCompetencia[];
+  demonstrativos: LegadoDemonstrativo[];
   dadosFiscais: LegadoDadosFiscais;
   tipificacao: LegadoTipificacao;
   precos: LegadoPrecos;
@@ -237,8 +239,20 @@ export async function lerLegado(url: string): Promise<{
           from tabela_precos_padrao where ativo order by ctid`,
       ),
     };
+    const demonstrativos = await ler<LegadoDemonstrativo>(
+      `select id, competencia, "chaveGrupo", "nomeFantasia", "clienteIds", "contratadoId",
+        "totalExames"::float8 as "totalExames", "valorExames"::float8 as "valorExames",
+        "valorFranquia"::float8 as "valorFranquia",
+        "valorPortalLaudos"::float8 as "valorPortalLaudos",
+        "valorIntegracao"::float8 as "valorIntegracao", "valorBruto"::float8 as "valorBruto",
+        ("valorPis" + "valorCofins" + "valorCsll" + "valorIrrf" + "valorIss")::float8
+          as "valorImpostos",
+        "valorLiquido"::float8 as "valorLiquido", "franquiaRegra", ${instante('geradoEm')},
+        detalhes from demonstrativos_faturamento order by competencia, "chaveGrupo"`,
+    );
     await cliente.query('COMMIT');
     return {
+      demonstrativos,
       precos,
       tipificacao,
       catalogo,

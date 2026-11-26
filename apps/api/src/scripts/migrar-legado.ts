@@ -1,4 +1,4 @@
-// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências, os dados fiscais, a tipificação e os preços dos clientes do banco do dashboards-one para o banco do redo-one
+// Migra o catálogo, os médicos, a escala, os arranjos, a configuração do robô da distribuição, as competências, os dados fiscais, a tipificação, os preços dos clientes e o retrato dos demonstrativos fechados do banco do dashboards-one para o banco do redo-one
 // (DATABASE_URL). O banco do dashboards-one é aberto SÓ PARA LEITURA; do redo-one, sem --gravar, só
 // se leem os usuários (a escala casa autor, revisor e gestora com eles). Sem --gravar, só mostra o
 // que faria. Uso:
@@ -41,6 +41,7 @@ import {
   prioridadesOperacaoDaCarga,
 } from '../migracao-legado/mapear-configuracao-distribuicao';
 import { mapearDadosFiscais } from '../migracao-legado/mapear-dados-fiscais';
+import { mapearDemonstrativos } from '../migracao-legado/mapear-demonstrativos';
 import { mapearDistribuicao } from '../migracao-legado/mapear-distribuicao';
 import { mapearEscala } from '../migracao-legado/mapear-escala';
 import { mapearMedicos } from '../migracao-legado/mapear-medicos';
@@ -238,7 +239,20 @@ async function migrarLegado() {
       console.log(
         `    - ${nomeMedico.get(a.medicoId) ?? a.medicoId} · ${a.situacao} · ${a.dataInicio} → ${a.dataFim}`,
       );
+    const demonstrativos = mapearDemonstrativos(legado.demonstrativos, {
+      fechadas: new Set(
+        competencias.tabelas.competencias
+          .filter((c) => c.status === 'fechada')
+          .map((c) => c.competencia),
+      ),
+      clientes: new Set(catalogo.tabelas.clientes.map((c) => c.id)),
+      contratados: new Set(catalogo.tabelas.contratados.map((c) => c.id as string)),
+    });
+    console.log(
+      `\nDemonstrativos fechados do dashboards-one (retrato): ${demonstrativos.tabelas.demonstrativos.length} grupos, ${demonstrativos.tabelas.itens.length} linhas por arranjo.`,
+    );
     const avisos = [
+      ...demonstrativos.avisos,
       ...catalogo.avisos,
       ...medicos.avisos,
       ...escala.avisos,
@@ -336,6 +350,7 @@ async function migrarLegado() {
       dadosFiscais,
       tipificacao,
       precos,
+      demonstrativos,
     );
     console.log('\nGravado no banco do redo-one.');
   } finally {

@@ -431,3 +431,38 @@ export interface LegadoPrecos {
   clientes: LegadoPreco[];
   padrao: LegadoPreco[];
 }
+
+/**
+ * `demonstrativos_faturamento` (o retrato por grupo de nome fantasia); `detalhes` é o JSON por
+ * arranjo e `valorImpostos` a soma de PIS, COFINS, CSLL, IRRF e ISS.
+ */
+export interface LegadoDemonstrativo {
+  id: string;
+  competencia: string;
+  chaveGrupo: string;
+  nomeFantasia: string;
+  clienteIds: string[];
+  contratadoId: string | null;
+  totalExames: number;
+  valorExames: number;
+  valorFranquia: number;
+  valorPortalLaudos: number;
+  valorIntegracao: number;
+  valorBruto: number;
+  valorImpostos: number;
+  valorLiquido: number;
+  franquiaRegra: string | null;
+  geradoEm: string | null;
+  detalhes:
+    | {
+        modalidade: string;
+        especialidade: string;
+        categoria: string;
+        prioridade: string;
+        quantidade: number;
+        valorUnitario: number;
+        valorTotal: number;
+        precoPadrao?: boolean;
+      }[]
+    | null;
+}
