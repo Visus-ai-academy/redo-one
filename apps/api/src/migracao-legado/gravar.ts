@@ -41,35 +41,53 @@ const LOTE = 300;
 type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /**
- * Colunas que o redo-one mantém e a carga só preenche quando estão vazias: a conta MobileMed do
- * médico é mapeada aqui (`mobilemed:mapear-medicos`, com auditoria) e o nível vem do catálogo de
- * níveis do redo-one; o dashboards-one não as conhece (ou tem só algumas), e regravar apagaria o
- * mapeamento (aconteceu em 23/11/2026: 122 contas voltaram a nulo).
+ * Regras de mescla das colunas que os dois sistemas conhecem, quando o valor do redo-one pode valer
+ * mais que o do dashboards-one (a coluna que a carga não traz nem entra aqui: fica como está).
+ * - `prevaleceRedo`: o valor do redo-one fica; o do dashboards-one só preenche o vazio. A cor foi
+ *   refeita aqui; a conta MobileMed do médico é mapeada aqui (`mobilemed:mapear-medicos`, com
+ *   auditoria) e regravar apagou 122 contas em 23/11/2026.
+ * - `complemento`: o do dashboards-one vale, mas vazio lá não apaga o preenchido aqui.
  */
-const MANTIDAS_NO_REDO = new Set(['idMobilemed', 'nivelId']);
+const MESCLA = {
+  prevaleceRedo: new Set(['cor', 'idMobilemed']),
+  complemento: new Set(['descricao']),
+};
 
 /**
- * `coluna = excluded.coluna` para todas as colunas menos as da chave. A descrição é complemento:
- * vazia no dashboards-one, fica a que alguém preencheu no redo-one. A cor escolhida no redo-one
- * vale mais que a de lá (as cores foram refeitas aqui); a de lá só preenche a vazia. O mesmo vale
- * para as colunas de `MANTIDAS_NO_REDO`.
+ * O `set` do upsert: só as colunas que a carga traz (as chaves do objeto mapeado, mesmo com nulo)
+ * recebem `excluded.coluna`; a que ela não traz fica como está no redo-one (insert com default
+ * não pode sobrescrever a configuração feita na tela). A data de atualização acompanha.
  */
-function atualizarTudo(tabela: PgTable, chave: string[]): Record<string, SQL> {
+function colunasDaCarga(tabela: PgTable, chave: string[], trazidas: string[]): Record<string, SQL> {
   const set: Record<string, SQL> = {};
   for (const [prop, coluna] of Object.entries(getTableColumns(tabela))) {
-    if (chave.includes(prop) || prop === 'criadoEm') continue;
+    if (chave.includes(prop)) continue;
+    if (!trazidas.includes(prop) && !coluna.onUpdateFn) continue;
     const atual = `"${getTableName(tabela)}"."${coluna.name}"`;
-    set[prop] =
-      prop === 'cor' || MANTIDAS_NO_REDO.has(prop)
-        ? sql.raw(`coalesce(${atual}, excluded."${coluna.name}")`)
-        : prop === 'descricao'
-          ? sql.raw(`coalesce(excluded."${coluna.name}", ${atual})`)
-          : sql.raw(`excluded."${coluna.name}"`);
+    const novo = `excluded."${coluna.name}"`;
+    set[prop] = sql.raw(
+      MESCLA.prevaleceRedo.has(prop)
+        ? `coalesce(${atual}, ${novo})`
+        : MESCLA.complemento.has(prop)
+          ? `coalesce(${novo}, ${atual})`
+          : novo,
+    );
   }
   return set;
 }
 
-/** Insere em lotes; a linha que já existe (mesmo id) é atualizada. Rodar de novo dá o mesmo. */
+/** Chaves com valor (`undefined` é ausente: o insert usaria o default). */
+const trazidasPor = (linha: object) =>
+  Object.entries(linha)
+    .filter(([, v]) => v !== undefined)
+    .map(([k]) => k)
+    .sort();
+
+/**
+ * Insere em lotes; a linha que já existe (mesma chave) é atualizada só no que a carga traz. Linhas
+ * com colunas diferentes vão em inserts separados, para uma não levar o default para a outra.
+ * Rodar de novo dá o mesmo.
+ */
 async function upsert<T extends PgTable>(
   tx: Transacao,
   tabela: T,
@@ -78,13 +96,21 @@ async function upsert<T extends PgTable>(
 ) {
   const colunas = getTableColumns(tabela);
   const alvo = chave.map((c) => colunas[c]).filter((c) => c !== undefined);
-  const set = atualizarTudo(tabela, chave);
-  for (let i = 0; i < linhas.length; i += LOTE) {
-    const lote = linhas.slice(i, i + LOTE);
-    const insert = tx.insert(tabela).values(lote as never);
-    await (Object.keys(set).length > 0
-      ? insert.onConflictDoUpdate({ target: alvo as never, set })
-      : insert.onConflictDoNothing());
+  const grupos = new Map<string, T['$inferInsert'][]>();
+  for (const linha of linhas) {
+    const assinatura = trazidasPor(linha as object).join(',');
+    const grupo = grupos.get(assinatura);
+    if (grupo) grupo.push(linha);
+    else grupos.set(assinatura, [linha]);
+  }
+  for (const [assinatura, doGrupo] of grupos) {
+    const set = colunasDaCarga(tabela, chave, assinatura.split(','));
+    for (let i = 0; i < doGrupo.length; i += LOTE) {
+      const insert = tx.insert(tabela).values(doGrupo.slice(i, i + LOTE) as never);
+      await (Object.keys(set).length > 0
+        ? insert.onConflictDoUpdate({ target: alvo as never, set })
+        : insert.onConflictDoNothing());
+    }
   }
 }
 

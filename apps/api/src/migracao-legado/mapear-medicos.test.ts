@@ -50,8 +50,9 @@ describe('mapearMedicos', () => {
       crm: '123',
       idMobilemed: 77,
       funcao: 'STAFF',
-      nivelId: null,
     });
+    // O nível é do catálogo de níveis do redo-one: a carga não o traz, para não apagar o escolhido.
+    expect(tabelas.medicos[0]).not.toHaveProperty('nivelId');
     expect(tabelas.medicos[1]?.funcao).toBeNull();
     expect(avisos).toContainEqual({
       tabela: 'medicos',

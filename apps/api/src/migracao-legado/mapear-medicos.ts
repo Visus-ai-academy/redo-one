@@ -77,7 +77,6 @@ export function mapearMedicos(legado: LegadoMedicos): MedicosMigrados {
       senior: m.senior,
       fellowship: m.fellowship,
       funcao: funcao && FUNCOES.has(funcao) ? (funcao as 'STAFF' | 'FELLOW') : null,
-      nivelId: null,
       dataInicioVinculo: m.dataInicioVinculo,
       observacoes: texto(m.observacoes),
     });

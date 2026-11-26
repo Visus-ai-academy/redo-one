@@ -34,6 +34,7 @@ import { mapearPrecos } from './mapear-precos';
 import { cadastroDaCarga, mapearTipificacao } from './mapear-tipificacao';
 
 const url = process.env.TEST_DATABASE_URL;
+const NIVEL = '00000000-0000-4000-8000-000000000001';
 
 const lista = { descricao: null, cor: null, ordem: 0, ativo: true };
 const cliente = (id: string, nome: string) => ({
@@ -1037,10 +1038,11 @@ describe.skipIf(!url)('gravarMigracao', () => {
     const titular = idDoLegado('alocacoes_medico', 'a1');
     const copia = async (id: string, dataInicio: string, dataFim: string | null) =>
       db.execute(sql`
-        insert into alocacoes (id, medico_id, turno_id, frente_id, dias_semana, horario_inicio,
-          horario_fim, data_inicio, data_fim)
-        select ${id}::uuid, medico_id, turno_id, frente_id, dias_semana, horario_inicio,
-          horario_fim, ${dataInicio}::date, ${dataFim}::date from alocacoes where id = ${titular}`);
+        insert into alocacoes (id, medico_id, turno_id, frente_id, dias_semana, todas_semanas,
+          semanas_do_mes, horario_inicio, horario_fim, vigencia, data_inicio, data_fim)
+        select ${id}::uuid, medico_id, turno_id, frente_id, dias_semana, todas_semanas,
+          semanas_do_mes, horario_inicio, horario_fim, vigencia, ${dataInicio}::date,
+          ${dataFim}::date from alocacoes where id = ${titular}`);
     const sumiu = idDoLegado('alocacoes_medico', 'sumiu');
     const antiga = idDoLegado('alocacoes_medico', 'antiga');
     const futura = idDoLegado('alocacoes_medico', 'futura');
@@ -1228,6 +1230,69 @@ describe.skipIf(!url)('gravarMigracao', () => {
     ]);
   });
 
+  it('coluna que só o redo-one tem não volta ao default quando a carga roda de novo', async () => {
+    await gravarMigracao(db, catalogo, medicos);
+    await db.execute(sql`update contratados set padrao = true, usa_financeiro = true`);
+    await db.execute(
+      sql`insert into niveis_medico (id, nome) values (${NIVEL}, 'Pleno') on conflict do nothing`,
+    );
+    await db.execute(sql`update medicos set nivel_id = ${NIVEL}`);
+
+    await gravarMigracao(db, catalogo, medicos);
+
+    expect((await db.execute(sql`select padrao, usa_financeiro from contratados`)).rows).toEqual([
+      { padrao: true, usa_financeiro: true },
+    ]);
+    expect((await db.execute(sql`select nivel_id from medicos`)).rows).toEqual([
+      { nivel_id: NIVEL },
+    ]);
+  });
+
+  it('coluna que a carga traz segue atualizada, inclusive com o nulo que ela manda', async () => {
+    const comEndereco = (endereco: string | null, razaoSocial: string) => ({
+      ...catalogo,
+      tabelas: {
+        ...catalogo.tabelas,
+        contratados: catalogo.tabelas.contratados.map((ct) => ({ ...ct, endereco, razaoSocial })),
+      },
+    });
+    await gravarMigracao(db, comEndereco('Rua A, 1', 'TELEIMAGEM'), medicos);
+
+    await gravarMigracao(db, comEndereco(null, 'TELEIMAGEM LTDA'), medicos);
+
+    expect((await db.execute(sql`select razao_social, endereco from contratados`)).rows).toEqual([
+      { razao_social: 'TELEIMAGEM LTDA', endereco: null },
+    ]);
+  });
+
+  it('linha sem uma coluna no mesmo lote de outra que a traz: só a que traz atualiza', async () => {
+    const ct = catalogo.tabelas.contratados[0] as (typeof catalogo.tabelas.contratados)[number];
+    const dois = (linhas: (typeof catalogo.tabelas.contratados)[number][]) => ({
+      ...catalogo,
+      tabelas: { ...catalogo.tabelas, contratados: linhas },
+    });
+    const outro = { ...ct, id: idDoLegado('contratados', 'ct-rn'), razaoSocial: 'RN' };
+    await gravarMigracao(
+      db,
+      dois([
+        { ...ct, cidade: 'Natal' },
+        { ...outro, cidade: 'Recife' },
+      ]),
+      medicos,
+    );
+
+    const { cidade: _semCidade, ...semCidade } = ct;
+    await gravarMigracao(db, dois([semCidade, { ...outro, cidade: 'Olinda' }]), medicos);
+
+    expect(
+      (await db.execute(sql`select razao_social, cidade from contratados order by razao_social`))
+        .rows,
+    ).toEqual([
+      { razao_social: 'RN', cidade: 'Olinda' },
+      { razao_social: 'TELEIMAGEM', cidade: 'Natal' },
+    ]);
+  });
+
   it('cor vazia no dashboards-one não apaga a escolhida no redo-one', async () => {
     await gravarMigracao(db, catalogo, medicos);
     await db.execute(sql`update modalidades set cor = '#F58231'`);
@@ -1351,7 +1416,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
     const primeira = await contar();
     // Um arranjo criado no redo-one para o mesmo médico: a carga devolve a lista de lá.
     await db.execute(
-      sql`insert into arranjos (medico_id) select medico_id from arranjos where medico_id is not null limit 1`,
+      sql`insert into arranjos (medico_id, especialidade_id, modalidade_id) select medico_id, especialidade_id, modalidade_id from arranjos where medico_id is not null limit 1`,
     );
     await gravarMigracao(db, catalogo, medicos, undefined, distribuicao);
 
