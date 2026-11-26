@@ -1,3 +1,4 @@
+import type { AvisosClienteInativo } from '../application/ports/avisos-cliente-inativo';
 import type { AvisosContaUnidade } from '../application/ports/avisos-conta-unidade';
 import type { AvisosPrioridade } from '../application/ports/avisos-prioridade';
 import type {
@@ -32,7 +33,12 @@ import type {
 } from '../application/ports/rodadas.repository';
 import { RodadaVivaError } from '../application/use-cases/rodadas/erros';
 import type { ContaForaDaUnidade } from '../domain/rodada/contas-fora-da-unidade';
-import type { CatalogoDaFila, InsumosRodada, RecortesRodada } from '../domain/rodada/entrada';
+import type {
+  CatalogoDaFila,
+  ClienteInativoNaFila,
+  InsumosRodada,
+  RecortesRodada,
+} from '../domain/rodada/entrada';
 import type { GrafiaSemDePara } from '../domain/rodada/grafias-sem-de-para';
 import { estaViva, type StatusRodada } from '../domain/rodada/maquina';
 import {
@@ -657,6 +663,26 @@ export class AvisosContaUnidadeEmMemoria implements AvisosContaUnidade {
     for (const c of conferidas) {
       const a = this.avisos.get(c);
       if (a) a.status = 'resolvido';
+    }
+  }
+}
+
+export class AvisosClienteInativoEmMemoria implements AvisosClienteInativo {
+  readonly avisos = new Map<
+    string,
+    ClienteInativoNaFila & { status: 'pendente' | 'resolvido' | 'ignorado' }
+  >();
+  falha: Error | null = null;
+
+  async sincronizar(clientes: readonly ClienteInativoNaFila[]) {
+    if (this.falha) throw this.falha;
+    const vieram = new Set(clientes.map((c) => c.clienteId));
+    for (const [id, a] of this.avisos) {
+      if (!vieram.has(id) && a.status === 'pendente') a.status = 'resolvido';
+    }
+    for (const c of clientes) {
+      const status = this.avisos.get(c.clienteId)?.status === 'ignorado' ? 'ignorado' : 'pendente';
+      this.avisos.set(c.clienteId, { ...c, status });
     }
   }
 }

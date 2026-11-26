@@ -821,12 +821,38 @@ export class TurnoDaFilaDto {
   cor!: string | null;
 }
 
+export class ClienteInativoNaFilaDto {
+  @ApiProperty({ format: 'uuid', description: 'O cliente (ou a unidade de um principal) inativo.' })
+  clienteId!: string;
+  @ApiProperty() nome!: string;
+  @ApiProperty({
+    type: 'integer',
+    description: 'Exames NOVO dele na fila, que não são distribuídos.',
+  })
+  exames!: number;
+  @ApiProperty({
+    type: [String],
+    description: 'Os exames, sem nada do paciente: "ESTUDO · exame ID na MobileMed".',
+  })
+  itens!: string[];
+}
+
 export class FilaDoMomentoDto {
   @ApiProperty({ type: String, format: 'date-time' }) lidaEm!: Date;
-  @ApiProperty({ type: 'integer', description: 'Exames NOVO sem médico.' }) total!: number;
+  @ApiProperty({
+    type: 'integer',
+    description: 'Exames NOVO sem médico, sem os de cliente inativo (ver `clientesInativos`).',
+  })
+  total!: number;
   @ApiProperty({ type: 'integer' }) urgentes!: number;
   @ApiProperty({ type: 'integer' }) semCatalogo!: number;
   @ApiProperty({ type: 'integer' }) semCliente!: number;
+  @ApiProperty({
+    type: [ClienteInativoNaFilaDto],
+    description:
+      'Clientes inativos com exames NOVO na fila: não são distribuídos e ficam fora das contagens (a tela mostra o alerta).',
+  })
+  clientesInativos!: ClienteInativoNaFilaDto[];
   @ApiProperty({ type: 'integer', description: 'Prazo já passou.' })
   vencidos!: number;
   @ApiProperty({

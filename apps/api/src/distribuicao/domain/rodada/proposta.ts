@@ -8,7 +8,8 @@ import {
 } from '../motor/fila';
 import type { Barreira } from '../motor/medicos-disponiveis';
 import type { MedicoForaDaRodada, MedicoNaRodada, ResultadoRodada } from '../motor/rodada';
-import type { ExameLido } from './entrada';
+import { alertaClienteInativo } from './clientes-inativos';
+import type { ClienteInativoNaFila, ExameLido } from './entrada';
 import type { MotivoFica, MotivoRecolhimento, Recolhimento } from './recolhimento';
 
 /**
@@ -152,6 +153,8 @@ export function montarProposta(p: {
   prioridadesCliente: readonly PrioridadeCliente[];
   semCatalogo: number;
   semCliente: number;
+  /** Clientes inativos com exames na fila (não distribuídos). */
+  clientesInativos?: readonly ClienteInativoNaFila[];
   escalaDosMedicos: Readonly<Record<string, EscalaDoMedico>>;
   habilitados: string[];
   /**
@@ -225,6 +228,7 @@ export function montarProposta(p: {
       `${p.semCliente} exame(s) com unidade sem cliente cadastrado: as regras de cliente não valem para eles.`,
     );
   }
+  for (const c of p.clientesInativos ?? []) avisos.push(alertaClienteInativo(c));
   if (p.resultado.grafiasSemDePara.length) {
     avisos.push(
       `Prioridade da MobileMed sem de-para na distribuição: ${p.resultado.grafiasSemDePara.join(', ')} (valeu como a padrão). Cadastre em Configurações › Distribuição.`,

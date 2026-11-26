@@ -28,6 +28,8 @@ const PERMISSAO_DO_TIPO: Readonly<Record<TipoAviso, string>> = {
   preco_repetido: 'faturamento.ver',
   // O item criado pela carga se confere (ou se junta a outro) na tela do Catálogo.
   catalogo_criado_carga: 'catalogo.ver',
+  // O cliente é reativado (ou conferido) na tela Clientes.
+  cliente_inativo: 'clientes.ver',
 };
 
 const TIPOS = TIPOS_AVISO;

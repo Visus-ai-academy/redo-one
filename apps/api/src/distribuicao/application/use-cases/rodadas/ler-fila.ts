@@ -105,6 +105,7 @@ export class LerFila {
         prioridadesCliente: insumos.prioridadesCliente,
         semCatalogo: montada.semCatalogo,
         semCliente: montada.semCliente,
+        clientesInativos: montada.clientesInativos,
         escalaDosMedicos: escalaDosMedicos(insumos, agora),
         habilitados: insumos.medicos.map((m) => m.id),
         recolhimento,
@@ -147,6 +148,16 @@ export class LerFila {
         await this.d.rodadas.registrarEvento(
           rodadaId,
           `Não foi possível registrar os avisos de prioridade: ${mensagemDo(erro)}`,
+          this.d.agora(),
+        );
+      }
+      try {
+        // A leitura vê a fila inteira (os recortes só valem no motor): é a verificação completa.
+        await this.d.avisosClienteInativo.sincronizar(montada.clientesInativos, agora);
+      } catch (erro) {
+        await this.d.rodadas.registrarEvento(
+          rodadaId,
+          `Não foi possível registrar os avisos de cliente inativo: ${mensagemDo(erro)}`,
           this.d.agora(),
         );
       }

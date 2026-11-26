@@ -144,6 +144,20 @@ describe.skipIf(!url)('insumos da rodada (banco)', () => {
     expect(catalogo.traduzirPrioridade('Rotina')).toBe(ids.rotina);
   });
 
+  it('os clientes inativos do cadastro, que a rodada não distribui (e o nome para o alerta)', async () => {
+    const inativo = await primeiro(
+      db
+        .insert(schema.clientes)
+        .values({ nome: 'CLINICA FECHADA', chaveNormalizada: 'CLINICA FECHADA', ativo: false })
+        .returning(),
+    );
+    const { insumos, catalogo } = await new DrizzleInsumosRodada(db, semEscala).carregar(agora);
+    expect(insumos.clientesInativos).toEqual([inativo]);
+    expect(insumos.nomes[inativo]).toBe('CLINICA FECHADA');
+    // O inativo continua casando pelo nome: é assim que a rodada sabe de quem é o exame.
+    expect(catalogo.cliente('CLINICA FECHADA')).toBe(inativo);
+  });
+
   it('médicos da rodada: habilitados e o cadastro na hora', async () => {
     const m = new DrizzleMedicosRodada(db);
     expect(await m.habilitados()).toBe(1);

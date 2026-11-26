@@ -146,6 +146,11 @@ export interface InsumosRodada {
   /** Exceções temporárias da grade que podem valer hoje (o motor escolhe pelo dia). */
   excecoesRecebimento?: ExcecaoRecebimento[];
   prioridadesCliente: PrioridadeCliente[];
+  /**
+   * Clientes (e unidades de um principal) inativos no cadastro: os exames deles não são
+   * distribuídos e viram alerta e aviso. Ausente = nenhum.
+   */
+  clientesInativos?: readonly string[];
   /** Id → nome, só para os textos (prioridades, clientes, frentes, segmentos). */
   nomes: Readonly<Record<string, string>>;
   /** Id → cor cadastrada (turnos, especialidades, modalidades, segmentos), só para a tela. */
@@ -247,11 +252,22 @@ export interface ExameLido extends ClassificacaoEstudo {
   unidadeId?: string | null;
 }
 
+/** Cliente inativo com exames NOVO na fila: eles não são distribuídos (alerta e aviso). */
+export interface ClienteInativoNaFila {
+  clienteId: string;
+  nome: string;
+  /** Exames NOVO dele na fila. */
+  exames: number;
+  /** Os exames, sem nada do paciente: "ESTUDO · exame ID na MobileMed". */
+  itens: string[];
+}
+
 export interface EntradaMontada {
   entrada: EntradaRodada;
   lidos: ExameLido[];
   semCatalogo: number;
   semCliente: number;
+  clientesInativos: ClienteInativoNaFila[];
 }
 
 /** O dia (AAAA-MM-DD) em Brasília. */
@@ -411,12 +427,29 @@ export function montarEntrada(p: {
   let semCatalogo = 0;
   let semCliente = 0;
   const lidos: ExameLido[] = [];
+  const inativos = new Set(insumos.clientesInativos ?? []);
+  const clientesInativos = new Map<string, ClienteInativoNaFila>();
   const exames = p.leitura.semMedico.map((e) => {
     const c = catalogo.classificar(e);
     const clienteId = catalogo.cliente(e.unidade);
     const unidadeId = unidadeDo(catalogo, e.unidade, clienteId);
     if (!c.exameId) semCatalogo++;
     if (!clienteId) semCliente++;
+    // A unidade inativa segura só os exames dela; o principal inativo, os de todas.
+    const clienteInativoId =
+      [unidadeId, clienteId].find((id): id is string => !!id && inativos.has(id)) ?? null;
+    const novo = normalizarGrafia(e.status) === STATUS_NOVO;
+    if (clienteInativoId && novo) {
+      const ci = clientesInativos.get(clienteInativoId) ?? {
+        clienteId: clienteInativoId,
+        nome: insumos.nomes[clienteInativoId] ?? e.unidade,
+        exames: 0,
+        itens: [],
+      };
+      ci.exames++;
+      ci.itens.push(`${e.estudo} · exame ${e.idExame}`);
+      clientesInativos.set(clienteInativoId, ci);
+    }
     const pacienteChave = chavePaciente(e.paciente);
     const op = lerPrioridade(e.prioridade).prioridade;
     const restanteMin = e.prazo === null ? null : (e.prazo.getTime() - agora.getTime()) / 60_000;
@@ -443,6 +476,7 @@ export function montarEntrada(p: {
       exameId: c.exameId,
       clienteId,
       unidadeId,
+      clienteInativoId,
       especialidadeId: c.especialidadeId,
       especialidadesDoSegmento: c.especialidadesDoSegmento,
       modalidadeId: c.modalidadeId,
@@ -453,7 +487,7 @@ export function montarEntrada(p: {
       laudos: e.laudos ?? 1,
       prazo: e.prazo,
       entradaEm: e.entradaEm,
-      novo: normalizarGrafia(e.status) === STATUS_NOVO,
+      novo,
       medicoAderente: c.especialidadeId
         ? (aderente.get(`${pacienteChave}|${c.especialidadeId}`) ?? null)
         : null,
@@ -510,5 +544,6 @@ export function montarEntrada(p: {
     lidos,
     semCatalogo,
     semCliente,
+    clientesInativos: [...clientesInativos.values()],
   };
 }

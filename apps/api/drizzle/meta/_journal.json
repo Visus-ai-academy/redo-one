@@ -736,6 +736,13 @@
       "when": 1795712506092,
       "tag": "0104_recalculos_competencia",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1795713679830,
+      "tag": "0105_tipo_aviso_cliente_inativo",
+      "breakpoints": true
     }
   ]
 }

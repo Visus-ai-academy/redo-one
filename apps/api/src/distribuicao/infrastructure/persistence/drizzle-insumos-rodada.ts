@@ -88,6 +88,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
       examesSub,
       subsEsp,
       outrasContas,
+      inativos,
     ] = await Promise.all([
       new DrizzleConfiguracaoDistribuicaoRepository(db).obter(),
       new DrizzleRegrasFrenteRepository(db).listar(),
@@ -128,6 +129,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
           idMobilemed: medicosContasMobilemed.idMobilemed,
         })
         .from(medicosContasMobilemed),
+      db.select({ id: clientes.id }).from(clientes).where(eq(clientes.ativo, false)),
     ]);
 
     // --- arranjos de médicos e equipes ---
@@ -322,6 +324,7 @@ export class DrizzleInsumosRodada implements LeitorInsumosRodada {
         gradeRecebimento,
         excecoesRecebimento,
         prioridadesCliente,
+        clientesInativos: inativos.map((c) => c.id),
         nomes,
         cores,
         segmentos: Object.fromEntries(

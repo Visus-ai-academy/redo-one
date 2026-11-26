@@ -1,3 +1,4 @@
+import type { AvisosClienteInativo } from '../ports/avisos-cliente-inativo';
 import type { ConfiguracaoDistribuicaoRepository } from '../ports/configuracao-distribuicao.repository';
 import type { RetratoFilaRepository } from '../ports/retrato-fila.repository';
 import { configuracaoAtual, mensagemDo } from './rodadas/comum';
@@ -12,18 +13,26 @@ const maisNova = (...datas: (Date | null | undefined)[]) =>
 
 /**
  * O job: lê a fila (a mesma conta da fila do momento) e troca o retrato. Falhou, o retrato
- * anterior fica e a falha é anotada. Devolve a mensagem da falha (null = leu) para o log.
+ * anterior fica e a falha é anotada. Devolve a mensagem da falha (null = leu) para o log. A leitura
+ * boa sincroniza os avisos de cliente inativo (a fila inteira é a verificação completa).
  */
 export class LerRetratoFila {
   constructor(
     private readonly montar: { executar(): Promise<FilaDoMomento> },
     private readonly repo: RetratoFilaRepository,
+    private readonly avisosClienteInativo: AvisosClienteInativo,
     private readonly agora: () => Date,
   ) {}
 
   async executar(): Promise<string | null> {
     try {
-      await this.repo.gravar(await this.montar.executar());
+      const fila = await this.montar.executar();
+      await this.repo.gravar(fila);
+      try {
+        await this.avisosClienteInativo.sincronizar(fila.clientesInativos ?? [], fila.lidaEm);
+      } catch {
+        // O aviso não segura o retrato: a tela já mostra o alerta, e a próxima leitura tenta de novo.
+      }
       return null;
     } catch (erro) {
       const mensagem = mensagemDo(erro);
@@ -70,7 +79,7 @@ export class AgendarLeituraFila {
 
 export interface SituacaoRetratoFila {
   /** O último retrato bom; null = a fila ainda não foi lida. */
-  fila: FilaDoMomento | null;
+  fila: (FilaDoMomento & Required<Pick<FilaDoMomento, 'clientesInativos'>>) | null;
   pedidaEm: Date | null;
   /** Há leitura pedida e ainda não terminada. */
   lendo: boolean;
@@ -94,7 +103,12 @@ export class ConsultarRetratoFila {
     ]);
     return {
       // Ligar ou desligar o robô vale na hora, não na próxima leitura.
-      fila: r.fila && { ...r.fila, roboAtivo: config.roboAtivo },
+      // O retrato gravado antes de 26/11 não traz os clientes inativos.
+      fila: r.fila && {
+        ...r.fila,
+        roboAtivo: config.roboAtivo,
+        clientesInativos: r.fila.clientesInativos ?? [],
+      },
       pedidaEm: r.pedidaEm,
       lendo: r.pedidaEm !== null && r.pedidaEm.getTime() > maisNova(r.fila?.lidaEm, r.falhouEm),
       falha: r.falhouEm ? { em: r.falhouEm, erro: r.erro ?? '' } : null,

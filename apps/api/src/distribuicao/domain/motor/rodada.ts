@@ -52,6 +52,11 @@ export interface ExameFilaRodada {
   clienteId: string | null;
   /** A unidade de onde o exame veio, quando é unidade de um principal (ver `citaCliente`). */
   unidadeId?: string | null;
+  /**
+   * O cadastro inativo de onde o exame veio (o cliente, ou a unidade dele): o exame não é
+   * distribuído. Ausente ou null = cliente ativo (ou sem cadastro).
+   */
+  clienteInativoId?: string | null;
   especialidadeId: string | null;
   especialidadesDoSegmento: readonly string[];
   modalidadeId: string | null;
@@ -122,6 +127,7 @@ export interface EntradaRodada {
 export type MotivoRodada =
   | MotivoNaoDistribuido
   | 'nao_novo'
+  | 'cliente_inativo'
   | 'fora_da_prioridade'
   | 'fora_da_clinica'
   | 'fora_da_frente'
@@ -294,6 +300,15 @@ export function rodarMotor(entrada: EntradaRodada): ResultadoRodada {
       recusas.set(
         l.fila.id,
         semItem(l.fila.id, 'nao_novo', 'Só o exame NOVO na MobileMed é distribuído.'),
+      );
+    else if (l.fila.clienteInativoId)
+      recusas.set(
+        l.fila.id,
+        semItem(
+          l.fila.id,
+          'cliente_inativo',
+          `${nome(l.fila.clienteInativoId)} está inativo no cadastro de clientes: os exames dele não são distribuídos.`,
+        ),
       );
   }
   const filtro = entrada.filtro ?? {};

@@ -349,6 +349,20 @@ describe('rodarMotor', () => {
     expect(item(r, 'velho')).toMatchObject({ medicoId: null, motivo: 'nao_novo' });
   });
 
+  it('exame de cliente inativo não é distribuído, com o cliente no motivo', () => {
+    const r = rodar({
+      exames: [exame({ id: 'i', clienteId: 'X', clienteInativoId: 'X' }), exame({ id: 'a' })],
+      nomes: { X: 'CLÍNICA X' },
+    });
+    expect(item(r, 'i')).toMatchObject({
+      medicoId: null,
+      motivo: 'cliente_inativo',
+      detalhe:
+        'CLÍNICA X está inativo no cadastro de clientes: os exames dele não são distribuídos.',
+    });
+    expect(item(r, 'a')?.medicoId).toBe('A');
+  });
+
   it('recorte da rodada de clínica, com o motivo à vista', () => {
     const r = rodar({
       exames: [exame({ id: 'x', clienteId: 'X' }), exame({ id: 'y', clienteId: 'Y' })],

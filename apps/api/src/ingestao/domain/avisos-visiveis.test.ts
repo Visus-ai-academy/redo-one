@@ -21,6 +21,7 @@ describe('tiposDeAvisoVisiveis', () => {
       'cliente_ambiguo',
       'preco_repetido',
       'catalogo_criado_carga',
+      'cliente_inativo',
     ]);
   });
 
@@ -29,7 +30,12 @@ describe('tiposDeAvisoVisiveis', () => {
   });
 
   it('cada tipo segue o ver da tela onde o aviso se resolve', () => {
-    expect(tiposDeAvisoVisiveis(acesso('clientes.ver'))).toEqual(['cliente', 'cliente_ambiguo']);
+    // O cliente inativo se reativa (ou se confere) na tela Clientes.
+    expect(tiposDeAvisoVisiveis(acesso('clientes.ver'))).toEqual([
+      'cliente',
+      'cliente_ambiguo',
+      'cliente_inativo',
+    ]);
     // O preço se resolve na aba Preços do cliente (ou na tabela padrão do contratado).
     expect(tiposDeAvisoVisiveis(acesso('faturamento.ver'))).toEqual(['preco_repetido']);
     expect(tiposDeAvisoVisiveis(acesso('medicos.ver'))).toEqual(['medico', 'conta_unidade']);
@@ -50,6 +56,7 @@ describe('tiposDeAvisoVisiveis', () => {
       'cliente',
       'estudo',
       'cliente_ambiguo',
+      'cliente_inativo',
     ]);
   });
 });

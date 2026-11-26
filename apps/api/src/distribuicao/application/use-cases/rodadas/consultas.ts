@@ -2,7 +2,11 @@ import type { FrenteEscala } from '../../../domain/arranjo';
 import type { UnidadeTeto } from '../../../domain/motor/capacidade';
 import type { Barreira, MotivoForaDaRodada } from '../../../domain/motor/medicos-disponiveis';
 import { exameNaFrente } from '../../../domain/motor/rodada';
-import { montarEntrada, RECORTES_VAZIOS } from '../../../domain/rodada/entrada';
+import {
+  type ClienteInativoNaFila,
+  montarEntrada,
+  RECORTES_VAZIOS,
+} from '../../../domain/rodada/entrada';
 import { STATUS_VIVOS, type StatusRodada } from '../../../domain/rodada/maquina';
 import type { InsumosGravados, RecolhimentoGravado } from '../../../domain/rodada/proposta';
 import type {
@@ -274,6 +278,11 @@ export interface FilaDoMomento {
   turnos: TurnoDaFila[];
   semCatalogo: number;
   semCliente: number;
+  /**
+   * Clientes inativos com exames NOVO na fila: não são distribuídos e ficam fora das contagens
+   * acima (a tela mostra o alerta). Ausente nos retratos gravados antes de 26/11.
+   */
+  clientesInativos?: ClienteInativoNaFila[];
   porPrioridade: ({ prioridadeOperacaoId: string | null; nome: string } & ContagemFila)[];
   porEspecialidade: ({ especialidadeId: string | null; nome: string } & ContagemFila)[];
   porModalidade: ({ modalidadeId: string | null; nome: string } & ContagemFila)[];
@@ -329,7 +338,7 @@ export class ConsultarFilaDoMomento {
       this.d.fila.ler(),
       this.d.insumos.carregar(agora),
     ]);
-    const { entrada, lidos, semCatalogo, semCliente } = montarEntrada({
+    const { entrada, lidos, semCatalogo, semCliente, clientesInativos } = montarEntrada({
       agora,
       leitura,
       catalogo,
@@ -338,7 +347,10 @@ export class ConsultarFilaDoMomento {
       recortes: RECORTES_VAZIOS,
       pseudonimo: (t) => this.d.pseudonimizador.pseudonimo(t),
     });
-    const novos = new Set(entrada.exames.filter((e) => e.novo).map((e) => e.id));
+    // O exame de cliente inativo não é distribuído: sai das contagens e vai para o alerta.
+    const novos = new Set(
+      entrada.exames.filter((e) => e.novo && !e.clienteInativoId).map((e) => e.id),
+    );
     const fila = lidos.filter((l) => novos.has(l.idExame));
     const nome = (id: string | null, semNome: string) => (id ? (insumos.nomes[id] ?? id) : semNome);
     const contar = (chave: (l: (typeof fila)[number]) => string | null) => {
@@ -518,6 +530,7 @@ export class ConsultarFilaDoMomento {
         .map(({ ids: _, ...t }) => t),
       semCatalogo,
       semCliente,
+      clientesInativos,
       porPrioridade: contar((l) => l.prioridadeOperacaoId).map(({ id, ...c }) => ({
         prioridadeOperacaoId: id,
         nome: nome(id, 'Sem prioridade'),
@@ -755,6 +768,7 @@ export interface Explicacao {
 /** Recusas que acontecem antes de olhar os médicos (o exame nem entrou na distribuição). */
 const ANTES_DOS_MEDICOS = new Set([
   'nao_novo',
+  'cliente_inativo',
   'fora_da_prioridade',
   'fora_da_clinica',
   'fora_da_frente',

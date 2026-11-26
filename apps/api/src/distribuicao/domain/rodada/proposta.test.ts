@@ -214,6 +214,15 @@ describe('proposta da rodada', () => {
     ]);
   });
 
+  it('avisa cada cliente inativo com exames na fila', () => {
+    const { avisos } = propor({
+      clientesInativos: [{ clienteId: 'cli-a', nome: 'HOSPITAL A', exames: 3, itens: [] }],
+    });
+    expect(avisos).toContain(
+      'HOSPITAL A está inativo no cadastro de clientes: 3 exames dele não estão sendo distribuídos.',
+    );
+  });
+
   it('conta os urgentes e guarda o que o motor viu para o "por quê"', () => {
     const r = propor();
     expect(r.urgentes).toBe(1);

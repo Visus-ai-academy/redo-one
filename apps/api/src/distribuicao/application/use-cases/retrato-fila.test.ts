@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { CONFIGURACAO_INICIAL } from '../../domain/configuracao-global';
 import { ConfiguracaoEmMemoria, RetratoFilaEmMemoria } from '../../testing/fakes';
+import { AvisosClienteInativoEmMemoria } from '../../testing/rodadas-fakes';
 import {
   AgendarLeituraFila,
   ConsultarRetratoFila,
@@ -40,12 +41,14 @@ describe('retrato da fila do momento', () => {
   let repo: RetratoFilaEmMemoria;
   let configuracao: ConfiguracaoEmMemoria;
   let montar: { executar: () => Promise<FilaDoMomento> };
+  let avisos: AvisosClienteInativoEmMemoria;
 
   beforeEach(() => {
     agora = t0;
     repo = new RetratoFilaEmMemoria();
     configuracao = new ConfiguracaoEmMemoria();
     montar = { executar: async () => filaLida(agora) };
+    avisos = new AvisosClienteInativoEmMemoria();
   });
 
   const relogio = () => agora;
@@ -53,7 +56,7 @@ describe('retrato da fila do momento', () => {
   describe('leitura (job)', () => {
     it('grava o retrato com a hora da leitura e apaga a falha anterior', async () => {
       await repo.registrarFalha(min(-5), 'fora do ar');
-      expect(await new LerRetratoFila(montar, repo, relogio).executar()).toBeNull();
+      expect(await new LerRetratoFila(montar, repo, avisos, relogio).executar()).toBeNull();
       expect(await repo.obter()).toMatchObject({
         fila: { lidaEm: t0, total: 3 },
         falhouEm: null,
@@ -66,7 +69,7 @@ describe('retrato da fila do momento', () => {
       montar.executar = async () => {
         throw new Error('MobileMed respondeu 503');
       };
-      expect(await new LerRetratoFila(montar, repo, relogio).executar()).toBe(
+      expect(await new LerRetratoFila(montar, repo, avisos, relogio).executar()).toBe(
         'MobileMed respondeu 503',
       );
       expect(await repo.obter()).toMatchObject({
@@ -74,6 +77,35 @@ describe('retrato da fila do momento', () => {
         falhouEm: t0,
         erro: 'MobileMed respondeu 503',
       });
+    });
+  });
+
+  describe('clientes inativos na leitura', () => {
+    const inativo = { clienteId: 'cli-a', nome: 'HOSPITAL A', exames: 2, itens: ['x', 'y'] };
+
+    it('cada leitura sincroniza os avisos: abre o do cliente na fila e resolve o que sumiu', async () => {
+      montar.executar = async () => ({ ...filaLida(agora), clientesInativos: [inativo] });
+      await new LerRetratoFila(montar, repo, avisos, relogio).executar();
+      expect(avisos.avisos.get('cli-a')).toMatchObject({ exames: 2, status: 'pendente' });
+      montar.executar = async () => ({ ...filaLida(agora), clientesInativos: [] });
+      await new LerRetratoFila(montar, repo, avisos, relogio).executar();
+      expect(avisos.avisos.get('cli-a')?.status).toBe('resolvido');
+    });
+
+    it('falha ao registrar o aviso não segura o retrato', async () => {
+      avisos.falha = new Error('banco fora');
+      montar.executar = async () => ({ ...filaLida(agora), clientesInativos: [inativo] });
+      expect(await new LerRetratoFila(montar, repo, avisos, relogio).executar()).toBeNull();
+      expect((await repo.obter()).fila?.clientesInativos).toEqual([inativo]);
+    });
+
+    it('a leitura que falhou não mexe nos avisos', async () => {
+      await avisos.sincronizar([inativo]);
+      montar.executar = async () => {
+        throw new Error('fora');
+      };
+      await new LerRetratoFila(montar, repo, avisos, relogio).executar();
+      expect(avisos.avisos.get('cli-a')?.status).toBe('pendente');
     });
   });
 

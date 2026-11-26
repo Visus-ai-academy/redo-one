@@ -211,6 +211,46 @@ describe('montar a entrada do motor a partir da leitura da fila', () => {
     expect(r.semCliente).toBe(1);
   });
 
+  it('marca o exame de cliente inativo e junta, por cliente, os NOVO que ficam sem distribuir', () => {
+    const r = montar({
+      insumos: insumos({ clientesInativos: ['cli-a'], nomes: { 'cli-a': 'HOSPITAL A' } }),
+      leitura: {
+        semMedico: [
+          exame({ idExame: 'i1' }),
+          exame({ idExame: 'i2', estudo: 'OUTRO' }),
+          exame({ idExame: 'i3', status: 'Pré-laudado' }),
+          exame({ idExame: 'z', unidade: 'CLINICA X' }),
+        ],
+        emMaos: [],
+      },
+    });
+    const porId = new Map(r.entrada.exames.map((e) => [e.id, e]));
+    expect(porId.get('i1')?.clienteInativoId).toBe('cli-a');
+    expect(porId.get('z')?.clienteInativoId).toBeNull();
+    expect(r.clientesInativos).toEqual([
+      {
+        clienteId: 'cli-a',
+        nome: 'HOSPITAL A',
+        exames: 2,
+        itens: ['TC TORAX · exame i1', 'OUTRO · exame i2'],
+      },
+    ]);
+  });
+
+  it('a unidade inativa de um principal ativo também segura os exames dela', () => {
+    const r = montar({
+      insumos: insumos({ clientesInativos: ['cli-a2'], nomes: { 'cli-a2': 'HOSPITAL A2' } }),
+      leitura: {
+        semMedico: [exame({ idExame: 'u1', unidade: 'HOSPITAL A2' }), exame({ idExame: 'p1' })],
+        emMaos: [],
+      },
+    });
+    const porId = new Map(r.entrada.exames.map((e) => [e.id, e]));
+    expect(porId.get('u1')?.clienteInativoId).toBe('cli-a2');
+    expect(porId.get('p1')?.clienteInativoId).toBeNull();
+    expect(r.clientesInativos).toMatchObject([{ clienteId: 'cli-a2', exames: 1 }]);
+  });
+
   it('carga em mãos e aderência vêm dos exames com médico, pela conta na MobileMed', () => {
     const { entrada } = montar({
       leitura: {

@@ -21,6 +21,8 @@ export const TIPOS_AVISO = [
   'preco_repetido',
   /** Item do catálogo (categoria, prioridade...) que a carga do dashboards-one criou. */
   'catalogo_criado_carga',
+  /** Cliente inativo no cadastro com exames na fila: o robô não os distribui (leitura da fila). */
+  'cliente_inativo',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 

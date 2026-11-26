@@ -20,6 +20,7 @@ import {
   PrioridadesClienteEmMemoria,
 } from '../../../testing/fakes';
 import {
+  AvisosClienteInativoEmMemoria,
   AvisosContaUnidadeEmMemoria,
   AvisosPrioridadeEmMemoria,
   EscalaRecolhimentoEmMemoria,
@@ -194,6 +195,7 @@ describe('rodada do robô (casos de uso)', () => {
   let insumos: InsumosFixos;
   let avisosPrioridade: AvisosPrioridadeEmMemoria;
   let avisosContaUnidade: AvisosContaUnidadeEmMemoria;
+  let avisosClienteInativo: AvisosClienteInativoEmMemoria;
   let escalaRecolhimento: EscalaRecolhimentoEmMemoria;
   let nomesPacientes: NomesPacientesDeTeste;
   let casos: ReturnType<typeof criarCasosDeUsoRodada>;
@@ -233,6 +235,7 @@ describe('rodada do robô (casos de uso)', () => {
     escalaRecolhimento = new EscalaRecolhimentoEmMemoria();
     avisosPrioridade = new AvisosPrioridadeEmMemoria();
     avisosContaUnidade = new AvisosContaUnidadeEmMemoria();
+    avisosClienteInativo = new AvisosClienteInativoEmMemoria();
     nomesPacientes = new NomesPacientesDeTeste();
     contasUnidade = new ContasPorUnidadeDeTeste();
     casos = criarCasosDeUsoRodada({
@@ -250,6 +253,7 @@ describe('rodada do robô (casos de uso)', () => {
       pseudonimizador: { pseudonimo: (t) => `hmac(${t})` },
       avisosPrioridade,
       avisosContaUnidade,
+      avisosClienteInativo,
       nomesPacientes,
       auditoria,
       agora: () => agora,
@@ -348,6 +352,45 @@ describe('rodada do robô (casos de uso)', () => {
       };
       await criarELer();
       expect(avisosPrioridade.avisos.get('ELETIVO')?.status).toBe('resolvido');
+    });
+
+    it('exame de cliente inativo fica fora, com alerta na proposta e um aviso por cliente', async () => {
+      insumos.insumos = {
+        ...insumosBase(),
+        clientesInativos: ['cli-a'],
+        nomes: { 'cli-a': 'HOSPITAL A' },
+      };
+      mobilemed.leitura.semMedico.push(exame({ idExame: 'z', unidade: 'CLINICA X' }));
+      const id = await criarELer();
+      expect(designacao('e1')).toMatchObject({ status: 'recusada', motivo: 'cliente_inativo' });
+      expect(designacao('z')?.status).toBe('prevista');
+      expect(repo.rodadas.get(id)?.avisos).toContain(
+        'HOSPITAL A está inativo no cadastro de clientes: 3 exames dele não estão sendo distribuídos.',
+      );
+      expect([...avisosClienteInativo.avisos.values()]).toEqual([
+        {
+          clienteId: 'cli-a',
+          nome: 'HOSPITAL A',
+          exames: 3,
+          itens: ['TC TORAX · exame e1', 'TC TORAX · exame e2', 'ESTUDO SEM CADASTRO · exame e3'],
+          status: 'pendente',
+        },
+      ]);
+      // Reativado, a leitura seguinte resolve o aviso.
+      await casos.cancelar.executar(admin, id);
+      insumos.insumos = { ...insumosBase(), nomes: { 'cli-a': 'HOSPITAL A' } };
+      await criarELer();
+      expect(avisosClienteInativo.avisos.get('cli-a')?.status).toBe('resolvido');
+    });
+
+    it('falha ao registrar o aviso de cliente inativo não derruba a proposta', async () => {
+      avisosClienteInativo.falha = new Error('banco fora');
+      insumos.insumos = { ...insumosBase(), clientesInativos: ['cli-a'] };
+      const id = await criarELer();
+      expect(repo.rodadas.get(id)?.status).toBe('aguardando_aprovacao');
+      expect((await repo.eventos(id, 50)).map((e) => e.texto)).toContainEqual(
+        expect.stringMatching(/avisos de cliente inativo: banco fora/),
+      );
     });
 
     it('falha ao registrar o aviso não derruba a proposta', async () => {
@@ -1123,6 +1166,27 @@ describe('rodada do robô (casos de uso)', () => {
         expect.objectContaining({ turnoId: 'manha', nome: 'Manhã', medicos: 2, emAndamento: true }),
       ]);
       expect(f.medicosEmTurno[0]).toMatchObject({ turno: 'Manhã', frenteNome: 'MEDICINA INTERNA' });
+    });
+
+    it('fila do momento: o exame de cliente inativo sai das contagens e vai para o alerta', async () => {
+      mobilemed.leitura = {
+        semMedico: [
+          exame({ idExame: 'a1' }),
+          exame({ idExame: 'a2', status: 'Pré-laudado' }),
+          exame({ idExame: 'z1', unidade: 'CLINICA X' }),
+        ],
+        emMaos: [],
+      };
+      insumos.insumos = {
+        ...insumosBase(),
+        clientesInativos: ['cli-a'],
+        nomes: { 'cli-a': 'HOSPITAL A' },
+      };
+      const f = await casos.filaDoMomento.executar();
+      expect(f.total).toBe(1);
+      expect(f.clientesInativos).toEqual([
+        { clienteId: 'cli-a', nome: 'HOSPITAL A', exames: 1, itens: ['TC TORAX · exame a1'] },
+      ]);
     });
 
     it('fila do momento: cada frente quebrada por segmento × prioridade; sem segmento à parte', async () => {

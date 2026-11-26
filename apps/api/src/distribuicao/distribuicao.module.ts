@@ -17,6 +17,10 @@ import {
 } from './application/ports/arranjos.repository';
 import { ATRIBUIDOR_EXAMES, type AtribuidorExames } from './application/ports/atribuidor-exames';
 import {
+  AVISOS_CLIENTE_INATIVO,
+  type AvisosClienteInativo,
+} from './application/ports/avisos-cliente-inativo';
+import {
   AVISOS_CONTA_UNIDADE,
   type AvisosContaUnidade,
 } from './application/ports/avisos-conta-unidade';
@@ -167,6 +171,7 @@ import {
 } from './infrastructure/http/prioridades-operacao.controller';
 import { RegrasFrenteController } from './infrastructure/http/regras-frente.controller';
 import { RodadasController } from './infrastructure/http/rodadas.controller';
+import { AvisosClienteInativoAdapter } from './infrastructure/ingestao/avisos-cliente-inativo.adapter';
 import { AvisosContaUnidadeAdapter } from './infrastructure/ingestao/avisos-conta-unidade.adapter';
 import { AvisosPrioridadeAdapter } from './infrastructure/ingestao/avisos-prioridade.adapter';
 import { NomesPacientesEmMemoria } from './infrastructure/memoria/nomes-pacientes-em-memoria';
@@ -253,6 +258,7 @@ const CASOS_RODADA = [
     { provide: ESCOPO_RODADA, useClass: EscopoRodadaAdapter },
     { provide: AVISOS_PRIORIDADE, useClass: AvisosPrioridadeAdapter },
     { provide: AVISOS_CONTA_UNIDADE, useClass: AvisosContaUnidadeAdapter },
+    { provide: AVISOS_CLIENTE_INATIVO, useClass: AvisosClienteInativoAdapter },
     DrizzleAmostraCatalogo,
     {
       // Fake (padrão) ou a MobileMed de verdade: só `DISTRIBUICAO_MOBILEMED=real` liga a integração.
@@ -325,6 +331,7 @@ const CASOS_RODADA = [
         PSEUDONIMIZADOR_PACIENTE,
         AVISOS_PRIORIDADE,
         AVISOS_CONTA_UNIDADE,
+        AVISOS_CLIENTE_INATIVO,
         NOMES_PACIENTES_RODADA,
         AUDITORIA,
       ],
@@ -343,6 +350,7 @@ const CASOS_RODADA = [
         pseudonimizador: PseudonimizadorPaciente,
         avisosPrioridade: AvisosPrioridade,
         avisosContaUnidade: AvisosContaUnidade,
+        avisosClienteInativo: AvisosClienteInativo,
         nomesPacientes: NomesPacientesRodada,
         auditoria: Auditoria,
       ): DependenciasRodada => ({
@@ -360,6 +368,7 @@ const CASOS_RODADA = [
         pseudonimizador,
         avisosPrioridade,
         avisosContaUnidade,
+        avisosClienteInativo,
         nomesPacientes,
         auditoria,
         agora,
@@ -373,9 +382,12 @@ const CASOS_RODADA = [
     { provide: RETRATO_FILA_REPOSITORY, useClass: DrizzleRetratoFilaRepository },
     {
       provide: LerRetratoFila,
-      inject: [ConsultarFilaDoMomento, RETRATO_FILA_REPOSITORY],
-      useFactory: (montar: ConsultarFilaDoMomento, repo: RetratoFilaRepository) =>
-        new LerRetratoFila(montar, repo, agora),
+      inject: [ConsultarFilaDoMomento, RETRATO_FILA_REPOSITORY, AVISOS_CLIENTE_INATIVO],
+      useFactory: (
+        montar: ConsultarFilaDoMomento,
+        repo: RetratoFilaRepository,
+        avisos: AvisosClienteInativo,
+      ) => new LerRetratoFila(montar, repo, avisos, agora),
     },
     {
       provide: PedirLeituraFila,
