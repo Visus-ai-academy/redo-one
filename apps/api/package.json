@@ -21,6 +21,7 @@
     "migrar:repasse-legado": "nest build && JOBS_WORKER=false node dist/scripts/migrar-repasse-legado.js",
     "paridade:repasse": "nest build && JOBS_WORKER=false node dist/scripts/paridade-repasse.js",
     "paridade:precos": "nest build && JOBS_WORKER=false node dist/scripts/paridade-precos.js",
+    "paridade:demonstrativo": "nest build && JOBS_WORKER=false node dist/scripts/paridade-demonstrativo.js",
     "comparar:rodadas-legado": "nest build && JOBS_WORKER=false node dist/scripts/comparar-rodadas-legado.js",
     "mobilemed:mapear-medicos": "nest build && JOBS_WORKER=false node dist/scripts/mapear-medicos-mobilemed.js",
     "clientes:reresolver": "nest build && JOBS_WORKER=false node dist/scripts/reresolver-clientes.js",
