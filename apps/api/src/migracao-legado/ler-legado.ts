@@ -308,37 +308,61 @@ export async function lerEstudosDoLegado(
   }
 }
 
+/** Tentativas de ler um dia quando a conexão com o pooler do dashboards-one cai no meio. */
+const TENTATIVAS_POR_DIA = 3;
+
 /**
  * Os laudos do dashboards-one com data do laudo nos dias pedidos (com um dia de folga de cada lado,
  * porque lá a data é gravada sem fuso), SÓ PARA LEITURA: a linha crua da MobileMed e as contas de
- * quem assinou. Lê um dia por consulta (o resultado inteiro de uma vez derrubava a conexão do
- * pooler). A linha traz o nome do paciente: fica só em memória até a carga gravá-la como a
- * importação grava.
+ * quem assinou. Um dia por consulta, cada uma na sua transação `READ ONLY`: uma transação longa ou
+ * um resultado grande faziam o pooler derrubar a conexão sem avisar (o cliente ficava parado), então
+ * cada consulta tem prazo e o dia é lido de novo numa conexão nova. A linha traz o nome do paciente:
+ * fica só em memória até a carga gravá-la como a importação grava.
  */
 export async function lerLaudosDoLegado(url: string, dias: PeriodoDias): Promise<LaudoDoLegado[]> {
-  const cliente = new Client({ connectionString: url, application_name: 'redo-one-carga-laudos' });
-  await cliente.connect();
-  try {
+  const conectar = async () => {
+    const c = new Client({
+      connectionString: url,
+      application_name: 'redo-one-carga-laudos',
+      keepAlive: true,
+      query_timeout: 90_000,
+    });
+    c.on('error', () => undefined);
+    await c.connect();
+    return c;
+  };
+  let cliente = await conectar();
+  const lerDia = async (dia: string) => {
     await cliente.query('BEGIN TRANSACTION READ ONLY');
-    await cliente.query("SET LOCAL statement_timeout = '120s'");
+    await cliente.query("SET LOCAL statement_timeout = '60s'");
+    const { rows } = await cliente.query<LaudoDoLegado>(
+      `select "dadosBrutos", "medicoIdMobilemed", "medicoReassinaturaIdMobilemed" from laudos
+        where "dataLaudo" >= $1::date and "dataLaudo" < $1::date + 1
+          and "dadosBrutos" is not null
+        order by "dataLaudo", id`,
+      [dia],
+    );
+    await cliente.query('COMMIT');
+    return rows;
+  };
+  try {
     const laudos: LaudoDoLegado[] = [];
     const ate = Date.parse(`${dias.fim}T00:00:00Z`) + 2 * 86_400_000;
     for (let d = Date.parse(`${dias.inicio}T00:00:00Z`) - 86_400_000; d < ate; d += 86_400_000) {
-      const { rows } = await cliente.query<LaudoDoLegado>(
-        `select "dadosBrutos", "medicoIdMobilemed", "medicoReassinaturaIdMobilemed" from laudos
-          where "dataLaudo" >= $1::date and "dataLaudo" < $1::date + 1
-            and "dadosBrutos" is not null
-          order by "dataLaudo", id`,
-        [new Date(d).toISOString().slice(0, 10)],
-      );
-      laudos.push(...rows);
+      const dia = new Date(d).toISOString().slice(0, 10);
+      for (let tentativa = 1; ; tentativa++) {
+        try {
+          laudos.push(...(await lerDia(dia)));
+          break;
+        } catch (erro) {
+          await cliente.end().catch(() => undefined);
+          if (tentativa >= TENTATIVAS_POR_DIA) throw erro;
+          cliente = await conectar();
+        }
+      }
     }
-    await cliente.query('COMMIT');
     return laudos;
-  } catch (erro) {
-    await cliente.query('ROLLBACK').catch(() => undefined);
-    throw erro;
   } finally {
-    await cliente.end();
+    await cliente.end().catch(() => undefined);
   }
 }

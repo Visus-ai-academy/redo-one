@@ -61,6 +61,8 @@ async function migrarLaudosLegado() {
 }
 
 migrarLaudosLegado().catch((erro) => {
+  // A causa (erro do Postgres) diz o motivo; a mensagem do Drizzle só repete a consulta.
   console.error(erro instanceof Error ? erro.message : erro);
+  if (erro instanceof Error && erro.cause) console.error('Causa:', String(erro.cause));
   process.exitCode = 1;
 });
