@@ -139,11 +139,17 @@ function Avisos() {
             to="."
             search={(a: Busca) => ({ ...a, id: info.row.original.id })}
           >
-            {info.getValue()}
+            {/* Texto longo fica em 2 linhas; o inteiro está no painel (e no title). */}
+            <span title={info.getValue()} className="line-clamp-2 min-w-60 break-words">
+              {info.getValue()}
+            </span>
           </LinkDaLinha>
         ),
       }),
-      coluna.accessor('tipo', { header: 'Tipo', cell: (info) => tipoDoAviso(info.getValue()) }),
+      coluna.accessor('tipo', {
+        header: 'Tipo',
+        cell: (info) => <span className="whitespace-nowrap">{tipoDoAviso(info.getValue())}</span>,
+      }),
       coluna.accessor('competencias', {
         header: 'Competência',
         cell: (info) => (

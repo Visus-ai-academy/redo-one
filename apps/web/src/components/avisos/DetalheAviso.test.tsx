@@ -23,9 +23,9 @@ const pendente: AvisoDto = {
 };
 
 describe('DetalheAviso', () => {
-  it('mostra o que chegou e em quantos laudos', () => {
+  it('mostra em quantos laudos e quando, sem repetir o texto do aviso (ele é o título do painel)', () => {
     render(<DetalheAviso aviso={pendente} podeTriar={false} />);
-    expect(screen.getByText('Cliente').nextSibling).toHaveTextContent('CLINICA NOVA');
+    expect(screen.queryByText('CLINICA NOVA')).not.toBeInTheDocument();
     expect(screen.getByText('Laudos na última importação').nextSibling).toHaveTextContent('42');
     expect(screen.getByText('Competência').nextSibling).toHaveTextContent('10/2026 a 11/2026');
     expect(screen.getByText('Encontrado por').nextSibling).toHaveTextContent(
@@ -127,9 +127,6 @@ describe('DetalheAviso', () => {
     const { unmount } = render(
       <DetalheAviso aviso={conta} podeTriar={false} procurar={<a href="/x">Abrir</a>} />,
     );
-    expect(screen.getByText('Conta na unidade').nextSibling).toHaveTextContent(
-      'Dr. Fulano sem conta liberada na unidade CEDI_RJ',
-    );
     expect(screen.getByText('Exames na última rodada').nextSibling).toHaveTextContent('3');
     expect(
       screen.getByText(/Libere a conta do médico nesta unidade na MobileMed/),
@@ -139,6 +136,33 @@ describe('DetalheAviso', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'Uma rodada encontrou a conta do médico liberada nesta unidade',
     );
+  });
+
+  it('o item criado pela carga lista as tabelas de preço que o usam, recolhidas', async () => {
+    const tabelas = Array.from({ length: 40 }, (_, i) => `CLIENTE ${i + 1}`);
+    render(
+      <DetalheAviso
+        aviso={{
+          ...pendente,
+          tipo: 'catalogo_criado_carga',
+          origem: 'carga',
+          valor:
+            'Categoria SUBCLAVIA: só os preços do dashboards-one a usam (592 linhas, em 40 tabelas)',
+          itens: tabelas,
+        }}
+        podeTriar={false}
+      />,
+    );
+    expect(
+      screen.getByRole('list', { name: 'Tabelas de preço que o usam' }).children.length,
+    ).toBeLessThan(40);
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar todos os 40' }));
+    expect(screen.getByText('CLIENTE 40')).toBeVisible();
+  });
+
+  it('sem itens, não mostra a lista', () => {
+    render(<DetalheAviso aviso={pendente} podeTriar={false} />);
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('com o motivo digitado e não enviado, avisa quem usa (o painel pergunta antes de fechar)', async () => {

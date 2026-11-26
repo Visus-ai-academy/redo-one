@@ -120,10 +120,14 @@ export function PainelLateral({
               largura === 'larga' ? 'lg:w-[720px]' : 'lg:w-[400px]',
             )}
           >
-            <div className="flex flex-none items-center gap-3 border-b p-4">
+            <div className="flex flex-none items-start gap-3 border-b p-4">
               {inicio}
-              <span className="flex min-w-0 flex-1 flex-col">
-                <Drawer.Title className="truncate text-base font-semibold">{titulo}</Drawer.Title>
+              {/* Título longo quebra linha (nunca corta): o painel mostra o nome inteiro. O
+                  mínimo de 36px alinha o título de uma linha ao meio do botão de fechar. */}
+              <span className="flex min-h-9 min-w-0 flex-1 flex-col justify-center">
+                <Drawer.Title className="text-base font-semibold break-words">
+                  {titulo}
+                </Drawer.Title>
                 {subtitulo && (
                   <Drawer.Description className="text-muted-foreground truncate text-[13px]">
                     {subtitulo}

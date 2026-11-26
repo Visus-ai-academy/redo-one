@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import type { AvisoDto } from '../../gen/types/AvisoDto';
-import { competenciasDoAviso, situacaoDoAviso, tipoDoAviso } from '../../lib/avisos';
+import { competenciasDoAviso, situacaoDoAviso } from '../../lib/avisos';
 import { dataHoraCurta } from '../../lib/datas';
 import { numero } from '../../lib/formato';
 import { Alerta } from '../alerta/Alerta';
@@ -11,16 +11,33 @@ import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
+import { ListaDeNomes } from '../lista-de-nomes/ListaDeNomes';
 import { useAlterado } from '../painel/fechamento';
 
-function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+/** Par rótulo e valor; `bloco` põe o valor (texto longo, como o motivo) abaixo, à esquerda. */
+function Campo({
+  rotulo,
+  bloco = false,
+  children,
+}: {
+  rotulo: string;
+  bloco?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex justify-between gap-4 py-1.5">
-      <dt className="text-muted-foreground">{rotulo}</dt>
-      <dd className="text-right break-words tabular-nums">{children}</dd>
+    <div className={bloco ? 'flex flex-col gap-1 py-1.5' : 'flex justify-between gap-4 py-1.5'}>
+      <dt className="text-muted-foreground flex-none">{rotulo}</dt>
+      <dd className={bloco ? 'break-words' : 'min-w-0 text-right break-words tabular-nums'}>
+        {children}
+      </dd>
     </div>
   );
 }
+
+/** Do que são os nomes citados pelo aviso (`itens`), por tipo. */
+const ROTULO_DOS_ITENS: Partial<Record<AvisoDto['tipo'], string>> = {
+  catalogo_criado_carga: 'Tabelas de preço que o usam',
+};
 
 const schema = z.object({
   motivo: z
@@ -137,8 +154,8 @@ export function DetalheAviso({
         )}
       </div>
 
+      {/* O texto do aviso é o título do painel; aqui ficam os dados dele. */}
       <dl className="divide-y">
-        <Campo rotulo={tipoDoAviso(aviso.tipo)}>{aviso.valor}</Campo>
         <Campo rotulo="Encontrado por">{ORIGENS[aviso.origem]}</Campo>
         <Campo rotulo={OCORRENCIAS[aviso.origem]}>{numero(aviso.ocorrencias)}</Campo>
         {competencias && <Campo rotulo="Competência">{competencias}</Campo>}
@@ -148,8 +165,19 @@ export function DetalheAviso({
         {aviso.decididoEm && aviso.status !== 'pendente' && (
           <Campo rotulo={`${decisao} em`}>{dataHoraCurta(aviso.decididoEm)}</Campo>
         )}
-        {aviso.motivo && <Campo rotulo="Motivo">{aviso.motivo}</Campo>}
+        {aviso.motivo && (
+          <Campo rotulo="Motivo" bloco>
+            {aviso.motivo}
+          </Campo>
+        )}
       </dl>
+
+      {aviso.itens.length > 0 && (
+        <ListaDeNomes
+          rotulo={ROTULO_DOS_ITENS[aviso.tipo] ?? 'Citados no aviso'}
+          nomes={aviso.itens}
+        />
+      )}
 
       {aviso.status === 'pendente' && procurar && (
         <div className="flex flex-col gap-2">
