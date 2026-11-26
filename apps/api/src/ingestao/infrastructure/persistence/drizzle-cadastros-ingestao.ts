@@ -22,12 +22,6 @@ import {
   sufixosNomeCliente,
 } from '../../../database/schema';
 import type { LeitorCadastrosIngestao } from '../../application/ports/cadastros-ingestao';
-import type {
-  ExameDoCadastro,
-  PecaDaQuebra,
-  ValorForaDoPadrao,
-} from '../../domain/classificar-estudo';
-import { chaveEstudo, chaveEstudoLimpo } from '../../domain/nome-estudo';
 import type { CadastrosIngestao } from '../../domain/preparar-laudo';
 import {
   type CadastroClientes,
@@ -36,6 +30,7 @@ import {
   montarResolvedorUnidadeCliente,
 } from '../../domain/resolver-cliente';
 import { montarResolvedorMedico } from '../../domain/resolver-medico';
+import { montarRetratoCatalogo } from '../../domain/retrato-catalogo';
 
 /** Primeira ocorrência vence, como os resolvedores do dashboards-one. */
 function indice<V>(pares: [string, V][]) {
@@ -131,27 +126,6 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
         .from(medicosContasMobilemed),
     ]);
 
-    const exameDoCadastro = (e: (typeof listaExames)[number]): ExameDoCadastro => ({
-      id: e.id,
-      modalidadeId: e.modalidadeId,
-      especialidadeId: e.especialidadeId,
-      categoriaId: e.categoriaId,
-    });
-    // O vínculo do valor fora do padrão vale mesmo com o exame inativo, como no dashboards-one.
-    const examePorId = new Map(listaExames.map((e) => [e.id, exameDoCadastro(e)]));
-
-    // A regra também passa pela limpeza do estudo (decidido em 16/11/2026): no dashboards-one a
-    // regra gravada com " X1 X6" nunca casava, porque só o estudo do laudo era limpo. Duas regras
-    // com a mesma chave depois de limpas: vale a primeira.
-    const quebras = new Map<string, PecaDaQuebra[]>();
-    const donoDaChave = new Map<string, string>();
-    for (const { quebraId, estudo, ...peca } of pecas) {
-      const chave = chaveEstudoLimpo(estudo);
-      if ((donoDaChave.get(chave) ?? quebraId) !== quebraId) continue;
-      donoDaChave.set(chave, quebraId);
-      quebras.set(chave, [...(quebras.get(chave) ?? []), peca]);
-    }
-
     const cadastroClientes: CadastroClientes = {
       clientes: listaClientes,
       aliases,
@@ -160,38 +134,15 @@ export class DrizzleCadastrosIngestao implements LeitorCadastrosIngestao {
     const resolverCliente = montarResolvedorCliente(cadastroClientes);
     const resolverUnidadeCliente = montarResolvedorUnidadeCliente(cadastroClientes);
     return {
-      catalogo: {
-        exames: indice(
-          listaExames.filter((e) => e.ativo).map((e) => [chaveEstudo(e.nome), exameDoCadastro(e)]),
-        ),
-        valoresForaDoPadrao: indice<ValorForaDoPadrao>(
-          foraDoPadrao
-            .filter((f) => f.valores > 0)
-            .map((f) => [
-              chaveEstudo(f.estudoDescricao),
-              { valores: f.valores, exame: f.exameId ? (examePorId.get(f.exameId) ?? null) : null },
-            ]),
-        ),
-        quebras,
-        modalidades: indice([
-          ...listaModalidades.map((m): [string, string] => [normalizarNome(m.codigo), m.id]),
-          ...variacoesModalidade.map((v): [string, string] => [
-            normalizarNome(v.origem),
-            v.modalidadeId,
-          ]),
-        ]),
-        especialidades: indice([
-          ...listaEspecialidades.map((e): [string, string] => [normalizarNome(e.nome), e.id]),
-          ...variacoesEspecialidade.flatMap((v): [string, string][] =>
-            v.especialidadeId ? [[normalizarNome(v.origem), v.especialidadeId]] : [],
-          ),
-        ]),
-        especialidadesInvalidas: new Set(
-          variacoesEspecialidade
-            .filter((v) => v.tipo === 'invalida')
-            .map((v) => normalizarNome(v.origem)),
-        ),
-      },
+      catalogo: montarRetratoCatalogo({
+        exames: listaExames,
+        foraDoPadrao,
+        pecas,
+        modalidades: listaModalidades,
+        variacoesModalidade,
+        especialidades: listaEspecialidades,
+        variacoesEspecialidade,
+      }),
       prioridades: indice([
         ...listaPrioridades.map((p): [string, string] => [normalizarNome(p.nome), p.id]),
         ...variacoesPrioridade.map((v): [string, string] => [
