@@ -601,6 +601,9 @@ async function gravarConfiguracaoDistribuicao(tx: Transacao, c: ConfiguracaoDist
   const db = tx as unknown as Database;
   if (c.configuracao)
     await new DrizzleConfiguracaoDistribuicaoRepository(db).salvar(c.configuracao);
+  // A grade aponta para os turnos: vai depois da escala (as prioridades já foram, antes dela).
+  if (c.prioridadesOperacao.length)
+    await new DrizzlePrioridadesOperacaoRepository(db).salvarGrade(c.gradeRecebimento);
   const regras = new DrizzleRegrasFrenteRepository(db);
   for (const r of c.regrasFrente) await regras.salvar(r);
   const prioridades = new DrizzlePrioridadesClienteRepository(db);
@@ -608,8 +611,8 @@ async function gravarConfiguracaoDistribuicao(tx: Transacao, c: ConfiguracaoDist
 }
 
 /**
- * Prioridades da operação pelos ids estáveis (upsert) e a grade geral trocada inteira. A carga é a
- * fonte: a grafia que estava no de-para de outra prioridade passa para a da carga, e a prioridade
+ * Prioridades da operação pelos ids estáveis (upsert); a grade geral vai com a configuração do
+ * robô, depois da escala. A carga é a fonte: a grafia que estava no de-para de outra prioridade passa para a da carga, e a prioridade
  * criada pela tela com o mesmo nome dá lugar à da carga.
  */
 async function gravarPrioridadesOperacao(tx: Transacao, c: ConfiguracaoDistribuicaoMigrada) {
@@ -647,7 +650,6 @@ async function gravarPrioridadesOperacao(tx: Transacao, c: ConfiguracaoDistribui
       .onConflictDoNothing();
     await repo.salvar({ ...p, cor: p.cor ?? corDe.get(p.nome.toUpperCase()) ?? null });
   }
-  await repo.salvarGrade(c.gradeRecebimento);
 }
 
 /**

@@ -1448,7 +1448,7 @@ describe.skipIf(!url)('gravarMigracao', () => {
     expect(primeira).toEqual({ arranjos: 2, modalidades: 2, habilitados: 1 });
   });
 
-  it('banco vazio: a alocação com prioridade da operação grava junto com as prioridades da carga', async () => {
+  it('banco vazio: a alocação com prioridade da operação e a grade geral gravam junto com as prioridades da carga', async () => {
     const rotina = {
       id: '5b8c1b5e-0000-4000-8000-000000000001',
       nome: 'ROTINA',
@@ -1469,7 +1469,13 @@ describe.skipIf(!url)('gravarMigracao', () => {
     const configuracao: ConfiguracaoDistribuicaoMigrada = {
       configuracao: null,
       prioridadesOperacao: [rotina],
-      gradeRecebimento: [],
+      gradeRecebimento: [
+        {
+          prioridadeOperacaoId: rotina.id,
+          turnoId: comPrioridade.tabelas.turnos[0]?.id as string,
+          regra: { tipo: 'prazo_minimo', horas: 24 },
+        },
+      ],
       regrasFrente: [],
       prioridadesCliente: [],
       avisos: [],
@@ -1482,6 +1488,9 @@ describe.skipIf(!url)('gravarMigracao', () => {
       sql`select count(*)::int n from alocacoes_prioridades where prioridade_id = ${rotina.id}`,
     );
     expect(r.rows[0]?.n).toBeGreaterThan(0);
+    expect(await new DrizzlePrioridadesOperacaoRepository(db).obterGrade()).toEqual(
+      configuracao.gradeRecebimento,
+    );
   });
 
   it('configuração do robô: grava a global, as regras da frente e a prioridade do cliente; de novo, igual', async () => {
