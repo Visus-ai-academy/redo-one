@@ -11,6 +11,7 @@ import {
   CADASTRO_CLIENTES_ALTERADO,
   type CadastroClientesAlterado,
 } from './cadastro-clientes-alterado';
+import { CLIENTE_REATIVADO, type ClienteReativado } from './cliente-reativado';
 import type {
   ClienteDetalhe,
   ClientesRepository,
@@ -41,6 +42,7 @@ export class DrizzleClientesRepository
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(CADASTRO_CLIENTES_ALTERADO) private readonly alterado: CadastroClientesAlterado,
+    @Inject(CLIENTE_REATIVADO) private readonly reativado: ClienteReativado,
   ) {}
 
   async listar(filtro: FiltroClientes) {
@@ -156,6 +158,7 @@ export class DrizzleClientesRepository
           nome: clientes.nome,
           chaveNormalizada: clientes.chaveNormalizada,
           nomeFantasia: clientes.nomeFantasia,
+          ativo: clientes.ativo,
         })
         .from(clientes)
         .where(eq(clientes.id, id))
@@ -167,6 +170,7 @@ export class DrizzleClientesRepository
           antes.chaveNormalizada !== dados.chaveNormalizada ||
           antes.nomeFantasia !== dados.nomeFantasia);
       if (resolucaoMudou) await this.alterado.aoAlterar(tx);
+      if (antes && !antes.ativo && dados.ativo) await this.reativado.aoReativar(tx, id);
     });
   }
 

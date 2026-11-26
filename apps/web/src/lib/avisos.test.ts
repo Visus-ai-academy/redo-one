@@ -1,7 +1,9 @@
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
 import {
   competenciasDoAviso,
+  invalidarAvisos,
   ondeProcurar,
   situacaoDoAviso,
   textoDaFaixa,
@@ -177,5 +179,27 @@ describe('textoDaFaixa', () => {
     expect(textoDaFaixa({ total: 2, maisAntigoEm: '2026-11-24T10:00:00Z' }, agora)).toBe(
       '2 avisos seus pendentes; o mais antigo há 1 dia',
     );
+  });
+});
+
+describe('invalidarAvisos', () => {
+  it('marca como velhas a lista, os selos e os resumos dos avisos, e nada mais', async () => {
+    const qc = new QueryClient();
+    const chaves = [
+      [{ url: '/ingestao/avisos' }, { status: 'pendente' }],
+      [{ url: '/ingestao/avisos/selos' }, { entidade: 'cliente', ids: ['c1'] }],
+      [{ url: '/ingestao/avisos/resumo-do-responsavel' }],
+      [{ url: '/catalogo/clientes' }],
+    ];
+    for (const chave of chaves) qc.setQueryData(chave, {});
+
+    await invalidarAvisos(qc);
+
+    expect(chaves.map((chave) => qc.getQueryState(chave)?.isInvalidated)).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
   });
 });

@@ -4,8 +4,9 @@ import type { ClienteInativoNaFila } from './entrada';
 /**
  * Cliente inativo no cadastro com exames na fila: o robô não os distribui (motivo
  * `cliente_inativo`). A tela da distribuição mostra o alerta e Operação › Avisos ganha um aviso por
- * cliente, que se resolve sozinho quando a leitura da fila não o encontra mais (cliente reativado
- * ou sem exames na fila).
+ * cliente, que se resolve na hora em que o cliente é reativado no cadastro (porta
+ * `CLIENTE_REATIVADO` do `catalogo`) ou quando a leitura da fila não o encontra mais (sem exames na
+ * fila).
  */
 
 /** O alerta da tela e da proposta. */

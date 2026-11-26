@@ -36,7 +36,7 @@ import { clientesControllerListarQueryOptions } from '../../gen/hooks/useCliente
 import { clientesControllerObterQueryOptions } from '../../gen/hooks/useClientesControllerObter';
 import { opcoesControllerListasQueryOptions } from '../../gen/hooks/useOpcoesControllerListas';
 import type { ClienteResumoDto } from '../../gen/types/ClienteResumoDto';
-import { useSelosDeAviso } from '../../lib/avisos';
+import { invalidarAvisos, useSelosDeAviso } from '../../lib/avisos';
 import { invalidarCatalogo, ordenarContratados } from '../../lib/catalogo';
 import { formatarCnpj } from '../../lib/documentos';
 import { numero } from '../../lib/formato';
@@ -386,7 +386,8 @@ function Painel({
         let alvo = id;
         if (id) await clientesControllerAtualizar({ path: { id }, body }).unwrap();
         else alvo = (await clientesControllerCriar({ body }).unwrap()).id;
-        await invalidarCatalogo(queryClient);
+        // Reativar o cliente resolve na hora o aviso de cliente inativo dele (selo, faixa, menu).
+        await Promise.all([invalidarCatalogo(queryClient), invalidarAvisos(queryClient)]);
         avisos.sucesso(id ? 'Cliente salvo.' : 'Cliente criado.');
         void navigate({ search: (a) => ({ ...a, novo: undefined, id: alvo }), replace: true });
       }}

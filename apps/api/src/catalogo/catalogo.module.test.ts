@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { DatabaseModule } from '../database/database.module';
+import { GatilhosDistribuicaoModule } from '../distribuicao/infrastructure/catalogo/gatilhos-distribuicao.module';
+import { AvisosCompartilhadosModule } from '../ingestao/infrastructure/avisos/avisos-compartilhados.module';
 import { GatilhosIngestaoModule } from '../ingestao/infrastructure/jobs/gatilhos-ingestao.module';
 import { CatalogoModule } from './catalogo.module';
 import { ClientesController } from './clientes/clientes.controller';
@@ -23,6 +25,8 @@ const MODULOS = [
   DatabaseModule,
   AuditoriaModule,
   GatilhosIngestaoModule,
+  AvisosCompartilhadosModule,
+  GatilhosDistribuicaoModule,
   CatalogoModule,
 ];
 

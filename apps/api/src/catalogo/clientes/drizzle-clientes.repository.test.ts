@@ -8,6 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../../database/database';
 import * as schema from '../../database/schema';
 import type { CadastroClientesAlterado } from './cadastro-clientes-alterado';
+import type { ClienteReativado } from './cliente-reativado';
 import type { DadosCliente } from './clientes.repository';
 import { DrizzleClientesRepository } from './drizzle-clientes.repository';
 
@@ -24,6 +25,14 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     aoAlterar: async () => {
       alterado.vezes++;
       if (alterado.falhar) throw new Error('aviso falhou');
+    },
+  };
+  /** Clientes reativados avisados; `falhar` desfaz a gravação. */
+  const reativado = { ids: [] as string[], falhar: false };
+  const avisarReativado: ClienteReativado = {
+    aoReativar: async (_tx, id) => {
+      reativado.ids.push(id);
+      if (reativado.falhar) throw new Error('reativação falhou');
     },
   };
 
@@ -46,7 +55,7 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../drizzle') });
-    repo = new DrizzleClientesRepository(db, avisar);
+    repo = new DrizzleClientesRepository(db, avisar, avisarReativado);
   });
 
   beforeEach(async () => {
@@ -55,6 +64,8 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
     tele = c?.id ?? '';
     alterado.vezes = 0;
     alterado.falhar = false;
+    reativado.ids = [];
+    reativado.falhar = false;
   });
 
   afterAll(async () => {
@@ -204,6 +215,28 @@ describe.skipIf(!url)('DrizzleClientesRepository', () => {
       expect(alterado.vezes).toBe(1);
       await repo.atualizar(id, dados('PRN2', { nomeFantasia: 'Rede' }));
       expect(alterado.vezes).toBe(2);
+    });
+
+    it('atualizar avisa a reativação só quando o cliente passa de inativo a ativo', async () => {
+      const id = await repo.criar(dados('PRN', { ativo: false }));
+
+      await repo.atualizar(id, dados('PRN', { ativo: false, observacoes: 'segue inativo' }));
+      expect(reativado.ids).toEqual([]);
+      await repo.atualizar(id, dados('PRN', { ativo: true }));
+      expect(reativado.ids).toEqual([id]);
+      await repo.atualizar(id, dados('PRN', { ativo: true, observacoes: 'segue ativo' }));
+      await repo.atualizar(id, dados('PRN', { ativo: false }));
+      expect(reativado.ids).toEqual([id]);
+    });
+
+    it('se o aviso da reativação falha, o cliente continua inativo', async () => {
+      const id = await repo.criar(dados('PRN', { ativo: false }));
+      reativado.falhar = true;
+
+      await expect(repo.atualizar(id, dados('PRN', { ativo: true }))).rejects.toThrow(
+        'reativação falhou',
+      );
+      expect((await repo.buscar(id))?.ativo).toBe(false);
     });
 
     it('se o aviso falha, a mudança não fica gravada', async () => {

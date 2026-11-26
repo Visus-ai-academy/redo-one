@@ -11,6 +11,7 @@ import { ErroDeDominioFilter } from './comum/erro-de-dominio.filter';
 import { validarAmbiente } from './config/ambiente';
 import { DatabaseModule } from './database/database.module';
 import { DistribuicaoModule } from './distribuicao/distribuicao.module';
+import { GatilhosDistribuicaoModule } from './distribuicao/infrastructure/catalogo/gatilhos-distribuicao.module';
 import { EscalaModule } from './escala/escala.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
 import { GatilhosTipificacaoModule } from './faturamento/infrastructure/jobs/gatilhos-tipificacao.module';
@@ -31,6 +32,7 @@ import { RepasseModule } from './repasse/repasse.module';
     CatalogoModule,
     GatilhosTipificacaoModule,
     GatilhosIngestaoModule,
+    GatilhosDistribuicaoModule,
     AvisosCompartilhadosModule,
     MedicosModule,
     EscalaModule,

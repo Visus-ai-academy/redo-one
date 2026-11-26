@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { type QueryClient, useQuery } from '@tanstack/react-query';
 
 import type { TomEtiqueta } from '../components/etiqueta/Etiqueta';
 import { avisosControllerListarQueryOptions } from '../gen/hooks/useAvisosControllerListar';
@@ -215,6 +215,19 @@ export function useResumoAvisosDoResponsavel(ativo: boolean) {
     refetchInterval: 2 * 60_000,
     refetchIntervalInBackground: false,
   }).data;
+}
+
+/**
+ * Gravação que pode resolver avisos na hora (ex.: cliente reativado): a lista, os selos, a faixa e
+ * o contador do menu voltam a ser buscados, sem esperar o tempo de cada um.
+ */
+export function invalidarAvisos(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({
+    predicate: (consulta) => {
+      const chave = consulta.queryKey[0] as { url?: unknown } | undefined;
+      return typeof chave?.url === 'string' && chave.url.startsWith('/ingestao/avisos');
+    },
+  });
 }
 
 /**
