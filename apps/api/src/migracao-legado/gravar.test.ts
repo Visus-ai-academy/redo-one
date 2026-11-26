@@ -136,89 +136,88 @@ const medicos = mapearMedicos({
   equipesMembros: [{ equipeId: 'e1', medicoId: 'm1' }],
 });
 
-const escala = mapearEscala(
-  {
-    turnos: [
-      {
-        id: 't1',
-        nome: 'Manhã',
-        tipo: 'fixo',
-        horarioInicio: '07:00',
-        horarioFim: '13:00',
-        cor: null,
-        ordem: 0,
-        ativo: true,
-      },
-    ],
-    turnosEspecialidades: [{ turnoId: 't1', especialidadeId: 'es-neuro', ativo: true }],
-    alocacoes: ['a1', 'c1'].map((id) => ({
-      id,
-      turnoId: 't1',
-      especialidadeId: 'es-neuro',
-      medicoId: 'm1',
-      diasSemana: [1],
-      semanasDoMes: [],
+const legadoEscala: Parameters<typeof mapearEscala>[0] = {
+  turnos: [
+    {
+      id: 't1',
+      nome: 'Manhã',
+      tipo: 'fixo',
       horarioInicio: '07:00',
       horarioFim: '13:00',
-      dataInicio: '2026-01-01',
-      dataFim: id === 'c1' ? '2026-01-31' : null,
-      status: 'ativo',
-      produtividade: 10,
-      prioridades: [],
-      subespecialidades: [],
-      gratificado: false,
+      cor: null,
+      ordem: 0,
+      ativo: true,
+    },
+  ],
+  turnosEspecialidades: [{ turnoId: 't1', especialidadeId: 'es-neuro', ativo: true }],
+  alocacoes: ['a1', 'c1'].map((id) => ({
+    id,
+    turnoId: 't1',
+    especialidadeId: 'es-neuro',
+    medicoId: 'm1',
+    diasSemana: [1],
+    semanasDoMes: [],
+    horarioInicio: '07:00',
+    horarioFim: '13:00',
+    dataInicio: '2026-01-01',
+    dataFim: id === 'c1' ? '2026-01-31' : null,
+    status: 'ativo',
+    produtividade: 10,
+    prioridades: [],
+    subespecialidades: [],
+    gratificado: false,
+    observacoes: null,
+    coberturaDeId: id === 'c1' ? 'a1' : null,
+    criadoEm: '2026-01-01T00:00:00.000Z',
+  })),
+  ajustes: [
+    { id: 'aj', alocacaoId: 'a1', data: '2026-01-05', produtividade: 3, observacoes: null },
+  ],
+  ausencias: [
+    {
+      id: 'au1',
+      medicoId: 'm1',
+      tipo: 'ferias',
+      dataInicio: '2026-07-01',
+      dataFim: '2026-07-10',
       observacoes: null,
-      coberturaDeId: id === 'c1' ? 'a1' : null,
+      especialidadeIds: ['es-neuro'],
+      diasSemana: [],
+      turnoIds: ['t1'],
+      situacao: 'aprovada',
+      origem: 'gestor',
+      solicitadaPorUserId: null,
+      revisadaPorUserId: null,
+      revisadaEm: null,
+      motivoRecusa: null,
+      criadoEm: '2026-06-01T00:00:00.000Z',
+    },
+  ],
+  logs: [
+    {
+      id: 'l1',
+      entidade: 'alocacao_medico',
+      registroId: 'a1',
+      acao: 'criar',
+      usuarioId: null,
+      usuarioNome: 'Fulana',
+      medicoId: 'm1',
+      antes: null,
+      depois: { turno: 'Manhã' },
       criadoEm: '2026-01-01T00:00:00.000Z',
-    })),
-    ajustes: [
-      { id: 'aj', alocacaoId: 'a1', data: '2026-01-05', produtividade: 3, observacoes: null },
-    ],
-    ausencias: [
-      {
-        id: 'au1',
-        medicoId: 'm1',
-        tipo: 'ferias',
-        dataInicio: '2026-07-01',
-        dataFim: '2026-07-10',
-        observacoes: null,
-        especialidadeIds: ['es-neuro'],
-        diasSemana: [],
-        turnoIds: ['t1'],
-        situacao: 'aprovada',
-        origem: 'gestor',
-        solicitadaPorUserId: null,
-        revisadaPorUserId: null,
-        revisadaEm: null,
-        motivoRecusa: null,
-        criadoEm: '2026-06-01T00:00:00.000Z',
-      },
-    ],
-    logs: [
-      {
-        id: 'l1',
-        entidade: 'alocacao_medico',
-        registroId: 'a1',
-        acao: 'criar',
-        usuarioId: null,
-        usuarioNome: 'Fulana',
-        medicoId: 'm1',
-        antes: null,
-        depois: { turno: 'Manhã' },
-        criadoEm: '2026-01-01T00:00:00.000Z',
-      },
-    ],
-    usuarios: [],
-  },
-  {
-    legadoCatalogo,
-    catalogo: catalogo.tabelas,
-    medicos: medicos.tabelas,
-    prioridadesOperacao: [],
-    usuarios: [],
-    hoje: '2026-11-16',
-  },
-);
+    },
+  ],
+  usuarios: [],
+};
+const contextoEscala = {
+  legadoCatalogo,
+  catalogo: catalogo.tabelas,
+  medicos: medicos.tabelas,
+  prioridadesOperacao: [],
+  usuarios: [],
+  hoje: '2026-11-16',
+};
+const escala = mapearEscala(legadoEscala, contextoEscala);
 
 describe.skipIf(!url)('gravarMigracao', () => {
   let pool: Pool;
@@ -1447,6 +1446,42 @@ describe.skipIf(!url)('gravarMigracao', () => {
 
     expect(await contar()).toEqual(primeira);
     expect(primeira).toEqual({ arranjos: 2, modalidades: 2, habilitados: 1 });
+  });
+
+  it('banco vazio: a alocação com prioridade da operação grava junto com as prioridades da carga', async () => {
+    const rotina = {
+      id: '5b8c1b5e-0000-4000-8000-000000000001',
+      nome: 'ROTINA',
+      posicao: 3,
+      urgencia: { tipo: 'nunca' as const },
+      furaGradeNaAlocacao: false,
+      padrao: true,
+      grafias: ['P4', 'Rotina'],
+      cor: null,
+    };
+    const comPrioridade = mapearEscala(
+      {
+        ...legadoEscala,
+        alocacoes: legadoEscala.alocacoes.map((a) => ({ ...a, prioridades: ['Rotina'] })),
+      },
+      { ...contextoEscala, prioridadesOperacao: [rotina] },
+    );
+    const configuracao: ConfiguracaoDistribuicaoMigrada = {
+      configuracao: null,
+      prioridadesOperacao: [rotina],
+      gradeRecebimento: [],
+      regrasFrente: [],
+      prioridadesCliente: [],
+      avisos: [],
+      resumo: {},
+    };
+
+    await gravarMigracao(db, catalogo, medicos, comPrioridade, undefined, configuracao);
+
+    const r = await db.execute<{ n: number }>(
+      sql`select count(*)::int n from alocacoes_prioridades where prioridade_id = ${rotina.id}`,
+    );
+    expect(r.rows[0]?.n).toBeGreaterThan(0);
   });
 
   it('configuração do robô: grava a global, as regras da frente e a prioridade do cliente; de novo, igual', async () => {

@@ -213,6 +213,9 @@ export async function gravarMigracao(
     await upsert(tx, schema.equipes, m.equipes);
     await upsert(tx, schema.equipesMembros, m.equipesMembros, ['equipeId', 'medicoId']);
 
+    // As alocações e os arranjos apontam para as prioridades da operação: elas vêm antes (no banco
+    // vazio, ainda não existem).
+    if (configuracaoDistribuicao) await gravarPrioridadesOperacao(tx, configuracaoDistribuicao);
     if (escala) await gravarEscala(tx, escala);
     if (distribuicao) await gravarDistribuicao(tx, distribuicao);
     if (configuracaoDistribuicao)
@@ -598,7 +601,6 @@ async function gravarConfiguracaoDistribuicao(tx: Transacao, c: ConfiguracaoDist
   const db = tx as unknown as Database;
   if (c.configuracao)
     await new DrizzleConfiguracaoDistribuicaoRepository(db).salvar(c.configuracao);
-  await gravarPrioridadesOperacao(tx, c);
   const regras = new DrizzleRegrasFrenteRepository(db);
   for (const r of c.regrasFrente) await regras.salvar(r);
   const prioridades = new DrizzlePrioridadesClienteRepository(db);
