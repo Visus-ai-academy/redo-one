@@ -23,6 +23,11 @@ export type AvisoDto = {
    * @type string
    */
   valor: string;
+  /**
+   * @description Nomes citados pelo aviso, para mostrar em lista (ex.: as tabelas de preço).
+   * @type array
+   */
+  itens: string[];
   status: StatusAvisoKey;
   origem: OrigemAvisoKey;
   /**

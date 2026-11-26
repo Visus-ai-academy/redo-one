@@ -8657,7 +8657,7 @@
             "name": "busca",
             "required": false,
             "in": "query",
-            "description": "Parte do nome como chegou da MobileMed.",
+            "description": "Parte do texto do aviso (o nome como chegou) ou de um nome citado em lista.",
             "schema": {
               "type": "string"
             }
@@ -19470,6 +19470,13 @@
             "type": "string",
             "description": "Como chegou na última verificação (importação, rodada, carga)."
           },
+          "itens": {
+            "description": "Nomes citados pelo aviso, para mostrar em lista (ex.: as tabelas de preço).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "status": {
             "allOf": [
               {
@@ -19536,6 +19543,7 @@
           "id",
           "tipo",
           "valor",
+          "itens",
           "status",
           "origem",
           "competencias",

@@ -336,6 +336,11 @@ export const avisosCadastro = pgTable(
     chave: text('chave').notNull(),
     /** Como chegou na última vez. */
     valor: text('valor').notNull(),
+    /**
+     * Nomes citados pelo aviso, que a tela mostra em lista em vez de dentro do texto (ex.: as
+     * tabelas de preço que usam o item criado pela carga).
+     */
+    itens: text('itens').array().notNull().default(sql`'{}'`),
     status: statusAvisoCadastro('status').notNull().default('pendente'),
     /** Quem encontrou: importação, rodada, carga, tela ou job. */
     origem: text('origem', { enum: ['importacao', 'rodada', 'carga', 'tela', 'job'] })

@@ -1,0 +1,1 @@
+ALTER TABLE "avisos_cadastro" ADD COLUMN "itens" text[] DEFAULT '{}' NOT NULL;

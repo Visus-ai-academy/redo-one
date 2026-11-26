@@ -53,6 +53,11 @@ export interface AvisoLevantado {
   chave: string;
   /** Texto para a pessoa: o que está errado, como chegou. */
   valor: string;
+  /**
+   * Nomes citados pelo aviso, para a tela mostrar em lista em vez de dentro do texto (ex.: as
+   * tabelas de preço que usam o item criado pela carga). Ausente = nenhum.
+   */
+  itens?: readonly string[];
   /** Quantas vezes apareceu nesta verificação (laudos, exames, linhas). */
   ocorrencias: number;
   entidades?: readonly EntidadeAviso[];

@@ -108,6 +108,25 @@ describe.skipIf(!url)('avisos com impacto (Drizzle)', () => {
       });
     });
 
+    it('devolve os itens citados e a busca também os procura', async () => {
+      await inserir([
+        { valor: 'Categoria SUBCLAVIA', itens: ['AKCPALMAS', 'VOTUPORANGA'] },
+        { valor: 'Outro aviso' },
+      ]);
+
+      const achados = await consulta().listar({ ...pagina, tipos: ['cliente'], busca: 'votupor' });
+      expect(achados.itens).toEqual([
+        expect.objectContaining({
+          valor: 'Categoria SUBCLAVIA',
+          itens: ['AKCPALMAS', 'VOTUPORANGA'],
+        }),
+      ]);
+      const [semItens] = (
+        await consulta().listar({ ...pagina, tipos: ['cliente'], busca: 'outro' })
+      ).itens;
+      expect(semItens?.itens).toEqual([]);
+    });
+
     it('resume os pendentes dos tipos: quantos e o mais antigo', async () => {
       await inserir([
         { primeiraVezEm: new Date('2026-11-20T10:00:00Z') },

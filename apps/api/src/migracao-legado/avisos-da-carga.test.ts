@@ -116,7 +116,7 @@ describe('avisosDosPrecosRepetidos', () => {
 });
 
 describe('avisosDosItensCriados', () => {
-  it('cada categoria ou prioridade que só os preços usam vira aviso ligado ao item', () => {
+  it('cada categoria ou prioridade que só os preços usam vira aviso ligado ao item, com as tabelas em lista', () => {
     const itens: PrecosMigrados['itensCriados'] = [
       {
         tipo: 'categoria',
@@ -132,7 +132,9 @@ describe('avisosDosItensCriados', () => {
       {
         tipo: 'catalogo_criado_carga',
         chave: 'categoria:k1',
-        valor: 'Categoria SUBCLAVIA: só os preços do dashboards-one a usam (3 linhas, de A e B)',
+        valor:
+          'Categoria SUBCLAVIA: só os preços do dashboards-one a usam (3 linhas, em 2 tabelas)',
+        itens: ['A', 'B'],
         ocorrencias: 3,
         entidades: [{ tipo: 'categoria', id: 'k1' }],
         competencias: null,
@@ -140,7 +142,8 @@ describe('avisosDosItensCriados', () => {
       {
         tipo: 'catalogo_criado_carga',
         chave: 'prioridade:p1',
-        valor: 'Prioridade CONVÊNIO: só os preços do dashboards-one a usam (1 linha, de A)',
+        valor: 'Prioridade CONVÊNIO: só os preços do dashboards-one a usam (1 linha, em 1 tabela)',
+        itens: ['A'],
         ocorrencias: 1,
         entidades: [{ tipo: 'prioridade', id: 'p1' }],
         competencias: null,

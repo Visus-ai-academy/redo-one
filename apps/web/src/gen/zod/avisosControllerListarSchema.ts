@@ -24,7 +24,7 @@ export const avisosControllerListarQueryTipoSchema = tipoAvisoSchema.optional()
 
 export type AvisosControllerListarQueryTipoSchemaType = z.infer<typeof avisosControllerListarQueryTipoSchema>
 
-export const avisosControllerListarQueryBuscaSchema = z.string().optional().describe('Parte do nome como chegou da MobileMed.')
+export const avisosControllerListarQueryBuscaSchema = z.string().optional().describe('Parte do texto do aviso (o nome como chegou) ou de um nome citado em lista.')
 
 export type AvisosControllerListarQueryBuscaSchemaType = z.infer<typeof avisosControllerListarQueryBuscaSchema>
 
@@ -57,7 +57,7 @@ export const avisosControllerListarQuerySchema = z.object({
   porPagina: z.int().min(1).max(100).optional().default(25),
   status: statusAvisoSchema.optional(),
   tipo: tipoAvisoSchema.optional(),
-  busca: z.string().optional().describe('Parte do nome como chegou da MobileMed.'),
+  busca: z.string().optional().describe('Parte do texto do aviso (o nome como chegou) ou de um nome citado em lista.'),
   meus: z.boolean().optional().describe('Só os tipos de que algum papel de quem consulta é responsável.'),
   competencia: z.string().optional().describe('Só os ligados a esta competência.').meta({ examples: ['2026-10'] }),
   entidade: z.string().optional().describe('Só os que se referem a este item (com `entidadeId`): cliente, medico, exame...'),

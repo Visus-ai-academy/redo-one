@@ -117,6 +117,7 @@ export class DrizzleRegistroAvisos implements RegistroAvisos {
             tipo: l.tipo,
             chave: l.chave,
             valor: l.valor,
+            itens: [...(l.itens ?? [])],
             ocorrencias: l.ocorrencias,
             origem,
             competenciaDesde: l.competencias?.desde ?? null,
@@ -130,6 +131,7 @@ export class DrizzleRegistroAvisos implements RegistroAvisos {
           target: [avisosCadastro.tipo, avisosCadastro.chave],
           set: {
             valor: sql`excluded.valor`,
+            itens: sql`excluded.itens`,
             ocorrencias: sql`excluded.ocorrencias`,
             origem: sql`excluded.origem`,
             competenciaDesde: sql`excluded.competencia_desde`,

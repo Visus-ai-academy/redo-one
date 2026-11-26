@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ilike, inArray, min, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, min, or, sql } from 'drizzle-orm';
 
 import type { EntidadeAviso } from '../../../comum/avisos/registro-avisos';
 import { contem, relevancia } from '../../../database/busca';
@@ -17,6 +17,7 @@ const colunas = {
   id: avisosCadastro.id,
   tipo: avisosCadastro.tipo,
   valor: avisosCadastro.valor,
+  itens: avisosCadastro.itens,
   status: avisosCadastro.status,
   origem: avisosCadastro.origem,
   competencias: sql<
@@ -54,7 +55,13 @@ export class DrizzleConsultaAvisos implements ConsultaAvisos {
     const onde = and(
       f.status ? eq(avisosCadastro.status, f.status) : undefined,
       inArray(avisosCadastro.tipo, [...f.tipos]),
-      f.busca ? ilike(avisosCadastro.valor, contem(f.busca)) : undefined,
+      f.busca
+        ? or(
+            ilike(avisosCadastro.valor, contem(f.busca)),
+            // O nome citado em lista (ex.: a tabela de preço) também acha o aviso.
+            sql`array_to_string(${avisosCadastro.itens}, ' ') ilike ${contem(f.busca)}`,
+          )
+        : undefined,
       f.competencia ? ligadoACompetencia(f.competencia) : undefined,
       f.entidade ? refereSe(f.entidade) : undefined,
     );

@@ -93,6 +93,34 @@ describe.skipIf(!url)('DrizzleRegistroAvisos', () => {
     ]);
   });
 
+  it('grava os itens citados; a próxima vez os troca, e quem não traz itens fica sem', async () => {
+    const item = (itens?: string[]): AvisoLevantado => ({
+      tipo: 'catalogo_criado_carga',
+      chave: 'categoria:k1',
+      valor: 'Categoria SUBCLAVIA',
+      ocorrencias: 3,
+      ...(itens && { itens }),
+    });
+    await registro.registrar(db, {
+      origem: 'carga',
+      levantados: [item(['A', 'B'])],
+      conferidos: [],
+      agora,
+    });
+    expect((await avisos()).map((a) => a.itens)).toEqual([['A', 'B']]);
+
+    await registro.registrar(db, {
+      origem: 'carga',
+      levantados: [item(['C'])],
+      conferidos: [],
+      agora,
+    });
+    expect((await avisos()).map((a) => a.itens)).toEqual([['C']]);
+
+    await registro.registrar(db, { origem: 'carga', levantados: [item()], conferidos: [], agora });
+    expect((await avisos()).map((a) => a.itens)).toEqual([[]]);
+  });
+
   it('o tipo precisa existir em tipos_aviso', async () => {
     await expect(
       db

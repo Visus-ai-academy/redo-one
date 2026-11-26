@@ -15,6 +15,8 @@ export interface AvisoCadastro {
   tipo: TipoAviso;
   /** Como chegou na última verificação. */
   valor: string;
+  /** Nomes citados pelo aviso, em lista (vazia se nenhum). */
+  itens: string[];
   status: StatusAviso;
   origem: OrigemAviso;
   /** Competências a que se liga (trava do fechamento); nulo se nenhuma. */

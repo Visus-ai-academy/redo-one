@@ -9,6 +9,7 @@ const pendente: AvisoDto = {
   id: 'a1',
   tipo: 'cliente',
   valor: 'CLINICA NOVA',
+  itens: [],
   status: 'pendente',
   origem: 'importacao',
   competencias: { desde: '2026-10', ate: '2026-11' },

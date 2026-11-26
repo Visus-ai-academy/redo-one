@@ -40,7 +40,9 @@ export class ListarAvisosDto extends PaginacaoDto {
   @IsIn(TIPOS)
   tipo?: (typeof TIPOS)[number];
 
-  @ApiPropertyOptional({ description: 'Parte do nome como chegou da MobileMed.' })
+  @ApiPropertyOptional({
+    description: 'Parte do texto do aviso (o nome como chegou) ou de um nome citado em lista.',
+  })
   @Transform(aparar)
   @IsOptional()
   @IsString()
@@ -91,6 +93,11 @@ export class AvisoDto {
   @ApiProperty({ enum: TIPOS, enumName: 'TipoAviso' }) tipo!: (typeof TIPOS)[number];
   @ApiProperty({ description: 'Como chegou na última verificação (importação, rodada, carga).' })
   valor!: string;
+  @ApiProperty({
+    type: [String],
+    description: 'Nomes citados pelo aviso, para mostrar em lista (ex.: as tabelas de preço).',
+  })
+  itens!: string[];
   @ApiProperty({ enum: STATUS, enumName: 'StatusAviso' }) status!: (typeof STATUS)[number];
   @ApiProperty({ enum: ORIGENS_AVISO, enumName: 'OrigemAviso' })
   origem!: (typeof ORIGENS_AVISO)[number];

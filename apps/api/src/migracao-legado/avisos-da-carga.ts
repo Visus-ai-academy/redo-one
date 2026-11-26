@@ -53,13 +53,15 @@ const NOME_DO_TIPO = { categoria: 'Categoria', prioridade: 'Prioridade' } as con
 /**
  * As categorias e prioridades que só os preços do dashboards-one usam (o catálogo de lá não as
  * tem) viram avisos de `catalogo_criado_carga`, ligados ao item, para alguém conferir o nome e as
- * variações.
+ * variações. Os clientes e contratados cujas tabelas as usam vão em `itens`.
  */
 export function avisosDosItensCriados(itens: PrecosMigrados['itensCriados']): AvisoLevantado[] {
   return itens.map((i) => ({
     tipo: 'catalogo_criado_carga',
     chave: `${i.tipo}:${i.id}`,
-    valor: `${NOME_DO_TIPO[i.tipo]} ${i.nome}: só os preços do dashboards-one a usam (${i.linhas} ${i.linhas === 1 ? 'linha' : 'linhas'}, de ${lista(i.donos)})`,
+    valor: `${NOME_DO_TIPO[i.tipo]} ${i.nome}: só os preços do dashboards-one a usam (${i.linhas} ${i.linhas === 1 ? 'linha' : 'linhas'}, em ${i.donos.length} ${i.donos.length === 1 ? 'tabela' : 'tabelas'})`,
+    // Os donos das tabelas (podem ser centenas) vão em lista, não no texto.
+    itens: i.donos,
     ocorrencias: i.linhas,
     entidades: [{ tipo: i.tipo, id: i.id }],
     competencias: null,

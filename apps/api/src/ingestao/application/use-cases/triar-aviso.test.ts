@@ -18,6 +18,7 @@ describe('TriarAviso', () => {
     const base = {
       tipo: 'cliente' as const,
       valor: 'CLINICA NOVA',
+      itens: [],
       origem: 'importacao' as const,
       competencias: null,
       entidades: [],

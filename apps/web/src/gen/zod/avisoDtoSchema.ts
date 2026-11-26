@@ -15,6 +15,7 @@ export const avisoDtoSchema = z.object({
   id: z.uuid(),
   tipo: tipoAvisoSchema,
   valor: z.string().describe('Como chegou na última verificação (importação, rodada, carga).'),
+  itens: z.array(z.string()).describe('Nomes citados pelo aviso, para mostrar em lista (ex.: as tabelas de preço).'),
   status: statusAvisoSchema,
   origem: origemAvisoSchema,
   competencias: competenciasAvisoDtoSchema.nullable().describe('Competências a que se liga (a trava do fechamento).'),

@@ -24,7 +24,7 @@ export type AvisosControllerListarQuery = {
   status?: StatusAvisoKey;
   tipo?: TipoAvisoKey;
   /**
-   * @description Parte do nome como chegou da MobileMed.
+   * @description Parte do texto do aviso (o nome como chegou) ou de um nome citado em lista.
    * @type string | undefined
    */
   busca?: string;
