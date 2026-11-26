@@ -3,7 +3,6 @@ import { Inject, Module, type OnModuleInit } from '@nestjs/common';
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { DATABASE, type Database } from '../database/database';
-import type { CompetenciasRepository } from '../faturamento/application/ports/competencias.repository';
 import {
   RECALCULOS_COMPETENCIA,
   type RecalculosCompetencia,
@@ -11,7 +10,6 @@ import {
 import { RegistroRecalculadores } from '../faturamento/application/recalculadores';
 import { RecalcularCompetenciaFechada } from '../faturamento/application/use-cases/recalcular-competencia';
 import { FaturamentoModule } from '../faturamento/faturamento.module';
-import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competencias-bloqueadas';
 import {
   ADICIONAIS_REPOSITORY,
   type AdicionaisRepository,
@@ -87,17 +85,6 @@ const CONFIGURACAO = [
     { provide: CONFIGURACAO_REPASSE, useClass: DrizzleConfiguracaoRepasseRepository },
     { provide: AGENDADOR_REPASSE, useClass: AgendadorRepasseFila },
     {
-      // O `faturamento` exporta as competências pela porta da ingestão (o mesmo repositório).
-      provide: RecalcularCompetenciaFechada,
-      inject: [COMPETENCIAS_BLOQUEADAS, RECALCULOS_COMPETENCIA, RegistroRecalculadores, AUDITORIA],
-      useFactory: (
-        competencias: CompetenciasRepository,
-        recalculos: RecalculosCompetencia,
-        registro: RegistroRecalculadores,
-        auditoria: Auditoria,
-      ) => new RecalcularCompetenciaFechada(competencias, recalculos, registro, auditoria, agora),
-    },
-    {
       provide: RECALCULO_REPASSE,
       inject: [RecalcularCompetenciaFechada, RECALCULOS_COMPETENCIA],
       useFactory: (recalcular: RecalcularCompetenciaFechada, recalculos: RecalculosCompetencia) =>
@@ -162,14 +149,11 @@ export class RepasseModule implements OnModuleInit {
 
   onModuleInit() {
     // O recálculo da competência fechada (pedido com motivo) roda o mesmo job, com o id do pedido.
-    // O registro do `faturamento` é um objeto só no processo (useValue): outra instância da
-    // aplicação no mesmo processo (testes, export do OpenAPI) já o encontra registrado.
-    if (!this.recalculadores.obter('repasse'))
-      this.recalculadores.registrar({
-        contexto: 'repasse',
-        enfileirar: (executor, { recalculoId, competencia }) =>
-          enfileirarRepasse(executor, competencia, recalculoId),
-      });
+    this.recalculadores.registrar({
+      contexto: 'repasse',
+      enfileirar: (executor, { recalculoId, competencia }) =>
+        enfileirarRepasse(executor, competencia, recalculoId),
+    });
     this.tarefas.registrar(TAREFA_GERAR_REPASSE, async (payload) => {
       const p = payload as { competencia?: unknown; recalculoId?: unknown } | null;
       if (typeof p?.competencia !== 'string')

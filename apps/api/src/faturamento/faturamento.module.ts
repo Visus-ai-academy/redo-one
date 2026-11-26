@@ -342,13 +342,15 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
         new HistoricoDadosFiscais(repo, historico),
     },
   ],
-  // O registro e o histórico dos recálculos servem também ao `repasse` (fechamento único).
+  // O registro, o histórico e o pedido de recálculo servem também ao `repasse` (fechamento
+  // único): o caso de uso recebe o contexto, e cada aplicação tem o seu registro.
   exports: [
     COMPETENCIAS_BLOQUEADAS,
     CORTES_COMPETENCIA,
     TIPIFICACAO_LAUDOS,
     RegistroRecalculadores,
     RECALCULOS_COMPETENCIA,
+    RecalcularCompetenciaFechada,
   ],
 })
 export class FaturamentoModule implements OnModuleInit {
