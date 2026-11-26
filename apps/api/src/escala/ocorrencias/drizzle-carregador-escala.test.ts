@@ -78,6 +78,7 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
     turnoId: ids.manha ?? '',
     frenteId: ids.neuro ?? '',
     diasSemana: [1, 2, 3, 4, 5],
+    todasSemanas: true,
     horarioInicio: '07:00',
     horarioFim: '13:00',
   });
@@ -122,6 +123,8 @@ describe.skipIf(!url)('carregador da escala (banco) + expansão', () => {
         tipoId: ids.ferias ?? '',
         dataInicio: '2026-11-18',
         dataFim: '2026-11-18',
+        todosDias: true,
+        todosTurnos: true,
       })
       .returning();
     await db

@@ -168,7 +168,10 @@ describe.skipIf(!url)('DrizzleAusenciasRepository', () => {
       tipo: { id: ids.ferias, nome: 'Férias', cor: '#00AA00' },
       dataInicio: '2026-12-01',
       dataFim: '2026-12-10',
+      todosDias: false,
       diasSemana: [1, 3],
+      todasFrentes: false,
+      todosTurnos: false,
       frentes: [
         { id: ids.tc, nome: 'TC' },
         { id: ids.neuro, nome: 'NEURO' },

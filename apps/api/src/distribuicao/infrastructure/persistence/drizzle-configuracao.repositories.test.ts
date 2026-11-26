@@ -42,7 +42,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
     await db.execute(
       sql`truncate table ajustes_dia_distribuicao, alocacoes, frentes_escala, usuarios, papeis, medicos, prioridades_cliente, regras_frente, configuracao_distribuicao, prioridades_operacao,
         configuracao_distribuicao_turnos_posteriores, configuracao_distribuicao_recolhimento_turnos,
-        turnos, clientes, modalidades, especialidades, subespecialidades, prioridades cascade`,
+        turnos, clientes, modalidades, especialidades, subespecialidades, prioridades, eventos_auditoria cascade`,
     );
     ids.urg = await primeiro(
       db.insert(schema.prioridades).values({ nome: 'URGÊNCIA' }).returning(),
@@ -302,6 +302,7 @@ describe.skipIf(!url)('configuração do robô (banco)', () => {
           turnoId: id('tarde'),
           frenteId: frente,
           diasSemana: [3],
+          todasSemanas: true,
           horarioInicio: '13:00',
           horarioFim: '19:00',
           dataInicio: '2026-11-01',
