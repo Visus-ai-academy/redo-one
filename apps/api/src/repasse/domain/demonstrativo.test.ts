@@ -38,7 +38,8 @@ const entrada = (p: Partial<EntradaRepasse> = {}): EntradaRepasse => ({
   configuracoes: new Map(),
   precos: new Map([['ana', [preco()]]]),
   alternativas: [],
-  tarifas: new Map(),
+  regras: [],
+  especialidadesDoMedico: new Map(),
   adicionais: [],
   retencoes: [],
   pessoas: new Map(),
@@ -238,7 +239,20 @@ describe('calcularRepasse', () => {
     const r = calcularRepasse(
       entrada({
         laudos: [laudo(), laudo({ prioridadeId: 'plantao' })],
-        tarifas: new Map([['ana', 4700]]),
+        regras: [
+          {
+            id: 'tarifa',
+            medicoId: 'ana',
+            tipo: 'tarifa_laudo',
+            descricao: 'Tarifa própria',
+            valorCentavos: 4700,
+            percentualPpm: null,
+            divisor: 1,
+            modalidadeIds: null,
+            especialidadeIds: null,
+            prioridadeIds: null,
+          },
+        ],
       }),
     );
     expect(so(r)).toMatchObject({ examesCentavos: 9400, gruposSemPreco: 0 });
@@ -250,6 +264,39 @@ describe('calcularRepasse', () => {
     expect(so(r).grupos[0]?.laudos).toEqual([
       { laudoId: l.laudoId, peca: 0, volume: 2, totalCentavos: 10000 },
     ]);
+  });
+
+  it('os extras das regras entram no bruto e criam o demonstrativo do coordenador', () => {
+    const r = calcularRepasse(
+      entrada({
+        laudos: [laudo()],
+        regras: [
+          {
+            id: 'coord',
+            medicoId: 'bia',
+            tipo: 'percentual_repasse',
+            descricao: 'Coordenação',
+            valorCentavos: null,
+            percentualPpm: 100000,
+            divisor: 1,
+            modalidadeIds: null,
+            especialidadeIds: ['neuro'],
+            prioridadeIds: null,
+          },
+        ],
+        especialidadesDoMedico: new Map([['ana', new Set(['neuro'])]]),
+      }),
+    );
+    expect(so(r, 'bia')).toMatchObject({
+      examesCentavos: 0,
+      adicionaisCentavos: 500,
+      brutoCentavos: 500,
+    });
+    expect(so(r, 'bia').extras).toHaveLength(1);
+  });
+
+  it('laudo sem médico não gera demonstrativo', () => {
+    expect(calcularRepasse(entrada({ laudos: [laudo({ medicoId: null })] }))).toEqual([]);
   });
 
   it('retém pela regra que se aplica ao médico, com piso', () => {

@@ -1,3 +1,4 @@
+import { calcularExtras, type RegraApuracaoVigente, tarifasDasRegras } from './apuracao';
 import {
   type AlternativaPreco,
   type ArranjoRepasse,
@@ -11,7 +12,8 @@ export interface LaudoRepasse extends ArranjoRepasse {
   laudoId: string;
   /** 0 = o laudo inteiro; 1..N = a peça da quebra. */
   peca: number;
-  medicoId: string;
+  /** Nulo: médico sem cadastro (não recebe, mas o laudo conta na regra "por laudo da operação"). */
+  medicoId: string | null;
   clienteId: string | null;
   unidadeId: string | null;
   volume: number;
@@ -86,16 +88,13 @@ export interface EntradaRepasse {
   /** Preços vigentes de cada médico. */
   precos: ReadonlyMap<string, readonly PrecoRepasse[]>;
   alternativas: readonly AlternativaPreco[];
-  /** Tarifa própria vigente do médico (regra `tarifa_laudo`). */
-  tarifas: ReadonlyMap<string, number>;
+  /** Regras de apuração vigentes (coordenação, tarifa própria). */
+  regras: readonly RegraApuracaoVigente[];
+  /** Especialidades que cada médico lauda (base do percentual de coordenação). */
+  especialidadesDoMedico: ReadonlyMap<string, ReadonlySet<string>>;
   adicionais: readonly AdicionalVigente[];
   retencoes: readonly RetencaoVigente[];
   pessoas: ReadonlyMap<string, PessoaMedico>;
-  /**
-   * Extras das regras de apuração, calculados depois dos exames de todos (o percentual soma o dos
-   * outros médicos): recebe o valor de exames de cada médico.
-   */
-  extras?: (examesPorMedico: ReadonlyMap<string, number>) => ReadonlyMap<string, ExtraRegra[]>;
 }
 
 export interface LaudoPago {
@@ -190,10 +189,15 @@ function aplicaA(retencao: RetencaoVigente, pessoa: PessoaMedico | undefined): b
 /** Volume com duas casas (como no banco), sem o ruído da soma de ponto flutuante. */
 const volume2 = (n: number) => Math.round(n * 100) / 100;
 
-function gruposDoMedico(laudos: readonly LaudoRepasse[], e: EntradaRepasse, medicoId: string) {
+function gruposDoMedico(
+  laudos: readonly LaudoRepasse[],
+  e: EntradaRepasse,
+  medicoId: string,
+  tarifas: ReadonlyMap<string, number>,
+) {
   const porChave = new Map<string, GrupoCalculado>();
   const precos = e.precos.get(medicoId) ?? [];
-  const tarifa = e.tarifas.get(medicoId) ?? null;
+  const tarifa = tarifas.get(medicoId) ?? null;
   for (const l of laudos) {
     const chave = [
       l.modalidadeId,
@@ -246,17 +250,22 @@ function gruposDoMedico(laudos: readonly LaudoRepasse[], e: EntradaRepasse, medi
 export function calcularRepasse(e: EntradaRepasse): DemonstrativoCalculado[] {
   const laudosPorMedico = new Map<string, LaudoRepasse[]>();
   const diasPorMedico = new Map<string, Map<string, { volume: number; totalCentavos: number }>>();
+  const daOperacao: LaudoRepasse[] = [];
   for (const bruto of e.laudos) {
     if (bruto.duplicado && !e.pagaDuplicados) continue;
-    const l = reclassificar(bruto, e.reclassificacoes, e.equipesDoMedico.get(bruto.medicoId));
-    if (!contaParaOMedico(l, e.configuracoes.get(l.medicoId))) continue;
-    laudosPorMedico.set(l.medicoId, [...(laudosPorMedico.get(l.medicoId) ?? []), l]);
+    const equipes = bruto.medicoId ? e.equipesDoMedico.get(bruto.medicoId) : undefined;
+    const l = reclassificar(bruto, e.reclassificacoes, equipes);
+    daOperacao.push(l);
+    const { medicoId } = l;
+    if (medicoId === null || !contaParaOMedico(l, e.configuracoes.get(medicoId))) continue;
+    laudosPorMedico.set(medicoId, [...(laudosPorMedico.get(medicoId) ?? []), l]);
   }
+  const tarifas = tarifasDasRegras(e.regras);
 
   const gruposPorMedico = new Map<string, GrupoCalculado[]>();
   const examesPorMedico = new Map<string, number>();
   for (const [medicoId, laudos] of laudosPorMedico) {
-    const grupos = gruposDoMedico(laudos, e, medicoId);
+    const grupos = gruposDoMedico(laudos, e, medicoId, tarifas);
     gruposPorMedico.set(medicoId, grupos);
     examesPorMedico.set(
       medicoId,
@@ -278,7 +287,13 @@ export function calcularRepasse(e: EntradaRepasse): DemonstrativoCalculado[] {
   const adicionaisPorMedico = new Map<string, AdicionalVigente[]>();
   for (const a of e.adicionais)
     adicionaisPorMedico.set(a.medicoId, [...(adicionaisPorMedico.get(a.medicoId) ?? []), a]);
-  const extras = e.extras?.(examesPorMedico) ?? new Map<string, ExtraRegra[]>();
+  // Depois dos exames de todos: o percentual de coordenação soma o dos outros médicos.
+  const extras = calcularExtras({
+    regras: e.regras,
+    laudos: daOperacao,
+    especialidadesDoMedico: e.especialidadesDoMedico,
+    examesPorMedico,
+  });
 
   const medicos = new Set([
     ...gruposPorMedico.keys(),
