@@ -1,13 +1,6 @@
-import { normalizarNome } from '../../../catalogo/comum/nomes';
 import type { ArmazenamentoArquivos } from '../../../comum/armazenamento/armazenamento-arquivos';
-import { type Celula, texto } from '../../domain/celulas';
-import { converterLinha } from '../../domain/linha-planilha';
 import { planejarImportacao } from '../../domain/planejar-importacao';
-import { type LaudoPreparado, prepararLaudo, type TipoAviso } from '../../domain/preparar-laudo';
-import type {
-  AvisosCadastroRepository,
-  PendenciaRegistrada,
-} from '../ports/avisos-cadastro.repository';
+import type { AvisosCadastroRepository } from '../ports/avisos-cadastro.repository';
 import type { LeitorCadastrosIngestao } from '../ports/cadastros-ingestao';
 import type { CompetenciasBloqueadas } from '../ports/competencias-bloqueadas';
 import type { LeitorCortesCompetencia } from '../ports/cortes-competencia';
@@ -17,33 +10,12 @@ import type {
   ResultadoImportacao,
 } from '../ports/importacoes.repository';
 import type { JanelaLaudos, LaudosRepository } from '../ports/laudos.repository';
-import {
-  type LeitorPlanilha,
-  PlanilhaInvalidaError,
-  type PlanilhaLida,
-} from '../ports/leitor-planilha';
+import { type LeitorPlanilha, PlanilhaInvalidaError } from '../ports/leitor-planilha';
 import type { ParametrosIngestaoRepository } from '../ports/parametros-ingestao.repository';
 import type { Pseudonimizador } from '../ports/pseudonimizador';
 import { type RelatorioMobileMed, RelatorioMobileMedError } from '../ports/relatorio-mobilemed';
 import type { LeitorTipificacao } from '../ports/tipificacao-laudos';
-
-/**
- * No compartilhamento da MobileMed, só as unidades de destino configuradas (o RPA marcava
- * CRD_APOIO na tela); o relatório traz todas.
- */
-function soUnidadesAceitas(planilha: PlanilhaLida, unidades: string[]): PlanilhaLida {
-  if (planilha.formato !== 'compartilhamento') return planilha;
-  const aceitas = new Set(unidades.map(normalizarNome));
-  return {
-    ...planilha,
-    linhas: planilha.linhas.filter((l) =>
-      aceitas.has(normalizarNome(texto(l.registro.EMPRESA) ?? '')),
-    ),
-  };
-}
-
-/** Quantos erros de linha ficam guardados na importação (o total vai em `invalidas`). */
-const MAXIMO_ERROS_GUARDADOS = 20;
+import { classificar, prepararLinhas, soUnidadesAceitas } from '../preparar-linhas';
 
 /**
  * Importa os laudos de uma importação (job `ingestao.importar`): lê a planilha do storage (upload)
@@ -89,16 +61,25 @@ export class ImportarLaudos {
   private async processar(importacao: ImportacaoParaProcessar) {
     const importacaoId = importacao.id;
     const parametros = await this.parametros.obter();
+    const lida =
+      importacao.origem === 'mobilemed'
+        ? await this.relatorio.buscar(importacao.formato, importacao.periodo, {
+            janelaDias: parametros.mobilemedJanelaDias,
+            teto: parametros.mobilemedTeto,
+          })
+        : await this.leitor.ler(await this.armazenamento.ler(importacao.arquivoChave));
+    const origem = lida.formato === 'compartilhamento' ? 'compartilhamento' : 'normal';
     const planilha =
       importacao.origem === 'mobilemed'
-        ? soUnidadesAceitas(
-            await this.relatorio.buscar(importacao.formato, importacao.periodo, {
-              janelaDias: parametros.mobilemedJanelaDias,
-              teto: parametros.mobilemedTeto,
-            }),
-            parametros.mobilemedCompartilhamentoUnidades,
-          )
-        : await this.leitor.ler(await this.armazenamento.ler(importacao.arquivoChave));
+        ? {
+            ...lida,
+            linhas: soUnidadesAceitas(
+              lida.linhas,
+              () => origem,
+              parametros.mobilemedCompartilhamentoUnidades,
+            ),
+          }
+        : lida;
     const [cadastros, bloqueadas, cortes, tipificar] = await Promise.all([
       this.cadastros.carregar(),
       this.competencias.listar(),
@@ -106,53 +87,14 @@ export class ImportarLaudos {
       this.tipificacao.carregar(),
     ]);
     const competenciasBloqueadas = new Set(bloqueadas);
-    const origem = planilha.formato === 'compartilhamento' ? 'compartilhamento' : 'normal';
-    const pseudonimo = (texto: string) => this.pseudonimizador.pseudonimo(texto);
-
-    const preparados: LaudoPreparado[] = [];
-    const linhasBrutas = new Map<string, Record<string, Celula>>();
-    const pendencias = new Map<string, PendenciaRegistrada>();
-    const conferidos = new Map<string, { tipo: TipoAviso; chave: string }>();
-    const errosLinhas: { linha: number; mensagem: string }[] = [];
-    let invalidas = 0;
-    // Identidades das linhas cuja competência calculada está bloqueada: o gravado fica como está.
-    const ignoradas = new Set<string>();
-
-    for (const { numero, registro } of planilha.linhas) {
-      let preparo: ReturnType<typeof prepararLaudo>;
-      try {
-        preparo = prepararLaudo(converterLinha(registro), origem, cadastros, pseudonimo, cortes);
-      } catch (erro) {
-        invalidas++;
-        if (errosLinhas.length < MAXIMO_ERROS_GUARDADOS) {
-          errosLinhas.push({ linha: numero, mensagem: (erro as Error).message });
-        }
-        continue;
-      }
-      if (competenciasBloqueadas.has(preparo.laudo.competencia)) {
-        ignoradas.add(preparo.laudo.identidade);
-        continue;
-      }
-      preparados.push(preparo.laudo);
-      linhasBrutas.set(preparo.laudo.identidade, registro);
-      const { competencia } = preparo.laudo;
-      for (const p of preparo.pendencias) {
-        const k = `${p.tipo}:${p.chave}`;
-        const antes = pendencias.get(k);
-        // Da menor à maior competência dos laudos em que apareceu (a trava do fechamento).
-        const desde = antes?.competencias?.desde;
-        const ate = antes?.competencias?.ate;
-        pendencias.set(k, {
-          ...p,
-          ocorrencias: (antes?.ocorrencias ?? 0) + 1,
-          competencias: {
-            desde: desde && desde < competencia ? desde : competencia,
-            ate: ate && ate > competencia ? ate : competencia,
-          },
-        });
-      }
-      for (const c of preparo.conferidos) conferidos.set(`${c.tipo}:${c.chave}`, c);
-    }
+    // As linhas cuja competência calculada está bloqueada ficam de fora: o gravado fica como está.
+    const { preparados, linhasBrutas, pendencias, conferidos, errosLinhas, invalidas, ignoradas } =
+      prepararLinhas(
+        planilha.linhas,
+        () => origem,
+        { cadastros, cortes, pseudonimo: (texto) => this.pseudonimizador.pseudonimo(texto) },
+        (competencia) => competenciasBloqueadas.has(competencia),
+      );
 
     const resultado: ResultadoImportacao & { status: 'concluida' | 'recusada' | 'erro' } = {
       status: 'concluida',
@@ -229,22 +171,11 @@ export class ImportarLaudos {
           plano.pacientes.flatMap((l) => (l.paciente ? [[l.identidade, l.paciente] as const] : [])),
         ),
         // Todos os da janela: a configuração mudada chega também aos laudos que não mudaram.
-        classificacoes: new Map(
-          tipificar
-            ? preparados.map(
-                (l) => [l.identidade, { ...tipificar(l), competencia: l.competencia }] as const,
-              )
-            : [],
-        ),
+        classificacoes: classificar(preparados, tipificar),
       },
       this.agora(),
     );
-    await this.avisos.registrar(
-      importacaoId,
-      [...pendencias.values()],
-      [...conferidos.values()],
-      this.agora(),
-    );
+    await this.avisos.registrar(importacaoId, pendencias, conferidos, this.agora());
     return resultado;
   }
 }
