@@ -771,6 +771,13 @@
       "when": 1795716130886,
       "tag": "0109_parametros_demonstrativo",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1795716155833,
+      "tag": "0110_demonstrativos_faturamento",
+      "breakpoints": true
     }
   ]
 }

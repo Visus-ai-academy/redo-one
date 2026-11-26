@@ -1,8 +1,10 @@
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   check,
+  date,
   index,
   integer,
   numeric,
@@ -633,4 +635,154 @@ export const prioridadesAlternativasPreco = pgTable(
       sql`${t.alternativaId} is null or ${t.alternativaId} <> ${t.prioridadeId}`,
     ),
   ],
+);
+
+/**
+ * Demonstrativo de faturamento de um cliente (principal) numa competência, por versão. Na aberta,
+ * a prévia (origem `previa`) é refeita pelo job a cada mudança; ao fechar, o job grava a versão do
+ * fechamento; o recálculo da fechada grava outra versão. Só a última versão é vigente; as
+ * anteriores ficam guardadas (nunca se apagam, só a prévia é substituída). Valores em centavos.
+ */
+export const demonstrativosFaturamento = pgTable(
+  'demonstrativos_faturamento',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    competencia: text('competencia')
+      .notNull()
+      .references(() => competencias.competencia),
+    clienteId: uuid('cliente_id')
+      .notNull()
+      .references(() => clientes.id),
+    versao: integer('versao').notNull(),
+    vigente: boolean('vigente').notNull(),
+    origem: text('origem', { enum: ['previa', 'fechamento', 'recalculo'] }).notNull(),
+    /** O pedido de recálculo que gerou a versão (origem `recalculo`). */
+    recalculoId: uuid('recalculo_id').references(() => recalculosCompetencia.id),
+    contratadoId: uuid('contratado_id').references(() => contratados.id),
+    /** Laudos que faturam. */
+    laudos: integer('laudos').notNull(),
+    quantidade: numeric('quantidade', { precision: 14, scale: 2, mode: 'number' }).notNull(),
+    valorCentavos: bigint('valor_centavos', { mode: 'number' }).notNull(),
+    quantidadeSemPreco: numeric('quantidade_sem_preco', {
+      precision: 14,
+      scale: 2,
+      mode: 'number',
+    }).notNull(),
+    /** O cliente teve laudos na competência, mas nenhum fatura (R$ 0). */
+    nadaAFaturar: boolean('nada_a_faturar').notNull(),
+    geradoEm: quando('gerado_em').notNull(),
+  },
+  (t) => [
+    unique('demonstrativos_faturamento_versao_key').on(t.competencia, t.clienteId, t.versao),
+    uniqueIndex('demonstrativos_faturamento_vigente_key')
+      .on(t.competencia, t.clienteId)
+      .where(sql`${t.vigente}`),
+    index('demonstrativos_faturamento_competencia_idx').on(t.competencia, t.vigente),
+    check(
+      'demonstrativos_faturamento_origem_check',
+      sql`${t.origem} in ('previa', 'fechamento', 'recalculo')`,
+    ),
+  ],
+);
+
+/**
+ * Linhas do demonstrativo: membro (unidade ou o próprio cliente) × arranjo × dia do laudo × preço
+ * unitário. O unitário é o da linha de preço usada (nunca média); nulo = sem preço.
+ */
+export const demonstrativosFaturamentoItens = pgTable(
+  'demonstrativos_faturamento_itens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    demonstrativoId: uuid('demonstrativo_id')
+      .notNull()
+      .references(() => demonstrativosFaturamento.id, { onDelete: 'cascade' }),
+    membroId: uuid('membro_id')
+      .notNull()
+      .references(() => clientes.id),
+    modalidadeId: uuid('modalidade_id')
+      .notNull()
+      .references(() => modalidades.id),
+    especialidadeId: uuid('especialidade_id')
+      .notNull()
+      .references(() => especialidades.id),
+    categoriaId: uuid('categoria_id')
+      .notNull()
+      .references(() => categoriasExame.id),
+    prioridadeId: uuid('prioridade_id')
+      .notNull()
+      .references(() => prioridades.id),
+    dia: date('dia').notNull(),
+    unitarioCentavos: bigint('unitario_centavos', { mode: 'number' }),
+    /** A versão de preço usada (de `precos_cliente` ou `precos_padrao_contratado`). */
+    linhaPrecoId: uuid('linha_preco_id'),
+    origemPreco: text('origem_preco', { enum: ['unidade', 'principal', 'padrao'] }),
+    comoAchou: text('como_achou', { enum: ['exato', 'prioridade_alternativa', 'menor_faixa'] }),
+    quantidade: numeric('quantidade', { precision: 14, scale: 2, mode: 'number' }).notNull(),
+    valorCentavos: bigint('valor_centavos', { mode: 'number' }).notNull(),
+    laudos: integer('laudos').notNull(),
+  },
+  (t) => [index('demonstrativos_faturamento_itens_demonstrativo_idx').on(t.demonstrativoId)],
+);
+
+/**
+ * Retrato do demonstrativo fechado no dashboards-one (trazido pela carga), por grupo de nome
+ * fantasia: é o que foi faturado nas competências fechadas antes do redo-one. Só leitura e
+ * comparação; textos como lá (modalidade, especialidade...). Valores em centavos.
+ */
+export const demonstrativosFaturamentoLegado = pgTable(
+  'demonstrativos_faturamento_legado',
+  {
+    id: uuid('id').primaryKey(),
+    competencia: text('competencia').notNull(),
+    chaveGrupo: text('chave_grupo').notNull(),
+    nomeFantasia: text('nome_fantasia').notNull(),
+    contratadoId: uuid('contratado_id').references(() => contratados.id),
+    totalExames: numeric('total_exames', { precision: 14, scale: 2, mode: 'number' }).notNull(),
+    valorExamesCentavos: bigint('valor_exames_centavos', { mode: 'number' }).notNull(),
+    valorFranquiaCentavos: bigint('valor_franquia_centavos', { mode: 'number' }).notNull(),
+    valorPortalCentavos: bigint('valor_portal_centavos', { mode: 'number' }).notNull(),
+    valorIntegracaoCentavos: bigint('valor_integracao_centavos', { mode: 'number' }).notNull(),
+    valorBrutoCentavos: bigint('valor_bruto_centavos', { mode: 'number' }).notNull(),
+    valorImpostosCentavos: bigint('valor_impostos_centavos', { mode: 'number' }).notNull(),
+    valorLiquidoCentavos: bigint('valor_liquido_centavos', { mode: 'number' }).notNull(),
+    franquiaRegra: text('franquia_regra'),
+    geradoEm: quando('gerado_em'),
+  },
+  (t) => [unique('demonstrativos_faturamento_legado_grupo_key').on(t.competencia, t.chaveGrupo)],
+);
+
+/** Clientes do redo-one que formavam o grupo no dashboards-one. */
+export const demonstrativosFaturamentoLegadoMembros = pgTable(
+  'demonstrativos_faturamento_legado_membros',
+  {
+    demonstrativoId: uuid('demonstrativo_id')
+      .notNull()
+      .references(() => demonstrativosFaturamentoLegado.id, { onDelete: 'cascade' }),
+    clienteId: uuid('cliente_id')
+      .notNull()
+      .references(() => clientes.id),
+  },
+  (t) => [primaryKey({ columns: [t.demonstrativoId, t.clienteId] })],
+);
+
+/** Linhas por arranjo do retrato do dashboards-one, como lá. */
+export const demonstrativosFaturamentoLegadoItens = pgTable(
+  'demonstrativos_faturamento_legado_itens',
+  {
+    demonstrativoId: uuid('demonstrativo_id')
+      .notNull()
+      .references(() => demonstrativosFaturamentoLegado.id, { onDelete: 'cascade' }),
+    ordem: integer('ordem').notNull(),
+    modalidade: text('modalidade').notNull(),
+    especialidade: text('especialidade').notNull(),
+    categoria: text('categoria').notNull(),
+    prioridade: text('prioridade').notNull(),
+    quantidade: numeric('quantidade', { precision: 14, scale: 2, mode: 'number' }).notNull(),
+    /** Lá é a média valor ÷ quantidade, arredondada. */
+    valorUnitarioCentavos: bigint('valor_unitario_centavos', { mode: 'number' }).notNull(),
+    valorTotalCentavos: bigint('valor_total_centavos', { mode: 'number' }).notNull(),
+    /** Cobrado pela tabela padrão do contratado. */
+    precoPadrao: boolean('preco_padrao').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.demonstrativoId, t.ordem] })],
 );
