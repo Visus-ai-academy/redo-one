@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  contratadoEscolhido,
   idDoContratadoPadrao,
   ordenarContratados,
   subespecialidadeQueFica,
@@ -56,5 +57,22 @@ describe('contratado padrão', () => {
   it('o id do padrão, ou vazio quando nenhum está marcado', () => {
     expect(idDoContratadoPadrao([rn, tele])).toBe('tele');
     expect(idDoContratadoPadrao([rn, alfa])).toBe('');
+  });
+});
+
+describe('contratado escolhido', () => {
+  const rn = { id: 'rn', nome: 'CLINICA DE RADIOLOGIA NACIONAL LTDA', padrao: false };
+  const tele = { id: 'tele', nome: 'TELEIMAGEM - SERVIÇOS DE DADOS LTDA', padrao: true };
+
+  it('nada escolhido não cai no padrão nem no primeiro', () => {
+    expect(contratadoEscolhido([tele, rn], undefined)).toBeUndefined();
+  });
+
+  it('id que não está na lista (inativo ou apagado) fica sem escolha', () => {
+    expect(contratadoEscolhido([tele, rn], 'sumiu')).toBeUndefined();
+  });
+
+  it('o contratado do id escolhido', () => {
+    expect(contratadoEscolhido([tele, rn], 'rn')).toBe(rn);
   });
 });

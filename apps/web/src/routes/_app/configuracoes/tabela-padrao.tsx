@@ -12,7 +12,7 @@ import { useGuardaDeSaida } from '../../../components/painel/use-guarda-de-saida
 import { Select } from '../../../components/select/Select';
 import { CamposCarregando } from '../../../components/skeleton/CamposCarregando';
 import { precosControllerOpcoesQueryOptions } from '../../../gen/hooks/usePrecosControllerOpcoes';
-import { ordenarContratados } from '../../../lib/catalogo';
+import { contratadoEscolhido, ordenarContratados } from '../../../lib/catalogo';
 import { pode } from '../../../lib/permissoes';
 
 export const Route = createFileRoute('/_app/configuracoes/tabela-padrao')({
@@ -57,10 +57,9 @@ function TabelaPadrao() {
     );
   else if (!opcoes.data) conteudo = <CamposCarregando quantidade={3} />;
   else {
-    // O padrão vem primeiro: sem contratado na URL, é ele que abre.
     const contratados = ordenarContratados(opcoes.data.contratados);
-    const atual = contratados.find((c) => c.id === contratado) ?? contratados[0];
-    conteudo = atual ? (
+    const atual = contratadoEscolhido(contratados, contratado);
+    conteudo = contratados.length ? (
       <div className="flex flex-col gap-4">
         <div className="flex max-w-[480px] flex-col gap-2">
           <label htmlFor={idContratado} className="font-medium">
@@ -68,19 +67,26 @@ function TabelaPadrao() {
           </label>
           <Select
             id={idContratado}
-            value={atual.id}
+            value={atual?.id ?? ''}
+            placeholder="Escolha o contratado"
             onValueChange={(id) => void navigate({ search: { contratado: id }, replace: true })}
             opcoes={contratados.map((c) => ({ valor: c.id, rotulo: c.nome }))}
           />
         </div>
-        <TabelaPrecos
-          key={atual.id}
-          tipo="contratado"
-          donoId={atual.id}
-          veAvisos={pode(sessao, 'avisos.ver')}
-          podeEditar={pode(sessao, 'faturamento.precos.editar')}
-          onAlterado={setAlterado}
-        />
+        {atual ? (
+          <TabelaPrecos
+            key={atual.id}
+            tipo="contratado"
+            donoId={atual.id}
+            veAvisos={pode(sessao, 'avisos.ver')}
+            podeEditar={pode(sessao, 'faturamento.precos.editar')}
+            onAlterado={setAlterado}
+          />
+        ) : (
+          <p className="text-muted-foreground bg-muted rounded-md p-3 text-[13px]">
+            Escolha o contratado para ver a tabela de preços dele.
+          </p>
+        )}
       </div>
     ) : (
       <p className="text-muted-foreground">Nenhum contratado ativo.</p>

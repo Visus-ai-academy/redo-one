@@ -52,3 +52,11 @@ export function ordenarContratados<T extends ContratadoDeEscolha>(contratados: T
 export function idDoContratadoPadrao(contratados: ContratadoDeEscolha[]): string {
   return contratados.find((c) => c.padrao)?.id ?? '';
 }
+
+/** O contratado do id escolhido; sem escolha (ou id fora da lista), nenhum: não cai no padrão. */
+export function contratadoEscolhido<T extends { id: string }>(
+  contratados: T[],
+  id: string | undefined,
+): T | undefined {
+  return id ? contratados.find((c) => c.id === id) : undefined;
+}
