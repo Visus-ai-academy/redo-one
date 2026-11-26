@@ -190,6 +190,7 @@ describe.skipIf(!url)('avisos com impacto (Drizzle)', () => {
         'cliente_ambiguo',
         'preco_repetido',
         'catalogo_criado_carga',
+        'cliente_inativo',
       ]);
       expect(tipos.filter((t) => t.impedeFecharCompetencia).map((t) => t.tipo)).toEqual([
         'cliente',
