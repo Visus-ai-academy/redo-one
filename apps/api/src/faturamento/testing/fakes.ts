@@ -20,6 +20,10 @@ import type {
   DadosFiscaisRegistrados,
   DadosFiscaisRepository,
 } from '../application/ports/dados-fiscais.repository';
+import type {
+  DemonstrativosRepository,
+  GravacaoDemonstrativos,
+} from '../application/ports/demonstrativos.repository';
 import type { EquipesMedicos } from '../application/ports/equipes-medicos';
 import type {
   AlteracaoDadosFiscais,
@@ -136,6 +140,13 @@ export class CompetenciasEmMemoria implements CompetenciasRepository {
   async obter(competencia: string) {
     const c = this.competencias.get(competencia);
     return c ? { ...c } : null;
+  }
+
+  async abertas() {
+    return [...this.competencias]
+      .filter(([, c]) => c.status === 'aberta')
+      .map(([c]) => c)
+      .sort();
   }
 
   async ultimaFechada() {
@@ -716,5 +727,35 @@ export class ParametrosDemonstrativoEmMemoria implements ParametrosDemonstrativo
 
   async prioridadeExiste(id: string) {
     return this.prioridades.has(id);
+  }
+}
+
+/** Guarda as gravações; recusa como o repositório real quando o status não confere. */
+export class DemonstrativosEmMemoria implements DemonstrativosRepository {
+  readonly gravacoes: GravacaoDemonstrativos[] = [];
+
+  constructor(private readonly competencias: CompetenciasEmMemoria) {}
+
+  async gravar(g: GravacaoDemonstrativos) {
+    const status = this.competencias.competencias.get(g.competencia)?.status;
+    if (status !== (g.origem === 'previa' ? 'aberta' : 'fechada')) return false;
+    this.gravacoes.push(g);
+    return true;
+  }
+
+  async listar() {
+    return { itens: [], total: 0 };
+  }
+
+  async totais() {
+    return { clientes: 0, laudos: 0, quantidade: 0, valorCentavos: 0, quantidadeSemPreco: 0 };
+  }
+
+  async obter() {
+    return null;
+  }
+
+  async versoes() {
+    return [];
   }
 }

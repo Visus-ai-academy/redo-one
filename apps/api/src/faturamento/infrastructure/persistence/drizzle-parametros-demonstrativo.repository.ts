@@ -16,6 +16,7 @@ import type {
   VersaoParametrosRegistrada,
 } from '../../application/ports/parametros-demonstrativo.repository';
 import type { ParametrosDemonstrativo } from '../../domain/parametros-demonstrativo';
+import { enfileirarPreviasDemonstrativo } from '../jobs/enfileirar-demonstrativos';
 
 @Injectable()
 export class DrizzleParametrosDemonstrativoRepository implements ParametrosDemonstrativoRepository {
@@ -43,12 +44,15 @@ export class DrizzleParametrosDemonstrativoRepository implements ParametrosDemon
     dados: ParametrosDemonstrativo,
     { usuarioId, em }: Autor,
   ): Promise<string> {
-    const [linha] = await this.db
-      .insert(parametrosDemonstrativo)
-      .values({ desde, ...dados, criadoEm: em, criadoPorId: usuarioId })
-      .returning({ id: parametrosDemonstrativo.id });
-    if (!linha) throw new Error('parâmetros não gravados');
-    return linha.id;
+    return this.db.transaction(async (tx) => {
+      const [linha] = await tx
+        .insert(parametrosDemonstrativo)
+        .values({ desde, ...dados, criadoEm: em, criadoPorId: usuarioId })
+        .returning({ id: parametrosDemonstrativo.id });
+      if (!linha) throw new Error('parâmetros não gravados');
+      await enfileirarPreviasDemonstrativo(tx);
+      return linha.id;
+    });
   }
 
   listarAlternativas(): Promise<VersaoAlternativaRegistrada[]> {
@@ -71,12 +75,15 @@ export class DrizzleParametrosDemonstrativoRepository implements ParametrosDemon
     dados: { prioridadeId: string; alternativaId: string | null },
     { usuarioId, em }: Autor,
   ): Promise<string> {
-    const [linha] = await this.db
-      .insert(prioridadesAlternativasPreco)
-      .values({ desde, ...dados, criadoEm: em, criadoPorId: usuarioId })
-      .returning({ id: prioridadesAlternativasPreco.id });
-    if (!linha) throw new Error('prioridade alternativa não gravada');
-    return linha.id;
+    return this.db.transaction(async (tx) => {
+      const [linha] = await tx
+        .insert(prioridadesAlternativasPreco)
+        .values({ desde, ...dados, criadoEm: em, criadoPorId: usuarioId })
+        .returning({ id: prioridadesAlternativasPreco.id });
+      if (!linha) throw new Error('prioridade alternativa não gravada');
+      await enfileirarPreviasDemonstrativo(tx);
+      return linha.id;
+    });
   }
 
   async categoriaExiste(id: string): Promise<boolean> {

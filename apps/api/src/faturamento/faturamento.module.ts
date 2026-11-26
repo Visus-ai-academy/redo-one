@@ -1,9 +1,14 @@
 import { Inject, Module, type OnModuleInit } from '@nestjs/common';
 
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
+import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competencias-bloqueadas';
 import { CORTES_COMPETENCIA } from '../ingestao/application/ports/cortes-competencia';
 import { TIPIFICACAO_LAUDOS } from '../ingestao/application/ports/tipificacao-laudos';
+import {
+  AVISOS_DO_DEMONSTRATIVO,
+  type AvisosDoDemonstrativo,
+} from './application/ports/avisos-do-demonstrativo';
 import {
   AVISOS_DO_FECHAMENTO,
   type AvisosDoFechamento,
@@ -17,6 +22,14 @@ import {
   DADOS_FISCAIS_REPOSITORY,
   type DadosFiscaisRepository,
 } from './application/ports/dados-fiscais.repository';
+import {
+  DEMONSTRATIVOS_REPOSITORY,
+  type DemonstrativosRepository,
+} from './application/ports/demonstrativos.repository';
+import {
+  ENTRADAS_DEMONSTRATIVO,
+  type EntradasDemonstrativo,
+} from './application/ports/entradas-demonstrativo';
 import { EQUIPES_MEDICOS, type EquipesMedicos } from './application/ports/equipes-medicos';
 import {
   HISTORICO_DADOS_FISCAIS,
@@ -45,6 +58,7 @@ import {
   ObterDadosFiscais,
 } from './application/use-cases/dados-fiscais';
 import { FecharCompetencia } from './application/use-cases/fechar-competencia';
+import { GerarDemonstrativos } from './application/use-cases/gerar-demonstrativos';
 import { ListarCompetencias } from './application/use-cases/listar-competencias';
 import { ListarCortes } from './application/use-cases/listar-cortes';
 import {
@@ -79,6 +93,7 @@ import {
   SalvarTipificacaoCliente,
 } from './application/use-cases/tipificacao';
 import { DestravarImportacao, TravarImportacao } from './application/use-cases/travar-importacao';
+import { RegistroAvisosDoDemonstrativo } from './infrastructure/avisos/registro-avisos-do-demonstrativo';
 import { CompetenciasController } from './infrastructure/http/competencias.controller';
 import { CortesController } from './infrastructure/http/cortes.controller';
 import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.controller';
@@ -88,9 +103,16 @@ import {
   TipificacaoClienteController,
   TipificacaoController,
 } from './infrastructure/http/tipificacao.controller';
+import {
+  enfileirarRecalculoDemonstrativo,
+  pedidoDoPayload,
+  TAREFA_GERAR_DEMONSTRATIVOS,
+} from './infrastructure/jobs/enfileirar-demonstrativos';
 import { DrizzleCompetenciasRepository } from './infrastructure/persistence/drizzle-competencias.repository';
 import { DrizzleCortesRepository } from './infrastructure/persistence/drizzle-cortes.repository';
 import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/drizzle-dados-fiscais.repository';
+import { DrizzleDemonstrativosRepository } from './infrastructure/persistence/drizzle-demonstrativos.repository';
+import { DrizzleEntradasDemonstrativo } from './infrastructure/persistence/drizzle-entradas-demonstrativo';
 import { DrizzleEquipesMedicos } from './infrastructure/persistence/drizzle-equipes-medicos';
 import { DrizzleHistoricoDadosFiscais } from './infrastructure/persistence/drizzle-historico-dados-fiscais';
 import { DrizzleLaudosCompetencia } from './infrastructure/persistence/drizzle-laudos-competencia';
@@ -215,8 +237,29 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
         auditoria: Auditoria,
       ) => new Caso(repo, competencias, auditoria, agora),
     })),
+    { provide: DEMONSTRATIVOS_REPOSITORY, useClass: DrizzleDemonstrativosRepository },
+    { provide: ENTRADAS_DEMONSTRATIVO, useClass: DrizzleEntradasDemonstrativo },
+    { provide: AVISOS_DO_DEMONSTRATIVO, useClass: RegistroAvisosDoDemonstrativo },
+    {
+      provide: GerarDemonstrativos,
+      inject: [
+        COMPETENCIAS_REPOSITORY,
+        ENTRADAS_DEMONSTRATIVO,
+        DEMONSTRATIVOS_REPOSITORY,
+        RECALCULOS_COMPETENCIA,
+        AVISOS_DO_DEMONSTRATIVO,
+      ],
+      useFactory: (
+        competencias: CompetenciasRepository,
+        entradas: EntradasDemonstrativo,
+        demonstrativos: DemonstrativosRepository,
+        recalculos: RecalculosCompetencia,
+        avisos: AvisosDoDemonstrativo,
+      ) =>
+        new GerarDemonstrativos(competencias, entradas, demonstrativos, recalculos, avisos, agora),
+    },
     // Um registro só para todos os contextos (faturamento, repasse): cada um registra o seu.
-    { provide: RegistroRecalculadores, useValue: new RegistroRecalculadores() },
+    { provide: RegistroRecalculadores, useFactory: () => new RegistroRecalculadores() },
     { provide: RECALCULOS_COMPETENCIA, useClass: DrizzleRecalculosCompetencia },
     {
       provide: RecalcularCompetenciaFechada,
@@ -309,10 +352,24 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
   ],
 })
 export class FaturamentoModule implements OnModuleInit {
-  constructor(@Inject(CORTES_REPOSITORY) private readonly cortes: CortesRepository) {}
+  constructor(
+    @Inject(CORTES_REPOSITORY) private readonly cortes: CortesRepository,
+    private readonly tarefas: RegistroTarefas,
+    private readonly recalculadores: RegistroRecalculadores,
+    private readonly gerarDemonstrativos: GerarDemonstrativos,
+  ) {}
 
   /** A vigência padrão inicial (dia 7, mês seguinte) fica gravada, para a tela mostrar e o histórico começar dela. */
   async onModuleInit() {
+    this.tarefas.registrar(TAREFA_GERAR_DEMONSTRATIVOS, (payload) =>
+      this.gerarDemonstrativos.executar(pedidoDoPayload(payload)),
+    );
+    // O recálculo da fechada com motivo refaz o demonstrativo como versão nova.
+    this.recalculadores.registrar({
+      contexto: 'faturamento',
+      enfileirar: (executor, { recalculoId }) =>
+        enfileirarRecalculoDemonstrativo(executor, recalculoId),
+    });
     await this.cortes.garantirPadraoInicial();
   }
 }

@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { runMigrations } from 'graphile-worker';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -25,6 +26,7 @@ describe.skipIf(!url)('DrizzleParametrosDemonstrativoRepository', () => {
     pool = new Pool({ connectionString: url });
     db = drizzle({ client: pool, schema });
     await migrate(db, { migrationsFolder: resolve(__dirname, '../../../../drizzle') });
+    await runMigrations({ pgPool: pool });
     repo = new DrizzleParametrosDemonstrativoRepository(db);
   });
 

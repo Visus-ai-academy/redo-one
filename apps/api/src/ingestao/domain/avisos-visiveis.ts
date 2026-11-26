@@ -33,6 +33,10 @@ const PERMISSAO_DO_TIPO: Readonly<Record<TipoAviso, string>> = {
   // O preço de repasse entra pelo médico (os preços de repasse dele).
   repasse_sem_preco: 'repasse.ver',
   preco_repasse_repetido: 'repasse.ver',
+  // Os do demonstrativo se resolvem nos preços e na tipificação do cliente (faturamento).
+  laudo_sem_preco: 'faturamento.ver',
+  laudo_sem_tipificacao: 'faturamento.ver',
+  laudo_arranjo_incompleto: 'exames.ver',
 };
 
 const TIPOS = TIPOS_AVISO;

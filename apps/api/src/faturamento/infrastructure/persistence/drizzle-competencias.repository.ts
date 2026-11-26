@@ -25,6 +25,7 @@ import type {
   CompetenciasRepository,
   SituacaoCompetencia,
 } from '../../application/ports/competencias.repository';
+import { enfileirarFechamentoDemonstrativo } from '../jobs/enfileirar-demonstrativos';
 
 const fechou = alias(usuarios, 'fechou');
 const reabriu = alias(usuarios, 'reabriu');
@@ -118,6 +119,15 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
     return linha ?? null;
   }
 
+  async abertas(): Promise<string[]> {
+    const linhas = await this.db
+      .select({ competencia: competencias.competencia })
+      .from(competencias)
+      .where(eq(competencias.status, 'aberta'))
+      .orderBy(competencias.competencia);
+    return linhas.map((l) => l.competencia);
+  }
+
   async ultimaFechada(): Promise<string | null> {
     const [linha] = await this.db
       .select({ competencia: competencias.competencia })
@@ -143,17 +153,27 @@ export class DrizzleCompetenciasRepository implements CompetenciasRepository {
     return linhas.length > 0;
   }
 
+  /** Com a versão do fechamento do demonstrativo enfileirada na mesma transação. */
   fechar(
     competencia: string,
     { usuarioId, em }: Autor,
     motivoAvisos: string | null = null,
   ): Promise<boolean> {
-    return this.atualizar(competencia, eq(competencias.status, 'aberta'), {
-      status: 'fechada',
-      fechadaEm: em,
-      fechadaPorId: usuarioId,
-      fechadaPorLegado: null,
-      fechadaComAvisosMotivo: motivoAvisos,
+    return this.db.transaction(async (tx) => {
+      const fechou = await this.atualizar(
+        competencia,
+        eq(competencias.status, 'aberta'),
+        {
+          status: 'fechada',
+          fechadaEm: em,
+          fechadaPorId: usuarioId,
+          fechadaPorLegado: null,
+          fechadaComAvisosMotivo: motivoAvisos,
+        },
+        tx,
+      );
+      if (fechou) await enfileirarFechamentoDemonstrativo(tx, competencia);
+      return fechou;
     });
   }
 

@@ -1,15 +1,20 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
 import {
   ARMAZENAMENTO_ARQUIVOS,
   type ArmazenamentoArquivos,
 } from '../comum/armazenamento/armazenamento-arquivos';
+import { FilaJobs } from '../comum/jobs/fila-jobs';
 import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { ClienteMobileMed } from '../comum/mobilemed/cliente-mobilemed';
 import { TOKEN_MOBILEMED, type TokenMobileMed } from '../comum/mobilemed/token-mobilemed';
 import { FaturamentoModule } from '../faturamento/faturamento.module';
+import {
+  OPCOES_PREVIAS,
+  PEDIDO_PREVIAS,
+  TAREFA_GERAR_DEMONSTRATIVOS,
+} from '../faturamento/infrastructure/jobs/enfileirar-demonstrativos';
 import {
   ARQUIVOS_REPOSITORY,
   type ArquivosRepository,
@@ -365,13 +370,20 @@ export class IngestaoModule implements OnModuleInit {
     private readonly recalcularCompetencias: RecalcularCompetencias,
     private readonly reclassificarTipificacao: ReclassificarTipificacao,
     private readonly reresolverClientes: ReresolverClientes,
+    private readonly fila: FilaJobs,
   ) {}
+
+  /** Os laudos podem ter mudado: as prévias dos demonstrativos das abertas se refazem depois. */
+  private previasDemonstrativo() {
+    return this.fila.enfileirar(TAREFA_GERAR_DEMONSTRATIVOS, PEDIDO_PREVIAS, OPCOES_PREVIAS);
+  }
 
   onModuleInit() {
     this.registro.registrar(TAREFA_IMPORTAR_LAUDOS, async (payload) => {
       const id = (payload as { importacaoId?: unknown } | null)?.importacaoId;
       if (typeof id !== 'string') throw new Error(`${TAREFA_IMPORTAR_LAUDOS}: payload inválido`);
       await this.importarLaudos.executar(id);
+      await this.previasDemonstrativo();
     });
     this.registro.registrar(TAREFA_RECALCULAR_COMPETENCIAS, async (payload) => {
       const ids = (payload as { clienteIds?: unknown } | null)?.clienteIds;
@@ -379,6 +391,7 @@ export class IngestaoModule implements OnModuleInit {
         ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string'));
       if (!valido) throw new Error(`${TAREFA_RECALCULAR_COMPETENCIAS}: payload inválido`);
       await this.recalcularCompetencias.executar({ clienteIds: ids as string[] | null });
+      await this.previasDemonstrativo();
     });
     this.registro.registrar(TAREFA_RECLASSIFICAR_TIPIFICACAO, async (payload) => {
       const ids = (payload as { clienteIds?: unknown } | null)?.clienteIds;
@@ -386,9 +399,11 @@ export class IngestaoModule implements OnModuleInit {
         ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string'));
       if (!valido) throw new Error(`${TAREFA_RECLASSIFICAR_TIPIFICACAO}: payload inválido`);
       await this.reclassificarTipificacao.executar({ clienteIds: ids as string[] | null });
+      await this.previasDemonstrativo();
     });
     this.registro.registrar(TAREFA_RERESOLVER_CLIENTES, async () => {
       await this.reresolverClientes.executar();
+      await this.previasDemonstrativo();
     });
     this.registro.registrar(TAREFA_EXPURGAR_LINHAS_BRUTAS, async () => {
       await this.expurgarLinhasBrutas.executar();

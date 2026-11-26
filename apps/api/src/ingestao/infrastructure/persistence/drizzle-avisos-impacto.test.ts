@@ -191,11 +191,21 @@ describe.skipIf(!url)('avisos com impacto (Drizzle)', () => {
         'preco_repetido',
         'catalogo_criado_carga',
         'cliente_inativo',
+        'repasse_sem_preco',
+        'preco_repasse_repetido',
+        'laudo_sem_preco',
+        'laudo_sem_tipificacao',
+        'laudo_arranjo_incompleto',
       ]);
       expect(tipos.filter((t) => t.impedeFecharCompetencia).map((t) => t.tipo)).toEqual([
         'cliente',
         'estudo',
         'preco_repetido',
+        'repasse_sem_preco',
+        'preco_repasse_repetido',
+        'laudo_sem_preco',
+        'laudo_sem_tipificacao',
+        'laudo_arranjo_incompleto',
       ]);
       expect(tipos.every((t) => t.responsaveis.length === 0)).toBe(true);
     });

@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { ComumModule } from '../comum/comum.module';
 import { DatabaseModule } from '../database/database.module';
 import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competencias-bloqueadas';
 import { CORTES_COMPETENCIA } from '../ingestao/application/ports/cortes-competencia';
@@ -24,6 +25,7 @@ describe('FaturamentoModule', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [() => ({})] }),
         DatabaseModule,
+        ComumModule,
         AuditoriaModule,
         AvisosCompartilhadosModule,
         FaturamentoModule,

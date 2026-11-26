@@ -11,6 +11,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { ComumModule } from '../comum/comum.module';
 import { PG_POOL } from '../database/database';
 import { DatabaseModule } from '../database/database.module';
 import * as schema from '../database/schema';
@@ -44,6 +45,7 @@ describe.skipIf(!url)('permissões das rotas do faturamento (HTTP real)', () => 
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         DatabaseModule,
+        ComumModule,
         AuditoriaModule,
         AvisosCompartilhadosModule,
         IdentidadeModule,

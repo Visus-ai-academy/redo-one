@@ -43,6 +43,8 @@ export interface CompetenciasRepository extends CompetenciasBloqueadas {
   listarPagina(paginacao: Paginacao): Promise<Pagina<CompetenciaResumo>>;
   /** Nulo se a competência não tem linha. */
   obter(competencia: string): Promise<SituacaoCompetencia | null>;
+  /** As abertas (com linha), da mais antiga para a mais nova. */
+  abertas(): Promise<string[]>;
   /** A mais recente com status fechada; nulo se nenhuma. */
   ultimaFechada(): Promise<string | null>;
   /**

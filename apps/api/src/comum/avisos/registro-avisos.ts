@@ -27,6 +27,12 @@ export const TIPOS_AVISO = [
   'repasse_sem_preco',
   /** Mesmo médico, arranjo e cliente com preços de repasse diferentes no dashboards-one; vale o mais recente. */
   'preco_repasse_repetido',
+  /** Laudo que fatura sem preço em nenhuma tabela, visto pelo demonstrativo da competência. */
+  'laudo_sem_preco',
+  /** Laudo ainda sem tipificação, visto pelo demonstrativo: fica fora do valor. */
+  'laudo_sem_tipificacao',
+  /** Laudo sem modalidade, especialidade, categoria ou prioridade (e sem padrão), visto pelo demonstrativo. */
+  'laudo_arranjo_incompleto',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 

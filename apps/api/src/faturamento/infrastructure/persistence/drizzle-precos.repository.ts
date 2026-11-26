@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-
 import { REGISTRO_AVISOS, type RegistroAvisos } from '../../../comum/avisos/registro-avisos';
 import { DATABASE, type Database } from '../../../database/database';
 import {
@@ -35,6 +34,7 @@ import {
   VigenciaPrecoInvalidaError,
 } from '../../domain/versoes-preco';
 import { mesAno } from '../../domain/vigencia-corte';
+import { enfileirarPreviasDemonstrativo } from '../jobs/enfileirar-demonstrativos';
 
 const tabela = (dono: Dono) => (dono.tipo === 'cliente' ? precosCliente : precosPadraoContratado);
 const colunaDono = (dono: Dono) =>
@@ -208,6 +208,9 @@ export class DrizzlePrecosRepository implements PrecosRepository {
           limit 1`);
         if (cruzadas.rows.length) throw new VersaoConflitanteError();
       }
+
+      // O preço mudou: as prévias das abertas se refazem.
+      await enfileirarPreviasDemonstrativo(tx);
 
       // A versão em que se mexeu foi conferida por alguém: o aviso de preço repetido dela some.
       const mexidas = mudancas.filter((m) => m.tipo !== 'criar').map((m) => m.id);

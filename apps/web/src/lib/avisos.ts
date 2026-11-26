@@ -26,6 +26,9 @@ const TIPOS: Record<TipoAvisoKey, string> = {
   cliente_inativo: 'Cliente inativo',
   repasse_sem_preco: 'Sem preço de repasse',
   preco_repasse_repetido: 'Preço de repasse repetido',
+  laudo_sem_preco: 'Laudo sem preço',
+  laudo_sem_tipificacao: 'Laudo sem tipificação',
+  laudo_arranjo_incompleto: 'Laudo com arranjo incompleto',
 };
 
 export const tipoDoAviso = (tipo: TipoAvisoKey) => TIPOS[tipo];
@@ -76,6 +79,20 @@ export function ondeProcurar({
         search: { contratado: daEntidade('contratado') },
       };
     }
+    case 'laudo_sem_preco':
+      return {
+        rotulo: 'Abrir os preços do cliente',
+        to: '/clientes' as const,
+        search: { id: daEntidade('cliente'), aba: 'precos' as const },
+      };
+    case 'laudo_sem_tipificacao':
+      return {
+        rotulo: 'Abrir o cliente',
+        to: '/clientes' as const,
+        search: { id: daEntidade('cliente') },
+      };
+    case 'laudo_arranjo_incompleto':
+      return { rotulo: 'Procurar em Exames', to: '/exames' as const, search: {} };
     case 'catalogo_criado_carga': {
       const aba = daEntidade('prioridade') ? 'prioridades' : 'categorias';
       return {
@@ -240,6 +257,11 @@ const SIGNIFICADO: Record<TipoAvisoKey, string> = {
     'Laudos de um médico num arranjo sem preço de repasse: são pagos a zero até o preço existir.',
   preco_repasse_repetido:
     'Preço de repasse repetido no dashboards-one com valores diferentes (mesmo médico, arranjo e cliente).',
+  laudo_sem_preco:
+    'Laudo que fatura sem preço na tabela da unidade, do cliente nem na tabela padrão do contratado.',
+  laudo_sem_tipificacao: 'Laudo ainda sem tipificação: fica fora do valor do demonstrativo.',
+  laudo_arranjo_incompleto:
+    'Laudo sem modalidade, especialidade, categoria ou prioridade: fica fora do valor do demonstrativo.',
 };
 
 export const significadoDoTipo = (tipo: TipoAvisoKey) => SIGNIFICADO[tipo];

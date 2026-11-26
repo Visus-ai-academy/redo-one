@@ -62,12 +62,24 @@ describe('ListarAvisos', () => {
       pagina: 1,
       porPagina: 25,
       status: 'pendente',
-      tipos: ['cliente', 'estudo', 'cliente_ambiguo', 'cliente_inativo'],
+      tipos: [
+        'cliente',
+        'estudo',
+        'cliente_ambiguo',
+        'cliente_inativo',
+        'laudo_arranjo_incompleto',
+      ],
     });
     expect(r).toEqual({
       itens: [],
       total: 0,
-      tipos: ['cliente', 'estudo', 'cliente_ambiguo', 'cliente_inativo'],
+      tipos: [
+        'cliente',
+        'estudo',
+        'cliente_ambiguo',
+        'cliente_inativo',
+        'laudo_arranjo_incompleto',
+      ],
     });
   });
 

@@ -24,6 +24,9 @@ describe('tiposDeAvisoVisiveis', () => {
       'cliente_inativo',
       'repasse_sem_preco',
       'preco_repasse_repetido',
+      'laudo_sem_preco',
+      'laudo_sem_tipificacao',
+      'laudo_arranjo_incompleto',
     ]);
   });
 
@@ -46,9 +49,16 @@ describe('tiposDeAvisoVisiveis', () => {
       'cliente_inativo',
     ]);
     // O preço se resolve na aba Preços do cliente (ou na tabela padrão do contratado).
-    expect(tiposDeAvisoVisiveis(acesso('faturamento.ver'))).toEqual(['preco_repetido']);
+    expect(tiposDeAvisoVisiveis(acesso('faturamento.ver'))).toEqual([
+      'preco_repetido',
+      'laudo_sem_preco',
+      'laudo_sem_tipificacao',
+    ]);
     expect(tiposDeAvisoVisiveis(acesso('medicos.ver'))).toEqual(['medico', 'conta_unidade']);
-    expect(tiposDeAvisoVisiveis(acesso('exames.ver'))).toEqual(['estudo']);
+    expect(tiposDeAvisoVisiveis(acesso('exames.ver'))).toEqual([
+      'estudo',
+      'laudo_arranjo_incompleto',
+    ]);
     expect(tiposDeAvisoVisiveis(acesso('catalogo.ver'))).toEqual([
       'modalidade',
       'especialidade',
@@ -66,6 +76,7 @@ describe('tiposDeAvisoVisiveis', () => {
       'estudo',
       'cliente_ambiguo',
       'cliente_inativo',
+      'laudo_arranjo_incompleto',
     ]);
   });
 });
