@@ -9,13 +9,15 @@
 // que vieram do dashboards-one e foram apagadas lá; as ausências apagadas lá são recusadas (tudo
 // listado antes de gravar). Roda com
 // JOBS_WORKER=false: este processo não pega jobs da fila. A tipificação traduz valores crus do
-// dashboards-one (COLUNAS) pela especialidade que a importação deu aos laudos: rode a carga
-// depois de a importação ter trazido laudos.
+// dashboards-one (COLUNAS) pela especialidade que a importação deu aos laudos do redo-one; o valor
+// que eles ainda não têm (banco vazio) sai dos estudos dos laudos de lá, classificados pelo
+// catálogo da carga como a importação faria.
 import { parseArgs } from 'node:util';
 
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../app.module';
+import { normalizarNome } from '../catalogo/comum/nomes';
 import { DATABASE, type Database } from '../database/database';
 import {
   categoriasExame as tabCategorias,
@@ -27,13 +29,19 @@ import {
 } from '../database/schema';
 import type { Aviso } from '../migracao-legado/comum';
 import {
+  completarEspecialidadesDosLaudos,
+  especialidadesDaTipificacao,
+  especialidadesPelosEstudos,
+  retratoDoCatalogoMigrado,
+} from '../migracao-legado/especialidades-dos-estudos';
+import {
   alocacoesSumidasDoLegado,
   ausenciasSumidasDoLegado,
   gravarMigracao,
   precosComHistoriaNoRedo,
   tipificacaoComHistoriaNoRedo,
 } from '../migracao-legado/gravar';
-import { lerLegado } from '../migracao-legado/ler-legado';
+import { lerEstudosDoLegado, lerLegado } from '../migracao-legado/ler-legado';
 import { mapearCatalogo } from '../migracao-legado/mapear-catalogo';
 import { mapearCompetencias } from '../migracao-legado/mapear-competencias';
 import {
@@ -136,8 +144,9 @@ async function migrarLegado() {
     );
 
     // A tipificação casa o valor cru do dashboards-one (COLUNAS) com a especialidade que a
-    // importação do redo-one deu aos laudos com esse valor.
-    const especialidadesDosLaudos = (
+    // importação do redo-one deu aos laudos com esse valor; sem laudos com ele no redo-one, com a
+    // que ela daria aos estudos dos laudos do dashboards-one.
+    const especialidadesDoRedo = (
       await db
         .selectDistinct({
           origem: tabLaudos.especialidadeOrigem,
@@ -148,6 +157,22 @@ async function migrarLegado() {
       l.origem && l.especialidadeId
         ? [{ origem: l.origem, especialidadeId: l.especialidadeId }]
         : [],
+    );
+    const retrato = retratoDoCatalogoMigrado(catalogo.tabelas);
+    // Só os valores que não são especialidade nem de-para do catálogo (COLUNAS) precisam dos laudos.
+    const valoresCrus = especialidadesDaTipificacao(legado.tipificacao).filter(
+      (v) => !retrato.especialidades.has(normalizarNome(v)),
+    );
+    const doLegado = especialidadesPelosEstudos(
+      await lerEstudosDoLegado(url, valoresCrus),
+      retrato,
+    );
+    const especialidadesDosLaudos = completarEspecialidadesDosLaudos(
+      especialidadesDoRedo,
+      doLegado.especialidades,
+    );
+    const usadasDoLegado = new Set(
+      especialidadesDosLaudos.slice(especialidadesDoRedo.length).map((e) => e.origem),
     );
     const tipificacao = mapearTipificacao(
       legado.tipificacao,
@@ -267,6 +292,22 @@ async function migrarLegado() {
     console.log(
       `\nTipificação: ${tipificacao.unidadesComCoExplicita} unidade(s) sem configuração no dashboards-one ganharam a regra padrão explícita.`,
     );
+    const nomeEspecialidade = new Map(
+      catalogo.tabelas.especialidades.map((e) => [e.id as string, e.nome]),
+    );
+    console.log(
+      `\nTipificação: valores crus sem laudo no redo-one, pela maioria dos laudos do dashboards-one (${usadasDoLegado.size}):`,
+    );
+    for (const e of especialidadesDosLaudos.slice(especialidadesDoRedo.length))
+      console.log(
+        `  ${e.origem} → ${nomeEspecialidade.get(e.especialidadeId) ?? e.especialidadeId}`,
+      );
+    for (const d of doLegado.descartadas.filter(
+      (x) => !especialidadesDoRedo.some((r) => r.origem === x.origem),
+    ))
+      console.log(
+        `    descartada: ${d.origem} → ${nomeEspecialidade.get(d.especialidadeId) ?? d.especialidadeId} (${d.laudos} laudo(s)${d.maioria === null ? ', empate: nenhuma vale' : ` contra ${d.maioria}`})`,
+      );
     if (tipificacao.erros.length) {
       console.log(`\nTipificação: ${tipificacao.erros.length} erro(s) que impedem gravar.`);
       for (const e of tipificacao.erros) console.log(`  - ${e}`);

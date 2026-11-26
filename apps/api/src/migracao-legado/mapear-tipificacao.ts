@@ -496,7 +496,7 @@ export function mapearTipificacao(
         if (id) valores.add(id);
         else {
           cfg.erros.push(
-            `${item}: ${tipo} "${v}" não existe no redo-one.${tipo === 'especialidade' ? ' Se é um valor cru da MobileMed (COLUNAS), importe os laudos antes da carga.' : ''}`,
+            `${item}: ${tipo} "${v}" não existe no redo-one.${tipo === 'especialidade' ? ' Se é um valor cru da MobileMed (COLUNAS), nem os laudos do redo-one nem os estudos dos laudos do dashboards-one dão uma especialidade só.' : ''}`,
           );
           falhou = true;
         }

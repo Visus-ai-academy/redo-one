@@ -683,7 +683,7 @@ describe('mapearTipificacao', () => {
       'Empresa "NAO_EXISTE" não casa com nenhum cliente do redo-one.',
       'CBU, linha 1: grupo "Neurologistas" não existe como equipe no redo-one.',
       'CBU, linha 1: médico "fulano de tal" não tem cadastro no redo-one.',
-      'CBU, linha 2: especialidade "ODONTO" não existe no redo-one. Se é um valor cru da MobileMed (COLUNAS), importe os laudos antes da carga.',
+      'CBU, linha 2: especialidade "ODONTO" não existe no redo-one. Se é um valor cru da MobileMed (COLUNAS), nem os laudos do redo-one nem os estudos dos laudos do dashboards-one dão uma especialidade só.',
     ]);
   });
 });

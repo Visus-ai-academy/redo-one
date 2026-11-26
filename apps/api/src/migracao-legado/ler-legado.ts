@@ -1,5 +1,6 @@
 import { Client } from 'pg';
 
+import type { EstudoDoLegado } from './especialidades-dos-estudos';
 import type {
   LegadoCatalogo,
   LegadoCompetencia,
@@ -263,6 +264,40 @@ export async function lerLegado(url: string): Promise<{
       competencias,
       dadosFiscais,
     };
+  } catch (erro) {
+    await cliente.query('ROLLBACK').catch(() => undefined);
+    throw erro;
+  } finally {
+    await cliente.end();
+  }
+}
+
+/**
+ * Os estudos (com quantos laudos cada) dos laudos do dashboards-one com essas especialidades cruas, SÓ PARA
+ * LEITURA: com eles a carga sabe que especialidade a importação do redo-one daria a um valor cru
+ * da MobileMed (COLUNAS) quando o redo-one ainda não tem laudos com ele.
+ */
+export async function lerEstudosDoLegado(
+  url: string,
+  especialidades: string[],
+): Promise<(EstudoDoLegado & { laudos: number })[]> {
+  if (!especialidades.length) return [];
+  const cliente = new Client({
+    connectionString: url,
+    application_name: 'redo-one-migracao-leitura',
+  });
+  await cliente.connect();
+  try {
+    await cliente.query('BEGIN TRANSACTION READ ONLY');
+    await cliente.query("SET LOCAL statement_timeout = '120s'");
+    const { rows } = await cliente.query<EstudoDoLegado & { laudos: number }>(
+      `select "estudoDescricao" as estudo, modalidade, especialidade, count(*)::int as laudos
+        from laudos where upper(trim(especialidade)) = any($1::text[])
+        group by 1, 2, 3 order by 3, 1, 2`,
+      [especialidades.map((e) => e.trim().toUpperCase())],
+    );
+    await cliente.query('COMMIT');
+    return rows;
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;
