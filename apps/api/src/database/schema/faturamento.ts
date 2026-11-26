@@ -715,7 +715,8 @@ export const demonstrativosFaturamentoItens = pgTable(
     unitarioCentavos: bigint('unitario_centavos', { mode: 'number' }),
     /** A versão de preço usada (de `precos_cliente` ou `precos_padrao_contratado`). */
     linhaPrecoId: uuid('linha_preco_id'),
-    origemPreco: text('origem_preco', { enum: ['unidade', 'principal', 'padrao'] }),
+    /** `ajuste`: valor forçado por ajuste manual do laudo. */
+    origemPreco: text('origem_preco', { enum: ['unidade', 'principal', 'padrao', 'ajuste'] }),
     comoAchou: text('como_achou', { enum: ['exato', 'prioridade_alternativa', 'menor_faixa'] }),
     quantidade: numeric('quantidade', { precision: 14, scale: 2, mode: 'number' }).notNull(),
     valorCentavos: bigint('valor_centavos', { mode: 'number' }).notNull(),
@@ -843,6 +844,48 @@ export const reclassificacoesFaturamentoRecortes = pgTable(
     check(
       'reclassificacoes_faturamento_recortes_uma_check',
       sql`num_nonnulls(${t.modalidadeId}, ${t.especialidadeId}, ${t.categoriaId}, ${t.equipeId}) = 1`,
+    ),
+  ],
+);
+
+/**
+ * Ajuste manual do faturamento de um laudo, pela chave natural (sobrevive à reimportação): valor
+ * unitário forçado ou excluir, sempre com motivo, quem fez e quando. Nada se apaga: tirar ou trocar
+ * o ajuste o encerra (com motivo) e fica no histórico. Na competência fechada, entra no
+ * demonstrativo pelo recálculo com motivo.
+ */
+export const ajustesLaudoFaturamento = pgTable(
+  'ajustes_laudo_faturamento',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** `laudos.identidade`. */
+    laudoIdentidade: text('laudo_identidade').notNull(),
+    competencia: text('competencia').notNull(),
+    clienteId: uuid('cliente_id').references(() => clientes.id),
+    tipo: text('tipo', { enum: ['valor', 'excluir'] }).notNull(),
+    /** Só no tipo `valor`. */
+    valorUnitarioCentavos: bigint('valor_unitario_centavos', { mode: 'number' }),
+    motivo: text('motivo').notNull(),
+    criadoEm: quando('criado_em').notNull(),
+    criadoPorId: quem('criado_por_id').notNull(),
+    encerradoEm: quando('encerrado_em'),
+    encerradoPorId: quem('encerrado_por_id'),
+    motivoEncerramento: text('motivo_encerramento'),
+  },
+  (t) => [
+    uniqueIndex('ajustes_laudo_faturamento_vigente_key')
+      .on(t.laudoIdentidade)
+      .where(sql`${t.encerradoEm} is null`),
+    index('ajustes_laudo_faturamento_competencia_idx').on(t.competencia),
+    check('ajustes_laudo_faturamento_tipo_check', sql`${t.tipo} in ('valor', 'excluir')`),
+    check(
+      'ajustes_laudo_faturamento_valor_check',
+      sql`(${t.tipo} = 'valor') = (${t.valorUnitarioCentavos} is not null) and coalesce(${t.valorUnitarioCentavos}, 0) >= 0`,
+    ),
+    check('ajustes_laudo_faturamento_motivo_check', sql`btrim(${t.motivo}) <> ''`),
+    check(
+      'ajustes_laudo_faturamento_encerramento_check',
+      sql`(${t.encerradoEm} is null) = (${t.encerradoPorId} is null) and (${t.encerradoEm} is null or btrim(coalesce(${t.motivoEncerramento}, '')) <> '')`,
     ),
   ],
 );

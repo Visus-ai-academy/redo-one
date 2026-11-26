@@ -3,6 +3,7 @@ import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../../database/database';
 import {
+  ajustesLaudoFaturamento,
   categoriasExame,
   classificacoesLaudo,
   clientes,
@@ -23,6 +24,7 @@ import type {
   NomesDemonstrativo,
 } from '../../application/ports/entradas-demonstrativo';
 import type {
+  AjusteDoLaudo,
   EntradaDemonstrativo,
   LaudoDoDemonstrativo,
   PecaDoDemonstrativo,
@@ -85,6 +87,7 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
       pris,
       reclassificacoes,
       membros,
+      ajustes,
     ] = await Promise.all([
       this.db
         .select({
@@ -140,6 +143,15 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
       this.db
         .select({ medicoId: equipesMembros.medicoId, equipeId: equipesMembros.equipeId })
         .from(equipesMembros),
+      this.db
+        .select({
+          laudoId: laudos.id,
+          tipo: ajustesLaudoFaturamento.tipo,
+          valor: ajustesLaudoFaturamento.valorUnitarioCentavos,
+        })
+        .from(ajustesLaudoFaturamento)
+        .innerJoin(laudos, eq(laudos.identidade, ajustesLaudoFaturamento.laudoIdentidade))
+        .where(and(onde, isNull(ajustesLaudoFaturamento.encerradoEm))),
     ]);
     const equipesDoMedico = new Map<string, Set<string>>();
     for (const m of membros)
@@ -187,6 +199,14 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
       alternativas: alternativasEm(alternativas, competencia),
       reclassificacoes: reclassificacoesEm(reclassificacoes, competencia),
       equipesDoMedico,
+      ajustes: new Map(
+        ajustes.map((a): [string, AjusteDoLaudo] => [
+          a.laudoId,
+          a.tipo === 'valor'
+            ? { tipo: 'valor', unitarioCentavos: a.valor ?? 0 }
+            : { tipo: 'excluir' },
+        ]),
+      ),
     };
     const mapa = (ls: { id: string; nome: string }[]) => new Map(ls.map((x) => [x.id, x.nome]));
     const nomes: NomesDemonstrativo = {

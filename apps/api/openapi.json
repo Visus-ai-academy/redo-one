@@ -8612,6 +8612,112 @@
         ]
       }
     },
+    "/faturamento/ajustes-laudo": {
+      "get": {
+        "operationId": "AjustesLaudoController_listar",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vigentes e encerrados, o mais novo primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AjusteLaudoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      },
+      "post": {
+        "operationId": "AjustesLaudoController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarAjusteLaudoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Troca o vigente do laudo (encerrado, no histórico). Na competência fechada, vale pelo recálculo com motivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sem motivo ou valor inválido."
+          },
+          "404": {
+            "description": "Laudo não encontrado."
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
+    "/faturamento/ajustes-laudo/{id}/encerrar": {
+      "post": {
+        "operationId": "AjustesLaudoController_encerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncerrarAjusteLaudoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "O laudo volta à tabela de preços; o ajuste fica no histórico."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "faturamento"
+        ]
+      }
+    },
     "/repasse/competencias/{competencia}/recalcular": {
       "post": {
         "operationId": "RepasseController_recalcular",
@@ -20093,6 +20199,156 @@
         },
         "required": [
           "aPartirDe"
+        ]
+      },
+      "TipoAjusteLaudo": {
+        "type": "string",
+        "enum": [
+          "valor",
+          "excluir"
+        ]
+      },
+      "AjusteLaudoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "laudoIdentidade": {
+            "type": "string"
+          },
+          "laudoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAjusteLaudo"
+              }
+            ]
+          },
+          "valorUnitarioCentavos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "criadoPorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "encerradoPorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "motivoEncerramento": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "laudoIdentidade",
+          "laudoId",
+          "competencia",
+          "clienteId",
+          "tipo",
+          "valorUnitarioCentavos",
+          "motivo",
+          "criadoEm",
+          "criadoPorId",
+          "criadoPor",
+          "encerradoEm",
+          "encerradoPorId",
+          "encerradoPor",
+          "motivoEncerramento"
+        ]
+      },
+      "CriarAjusteLaudoDto": {
+        "type": "object",
+        "properties": {
+          "laudoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoAjusteLaudo"
+              }
+            ]
+          },
+          "valorUnitarioCentavos": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Só no tipo valor: o unitário cobrado pelo laudo, em centavos."
+          },
+          "motivo": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Obrigatório: fica no histórico."
+          }
+        },
+        "required": [
+          "laudoId",
+          "tipo",
+          "valorUnitarioCentavos",
+          "motivo"
+        ]
+      },
+      "AjusteCriadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "EncerrarAjusteLaudoDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "motivo"
         ]
       },
       "MotivoDto": {

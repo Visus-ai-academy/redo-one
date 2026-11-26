@@ -54,6 +54,7 @@ const entrada = (over: Partial<EntradaDemonstrativo> = {}): EntradaDemonstrativo
   alternativas: new Map(),
   reclassificacoes: [],
   equipesDoMedico: new Map(),
+  ajustes: new Map(),
   ...over,
 });
 
@@ -297,5 +298,27 @@ describe('montar os demonstrativos da competência', () => {
       ['MSK', 'COLUNAS', 5000],
       ['NEURO', 'SC', 6350],
     ]);
+  });
+
+  it('ajuste manual: o valor forçado vence a tabela; excluir tira o laudo (e da faixa)', () => {
+    const forcado = laudo({ id: 'forcado', volume: 2 });
+    const fora = laudo({ id: 'fora' });
+    const r = montarDemonstrativos(
+      entrada({
+        laudos: [forcado, fora, laudo({ id: 'normal' })],
+        ajustes: new Map([
+          ['forcado', { tipo: 'valor' as const, unitarioCentavos: 1000 }],
+          ['fora', { tipo: 'excluir' as const }],
+        ]),
+      }),
+    );
+    expect(r.excluidos.ajuste).toBe(1);
+    expect(
+      r.demonstrativos[0]?.itens.map((i) => [i.origem, i.unitarioCentavos, i.quantidade]),
+    ).toEqual([
+      ['ajuste', 1000, 2],
+      ['principal', 6350, 1],
+    ]);
+    expect(r.demonstrativos[0]?.valorCentavos).toBe(6350 + 2000);
   });
 });

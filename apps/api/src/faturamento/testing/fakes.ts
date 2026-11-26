@@ -7,6 +7,12 @@ import {
   type VigenciaCorte,
 } from '../../ingestao/domain/competencia';
 import type {
+  AjusteLaudo,
+  AjustesLaudoRepository,
+  LaudoDoAjuste,
+  NovoAjusteLaudo,
+} from '../application/ports/ajustes-laudo.repository';
+import type {
   Autor,
   CompetenciaResumo,
   CompetenciasRepository,
@@ -784,5 +790,67 @@ export class ReclassificacoesEmMemoria implements ReclassificacoesRepository {
     if (!r || (r.vigenciaAte !== null && r.vigenciaAte <= ate)) return false;
     r.vigenciaAte = ate;
     return true;
+  }
+}
+
+export class AjustesLaudoEmMemoria implements AjustesLaudoRepository {
+  readonly laudos = new Map<string, LaudoDoAjuste>();
+  readonly ajustes: AjusteLaudo[] = [];
+  private proximo = 1;
+
+  async obterLaudo(id: string) {
+    return this.laudos.get(id) ?? null;
+  }
+
+  async vigente(identidade: string) {
+    return this.ajustes.find((a) => a.laudoIdentidade === identidade && !a.encerradoEm) ?? null;
+  }
+
+  async obter(id: string) {
+    return this.ajustes.find((a) => a.id === id) ?? null;
+  }
+
+  async criar(novo: NovoAjusteLaudo, autor: Autor, motivoTroca: string | null) {
+    const atual = await this.vigente(novo.laudo.identidade);
+    if (atual && motivoTroca)
+      Object.assign(atual, {
+        encerradoEm: autor.em,
+        encerradoPorId: autor.usuarioId,
+        motivoEncerramento: motivoTroca,
+      });
+    const id = `ajuste-${this.proximo++}`;
+    this.ajustes.push({
+      id,
+      laudoIdentidade: novo.laudo.identidade,
+      laudoId: novo.laudo.id,
+      competencia: novo.laudo.competencia,
+      clienteId: novo.laudo.clienteId,
+      tipo: novo.tipo,
+      valorUnitarioCentavos: novo.valorUnitarioCentavos,
+      motivo: novo.motivo,
+      criadoEm: autor.em,
+      criadoPorId: autor.usuarioId,
+      criadoPor: null,
+      encerradoEm: null,
+      encerradoPorId: null,
+      encerradoPor: null,
+      motivoEncerramento: null,
+    });
+    return id;
+  }
+
+  async encerrar(id: string, motivo: string, autor: Autor) {
+    const a = this.ajustes.find((x) => x.id === id && !x.encerradoEm);
+    if (!a) return false;
+    Object.assign(a, {
+      encerradoEm: autor.em,
+      encerradoPorId: autor.usuarioId,
+      motivoEncerramento: motivo,
+    });
+    return true;
+  }
+
+  async listar(competencia: string) {
+    return this.ajustes.filter((a) => a.competencia === competencia).reverse();
   }
 }

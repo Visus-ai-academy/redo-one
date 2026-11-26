@@ -354,6 +354,13 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         sensivel: true,
       },
       {
+        chave: 'faturamento.ajuste_laudo.editar',
+        rotulo: 'Ajustar laudo no faturamento',
+        descricao:
+          'Forçar o valor de um laudo ou tirá-lo do faturamento, com motivo; na competência fechada, vale pelo recálculo.',
+        sensivel: true,
+      },
+      {
         chave: 'faturamento.competencia.travar',
         rotulo: 'Travar importação',
         descricao: 'Travar e destravar a importação dos laudos de uma competência.',

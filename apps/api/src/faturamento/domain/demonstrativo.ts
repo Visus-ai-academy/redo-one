@@ -64,7 +64,12 @@ export interface EntradaDemonstrativo {
   reclassificacoes: readonly ReclassificacaoFaturamento[];
   /** Médico → equipes dele (o recorte de médicos da reclassificação). */
   equipesDoMedico: ReadonlyMap<string, ReadonlySet<string>>;
+  /** Ajuste manual vigente de cada laudo (pelo id): valor forçado ou excluir. */
+  ajustes: ReadonlyMap<string, AjusteDoLaudo>;
 }
+
+/** Ajuste manual do laudo, com motivo: o valor forçado vence a tabela; excluir tira o laudo. */
+export type AjusteDoLaudo = { tipo: 'valor'; unitarioCentavos: number } | { tipo: 'excluir' };
 
 export interface ItemDemonstrativo extends Arranjo {
   /** A unidade de origem ou o próprio principal. */
@@ -73,7 +78,8 @@ export interface ItemDemonstrativo extends Arranjo {
   /** Nulo = sem preço em nenhuma tabela. */
   unitarioCentavos: number | null;
   linhaPrecoId: string | null;
-  origem: OrigemPreco | null;
+  /** `ajuste`: valor forçado no laudo por ajuste manual (com motivo). */
+  origem: OrigemPreco | 'ajuste' | null;
   como: ComoAchou | null;
   quantidade: number;
   valorCentavos: number;
@@ -107,7 +113,7 @@ export interface ResultadoDemonstrativos {
   semTipificacao: { clienteId: string; laudoId: string }[];
   arranjoIncompleto: { clienteId: string; laudoId: string }[];
   /** Laudos que nem entram no demonstrativo, por motivo. */
-  excluidos: { naoAssinado: number; duplicado: number; clienteInativo: number };
+  excluidos: { naoAssinado: number; duplicado: number; clienteInativo: number; ajuste: number };
 }
 
 interface Parcela {
@@ -116,6 +122,8 @@ interface Parcela {
   arranjo: Arranjo;
   quantidade: number;
   dia: string;
+  /** Unitário forçado por ajuste manual do laudo, em centavos. */
+  forcado: number | null;
 }
 
 const chaveArranjo = (a: Arranjo) =>
@@ -143,13 +151,14 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     semPreco: [],
     semTipificacao: [],
     arranjoIncompleto: [],
-    excluidos: { naoAssinado: 0, duplicado: 0, clienteInativo: 0 },
+    excluidos: { naoAssinado: 0, duplicado: 0, clienteInativo: 0, ajuste: 0 },
   };
   const ativo = (id: string | null) => id === null || e.clientes.get(id)?.ativo !== false;
 
   const entram: LaudoDoDemonstrativo[] = [];
   for (const l of e.laudos) {
-    if (!l.assinado) r.excluidos.naoAssinado++;
+    if (e.ajustes.get(l.id)?.tipo === 'excluir') r.excluidos.ajuste++;
+    else if (!l.assinado) r.excluidos.naoAssinado++;
     else if (l.duplicado && !p.cobraDuplicados) r.excluidos.duplicado++;
     else if (!p.cobraClientesInativos && !(ativo(l.clienteId) && ativo(l.unidadeId)))
       r.excluidos.clienteInativo++;
@@ -208,6 +217,10 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     };
   };
 
+  const forcado = (laudoId: string) => {
+    const a = e.ajustes.get(laudoId);
+    return a?.tipo === 'valor' ? a.unitarioCentavos : null;
+  };
   const porCliente = new Map<string, Parcela[]>();
   const clientesVistos = new Set<string>();
   for (const l of entram) {
@@ -250,6 +263,7 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
         arranjo: a.arranjo as Arranjo,
         quantidade: a.quantidade,
         dia: l.diaLaudo,
+        forcado: forcado(l.id),
       });
     }
     porCliente.set(l.clienteId, lista);
@@ -262,8 +276,8 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     const precos = new Map<string, ReturnType<typeof buscarPreco>>();
     for (const pc of porCliente.get(clienteId) ?? []) {
       const kPreco = `${pc.membroId}|${chaveArranjo(pc.arranjo)}`;
-      let achado = precos.get(kPreco);
-      if (!achado) {
+      let achado = pc.forcado === null ? precos.get(kPreco) : undefined;
+      if (pc.forcado === null && !achado) {
         const volume = volumes.get(pc.membroId) as ReturnType<typeof volumeDaFaixa>;
         const unidade = pc.membroId !== clienteId;
         achado = buscarPreco({
@@ -284,16 +298,17 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
         });
         precos.set(kPreco, achado);
       }
-      const unitario = achado.encontrado ? centavos(achado.valor) : null;
-      const k = `${kPreco}|${pc.dia}|${unitario}`;
+      const tabela = achado?.encontrado ? achado : null;
+      const unitario = pc.forcado ?? (tabela ? centavos(tabela.valor) : null);
+      const k = `${kPreco}|${pc.dia}|${unitario}|${pc.forcado === null ? 'tabela' : 'ajuste'}`;
       const item = itens.get(k) ?? {
         ...pc.arranjo,
         membroId: pc.membroId,
         dia: pc.dia,
         unitarioCentavos: unitario,
-        linhaPrecoId: achado.encontrado ? achado.linhaId : null,
-        origem: achado.encontrado ? achado.origem : null,
-        como: achado.encontrado ? achado.como : null,
+        linhaPrecoId: tabela?.linhaId ?? null,
+        origem: pc.forcado !== null ? ('ajuste' as const) : (tabela?.origem ?? null),
+        como: tabela?.como ?? null,
         quantidade: 0,
         valorCentavos: 0,
         laudos: 0,

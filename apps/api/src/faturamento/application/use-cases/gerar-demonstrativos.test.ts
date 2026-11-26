@@ -74,6 +74,7 @@ const entrada = (competencia: string): EntradaDemonstrativo => ({
   alternativas: new Map(),
   reclassificacoes: [],
   equipesDoMedico: new Map(),
+  ajustes: new Map(),
 });
 
 describe('gerar os demonstrativos', () => {

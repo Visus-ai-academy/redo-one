@@ -6,6 +6,10 @@ import { COMPETENCIAS_BLOQUEADAS } from '../ingestao/application/ports/competenc
 import { CORTES_COMPETENCIA } from '../ingestao/application/ports/cortes-competencia';
 import { TIPIFICACAO_LAUDOS } from '../ingestao/application/ports/tipificacao-laudos';
 import {
+  AJUSTES_LAUDO_REPOSITORY,
+  type AjustesLaudoRepository,
+} from './application/ports/ajustes-laudo.repository';
+import {
   AVISOS_DO_DEMONSTRATIVO,
   type AvisosDoDemonstrativo,
 } from './application/ports/avisos-do-demonstrativo';
@@ -54,6 +58,11 @@ import {
   type TipificacaoRepository,
 } from './application/ports/tipificacao.repository';
 import { RegistroRecalculadores } from './application/recalculadores';
+import {
+  CriarAjusteLaudo,
+  EncerrarAjusteLaudo,
+  ListarAjustesLaudo,
+} from './application/use-cases/ajustes-laudo';
 import { CarregarTipificador } from './application/use-cases/carregar-tipificador';
 import { CriarCorte } from './application/use-cases/criar-corte';
 import {
@@ -103,6 +112,7 @@ import {
 } from './application/use-cases/tipificacao';
 import { DestravarImportacao, TravarImportacao } from './application/use-cases/travar-importacao';
 import { RegistroAvisosDoDemonstrativo } from './infrastructure/avisos/registro-avisos-do-demonstrativo';
+import { AjustesLaudoController } from './infrastructure/http/ajustes-laudo.controller';
 import { CompetenciasController } from './infrastructure/http/competencias.controller';
 import { CortesController } from './infrastructure/http/cortes.controller';
 import { DadosFiscaisController } from './infrastructure/http/dados-fiscais.controller';
@@ -117,6 +127,7 @@ import {
   pedidoDoPayload,
   TAREFA_GERAR_DEMONSTRATIVOS,
 } from './infrastructure/jobs/enfileirar-demonstrativos';
+import { DrizzleAjustesLaudoRepository } from './infrastructure/persistence/drizzle-ajustes-laudo.repository';
 import { DrizzleCompetenciasRepository } from './infrastructure/persistence/drizzle-competencias.repository';
 import { DrizzleCortesRepository } from './infrastructure/persistence/drizzle-cortes.repository';
 import { DrizzleDadosFiscaisRepository } from './infrastructure/persistence/drizzle-dados-fiscais.repository';
@@ -150,6 +161,7 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
     TipificacaoClienteController,
     PrecosController,
     ParametrosDemonstrativoController,
+    AjustesLaudoController,
   ],
   providers: [
     { provide: COMPETENCIAS_REPOSITORY, useClass: DrizzleCompetenciasRepository },
@@ -282,6 +294,18 @@ const ACOES_COMPETENCIA = [ReabrirCompetencia, TravarImportacao, DestravarImport
         competencias: CompetenciasRepository,
         auditoria: Auditoria,
       ) => new Caso(repo, competencias, auditoria, agora),
+    })),
+    { provide: AJUSTES_LAUDO_REPOSITORY, useClass: DrizzleAjustesLaudoRepository },
+    {
+      provide: ListarAjustesLaudo,
+      inject: [AJUSTES_LAUDO_REPOSITORY],
+      useFactory: (repo: AjustesLaudoRepository) => new ListarAjustesLaudo(repo),
+    },
+    ...[CriarAjusteLaudo, EncerrarAjusteLaudo].map((Caso) => ({
+      provide: Caso,
+      inject: [AJUSTES_LAUDO_REPOSITORY, AUDITORIA],
+      useFactory: (repo: AjustesLaudoRepository, auditoria: Auditoria) =>
+        new Caso(repo, auditoria, agora),
     })),
     // Um registro só para todos os contextos (faturamento, repasse): cada um registra o seu.
     { provide: RegistroRecalculadores, useFactory: () => new RegistroRecalculadores() },

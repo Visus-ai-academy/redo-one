@@ -799,6 +799,13 @@
       "when": 1795718094288,
       "tag": "0113_reclassificacoes_faturamento_coluna",
       "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1795718760828,
+      "tag": "0114_ajustes_laudo_faturamento",
+      "breakpoints": true
     }
   ]
 }
