@@ -126,6 +126,7 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
           id: clientes.id,
           nome: clientes.nome,
           ativo: clientes.ativo,
+          unificadoEmId: clientes.unificadoEmId,
           contratadoId: clientes.contratadoId,
         })
         .from(clientes),
@@ -171,7 +172,10 @@ export class DrizzleEntradasDemonstrativo implements EntradasDemonstrativo {
     const entrada: EntradaDemonstrativo = {
       competencia,
       clientes: new Map(
-        todosClientes.map((c) => [c.id, { ativo: c.ativo, contratadoId: c.contratadoId }]),
+        todosClientes.map((c) => [
+          c.id,
+          { ativo: c.ativo, unidade: c.unificadoEmId !== null, contratadoId: c.contratadoId },
+        ]),
       ),
       laudos: linhas.map(
         (l): LaudoDoDemonstrativo => ({

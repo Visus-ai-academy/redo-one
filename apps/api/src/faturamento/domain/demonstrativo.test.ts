@@ -44,8 +44,8 @@ const laudo = (over: Partial<LaudoDoDemonstrativo> = {}): LaudoDoDemonstrativo =
 const entrada = (over: Partial<EntradaDemonstrativo> = {}): EntradaDemonstrativo => ({
   competencia: '2026-10',
   clientes: new Map([
-    ['c1', { ativo: true, contratadoId: 't1' }],
-    ['u1', { ativo: true, contratadoId: null }],
+    ['c1', { ativo: true, unidade: false, contratadoId: 't1' }],
+    ['u1', { ativo: true, unidade: true, contratadoId: null }],
   ]),
   laudos: [laudo()],
   precosPorCliente: new Map([['c1', [preco({ id: 'p1', valor: 63.5 })]]]),
@@ -145,8 +145,8 @@ describe('montar os demonstrativos da competência', () => {
 
   it('cliente inativo fica fora conforme o parâmetro (o principal ou a unidade)', () => {
     const clientes = new Map([
-      ['c1', { ativo: false, contratadoId: 't1' }],
-      ['u1', { ativo: true, contratadoId: null }],
+      ['c1', { ativo: false, unidade: false, contratadoId: 't1' }],
+      ['u1', { ativo: true, unidade: true, contratadoId: null }],
     ]);
     const fora = montarDemonstrativos(entrada({ clientes }));
     expect(fora.demonstrativos).toEqual([]);
@@ -159,7 +159,7 @@ describe('montar os demonstrativos da competência', () => {
 
   it('não assinado nunca entra', () => {
     const r = montarDemonstrativos(entrada({ laudos: [laudo({ assinado: false })] }));
-    expect(r.demonstrativos).toEqual([]);
+    expect(r.demonstrativos.map((d) => [d.nadaAFaturar, d.valorCentavos])).toEqual([[true, 0]]);
     expect(r.excluidos.naoAssinado).toBe(1);
   });
 
@@ -320,5 +320,19 @@ describe('montar os demonstrativos da competência', () => {
       ['principal', 6350, 1],
     ]);
     expect(r.demonstrativos[0]?.valorCentavos).toBe(6350 + 2000);
+  });
+
+  it('cliente ativo sem laudo aparece com R$ 0 e "nada a faturar"; inativo e unidade não', () => {
+    const clientes = new Map([
+      ['c1', { ativo: true, unidade: false, contratadoId: 't1' }],
+      ['c2', { ativo: true, unidade: false, contratadoId: null }],
+      ['c3', { ativo: false, unidade: false, contratadoId: null }],
+      ['u1', { ativo: true, unidade: true, contratadoId: null }],
+    ]);
+    const r = montarDemonstrativos(entrada({ clientes }));
+    expect(r.demonstrativos.map((d) => [d.clienteId, d.nadaAFaturar, d.valorCentavos])).toEqual([
+      ['c1', false, 6350],
+      ['c2', true, 0],
+    ]);
   });
 });

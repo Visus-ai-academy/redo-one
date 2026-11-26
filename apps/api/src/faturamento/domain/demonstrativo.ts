@@ -44,6 +44,8 @@ export interface LaudoDoDemonstrativo {
 
 export interface ClienteDoDemonstrativo {
   ativo: boolean;
+  /** Unidade de outro cliente (`clientes.unificado_em_id`): fatura pelo principal. */
+  unidade: boolean;
   /** Escolhe a tabela padrão (a do principal). */
   contratadoId: string | null;
 }
@@ -95,7 +97,7 @@ export interface Demonstrativo {
   quantidade: number;
   valorCentavos: number;
   quantidadeSemPreco: number;
-  /** O cliente teve laudos na competência, mas nenhum fatura: R$ 0. */
+  /** Nenhum laudo que fature na competência (ou nenhum laudo, no cliente ativo): R$ 0. */
   nadaAFaturar: boolean;
   itens: ItemDemonstrativo[];
 }
@@ -142,7 +144,8 @@ const centavos = (valor: number) => Math.round(valor * 100);
  *    faixa e no preço;
  * 4. o preço é o da busca (`buscarPreco`): unidade, principal, padrão do contratado. Sem preço, o
  *    item fica sem unitário e entra em `semPreco`. Valores em centavos inteiros.
- * O cliente com laudos e nada a faturar aparece com R$ 0 e `nadaAFaturar`.
+ * O cliente com laudos e nada a faturar, e o cliente ativo sem laudos, aparecem com R$ 0 e
+ * `nadaAFaturar`.
  */
 export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstrativos {
   const { parametros: p } = e;
@@ -269,6 +272,8 @@ export function montarDemonstrativos(e: EntradaDemonstrativo): ResultadoDemonstr
     porCliente.set(l.clienteId, lista);
   }
 
+  // O cliente ativo (principal) sem nenhum laudo também aparece, com R$ 0 (decisão de 26/11/2026).
+  for (const [id, c] of e.clientes) if (c.ativo && !c.unidade) clientesVistos.add(id);
   for (const clienteId of [...clientesVistos].sort()) {
     const contratadoId = e.clientes.get(clienteId)?.contratadoId ?? null;
     const itens = new Map<string, ItemDemonstrativo & { ids: Set<string> }>();

@@ -155,6 +155,7 @@ describe.skipIf(!url)('DrizzleEntradasDemonstrativo', () => {
     });
     expect(entrada.clientes.get(cliente?.id as string)).toEqual({
       ativo: false,
+      unidade: false,
       contratadoId: null,
     });
     expect(entrada.precosPorCliente.get(cliente?.id as string)?.[0]?.valor).toBe(63.5);

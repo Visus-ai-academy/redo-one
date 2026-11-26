@@ -43,7 +43,7 @@ const laudoBase = {
 
 const entrada = (competencia: string): EntradaDemonstrativo => ({
   competencia,
-  clientes: new Map([['c1', { ativo: true, contratadoId: null }]]),
+  clientes: new Map([['c1', { ativo: true, unidade: false, contratadoId: null }]]),
   laudos: [
     { ...laudoBase, id: 'l1' },
     { ...laudoBase, id: 'l2', modalidadeId: 'CT', volume: 2 },
