@@ -133,7 +133,15 @@ describe('catálogo de permissões', () => {
       'faturamento.tipificacao.editar',
       'faturamento.precos.editar',
     ]);
-    expect(especiais('repasse')).toEqual(['repasse.adicional.lancar', 'repasse.fechar']);
+    expect(especiais('repasse')).toEqual([
+      'repasse.adicional.lancar',
+      'repasse.adicional.lancar_fechada',
+      'repasse.fechar',
+      'repasse.recalcular',
+      'repasse.precos.editar',
+      'repasse.regras.editar',
+      'repasse.parametros.editar',
+    ]);
     expect(especiais('pre-pago')).toEqual(['pre-pago.recarga.solicitar']);
     expect(especiais('contratos')).toEqual(['contratos.assinatura.enviar']);
     expect(especiais('usuarios')).toEqual([

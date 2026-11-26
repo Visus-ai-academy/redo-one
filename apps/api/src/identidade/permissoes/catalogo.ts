@@ -388,9 +388,45 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         descricao: 'Lançar crédito ou débito avulso no repasse.',
       },
       {
+        chave: 'repasse.adicional.lancar_fechada',
+        rotulo: 'Lançar adicional em competência fechada',
+        descricao:
+          'Lançar o adicional na própria competência fechada (com justificativa), em vez da próxima aberta; o repasse dela é recalculado.',
+        sensivel: true,
+        implica: ['repasse.adicional.lancar'],
+      },
+      {
         chave: 'repasse.fechar',
         rotulo: 'Fechar repasse',
         descricao: 'Fechar o repasse dos médicos na competência.',
+        sensivel: true,
+      },
+      {
+        chave: 'repasse.recalcular',
+        rotulo: 'Recalcular repasse',
+        descricao:
+          'Refazer os demonstrativos de uma competência; na fechada, com justificativa, guardando a versão anterior.',
+        sensivel: true,
+      },
+      // Decidem quanto cada laudo vale para o médico.
+      {
+        chave: 'repasse.precos.editar',
+        rotulo: 'Editar preços do repasse',
+        descricao: 'Incluir, alterar e encerrar os preços de repasse dos médicos.',
+        sensivel: true,
+      },
+      {
+        chave: 'repasse.regras.editar',
+        rotulo: 'Editar regras do repasse',
+        descricao:
+          'Regras de apuração (coordenação, tarifa própria) e a configuração de repasse de cada médico (só adicionais, recortes).',
+        sensivel: true,
+      },
+      {
+        chave: 'repasse.parametros.editar',
+        rotulo: 'Editar parâmetros do repasse',
+        descricao:
+          'Tarifas padrão, contratado do registro, duplicados, vencimento, reclassificações e categorias alternativas de preço.',
         sensivel: true,
       },
     ],

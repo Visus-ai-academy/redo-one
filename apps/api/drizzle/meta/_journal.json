@@ -743,6 +743,20 @@
       "when": 1795713679830,
       "tag": "0105_tipo_aviso_cliente_inativo",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1795715184219,
+      "tag": "0106_repasse",
+      "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1795715185110,
+      "tag": "0107_repasse_parametros_padrao",
+      "breakpoints": true
     }
   ]
 }
