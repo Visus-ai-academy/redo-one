@@ -15,10 +15,12 @@
 import { parseArgs } from 'node:util';
 
 import { NestFactory } from '@nestjs/core';
+import type { Pool } from 'pg';
 
 import { AppModule } from '../app.module';
 import { normalizarNome } from '../catalogo/comum/nomes';
-import { DATABASE, type Database } from '../database/database';
+import { garantirFilaJobs } from '../comum/jobs/garantir-fila';
+import { DATABASE, type Database, PG_POOL } from '../database/database';
 import {
   categoriasExame as tabCategorias,
   laudos as tabLaudos,
@@ -380,6 +382,8 @@ async function migrarLegado() {
       process.exitCode = 1;
       return;
     }
+    // A gravação enfileira jobs (nova resolução dos clientes): no banco vazio, a fila ainda não existe.
+    await garantirFilaJobs(app.get<Pool>(PG_POOL));
     await gravarMigracao(
       db,
       catalogo,
