@@ -45,11 +45,13 @@ type Transacao = Parameters<Parameters<Database['transaction']>[0]>[0];
  * mais que o do dashboards-one (a coluna que a carga não traz nem entra aqui: fica como está).
  * - `prevaleceRedo`: o valor do redo-one fica; o do dashboards-one só preenche o vazio. A cor foi
  *   refeita aqui; a conta MobileMed do médico é mapeada aqui (`mobilemed:mapear-medicos`, com
- *   auditoria) e regravar apagou 122 contas em 23/11/2026.
+ *   auditoria) e regravar apagou 122 contas em 23/11/2026. A unificação do cliente
+ *   (`unificadoEmId`) feita no redo-one também fica: a carga só preenche a que ela deriva (PRN,
+ *   CEDIDIAG) e não desfaz a que o usuário decidiu aqui (os grupos por nome fantasia, 26/11/2026).
  * - `complemento`: o do dashboards-one vale, mas vazio lá não apaga o preenchido aqui.
  */
 const MESCLA = {
-  prevaleceRedo: new Set(['cor', 'idMobilemed']),
+  prevaleceRedo: new Set(['cor', 'idMobilemed', 'unificadoEmId']),
   complemento: new Set(['descricao']),
 };
 

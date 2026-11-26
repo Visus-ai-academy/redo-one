@@ -275,6 +275,31 @@ describe.skipIf(!url)('gravarMigracao', () => {
     ]);
   });
 
+  it('a unificação feita no redo-one sobrevive a uma nova carga', async () => {
+    const comOutro = mapearCatalogo({
+      ...legadoCatalogo,
+      clientes: [
+        ...legadoCatalogo.clientes,
+        { ...cliente('cl-c', 'CLINICA_X'), nomeFantasia: 'CLINICA_X' },
+        { ...cliente('cl-d', 'CLINICA_X_2'), nomeFantasia: 'CLINICA_X' },
+      ],
+    });
+    await gravarMigracao(db, comOutro, medicos);
+    await db.execute(sql`update clientes set unificado_em_id = (select id from clientes where nome = 'CLINICA_X')
+      where nome = 'CLINICA_X_2'`);
+
+    await gravarMigracao(db, comOutro, medicos);
+
+    const unidades = await db.execute<{ nome: string; principal: string }>(sql`
+      select u.nome, p.nome principal from clientes u join clientes p on p.id = u.unificado_em_id
+      order by u.nome`);
+    expect(unidades.rows).toEqual([
+      { nome: 'CLINICA_X_2', principal: 'CLINICA_X' },
+      { nome: 'PRN TELE_ARARAQUARA', principal: 'PRN' },
+      { nome: 'PRN TELE_MARABA', principal: 'PRN' },
+    ]);
+  });
+
   it('grava as competências; rodar de novo dá o mesmo e atualiza o que mudou', async () => {
     const [usuario] = await db
       .insert(schema.usuarios)
