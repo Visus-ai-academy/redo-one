@@ -1,6 +1,8 @@
 import { Client } from 'pg';
 
+import type { PeriodoDias } from '../ingestao/domain/periodo-mobilemed';
 import type { EstudoDoLegado } from './especialidades-dos-estudos';
+import type { LaudoDoLegado } from './laudos-legado';
 import type {
   LegadoCatalogo,
   LegadoCompetencia,
@@ -298,6 +300,41 @@ export async function lerEstudosDoLegado(
     );
     await cliente.query('COMMIT');
     return rows;
+  } catch (erro) {
+    await cliente.query('ROLLBACK').catch(() => undefined);
+    throw erro;
+  } finally {
+    await cliente.end();
+  }
+}
+
+/**
+ * Os laudos do dashboards-one com data do laudo nos dias pedidos (com um dia de folga de cada lado,
+ * porque lá a data é gravada sem fuso), SÓ PARA LEITURA: a linha crua da MobileMed e as contas de
+ * quem assinou. Lê um dia por consulta (o resultado inteiro de uma vez derrubava a conexão do
+ * pooler). A linha traz o nome do paciente: fica só em memória até a carga gravá-la como a
+ * importação grava.
+ */
+export async function lerLaudosDoLegado(url: string, dias: PeriodoDias): Promise<LaudoDoLegado[]> {
+  const cliente = new Client({ connectionString: url, application_name: 'redo-one-carga-laudos' });
+  await cliente.connect();
+  try {
+    await cliente.query('BEGIN TRANSACTION READ ONLY');
+    await cliente.query("SET LOCAL statement_timeout = '120s'");
+    const laudos: LaudoDoLegado[] = [];
+    const ate = Date.parse(`${dias.fim}T00:00:00Z`) + 2 * 86_400_000;
+    for (let d = Date.parse(`${dias.inicio}T00:00:00Z`) - 86_400_000; d < ate; d += 86_400_000) {
+      const { rows } = await cliente.query<LaudoDoLegado>(
+        `select "dadosBrutos", "medicoIdMobilemed", "medicoReassinaturaIdMobilemed" from laudos
+          where "dataLaudo" >= $1::date and "dataLaudo" < $1::date + 1
+            and "dadosBrutos" is not null
+          order by "dataLaudo", id`,
+        [new Date(d).toISOString().slice(0, 10)],
+      );
+      laudos.push(...rows);
+    }
+    await cliente.query('COMMIT');
+    return laudos;
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => undefined);
     throw erro;

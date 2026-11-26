@@ -19,6 +19,7 @@
     "migrar:legado": "nest build && JOBS_WORKER=false node dist/scripts/migrar-legado.js",
     "paridade:tipificacao": "nest build && JOBS_WORKER=false node dist/scripts/paridade-tipificacao.js",
     "migrar:repasse-legado": "nest build && JOBS_WORKER=false node dist/scripts/migrar-repasse-legado.js",
+    "migrar:laudos-legado": "nest build && JOBS_WORKER=false node dist/scripts/migrar-laudos-legado.js",
     "paridade:repasse": "nest build && JOBS_WORKER=false node dist/scripts/paridade-repasse.js",
     "paridade:precos": "nest build && JOBS_WORKER=false node dist/scripts/paridade-precos.js",
     "paridade:demonstrativo": "nest build && JOBS_WORKER=false node dist/scripts/paridade-demonstrativo.js",
