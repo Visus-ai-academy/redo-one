@@ -64,9 +64,9 @@ const catalogo: CatalogoMatriz = [
         implica: [],
       },
       {
-        chave: 'repasse.fechar',
-        rotulo: 'Fechar repasse',
-        descricao: 'Fecha o repasse da competência.',
+        chave: 'repasse.recalcular',
+        rotulo: 'Recalcular repasse',
+        descricao: 'Refaz os demonstrativos da competência.',
         sensivel: true,
         implica: [],
       },
@@ -82,7 +82,7 @@ function montar(props: Partial<EditorPermissoesProps> = {}) {
   render(
     <EditorPermissoes
       catalogo={catalogo}
-      marcadas={new Set(['repasse.ver', 'repasse.fechar'])}
+      marcadas={new Set(['repasse.ver', 'repasse.recalcular'])}
       onChange={onChange}
       acesso={ADMIN}
       {...props}
@@ -114,7 +114,7 @@ describe('EditorPermissoes', () => {
     await userEvent.click(caixa('Clientes: Criar'));
 
     expect(onChange).toHaveBeenCalledWith(
-      new Set(['repasse.ver', 'repasse.fechar', 'clientes.criar', 'clientes.ver']),
+      new Set(['repasse.ver', 'repasse.recalcular', 'clientes.criar', 'clientes.ver']),
     );
   });
 
@@ -170,7 +170,7 @@ describe('EditorPermissoes', () => {
     expect(onChange).toHaveBeenCalledWith(
       new Set([
         'repasse.ver',
-        'repasse.fechar',
+        'repasse.recalcular',
         'clientes.ver',
         'clientes.criar',
         'clientes.editar',
@@ -187,7 +187,7 @@ describe('EditorPermissoes', () => {
     expect(onChange).toHaveBeenCalledWith(
       new Set([
         'repasse.ver',
-        'repasse.fechar',
+        'repasse.recalcular',
         'clientes.excluir',
         'clientes.ver',
         'exames.excluir',
@@ -213,14 +213,14 @@ describe('EditorPermissoes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Especiais de Repasse: 1 de 2' }));
 
     const popover = await screen.findByRole('dialog');
-    expect(within(popover).getByRole('checkbox', { name: /Fechar repasse/ })).toBeChecked();
-    expect(popover).toHaveTextContent('Fecha o repasse da competência.');
+    expect(within(popover).getByRole('checkbox', { name: /Recalcular repasse/ })).toBeChecked();
+    expect(popover).toHaveTextContent('Refaz os demonstrativos da competência.');
     expect(popover).toHaveTextContent('Sensível');
 
     await userEvent.click(within(popover).getByRole('checkbox', { name: /Lançar adicional/ }));
 
     expect(onChange).toHaveBeenCalledWith(
-      new Set(['repasse.ver', 'repasse.fechar', 'repasse.adicional.lancar']),
+      new Set(['repasse.ver', 'repasse.recalcular', 'repasse.adicional.lancar']),
     );
   });
 
@@ -230,7 +230,13 @@ describe('EditorPermissoes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Só leitura' }));
 
     expect(onChange).toHaveBeenCalledWith(
-      new Set(['repasse.ver', 'repasse.fechar', 'volumetria.ver', 'clientes.ver', 'exames.ver']),
+      new Set([
+        'repasse.ver',
+        'repasse.recalcular',
+        'volumetria.ver',
+        'clientes.ver',
+        'exames.ver',
+      ]),
     );
   });
 

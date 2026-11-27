@@ -192,7 +192,7 @@ describe('PapeisService', () => {
       const resultado = await service.atualizar(admin, 'p-fin', {
         nome: 'Financeiro',
         descricao: 'Faturamento e repasse',
-        permissoes: ['faturamento.ver', 'repasse.fechar'],
+        permissoes: ['faturamento.ver', 'repasse.recalcular'],
       });
 
       expect(resultado).toEqual({ sessoesEncerradas: 2 });
@@ -207,7 +207,7 @@ describe('PapeisService', () => {
           antes: { nome: 'Financeiro', permissoes: ['faturamento.ver'] },
           depois: {
             nome: 'Financeiro',
-            permissoes: ['faturamento.ver', 'repasse.fechar', 'repasse.ver'],
+            permissoes: ['faturamento.ver', 'repasse.recalcular', 'repasse.ver'],
           },
         }),
       ]);

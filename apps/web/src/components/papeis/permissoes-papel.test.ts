@@ -12,16 +12,16 @@ describe('podeConceder', () => {
   it('só concede o que tem; o Administrador concede tudo', () => {
     const financeiro = { acessoTotal: false, permissoes: ['repasse.ver'] };
     expect(podeConceder(financeiro, 'repasse.ver')).toBe(true);
-    expect(podeConceder(financeiro, 'repasse.fechar')).toBe(false);
-    expect(podeConceder({ acessoTotal: true, permissoes: [] }, 'repasse.fechar')).toBe(true);
+    expect(podeConceder(financeiro, 'repasse.recalcular')).toBe(false);
+    expect(podeConceder({ acessoTotal: true, permissoes: [] }, 'repasse.recalcular')).toBe(true);
   });
 });
 
 describe('resumoDasPermissoes', () => {
   it('conta permissões e telas', () => {
-    expect(resumoDasPermissoes(new Set(['repasse.ver', 'repasse.fechar', 'volumetria.ver']))).toBe(
-      '3 permissões em 2 telas',
-    );
+    expect(
+      resumoDasPermissoes(new Set(['repasse.ver', 'repasse.recalcular', 'volumetria.ver'])),
+    ).toBe('3 permissões em 2 telas');
     expect(resumoDasPermissoes(new Set(['repasse.ver']))).toBe('1 permissão em 1 tela');
     expect(resumoDasPermissoes(new Set())).toBe('Nenhuma permissão');
   });

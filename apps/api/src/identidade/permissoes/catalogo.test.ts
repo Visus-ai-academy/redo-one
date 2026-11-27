@@ -138,7 +138,6 @@ describe('catálogo de permissões', () => {
     expect(especiais('repasse')).toEqual([
       'repasse.adicional.lancar',
       'repasse.adicional.lancar_fechada',
-      'repasse.fechar',
       'repasse.recalcular',
       'repasse.precos.editar',
       'repasse.regras.editar',
@@ -240,9 +239,9 @@ describe('catálogo de permissões', () => {
   it('normaliza: acrescenta o ver da tela, tira repetição e ordena', () => {
     expect(
       normalizarPermissoes([
-        'repasse.fechar',
+        'repasse.recalcular',
         'faturamento.ver',
-        'repasse.fechar',
+        'repasse.recalcular',
         'clientes.excluir',
         'inexistente.x',
       ]),
@@ -250,7 +249,7 @@ describe('catálogo de permissões', () => {
       'clientes.excluir',
       'clientes.ver',
       'faturamento.ver',
-      'repasse.fechar',
+      'repasse.recalcular',
       'repasse.ver',
     ]);
   });

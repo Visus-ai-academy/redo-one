@@ -410,12 +410,6 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
         implica: ['repasse.adicional.lancar'],
       },
       {
-        chave: 'repasse.fechar',
-        rotulo: 'Fechar repasse',
-        descricao: 'Fechar o repasse dos médicos na competência.',
-        sensivel: true,
-      },
-      {
         chave: 'repasse.recalcular',
         rotulo: 'Recalcular repasse',
         descricao:

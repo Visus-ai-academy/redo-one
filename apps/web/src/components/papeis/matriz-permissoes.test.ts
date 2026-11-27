@@ -95,9 +95,9 @@ const repasse: TelaMatriz = {
       implica: [],
     },
     {
-      chave: 'repasse.fechar',
-      rotulo: 'Fechar repasse',
-      descricao: 'Fecha a competência',
+      chave: 'repasse.recalcular',
+      rotulo: 'Recalcular repasse',
+      descricao: 'Refaz os demonstrativos',
       sensivel: true,
       implica: [],
     },
@@ -165,8 +165,8 @@ describe('alternarAcao', () => {
       'clientes.editar',
       'clientes.ver',
     ]);
-    expect(ordenado(alternarAcao(new Set(), catalogo, repasse, 'repasse.fechar'))).toEqual([
-      'repasse.fechar',
+    expect(ordenado(alternarAcao(new Set(), catalogo, repasse, 'repasse.recalcular'))).toEqual([
+      'repasse.recalcular',
       'repasse.ver',
     ]);
   });
@@ -226,7 +226,7 @@ describe('alternarLinha', () => {
   });
 
   it('com todas as padrão marcadas, limpa a linha (inclusive as especiais)', () => {
-    const marcadas = new Set(['repasse.ver', 'repasse.fechar']);
+    const marcadas = new Set(['repasse.ver', 'repasse.recalcular']);
     expect(ordenado(alternarLinha(marcadas, catalogo, repasse))).toEqual([]);
   });
 
@@ -271,13 +271,13 @@ describe('colunas da área', () => {
 
 describe('soLeitura', () => {
   it('marca o ver de todas as telas, sem tirar o que já estava', () => {
-    expect(ordenado(soLeitura(new Set(['repasse.fechar', 'repasse.ver']), catalogo))).toEqual([
+    expect(ordenado(soLeitura(new Set(['repasse.recalcular', 'repasse.ver']), catalogo))).toEqual([
       'clientes.ver',
       'escala-config.ver',
       'escala.ver',
       'exames.ver',
       'medicos.ver',
-      'repasse.fechar',
+      'repasse.recalcular',
       'repasse.ver',
       'volumetria.ver',
     ]);
@@ -312,7 +312,7 @@ describe('resumoDaArea', () => {
 
 describe('contarEspeciais', () => {
   it('conta as especiais marcadas da tela', () => {
-    expect(contarEspeciais(new Set(['repasse.fechar']), repasse)).toEqual({
+    expect(contarEspeciais(new Set(['repasse.recalcular']), repasse)).toEqual({
       marcadas: 1,
       total: 2,
     });
@@ -336,11 +336,15 @@ describe('copiarDePapel', () => {
 
   it('de um papel de acesso total, copia o catálogo inteiro', () => {
     const tudo = copiarDePapel({ acessoTotal: true, permissoes: [] }, [repasse]);
-    expect(ordenado(tudo)).toEqual(['repasse.adicional.lancar', 'repasse.fechar', 'repasse.ver']);
+    expect(ordenado(tudo)).toEqual([
+      'repasse.adicional.lancar',
+      'repasse.recalcular',
+      'repasse.ver',
+    ]);
   });
 
   it('deixa de fora o que quem edita não pode conceder', () => {
-    const outro = { acessoTotal: false, permissoes: ['repasse.ver', 'repasse.fechar'] };
+    const outro = { acessoTotal: false, permissoes: ['repasse.ver', 'repasse.recalcular'] };
     expect(ordenado(copiarDePapel(outro, catalogo, (c) => c === 'repasse.ver'))).toEqual([
       'repasse.ver',
     ]);
