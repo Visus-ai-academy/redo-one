@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ContaBancariaDetalheDto } from '../../gen/types/ContaBancariaDetalheDto';
+import type { ContaBancariaDto } from '../../gen/types/ContaBancariaDto';
 import { escolherOpcao } from '../../test/select';
 import { PainelContaBancaria } from './PainelContaBancaria';
 
@@ -31,6 +33,22 @@ const conta: ContaBancariaDetalheDto = {
     { nome: 'ITAU_TELE_CLIENT_SECRET', configurada: false },
   ],
 };
+
+/** O painel recebe a conta como a API devolve depois de salvar. */
+function ComApi({ onFechar }: { onFechar: () => void }) {
+  const [atual, setAtual] = useState(conta);
+  return (
+    <PainelContaBancaria
+      conta={atual}
+      empresas={empresas}
+      podeEditar
+      onSalvar={async (dados: ContaBancariaDto) => {
+        setAtual({ ...atual, ...dados, variaveisCredencial: [] });
+      }}
+      onFechar={onFechar}
+    />
+  );
+}
 
 describe('PainelContaBancaria', () => {
   it('cria com o saldo em centavos (negativo vale) e a única empresa já escolhida', async () => {
@@ -189,5 +207,40 @@ describe('PainelContaBancaria', () => {
     expect(screen.getByText('ITAU_TELE_CLIENT_ID')).toBeInTheDocument();
     expect(screen.getByText('Configurada no servidor')).toBeInTheDocument();
     expect(screen.getByText('Não encontrada no servidor')).toBeInTheDocument();
+  });
+
+  it('trocou do Itaú para Nenhuma e salvou: fecha sem perguntar se descarta; voltar ao Itaú pede a credencial de novo', async () => {
+    const onFechar = vi.fn();
+    render(<ComApi onFechar={onFechar} />);
+
+    await escolherOpcao('Integração', 'Nenhuma');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Saldo inicial (R$)' })).toHaveValue('250.000,00'),
+    );
+
+    await escolherOpcao('Integração', 'Itaú');
+    expect(screen.getByRole('textbox', { name: 'Credencial' })).toHaveValue('');
+    await escolherOpcao('Integração', 'Nenhuma');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar painel' }));
+    await waitFor(() => expect(onFechar).toHaveBeenCalled());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('trocar para Nenhuma e voltar ao Itaú sem salvar mantém a credencial salva', async () => {
+    render(
+      <PainelContaBancaria
+        conta={conta}
+        empresas={empresas}
+        podeEditar
+        onSalvar={vi.fn()}
+        onFechar={vi.fn()}
+      />,
+    );
+
+    await escolherOpcao('Integração', 'Nenhuma');
+    await escolherOpcao('Integração', 'Itaú');
+    expect(screen.getByRole('textbox', { name: 'Credencial' })).toHaveValue('ITAU_TELE');
   });
 });

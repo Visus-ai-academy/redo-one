@@ -339,7 +339,19 @@ export function PainelContaBancaria({
 
         <fieldset className="mt-2 flex flex-col gap-4">
           <legend className="mb-2 font-semibold">Integração com o banco</legend>
-          <form.AppField name="integracao">
+          <form.AppField
+            name="integracao"
+            listeners={{
+              // Sem integração não há credencial: o campo zera para o formulário bater com o que a
+              // API guarda (senão o prefixo escondido deixa o painel "alterado" depois de salvar).
+              // Voltando ao Itaú, reaparece a credencial salva, se houver.
+              onChange: ({ value }) =>
+                form.setFieldValue(
+                  'credencial',
+                  value === 'nenhuma' ? '' : (conta?.credencial ?? ''),
+                ),
+            }}
+          >
             {(field) => (
               <field.SelectField label="Integração" placeholder="Nenhuma" opcoes={INTEGRACOES} />
             )}
