@@ -35,7 +35,7 @@ Só tema claro; não há tema escuro (decisão de 13/11/2026, revisar se surgir 
 | Texto principal | `#121917` | títulos, conteúdo |
 | Texto secundário | `#4F5B58` | itens de menu, descrições |
 | Texto terciário | `#66726F` | rótulos de grupo, cabeçalho de tabela, legendas (4,8:1 no branco) |
-| Acento | `#214037` | botão primário, ícone do item ativo, link, checkbox |
+| Acento | `#214037` | botão primário, ícone do item ativo, link, caixa de marcar e interruptor ligados |
 | Acento forte | `#112622` | hover do botão primário |
 | Acento suave | `#EAF2EF` | fundo do item ativo e da linha selecionada |
 | Foco | `#34594F` | anel de 2px com 2px de afastamento |
@@ -164,6 +164,11 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
 
 - `*` vermelho no rótulo de todo campo obrigatório + `required`; legenda "* Campo obrigatório" quando há campos opcionais.
 - Campo numérico com faixa (`min`/`max`) nunca corrige sozinho para o limite: mostra o erro abaixo do campo ("Use um valor entre 1 e 1440.", "Use um valor a partir de 0.", "Use um valor até 100.") e o formulário não envia até voltar para a faixa. Regra única no `NumberField` do kit; as setas do teclado continuam parando no limite. Aprovado em 18/11/2026.
+- **Interruptor × caixa de marcar** (decidido em 28/11/2026): ligar ou desligar **uma configuração só** (Ativo, Sênior, Fez fellowship, Oculto nos painéis, Padrão, Distribui pelo robô, Considerar a data do exame) é sempre **interruptor** (Switch do Base UI), nunca caixa de marcar. **Caixa de marcar só para escolher itens de uma lista ou conjunto** (prioridades, especialidades, modalidades, médicos, ações da matriz de permissões, células de uma grade, linhas de uma tabela), com o "Todas" explícito quando houver.
+  - Linha do interruptor: o interruptor à **esquerda** (36×20px, trilho `rounded-full`), 12px antes do rótulo, como a linha da caixa de marcar; rótulo 14px peso 500; descrição abaixo, 13px no texto secundário, alinhada ao rótulo (recuo de 48px); erro abaixo da descrição, no mesmo recuo. Clicar no rótulo alterna.
+  - Cores: desligado, trilho na superfície suave com a borda de controle e o pino branco à esquerda; ligado, trilho e borda no acento, pino à direita. Hover: desligado, a borda escurece para a cor do foco; ligado, o acento forte. Foco: anel de 2px na cor do foco, 2px afastado. Desabilitado: 60% de opacidade, cursor proibido; só leitura (sem permissão): 70%, sem alternar. O pino desliza em 150ms ease-out (nada com movimento reduzido).
+  - Teclado: Tab chega ao interruptor e a barra de espaço alterna (o Base UI já faz).
+  - No código: no formulário, `<field.InterruptorField label description />` (vale ao salvar, entra no "Descartar as alterações?"); fora do formulário, que vale na hora, a `Chave`; peça solta (popover, linha própria), o `Interruptor` (`src/components/interruptor/`). A `CaixaDeSelecao` fica só para listas (`CheckboxListField`, `CheckboxGroup`, tabelas).
 - Todo campo de texto tem placeholder com um exemplo do formato esperado (`nome@empresa.com.br`, `000.000.000-00`, `Ex.: Maria Souza`). O placeholder nunca substitui o rótulo.
 
 ## Acesso (login, recuperação, convite)

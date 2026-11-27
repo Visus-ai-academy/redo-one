@@ -104,7 +104,7 @@ describe('PainelCliente', () => {
 
     await userEvent.type(screen.getByRole('textbox', { name: 'CNPJ' }), '12.345.678/0001-90');
     await escolherOpcao('Empresa que fatura', '001 TELEIMAGEM');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Oculto nos painéis' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Oculto nos painéis' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar cliente' }));
 
     expect(onSalvar).toHaveBeenCalledWith({

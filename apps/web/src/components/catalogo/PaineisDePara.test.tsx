@@ -88,10 +88,7 @@ describe('painéis dos de-paras', () => {
     );
 
     expect(screen.getByRole('textbox', { name: 'Valor que chega' })).toBeDisabled();
-    expect(screen.getByRole('checkbox', { name: 'Ativo' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    expect(screen.getByRole('switch', { name: 'Ativo' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('sem editar mas com excluir, o painel só leitura mostra Excluir e confirma', async () => {

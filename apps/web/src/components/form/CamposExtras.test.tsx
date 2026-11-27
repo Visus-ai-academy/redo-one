@@ -29,7 +29,7 @@ function Formulario({ onSubmit }: { onSubmit: (valores: Valores) => void }) {
     >
       <form.AppField name="ativo">
         {(field) => (
-          <field.CheckboxField label="Ativo" description="Inativo some das listas de escolha." />
+          <field.InterruptorField label="Ativo" description="Inativo some das listas de escolha." />
         )}
       </form.AppField>
       <form.AppField name="observacoes">
@@ -67,12 +67,12 @@ function FormularioFaixa({ onSubmit }: { onSubmit: (valores: { minutos: string }
   );
 }
 
-describe('campos de caixa de marcar, texto longo e número', () => {
+describe('campos de interruptor, texto longo e número', () => {
   it('enviam os valores digitados', async () => {
     const onSubmit = vi.fn();
     render(<Formulario onSubmit={onSubmit} />);
 
-    const ativo = screen.getByRole('checkbox', { name: 'Ativo' });
+    const ativo = screen.getByRole('switch', { name: 'Ativo' });
     expect(ativo).toHaveAccessibleDescription('Inativo some das listas de escolha.');
     await userEvent.click(ativo);
     await userEvent.type(screen.getByRole('textbox', { name: 'Observações' }), 'Unidade nova');

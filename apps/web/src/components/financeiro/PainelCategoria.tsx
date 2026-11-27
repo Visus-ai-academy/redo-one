@@ -208,7 +208,7 @@ export function PainelCategoria({
         </form.AppField>
         <form.AppField name="ativa">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Ativa"
               description="Inativa some das listas de escolha, mas continua nos lançamentos que já a usam."
             />

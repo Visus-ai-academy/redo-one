@@ -74,7 +74,7 @@ export function PainelTipoAviso({
             </form.AppField>
             <form.AppField name="impedeFecharCompetencia">
               {(field) => (
-                <field.CheckboxField
+                <field.InterruptorField
                   label="Impede fechar a competência"
                   description="Aviso pendente deste tipo ligado a uma competência impede fechá-la. Quem tem a permissão própria fecha mesmo assim, informando o motivo."
                 />

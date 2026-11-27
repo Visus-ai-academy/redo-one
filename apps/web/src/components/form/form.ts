@@ -9,12 +9,12 @@ import { useState } from 'react';
 
 import { BuscaField } from './BuscaField';
 import { CaixasComContagemField } from './CaixasComContagemField';
-import { CheckboxField } from './CheckboxField';
 import { CheckboxListField } from './CheckboxListField';
 import { fieldContext, formContext } from './context';
 import { EscolhaMultiplaField } from './EscolhaMultiplaField';
 import { EscolhidosField } from './EscolhidosField';
 import { EtiquetasField } from './EtiquetasField';
+import { InterruptorField } from './InterruptorField';
 import { NumberField } from './NumberField';
 import { PasswordField } from './PasswordField';
 import { RequiredLegend } from './RequiredLegend';
@@ -32,7 +32,7 @@ const kit = createFormHook({
     TextField,
     PasswordField,
     SelectField,
-    CheckboxField,
+    InterruptorField,
     CheckboxListField,
     BuscaField,
     EscolhaMultiplaField,

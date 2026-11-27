@@ -423,7 +423,7 @@ function NovaVigencia({
         {clienteId && (
           <form.AppField name="usaPadrao">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Usar o corte padrão"
                 description="A partir desta competência, o cliente segue o corte padrão."
               />
@@ -464,7 +464,7 @@ function NovaVigencia({
               <div className="flex items-start gap-1">
                 <form.AppField name="consideraExame">
                   {(field) => (
-                    <field.CheckboxField
+                    <field.InterruptorField
                       label="Considerar a data do exame"
                       description="Ligado, a competência é a mais tarde entre a da data do laudo e a da data do exame, cada uma pelo seu corte. Desligado, só a data do laudo conta."
                     />

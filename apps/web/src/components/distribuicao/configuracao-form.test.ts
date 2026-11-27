@@ -175,7 +175,7 @@ describe('configuração global no formulário', () => {
       'ordemFila: A fila precisa de ao menos um critério.',
       'margemUrgenciaPct: Use um número inteiro de 0 a 100.',
       'cicloMinutos: Use um número inteiro de 1 a 1440.',
-      'turnoIds: Escolha ao menos um turno, ou desmarque os turnos posteriores.',
+      'turnoIds: Escolha ao menos um turno, ou desligue os turnos posteriores.',
       'cheiaEm: Use HH:MM, como 10:50.',
       'marcadores: Há marcador repetido.',
     ]);

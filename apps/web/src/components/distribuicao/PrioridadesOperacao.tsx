@@ -200,7 +200,7 @@ function PainelPrioridade({
         </form.AppField>
         <form.AppField name="furaGradeNaAlocacao">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label={ROTULO_FURA_GRADE}
               description="Com a prioridade marcada na alocação, o exame urgente dela segue o SLA mesmo que a grade de recebimento do turno diga “não recebe” ou prazo mínimo. Desligada, vale a grade."
             />
@@ -246,7 +246,7 @@ function PainelPrioridade({
         </form.AppField>
         <form.AppField name="padrao">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Vale para a grafia sem de-para"
               description="O exame com uma grafia que nenhuma prioridade tem cai nesta (e vira aviso na rodada). Só uma prioridade pode ser a padrão."
             />

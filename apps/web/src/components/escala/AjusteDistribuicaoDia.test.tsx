@@ -72,7 +72,7 @@ describe('AjusteDistribuicaoDia', () => {
     const { onSalvar } = montar();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'URGÊNCIA' }));
     expect(screen.getByRole('checkbox', { name: 'INTERNADO' })).not.toBeChecked();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Segue o SLA' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Segue o SLA' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
     expect(onSalvar).toHaveBeenCalledWith({
       prioridadeIdsLiberadas: ['p-urg'],

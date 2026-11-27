@@ -240,7 +240,7 @@ function FormRegras({
         )}
         <form.AppField name="listaDepoisDosFixos">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Guardar para os turnos posteriores"
               description="Antes de os turnos posteriores (ex.: a Tarde) começarem, a Lista recebe só o que eles não vão dar conta."
             />
@@ -251,7 +251,7 @@ function FormRegras({
       <Secao titulo="Robô" className="border-t pt-6">
         <form.AppField name="distribuiPeloRobo">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Distribui pelo robô"
               description="Desmarcado: a frente é toda manual."
             />
@@ -343,7 +343,7 @@ function FormRegras({
       <Secao titulo="Recolhimento" className="border-t pt-6">
         <form.AppField name="recolheAoFimDoTurno">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Recolhe ao fim do turno"
               description="O exame que o médico não abriu volta para a fila depois que o turno dele acaba."
             />
@@ -514,7 +514,7 @@ function FormRegras({
                       </div>
                       <form.AppField name={`segmentos[${i}].reduzido`}>
                         {(field) => (
-                          <field.CheckboxField
+                          <field.InterruptorField
                             label="Teto menor para quem produz pouco"
                             description="Quem tem produtividade de escala baixa recebe um teto reduzido."
                           />
@@ -548,7 +548,7 @@ function FormRegras({
                       )}
                       <form.AppField name={`segmentos[${i}].pacoteAParte`}>
                         {(field) => (
-                          <field.CheckboxField
+                          <field.InterruptorField
                             label="Pacote à parte"
                             description="No pacote do paciente, os exames deste segmento não se juntam aos outros."
                           />

@@ -278,7 +278,7 @@ export function PainelAlocacao({
                   ) : (
                     <form.AppField name="gratificado">
                       {(field) => (
-                        <field.CheckboxField
+                        <field.InterruptorField
                           label="Gratificado"
                           description="Pontual: vale entre o início e o fim, com cota de registros, e não mexe na escala fixa do médico."
                         />

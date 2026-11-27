@@ -165,7 +165,7 @@ export function FormConfiguracaoDistribuicao({
         <div className="flex flex-col gap-4">
           <form.AppField name="roboAtivo">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Robô ligado"
                 description="Desligado, ninguém inicia rodada e os exames ficam para a distribuição à mão."
               />
@@ -185,7 +185,7 @@ export function FormConfiguracaoDistribuicao({
           </form.AppField>
           <form.AppField name="temTeto">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Limitar os exames por rodada"
                 description="O que passar do teto fica para a próxima rodada."
               />
@@ -210,7 +210,7 @@ export function FormConfiguracaoDistribuicao({
           </form.Subscribe>
           <form.AppField name="lerFila">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Ler a fila do momento sozinho"
                 description="A tela Operação › Distribuição mostra a última leitura da fila da MobileMed. Não distribui nada: a rodada sempre lê a fila de novo."
               />
@@ -235,7 +235,7 @@ export function FormConfiguracaoDistribuicao({
           </form.Subscribe>
           <form.AppField name="conferirUnidade">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Conferir na proposta a conta do médico na unidade"
                 description="A proposta não oferece o exame a quem não está liberado na unidade dele na MobileMed. A lista de médicos de cada unidade fica guardada na API; a execução sempre confere na hora."
               />
@@ -358,7 +358,7 @@ export function FormConfiguracaoDistribuicao({
           </form.AppField>
           <form.AppField name="agruparPorPaciente">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Exames do mesmo paciente vão juntos para um médico"
                 description="Na mesma especialidade: o pacote não se parte entre médicos."
               />
@@ -452,7 +452,7 @@ export function FormConfiguracaoDistribuicao({
           </form.AppField>
           <form.AppField name="temTurnosPosteriores">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Há turnos que só recebem numa rodada mais tarde"
                 description="Ex.: a Tarde, que enche de uma vez numa rodada da manhã."
               />
@@ -484,7 +484,7 @@ export function FormConfiguracaoDistribuicao({
             <span className="font-medium">Recolher exames não abertos</span>
             <form.AppField name="recolhe">
               {(field) => (
-                <field.CheckboxField
+                <field.InterruptorField
                   label="Devolver à fila o exame que o médico não abriu depois que o turno acabou"
                   description="Só nas frentes que recolhem."
                 />
@@ -602,7 +602,7 @@ export function FormConfiguracaoDistribuicao({
           </form.AppField>
           <form.AppField name="escalaRestringeEspecialidade">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="O médico só recebe da frente em que está escalado"
                 description="Desmarcado: a frente da escala não limita o que ele recebe no período."
               />

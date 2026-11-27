@@ -274,9 +274,9 @@ describe('PainelAlocacao', () => {
 
   it('gratificado só em turno lista, e pede a cota', async () => {
     montar({ inicial: { frenteId: 'f-tc', turnoId: 't-manha' } });
-    expect(screen.queryByRole('checkbox', { name: 'Gratificado' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Gratificado' })).not.toBeInTheDocument();
     await escolherOpcao('Turno', 'Lista 24 h');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Gratificado' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Gratificado' }));
     expect(screen.getByRole('textbox', { name: 'Cota de registros no período' })).toBeRequired();
   });
 

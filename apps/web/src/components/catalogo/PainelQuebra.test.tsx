@@ -79,9 +79,7 @@ describe('PainelQuebra', () => {
       ativo: true,
     });
 
-    await userEvent.click(
-      within(pecas).getByRole('checkbox', { name: 'TC ABDOME ativo na quebra' }),
-    );
+    await userEvent.click(within(pecas).getByRole('switch', { name: 'TC ABDOME ativo na quebra' }));
     expect(onAtualizarPeca).toHaveBeenCalledWith('p-1', {
       exameId: 'x-2',
       categoriaId: null,

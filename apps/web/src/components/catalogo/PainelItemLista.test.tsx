@@ -111,7 +111,7 @@ describe('PainelItemLista', () => {
     });
 
     expect(screen.getByRole('dialog', { name: 'URGENTE' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Urgente' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Urgente' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(onSalvar).toHaveBeenCalledWith(

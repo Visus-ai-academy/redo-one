@@ -280,7 +280,7 @@ export function PainelLancarAdicional({
         {fechada && podeLancarNaFechada && (
           <form.AppField name="naFechada">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Lançar na própria competência fechada"
                 description={`Pede o motivo e gera uma versão nova do repasse de ${nomeCompetencia(v.competencia)}.`}
               />

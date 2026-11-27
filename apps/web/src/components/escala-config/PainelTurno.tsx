@@ -284,7 +284,7 @@ export function PainelTurno({
         </div>
         <form.AppField name="ativo">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Ativo"
               description="Inativo some da montagem da escala, mas as alocações antigas ficam."
             />

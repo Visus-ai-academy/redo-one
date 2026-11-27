@@ -168,7 +168,7 @@ export function PainelEquipe({
         </div>
         <form.AppField name="ativo">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Ativa"
               description="Inativa, o robô ignora o recorte dela; os membros continuam."
             />

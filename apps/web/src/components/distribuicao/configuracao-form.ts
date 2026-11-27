@@ -232,7 +232,7 @@ export const esquemaConfiguracao = valoresSchema.superRefine((v, ctx) => {
   faixa('antecedenciaPeriodoMin', 0, 1440);
   if (v.temTurnosPosteriores) {
     if (v.turnoIds.length === 0) {
-      erro('turnoIds', 'Escolha ao menos um turno, ou desmarque os turnos posteriores.');
+      erro('turnoIds', 'Escolha ao menos um turno, ou desligue os turnos posteriores.');
     }
     if (!HORA.test(v.cheiaEm.trim())) erro('cheiaEm', 'Use HH:MM, como 10:50.');
   }

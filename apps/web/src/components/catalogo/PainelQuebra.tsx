@@ -11,9 +11,9 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
-import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
+import { Interruptor } from '../interruptor/Interruptor';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useAlterado } from '../painel/fechamento';
@@ -220,7 +220,7 @@ function PecasQuebra({
             return (
               <li key={peca.id} className="flex items-center gap-3 px-3 py-2">
                 {podeEditar && (
-                  <CaixaDeSelecao
+                  <Interruptor
                     aria-label={`${peca.exame.nome} ativo na quebra`}
                     checked={peca.ativo}
                     onCheckedChange={(ativo) =>

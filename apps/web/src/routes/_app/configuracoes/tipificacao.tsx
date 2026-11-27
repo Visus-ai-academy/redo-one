@@ -611,7 +611,7 @@ function PainelRegra({
           )}
           <form.AppField name="fatura">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Fatura sem sub-regra"
                 description={
                   regra
@@ -638,7 +638,7 @@ function PainelRegra({
             )}
           <form.AppField name="ativo">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Ativa"
                 description="Inativa some das listas de escolha, mas continua valendo onde já está."
               />
@@ -814,7 +814,7 @@ function PainelSubregra({
           )}
           <form.AppField name="fatura">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Fatura"
                 description={
                   subregra
@@ -841,7 +841,7 @@ function PainelSubregra({
             )}
           <form.AppField name="ativo">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Ativa"
                 description="Inativa some das listas de escolha, mas continua valendo onde já está."
               />

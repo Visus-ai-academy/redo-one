@@ -380,7 +380,7 @@ function FormCadastro({
       </form.AppField>
       <form.AppField name="senior">
         {(field) => (
-          <field.CheckboxField
+          <field.InterruptorField
             label="Sênior"
             description="Independe da função: um staff pode ou não ser sênior."
           />
@@ -388,7 +388,7 @@ function FormCadastro({
       </form.AppField>
       <form.AppField name="fellowship">
         {(field) => (
-          <field.CheckboxField
+          <field.InterruptorField
             label="Fez fellowship"
             description="Formação concluída; entra na classificação da qualidade."
           />
@@ -396,7 +396,7 @@ function FormCadastro({
       </form.AppField>
       <form.AppField name="ocultoDashboards">
         {(field) => (
-          <field.CheckboxField
+          <field.InterruptorField
             label="Oculto nos painéis"
             description="Some da volumetria e do painel executivo."
           />
@@ -404,7 +404,7 @@ function FormCadastro({
       </form.AppField>
       <form.AppField name="ativo">
         {(field) => (
-          <field.CheckboxField
+          <field.InterruptorField
             label="Ativo"
             description="Inativo some das listas de escolha; o histórico continua."
           />

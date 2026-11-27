@@ -273,7 +273,7 @@ function FormAjuste({
       </form.AppField>
       <form.AppField name="segueSla">
         {(field) => (
-          <field.CheckboxField
+          <field.InterruptorField
             label="Segue o SLA"
             description="Nos dias do ajuste, o prazo mínimo da grade de recebimento não vale para ele, em nenhum turno. O que o turno não recebe continua de fora."
           />

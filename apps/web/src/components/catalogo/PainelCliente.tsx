@@ -291,7 +291,7 @@ export function PainelCliente({
             </form.AppField>
             <form.AppField name="ocultoDashboards">
               {(field) => (
-                <field.CheckboxField
+                <field.InterruptorField
                   label="Oculto nos painéis"
                   description="Some da volumetria e do painel executivo; continua no faturamento."
                 />
@@ -299,7 +299,7 @@ export function PainelCliente({
             </form.AppField>
             <form.AppField name="ativo">
               {(field) => (
-                <field.CheckboxField
+                <field.InterruptorField
                   label="Ativo"
                   description="Inativo some das listas de escolha; o histórico continua."
                 />

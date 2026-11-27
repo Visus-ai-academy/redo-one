@@ -142,7 +142,7 @@ describe('EditorCorte (padrão)', () => {
     editor();
     await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
     await escolherOpcao('A partir de', '12/2026');
-    await userEvent.click(screen.getByRole('checkbox', { name: /Considerar a data do exame/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /Considerar a data do exame/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
     expect(
       await screen.findByText(/^Pela data do laudo, só nas competências abertas/),
@@ -198,9 +198,7 @@ describe('EditorCorte (data do exame)', () => {
       within(laudo).getByRole('combobox', { name: 'Dia do corte (data do laudo)' }),
     ).toBeInTheDocument();
     const exame = screen.getByRole('group', { name: 'Data do exame' });
-    expect(
-      within(exame).getByRole('checkbox', { name: /Considerar a data do exame/ }),
-    ).toBeChecked();
+    expect(within(exame).getByRole('switch', { name: /Considerar a data do exame/ })).toBeChecked();
     expect(
       within(exame).getByRole('combobox', { name: 'Dia do corte (data do exame)' }),
     ).toHaveTextContent('Último dia do mês');
@@ -227,7 +225,7 @@ describe('EditorCorte (data do exame)', () => {
   it('sem considerar a data do exame, os campos dele somem e a frase diz que só o laudo conta', async () => {
     editor();
     await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: /Considerar a data do exame/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /Considerar a data do exame/ }));
     expect(
       screen.queryByRole('combobox', { name: 'Dia do corte (data do exame)' }),
     ).not.toBeInTheDocument();
@@ -370,7 +368,7 @@ describe('EditorCorte (cliente)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Nova vigência' }));
     await escolherOpcao('A partir de', '01/2027');
     expect(screen.queryByRole('option', { name: '11/2026' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('checkbox', { name: /Usar o corte padrão/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /Usar o corte padrão/ }));
     expect(screen.queryByRole('combobox', { name: /Dia do corte/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
     expect(previa).toHaveBeenCalledWith({

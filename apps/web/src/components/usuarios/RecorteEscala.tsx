@@ -18,6 +18,7 @@ import { Alerta } from '../alerta/Alerta';
 import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
+import { Interruptor } from '../interruptor/Interruptor';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useAvisos } from '../toast/use-avisos';
 
@@ -34,7 +35,7 @@ export type RecorteEscalaProps = {
 };
 
 const AJUDA =
-  'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Para ela ver tudo, marque "Vê toda a escala".';
+  'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Para ela ver tudo, ligue "Vê toda a escala".';
 
 // A API devolve no máximo 100 por página; turnos e frentes ativos são bem menos que isso.
 const CADASTROS_ATIVOS = { query: { ativo: true, porPagina: 100 } };
@@ -217,8 +218,8 @@ function EditorRecorte({
         </Alerta>
       )}
       <Field.Root>
-        <Field.Label className="flex items-center gap-2">
-          <CaixaDeSelecao
+        <Field.Label className="flex items-center gap-3 font-medium">
+          <Interruptor
             checked={veTodaEscala}
             onCheckedChange={(marcada) => {
               setVeTodaEscala(marcada);

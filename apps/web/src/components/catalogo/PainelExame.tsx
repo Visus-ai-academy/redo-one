@@ -258,18 +258,18 @@ export function PainelExame({
             </div>
             <form.AppField name="exigeRevisaoManual">
               {(field) => (
-                <field.CheckboxField
+                <field.InterruptorField
                   label="Exige revisão manual"
                   description="O robô separa para a operação analisar em vez de distribuir (ex.: idade óssea)."
                 />
               )}
             </form.AppField>
             <form.AppField name="permiteQuebra">
-              {(field) => <field.CheckboxField label="Permite quebra" />}
+              {(field) => <field.InterruptorField label="Permite quebra" />}
             </form.AppField>
             <form.AppField name="ativo">
               {(field) => (
-                <field.CheckboxField
+                <field.InterruptorField
                   label="Ativo"
                   description="Inativo some das buscas de exame; o histórico continua."
                 />

@@ -34,8 +34,8 @@ describe('PainelTipoAusencia', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), 'Falta');
     await userEvent.clear(screen.getByRole('textbox', { name: 'Gravidade' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Gravidade' }), '5');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Só o gestor lança' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Conta como falta' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Só o gestor lança' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Conta como falta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar tipo de ausência' }));
 
     expect(onSalvar).toHaveBeenCalledWith({

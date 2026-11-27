@@ -116,8 +116,8 @@ describe('FormConfiguracaoDistribuicao', () => {
         onSalvar={onSalvar}
       />,
     );
-    await userEvent.click(screen.getByRole('checkbox', { name: /Robô ligado/ }));
-    await userEvent.click(screen.getByRole('checkbox', { name: /Limitar os exames por rodada/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /Robô ligado/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /Limitar os exames por rodada/ }));
     await userEvent.type(screen.getByRole('textbox', { name: /Teto de exames por rodada/ }), '500');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
     expect(onSalvar).toHaveBeenCalledWith(
@@ -213,7 +213,7 @@ describe('FormConfiguracaoDistribuicao', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Tarde' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
     expect(
-      await screen.findByText('Escolha ao menos um turno, ou desmarque os turnos posteriores.'),
+      await screen.findByText('Escolha ao menos um turno, ou desligue os turnos posteriores.'),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });

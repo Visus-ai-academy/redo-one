@@ -174,7 +174,7 @@ export function PainelNaoEspecialidade({
         )}
       </form.AppField>
       <form.AppField name="ativo">
-        {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
+        {(field) => <field.InterruptorField label="Ativo" description={ativoAjuda} />}
       </form.AppField>
     </MolduraDePara>
   );
@@ -249,7 +249,7 @@ export function PainelSufixo({
         )}
       </form.AppField>
       <form.AppField name="ativo">
-        {(field) => <field.CheckboxField label="Ativo" description={ativoAjuda} />}
+        {(field) => <field.InterruptorField label="Ativo" description={ativoAjuda} />}
       </form.AppField>
     </MolduraDePara>
   );

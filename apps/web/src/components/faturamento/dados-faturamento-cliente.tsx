@@ -341,7 +341,7 @@ function FormDados({
         </form.AppField>
         <form.AppField name="exclusaoFiscal">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Exclusão fiscal"
               description="Os laudos deste cliente saem do faturamento."
             />

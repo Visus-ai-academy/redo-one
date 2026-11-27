@@ -84,7 +84,7 @@ describe('PainelMedico', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'E-mail' }), 'carla@clinica.com');
     await escolherOpcao('Nível', 'Nível 1');
     await escolherOpcao('Função', 'Fellow (em formação)');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Sênior' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Sênior' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar médico' }));
 
     expect(onSalvar).toHaveBeenCalledWith({

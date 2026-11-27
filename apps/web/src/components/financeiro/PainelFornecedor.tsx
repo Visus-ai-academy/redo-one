@@ -585,7 +585,7 @@ export function PainelFornecedor({
           </form.AppField>
           <form.AppField name="ativo">
             {(field) => (
-              <field.CheckboxField
+              <field.InterruptorField
                 label="Ativo"
                 description="Inativo some da escolha de favorecido, mas continua nos títulos já lançados."
               />

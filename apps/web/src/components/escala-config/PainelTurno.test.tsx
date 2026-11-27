@@ -154,7 +154,7 @@ describe('PainelTurno', () => {
         'O turno foi inativado, mas tem 4 alocações vigentes: elas continuam na escala.',
       ]),
     });
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Ativo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(

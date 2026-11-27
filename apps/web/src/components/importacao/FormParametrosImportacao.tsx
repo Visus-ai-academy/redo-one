@@ -213,7 +213,7 @@ export function FormParametrosImportacao({
         </p>
         {avisoDesligada}
         <form.AppField name="mobilemedAutomatica">
-          {(field) => <field.CheckboxField label="Importar automaticamente" />}
+          {(field) => <field.InterruptorField label="Importar automaticamente" />}
         </form.AppField>
         <form.Subscribe selector={(estado) => estado.values.mobilemedAutomatica}>
           {(automatica) =>

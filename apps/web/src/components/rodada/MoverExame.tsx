@@ -14,8 +14,8 @@ import { Alerta } from '../alerta/Alerta';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { CampoBusca } from '../busca/CampoBusca';
 import { buttonClassName } from '../button/button-class';
-import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { Etiqueta } from '../etiqueta/Etiqueta';
+import { Interruptor } from '../interruptor/Interruptor';
 
 const semAcento = (t: string) =>
   t
@@ -209,9 +209,9 @@ export function MoverExame({
               )}
             </ul>
             {outros > 0 && (
-              // biome-ignore lint/a11y/noLabelWithoutControl: o Checkbox do Base UI renderiza o input dentro do label.
+              // biome-ignore lint/a11y/noLabelWithoutControl: o Switch do Base UI renderiza o input dentro do label.
               <label className="flex items-center gap-2 border-t px-3 py-2 text-[13px]">
-                <CaixaDeSelecao checked={levar} onCheckedChange={setLevar} />
+                <Interruptor checked={levar} onCheckedChange={setLevar} />
                 <Package size={16} aria-hidden className="text-muted-foreground" />
                 {designacao.nomePaciente
                   ? `Levar os outros ${outros} exame(s) de ${designacao.nomePaciente}`

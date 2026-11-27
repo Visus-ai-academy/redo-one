@@ -328,7 +328,7 @@ export function PainelContaBancaria({
         </div>
         <form.AppField name="padraoRecebimento">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Padrão para recebimento"
               description="Onde o cliente paga quando a regra não diz outra conta. Marcar esta desmarca a anterior da empresa."
             />
@@ -336,7 +336,7 @@ export function PainelContaBancaria({
         </form.AppField>
         <form.AppField name="ativa">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Ativa"
               description="Inativa some das listas de escolha, mas continua nos lançamentos que já a usam."
             />

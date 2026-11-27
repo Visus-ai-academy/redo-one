@@ -90,7 +90,7 @@ describe('PainelLancarAdicional', () => {
     await vi.waitFor(() => expect(unitario).toHaveValue('600,00'));
 
     await userEvent.click(
-      within(p).getByRole('checkbox', { name: 'Lançar na própria competência fechada' }),
+      within(p).getByRole('switch', { name: 'Lançar na própria competência fechada' }),
     );
     await vi.waitFor(() => expect(unitario).toHaveValue('350,00'));
     await userEvent.type(within(p).getByRole('textbox', { name: /Quantidade/ }), '1');
@@ -116,9 +116,7 @@ describe('PainelLancarAdicional', () => {
     montar({ competenciaInicial: '2026-11', podeLancarNaFechada: false });
     const p = await painel();
     await within(p).findByText(/está fechada/);
-    expect(
-      within(p).queryByRole('checkbox', { name: /Lançar na própria/ }),
-    ).not.toBeInTheDocument();
+    expect(within(p).queryByRole('switch', { name: /Lançar na própria/ })).not.toBeInTheDocument();
   });
 
   it('Peer Review pede os meses avaliados', async () => {

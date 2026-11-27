@@ -32,7 +32,7 @@ describe('PainelTipoAviso', () => {
     expect(await screen.findByText('214 avisos pendentes')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Financeiro' })).toBeChecked();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Operação' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Impede fechar a competência' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Impede fechar a competência' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(onSalvar).toHaveBeenCalledWith({

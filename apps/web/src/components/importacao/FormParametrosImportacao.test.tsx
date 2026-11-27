@@ -36,7 +36,7 @@ describe('FormParametrosImportacao', () => {
     const onSalvar = vi.fn(async () => undefined);
     render(<FormParametrosImportacao parametros={atuais} podeEditar onSalvar={onSalvar} />);
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Importar automaticamente' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Importar automaticamente' }));
     expect(screen.queryByRole('textbox', { name: /Intervalo/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar parâmetros' }));
 

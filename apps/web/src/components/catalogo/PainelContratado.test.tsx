@@ -45,19 +45,19 @@ describe('PainelContratado', () => {
     );
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Razão social' }), 'TELEIMAGEM');
-    const financeiro = screen.getByRole('checkbox', { name: 'Usa o financeiro do One' });
+    const financeiro = screen.getByRole('switch', { name: 'Usa o financeiro do One' });
     expect(financeiro).toHaveAccessibleDescription(
       'Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One.',
     );
     await userEvent.click(financeiro);
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Ativo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
     expect(
       await screen.findByText('Um contratado inativo não pode usar o financeiro do One.'),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Ativo' }));
     await waitFor(() =>
       expect(
         screen.queryByText('Um contratado inativo não pode usar o financeiro do One.'),
@@ -78,15 +78,15 @@ describe('PainelContratado', () => {
     );
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Razão social' }), 'TELEIMAGEM');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Contratado padrão' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Contratado padrão' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Ativo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
     expect(
       await screen.findByText('Um contratado inativo não pode ser o contratado padrão.'),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ativo' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Ativo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));
     await waitFor(() =>
       expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ padrao: true, ativo: true })),

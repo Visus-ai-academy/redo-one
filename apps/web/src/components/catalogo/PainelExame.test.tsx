@@ -64,7 +64,7 @@ describe('PainelExame', () => {
     const avc = await screen.findByRole('option', { name: 'AVC' });
     expect(screen.queryByRole('option', { name: 'ABDOME' })).not.toBeInTheDocument();
     await userEvent.click(avc);
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Exige revisão manual' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Exige revisão manual' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar exame' }));
 
     expect(onSalvar).toHaveBeenCalledWith({
@@ -182,6 +182,7 @@ describe('PainelExame', () => {
         expect(screen.queryByRole('combobox', { name: campo })).not.toBeInTheDocument();
       }
       expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+      expect(screen.queryAllByRole('switch')).toHaveLength(0);
       const especialidade = screen.getByRole('textbox', { name: 'Especialidade' });
       expect(especialidade).toHaveValue('MEDICINA INTERNA');
       expect(especialidade).toHaveAttribute('readonly');

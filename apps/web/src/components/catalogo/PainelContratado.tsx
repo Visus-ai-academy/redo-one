@@ -253,7 +253,7 @@ export function PainelContratado({
         </form.AppField>
         <form.AppField name="ativo">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Ativo"
               description="Inativo some da escolha da empresa que fatura, mas continua nos clientes que já o usam."
             />
@@ -269,7 +269,7 @@ export function PainelContratado({
           }}
         >
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Contratado padrão"
               description="Vem escolhido nos campos de contratado, como a empresa que fatura do cliente novo. Marcar este desmarca o anterior."
             />
@@ -285,7 +285,7 @@ export function PainelContratado({
           }}
         >
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Usa o financeiro do One"
               description="Contas a pagar e a receber, nota fiscal e cobrança desta empresa ficam no One."
             />

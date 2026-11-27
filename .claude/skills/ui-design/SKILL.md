@@ -77,6 +77,7 @@ Como a tela reage (validação, estado na URL, erros por código HTTP, textos de
 
 **Formulários**
 - **Campo de formato fixo tem máscara** (CPF, CNPJ, CEP, telefone, chave Pix desses tipos): formata enquanto a pessoa digita, sem pular o cursor, com teclado numérico no celular.
+- **Ligar/desligar uma configuração é interruptor; caixa de marcar só para escolher itens de uma lista** (prioridades, especialidades, linhas de tabela). Linha do interruptor, estados e teclado: `sistema.md`, seção "Formulários".
 - Rótulo acima do campo, ajuda abaixo, erro abaixo (texto que diz o problema e como resolver). Largura de leitura: 480–640px.
 - Seleção com mais de 7 opções abre com um campo de busca no topo da lista, com o foco nele: a pessoa digita parte do nome (sem acento nem maiúscula) em vez de rolar. Lista curta (situação, tipo) fica sem busca.
 - Um botão primário por formulário, à direita no rodapé (ou largura total em formulários estreitos de acesso); "Cancelar" secundário ao lado.
@@ -165,6 +166,7 @@ Responda na ordem; a primeira resposta "sim" decide.
 - Área em branco ou spinner no meio enquanto carrega, quando dá para mostrar o skeleton do conteúdo; clique sem resposta visível.
 - Ícones de conjuntos misturados, emoji, ícone decorativo sem função.
 - Componente reinventado (barra de rolagem, select, checkbox feitos à mão) quando há nativo ou Base UI.
+- Caixa de marcar sozinha para ligar ou desligar uma configuração (use o interruptor).
 - Enfeite nativo do navegador fora do sistema (o "x" azul do campo de busca, setas do campo numérico): esconda e use o ícone Phosphor, com cursor de clique.
 - Telas do mesmo tipo com padrões diferentes (cada lista com um jeito de filtrar, cada formulário com um jeito de salvar).
 

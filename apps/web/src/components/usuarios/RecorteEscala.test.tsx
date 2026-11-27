@@ -98,6 +98,7 @@ describe('RecorteEscala', () => {
 
     expect(await screen.findByText('Vê toda a escala.')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 
   it('sem "vê toda a escala" e sem turno nem frente, diz que não vê a escala', async () => {
@@ -119,6 +120,7 @@ describe('RecorteEscala', () => {
 
     expect(await screen.findByRole('list', { name: 'Turnos' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     expect(listarTurnos).not.toHaveBeenCalled();
   });
 
@@ -127,6 +129,7 @@ describe('RecorteEscala', () => {
 
     expect(await screen.findByText('Você não pode alterar o próprio recorte.')).toBeVisible();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 
   it('marca turnos e frentes e salva o recorte', async () => {
@@ -136,7 +139,7 @@ describe('RecorteEscala', () => {
     expect(manha).toBeChecked();
     expect(
       screen.getByText(
-        'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Para ela ver tudo, marque "Vê toda a escala".',
+        'A gestora vê e edita só as alocações e ausências desses turnos ou dessas frentes. Para ela ver tudo, ligue "Vê toda a escala".',
       ),
     ).toBeVisible();
     const salvar = screen.getByRole('button', { name: 'Salvar recorte' });
@@ -161,7 +164,7 @@ describe('RecorteEscala', () => {
   it('"Vê toda a escala" esconde os turnos e as frentes e salva o "todos" explícito', async () => {
     montar(COM_RECORTE);
 
-    await userEvent.click(await screen.findByRole('checkbox', { name: 'Vê toda a escala' }));
+    await userEvent.click(await screen.findByRole('switch', { name: 'Vê toda a escala' }));
     expect(screen.queryByRole('checkbox', { name: 'Manhã' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar recorte' }));
 

@@ -232,13 +232,16 @@ export function PainelItemLista({
       {variante === 'prioridade' && (
         <form.AppField name="urgente">
           {(field) => (
-            <field.CheckboxField label="Urgente" description="A distribuição trata como urgente." />
+            <field.InterruptorField
+              label="Urgente"
+              description="A distribuição trata como urgente."
+            />
           )}
         </form.AppField>
       )}
       <form.AppField name="ativo">
         {(field) => (
-          <field.CheckboxField
+          <field.InterruptorField
             label="Ativo"
             description={`Inativ${artigo} some das listas de escolha, mas continua nos cadastros que já usam.`}
           />

@@ -87,7 +87,7 @@ describe('MoverExame', () => {
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
     expect(
-      screen.getByRole('checkbox', { name: /Levar os outros 2 exame\(s\) de Paciente Fictício/ }),
+      screen.getByRole('switch', { name: /Levar os outros 2 exame\(s\) de Paciente Fictício/ }),
     ).toBeChecked();
     expect(screen.queryByText('Davi')).not.toBeInTheDocument();
     expect(screen.queryByText('Ana')).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('MoverExame', () => {
       />,
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: /Levar os outros/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /Levar os outros/ }));
     await userEvent.click(screen.getByRole('button', { name: /Bruno/ }));
     expect(onEscolher).toHaveBeenCalledWith('B', false);
   });

@@ -144,7 +144,7 @@ export function PainelTipoAusencia({
         </form.AppField>
         <form.AppField name="soGestor">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Só o gestor lança"
               description="O médico não pede esta ausência pelo portal."
             />
@@ -152,7 +152,7 @@ export function PainelTipoAusencia({
         </form.AppField>
         <form.AppField name="contaComoFalta">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Conta como falta"
               description="Entra na contagem de faltas dos indicadores."
             />
@@ -195,7 +195,7 @@ export function PainelTipoAusencia({
         </div>
         <form.AppField name="ativo">
           {(field) => (
-            <field.CheckboxField
+            <field.InterruptorField
               label="Ativo"
               description="Inativo some das opções ao lançar ausência, mas as antigas ficam."
             />

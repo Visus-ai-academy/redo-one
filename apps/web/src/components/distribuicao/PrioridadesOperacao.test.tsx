@@ -70,7 +70,7 @@ describe('PrioridadesOperacao', () => {
     );
     await userEvent.type(screen.getByRole('combobox', { name: /Grafias/ }), 'P9{enter}p9.Teste,');
     await userEvent.type(screen.getByRole('textbox', { name: /Cor/ }), ' #8A8A45 ');
-    await userEvent.click(screen.getByRole('checkbox', { name: /a urgência fura a grade/ }));
+    await userEvent.click(screen.getByRole('switch', { name: /a urgência fura a grade/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar prioridade' }));
     expect(onCriar).toHaveBeenCalledWith({
       nome: 'TESTE',
