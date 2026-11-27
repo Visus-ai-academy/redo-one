@@ -173,7 +173,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="expiracaoPropostaMin">
             {(field) => (
               <field.NumberField
-                label="Validade da proposta (minutos)"
+                label="Validade da proposta"
+                unidade="min"
                 placeholder="Ex.: 45"
                 description="A proposta não aprovada nesse tempo expira: a fila já mudou."
                 min={1}
@@ -221,7 +222,8 @@ export function FormConfiguracaoDistribuicao({
                 <form.AppField name="retratoFilaMin">
                   {(field) => (
                     <field.NumberField
-                      label="Ler a cada (minutos)"
+                      label="Ler a cada"
+                      unidade="min"
                       placeholder="Ex.: 5"
                       min={1}
                       max={1440}
@@ -246,7 +248,8 @@ export function FormConfiguracaoDistribuicao({
                 <form.AppField name="contasUnidadeValidadeMin">
                   {(field) => (
                     <field.NumberField
-                      label="Validade da lista de cada unidade (minutos)"
+                      label="Validade da lista de cada unidade"
+                      unidade="min"
                       placeholder="Ex.: 240"
                       description="Depois disso a lista é lida de novo na MobileMed. 0 = lê a cada rodada."
                       min={0}
@@ -346,7 +349,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="prazoCriticoMin">
             {(field) => (
               <field.NumberField
-                label="Prazo crítico (minutos)"
+                label="Prazo crítico"
+                unidade="min"
                 placeholder="Ex.: 60"
                 description="Faltando menos que isso para vencer, o exame passa à frente dos clientes com prioridade."
                 min={0}
@@ -369,7 +373,8 @@ export function FormConfiguracaoDistribuicao({
                 <form.AppField name="janelaPacienteHoras">
                   {(field) => (
                     <field.NumberField
-                      label="Distância máxima entre os exames do pacote (horas)"
+                      label="Distância máxima entre os exames do pacote"
+                      unidade="h"
                       placeholder="Ex.: 0"
                       description="0: sem limite de tempo."
                       min={0}
@@ -389,7 +394,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="toleranciaAcimaTeto">
             {(field) => (
               <field.NumberField
-                label="Folga acima do teto (exames)"
+                label="Folga acima do teto"
+                unidade="exames"
                 placeholder="Ex.: 0"
                 description="Quantos exames a mais o médico pode receber para não quebrar um pacote."
                 min={0}
@@ -401,7 +407,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="margemUrgenciaPct">
             {(field) => (
               <field.NumberField
-                label="Margem acima do teto só para urgência (%)"
+                label="Margem acima do teto só para urgência"
+                unidade="%"
                 placeholder="Ex.: 10"
                 min={0}
                 max={100}
@@ -412,7 +419,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="folgaProporcaoPct">
             {(field) => (
               <field.NumberField
-                label="Folga da proporção para exame atrasado ou vencendo antes da próxima rodada (pontos %)"
+                label="Folga da proporção para exame atrasado ou vencendo antes da próxima rodada"
+                unidade="pontos %"
                 placeholder="Ex.: 20"
                 description="Na frente dividida por modalidade, quanto o médico pode passar da proporção para não deixar o exame vencer. 100: ignora a proporção nesses casos."
                 min={0}
@@ -429,7 +437,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="cicloMinutos">
             {(field) => (
               <field.NumberField
-                label="Intervalo entre rodadas (minutos)"
+                label="Intervalo entre rodadas"
+                unidade="min"
                 placeholder="Ex.: 30"
                 min={1}
                 max={1440}
@@ -440,7 +449,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="antecedenciaPeriodoMin">
             {(field) => (
               <field.NumberField
-                label="Antecedência do turno (minutos)"
+                label="Antecedência do turno"
+                unidade="min"
                 placeholder="Ex.: 180"
                 description="Um turno que ainda não começou já recebe exames esse tempo antes do início."
                 min={0}
@@ -500,7 +510,8 @@ export function FormConfiguracaoDistribuicao({
                   <form.AppField name="recolhimentoAposTurnoMin">
                     {(field) => (
                       <field.NumberField
-                        label="Prazo para recolher, depois do fim do turno (minutos)"
+                        label="Prazo para recolher, depois do fim do turno"
+                        unidade="min"
                         placeholder="Ex.: 60"
                         description={dicaDoPrazo(field.state.value)}
                         min={0}
@@ -548,7 +559,8 @@ export function FormConfiguracaoDistribuicao({
                                   <form.AppField name={`recolhimentoPorTurno[${i}].minutos`}>
                                     {(field) => (
                                       <field.NumberField
-                                        label={`Prazo do turno ${i + 1} (minutos)`}
+                                        label={`Prazo do turno ${i + 1}`}
+                                        unidade="min"
                                         placeholder="Ex.: 1440"
                                         description={dicaDoPrazo(field.state.value)}
                                         min={0}
@@ -593,7 +605,8 @@ export function FormConfiguracaoDistribuicao({
           <form.AppField name="diasJaEntregue">
             {(field) => (
               <field.NumberField
-                label="Não devolver ao mesmo médico por (dias)"
+                label="Não devolver ao mesmo médico por"
+                unidade="dias"
                 placeholder="Ex.: 7"
                 description="O exame que já foi entregue a um médico e voltou para a fila não vai de novo para ele nesse período."
                 min={0}

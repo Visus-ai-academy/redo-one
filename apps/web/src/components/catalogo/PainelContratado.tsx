@@ -7,11 +7,21 @@ import { ordenarContratados } from '../../lib/catalogo';
 import { formatarCep, formatarCnpj, soDigitos } from '../../lib/documentos';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
+import { UFS } from '../faturamento/dados-faturamento';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
+
+/** As 27 siglas; a gravada fora da lista (cadastro antigo) continua oferecida, para não se perder. */
+function opcoesDeUf(atual: string) {
+  const fora = atual && !(UFS as readonly string[]).includes(atual) ? [atual] : [];
+  return [
+    { valor: '', rotulo: '—' },
+    ...[...UFS, ...fora].map((uf) => ({ valor: uf, rotulo: uf })),
+  ];
+}
 
 const tamanho = (n: number, mensagem: string) =>
   z.string().refine((v) => v.trim() === '' || soDigitos(v).length === n, mensagem);
@@ -216,11 +226,11 @@ export function PainelContratado({
           </form.AppField>
           <form.AppField name="uf">
             {(field) => (
-              <field.TextField
+              <field.SelectField
                 label="UF"
-                placeholder="SP"
-                autoComplete="off"
-                className="flex-[1_1_64px]"
+                placeholder="UF"
+                opcoes={opcoesDeUf(iniciais.uf)}
+                className="flex-[1_1_88px]"
               />
             )}
           </form.AppField>

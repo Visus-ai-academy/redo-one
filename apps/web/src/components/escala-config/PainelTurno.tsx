@@ -261,12 +261,9 @@ export function PainelTurno({
         <div className="flex flex-wrap gap-4">
           <form.AppField name="cor">
             {(field) => (
-              <field.TextField
-                label="Cor"
-                placeholder="#1F7A4D"
-                autoComplete="off"
+              <field.CorField
                 description="Cor do turno na grade da escala."
-                className="flex-[1_1_160px]"
+                className="basis-full"
               />
             )}
           </form.AppField>

@@ -69,7 +69,7 @@ describe('PrioridadesOperacao', () => {
       '6',
     );
     await userEvent.type(screen.getByRole('combobox', { name: /Grafias/ }), 'P9{enter}p9.Teste,');
-    await userEvent.type(screen.getByRole('textbox', { name: /Cor/ }), ' #8A8A45 ');
+    await userEvent.click(screen.getByRole('radio', { name: 'Oliva' }));
     await userEvent.click(screen.getByRole('switch', { name: /a urgência fura a grade/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar prioridade' }));
     expect(onCriar).toHaveBeenCalledWith({
@@ -107,17 +107,11 @@ describe('PrioridadesOperacao', () => {
     ).toEqual(['P8.Urgente', 'P9']);
   });
 
-  it('a cor fora do formato #RRGGBB não salva; vazia salva sem cor', async () => {
+  it('a cor vem marcada na paleta; "Sem cor" salva sem cor', async () => {
     const { onEditar } = montar();
     await userEvent.click(screen.getByRole('button', { name: /AMBULATÓRIO/ }));
-    const cor = await screen.findByRole('textbox', { name: /Cor/ });
-    expect(cor).toHaveValue('#5677B8');
-    await userEvent.clear(cor);
-    await userEvent.type(cor, 'azul');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText('Use o formato #RRGGBB, como #1F7A4D.')).toBeInTheDocument();
-    expect(onEditar).not.toHaveBeenCalled();
-    await userEvent.clear(cor);
+    expect(await screen.findByRole('radio', { name: 'Azul' })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: 'Sem cor' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(onEditar).toHaveBeenCalledWith('op-amb', expect.objectContaining({ cor: null }));
   });

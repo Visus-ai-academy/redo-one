@@ -225,11 +225,9 @@ function PainelPrioridade({
         </form.Subscribe>
         <form.AppField name="cor">
           {(field) => (
-            <field.TextField
-              label="Cor"
-              placeholder="#1F7A4D"
-              autoComplete="off"
+            <field.CorField
               description="Cor da prioridade na barra da fila do momento (Operação › Distribuição). Sem cor, fica cinza."
+              className="basis-full"
             />
           )}
         </form.AppField>

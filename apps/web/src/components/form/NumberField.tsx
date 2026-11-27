@@ -75,7 +75,12 @@ export function NumberField({
       touched={field.state.meta.isTouched}
       className={cn('flex flex-col gap-2', className)}
     >
-      <FieldLabel required={required}>{label}</FieldLabel>
+      <FieldLabel required={required}>
+        {label}
+        {/* A unidade à vista é decorativa; o leitor de tela a ouve no nome do campo. */}
+        {unidade && ' '}
+        {unidade && <span className="sr-only">({unidade})</span>}
+      </FieldLabel>
       <BaseNumberField.Root
         value={field.state.value.trim() === '' ? null : Number(field.state.value)}
         onValueChange={(valor) => field.handleChange(valor === null ? '' : String(valor))}

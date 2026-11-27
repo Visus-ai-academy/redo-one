@@ -206,13 +206,7 @@ export function PainelItemLista({
       <div className="flex flex-wrap gap-4">
         <form.AppField name="cor">
           {(field) => (
-            <field.TextField
-              label="Cor"
-              placeholder="#1F7A4D"
-              autoComplete="off"
-              description="Cor do selo nas telas."
-              className="flex-[1_1_160px]"
-            />
+            <field.CorField description="Cor do selo nas telas." className="basis-full" />
           )}
         </form.AppField>
         <form.AppField name="ordem">

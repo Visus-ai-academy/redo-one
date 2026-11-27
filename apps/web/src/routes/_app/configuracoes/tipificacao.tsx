@@ -578,12 +578,7 @@ function PainelRegra({
           </form.AppField>
           <form.AppField name="cor">
             {(field) => (
-              <field.TextField
-                label="Cor"
-                placeholder="#DC2626"
-                autoComplete="off"
-                description="Cor do selo nas telas."
-              />
+              <field.CorField description="Cor do selo nas telas." className="basis-full" />
             )}
           </form.AppField>
           {regra && (

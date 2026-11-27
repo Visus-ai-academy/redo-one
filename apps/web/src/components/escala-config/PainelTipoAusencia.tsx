@@ -170,13 +170,7 @@ export function PainelTipoAusencia({
         <div className="flex flex-wrap gap-4">
           <form.AppField name="cor">
             {(field) => (
-              <field.TextField
-                label="Cor"
-                placeholder="#1F7A4D"
-                autoComplete="off"
-                description="Cor da ausência na escala."
-                className="flex-[1_1_160px]"
-              />
+              <field.CorField description="Cor da ausência na escala." className="basis-full" />
             )}
           </form.AppField>
           <form.AppField name="ordem">

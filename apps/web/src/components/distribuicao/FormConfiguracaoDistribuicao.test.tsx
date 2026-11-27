@@ -71,7 +71,7 @@ describe('FormConfiguracaoDistribuicao', () => {
         onSalvar={onSalvar}
       />,
     );
-    const ciclo = screen.getByRole('textbox', { name: 'Intervalo entre rodadas (minutos)' });
+    const ciclo = screen.getByRole('textbox', { name: 'Intervalo entre rodadas (min)' });
     await userEvent.clear(ciclo);
     await userEvent.type(ciclo, '20');
     await userEvent.click(screen.getByRole('button', { name: 'Critério chegada' }));
@@ -240,10 +240,7 @@ describe('FormConfiguracaoDistribuicao', () => {
     );
     await userEvent.keyboard('{Escape}');
     await escolherOpcao('Turno 2', 'Lista');
-    await userEvent.type(
-      screen.getByRole('textbox', { name: 'Prazo do turno 2 (minutos)' }),
-      '1440',
-    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Prazo do turno 2 (min)' }), '1440');
     expect(screen.getByText('(24 h)')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar configuração' }));
     expect(onSalvar).toHaveBeenCalledWith(

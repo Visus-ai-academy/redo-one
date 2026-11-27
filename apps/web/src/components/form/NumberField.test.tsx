@@ -39,7 +39,7 @@ describe('NumberField com unidade', () => {
   it('mostra a unidade fixa ao lado do número, fora do nome do campo', () => {
     render(<Formulario inicial="12.5" />);
     expect(screen.getByText('%')).toHaveAttribute('aria-hidden');
-    expect(screen.getByRole('textbox', { name: 'Percentual' })).toHaveValue('12,5');
+    expect(screen.getByRole('textbox', { name: 'Percentual (%)' })).toHaveValue('12,5');
   });
 
   it('sem mexer, devolve o mesmo valor', async () => {
@@ -52,7 +52,7 @@ describe('NumberField com unidade', () => {
   it('digitado com vírgula, guarda com ponto', async () => {
     const aoEnviar = vi.fn();
     render(<Formulario inicial="" aoEnviar={aoEnviar} />);
-    await userEvent.type(screen.getByRole('textbox', { name: 'Percentual' }), '7,25');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Percentual (%)' }), '7,25');
     await userEvent.tab();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(aoEnviar).toHaveBeenCalledWith('7.25'));

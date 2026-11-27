@@ -36,7 +36,7 @@ describe('PainelItemLista', () => {
     expect(screen.getByRole('dialog', { name: 'Nova modalidade' })).toBeInTheDocument();
     await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'MR');
     await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Ressonância');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Cor' }), '#1F7A4D');
+    await userEvent.click(screen.getByRole('radio', { name: 'Verde' }));
     await userEvent.clear(screen.getByRole('textbox', { name: 'Ordem' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Ordem' }), '2');
     await userEvent.click(screen.getByRole('button', { name: 'Criar modalidade' }));
@@ -44,7 +44,7 @@ describe('PainelItemLista', () => {
     expect(onSalvar).toHaveBeenCalledWith({
       nome: 'MR',
       descricao: 'Ressonância',
-      cor: '#1F7A4D',
+      cor: '#5A9A64',
       ordem: 2,
       ativo: true,
     });
@@ -84,14 +84,13 @@ describe('PainelItemLista', () => {
     expect(onFechar).not.toHaveBeenCalled();
   });
 
-  it('valida nome e cor antes de enviar', async () => {
+  it('valida o nome antes de enviar; a cor só se escolhe na paleta', async () => {
     const { onSalvar } = montar();
 
-    await userEvent.type(screen.getByRole('textbox', { name: 'Cor' }), 'verde');
+    expect(screen.queryByRole('textbox', { name: 'Cor' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Criar modalidade' }));
 
     expect(await screen.findByText('Informe o código.')).toBeInTheDocument();
-    expect(screen.getByText('Use o formato #RRGGBB, como #1F7A4D.')).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });
 

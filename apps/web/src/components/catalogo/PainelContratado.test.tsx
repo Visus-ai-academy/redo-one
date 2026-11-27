@@ -19,7 +19,8 @@ describe('PainelContratado', () => {
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Razão social' }), '003 NOVA LTDA');
     await userEvent.type(screen.getByRole('textbox', { name: 'CNPJ' }), '12.345.678/0001-90');
-    await userEvent.type(screen.getByRole('textbox', { name: 'UF' }), 'sp');
+    await userEvent.click(screen.getByRole('combobox', { name: 'UF' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'SP' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'CEP' }), '01310-100');
     await escolherOpcao('Consolida o repasse em', '001 TELEIMAGEM');
     await userEvent.click(screen.getByRole('button', { name: 'Criar contratado' }));

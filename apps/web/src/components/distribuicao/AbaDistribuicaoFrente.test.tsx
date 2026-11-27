@@ -176,7 +176,9 @@ describe('AbaDistribuicaoFrente', () => {
       ],
     });
     renderComRotas(<AbaDistribuicaoFrente tipo="especialidade" id="e-mi" podeEditar />);
-    const percentual = await screen.findByRole('textbox', { name: 'Percentual da modalidade 2' });
+    const percentual = await screen.findByRole('textbox', {
+      name: 'Percentual da modalidade 2 (%)',
+    });
     await userEvent.clear(percentual);
     await userEvent.type(percentual, '30');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
@@ -291,8 +293,14 @@ describe('AbaDistribuicaoFrente', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar modalidade' }));
     await escolherOpcao('Modalidade 1', 'MR');
     await escolherOpcao('Modalidade 2', 'CT');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Percentual da modalidade 1' }), '70');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Percentual da modalidade 2' }), '30');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Percentual da modalidade 1 (%)' }),
+      '70',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Percentual da modalidade 2 (%)' }),
+      '30',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Salvar regras' }));
     expect(salvarEsp).toHaveBeenCalledWith(
       expect.objectContaining({

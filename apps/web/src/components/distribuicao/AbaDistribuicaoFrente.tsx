@@ -413,6 +413,7 @@ function FormRegras({
                                     {(field) => (
                                       <field.NumberField
                                         label={`Percentual da modalidade ${i + 1}`}
+                                        unidade="%"
                                         placeholder="Ex.: 60"
                                         min={1}
                                         max={100}
