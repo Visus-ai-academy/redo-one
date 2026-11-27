@@ -319,10 +319,9 @@ export function PainelFornecedor({
           <div className="flex flex-wrap gap-4">
             <form.AppField name="tipoPessoa">
               {(field) => (
-                <field.SelectField
+                <field.SegmentadaField
                   label="Tipo de pessoa"
                   required
-                  placeholder="Escolha"
                   opcoes={[
                     { valor: 'PJ', rotulo: 'Pessoa jurídica' },
                     { valor: 'PF', rotulo: 'Pessoa física' },

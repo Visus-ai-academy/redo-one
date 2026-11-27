@@ -18,6 +18,7 @@ import {
   aplicarNasCelulas,
   chaveCelula,
   type Grade,
+  OPCOES_RECEBIMENTO,
   regraEfetiva,
   rotuloCurto,
   rotuloRecebimento,
@@ -156,16 +157,7 @@ function Legenda({ naFrente, editavel }: { naFrente: boolean; editavel: boolean 
 
 type Opcao = { valor: ValorCelula['tipo']; rotulo: string; ajuda?: string };
 
-const OPCOES: Opcao[] = [
-  { valor: 'segue_sla', rotulo: 'Segue o SLA', ajuda: 'Recebe qualquer exame, pelo prazo.' },
-  {
-    valor: 'prazo_minimo',
-    rotulo: 'Prazo mínimo',
-    ajuda:
-      'Só o exame que ainda tem essas horas ou mais até vencer. Quem tem URGÊNCIA marcada na escala recebe a urgência mesmo assim.',
-  },
-  { valor: 'nao_recebe', rotulo: 'Não recebe', ajuda: 'O turno não pega essa prioridade.' },
-];
+const OPCOES: Opcao[] = OPCOES_RECEBIMENTO;
 
 /** O editor da célula, no popover: a regra, as horas na mesma linha e o uso em lote. */
 function EditorDaCelula({

@@ -19,10 +19,16 @@ export type Grade = Record<string, ValorCelula>;
 export const chaveCelula = (prioridadeOperacaoId: string, turnoId: string) =>
   `${prioridadeOperacaoId}|${turnoId}`;
 
-export const OPCOES_RECEBIMENTO: { valor: TipoRecebimento; rotulo: string }[] = [
-  { valor: 'segue_sla', rotulo: 'Segue o SLA' },
-  { valor: 'prazo_minimo', rotulo: 'Prazo mínimo' },
-  { valor: 'nao_recebe', rotulo: 'Não recebe' },
+/** As regras de recebimento, com a explicação de cada uma (a mesma na grade e nas exceções). */
+export const OPCOES_RECEBIMENTO: { valor: TipoRecebimento; rotulo: string; ajuda: string }[] = [
+  { valor: 'segue_sla', rotulo: 'Segue o SLA', ajuda: 'Recebe qualquer exame, pelo prazo.' },
+  {
+    valor: 'prazo_minimo',
+    rotulo: 'Prazo mínimo',
+    ajuda:
+      'Só o exame que ainda tem essas horas ou mais até vencer. Quem tem URGÊNCIA marcada na escala recebe a urgência mesmo assim.',
+  },
+  { valor: 'nao_recebe', rotulo: 'Não recebe', ajuda: 'O turno não pega essa prioridade.' },
 ];
 
 export const OPCOES_URGENCIA: { valor: TipoUrgencia; rotulo: string }[] = [

@@ -123,7 +123,7 @@ describe('ExcecoesRecebimento', () => {
     const { onCriar } = montar([]);
     await userEvent.click(screen.getByRole('button', { name: 'Nova exceção' }));
     await escolherOpcao('Turno', 'Manhã');
-    await escolherOpcao('Regra', 'Prazo mínimo');
+    await userEvent.click(screen.getByRole('radio', { name: 'Prazo mínimo' }));
     await userEvent.type(
       await screen.findByRole('textbox', { name: /Prazo mínimo, em horas/ }),
       '12',
@@ -182,5 +182,15 @@ describe('ExcecoesRecebimento', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Lista: segue o SLA/ }));
     expect(await screen.findByLabelText('Período')).toHaveValue('01/10/2026 a 31/10/2026');
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+  });
+
+  it('a regra fica em opções redondas com a explicação; frentes separadas por tipo', async () => {
+    montar([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Nova exceção' }));
+    expect(await screen.findByRole('radio', { name: 'Não recebe' })).toBeInTheDocument();
+    expect(screen.getByText('O turno não pega essa prioridade.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Frente' }));
+    expect(await screen.findByText('Especialidades')).toBeInTheDocument();
+    expect(screen.getByText('Modalidades')).toBeInTheDocument();
   });
 });

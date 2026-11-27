@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -92,10 +92,12 @@ describe('AbaDistribuicaoMedico', () => {
 
   it('troca a unidade do teto na hora, com o aviso', async () => {
     renderComRotas(<AbaDistribuicaoMedico medicoId="m1" podeEditar />);
-    const campo = await screen.findByRole('combobox', { name: 'Conta o teto por' });
-    expect(campo).toHaveTextContent('Exames');
-    await userEvent.click(campo);
-    await userEvent.click(await screen.findByRole('option', { name: 'Laudos' }));
+    const grupo = await screen.findByRole('group', { name: 'Conta o teto por' });
+    expect(within(grupo).getByRole('button', { name: 'Exames' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await userEvent.click(within(grupo).getByRole('button', { name: 'Laudos' }));
     expect(salvarRobo).toHaveBeenCalledWith(
       expect.objectContaining({ path: { medicoId: 'm1' }, body: { unidadeTeto: 'laudos' } }),
     );
@@ -107,7 +109,7 @@ describe('AbaDistribuicaoMedico', () => {
     expect(await screen.findByText('NEURO · TC')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Habilitado no robô' }));
     expect(salvarRobo).not.toHaveBeenCalled();
-    expect(screen.getByRole('combobox', { name: 'Conta o teto por' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Laudos' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Novo arranjo' })).not.toBeInTheDocument();
   });
 });

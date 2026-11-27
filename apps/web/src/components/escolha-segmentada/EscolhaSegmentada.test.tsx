@@ -28,4 +28,26 @@ describe('EscolhaSegmentada', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Semana' }));
     expect(onMudar).not.toHaveBeenCalled();
   });
+
+  it('aceita uma opção de valor vazio ("Não informado")', async () => {
+    const onMudar = vi.fn();
+    const opcoesSimNao = [
+      { valor: '', rotulo: 'Não informado' },
+      { valor: 'sim', rotulo: 'Sim' },
+    ];
+    const { rerender } = render(
+      <EscolhaSegmentada aria-label="Sócio" opcoes={opcoesSimNao} valor="" onMudar={onMudar} />,
+    );
+    expect(screen.getByRole('button', { name: 'Não informado' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Sim' }));
+    expect(onMudar).toHaveBeenCalledWith('sim');
+    rerender(
+      <EscolhaSegmentada aria-label="Sócio" opcoes={opcoesSimNao} valor="sim" onMudar={onMudar} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Não informado' }));
+    expect(onMudar).toHaveBeenLastCalledWith('');
+  });
 });

@@ -9,6 +9,7 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { buttonClassName } from '../button/button-class';
 import { type ExcluirPainel, RodapePainel } from '../catalogo/rodape-painel';
+import { opcoesDeFrentes } from '../escala/opcoes-frentes';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { DateField } from '../form/DateField';
@@ -145,7 +146,15 @@ function PainelExcecao({
 
   const opcoesFrente = [
     { valor: TODAS, rotulo: 'Todas as frentes' },
-    ...frentes.map((f) => ({ valor: chaveFrente(f), rotulo: f.rotulo })),
+    // Especialidades, depois modalidades, cada grupo com o subtítulo.
+    ...opcoesDeFrentes(
+      frentes.map((f) => ({
+        id: chaveFrente(f),
+        rotulo: f.rotulo,
+        cor: null,
+        tipo: f.especialidadeId ? ('especialidade' as const) : ('modalidade' as const),
+      })),
+    ).map(({ valor, rotulo, grupo }) => ({ valor, rotulo, grupo })),
   ];
   const opcoesPrioridade = [
     { valor: TODAS, rotulo: 'Todas as prioridades' },
@@ -175,9 +184,8 @@ function PainelExcecao({
         </form.AppField>
         <form.AppField name="regra">
           {(field) => (
-            <field.SelectField
+            <field.OpcoesField
               label="Regra"
-              placeholder="Escolha"
               opcoes={OPCOES_RECEBIMENTO}
               description="No período, vale esta regra no lugar da grade geral e da grade da frente. O ajuste do dia do médico continua valendo por cima."
               required

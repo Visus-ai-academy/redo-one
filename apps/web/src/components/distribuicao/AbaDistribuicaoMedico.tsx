@@ -10,7 +10,7 @@ import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { Chave } from '../chave/Chave';
-import { Select } from '../select/Select';
+import { EscolhaSegmentada } from '../escolha-segmentada/EscolhaSegmentada';
 import { useAvisos } from '../toast/use-avisos';
 import { ArranjosDistribuicao } from './ArranjosDistribuicao';
 import { buscarClientes, buscarExames, useCatalogoDoArranjo } from './buscas';
@@ -92,27 +92,27 @@ export function AbaDistribuicaoMedico({
         />
         <div className="mt-2 flex flex-col gap-1">
           <div className="flex items-center gap-1">
-            <label htmlFor={`unidade-teto-${medicoId}`} className="font-medium">
+            <span id={`unidade-teto-${medicoId}`} className="font-medium">
               Conta o teto por
-            </label>
+            </span>
             <AjudaContextual assunto="a unidade do teto">
               Exames: cada exame vale 1 no teto, seja qual for o número de laudos. Laudos: o exame
               vale os laudos dele (um exame de 3 laudos ocupa 3). A carga em mãos e a cota
               gratificada seguem a mesma unidade.
             </AjudaContextual>
           </div>
-          <Select
-            id={`unidade-teto-${medicoId}`}
+          <EscolhaSegmentada
+            aria-labelledby={`unidade-teto-${medicoId}`}
             aria-describedby={`unidade-teto-${medicoId}-ajuda`}
-            className="w-full max-w-60"
-            value={unidadeSalvando ?? dados.unidadeTeto}
+            className="self-start"
+            valor={unidadeSalvando ?? dados.unidadeTeto}
             opcoes={UNIDADES_TETO}
             disabled={!podeEditar || salvandoRobo}
-            onValueChange={(valor) => {
+            onMudar={(valor) => {
               if (valor === dados.unidadeTeto) return;
-              setUnidadeSalvando(valor as UnidadeTetoKey);
+              setUnidadeSalvando(valor);
               void salvarRobo(
-                { unidadeTeto: valor as UnidadeTetoKey },
+                { unidadeTeto: valor },
                 valor === 'laudos'
                   ? 'O teto passa a contar laudos.'
                   : 'O teto passa a contar exames.',

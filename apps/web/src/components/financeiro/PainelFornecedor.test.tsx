@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { CategoriaItemDto } from '../../gen/types/CategoriaItemDto';
 import type { FornecedorDetalheDto } from '../../gen/types/FornecedorDetalheDto';
-import { escolherOpcao } from '../../test/select';
+import { escolherOpcao, escolherSegmento } from '../../test/select';
 import { PainelFornecedor } from './PainelFornecedor';
 
 const categorias: CategoriaItemDto[] = [
@@ -96,7 +96,7 @@ describe('PainelFornecedor', () => {
       />,
     );
 
-    await escolherOpcao('Tipo de pessoa', 'Pessoa física');
+    await escolherSegmento('Tipo de pessoa', 'Pessoa física');
     await userEvent.click(screen.getByRole('button', { name: 'Criar fornecedor' }));
 
     expect(await screen.findByText('Informe o CPF.')).toBeInTheDocument();
