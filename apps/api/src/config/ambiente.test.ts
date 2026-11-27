@@ -39,6 +39,8 @@ describe('validarAmbiente', () => {
     ['MOBILEMED_LOGIN_PAUSA_MS', '1000'],
     ['MOBILEMED_LOGIN_PAUSA_MAXIMA_MS', 'uma-hora'],
     ['MOBILEMED_TOTP_SEGREDO', 'chave-com-1-e-8'],
+    ['FOCUS_NFE_AMBIENTE', 'teste'],
+    ['FOCUS_NFE_INTEGRACAO', 'real'],
   ])('recusa %s=%s, dizendo qual variável está errada', (nome, valor) => {
     expect(() => validarAmbiente({ ...minimo, [nome]: valor })).toThrow(nome);
   });
@@ -71,6 +73,30 @@ describe('validarAmbiente', () => {
   it('o erro da chave TOTP não repete o valor', () => {
     expect(() => validarAmbiente({ ...minimo, MOBILEMED_TOTP_SEGREDO: 'segredo-errado' })).toThrow(
       /^(?![\s\S]*segredo-errado)/,
+    );
+  });
+
+  it('a Focus NFe de verdade exige o token e o ambiente', () => {
+    expect(() => validarAmbiente({ ...minimo, FOCUS_NFE_INTEGRACAO: 'focus' })).toThrow(
+      'FOCUS_NFE_TOKEN: obrigatória com FOCUS_NFE_INTEGRACAO=focus',
+    );
+    // Com o token e sem FOCUS_NFE_INTEGRACAO, vale a Focus: o ambiente precisa ser escolhido.
+    expect(() => validarAmbiente({ ...minimo, FOCUS_NFE_TOKEN: 'tok' })).toThrow(
+      'FOCUS_NFE_AMBIENTE: obrigatória com a Focus NFe ligada',
+    );
+    expect(
+      validarAmbiente({ ...minimo, FOCUS_NFE_TOKEN: 'tok', FOCUS_NFE_AMBIENTE: 'homologacao' }),
+    ).toBeTruthy();
+    // Simulador: nada é exigido, nem com o token preenchido.
+    expect(validarAmbiente({ ...minimo })).toBeTruthy();
+    expect(
+      validarAmbiente({ ...minimo, FOCUS_NFE_TOKEN: 'tok', FOCUS_NFE_INTEGRACAO: 'simulador' }),
+    ).toBeTruthy();
+  });
+
+  it('o erro da Focus não repete o token', () => {
+    expect(() => validarAmbiente({ ...minimo, FOCUS_NFE_TOKEN: 'token-secreto' })).toThrow(
+      /^(?![\s\S]*token-secreto)/,
     );
   });
 });

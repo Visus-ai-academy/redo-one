@@ -1,3 +1,5 @@
+import { integracaoFocusNfe } from '../financeiro/infrastructure/integracao-focus-nfe';
+
 type Ambiente = Record<string, unknown>;
 
 /**
@@ -67,6 +69,28 @@ export function validarAmbiente(env: Ambiente): Ambiente {
     if (texto(chave) !== 'real') continue;
     for (const nome of ['MOBILEMED_USUARIO', 'MOBILEMED_SENHA', 'MOBILEMED_TOTP_SEGREDO']) {
       if (!texto(nome)) erros.push(`${nome}: obrigatória com ${chave}=real`);
+    }
+  }
+
+  opcional(
+    'FOCUS_NFE_INTEGRACAO',
+    (v) => v === 'focus' || v === 'simulador',
+    'use focus ou simulador',
+  );
+  opcional(
+    'FOCUS_NFE_AMBIENTE',
+    (v) => v === 'homologacao' || v === 'producao',
+    'use homologacao ou producao',
+  );
+  if (integracaoFocusNfe(texto) === 'focus') {
+    if (!texto('FOCUS_NFE_TOKEN')) {
+      erros.push('FOCUS_NFE_TOKEN: obrigatória com FOCUS_NFE_INTEGRACAO=focus');
+    }
+    // Sem padrão de propósito: emitir nota de verdade (produção) tem de ser escolha explícita.
+    if (!texto('FOCUS_NFE_AMBIENTE')) {
+      erros.push(
+        'FOCUS_NFE_AMBIENTE: obrigatória com a Focus NFe ligada (homologacao ou producao)',
+      );
     }
   }
 
