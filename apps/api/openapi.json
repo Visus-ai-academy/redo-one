@@ -22498,6 +22498,136 @@
           "id"
         ]
       },
+      "FaixaListaAtrasoDto": {
+        "type": "object",
+        "properties": {
+          "exames": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Centavos."
+          }
+        },
+        "required": [
+          "exames",
+          "valorCentavos"
+        ]
+      },
+      "VersaoParametrosRepasseDto": {
+        "type": "object",
+        "properties": {
+          "tarifaPeerReviewCentavos": {
+            "type": "integer",
+            "description": "Centavos."
+          },
+          "tarifaPlantaoCentavos": {
+            "type": "integer",
+            "description": "Centavos."
+          },
+          "contratadoRegistroId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Contratado do registro."
+          },
+          "pagaDuplicados": {
+            "type": "boolean",
+            "description": "Laudo duplicado entra no repasse."
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28
+          },
+          "diaCorteAntecipacao": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28
+          },
+          "categoriaFinanceiraSocio": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "categoriaFinanceiraNaoSocio": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "faixasListaAtraso": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaixaListaAtrasoDto"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true,
+            "description": "A véspera da versão seguinte."
+          },
+          "contratadoRegistro": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reabertoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "reabertoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "tarifaPeerReviewCentavos",
+          "tarifaPlantaoCentavos",
+          "contratadoRegistroId",
+          "pagaDuplicados",
+          "diaVencimento",
+          "diaCorteAntecipacao",
+          "categoriaFinanceiraSocio",
+          "categoriaFinanceiraNaoSocio",
+          "faixasListaAtraso",
+          "id",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "contratadoRegistro",
+          "criadoPor",
+          "criadoEm",
+          "encerradoPor",
+          "encerradoEm",
+          "reabertoPor",
+          "reabertoEm"
+        ]
+      },
       "ParametrosComVersoesDto": {
         "type": "object",
         "properties": {
@@ -22515,7 +22645,7 @@
             "description": "A mais nova primeiro.",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/VersaoParametrosDto"
+              "$ref": "#/components/schemas/VersaoParametrosRepasseDto"
             }
           }
         },
@@ -22524,24 +22654,6 @@
           "aPartirDeMinimo",
           "aPartirDeSugerido",
           "versoes"
-        ]
-      },
-      "FaixaListaAtrasoDto": {
-        "type": "object",
-        "properties": {
-          "exames": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "valorCentavos": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Centavos."
-          }
-        },
-        "required": [
-          "exames",
-          "valorCentavos"
         ]
       },
       "CriarParametrosRepasseDto": {

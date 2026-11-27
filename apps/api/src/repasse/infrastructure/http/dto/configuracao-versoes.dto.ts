@@ -53,7 +53,7 @@ export class RegrasComNomesDto extends VigenciaDaTelaRepasseDto {
   @ApiProperty({ type: [AlternativaComNomesDto] }) alternativas!: AlternativaComNomesDto[];
 }
 
-export class VersaoParametrosDto extends DadosParametrosRepasseDto {
+export class VersaoParametrosRepasseDto extends DadosParametrosRepasseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ example: '2026-11' }) vigenciaDesde!: string;
   @ApiProperty({ type: String, nullable: true, description: 'A véspera da versão seguinte.' })
@@ -68,6 +68,6 @@ export class VersaoParametrosDto extends DadosParametrosRepasseDto {
 }
 
 export class ParametrosComVersoesDto extends VigenciaDaTelaRepasseDto {
-  @ApiProperty({ type: [VersaoParametrosDto], description: 'A mais nova primeiro.' })
-  versoes!: VersaoParametrosDto[];
+  @ApiProperty({ type: [VersaoParametrosRepasseDto], description: 'A mais nova primeiro.' })
+  versoes!: VersaoParametrosRepasseDto[];
 }

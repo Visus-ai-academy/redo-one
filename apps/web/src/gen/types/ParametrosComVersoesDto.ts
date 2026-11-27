@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { VersaoParametrosDto } from './VersaoParametrosDto'
+import type { VersaoParametrosRepasseDto } from './VersaoParametrosRepasseDto'
 
 export type ParametrosComVersoesDto = {
   /**
@@ -17,5 +17,5 @@ export type ParametrosComVersoesDto = {
    * @description A mais nova primeiro.
    * @type array
    */
-  versoes: VersaoParametrosDto[];
+  versoes: VersaoParametrosRepasseDto[];
 };

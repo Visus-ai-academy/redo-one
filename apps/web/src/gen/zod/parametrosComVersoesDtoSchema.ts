@@ -4,13 +4,13 @@
 */
 
 import * as z from 'zod'
-import { versaoParametrosDtoSchema } from './versaoParametrosDtoSchema'
+import { versaoParametrosRepasseDtoSchema } from './versaoParametrosRepasseDtoSchema'
 
 export const parametrosComVersoesDtoSchema = z.object({
   mesAtual: z.string().meta({ examples: ['2026-11'] }),
   aPartirDeMinimo: z.string(),
   aPartirDeSugerido: z.string(),
-  versoes: z.array(versaoParametrosDtoSchema).describe('A mais nova primeiro.'),
+  versoes: z.array(versaoParametrosRepasseDtoSchema).describe('A mais nova primeiro.'),
 })
 
 export type ParametrosComVersoesDtoSchemaType = z.infer<typeof parametrosComVersoesDtoSchema>
