@@ -295,6 +295,11 @@ export type TabelaPrecosDaFonteProps = Omit<TabelaPrecosProps, 'tipo' | 'donoId'
   fonte: FontePrecos;
   /** Abre "Incluir preço" já com o arranjo (atalho do aviso de preço que falta). */
   abrirNovo?: Partial<ValoresPrecoTela>;
+  /**
+   * Ação a mais na barra (com `podeEditar`), aberta no lugar da tabela como o preço aberto (ex.:
+   * "Preencher pela régua do nível" no repasse). `conteudo` recebe como voltar para a tabela.
+   */
+  acaoExtra?: { rotulo: string; icone: ReactNode; conteudo: (voltar: () => void) => ReactNode };
 };
 
 /** A tabela de preços sobre qualquer fonte (faturamento ou repasse). */
@@ -305,7 +310,9 @@ export function TabelaPrecosDaFonte({
   onAlterado,
   veAvisos = false,
   abrirNovo,
+  acaoExtra,
 }: TabelaPrecosDaFonteProps) {
+  const [extraAberta, setExtraAberta] = useState(false);
   const [termo, setTermo] = useState('');
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
@@ -352,6 +359,8 @@ export function TabelaPrecosDaFonte({
     );
   if (!tabela.data || !opcoes.data) return <CamposCarregando quantidade={4} />;
   const dados = tabela.data;
+
+  if (extraAberta && acaoExtra) return acaoExtra.conteudo(() => setExtraAberta(false));
 
   if (aberto)
     return (
@@ -413,6 +422,16 @@ export function TabelaPrecosDaFonte({
               <UploadSimple size={16} aria-hidden />
               Importar planilha
             </Button>
+            {acaoExtra && (
+              <Button
+                type="button"
+                onClick={() => setExtraAberta(true)}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                {acaoExtra.icone}
+                {acaoExtra.rotulo}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={() => setAberto({ modo: 'novo' })}

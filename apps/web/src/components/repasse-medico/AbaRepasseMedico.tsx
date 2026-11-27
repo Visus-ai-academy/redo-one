@@ -1,3 +1,4 @@
+import { Ruler } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 
 import { Abas } from '../abas/Abas';
@@ -6,6 +7,7 @@ import { AdicionaisMedico } from './AdicionaisMedico';
 import { ApuracaoMedico } from './ApuracaoMedico';
 import { ContagemMedico } from './ContagemMedico';
 import { type ArranjoDoAtalho, fonteRepasse } from './fonte-precos';
+import { PreencherPelaRegua } from './PreencherPelaRegua';
 
 export type ParteRepasse = 'precos' | 'regras' | 'apuracao' | 'adicionais';
 
@@ -63,6 +65,11 @@ export function AbaRepasseMedico({
             podeEditar={podeEditarPrecos}
             veAvisos={veAvisos}
             abrirNovo={arranjo}
+            acaoExtra={{
+              rotulo: 'Preencher pela régua do nível',
+              icone: <Ruler size={16} aria-hidden />,
+              conteudo: (voltar) => <PreencherPelaRegua medicoId={medicoId} onVoltar={voltar} />,
+            }}
           />
         ) : parte === 'regras' ? (
           <ContagemMedico medicoId={medicoId} podeEditar={podeEditarRegras} />

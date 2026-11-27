@@ -5,18 +5,22 @@ import { Abas } from '../../../components/abas/Abas';
 import { ConfiguracoesLayout } from '../../../components/configuracoes/ConfiguracoesLayout';
 import { SemPermissao } from '../../../components/estado/estados';
 import { ParametrosRepasse } from '../../../components/repasse-config/ParametrosRepasse';
+import { RegrasApuracaoGeral } from '../../../components/repasse-config/RegrasApuracaoGeral';
 import { RegrasRepasse } from '../../../components/repasse-config/RegrasRepasse';
+import { ReguaNivel } from '../../../components/repasse-config/ReguaNivel';
 import { precosRepasseControllerOpcoesQueryOptions } from '../../../gen/hooks/usePrecosRepasseControllerOpcoes';
 import { repasseControllerParametrosQueryOptions } from '../../../gen/hooks/useRepasseControllerParametros';
 import { repasseControllerRegrasQueryOptions } from '../../../gen/hooks/useRepasseControllerRegras';
 import { pode } from '../../../lib/permissoes';
 
-const ABAS = ['parametros', 'reclassificacoes', 'alternativas'] as const;
+const ABAS = ['parametros', 'reclassificacoes', 'alternativas', 'regua', 'apuracao'] as const;
 type AbaRepasse = (typeof ABAS)[number];
 const ROTULOS: Record<AbaRepasse, string> = {
   parametros: 'Parâmetros',
   reclassificacoes: 'Reclassificações',
   alternativas: 'Alternativas de preço',
+  regua: 'Régua por nível',
+  apuracao: 'Regras de apuração',
 };
 
 export const Route = createFileRoute('/_app/configuracoes/repasse')({
@@ -33,7 +37,9 @@ export const Route = createFileRoute('/_app/configuracoes/repasse')({
       context.queryClient.prefetchQuery(precosRepasseControllerOpcoesQueryOptions()),
       (deps.aba ?? 'parametros') === 'parametros'
         ? context.queryClient.prefetchQuery(repasseControllerParametrosQueryOptions())
-        : context.queryClient.prefetchQuery(repasseControllerRegrasQueryOptions()),
+        : deps.aba === 'reclassificacoes' || deps.aba === 'alternativas'
+          ? context.queryClient.prefetchQuery(repasseControllerRegrasQueryOptions())
+          : undefined,
     ]);
   },
   head: () => ({ meta: [{ title: 'Repasse · Configurações · One' }] }),
@@ -69,6 +75,10 @@ function Repasse() {
       >
         {aba === 'parametros' ? (
           <ParametrosRepasse podeEditar={podeEditar} />
+        ) : aba === 'regua' ? (
+          <ReguaNivel podeEditar={podeEditar} />
+        ) : aba === 'apuracao' ? (
+          <RegrasApuracaoGeral />
         ) : (
           <RegrasRepasse
             key={aba}
