@@ -52,6 +52,24 @@ describe('ListaCadastro', () => {
     expect(screen.getByText('1 de 1')).toBeInTheDocument();
   });
 
+  it('a busca é o campo que cresce na faixa, com a largura mínima que a lista pedir', () => {
+    render(
+      <ListaCadastro
+        {...props}
+        busca={{ ...props.busca, largura: 'basis-[280px]' }}
+        filtros={<span>filtro</span>}
+        itens={[]}
+        total={0}
+      />,
+    );
+
+    // A caixa da busca: cresce muito mais que os filtros (que têm largura própria) e não encolhe
+    // abaixo do pedido, para o placeholder caber inteiro.
+    const caixa = screen.getByRole('searchbox', { name: 'Buscar contratados' }).parentElement;
+    expect(caixa).toHaveClass('grow-[999]', 'basis-[280px]');
+    expect(caixa).not.toHaveClass('basis-[220px]');
+  });
+
   it('com abas, a ação de criar fica no topo, ao lado do título, e não na faixa dos filtros', () => {
     render(
       <ListaCadastro

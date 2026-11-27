@@ -26,9 +26,16 @@ type ListaCadastroProps<T extends RowData> = {
   novo?: { rotulo: string; onClick: () => void; icone?: Icon };
   /** Outras ações da página, ao lado do "novo" (botões secundários). */
   acoes?: ReactNode;
-  /** Sem busca (ex.: histórico por data), a faixa acima da tabela só aparece com filtros. */
-  busca?: { valor: string | undefined; rotulo: string; placeholder: string };
-  /** Selects de filtro, na mesma faixa da busca. */
+  /**
+   * Sem busca (ex.: histórico por data), a faixa acima da tabela só aparece com filtros. A busca é o
+   * campo que cresce na faixa; `largura` (classe `basis-[…]`) é a mínima, para o placeholder caber
+   * inteiro quando há muitos filtros (padrão 220px).
+   */
+  busca?: { valor: string | undefined; rotulo: string; placeholder: string; largura?: string };
+  /**
+   * Selects de filtro, na mesma faixa da busca, cada um com a sua largura fixa no computador
+   * (`flex-[1_1_176px] md:flex-[0_0_176px]`); no celular, dividem a linha.
+   */
   filtros?: ReactNode;
   /** Algum filtro além da busca está ativo (muda a mensagem de lista vazia). */
   temFiltro?: boolean;
@@ -143,7 +150,8 @@ export function ListaCadastro<T extends RowData>({
                   placeholder={busca.placeholder}
                   valor={termo}
                   onMudar={setTermo}
-                  className="flex-[1_1_220px]"
+                  // Cresce bem mais que os filtros: a sobra da linha vai toda para ela.
+                  className={cn('shrink grow-[999] basis-[220px]', busca.largura)}
                 />
               )}
               {filtros}

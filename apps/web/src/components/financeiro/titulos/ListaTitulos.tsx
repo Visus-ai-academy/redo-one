@@ -223,6 +223,8 @@ export function ListaTitulos({ tipo, busca, ir, acesso, abas }: ListaTitulosProp
           valor: busca.busca,
           rotulo: `Buscar em ${textos.titulo}`,
           placeholder: textos.buscar,
+          // Com cinco filtros, a busca guarda espaço para o placeholder inteiro.
+          largura: 'basis-[280px]',
         }}
         temFiltro={temFiltro}
         filtros={
@@ -253,7 +255,7 @@ export function ListaTitulos({ tipo, busca, ir, acesso, abas }: ListaTitulosProp
               value={busca.empresa ?? TODAS}
               onValueChange={(v) => filtrar({ empresa: v === TODAS ? undefined : v })}
               opcoes={opcoesEmpresa}
-              className="flex-[1_1_180px] md:flex-[0_1_220px]"
+              className="flex-[1_1_176px] md:flex-[0_0_176px]"
             />
             <Select
               aria-label="Filtrar por situação"
@@ -271,7 +273,7 @@ export function ListaTitulos({ tipo, busca, ir, acesso, abas }: ListaTitulosProp
                 { valor: 'cancelado', rotulo: 'Cancelados' },
                 { valor: TODAS, rotulo: 'Todas as situações' },
               ]}
-              className="flex-[1_1_160px] md:flex-[0_1_180px]"
+              className="flex-[1_1_176px] md:flex-[0_0_176px]"
             />
             <Select
               aria-label="Filtrar por vencimento"
@@ -289,7 +291,8 @@ export function ListaTitulos({ tipo, busca, ir, acesso, abas }: ListaTitulosProp
                 { valor: '7dias', rotulo: 'Vence em até 7 dias' },
                 { valor: 'periodo', rotulo: 'Vencimento no período…' },
               ]}
-              className="flex-[1_1_180px] md:flex-[0_1_210px]"
+              // Cabe "Vencimento no período…" inteiro.
+              className="flex-[1_1_208px] md:flex-[0_0_208px]"
             />
             {busca.vence === 'periodo' && (
               <span className="flex flex-[1_1_300px] items-center gap-2 md:flex-[0_1_320px]">
@@ -321,7 +324,7 @@ export function ListaTitulos({ tipo, busca, ir, acesso, abas }: ListaTitulosProp
                   { valor: 'manual', rotulo: ROTULO_ORIGEM.manual ?? 'Lançado à mão' },
                   { valor: 'faturamento', rotulo: ROTULO_ORIGEM.faturamento ?? 'Faturamento' },
                 ]}
-                className="flex-[1_1_160px] md:flex-[0_1_180px]"
+                className="flex-[1_1_160px] md:flex-[0_0_160px]"
               />
             ) : (
               <Select
@@ -329,7 +332,7 @@ export function ListaTitulos({ tipo, busca, ir, acesso, abas }: ListaTitulosProp
                 value={busca.categoria ?? TODAS}
                 onValueChange={(v) => filtrar({ categoria: v === TODAS ? undefined : v })}
                 opcoes={opcoesCategoria}
-                className="flex-[1_1_180px] md:flex-[0_1_240px]"
+                className="flex-[1_1_176px] md:flex-[0_0_176px]"
               />
             )}
           </>
