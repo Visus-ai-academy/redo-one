@@ -21,9 +21,11 @@ describe('formatarMoedaDigitando', () => {
     expect(formatarMoedaDigitando('R$ 12a3')).toBe('123');
   });
 
-  it('o ponto digitado no fim vira a vírgula dos centavos', () => {
-    expect(formatarMoedaDigitando('12.')).toBe('12,');
-    expect(formatarMoedaDigitando('1.234.')).toBe('1.234,');
+  it('o ponto digitado é o do milhar: "1.200,50" digitado tecla a tecla chega lá', () => {
+    let texto = '';
+    for (const tecla of '1.200,50') texto = formatarMoedaDigitando(texto + tecla);
+    expect(texto).toBe('1.200,50');
+    expect(formatarMoedaDigitando('12.')).toBe('12');
   });
 
   it('apagar um dígito de "1.234" refaz o milhar, sem virar centavos', () => {

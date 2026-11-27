@@ -301,6 +301,7 @@ function FormRegras({
                                   <field.TextField
                                     label="Das"
                                     placeholder="19:00"
+                                    mascara="hora"
                                     autoComplete="off"
                                     required
                                     className="flex-[1_1_100px]"
@@ -312,6 +313,7 @@ function FormRegras({
                                   <field.TextField
                                     label="Até"
                                     placeholder="07:00"
+                                    mascara="hora"
                                     autoComplete="off"
                                     required
                                     className="flex-[1_1_100px]"

@@ -1,8 +1,7 @@
 import { Button } from '@base-ui/react/button';
-import { Input } from '@base-ui/react/input';
 import { Plus, Trash } from '@phosphor-icons/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useId, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { configuracaoVersoesControllerCancelarParametros } from '../../gen/clients/configuracaoVersoesControllerCancelarParametros';
@@ -22,8 +21,7 @@ import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { AbaComErro } from '../distribuicao/estados';
 import { mesAno } from '../faturamento/competencias';
 import { HistoricoVigencias } from '../faturamento/historico-vigencias';
-import { numeroPtBr, opcoesAPartirDe } from '../faturamento/precos';
-import { controlClassName } from '../form/control-class';
+import { opcoesAPartirDe } from '../faturamento/precos';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { Painel } from '../painel/Painel';
@@ -31,12 +29,13 @@ import { PainelLateral } from '../painel/PainelLateral';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 
-const reais = (centavos: number) => (centavos / 100).toFixed(2).replace('.', ',');
-
-type Faixa = { exames: string; valor: string };
+/** `valor` em centavos. */
+type Faixa = { exames: string; valor: number | null };
 type Valores = {
-  tarifaPeerReview: string;
-  tarifaPlantao: string;
+  /** Centavos. */
+  tarifaPeerReview: number | null;
+  /** Centavos. */
+  tarifaPlantao: number | null;
   contratadoRegistroId: string;
   pagaDuplicados: string;
   diaVencimento: string;
@@ -48,7 +47,11 @@ type Valores = {
 };
 
 const dinheiro = (rotulo: string) =>
-  z.string().refine((t) => (numeroPtBr(t, 2) ?? 0) > 0, `${rotulo}: maior que zero, como 21,00.`);
+  z
+    .number()
+    .int()
+    .nullable()
+    .refine((c) => (c ?? 0) > 0, `${rotulo}: maior que zero.`);
 const dia = (rotulo: string) =>
   z
     .string()
@@ -67,21 +70,20 @@ const esquema = z
     diaCorteAntecipacao: dia('Dia do corte da antecipação'),
     categoriaFinanceiraSocio: z.string().trim().min(1, 'Informe a categoria do sócio.'),
     categoriaFinanceiraNaoSocio: z.string().trim().min(1, 'Informe a categoria do não sócio.'),
-    faixas: z.array(z.object({ exames: z.string(), valor: z.string() })),
+    faixas: z.array(z.object({ exames: z.string(), valor: z.number().int().nullable() })),
     aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual vale.'),
   })
   .superRefine((v, ctx) => {
     const exames = v.faixas.map((f) => f.exames.trim());
     if (
       v.faixas.some(
-        (f) =>
-          !/^\d+$/.test(f.exames.trim()) || Number(f.exames) < 1 || numeroPtBr(f.valor, 2) === null,
+        (f) => !/^\d+$/.test(f.exames.trim()) || Number(f.exames) < 1 || f.valor === null,
       )
     )
       ctx.addIssue({
         code: 'custom',
         path: ['faixas'],
-        message: 'Cada faixa: a partir de quantos exames (1 ou mais) e o valor, como 200,00.',
+        message: 'Cada faixa: a partir de quantos exames (1 ou mais) e o valor.',
       });
     else if (new Set(exames).size !== exames.length)
       ctx.addIssue({
@@ -92,8 +94,8 @@ const esquema = z
   });
 
 const valoresDa = (p: VersaoParametrosRepasseDto | undefined, aPartirDe: string): Valores => ({
-  tarifaPeerReview: p ? reais(p.tarifaPeerReviewCentavos) : '',
-  tarifaPlantao: p ? reais(p.tarifaPlantaoCentavos) : '',
+  tarifaPeerReview: p ? p.tarifaPeerReviewCentavos : null,
+  tarifaPlantao: p ? p.tarifaPlantaoCentavos : null,
   contratadoRegistroId: p?.contratadoRegistroId ?? '',
   pagaDuplicados: p ? (p.pagaDuplicados ? 'sim' : 'nao') : '',
   diaVencimento: p ? String(p.diaVencimento) : '',
@@ -102,7 +104,7 @@ const valoresDa = (p: VersaoParametrosRepasseDto | undefined, aPartirDe: string)
   categoriaFinanceiraNaoSocio: p?.categoriaFinanceiraNaoSocio ?? '',
   faixas: (p?.faixasListaAtraso ?? []).map((f) => ({
     exames: String(f.exames),
-    valor: reais(f.valorCentavos),
+    valor: f.valorCentavos,
   })),
   aPartirDe,
 });
@@ -250,8 +252,8 @@ function NovaVersao({
         await repasseControllerCriarParametros({
           body: {
             aPartirDe: v.aPartirDe,
-            tarifaPeerReviewCentavos: Math.round((numeroPtBr(v.tarifaPeerReview, 2) ?? 0) * 100),
-            tarifaPlantaoCentavos: Math.round((numeroPtBr(v.tarifaPlantao, 2) ?? 0) * 100),
+            tarifaPeerReviewCentavos: v.tarifaPeerReview ?? 0,
+            tarifaPlantaoCentavos: v.tarifaPlantao ?? 0,
             contratadoRegistroId: v.contratadoRegistroId,
             pagaDuplicados: v.pagaDuplicados === 'sim',
             diaVencimento: Number(v.diaVencimento),
@@ -260,7 +262,7 @@ function NovaVersao({
             categoriaFinanceiraNaoSocio: v.categoriaFinanceiraNaoSocio.trim(),
             faixasListaAtraso: v.faixas.map((f) => ({
               exames: Number(f.exames),
-              valorCentavos: Math.round((numeroPtBr(f.valor, 2) ?? 0) * 100),
+              valorCentavos: f.valor ?? 0,
             })),
           },
         }).unwrap();
@@ -268,7 +270,6 @@ function NovaVersao({
       }),
   });
   const alterado = useAlterado(form, iniciais);
-  const idFaixas = useId();
   const competencias = opcoesAPartirDe(dados.aPartirDeMinimo, dados.mesAtual).map((c) => ({
     valor: c,
     rotulo: mesAno(c),
@@ -292,11 +293,9 @@ function NovaVersao({
         <div className="flex flex-wrap gap-4">
           <form.AppField name="tarifaPeerReview">
             {(f) => (
-              <f.TextField
-                label="Tarifa do Peer Review (R$)"
+              <f.MoedaField
+                label="Tarifa do Peer Review"
                 required
-                placeholder="0,00"
-                spellCheck={false}
                 description="Por avaliação; sugerida ao lançar o adicional."
                 className="flex-[1_1_160px]"
               />
@@ -304,11 +303,9 @@ function NovaVersao({
           </form.AppField>
           <form.AppField name="tarifaPlantao">
             {(f) => (
-              <f.TextField
-                label="Tarifa do Plantão (R$)"
+              <f.MoedaField
+                label="Tarifa do Plantão"
                 required
-                placeholder="0,00"
-                spellCheck={false}
                 description="Por plantão; sugerida ao lançar o adicional."
                 className="flex-[1_1_160px]"
               />
@@ -328,10 +325,9 @@ function NovaVersao({
         </form.AppField>
         <form.AppField name="pagaDuplicados">
           {(f) => (
-            <f.SelectField
+            <f.SegmentadaField
               label="Laudo duplicado na MobileMed"
               required
-              placeholder="Escolha"
               opcoes={[
                 { valor: 'sim', rotulo: 'É pago' },
                 { valor: 'nao', rotulo: 'Não é pago' },
@@ -392,8 +388,6 @@ function NovaVersao({
         <form.Field name="faixas">
           {(field) => {
             const faixas = field.state.value;
-            const mudar = (i: number, parte: Partial<Faixa>) =>
-              field.handleChange(faixas.map((f, j) => (j === i ? { ...f, ...parte } : f)));
             const erroFaixas = field.state.meta.errors
               .map((e) =>
                 typeof e === 'string'
@@ -408,36 +402,23 @@ function NovaVersao({
                   Gratificação padrão por exames da lista em atraso entregues no prazo. Sem faixas,
                   não há gratificação padrão.
                 </p>
-                {faixas.map((f, i) => (
+                {faixas.map((_, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: a faixa não tem id antes de salvar.
                   <div key={i} className="flex flex-wrap items-end gap-2">
-                    <div className="flex flex-[1_1_140px] flex-col gap-1">
-                      <label
-                        htmlFor={`${idFaixas}-exames-${i}`}
-                        className="text-[13px] font-medium"
-                      >
-                        A partir de (exames)
-                      </label>
-                      <Input
-                        id={`${idFaixas}-exames-${i}`}
-                        value={f.exames}
-                        inputMode="numeric"
-                        onValueChange={(exames) => mudar(i, { exames })}
-                        className={controlClassName('app', 'tabular-nums')}
-                      />
-                    </div>
-                    <div className="flex flex-[1_1_140px] flex-col gap-1">
-                      <label htmlFor={`${idFaixas}-valor-${i}`} className="text-[13px] font-medium">
-                        Valor (R$)
-                      </label>
-                      <Input
-                        id={`${idFaixas}-valor-${i}`}
-                        value={f.valor}
-                        inputMode="decimal"
-                        onValueChange={(valor) => mudar(i, { valor })}
-                        className={controlClassName('app', 'tabular-nums')}
-                      />
-                    </div>
+                    <form.AppField name={`faixas[${i}].exames`}>
+                      {(c) => (
+                        <c.NumberField
+                          label="A partir de"
+                          placeholder="10"
+                          min={1}
+                          unidade="exames"
+                          className="flex-[1_1_140px]"
+                        />
+                      )}
+                    </form.AppField>
+                    <form.AppField name={`faixas[${i}].valor`}>
+                      {(c) => <c.MoedaField label="Valor" className="flex-[1_1_140px]" />}
+                    </form.AppField>
                     <Button
                       type="button"
                       aria-label={`Tirar a faixa ${i + 1}`}
@@ -450,7 +431,7 @@ function NovaVersao({
                 ))}
                 <Button
                   type="button"
-                  onClick={() => field.handleChange([...faixas, { exames: '', valor: '' }])}
+                  onClick={() => field.handleChange([...faixas, { exames: '', valor: null }])}
                   className={buttonClassName({ variant: 'secondary', className: 'self-start' })}
                 >
                   <Plus size={16} aria-hidden />

@@ -42,7 +42,7 @@ export function opcoesAPartirDe(minimo: string, mesAtual: string): string[] {
   return r;
 }
 
-/** Valores do formulário: os ids, a faixa e o valor como texto (o campo numérico guarda texto). */
+/** Valores do formulário: os ids, a faixa como texto (o campo numérico guarda texto) e o valor em centavos. */
 export type ValoresPreco = {
   modalidadeId: string;
   especialidadeId: string;
@@ -51,7 +51,8 @@ export type ValoresPreco = {
   faixaInicio: string;
   faixaFim: string;
   condVolume: CondVolumeKey;
-  valor: string;
+  /** Centavos (`MoedaField`); a API recebe em reais. */
+  valor: number | null;
   aPartirDe: string;
 };
 
@@ -66,6 +67,12 @@ export function numeroPtBr(texto: string, casas: 0 | 2): number | null {
   return Number(t.replace(/\./g, '').replace(',', '.'));
 }
 
+/** Centavos do campo em reais para a API (que guarda o preço em reais, com 2 casas). */
+export const reaisDosCentavos = (centavos: number | null) => (centavos ?? 0) / 100;
+
+/** Preço em reais da API em centavos para o campo. */
+export const centavosDosReais = (reais: number) => Math.round(reais * 100);
+
 const inteiro = (t: string) => (t.trim() === '' ? null : numeroPtBr(t, 0));
 
 export function corpoDoPreco(v: ValoresPreco): MudarPrecoDto {
@@ -77,7 +84,7 @@ export function corpoDoPreco(v: ValoresPreco): MudarPrecoDto {
     faixaInicio: inteiro(v.faixaInicio),
     faixaFim: inteiro(v.faixaFim),
     condVolume: v.condVolume,
-    valor: numeroPtBr(v.valor, 2) as number,
+    valor: reaisDosCentavos(v.valor),
     aPartirDe: v.aPartirDe,
   };
 }

@@ -129,6 +129,7 @@ export function PainelCobertura({
               <field.TextField
                 label="Horário início"
                 placeholder={titular.horarioInicio}
+                mascara="hora"
                 autoComplete="off"
                 className="flex-[1_1_120px]"
               />
@@ -139,6 +140,7 @@ export function PainelCobertura({
               <field.TextField
                 label="Horário fim"
                 placeholder={titular.horarioFim}
+                mascara="hora"
                 autoComplete="off"
                 className="flex-[1_1_120px]"
               />

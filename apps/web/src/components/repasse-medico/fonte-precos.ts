@@ -9,7 +9,7 @@ import { precosRepasseControllerOpcoes } from '../../gen/clients/precosRepasseCo
 import { precosRepasseControllerHistoricoQueryKey } from '../../gen/hooks/usePrecosRepasseControllerHistorico';
 import { precosRepasseControllerOpcoesQueryKey } from '../../gen/hooks/usePrecosRepasseControllerOpcoes';
 import type { MudarPrecoRepasseDto } from '../../gen/types/MudarPrecoRepasseDto';
-import { numeroPtBr, TODOS_OS_CLIENTES } from '../faturamento/precos';
+import { reaisDosCentavos, TODOS_OS_CLIENTES } from '../faturamento/precos';
 import type { FontePrecos, ValoresPrecoTela } from '../faturamento/tabela-precos';
 
 /** Arranjo que o atalho abre já escolhido (`?arranjo=mod.esp.cat.pri`, os ids do catálogo). */
@@ -48,7 +48,7 @@ export function corpoDoPrecoRepasse(v: ValoresPrecoTela): MudarPrecoRepasseDto {
     prioridadeId: v.prioridadeId,
     todosClientes: todos,
     clienteId: todos ? null : v.clienteId,
-    valor: numeroPtBr(v.valor, 2) as number,
+    valor: reaisDosCentavos(v.valor),
     aPartirDe: v.aPartirDe,
   };
 }

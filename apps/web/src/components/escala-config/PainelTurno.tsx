@@ -198,6 +198,7 @@ export function PainelTurno({
               <field.TextField
                 label="Início"
                 placeholder="07:00"
+                mascara="hora"
                 autoComplete="off"
                 required
                 className="flex-[1_1_120px]"
@@ -209,6 +210,7 @@ export function PainelTurno({
               <field.TextField
                 label="Fim"
                 placeholder="13:00"
+                mascara="hora"
                 autoComplete="off"
                 required
                 className="flex-[1_1_120px]"

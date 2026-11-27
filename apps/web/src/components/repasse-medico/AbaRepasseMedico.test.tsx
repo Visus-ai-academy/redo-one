@@ -11,7 +11,7 @@ import { renderComRotas } from '../../test/render';
 import { escolherOpcao } from '../../test/select';
 import { AbaRepasseMedico, type AbaRepasseMedicoProps } from './AbaRepasseMedico';
 import { arranjoDoAtalho } from './fonte-precos';
-import { percentualDePpm, ppmDoTexto } from './textos';
+import { campoDoPpm, percentualDePpm, ppmDoCampo } from './textos';
 
 vi.mock('../../gen/clients/precosRepasseControllerListar', () => ({
   precosRepasseControllerListar: vi.fn(),
@@ -171,8 +171,16 @@ describe('AbaRepasseMedico', () => {
 describe('textos do repasse do médico', () => {
   it('percentual em partes por milhão', () => {
     expect(percentualDePpm(60000)).toBe('6%');
-    expect(ppmDoTexto('2,5')).toBe(25000);
-    expect(ppmDoTexto('2.5')).toBeNull();
+    expect(ppmDoCampo('2.5')).toBe(25000);
+    expect(ppmDoCampo('')).toBeNull();
+    expect(campoDoPpm(25000)).toBe('2.5');
+    expect(campoDoPpm(null)).toBe('');
+  });
+
+  it('percentual vai e volta do campo sem mudar o valor gravado', () => {
+    for (const ppm of [1, 25000, 60000, 123456, 1_000_000, 333_333]) {
+      expect(ppmDoCampo(campoDoPpm(ppm))).toBe(ppm);
+    }
     expect(arranjoDoAtalho('x.y')).toBeUndefined();
   });
 });

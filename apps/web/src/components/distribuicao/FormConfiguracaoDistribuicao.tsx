@@ -471,6 +471,7 @@ export function FormConfiguracaoDistribuicao({
                       <field.TextField
                         label="Horário da rodada que enche esses turnos"
                         placeholder="10:50"
+                        mascara="hora"
                         description="Dali em diante, a Lista não guarda mais nada para eles."
                         autoComplete="off"
                         required

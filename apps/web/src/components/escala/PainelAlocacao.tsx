@@ -354,6 +354,7 @@ export function PainelAlocacao({
                       <field.TextField
                         label="Horário início"
                         placeholder={turno?.horarioInicio ?? '07:00'}
+                        mascara="hora"
                         autoComplete="off"
                         className="flex-[1_1_120px]"
                       />
@@ -364,6 +365,7 @@ export function PainelAlocacao({
                       <field.TextField
                         label="Horário fim"
                         placeholder={turno?.horarioFim ?? '13:00'}
+                        mascara="hora"
                         autoComplete="off"
                         className="flex-[1_1_120px]"
                       />

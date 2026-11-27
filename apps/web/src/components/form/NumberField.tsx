@@ -10,6 +10,10 @@ import { erroDeFaixa } from './faixa-numero';
 import { FieldError, FieldLabel } from './field-parts';
 import { useCampo } from './use-campo';
 
+/** Casas decimais do passo: 1 → 0, 0,01 → 2, 0,0001 → 4. */
+const casasDecimais = (step: number) =>
+  step >= 1 ? 0 : (String(step).split('.')[1]?.length ?? Math.round(-Math.log10(step)));
+
 type NumberFieldProps = {
   label: string;
   placeholder: string;
@@ -17,7 +21,7 @@ type NumberFieldProps = {
   description?: string;
   min?: number;
   max?: number;
-  /** `0.01` para valores com centavos; padrão inteiro. */
+  /** `0.01` para duas casas, `0.0001` para quatro; padrão inteiro. As casas seguem o passo. */
   step?: number;
   /** Unidade fixa à direita do número ("%", "min", "h", "exames"), no lugar de escrevê-la no rótulo. */
   unidade?: string;
@@ -81,7 +85,7 @@ export function NumberField({
         step={step}
         required={required}
         // Sem separador de milhar: código e ID (990001) não viram "990.001".
-        format={{ useGrouping: false, maximumFractionDigits: step < 1 ? 2 : 0 }}
+        format={{ useGrouping: false, maximumFractionDigits: casasDecimais(step) }}
         locale="pt-BR"
       >
         {unidade ? (

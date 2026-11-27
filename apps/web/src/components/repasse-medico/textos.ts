@@ -37,11 +37,16 @@ export function percentualDePpm(ppm: number): string {
   return `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(ppm / 10_000)}%`;
 }
 
-/** "6", "2,5" → partes por milhão; fora do formato, nulo. */
-export function ppmDoTexto(texto: string): number | null {
-  const t = texto.trim().replace('%', '').trim();
-  if (!/^\d{1,3}(,\d{1,4})?$/.test(t)) return null;
-  return Math.round(Number(t.replace(',', '.')) * 10_000);
+/** Partes por milhão no valor do campo de percentual (`NumberField`, ponto decimal): 25000 → "2.5". */
+export function campoDoPpm(ppm: number | null | undefined): string {
+  return ppm == null ? '' : String(ppm / 10_000);
+}
+
+/** O valor do campo de percentual ("2.5") em partes por milhão; vazio ou inválido, nulo. */
+export function ppmDoCampo(texto: string): number | null {
+  if (texto.trim() === '') return null;
+  const n = Number(texto);
+  return Number.isFinite(n) ? Math.round(n * 10_000) : null;
 }
 
 const lista = (nomes: string[] | null, todas: string) =>

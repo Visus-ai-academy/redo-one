@@ -47,6 +47,7 @@ import { useAvisos } from '../toast/use-avisos';
 import { mesAno } from './competencias';
 import {
   baixarArquivo,
+  centavosDosReais,
   corpoDoPreco,
   numeroPtBr,
   opcoesAPartirDe,
@@ -482,23 +483,15 @@ const esquemaPara = (dimensao: FontePrecos['dimensao']) =>
       faixaFim: z.string(),
       condVolume: z.enum(['MOD', 'MOD_ESP', 'MOD_ESP_CAT', 'TOTAL']),
       clienteId: z.string(),
-      valor: z.string().min(1, 'Informe o valor.'),
+      valor: z
+        .number()
+        .int()
+        .nullable()
+        .refine((c) => c !== null, 'Informe o valor.')
+        .refine((c) => c === null || c > 0, 'O valor tem de ser maior que zero.'),
       aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual o preço vale.'),
     })
     .superRefine((v, ctx) => {
-      const valor = numeroPtBr(v.valor, 2);
-      if (v.valor.trim() && valor === null)
-        ctx.addIssue({
-          code: 'custom',
-          path: ['valor'],
-          message: 'Use vírgula nos centavos, como 1.200,50.',
-        });
-      else if (v.valor.trim() && !((valor ?? 0) > 0))
-        ctx.addIssue({
-          code: 'custom',
-          path: ['valor'],
-          message: 'O valor tem de ser maior que zero.',
-        });
       if (dimensao === 'cliente') {
         if (!v.clienteId)
           ctx.addIssue({
@@ -528,7 +521,7 @@ const esquemaPara = (dimensao: FontePrecos['dimensao']) =>
         });
     });
 
-/** Valores do formulário: os ids, a faixa ou o cliente e o valor como texto. */
+/** Valores do formulário: os ids, a faixa ou o cliente e o valor em centavos. */
 function valoresIniciais(
   item: ItemPrecoTela | undefined,
   aPartirDe: string,
@@ -547,7 +540,7 @@ function valoresIniciais(
         ? TODOS_OS_CLIENTES
         : (item.clienteId ?? '')
       : (arranjo?.clienteId ?? ''),
-    valor: item ? item.valor.toFixed(2).replace('.', ',') : '',
+    valor: item ? centavosDosReais(item.valor) : null,
     aPartirDe,
   };
 }
@@ -769,15 +762,7 @@ function EditorPreco({
               </>
             )}
             <form.AppField name="valor">
-              {(f) => (
-                <f.TextField
-                  label="Valor (R$)"
-                  required
-                  placeholder="0,00"
-                  spellCheck={false}
-                  description="Vírgula nos centavos, como 1.200,50."
-                />
-              )}
+              {(f) => <f.MoedaField label="Valor" required />}
             </form.AppField>
             <form.AppField name="aPartirDe">
               {(f) => (

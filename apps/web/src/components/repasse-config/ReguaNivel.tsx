@@ -28,7 +28,7 @@ import { AbaComErro } from '../distribuicao/estados';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { mesAno } from '../faturamento/competencias';
 import { HistoricoVigencias } from '../faturamento/historico-vigencias';
-import { numeroPtBr, opcoesAPartirDe, textoDaVigencia } from '../faturamento/precos';
+import { opcoesAPartirDe, textoDaVigencia } from '../faturamento/precos';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -221,7 +221,8 @@ type Valores = {
   especialidadeId: string;
   categoriaId: string;
   prioridadeId: string;
-  valor: string;
+  /** Centavos. */
+  valor: number | null;
   aPartirDe: string;
 };
 
@@ -231,8 +232,10 @@ const esquema = z.object({
   categoriaId: z.string().min(1, 'Escolha a categoria ou "Todas as categorias".'),
   prioridadeId: z.string().min(1, 'Escolha a prioridade ou "Todas as prioridades".'),
   valor: z
-    .string()
-    .refine((t) => (numeroPtBr(t, 2) ?? 0) > 0, 'Informe o valor, maior que zero, como 27,00.'),
+    .number()
+    .int()
+    .nullable()
+    .refine((c) => (c ?? 0) > 0, 'Informe o valor, maior que zero.'),
   aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual vale.'),
 });
 
@@ -260,7 +263,7 @@ function PainelLinha({
       especialidadeId: linha?.especialidadeId ?? '',
       categoriaId: linha ? (linha.categoriaId ?? TODAS) : '',
       prioridadeId: linha ? (linha.prioridadeId ?? TODAS) : '',
-      valor: linha ? (linha.valorCentavos / 100).toFixed(2).replace('.', ',') : '',
+      valor: linha ? linha.valorCentavos : null,
       aPartirDe: dados.aPartirDeSugerido,
     }),
     [linha, dados],
@@ -278,7 +281,7 @@ function PainelLinha({
     onSubmit: ({ value }) =>
       tentar(async () => {
         const v = value as Valores;
-        const valorCentavos = Math.round((numeroPtBr(v.valor, 2) ?? 0) * 100);
+        const valorCentavos = v.valor ?? 0;
         if (linha)
           await reguaNivelControllerAlterar({
             path: { nivelId, id: linha.id },
@@ -380,15 +383,7 @@ function PainelLinha({
         {podeEditar && (
           <fieldset className="flex flex-col gap-4">
             <form.AppField name="valor">
-              {(f) => (
-                <f.TextField
-                  label="Valor (R$)"
-                  required
-                  placeholder="0,00"
-                  spellCheck={false}
-                  description="Vírgula nos centavos, como 27,00."
-                />
-              )}
+              {(f) => <f.MoedaField label="Valor" required placeholder="27,00" />}
             </form.AppField>
             <form.AppField name="aPartirDe">
               {(f) => (

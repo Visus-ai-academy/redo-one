@@ -147,15 +147,14 @@ describe('TabelaPrecos', () => {
     );
   });
 
-  it('alterar lê "1.300" como mil e trezentos e recusa "1.2"', async () => {
+  it('alterar lê "1.300" como mil e trezentos; o ponto é sempre o do milhar', async () => {
     renderComRotas(<TabelaPrecos tipo="cliente" donoId="c1" podeEditar />);
     await userEvent.click((await screen.findAllByText('Desde sempre'))[0] as HTMLElement);
     const valor = await screen.findByRole('textbox', { name: /Valor/ });
     expect(valor).toHaveValue('63,00');
     await userEvent.clear(valor);
     await userEvent.type(valor, '1.2');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar alteração' }));
-    expect(await screen.findByText('Use vírgula nos centavos, como 1.200,50.')).toBeInTheDocument();
+    expect(valor).toHaveValue('12');
     await userEvent.clear(valor);
     await userEvent.type(valor, '1.300');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar alteração' }));

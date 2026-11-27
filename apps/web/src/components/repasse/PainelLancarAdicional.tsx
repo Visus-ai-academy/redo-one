@@ -7,13 +7,7 @@ import type { CompetenciaComRepasseDto } from '../../gen/types/CompetenciaComRep
 import type { LancarAdicionalDto } from '../../gen/types/LancarAdicionalDto';
 import type { TarifasLancamentoDto } from '../../gen/types/TarifasLancamentoDto';
 import { moeda } from '../../lib/formato';
-import {
-  centavosDoTexto,
-  nomeCompetencia,
-  ROTULO_TIPO_ADICIONAL,
-  type TipoAdicional,
-  textoDeCentavos,
-} from '../../lib/repasse';
+import { nomeCompetencia, ROTULO_TIPO_ADICIONAL, type TipoAdicional } from '../../lib/repasse';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
@@ -33,9 +27,11 @@ type Valores = {
   naFechada: boolean;
   motivo: string;
   data: string;
-  valor: string;
+  /** Centavos (negativo é desconto). */
+  valor: number | null;
   quantidade: string;
-  unitario: string;
+  /** Centavos. */
+  unitario: number | null;
   descricao: string;
   referenciaDesde: string;
   referenciaAte: string;
@@ -53,9 +49,9 @@ const esquema = (fechada: (c: string) => boolean) =>
       naFechada: z.boolean(),
       motivo: z.string().max(1000, 'Use até 1.000 caracteres.'),
       data: z.string(),
-      valor: z.string(),
+      valor: z.number().int().nullable(),
       quantidade: z.string(),
-      unitario: z.string(),
+      unitario: z.number().int().nullable(),
       descricao: z.string().max(500, 'Use até 500 caracteres.'),
       referenciaDesde: z.string(),
       referenciaAte: z.string(),
@@ -69,16 +65,14 @@ const esquema = (fechada: (c: string) => boolean) =>
       if (v.naFechada && fechada(v.competencia) && !v.motivo.trim())
         erro('motivo', 'Informe o motivo de lançar na competência fechada.');
       if (v.tipo === 'avulso') {
-        const valor = centavosDoTexto(v.valor, { negativo: true });
-        if (valor === null || valor === 0)
-          erro('valor', 'Informe o valor, com vírgula nos centavos (negativo = desconto).');
+        if (v.valor === null || v.valor === 0)
+          erro('valor', 'Informe o valor (negativo é desconto).');
         if (v.descricao.trim().length < 3) erro('descricao', MSG_DESCRICAO);
       } else if (v.tipo) {
         const q = Number(v.quantidade);
         if (!/^\d+$/.test(v.quantidade.trim()) || q < 1)
           erro('quantidade', 'Informe a quantidade (1 ou mais).');
-        if (!((centavosDoTexto(v.unitario) ?? 0) > 0))
-          erro('unitario', 'Informe o valor unitário, maior que zero, com vírgula nos centavos.');
+        if (!((v.unitario ?? 0) > 0)) erro('unitario', 'Informe o valor unitário, maior que zero.');
       }
       if (v.tipo === 'peer_review') {
         if (!v.referenciaDesde) erro('referenciaDesde', 'Escolha o primeiro mês avaliado.');
@@ -144,9 +138,9 @@ export function PainelLancarAdicional({
     naFechada: false,
     motivo: '',
     data: hoje,
-    valor: '',
+    valor: null,
     quantidade: '',
-    unitario: '',
+    unitario: null,
     descricao: '',
     referenciaDesde: '',
     referenciaAte: '',
@@ -167,9 +161,9 @@ export function PainelLancarAdicional({
           ...(porQuantidade
             ? {
                 quantidade: Number(v.quantidade),
-                valorUnitarioCentavos: centavosDoTexto(v.unitario) ?? undefined,
+                valorUnitarioCentavos: v.unitario ?? undefined,
               }
-            : { valorCentavos: centavosDoTexto(v.valor, { negativo: true }) ?? undefined }),
+            : { valorCentavos: v.valor ?? undefined }),
           ...(v.descricao.trim() && { descricao: v.descricao.trim() }),
           ...(v.tipo === 'peer_review' && {
             referenciaDesde: v.referenciaDesde,
@@ -207,16 +201,16 @@ export function PainelLancarAdicional({
       : null;
 
   // O unitário segue a tarifa vigente enquanto a pessoa não digitar outro valor nele.
-  const automatico = useRef('');
+  const automatico = useRef<number | null>(null);
   useEffect(() => {
     if (sugerida === null) return;
     const atual = form.getFieldValue('unitario');
-    if (atual !== '' && atual !== automatico.current) return;
-    automatico.current = textoDeCentavos(sugerida);
-    form.setFieldValue('unitario', automatico.current);
+    if (atual !== null && atual !== automatico.current) return;
+    automatico.current = sugerida;
+    form.setFieldValue('unitario', sugerida);
   }, [sugerida, form]);
 
-  const unitario = centavosDoTexto(v.unitario);
+  const unitario = v.unitario;
   const quantidade = /^\d+$/.test(v.quantidade.trim()) ? Number(v.quantidade) : null;
   const total = unitario !== null && quantidade ? unitario * quantidade : null;
 
@@ -305,12 +299,12 @@ export function PainelLancarAdicional({
         {v.tipo === 'avulso' && (
           <form.AppField name="valor">
             {(field) => (
-              <field.TextField
-                label="Valor (R$)"
+              <field.MoedaField
+                label="Valor"
                 required
-                placeholder="Ex.: -120,00"
-                spellCheck={false}
-                description="Vírgula nos centavos. Negativo é desconto."
+                negativo
+                placeholder="-120,00"
+                description="Negativo é desconto."
               />
             )}
           </form.AppField>
@@ -358,13 +352,7 @@ export function PainelLancarAdicional({
               </form.AppField>
               <form.AppField name="unitario">
                 {(field) => (
-                  <field.TextField
-                    label="Valor unitário (R$)"
-                    required
-                    placeholder="0,00"
-                    spellCheck={false}
-                    className="flex-[1_1_160px]"
-                  />
+                  <field.MoedaField label="Valor unitário" required className="flex-[1_1_160px]" />
                 )}
               </form.AppField>
             </div>

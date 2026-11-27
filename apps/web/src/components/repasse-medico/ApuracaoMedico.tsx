@@ -28,7 +28,7 @@ import { AbaComErro } from '../distribuicao/estados';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { mesAno } from '../faturamento/competencias';
 import { HistoricoVigencias } from '../faturamento/historico-vigencias';
-import { numeroPtBr, opcoesAPartirDe, textoDaVigencia } from '../faturamento/precos';
+import { opcoesAPartirDe, textoDaVigencia } from '../faturamento/precos';
 import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
 import { RequiredLegend } from '../form/RequiredLegend';
@@ -39,8 +39,8 @@ import { CamposCarregando } from '../skeleton/CamposCarregando';
 import { useAvisos } from '../toast/use-avisos';
 import {
   AJUDA_TIPO_REGRA,
-  percentualDePpm,
-  ppmDoTexto,
+  campoDoPpm,
+  ppmDoCampo,
   ROTULO_TIPO_REGRA,
   recortesDaRegra,
   valorDaRegra,
@@ -174,7 +174,9 @@ export function ApuracaoMedico({
 type Valores = {
   tipo: string;
   descricao: string;
-  valor: string;
+  /** Centavos. */
+  valor: number | null;
+  /** Percentual com ponto decimal ("2.5"), como o `NumberField` guarda. */
   percentual: string;
   divisor: string;
   modalidades: string[];
@@ -187,7 +189,7 @@ const esquema = z
   .object({
     tipo: z.string().min(1, 'Escolha o tipo da regra.'),
     descricao: z.string().trim().min(1, 'Descreva a regra (ex.: Coordenação de neuro).'),
-    valor: z.string(),
+    valor: z.number().int().nullable(),
     percentual: z.string(),
     divisor: z.string(),
     modalidades: esquemaCaixasComTodas('Escolha as modalidades ou "Todas".'),
@@ -197,20 +199,19 @@ const esquema = z
   })
   .superRefine((v, ctx) => {
     if (v.tipo === 'percentual_repasse') {
-      const ppm = ppmDoTexto(v.percentual);
+      const ppm = ppmDoCampo(v.percentual);
       if (ppm === null || ppm <= 0 || ppm > 1_000_000)
         ctx.addIssue({
           code: 'custom',
           path: ['percentual'],
-          message: 'Informe o percentual de 0 a 100, com vírgula nos decimais (ex.: 2,5).',
+          message: 'Informe o percentual, maior que 0 e até 100.',
         });
     } else if (v.tipo) {
-      const valor = numeroPtBr(v.valor, 2);
-      if (valor === null || valor <= 0)
+      if (v.valor === null || v.valor <= 0)
         ctx.addIssue({
           code: 'custom',
           path: ['valor'],
-          message: 'Informe o valor, maior que zero, com vírgula nos centavos (ex.: 1.200,50).',
+          message: 'Informe o valor, maior que zero.',
         });
     }
     const d = Number(v.divisor);
@@ -226,10 +227,8 @@ function iniciaisDa(regra: RegraApuracaoDto | undefined, aPartirDe: string): Val
   return {
     tipo: regra?.tipo ?? '',
     descricao: regra?.descricao ?? '',
-    valor:
-      regra?.valorCentavos != null ? (regra.valorCentavos / 100).toFixed(2).replace('.', ',') : '',
-    percentual:
-      regra?.percentualPpm != null ? percentualDePpm(regra.percentualPpm).replace('%', '') : '',
+    valor: regra?.valorCentavos ?? null,
+    percentual: campoDoPpm(regra?.percentualPpm),
     divisor: String(regra?.divisor ?? 1),
     modalidades: regra
       ? caixasDaApi(regra.modalidadeIds === null, regra.modalidadeIds ?? [])
@@ -280,11 +279,8 @@ function EditorRegra({
           aPartirDe: v.aPartirDe,
           tipo,
           descricao: v.descricao.trim(),
-          valorCentavos:
-            tipo === 'percentual_repasse'
-              ? null
-              : Math.round((numeroPtBr(v.valor, 2) as number) * 100),
-          percentualPpm: tipo === 'percentual_repasse' ? ppmDoTexto(v.percentual) : null,
+          valorCentavos: tipo === 'percentual_repasse' ? null : v.valor,
+          percentualPpm: tipo === 'percentual_repasse' ? ppmDoCampo(v.percentual) : null,
           divisor: Number(v.divisor),
           modalidades: caixasParaApi(v.modalidades),
           especialidades: caixasParaApi(v.especialidades),
@@ -311,7 +307,7 @@ function EditorRegra({
   const aPartirDe = useStore(form.store, (s) => s.values.aPartirDe);
   useEffect(() => {
     // Trocar o tipo não carrega o valor de um campo para o outro.
-    if (tipo === 'percentual_repasse') form.setFieldValue('valor', '');
+    if (tipo === 'percentual_repasse') form.setFieldValue('valor', null);
     else form.setFieldValue('percentual', '');
   }, [tipo, form]);
 
@@ -392,26 +388,20 @@ function EditorRegra({
             {tipo === 'percentual_repasse' ? (
               <form.AppField name="percentual">
                 {(f) => (
-                  <f.TextField
-                    label="Percentual (%)"
+                  <f.NumberField
+                    label="Percentual"
                     required
-                    placeholder="0"
-                    spellCheck={false}
-                    description="Vírgula nos decimais, como 2,5."
+                    placeholder="2,5"
+                    step={0.0001}
+                    min={0}
+                    max={100}
+                    unidade="%"
                   />
                 )}
               </form.AppField>
             ) : (
               <form.AppField name="valor">
-                {(f) => (
-                  <f.TextField
-                    label="Valor (R$)"
-                    required
-                    placeholder="0,00"
-                    spellCheck={false}
-                    description="Vírgula nos centavos, como 1.200,50."
-                  />
-                )}
+                {(f) => <f.MoedaField label="Valor" required />}
               </form.AppField>
             )}
             <form.AppField name="divisor">

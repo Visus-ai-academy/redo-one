@@ -6,16 +6,13 @@ const agrupar = (inteiros: string) => inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, 
 
 /**
  * Formata enquanto digita: milhar com ponto, vírgula dos centavos (até duas casas) e, com
- * `negativo`, o sinal de menos na frente. O ponto digitado no fim (teclado sem vírgula) vira a
- * vírgula; ponto no meio é o do milhar e é refeito.
+ * `negativo`, o sinal de menos na frente. O ponto digitado é o do milhar e é refeito.
  */
 export function formatarMoedaDigitando(texto: string, { negativo = false } = {}): string {
   let t = texto.replace(/−/g, '-').replace(/[^\d,.-]/g, '');
   const menos = negativo && t.trimStart().startsWith('-');
   t = t.replace(/-/g, '');
-  // Ponto acabado de digitar no fim ("12."), sem vírgula, é a vírgula dos centavos. Ponto no meio
-  // é o do milhar ("1.23" depois de apagar o 4 de "1.234" é 123, não 1,23).
-  if (!t.includes(',')) t = t.replace(/\.$/, ',');
+  // Ponto é sempre o do milhar (refeito a cada tecla): quem digita "1.200,50" chega lá.
   const virgula = t.indexOf(',');
   const temVirgula = virgula >= 0;
   const inteirosBrutos = (temVirgula ? t.slice(0, virgula) : t).replace(/\D/g, '');
