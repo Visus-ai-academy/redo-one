@@ -834,6 +834,13 @@
       "when": 1795793583179,
       "tag": "0118_financeiro_categorias",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1795794944594,
+      "tag": "0119_financeiro_contas_bancarias",
+      "breakpoints": true
     }
   ]
 }

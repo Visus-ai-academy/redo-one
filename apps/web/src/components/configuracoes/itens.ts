@@ -1,5 +1,6 @@
 import {
   ArrowsLeftRight,
+  Bank,
   Bell,
   BookOpen,
   CalendarDots,
@@ -181,6 +182,13 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: TagSimple,
         to: '/configuracoes/categorias-financeiras',
         permissao: 'categorias-financeiras.ver',
+      },
+      {
+        nome: 'Contas bancárias',
+        descricao: 'Contas de cada empresa, saldo inicial e a credencial do banco',
+        icone: Bank,
+        to: '/configuracoes/contas-bancarias',
+        permissao: 'contas-bancarias.ver',
       },
     ],
   },

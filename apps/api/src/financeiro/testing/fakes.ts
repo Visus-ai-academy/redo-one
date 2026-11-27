@@ -5,7 +5,14 @@ import type {
   CategoriasRepository,
   FiltroCategorias,
 } from '../application/ports/categorias.repository';
+import type {
+  ContaBancaria,
+  ContasBancariasRepository,
+  FiltroContasBancarias,
+} from '../application/ports/contas-bancarias.repository';
+import type { EmpresasFinanceiro } from '../application/ports/empresas';
 import type { DadosCategoria, TipoCategoria } from '../domain/categoria-financeira';
+import type { DadosContaBancaria } from '../domain/conta-bancaria';
 
 /** Fatia a página como o banco faria. */
 export function paginar<T>(itens: T[], filtro: { pagina: number; porPagina: number }) {
@@ -83,6 +90,100 @@ export class CategoriasEmMemoria implements CategoriasRepository {
   async excluir(id: string) {
     const temFilhas = [...this.linhas.values()].some((c) => c.paiId === id);
     if (temFilhas || this.usadas.has(id)) return false;
+    this.linhas.delete(id);
+    return true;
+  }
+}
+
+/** Contratados do catálogo, com a marca "usa o financeiro do One". */
+export class EmpresasEmMemoria implements EmpresasFinanceiro {
+  constructor(readonly linhas: { id: string; nome: string; usaFinanceiro: boolean }[]) {}
+
+  async listar() {
+    return this.linhas.filter((e) => e.usaFinanceiro).map(({ id, nome }) => ({ id, nome }));
+  }
+
+  async usaFinanceiro(id: string) {
+    return this.linhas.some((e) => e.id === id && e.usaFinanceiro);
+  }
+
+  nome(id: string) {
+    return this.linhas.find((e) => e.id === id)?.nome ?? '';
+  }
+}
+
+/** Contas bancárias em memória; "em uso" = está em `usadas`. */
+export class ContasBancariasEmMemoria implements ContasBancariasRepository {
+  readonly linhas = new Map<string, DadosContaBancaria>();
+  readonly usadas = new Set<string>();
+
+  constructor(private readonly empresas: EmpresasEmMemoria) {}
+
+  private completa(id: string, d: DadosContaBancaria): ContaBancaria {
+    return {
+      id,
+      ...d,
+      empresaNome: this.empresas.nome(d.contratadoId),
+      saldoAtualCentavos: d.saldoInicialCentavos,
+    };
+  }
+
+  async listar(filtro: FiltroContasBancarias) {
+    const termo = filtro.busca?.toLowerCase();
+    const itens = [...this.linhas.entries()]
+      .map(([id, d]) => this.completa(id, d))
+      .filter((c) => filtro.empresa === 'todas' || c.contratadoId === filtro.empresa.id)
+      .filter((c) => filtro.situacao === 'todas' || c.ativa === (filtro.situacao === 'ativas'))
+      .filter(
+        (c) =>
+          !termo ||
+          [c.apelido, c.bancoCodigo, c.agencia, c.conta].some((v) =>
+            v?.toLowerCase().includes(termo),
+          ),
+      )
+      .sort(
+        (a, b) => a.empresaNome.localeCompare(b.empresaNome) || a.apelido.localeCompare(b.apelido),
+      );
+    return paginar(itens, filtro);
+  }
+
+  async buscar(id: string) {
+    const d = this.linhas.get(id);
+    return d ? this.completa(id, d) : null;
+  }
+
+  async buscarPorApelido(contratadoId: string, apelido: string) {
+    const achada = [...this.linhas.entries()].find(
+      ([, c]) =>
+        c.contratadoId === contratadoId && c.apelido.toLowerCase() === apelido.toLowerCase(),
+    );
+    return achada ? { id: achada[0] } : null;
+  }
+
+  async buscarPadrao(contratadoId: string) {
+    const achada = [...this.linhas.entries()].find(
+      ([, c]) => c.contratadoId === contratadoId && c.padraoRecebimento,
+    );
+    return achada ? { id: achada[0] } : null;
+  }
+
+  async desmarcarPadrao(id: string) {
+    const d = this.linhas.get(id);
+    if (d) this.linhas.set(id, { ...d, padraoRecebimento: false });
+  }
+
+  async criar(dados: DadosContaBancaria) {
+    const id = randomUUID();
+    this.linhas.set(id, { ...dados });
+    return id;
+  }
+
+  async atualizar(id: string, dados: DadosContaBancaria) {
+    this.linhas.set(id, { ...dados });
+  }
+
+  async excluir(id: string) {
+    if (this.usadas.has(id)) return false;
     this.linhas.delete(id);
     return true;
   }

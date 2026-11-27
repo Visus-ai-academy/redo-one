@@ -25,6 +25,7 @@ import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configu
 import { Route as AppConfiguracoesAvisosRouteImport } from './routes/_app/configuracoes/avisos'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
 import { Route as AppConfiguracoesCategoriasFinanceirasRouteImport } from './routes/_app/configuracoes/categorias-financeiras'
+import { Route as AppConfiguracoesContasBancariasRouteImport } from './routes/_app/configuracoes/contas-bancarias'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
 import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
 import { Route as AppConfiguracoesDistribuicaoRouteImport } from './routes/_app/configuracoes/distribuicao'
@@ -125,6 +126,12 @@ const AppConfiguracoesCategoriasFinanceirasRoute =
   AppConfiguracoesCategoriasFinanceirasRouteImport.update({
     id: '/configuracoes/categorias-financeiras',
     path: '/configuracoes/categorias-financeiras',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppConfiguracoesContasBancariasRoute =
+  AppConfiguracoesContasBancariasRouteImport.update({
+    id: '/configuracoes/contas-bancarias',
+    path: '/configuracoes/contas-bancarias',
     getParentRoute: () => AppRoute,
   } as any)
 const AppConfiguracoesContratadosRoute =
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/categorias-financeiras': typeof AppConfiguracoesCategoriasFinanceirasRoute
+  '/configuracoes/contas-bancarias': typeof AppConfiguracoesContasBancariasRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
@@ -291,6 +299,7 @@ export interface FileRoutesByTo {
   '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/categorias-financeiras': typeof AppConfiguracoesCategoriasFinanceirasRoute
+  '/configuracoes/contas-bancarias': typeof AppConfiguracoesContasBancariasRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
@@ -330,6 +339,7 @@ export interface FileRoutesById {
   '/_app/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/_app/configuracoes/categorias-financeiras': typeof AppConfiguracoesCategoriasFinanceirasRoute
+  '/_app/configuracoes/contas-bancarias': typeof AppConfiguracoesContasBancariasRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/_app/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
     | '/configuracoes/categorias-financeiras'
+    | '/configuracoes/contas-bancarias'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/distribuicao'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
     | '/configuracoes/categorias-financeiras'
+    | '/configuracoes/contas-bancarias'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/distribuicao'
@@ -444,6 +456,7 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/avisos'
     | '/_app/configuracoes/catalogo'
     | '/_app/configuracoes/categorias-financeiras'
+    | '/_app/configuracoes/contas-bancarias'
     | '/_app/configuracoes/contratados'
     | '/_app/configuracoes/de-paras'
     | '/_app/configuracoes/distribuicao'
@@ -586,6 +599,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes/categorias-financeiras'
       fullPath: '/configuracoes/categorias-financeiras'
       preLoaderRoute: typeof AppConfiguracoesCategoriasFinanceirasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/configuracoes/contas-bancarias': {
+      id: '/_app/configuracoes/contas-bancarias'
+      path: '/configuracoes/contas-bancarias'
+      fullPath: '/configuracoes/contas-bancarias'
+      preLoaderRoute: typeof AppConfiguracoesContasBancariasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/configuracoes/contratados': {
@@ -743,6 +763,7 @@ interface AppRouteChildren {
   AppConfiguracoesAvisosRoute: typeof AppConfiguracoesAvisosRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
   AppConfiguracoesCategoriasFinanceirasRoute: typeof AppConfiguracoesCategoriasFinanceirasRoute
+  AppConfiguracoesContasBancariasRoute: typeof AppConfiguracoesContasBancariasRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
   AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
   AppConfiguracoesDistribuicaoRoute: typeof AppConfiguracoesDistribuicaoRoute
@@ -779,6 +800,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
   AppConfiguracoesCategoriasFinanceirasRoute:
     AppConfiguracoesCategoriasFinanceirasRoute,
+  AppConfiguracoesContasBancariasRoute: AppConfiguracoesContasBancariasRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
   AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,
   AppConfiguracoesDistribuicaoRoute: AppConfiguracoesDistribuicaoRoute,

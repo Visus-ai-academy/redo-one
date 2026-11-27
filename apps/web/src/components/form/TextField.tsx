@@ -22,6 +22,8 @@ type TextFieldProps = {
   mascara?: Mascara;
   /** `false` em códigos, chaves e identificadores (e-mail, busca e máscara já desligam). */
   spellCheck?: boolean;
+  /** Teclado do celular sem máscara: `numeric` (códigos, agência) ou `decimal` (valores em R$). */
+  inputMode?: 'numeric' | 'decimal';
   className?: string;
 };
 
@@ -35,6 +37,7 @@ export function TextField({
   size = 'app',
   mascara,
   spellCheck,
+  inputMode,
   className,
 }: TextFieldProps) {
   const field = useFieldContext<string>();
@@ -77,7 +80,7 @@ export function TextField({
       <Field.Control
         ref={entrada}
         type={mascara === 'telefone' ? 'tel' : type}
-        inputMode={mascara ? 'numeric' : type === 'tel' ? 'tel' : undefined}
+        inputMode={mascara ? 'numeric' : type === 'tel' ? 'tel' : inputMode}
         required={required}
         placeholder={placeholder}
         // E-mail, busca e documento: sem corretor, sem maiúscula automática e sem o navegador

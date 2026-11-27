@@ -11809,6 +11809,235 @@
         ]
       }
     },
+    "/financeiro/contas-bancarias": {
+      "get": {
+        "operationId": "ContasBancariasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome, do documento ou do código.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltro"
+            }
+          },
+          {
+            "name": "empresa",
+            "required": true,
+            "in": "query",
+            "description": "Id da empresa ou `todas` (escolha explícita; nunca vazio).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaContasBancariasDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "ContasBancariasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContaBancariaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empresa que não usa o financeiro, apelido vazio, data ou credencial inválida; `campos` diz qual."
+          },
+          "409": {
+            "description": "A empresa já tem uma conta com o apelido."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-bancarias/{id}": {
+      "get": {
+        "operationId": "ContasBancariasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContaBancariaDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "ContasBancariasController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContaBancariaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Empresa que não usa o financeiro, apelido vazio, data ou credencial inválida; `campos` diz qual."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "A empresa já tem uma conta com o apelido."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "delete": {
+        "operationId": "ContasBancariasController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Com baixas ou títulos ligados: desative."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/empresas": {
+      "get": {
+        "operationId": "EmpresasFinanceiroController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EmpresaFinanceiroDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
     "/distribuicao/rodadas/viva": {
       "get": {
         "operationId": "RodadasController_viva",
@@ -27006,6 +27235,349 @@
           "tipo",
           "nome",
           "ativa"
+        ]
+      },
+      "TipoContaBancaria": {
+        "type": "string",
+        "enum": [
+          "corrente",
+          "aplicacao",
+          "caixa"
+        ]
+      },
+      "IntegracaoBancaria": {
+        "type": "string",
+        "enum": [
+          "nenhuma",
+          "itau"
+        ]
+      },
+      "ContaBancariaItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "apelido": {
+            "type": "string"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoContaBancaria"
+              }
+            ]
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "agencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "conta": {
+            "type": "string",
+            "nullable": true
+          },
+          "digito": {
+            "type": "string",
+            "nullable": true
+          },
+          "saldoInicialCentavos": {
+            "type": "integer"
+          },
+          "saldoInicialEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "saldoAtualCentavos": {
+            "type": "integer",
+            "description": "Saldo inicial mais as baixas desde a data do saldo (as baixas vêm com os títulos)."
+          },
+          "integracao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntegracaoBancaria"
+              }
+            ]
+          },
+          "credencial": {
+            "type": "string",
+            "nullable": true
+          },
+          "padraoRecebimento": {
+            "type": "boolean"
+          },
+          "ativa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "contratadoId",
+          "empresaNome",
+          "apelido",
+          "tipo",
+          "bancoCodigo",
+          "agencia",
+          "conta",
+          "digito",
+          "saldoInicialCentavos",
+          "saldoInicialEm",
+          "saldoAtualCentavos",
+          "integracao",
+          "credencial",
+          "padraoRecebimento",
+          "ativa"
+        ]
+      },
+      "PaginaContasBancariasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContaBancariaItemDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "VariavelCredencialDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "ITAU_TELEIMAGEM_CLIENT_ID"
+          },
+          "configurada": {
+            "type": "boolean",
+            "description": "A variável existe no servidor (o valor nunca sai da API)."
+          }
+        },
+        "required": [
+          "nome",
+          "configurada"
+        ]
+      },
+      "ContaBancariaDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "apelido": {
+            "type": "string"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoContaBancaria"
+              }
+            ]
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "agencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "conta": {
+            "type": "string",
+            "nullable": true
+          },
+          "digito": {
+            "type": "string",
+            "nullable": true
+          },
+          "saldoInicialCentavos": {
+            "type": "integer"
+          },
+          "saldoInicialEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "saldoAtualCentavos": {
+            "type": "integer",
+            "description": "Saldo inicial mais as baixas desde a data do saldo (as baixas vêm com os títulos)."
+          },
+          "integracao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntegracaoBancaria"
+              }
+            ]
+          },
+          "credencial": {
+            "type": "string",
+            "nullable": true
+          },
+          "padraoRecebimento": {
+            "type": "boolean"
+          },
+          "ativa": {
+            "type": "boolean"
+          },
+          "variaveisCredencial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariavelCredencialDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "contratadoId",
+          "empresaNome",
+          "apelido",
+          "tipo",
+          "bancoCodigo",
+          "agencia",
+          "conta",
+          "digito",
+          "saldoInicialCentavos",
+          "saldoInicialEm",
+          "saldoAtualCentavos",
+          "integracao",
+          "credencial",
+          "padraoRecebimento",
+          "ativa",
+          "variaveisCredencial"
+        ]
+      },
+      "ContaBancariaDto": {
+        "type": "object",
+        "properties": {
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A empresa (contratado que usa o financeiro)."
+          },
+          "apelido": {
+            "type": "string",
+            "example": "Itaú cobrança",
+            "maxLength": 80
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoContaBancaria"
+              }
+            ]
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true,
+            "example": "341",
+            "maxLength": 3
+          },
+          "agencia": {
+            "type": "string",
+            "nullable": true,
+            "example": "0123",
+            "maxLength": 10
+          },
+          "conta": {
+            "type": "string",
+            "nullable": true,
+            "example": "45678",
+            "maxLength": 20
+          },
+          "digito": {
+            "type": "string",
+            "nullable": true,
+            "example": "9",
+            "maxLength": 2
+          },
+          "saldoInicialCentavos": {
+            "type": "integer",
+            "description": "Em centavos; pode ser negativo."
+          },
+          "saldoInicialEm": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-12-01"
+          },
+          "integracao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntegracaoBancaria"
+              }
+            ]
+          },
+          "credencial": {
+            "type": "string",
+            "nullable": true,
+            "example": "ITAU_TELEIMAGEM",
+            "maxLength": 60,
+            "description": "Prefixo das variáveis de ambiente da credencial; nunca o segredo."
+          },
+          "padraoRecebimento": {
+            "type": "boolean",
+            "description": "Marcar desmarca a padrão anterior da empresa; só ativa."
+          },
+          "ativa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "contratadoId",
+          "apelido",
+          "tipo",
+          "saldoInicialCentavos",
+          "saldoInicialEm",
+          "integracao",
+          "padraoRecebimento",
+          "ativa"
+        ]
+      },
+      "EmpresaFinanceiroDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
         ]
       },
       "StatusRodada": {

@@ -49,11 +49,13 @@ function SoCampo({
   mascara,
   autoComplete,
   spellCheck,
+  inputMode,
 }: {
   type?: 'text' | 'email' | 'search' | 'tel';
   mascara?: Mascara;
   autoComplete?: string;
   spellCheck?: boolean;
+  inputMode?: 'numeric' | 'decimal';
 }) {
   const form = useAppForm({ defaultValues: { v: '' } });
   return (
@@ -65,6 +67,7 @@ function SoCampo({
           type={type}
           mascara={mascara}
           autoComplete={autoComplete}
+          inputMode={inputMode}
           spellCheck={spellCheck}
         />
       )}
@@ -80,6 +83,11 @@ describe('TextField: teclado e preenchimento', () => {
     expect(campo).toHaveAttribute('spellcheck', 'false');
     expect(campo).toHaveAttribute('autocapitalize', 'none');
     expect(campo).toHaveAttribute('autocomplete', 'off');
+  });
+
+  it('valor em reais sem máscara: teclado decimal no celular', () => {
+    render(<SoCampo inputMode="decimal" />);
+    expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveAttribute('inputmode', 'decimal');
   });
 
   it('respeita o autoComplete das telas de acesso', () => {

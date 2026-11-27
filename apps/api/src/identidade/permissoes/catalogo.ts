@@ -475,6 +475,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     especiais: [],
   },
   {
+    // Configurações › Financeiro › Contas bancárias: o saldo inicial entra no saldo de cada conta.
+    tela: 'contas-bancarias',
+    rotulo: 'Contas bancárias',
+    area: 'Financeiro',
+    padrao: crud('editar', 'excluir'),
+    especiais: [],
+  },
+  {
     tela: 'usuarios',
     rotulo: 'Usuários',
     area: 'Configurações',

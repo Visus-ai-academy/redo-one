@@ -9,6 +9,7 @@ import { FinanceiroModule } from './financeiro.module';
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { FocusNfeEmissor } from './infrastructure/focus-nfe/focus-nfe-emissor';
 import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
+import { ContasBancariasController } from './infrastructure/http/contas-bancarias.controller';
 import { SimuladorEmissorNfse } from './infrastructure/simulador/simulador-emissor-nfse';
 
 const config = (valores: Record<string, string>) => ({ get: (nome: string) => valores[nome] });
@@ -51,5 +52,6 @@ describe('FinanceiroModule', () => {
     expect(modulo.get(CategoriasFinanceirasController)).toBeInstanceOf(
       CategoriasFinanceirasController,
     );
+    expect(modulo.get(ContasBancariasController)).toBeInstanceOf(ContasBancariasController);
   });
 });

@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
-import { invalidarFinanceiro, rotuloDaCategoria } from './financeiro';
+import { contaPorExtenso, formatarDia, invalidarFinanceiro, rotuloDaCategoria } from './financeiro';
 
 describe('invalidarFinanceiro', () => {
   it('invalida só as consultas do financeiro', async () => {
@@ -26,5 +26,20 @@ describe('rotuloDaCategoria', () => {
       'Ocupação › Aluguel',
     );
     expect(rotuloDaCategoria({ nome: 'Ocupação', grupoNome: null })).toBe('Ocupação');
+  });
+});
+
+describe('formatarDia e contaPorExtenso', () => {
+  it('dia no formato brasileiro', () => {
+    expect(formatarDia('2026-12-01')).toBe('01/12/2026');
+  });
+
+  it('banco, agência e conta com dígito; o que falta some', () => {
+    expect(
+      contaPorExtenso({ bancoCodigo: '341', agencia: '0123', conta: '45678', digito: '9' }),
+    ).toBe('341 · 0123 · 45678-9');
+    expect(contaPorExtenso({ bancoCodigo: null, agencia: null, conta: null, digito: null })).toBe(
+      '—',
+    );
   });
 });
