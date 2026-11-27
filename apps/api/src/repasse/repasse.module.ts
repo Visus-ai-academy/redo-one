@@ -34,6 +34,10 @@ import {
   type RegrasMedicoRepository,
 } from './application/ports/regras-medico.repository';
 import {
+  REGUA_NIVEL_REPOSITORY,
+  type ReguaNivelRepository,
+} from './application/ports/regua-nivel.repository';
+import {
   VERSOES_CONFIGURACAO,
   type VersoesConfiguracaoRepository,
 } from './application/ports/versoes-configuracao.repository';
@@ -83,11 +87,20 @@ import {
   EncerrarRegraApuracao,
   ListarContagemMedico,
   ListarRegrasApuracao,
+  ListarRegrasApuracaoGeral,
   NovaVersaoContagem,
 } from './application/use-cases/regras-medico';
+import {
+  AlterarRegua,
+  EncerrarRegua,
+  IncluirRegua,
+  ListarRegua,
+  PreencherPelaRegua,
+} from './application/use-cases/regua-nivel';
 import { ConfiguracaoVersoesController } from './infrastructure/http/configuracao-versoes.controller';
 import { PrecosRepasseController } from './infrastructure/http/precos-repasse.controller';
 import { RegrasMedicoController } from './infrastructure/http/regras-medico.controller';
+import { ReguaNivelController } from './infrastructure/http/regua-nivel.controller';
 import { RepasseController } from './infrastructure/http/repasse.controller';
 import { RepasseConsultasController } from './infrastructure/http/repasse-consultas.controller';
 import { AgendadorRepasseFila } from './infrastructure/jobs/agendador-repasse-fila';
@@ -104,6 +117,7 @@ import {
 } from './infrastructure/persistence/drizzle-geracoes-repasse';
 import { DrizzlePrecosRepasseRepository } from './infrastructure/persistence/drizzle-precos-repasse.repository';
 import { DrizzleRegrasMedicoRepository } from './infrastructure/persistence/drizzle-regras-medico.repository';
+import { DrizzleReguaNivelRepository } from './infrastructure/persistence/drizzle-regua-nivel.repository';
 import { DrizzleVersoesConfiguracaoRepository } from './infrastructure/persistence/drizzle-versoes-configuracao.repository';
 import { RecalculoRepasseAdapter } from './infrastructure/recalculo-repasse.adapter';
 
@@ -128,6 +142,7 @@ const CONFIGURACAO = [
     PrecosRepasseController,
     RegrasMedicoController,
     ConfiguracaoVersoesController,
+    ReguaNivelController,
   ],
   providers: [
     { provide: CONSULTAS_REPASSE, useClass: DrizzleConsultasRepasse },
@@ -172,6 +187,18 @@ const CONFIGURACAO = [
     ),
     { provide: REGRAS_MEDICO_REPOSITORY, useClass: DrizzleRegrasMedicoRepository },
     { provide: VERSOES_CONFIGURACAO, useClass: DrizzleVersoesConfiguracaoRepository },
+    { provide: REGUA_NIVEL_REPOSITORY, useClass: DrizzleReguaNivelRepository },
+    ...[ListarRegua, IncluirRegua, AlterarRegua, EncerrarRegua].map((Caso) => ({
+      provide: Caso,
+      inject: [REGUA_NIVEL_REPOSITORY],
+      useFactory: (repo: ReguaNivelRepository) => new Caso(repo, agora),
+    })),
+    {
+      provide: PreencherPelaRegua,
+      inject: [REGUA_NIVEL_REPOSITORY, PRECOS_REPASSE_REPOSITORY],
+      useFactory: (r: ReguaNivelRepository, p: PrecosRepasseRepository) =>
+        new PreencherPelaRegua(r, p, agora),
+    },
     ...[
       ListarRegrasComNomes,
       ListarParametrosComAutoria,
@@ -197,6 +224,7 @@ const CONFIGURACAO = [
       AlterarRegraApuracao,
       EncerrarRegraApuracao,
       CancelarRegraApuracao,
+      ListarRegrasApuracaoGeral,
     ].map((Caso) => ({
       provide: Caso,
       inject: [REGRAS_MEDICO_REPOSITORY],

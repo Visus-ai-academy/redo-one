@@ -39,6 +39,7 @@ function montar(contagem: VersaoContagem[] = [], regras: RegraApuracaoGravada[] 
     bloqueadas: async () => ['2026-10'],
     listarContagem: async () => contagem,
     listarRegras: async () => regras,
+    listarTodasRegras: async () => ({ itens: [], total: 0 }),
     gravarContagem: async (g) => void gravadas.push(g),
     gravarRegra: async (g) => void gravadas.push(g),
     eventos: async () => new Map([['c1', [{ acao: 'encerrada', quem: 'Bruno', em: AGORA }]]]),

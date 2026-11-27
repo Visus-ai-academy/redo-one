@@ -28,7 +28,7 @@ import {
 import { recalculosCompetencia } from './faturamento';
 import { usuarios } from './identidade';
 import { laudos } from './ingestao';
-import { equipes, medicos } from './medicos';
+import { equipes, medicos, niveisMedico } from './medicos';
 
 // Contexto `repasse`: o que se paga a cada médico na competência. Dinheiro em centavos inteiros.
 // Tudo o que decide o valor tem vigência por competência ("AAAA-MM", inclusivas): nada se
@@ -173,6 +173,42 @@ export const precosRepasse = pgTable(
     check('precos_repasse_cliente_check', sql`${t.todosClientes} = (${t.clienteId} is null)`),
     check('precos_repasse_valor_check', sql`${t.valorCentavos} >= 0`),
     checkVigencia('precos_repasse', t),
+  ],
+);
+
+/**
+ * Régua de referência do repasse por nível do médico, por arranjo (categoria e prioridade podem
+ * ser "todas", explícito). Não entra no cálculo: serve para preencher os preços de um médico pelo
+ * nível dele ("Preencher pela régua do nível").
+ */
+export const reguasRepasseNivel = pgTable(
+  'reguas_repasse_nivel',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nivelId: uuid('nivel_id')
+      .notNull()
+      .references(() => niveisMedico.id),
+    modalidadeId: uuid('modalidade_id')
+      .notNull()
+      .references(() => modalidades.id),
+    especialidadeId: uuid('especialidade_id')
+      .notNull()
+      .references(() => especialidades.id),
+    todasCategorias: boolean('todas_categorias').notNull(),
+    categoriaId: uuid('categoria_id').references(() => categoriasExame.id),
+    todasPrioridades: boolean('todas_prioridades').notNull(),
+    prioridadeId: uuid('prioridade_id').references(() => prioridades.id),
+    valorCentavos: integer('valor_centavos').notNull(),
+    ...vigencia(),
+  },
+  (t) => [
+    index('reguas_repasse_nivel_nivel_idx').on(t.nivelId, t.modalidadeId, t.especialidadeId),
+    check(
+      'reguas_repasse_nivel_recorte_check',
+      sql`${t.todasCategorias} = (${t.categoriaId} is null) and ${t.todasPrioridades} = (${t.prioridadeId} is null)`,
+    ),
+    check('reguas_repasse_nivel_valor_check', sql`${t.valorCentavos} > 0`),
+    checkVigencia('reguas_repasse_nivel', t),
   ],
 );
 

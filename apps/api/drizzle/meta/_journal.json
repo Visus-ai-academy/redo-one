@@ -820,6 +820,13 @@
       "when": 1795784885648,
       "tag": "0116_revogar_repasse_fechar",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1795786563228,
+      "tag": "0117_regua_repasse_nivel",
+      "breakpoints": true
     }
   ]
 }

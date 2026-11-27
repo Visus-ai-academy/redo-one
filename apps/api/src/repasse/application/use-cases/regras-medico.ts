@@ -18,6 +18,7 @@ import {
 import type {
   DadosRegraApuracao,
   EventoDaVersao,
+  FiltroRegrasGeral,
   ModoContagem,
   RecorteContagem,
   RegraApuracaoGravada,
@@ -397,5 +398,21 @@ export class CancelarRegraApuracao extends CasoRegras {
       nova: null,
       eventos: this.eventos(usuarioId, ENTIDADE_REGRA_APURACAO, mudancas, null, { medicoId }),
     });
+  }
+}
+
+/** Lista geral das regras de apuração (só leitura; editar é no painel do médico). */
+export class ListarRegrasApuracaoGeral extends CasoRegras {
+  async executar(f: Omit<FiltroRegrasGeral, 'mesAtual'>) {
+    const mesAtual = mesDeBrasilia(this.agora());
+    const { itens, total } = await this.repo.listarTodasRegras({ ...f, mesAtual });
+    // As que valem ou vão valer: quem encerrou e reabriu fica no histórico do médico.
+    const semEncerramento = {
+      encerradoPor: null,
+      encerradoEm: null,
+      reabertoPor: null,
+      reabertoEm: null,
+    };
+    return { mesAtual, total, itens: itens.map((r) => ({ ...r, ...semEncerramento })) };
   }
 }

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
 
 import type { EventoAuditoria } from '../../../auditoria/auditoria';
 import { DATABASE, type Database } from '../../../database/database';
@@ -20,8 +20,10 @@ import {
 import type {
   DadosRegraApuracao,
   EventoDaVersao,
+  FiltroRegrasGeral,
   Gravacao,
   ModoContagem,
+  PaginaRegrasGeral,
   RecorteContagem,
   RegraApuracaoGravada,
   RegrasMedicoRepository,
@@ -170,7 +172,56 @@ export class DrizzleRegrasMedicoRepository implements RegrasMedicoRepository {
     }));
   }
 
-  async listarRegras(medicoId: string): Promise<RegraApuracaoGravada[]> {
+  listarRegras(medicoId: string): Promise<RegraApuracaoGravada[]> {
+    return this.regras(eq(regrasApuracaoRepasse.medicoId, medicoId));
+  }
+
+  async listarTodasRegras(filtro: FiltroRegrasGeral): Promise<PaginaRegrasGeral> {
+    const r = regrasApuracaoRepasse;
+    // Sem acento nem maiúscula, como a chave do médico (sem depender de extensão do Postgres).
+    const termo = filtro.busca
+      ?.trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const onde = and(
+      filtro.tipo ? eq(r.tipo, filtro.tipo) : undefined,
+      // Só as que valem ou vão valer; as encerradas ficam no histórico de cada médico.
+      sql`(${r.vigenciaAte} is null or ${r.vigenciaAte} >= ${filtro.mesAtual})`,
+      termo
+        ? or(
+            sql`${medicos.chaveNormalizada} like ${`%${termo}%`}`,
+            sql`${r.descricao} ilike ${`%${filtro.busca?.trim()}%`}`,
+          )
+        : undefined,
+    );
+    const [{ total } = { total: 0 }] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(r)
+      .innerJoin(medicos, eq(medicos.id, r.medicoId))
+      .where(onde);
+    const pagina = await this.db
+      .select({ id: r.id, medicoId: r.medicoId, medico: medicos.nome })
+      .from(r)
+      .innerJoin(medicos, eq(medicos.id, r.medicoId))
+      .where(onde)
+      .orderBy(asc(medicos.nome), asc(r.descricao), asc(r.vigenciaDesde), asc(r.id))
+      .limit(filtro.porPagina)
+      .offset((filtro.pagina - 1) * filtro.porPagina);
+    const ids = pagina.map((p) => p.id);
+    const regras = ids.length ? await this.regras(inArray(r.id, ids)) : [];
+    const porId = new Map(regras.map((x) => [x.id, x]));
+    return {
+      itens: pagina.map((p) => ({
+        ...(porId.get(p.id) as RegraApuracaoGravada),
+        medicoId: p.medicoId,
+        medico: p.medico,
+      })),
+      total,
+    };
+  }
+
+  private async regras(onde: SQL | undefined): Promise<RegraApuracaoGravada[]> {
     const r = regrasApuracaoRepasse;
     const regras = await this.db
       .select({
@@ -190,7 +241,7 @@ export class DrizzleRegrasMedicoRepository implements RegrasMedicoRepository {
       })
       .from(r)
       .leftJoin(usuarios, eq(usuarios.id, r.criadoPorId))
-      .where(eq(r.medicoId, medicoId));
+      .where(onde);
     const ids = regras.map((x) => x.id);
     const x = regrasApuracaoRepasseRecortes;
     const recortes = ids.length

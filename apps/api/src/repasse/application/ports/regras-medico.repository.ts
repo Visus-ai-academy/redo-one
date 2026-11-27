@@ -57,12 +57,29 @@ export interface Gravacao<D> {
   eventos: EventoAuditoria[];
 }
 
+/** Lista geral das regras (todos os médicos); sem `tipo`, todos os tipos (a tela diz "Todos"). */
+export interface FiltroRegrasGeral {
+  busca?: string;
+  tipo?: TipoRegraApuracao;
+  /** As encerradas antes dele ficam de fora. */
+  mesAtual: string;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface PaginaRegrasGeral {
+  itens: (RegraApuracaoGravada & { medicoId: string; medico: string })[];
+  total: number;
+}
+
 /** Configuração de contagem (`configuracoes_medico_repasse`) e regras de apuração do médico. */
 export interface RegrasMedicoRepository {
   nomeDoMedico(medicoId: string): Promise<string | null>;
   bloqueadas(): Promise<string[]>;
   listarContagem(medicoId: string): Promise<VersaoContagem[]>;
   listarRegras(medicoId: string): Promise<RegraApuracaoGravada[]>;
+  /** Todas as regras que valem ou vão valer, de todos os médicos, paginadas. */
+  listarTodasRegras(filtro: FiltroRegrasGeral): Promise<PaginaRegrasGeral>;
   /**
    * Numa transação: confere a competência, aplica as mudanças (conferindo o `vigencia_ate` lido),
    * cria a versão nova, grava os eventos e pede as prévias. Se algo falha, nada é gravado.
