@@ -108,6 +108,7 @@ pnpm add --save-exact <pacote> --filter @repo/web
 
 - Você decide sozinho quando, qual e como instalar dependências, sempre pela skill `add-dependency` (critérios, limites e quando perguntar antes). Versão exata (`--save-exact`), nunca `^` ou `~`.
 - Commits **sempre** na especificação [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/), validados pelo commitlint. Ver skill `conventional-commit`.
+- **Repositório limpo: só a `main`.** Sem branches: cada trabalho roda num worktree destacado (`git worktree add --detach`) a partir da `main` e entra nela por `git merge --ff-only`. Entregou, apague na hora o worktree e qualquer branch criada no caminho, local e no remoto (`origin`). Com o trabalho finalizado, não sobra nada além da `main`, nem local nem no remoto: nenhuma branch, nenhum worktree. Branch ou worktree com trabalho que não entrou na `main` não se apaga sem perguntar.
 - **Desenvolvimento em TDD** em todos os apps e pacotes: teste falhando primeiro, depois a implementação mínima, depois refatoração. Ver skill `tdd`.
 - Testes com Vitest, em `*.test.ts(x)` ao lado do código. Importe `describe`/`it`/`expect` de `vitest` (sem globals).
 - Variáveis de ambiente ficam por app: novas entram no `.env.example` do app (`apps/api` ou `apps/web`), sem valores reais. Não há `.env` na raiz.
