@@ -12,7 +12,25 @@ describe('BotaoComCarregamento', () => {
     expect(screen.getByText('Salvar')).not.toHaveClass('invisible');
   });
 
-  it('carregando, guarda a largura do rótulo e põe o giro por cima, sem empurrar nada', () => {
+  it('a largura cabe o giro com o texto de carregamento desde antes do envio', () => {
+    render(<BotaoComCarregamento rotuloCarregando="Salvando…">Salvar</BotaoComCarregamento>);
+
+    // Parado, o "Salvando…" já está no botão, invisível e fora do nome: é ele que dá a largura
+    // mínima, então o botão não muda de tamanho quando o envio começa.
+    const carregando = screen.getByText('Salvando…');
+    const camada = carregando.closest('[data-camada="carregando"]');
+    expect(camada).toHaveClass('invisible');
+    expect(camada).toHaveAttribute('aria-hidden', 'true');
+    expect(carregando).toHaveClass('whitespace-nowrap');
+    // As duas camadas ocupam a mesma célula da grade: o botão fica com a largura da maior.
+    const rotulo = screen.getByText('Salvar').closest('[data-camada="rotulo"]');
+    expect(rotulo).toHaveClass('[grid-area:1/1]');
+    expect(camada).toHaveClass('[grid-area:1/1]');
+    expect(rotulo?.parentElement).toBe(camada?.parentElement);
+    expect(rotulo?.parentElement).toHaveClass('grid');
+  });
+
+  it('carregando, mostra o giro e o texto inteiro no lugar do rótulo, sem cortar', () => {
     render(
       <BotaoComCarregamento carregando rotuloCarregando="Salvando…">
         Salvar
@@ -21,19 +39,15 @@ describe('BotaoComCarregamento', () => {
 
     const botao = screen.getByRole('button', { name: 'Salvando…' });
     expect(botao).toHaveAttribute('aria-disabled', 'true');
-    // O botão é a referência do que fica por cima.
-    expect(botao).toHaveClass('relative');
-    // O rótulo de sempre continua na tela, invisível: é ele que dá a largura do botão.
-    const rotulo = screen.getByText('Salvar');
+    const rotulo = screen.getByText('Salvar').closest('[data-camada="rotulo"]');
     expect(rotulo).toHaveClass('invisible');
     expect(rotulo).toHaveAttribute('aria-hidden', 'true');
-    // O giro e o "Salvando…" ficam fora do fluxo, no espaço que o rótulo reservou; o texto que não
-    // cabe ao lado do giro desce para uma segunda linha cortada (fica só o giro).
-    const carregando = screen.getByText('Salvando…');
-    expect(carregando).toHaveClass('whitespace-nowrap');
-    const linha = carregando.parentElement;
-    expect(linha).toHaveClass('flex-wrap', 'overflow-hidden', 'h-[1lh]');
-    expect(linha?.parentElement).toHaveClass('absolute', 'inset-0');
+    const camada = screen.getByText('Salvando…').closest('[data-camada="carregando"]');
+    expect(camada).not.toHaveClass('invisible');
+    expect(camada).not.toHaveAttribute('aria-hidden');
+    expect(camada?.querySelector('svg')).toHaveClass('animate-spin');
+    // Nada de linha cortada: o texto não some ao lado do giro.
+    expect(camada).not.toHaveClass('overflow-hidden');
   });
 
   it('sem rótulo de carregamento, o nome do botão continua o de sempre', () => {

@@ -17,10 +17,10 @@ type BotaoComCarregamentoProps = Omit<ComponentProps<typeof Button>, 'className'
 };
 
 /**
- * Botão de uma ação que espera a API (salvar, enviar, aprovar). Carregando, ele não muda de
- * largura: o rótulo de sempre continua no lugar, invisível, e o giro com o "Salvando…" vai por cima,
- * no mesmo espaço. Se o texto não cabe ao lado do giro (ex.: "Salvar"), fica só o giro; o leitor de
- * tela lê o texto do mesmo jeito. Assim o rodapé nunca quebra de linha quando o envio começa.
+ * Botão de uma ação que espera a API (salvar, enviar, aprovar). A largura cabe o maior entre o
+ * rótulo e o giro com o texto de carregamento ("Salvando…"), desde antes do envio: as duas camadas
+ * ficam na mesma célula de uma grade e só uma aparece. Assim o texto sempre se lê inteiro, e o botão
+ * (e o rodapé) não muda de tamanho nem de linha quando o envio começa.
  * Só desabilita enquanto roda (antes, o clique diz o que falta).
  */
 export function BotaoComCarregamento({
@@ -40,7 +40,7 @@ export function BotaoComCarregamento({
       disabled={disabled || carregando}
       // Carregando, o foco fica no botão que a pessoa acabou de usar.
       focusableWhenDisabled={focusableWhenDisabled || carregando}
-      className={buttonClassName({ variant, size, className: cn('relative', className) })}
+      className={buttonClassName({ variant, size, className })}
     >
       <ConteudoComCarregamento carregando={carregando} rotuloCarregando={rotuloCarregando}>
         {children}
@@ -49,7 +49,10 @@ export function BotaoComCarregamento({
   );
 }
 
-/** O miolo do botão: o rótulo que reserva a largura e, carregando, o giro por cima. */
+/**
+ * O miolo do botão: o rótulo e a camada do carregamento (giro + texto), sobrepostos na mesma célula
+ * da grade. A invisível continua ocupando espaço, e é isso que fixa a largura mínima.
+ */
 function ConteudoComCarregamento({
   carregando,
   rotuloCarregando,
@@ -60,27 +63,26 @@ function ConteudoComCarregamento({
   children: ReactNode;
 }) {
   return (
-    <>
+    <span className="grid items-center justify-items-center">
       <span
+        data-camada="rotulo"
         aria-hidden={carregando || undefined}
-        className={cn('inline-flex items-center gap-2', carregando && 'invisible')}
+        className={cn('inline-flex items-center gap-2 [grid-area:1/1]', carregando && 'invisible')}
       >
         {children}
       </span>
-      {carregando && (
-        // Mesmo recuo do botão: o que fica por cima ocupa só o espaço do rótulo.
-        <span className="absolute inset-0 flex items-center justify-center [padding-inline:inherit]">
-          {/* Uma linha só: o que não cabe ao lado do giro desce e fica cortado. */}
-          <span className="flex h-[1lh] max-w-full min-w-0 flex-wrap items-center justify-center gap-x-2 overflow-hidden">
-            <CircleNotch
-              size={18}
-              aria-hidden
-              className="flex-none animate-spin motion-reduce:animate-none"
-            />
-            <span className="whitespace-nowrap">{rotuloCarregando ?? children}</span>
-          </span>
-        </span>
-      )}
-    </>
+      <span
+        data-camada="carregando"
+        aria-hidden={!carregando || undefined}
+        className={cn('inline-flex items-center gap-2 [grid-area:1/1]', !carregando && 'invisible')}
+      >
+        <CircleNotch
+          size={18}
+          aria-hidden
+          className={cn('flex-none', carregando && 'animate-spin motion-reduce:animate-none')}
+        />
+        <span className="whitespace-nowrap">{rotuloCarregando ?? children}</span>
+      </span>
+    </span>
   );
 }

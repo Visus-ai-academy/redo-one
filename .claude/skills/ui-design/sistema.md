@@ -169,6 +169,7 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
   - Cores: desligado, trilho na superfície suave com a borda de controle e o pino branco à esquerda; ligado, trilho e borda no acento, pino à direita. Hover: desligado, a borda escurece para a cor do foco; ligado, o acento forte. Foco: anel de 2px na cor do foco, 2px afastado. Desabilitado: 60% de opacidade, cursor proibido; só leitura (sem permissão): 70%, sem alternar. O pino desliza em 150ms ease-out (nada com movimento reduzido).
   - Teclado: Tab chega ao interruptor e a barra de espaço alterna (o Base UI já faz).
   - No código: no formulário, `<field.InterruptorField label description />` (vale ao salvar, entra no "Descartar as alterações?"); fora do formulário, que vale na hora, a `Chave`; peça solta (popover, linha própria), o `Interruptor` (`src/components/interruptor/`). A `CaixaDeSelecao` fica só para listas (`CheckboxListField`, `CheckboxGroup`, tabelas).
+- **Botão de envio carregando** (decidido em 27/11/2026): giro + texto no gerúndio ("Salvando…"), sempre inteiro; a largura mínima do botão cabe esse conteúdo desde antes do envio, para o texto nunca sumir e o layout nunca pular. Detalhes no `comportamento.md`, seção "Formulários: validação e envio".
 - Todo campo de texto tem placeholder com um exemplo do formato esperado (`nome@empresa.com.br`, `000.000.000-00`, `Ex.: Maria Souza`). O placeholder nunca substitui o rótulo.
 
 ## Acesso (login, recuperação, convite)
