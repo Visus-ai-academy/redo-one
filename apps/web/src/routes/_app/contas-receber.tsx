@@ -101,18 +101,8 @@ function PaginaContasReceber() {
     return <ListaRecorrencias tipo={TIPO} busca={busca} ir={ir} acesso={sessao} abas={abas} />;
   }
   if (aba === 'inadimplencia') {
-    return (
-      <ListaInadimplencia
-        busca={busca}
-        ir={ir}
-        abas={abas}
-        novo={
-          pode(sessao, `${TELA}.criar`)
-            ? { rotulo: 'Lançar título', onClick: () => ir(() => ({ novo: 1 })) }
-            : undefined
-        }
-      />
-    );
+    // Sem ação de criar: a aba só lista quem está em atraso.
+    return <ListaInadimplencia busca={busca} ir={ir} abas={abas} />;
   }
   return <ListaTitulos tipo={TIPO} busca={busca} ir={ir} acesso={sessao} abas={abas} />;
 }

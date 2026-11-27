@@ -19,7 +19,10 @@ type ListaCadastroProps<T extends RowData> = {
   totalNoTitulo?: boolean;
   /** Abas logo abaixo do título (as listas de um mesmo assunto). */
   abas?: ReactNode;
-  /** Ação de criar; presente só para quem pode editar. `icone` troca o "+" (ex.: enviar arquivo). */
+  /**
+   * Ação de criar, no topo à direita do título (com abas, a da aba aberta); presente só para quem
+   * pode editar. `icone` troca o "+" (ex.: enviar arquivo).
+   */
   novo?: { rotulo: string; onClick: () => void; icone?: Icon };
   /** Outras ações da página, ao lado do "novo" (botões secundários). */
   acoes?: ReactNode;
@@ -94,11 +97,11 @@ export function ListaCadastro<T extends RowData>({
   );
 
   const filtrando = Boolean(busca?.valor) || temFiltro;
-  const temFaixa = Boolean(busca || filtros || (novo && abas));
+  const temFaixa = Boolean(busca || filtros);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-4">
         <h1 className="text-[22px] leading-snug font-semibold">
           {titulo}
           {totalNoTitulo && (
@@ -110,10 +113,11 @@ export function ListaCadastro<T extends RowData>({
             </>
           )}
         </h1>
-        {(acoes || (novo && !abas)) && (
+        {/* A ação de criar fica sempre aqui, também com abas (cada aba passa a sua). */}
+        {(acoes || novo) && (
           <div className="flex flex-wrap items-center gap-2">
             {acoes}
-            {novo && !abas && <BotaoNovo {...novo} />}
+            {novo && <BotaoNovo {...novo} />}
           </div>
         )}
       </div>
@@ -143,7 +147,6 @@ export function ListaCadastro<T extends RowData>({
                 />
               )}
               {filtros}
-              {novo && abas && <BotaoNovo {...novo} />}
             </div>
           )}
 

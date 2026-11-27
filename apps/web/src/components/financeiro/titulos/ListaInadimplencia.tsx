@@ -31,12 +31,10 @@ export function ListaInadimplencia({
   busca,
   ir,
   abas,
-  novo,
 }: {
   busca: BuscaTitulos;
   ir: (mudar: (atual: BuscaTitulos) => BuscaTitulos, replace?: boolean) => void;
   abas: ReactNode;
-  novo?: { rotulo: string; onClick: () => void };
 }) {
   const lista = useQuery({
     ...inadimplenciaControllerListarQueryOptions(consultaDaInadimplencia(busca)),
@@ -136,7 +134,6 @@ export function ListaInadimplencia({
       titulo="Contas a receber"
       totalNoTitulo={false}
       abas={abas}
-      novo={novo}
       busca={{ valor: busca.busca, rotulo: 'Buscar cliente', placeholder: 'Cliente' }}
       temFiltro={busca.empresa !== undefined || busca.faixa !== undefined}
       filtros={

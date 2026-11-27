@@ -52,6 +52,25 @@ describe('ListaCadastro', () => {
     expect(screen.getByText('1 de 1')).toBeInTheDocument();
   });
 
+  it('com abas, a ação de criar fica no topo, ao lado do título, e não na faixa dos filtros', () => {
+    render(
+      <ListaCadastro
+        {...props}
+        totalNoTitulo={false}
+        abas={<nav aria-label="Partes" />}
+        filtros={<span>filtro</span>}
+        itens={[{ id: 'c-1', nome: 'A' }]}
+        total={1}
+        novo={{ rotulo: 'Lançar despesa', onClick: vi.fn() }}
+      />,
+    );
+
+    const botao = screen.getByRole('button', { name: 'Lançar despesa' });
+    const regiao = screen.getByRole('region', { name: 'Contratados' });
+    expect(regiao).not.toContainElement(botao);
+    expect(screen.getByRole('heading', { level: 1 }).parentElement).toContainElement(botao);
+  });
+
   it('o painel fica por cima: com ele aberto, a lista não muda nada (classes, colunas)', () => {
     const duas = [...colunas, coluna.accessor('cnpj', { header: 'CNPJ' })];
     const item = [{ id: 'c-1', nome: 'A', cnpj: '1' }];
