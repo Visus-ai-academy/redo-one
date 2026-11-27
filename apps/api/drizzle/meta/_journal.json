@@ -813,6 +813,13 @@
       "when": 1795721471357,
       "tag": "0115_importacao_carga_legado",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1795784885648,
+      "tag": "0116_revogar_repasse_fechar",
+      "breakpoints": true
     }
   ]
 }
