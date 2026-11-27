@@ -11,14 +11,17 @@ import { BuscaField } from './BuscaField';
 import { CaixasComContagemField } from './CaixasComContagemField';
 import { CaixasField } from './CaixasField';
 import { CheckboxListField } from './CheckboxListField';
+import { CorField } from './CorField';
 import { fieldContext, formContext } from './context';
 import { EscolhaMultiplaField } from './EscolhaMultiplaField';
 import { EscolhidosField } from './EscolhidosField';
 import { EtiquetasField } from './EtiquetasField';
 import { InterruptorField } from './InterruptorField';
+import { MoedaField } from './MoedaField';
 import { NumberField } from './NumberField';
 import { OpcoesField } from './OpcoesField';
 import { PasswordField } from './PasswordField';
+import { PeriodoField } from './PeriodoField';
 import { RequiredLegend } from './RequiredLegend';
 import { campoDoKit, camposParaAparar, focarPrimeiro } from './registro';
 import { SegmentadaField } from './SegmentadaField';
@@ -48,6 +51,9 @@ const kit = createFormHook({
     OpcoesField,
     SegmentadaField,
     CaixasField,
+    MoedaField,
+    CorField,
+    PeriodoField,
   },
   formComponents: { SubmitButton, RequiredLegend },
 });

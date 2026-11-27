@@ -106,48 +106,6 @@ export function situacaoDaAusencia(situacao: SituacaoAusenciaKey) {
   return SITUACOES[situacao];
 }
 
-export const ATALHOS_PERIODO = [
-  { valor: 'hoje', rotulo: 'Hoje', dias: 0 },
-  { valor: '7', rotulo: 'Próximos 7 dias', dias: 7 },
-  { valor: '30', rotulo: 'Próximos 30 dias', dias: 30 },
-  { valor: '90', rotulo: 'Próximos 90 dias', dias: 90 },
-] as const;
-export type AtalhoPeriodo = (typeof ATALHOS_PERIODO)[number]['valor'];
-
-/** O período de um atalho: de hoje até hoje + N dias. */
-export function periodoDoAtalho(atalho: AtalhoPeriodo, hoje = hojeEmBrasilia()) {
-  const dias = ATALHOS_PERIODO.find((a) => a.valor === atalho)?.dias ?? 0;
-  return { de: hoje, ate: somarDias(hoje, dias) };
-}
-
-/**
- * Qual atalho o período escolhido é: '' sem período (o padrão da API, desde 30 dias atrás),
- * 'personalizado' quando as datas não batem com nenhum atalho.
- */
-export function atalhoDoPeriodo(
-  de: string | undefined,
-  ate: string | undefined,
-  hoje = hojeEmBrasilia(),
-): AtalhoPeriodo | '' | 'personalizado' {
-  if (!de && !ate) return '';
-  const atalho = ATALHOS_PERIODO.find((a) => {
-    const p = periodoDoAtalho(a.valor, hoje);
-    return p.de === de && p.ate === ate;
-  });
-  return atalho?.valor ?? 'personalizado';
-}
-
-/** Rótulo de um período escolhido à mão: "05/12 a 12/12", "A partir de 05/12", "Até 12/12". */
-export function rotuloDoIntervalo(
-  de: string | undefined,
-  ate: string | undefined,
-  hoje = hojeEmBrasilia(),
-): string {
-  if (de && ate) return `${diaCurto(de, hoje)} a ${diaCurto(ate, hoje)}`;
-  if (de) return `A partir de ${diaCurto(de, hoje)}`;
-  return ate ? `Até ${diaCurto(ate, hoje)}` : '';
-}
-
 type BuscaDoPainel = {
   id?: string;
   novo?: 1;

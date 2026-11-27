@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FiltroPeriodo } from './FiltroPeriodo';
+import { ATALHOS_PROXIMOS, ATALHOS_ULTIMOS } from './periodo';
+
+const PADRAO = { atalhos: ATALHOS_PROXIMOS, rotuloSemPeriodo: 'Desde 30 dias atrás' };
 
 const HOJE = '2026-11-16';
 
@@ -13,7 +16,7 @@ async function escolher(opcao: string) {
 
 describe('FiltroPeriodo', () => {
   it('sem período, mostra o padrão da lista e nenhuma data solta', () => {
-    render(<FiltroPeriodo hoje={HOJE} onMudar={vi.fn()} />);
+    render(<FiltroPeriodo {...PADRAO} hoje={HOJE} onMudar={vi.fn()} />);
 
     expect(screen.getByRole('combobox', { name: 'Período' })).toHaveTextContent(
       'Desde 30 dias atrás',
@@ -23,7 +26,7 @@ describe('FiltroPeriodo', () => {
 
   it('o atalho preenche de hoje até hoje + N dias', async () => {
     const onMudar = vi.fn();
-    render(<FiltroPeriodo hoje={HOJE} onMudar={onMudar} />);
+    render(<FiltroPeriodo {...PADRAO} hoje={HOJE} onMudar={onMudar} />);
 
     await escolher('Próximos 7 dias');
 
@@ -31,14 +34,14 @@ describe('FiltroPeriodo', () => {
   });
 
   it('reconhece o atalho escolhido', () => {
-    render(<FiltroPeriodo hoje={HOJE} de={HOJE} ate={HOJE} onMudar={vi.fn()} />);
+    render(<FiltroPeriodo {...PADRAO} hoje={HOJE} de={HOJE} ate={HOJE} onMudar={vi.fn()} />);
 
     expect(screen.getByRole('combobox', { name: 'Período' })).toHaveTextContent('Hoje');
   });
 
   it('"Personalizado…" abre De e Até e aplica o intervalo', async () => {
     const onMudar = vi.fn();
-    render(<FiltroPeriodo hoje={HOJE} onMudar={onMudar} />);
+    render(<FiltroPeriodo {...PADRAO} hoje={HOJE} onMudar={onMudar} />);
 
     await escolher('Personalizado…');
     const popup = await screen.findByRole('dialog', { name: 'Período personalizado' });
@@ -51,7 +54,7 @@ describe('FiltroPeriodo', () => {
 
   it('não aplica fim antes do início', async () => {
     const onMudar = vi.fn();
-    render(<FiltroPeriodo hoje={HOJE} onMudar={onMudar} />);
+    render(<FiltroPeriodo {...PADRAO} hoje={HOJE} onMudar={onMudar} />);
 
     await escolher('Personalizado…');
     const popup = await screen.findByRole('dialog', { name: 'Período personalizado' });
@@ -65,7 +68,9 @@ describe('FiltroPeriodo', () => {
 
   it('com intervalo escolhido, o seletor mostra as datas; reabre já preenchido e limpa', async () => {
     const onMudar = vi.fn();
-    render(<FiltroPeriodo hoje={HOJE} de="2026-12-05" ate="2026-12-12" onMudar={onMudar} />);
+    render(
+      <FiltroPeriodo {...PADRAO} hoje={HOJE} de="2026-12-05" ate="2026-12-12" onMudar={onMudar} />,
+    );
 
     expect(screen.getByRole('combobox', { name: 'Período' })).toHaveTextContent('05/12 a 12/12');
     await escolher('Personalizado…');
@@ -74,5 +79,35 @@ describe('FiltroPeriodo', () => {
     await userEvent.click(within(popup).getByRole('button', { name: 'Limpar' }));
 
     expect(onMudar).toHaveBeenCalledWith({ de: undefined, ate: undefined });
+  });
+
+  it('para trás: os atalhos dos históricos vão de hoje − N até hoje', async () => {
+    const onMudar = vi.fn();
+    render(
+      <FiltroPeriodo
+        atalhos={ATALHOS_ULTIMOS}
+        hoje={HOJE}
+        de="2026-11-09"
+        ate={HOJE}
+        onMudar={onMudar}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Período' })).toHaveTextContent('Últimos 7 dias');
+    await escolher('Últimos 30 dias');
+    expect(onMudar).toHaveBeenCalledWith({ de: '2026-10-17', ate: HOJE });
+  });
+
+  it('sem a opção sem período, ela não aparece', async () => {
+    render(
+      <FiltroPeriodo
+        atalhos={ATALHOS_ULTIMOS}
+        hoje={HOJE}
+        de={HOJE}
+        ate={HOJE}
+        onMudar={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole('combobox', { name: 'Período' }));
+    expect(screen.queryByRole('option', { name: 'Desde 30 dias atrás' })).not.toBeInTheDocument();
   });
 });

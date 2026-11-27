@@ -25,6 +25,27 @@ describe('aplicarMascara', () => {
     expect(aplicarMascara('telefone', '(67) 982060704')).toBe('(67) 98206-0704');
   });
 
+  it('hora: põe os dois-pontos depois das horas', () => {
+    expect(aplicarMascara('hora', '0')).toBe('0');
+    expect(aplicarMascara('hora', '07')).toBe('07');
+    expect(aplicarMascara('hora', '070')).toBe('07:0');
+    expect(aplicarMascara('hora', '0700')).toBe('07:00');
+    expect(aplicarMascara('hora', '1930')).toBe('19:30');
+    expect(aplicarMascara('hora', '07:005')).toBe('07:00');
+  });
+
+  it('hora: dígito de 3 a 9 no começo já é a hora (7 vira 07)', () => {
+    expect(aplicarMascara('hora', '7')).toBe('07');
+    expect(aplicarMascara('hora', '730')).toBe('07:30');
+  });
+
+  it('hora: mantém o valor que já vem da API, inclusive com um dígito na hora', () => {
+    expect(aplicarMascara('hora', '07:00')).toBe('07:00');
+    expect(aplicarMascara('hora', '23:59')).toBe('23:59');
+    expect(aplicarMascara('hora', '7:00')).toBe('7:00');
+    expect(aplicarMascara('hora', '7:')).toBe('7:');
+  });
+
   it('vazio fica vazio', () => {
     expect(aplicarMascara('cpf', '')).toBe('');
   });

@@ -19,6 +19,8 @@ type NumberFieldProps = {
   max?: number;
   /** `0.01` para valores com centavos; padrão inteiro. */
   step?: number;
+  /** Unidade fixa à direita do número ("%", "min", "h", "exames"), no lugar de escrevê-la no rótulo. */
+  unidade?: string;
   className?: string;
 };
 
@@ -40,6 +42,7 @@ export function NumberField({
   min,
   max,
   step = 1,
+  unidade,
   className,
 }: NumberFieldProps) {
   const field = useFieldContext<string>();
@@ -81,11 +84,29 @@ export function NumberField({
         format={{ useGrouping: false, maximumFractionDigits: step < 1 ? 2 : 0 }}
         locale="pt-BR"
       >
-        <BaseNumberField.Input
-          placeholder={placeholder}
-          onBlur={aoSair}
-          className={controlClassName('app', 'tabular-nums')}
-        />
+        {unidade ? (
+          <BaseNumberField.Group className="relative">
+            <BaseNumberField.Input
+              placeholder={placeholder}
+              onBlur={aoSair}
+              // Espaço para a unidade, pelo tamanho dela.
+              style={{ paddingRight: `calc(${unidade.length}ch + 1.25rem)` }}
+              className={controlClassName('app', 'tabular-nums')}
+            />
+            <span
+              aria-hidden
+              className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center"
+            >
+              {unidade}
+            </span>
+          </BaseNumberField.Group>
+        ) : (
+          <BaseNumberField.Input
+            placeholder={placeholder}
+            onBlur={aoSair}
+            className={controlClassName('app', 'tabular-nums')}
+          />
+        )}
       </BaseNumberField.Root>
       {description && (
         <Field.Description className="text-muted-foreground text-[13px]">

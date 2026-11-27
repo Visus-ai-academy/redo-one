@@ -16,7 +16,6 @@ import {
 } from '../../../components/escala-ausencias/ausencias';
 import { CelulaMedico, CelulaPeriodo } from '../../../components/escala-ausencias/celulas';
 import { DetalheAusencia } from '../../../components/escala-ausencias/DetalheAusencia';
-import { FiltroPeriodo } from '../../../components/escala-ausencias/FiltroPeriodo';
 import {
   FormAusencia,
   type InicialAusencia,
@@ -26,6 +25,8 @@ import { SemPermissao } from '../../../components/estado/estados';
 import { Etiqueta } from '../../../components/etiqueta/Etiqueta';
 import { PainelCarregando } from '../../../components/painel/PainelCarregando';
 import { PainelLateral } from '../../../components/painel/PainelLateral';
+import { FiltroPeriodo } from '../../../components/periodo/FiltroPeriodo';
+import { ATALHOS_PROXIMOS } from '../../../components/periodo/periodo';
 import { Select } from '../../../components/select/Select';
 import { useFaseDoCarregamento } from '../../../components/skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../../components/toast/use-avisos';
@@ -297,6 +298,8 @@ function Ausencias() {
             className="w-auto min-w-[160px] flex-[1_1_auto] xl:flex-[0_0_auto]"
           />
           <FiltroPeriodo
+            atalhos={ATALHOS_PROXIMOS}
+            rotuloSemPeriodo="Desde 30 dias atrás"
             de={busca.de}
             ate={busca.ate}
             hoje={hoje}

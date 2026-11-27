@@ -170,6 +170,18 @@ Leve animação em tudo que abre e fecha por cima da tela, para mostrar de onde 
   - Teclado: Tab chega ao interruptor e a barra de espaço alterna (o Base UI já faz).
   - No código: no formulário, `<field.InterruptorField label description />` (vale ao salvar, entra no "Descartar as alterações?"); fora do formulário, que vale na hora, a `Chave`; peça solta (popover, linha própria), o `Interruptor` (`src/components/interruptor/`). A `CaixaDeSelecao` fica só para listas (`CheckboxListField`, `CheckboxGroup`, tabelas).
 - **Botão de envio carregando** (decidido em 27/11/2026): giro + texto no gerúndio ("Salvando…"), sempre inteiro; a largura mínima do botão cabe esse conteúdo desde antes do envio, para o texto nunca sumir e o layout nunca pular. Detalhes no `comportamento.md`, seção "Formulários: validação e envio".
+- **Controle certo para cada escolha** (aprovado em 27/11/2026; a mesma escolha usa o mesmo controle em todas as telas):
+  - **Uma entre 2 ou 3 opções de rótulo curto** (até ~15 caracteres, sem explicação própria: Pessoa jurídica | Pessoa física, Receita | Despesa, Fixo | Lista, Exames | Laudos): **botões lado a lado** (`<field.SegmentadaField>` no formulário; `EscolhaSegmentada` fora dele, quando vale na hora, como troca de visão). Setas do teclado andam entre as opções; clicar na marcada não desmarca.
+  - **Uma entre poucas opções com explicação própria, rótulo que é frase, ou 4–5 opções**: **opções redondas** (`<field.OpcoesField>`, sobre o RadioGroup; cada opção pode ter `ajuda`, e aí ficam uma embaixo da outra). Peça fora do formulário (editor no popover): `ListaDeOpcoes` dentro do `RadioGroup`.
+  - **Mais de 5 opções, ou opções que vêm de cadastro**: `Select` (com busca acima de 7). Em linha de tabela ou lista que se repete, o `Select` continua certo mesmo com 2–3 opções, porque ocupa menos espaço.
+  - **Várias de uma lista curta** (dias, prioridades, turnos): caixas lado a lado (`<field.CaixasField>`); lista que cresce (especialidades): `SelecaoMultiplaField`; lista grande buscada na API (médicos): `EscolhaMultiplaField` (com `required`, leva `*`, erro e foco na busca).
+- **Valor de formato fixo nunca é texto livre**:
+  - Horário: `<field.TextField mascara="hora" placeholder="07:00">` (0700 vira 07:00; um dígito de 3 a 9 já é a hora: 7 vira 07). O valor continua o texto "HH:MM".
+  - Dinheiro: `<field.MoedaField>` ("R$" fixo à esquerda, milhar enquanto digita, vírgula nos centavos, duas casas ao sair; `negativo` quando o campo aceita desconto ou estorno). O valor do campo é em **centavos inteiros** (`number | null`), como a API.
+  - Número com unidade: `<field.NumberField unidade="%">` ("%", "min", "h", "exames" fixos à direita), nunca a unidade escrita no rótulo; sem setas.
+  - Cor de um cadastro: `<field.CorField>`, escolha na paleta das cores de categoria (acima), com "Sem cor" quando é opcional. Cor gravada fora da paleta aparece como "Cor atual" e não se perde; não há hex livre.
+  - UF: `Select` com as 27 siglas (com busca), nunca texto.
+  - Período: para filtrar uma lista, `FiltroPeriodo` (`src/components/periodo/`: atalhos `ATALHOS_PROXIMOS` ou `ATALHOS_ULTIMOS` + "Personalizado…" com De e Até num popover); dentro de formulário, `<field.PeriodoField>` (De e Até lado a lado, valor `{ de, ate }`, erro "O fim não pode ser antes do início.").
 - Todo campo de texto tem placeholder com um exemplo do formato esperado (`nome@empresa.com.br`, `000.000.000-00`, `Ex.: Maria Souza`). O placeholder nunca substitui o rótulo.
 
 ## Acesso (login, recuperação, convite)

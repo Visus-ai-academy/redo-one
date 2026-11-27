@@ -18,7 +18,7 @@ type TextFieldProps = {
   autoComplete?: string;
   /** `acesso`: controles de 44px das telas de login, recuperação e convite. */
   size?: 'app' | 'acesso';
-  /** Formato fixo (CPF, CNPJ, CEP, telefone): ajusta enquanto digita; teclado numérico. */
+  /** Formato fixo (CPF, CNPJ, CEP, telefone, hora): ajusta enquanto digita; teclado numérico. */
   mascara?: Mascara;
   /** `false` em códigos, chaves e identificadores (e-mail, busca e máscara já desligam). */
   spellCheck?: boolean;
@@ -58,11 +58,13 @@ export function TextField({
     if (!mascara) return field.handleChange(valor);
     // O cursor fica depois do mesmo dígito, mesmo quando a pontuação entra ou sai.
     const el = entrada.current;
-    const digitosAntes = valor
-      .slice(0, el?.selectionStart ?? valor.length)
-      .replace(/\D/g, '').length;
+    const cursor = el?.selectionStart ?? valor.length;
+    const digitosAntes = valor.slice(0, cursor).replace(/\D/g, '').length;
     const formatado = aplicarMascara(mascara, valor);
-    cursorPendente.current = posicaoAposDigitos(formatado, digitosAntes);
+    // Digitando no fim (o caso comum), o cursor fica no fim, mesmo quando a máscara põe um
+    // dígito antes ("7" vira "07").
+    cursorPendente.current =
+      cursor >= valor.length ? formatado.length : posicaoAposDigitos(formatado, digitosAntes);
     field.handleChange(formatado);
   };
   const { erros, invalido, aoSair, ref } = useCampo(field, { aparar: true });

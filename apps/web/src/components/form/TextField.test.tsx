@@ -154,6 +154,17 @@ describe('TextField', () => {
       // Logo depois do 3 (o último dígito antes do que foi apagado), não no fim.
       expect(campo.selectionStart).toBe(3);
     });
+
+    it('hora: digitar 730 vira 07:30, com o cursor no fim', async () => {
+      render(<ComMascara mascara="hora" />);
+      const campo = screen.getByRole('textbox', { name: 'Documento' }) as HTMLInputElement;
+
+      await userEvent.type(campo, '730');
+      await new Promise((r) => requestAnimationFrame(r));
+
+      expect(campo).toHaveValue('07:30');
+      expect(campo.selectionStart).toBe(5);
+    });
   });
 
   it('marca o campo obrigatório com * escondido do leitor de tela e o atributo required', () => {

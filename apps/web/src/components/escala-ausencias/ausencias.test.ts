@@ -2,15 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { AusenciaItemDto } from '../../gen/types/AusenciaItemDto';
 import {
-  atalhoDoPeriodo,
   buscaAoFecharPainel,
   diaCurto,
   diasDaSemana,
   hojeEmBrasilia,
   periodoDaAusencia,
-  periodoDoAtalho,
   recorteDaAusencia,
-  rotuloDoIntervalo,
   situacaoDaAusencia,
   somarDias,
 } from './ausencias';
@@ -144,28 +141,5 @@ describe('situacaoDaAusencia', () => {
     expect(situacaoDaAusencia('pendente')).toEqual({ texto: 'Pendente', tom: 'atencao' });
     expect(situacaoDaAusencia('aprovada')).toEqual({ texto: 'Aprovada', tom: 'sucesso' });
     expect(situacaoDaAusencia('recusada')).toEqual({ texto: 'Recusada', tom: 'inativo' });
-  });
-});
-
-describe('atalhos de período', () => {
-  const hoje = '2026-11-16';
-  it('cada atalho começa hoje', () => {
-    expect(periodoDoAtalho('hoje', hoje)).toEqual({ de: hoje, ate: hoje });
-    expect(periodoDoAtalho('7', hoje)).toEqual({ de: hoje, ate: '2026-11-23' });
-    expect(periodoDoAtalho('90', hoje)).toEqual({ de: hoje, ate: '2027-02-14' });
-  });
-  it('reconhece o atalho pelo período; sem período é o padrão da API', () => {
-    expect(atalhoDoPeriodo(undefined, undefined, hoje)).toBe('');
-    expect(atalhoDoPeriodo(hoje, '2026-12-16', hoje)).toBe('30');
-    expect(atalhoDoPeriodo('2026-11-01', '2026-11-30', hoje)).toBe('personalizado');
-  });
-});
-
-describe('rotuloDoIntervalo', () => {
-  it('diz o intervalo, ou só uma ponta', () => {
-    const hoje = '2026-11-16';
-    expect(rotuloDoIntervalo('2026-12-05', '2026-12-12', hoje)).toBe('05/12 a 12/12');
-    expect(rotuloDoIntervalo('2026-12-05', undefined, hoje)).toBe('A partir de 05/12');
-    expect(rotuloDoIntervalo(undefined, '2027-01-02', hoje)).toBe('Até 02/01/2027');
   });
 });
