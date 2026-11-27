@@ -26,6 +26,10 @@ import {
   validarAPartirDe,
   vigenteEm,
 } from '../../domain/vigencia';
+import { MedicoNaoEncontradoError } from './adicionais';
+
+export { MedicoNaoEncontradoError };
+
 import type {
   MudancaPrecoGravada,
   OpcoesPrecoRepasse,
@@ -35,13 +39,6 @@ import type {
 
 /** Entidade dos eventos de auditoria do preço de repasse (a mesma do aviso de preço repetido). */
 export const ENTIDADE_PRECO_REPASSE = 'preco_repasse';
-
-export class MedicoNaoEncontradoError extends ErroDeDominio {
-  readonly tipo = 'nao_encontrado';
-  constructor() {
-    super('Médico não encontrado.');
-  }
-}
 
 export class PlanilhaPrecosRepasseInvalidaError extends ErroDeDominio {
   readonly tipo = 'invalido';

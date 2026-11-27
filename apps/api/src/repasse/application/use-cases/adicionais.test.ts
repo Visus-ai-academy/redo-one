@@ -62,6 +62,7 @@ function montar(fechadas: string[] = ['2026-09', '2026-10']) {
         porPagina: f.porPagina,
       };
     },
+    listarDoMedico: async () => ({ itens: [...linhas.values()], total: linhas.size }),
   };
   const deps = {
     repo,

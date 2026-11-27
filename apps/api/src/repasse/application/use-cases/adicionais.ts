@@ -154,3 +154,13 @@ export class ListarAdicionais {
     return this.repo.listar(filtro);
   }
 }
+
+/** Os adicionais do médico, paginados (aba Repasse do médico). */
+export class ListarAdicionaisDoMedico {
+  constructor(private readonly repo: AdicionaisRepository) {}
+
+  async executar(medicoId: string, pagina: { pagina: number; porPagina: number }) {
+    if (!(await this.repo.medicoExiste(medicoId))) throw new MedicoNaoEncontradoError();
+    return this.repo.listarDoMedico(medicoId, pagina);
+  }
+}

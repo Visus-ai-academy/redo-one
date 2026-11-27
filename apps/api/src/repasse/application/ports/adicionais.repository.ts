@@ -42,4 +42,9 @@ export interface AdicionaisRepository {
   cancelar(id: string, por: string, em: Date, motivo: string): Promise<void>;
   /** Da competência, os cancelados também, mais novos primeiro. */
   listar(filtro: FiltroAdicionais): Promise<PaginaRepasse<AdicionalGravado>>;
+  /** Do médico, todas as competências (cancelados também), a competência mais nova primeiro. */
+  listarDoMedico(
+    medicoId: string,
+    pagina: { pagina: number; porPagina: number },
+  ): Promise<{ itens: AdicionalGravado[]; total: number }>;
 }

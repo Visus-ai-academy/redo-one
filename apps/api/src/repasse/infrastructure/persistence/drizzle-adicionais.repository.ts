@@ -138,4 +138,22 @@ export class DrizzleAdicionaisRepository implements AdicionaisRepository {
     ]);
     return { itens, total: total?.n ?? 0, pagina: f.pagina, porPagina: f.porPagina };
   }
+
+  async listarDoMedico(medicoId: string, p: { pagina: number; porPagina: number }) {
+    const doMedico = eq(adicionaisRepasse.medicoId, medicoId);
+    const [{ total } = { total: 0 }] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(adicionaisRepasse)
+      .where(doMedico);
+    const itens = await this.consulta()
+      .where(doMedico)
+      .orderBy(
+        desc(adicionaisRepasse.competencia),
+        desc(adicionaisRepasse.lancadoEm),
+        sql`${adicionaisRepasse.id}`,
+      )
+      .limit(p.porPagina)
+      .offset((p.pagina - 1) * p.porPagina);
+    return { itens, total };
+  }
 }

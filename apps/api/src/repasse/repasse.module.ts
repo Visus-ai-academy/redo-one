@@ -29,11 +29,16 @@ import {
   type PrecosRepasseRepository,
 } from './application/ports/precos-repasse.repository';
 import { RECALCULO_REPASSE, type RecalculoRepasse } from './application/ports/recalculo-repasse';
+import {
+  REGRAS_MEDICO_REPOSITORY,
+  type RegrasMedicoRepository,
+} from './application/ports/regras-medico.repository';
 import { TAREFA_GERAR_PREVIAS, TAREFA_GERAR_REPASSE } from './application/tarefas';
 import {
   CancelarAdicional,
   LancarAdicional,
   ListarAdicionais,
+  ListarAdicionaisDoMedico,
 } from './application/use-cases/adicionais';
 import {
   CriarAlternativaPreco,
@@ -59,7 +64,18 @@ import {
   OpcoesPrecosRepasse,
 } from './application/use-cases/precos-medico';
 import { RecalcularRepasse } from './application/use-cases/recalcular-repasse';
+import {
+  AlterarRegraApuracao,
+  CancelarRegraApuracao,
+  CancelarVersaoContagem,
+  CriarRegraApuracao,
+  EncerrarRegraApuracao,
+  ListarContagemMedico,
+  ListarRegrasApuracao,
+  NovaVersaoContagem,
+} from './application/use-cases/regras-medico';
 import { PrecosRepasseController } from './infrastructure/http/precos-repasse.controller';
+import { RegrasMedicoController } from './infrastructure/http/regras-medico.controller';
 import { RepasseController } from './infrastructure/http/repasse.controller';
 import { RepasseConsultasController } from './infrastructure/http/repasse-consultas.controller';
 import { AgendadorRepasseFila } from './infrastructure/jobs/agendador-repasse-fila';
@@ -75,6 +91,7 @@ import {
   DrizzleGeracoesRepasse,
 } from './infrastructure/persistence/drizzle-geracoes-repasse';
 import { DrizzlePrecosRepasseRepository } from './infrastructure/persistence/drizzle-precos-repasse.repository';
+import { DrizzleRegrasMedicoRepository } from './infrastructure/persistence/drizzle-regras-medico.repository';
 import { RecalculoRepasseAdapter } from './infrastructure/recalculo-repasse.adapter';
 
 const agora = () => new Date();
@@ -92,7 +109,12 @@ const CONFIGURACAO = [
  */
 @Module({
   imports: [FaturamentoModule, IngestaoModule],
-  controllers: [RepasseController, RepasseConsultasController, PrecosRepasseController],
+  controllers: [
+    RepasseController,
+    RepasseConsultasController,
+    PrecosRepasseController,
+    RegrasMedicoController,
+  ],
   providers: [
     { provide: CONSULTAS_REPASSE, useClass: DrizzleConsultasRepasse },
     ...[ObterCompetenciaRepasse, ListarDemonstrativos, ObterDemonstrativo].map((Caso) => ({
@@ -134,6 +156,26 @@ const CONFIGURACAO = [
         useFactory: (repo: PrecosRepasseRepository) => new Caso(repo, agora),
       }),
     ),
+    { provide: REGRAS_MEDICO_REPOSITORY, useClass: DrizzleRegrasMedicoRepository },
+    ...[
+      ListarContagemMedico,
+      NovaVersaoContagem,
+      CancelarVersaoContagem,
+      ListarRegrasApuracao,
+      CriarRegraApuracao,
+      AlterarRegraApuracao,
+      EncerrarRegraApuracao,
+      CancelarRegraApuracao,
+    ].map((Caso) => ({
+      provide: Caso,
+      inject: [REGRAS_MEDICO_REPOSITORY],
+      useFactory: (repo: RegrasMedicoRepository) => new Caso(repo, agora),
+    })),
+    {
+      provide: ListarAdicionaisDoMedico,
+      inject: [ADICIONAIS_REPOSITORY],
+      useFactory: (repo: AdicionaisRepository) => new ListarAdicionaisDoMedico(repo),
+    },
     {
       provide: OpcoesPrecosRepasse,
       inject: [PRECOS_REPASSE_REPOSITORY],
