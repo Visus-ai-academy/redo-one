@@ -47,6 +47,10 @@ export type PainelMedicoProps = {
   escala?: ReactNode;
   /** Conteúdo da aba Distribuição (robô e arranjos); sem ele (sem permissão), a aba não aparece. */
   distribuicao?: ReactNode;
+  /** Conteúdo da aba Repasse (preços, regras, apuração e adicionais); sem ele, não aparece. */
+  repasse?: ReactNode;
+  /** A aba que abre (ex.: o atalho do aviso de repasse sem preço abre a do repasse). */
+  abaInicial?: 'repasse';
   /** Conteúdo da aba Histórico (a última); sem ele, a aba não aparece. */
   historico?: ReactNode;
 };
@@ -104,9 +108,11 @@ export function PainelMedico({
   acesso,
   escala,
   distribuicao,
+  repasse,
+  abaInicial,
   historico,
 }: PainelMedicoProps) {
-  const [aba, setAba] = useState('cadastro');
+  const [aba, setAba] = useState<string>(abaInicial && repasse ? abaInicial : 'cadastro');
   const [alterado, setAlterado] = useState(false);
   const abas = medico
     ? [
@@ -115,6 +121,7 @@ export function PainelMedico({
         ...(acesso ? [{ valor: 'acesso', rotulo: 'Acesso' }] : []),
         ...(escala ? [{ valor: 'escala', rotulo: 'Escala' }] : []),
         ...(distribuicao ? [{ valor: 'distribuicao', rotulo: 'Distribuição' }] : []),
+        ...(repasse ? [{ valor: 'repasse', rotulo: 'Repasse' }] : []),
         ...(historico ? [{ valor: 'historico', rotulo: 'Histórico' }] : []),
       ]
     : [];
@@ -159,6 +166,8 @@ export function PainelMedico({
       subtitulo={medico?.crm ? `CRM ${medico.crm}` : undefined}
       onFechar={onFechar}
       alterado={alterado}
+      // Os preços e as regras do repasse são tabelas largas.
+      largura={aba === 'repasse' ? 'larga' : 'padrao'}
     >
       {abas.length > 1 ? (
         <Abas
@@ -178,9 +187,11 @@ export function PainelMedico({
                 ? escala
                 : aba === 'distribuicao'
                   ? distribuicao
-                  : aba === 'historico'
-                    ? historico
-                    : null}
+                  : aba === 'repasse'
+                    ? repasse
+                    : aba === 'historico'
+                      ? historico
+                      : null}
         </Abas>
       ) : (
         cadastro

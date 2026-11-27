@@ -21,6 +21,8 @@ import { FormPagamento } from '../../components/medicos/FormPagamento';
 import { PainelMedico } from '../../components/medicos/PainelMedico';
 import { SecaoAcesso } from '../../components/medicos/SecaoAcesso';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
+import { AbaRepasseMedico } from '../../components/repasse-medico/AbaRepasseMedico';
+import { arranjoDoAtalho } from '../../components/repasse-medico/fonte-precos';
 import { Select } from '../../components/select/Select';
 import { CamposCarregando } from '../../components/skeleton/CamposCarregando';
 import { ComEsqueleto } from '../../components/skeleton/ComEsqueleto';
@@ -60,6 +62,12 @@ const buscaSchema = z.object({
   pagina: z.coerce.number().int().min(1).optional().catch(undefined),
   id: z.uuid().optional().catch(undefined),
   novo: z.literal(1).optional().catch(undefined),
+  /** Aba do painel que abre (o atalho do aviso de repasse sem preço abre a do repasse). */
+  aba: z.enum(['repasse']).optional().catch(undefined),
+  /** Parte da aba Repasse que abre. */
+  parte: z.enum(['precos', 'regras', 'apuracao', 'adicionais']).optional().catch(undefined),
+  /** Arranjo que abre em "Incluir preço" (ids "mod.esp.cat.pri"). */
+  arranjo: z.string().optional().catch(undefined),
 });
 type Busca = z.infer<typeof buscaSchema>;
 
@@ -131,7 +139,15 @@ function Medicos() {
     (novos: Partial<Busca>) => ir((a) => ({ ...a, ...novos, pagina: undefined }), true),
     [ir],
   );
-  const fechar = () => ir((a) => ({ ...a, id: undefined, novo: undefined }));
+  const fechar = () =>
+    ir((a) => ({
+      ...a,
+      id: undefined,
+      novo: undefined,
+      aba: undefined,
+      parte: undefined,
+      arranjo: undefined,
+    }));
 
   const colunas = useMemo(
     () => [
@@ -254,6 +270,7 @@ function Medicos() {
             key={busca.id ?? 'novo'}
             id={busca.id}
             niveis={niveis.itens}
+            atalho={{ aba: busca.aba, parte: busca.parte, arranjo: busca.arranjo }}
             onFechar={fechar}
             onSalvo={async (id) => {
               await invalidarMedicos(queryClient);
@@ -275,12 +292,14 @@ function Medicos() {
 function PainelDoMedico({
   id,
   niveis,
+  atalho,
   onFechar,
   onSalvo,
   onExcluido,
 }: {
   id?: string;
   niveis: { id: string; nome: string }[];
+  atalho: Pick<Busca, 'aba' | 'parte' | 'arranjo'>;
   onFechar: () => void;
   onSalvo: (id: string) => Promise<void>;
   onExcluido: () => Promise<void>;
@@ -396,6 +415,20 @@ function PainelDoMedico({
           <AbaDistribuicaoMedico medicoId={id} podeEditar={abas.distribuicao.editar} />
         ) : undefined
       }
+      repasse={
+        id && pode(sessao, 'repasse.ver') ? (
+          <AbaRepasseMedico
+            key={id}
+            medicoId={id}
+            podeEditarPrecos={pode(sessao, 'repasse.precos.editar')}
+            podeEditarRegras={pode(sessao, 'repasse.regras.editar')}
+            veAvisos={pode(sessao, 'avisos.ver')}
+            parteInicial={atalho.parte ?? (atalho.arranjo ? 'precos' : undefined)}
+            arranjo={arranjoDoAtalho(atalho.arranjo)}
+          />
+        ) : undefined
+      }
+      abaInicial={atalho.aba}
       historico={id ? <HistoricoCadastro key={id} cadastro="medico" id={id} /> : undefined}
     />
   );

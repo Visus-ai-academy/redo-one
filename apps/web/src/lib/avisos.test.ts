@@ -36,6 +36,33 @@ describe('situacaoDoAviso', () => {
 });
 
 describe('ondeProcurar', () => {
+  it('repasse sem preço abre os preços do médico com o arranjo já escolhido', () => {
+    const [m, mod, esp, cat, pri] = [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+      '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444',
+      '55555555-5555-4555-8555-555555555555',
+    ];
+    expect(
+      ondeProcurar({
+        tipo: 'repasse_sem_preco',
+        valor: 'Dra. Reia | RX|NEURO|SC|ROTINA sem preço de repasse em 2026-11',
+        entidades: [
+          { tipo: 'medico', id: m },
+          { tipo: 'modalidade', id: mod },
+          { tipo: 'especialidade', id: esp },
+          { tipo: 'categoria', id: cat },
+          { tipo: 'prioridade', id: pri },
+        ],
+      }),
+    ).toEqual({
+      rotulo: 'Abrir os preços do médico',
+      to: '/medicos',
+      search: { id: m, aba: 'repasse', parte: 'precos', arranjo: `${mod}.${esp}.${cat}.${pri}` },
+    });
+  });
+
   it('aviso do repasse leva ao médico pelo nome', () => {
     expect(
       ondeProcurar({

@@ -22,6 +22,11 @@ type AbasProps = {
    */
   children?: ReactNode;
   className?: string;
+  /**
+   * `linha` (padrão): abas com sublinhado. `segmentada`: as partes de uma aba (ex.: Preços,
+   * Regras dentro da aba Repasse do médico), num grupo com fundo, para não repetir a linha.
+   */
+  variante?: 'linha' | 'segmentada';
 };
 
 /**
@@ -35,7 +40,9 @@ export function Abas({
   'aria-label': ariaLabel,
   children,
   className,
+  variante = 'linha',
 }: AbasProps) {
+  const segmentada = variante === 'segmentada';
   const lista = useRef<HTMLDivElement>(null);
   const [sobra, setSobra] = useState({ esquerda: false, direita: false });
   const coletor = useColetorDeAlterados();
@@ -97,7 +104,8 @@ export function Abas({
         data-mais-a-esquerda={sobra.esquerda || undefined}
         data-mais-a-direita={sobra.direita || undefined}
         className={cn(
-          'flex [scrollbar-width:none] gap-1 overflow-x-auto border-b [&::-webkit-scrollbar]:hidden',
+          'flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden',
+          segmentada ? 'bg-muted max-w-full self-start rounded-lg p-1' : 'border-b',
           'data-[mais-a-direita]:[mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]',
           'data-[mais-a-esquerda]:[mask-image:linear-gradient(to_left,black_calc(100%-2.5rem),transparent)]',
           'data-[mais-a-esquerda]:data-[mais-a-direita]:[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]',
@@ -108,9 +116,11 @@ export function Abas({
             key={aba.valor}
             value={aba.valor}
             className={cn(
-              'text-muted-foreground hover:text-foreground -mb-px h-9 border-b-2 border-transparent px-3 whitespace-nowrap',
-              'focus-visible:outline-ring rounded-t-md focus-visible:outline-2 focus-visible:-outline-offset-2',
-              'data-[active]:border-primary data-[active]:text-foreground data-[active]:font-medium',
+              'text-muted-foreground hover:text-foreground px-3 whitespace-nowrap',
+              'focus-visible:outline-ring focus-visible:outline-2 focus-visible:-outline-offset-2',
+              segmentada
+                ? 'data-[active]:bg-card data-[active]:text-foreground h-8 rounded-sm data-[active]:font-medium'
+                : 'data-[active]:border-primary data-[active]:text-foreground -mb-px h-9 rounded-t-md border-b-2 border-transparent data-[active]:font-medium',
             )}
           >
             {aba.rotulo}

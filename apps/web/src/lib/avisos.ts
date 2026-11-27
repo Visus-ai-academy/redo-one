@@ -109,13 +109,34 @@ export function ondeProcurar({
         search: { id: daEntidade('cliente') },
       };
     case 'repasse_sem_preco':
-    case 'preco_repasse_repetido':
+    case 'preco_repasse_repetido': {
+      // O aviso de laudo sem preço traz o médico e o arranjo: abre "Incluir preço" já com ele.
+      const medico = daEntidade('medico');
+      const arranjo = ['modalidade', 'especialidade', 'categoria', 'prioridade'].map(daEntidade);
+      if (medico && tipo === 'repasse_sem_preco' && arranjo.every(Boolean))
+        return {
+          rotulo: 'Abrir os preços do médico',
+          to: '/medicos' as const,
+          search: {
+            id: medico,
+            aba: 'repasse' as const,
+            parte: 'precos' as const,
+            arranjo: arranjo.join('.'),
+          },
+        };
+      if (medico)
+        return {
+          rotulo: 'Abrir os preços do médico',
+          to: '/medicos' as const,
+          search: { id: medico, aba: 'repasse' as const, parte: 'precos' as const },
+        };
       // O preço de repasse é do médico (o texto começa pelo nome dele).
       return {
         rotulo: 'Procurar em Médicos',
         to: '/medicos' as const,
         search: { busca: (valor.split(' | ')[0] ?? valor).replace(/^dra?\.?\s+/i, '') },
       };
+    }
     case 'cliente':
       return {
         rotulo: 'Procurar em Clientes',
