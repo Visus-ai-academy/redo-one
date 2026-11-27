@@ -1,7 +1,7 @@
 import { Button } from '@base-ui/react/button';
 import { ArrowLeft, DownloadSimple, Plus, UploadSimple } from '@phosphor-icons/react';
 import { useStore } from '@tanstack/react-form';
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, type QueryKey, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { z } from 'zod';
 
@@ -9,15 +9,16 @@ import { ResponseError } from '../../gen/.kubb/client';
 import { precosControllerAlterar } from '../../gen/clients/precosControllerAlterar';
 import { precosControllerEncerrar } from '../../gen/clients/precosControllerEncerrar';
 import { precosControllerExportar } from '../../gen/clients/precosControllerExportar';
+import { precosControllerHistorico } from '../../gen/clients/precosControllerHistorico';
 import { precosControllerImportar } from '../../gen/clients/precosControllerImportar';
 import { precosControllerIncluir } from '../../gen/clients/precosControllerIncluir';
-import { precosControllerHistoricoQueryOptions } from '../../gen/hooks/usePrecosControllerHistorico';
-import { precosControllerListarQueryOptions } from '../../gen/hooks/usePrecosControllerListar';
-import { precosControllerOpcoesQueryOptions } from '../../gen/hooks/usePrecosControllerOpcoes';
-import type { ItemPrecoDto } from '../../gen/types/ItemPrecoDto';
-import type { OpcoesPrecoDto } from '../../gen/types/OpcoesPrecoDto';
+import { precosControllerListar } from '../../gen/clients/precosControllerListar';
+import { precosControllerOpcoes } from '../../gen/clients/precosControllerOpcoes';
+import { precosControllerHistoricoQueryKey } from '../../gen/hooks/usePrecosControllerHistorico';
+import { precosControllerListarQueryKey } from '../../gen/hooks/usePrecosControllerListar';
+import { precosControllerOpcoesQueryKey } from '../../gen/hooks/usePrecosControllerOpcoes';
+import type { CondVolumeKey } from '../../gen/types/CondVolume';
 import type { SeloAvisoDto } from '../../gen/types/SeloAvisoDto';
-import type { TabelaPrecosDto } from '../../gen/types/TabelaPrecosDto';
 import { useSelosDeAviso } from '../../lib/avisos';
 import { dataDeBrasilia } from '../../lib/datas';
 import { moeda, plural } from '../../lib/formato';
@@ -49,11 +50,102 @@ import {
   numeroPtBr,
   opcoesAPartirDe,
   ROTULO_COND,
+  TODOS_OS_CLIENTES,
   textoDaFaixa,
   textoDaVigencia,
   type ValoresPreco,
-  valoresDoPreco,
 } from './precos';
+
+type Opcao = { id: string; nome: string };
+
+/**
+ * Uma linha da tabela, de qualquer fonte: o arranjo, a faixa (preço do cliente) ou o cliente
+ * (preço de repasse do médico), o valor e a vigência.
+ */
+export type ItemPrecoTela = {
+  id: string;
+  modalidadeId: string;
+  especialidadeId: string;
+  categoriaId: string;
+  prioridadeId: string;
+  faixaInicio?: number | null;
+  faixaFim?: number | null;
+  condVolume?: CondVolumeKey;
+  /** Só no preço por cliente: nulo com `todosClientes`. */
+  clienteId?: string | null;
+  todosClientes?: boolean;
+  valor: number;
+  vigenciaDesde: string | null;
+  vigenciaAte: string | null;
+  nomes: {
+    modalidade: string;
+    especialidade: string;
+    categoria: string;
+    prioridade: string;
+    cliente?: string | null;
+  };
+  duplicado: boolean;
+  emVigor: boolean;
+};
+
+export type VersaoHistoricoTela = Omit<ItemPrecoTela, 'duplicado' | 'emVigor'> & {
+  criadoPor: string | null;
+  criadoEm: string | null;
+  encerradoPor: string | null;
+  encerradoEm: string | null;
+};
+
+export type TabelaPrecosTela = {
+  mesAtual: string;
+  aPartirDeMinimo: string;
+  aPartirDeSugerido: string;
+  itens: ItemPrecoTela[];
+  total: number;
+  /** Só na unidade: o nome do cliente principal, de onde vem o preço que faltar. */
+  principal?: string | null;
+};
+
+export type OpcoesPrecosTela = {
+  modalidades: Opcao[];
+  especialidades: Opcao[];
+  categorias: Opcao[];
+  prioridades: Opcao[];
+  clientes?: Opcao[];
+};
+
+/** O que o formulário manda: os valores, com o cliente ('todos' ou o id) no preço por cliente. */
+export type ValoresPrecoTela = ValoresPreco & { clienteId: string };
+
+type Consulta<T> = { queryKey: QueryKey; queryFn: (c: { signal: AbortSignal }) => Promise<T> };
+
+/**
+ * De onde vêm e para onde vão os preços: a tabela do cliente ou do contratado (faturamento) ou a
+ * do médico (repasse). A tela é a mesma; muda a segunda dimensão (faixa ou cliente) e a API.
+ */
+export type FontePrecos = {
+  /** Prefixo das consultas da tabela (recarregar depois de mudar). */
+  chave: QueryKey;
+  dimensao: 'faixa' | 'cliente';
+  /** Entidade dos selos de aviso (preço repetido). */
+  entidadeAviso: string;
+  listar: (q: { pagina: number; porPagina: number; busca?: string }) => Consulta<TabelaPrecosTela>;
+  opcoes: () => Consulta<OpcoesPrecosTela>;
+  historico: (item: ItemPrecoTela) => Consulta<VersaoHistoricoTela[]>;
+  incluir: (v: ValoresPrecoTela) => Promise<unknown>;
+  alterar: (id: string, v: ValoresPrecoTela) => Promise<unknown>;
+  encerrar: (id: string, aPartirDe: string) => Promise<unknown>;
+  exportar: () => Promise<{ nomeArquivo: string; conteudo: string }>;
+  importar: (
+    conteudo: string,
+    aPartirDe: string,
+  ) => Promise<{ incluidos: number; alterados: number; iguais: number }>;
+  /** Texto da lista vazia (com ou sem busca). */
+  vazio: (comBusca: boolean, tabela: TabelaPrecosTela) => string;
+  /** Aviso acima da tabela (ex.: na unidade, de onde vem o que falta). */
+  aviso?: (tabela: TabelaPrecosTela) => ReactNode;
+  /** Explica a planilha no importar (as colunas mudam com a dimensão). */
+  ajudaPlanilha: string;
+};
 
 export type TabelaPrecosProps = {
   /** Preços do cliente (ou unidade) ou tabela padrão do contratado. */
@@ -69,11 +161,91 @@ export type TabelaPrecosProps = {
   veAvisos?: boolean;
 };
 
-type Aberto = { modo: 'novo' } | { modo: 'editar'; item: ItemPrecoDto } | null;
+/** A tabela do faturamento: preços do cliente (ou unidade) ou padrão do contratado. */
+function fonteFaturamento(tipo: 'cliente' | 'contratado', donoId: string): FontePrecos {
+  const path = { tipo, donoId };
+  return {
+    chave: [{ url: '/faturamento/precos/:tipo/:donoId', params: path }],
+    dimensao: 'faixa',
+    entidadeAviso: tipo === 'cliente' ? 'preco_cliente' : 'preco_padrao_contratado',
+    listar: (query) => ({
+      queryKey: precosControllerListarQueryKey({ path, query }),
+      queryFn: async ({ signal }) => {
+        const r = await precosControllerListar({ path, query, signal }).unwrap();
+        return { ...r, principal: r.dono.principal?.nome ?? null };
+      },
+    }),
+    opcoes: () => ({
+      queryKey: precosControllerOpcoesQueryKey(),
+      queryFn: ({ signal }) => precosControllerOpcoes({ signal }).unwrap(),
+    }),
+    historico: (item) => {
+      const query = {
+        modalidadeId: item.modalidadeId,
+        especialidadeId: item.especialidadeId,
+        categoriaId: item.categoriaId,
+        prioridadeId: item.prioridadeId,
+      };
+      return {
+        queryKey: precosControllerHistoricoQueryKey({ path, query }),
+        queryFn: async ({ signal }) =>
+          (await precosControllerHistorico({ path, query, signal }).unwrap()).map((v) => ({
+            ...v,
+            criadoEm: v.criadoEm === null ? null : String(v.criadoEm),
+            encerradoEm: v.encerradoEm === null ? null : String(v.encerradoEm),
+          })),
+      };
+    },
+    incluir: (v) => precosControllerIncluir({ path, body: corpoDoPreco(v) }).unwrap(),
+    alterar: (precoId, v) =>
+      precosControllerAlterar({ path: { ...path, precoId }, body: corpoDoPreco(v) }).unwrap(),
+    encerrar: (precoId, aPartirDe) =>
+      precosControllerEncerrar({ path: { ...path, precoId }, body: { aPartirDe } }).unwrap(),
+    exportar: () => precosControllerExportar({ path }).unwrap(),
+    importar: (conteudo, aPartirDe) =>
+      precosControllerImportar({ path, body: { conteudo, aPartirDe } }).unwrap(),
+    vazio: (comBusca, { principal }) =>
+      comBusca
+        ? 'Nenhum preço com essa busca.'
+        : principal
+          ? `Nenhum preço próprio. Os laudos usam a tabela de ${principal}.`
+          : tipo === 'cliente'
+            ? 'Nenhum preço cadastrado. Os laudos usam a tabela padrão do contratado.'
+            : 'Nenhum preço cadastrado nesta tabela padrão.',
+    aviso: ({ principal }) =>
+      principal ? (
+        <Alerta tom="info">
+          Estes são os preços desta unidade. O arranjo que faltar aqui é cobrado pela tabela de{' '}
+          {principal}, o cliente principal, e depois pela tabela padrão do contratado.
+        </Alerta>
+      ) : null,
+    ajudaPlanilha:
+      'No modelo da exportação, com "Vale a partir de" em cada linha: a linha exportada traz o início do preço (MM/AAAA ou "desde sempre") e muda só ele; a linha com a coluna vazia é preço novo ou alterado a partir da competência abaixo. Se a tabela mudou depois da exportação, a linha é recusada: exporte de novo.',
+  };
+}
 
-const coluna = createDataTableColumnHelper<ItemPrecoDto>();
+/**
+ * Tabela de preços por arranjo, a mesma no cliente (aba Preços) e na tabela padrão do contratado:
+ * lista com busca e paginação, e o preço aberto no lugar (formulário com "Vale a partir de" e o
+ * histórico de vigências do arranjo). Nada se sobrescreve: alterar e encerrar criam versões.
+ */
+export function TabelaPrecos({ tipo, donoId, ...resto }: TabelaPrecosProps) {
+  const fonte = useMemo(() => fonteFaturamento(tipo, donoId), [tipo, donoId]);
+  return <TabelaPrecosDaFonte fonte={fonte} {...resto} />;
+}
+
+type Aberto =
+  | { modo: 'novo'; arranjo?: Partial<ValoresPrecoTela> }
+  | { modo: 'editar'; item: ItemPrecoTela }
+  | null;
+
+const coluna = createDataTableColumnHelper<ItemPrecoTela>();
 /** As colunas, com o selo dos avisos pendentes de cada versão (`entidade`: a tabela do preço). */
-const colunasCom = (selos: ReadonlyMap<string, SeloAvisoDto[]>, entidade: string) => [
+const colunasCom = (
+  selos: ReadonlyMap<string, SeloAvisoDto[]>,
+  entidade: string,
+  dimensao: FontePrecos['dimensao'],
+) => [
   coluna.display({
     id: 'arranjo',
     header: 'Arranjo',
@@ -88,11 +260,17 @@ const colunasCom = (selos: ReadonlyMap<string, SeloAvisoDto[]>, entidade: string
       </span>
     ),
   }),
-  coluna.accessor((p) => textoDaFaixa(p.faixaInicio, p.faixaFim), {
-    id: 'faixa',
-    header: 'Faixa',
-    cell: (c) => <span className="tabular-nums">{c.getValue()}</span>,
-  }),
+  dimensao === 'faixa'
+    ? coluna.accessor((p) => textoDaFaixa(p.faixaInicio ?? null, p.faixaFim ?? null), {
+        id: 'faixa',
+        header: 'Faixa',
+        cell: (c) => <span className="tabular-nums">{c.getValue()}</span>,
+      })
+    : coluna.accessor((p) => p.nomes.cliente ?? 'Todos os clientes', {
+        id: 'cliente',
+        header: 'Cliente',
+        cell: (c) => <span>{c.getValue()}</span>,
+      }),
   coluna.accessor('valor', {
     header: () => <span className="block text-right">Valor</span>,
     cell: (c) => (
@@ -113,28 +291,27 @@ const colunasCom = (selos: ReadonlyMap<string, SeloAvisoDto[]>, entidade: string
   }),
 ];
 
-/** Chave das consultas da tabela (para recarregar depois de mudar). */
-const chaveDoDono = (tipo: string, donoId: string) => [
-  { url: '/faturamento/precos/:tipo/:donoId', params: { tipo, donoId } },
-];
+export type TabelaPrecosDaFonteProps = Omit<TabelaPrecosProps, 'tipo' | 'donoId'> & {
+  fonte: FontePrecos;
+  /** Abre "Incluir preço" já com o arranjo (atalho do aviso de preço que falta). */
+  abrirNovo?: Partial<ValoresPrecoTela>;
+};
 
-/**
- * Tabela de preços por arranjo, a mesma no cliente (aba Preços) e na tabela padrão do contratado:
- * lista com busca e paginação, e o preço aberto no lugar (formulário com "Vale a partir de" e o
- * histórico de vigências do arranjo). Nada se sobrescreve: alterar e encerrar criam versões.
- */
-export function TabelaPrecos({
-  tipo,
-  donoId,
+/** A tabela de preços sobre qualquer fonte (faturamento ou repasse). */
+export function TabelaPrecosDaFonte({
+  fonte,
   podeEditar,
   porPagina = 10,
   onAlterado,
   veAvisos = false,
-}: TabelaPrecosProps) {
+  abrirNovo,
+}: TabelaPrecosDaFonteProps) {
   const [termo, setTermo] = useState('');
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
-  const [aberto, setAberto] = useState<Aberto>(null);
+  const [aberto, setAberto] = useState<Aberto>(
+    abrirNovo && podeEditar ? { modo: 'novo', arranjo: abrirNovo } : null,
+  );
   const [importando, setImportando] = useState(false);
   const avisos = useAvisos();
   const [erroExportar, setErroExportar] = useState<string>();
@@ -148,20 +325,19 @@ export function TabelaPrecos({
   }, [termo]);
 
   const tabela = useQuery({
-    ...precosControllerListarQueryOptions({
-      path: { tipo, donoId },
-      query: { pagina, porPagina, ...(busca ? { busca } : {}) },
-    }),
+    ...fonte.listar({ pagina, porPagina, ...(busca ? { busca } : {}) }),
     placeholderData: keepPreviousData,
   });
-  const opcoes = useQuery(precosControllerOpcoesQueryOptions());
-  const entidade = tipo === 'cliente' ? 'preco_cliente' : 'preco_padrao_contratado';
+  const opcoes = useQuery(fonte.opcoes());
   const selos = useSelosDeAviso(
-    entidade,
+    fonte.entidadeAviso,
     (tabela.data?.itens ?? []).map((p) => p.id),
     veAvisos,
   );
-  const colunas = useMemo(() => colunasCom(selos, entidade), [selos, entidade]);
+  const colunas = useMemo(
+    () => colunasCom(selos, fonte.entidadeAviso, fonte.dimensao),
+    [selos, fonte.entidadeAviso, fonte.dimensao],
+  );
 
   if (tabela.isError || opcoes.isError)
     return (
@@ -180,8 +356,7 @@ export function TabelaPrecos({
   if (aberto)
     return (
       <EditorPreco
-        tipo={tipo}
-        donoId={donoId}
+        fonte={fonte}
         aberto={aberto}
         tabela={dados}
         opcoes={opcoes.data}
@@ -197,7 +372,7 @@ export function TabelaPrecos({
   const exportar = async () => {
     setErroExportar(undefined);
     try {
-      const r = await precosControllerExportar({ path: { tipo, donoId } }).unwrap();
+      const r = await fonte.exportar();
       baixarArquivo(r.nomeArquivo, r.conteudo);
     } catch (e) {
       setErroExportar(mensagemDaApi(e, 'Não foi possível exportar agora. Tente de novo.'));
@@ -206,18 +381,16 @@ export function TabelaPrecos({
 
   return (
     <div className="flex flex-col gap-4">
-      {dados.dono.principal && (
-        <Alerta tom="info">
-          Estes são os preços desta unidade. O arranjo que faltar aqui é cobrado pela tabela de{' '}
-          {dados.dono.principal.nome}, o cliente principal, e depois pela tabela padrão do
-          contratado.
-        </Alerta>
-      )}
+      {fonte.aviso?.(dados)}
       {erroExportar && <Alerta tom="erro">{erroExportar}</Alerta>}
       <div className="flex flex-wrap items-center gap-2">
         <CampoBusca
           rotulo="Buscar preços"
-          placeholder="Buscar modalidade, especialidade, categoria…"
+          placeholder={
+            fonte.dimensao === 'cliente'
+              ? 'Buscar arranjo ou cliente…'
+              : 'Buscar modalidade, especialidade, categoria…'
+          }
           valor={termo}
           onMudar={setTermo}
           className="min-w-[220px] flex-1"
@@ -257,15 +430,7 @@ export function TabelaPrecos({
         getRowId={(p) => p.id}
         onRowClick={(item) => setAberto({ modo: 'editar', item })}
         recarregando={tabela.isFetching}
-        emptyMessage={
-          busca
-            ? 'Nenhum preço com essa busca.'
-            : dados.dono.principal
-              ? `Nenhum preço próprio. Os laudos usam a tabela de ${dados.dono.principal.nome}.`
-              : tipo === 'cliente'
-                ? 'Nenhum preço cadastrado. Os laudos usam a tabela padrão do contratado.'
-                : 'Nenhum preço cadastrado nesta tabela padrão.'
-        }
+        emptyMessage={fonte.vazio(Boolean(busca), dados)}
         className="max-h-[60vh]"
       />
       {dados.total > 0 && (
@@ -273,8 +438,7 @@ export function TabelaPrecos({
       )}
       {importando && (
         <ImportarPlanilha
-          tipo={tipo}
-          donoId={donoId}
+          fonte={fonte}
           tabela={dados}
           onFechar={() => setImportando(false)}
           onImportado={(texto) => {
@@ -287,56 +451,90 @@ export function TabelaPrecos({
   );
 }
 
-const esquema = z
-  .object({
-    modalidadeId: z.string().min(1, 'Escolha a modalidade.'),
-    especialidadeId: z.string().min(1, 'Escolha a especialidade.'),
-    categoriaId: z.string().min(1, 'Escolha a categoria.'),
-    prioridadeId: z.string().min(1, 'Escolha a prioridade.'),
-    faixaInicio: z.string(),
-    faixaFim: z.string(),
-    condVolume: z.enum(['MOD', 'MOD_ESP', 'MOD_ESP_CAT', 'TOTAL']),
-    valor: z.string().min(1, 'Informe o valor.'),
-    aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual o preço vale.'),
-  })
-  .superRefine((v, ctx) => {
-    const valor = numeroPtBr(v.valor, 2);
-    if (v.valor.trim() && valor === null)
-      ctx.addIssue({
-        code: 'custom',
-        path: ['valor'],
-        message: 'Use vírgula nos centavos, como 1.200,50.',
-      });
-    else if (v.valor.trim() && !((valor ?? 0) > 0))
-      ctx.addIssue({
-        code: 'custom',
-        path: ['valor'],
-        message: 'O valor tem de ser maior que zero.',
-      });
-    const ini = v.faixaInicio.trim() ? numeroPtBr(v.faixaInicio, 0) : null;
-    const fim = v.faixaFim.trim() ? numeroPtBr(v.faixaFim, 0) : null;
-    for (const [campo, texto, n] of [
-      ['faixaInicio', v.faixaInicio, ini],
-      ['faixaFim', v.faixaFim, fim],
-    ] as const)
-      if (texto.trim() && n === null)
+const esquemaPara = (dimensao: FontePrecos['dimensao']) =>
+  z
+    .object({
+      modalidadeId: z.string().min(1, 'Escolha a modalidade.'),
+      especialidadeId: z.string().min(1, 'Escolha a especialidade.'),
+      categoriaId: z.string().min(1, 'Escolha a categoria.'),
+      prioridadeId: z.string().min(1, 'Escolha a prioridade.'),
+      faixaInicio: z.string(),
+      faixaFim: z.string(),
+      condVolume: z.enum(['MOD', 'MOD_ESP', 'MOD_ESP_CAT', 'TOTAL']),
+      clienteId: z.string(),
+      valor: z.string().min(1, 'Informe o valor.'),
+      aPartirDe: z.string().min(1, 'Escolha a competência a partir da qual o preço vale.'),
+    })
+    .superRefine((v, ctx) => {
+      const valor = numeroPtBr(v.valor, 2);
+      if (v.valor.trim() && valor === null)
         ctx.addIssue({
           code: 'custom',
-          path: [campo],
-          message: 'Use um número inteiro (ex.: 300 ou 1.000).',
+          path: ['valor'],
+          message: 'Use vírgula nos centavos, como 1.200,50.',
         });
-    if (ini !== null && fim !== null && fim < ini)
-      ctx.addIssue({
-        code: 'custom',
-        path: ['faixaFim'],
-        message: 'O fim da faixa tem de ser maior ou igual ao início.',
-      });
-  });
+      else if (v.valor.trim() && !((valor ?? 0) > 0))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['valor'],
+          message: 'O valor tem de ser maior que zero.',
+        });
+      if (dimensao === 'cliente') {
+        if (!v.clienteId)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['clienteId'],
+            message: 'Escolha o cliente ou "Todos os clientes".',
+          });
+        return;
+      }
+      const ini = v.faixaInicio.trim() ? numeroPtBr(v.faixaInicio, 0) : null;
+      const fim = v.faixaFim.trim() ? numeroPtBr(v.faixaFim, 0) : null;
+      for (const [campo, texto, n] of [
+        ['faixaInicio', v.faixaInicio, ini],
+        ['faixaFim', v.faixaFim, fim],
+      ] as const)
+        if (texto.trim() && n === null)
+          ctx.addIssue({
+            code: 'custom',
+            path: [campo],
+            message: 'Use um número inteiro (ex.: 300 ou 1.000).',
+          });
+      if (ini !== null && fim !== null && fim < ini)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['faixaFim'],
+          message: 'O fim da faixa tem de ser maior ou igual ao início.',
+        });
+    });
+
+/** Valores do formulário: os ids, a faixa ou o cliente e o valor como texto. */
+function valoresIniciais(
+  item: ItemPrecoTela | undefined,
+  aPartirDe: string,
+  arranjo?: Partial<ValoresPrecoTela>,
+): ValoresPrecoTela {
+  return {
+    modalidadeId: item?.modalidadeId ?? arranjo?.modalidadeId ?? '',
+    especialidadeId: item?.especialidadeId ?? arranjo?.especialidadeId ?? '',
+    categoriaId: item?.categoriaId ?? arranjo?.categoriaId ?? '',
+    prioridadeId: item?.prioridadeId ?? arranjo?.prioridadeId ?? '',
+    faixaInicio: item?.faixaInicio == null ? '' : String(item.faixaInicio),
+    faixaFim: item?.faixaFim == null ? '' : String(item.faixaFim),
+    condVolume: item?.condVolume ?? 'MOD_ESP_CAT',
+    clienteId: item
+      ? item.todosClientes
+        ? TODOS_OS_CLIENTES
+        : (item.clienteId ?? '')
+      : (arranjo?.clienteId ?? ''),
+    valor: item ? item.valor.toFixed(2).replace('.', ',') : '',
+    aPartirDe,
+  };
+}
 
 /** O preço aberto: formulário (novo ou alteração) e o histórico de vigências do arranjo. */
 function EditorPreco({
-  tipo,
-  donoId,
+  fonte,
   aberto,
   tabela,
   opcoes,
@@ -344,28 +542,29 @@ function EditorPreco({
   onAlterado,
   onVoltar,
 }: {
-  tipo: 'cliente' | 'contratado';
-  donoId: string;
+  fonte: FontePrecos;
   aberto: NonNullable<Aberto>;
-  tabela: TabelaPrecosDto;
-  opcoes: OpcoesPrecoDto;
+  tabela: TabelaPrecosTela;
+  opcoes: OpcoesPrecosTela;
   podeEditar: boolean;
   onAlterado?: (alterado: boolean) => void;
   onVoltar: () => void;
 }) {
   const item = aberto.modo === 'editar' ? aberto.item : undefined;
+  const arranjo = aberto.modo === 'novo' ? aberto.arranjo : undefined;
   const queryClient = useQueryClient();
   const avisos = useAvisos();
   const { erro, tentar } = useErroDoPainel();
   const idTitulo = useId();
   const iniciais = useMemo(
-    () => valoresDoPreco(item, tabela.aPartirDeSugerido),
-    [item, tabela.aPartirDeSugerido],
+    () => valoresIniciais(item, tabela.aPartirDeSugerido, arranjo),
+    [item, tabela.aPartirDeSugerido, arranjo],
   );
+  const esquema = useMemo(() => esquemaPara(fonte.dimensao), [fonte.dimensao]);
   // Mexer na versão pode resolver o aviso dela (preço repetido): o selo também recarrega.
   const recarregar = () =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: chaveDoDono(tipo, donoId) }),
+      queryClient.invalidateQueries({ queryKey: fonte.chave }),
       queryClient.invalidateQueries({ queryKey: [{ url: '/ingestao/avisos/selos' }] }),
     ]);
   const form = useAppForm({
@@ -373,18 +572,14 @@ function EditorPreco({
     validators: { onSubmit: esquema },
     onSubmit: ({ value }) =>
       tentar(async () => {
-        const body = corpoDoPreco(value as ValoresPreco);
-        if (item)
-          await precosControllerAlterar({
-            path: { tipo, donoId, precoId: item.id },
-            body,
-          }).unwrap();
-        else await precosControllerIncluir({ path: { tipo, donoId }, body }).unwrap();
+        const v = value as ValoresPrecoTela;
+        if (item) await fonte.alterar(item.id, v);
+        else await fonte.incluir(v);
         await recarregar();
         avisos.sucesso(
           item
-            ? `Preço alterado a partir de ${mesAno(body.aPartirDe)}.`
-            : `Preço incluído a partir de ${mesAno(body.aPartirDe)}.`,
+            ? `Preço alterado a partir de ${mesAno(v.aPartirDe)}.`
+            : `Preço incluído a partir de ${mesAno(v.aPartirDe)}.`,
         );
         onVoltar();
       }),
@@ -395,8 +590,7 @@ function EditorPreco({
   const aPartirDe = useStore(form.store, (s) => s.values.aPartirDe);
   const temFaixa = useStore(form.store, (s) => Boolean(s.values.faixaInicio || s.values.faixaFim));
 
-  const lista = (l: { id: string; nome: string }[]) =>
-    l.map((o) => ({ valor: o.id, rotulo: o.nome }));
+  const lista = (l: Opcao[]) => l.map((o) => ({ valor: o.id, rotulo: o.nome }));
   const competencias = opcoesAPartirDe(tabela.aPartirDeMinimo, tabela.mesAtual).map((c) => ({
     valor: c,
     rotulo: mesAno(c),
@@ -410,6 +604,11 @@ function EditorPreco({
         item.nomes.prioridade,
       ].join(' / ')
     : 'Novo preço';
+  const segunda =
+    item &&
+    (fonte.dimensao === 'cliente'
+      ? (item.nomes.cliente ?? 'Todos os clientes')
+      : textoDaFaixa(item.faixaInicio ?? null, item.faixaFim ?? null).toLowerCase());
   const apagaDeVez = Boolean(
     item?.vigenciaDesde && item.vigenciaDesde > tabela.mesAtual && item.vigenciaDesde >= aPartirDe,
   );
@@ -430,7 +629,7 @@ function EditorPreco({
         </h4>
         {item && (
           <p className="text-muted-foreground tabular-nums">
-            {moeda(item.valor)}, {textoDaFaixa(item.faixaInicio, item.faixaFim).toLowerCase()},{' '}
+            {moeda(item.valor)}, {segunda},{' '}
             {textoDaVigencia(item.vigenciaDesde, item.vigenciaAte).toLowerCase()}
           </p>
         )}
@@ -497,37 +696,57 @@ function EditorPreco({
                 />
               )}
             </form.AppField>
-            <form.AppField name="faixaInicio">
-              {(f) => (
-                <f.TextField
-                  label="Faixa: de"
-                  placeholder="Sem faixa"
-                  spellCheck={false}
-                  description="Volume do mês; vazio vale para qualquer volume."
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="faixaFim">
-              {(f) => (
-                <f.TextField label="Faixa: até" placeholder="Sem limite" spellCheck={false} />
-              )}
-            </form.AppField>
-            {temFaixa && (
-              <form.AppField name="condVolume">
+            {fonte.dimensao === 'cliente' ? (
+              <form.AppField name="clienteId">
                 {(f) => (
                   <f.SelectField
-                    label="Volume somado por"
+                    label="Cliente"
                     required
                     placeholder="Escolha"
-                    opcoes={Object.entries(ROTULO_COND).map(([valor, rotulo]) => ({
-                      valor,
-                      rotulo,
-                    }))}
-                    description="Os exames do mês do cliente que contam para a faixa (faturem ou não)."
+                    opcoes={[
+                      { valor: TODOS_OS_CLIENTES, rotulo: 'Todos os clientes' },
+                      ...lista(opcoes.clientes ?? []),
+                    ]}
+                    description="O preço de um cliente vale no lugar do de todos os clientes."
                     className="sm:col-span-2"
                   />
                 )}
               </form.AppField>
+            ) : (
+              <>
+                <form.AppField name="faixaInicio">
+                  {(f) => (
+                    <f.TextField
+                      label="Faixa: de"
+                      placeholder="Sem faixa"
+                      spellCheck={false}
+                      description="Volume do mês; vazio vale para qualquer volume."
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="faixaFim">
+                  {(f) => (
+                    <f.TextField label="Faixa: até" placeholder="Sem limite" spellCheck={false} />
+                  )}
+                </form.AppField>
+                {temFaixa && (
+                  <form.AppField name="condVolume">
+                    {(f) => (
+                      <f.SelectField
+                        label="Volume somado por"
+                        required
+                        placeholder="Escolha"
+                        opcoes={Object.entries(ROTULO_COND).map(([valor, rotulo]) => ({
+                          valor,
+                          rotulo,
+                        }))}
+                        description="Os exames do mês do cliente que contam para a faixa (faturem ou não)."
+                        className="sm:col-span-2"
+                      />
+                    )}
+                  </form.AppField>
+                )}
+              </>
             )}
             <form.AppField name="valor">
               {(f) => (
@@ -566,10 +785,7 @@ function EditorPreco({
                 }
                 onConfirmar={() =>
                   tentar(async () => {
-                    await precosControllerEncerrar({
-                      path: { tipo, donoId, precoId: item.id },
-                      body: { aPartirDe },
-                    }).unwrap();
+                    await fonte.encerrar(item.id, aPartirDe);
                     await recarregar();
                     avisos.sucesso(apagaDeVez ? 'Preço programado removido.' : 'Preço encerrado.');
                     onVoltar();
@@ -584,37 +800,23 @@ function EditorPreco({
         </form>
       )}
 
-      {item && (
-        <HistoricoArranjo tipo={tipo} donoId={donoId} item={item} mesAtual={tabela.mesAtual} />
-      )}
+      {item && <HistoricoArranjo fonte={fonte} item={item} mesAtual={tabela.mesAtual} />}
     </div>
   );
 }
 
-/** Todas as versões do arranjo (todas as faixas), da mais nova para a mais antiga. */
+/** Todas as versões do arranjo (todas as faixas, ou do cliente), da mais nova para a mais antiga. */
 function HistoricoArranjo({
-  tipo,
-  donoId,
+  fonte,
   item,
   mesAtual,
 }: {
-  tipo: 'cliente' | 'contratado';
-  donoId: string;
-  item: ItemPrecoDto;
+  fonte: FontePrecos;
+  item: ItemPrecoTela;
   mesAtual: string;
 }) {
   const id = useId();
-  const historico = useQuery(
-    precosControllerHistoricoQueryOptions({
-      path: { tipo, donoId },
-      query: {
-        modalidadeId: item.modalidadeId,
-        especialidadeId: item.especialidadeId,
-        categoriaId: item.categoriaId,
-        prioridadeId: item.prioridadeId,
-      },
-    }),
-  );
+  const historico = useQuery(fonte.historico(item));
   const paginacao = usePaginaLocal(historico.data ?? [], 5);
   let conteudo: ReactNode;
   if (historico.isError)
@@ -636,9 +838,11 @@ function HistoricoArranjo({
               <li key={v.id} className="flex flex-col gap-1 px-3 py-2">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">{moeda(v.valor)}</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {textoDaFaixa(v.faixaInicio, v.faixaFim)}
-                  </span>
+                  {fonte.dimensao === 'faixa' && (
+                    <span className="text-muted-foreground tabular-nums">
+                      {textoDaFaixa(v.faixaInicio ?? null, v.faixaFim ?? null)}
+                    </span>
+                  )}
                   {emVigor && <Etiqueta tom="sucesso">Em vigor</Etiqueta>}
                   {v.vigenciaDesde !== null && v.vigenciaDesde > mesAtual && (
                     <Etiqueta tom="info">Programado</Etiqueta>
@@ -687,15 +891,13 @@ function HistoricoArranjo({
 
 /** Importar a planilha (CSV com `;`, no modelo da exportação), a partir de uma competência. */
 function ImportarPlanilha({
-  tipo,
-  donoId,
+  fonte,
   tabela,
   onFechar,
   onImportado,
 }: {
-  tipo: 'cliente' | 'contratado';
-  donoId: string;
-  tabela: TabelaPrecosDto;
+  fonte: FontePrecos;
+  tabela: TabelaPrecosTela;
   onFechar: () => void;
   onImportado: (texto: string) => void;
 }) {
@@ -719,11 +921,8 @@ function ImportarPlanilha({
     setLinhas([]);
     try {
       const conteudo = await arquivo.text();
-      const r = await precosControllerImportar({
-        path: { tipo, donoId },
-        body: { conteudo, aPartirDe },
-      }).unwrap();
-      await queryClient.invalidateQueries({ queryKey: chaveDoDono(tipo, donoId) });
+      const r = await fonte.importar(conteudo, aPartirDe);
+      await queryClient.invalidateQueries({ queryKey: fonte.chave });
       onImportado(
         `Planilha importada: ${plural(r.incluidos, { um: 'preço incluído', varios: 'preços incluídos' })}, ${plural(r.alterados, { um: 'alterado', varios: 'alterados' })} e ${plural(r.iguais, { um: 'igual', varios: 'iguais' })}.`,
       );
@@ -771,12 +970,7 @@ function ImportarPlanilha({
           }}
           className="file:border-input file:bg-card text-[14px] file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5"
         />
-        <p className="text-muted-foreground text-[13px]">
-          No modelo da exportação, com "Vale a partir de" em cada linha: a linha exportada traz o
-          início do preço (MM/AAAA ou "desde sempre") e muda só ele; a linha com a coluna vazia é
-          preço novo ou alterado a partir da competência abaixo. Se a tabela mudou depois da
-          exportação, a linha é recusada: exporte de novo.
-        </p>
+        <p className="text-muted-foreground text-[13px]">{fonte.ajudaPlanilha}</p>
         {faltaArquivo && <p className="text-destructive text-[13px]">Escolha a planilha.</p>}
       </div>
       <div className="flex flex-col gap-2">

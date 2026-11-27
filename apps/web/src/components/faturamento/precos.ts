@@ -1,7 +1,9 @@
 import type { CondVolumeKey } from '../../gen/types/CondVolume';
-import type { ItemPrecoDto } from '../../gen/types/ItemPrecoDto';
 import type { MudarPrecoDto } from '../../gen/types/MudarPrecoDto';
 import { mesAno } from './competencias';
+
+/** Valor do "Todos os clientes" no campo de cliente (sempre explícito; vazio é erro). */
+export const TODOS_OS_CLIENTES = 'todos';
 
 export const ROTULO_COND: Record<CondVolumeKey, string> = {
   MOD: 'Modalidade',
@@ -52,23 +54,6 @@ export type ValoresPreco = {
   valor: string;
   aPartirDe: string;
 };
-
-export function valoresDoPreco(
-  v: Omit<ItemPrecoDto, 'duplicado' | 'emVigor'> | undefined,
-  aPartirDe: string,
-): ValoresPreco {
-  return {
-    modalidadeId: v?.modalidadeId ?? '',
-    especialidadeId: v?.especialidadeId ?? '',
-    categoriaId: v?.categoriaId ?? '',
-    prioridadeId: v?.prioridadeId ?? '',
-    faixaInicio: v?.faixaInicio == null ? '' : String(v.faixaInicio),
-    faixaFim: v?.faixaFim == null ? '' : String(v.faixaFim),
-    condVolume: v?.condVolume ?? 'MOD_ESP_CAT',
-    valor: v ? v.valor.toFixed(2).replace('.', ',') : '',
-    aPartirDe,
-  };
-}
 
 /**
  * Número em pt-BR (ponto só no milhar, vírgula nos centavos): "1.200" = 1200, "1.200,50" = 1200,5,
