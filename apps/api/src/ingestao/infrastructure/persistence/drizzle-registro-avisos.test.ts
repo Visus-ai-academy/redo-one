@@ -129,6 +129,28 @@ describe.skipIf(!url)('DrizzleRegistroAvisos', () => {
     ).rejects.toThrow();
   });
 
+  it('registrar: a chave levantada e também conferida fica pendente; só a conferida se resolve', async () => {
+    await db.insert(schema.avisosCadastro).values([
+      { tipo: 'preco_repetido', chave: 'continua', valor: 'C', origem: 'job' },
+      { tipo: 'preco_repetido', chave: 'sumiu', valor: 'S', origem: 'job' },
+    ]);
+
+    await registro.registrar(db, {
+      origem: 'job',
+      levantados: [preco('continua', 'C2', randomUUID())],
+      conferidos: [
+        { tipo: 'preco_repetido', chave: 'continua' },
+        { tipo: 'preco_repetido', chave: 'sumiu' },
+      ],
+      agora,
+    });
+
+    expect((await avisos()).map((x) => [x.chave, x.status, x.decididoEm])).toEqual([
+      ['continua', 'pendente', null],
+      ['sumiu', 'resolvido', agora],
+    ]);
+  });
+
   it('sincronizar resolve os pendentes do tipo e origem que não vieram; o ignorado fica', async () => {
     await db.insert(schema.avisosCadastro).values([
       { tipo: 'preco_repetido', chave: 'sumiu', valor: 'S', origem: 'carga' },

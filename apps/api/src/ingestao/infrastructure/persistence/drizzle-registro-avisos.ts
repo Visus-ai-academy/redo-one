@@ -38,8 +38,12 @@ export class DrizzleRegistroAvisos implements RegistroAvisos {
     if (!e.levantados.length && !e.conferidos.length) return;
     await executor.transaction(async (tx) => {
       await this.abrir(tx, e.origem, e.importacaoId ?? null, e.levantados, e.agora);
+      // Levantado vence conferido: a causa da chave levantada continua, então ela não se resolve.
+      const levantadas = new Set(e.levantados.map((l) => `${l.tipo}:${l.chave}`));
       const porTipo = new Map<TipoAviso, string[]>();
-      for (const c of e.conferidos) porTipo.set(c.tipo, [...(porTipo.get(c.tipo) ?? []), c.chave]);
+      for (const c of e.conferidos)
+        if (!levantadas.has(`${c.tipo}:${c.chave}`))
+          porTipo.set(c.tipo, [...(porTipo.get(c.tipo) ?? []), c.chave]);
       for (const [tipo, chaves] of porTipo) {
         for (const lote of lotes(chaves)) {
           await tx

@@ -89,7 +89,8 @@ export const REGISTRO_AVISOS = Symbol('REGISTRO_AVISOS');
 export interface RegistroAvisos {
   /**
    * Abre ou atualiza os avisos levantados e resolve os pendentes conferidos (a causa sumiu). Para
-   * origens que veem só parte dos casos a cada vez (a importação vê só os laudos do arquivo).
+   * origens que veem só parte dos casos a cada vez (a importação vê só os laudos do arquivo). A
+   * chave que vem nos dois fica pendente: levantado vence conferido.
    */
   registrar(
     executor: ExecutorAvisos,
