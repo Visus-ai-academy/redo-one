@@ -827,6 +827,13 @@
       "when": 1795786563228,
       "tag": "0117_regua_repasse_nivel",
       "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1795793583179,
+      "tag": "0118_financeiro_categorias",
+      "breakpoints": true
     }
   ]
 }

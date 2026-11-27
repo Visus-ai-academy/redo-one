@@ -11571,6 +11571,244 @@
         ]
       }
     },
+    "/financeiro/categorias": {
+      "get": {
+        "operationId": "CategoriasFinanceirasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome, do documento ou do código.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltro"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "query",
+            "description": "A aba: Receitas ou Despesas.",
+            "schema": {
+              "$ref": "#/components/schemas/TipoCategoriaFinanceira"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Em árvore: cada grupo e as categorias dele.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaCategoriasDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "CategoriasFinanceirasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Nome vazio ou grupo inválido (de outro tipo, dentro de outro grupo ou inexistente); `campos` diz qual."
+          },
+          "409": {
+            "description": "Já existe uma categoria com o nome no mesmo grupo."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/categorias/opcoes": {
+      "get": {
+        "operationId": "CategoriasFinanceirasController_opcoes",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "description": "Sem ele, as dos dois tipos.",
+            "schema": {
+              "$ref": "#/components/schemas/TipoCategoriaFinanceira"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As ativas, em árvore, para escolher.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoriaItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/categorias/{id}": {
+      "get": {
+        "operationId": "CategoriasFinanceirasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "CategoriasFinanceirasController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Nome vazio ou grupo inválido (de outro tipo, dentro de outro grupo ou inexistente); `campos` diz qual."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já existe uma categoria com o nome no mesmo grupo."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "delete": {
+        "operationId": "CategoriasFinanceirasController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Em uso (categorias dentro, fornecedores ou títulos): desative."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
     "/distribuicao/rodadas/viva": {
       "get": {
         "operationId": "RodadasController_viva",
@@ -26641,6 +26879,133 @@
           "mobilemedJanelaDias",
           "mobilemedTeto",
           "mobilemedCompartilhamentoUnidades"
+        ]
+      },
+      "SituacaoFiltro": {
+        "type": "string",
+        "enum": [
+          "todas",
+          "ativas",
+          "inativas"
+        ]
+      },
+      "TipoCategoriaFinanceira": {
+        "type": "string",
+        "enum": [
+          "receita",
+          "despesa"
+        ]
+      },
+      "CategoriaItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoCategoriaFinanceira"
+              }
+            ]
+          },
+          "nome": {
+            "type": "string"
+          },
+          "paiId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "grupoNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "codigoContabil": {
+            "type": "string",
+            "nullable": true
+          },
+          "ativa": {
+            "type": "boolean"
+          },
+          "totalFilhas": {
+            "type": "integer",
+            "description": "Categorias dentro desta (é um grupo se > 0)."
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "nome",
+          "paiId",
+          "grupoNome",
+          "codigoContabil",
+          "ativa",
+          "totalFilhas"
+        ]
+      },
+      "PaginaCategoriasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoriaItemDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "CategoriaDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoCategoriaFinanceira"
+              }
+            ]
+          },
+          "nome": {
+            "type": "string",
+            "example": "Software e TI",
+            "maxLength": 120
+          },
+          "paiId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Grupo (categoria do nível de cima, do mesmo tipo). Vazio = nível de cima."
+          },
+          "codigoContabil": {
+            "type": "string",
+            "nullable": true,
+            "example": "3.2.03",
+            "maxLength": 40
+          },
+          "ativa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tipo",
+          "nome",
+          "ativa"
         ]
       },
       "StatusRodada": {

@@ -467,6 +467,14 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     ],
   },
   {
+    // Configurações › Financeiro › Categorias financeiras: o plano de receitas e despesas.
+    tela: 'categorias-financeiras',
+    rotulo: 'Categorias financeiras',
+    area: 'Financeiro',
+    padrao: crud(),
+    especiais: [],
+  },
+  {
     tela: 'usuarios',
     rotulo: 'Usuários',
     area: 'Configurações',

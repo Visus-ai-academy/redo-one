@@ -24,6 +24,7 @@ import { Route as AppRepasseRouteImport } from './routes/_app/repasse'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesAvisosRouteImport } from './routes/_app/configuracoes/avisos'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
+import { Route as AppConfiguracoesCategoriasFinanceirasRouteImport } from './routes/_app/configuracoes/categorias-financeiras'
 import { Route as AppConfiguracoesContratadosRouteImport } from './routes/_app/configuracoes/contratados'
 import { Route as AppConfiguracoesDeParasRouteImport } from './routes/_app/configuracoes/de-paras'
 import { Route as AppConfiguracoesDistribuicaoRouteImport } from './routes/_app/configuracoes/distribuicao'
@@ -118,6 +119,12 @@ const AppConfiguracoesCatalogoRoute =
   AppConfiguracoesCatalogoRouteImport.update({
     id: '/configuracoes/catalogo',
     path: '/configuracoes/catalogo',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppConfiguracoesCategoriasFinanceirasRoute =
+  AppConfiguracoesCategoriasFinanceirasRouteImport.update({
+    id: '/configuracoes/categorias-financeiras',
+    path: '/configuracoes/categorias-financeiras',
     getParentRoute: () => AppRoute,
   } as any)
 const AppConfiguracoesContratadosRoute =
@@ -246,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/repasse': typeof AppRepasseRoute
   '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
+  '/configuracoes/categorias-financeiras': typeof AppConfiguracoesCategoriasFinanceirasRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
@@ -282,6 +290,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
+  '/configuracoes/categorias-financeiras': typeof AppConfiguracoesCategoriasFinanceirasRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
@@ -320,6 +329,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
+  '/_app/configuracoes/categorias-financeiras': typeof AppConfiguracoesCategoriasFinanceirasRoute
   '/_app/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
   '/_app/configuracoes/de-paras': typeof AppConfiguracoesDeParasRoute
   '/_app/configuracoes/distribuicao': typeof AppConfiguracoesDistribuicaoRoute
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/repasse'
     | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
+    | '/configuracoes/categorias-financeiras'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/distribuicao'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
+    | '/configuracoes/categorias-financeiras'
     | '/configuracoes/contratados'
     | '/configuracoes/de-paras'
     | '/configuracoes/distribuicao'
@@ -431,6 +443,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/configuracoes/avisos'
     | '/_app/configuracoes/catalogo'
+    | '/_app/configuracoes/categorias-financeiras'
     | '/_app/configuracoes/contratados'
     | '/_app/configuracoes/de-paras'
     | '/_app/configuracoes/distribuicao'
@@ -566,6 +579,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes/catalogo'
       fullPath: '/configuracoes/catalogo'
       preLoaderRoute: typeof AppConfiguracoesCatalogoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/configuracoes/categorias-financeiras': {
+      id: '/_app/configuracoes/categorias-financeiras'
+      path: '/configuracoes/categorias-financeiras'
+      fullPath: '/configuracoes/categorias-financeiras'
+      preLoaderRoute: typeof AppConfiguracoesCategoriasFinanceirasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/configuracoes/contratados': {
@@ -722,6 +742,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesAvisosRoute: typeof AppConfiguracoesAvisosRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
+  AppConfiguracoesCategoriasFinanceirasRoute: typeof AppConfiguracoesCategoriasFinanceirasRoute
   AppConfiguracoesContratadosRoute: typeof AppConfiguracoesContratadosRoute
   AppConfiguracoesDeParasRoute: typeof AppConfiguracoesDeParasRoute
   AppConfiguracoesDistribuicaoRoute: typeof AppConfiguracoesDistribuicaoRoute
@@ -756,6 +777,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesAvisosRoute: AppConfiguracoesAvisosRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,
+  AppConfiguracoesCategoriasFinanceirasRoute:
+    AppConfiguracoesCategoriasFinanceirasRoute,
   AppConfiguracoesContratadosRoute: AppConfiguracoesContratadosRoute,
   AppConfiguracoesDeParasRoute: AppConfiguracoesDeParasRoute,
   AppConfiguracoesDistribuicaoRoute: AppConfiguracoesDistribuicaoRoute,

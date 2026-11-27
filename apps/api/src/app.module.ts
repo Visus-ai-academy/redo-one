@@ -15,6 +15,7 @@ import { GatilhosDistribuicaoModule } from './distribuicao/infrastructure/catalo
 import { EscalaModule } from './escala/escala.module';
 import { FaturamentoModule } from './faturamento/faturamento.module';
 import { GatilhosTipificacaoModule } from './faturamento/infrastructure/jobs/gatilhos-tipificacao.module';
+import { FinanceiroModule } from './financeiro/financeiro.module';
 import { IdentidadeModule } from './identidade/identidade.module';
 import { AvisosCompartilhadosModule } from './ingestao/infrastructure/avisos/avisos-compartilhados.module';
 import { GatilhosIngestaoModule } from './ingestao/infrastructure/jobs/gatilhos-ingestao.module';
@@ -38,6 +39,7 @@ import { RepasseModule } from './repasse/repasse.module';
     EscalaModule,
     FaturamentoModule,
     RepasseModule,
+    FinanceiroModule,
     IngestaoModule,
     DistribuicaoModule,
     HistoricoCadastroModule,

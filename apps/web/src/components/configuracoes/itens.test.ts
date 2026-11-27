@@ -61,13 +61,18 @@ describe('grupo Operação', () => {
 });
 
 describe('grupo Financeiro', () => {
-  it('tem o Faturamento, a Tipificação e a Tabela padrão de preços (ver do faturamento) e o Repasse (ver do repasse)', () => {
+  it('tem o Faturamento, a Tipificação e a Tabela padrão de preços (ver do faturamento), o Repasse (ver do repasse) e os cadastros do financeiro, cada um com o ver da sua tela', () => {
     const financeiro = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Financeiro');
     expect(financeiro?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Faturamento', '/configuracoes/faturamento', 'faturamento.ver'],
       ['Tipificação', '/configuracoes/tipificacao', 'faturamento.ver'],
       ['Tabela padrão de preços', '/configuracoes/tabela-padrao', 'faturamento.ver'],
       ['Repasse', '/configuracoes/repasse', 'repasse.ver'],
+      [
+        'Categorias financeiras',
+        '/configuracoes/categorias-financeiras',
+        'categorias-financeiras.ver',
+      ],
     ]);
   });
 });

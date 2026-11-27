@@ -2,10 +2,13 @@ import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 
+import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { DatabaseModule } from '../database/database.module';
 import { EMISSOR_NFSE } from './application/ports/emissor-nfse';
 import { FinanceiroModule } from './financeiro.module';
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { FocusNfeEmissor } from './infrastructure/focus-nfe/focus-nfe-emissor';
+import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
 import { SimuladorEmissorNfse } from './infrastructure/simulador/simulador-emissor-nfse';
 
 const config = (valores: Record<string, string>) => ({ get: (nome: string) => valores[nome] });
@@ -35,10 +38,18 @@ describe('criarEmissorNfse', () => {
 });
 
 describe('FinanceiroModule', () => {
-  it('exporta o emissor de NFS-e', async () => {
+  it('exporta o emissor de NFS-e e liga os controllers do financeiro', async () => {
     const modulo = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), FinanceiroModule],
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
+        DatabaseModule,
+        AuditoriaModule,
+        FinanceiroModule,
+      ],
     }).compile();
     expect(modulo.get(EMISSOR_NFSE)).toBeInstanceOf(SimuladorEmissorNfse);
+    expect(modulo.get(CategoriasFinanceirasController)).toBeInstanceOf(
+      CategoriasFinanceirasController,
+    );
   });
 });

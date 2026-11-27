@@ -78,6 +78,7 @@ describe('catálogo de permissões', () => {
       repasse: ['Financeiro', ['ver']],
       'pre-pago': ['Financeiro', ['ver']],
       contratos: ['Financeiro', crud],
+      'categorias-financeiras': ['Financeiro', crud],
       usuarios: ['Configurações', ['ver', 'criar', 'editar']],
       papeis: ['Configurações', crud],
       catalogo: ['Configurações', crud],
@@ -145,6 +146,7 @@ describe('catálogo de permissões', () => {
     ]);
     expect(especiais('pre-pago')).toEqual(['pre-pago.recarga.solicitar']);
     expect(especiais('contratos')).toEqual(['contratos.assinatura.enviar']);
+    expect(especiais('categorias-financeiras')).toEqual([]);
     expect(especiais('usuarios')).toEqual([
       'usuarios.desbloquear',
       'usuarios.desativar',

@@ -5,6 +5,7 @@ export * from './catalogo';
 export * from './distribuicao';
 export * from './escala';
 export * from './faturamento';
+export * from './financeiro';
 export * from './identidade';
 export * from './ingestao';
 export * from './medicos';
