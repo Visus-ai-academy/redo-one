@@ -20,6 +20,7 @@ import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as AppExamesRouteImport } from './routes/_app/exames'
 import { Route as AppImportacaoRouteImport } from './routes/_app/importacao'
 import { Route as AppMedicosRouteImport } from './routes/_app/medicos'
+import { Route as AppRepasseRouteImport } from './routes/_app/repasse'
 import { Route as AppConfiguracoesIndexRouteImport } from './routes/_app/configuracoes/index'
 import { Route as AppConfiguracoesAvisosRouteImport } from './routes/_app/configuracoes/avisos'
 import { Route as AppConfiguracoesCatalogoRouteImport } from './routes/_app/configuracoes/catalogo'
@@ -95,6 +96,11 @@ const AppImportacaoRoute = AppImportacaoRouteImport.update({
 const AppMedicosRoute = AppMedicosRouteImport.update({
   id: '/medicos',
   path: '/medicos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRepasseRoute = AppRepasseRouteImport.update({
+  id: '/repasse',
+  path: '/repasse',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConfiguracoesIndexRoute = AppConfiguracoesIndexRouteImport.update({
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/exames': typeof AppExamesRoute
   '/importacao': typeof AppImportacaoRoute
   '/medicos': typeof AppMedicosRoute
+  '/repasse': typeof AppRepasseRoute
   '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
   '/configuracoes/contratados': typeof AppConfiguracoesContratadosRoute
@@ -264,6 +271,7 @@ export interface FileRoutesByTo {
   '/exames': typeof AppExamesRoute
   '/importacao': typeof AppImportacaoRoute
   '/medicos': typeof AppMedicosRoute
+  '/repasse': typeof AppRepasseRoute
   '/': typeof AppIndexRoute
   '/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/_app/exames': typeof AppExamesRoute
   '/_app/importacao': typeof AppImportacaoRoute
   '/_app/medicos': typeof AppMedicosRoute
+  '/_app/repasse': typeof AppRepasseRoute
   '/_app/': typeof AppIndexRoute
   '/_app/configuracoes/avisos': typeof AppConfiguracoesAvisosRoute
   '/_app/configuracoes/catalogo': typeof AppConfiguracoesCatalogoRoute
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/exames'
     | '/importacao'
     | '/medicos'
+    | '/repasse'
     | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
     | '/configuracoes/contratados'
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/exames'
     | '/importacao'
     | '/medicos'
+    | '/repasse'
     | '/'
     | '/configuracoes/avisos'
     | '/configuracoes/catalogo'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/_app/exames'
     | '/_app/importacao'
     | '/_app/medicos'
+    | '/_app/repasse'
     | '/_app/'
     | '/_app/configuracoes/avisos'
     | '/_app/configuracoes/catalogo'
@@ -514,6 +526,13 @@ declare module '@tanstack/react-router' {
       path: '/medicos'
       fullPath: '/medicos'
       preLoaderRoute: typeof AppMedicosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/repasse': {
+      id: '/_app/repasse'
+      path: '/repasse'
+      fullPath: '/repasse'
+      preLoaderRoute: typeof AppRepasseRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/configuracoes/': {
@@ -680,6 +699,7 @@ interface AppRouteChildren {
   AppExamesRoute: typeof AppExamesRoute
   AppImportacaoRoute: typeof AppImportacaoRoute
   AppMedicosRoute: typeof AppMedicosRoute
+  AppRepasseRoute: typeof AppRepasseRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConfiguracoesAvisosRoute: typeof AppConfiguracoesAvisosRoute
   AppConfiguracoesCatalogoRoute: typeof AppConfiguracoesCatalogoRoute
@@ -712,6 +732,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExamesRoute: AppExamesRoute,
   AppImportacaoRoute: AppImportacaoRoute,
   AppMedicosRoute: AppMedicosRoute,
+  AppRepasseRoute: AppRepasseRoute,
   AppIndexRoute: AppIndexRoute,
   AppConfiguracoesAvisosRoute: AppConfiguracoesAvisosRoute,
   AppConfiguracoesCatalogoRoute: AppConfiguracoesCatalogoRoute,

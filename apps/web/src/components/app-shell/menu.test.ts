@@ -22,10 +22,11 @@ describe('GRUPOS_MENU', () => {
     ]);
   });
 
-  it('Financeiro tem Faturamento, que abre as competências e exige faturamento.ver', () => {
+  it('Financeiro tem Faturamento e Repasse, cada um com a permissão ver', () => {
     const financeiro = GRUPOS_MENU.find((g) => g.titulo === 'Financeiro');
     expect(financeiro?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Faturamento', '/faturamento/competencias', 'faturamento.ver'],
+      ['Repasse', '/repasse', 'repasse.ver'],
     ]);
   });
 });

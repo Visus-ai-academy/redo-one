@@ -12,6 +12,10 @@ export const PARAMETROS_DE_PAINEL = [
   'distribuir',
   'regra',
   'subregra',
+  // Repasse: o lançamento do adicional e a aba e a página dos laudos do detalhe.
+  'lancar',
+  'detalhe',
+  'paginaLaudos',
 ] as const;
 
 type Local = { pathname: string; search: object };

@@ -27,6 +27,20 @@ describe('soPainelMudou', () => {
     expect(soPainelMudou(local('/clientes'), local('/clientes', { novo: 1 }))).toBe(true);
   });
 
+  it('no repasse, abrir o lançamento e trocar a aba ou a página dos laudos do detalhe só muda o painel', () => {
+    const base = { competencia: '2026-11', id: 'd1' };
+    expect(soPainelMudou(local('/repasse', {}), local('/repasse', { lancar: 1 }))).toBe(true);
+    expect(
+      soPainelMudou(local('/repasse', base), local('/repasse', { ...base, detalhe: 'laudos' })),
+    ).toBe(true);
+    expect(
+      soPainelMudou(
+        local('/repasse', { ...base, detalhe: 'laudos' }),
+        local('/repasse', { ...base, detalhe: 'laudos', paginaLaudos: 2 }),
+      ),
+    ).toBe(true);
+  });
+
   it('trocar de página da lista não é só o painel', () => {
     expect(soPainelMudou(local('/medicos', { pagina: 1 }), local('/medicos', { pagina: 2 }))).toBe(
       false,

@@ -6,6 +6,7 @@ import {
   FileArrowUp,
   Flask,
   Gear,
+  HandCoins,
   type Icon,
   Receipt,
   Robot,
@@ -66,6 +67,7 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         icone: Receipt,
         permissao: 'faturamento.ver',
       },
+      { nome: 'Repasse', to: '/repasse', icone: HandCoins, permissao: 'repasse.ver' },
     ],
   },
 ];
