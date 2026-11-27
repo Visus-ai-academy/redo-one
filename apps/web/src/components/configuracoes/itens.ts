@@ -6,6 +6,7 @@ import {
   Certificate,
   CurrencyDollar,
   FileArrowUp,
+  HandCoins,
   type Icon,
   IdentificationBadge,
   Ranking,
@@ -164,6 +165,14 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
         icone: CurrencyDollar,
         to: '/configuracoes/tabela-padrao',
         permissao: 'faturamento.ver',
+      },
+      {
+        nome: 'Repasse',
+        descricao:
+          'Tarifas, vencimento, contratado do registro, reclassificações e alternativas de preço do repasse dos médicos',
+        icone: HandCoins,
+        to: '/configuracoes/repasse',
+        permissao: 'repasse.ver',
       },
     ],
   },
