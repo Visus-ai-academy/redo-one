@@ -37,6 +37,12 @@ function doAlvo(alvo: AlvoHistorico): SQL {
   const proprio = (entidade: string) => and(eq(e.entidade, entidade), eq(e.entidadeId, alvo.id));
   if (alvo.cadastro === 'cliente') return proprio('cliente') as SQL;
   if (alvo.cadastro === 'fornecedor') return proprio('fornecedor') as SQL;
+  if (alvo.cadastro === 'recorrencia') {
+    return and(
+      proprio('recorrencia'),
+      sql`exists (select 1 from recorrencias where recorrencias.id::text = ${e.entidadeId} and recorrencias.tipo = ${alvo.tipo})`,
+    ) as SQL;
+  }
   if (alvo.cadastro === 'titulo') {
     return and(
       proprio('titulo'),

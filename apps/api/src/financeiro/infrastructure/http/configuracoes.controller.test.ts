@@ -39,11 +39,12 @@ describe('controllers das regras financeiras e da inadimplência', () => {
       {} as ConsultarConfiguracoes,
       salvar as unknown as SalvarConfiguracao,
     );
-    await r.atualizar({ usuarioId: 'u1' } as PrincipalUsuario, 'e1', {
+    const corpo = {
       faixasInadimplencia: [1, 5],
-    });
-    expect(salvar.executar).toHaveBeenCalledWith({ usuarioId: 'u1' }, 'e1', {
-      faixasInadimplencia: [1, 5],
-    });
+      horizonteRecorrenciaMeses: 3,
+      ajusteDiaNaoUtil: 'posterga' as const,
+    };
+    await r.atualizar({ usuarioId: 'u1' } as PrincipalUsuario, 'e1', corpo);
+    expect(salvar.executar).toHaveBeenCalledWith({ usuarioId: 'u1' }, 'e1', corpo);
   });
 });

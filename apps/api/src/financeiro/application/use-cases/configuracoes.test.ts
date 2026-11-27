@@ -12,6 +12,11 @@ import {
 
 const relogio = { now: () => new Date('2026-11-27T15:00:00Z') };
 const ator = { usuarioId: 'u1' };
+const regras = {
+  faixasInadimplencia: [1, 6, 16, 31],
+  horizonteRecorrenciaMeses: 3,
+  ajusteDiaNaoUtil: 'antecipa' as const,
+};
 
 describe('configurações financeiras', () => {
   let empresas: EmpresasEmMemoria;
@@ -33,6 +38,8 @@ describe('configurações financeiras', () => {
         empresaId: 'tele',
         empresaNome: '001 TELEIMAGEM',
         faixasInadimplencia: [1, 6, 16, 31],
+        horizonteRecorrenciaMeses: 3,
+        ajusteDiaNaoUtil: 'posterga',
         padrao: true,
       },
     ]);
@@ -40,25 +47,23 @@ describe('configurações financeiras', () => {
 
   it('salva as faixas ordenadas e audita o que mudou; recusa empresa fora do financeiro', async () => {
     const salvar = new SalvarConfiguracao(empresas, configs, auditoria, relogio);
-    await salvar.executar(ator, 'tele', { faixasInadimplencia: [1, 31, 11] });
+    await salvar.executar(ator, 'tele', { ...regras, faixasInadimplencia: [1, 31, 11] });
 
-    expect(await configs.buscar('tele')).toEqual({ faixasInadimplencia: [1, 11, 31] });
+    expect(await configs.buscar('tele')).toEqual({ ...regras, faixasInadimplencia: [1, 11, 31] });
     expect(auditoria.eventos).toEqual([
       expect.objectContaining({
         entidade: 'configuracao_financeira',
         entidadeId: 'tele',
         acao: 'alterado',
-        antes: { faixasInadimplencia: [1, 6, 16, 31] },
-        depois: { faixasInadimplencia: [1, 11, 31] },
+        antes: { faixasInadimplencia: [1, 6, 16, 31], ajusteDiaNaoUtil: 'posterga' },
+        depois: { faixasInadimplencia: [1, 11, 31], ajusteDiaNaoUtil: 'antecipa' },
       }),
     ]);
-    await expect(salvar.executar(ator, 'rn', { faixasInadimplencia: [1, 5] })).rejects.toThrow(
-      DadosInvalidosError,
-    );
+    await expect(salvar.executar(ator, 'rn', { ...regras })).rejects.toThrow(DadosInvalidosError);
   });
 
   it('a inadimplência põe cada cliente na faixa da empresa dele e lista as faixas para o filtro', async () => {
-    await configs.salvar('tele', { faixasInadimplencia: [1, 11, 31] }, 'u1');
+    await configs.salvar('tele', { ...regras, faixasInadimplencia: [1, 11, 31] }, 'u1');
     let recebido: FiltroInadimplencia | undefined;
     const fonte: Inadimplencia = {
       listar: async (filtro) => {

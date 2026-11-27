@@ -6,7 +6,7 @@ import {
   type ConfiguracaoFinanceira,
   FAIXAS_PADRAO,
   faixaDoAtraso,
-  prepararFaixas,
+  prepararConfiguracao,
   rotuloDaFaixa,
 } from '../../domain/configuracao-financeira';
 import { hojeEmBrasilia } from '../../domain/dias';
@@ -65,9 +65,7 @@ export class SalvarConfiguracao {
     if (!(await this.empresas.usaFinanceiro(empresaId))) {
       exigirSemErros({ empresaId: 'Escolha uma empresa que usa o financeiro do One.' });
     }
-    const dados: ConfiguracaoFinanceira = {
-      faixasInadimplencia: prepararFaixas(entrada.faixasInadimplencia),
-    };
+    const dados = prepararConfiguracao(entrada);
     const antes = (await this.configs.buscar(empresaId)) ?? CONFIGURACAO_PADRAO;
     await this.configs.salvar(empresaId, dados, ator.usuarioId);
     await this.registro.alterado(ator, empresaId, antes, dados);

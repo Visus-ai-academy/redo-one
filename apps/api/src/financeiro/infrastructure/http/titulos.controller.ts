@@ -90,6 +90,7 @@ export function criarTitulosController(tipo: TipoTitulo): Type<unknown> {
           query.favorecidoTipo && query.favorecidoId
             ? { tipo: query.favorecidoTipo, id: query.favorecidoId }
             : undefined,
+        recorrenciaId: query.recorrenciaId,
         vencimentoDe: query.vencimentoDe,
         vencimentoAte: query.vencimentoAte,
         busca: query.busca,

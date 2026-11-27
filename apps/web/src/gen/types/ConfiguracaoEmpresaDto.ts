@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { AjusteDiaNaoUtilKey } from './AjusteDiaNaoUtil'
+
 export type ConfiguracaoEmpresaDto = {
   /**
    * @description
@@ -17,6 +19,18 @@ export type ConfiguracaoEmpresaDto = {
    * @type array
    */
   faixasInadimplencia: number[];
+  /**
+   * @description Quantos meses à frente as recorrências geram os títulos.
+   * @minimum 1
+   * @maximum 24
+   * @type integer
+   */
+  horizonteRecorrenciaMeses: number;
+  /**
+   * @description Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém.
+   * @type string
+   */
+  ajusteDiaNaoUtil: AjusteDiaNaoUtilKey;
   /**
    * @description A empresa ainda não gravou as suas: vale o padrão.
    * @type boolean

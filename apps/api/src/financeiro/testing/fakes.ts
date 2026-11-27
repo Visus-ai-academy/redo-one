@@ -18,6 +18,12 @@ import type {
   FornecedoresRepository,
 } from '../application/ports/fornecedores.repository';
 import type {
+  CamposRecorrencia,
+  FiltroRecorrencias,
+  Recorrencia,
+  RecorrenciasRepository,
+} from '../application/ports/recorrencias.repository';
+import type {
   EscritaTitulo,
   Favorecidos,
   FiltroTitulos,
@@ -32,7 +38,14 @@ import type { DadosCategoria, TipoCategoria } from '../domain/categoria-financei
 import type { ConfiguracaoFinanceira } from '../domain/configuracao-financeira';
 import type { DadosContaBancaria } from '../domain/conta-bancaria';
 import type { DadosFornecedor } from '../domain/fornecedor';
-import type { BaixaPreparada, Favorecido, TipoFavorecido, TipoTitulo } from '../domain/titulo';
+import type { DadosRecorrencia } from '../domain/recorrencia';
+import type {
+  BaixaPreparada,
+  DadosTitulo,
+  Favorecido,
+  TipoFavorecido,
+  TipoTitulo,
+} from '../domain/titulo';
 
 /** Fatia a página como o banco faria. */
 export function paginar<T>(itens: T[], filtro: { pagina: number; porPagina: number }) {
@@ -323,6 +336,7 @@ export class FavorecidosEmMemoria implements Favorecidos {
 }
 
 type LinhaTitulo = Omit<TituloTravado, 'baixas'> & {
+  ocorrencia: number | null;
   baixas: (BaixaPreparada & {
     id: string;
     criadoPorId: string;
@@ -373,6 +387,8 @@ export class TitulosEmMemoria implements TitulosRepository {
       situacao: l.situacao,
       origem: l.origem,
       contaPrevistaId: l.dados.contaPrevistaId,
+      recorrenciaId: l.recorrenciaId,
+      ocorrencia: l.ocorrencia,
     };
   }
 
@@ -391,6 +407,7 @@ export class TitulosEmMemoria implements TitulosRepository {
           (t.favorecido.tipo === filtro.favorecido.tipo &&
             t.favorecido.id === filtro.favorecido.id),
       )
+      .filter((t) => !filtro.recorrenciaId || t.recorrenciaId === filtro.recorrenciaId)
       .filter((t) => !filtro.vencimentoDe || t.vencimento >= filtro.vencimentoDe)
       .filter((t) => !filtro.vencimentoAte || t.vencimento <= filtro.vencimentoAte)
       .filter((t) => {
@@ -433,6 +450,10 @@ export class TitulosEmMemoria implements TitulosRepository {
       canceladoEm: l.canceladoEm,
       motivoCancelamento: l.motivoCancelamento,
       criadoEm: l.criadoEm,
+      editadoAMao: l.editadoAMao,
+      recorrencia: l.recorrenciaId
+        ? { id: l.recorrenciaId, descricao: l.dados.descricao, modoValor: 'fixo' }
+        : null,
       baixas: [...l.baixas].reverse().map((b) => ({
         id: b.id,
         pagoEm: b.pagoEm,
@@ -454,6 +475,14 @@ export class TitulosEmMemoria implements TitulosRepository {
     };
   }
 
+  /** Título que a recorrência gerou (o fake das recorrências chama). */
+  async criarDaRecorrencia(novo: NovoTitulo, recorrenciaId: string, ocorrencia: number) {
+    const criado = await this.criar(novo);
+    const linha = this.linhas.get(criado.id);
+    if (linha) Object.assign(linha, { origem: 'recorrencia', recorrenciaId, ocorrencia });
+    return criado;
+  }
+
   async criar(novo: NovoTitulo) {
     const chave = `${novo.dados.contratadoId}:${novo.tipo}`;
     const numero = (this.ultimos.get(chave) ?? 0) + 1;
@@ -464,6 +493,9 @@ export class TitulosEmMemoria implements TitulosRepository {
       tipo: novo.tipo,
       numero,
       origem: 'manual',
+      recorrenciaId: null,
+      ocorrencia: null,
+      editadoAMao: false,
       dados: structuredClone(novo.dados),
       contratadoId: novo.dados.contratadoId,
       situacao: 'aberto',
@@ -498,6 +530,7 @@ export class TitulosEmMemoria implements TitulosRepository {
           canceladoEm,
           canceladoPorId,
           motivoCancelamento,
+          editadoAMao,
           ...dados
         } = campos;
         Object.assign(copia.dados, dados);
@@ -511,6 +544,7 @@ export class TitulosEmMemoria implements TitulosRepository {
         if (canceladoEm !== undefined) copia.canceladoEm = canceladoEm;
         if (canceladoPorId !== undefined) copia.canceladoPorId = canceladoPorId;
         if (motivoCancelamento !== undefined) copia.motivoCancelamento = motivoCancelamento;
+        if (editadoAMao !== undefined) copia.editadoAMao = editadoAMao;
       },
       inserirBaixa: async (baixa) => {
         const baixaId = randomUUID();
@@ -562,5 +596,151 @@ export class ConfiguracoesEmMemoria implements ConfiguracoesFinanceiras {
 
   async salvar(contratadoId: string, dados: ConfiguracaoFinanceira, _porId?: string) {
     this.linhas.set(contratadoId, structuredClone(dados));
+  }
+}
+
+type LinhaRecorrencia = CamposRecorrencia & { id: string; tipo: TipoTitulo; criadoEm: Date };
+
+/** Recorrências em memória; os títulos gerados vão para o fake dos títulos. */
+export class RecorrenciasEmMemoria implements RecorrenciasRepository {
+  readonly linhas = new Map<string, LinhaRecorrencia>();
+
+  constructor(
+    private readonly titulos: TitulosEmMemoria,
+    private readonly favorecidos: FavorecidosEmMemoria,
+  ) {}
+
+  private gerados(id: string) {
+    return [...this.titulos.linhas.values()].filter((t) => t.recorrenciaId === id);
+  }
+
+  async listar(filtro: FiltroRecorrencias) {
+    const todas = [...this.linhas.values()]
+      .filter((r) => r.tipo === filtro.tipo)
+      .filter((r) => filtro.empresa === 'todas' || r.contratadoId === filtro.empresa.id)
+      .filter((r) => filtro.situacao === 'todas' || r.situacao === filtro.situacao)
+      .filter((r) => filtro.frequencia === 'todas' || r.frequencia === filtro.frequencia)
+      .filter(
+        (r) => !filtro.busca || r.descricao.toLowerCase().includes(filtro.busca.toLowerCase()),
+      );
+    const itens = todas.map((r) => ({
+      id: r.id,
+      tipo: r.tipo,
+      contratadoId: r.contratadoId,
+      empresaNome: '',
+      favorecido: {
+        ...r.favorecido,
+        nome: this.favorecidos.linhas.find((f) => f.id === r.favorecido.id)?.nome ?? '',
+      },
+      descricao: r.descricao,
+      valorCentavos: r.valorCentavos,
+      modoValor: r.modoValor,
+      frequencia: r.frequencia,
+      diaVencimento: r.diaVencimento,
+      termino: r.termino,
+      terminoEm: r.terminoEm,
+      terminoOcorrencias: r.terminoOcorrencias,
+      situacao: r.situacao,
+      encerradaEm: r.encerradaEm,
+      proximoVencimento:
+        this.gerados(r.id)
+          .filter((t) => t.situacao === 'aberto' && t.vencimento >= filtro.hoje)
+          .map((t) => t.vencimento)
+          .sort()[0] ?? null,
+    }));
+    return {
+      ...paginar(itens, filtro),
+      ativas: todas
+        .filter((r) => r.situacao === 'ativa')
+        .map((r) => ({ valorCentavos: r.valorCentavos, frequencia: r.frequencia })),
+    };
+  }
+
+  async buscar(id: string): Promise<Recorrencia | null> {
+    const r = this.linhas.get(id);
+    if (!r) return null;
+    return {
+      ...structuredClone(r),
+      empresaNome: '',
+      favorecidoNome: '',
+      categoriaNome: '',
+      contaPrevistaNome: null,
+      ocorrencias: this.gerados(id)
+        .map((t) => t.ocorrencia as number)
+        .sort((a, b) => a - b),
+    };
+  }
+
+  async criar(
+    tipo: TipoTitulo,
+    dados: DadosRecorrencia,
+    extras: { geraAPartirDe: string; criadoPorId: string },
+  ) {
+    const id = randomUUID();
+    this.linhas.set(id, {
+      ...structuredClone(dados),
+      id,
+      tipo,
+      situacao: 'ativa',
+      geraAPartirDe: extras.geraAPartirDe,
+      encerradaEm: null,
+      encerradaPorId: null,
+      motivoEncerramento: null,
+      criadoEm: new Date(),
+    });
+    return id;
+  }
+
+  async atualizar(id: string, campos: Partial<CamposRecorrencia>) {
+    const r = this.linhas.get(id);
+    if (r) Object.assign(r, structuredClone(campos));
+  }
+
+  async ativas() {
+    return [...this.linhas.values()].filter((r) => r.situacao === 'ativa').map((r) => r.id);
+  }
+
+  async gerarTitulos(
+    id: string,
+    tipo: TipoTitulo,
+    novos: { ocorrencia: number; dados: DadosTitulo }[],
+    criadoPorId: string | null,
+  ) {
+    const existentes = new Set(this.gerados(id).map((t) => t.ocorrencia));
+    const criados = [];
+    for (const n of novos.filter((x) => !existentes.has(x.ocorrencia))) {
+      const t = await this.titulos.criarDaRecorrencia(
+        { tipo, dados: n.dados, criadoPorId },
+        id,
+        n.ocorrencia,
+      );
+      criados.push({ ...t, ocorrencia: n.ocorrencia });
+    }
+    return criados;
+  }
+
+  async titulosAjustaveis(id: string) {
+    return this.gerados(id)
+      .filter((t) => t.situacao === 'aberto' && t.pagoCentavos === 0 && !t.editadoAMao)
+      .map((t) => ({
+        id: t.id,
+        numero: t.numero,
+        ocorrencia: t.ocorrencia as number,
+        dados: structuredClone(t.dados),
+      }));
+  }
+
+  async aplicarNosTitulos(mudancas: { tituloId: string; dados: DadosTitulo }[]) {
+    const feitos: string[] = [];
+    for (const m of mudancas) {
+      const t = this.titulos.linhas.get(m.tituloId);
+      if (t?.situacao !== 'aberto' || t.pagoCentavos !== 0 || t.editadoAMao) continue;
+      t.dados = structuredClone(m.dados);
+      t.valorCentavos = m.dados.valorCentavos;
+      t.vencimento = m.dados.vencimento;
+      t.emissaoEm = m.dados.emissaoEm;
+      feitos.push(t.id);
+    }
+    return feitos;
   }
 }

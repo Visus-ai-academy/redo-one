@@ -6,6 +6,7 @@
 import type { BaixaDoTituloDto } from './BaixaDoTituloDto'
 import type { FavorecidoNomeDto } from './FavorecidoNomeDto'
 import type { OrigemTituloKey } from './OrigemTitulo'
+import type { RecorrenciaDoTituloDto } from './RecorrenciaDoTituloDto'
 import type { SituacaoTituloKey } from './SituacaoTitulo'
 import type { TipoTituloKey } from './TipoTitulo'
 
@@ -75,6 +76,18 @@ export type TituloDetalheDto = {
    */
   contaPrevistaId: string | null;
   /**
+   * @description A recorrência que gerou.
+   *
+   * Format: `uuid`
+   * @type string
+   */
+  recorrenciaId: string | null;
+  /**
+   * @description A ocorrência (1ª, 2ª...) dela.
+   * @type integer
+   */
+  ocorrencia: number | null;
+  /**
    * @description Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo.
    * @type integer
    */
@@ -101,6 +114,12 @@ export type TituloDetalheDto = {
    * @type string
    */
   criadoEm: string;
+  recorrencia: RecorrenciaDoTituloDto | null;
+  /**
+   * @description Mudado à mão depois de gerado pela recorrência.
+   * @type boolean
+   */
+  editadoAMao: boolean;
   /**
    * @description Da mais nova para a mais antiga.
    * @type array

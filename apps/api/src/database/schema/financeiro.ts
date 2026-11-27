@@ -174,6 +174,7 @@ export const origemTitulo = pgEnum('origem_titulo', [
   'pre_pago',
   'repasse',
   'carga_omie',
+  'recorrencia',
 ]);
 export const formaBaixa = pgEnum('forma_baixa', [
   'pix',
@@ -184,6 +185,7 @@ export const formaBaixa = pgEnum('forma_baixa', [
   'outro',
 ]);
 export const origemBaixa = pgEnum('origem_baixa', ['manual', 'banco']);
+export const ajusteDiaNaoUtil = pgEnum('ajuste_dia_nao_util', ['antecipa', 'posterga', 'mantem']);
 
 /** Último número de título de cada empresa e tipo (R-0001, P-0001...). */
 export const titulosNumeracao = pgTable(
@@ -239,6 +241,11 @@ export const titulos = pgTable(
     origemId: uuid('origem_id'),
     origemVersao: integer('origem_versao'),
     observacoes: text('observacoes'),
+    /** A recorrência que gerou o título e a ocorrência (1ª, 2ª...) dela. */
+    recorrenciaId: uuid('recorrencia_id').references((): AnyPgColumn => recorrencias.id),
+    ocorrencia: integer('ocorrencia'),
+    /** Mudado à mão depois de gerado: a edição da recorrência não mexe mais nele. */
+    editadoAMao: boolean('editado_a_mao').notNull().default(false),
     canceladoEm: timestamp('cancelado_em', { withTimezone: true }),
     canceladoPorId: uuid('cancelado_por_id').references(() => usuarios.id),
     motivoCancelamento: text('motivo_cancelamento'),
@@ -259,6 +266,14 @@ export const titulos = pgTable(
     index('titulos_fornecedor_idx').on(t.fornecedorId),
     index('titulos_medico_idx').on(t.medicoId),
     index('titulos_categoria_idx').on(t.categoriaId),
+    // Cada ocorrência da recorrência gera um título só: deixa o job idempotente.
+    uniqueIndex('titulos_recorrencia_ocorrencia_key')
+      .on(t.recorrenciaId, t.ocorrencia)
+      .where(sql`${t.recorrenciaId} is not null`),
+    check(
+      'titulos_recorrencia_check',
+      sql`(${t.recorrenciaId} is null) = (${t.ocorrencia} is null)`,
+    ),
     check(
       'titulos_favorecido_check',
       sql`(${t.tipo} = 'receber' and ${t.clienteId} is not null and ${t.fornecedorId} is null and ${t.medicoId} is null) or (${t.tipo} = 'pagar' and ${t.clienteId} is null and num_nonnulls(${t.fornecedorId}, ${t.medicoId}) = 1)`,
@@ -328,6 +343,90 @@ export const configuracoesFinanceiras = pgTable('configuracoes_financeiras', {
     .references(() => contratados.id),
   /** Começo (em dias de atraso) de cada faixa, em ordem, a primeira no dia 1. */
   faixasInadimplencia: integer('faixas_inadimplencia').array().notNull(),
+  /** Quantos meses à frente as recorrências geram os títulos. */
+  horizonteRecorrenciaMeses: integer('horizonte_recorrencia_meses').notNull().default(3),
+  /** Vencimento em fim de semana ou feriado, nas recorrências que não escolhem o seu. */
+  ajusteDiaNaoUtil: ajusteDiaNaoUtil('ajuste_dia_nao_util').notNull().default('posterga'),
   atualizadoPorId: uuid('atualizado_por_id').references(() => usuarios.id),
   atualizadoEm: atualizadoEm(),
 });
+
+export const frequenciaRecorrencia = pgEnum('frequencia_recorrencia', [
+  'semanal',
+  'mensal',
+  'bimestral',
+  'trimestral',
+  'semestral',
+  'anual',
+]);
+export const terminoRecorrencia = pgEnum('termino_recorrencia', ['sem', 'data', 'ocorrencias']);
+export const modoValorRecorrencia = pgEnum('modo_valor_recorrencia', ['fixo', 'previsto']);
+export const situacaoRecorrencia = pgEnum('situacao_recorrencia', [
+  'ativa',
+  'pausada',
+  'encerrada',
+]);
+
+/**
+ * Conta recorrente (aluguel, contador, mensalidade de cliente): gera títulos independentes de
+ * tempos em tempos, até o horizonte das regras financeiras. Cada título guarda a ocorrência.
+ */
+export const recorrencias = pgTable(
+  'recorrencias',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tipo: tipoTitulo('tipo').notNull(),
+    contratadoId: uuid('contratado_id')
+      .notNull()
+      .references(() => contratados.id),
+    clienteId: uuid('cliente_id').references(() => clientes.id),
+    fornecedorId: uuid('fornecedor_id').references(() => fornecedores.id),
+    medicoId: uuid('medico_id').references(() => medicos.id),
+    categoriaId: uuid('categoria_id')
+      .notNull()
+      .references(() => categoriasFinanceiras.id),
+    descricao: text('descricao').notNull(),
+    valorCentavos: bigint('valor_centavos', { mode: 'number' }).notNull(),
+    modoValor: modoValorRecorrencia('modo_valor').notNull().default('fixo'),
+    frequencia: frequenciaRecorrencia('frequencia').notNull(),
+    /** Dia do mês (1 a 31); vazio na semanal. */
+    diaVencimento: integer('dia_vencimento'),
+    primeiroVencimento: date('primeiro_vencimento').notNull(),
+    /** Vazio = o padrão da empresa nas regras financeiras. */
+    ajusteDiaNaoUtil: ajusteDiaNaoUtil('ajuste_dia_nao_util'),
+    termino: terminoRecorrencia('termino').notNull().default('sem'),
+    terminoEm: date('termino_em'),
+    terminoOcorrencias: integer('termino_ocorrencias'),
+    contaPrevistaId: uuid('conta_prevista_id').references(() => contasBancarias.id),
+    observacoes: text('observacoes'),
+    situacao: situacaoRecorrencia('situacao').notNull().default('ativa'),
+    /** Gera só as ocorrências a partir deste dia (o primeiro vencimento; ao retomar, a retomada). */
+    geraAPartirDe: date('gera_a_partir_de').notNull(),
+    encerradaEm: timestamp('encerrada_em', { withTimezone: true }),
+    encerradaPorId: uuid('encerrada_por_id').references(() => usuarios.id),
+    motivoEncerramento: text('motivo_encerramento'),
+    criadoPorId: uuid('criado_por_id').references(() => usuarios.id),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    index('recorrencias_lista_idx').on(t.contratadoId, t.tipo, t.situacao),
+    index('recorrencias_tipo_situacao_idx').on(t.tipo, t.situacao),
+    index('recorrencias_cliente_idx').on(t.clienteId),
+    index('recorrencias_fornecedor_idx').on(t.fornecedorId),
+    index('recorrencias_medico_idx').on(t.medicoId),
+    check(
+      'recorrencias_favorecido_check',
+      sql`(${t.tipo} = 'receber' and ${t.clienteId} is not null and ${t.fornecedorId} is null and ${t.medicoId} is null) or (${t.tipo} = 'pagar' and ${t.clienteId} is null and num_nonnulls(${t.fornecedorId}, ${t.medicoId}) = 1)`,
+    ),
+    check('recorrencias_valor_check', sql`${t.valorCentavos} > 0`),
+    check(
+      'recorrencias_dia_check',
+      sql`(${t.frequencia} = 'semanal') = (${t.diaVencimento} is null) and coalesce(${t.diaVencimento} between 1 and 31, true)`,
+    ),
+    check(
+      'recorrencias_termino_check',
+      sql`(${t.termino} = 'data') = (${t.terminoEm} is not null) and (${t.termino} = 'ocorrencias') = (${t.terminoOcorrencias} is not null)`,
+    ),
+  ],
+);

@@ -57,12 +57,14 @@ describe('HistoricoCadastroService', () => {
     await service.doExame('x-1', pagina);
     await service.doFornecedor('f-1', pagina);
     await service.doTitulo('pagar', 't-1', pagina);
+    await service.doRecorrencia('receber', 'r-1', pagina);
 
     expect(repo.alvos).toEqual([
       { cadastro: 'cliente', id: 'c-1' },
       { cadastro: 'exame', id: 'x-1' },
       { cadastro: 'fornecedor', id: 'f-1' },
       { cadastro: 'titulo', tipo: 'pagar', id: 't-1' },
+      { cadastro: 'recorrencia', tipo: 'receber', id: 'r-1' },
     ]);
   });
 });

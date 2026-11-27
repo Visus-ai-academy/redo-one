@@ -9,6 +9,7 @@ export const origemTitulo = {
   pre_pago: 'pre_pago',
   repasse: 'repasse',
   carga_omie: 'carga_omie',
+  recorrencia: 'recorrencia',
 } as const;
 
 export type OrigemTituloKey = (typeof origemTitulo)[keyof typeof origemTitulo];

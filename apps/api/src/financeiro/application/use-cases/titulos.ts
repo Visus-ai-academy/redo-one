@@ -136,9 +136,12 @@ export class SalvarTitulo {
           'A empresa do título não muda. Cancele e lance de novo na outra empresa.',
         );
       }
+      // O título que a recorrência gerou, mudado à mão, sai do alcance da edição da recorrência.
+      const mudou = JSON.stringify(atual.dados) !== JSON.stringify(dados);
       await escrita.atualizar({
         ...dados,
         situacao: situacaoDo(dados.valorCentavos, atual.pagoCentavos),
+        editadoAMao: atual.editadoAMao || (Boolean(atual.recorrenciaId) && mudou),
       });
       return { antes: atual.dados, depois: dados };
     });
@@ -150,7 +153,10 @@ export class SalvarTitulo {
     const { antes, depois } = await this.repo.alterar(id, async (travado, escrita) => {
       const atual = exigirDoTipo(travado, tipo);
       const mudanca = prepararProrrogacao(atual, novo);
-      await escrita.atualizar(mudanca);
+      await escrita.atualizar({
+        ...mudanca,
+        editadoAMao: atual.editadoAMao || Boolean(atual.recorrenciaId),
+      });
       return { antes: { vencimento: atual.vencimento }, depois: mudanca };
     });
     await this.registro.registrar(ator, id, 'vencimento_prorrogado', antes, {

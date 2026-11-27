@@ -7,6 +7,7 @@ import * as z from 'zod'
 import { baixaDoTituloDtoSchema } from './baixaDoTituloDtoSchema'
 import { favorecidoNomeDtoSchema } from './favorecidoNomeDtoSchema'
 import { origemTituloSchema } from './origemTituloSchema'
+import { recorrenciaDoTituloDtoSchema } from './recorrenciaDoTituloDtoSchema'
 import { situacaoTituloSchema } from './situacaoTituloSchema'
 import { tipoTituloSchema } from './tipoTituloSchema'
 
@@ -29,6 +30,8 @@ export const tituloDetalheDtoSchema = z.object({
   situacao: situacaoTituloSchema,
   origem: origemTituloSchema,
   contaPrevistaId: z.uuid().nullable(),
+  recorrenciaId: z.uuid().nullable().describe('A recorrência que gerou.'),
+  ocorrencia: z.int().nullable().describe('A ocorrência (1ª, 2ª...) dela.'),
   diasDeAtraso: z.int().describe('Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo.'),
   contaPrevistaNome: z.string().nullable(),
   vencimentoOriginal: z.iso.date().nullable().describe('Antes da prorrogação.'),
@@ -36,6 +39,8 @@ export const tituloDetalheDtoSchema = z.object({
   canceladoEm: z.iso.datetime().nullable(),
   motivoCancelamento: z.string().nullable(),
   criadoEm: z.iso.datetime(),
+  recorrencia: recorrenciaDoTituloDtoSchema.nullable(),
+  editadoAMao: z.boolean().describe('Mudado à mão depois de gerado pela recorrência.'),
   baixas: z.array(baixaDoTituloDtoSchema).describe('Da mais nova para a mais antiga.'),
 })
 

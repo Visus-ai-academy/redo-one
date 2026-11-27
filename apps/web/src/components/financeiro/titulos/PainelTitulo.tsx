@@ -23,6 +23,7 @@ import { MenuDeAcoes } from '../../menu-acoes/MenuDeAcoes';
 import { Paginacao } from '../../paginacao/Paginacao';
 import { usePaginaLocal } from '../../paginacao/use-pagina-local';
 import { PainelLateral } from '../../painel/PainelLateral';
+import { RodapeDeAcoes } from '../../painel/RodapeDeAcoes';
 import { DialogoMotivo } from '../../repasse/DialogoMotivo';
 import { useAvisos } from '../../toast/use-avisos';
 import { DialogoBaixa } from './DialogoBaixa';
@@ -139,28 +140,29 @@ export function PainelTitulo({
           )}
           {aba === 'historico' && historico}
         </Abas>
-        <div className="mt-auto flex flex-wrap items-center gap-2 border-t p-4">
-          {pode.baixar && emAberto && (
-            <Button
-              type="button"
-              onClick={() => setDialogo({ tipo: 'baixa' })}
-              className={buttonClassName()}
-            >
-              Dar baixa
-            </Button>
-          )}
-          {pode.editar && emAberto && (
-            <Button
-              type="button"
-              onClick={onEditar}
-              className={buttonClassName({ variant: 'secondary' })}
-            >
-              Editar
-            </Button>
-          )}
-          <span className="ml-auto">
-            <MenuDeAcoes aria-label={`Mais ações do título ${numero}`} acoes={acoes} />
-          </span>
+        <div className="mt-auto border-t p-4">
+          <RodapeDeAcoes
+            inicio={<MenuDeAcoes aria-label={`Mais ações do título ${numero}`} acoes={acoes} />}
+          >
+            {pode.editar && emAberto && (
+              <Button
+                type="button"
+                onClick={onEditar}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Editar
+              </Button>
+            )}
+            {pode.baixar && emAberto && (
+              <Button
+                type="button"
+                onClick={() => setDialogo({ tipo: 'baixa' })}
+                className={buttonClassName()}
+              >
+                Dar baixa
+              </Button>
+            )}
+          </RodapeDeAcoes>
         </div>
       </div>
 

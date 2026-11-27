@@ -22,11 +22,17 @@ export const buscaTitulosSchema = z.object({
   ate: z.iso.date().optional().catch(undefined),
   categoria: z.uuid().optional().catch(undefined),
   origem: z
-    .enum(['manual', 'faturamento', 'pre_pago', 'repasse', 'carga_omie'])
+    .enum(['manual', 'faturamento', 'pre_pago', 'repasse', 'carga_omie', 'recorrencia'])
     .optional()
     .catch(undefined),
   /** Inadimplência: o começo (em dias) da faixa de atraso. */
   faixa: z.coerce.number().int().min(1).optional().catch(undefined),
+  /** Recorrentes: a situação e a frequência. */
+  situacaoRecorrencia: z.enum(['ativa', 'pausada', 'encerrada']).optional().catch(undefined),
+  frequencia: z
+    .enum(['semanal', 'mensal', 'bimestral', 'trimestral', 'semestral', 'anual'])
+    .optional()
+    .catch(undefined),
   favorecidoTipo: z.enum(['cliente', 'fornecedor', 'medico']).optional().catch(undefined),
   favorecidoId: z.uuid().optional().catch(undefined),
   /** Nome do favorecido filtrado (para o aviso acima da lista). */
@@ -79,5 +85,25 @@ export const consultaDaInadimplencia = (busca: BuscaTitulos) => ({
     busca: busca.busca,
     pagina: busca.pagina ?? 1,
     porPagina: POR_PAGINA_INADIMPLENCIA,
+  },
+});
+
+/** Situação da recorrência na etiqueta. */
+export const SITUACAO_RECORRENCIA: Record<string, { texto: string; tom: TomEtiqueta }> = {
+  ativa: { texto: 'Ativa', tom: 'sucesso' },
+  pausada: { texto: 'Pausada', tom: 'atencao' },
+  encerrada: { texto: 'Encerrada', tom: 'inativo' },
+};
+
+export const POR_PAGINA_RECORRENCIAS = 25;
+
+export const consultaDeRecorrencias = (busca: BuscaTitulos) => ({
+  query: {
+    empresa: busca.empresa ?? TODAS,
+    situacao: busca.situacaoRecorrencia ?? (TODAS as 'todas'),
+    frequencia: busca.frequencia ?? (TODAS as 'todas'),
+    busca: busca.busca,
+    pagina: busca.pagina ?? 1,
+    porPagina: POR_PAGINA_RECORRENCIAS,
   },
 });

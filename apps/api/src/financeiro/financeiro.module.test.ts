@@ -1,11 +1,14 @@
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { parseCrontab } from 'graphile-worker';
 import { describe, expect, it } from 'vitest';
 
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { ComumModule } from '../comum/comum.module';
+import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { DatabaseModule } from '../database/database.module';
 import { EMISSOR_NFSE } from './application/ports/emissor-nfse';
-import { FinanceiroModule } from './financeiro.module';
+import { FinanceiroModule, TAREFA_GERAR_RECORRENCIAS } from './financeiro.module';
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { FocusNfeEmissor } from './infrastructure/focus-nfe/focus-nfe-emissor';
 import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
@@ -15,6 +18,7 @@ import {
 } from './infrastructure/http/configuracoes.controller';
 import { ContasBancariasController } from './infrastructure/http/contas-bancarias.controller';
 import { FornecedoresController } from './infrastructure/http/fornecedores.controller';
+import { ContasPagarRecorrenciasController } from './infrastructure/http/recorrencias.controller';
 import {
   ContasPagarTitulosController,
   ContasReceberTitulosController,
@@ -54,9 +58,17 @@ describe('FinanceiroModule', () => {
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
         DatabaseModule,
         AuditoriaModule,
+        ComumModule,
         FinanceiroModule,
       ],
     }).compile();
+    await modulo.init();
+    // A geração das recorrências roda todo dia pela fila, com crontab válido.
+    expect(Object.keys(modulo.get(RegistroTarefas).listar())).toContain(TAREFA_GERAR_RECORRENCIAS);
+    expect(modulo.get(RegistroTarefas).agenda()).toContain(
+      `0 5 * * * ${TAREFA_GERAR_RECORRENCIAS}`,
+    );
+    expect(() => parseCrontab(modulo.get(RegistroTarefas).agenda())).not.toThrow();
     expect(modulo.get(EMISSOR_NFSE)).toBeInstanceOf(SimuladorEmissorNfse);
     expect(modulo.get(CategoriasFinanceirasController)).toBeInstanceOf(
       CategoriasFinanceirasController,
@@ -71,5 +83,9 @@ describe('FinanceiroModule', () => {
     expect(modulo.get(ConfiguracoesFinanceirasController)).toBeInstanceOf(
       ConfiguracoesFinanceirasController,
     );
+    expect(modulo.get(ContasPagarRecorrenciasController)).toBeInstanceOf(
+      ContasPagarRecorrenciasController,
+    );
+    await modulo.close();
   });
 });

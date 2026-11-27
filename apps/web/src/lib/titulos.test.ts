@@ -4,10 +4,12 @@ import {
   diaDeHoje,
   etiquetaDaSituacao,
   faixasDoTexto,
+  frequenciaPorExtenso,
   numeroDoTitulo,
   periodoDoVencimento,
   rotulosDasFaixas,
   somarDias,
+  terminoPorExtenso,
 } from './titulos';
 
 describe('títulos', () => {
@@ -72,5 +74,21 @@ describe('faixas da inadimplência', () => {
     expect(faixasDoTexto('16, 1; 6 31')).toEqual([1, 6, 16, 31]);
     expect(faixasDoTexto('1, seis')).toBeNull();
     expect(faixasDoTexto('  ')).toBeNull();
+  });
+});
+
+describe('recorrências', () => {
+  it('frequência e término por extenso', () => {
+    expect(frequenciaPorExtenso('mensal', 5)).toBe('Mensal, dia 5');
+    expect(frequenciaPorExtenso('semanal', null)).toBe('Semanal');
+    expect(terminoPorExtenso({ termino: 'sem', terminoEm: null, terminoOcorrencias: null })).toBe(
+      'Sem término',
+    );
+    expect(
+      terminoPorExtenso({ termino: 'data', terminoEm: '2027-12-10', terminoOcorrencias: null }),
+    ).toBe('Até 10/12/2027');
+    expect(
+      terminoPorExtenso({ termino: 'ocorrencias', terminoEm: null, terminoOcorrencias: 3 }),
+    ).toBe('Após 3 vencimentos');
   });
 });

@@ -13,6 +13,12 @@ import {
   DrizzleInadimplencia,
 } from './drizzle-configuracoes-financeiras';
 
+const regras = {
+  faixasInadimplencia: [1, 6, 16, 31],
+  horizonteRecorrenciaMeses: 3,
+  ajusteDiaNaoUtil: 'posterga' as const,
+};
+
 // Roda contra um Postgres de verdade. Sem TEST_DATABASE_URL, aparece como "skipped".
 const url = process.env.TEST_DATABASE_URL;
 
@@ -95,9 +101,17 @@ describe.skipIf(!url)('DrizzleConfiguracoesFinanceiras e DrizzleInadimplencia', 
 
   it('grava e regrava as faixas da empresa; sem linha, nada', async () => {
     expect(await configs.buscar(tele)).toBeNull();
-    await configs.salvar(tele, { faixasInadimplencia: [1, 11, 31] }, null as unknown as string);
-    await configs.salvar(tele, { faixasInadimplencia: [1, 31] }, null as unknown as string);
-    expect(await configs.buscar(tele)).toEqual({ faixasInadimplencia: [1, 31] });
+    await configs.salvar(
+      tele,
+      { ...regras, faixasInadimplencia: [1, 11, 31] },
+      null as unknown as string,
+    );
+    await configs.salvar(
+      tele,
+      { ...regras, faixasInadimplencia: [1, 31] },
+      null as unknown as string,
+    );
+    expect(await configs.buscar(tele)).toEqual({ ...regras, faixasInadimplencia: [1, 31] });
   });
 
   it('soma por cliente e empresa só o saldo vencido, do maior atraso ao menor, com a faixa da empresa', async () => {
@@ -108,7 +122,7 @@ describe.skipIf(!url)('DrizzleConfiguracoesFinanceiras e DrizzleInadimplencia', 
     await titulo(tele, hcl, '2026-12-10', 999_999); // não venceu
     await titulo(tele, hcl, '2026-10-01', 50_000, { situacao: 'cancelado' });
     await titulo(rn, prn, '2026-11-24', 120_000);
-    await configs.salvar(rn, { faixasInadimplencia: [1, 3] }, null as unknown as string);
+    await configs.salvar(rn, { ...regras, faixasInadimplencia: [1, 3] }, null as unknown as string);
 
     const r = await inadimplencia.listar(filtro());
     expect(r.total).toBe(2);

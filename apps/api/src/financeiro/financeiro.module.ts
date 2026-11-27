@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { AUDITORIA, type Auditoria } from '../auditoria/auditoria';
+import { RegistroTarefas } from '../comum/jobs/registro-tarefas';
 import { CLOCK, type Clock, systemClock } from '../identidade/clock';
 import {
   CATEGORIAS_REPOSITORY,
@@ -23,6 +24,10 @@ import {
   FORNECEDORES_REPOSITORY,
   type FornecedoresRepository,
 } from './application/ports/fornecedores.repository';
+import {
+  RECORRENCIAS_REPOSITORY,
+  type RecorrenciasRepository,
+} from './application/ports/recorrencias.repository';
 import {
   FAVORECIDOS,
   type Favorecidos,
@@ -52,6 +57,12 @@ import {
   SalvarFornecedor,
 } from './application/use-cases/fornecedores';
 import {
+  AcoesRecorrencia,
+  ConsultarRecorrencias,
+  GerarTitulosDaRecorrencia,
+  SalvarRecorrencia,
+} from './application/use-cases/recorrencias';
+import {
   BaixasTitulo,
   CancelarTitulo,
   ConsultarTitulos,
@@ -71,6 +82,10 @@ import {
 } from './infrastructure/http/contas-bancarias.controller';
 import { FornecedoresController } from './infrastructure/http/fornecedores.controller';
 import {
+  ContasPagarRecorrenciasController,
+  ContasReceberRecorrenciasController,
+} from './infrastructure/http/recorrencias.controller';
+import {
   ContasPagarTitulosController,
   ContasReceberTitulosController,
 } from './infrastructure/http/titulos.controller';
@@ -83,8 +98,12 @@ import { DrizzleContasBancariasRepository } from './infrastructure/persistence/d
 import { DrizzleEmpresas } from './infrastructure/persistence/drizzle-empresas';
 import { DrizzleFavorecidos } from './infrastructure/persistence/drizzle-favorecidos';
 import { DrizzleFornecedoresRepository } from './infrastructure/persistence/drizzle-fornecedores.repository';
+import { DrizzleRecorrenciasRepository } from './infrastructure/persistence/drizzle-recorrencias.repository';
 import { DrizzleTitulosRepository } from './infrastructure/persistence/drizzle-titulos.repository';
 import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
+
+/** Gera os títulos das recorrências ativas até o horizonte das regras de cada empresa. */
+export const TAREFA_GERAR_RECORRENCIAS = 'financeiro:gerar-recorrencias';
 
 /**
  * Contexto financeiro: plano de categorias, contas bancárias, fornecedores, títulos a pagar e a
@@ -101,6 +120,8 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
     ContasReceberTitulosController,
     InadimplenciaController,
     ConfiguracoesFinanceirasController,
+    ContasPagarRecorrenciasController,
+    ContasReceberRecorrenciasController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -265,7 +286,74 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
         clock: Clock,
       ) => new ConsultarInadimplencia(fonte, empresas, configs, clock),
     },
+    { provide: RECORRENCIAS_REPOSITORY, useClass: DrizzleRecorrenciasRepository },
+    {
+      provide: GerarTitulosDaRecorrencia,
+      inject: [RECORRENCIAS_REPOSITORY, CONFIGURACOES_FINANCEIRAS, AUDITORIA, CLOCK],
+      useFactory: (
+        repo: RecorrenciasRepository,
+        configs: ConfiguracoesFinanceiras,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new GerarTitulosDaRecorrencia(repo, configs, auditoria, clock),
+    },
+    {
+      provide: ConsultarRecorrencias,
+      inject: [RECORRENCIAS_REPOSITORY, CONFIGURACOES_FINANCEIRAS, CLOCK],
+      useFactory: (repo: RecorrenciasRepository, configs: ConfiguracoesFinanceiras, clock: Clock) =>
+        new ConsultarRecorrencias(repo, configs, clock),
+    },
+    {
+      provide: SalvarRecorrencia,
+      inject: [
+        RECORRENCIAS_REPOSITORY,
+        ContextoDoTitulo,
+        CONFIGURACOES_FINANCEIRAS,
+        GerarTitulosDaRecorrencia,
+        AUDITORIA,
+        CLOCK,
+      ],
+      useFactory: (
+        repo: RecorrenciasRepository,
+        contexto: ContextoDoTitulo,
+        configs: ConfiguracoesFinanceiras,
+        gerador: GerarTitulosDaRecorrencia,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new SalvarRecorrencia(repo, contexto, configs, gerador, auditoria, clock),
+    },
+    {
+      provide: AcoesRecorrencia,
+      inject: [
+        RECORRENCIAS_REPOSITORY,
+        CONFIGURACOES_FINANCEIRAS,
+        GerarTitulosDaRecorrencia,
+        AUDITORIA,
+        CLOCK,
+      ],
+      useFactory: (
+        repo: RecorrenciasRepository,
+        configs: ConfiguracoesFinanceiras,
+        gerador: GerarTitulosDaRecorrencia,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new AcoesRecorrencia(repo, configs, gerador, auditoria, clock),
+    },
   ],
   exports: [EMISSOR_NFSE],
 })
-export class FinanceiroModule {}
+export class FinanceiroModule implements OnModuleInit {
+  constructor(
+    private readonly registro: RegistroTarefas,
+    private readonly gerador: GerarTitulosDaRecorrencia,
+  ) {}
+
+  onModuleInit() {
+    this.registro.registrar(TAREFA_GERAR_RECORRENCIAS, async () => {
+      await this.gerador.todas();
+    });
+    // Todo dia às 05:00 no fuso do servidor (em UTC, 02:00 em Brasília), fora do horário de uso.
+    // Idempotente: cada ocorrência tem um título só.
+    this.registro.agendar(TAREFA_GERAR_RECORRENCIAS, '0 5 * * *');
+  }
+}

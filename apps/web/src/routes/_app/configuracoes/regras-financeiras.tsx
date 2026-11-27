@@ -97,7 +97,7 @@ function Regras() {
               Só aparecem as empresas que usam o financeiro do One.
             </span>
           </div>
-          <Painel titulo="Inadimplência">
+          <Painel titulo="Padrão da empresa">
             <FormRegrasFinanceiras
               key={atual.empresaId}
               configuracao={atual}

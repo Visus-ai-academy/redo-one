@@ -12333,6 +12333,16 @@
             }
           },
           {
+            "name": "recorrenciaId",
+            "required": false,
+            "in": "query",
+            "description": "Só os títulos que esta recorrência gerou.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "vencimentoDe",
             "required": false,
             "in": "query",
@@ -12785,6 +12795,16 @@
             "name": "favorecidoId",
             "required": false,
             "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "recorrenciaId",
+            "required": false,
+            "in": "query",
+            "description": "Só os títulos que esta recorrência gerou.",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -13286,6 +13306,826 @@
             "description": "Faixas inválidas ou empresa fora do financeiro."
           }
         },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias": {
+      "get": {
+        "operationId": "ContasPagarRecorrenciasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte da descrição ou do nome do favorecido.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa",
+            "required": true,
+            "in": "query",
+            "description": "Id da empresa ou `todas` (escolha explícita).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltroRecorrencia"
+            }
+          },
+          {
+            "name": "frequencia",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/FrequenciaFiltroRecorrencia"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRecorrenciasDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Recorrências, ativas primeiro, com o previsto por mês das ativas.",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "ContasPagarRecorrenciasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecorrenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaCriadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          }
+        },
+        "summary": "Cria a recorrência e gera os títulos até o horizonte.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/previa": {
+      "post": {
+        "operationId": "ContasPagarRecorrenciasController_previa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaRecorrenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaRecorrenciaDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Os vencimentos que a recorrência geraria agora.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}": {
+      "get": {
+        "operationId": "ContasPagarRecorrenciasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "A recorrência, com o ajuste que vale e o próximo a gerar.",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "ContasPagarRecorrenciasController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditarRecorrenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaEditadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Recorrência encerrada."
+          }
+        },
+        "summary": "Edita a recorrência; com `aplicarAosGerados`, os ajustáveis também.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}/titulos-ajustaveis": {
+      "get": {
+        "operationId": "ContasPagarRecorrenciasController_ajustaveis",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TituloAjustavelDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "Títulos gerados em aberto, sem baixa e não editados à mão: os que a edição pode mudar.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}/pausa": {
+      "post": {
+        "operationId": "ContasPagarRecorrenciasController_pausar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está ativa."
+          }
+        },
+        "summary": "Pausa: não gera enquanto estiver pausada.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}/retomada": {
+      "post": {
+        "operationId": "ContasPagarRecorrenciasController_retomar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaRetomadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está pausada."
+          }
+        },
+        "summary": "Retoma a partir de hoje (o que venceu na pausa não é gerado).",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}/encerramento": {
+      "post": {
+        "operationId": "ContasPagarRecorrenciasController_encerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Motivo faltando."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já encerrada."
+          }
+        },
+        "summary": "Encerra com motivo; os títulos em aberto ficam.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}/proximo": {
+      "post": {
+        "operationId": "ContasPagarRecorrenciasController_gerarProximo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "O id do título gerado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está ativa ou já gerou tudo do término."
+          }
+        },
+        "summary": "Gera o próximo título agora, mesmo além do horizonte.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias": {
+      "get": {
+        "operationId": "ContasReceberRecorrenciasController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte da descrição ou do nome do favorecido.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa",
+            "required": true,
+            "in": "query",
+            "description": "Id da empresa ou `todas` (escolha explícita).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltroRecorrencia"
+            }
+          },
+          {
+            "name": "frequencia",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/FrequenciaFiltroRecorrencia"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRecorrenciasDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Recorrências, ativas primeiro, com o previsto por mês das ativas.",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "ContasReceberRecorrenciasController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecorrenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaCriadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          }
+        },
+        "summary": "Cria a recorrência e gera os títulos até o horizonte.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/previa": {
+      "post": {
+        "operationId": "ContasReceberRecorrenciasController_previa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaRecorrenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaRecorrenciaDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Os vencimentos que a recorrência geraria agora.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}": {
+      "get": {
+        "operationId": "ContasReceberRecorrenciasController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "A recorrência, com o ajuste que vale e o próximo a gerar.",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "ContasReceberRecorrenciasController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditarRecorrenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaEditadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Recorrência encerrada."
+          }
+        },
+        "summary": "Edita a recorrência; com `aplicarAosGerados`, os ajustáveis também.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}/titulos-ajustaveis": {
+      "get": {
+        "operationId": "ContasReceberRecorrenciasController_ajustaveis",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TituloAjustavelDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "Títulos gerados em aberto, sem baixa e não editados à mão: os que a edição pode mudar.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}/pausa": {
+      "post": {
+        "operationId": "ContasReceberRecorrenciasController_pausar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está ativa."
+          }
+        },
+        "summary": "Pausa: não gera enquanto estiver pausada.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}/retomada": {
+      "post": {
+        "operationId": "ContasReceberRecorrenciasController_retomar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecorrenciaRetomadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está pausada."
+          }
+        },
+        "summary": "Retoma a partir de hoje (o que venceu na pausa não é gerado).",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}/encerramento": {
+      "post": {
+        "operationId": "ContasReceberRecorrenciasController_encerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Motivo faltando."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Já encerrada."
+          }
+        },
+        "summary": "Encerra com motivo; os títulos em aberto ficam.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}/proximo": {
+      "post": {
+        "operationId": "ContasReceberRecorrenciasController_gerarProximo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "O id do título gerado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Não está ativa ou já gerou tudo do término."
+          }
+        },
+        "summary": "Gera o próximo título agora, mesmo além do horizonte.",
         "tags": [
           "financeiro"
         ]
@@ -15414,6 +16254,108 @@
         "responses": {
           "200": {
             "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga. Edição, baixas, estornos, prorrogação e cancelamento do título.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaHistoricoCadastroDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "historico"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/recorrencias/{id}/historico": {
+      "get": {
+        "operationId": "HistoricoCadastroController_doRecorrenciaPagar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaHistoricoCadastroDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "historico"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/recorrencias/{id}/historico": {
+      "get": {
+        "operationId": "HistoricoCadastroController_doRecorrenciaReceber",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga.",
             "content": {
               "application/json": {
                 "schema": {
@@ -29367,7 +30309,8 @@
           "faturamento",
           "pre_pago",
           "repasse",
-          "carga_omie"
+          "carga_omie",
+          "recorrencia"
         ]
       },
       "TipoFavorecido": {
@@ -29425,7 +30368,8 @@
           "faturamento",
           "pre_pago",
           "repasse",
-          "carga_omie"
+          "carga_omie",
+          "recorrencia"
         ]
       },
       "TituloItemDto": {
@@ -29510,6 +30454,17 @@
             "format": "uuid",
             "nullable": true
           },
+          "recorrenciaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "A recorrência que gerou."
+          },
+          "ocorrencia": {
+            "type": "integer",
+            "nullable": true,
+            "description": "A ocorrência (1ª, 2ª...) dela."
+          },
           "diasDeAtraso": {
             "type": "integer",
             "description": "Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo."
@@ -29534,6 +30489,8 @@
           "situacao",
           "origem",
           "contaPrevistaId",
+          "recorrenciaId",
+          "ocorrencia",
           "diasDeAtraso"
         ]
       },
@@ -29619,6 +30576,37 @@
           "nome",
           "detalhe",
           "categoriaPadraoId"
+        ]
+      },
+      "ModoValorRecorrencia": {
+        "type": "string",
+        "enum": [
+          "fixo",
+          "previsto"
+        ]
+      },
+      "RecorrenciaDoTituloDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "modoValor": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoValorRecorrencia"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "descricao",
+          "modoValor"
         ]
       },
       "FormaBaixa": {
@@ -29799,6 +30787,17 @@
             "format": "uuid",
             "nullable": true
           },
+          "recorrenciaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "A recorrência que gerou."
+          },
+          "ocorrencia": {
+            "type": "integer",
+            "nullable": true,
+            "description": "A ocorrência (1ª, 2ª...) dela."
+          },
           "diasDeAtraso": {
             "type": "integer",
             "description": "Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo."
@@ -29830,6 +30829,19 @@
             "format": "date-time",
             "type": "string"
           },
+          "recorrencia": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecorrenciaDoTituloDto"
+              }
+            ]
+          },
+          "editadoAMao": {
+            "type": "boolean",
+            "description": "Mudado à mão depois de gerado pela recorrência."
+          },
           "baixas": {
             "description": "Da mais nova para a mais antiga.",
             "type": "array",
@@ -29857,6 +30869,8 @@
           "situacao",
           "origem",
           "contaPrevistaId",
+          "recorrenciaId",
+          "ocorrencia",
           "diasDeAtraso",
           "contaPrevistaNome",
           "vencimentoOriginal",
@@ -29864,6 +30878,8 @@
           "canceladoEm",
           "motivoCancelamento",
           "criadoEm",
+          "recorrencia",
+          "editadoAMao",
           "baixas"
         ]
       },
@@ -30160,6 +31176,15 @@
           "faixas"
         ]
       },
+      "AjusteDiaNaoUtil": {
+        "type": "string",
+        "enum": [
+          "antecipa",
+          "posterga",
+          "mantem"
+        ],
+        "description": "Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém."
+      },
       "ConfiguracaoEmpresaDto": {
         "type": "object",
         "properties": {
@@ -30183,6 +31208,20 @@
               "type": "integer"
             }
           },
+          "horizonteRecorrenciaMeses": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "description": "Quantos meses à frente as recorrências geram os títulos."
+          },
+          "ajusteDiaNaoUtil": {
+            "description": "Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          },
           "padrao": {
             "type": "boolean",
             "description": "A empresa ainda não gravou as suas: vale o padrão."
@@ -30192,6 +31231,8 @@
           "empresaId",
           "empresaNome",
           "faixasInadimplencia",
+          "horizonteRecorrenciaMeses",
+          "ajusteDiaNaoUtil",
           "padrao"
         ]
       },
@@ -30210,10 +31251,771 @@
             "items": {
               "type": "integer"
             }
+          },
+          "horizonteRecorrenciaMeses": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "description": "Quantos meses à frente as recorrências geram os títulos."
+          },
+          "ajusteDiaNaoUtil": {
+            "description": "Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
           }
         },
         "required": [
-          "faixasInadimplencia"
+          "faixasInadimplencia",
+          "horizonteRecorrenciaMeses",
+          "ajusteDiaNaoUtil"
+        ]
+      },
+      "SituacaoFiltroRecorrencia": {
+        "type": "string",
+        "enum": [
+          "todas",
+          "ativa",
+          "pausada",
+          "encerrada"
+        ]
+      },
+      "FrequenciaFiltroRecorrencia": {
+        "type": "string",
+        "enum": [
+          "todas",
+          "semanal",
+          "mensal",
+          "bimestral",
+          "trimestral",
+          "semestral",
+          "anual"
+        ]
+      },
+      "FrequenciaRecorrencia": {
+        "type": "string",
+        "enum": [
+          "semanal",
+          "mensal",
+          "bimestral",
+          "trimestral",
+          "semestral",
+          "anual"
+        ]
+      },
+      "TerminoRecorrencia": {
+        "type": "string",
+        "enum": [
+          "sem",
+          "data",
+          "ocorrencias"
+        ],
+        "description": "`sem` término, até a `data` ou após N `ocorrencias`."
+      },
+      "SituacaoRecorrencia": {
+        "type": "string",
+        "enum": [
+          "ativa",
+          "pausada",
+          "encerrada"
+        ]
+      },
+      "RecorrenciaItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoTitulo"
+              }
+            ]
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "favorecido": {
+            "$ref": "#/components/schemas/FavorecidoNomeDto"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "modoValor": {
+            "description": "`previsto`: muda todo mês; o título nasce com o previsto e o financeiro confere.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoValorRecorrencia"
+              }
+            ]
+          },
+          "frequencia": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FrequenciaRecorrencia"
+              }
+            ]
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "nullable": true
+          },
+          "termino": {
+            "description": "`sem` término, até a `data` ou após N `ocorrencias`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TerminoRecorrencia"
+              }
+            ]
+          },
+          "terminoEm": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "terminoOcorrencias": {
+            "type": "integer",
+            "nullable": true
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoRecorrencia"
+              }
+            ]
+          },
+          "encerradaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "proximoVencimento": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "O primeiro título gerado em aberto, de hoje em diante."
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "contratadoId",
+          "empresaNome",
+          "favorecido",
+          "descricao",
+          "valorCentavos",
+          "modoValor",
+          "frequencia",
+          "diaVencimento",
+          "termino",
+          "terminoEm",
+          "terminoOcorrencias",
+          "situacao",
+          "encerradaEm",
+          "proximoVencimento"
+        ]
+      },
+      "PaginaRecorrenciasDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecorrenciaItemDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          },
+          "previstoMensalCentavos": {
+            "type": "integer",
+            "description": "Quanto as ativas que o filtro pega pesam por mês (a semanal vale 52/12)."
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina",
+          "previstoMensalCentavos"
+        ]
+      },
+      "AgendaRecorrenciaDto": {
+        "type": "object",
+        "properties": {
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A empresa (contratado que usa o financeiro)."
+          },
+          "frequencia": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FrequenciaRecorrencia"
+              }
+            ]
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Dia do mês (1 a 31); vazio na semanal. Dia que não existe vira o último dia."
+          },
+          "primeiroVencimento": {
+            "type": "string",
+            "format": "date",
+            "description": "O vencimento da 1ª ocorrência."
+          },
+          "ajusteDiaNaoUtil": {
+            "description": "Vazio = o padrão da empresa.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          },
+          "termino": {
+            "description": "`sem` término, até a `data` ou após N `ocorrencias`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TerminoRecorrencia"
+              }
+            ]
+          },
+          "terminoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Com término `data`.",
+            "nullable": true
+          },
+          "terminoOcorrencias": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Com término `ocorrencias`."
+          }
+        },
+        "required": [
+          "contratadoId",
+          "frequencia",
+          "primeiroVencimento",
+          "termino"
+        ]
+      },
+      "PreviaRecorrenciaDto": {
+        "type": "object",
+        "properties": {
+          "vencimentos": {
+            "description": "Os vencimentos que sairiam agora, já ajustados.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "horizonteMeses": {
+            "type": "integer"
+          },
+          "ajustePadrao": {
+            "description": "Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          }
+        },
+        "required": [
+          "vencimentos",
+          "horizonteMeses",
+          "ajustePadrao"
+        ]
+      },
+      "ProximoAGerarDto": {
+        "type": "object",
+        "properties": {
+          "vencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "geradoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Quando o job diário gera (o horizonte)."
+          }
+        },
+        "required": [
+          "vencimento",
+          "geradoEm"
+        ]
+      },
+      "RecorrenciaDetalheDto": {
+        "type": "object",
+        "properties": {
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A empresa (contratado que usa o financeiro)."
+          },
+          "frequencia": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FrequenciaRecorrencia"
+              }
+            ]
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Dia do mês (1 a 31); vazio na semanal. Dia que não existe vira o último dia."
+          },
+          "primeiroVencimento": {
+            "type": "string",
+            "format": "date",
+            "description": "O vencimento da 1ª ocorrência."
+          },
+          "ajusteDiaNaoUtil": {
+            "description": "Vazio = o padrão da empresa.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          },
+          "termino": {
+            "description": "`sem` término, até a `data` ou após N `ocorrencias`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TerminoRecorrencia"
+              }
+            ]
+          },
+          "terminoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Com término `data`.",
+            "nullable": true
+          },
+          "terminoOcorrencias": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Com término `ocorrencias`."
+          },
+          "favorecido": {
+            "$ref": "#/components/schemas/FavorecidoDto"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Aluguel da sala comercial",
+            "maxLength": 200
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Em centavos, maior que zero."
+          },
+          "modoValor": {
+            "description": "`previsto`: muda todo mês; o título nasce com o previsto e o financeiro confere.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoValorRecorrencia"
+              }
+            ]
+          },
+          "contaPrevistaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoTitulo"
+              }
+            ]
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoRecorrencia"
+              }
+            ]
+          },
+          "geraAPartirDe": {
+            "type": "string",
+            "format": "date"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "favorecidoNome": {
+            "type": "string"
+          },
+          "categoriaNome": {
+            "type": "string"
+          },
+          "contaPrevistaNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "motivoEncerramento": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "ocorrencias": {
+            "description": "As ocorrências que já têm título.",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ajusteEfetivo": {
+            "description": "O ajuste que vale (o dela ou o da empresa).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          },
+          "horizonteMeses": {
+            "type": "integer"
+          },
+          "proximoAGerar": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProximoAGerarDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contratadoId",
+          "frequencia",
+          "primeiroVencimento",
+          "termino",
+          "favorecido",
+          "categoriaId",
+          "descricao",
+          "valorCentavos",
+          "modoValor",
+          "id",
+          "tipo",
+          "situacao",
+          "geraAPartirDe",
+          "empresaNome",
+          "favorecidoNome",
+          "categoriaNome",
+          "contaPrevistaNome",
+          "encerradaEm",
+          "motivoEncerramento",
+          "criadoEm",
+          "ocorrencias",
+          "ajusteEfetivo",
+          "horizonteMeses",
+          "proximoAGerar"
+        ]
+      },
+      "TituloAjustavelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "numero": {
+            "type": "integer"
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "vencimento"
+        ]
+      },
+      "RecorrenciaDto": {
+        "type": "object",
+        "properties": {
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A empresa (contratado que usa o financeiro)."
+          },
+          "frequencia": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FrequenciaRecorrencia"
+              }
+            ]
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Dia do mês (1 a 31); vazio na semanal. Dia que não existe vira o último dia."
+          },
+          "primeiroVencimento": {
+            "type": "string",
+            "format": "date",
+            "description": "O vencimento da 1ª ocorrência."
+          },
+          "ajusteDiaNaoUtil": {
+            "description": "Vazio = o padrão da empresa.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          },
+          "termino": {
+            "description": "`sem` término, até a `data` ou após N `ocorrencias`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TerminoRecorrencia"
+              }
+            ]
+          },
+          "terminoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Com término `data`.",
+            "nullable": true
+          },
+          "terminoOcorrencias": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Com término `ocorrencias`."
+          },
+          "favorecido": {
+            "$ref": "#/components/schemas/FavorecidoDto"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Aluguel da sala comercial",
+            "maxLength": 200
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Em centavos, maior que zero."
+          },
+          "modoValor": {
+            "description": "`previsto`: muda todo mês; o título nasce com o previsto e o financeiro confere.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoValorRecorrencia"
+              }
+            ]
+          },
+          "contaPrevistaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "contratadoId",
+          "frequencia",
+          "primeiroVencimento",
+          "termino",
+          "favorecido",
+          "categoriaId",
+          "descricao",
+          "valorCentavos",
+          "modoValor"
+        ]
+      },
+      "RecorrenciaCriadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "titulosGerados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "titulosGerados"
+        ]
+      },
+      "EditarRecorrenciaDto": {
+        "type": "object",
+        "properties": {
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A empresa (contratado que usa o financeiro)."
+          },
+          "frequencia": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FrequenciaRecorrencia"
+              }
+            ]
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Dia do mês (1 a 31); vazio na semanal. Dia que não existe vira o último dia."
+          },
+          "primeiroVencimento": {
+            "type": "string",
+            "format": "date",
+            "description": "O vencimento da 1ª ocorrência."
+          },
+          "ajusteDiaNaoUtil": {
+            "description": "Vazio = o padrão da empresa.",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AjusteDiaNaoUtil"
+              }
+            ]
+          },
+          "termino": {
+            "description": "`sem` término, até a `data` ou após N `ocorrencias`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TerminoRecorrencia"
+              }
+            ]
+          },
+          "terminoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Com término `data`.",
+            "nullable": true
+          },
+          "terminoOcorrencias": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Com término `ocorrencias`."
+          },
+          "favorecido": {
+            "$ref": "#/components/schemas/FavorecidoDto"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Aluguel da sala comercial",
+            "maxLength": 200
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Em centavos, maior que zero."
+          },
+          "modoValor": {
+            "description": "`previsto`: muda todo mês; o título nasce com o previsto e o financeiro confere.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ModoValorRecorrencia"
+              }
+            ]
+          },
+          "contaPrevistaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "aplicarAosGerados": {
+            "type": "boolean",
+            "description": "Também nos títulos já gerados em aberto, sem baixa e não editados à mão (senão, só nos próximos)."
+          }
+        },
+        "required": [
+          "contratadoId",
+          "frequencia",
+          "primeiroVencimento",
+          "termino",
+          "favorecido",
+          "categoriaId",
+          "descricao",
+          "valorCentavos",
+          "modoValor",
+          "aplicarAosGerados"
+        ]
+      },
+      "RecorrenciaEditadaDto": {
+        "type": "object",
+        "properties": {
+          "titulosAtualizados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "titulosAtualizados"
+        ]
+      },
+      "RecorrenciaRetomadaDto": {
+        "type": "object",
+        "properties": {
+          "titulosGerados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "titulosGerados"
         ]
       },
       "StatusRodada": {

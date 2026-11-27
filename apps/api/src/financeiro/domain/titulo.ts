@@ -16,6 +16,7 @@ export const ORIGENS_TITULO = [
   'pre_pago',
   'repasse',
   'carga_omie',
+  'recorrencia',
 ] as const;
 export type OrigemTitulo = (typeof ORIGENS_TITULO)[number];
 
@@ -73,7 +74,7 @@ export interface ContextoTitulo {
   atual?: {
     situacao: SituacaoTitulo;
     pagoCentavos: number;
-    origem: OrigemTitulo | 'recorrencia';
+    origem: OrigemTitulo;
     valorCentavos: number;
     favorecido: Favorecido;
     categoriaId: string;

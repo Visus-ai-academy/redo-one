@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CONFIGURACAO_PADRAO,
   FAIXAS_PADRAO,
   faixaDoAtraso,
+  prepararConfiguracao,
   prepararFaixas,
   rotuloDaFaixa,
 } from './configuracao-financeira';
@@ -56,5 +58,24 @@ describe('faixas da inadimplência', () => {
     expect(campos(() => prepararFaixas([1, 0.5]))).toEqual({
       faixasInadimplencia: 'Os dias são números inteiros maiores que zero.',
     });
+  });
+});
+
+describe('prepararConfiguracao', () => {
+  it('o padrão: 3 meses de antecedência e o vencimento em fim de semana posterga', () => {
+    expect(CONFIGURACAO_PADRAO).toMatchObject({
+      horizonteRecorrenciaMeses: 3,
+      ajusteDiaNaoUtil: 'posterga',
+    });
+  });
+
+  it('horizonte de 1 a 24 meses', () => {
+    expect(
+      campos(() => prepararConfiguracao({ ...CONFIGURACAO_PADRAO, horizonteRecorrenciaMeses: 0 })),
+    ).toEqual({ horizonteRecorrenciaMeses: 'Use de 1 a 24 meses.' });
+    expect(
+      prepararConfiguracao({ ...CONFIGURACAO_PADRAO, horizonteRecorrenciaMeses: 12 })
+        .horizonteRecorrenciaMeses,
+    ).toBe(12);
   });
 });

@@ -57,6 +57,13 @@ export type ContasReceberTitulosControllerListarQuery = {
    */
   favorecidoId?: string;
   /**
+   * @description Só os títulos que esta recorrência gerou.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  recorrenciaId?: string;
+  /**
    * @description Vencimento a partir deste dia.
    *
    * Format: `date`

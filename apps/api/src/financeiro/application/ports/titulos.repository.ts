@@ -40,6 +40,8 @@ export interface FiltroTitulos extends Paginacao {
   vencimentoDe?: string;
   /** Vencimento até (inclusive), AAAA-MM-DD. */
   vencimentoAte?: string;
+  /** Só os títulos gerados por esta recorrência. */
+  recorrenciaId?: string;
   /** Nome do favorecido, número (R-0123 ou 123), documento ou descrição. */
   busca?: string;
   /** Dia de hoje em Brasília: decide o que está vencido. */
@@ -66,6 +68,9 @@ export interface TituloItem {
   situacao: SituacaoTitulo;
   origem: OrigemTitulo;
   contaPrevistaId: string | null;
+  /** A recorrência que gerou o título e a ocorrência dela. */
+  recorrenciaId: string | null;
+  ocorrencia: number | null;
 }
 
 export interface PaginaTitulos extends Pagina<TituloItem> {
@@ -99,6 +104,10 @@ export interface TituloDetalhe extends TituloItem {
   canceladoEm: Date | null;
   motivoCancelamento: string | null;
   criadoEm: Date;
+  /** Da recorrência: a descrição e se o valor é o previsto (muda todo mês). */
+  recorrencia: { id: string; descricao: string; modoValor: 'fixo' | 'previsto' } | null;
+  /** Mudado à mão depois de gerado pela recorrência. */
+  editadoAMao: boolean;
   /** Da mais nova para a mais antiga, estornadas inclusive. */
   baixas: BaixaDoTitulo[];
 }
@@ -109,6 +118,8 @@ export interface TituloTravado extends EstadoTitulo {
   tipo: TipoTitulo;
   numero: number;
   origem: OrigemTitulo;
+  recorrenciaId: string | null;
+  editadoAMao: boolean;
   dados: DadosTitulo;
   baixas: { id: string; principalCentavos: number; estornadaEm: Date | null }[];
 }
@@ -121,6 +132,7 @@ export interface CamposTitulo extends DadosTitulo {
   canceladoEm: Date | null;
   canceladoPorId: string | null;
   motivoCancelamento: string | null;
+  editadoAMao: boolean;
 }
 
 /** As escritas possíveis dentro da trava do título (a mesma transação). */

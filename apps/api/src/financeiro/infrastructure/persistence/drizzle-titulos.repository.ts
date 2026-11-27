@@ -25,6 +25,7 @@ import {
   contratados,
   fornecedores,
   medicos,
+  recorrencias,
   titulos as t,
   titulosNumeracao,
   usuarios,
@@ -98,6 +99,8 @@ const selecaoItem = {
   situacao: t.situacao,
   origem: t.origem,
   contaPrevistaId: t.contaPrevistaId,
+  recorrenciaId: t.recorrenciaId,
+  ocorrencia: t.ocorrencia,
 };
 
 type LinhaItem = Omit<TituloItem, 'favorecido'> & {
@@ -144,6 +147,7 @@ export class DrizzleTitulosRepository implements TitulosRepository {
       ];
       condicoes.push(eq(coluna, filtro.favorecido.id));
     }
+    if (filtro.recorrenciaId) condicoes.push(eq(t.recorrenciaId, filtro.recorrenciaId));
     if (filtro.vencimentoDe) condicoes.push(gte(t.vencimento, filtro.vencimentoDe));
     if (filtro.vencimentoAte) condicoes.push(lte(t.vencimento, filtro.vencimentoAte));
     if (filtro.situacao === 'em_aberto') condicoes.push(emAberto);
@@ -202,8 +206,12 @@ export class DrizzleTitulosRepository implements TitulosRepository {
       canceladoEm: t.canceladoEm,
       motivoCancelamento: t.motivoCancelamento,
       criadoEm: t.criadoEm,
+      editadoAMao: t.editadoAMao,
+      recorrenciaDescricao: recorrencias.descricao,
+      recorrenciaModoValor: recorrencias.modoValor,
     })
       .leftJoin(contaPrevista, eq(contaPrevista.id, t.contaPrevistaId))
+      .leftJoin(recorrencias, eq(recorrencias.id, t.recorrenciaId))
       .where(eq(t.id, id))) as unknown as (LinhaItem & {
       contaPrevistaNome: string | null;
       vencimentoOriginal: string | null;
@@ -211,6 +219,9 @@ export class DrizzleTitulosRepository implements TitulosRepository {
       canceladoEm: Date | null;
       motivoCancelamento: string | null;
       criadoEm: Date;
+      editadoAMao: boolean;
+      recorrenciaDescricao: string | null;
+      recorrenciaModoValor: 'fixo' | 'previsto' | null;
     })[];
     if (!linha) return null;
     const {
@@ -220,6 +231,9 @@ export class DrizzleTitulosRepository implements TitulosRepository {
       canceladoEm,
       motivoCancelamento,
       criadoEm,
+      editadoAMao,
+      recorrenciaDescricao,
+      recorrenciaModoValor,
       ...item
     } = linha;
     const criador = aliasedTable(usuarios, 'criador');
@@ -256,6 +270,15 @@ export class DrizzleTitulosRepository implements TitulosRepository {
       canceladoEm,
       motivoCancelamento,
       criadoEm,
+      editadoAMao,
+      recorrencia:
+        item.recorrenciaId && recorrenciaDescricao && recorrenciaModoValor
+          ? {
+              id: item.recorrenciaId,
+              descricao: recorrenciaDescricao,
+              modoValor: recorrenciaModoValor,
+            }
+          : null,
       baixas: listaBaixas,
     };
   }
@@ -299,6 +322,8 @@ export class DrizzleTitulosRepository implements TitulosRepository {
             tipo: linha.tipo,
             numero: linha.numero,
             origem: linha.origem,
+            recorrenciaId: linha.recorrenciaId,
+            editadoAMao: linha.editadoAMao,
             contratadoId: linha.contratadoId,
             situacao: linha.situacao,
             valorCentavos: linha.valorCentavos,
@@ -351,7 +376,7 @@ export class DrizzleTitulosRepository implements TitulosRepository {
 }
 
 /** Próximo número da empresa e do tipo, sem buraco nem repetição (a linha do contador trava). */
-async function proximoNumero(tx: Executor, contratadoId: string, tipo: 'receber' | 'pagar') {
+export async function proximoNumero(tx: Executor, contratadoId: string, tipo: 'receber' | 'pagar') {
   const [linha] = await tx
     .insert(titulosNumeracao)
     .values({ contratadoId, tipo, ultimo: 1 })

@@ -85,7 +85,7 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis, categorias_financeiras, contratados, fornecedores, titulos cascade`,
+      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis, categorias_financeiras, contratados, fornecedores, titulos, recorrencias cascade`,
     );
     minuto = 0;
     for (const k of Object.keys(ev)) delete ev[k];
@@ -400,6 +400,44 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
     expect(apelidos(r.itens)).toEqual(['criado']);
     expect(r.nomes[fornecedor?.id ?? '']).toBe('Ômega');
     expect((await repo.listar({ cadastro: 'titulo', tipo: 'receber', id }, pagina)).total).toBe(0);
+  });
+
+  it('recorrência: só os eventos dela e só pela rota do tipo dela', async () => {
+    const [empresa] = await db
+      .insert(schema.contratados)
+      .values({ razaoSocial: '001 TELEIMAGEM', usaFinanceiro: true })
+      .returning();
+    const [categoria] = await db
+      .insert(schema.categoriasFinanceiras)
+      .values({ tipo: 'despesa', nome: 'Aluguel' })
+      .returning();
+    const [fornecedor] = await db
+      .insert(schema.fornecedores)
+      .values({ tipoPessoa: 'PJ', razaoSocial: 'Sala', cnpj: '12345678000191' })
+      .returning();
+    const [recorrencia] = await db
+      .insert(schema.recorrencias)
+      .values({
+        tipo: 'pagar',
+        contratadoId: empresa?.id ?? '',
+        fornecedorId: fornecedor?.id,
+        categoriaId: categoria?.id ?? '',
+        descricao: 'Aluguel',
+        valorCentavos: 1000,
+        frequencia: 'mensal',
+        diaVencimento: 5,
+        primeiroVencimento: '2026-12-05',
+        geraAPartirDe: '2026-12-05',
+      })
+      .returning();
+    const id = recorrencia?.id ?? '';
+    await evento('criada', { entidade: 'recorrencia', entidadeId: id, acao: 'criado' });
+
+    const r = await repo.listar({ cadastro: 'recorrencia', tipo: 'pagar', id }, pagina);
+    expect(apelidos(r.itens)).toEqual(['criada']);
+    expect(
+      (await repo.listar({ cadastro: 'recorrencia', tipo: 'receber', id }, pagina)).total,
+    ).toBe(0);
   });
 
   it('exame: o cadastro e os valores fora do padrão ligados a ele, pela tabela ou pelo evento', async () => {

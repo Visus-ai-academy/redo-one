@@ -88,6 +88,11 @@ export class ListarTitulosDto extends PaginacaoDto {
   @IsUUID()
   favorecidoId?: string;
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Só os títulos que esta recorrência gerou.' })
+  @IsOptional()
+  @IsUUID()
+  recorrenciaId?: string;
+
   @ApiPropertyOptional(dia('Vencimento a partir deste dia.'))
   @IsOptional()
   @Matches(DIA)
@@ -196,6 +201,15 @@ export class TituloItemDto {
   @ApiProperty(ORIGEM) origem!: OrigemTitulo;
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) contaPrevistaId!: string | null;
   @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'A recorrência que gerou.',
+  })
+  recorrenciaId!: string | null;
+  @ApiProperty({ type: 'integer', nullable: true, description: 'A ocorrência (1ª, 2ª...) dela.' })
+  ocorrencia!: number | null;
+  @ApiProperty({
     type: 'integer',
     description: 'Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo.',
   })
@@ -236,6 +250,13 @@ export class BaixaDoTituloDto {
   @ApiProperty({ type: String, nullable: true }) motivoEstorno!: string | null;
 }
 
+export class RecorrenciaDoTituloDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() descricao!: string;
+  @ApiProperty({ enum: ['fixo', 'previsto'], enumName: 'ModoValorRecorrencia' })
+  modoValor!: 'fixo' | 'previsto';
+}
+
 export class TituloDetalheDto extends TituloItemDto {
   @ApiProperty({ type: String, nullable: true }) contaPrevistaNome!: string | null;
   @ApiProperty({
@@ -249,6 +270,10 @@ export class TituloDetalheDto extends TituloItemDto {
   @ApiProperty({ type: Date, nullable: true }) canceladoEm!: Date | null;
   @ApiProperty({ type: String, nullable: true }) motivoCancelamento!: string | null;
   @ApiProperty() criadoEm!: Date;
+  @ApiProperty({ type: RecorrenciaDoTituloDto, nullable: true })
+  recorrencia!: RecorrenciaDoTituloDto | null;
+  @ApiProperty({ description: 'Mudado à mão depois de gerado pela recorrência.' })
+  editadoAMao!: boolean;
   @ApiProperty({ type: [BaixaDoTituloDto], description: 'Da mais nova para a mais antiga.' })
   baixas!: BaixaDoTituloDto[];
 }

@@ -1,4 +1,5 @@
 import { exigirSemErros } from './erros';
+import { AJUSTES_DIA_NAO_UTIL, type AjusteDiaNaoUtil } from './recorrencia';
 
 /**
  * Começo (em dias de atraso) de cada faixa da inadimplência, quando a empresa ainda não editou as
@@ -11,11 +12,40 @@ export const FAIXAS_PADRAO: readonly number[] = [1, 6, 16, 31];
 export interface ConfiguracaoFinanceira {
   /** Começo de cada faixa, em ordem, a primeira no dia 1. */
   faixasInadimplencia: number[];
+  /** Quantos meses à frente as recorrências geram os títulos. */
+  horizonteRecorrenciaMeses: number;
+  /** Vencimento em fim de semana ou feriado, nas recorrências que não escolhem o seu. */
+  ajusteDiaNaoUtil: AjusteDiaNaoUtil;
 }
 
+/**
+ * O que vale para a empresa que ainda não gravou as suas regras (o mesmo default das colunas):
+ * as faixas do dashboards-one, 3 meses de antecedência e o vencimento que posterga.
+ */
 export const CONFIGURACAO_PADRAO: ConfiguracaoFinanceira = {
   faixasInadimplencia: [...FAIXAS_PADRAO],
+  horizonteRecorrenciaMeses: 3,
+  ajusteDiaNaoUtil: 'posterga',
 };
+
+/** Valida as regras: faixas, horizonte de 1 a 24 meses e o ajuste do vencimento. */
+export function prepararConfiguracao(entrada: ConfiguracaoFinanceira): ConfiguracaoFinanceira {
+  const faixasInadimplencia = prepararFaixas(entrada.faixasInadimplencia);
+  const erros: Record<string, string> = {};
+  const meses = entrada.horizonteRecorrenciaMeses;
+  if (!Number.isInteger(meses) || meses < 1 || meses > 24) {
+    erros.horizonteRecorrenciaMeses = 'Use de 1 a 24 meses.';
+  }
+  if (!(AJUSTES_DIA_NAO_UTIL as readonly string[]).includes(entrada.ajusteDiaNaoUtil)) {
+    erros.ajusteDiaNaoUtil = 'Escolha o que fazer com o vencimento em fim de semana.';
+  }
+  exigirSemErros(erros);
+  return {
+    faixasInadimplencia,
+    horizonteRecorrenciaMeses: meses,
+    ajusteDiaNaoUtil: entrada.ajusteDiaNaoUtil,
+  };
+}
 
 const dias = (n: number) => (n === 1 ? '1 dia' : `${n} dias`);
 

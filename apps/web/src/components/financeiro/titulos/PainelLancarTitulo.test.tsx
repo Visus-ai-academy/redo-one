@@ -147,4 +147,64 @@ describe('PainelLancarTitulo', () => {
     expect(screen.getByRole('textbox', { name: 'Competência' })).toHaveValue('10/2026');
     expect(screen.getByText(/Cliente e valor não se editam aqui/)).toBeInTheDocument();
   });
+
+  it('com "Repetir", cria a recorrência com o dia vindo do primeiro vencimento e mostra a prévia', async () => {
+    const onSalvar = vi.fn();
+    const onSalvarRecorrencia = vi.fn(async () => undefined);
+    const prever = vi.fn(async () => ({
+      vencimentos: ['2026-12-07', '2027-01-05', '2027-02-05'],
+      horizonteMeses: 3,
+      ajustePadrao: 'posterga' as const,
+    }));
+    comQuery(
+      <PainelLancarTitulo
+        tipo="pagar"
+        empresas={empresas}
+        categorias={categorias}
+        contas={contas}
+        buscarFavorecidos={buscarFavorecidos}
+        onSalvar={onSalvar}
+        onFechar={vi.fn()}
+        recorrencia={{ prever, onSalvar: onSalvarRecorrencia }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('switch', { name: 'Repetir (conta recorrente)' }));
+    expect(screen.queryByRole('textbox', { name: 'Emissão' })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole('combobox', { name: 'Favorecido' }), 'ome');
+    await userEvent.click(await screen.findByRole('option', { name: /Contabilidade Ômega/ }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Aluguel');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Valor (R$)' }), '9.500,00');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Primeiro vencimento' }),
+      '05/12/2026',
+    );
+    expect(
+      await screen.findByText(
+        'Gera agora 3 títulos (07/12/2026, 05/01/2027 e 05/02/2027) e mantém sempre 3 meses à frente.',
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar recorrência' }));
+
+    await waitFor(() =>
+      expect(onSalvarRecorrencia).toHaveBeenCalledWith({
+        contratadoId: 'tele',
+        favorecido: { tipo: 'fornecedor', id: 'f-1' },
+        categoriaId: 'cat-cont',
+        descricao: 'Aluguel',
+        valorCentavos: 950_000,
+        modoValor: 'fixo',
+        frequencia: 'mensal',
+        diaVencimento: 5,
+        primeiroVencimento: '2026-12-05',
+        ajusteDiaNaoUtil: null,
+        termino: 'sem',
+        terminoEm: null,
+        terminoOcorrencias: null,
+        contaPrevistaId: null,
+        observacoes: null,
+      }),
+    );
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
 });

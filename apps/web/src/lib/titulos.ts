@@ -97,3 +97,37 @@ export function faixasDoTexto(texto: string): number[] | null {
   if (partes.length === 0 || !partes.every((p) => /^\d+$/.test(p))) return null;
   return partes.map(Number).sort((a, b) => a - b);
 }
+
+export const ROTULO_FREQUENCIA: Record<string, string> = {
+  semanal: 'Semanal',
+  mensal: 'Mensal',
+  bimestral: 'Bimestral',
+  trimestral: 'Trimestral',
+  semestral: 'Semestral',
+  anual: 'Anual',
+};
+
+export const ROTULO_AJUSTE: Record<string, string> = {
+  antecipa: 'Antecipa para o dia útil anterior',
+  posterga: 'Posterga para o próximo dia útil',
+  mantem: 'Mantém o dia',
+};
+
+/** "Mensal, dia 5" / "Semanal". */
+export const frequenciaPorExtenso = (frequencia: string, dia: number | null) =>
+  `${ROTULO_FREQUENCIA[frequencia] ?? frequencia}${dia ? `, dia ${dia}` : ''}`;
+
+/** "Sem término", "Até 10/12/2027", "Após 3 vencimentos". */
+export function terminoPorExtenso(r: {
+  termino: string;
+  terminoEm: string | null;
+  terminoOcorrencias: number | null;
+}) {
+  if (r.termino === 'data' && r.terminoEm) {
+    return `Até ${r.terminoEm.split('-').reverse().join('/')}`;
+  }
+  if (r.termino === 'ocorrencias' && r.terminoOcorrencias) {
+    return `Após ${plural(r.terminoOcorrencias, { um: 'vencimento', varios: 'vencimentos' })}`;
+  }
+  return 'Sem término';
+}

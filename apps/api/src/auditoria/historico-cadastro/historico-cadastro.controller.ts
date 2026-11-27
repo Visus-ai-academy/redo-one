@@ -92,6 +92,26 @@ export class HistoricoCadastroController {
     return this.responder(this.historico.doTitulo('receber', id, paginacao(query)), query);
   }
 
+  @Get('financeiro/contas-pagar/recorrencias/:id/historico')
+  @Permissao('contas-pagar.ver')
+  @ApiOkResponse({ type: PaginaHistoricoCadastroDto, description: DESCRICAO })
+  doRecorrenciaPagar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginacaoDto,
+  ): Promise<PaginaHistoricoCadastroDto> {
+    return this.responder(this.historico.doRecorrencia('pagar', id, paginacao(query)), query);
+  }
+
+  @Get('financeiro/contas-receber/recorrencias/:id/historico')
+  @Permissao('contas-receber.ver')
+  @ApiOkResponse({ type: PaginaHistoricoCadastroDto, description: DESCRICAO })
+  doRecorrenciaReceber(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginacaoDto,
+  ): Promise<PaginaHistoricoCadastroDto> {
+    return this.responder(this.historico.doRecorrencia('receber', id, paginacao(query)), query);
+  }
+
   private async responder(
     consulta: Promise<PaginaHistoricoCadastro>,
     query: PaginacaoDto,

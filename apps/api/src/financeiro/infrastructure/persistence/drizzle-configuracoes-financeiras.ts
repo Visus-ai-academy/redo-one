@@ -19,7 +19,11 @@ export class DrizzleConfiguracoesFinanceiras implements ConfiguracoesFinanceiras
 
   async buscar(contratadoId: string) {
     const [linha] = await this.db
-      .select({ faixasInadimplencia: cfg.faixasInadimplencia })
+      .select({
+        faixasInadimplencia: cfg.faixasInadimplencia,
+        horizonteRecorrenciaMeses: cfg.horizonteRecorrenciaMeses,
+        ajusteDiaNaoUtil: cfg.ajusteDiaNaoUtil,
+      })
       .from(cfg)
       .where(eq(cfg.contratadoId, contratadoId));
     return linha ?? null;

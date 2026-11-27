@@ -55,6 +55,14 @@ const FRASES: Record<string, Record<string, string>> = {
     alterado: 'Cadastro alterado',
     excluido: 'Fornecedor excluído',
   },
+  recorrencia: {
+    criado: 'Recorrência criada',
+    alterado: 'Recorrência alterada',
+    pausada: 'Recorrência pausada',
+    retomada: 'Recorrência retomada',
+    encerrada: 'Recorrência encerrada',
+    proximo_gerado: 'Próximo título gerado',
+  },
   titulo: {
     criado: 'Título lançado',
     alterado: 'Título alterado',
@@ -82,6 +90,7 @@ const NOME_DA_ENTIDADE: Record<string, string> = {
   cliente_dados_fiscais: 'Dados de faturamento',
   fornecedor: 'Fornecedor',
   titulo: 'Título',
+  recorrencia: 'Recorrência',
   configuracao_financeira: 'Regras financeiras',
 };
 
@@ -165,7 +174,26 @@ const CAMPOS: Record<string, string> = {
 
 /** Rótulos que mudam por entidade: na aba Faturamento, o e-mail e o telefone são do contato. */
 const CAMPOS_DA_ENTIDADE: Record<string, Record<string, string>> = {
+  recorrencia: {
+    contratadoId: 'Empresa',
+    favorecido: 'Favorecido',
+    valorCentavos: 'Valor',
+    modoValor: 'Valor muda todo mês',
+    frequencia: 'Frequência',
+    diaVencimento: 'Dia do vencimento',
+    primeiroVencimento: 'Primeiro vencimento',
+    ajusteDiaNaoUtil: 'Fim de semana ou feriado',
+    termino: 'Término',
+    terminoEm: 'Até',
+    terminoOcorrencias: 'Quantos vencimentos',
+    contaPrevistaId: 'Conta prevista',
+    situacao: 'Situação',
+    geraAPartirDe: 'Gera a partir de',
+    vencimento: 'Vencimento',
+    ocorrencia: 'Ocorrência',
+  },
   titulo: {
+    ocorrencia: 'Ocorrência da recorrência',
     contratadoId: 'Empresa',
     favorecido: 'Favorecido',
     numero: 'Número',
@@ -289,7 +317,21 @@ const FORMATOS_DA_ENTIDADE: Record<string, Record<string, (v: string) => string>
 
 /** Só nestes campos o valor é um código. */
 const VALORES: Record<string, Record<string, string>> = {
+  modoValor: { fixo: 'Não (fixo)', previsto: 'Sim (previsto)' },
+  frequencia: {
+    semanal: 'Semanal',
+    mensal: 'Mensal',
+    bimestral: 'Bimestral',
+    trimestral: 'Trimestral',
+    semestral: 'Semestral',
+    anual: 'Anual',
+  },
+  ajusteDiaNaoUtil: { antecipa: 'Antecipa', posterga: 'Posterga', mantem: 'Mantém' },
+  termino: { sem: 'Sem término', data: 'Até uma data', ocorrencias: 'Após N vencimentos' },
   situacao: {
+    ativa: 'Ativa',
+    pausada: 'Pausada',
+    encerrada: 'Encerrada',
     aberto: 'Em aberto',
     parcial: 'Parcial',
     liquidado: 'Liquidado',
@@ -324,7 +366,8 @@ const CONTEXTO: Record<string, Set<string>> = {
   // A conta aparece pelo id do evento; nome, e-mail e CPF dela são da tela Usuários.
   usuario: new Set(['medicoId', 'nome', 'email', 'cpf']),
   // A baixa citada pelo id (a lista das baixas está na aba Baixas).
-  titulo: new Set(['baixaId']),
+  titulo: new Set(['baixaId', 'recorrenciaId']),
+  recorrencia: new Set(['tituloId']),
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

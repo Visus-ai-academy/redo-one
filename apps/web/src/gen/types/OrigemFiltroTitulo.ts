@@ -10,6 +10,7 @@ export const origemFiltroTitulo = {
   pre_pago: 'pre_pago',
   repasse: 'repasse',
   carga_omie: 'carga_omie',
+  recorrencia: 'recorrencia',
 } as const;
 
 export type OrigemFiltroTituloKey = (typeof origemFiltroTitulo)[keyof typeof origemFiltroTitulo];

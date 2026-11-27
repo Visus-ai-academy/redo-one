@@ -74,6 +74,18 @@ export type TituloItemDto = {
    */
   contaPrevistaId: string | null;
   /**
+   * @description A recorrência que gerou.
+   *
+   * Format: `uuid`
+   * @type string
+   */
+  recorrenciaId: string | null;
+  /**
+   * @description A ocorrência (1ª, 2ª...) dela.
+   * @type integer
+   */
+  ocorrencia: number | null;
+  /**
    * @description Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo.
    * @type integer
    */

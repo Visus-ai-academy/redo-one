@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -12,6 +13,19 @@ import {
 } from 'class-validator';
 
 import { aparar, PaginacaoDto } from '../../../../catalogo/comum/dto';
+import { AJUSTES_DIA_NAO_UTIL, type AjusteDiaNaoUtil } from '../../../domain/recorrencia';
+
+export const AJUSTE = {
+  enum: AJUSTES_DIA_NAO_UTIL,
+  enumName: 'AjusteDiaNaoUtil',
+  description: 'Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém.',
+};
+const HORIZONTE = {
+  type: 'integer',
+  minimum: 1,
+  maximum: 24,
+  description: 'Quantos meses à frente as recorrências geram os títulos.',
+} as const;
 
 const FAIXAS = {
   type: 'integer',
@@ -25,6 +39,8 @@ export class ConfiguracaoEmpresaDto {
   @ApiProperty({ format: 'uuid' }) empresaId!: string;
   @ApiProperty() empresaNome!: string;
   @ApiProperty(FAIXAS) faixasInadimplencia!: number[];
+  @ApiProperty(HORIZONTE) horizonteRecorrenciaMeses!: number;
+  @ApiProperty(AJUSTE) ajusteDiaNaoUtil!: AjusteDiaNaoUtil;
   @ApiProperty({ description: 'A empresa ainda não gravou as suas: vale o padrão.' })
   padrao!: boolean;
 }
@@ -36,6 +52,14 @@ export class ConfiguracaoDto {
   @ArrayMaxSize(20)
   @IsInt({ each: true })
   faixasInadimplencia!: number[];
+
+  @ApiProperty(HORIZONTE)
+  @IsInt()
+  horizonteRecorrenciaMeses!: number;
+
+  @ApiProperty(AJUSTE)
+  @IsIn(AJUSTES_DIA_NAO_UTIL)
+  ajusteDiaNaoUtil!: AjusteDiaNaoUtil;
 }
 
 export class ListarInadimplenciaDto extends PaginacaoDto {

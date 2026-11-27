@@ -4,9 +4,12 @@
 */
 
 import * as z from 'zod'
+import { ajusteDiaNaoUtilSchema } from './ajusteDiaNaoUtilSchema'
 
 export const configuracaoDtoSchema = z.object({
   faixasInadimplencia: z.array(z.int()).describe('Começo (em dias de atraso) de cada faixa da inadimplência: de 2 a 8, a primeira no dia 1.').meta({ examples: [[1,6,16,31]] }),
+  horizonteRecorrenciaMeses: z.int().min(1).max(24).describe('Quantos meses à frente as recorrências geram os títulos.'),
+  ajusteDiaNaoUtil: ajusteDiaNaoUtilSchema.describe('Vencimento em fim de semana ou feriado: antecipa, posterga ou mantém.'),
 })
 
 export type ConfiguracaoDtoSchemaType = z.infer<typeof configuracaoDtoSchema>

@@ -28,6 +28,8 @@ export const tituloItemDtoSchema = z.object({
   situacao: situacaoTituloSchema,
   origem: origemTituloSchema,
   contaPrevistaId: z.uuid().nullable(),
+  recorrenciaId: z.uuid().nullable().describe('A recorrência que gerou.'),
+  ocorrencia: z.int().nullable().describe('A ocorrência (1ª, 2ª...) dela.'),
   diasDeAtraso: z.int().describe('Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo.'),
 })
 

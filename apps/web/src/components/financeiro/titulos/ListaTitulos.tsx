@@ -28,7 +28,7 @@ import { PainelCarregando } from '../../painel/PainelCarregando';
 import { Select } from '../../select/Select';
 import { useFaseDoCarregamento } from '../../skeleton/use-fase-do-carregamento';
 import { useAvisos } from '../../toast/use-avisos';
-import { apiDoTipo, opcoesDeApoio, TEXTOS_DO_TIPO } from './api';
+import { apiDeRecorrencias, apiDoTipo, opcoesDeApoio, TEXTOS_DO_TIPO } from './api';
 import { type BuscaTitulos, consultaDeTitulos, POR_PAGINA_TITULOS, ROTA_DO_TIPO } from './busca';
 import { DialogoBaixa } from './DialogoBaixa';
 import { PainelLancarTitulo } from './PainelLancarTitulo';
@@ -473,6 +473,24 @@ function PainelDoTitulo({
           api.favorecidos({ query: { busca: termo || undefined }, signal: sinal }).unwrap()
         }
         onFechar={titulo ? () => setEditando(false) : fechar}
+        recorrencia={
+          titulo
+            ? undefined
+            : {
+                prever: (agenda, sinal) =>
+                  apiDeRecorrencias(tipo).previa({ body: agenda, signal: sinal }).unwrap(),
+                onSalvar: async (dados) => {
+                  const criada = await apiDeRecorrencias(tipo).criar({ body: dados }).unwrap();
+                  await recarregar();
+                  sucesso(
+                    criada.titulosGerados
+                      ? `Recorrência criada. ${criada.titulosGerados} ${criada.titulosGerados === 1 ? 'título gerado' : 'títulos gerados'}.`
+                      : 'Recorrência criada.',
+                  );
+                  ir(() => ({ aba: 'recorrentes', id: criada.id }), true);
+                },
+              }
+        }
         onSalvar={async (dados) => {
           if (titulo) {
             await api.atualizar({ path: { id: titulo.id }, body: dados }).unwrap();
@@ -503,6 +521,23 @@ function PainelDoTitulo({
       }}
       contas={todasAsContas.filter((c) => c.contratadoId === titulo.contratadoId)}
       historico={<HistoricoCadastro key={titulo.id} cadastro={cadastro} id={titulo.id} />}
+      origem={
+        titulo.recorrencia ? (
+          <span className="flex flex-col">
+            <LinkDaLinha
+              to="."
+              search={(() => ({ aba: 'recorrentes', id: titulo.recorrencia?.id })) as never}
+            >
+              {`Recorrência: ${titulo.recorrencia.descricao}`}
+            </LinkDaLinha>
+            {titulo.recorrencia.modoValor === 'previsto' && !titulo.editadoAMao && (
+              <span className="text-warning text-[13px]">
+                Valor previsto: confira (e edite) antes de dar baixa.
+              </span>
+            )}
+          </span>
+        ) : undefined
+      }
       onFechar={fechar}
       onEditar={() => setEditando(true)}
       onBaixar={async (dados) => {

@@ -7,6 +7,8 @@ import { historicoCadastroControllerDoClienteQueryOptions } from '../../gen/hook
 import { historicoCadastroControllerDoExameQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoExame';
 import { historicoCadastroControllerDoFornecedorQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoFornecedor';
 import { historicoCadastroControllerDoMedicoQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoMedico';
+import { historicoCadastroControllerDoRecorrenciaPagarQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoRecorrenciaPagar';
+import { historicoCadastroControllerDoRecorrenciaReceberQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoRecorrenciaReceber';
 import { historicoCadastroControllerDoTituloPagarQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoTituloPagar';
 import { historicoCadastroControllerDoTituloReceberQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoTituloReceber';
 import type { PaginaHistoricoCadastroDto } from '../../gen/types/PaginaHistoricoCadastroDto';
@@ -30,7 +32,9 @@ export type CadastroComHistorico =
   | 'fornecedor'
   | 'dados-fiscais'
   | 'titulo-pagar'
-  | 'titulo-receber';
+  | 'titulo-receber'
+  | 'recorrencia-pagar'
+  | 'recorrencia-receber';
 
 /** Num painel lateral, 10 mudanças por página (a API pagina). */
 const POR_PAGINA = 10;
@@ -57,6 +61,16 @@ function opcoesDaConsulta(
   }
   if (cadastro === 'fornecedor') {
     return historicoCadastroControllerDoFornecedorQueryOptions(args) as unknown as OpcoesHistorico;
+  }
+  if (cadastro === 'recorrencia-pagar') {
+    return historicoCadastroControllerDoRecorrenciaPagarQueryOptions(
+      args,
+    ) as unknown as OpcoesHistorico;
+  }
+  if (cadastro === 'recorrencia-receber') {
+    return historicoCadastroControllerDoRecorrenciaReceberQueryOptions(
+      args,
+    ) as unknown as OpcoesHistorico;
   }
   if (cadastro === 'titulo-receber') {
     return historicoCadastroControllerDoTituloReceberQueryOptions(

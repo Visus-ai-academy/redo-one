@@ -193,7 +193,7 @@ export const GRUPOS_CONFIGURACOES: GrupoConfiguracoes[] = [
       },
       {
         nome: 'Regras financeiras',
-        descricao: 'Faixas de atraso da inadimplência de cada empresa',
+        descricao: 'Faixas da inadimplência e antecedência das contas recorrentes de cada empresa',
         icone: CalendarCheck,
         to: '/configuracoes/regras-financeiras',
         permissao: 'financeiro-config.ver',

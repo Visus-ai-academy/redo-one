@@ -51,4 +51,12 @@ export class HistoricoCadastroService {
   ): Promise<PaginaHistoricoCadastro> {
     return this.repo.listar({ cadastro: 'titulo', tipo, id }, paginacao);
   }
+
+  doRecorrencia(
+    tipo: 'pagar' | 'receber',
+    id: string,
+    paginacao: Paginacao,
+  ): Promise<PaginaHistoricoCadastro> {
+    return this.repo.listar({ cadastro: 'recorrencia', tipo, id }, paginacao);
+  }
 }

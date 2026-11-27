@@ -45,6 +45,10 @@ export const contasPagarTitulosControllerListarQueryFavorecidoIdSchema = z.uuid(
 
 export type ContasPagarTitulosControllerListarQueryFavorecidoIdSchemaType = z.infer<typeof contasPagarTitulosControllerListarQueryFavorecidoIdSchema>
 
+export const contasPagarTitulosControllerListarQueryRecorrenciaIdSchema = z.uuid().optional().describe('Só os títulos que esta recorrência gerou.')
+
+export type ContasPagarTitulosControllerListarQueryRecorrenciaIdSchemaType = z.infer<typeof contasPagarTitulosControllerListarQueryRecorrenciaIdSchema>
+
 export const contasPagarTitulosControllerListarQueryVencimentoDeSchema = z.iso.date().optional().describe('Vencimento a partir deste dia.')
 
 export type ContasPagarTitulosControllerListarQueryVencimentoDeSchemaType = z.infer<typeof contasPagarTitulosControllerListarQueryVencimentoDeSchema>
@@ -71,6 +75,7 @@ export const contasPagarTitulosControllerListarQuerySchema = z.object({
   categoria: z.string().describe('Id da categoria ou `todas`.').meta({ examples: ['todas'] }),
   favorecidoTipo: tipoFavorecidoSchema.optional().describe('Com `favorecidoId`: só os títulos dele.'),
   favorecidoId: z.uuid().optional(),
+  recorrenciaId: z.uuid().optional().describe('Só os títulos que esta recorrência gerou.'),
   vencimentoDe: z.iso.date().optional().describe('Vencimento a partir deste dia.'),
   vencimentoAte: z.iso.date().optional().describe('Vencimento até este dia.'),
 })

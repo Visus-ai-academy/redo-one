@@ -5,6 +5,6 @@
 
 import * as z from 'zod'
 
-export const origemTituloSchema = z.enum(['manual', 'faturamento', 'pre_pago', 'repasse', 'carga_omie'])
+export const origemTituloSchema = z.enum(['manual', 'faturamento', 'pre_pago', 'repasse', 'carga_omie', 'recorrencia'])
 
 export type OrigemTituloSchemaType = z.infer<typeof origemTituloSchema>

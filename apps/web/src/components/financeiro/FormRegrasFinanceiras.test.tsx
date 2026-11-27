@@ -8,6 +8,8 @@ const configuracao = {
   empresaId: 'tele',
   empresaNome: '001 TELEIMAGEM',
   faixasInadimplencia: [1, 6, 16, 31],
+  horizonteRecorrenciaMeses: 3,
+  ajusteDiaNaoUtil: 'posterga' as const,
   padrao: true,
 };
 
@@ -28,7 +30,11 @@ describe('FormRegrasFinanceiras', () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
-      expect(onSalvar).toHaveBeenCalledWith({ faixasInadimplencia: [1, 11, 31] }),
+      expect(onSalvar).toHaveBeenCalledWith({
+        faixasInadimplencia: [1, 11, 31],
+        horizonteRecorrenciaMeses: 3,
+        ajusteDiaNaoUtil: 'posterga',
+      }),
     );
   });
 
