@@ -143,12 +143,17 @@ describe('HistoricoEscala', () => {
     expect(screen.queryByRole('combobox', { name: 'Filtrar por médico' })).not.toBeInTheDocument();
   });
 
-  it('filtra pelo período; um início depois do fim limpa o fim', async () => {
-    const { onFiltrar } = montar({ filtros: { ate: '2026-11-10' } });
+  it('filtra pelo período: atalho para trás ou De e Até no "Personalizado…"', async () => {
+    const { onFiltrar } = montar({ filtros: {} });
 
-    fireEvent.change(await screen.findByLabelText('De'), { target: { value: '12/11/2026' } });
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Período' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Personalizado…' }));
+    const popup = await screen.findByRole('dialog', { name: 'Período personalizado' });
+    fireEvent.change(within(popup).getByLabelText('De'), { target: { value: '01/11/2026' } });
+    fireEvent.change(within(popup).getByLabelText('Até'), { target: { value: '12/11/2026' } });
+    await userEvent.click(within(popup).getByRole('button', { name: 'Aplicar' }));
 
-    expect(onFiltrar).toHaveBeenLastCalledWith({ de: '2026-11-12', ate: undefined });
+    expect(onFiltrar).toHaveBeenLastCalledWith({ de: '2026-11-01', ate: '2026-11-12' });
   });
 
   it('pagina pela API', async () => {

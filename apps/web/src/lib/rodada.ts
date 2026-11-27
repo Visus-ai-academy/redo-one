@@ -1,5 +1,13 @@
 // A rodada do robô de distribuição na tela: rótulos, etapas, recortes e funil (sem React).
+import { somarDias } from '../components/escala-ausencias/ausencias';
 import type { TomEtiqueta } from '../components/etiqueta/Etiqueta';
+import {
+  ATALHOS_ULTIMOS,
+  type AtalhoDePeriodo,
+  inicioDoDiaEmBrasilia,
+  type Periodo as PeriodoKit,
+  periodoDoAtalho,
+} from '../components/periodo/periodo';
 import type { ContagemDesignacoesDto } from '../gen/types/ContagemDesignacoesDto';
 import type { ContagemMotivoDto } from '../gen/types/ContagemMotivoDto';
 import type { FunilMedicosDto } from '../gen/types/FunilMedicosDto';
@@ -541,12 +549,33 @@ export function textoDaCarga(
 export const tomDaPrioridade = (d: { urgente: boolean }): TomEtiqueta =>
   d.urgente ? 'erro' : 'inativo';
 
-export const PERIODOS = [
-  { valor: '7', rotulo: 'Últimos 7 dias' },
-  { valor: '30', rotulo: 'Últimos 30 dias' },
-  { valor: 'todas', rotulo: 'Todas' },
-] as const;
-export type Periodo = (typeof PERIODOS)[number]['valor'];
+/** O que fica na URL do histórico: `todas` (sem período) ou De e Até; nada é o padrão (7 dias). */
+export type BuscaPeriodoHistorico = { periodo?: 'todas'; de?: string; ate?: string };
+
+const PADRAO_HISTORICO = ATALHOS_ULTIMOS.find((a) => a.valor === '7') as AtalhoDePeriodo;
+
+/** O período do histórico das rodadas pela URL; sem nada, os últimos 7 dias. */
+export function periodoDoHistorico(busca: BuscaPeriodoHistorico, hoje: string): PeriodoKit {
+  if (busca.periodo === 'todas') return { de: undefined, ate: undefined };
+  if (busca.de || busca.ate) return { de: busca.de, ate: busca.ate };
+  return periodoDoAtalho(PADRAO_HISTORICO, hoje);
+}
+
+/** O período escolhido de volta para a URL (o padrão não fica na URL). */
+export function buscaDoPeriodoHistorico(p: PeriodoKit, hoje: string): BuscaPeriodoHistorico {
+  if (!p.de && !p.ate) return { periodo: 'todas' };
+  const padrao = periodoDoAtalho(PADRAO_HISTORICO, hoje);
+  if (p.de === padrao.de && p.ate === padrao.ate) return {};
+  return { de: p.de, ate: p.ate };
+}
+
+/** O período em instantes para a API: `desde` inclusivo, `ate` exclusivo (o dia seguinte). */
+export function consultaDoPeriodo(p: PeriodoKit): { desde?: string; ate?: string } {
+  return {
+    ...(p.de && { desde: inicioDoDiaEmBrasilia(p.de) }),
+    ...(p.ate && { ate: inicioDoDiaEmBrasilia(somarDias(p.ate, 1)) }),
+  };
+}
 
 /** "2 turno(s), 3 cliente(s)": o que a rodada recortou, em poucas palavras. */
 export function recortesEmPoucasPalavras(r: RecortesRodadaDto) {

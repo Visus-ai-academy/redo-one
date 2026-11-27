@@ -59,3 +59,11 @@ export type ValorPeriodo = { de: string; ate: string };
 export function erroDoPeriodo({ de, ate }: ValorPeriodo): string | undefined {
   return de && ate && ate < de ? 'O fim não pode ser antes do início.' : undefined;
 }
+
+/**
+ * O começo do dia de Brasília em instante UTC ("2026-11-16" → "2026-11-16T03:00:00.000Z"), para
+ * filtrar por data e hora na API. Brasília está em UTC−3 o ano todo (sem horário de verão desde 2019).
+ */
+export function inicioDoDiaEmBrasilia(dia: string): string {
+  return `${dia}T03:00:00.000Z`;
+}

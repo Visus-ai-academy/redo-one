@@ -29,11 +29,19 @@ import type { StatusRodadaKey } from '../../gen/types/StatusRodada';
 import { horaDeBrasilia } from '../../lib/acesso';
 import { dataHoraCurta } from '../../lib/datas';
 import { pode } from '../../lib/permissoes';
-import { intervaloDaRodada, intervaloDoRetrato, num, type Periodo } from '../../lib/rodada';
+import {
+  buscaDoPeriodoHistorico,
+  consultaDoPeriodo,
+  intervaloDaRodada,
+  intervaloDoRetrato,
+  num,
+  periodoDoHistorico,
+} from '../../lib/rodada';
 import { Abas } from '../abas/Abas';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
+import { hojeEmBrasilia } from '../escala-ausencias/ausencias';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useAvisos } from '../toast/use-avisos';
@@ -56,7 +64,9 @@ export type BuscaDistribuicao = {
   visao?: 'fora' | 'medicos-fora';
   motivo?: string;
   status?: StatusRodadaKey;
-  periodo?: Periodo;
+  periodo?: 'todas';
+  de?: string;
+  ate?: string;
   pagina?: number;
 };
 
@@ -793,19 +803,16 @@ function AbaHistorico({
   onBusca: (mudar: (atual: BuscaDistribuicao) => BuscaDistribuicao, replace?: boolean) => void;
   onAbrirRodada: (id: string) => void;
 }) {
-  const periodo = busca.periodo ?? '7';
-  // O início do período muda só por dia (a chave da consulta fica estável no dia).
-  const desde =
-    periodo === 'todas'
-      ? undefined
-      : new Date(Math.floor(Date.now() / DIA) * DIA - Number(periodo) * DIA).toISOString();
+  // O período muda só por dia (a chave da consulta fica estável no dia).
+  const hoje = hojeEmBrasilia();
+  const periodo = periodoDoHistorico(busca, hoje);
   const consulta = useQuery({
     ...rodadasControllerHistoricoQueryOptions({
       query: {
         pagina: busca.pagina ?? 1,
         porPagina: 10,
         ...(busca.status ? { status: [busca.status] } : {}),
-        ...(desde ? { desde } : {}),
+        ...consultaDoPeriodo(periodo),
       },
     }),
     placeholderData: keepPreviousData,
@@ -818,11 +825,15 @@ function AbaHistorico({
       onTentarDeNovo={() => void consulta.refetch()}
       status={busca.status}
       periodo={periodo}
+      hoje={hoje}
       onFiltrar={(f) =>
         onBusca((a) => ({
           ...a,
           status: f.status,
-          periodo: f.periodo === '7' ? undefined : f.periodo,
+          periodo: undefined,
+          de: undefined,
+          ate: undefined,
+          ...buscaDoPeriodoHistorico(f.periodo, hoje),
           pagina: undefined,
         }))
       }

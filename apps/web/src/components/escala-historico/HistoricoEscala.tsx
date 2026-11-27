@@ -7,8 +7,10 @@ import type { PaginaHistoricoDto } from '../../gen/types/PaginaHistoricoDto';
 import { dataHoraCurta } from '../../lib/datas';
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { ListaCadastro } from '../cadastro/ListaCadastro';
-import { CampoData } from '../campo-data/CampoData';
 import { createDataTableColumnHelper } from '../data-table/columns';
+import { hojeEmBrasilia } from '../escala-ausencias/ausencias';
+import { FiltroPeriodo } from '../periodo/FiltroPeriodo';
+import { ATALHOS_ULTIMOS } from '../periodo/periodo';
 import { Select } from '../select/Select';
 import {
   alteracoesDoEvento,
@@ -59,8 +61,6 @@ export function HistoricoEscala({
 }: HistoricoEscalaProps) {
   const [referencia] = useState(() => agora ?? new Date());
   const medicoId = useId();
-  const deId = useId();
-  const ateId = useId();
 
   const colunas = useMemo(
     () => [
@@ -151,39 +151,15 @@ export function HistoricoEscala({
               opcoes={OPCOES_ENTIDADE}
               className="flex-[1_1_180px] md:flex-[0_1_220px]"
             />
-            <span className="flex min-w-0 flex-[1_1_300px] items-center gap-2 md:flex-none">
-              <label htmlFor={deId} className="text-muted-foreground text-[13px]">
-                De
-              </label>
-              <CampoData
-                id={deId}
-                value={filtros.de ?? ''}
-                max={filtros.ate}
-                onValueChange={(valor) => {
-                  const de = valor || undefined;
-                  // Início depois do fim: o fim deixa de valer.
-                  onFiltrar(
-                    de && filtros.ate && de > filtros.ate ? { de, ate: undefined } : { de },
-                  );
-                }}
-                className="min-w-0 flex-1 md:w-40"
-              />
-              <label htmlFor={ateId} className="text-muted-foreground text-[13px]">
-                Até
-              </label>
-              <CampoData
-                id={ateId}
-                value={filtros.ate ?? ''}
-                min={filtros.de}
-                onValueChange={(valor) => {
-                  const ate = valor || undefined;
-                  onFiltrar(
-                    ate && filtros.de && ate < filtros.de ? { ate, de: undefined } : { ate },
-                  );
-                }}
-                className="min-w-0 flex-1 md:w-40"
-              />
-            </span>
+            <FiltroPeriodo
+              de={filtros.de}
+              ate={filtros.ate}
+              hoje={hojeEmBrasilia(referencia)}
+              atalhos={ATALHOS_ULTIMOS}
+              rotuloSemPeriodo="Todo o período"
+              onMudar={(periodo) => onFiltrar(periodo)}
+              className="flex-[1_1_180px] md:flex-[0_1_200px]"
+            />
           </>
         }
       />

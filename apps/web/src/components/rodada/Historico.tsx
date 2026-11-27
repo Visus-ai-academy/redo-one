@@ -6,18 +6,14 @@ import type { PaginaRodadasDto } from '../../gen/types/PaginaRodadasDto';
 import type { RodadaListadaDto } from '../../gen/types/RodadaListadaDto';
 import type { StatusRodadaKey } from '../../gen/types/StatusRodada';
 import { dataHoraCurta } from '../../lib/datas';
-import {
-  num,
-  PERIODOS,
-  type Periodo,
-  recortesEmPoucasPalavras,
-  situacaoDaRodada,
-} from '../../lib/rodada';
+import { num, recortesEmPoucasPalavras, situacaoDaRodada } from '../../lib/rodada';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
+import { FiltroPeriodo } from '../periodo/FiltroPeriodo';
+import { ATALHOS_ULTIMOS, type Periodo } from '../periodo/periodo';
 import { Select } from '../select/Select';
 import { Caixa, Vazio } from './comum';
 
@@ -44,6 +40,7 @@ export function Historico({
   onTentarDeNovo,
   status,
   periodo,
+  hoje,
   onFiltrar,
   onIrPara,
   onAbrir,
@@ -54,6 +51,8 @@ export function Historico({
   onTentarDeNovo: () => void;
   status: StatusRodadaKey | undefined;
   periodo: Periodo;
+  /** Hoje em Brasília, "AAAA-MM-DD". */
+  hoje: string;
   onFiltrar: (f: { status: StatusRodadaKey | undefined; periodo: Periodo }) => void;
   onIrPara: (pagina: number) => void;
   onAbrir: (id: string) => void;
@@ -107,11 +106,13 @@ export function Historico({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
-        <Select
-          aria-label="Período"
-          value={periodo}
-          onValueChange={(v) => onFiltrar({ status, periodo: v as Periodo })}
-          opcoes={PERIODOS.map((p) => ({ valor: p.valor, rotulo: p.rotulo }))}
+        <FiltroPeriodo
+          de={periodo.de}
+          ate={periodo.ate}
+          hoje={hoje}
+          atalhos={ATALHOS_ULTIMOS}
+          rotuloSemPeriodo="Todo o período"
+          onMudar={(novo) => onFiltrar({ status, periodo: novo })}
           className="w-full sm:w-48"
         />
         <Select
@@ -144,7 +145,7 @@ export function Historico({
         >
           A conexão com o servidor caiu. Confira a internet e tente de novo.
         </Vazio>
-      ) : pagina && pagina.total === 0 && !status && periodo === 'todas' ? (
+      ) : pagina && pagina.total === 0 && !status && !periodo.de && !periodo.ate ? (
         <Vazio icone={<ClockCounterClockwise size={28} />} titulo="Nenhuma rodada ainda">
           Cada rodada pedida em Distribuir agora fica aqui, com quem pediu, quem aprovou, os
           recortes e o funil.

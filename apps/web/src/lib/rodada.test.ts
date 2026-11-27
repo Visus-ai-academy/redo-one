@@ -4,8 +4,10 @@ import { medicoEmTurno } from '../components/rodada/teste-dados';
 import type { MedicoEmTurnoDto } from '../gen/types/MedicoEmTurnoDto';
 
 import {
+  buscaDoPeriodoHistorico,
   cargaDoMedico,
   cargaNaUnidade,
+  consultaDoPeriodo,
   descreverRecortes,
   etapasDaRodada,
   filtrarMedicosEmTurno,
@@ -16,6 +18,7 @@ import {
   juntarNomes,
   medicosEmTurno,
   opcoesDosFiltros,
+  periodoDoHistorico,
   recolhimentoPrevistoEmTexto,
   resumoDoRecolhimento,
   rotuloMotivo,
@@ -435,5 +438,40 @@ describe('intervaloDoRetrato', () => {
 
   it('leitura automática desligada: a cada 5 min (só a leitura pedida muda a fila)', () => {
     expect(intervaloDoRetrato({ ...base, intervaloMin: null }, t(lida))).toBe(5 * 60_000);
+  });
+});
+
+describe('período do histórico das rodadas', () => {
+  const hoje = '2026-11-16';
+
+  it('sem nada na URL, os últimos 7 dias; "todas" é sem período', () => {
+    expect(periodoDoHistorico({}, hoje)).toEqual({ de: '2026-11-09', ate: hoje });
+    expect(periodoDoHistorico({ periodo: 'todas' }, hoje)).toEqual({
+      de: undefined,
+      ate: undefined,
+    });
+    expect(periodoDoHistorico({ de: '2026-10-01', ate: '2026-10-31' }, hoje)).toEqual({
+      de: '2026-10-01',
+      ate: '2026-10-31',
+    });
+  });
+
+  it('de volta para a URL: o padrão some, sem período vira "todas"', () => {
+    expect(buscaDoPeriodoHistorico({ de: '2026-11-09', ate: hoje }, hoje)).toEqual({});
+    expect(buscaDoPeriodoHistorico({ de: undefined, ate: undefined }, hoje)).toEqual({
+      periodo: 'todas',
+    });
+    expect(buscaDoPeriodoHistorico({ de: '2026-10-01', ate: '2026-10-31' }, hoje)).toEqual({
+      de: '2026-10-01',
+      ate: '2026-10-31',
+    });
+  });
+
+  it('para a API, o começo do primeiro dia e o começo do dia seguinte ao último, em Brasília', () => {
+    expect(consultaDoPeriodo({ de: '2026-10-01', ate: '2026-10-31' })).toEqual({
+      desde: '2026-10-01T03:00:00.000Z',
+      ate: '2026-11-01T03:00:00.000Z',
+    });
+    expect(consultaDoPeriodo({ de: undefined, ate: undefined })).toEqual({});
   });
 });
