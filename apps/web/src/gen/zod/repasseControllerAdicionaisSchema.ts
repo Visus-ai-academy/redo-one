@@ -4,13 +4,30 @@
 */
 
 import * as z from 'zod'
-import { adicionalDtoSchema } from './adicionalDtoSchema'
+import { paginaAdicionaisDtoSchema } from './paginaAdicionaisDtoSchema'
+import { tipoAdicionalRepasseSchema } from './tipoAdicionalRepasseSchema'
 
-export const repasseControllerAdicionaisQueryCompetenciaSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).meta({ examples: ['2026-10'] })
+export const repasseControllerAdicionaisQueryPaginaSchema = z.int().min(1).optional().default(1)
+
+export type RepasseControllerAdicionaisQueryPaginaSchemaType = z.infer<typeof repasseControllerAdicionaisQueryPaginaSchema>
+
+export const repasseControllerAdicionaisQueryPorPaginaSchema = z.int().min(1).max(100).optional().default(25)
+
+export type RepasseControllerAdicionaisQueryPorPaginaSchemaType = z.infer<typeof repasseControllerAdicionaisQueryPorPaginaSchema>
+
+export const repasseControllerAdicionaisQueryCompetenciaSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).meta({ examples: ['2026-11'] })
 
 export type RepasseControllerAdicionaisQueryCompetenciaSchemaType = z.infer<typeof repasseControllerAdicionaisQueryCompetenciaSchema>
 
-export const repasseControllerAdicionaisStatus200Schema = z.array(adicionalDtoSchema)
+export const repasseControllerAdicionaisQueryMedicoIdSchema = z.uuid().optional().describe('Sem ele: todos os médicos.')
+
+export type RepasseControllerAdicionaisQueryMedicoIdSchemaType = z.infer<typeof repasseControllerAdicionaisQueryMedicoIdSchema>
+
+export const repasseControllerAdicionaisQueryTipoSchema = tipoAdicionalRepasseSchema.optional().describe('Sem ele: todos os tipos.')
+
+export type RepasseControllerAdicionaisQueryTipoSchemaType = z.infer<typeof repasseControllerAdicionaisQueryTipoSchema>
+
+export const repasseControllerAdicionaisStatus200Schema = paginaAdicionaisDtoSchema
 
 export type RepasseControllerAdicionaisStatus200SchemaType = z.infer<typeof repasseControllerAdicionaisStatus200Schema>
 
@@ -19,7 +36,11 @@ export const repasseControllerAdicionaisResponseSchema = repasseControllerAdicio
 export type RepasseControllerAdicionaisResponseSchemaType = z.infer<typeof repasseControllerAdicionaisResponseSchema>
 
 export const repasseControllerAdicionaisQuerySchema = z.object({
-  competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).meta({ examples: ['2026-10'] }),
+  pagina: z.int().min(1).optional().default(1),
+  porPagina: z.int().min(1).max(100).optional().default(25),
+  competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).meta({ examples: ['2026-11'] }),
+  medicoId: z.uuid().optional().describe('Sem ele: todos os médicos.'),
+  tipo: tipoAdicionalRepasseSchema.optional().describe('Sem ele: todos os tipos.'),
 })
 
 export type RepasseControllerAdicionaisQuerySchemaType = z.infer<typeof repasseControllerAdicionaisQuerySchema>

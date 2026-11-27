@@ -9142,26 +9142,63 @@
         "operationId": "RepasseController_adicionais",
         "parameters": [
           {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
             "name": "competencia",
             "required": true,
             "in": "query",
             "schema": {
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
-              "example": "2026-10",
+              "example": "2026-11",
               "type": "string"
+            }
+          },
+          {
+            "name": "medicoId",
+            "required": false,
+            "in": "query",
+            "description": "Sem ele: todos os médicos.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "description": "Sem ele: todos os tipos.",
+            "schema": {
+              "$ref": "#/components/schemas/TipoAdicionalRepasse"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Da competência, os cancelados também.",
+            "description": "Da competência, os cancelados também, mais novos primeiro.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AdicionalDto"
-                  }
+                  "$ref": "#/components/schemas/PaginaAdicionaisDto"
                 }
               }
             }
@@ -9245,7 +9282,339 @@
             "description": ""
           },
           "409": {
-            "description": "Já cancelado, ou a competência está fechada."
+            "description": "Já cancelado (`codigo: \"ja_cancelado\"`) ou a competência está fechada (`codigo: \"competencia_fechada\"`)."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/competencias": {
+      "get": {
+        "operationId": "RepasseConsultasController_competencias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Competências com repasse gerado, a mais recente primeiro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompetenciaComRepasseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/competencias/{competencia}": {
+      "get": {
+        "operationId": "RepasseConsultasController_competencia",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Situação, versões guardadas (com o motivo do recálculo) e a atual.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetenciaRepasseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/competencias/{competencia}/demonstrativos": {
+      "get": {
+        "operationId": "RepasseConsultasController_demonstrativos",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "versao",
+            "required": false,
+            "in": "query",
+            "description": "Geração; sem ela, a atual.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome do médico.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "todas",
+              "type": "string",
+              "enum": [
+                "todas",
+                "sem_preco",
+                "com_preco"
+              ]
+            }
+          },
+          {
+            "name": "ordem",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "medico",
+              "type": "string",
+              "enum": [
+                "medico",
+                "volume",
+                "exames",
+                "adicionais",
+                "bruto",
+                "retencoes",
+                "liquido",
+                "semPreco"
+              ]
+            }
+          },
+          {
+            "name": "direcao",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDemonstrativosRepasseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A versão não é desta competência."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/demonstrativos/{id}": {
+      "get": {
+        "operationId": "RepasseConsultasController_demonstrativo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemonstrativoDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/demonstrativos/{id}/laudos": {
+      "get": {
+        "operationId": "RepasseConsultasController_laudos",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Laudos pagos, por data; o nome do paciente só com a permissão (leitura auditada).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaLaudosDemonstrativoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/tarifas": {
+      "get": {
+        "operationId": "RepasseConsultasController_tarifas",
+        "parameters": [
+          {
+            "name": "competencia",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarifa vigente para o lançamento e para onde ele vai se a competência estiver fechada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifasLancamentoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/medicos": {
+      "get": {
+        "operationId": "RepasseConsultasController_medicos",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Até 20 médicos ativos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MedicoOpcaoDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -21621,6 +21990,32 @@
           "motivoCancelamento"
         ]
       },
+      "PaginaAdicionaisDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdicionalDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
       "LancarAdicionalDto": {
         "type": "object",
         "properties": {
@@ -21705,6 +22100,651 @@
           "id",
           "competencia",
           "recalculoId"
+        ]
+      },
+      "CompetenciaComRepasseDto": {
+        "type": "object",
+        "properties": {
+          "competencia": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aberta",
+              "fechada"
+            ]
+          }
+        },
+        "required": [
+          "competencia",
+          "status"
+        ]
+      },
+      "PedidoRecalculoLidoDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          },
+          "solicitadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "solicitadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "motivo",
+          "solicitadoPor",
+          "solicitadoEm"
+        ]
+      },
+      "TotaisRepasseDto": {
+        "type": "object",
+        "properties": {
+          "medicos": {
+            "type": "integer"
+          },
+          "volume": {
+            "type": "number",
+            "description": "Soma do volume dos laudos pagos."
+          },
+          "examesCentavos": {
+            "type": "integer"
+          },
+          "adicionaisCentavos": {
+            "type": "integer"
+          },
+          "brutoCentavos": {
+            "type": "integer"
+          },
+          "retencoesCentavos": {
+            "type": "integer"
+          },
+          "liquidoCentavos": {
+            "type": "integer"
+          },
+          "gruposSemPreco": {
+            "type": "integer",
+            "description": "Grupos (médico × arranjo × cliente) sem preço."
+          },
+          "laudosSemPreco": {
+            "type": "integer",
+            "description": "Laudos desses grupos, pagos a zero."
+          }
+        },
+        "required": [
+          "medicos",
+          "volume",
+          "examesCentavos",
+          "adicionaisCentavos",
+          "brutoCentavos",
+          "retencoesCentavos",
+          "liquidoCentavos",
+          "gruposSemPreco",
+          "laudosSemPreco"
+        ]
+      },
+      "VersaoRepasseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "numero": {
+            "type": "integer",
+            "description": "1 = a primeira geração guardada."
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "previa",
+              "recalculo"
+            ]
+          },
+          "atual": {
+            "type": "boolean"
+          },
+          "geradoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recalculo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PedidoRecalculoLidoDto"
+              }
+            ]
+          },
+          "totais": {
+            "$ref": "#/components/schemas/TotaisRepasseDto"
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "tipo",
+          "atual",
+          "geradoEm",
+          "recalculo",
+          "totais"
+        ]
+      },
+      "CompetenciaRepasseDto": {
+        "type": "object",
+        "properties": {
+          "competencia": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aberta",
+              "fechada"
+            ]
+          },
+          "fechadaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "fechadaPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "reabertaEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "versoes": {
+            "description": "A mais antiga primeiro.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersaoRepasseDto"
+            }
+          },
+          "atual": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VersaoRepasseDto"
+              }
+            ]
+          },
+          "recalculoPendente": {
+            "nullable": true,
+            "description": "Recálculo pedido e ainda em andamento.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PedidoRecalculoLidoDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "competencia",
+          "status",
+          "fechadaEm",
+          "fechadaPor",
+          "reabertaEm",
+          "versoes",
+          "atual",
+          "recalculoPendente"
+        ]
+      },
+      "DemonstrativoResumoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medico": {
+            "type": "string"
+          },
+          "volume": {
+            "type": "number"
+          },
+          "examesCentavos": {
+            "type": "integer"
+          },
+          "adicionaisCentavos": {
+            "type": "integer"
+          },
+          "brutoCentavos": {
+            "type": "integer"
+          },
+          "retencoesCentavos": {
+            "type": "integer"
+          },
+          "liquidoCentavos": {
+            "type": "integer"
+          },
+          "gruposSemPreco": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "medicoId",
+          "medico",
+          "volume",
+          "examesCentavos",
+          "adicionaisCentavos",
+          "brutoCentavos",
+          "retencoesCentavos",
+          "liquidoCentavos",
+          "gruposSemPreco"
+        ]
+      },
+      "PaginaDemonstrativosRepasseDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemonstrativoResumoDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          },
+          "totais": {
+            "description": "Somas do recorte filtrado.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TotaisRepasseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina",
+          "totais"
+        ]
+      },
+      "OrigemPrecoRepasse": {
+        "type": "string",
+        "enum": [
+          "unidade",
+          "cliente",
+          "todos",
+          "tarifa_propria",
+          "sem_preco"
+        ]
+      },
+      "GrupoRepasseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modalidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "especialidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoria": {
+            "type": "string",
+            "nullable": true
+          },
+          "prioridade": {
+            "type": "string",
+            "nullable": true
+          },
+          "cliente": {
+            "type": "string",
+            "nullable": true
+          },
+          "unidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "volume": {
+            "type": "number"
+          },
+          "unitarioCentavos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "totalCentavos": {
+            "type": "integer"
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemPrecoRepasse"
+              }
+            ]
+          },
+          "categoriaPreco": {
+            "type": "string",
+            "nullable": true,
+            "description": "Categoria do preço quando veio por uma alternativa."
+          }
+        },
+        "required": [
+          "id",
+          "modalidade",
+          "especialidade",
+          "categoria",
+          "prioridade",
+          "cliente",
+          "unidade",
+          "volume",
+          "unitarioCentavos",
+          "totalCentavos",
+          "origem",
+          "categoriaPreco"
+        ]
+      },
+      "LancamentoRepasseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "adicional",
+              "regra",
+              "retencao"
+            ]
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "totalCentavos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "descricao",
+          "totalCentavos"
+        ]
+      },
+      "DiaRepasseDto": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "string",
+            "example": "2026-11-03"
+          },
+          "volume": {
+            "type": "number"
+          },
+          "totalCentavos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dia",
+          "volume",
+          "totalCentavos"
+        ]
+      },
+      "DemonstrativoDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medico": {
+            "type": "string"
+          },
+          "volume": {
+            "type": "number"
+          },
+          "examesCentavos": {
+            "type": "integer"
+          },
+          "adicionaisCentavos": {
+            "type": "integer"
+          },
+          "brutoCentavos": {
+            "type": "integer"
+          },
+          "retencoesCentavos": {
+            "type": "integer"
+          },
+          "liquidoCentavos": {
+            "type": "integer"
+          },
+          "gruposSemPreco": {
+            "type": "integer"
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "geracaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versao": {
+            "type": "integer"
+          },
+          "versaoAtual": {
+            "type": "boolean"
+          },
+          "contratado": {
+            "type": "string",
+            "nullable": true
+          },
+          "grupos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrupoRepasseDto"
+            }
+          },
+          "lancamentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LancamentoRepasseDto"
+            }
+          },
+          "dias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiaRepasseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "medicoId",
+          "medico",
+          "volume",
+          "examesCentavos",
+          "adicionaisCentavos",
+          "brutoCentavos",
+          "retencoesCentavos",
+          "liquidoCentavos",
+          "gruposSemPreco",
+          "competencia",
+          "geracaoId",
+          "versao",
+          "versaoAtual",
+          "contratado",
+          "grupos",
+          "lancamentos",
+          "dias"
+        ]
+      },
+      "LaudoDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "laudoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "peca": {
+            "type": "integer",
+            "description": "0 = o laudo inteiro; 1..N = a peça da quebra."
+          },
+          "dataLaudo": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exame": {
+            "type": "string",
+            "nullable": true
+          },
+          "cliente": {
+            "type": "string",
+            "nullable": true
+          },
+          "paciente": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só com a permissão."
+          },
+          "volume": {
+            "type": "number"
+          },
+          "totalCentavos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "laudoId",
+          "peca",
+          "dataLaudo",
+          "exame",
+          "cliente",
+          "paciente",
+          "volume",
+          "totalCentavos"
+        ]
+      },
+      "PaginaLaudosDemonstrativoDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LaudoDemonstrativoDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          },
+          "pacienteVisivel": {
+            "type": "boolean",
+            "description": "O nome do paciente veio (quem pede tem a permissão)."
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina",
+          "pacienteVisivel"
+        ]
+      },
+      "TarifasDto": {
+        "type": "object",
+        "properties": {
+          "peerReviewCentavos": {
+            "type": "integer"
+          },
+          "plantaoCentavos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "peerReviewCentavos",
+          "plantaoCentavos"
+        ]
+      },
+      "TarifasLancamentoDto": {
+        "type": "object",
+        "properties": {
+          "competencia": {
+            "type": "string"
+          },
+          "fechada": {
+            "type": "boolean"
+          },
+          "destino": {
+            "type": "string",
+            "description": "Onde o adicional entra por padrão (a próxima aberta, se fechada)."
+          },
+          "tarifasDestino": {
+            "$ref": "#/components/schemas/TarifasDto"
+          },
+          "tarifasDaCompetencia": {
+            "description": "Para lançar na própria fechada.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TarifasDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "competencia",
+          "fechada",
+          "destino",
+          "tarifasDestino",
+          "tarifasDaCompetencia"
+        ]
+      },
+      "MedicoOpcaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
         ]
       },
       "StatusImportacao": {

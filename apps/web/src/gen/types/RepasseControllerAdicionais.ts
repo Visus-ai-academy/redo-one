@@ -3,18 +3,44 @@
 * Do not edit manually.
 */
 
-import type { AdicionalDto } from './AdicionalDto'
+import type { PaginaAdicionaisDto } from './PaginaAdicionaisDto'
+import type { TipoAdicionalRepasseKey } from './TipoAdicionalRepasse'
 
 export type RepasseControllerAdicionaisQuery = {
   /**
+   * @minimum 1
+   * @default 1
+   * @type integer | undefined
+   */
+  pagina?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   * @default 25
+   * @type integer | undefined
+   */
+  porPagina?: number;
+  /**
    * @pattern ^\d{4}-(0[1-9]|1[0-2])$
-   * @example 2026-10
+   * @example 2026-11
    * @type string
    */
   competencia: string;
+  /**
+   * @description Sem ele: todos os médicos.
+   *
+   * Format: `uuid`
+   * @type string | undefined
+   */
+  medicoId?: string;
+  /**
+   * @description Sem ele: todos os tipos.
+   * @type string | undefined
+   */
+  tipo?: TipoAdicionalRepasseKey;
 };
 
-export type RepasseControllerAdicionaisStatus200 = AdicionalDto[];
+export type RepasseControllerAdicionaisStatus200 = PaginaAdicionaisDto;
 
 export type RepasseControllerAdicionaisOptions = {
   body?: never;
