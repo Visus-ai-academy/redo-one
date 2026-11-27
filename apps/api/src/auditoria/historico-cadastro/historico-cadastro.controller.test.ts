@@ -13,7 +13,7 @@ describe('HistoricoCadastroController', () => {
 
   it('uma rota por cadastro, cada uma com o ver do cadastro', () => {
     expect(
-      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor].map((h) =>
+      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor, p.doTituloPagar].map((h) =>
         reflector.get(PATH_METADATA, h),
       ),
     ).toEqual([
@@ -21,12 +21,19 @@ describe('HistoricoCadastroController', () => {
       'catalogo/clientes/:id/historico',
       'catalogo/exames/:id/historico',
       'financeiro/fornecedores/:id/historico',
+      'financeiro/contas-pagar/titulos/:id/historico',
     ]);
     expect(
-      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor].map((h) =>
+      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor, p.doTituloPagar].map((h) =>
         reflector.get(PERMISSOES_EXIGIDAS, h),
       ),
-    ).toEqual([['medicos.ver'], ['clientes.ver'], ['exames.ver'], ['fornecedores.ver']]);
+    ).toEqual([
+      ['medicos.ver'],
+      ['clientes.ver'],
+      ['exames.ver'],
+      ['fornecedores.ver'],
+      ['contas-pagar.ver'],
+    ]);
   });
 
   it('passa quem consulta (para o recorte do médico) e devolve a página', async () => {

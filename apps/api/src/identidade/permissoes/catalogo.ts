@@ -493,6 +493,35 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     especiais: [],
   },
   {
+    // Financeiro › Contas a pagar: títulos a fornecedores e médicos e as baixas deles. Lê as
+    // categorias de despesa e as contas bancárias de cada empresa.
+    tela: 'contas-pagar',
+    rotulo: 'Contas a pagar',
+    area: 'Financeiro',
+    padrao: so('ver', 'criar', 'editar'),
+    especiais: [
+      {
+        chave: 'contas-pagar.baixar',
+        rotulo: 'Dar baixa',
+        descricao: 'Registrar o pagamento de um título, total ou parcial, numa conta bancária.',
+        sensivel: true,
+      },
+      {
+        chave: 'contas-pagar.estornar',
+        rotulo: 'Estornar baixa',
+        descricao: 'Desfazer uma baixa, com motivo; o título volta a ter saldo.',
+        sensivel: true,
+      },
+      {
+        chave: 'contas-pagar.cancelar',
+        rotulo: 'Cancelar',
+        descricao: 'Cancelar título sem baixa ativa, com motivo.',
+        sensivel: true,
+      },
+    ],
+    exige: ['categorias-financeiras', 'contas-bancarias'],
+  },
+  {
     tela: 'usuarios',
     rotulo: 'Usuários',
     area: 'Configurações',

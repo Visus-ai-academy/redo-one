@@ -12243,6 +12243,464 @@
         ]
       }
     },
+    "/financeiro/contas-pagar/titulos": {
+      "get": {
+        "operationId": "ContasPagarTitulosController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Nome do favorecido, nº (R-0123), documento ou descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa",
+            "required": true,
+            "in": "query",
+            "description": "Id da empresa ou `todas` (escolha explícita).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "description": "`em_aberto` = aberto ou parcial; `vencidos` = em aberto com vencimento antes de hoje.",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltroTitulo"
+            }
+          },
+          {
+            "name": "origem",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/OrigemFiltroTitulo"
+            }
+          },
+          {
+            "name": "categoria",
+            "required": true,
+            "in": "query",
+            "description": "Id da categoria ou `todas`.",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "favorecidoTipo",
+            "required": false,
+            "in": "query",
+            "description": "Com `favorecidoId`: só os títulos dele.",
+            "schema": {
+              "$ref": "#/components/schemas/TipoFavorecido"
+            }
+          },
+          {
+            "name": "favorecidoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vencimentoDe",
+            "required": false,
+            "in": "query",
+            "description": "Vencimento a partir deste dia.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vencimentoAte",
+            "required": false,
+            "in": "query",
+            "description": "Vencimento até este dia.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTitulosDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Títulos, por vencimento, com os totais em aberto e vencido.",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "ContasPagarTitulosController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TituloDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          }
+        },
+        "summary": "Lança o título à mão.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/favorecidos": {
+      "get": {
+        "operationId": "ContasPagarTitulosController_favorecidos",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpcaoFavorecidoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Fornecedores e médicos ativos para o título.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/titulos/{id}": {
+      "get": {
+        "operationId": "ContasPagarTitulosController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TituloDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "O título, com as baixas (estornadas inclusive).",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "ContasPagarTitulosController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TituloDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Título liquidado ou cancelado."
+          }
+        },
+        "summary": "Edita o título em aberto ou parcial.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/titulos/{id}/prorrogacao": {
+      "post": {
+        "operationId": "ContasPagarTitulosController_prorrogar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProrrogacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Título liquidado ou cancelado."
+          }
+        },
+        "summary": "Novo vencimento, com motivo; o original fica guardado.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/titulos/{id}/baixas": {
+      "post": {
+        "operationId": "ContasPagarTitulosController_baixar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaixaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "O id da baixa.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Título liquidado ou cancelado."
+          }
+        },
+        "summary": "Dá baixa (total ou parcial) numa conta bancária da empresa.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/titulos/{id}/baixas/{baixaId}/estorno": {
+      "post": {
+        "operationId": "ContasPagarTitulosController_estornar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "baixaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Motivo faltando."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "A baixa já foi estornada."
+          }
+        },
+        "summary": "Estorna a baixa, com motivo; o título volta a ter saldo.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/titulos/{id}/cancelamento": {
+      "post": {
+        "operationId": "ContasPagarTitulosController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Motivo faltando."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Com baixa ativa ou já cancelado."
+          }
+        },
+        "summary": "Cancela o título sem baixa ativa, com motivo.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
     "/distribuicao/rodadas/viva": {
       "get": {
         "operationId": "RodadasController_viva",
@@ -14264,6 +14722,57 @@
         "responses": {
           "200": {
             "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaHistoricoCadastroDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "historico"
+        ]
+      }
+    },
+    "/financeiro/contas-pagar/titulos/{id}/historico": {
+      "get": {
+        "operationId": "HistoricoCadastroController_doTituloPagar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga. Edição, baixas, estornos, prorrogação e cancelamento do título.",
             "content": {
               "application/json": {
                 "schema": {
@@ -23502,7 +24011,7 @@
           "motivo": {
             "type": "string",
             "maxLength": 1000,
-            "description": "Obrigatório; fica no histórico."
+            "description": "Fica no histórico."
           }
         },
         "required": [
@@ -28195,6 +28704,686 @@
           "tipoPessoa",
           "razaoSocial",
           "ativo"
+        ]
+      },
+      "SituacaoFiltroTitulo": {
+        "type": "string",
+        "enum": [
+          "todas",
+          "em_aberto",
+          "vencidos",
+          "aberto",
+          "parcial",
+          "liquidado",
+          "cancelado"
+        ]
+      },
+      "OrigemFiltroTitulo": {
+        "type": "string",
+        "enum": [
+          "todas",
+          "manual",
+          "faturamento",
+          "pre_pago",
+          "repasse",
+          "carga_omie"
+        ]
+      },
+      "TipoFavorecido": {
+        "type": "string",
+        "enum": [
+          "cliente",
+          "fornecedor",
+          "medico"
+        ]
+      },
+      "TipoTitulo": {
+        "type": "string",
+        "enum": [
+          "receber",
+          "pagar"
+        ]
+      },
+      "FavorecidoNomeDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoFavorecido"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "id",
+          "nome"
+        ]
+      },
+      "SituacaoTitulo": {
+        "type": "string",
+        "enum": [
+          "aberto",
+          "parcial",
+          "liquidado",
+          "cancelado"
+        ]
+      },
+      "OrigemTitulo": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "faturamento",
+          "pre_pago",
+          "repasse",
+          "carga_omie"
+        ]
+      },
+      "TituloItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoTitulo"
+              }
+            ]
+          },
+          "numero": {
+            "type": "integer",
+            "description": "Mostrado como R-0123 ou P-0045."
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "favorecido": {
+            "$ref": "#/components/schemas/FavorecidoNomeDto"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaNome": {
+            "type": "string",
+            "description": "\"Grupo › Categoria\" ou só a categoria."
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "documento": {
+            "type": "string",
+            "nullable": true
+          },
+          "competencia": {
+            "type": "string",
+            "nullable": true,
+            "description": "AAAA-MM."
+          },
+          "emissaoEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "pagoCentavos": {
+            "type": "integer",
+            "description": "Soma do principal das baixas não estornadas."
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoTitulo"
+              }
+            ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemTitulo"
+              }
+            ]
+          },
+          "contaPrevistaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "diasDeAtraso": {
+            "type": "integer",
+            "description": "Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo."
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "numero",
+          "contratadoId",
+          "empresaNome",
+          "favorecido",
+          "categoriaId",
+          "categoriaNome",
+          "descricao",
+          "documento",
+          "competencia",
+          "emissaoEm",
+          "vencimento",
+          "valorCentavos",
+          "pagoCentavos",
+          "situacao",
+          "origem",
+          "contaPrevistaId",
+          "diasDeAtraso"
+        ]
+      },
+      "TotaisTitulosDto": {
+        "type": "object",
+        "properties": {
+          "abertoCentavos": {
+            "type": "integer",
+            "description": "Saldo de aberto e parcial."
+          },
+          "vencidoCentavos": {
+            "type": "integer",
+            "description": "Parte do saldo vencida antes de hoje."
+          }
+        },
+        "required": [
+          "abertoCentavos",
+          "vencidoCentavos"
+        ]
+      },
+      "PaginaTitulosDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TituloItemDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          },
+          "totais": {
+            "$ref": "#/components/schemas/TotaisTitulosDto"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina",
+          "totais"
+        ]
+      },
+      "OpcaoFavorecidoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoFavorecido"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "detalhe": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nome fantasia, quando há."
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Do fornecedor: a categoria sugerida ao lançar a despesa."
+          }
+        },
+        "required": [
+          "tipo",
+          "id",
+          "nome",
+          "detalhe",
+          "categoriaPadraoId"
+        ]
+      },
+      "FormaBaixa": {
+        "type": "string",
+        "enum": [
+          "pix",
+          "boleto",
+          "ted",
+          "dinheiro",
+          "cartao",
+          "outro"
+        ]
+      },
+      "BaixaDoTituloDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pagoEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "contaBancariaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contaNome": {
+            "type": "string"
+          },
+          "principalCentavos": {
+            "type": "integer"
+          },
+          "jurosCentavos": {
+            "type": "integer"
+          },
+          "multaCentavos": {
+            "type": "integer"
+          },
+          "descontoCentavos": {
+            "type": "integer"
+          },
+          "valorMovimentadoCentavos": {
+            "type": "integer"
+          },
+          "forma": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FormaBaixa"
+              }
+            ]
+          },
+          "observacao": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoPorNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "estornadaEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "estornadaPorNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "motivoEstorno": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "pagoEm",
+          "contaBancariaId",
+          "contaNome",
+          "principalCentavos",
+          "jurosCentavos",
+          "multaCentavos",
+          "descontoCentavos",
+          "valorMovimentadoCentavos",
+          "forma",
+          "observacao",
+          "criadoPorNome",
+          "criadoEm",
+          "estornadaEm",
+          "estornadaPorNome",
+          "motivoEstorno"
+        ]
+      },
+      "TituloDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoTitulo"
+              }
+            ]
+          },
+          "numero": {
+            "type": "integer",
+            "description": "Mostrado como R-0123 ou P-0045."
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "favorecido": {
+            "$ref": "#/components/schemas/FavorecidoNomeDto"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaNome": {
+            "type": "string",
+            "description": "\"Grupo › Categoria\" ou só a categoria."
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "documento": {
+            "type": "string",
+            "nullable": true
+          },
+          "competencia": {
+            "type": "string",
+            "nullable": true,
+            "description": "AAAA-MM."
+          },
+          "emissaoEm": {
+            "type": "string",
+            "format": "date"
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "pagoCentavos": {
+            "type": "integer",
+            "description": "Soma do principal das baixas não estornadas."
+          },
+          "situacao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SituacaoTitulo"
+              }
+            ]
+          },
+          "origem": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigemTitulo"
+              }
+            ]
+          },
+          "contaPrevistaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "diasDeAtraso": {
+            "type": "integer",
+            "description": "Dias desde o vencimento, hoje em Brasília; 0 sem atraso ou sem saldo."
+          },
+          "contaPrevistaNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "vencimentoOriginal": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Antes da prorrogação."
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "canceladoEm": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "motivoCancelamento": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "baixas": {
+            "description": "Da mais nova para a mais antiga.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaixaDoTituloDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "numero",
+          "contratadoId",
+          "empresaNome",
+          "favorecido",
+          "categoriaId",
+          "categoriaNome",
+          "descricao",
+          "documento",
+          "competencia",
+          "emissaoEm",
+          "vencimento",
+          "valorCentavos",
+          "pagoCentavos",
+          "situacao",
+          "origem",
+          "contaPrevistaId",
+          "diasDeAtraso",
+          "contaPrevistaNome",
+          "vencimentoOriginal",
+          "observacoes",
+          "canceladoEm",
+          "motivoCancelamento",
+          "criadoEm",
+          "baixas"
+        ]
+      },
+      "FavorecidoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoFavorecido"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tipo",
+          "id"
+        ]
+      },
+      "TituloDto": {
+        "type": "object",
+        "properties": {
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A empresa (contratado que usa o financeiro)."
+          },
+          "favorecido": {
+            "description": "Cliente (a receber), fornecedor ou médico (a pagar).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FavorecidoDto"
+              }
+            ]
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Honorários de dezembro",
+            "maxLength": 200
+          },
+          "documento": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60,
+            "example": "NFS-e 1.284"
+          },
+          "competencia": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 7,
+            "example": "2026-11",
+            "description": "AAAA-MM."
+          },
+          "emissaoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Emissão."
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date",
+            "description": "Vencimento."
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Em centavos, maior que zero."
+          },
+          "contaPrevistaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "contratadoId",
+          "favorecido",
+          "categoriaId",
+          "descricao",
+          "emissaoEm",
+          "vencimento",
+          "valorCentavos"
+        ]
+      },
+      "ProrrogacaoDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Fica no histórico."
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date",
+            "description": "O novo vencimento."
+          }
+        },
+        "required": [
+          "motivo",
+          "vencimento"
+        ]
+      },
+      "BaixaDto": {
+        "type": "object",
+        "properties": {
+          "pagoEm": {
+            "type": "string",
+            "format": "date",
+            "description": "Data do pagamento; não pode ser depois de hoje."
+          },
+          "contaBancariaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "principalCentavos": {
+            "type": "integer",
+            "description": "Quanto abate do saldo, em centavos."
+          },
+          "jurosCentavos": {
+            "type": "integer",
+            "default": 0
+          },
+          "multaCentavos": {
+            "type": "integer",
+            "default": 0
+          },
+          "descontoCentavos": {
+            "type": "integer",
+            "default": 0
+          },
+          "forma": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FormaBaixa"
+              }
+            ]
+          },
+          "observacao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "pagoEm",
+          "contaBancariaId",
+          "principalCentavos",
+          "forma"
         ]
       },
       "StatusRodada": {

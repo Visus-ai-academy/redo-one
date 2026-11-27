@@ -14,7 +14,9 @@ export type AlvoHistorico =
     }
   | { cadastro: 'cliente'; id: string }
   | { cadastro: 'exame'; id: string }
-  | { cadastro: 'fornecedor'; id: string };
+  | { cadastro: 'fornecedor'; id: string }
+  /** Título a pagar ou a receber: só se o id for mesmo do tipo (cada tipo tem a sua permissão). */
+  | { cadastro: 'titulo'; tipo: 'pagar' | 'receber'; id: string };
 
 export interface ItemHistoricoCadastro {
   id: string;

@@ -85,7 +85,7 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis, categorias_financeiras cascade`,
+      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis, categorias_financeiras, contratados, fornecedores, titulos cascade`,
     );
     minuto = 0;
     for (const k of Object.keys(ev)) delete ev[k];
@@ -354,6 +354,52 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
     const r = await repo.listar({ cadastro: 'fornecedor', id: fornecedor }, pagina);
     expect(apelidos(r.itens)).toEqual(['criado']);
     expect(r.nomes[categoria?.id ?? '']).toBe('Contabilidade');
+  });
+
+  it('título: só os eventos dele e só pela rota do tipo dele, com o nome do fornecedor', async () => {
+    const [empresa] = await db
+      .insert(schema.contratados)
+      .values({ razaoSocial: '001 TELEIMAGEM', usaFinanceiro: true })
+      .returning();
+    const [categoria] = await db
+      .insert(schema.categoriasFinanceiras)
+      .values({ tipo: 'despesa', nome: 'Contabilidade' })
+      .returning();
+    const [fornecedor] = await db
+      .insert(schema.fornecedores)
+      .values({ tipoPessoa: 'PJ', razaoSocial: 'Ômega', cnpj: '12345678000190' })
+      .returning();
+    const [titulo] = await db
+      .insert(schema.titulos)
+      .values({
+        tipo: 'pagar',
+        contratadoId: empresa?.id ?? '',
+        numero: 1,
+        fornecedorId: fornecedor?.id,
+        categoriaId: categoria?.id ?? '',
+        descricao: 'Honorários',
+        emissaoEm: '2026-11-01',
+        vencimento: '2026-11-05',
+        valorCentavos: 1000,
+      })
+      .returning();
+    const id = titulo?.id ?? '';
+    await evento('criado', {
+      entidade: 'titulo',
+      entidadeId: id,
+      acao: 'criado',
+      depois: { favorecido: { tipo: 'fornecedor', id: fornecedor?.id } },
+    });
+    await evento('outro', {
+      entidade: 'fornecedor',
+      entidadeId: id,
+      acao: 'alterado',
+    });
+
+    const r = await repo.listar({ cadastro: 'titulo', tipo: 'pagar', id }, pagina);
+    expect(apelidos(r.itens)).toEqual(['criado']);
+    expect(r.nomes[fornecedor?.id ?? '']).toBe('Ômega');
+    expect((await repo.listar({ cadastro: 'titulo', tipo: 'receber', id }, pagina)).total).toBe(0);
   });
 
   it('exame: o cadastro e os valores fora do padrão ligados a ele, pela tabela ou pelo evento', async () => {

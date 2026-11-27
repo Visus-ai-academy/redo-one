@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CategoriaItemDto } from '../../gen/types/CategoriaItemDto';
 import type { FornecedorDetalheDto } from '../../gen/types/FornecedorDetalheDto';
 import { escolherOpcao } from '../../test/select';
-import { PainelFornecedor, TitulosDoFornecedor } from './PainelFornecedor';
+import { PainelFornecedor } from './PainelFornecedor';
 
 const categorias: CategoriaItemDto[] = [
   {
@@ -129,7 +129,7 @@ describe('PainelFornecedor', () => {
         onSalvar={vi.fn()}
         onFechar={vi.fn()}
         historico={<p>histórico aqui</p>}
-        titulos={<TitulosDoFornecedor />}
+        titulos={<p>Títulos do fornecedor aqui</p>}
       />,
     );
 
@@ -141,6 +141,6 @@ describe('PainelFornecedor', () => {
       'Histórico',
     ]);
     await userEvent.click(screen.getByRole('tab', { name: 'Títulos' }));
-    expect(screen.getByText('Nenhum título deste fornecedor.')).toBeInTheDocument();
+    expect(screen.getByText('Títulos do fornecedor aqui')).toBeInTheDocument();
   });
 });

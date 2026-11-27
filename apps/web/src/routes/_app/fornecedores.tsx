@@ -8,10 +8,8 @@ import { createDataTableColumnHelper } from '../../components/data-table/columns
 import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { SemPermissao } from '../../components/estado/estados';
 import { Etiqueta } from '../../components/etiqueta/Etiqueta';
-import {
-  PainelFornecedor,
-  TitulosDoFornecedor,
-} from '../../components/financeiro/PainelFornecedor';
+import { PainelFornecedor } from '../../components/financeiro/PainelFornecedor';
+import { TitulosDoFornecedor } from '../../components/financeiro/TitulosDoFornecedor';
 import { HistoricoCadastro } from '../../components/historico-cadastro/HistoricoCadastro';
 import { PainelCarregando } from '../../components/painel/PainelCarregando';
 import { Select } from '../../components/select/Select';
@@ -80,7 +78,10 @@ export const Route = createFileRoute('/_app/fornecedores')({
 function PaginaFornecedores() {
   const { sessao } = Route.useRouteContext();
   return pode(sessao, `${TELA}.ver`) ? (
-    <Fornecedores permissoes={podeNaTela(sessao, TELA)} />
+    <Fornecedores
+      permissoes={podeNaTela(sessao, TELA)}
+      podeVerTitulos={pode(sessao, 'contas-pagar.ver')}
+    />
   ) : (
     <SemPermissao tela="Fornecedores" />
   );
@@ -130,7 +131,13 @@ const colunas = [
   }),
 ];
 
-function Fornecedores({ permissoes }: { permissoes: PodeNaTela }) {
+function Fornecedores({
+  permissoes,
+  podeVerTitulos,
+}: {
+  permissoes: PodeNaTela;
+  podeVerTitulos: boolean;
+}) {
   const busca = Route.useSearch();
   const navigate = Route.useNavigate();
   const lista = useQuery({
@@ -227,14 +234,27 @@ function Fornecedores({ permissoes }: { permissoes: PodeNaTela }) {
       onIrPara={(numero) => ir((a) => ({ ...a, pagina: numero }))}
       painel={
         busca.id || (busca.novo && permissoes.criar) ? (
-          <Painel key={busca.id ?? 'novo'} id={busca.id} permissoes={permissoes} />
+          <Painel
+            key={busca.id ?? 'novo'}
+            id={busca.id}
+            permissoes={permissoes}
+            podeVerTitulos={podeVerTitulos}
+          />
         ) : undefined
       }
     />
   );
 }
 
-function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
+function Painel({
+  id,
+  permissoes,
+  podeVerTitulos,
+}: {
+  id?: string;
+  permissoes: PodeNaTela;
+  podeVerTitulos: boolean;
+}) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const categorias = useQuery(opcoesDespesa());
@@ -268,7 +288,11 @@ function Painel({ id, permissoes }: { id?: string; permissoes: PodeNaTela }) {
       podeEditar={id ? permissoes.editar : permissoes.criar}
       onFechar={fechar}
       historico={id ? <HistoricoCadastro key={id} cadastro="fornecedor" id={id} /> : undefined}
-      titulos={id ? <TitulosDoFornecedor /> : undefined}
+      titulos={
+        id && fornecedor ? (
+          <TitulosDoFornecedor id={id} nome={fornecedor.razaoSocial} podeVer={podeVerTitulos} />
+        ) : undefined
+      }
       onSalvar={async (dados) => {
         let alvo = id;
         if (id) await fornecedoresControllerAtualizar({ path: { id }, body: dados }).unwrap();

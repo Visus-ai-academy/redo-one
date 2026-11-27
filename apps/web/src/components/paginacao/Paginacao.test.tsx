@@ -28,6 +28,21 @@ describe('Paginacao', () => {
     expect(irPara.mock.calls).toEqual([[1], [3]]);
   });
 
+  it('com o resumo (totais da lista), ele vai à esquerda e a faixa junto dos botões', () => {
+    render(
+      <Paginacao
+        pagina={1}
+        porPagina={25}
+        total={3}
+        onIrPara={vi.fn()}
+        resumo={<span>Em aberto R$ 10,00</span>}
+      />,
+    );
+
+    expect(screen.getByText('Em aberto R$ 10,00')).toBeInTheDocument();
+    expect(screen.getByText('1–3 de 3')).toBeInTheDocument();
+  });
+
   it('desabilita os botões nas pontas', () => {
     render(<Paginacao pagina={1} porPagina={25} total={20} onIrPara={vi.fn()} />);
 

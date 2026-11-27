@@ -6,16 +6,19 @@ import {
   check,
   date,
   index,
+  integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { contratados, tipoPessoa } from './catalogo';
-import { tipoChavePix } from './medicos';
+import { clientes, contratados, tipoPessoa } from './catalogo';
+import { usuarios } from './identidade';
+import { medicos, tipoChavePix } from './medicos';
 
 // Contexto `financeiro`: plano de categorias, contas bancárias, fornecedores e, depois, títulos e
 // baixas. Valores em centavos (`bigint`), datas de vencimento e pagamento como `date` (dia de
@@ -154,6 +157,163 @@ export const fornecedores = pgTable(
     check(
       'fornecedores_documento_check',
       sql`(${t.tipoPessoa} = 'PJ' and ${t.cnpj} is not null and ${t.cpf} is null) or (${t.tipoPessoa} = 'PF' and ${t.cpf} is not null and ${t.cnpj} is null)`,
+    ),
+  ],
+);
+
+export const tipoTitulo = pgEnum('tipo_titulo', ['receber', 'pagar']);
+export const situacaoTitulo = pgEnum('situacao_titulo', [
+  'aberto',
+  'parcial',
+  'liquidado',
+  'cancelado',
+]);
+export const origemTitulo = pgEnum('origem_titulo', [
+  'manual',
+  'faturamento',
+  'pre_pago',
+  'repasse',
+  'carga_omie',
+]);
+export const formaBaixa = pgEnum('forma_baixa', [
+  'pix',
+  'boleto',
+  'ted',
+  'dinheiro',
+  'cartao',
+  'outro',
+]);
+export const origemBaixa = pgEnum('origem_baixa', ['manual', 'banco']);
+
+/** Último número de título de cada empresa e tipo (R-0001, P-0001...). */
+export const titulosNumeracao = pgTable(
+  'titulos_numeracao',
+  {
+    contratadoId: uuid('contratado_id')
+      .notNull()
+      .references(() => contratados.id),
+    tipo: tipoTitulo('tipo').notNull(),
+    ultimo: integer('ultimo').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.contratadoId, t.tipo] })],
+);
+
+/**
+ * Conta a receber (de um cliente) ou a pagar (a um fornecedor ou médico). "Vencido" não é
+ * gravado: é aberto ou parcial com vencimento antes de hoje. `pago_centavos` é a soma do principal
+ * das baixas não estornadas, mantida na mesma transação da baixa e do estorno.
+ */
+export const titulos = pgTable(
+  'titulos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tipo: tipoTitulo('tipo').notNull(),
+    contratadoId: uuid('contratado_id')
+      .notNull()
+      .references(() => contratados.id),
+    /** Sequencial por empresa e tipo. */
+    numero: integer('numero').notNull(),
+    /** A receber: sempre o cliente principal (os laudos da unidade são do principal). */
+    clienteId: uuid('cliente_id').references(() => clientes.id),
+    fornecedorId: uuid('fornecedor_id').references(() => fornecedores.id),
+    /** Os dados de pagamento ficam no `medicos`, com permissão própria. */
+    medicoId: uuid('medico_id').references(() => medicos.id),
+    categoriaId: uuid('categoria_id')
+      .notNull()
+      .references(() => categoriasFinanceiras.id),
+    descricao: text('descricao').notNull(),
+    /** Nº da NF ou do boleto. */
+    documento: text('documento'),
+    /** AAAA-MM. */
+    competencia: text('competencia'),
+    emissaoEm: date('emissao_em').notNull(),
+    vencimento: date('vencimento').notNull(),
+    /** O primeiro vencimento, guardado quando o vencimento é prorrogado. */
+    vencimentoOriginal: date('vencimento_original'),
+    valorCentavos: bigint('valor_centavos', { mode: 'number' }).notNull(),
+    pagoCentavos: bigint('pago_centavos', { mode: 'number' }).notNull().default(0),
+    contaPrevistaId: uuid('conta_prevista_id').references(() => contasBancarias.id),
+    situacao: situacaoTitulo('situacao').notNull().default('aberto'),
+    origem: origemTitulo('origem').notNull().default('manual'),
+    /** O demonstrativo, a recarga ou o demonstrativo de repasse de origem. */
+    origemId: uuid('origem_id'),
+    origemVersao: integer('origem_versao'),
+    observacoes: text('observacoes'),
+    canceladoEm: timestamp('cancelado_em', { withTimezone: true }),
+    canceladoPorId: uuid('cancelado_por_id').references(() => usuarios.id),
+    motivoCancelamento: text('motivo_cancelamento'),
+    /** Vazio quando o sistema gerou (job). */
+    criadoPorId: uuid('criado_por_id').references(() => usuarios.id),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex('titulos_numero_key').on(t.contratadoId, t.tipo, t.numero),
+    // A mesma origem (ex.: o demonstrativo) não gera dois títulos: deixa o job idempotente.
+    uniqueIndex('titulos_origem_key')
+      .on(t.origem, t.origemId)
+      .where(sql`${t.origemId} is not null`),
+    index('titulos_lista_idx').on(t.contratadoId, t.tipo, t.situacao, t.vencimento),
+    index('titulos_tipo_situacao_vencimento_idx').on(t.tipo, t.situacao, t.vencimento),
+    index('titulos_cliente_idx').on(t.clienteId, t.situacao),
+    index('titulos_fornecedor_idx').on(t.fornecedorId),
+    index('titulos_medico_idx').on(t.medicoId),
+    index('titulos_categoria_idx').on(t.categoriaId),
+    check(
+      'titulos_favorecido_check',
+      sql`(${t.tipo} = 'receber' and ${t.clienteId} is not null and ${t.fornecedorId} is null and ${t.medicoId} is null) or (${t.tipo} = 'pagar' and ${t.clienteId} is null and num_nonnulls(${t.fornecedorId}, ${t.medicoId}) = 1)`,
+    ),
+    check('titulos_valor_check', sql`${t.valorCentavos} > 0`),
+    check(
+      'titulos_pago_check',
+      sql`${t.pagoCentavos} >= 0 and ${t.pagoCentavos} <= ${t.valorCentavos}`,
+    ),
+    check('titulos_competencia_check', sql`${t.competencia} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+  ],
+);
+
+/**
+ * Pagamento ou recebimento de um título, numa conta e numa data. O estorno não apaga: marca a
+ * baixa, com quem, quando e o motivo, e o título volta a ter saldo.
+ */
+export const baixas = pgTable(
+  'baixas',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tituloId: uuid('titulo_id')
+      .notNull()
+      .references(() => titulos.id),
+    pagoEm: date('pago_em').notNull(),
+    contaBancariaId: uuid('conta_bancaria_id')
+      .notNull()
+      .references(() => contasBancarias.id),
+    /** Quanto abate do saldo. */
+    principalCentavos: bigint('principal_centavos', { mode: 'number' }).notNull(),
+    jurosCentavos: bigint('juros_centavos', { mode: 'number' }).notNull().default(0),
+    multaCentavos: bigint('multa_centavos', { mode: 'number' }).notNull().default(0),
+    descontoCentavos: bigint('desconto_centavos', { mode: 'number' }).notNull().default(0),
+    /** Principal + juros + multa − desconto: o que entrou ou saiu do banco. */
+    valorMovimentadoCentavos: bigint('valor_movimentado_centavos', { mode: 'number' }).notNull(),
+    forma: formaBaixa('forma').notNull(),
+    observacao: text('observacao'),
+    origem: origemBaixa('origem').notNull().default('manual'),
+    estornadaEm: timestamp('estornada_em', { withTimezone: true }),
+    estornadaPorId: uuid('estornada_por_id').references(() => usuarios.id),
+    motivoEstorno: text('motivo_estorno'),
+    criadoPorId: uuid('criado_por_id').references(() => usuarios.id),
+    criadoEm: criadoEm(),
+  },
+  (t) => [
+    index('baixas_titulo_idx').on(t.tituloId),
+    index('baixas_conta_idx').on(t.contaBancariaId, t.pagoEm),
+    check('baixas_principal_check', sql`${t.principalCentavos} > 0`),
+    check(
+      'baixas_acrescimos_check',
+      sql`${t.jurosCentavos} >= 0 and ${t.multaCentavos} >= 0 and ${t.descontoCentavos} >= 0`,
+    ),
+    check(
+      'baixas_movimentado_check',
+      sql`${t.valorMovimentadoCentavos} = ${t.principalCentavos} + ${t.jurosCentavos} + ${t.multaCentavos} - ${t.descontoCentavos} and ${t.valorMovimentadoCentavos} >= 0`,
     ),
   ],
 );

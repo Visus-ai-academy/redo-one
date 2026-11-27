@@ -17,6 +17,12 @@ import {
   FORNECEDORES_REPOSITORY,
   type FornecedoresRepository,
 } from './application/ports/fornecedores.repository';
+import {
+  FAVORECIDOS,
+  type Favorecidos,
+  TITULOS_REPOSITORY,
+  type TitulosRepository,
+} from './application/ports/titulos.repository';
 import { VARIAVEIS_AMBIENTE, type VariaveisAmbiente } from './application/ports/variaveis-ambiente';
 import {
   ConsultarCategorias,
@@ -34,6 +40,14 @@ import {
   ExcluirFornecedor,
   SalvarFornecedor,
 } from './application/use-cases/fornecedores';
+import {
+  BaixasTitulo,
+  CancelarTitulo,
+  ConsultarTitulos,
+  ContextoDoTitulo,
+  OpcoesDeFavorecido,
+  SalvarTitulo,
+} from './application/use-cases/titulos';
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
 import {
@@ -41,15 +55,18 @@ import {
   EmpresasFinanceiroController,
 } from './infrastructure/http/contas-bancarias.controller';
 import { FornecedoresController } from './infrastructure/http/fornecedores.controller';
+import { ContasPagarTitulosController } from './infrastructure/http/titulos.controller';
 import { DrizzleCategoriasRepository } from './infrastructure/persistence/drizzle-categorias.repository';
 import { DrizzleContasBancariasRepository } from './infrastructure/persistence/drizzle-contas-bancarias.repository';
 import { DrizzleEmpresas } from './infrastructure/persistence/drizzle-empresas';
+import { DrizzleFavorecidos } from './infrastructure/persistence/drizzle-favorecidos';
 import { DrizzleFornecedoresRepository } from './infrastructure/persistence/drizzle-fornecedores.repository';
+import { DrizzleTitulosRepository } from './infrastructure/persistence/drizzle-titulos.repository';
 import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
 
 /**
- * Contexto financeiro: plano de categorias, contas bancárias, fornecedores (e, a seguir, títulos)
- * e a integração de saída com a Focus NFe (ou o simulador).
+ * Contexto financeiro: plano de categorias, contas bancárias, fornecedores, títulos a pagar e as
+ * baixas deles, e a integração de saída com a Focus NFe (ou o simulador).
  */
 @Module({
   controllers: [
@@ -57,6 +74,7 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
     ContasBancariasController,
     EmpresasFinanceiroController,
     FornecedoresController,
+    ContasPagarTitulosController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -139,6 +157,59 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
       inject: [FORNECEDORES_REPOSITORY, AUDITORIA, CLOCK],
       useFactory: (repo: FornecedoresRepository, auditoria: Auditoria, clock: Clock) =>
         new ExcluirFornecedor(repo, auditoria, clock),
+    },
+    { provide: TITULOS_REPOSITORY, useClass: DrizzleTitulosRepository },
+    { provide: FAVORECIDOS, useClass: DrizzleFavorecidos },
+    {
+      provide: ContextoDoTitulo,
+      inject: [
+        EMPRESAS_FINANCEIRO,
+        CATEGORIAS_REPOSITORY,
+        CONTAS_BANCARIAS_REPOSITORY,
+        FAVORECIDOS,
+      ],
+      useFactory: (
+        empresas: EmpresasFinanceiro,
+        categorias: CategoriasRepository,
+        contas: ContasBancariasRepository,
+        favorecidos: Favorecidos,
+      ) => new ContextoDoTitulo(empresas, categorias, contas, favorecidos),
+    },
+    {
+      provide: ConsultarTitulos,
+      inject: [TITULOS_REPOSITORY, CLOCK],
+      useFactory: (repo: TitulosRepository, clock: Clock) => new ConsultarTitulos(repo, clock),
+    },
+    {
+      provide: SalvarTitulo,
+      inject: [TITULOS_REPOSITORY, ContextoDoTitulo, AUDITORIA, CLOCK],
+      useFactory: (
+        repo: TitulosRepository,
+        contexto: ContextoDoTitulo,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new SalvarTitulo(repo, contexto, auditoria, clock),
+    },
+    {
+      provide: BaixasTitulo,
+      inject: [TITULOS_REPOSITORY, CONTAS_BANCARIAS_REPOSITORY, AUDITORIA, CLOCK],
+      useFactory: (
+        repo: TitulosRepository,
+        contas: ContasBancariasRepository,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new BaixasTitulo(repo, contas, auditoria, clock),
+    },
+    {
+      provide: CancelarTitulo,
+      inject: [TITULOS_REPOSITORY, AUDITORIA, CLOCK],
+      useFactory: (repo: TitulosRepository, auditoria: Auditoria, clock: Clock) =>
+        new CancelarTitulo(repo, auditoria, clock),
+    },
+    {
+      provide: OpcoesDeFavorecido,
+      inject: [FAVORECIDOS],
+      useFactory: (favorecidos: Favorecidos) => new OpcoesDeFavorecido(favorecidos),
     },
   ],
   exports: [EMISSOR_NFSE],

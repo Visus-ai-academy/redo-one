@@ -37,6 +37,12 @@ function doAlvo(alvo: AlvoHistorico): SQL {
   const proprio = (entidade: string) => and(eq(e.entidade, entidade), eq(e.entidadeId, alvo.id));
   if (alvo.cadastro === 'cliente') return proprio('cliente') as SQL;
   if (alvo.cadastro === 'fornecedor') return proprio('fornecedor') as SQL;
+  if (alvo.cadastro === 'titulo') {
+    return and(
+      proprio('titulo'),
+      sql`exists (select 1 from titulos where titulos.id::text = ${e.entidadeId} and titulos.tipo = ${alvo.tipo})`,
+    ) as SQL;
+  }
   if (alvo.cadastro === 'exame') {
     // Valor fora do padrão: ligado ao exame hoje (tabela) ou em algum evento (inclusive apagado).
     // A quebra fica de fora: ela é do nome do estudo, não do id do exame, e o evento só guarda nomes.
@@ -106,8 +112,10 @@ const TABELAS_COM_NOME: Array<[tabela: string, coluna: string]> = [
   ['prioridades', 'nome'],
   // Arranjos: prioridades da operação desde 19/11/2026 (antes, do catálogo).
   ['prioridades_operacao', 'nome'],
-  // Fornecedor: a categoria padrão.
+  // Fornecedor: a categoria padrão; título: a categoria, o favorecido e as contas.
   ['categorias_financeiras', 'nome'],
+  ['fornecedores', 'razao_social'],
+  ['contas_bancarias', 'apelido'],
 ];
 
 @Injectable()

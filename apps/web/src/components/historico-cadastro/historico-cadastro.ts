@@ -2,6 +2,7 @@
 // o que mudou, em português. Os ids viram o nome que a página da API traz em `nomes`.
 
 import { formatarCep, formatarCnpj, formatarCpf, soDigitos } from '../../lib/documentos';
+import { moeda } from '../../lib/formato';
 import { aplicarMascara } from '../../lib/mascaras';
 import { type LinhaAlteracao, VAZIO } from '../escala-historico/historico';
 
@@ -54,6 +55,14 @@ const FRASES: Record<string, Record<string, string>> = {
     alterado: 'Cadastro alterado',
     excluido: 'Fornecedor excluído',
   },
+  titulo: {
+    criado: 'Título lançado',
+    alterado: 'Título alterado',
+    baixa_registrada: 'Baixa registrada',
+    baixa_estornada: 'Baixa estornada',
+    vencimento_prorrogado: 'Vencimento prorrogado',
+    cancelado: 'Título cancelado',
+  },
   de_para_valor_exame: {
     criado: 'Valor fora do padrão criado',
     alterado: 'Valor fora do padrão alterado',
@@ -72,6 +81,7 @@ const NOME_DA_ENTIDADE: Record<string, string> = {
   de_para_valor_exame: 'Valor fora do padrão',
   cliente_dados_fiscais: 'Dados de faturamento',
   fornecedor: 'Fornecedor',
+  titulo: 'Título',
 };
 
 /** No médico, o evento da equipe diz o que mudou para ele; `nome` é o da equipe. */
@@ -154,6 +164,27 @@ const CAMPOS: Record<string, string> = {
 
 /** Rótulos que mudam por entidade: na aba Faturamento, o e-mail e o telefone são do contato. */
 const CAMPOS_DA_ENTIDADE: Record<string, Record<string, string>> = {
+  titulo: {
+    contratadoId: 'Empresa',
+    favorecido: 'Favorecido',
+    numero: 'Número',
+    documento: 'Documento',
+    competencia: 'Competência',
+    emissaoEm: 'Emissão',
+    vencimento: 'Vencimento',
+    valorCentavos: 'Valor',
+    pagoCentavos: 'Pago',
+    contaPrevistaId: 'Conta prevista',
+    situacao: 'Situação',
+    pagoEm: 'Data do pagamento',
+    contaBancariaId: 'Conta',
+    principalCentavos: 'Valor baixado',
+    jurosCentavos: 'Juros',
+    multaCentavos: 'Multa',
+    descontoCentavos: 'Desconto',
+    valorMovimentadoCentavos: 'Total movimentado',
+    forma: 'Forma',
+  },
   fornecedor: {
     razaoSocial: 'Razão social ou nome',
     cep: 'CEP',
@@ -257,6 +288,20 @@ const FORMATOS_DA_ENTIDADE: Record<string, Record<string, (v: string) => string>
 
 /** Só nestes campos o valor é um código. */
 const VALORES: Record<string, Record<string, string>> = {
+  situacao: {
+    aberto: 'Em aberto',
+    parcial: 'Parcial',
+    liquidado: 'Liquidado',
+    cancelado: 'Cancelado',
+  },
+  forma: {
+    pix: 'Pix',
+    boleto: 'Boleto',
+    ted: 'TED',
+    dinheiro: 'Dinheiro',
+    cartao: 'Cartão',
+    outro: 'Outro',
+  },
   funcao: { STAFF: 'Staff', FELLOW: 'Fellow (em formação)' },
   tipoPessoa: { PJ: 'Pessoa jurídica', PF: 'Pessoa física' },
   unidadeTeto: { exames: 'Exames', laudos: 'Laudos' },
@@ -277,6 +322,8 @@ const IDS = new Set(['idMobilemed']);
 const CONTEXTO: Record<string, Set<string>> = {
   // A conta aparece pelo id do evento; nome, e-mail e CPF dela são da tela Usuários.
   usuario: new Set(['medicoId', 'nome', 'email', 'cpf']),
+  // A baixa citada pelo id (a lista das baixas está na aba Baixas).
+  titulo: new Set(['baixaId']),
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -312,7 +359,13 @@ function formatarValor(
     if (DIA.test(v)) return v.split('-').reverse().join('/');
     return VALORES[campo]?.[v] ?? v;
   }
-  if (typeof v === 'number') return IDS.has(campo) ? String(v) : v.toLocaleString('pt-BR');
+  if (typeof v === 'number') {
+    if (campo.endsWith('Centavos')) return moeda(v / 100);
+    return IDS.has(campo) ? String(v) : v.toLocaleString('pt-BR');
+  }
+  // Referência a outro cadastro (ex.: o favorecido do título, `{ tipo, id }`): o nome dele.
+  const id = (v as { id?: unknown }).id;
+  if (typeof v === 'object' && ehId(id)) return nomeDe(id, nomes);
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }

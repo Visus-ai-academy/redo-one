@@ -604,15 +604,3 @@ export function PainelFornecedor({
     </PainelLateral>
   );
 }
-
-/** Aba Títulos do fornecedor, enquanto Contas a pagar não existe: o vazio que diz por quê. */
-export function TitulosDoFornecedor() {
-  return (
-    <div className="flex flex-col gap-1 p-4">
-      <p className="font-medium">Nenhum título deste fornecedor.</p>
-      <p className="text-muted-foreground">
-        Os títulos lançados em Contas a pagar para este fornecedor aparecem aqui.
-      </p>
-    </div>
-  );
-}

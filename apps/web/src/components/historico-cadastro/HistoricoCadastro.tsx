@@ -7,6 +7,7 @@ import { historicoCadastroControllerDoClienteQueryOptions } from '../../gen/hook
 import { historicoCadastroControllerDoExameQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoExame';
 import { historicoCadastroControllerDoFornecedorQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoFornecedor';
 import { historicoCadastroControllerDoMedicoQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoMedico';
+import { historicoCadastroControllerDoTituloPagarQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoTituloPagar';
 import type { PaginaHistoricoCadastroDto } from '../../gen/types/PaginaHistoricoCadastroDto';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
@@ -21,7 +22,13 @@ import {
 } from './historico-cadastro';
 
 /** `dados-fiscais`: os dados de faturamento do cliente (aba Faturamento, `id` do cliente). */
-export type CadastroComHistorico = 'medico' | 'cliente' | 'exame' | 'fornecedor' | 'dados-fiscais';
+export type CadastroComHistorico =
+  | 'medico'
+  | 'cliente'
+  | 'exame'
+  | 'fornecedor'
+  | 'dados-fiscais'
+  | 'titulo-pagar';
 
 /** Num painel lateral, 10 mudanças por página (a API pagina). */
 const POR_PAGINA = 10;
@@ -48,6 +55,9 @@ function opcoesDaConsulta(
   }
   if (cadastro === 'fornecedor') {
     return historicoCadastroControllerDoFornecedorQueryOptions(args) as unknown as OpcoesHistorico;
+  }
+  if (cadastro === 'titulo-pagar') {
+    return historicoCadastroControllerDoTituloPagarQueryOptions(args) as unknown as OpcoesHistorico;
   }
   if (cadastro === 'exame') {
     return historicoCadastroControllerDoExameQueryOptions(args) as unknown as OpcoesHistorico;

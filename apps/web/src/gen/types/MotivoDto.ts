@@ -5,7 +5,7 @@
 
 export type MotivoDto = {
   /**
-   * @description Obrigatório; fica no histórico.
+   * @description Fica no histórico.
    * @maxLength 1000
    * @type string
    */

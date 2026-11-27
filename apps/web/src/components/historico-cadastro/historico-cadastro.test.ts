@@ -348,3 +348,36 @@ describe('dados de faturamento do cliente', () => {
     ]);
   });
 });
+
+describe('histórico do título', () => {
+  it('frases das ações e valores em reais, com o favorecido pelo nome e sem o id da baixa', () => {
+    expect(descreverEventoCadastro('titulo', 'baixa_estornada')).toBe('Baixa estornada');
+    const linhas = alteracoesDoCadastro(
+      evento(
+        'titulo',
+        'baixa_registrada',
+        { situacao: 'aberto', pagoCentavos: 0 },
+        {
+          baixaId: ID_CONTA,
+          principalCentavos: 120_000,
+          situacao: 'liquidado',
+          forma: 'pix',
+          pagoCentavos: 120_000,
+        },
+      ),
+      nomes,
+    );
+    expect(linhas).toEqual([
+      { rotulo: 'Situação', antes: 'Em aberto', depois: 'Liquidado' },
+      { rotulo: 'Pago', antes: 'R$\u00a00,00', depois: 'R$\u00a01.200,00' },
+      { rotulo: 'Valor baixado', antes: '(vazio)', depois: 'R$\u00a01.200,00' },
+      { rotulo: 'Forma', antes: '(vazio)', depois: 'Pix' },
+    ]);
+    expect(
+      alteracoesDoCadastro(
+        evento('titulo', 'criado', null, { favorecido: { tipo: 'medico', id: ID_MEDICO } }),
+        nomes,
+      ),
+    ).toEqual([{ rotulo: 'Favorecido', antes: null, depois: 'Ana Reis' }]);
+  });
+});

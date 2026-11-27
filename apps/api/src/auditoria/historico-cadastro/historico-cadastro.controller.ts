@@ -66,6 +66,19 @@ export class HistoricoCadastroController {
     return this.responder(this.historico.doFornecedor(id, paginacao(query)), query);
   }
 
+  @Get('financeiro/contas-pagar/titulos/:id/historico')
+  @Permissao('contas-pagar.ver')
+  @ApiOkResponse({
+    type: PaginaHistoricoCadastroDto,
+    description: `${DESCRICAO} Edição, baixas, estornos, prorrogação e cancelamento do título.`,
+  })
+  doTituloPagar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginacaoDto,
+  ): Promise<PaginaHistoricoCadastroDto> {
+    return this.responder(this.historico.doTitulo('pagar', id, paginacao(query)), query);
+  }
+
   private async responder(
     consulta: Promise<PaginaHistoricoCadastro>,
     query: PaginacaoDto,

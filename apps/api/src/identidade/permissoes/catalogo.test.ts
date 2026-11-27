@@ -81,6 +81,7 @@ describe('catálogo de permissões', () => {
       contratos: ['Financeiro', crud],
       'categorias-financeiras': ['Financeiro', crud],
       'contas-bancarias': ['Financeiro', crud],
+      'contas-pagar': ['Financeiro', ['ver', 'criar', 'editar']],
       usuarios: ['Configurações', ['ver', 'criar', 'editar']],
       papeis: ['Configurações', crud],
       catalogo: ['Configurações', crud],
@@ -151,6 +152,17 @@ describe('catálogo de permissões', () => {
     expect(especiais('categorias-financeiras')).toEqual([]);
     expect(especiais('contas-bancarias')).toEqual([]);
     expect(especiais('fornecedores')).toEqual([]);
+    expect(especiais('contas-pagar')).toEqual([
+      'contas-pagar.baixar',
+      'contas-pagar.estornar',
+      'contas-pagar.cancelar',
+    ]);
+    expect(sensiveis('contas-pagar')).toEqual([
+      'contas-pagar.baixar',
+      'contas-pagar.estornar',
+      'contas-pagar.cancelar',
+    ]);
+    expect(tela('contas-pagar').exige).toEqual(['categorias-financeiras', 'contas-bancarias']);
     expect(sensiveis('contas-bancarias')).toEqual([
       'contas-bancarias.editar',
       'contas-bancarias.excluir',

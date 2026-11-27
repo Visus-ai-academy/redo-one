@@ -32,6 +32,11 @@ export class EmUsoError extends ErroDeDominio {
   readonly tipo = 'conflito';
 }
 
+/** A situação do item não deixa fazer a ação (ex.: editar título liquidado, baixar cancelado). */
+export class SituacaoNaoPermiteError extends ErroDeDominio {
+  readonly tipo = 'conflito';
+}
+
 /** Lança `DadosInvalidosError` se houver algum campo com erro. */
 export function exigirSemErros(erros: Record<string, string>) {
   if (Object.keys(erros).length) throw new DadosInvalidosError(erros);

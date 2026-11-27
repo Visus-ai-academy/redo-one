@@ -17,6 +17,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppAvisosRouteImport } from './routes/_app/avisos'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
+import { Route as AppContasPagarRouteImport } from './routes/_app/contas-pagar'
 import { Route as AppExamesRouteImport } from './routes/_app/exames'
 import { Route as AppFornecedoresRouteImport } from './routes/_app/fornecedores'
 import { Route as AppImportacaoRouteImport } from './routes/_app/importacao'
@@ -85,6 +86,11 @@ const AppAvisosRoute = AppAvisosRouteImport.update({
 const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContasPagarRoute = AppContasPagarRouteImport.update({
+  id: '/contas-pagar',
+  path: '/contas-pagar',
   getParentRoute: () => AppRoute,
 } as any)
 const AppExamesRoute = AppExamesRouteImport.update({
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof AppSplatRoute
   '/avisos': typeof AppAvisosRoute
   '/clientes': typeof AppClientesRoute
+  '/contas-pagar': typeof AppContasPagarRoute
   '/exames': typeof AppExamesRoute
   '/fornecedores': typeof AppFornecedoresRoute
   '/importacao': typeof AppImportacaoRoute
@@ -298,6 +305,7 @@ export interface FileRoutesByTo {
   '/$': typeof AppSplatRoute
   '/avisos': typeof AppAvisosRoute
   '/clientes': typeof AppClientesRoute
+  '/contas-pagar': typeof AppContasPagarRoute
   '/exames': typeof AppExamesRoute
   '/fornecedores': typeof AppFornecedoresRoute
   '/importacao': typeof AppImportacaoRoute
@@ -339,6 +347,7 @@ export interface FileRoutesById {
   '/_app/$': typeof AppSplatRoute
   '/_app/avisos': typeof AppAvisosRoute
   '/_app/clientes': typeof AppClientesRoute
+  '/_app/contas-pagar': typeof AppContasPagarRoute
   '/_app/exames': typeof AppExamesRoute
   '/_app/fornecedores': typeof AppFornecedoresRoute
   '/_app/importacao': typeof AppImportacaoRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/avisos'
     | '/clientes'
+    | '/contas-pagar'
     | '/exames'
     | '/fornecedores'
     | '/importacao'
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/avisos'
     | '/clientes'
+    | '/contas-pagar'
     | '/exames'
     | '/fornecedores'
     | '/importacao'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/_app/$'
     | '/_app/avisos'
     | '/_app/clientes'
+    | '/_app/contas-pagar'
     | '/_app/exames'
     | '/_app/fornecedores'
     | '/_app/importacao'
@@ -555,6 +567,13 @@ declare module '@tanstack/react-router' {
       path: '/clientes'
       fullPath: '/clientes'
       preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contas-pagar': {
+      id: '/_app/contas-pagar'
+      path: '/contas-pagar'
+      fullPath: '/contas-pagar'
+      preLoaderRoute: typeof AppContasPagarRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/exames': {
@@ -774,6 +793,7 @@ interface AppRouteChildren {
   AppSplatRoute: typeof AppSplatRoute
   AppAvisosRoute: typeof AppAvisosRoute
   AppClientesRoute: typeof AppClientesRoute
+  AppContasPagarRoute: typeof AppContasPagarRoute
   AppExamesRoute: typeof AppExamesRoute
   AppFornecedoresRoute: typeof AppFornecedoresRoute
   AppImportacaoRoute: typeof AppImportacaoRoute
@@ -811,6 +831,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSplatRoute: AppSplatRoute,
   AppAvisosRoute: AppAvisosRoute,
   AppClientesRoute: AppClientesRoute,
+  AppContasPagarRoute: AppContasPagarRoute,
   AppExamesRoute: AppExamesRoute,
   AppFornecedoresRoute: AppFornecedoresRoute,
   AppImportacaoRoute: AppImportacaoRoute,

@@ -6,7 +6,7 @@
 import * as z from 'zod'
 
 export const motivoDtoSchema = z.object({
-  motivo: z.string().max(1000).describe('Obrigatório; fica no histórico.'),
+  motivo: z.string().max(1000).describe('Fica no histórico.'),
 })
 
 export type MotivoDtoSchemaType = z.infer<typeof motivoDtoSchema>

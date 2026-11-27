@@ -848,6 +848,13 @@
       "when": 1795795630392,
       "tag": "0120_financeiro_fornecedores",
       "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "7",
+      "when": 1795797392184,
+      "tag": "0121_financeiro_titulos",
+      "breakpoints": true
     }
   ]
 }

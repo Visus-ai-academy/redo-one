@@ -4,7 +4,7 @@ import { and, asc, eq, ilike, or, type SQL, sql } from 'drizzle-orm';
 import { violouChaveEstrangeira } from '../../../catalogo/comum/erros-do-banco';
 import { contem } from '../../../database/busca';
 import { DATABASE, type Database } from '../../../database/database';
-import { contasBancarias as c, contratados } from '../../../database/schema';
+import { baixas, contasBancarias as c, contratados, titulos } from '../../../database/schema';
 import type {
   ContaBancaria,
   ContasBancariasRepository,
@@ -28,8 +28,14 @@ const selecao = {
   credencial: c.credencial,
   padraoRecebimento: c.padraoRecebimento,
   ativa: c.ativa,
-  // Ainda não há baixas (entram com os títulos): o saldo atual é o inicial.
-  saldoAtualCentavos: c.saldoInicialCentavos,
+  // O inicial, mais o que entrou (a receber) e menos o que saiu (a pagar) pelas baixas não
+  // estornadas desde a data do saldo inicial.
+  saldoAtualCentavos: sql<number>`(${c.saldoInicialCentavos} + coalesce((
+    select sum(case when ${titulos.tipo} = 'receber' then ${baixas.valorMovimentadoCentavos} else -${baixas.valorMovimentadoCentavos} end)
+    from ${baixas} join ${titulos} on ${titulos.id} = ${baixas.tituloId}
+    where ${baixas.contaBancariaId} = ${c.id} and ${baixas.estornadaEm} is null
+      and ${baixas.pagoEm} >= ${c.saldoInicialEm}
+  ), 0))::bigint`.mapWith(Number),
 };
 
 @Injectable()

@@ -52,6 +52,8 @@ type ListaCadastroProps<T extends RowData> = {
   onFiltrar: (filtros: { busca: string | undefined }) => void;
   onLimparFiltros: () => void;
   onIrPara: (pagina: number) => void;
+  /** Totais da lista no rodapé, à esquerda da paginação (ex.: o saldo em aberto). */
+  resumo?: ReactNode;
   /** Painel de detalhe ou edição (`PainelLateral`): fica por cima da lista, sem mexer nela. */
   painel?: ReactNode;
 };
@@ -83,6 +85,7 @@ export function ListaCadastro<T extends RowData>({
   onFiltrar,
   onLimparFiltros,
   onIrPara,
+  resumo,
   painel,
 }: ListaCadastroProps<T>) {
   const [termo, setTermo] = useBuscaComEspera(
@@ -190,7 +193,13 @@ export function ListaCadastro<T extends RowData>({
           )}
 
           <div className="flex-none">
-            <Paginacao pagina={pagina} porPagina={porPagina} total={total} onIrPara={onIrPara} />
+            <Paginacao
+              pagina={pagina}
+              porPagina={porPagina}
+              total={total}
+              onIrPara={onIrPara}
+              resumo={resumo}
+            />
           </div>
         </section>
         {painel}
