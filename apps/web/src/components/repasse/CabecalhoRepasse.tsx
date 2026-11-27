@@ -93,7 +93,8 @@ export function CabecalhoRepasse({
               type="button"
               disabled={dados.recalculoPendente !== null}
               onClick={() => setRecalculando(true)}
-              className={buttonClassName()}
+              // Secundário: ação rara e de correção, com motivo; o primário da tela é o da aba.
+              className={buttonClassName({ variant: 'secondary' })}
             >
               Recalcular…
             </Button>

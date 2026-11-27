@@ -84,6 +84,13 @@ describe('CabecalhoRepasse', () => {
     );
   });
 
+  it('Recalcular… é secundário: o primário da tela é a ação da aba (ex.: Lançar adicional)', async () => {
+    montar();
+    const botao = await screen.findByRole('button', { name: 'Recalcular…' });
+    expect(botao).not.toHaveClass('bg-primary');
+    expect(botao).toHaveClass('border-input');
+  });
+
   it('Recalcular… só na fechada, com motivo obrigatório', async () => {
     const { onRecalcular } = montar();
     await userEvent.click(await screen.findByRole('button', { name: 'Recalcular…' }));

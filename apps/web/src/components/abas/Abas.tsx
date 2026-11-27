@@ -27,6 +27,12 @@ type AbasProps = {
    * Regras dentro da aba Repasse do médico), num grupo com fundo, para não repetir a linha.
    */
   variante?: 'linha' | 'segmentada';
+  /**
+   * Ação da aba aberta (ex.: "Lançar adicional"), na ponta direita da linha das abas: fica claro
+   * que é dela, e não da página. Passe `null` nas abas sem ação (em vez de omitir): a linha guarda a
+   * altura do botão e a tela não pula ao trocar de aba. Só na variante `linha`.
+   */
+  acao?: ReactNode;
 };
 
 /**
@@ -41,6 +47,7 @@ export function Abas({
   children,
   className,
   variante = 'linha',
+  acao,
 }: AbasProps) {
   const segmentada = variante === 'segmentada';
   const lista = useRef<HTMLDivElement>(null);
@@ -91,42 +98,61 @@ export function Abas({
     return () => observador.disconnect();
   }, [medir]);
 
+  const comAcao = acao !== undefined && !segmentada;
+
+  const listaDeAbas = (
+    <Tabs.List
+      ref={lista}
+      aria-label={ariaLabel}
+      onScroll={medir}
+      data-mais-a-esquerda={sobra.esquerda || undefined}
+      data-mais-a-direita={sobra.direita || undefined}
+      className={cn(
+        'flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden',
+        segmentada
+          ? 'bg-muted max-w-full self-start rounded-lg p-1'
+          : comAcao
+            ? 'min-w-0 flex-1'
+            : 'border-b',
+        'data-[mais-a-direita]:[mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]',
+        'data-[mais-a-esquerda]:[mask-image:linear-gradient(to_left,black_calc(100%-2.5rem),transparent)]',
+        'data-[mais-a-esquerda]:data-[mais-a-direita]:[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]',
+      )}
+    >
+      {abas.map((aba) => (
+        <Tabs.Tab
+          key={aba.valor}
+          value={aba.valor}
+          className={cn(
+            'text-muted-foreground hover:text-foreground px-3 whitespace-nowrap',
+            'focus-visible:outline-ring focus-visible:outline-2 focus-visible:-outline-offset-2',
+            segmentada
+              ? 'data-[active]:bg-card data-[active]:text-foreground h-8 rounded-sm data-[active]:font-medium'
+              : 'data-[active]:border-primary data-[active]:text-foreground -mb-px h-9 rounded-t-md border-b-2 border-transparent data-[active]:font-medium',
+          )}
+        >
+          {aba.rotulo}
+        </Tabs.Tab>
+      ))}
+    </Tabs.List>
+  );
+
   return (
     <Tabs.Root
       value={valor}
       onValueChange={(novo) => pedir(coletor.alterado, () => onMudar(String(novo)))}
       className={cn('flex flex-col gap-5', className)}
     >
-      <Tabs.List
-        ref={lista}
-        aria-label={ariaLabel}
-        onScroll={medir}
-        data-mais-a-esquerda={sobra.esquerda || undefined}
-        data-mais-a-direita={sobra.direita || undefined}
-        className={cn(
-          'flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden',
-          segmentada ? 'bg-muted max-w-full self-start rounded-lg p-1' : 'border-b',
-          'data-[mais-a-direita]:[mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]',
-          'data-[mais-a-esquerda]:[mask-image:linear-gradient(to_left,black_calc(100%-2.5rem),transparent)]',
-          'data-[mais-a-esquerda]:data-[mais-a-direita]:[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]',
-        )}
-      >
-        {abas.map((aba) => (
-          <Tabs.Tab
-            key={aba.valor}
-            value={aba.valor}
-            className={cn(
-              'text-muted-foreground hover:text-foreground px-3 whitespace-nowrap',
-              'focus-visible:outline-ring focus-visible:outline-2 focus-visible:-outline-offset-2',
-              segmentada
-                ? 'data-[active]:bg-card data-[active]:text-foreground h-8 rounded-sm data-[active]:font-medium'
-                : 'data-[active]:border-primary data-[active]:text-foreground -mb-px h-9 rounded-t-md border-b-2 border-transparent data-[active]:font-medium',
-            )}
-          >
-            {aba.rotulo}
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
+      {comAcao ? (
+        // A borda de baixo passa para a linha, que leva as abas (rolam de lado se não couberem) e a
+        // ação, 8px acima da borda; a altura (botão + 8px + borda = 45px) fica reservada mesmo sem ação.
+        <div className="flex min-h-[45px] items-end gap-3 border-b">
+          {listaDeAbas}
+          {acao != null && <div className="flex flex-none items-center gap-2 pb-2">{acao}</div>}
+        </div>
+      ) : (
+        listaDeAbas
+      )}
       {children != null && (
         <Tabs.Panel
           value={valor}

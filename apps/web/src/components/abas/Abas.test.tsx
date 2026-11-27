@@ -76,6 +76,46 @@ describe('Abas', () => {
     expect(screen.queryByRole('tabpanel')).not.toBeInTheDocument();
   });
 
+  it('a ação da aba aberta fica na linha das abas, à direita e fora da lista de abas', () => {
+    const { rerender } = render(
+      <Abas
+        aria-label="Repasse"
+        valor="adicionais"
+        onMudar={() => {}}
+        abas={[
+          { valor: 'medicos', rotulo: 'Médicos' },
+          { valor: 'adicionais', rotulo: 'Adicionais' },
+        ]}
+        acao={<button type="button">Lançar adicional</button>}
+      />,
+    );
+
+    const lista = screen.getByRole('tablist', { name: 'Repasse' });
+    const botao = screen.getByRole('button', { name: 'Lançar adicional' });
+    expect(lista).not.toContainElement(botao);
+    // A mesma linha (com a borda de baixo das abas) leva as abas e a ação.
+    const linha = lista.parentElement;
+    expect(linha).toContainElement(botao);
+    expect(linha).toHaveClass('border-b');
+    expect(lista).not.toHaveClass('border-b');
+
+    // Na aba sem ação, a linha continua com a mesma altura: a tela não pula ao trocar de aba.
+    rerender(
+      <Abas
+        aria-label="Repasse"
+        valor="medicos"
+        onMudar={() => {}}
+        abas={[
+          { valor: 'medicos', rotulo: 'Médicos' },
+          { valor: 'adicionais', rotulo: 'Adicionais' },
+        ]}
+        acao={null}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Lançar adicional' })).toBeNull();
+    expect(screen.getByRole('tablist').parentElement).toHaveClass('min-h-[45px]', 'border-b');
+  });
+
   it('com mais abas do que cabem: sem barra de rolagem, esmaece a borda que tem mais abas', () => {
     render(
       <Abas

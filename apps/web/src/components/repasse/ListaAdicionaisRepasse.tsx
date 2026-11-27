@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
 import { Menu } from '@base-ui/react/menu';
-import { DotsThree, Plus, XCircle } from '@phosphor-icons/react';
+import { DotsThree, XCircle } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 
 import type { AdicionalDto } from '../../gen/types/AdicionalDto';
@@ -24,14 +24,12 @@ type ListaAdicionaisRepasseProps = {
   /** Sem tipo = todos os tipos. */
   tipo: TipoAdicional | undefined;
   buscarMedicos: (termo: string, sinal?: AbortSignal) => Promise<OpcaoBusca[]>;
-  podeLancar: boolean;
   /** Só na competência aberta e com a permissão (na fechada, lança-se o valor contrário). */
   podeCancelar: boolean;
   recarregando: boolean;
   erro?: { erro: unknown; onTentarDeNovo: () => void };
   onFiltrar: (f: { medico?: OpcaoBusca | null; tipo?: TipoAdicional | undefined }) => void;
   onIrPara: (pagina: number) => void;
-  onLancar: () => void;
   onCancelar: (id: string, motivo: string) => Promise<void>;
 };
 
@@ -39,19 +37,20 @@ const coluna = createDataTableColumnHelper<AdicionalDto>();
 const dia = (iso: string) => iso.split('-').reverse().join('/');
 const riscado = (a: AdicionalDto) => (a.canceladoEm ? 'line-through' : undefined);
 
-/** Os adicionais da competência (os cancelados também), com filtros, página e o lançamento. */
+/**
+ * Os adicionais da competência (os cancelados também), com filtros e página. O "Lançar adicional"
+ * fica na linha das abas da tela, como ação da aba.
+ */
 export function ListaAdicionaisRepasse({
   pagina,
   medico,
   tipo,
   buscarMedicos,
-  podeLancar,
   podeCancelar,
   recarregando,
   erro,
   onFiltrar,
   onIrPara,
-  onLancar,
   onCancelar,
 }: ListaAdicionaisRepasseProps) {
   const [cancelando, setCancelando] = useState<AdicionalDto | null>(null);
@@ -141,16 +140,6 @@ export function ListaAdicionaisRepasse({
           ]}
           className="flex-[1_1_180px] md:flex-[0_1_200px]"
         />
-        {podeLancar && (
-          <Button
-            type="button"
-            onClick={onLancar}
-            className={buttonClassName({ className: 'ml-auto' })}
-          >
-            <Plus size={16} aria-hidden />
-            Lançar adicional
-          </Button>
-        )}
       </div>
 
       {erro ? (

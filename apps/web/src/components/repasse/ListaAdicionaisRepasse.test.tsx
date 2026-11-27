@@ -32,7 +32,6 @@ function montar(props: Partial<Parameters<typeof ListaAdicionaisRepasse>[0]> = {
   const handlers = {
     onFiltrar: vi.fn(),
     onIrPara: vi.fn(),
-    onLancar: vi.fn(),
     onCancelar: vi.fn(async () => {}),
   };
   render(
@@ -59,7 +58,6 @@ function montar(props: Partial<Parameters<typeof ListaAdicionaisRepasse>[0]> = {
         medico={null}
         tipo={undefined}
         buscarMedicos={async () => []}
-        podeLancar
         podeCancelar
         recarregando={false}
         {...handlers}
@@ -105,10 +103,13 @@ describe('ListaAdicionaisRepasse', () => {
     expect(onCancelar).toHaveBeenCalledWith('a1', 'em dobro');
   });
 
-  it('na competência fechada não se cancela; a ação de lançar continua', () => {
-    const { onLancar } = montar({ podeCancelar: false });
+  it('na competência fechada não se cancela', () => {
+    montar({ podeCancelar: false });
     expect(screen.queryByRole('button', { name: /Ações do lançamento/ })).toBeNull();
-    screen.getByRole('button', { name: 'Lançar adicional' }).click();
-    expect(onLancar).toHaveBeenCalled();
+  });
+
+  it('a ação de lançar não fica na faixa dos filtros (vai na linha das abas da tela)', () => {
+    montar();
+    expect(screen.queryByRole('button', { name: 'Lançar adicional' })).toBeNull();
   });
 });

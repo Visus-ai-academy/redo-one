@@ -1,3 +1,5 @@
+import { Button } from '@base-ui/react/button';
+import { Plus } from '@phosphor-icons/react';
 import {
   keepPreviousData,
   useQuery,
@@ -9,6 +11,7 @@ import { useCallback, useMemo } from 'react';
 import { z } from 'zod';
 
 import { Abas } from '../../components/abas/Abas';
+import { buttonClassName } from '../../components/button/button-class';
 import { LinkDaLinha } from '../../components/data-table/link-da-linha';
 import { EstadoDoErro } from '../../components/estado/EstadoDoErro';
 import { SemPermissao } from '../../components/estado/estados';
@@ -233,6 +236,20 @@ function Repasse() {
               }))
             }
             aria-label="Repasse"
+            // A ação da aba Adicionais, na linha das abas: é dela, não da competência (o
+            // "Recalcular…" do topo). Nas outras abas, `null` guarda a altura da linha.
+            acao={
+              busca.aba === 'adicionais' && pode(sessao, 'repasse.adicional.lancar') ? (
+                <Button
+                  type="button"
+                  onClick={() => ir((a) => ({ ...a, lancar: 1 }))}
+                  className={buttonClassName()}
+                >
+                  <Plus size={16} aria-hidden />
+                  Lançar adicional
+                </Button>
+              ) : null
+            }
           />
           {busca.aba === 'adicionais' ? (
             <AbaAdicionais competencia={competencia} status={dados?.status} />
@@ -511,7 +528,6 @@ function AbaAdicionais({
         medico={busca.medico ? { valor: busca.medico, rotulo: busca.medicoNome ?? '' } : null}
         tipo={busca.tipo}
         buscarMedicos={buscarMedicos}
-        podeLancar={podeLancar}
         podeCancelar={podeLancar && status === 'aberta'}
         recarregando={lista.isPlaceholderData}
         erro={
@@ -531,7 +547,6 @@ function AbaAdicionais({
           )
         }
         onIrPara={(n) => ir((a) => ({ ...a, paginaAdicionais: n }))}
-        onLancar={() => ir((a) => ({ ...a, lancar: 1 }))}
         onCancelar={async (id, motivo) => {
           try {
             await repasseControllerCancelar({ path: { id }, body: { motivo } }).unwrap();
