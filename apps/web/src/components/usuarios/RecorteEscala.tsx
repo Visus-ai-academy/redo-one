@@ -18,6 +18,7 @@ import { Alerta } from '../alerta/Alerta';
 import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
+import { opcoesDeFrentes } from '../escala/opcoes-frentes';
 import { Interruptor } from '../interruptor/Interruptor';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useAvisos } from '../toast/use-avisos';
@@ -133,7 +134,9 @@ function ListaDeNomes({ rotulo, itens }: { rotulo: string; itens: ReferenciaEsco
 }
 
 /** Opções ativas e, no fim, as do recorte que deixaram de estar ativas (para não sumirem caladas). */
-function opcoesCom(ativas: { id: string; nome: string }[], doRecorte: ReferenciaEscopoDto[]) {
+type OpcaoDeMarcar = { id: string; nome: string; grupo?: string };
+
+function opcoesCom(ativas: OpcaoDeMarcar[], doRecorte: ReferenciaEscopoDto[]): OpcaoDeMarcar[] {
   const ids = new Set(ativas.map((a) => a.id));
   return [...ativas, ...doRecorte.filter((r) => !ids.has(r.id))];
 }
@@ -245,7 +248,15 @@ function EditorRecorte({
             legenda="Frentes"
             carregando={!frentes.data}
             opcoes={opcoesCom(
-              (frentes.data?.itens ?? []).map((f) => ({ id: f.id, nome: f.rotulo })),
+              // Especialidades, depois modalidades, cada grupo com o subtítulo.
+              opcoesDeFrentes(
+                (frentes.data?.itens ?? []).map((f) => ({
+                  id: f.id,
+                  rotulo: f.rotulo,
+                  cor: null,
+                  tipo: f.tipo,
+                })),
+              ).map((o) => ({ id: o.valor, nome: o.rotulo, grupo: o.grupo })),
               escopo.frentes,
             )}
             valor={frenteIds}
@@ -282,10 +293,17 @@ function GrupoDeMarcar({
 }: {
   legenda: string;
   carregando: boolean;
-  opcoes: { id: string; nome: string }[];
+  opcoes: OpcaoDeMarcar[];
   valor: string[];
   onMudar: (ids: string[]) => void;
 }) {
+  // Opções com `grupo` (frentes) ficam sob o subtítulo do grupo, na ordem recebida.
+  const grupos = opcoes.reduce<{ grupo?: string; itens: OpcaoDeMarcar[] }[]>((acc, o) => {
+    const ultimo = acc.at(-1);
+    if (ultimo && ultimo.grupo === o.grupo) ultimo.itens.push(o);
+    else acc.push({ grupo: o.grupo, itens: [o] });
+    return acc;
+  }, []);
   return (
     <Field.Root>
       <Fieldset.Root
@@ -301,16 +319,23 @@ function GrupoDeMarcar({
         ) : opcoes.length === 0 ? (
           <p className="text-muted-foreground text-[13px]">Nenhum cadastrado.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {opcoes.map((opcao) => (
-              <Field.Item key={opcao.id}>
-                <Field.Label className="flex min-w-0 items-center gap-2">
-                  <CaixaDeSelecao value={opcao.id} />
-                  <span className="truncate">{opcao.nome}</span>
-                </Field.Label>
-              </Field.Item>
-            ))}
-          </div>
+          grupos.map(({ grupo, itens }) => (
+            <div key={grupo ?? 'sem-grupo'} className="flex flex-col gap-2">
+              {grupo && (
+                <span className="text-muted-foreground text-[13px] font-medium">{grupo}</span>
+              )}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {itens.map((opcao) => (
+                  <Field.Item key={opcao.id}>
+                    <Field.Label className="flex min-w-0 items-center gap-2">
+                      <CaixaDeSelecao value={opcao.id} />
+                      <span className="truncate">{opcao.nome}</span>
+                    </Field.Label>
+                  </Field.Item>
+                ))}
+              </div>
+            </div>
+          ))
         )}
       </Fieldset.Root>
     </Field.Root>

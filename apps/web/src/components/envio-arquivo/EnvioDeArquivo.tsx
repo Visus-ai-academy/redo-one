@@ -23,6 +23,109 @@ const tamanhoLegivel = (bytes: number) =>
     ? `${Math.max(1, Math.round(bytes / 1024))} KB`
     : `${(bytes / (1024 * 1024)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`;
 
+/** Confere a extensão e o tamanho; devolve o erro, ou `null` se o arquivo serve. */
+function erroDoArquivo(arquivo: File, extensao: string, tamanhoMaximoMb: number) {
+  if (!arquivo.name.toLowerCase().endsWith(extensao)) return `Escolha um arquivo ${extensao}.`;
+  if (arquivo.size > tamanhoMaximoMb * 1024 * 1024)
+    return `O arquivo passa de ${tamanhoMaximoMb} MB.`;
+  return null;
+}
+
+type SeletorDeArquivoProps = {
+  /** O arquivo escolhido (controlado por quem usa). */
+  arquivo: File | null;
+  /** Extensão aceita, com o ponto (ex.: `.csv`). */
+  extensao: string;
+  tamanhoMaximoMb: number;
+  /** Arquivo que serve; o que não serve vira `onErro`. */
+  onEscolher: (arquivo: File) => void;
+  onErro: (mensagem: string) => void;
+  /** Nome da entrada para o leitor de tela (padrão "Selecionar arquivo"). */
+  rotulo?: string;
+  invalido?: boolean;
+  desabilitado?: boolean;
+};
+
+/**
+ * Só a escolha do arquivo (clicando na área ou arrastando), sem enviar: para formulários e
+ * diálogos que mandam o arquivo junto com outros campos. O `EnvioDeArquivo` usa esta peça e
+ * acrescenta o envio com progresso.
+ */
+export function SeletorDeArquivo({
+  arquivo,
+  extensao,
+  tamanhoMaximoMb,
+  onEscolher,
+  onErro,
+  rotulo = 'Selecionar arquivo',
+  invalido = false,
+  desabilitado = false,
+}: SeletorDeArquivoProps) {
+  const idEntrada = useId();
+  const [arrastando, setArrastando] = useState(false);
+
+  const escolher = (escolhido: File | undefined) => {
+    if (!escolhido) return;
+    const erro = erroDoArquivo(escolhido, extensao, tamanhoMaximoMb);
+    if (erro) onErro(erro);
+    else onEscolher(escolhido);
+  };
+
+  return (
+    // A área inteira é o rótulo da entrada: clicar ou dar Enter nela abre a escolha do arquivo.
+    <label
+      htmlFor={idEntrada}
+      onDragOver={(evento) => {
+        evento.preventDefault();
+        if (!desabilitado) setArrastando(true);
+      }}
+      onDragLeave={() => setArrastando(false)}
+      onDrop={(evento: DragEvent) => {
+        evento.preventDefault();
+        setArrastando(false);
+        if (!desabilitado) escolher(evento.dataTransfer.files[0]);
+      }}
+      className={cn(
+        'border-input hover:bg-accent flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center',
+        'has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
+        invalido && 'border-destructive',
+        arrastando && 'border-primary bg-accent',
+        desabilitado && 'pointer-events-none opacity-60',
+      )}
+    >
+      {arquivo ? (
+        <div className="flex w-full items-center gap-3 text-left">
+          <FileXls size={28} aria-hidden className="text-primary flex-none" />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-medium">{arquivo.name}</span>
+            <span className="text-muted-foreground text-[13px] tabular-nums">
+              {tamanhoLegivel(arquivo.size)}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <>
+          <FileArrowUp size={28} aria-hidden className="text-subtle-foreground" />
+          <span className="text-muted-foreground">Selecionar arquivo</span>
+        </>
+      )}
+      <input
+        id={idEntrada}
+        type="file"
+        accept={extensao}
+        aria-label={rotulo}
+        aria-invalid={invalido || undefined}
+        disabled={desabilitado}
+        className="sr-only"
+        onChange={(evento) => {
+          escolher(evento.target.files?.[0]);
+          evento.target.value = '';
+        }}
+      />
+    </label>
+  );
+}
+
 /**
  * Selecionar (clicando na área ou arrastando) um arquivo e enviá-lo, com a barra de progresso. O arquivo vai direto ao
  * storage: quem usa faz o pedido da URL, o envio e a confirmação em `onEnviar`.
@@ -34,32 +137,10 @@ export function EnvioDeArquivo({
   onEnviar,
   ajuda,
 }: EnvioDeArquivoProps) {
-  const idEntrada = useId();
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [progresso, setProgresso] = useState<number | null>(null);
-  const [arrastando, setArrastando] = useState(false);
   const enviando = progresso !== null;
-
-  const escolher = (escolhido: File | undefined) => {
-    if (!escolhido) return;
-    setErro(null);
-    if (!escolhido.name.toLowerCase().endsWith(extensao)) {
-      setArquivo(null);
-      setErro(`Escolha um arquivo ${extensao}.`);
-    } else if (escolhido.size > tamanhoMaximoMb * 1024 * 1024) {
-      setArquivo(null);
-      setErro(`O arquivo passa de ${tamanhoMaximoMb} MB.`);
-    } else {
-      setArquivo(escolhido);
-    }
-  };
-
-  const soltar = (evento: DragEvent) => {
-    evento.preventDefault();
-    setArrastando(false);
-    if (!enviando) escolher(evento.dataTransfer.files[0]);
-  };
 
   const enviar = async () => {
     if (!arquivo) {
@@ -79,51 +160,20 @@ export function EnvioDeArquivo({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* A área inteira é o rótulo da entrada: clicar ou dar Enter nela abre a escolha do arquivo. */}
-      <label
-        htmlFor={idEntrada}
-        onDragOver={(evento) => {
-          evento.preventDefault();
-          if (!enviando) setArrastando(true);
+      <SeletorDeArquivo
+        arquivo={arquivo}
+        extensao={extensao}
+        tamanhoMaximoMb={tamanhoMaximoMb}
+        desabilitado={enviando}
+        onEscolher={(escolhido) => {
+          setErro(null);
+          setArquivo(escolhido);
         }}
-        onDragLeave={() => setArrastando(false)}
-        onDrop={soltar}
-        className={cn(
-          'border-input hover:bg-accent flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center',
-          'has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
-          arrastando && 'border-primary bg-accent',
-          enviando && 'pointer-events-none opacity-60',
-        )}
-      >
-        {arquivo ? (
-          <div className="flex w-full items-center gap-3 text-left">
-            <FileXls size={28} aria-hidden className="text-primary flex-none" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium">{arquivo.name}</span>
-              <span className="text-muted-foreground text-[13px] tabular-nums">
-                {tamanhoLegivel(arquivo.size)}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <>
-            <FileArrowUp size={28} aria-hidden className="text-subtle-foreground" />
-            <span className="text-muted-foreground">Selecionar arquivo</span>
-          </>
-        )}
-        <input
-          id={idEntrada}
-          type="file"
-          accept={extensao}
-          aria-label="Selecionar arquivo"
-          disabled={enviando}
-          className="sr-only"
-          onChange={(evento) => {
-            escolher(evento.target.files?.[0]);
-            evento.target.value = '';
-          }}
-        />
-      </label>
+        onErro={(mensagem) => {
+          setArquivo(null);
+          setErro(mensagem);
+        }}
+      />
 
       {ajuda && <p className="text-muted-foreground text-[13px]">{ajuda}</p>}
 

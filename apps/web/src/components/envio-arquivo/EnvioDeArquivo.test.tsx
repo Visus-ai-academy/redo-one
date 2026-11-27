@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EnvioDeArquivo } from './EnvioDeArquivo';
+import { EnvioDeArquivo, SeletorDeArquivo } from './EnvioDeArquivo';
 
 const xlsx = (nome = 'laudos.xlsx', bytes = 2048) =>
   new File([new Uint8Array(bytes)], nome, {
@@ -97,5 +97,42 @@ describe('EnvioDeArquivo', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('A planilha não chegou.');
     expect(screen.getByText('laudos.xlsx')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enviar planilha' })).toBeEnabled();
+  });
+});
+
+describe('SeletorDeArquivo', () => {
+  it('só escolhe (sem enviar) e confere a extensão', async () => {
+    const onEscolher = vi.fn();
+    const onErro = vi.fn();
+    render(
+      <SeletorDeArquivo
+        arquivo={null}
+        extensao=".csv"
+        tamanhoMaximoMb={5}
+        rotulo="Planilha"
+        onEscolher={onEscolher}
+        onErro={onErro}
+      />,
+    );
+    const entrada = screen.getByLabelText('Planilha');
+    const csv = new File(['a;b'], 'precos.csv', { type: 'text/csv' });
+    await userEvent.upload(entrada, csv);
+    expect(onEscolher).toHaveBeenCalledWith(csv);
+
+    fireEvent.change(entrada, { target: { files: [new File(['x'], 'precos.xlsx')] } });
+    expect(onErro).toHaveBeenCalledWith('Escolha um arquivo .csv.');
+  });
+
+  it('mostra o arquivo escolhido', () => {
+    render(
+      <SeletorDeArquivo
+        arquivo={new File(['a;b'], 'precos.csv')}
+        extensao=".csv"
+        tamanhoMaximoMb={5}
+        onEscolher={vi.fn()}
+        onErro={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('precos.csv')).toBeInTheDocument();
   });
 });

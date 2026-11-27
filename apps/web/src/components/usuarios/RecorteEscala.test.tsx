@@ -49,11 +49,15 @@ const turno = (id: string, nome: string) => ({
   ordem: 1,
   ativo: true,
 });
-const frente = (id: string, rotulo: string) => ({
+const frente = (
+  id: string,
+  rotulo: string,
+  tipo: 'especialidade' | 'modalidade' = 'especialidade',
+) => ({
   id,
-  tipo: 'especialidade' as const,
-  especialidadeId: id,
-  modalidadeId: null,
+  tipo,
+  especialidadeId: tipo === 'especialidade' ? id : null,
+  modalidadeId: tipo === 'modalidade' ? id : null,
   destinoNome: rotulo,
   rotulo,
   descricao: null,
@@ -85,7 +89,11 @@ describe('RecorteEscala', () => {
     );
     listarFrentes.mockReturnValue(
       resposta({
-        itens: [frente('f-neuro', 'Neuro'), frente('f-mama', 'Mama')],
+        itens: [
+          frente('f-tc', 'TC', 'modalidade'),
+          frente('f-neuro', 'Neuro'),
+          frente('f-mama', 'Mama'),
+        ],
         total: 2,
         pagina: 1,
         porPagina: 100,
@@ -144,6 +152,15 @@ describe('RecorteEscala', () => {
     ).toBeVisible();
     const salvar = screen.getByRole('button', { name: 'Salvar recorte' });
     expect(salvar).toBeDisabled();
+
+    // Frentes: especialidades primeiro, depois modalidades, cada grupo com subtítulo.
+    const frentes = screen.getByRole('group', { name: 'Frentes' });
+    expect(within(frentes).getByText('Especialidades')).toBeInTheDocument();
+    expect(within(frentes).getByText('Modalidades')).toBeInTheDocument();
+    const nomes = within(frentes)
+      .getAllByRole('checkbox')
+      .map((c) => c.closest('label')?.textContent);
+    expect(nomes).toEqual(['Neuro', 'Mama', 'TC']);
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Tarde' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Neuro' }));

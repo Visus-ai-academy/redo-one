@@ -35,6 +35,7 @@ import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
 import { Dialogo } from '../dialogo/Dialogo';
 import { AbaComErro } from '../distribuicao/estados';
+import { SeletorDeArquivo } from '../envio-arquivo/EnvioDeArquivo';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
 import { RequiredLegend } from '../form/RequiredLegend';
@@ -913,7 +914,7 @@ function ImportarPlanilha({
   const [linhas, setLinhas] = useState<{ linha: number; erro: string }[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [faltaArquivo, setFaltaArquivo] = useState(false);
-  const idArquivo = useId();
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
   const idCompetencia = useId();
 
   const importar = async () => {
@@ -956,27 +957,31 @@ function ImportarPlanilha({
       }
     >
       <div className="flex flex-col gap-2">
-        <label htmlFor={idArquivo} className="font-medium">
+        <span className="flex items-baseline gap-1 font-medium">
           Planilha (CSV com ;)
           <span aria-hidden className="text-destructive">
-            {' '}
             *
           </span>
-        </label>
-        <input
-          id={idArquivo}
-          type="file"
-          required
-          accept=".csv,text/csv"
-          aria-invalid={faltaArquivo || undefined}
-          onChange={(e) => {
-            setArquivo(e.target.files?.[0] ?? null);
+        </span>
+        <SeletorDeArquivo
+          arquivo={arquivo}
+          extensao=".csv"
+          tamanhoMaximoMb={5}
+          rotulo="Planilha (CSV com ;)"
+          invalido={faltaArquivo || Boolean(erroArquivo)}
+          onEscolher={(escolhido) => {
+            setArquivo(escolhido);
             setFaltaArquivo(false);
+            setErroArquivo(null);
           }}
-          className="file:border-input file:bg-card text-[14px] file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5"
+          onErro={(mensagem) => {
+            setArquivo(null);
+            setErroArquivo(mensagem);
+          }}
         />
         <p className="text-muted-foreground text-[13px]">{fonte.ajudaPlanilha}</p>
         {faltaArquivo && <p className="text-destructive text-[13px]">Escolha a planilha.</p>}
+        {erroArquivo && <p className="text-destructive text-[13px]">{erroArquivo}</p>}
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor={idCompetencia} className="font-medium">
