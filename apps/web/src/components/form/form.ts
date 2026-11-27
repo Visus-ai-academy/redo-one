@@ -109,7 +109,7 @@ function camposComErro(form: AnyFormApi) {
 
 /**
  * Antes de validar e enviar: tira os espaços das pontas dos campos de texto do kit e descarta o
- * resultado da validação ao vivo (`onDynamic`). Sem isso, um erro ao vivo faria o TanStack Form
+ * resultado da validação ao vivo (`onDynamic`) e o do envio anterior (`onSubmit`). Sem isso, um erro ao vivo faria o TanStack Form
  * parar antes do schema de envio, e os erros dos outros campos não apareceriam.
  */
 function prepararEnvio(form: AnyFormApi) {
@@ -117,9 +117,15 @@ function prepararEnvio(form: AnyFormApi) {
     const valor = form.getFieldValue(nome);
     if (typeof valor === 'string' && valor !== valor.trim()) form.setFieldValue(nome, valor.trim());
   }
+  // O erro do envio anterior também sai: o envio refaz a validação. Sem isso, o erro cruzado de
+  // um campo que a pessoa não tocou (ex.: "Informe a cidade." do endereço começado) ficava preso
+  // depois de desfeita a causa e travava o envio.
   for (const [nome, meta] of Object.entries(form.state.fieldMeta)) {
-    if (!meta?.errorMap.onDynamic) continue;
-    form.setFieldMeta(nome, (m) => ({ ...m, errorMap: { ...m.errorMap, onDynamic: undefined } }));
+    if (!meta?.errorMap.onDynamic && !meta?.errorMap.onSubmit) continue;
+    form.setFieldMeta(nome, (m) => ({
+      ...m,
+      errorMap: { ...m.errorMap, onDynamic: undefined, onSubmit: undefined },
+    }));
   }
 }
 
