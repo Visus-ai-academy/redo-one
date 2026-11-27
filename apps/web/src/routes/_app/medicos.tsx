@@ -420,6 +420,9 @@ function PainelDoMedico({
           <AbaRepasseMedico
             key={id}
             medicoId={id}
+            medicoNome={medico?.nome ?? ''}
+            podeLancar={pode(sessao, 'repasse.adicional.lancar')}
+            podeLancarNaFechada={pode(sessao, 'repasse.adicional.lancar_fechada')}
             podeEditarPrecos={pode(sessao, 'repasse.precos.editar')}
             podeEditarRegras={pode(sessao, 'repasse.regras.editar')}
             veAvisos={pode(sessao, 'avisos.ver')}

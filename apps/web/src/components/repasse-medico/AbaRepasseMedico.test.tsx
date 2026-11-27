@@ -9,7 +9,7 @@ import { regrasMedicoControllerContagem } from '../../gen/clients/regrasMedicoCo
 import { regrasMedicoControllerNovaContagem } from '../../gen/clients/regrasMedicoControllerNovaContagem';
 import { renderComRotas } from '../../test/render';
 import { escolherOpcao } from '../../test/select';
-import { AbaRepasseMedico } from './AbaRepasseMedico';
+import { AbaRepasseMedico, type AbaRepasseMedicoProps } from './AbaRepasseMedico';
 import { arranjoDoAtalho } from './fonte-precos';
 import { percentualDePpm, ppmDoTexto } from './textos';
 
@@ -95,8 +95,17 @@ beforeEach(() => {
     .mockReturnValue(resposta({ id: 'c1' }));
 });
 
-const aba = (extra: Partial<Parameters<typeof AbaRepasseMedico>[0]> = {}) => (
-  <AbaRepasseMedico medicoId="m1" podeEditarPrecos podeEditarRegras veAvisos={false} {...extra} />
+const aba = (extra: Partial<AbaRepasseMedicoProps> = {}) => (
+  <AbaRepasseMedico
+    medicoId="m1"
+    medicoNome="Ana"
+    podeLancar={false}
+    podeLancarNaFechada={false}
+    podeEditarPrecos
+    podeEditarRegras
+    veAvisos={false}
+    {...extra}
+  />
 );
 
 describe('AbaRepasseMedico', () => {

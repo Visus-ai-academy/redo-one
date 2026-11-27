@@ -1,8 +1,9 @@
 // Textos e contas da tela do repasse (Financeiro › Repasse).
+import type { CompetenciaComRepasseDto } from '../gen/types/CompetenciaComRepasseDto';
 import type { CompetenciaRepasseDto } from '../gen/types/CompetenciaRepasseDto';
 import type { GrupoRepasseDto } from '../gen/types/GrupoRepasseDto';
 import type { VersaoRepasseDto } from '../gen/types/VersaoRepasseDto';
-import { dataDeBrasilia, horaDeBrasilia } from './datas';
+import { dataDeBrasilia, horaDeBrasilia, mesDeBrasilia } from './datas';
 import { numero, plural } from './formato';
 
 const MESES = [
@@ -127,4 +128,21 @@ export function textoSemPreco(
     varios: 'laudos pagos a zero',
   });
   return `${arranjos} (${laudos}) ${status === 'aberta' ? (t.gruposSemPreco === 1 ? 'trava' : 'travam') + ' o fechamento' : 'nesta versão'}.`;
+}
+
+/**
+ * As competências do lançamento de adicional: as que já têm repasse, mais o mês atual e o seguinte
+ * (abertos), da mais nova para a mais antiga.
+ */
+export function competenciasDoLancamento(
+  competencias: readonly CompetenciaComRepasseDto[],
+  agora: Date,
+): CompetenciaComRepasseDto[] {
+  const mes = mesDeBrasilia(agora);
+  const [ano, m] = mes.split('-').map(Number) as [number, number];
+  const seguinte = m === 12 ? `${ano + 1}-01` : `${ano}-${String(m + 1).padStart(2, '0')}`;
+  const opcoes = [...competencias];
+  for (const c of [mes, seguinte])
+    if (!opcoes.some((o) => o.competencia === c)) opcoes.push({ competencia: c, status: 'aberta' });
+  return opcoes.sort((a, b) => b.competencia.localeCompare(a.competencia));
 }

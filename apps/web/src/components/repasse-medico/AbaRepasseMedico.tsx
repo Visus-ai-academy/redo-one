@@ -18,6 +18,10 @@ const PARTES: { valor: ParteRepasse; rotulo: string }[] = [
 
 export type AbaRepasseMedicoProps = {
   medicoId: string;
+  medicoNome: string;
+  /** `repasse.adicional.lancar` e `repasse.adicional.lancar_fechada`. */
+  podeLancar: boolean;
+  podeLancarNaFechada: boolean;
   /** `repasse.precos.editar`. */
   podeEditarPrecos: boolean;
   /** `repasse.regras.editar` (como os laudos contam e apuração). */
@@ -33,6 +37,9 @@ export type AbaRepasseMedicoProps = {
 /** Aba Repasse do painel do médico: preços, regras, apuração e adicionais. */
 export function AbaRepasseMedico({
   medicoId,
+  medicoNome,
+  podeLancar,
+  podeLancarNaFechada,
   podeEditarPrecos,
   podeEditarRegras,
   veAvisos,
@@ -62,7 +69,12 @@ export function AbaRepasseMedico({
         ) : parte === 'apuracao' ? (
           <ApuracaoMedico medicoId={medicoId} podeEditar={podeEditarRegras} />
         ) : (
-          <AdicionaisMedico medicoId={medicoId} />
+          <AdicionaisMedico
+            medicoId={medicoId}
+            medicoNome={medicoNome}
+            podeLancar={podeLancar}
+            podeLancarNaFechada={podeLancarNaFechada}
+          />
         )}
       </Abas>
     </div>

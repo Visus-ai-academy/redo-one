@@ -45,7 +45,7 @@ import { repasseControllerAdicionaisQueryOptions } from '../../gen/hooks/useRepa
 import type { CompetenciaComRepasseDto } from '../../gen/types/CompetenciaComRepasseDto';
 import { mesDeBrasilia } from '../../lib/datas';
 import { pode } from '../../lib/permissoes';
-import { nomeCompetencia } from '../../lib/repasse';
+import { competenciasDoLancamento, nomeCompetencia } from '../../lib/repasse';
 
 const POR_PAGINA = 25;
 /** Os laudos do detalhe, no painel lateral. */
@@ -501,14 +501,7 @@ function AbaAdicionais({
       ),
     );
 
-  // As competências do lançamento: as que já têm repasse, mais o mês atual e o seguinte (abertos).
-  const mes = mesDeBrasilia(new Date());
-  const [ano, m] = mes.split('-').map(Number) as [number, number];
-  const seguinte = m === 12 ? `${ano + 1}-01` : `${ano}-${String(m + 1).padStart(2, '0')}`;
-  const opcoes = [...competencias];
-  for (const c of [mes, seguinte])
-    if (!opcoes.some((o) => o.competencia === c)) opcoes.push({ competencia: c, status: 'aberta' });
-  opcoes.sort((a, b) => b.competencia.localeCompare(a.competencia));
+  const opcoes = competenciasDoLancamento(competencias, new Date());
   const hoje = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
 
   return (
