@@ -13,6 +13,10 @@ import {
 } from './application/ports/contas-bancarias.repository';
 import { EMISSOR_NFSE } from './application/ports/emissor-nfse';
 import { EMPRESAS_FINANCEIRO, type EmpresasFinanceiro } from './application/ports/empresas';
+import {
+  FORNECEDORES_REPOSITORY,
+  type FornecedoresRepository,
+} from './application/ports/fornecedores.repository';
 import { VARIAVEIS_AMBIENTE, type VariaveisAmbiente } from './application/ports/variaveis-ambiente';
 import {
   ConsultarCategorias,
@@ -25,19 +29,26 @@ import {
   ListarEmpresas,
   SalvarContaBancaria,
 } from './application/use-cases/contas-bancarias';
+import {
+  ConsultarFornecedores,
+  ExcluirFornecedor,
+  SalvarFornecedor,
+} from './application/use-cases/fornecedores';
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
 import {
   ContasBancariasController,
   EmpresasFinanceiroController,
 } from './infrastructure/http/contas-bancarias.controller';
+import { FornecedoresController } from './infrastructure/http/fornecedores.controller';
 import { DrizzleCategoriasRepository } from './infrastructure/persistence/drizzle-categorias.repository';
 import { DrizzleContasBancariasRepository } from './infrastructure/persistence/drizzle-contas-bancarias.repository';
 import { DrizzleEmpresas } from './infrastructure/persistence/drizzle-empresas';
+import { DrizzleFornecedoresRepository } from './infrastructure/persistence/drizzle-fornecedores.repository';
 import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
 
 /**
- * Contexto financeiro: plano de categorias, contas bancárias (e, a seguir, fornecedores, títulos)
+ * Contexto financeiro: plano de categorias, contas bancárias, fornecedores (e, a seguir, títulos)
  * e a integração de saída com a Focus NFe (ou o simulador).
  */
 @Module({
@@ -45,6 +56,7 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
     CategoriasFinanceirasController,
     ContasBancariasController,
     EmpresasFinanceiroController,
+    FornecedoresController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -105,6 +117,28 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
       inject: [CONTAS_BANCARIAS_REPOSITORY, AUDITORIA, CLOCK],
       useFactory: (repo: ContasBancariasRepository, auditoria: Auditoria, clock: Clock) =>
         new ExcluirContaBancaria(repo, auditoria, clock),
+    },
+    { provide: FORNECEDORES_REPOSITORY, useClass: DrizzleFornecedoresRepository },
+    {
+      provide: ConsultarFornecedores,
+      inject: [FORNECEDORES_REPOSITORY],
+      useFactory: (repo: FornecedoresRepository) => new ConsultarFornecedores(repo),
+    },
+    {
+      provide: SalvarFornecedor,
+      inject: [FORNECEDORES_REPOSITORY, CATEGORIAS_REPOSITORY, AUDITORIA, CLOCK],
+      useFactory: (
+        repo: FornecedoresRepository,
+        categorias: CategoriasRepository,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new SalvarFornecedor(repo, categorias, auditoria, clock),
+    },
+    {
+      provide: ExcluirFornecedor,
+      inject: [FORNECEDORES_REPOSITORY, AUDITORIA, CLOCK],
+      useFactory: (repo: FornecedoresRepository, auditoria: Auditoria, clock: Clock) =>
+        new ExcluirFornecedor(repo, auditoria, clock),
     },
   ],
   exports: [EMISSOR_NFSE],

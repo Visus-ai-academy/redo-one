@@ -92,6 +92,24 @@ describe('alteracoesDoCadastro', () => {
     ]);
   });
 
+  it('fornecedor: a frase, os campos na ordem da tela, CNPJ e CEP formatados e a categoria pelo nome', () => {
+    expect(descreverEventoCadastro('fornecedor', 'criado')).toBe('Fornecedor criado');
+    const linhas = alteracoesDoCadastro(
+      evento(
+        'fornecedor',
+        'alterado',
+        { cnpj: '12345678000190', cep: null, categoriaPadraoId: null },
+        { cnpj: '11222333000144', cep: '01310100', categoriaPadraoId: ID_NEURO },
+      ),
+      nomes,
+    );
+    expect(linhas).toEqual([
+      { rotulo: 'CNPJ', antes: '12.345.678/0001-90', depois: '11.222.333/0001-44' },
+      { rotulo: 'Categoria padrão', antes: '(vazio)', depois: 'NEURO' },
+      { rotulo: 'CEP', antes: '(vazio)', depois: '01310-100' },
+    ]);
+  });
+
   it('outra conta na MobileMed: o id sem separador de milhar, a observação e o motivo', () => {
     expect(descreverEventoCadastro('medico', 'conta_mobilemed_adicionada')).toBe(
       'Outra conta na MobileMed adicionada',

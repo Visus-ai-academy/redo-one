@@ -1,7 +1,7 @@
 // Apresentação dos eventos do Histórico dos cadastros (médico, cliente, exame): o que aconteceu e
 // o que mudou, em português. Os ids viram o nome que a página da API traz em `nomes`.
 
-import { formatarCep, soDigitos } from '../../lib/documentos';
+import { formatarCep, formatarCnpj, formatarCpf, soDigitos } from '../../lib/documentos';
 import { aplicarMascara } from '../../lib/mascaras';
 import { type LinhaAlteracao, VAZIO } from '../escala-historico/historico';
 
@@ -49,6 +49,11 @@ const FRASES: Record<string, Record<string, string>> = {
   },
   exame: { criado: 'Exame criado', alterado: 'Cadastro alterado', excluido: 'Exame excluído' },
   cliente_dados_fiscais: { alterado: 'Dados de faturamento alterados' },
+  fornecedor: {
+    criado: 'Fornecedor criado',
+    alterado: 'Cadastro alterado',
+    excluido: 'Fornecedor excluído',
+  },
   de_para_valor_exame: {
     criado: 'Valor fora do padrão criado',
     alterado: 'Valor fora do padrão alterado',
@@ -66,6 +71,7 @@ const NOME_DA_ENTIDADE: Record<string, string> = {
   exame: 'Exame',
   de_para_valor_exame: 'Valor fora do padrão',
   cliente_dados_fiscais: 'Dados de faturamento',
+  fornecedor: 'Fornecedor',
 };
 
 /** No médico, o evento da equipe diz o que mudou para ele; `nome` é o da equipe. */
@@ -148,6 +154,20 @@ const CAMPOS: Record<string, string> = {
 
 /** Rótulos que mudam por entidade: na aba Faturamento, o e-mail e o telefone são do contato. */
 const CAMPOS_DA_ENTIDADE: Record<string, Record<string, string>> = {
+  fornecedor: {
+    razaoSocial: 'Razão social ou nome',
+    cep: 'CEP',
+    logradouro: 'Logradouro',
+    numero: 'Número',
+    complemento: 'Complemento',
+    bairro: 'Bairro',
+    cidade: 'Cidade',
+    uf: 'UF',
+    bancoCodigo: 'Código do banco',
+    agencia: 'Agência',
+    conta: 'Conta',
+    categoriaPadraoId: 'Categoria padrão',
+  },
   cliente_dados_fiscais: {
     email: 'E-mail do contato',
     telefone: 'Telefone do contato',
@@ -168,6 +188,30 @@ const CAMPOS_DA_ENTIDADE: Record<string, Record<string, string>> = {
 
 /** Ordem das linhas por entidade (a da tela); o JSON gravado (jsonb) não guarda a ordem. */
 const ORDEM_DA_ENTIDADE: Record<string, string[]> = {
+  fornecedor: [
+    'tipoPessoa',
+    'razaoSocial',
+    'nomeFantasia',
+    'cnpj',
+    'cpf',
+    'email',
+    'telefone',
+    'categoriaPadraoId',
+    'cep',
+    'logradouro',
+    'numero',
+    'complemento',
+    'bairro',
+    'cidade',
+    'uf',
+    'tipoChavePix',
+    'chavePix',
+    'bancoCodigo',
+    'agencia',
+    'conta',
+    'observacoes',
+    'ativo',
+  ],
   cliente_dados_fiscais: [
     'emailsNf',
     'exclusaoFiscal',
@@ -197,6 +241,13 @@ function naOrdemDaEntidade(campos: string[], entidade: string) {
 
 /** Valores com formato próprio na aba Faturamento; fora do formato, aparecem como estão. */
 const FORMATOS_DA_ENTIDADE: Record<string, Record<string, (v: string) => string>> = {
+  fornecedor: {
+    cnpj: (v) => (/^\d{14}$/.test(v) ? formatarCnpj(v) : v),
+    cpf: (v) => (/^\d{11}$/.test(v) ? formatarCpf(v) : v),
+    cep: (v) => (/^\d{8}$/.test(v) ? formatarCep(v) : v),
+    telefone: (v) =>
+      v === soDigitos(v) && v.length >= 10 && v.length <= 11 ? aplicarMascara('telefone', v) : v,
+  },
   cliente_dados_fiscais: {
     cep: (v) => (/^\d{8}$/.test(v) ? formatarCep(v) : v),
     telefone: (v) =>

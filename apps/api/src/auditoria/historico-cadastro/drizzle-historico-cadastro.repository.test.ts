@@ -85,7 +85,7 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
 
   beforeEach(async () => {
     await db.execute(
-      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis cascade`,
+      sql`truncate table eventos_auditoria, equipes, exames_de_para_valores, exames, clientes, especialidades, niveis_medico, medicos, usuarios, papeis, categorias_financeiras cascade`,
     );
     minuto = 0;
     for (const k of Object.keys(ev)) delete ev[k];
@@ -326,6 +326,34 @@ describe.skipIf(!url)('repositório do histórico dos cadastros', () => {
 
     const r = await repo.listar({ cadastro: 'cliente', id: cliente }, pagina);
     expect(apelidos(r.itens)).toEqual(['alias', 'criado']);
+  });
+
+  it('fornecedor: só os eventos dele, com o nome da categoria padrão', async () => {
+    const [categoria] = await db
+      .insert(schema.categoriasFinanceiras)
+      .values({ tipo: 'despesa', nome: 'Contabilidade' })
+      .returning();
+    const fornecedor = '00000000-0000-4000-8000-0000000000f1';
+    await evento('criado', {
+      entidade: 'fornecedor',
+      entidadeId: fornecedor,
+      acao: 'criado',
+      depois: { razaoSocial: 'Ômega', categoriaPadraoId: categoria?.id },
+    });
+    await evento('outro', {
+      entidade: 'fornecedor',
+      entidadeId: '00000000-0000-4000-8000-0000000000f2',
+      acao: 'alterado',
+    });
+    await evento('clienteMesmoId', {
+      entidade: 'cliente',
+      entidadeId: fornecedor,
+      acao: 'alterado',
+    });
+
+    const r = await repo.listar({ cadastro: 'fornecedor', id: fornecedor }, pagina);
+    expect(apelidos(r.itens)).toEqual(['criado']);
+    expect(r.nomes[categoria?.id ?? '']).toBe('Contabilidade');
   });
 
   it('exame: o cadastro e os valores fora do padrão ligados a ele, pela tabela ou pelo evento', async () => {

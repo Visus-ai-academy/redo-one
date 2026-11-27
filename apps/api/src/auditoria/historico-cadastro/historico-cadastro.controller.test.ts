@@ -13,15 +13,20 @@ describe('HistoricoCadastroController', () => {
 
   it('uma rota por cadastro, cada uma com o ver do cadastro', () => {
     expect(
-      [p.doMedico, p.doCliente, p.doExame].map((h) => reflector.get(PATH_METADATA, h)),
+      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor].map((h) =>
+        reflector.get(PATH_METADATA, h),
+      ),
     ).toEqual([
       'medicos/:id/historico',
       'catalogo/clientes/:id/historico',
       'catalogo/exames/:id/historico',
+      'financeiro/fornecedores/:id/historico',
     ]);
     expect(
-      [p.doMedico, p.doCliente, p.doExame].map((h) => reflector.get(PERMISSOES_EXIGIDAS, h)),
-    ).toEqual([['medicos.ver'], ['clientes.ver'], ['exames.ver']]);
+      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor].map((h) =>
+        reflector.get(PERMISSOES_EXIGIDAS, h),
+      ),
+    ).toEqual([['medicos.ver'], ['clientes.ver'], ['exames.ver'], ['fornecedores.ver']]);
   });
 
   it('passa quem consulta (para o recorte do médico) e devolve a página', async () => {
@@ -30,6 +35,7 @@ describe('HistoricoCadastroController', () => {
       doMedico: vi.fn(async () => pagina),
       doCliente: vi.fn(async () => pagina),
       doExame: vi.fn(async () => pagina),
+      doFornecedor: vi.fn(async () => pagina),
     };
     const controller = new HistoricoCadastroController(
       service as unknown as HistoricoCadastroService,
@@ -47,5 +53,7 @@ describe('HistoricoCadastroController', () => {
     expect(service.doCliente).toHaveBeenCalledWith('c-1', query);
     await controller.doExame('x-1', query);
     expect(service.doExame).toHaveBeenCalledWith('x-1', query);
+    await controller.doFornecedor('f-1', query);
+    expect(service.doFornecedor).toHaveBeenCalledWith('f-1', query);
   });
 });

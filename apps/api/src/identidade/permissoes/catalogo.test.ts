@@ -73,6 +73,7 @@ describe('catálogo de permissões', () => {
       clientes: ['Cadastros', crud],
       medicos: ['Cadastros', crud],
       exames: ['Cadastros', crud],
+      fornecedores: ['Cadastros', crud],
       avisos: ['Cadastros', ['ver']],
       faturamento: ['Financeiro', ['ver']],
       repasse: ['Financeiro', ['ver']],
@@ -149,6 +150,7 @@ describe('catálogo de permissões', () => {
     expect(especiais('contratos')).toEqual(['contratos.assinatura.enviar']);
     expect(especiais('categorias-financeiras')).toEqual([]);
     expect(especiais('contas-bancarias')).toEqual([]);
+    expect(especiais('fornecedores')).toEqual([]);
     expect(sensiveis('contas-bancarias')).toEqual([
       'contas-bancarias.editar',
       'contas-bancarias.excluir',

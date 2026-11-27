@@ -11,6 +11,7 @@ import {
   Receipt,
   Robot,
   Stethoscope,
+  Storefront,
 } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
 
@@ -56,6 +57,12 @@ export const GRUPOS_MENU: GrupoMenu[] = [
       { nome: 'Clientes', to: '/clientes', icone: Buildings, permissao: 'clientes.ver' },
       { nome: 'Médicos', to: '/medicos', icone: Stethoscope, permissao: 'medicos.ver' },
       { nome: 'Exames', to: '/exames', icone: Flask, permissao: 'exames.ver' },
+      {
+        nome: 'Fornecedores',
+        to: '/fornecedores',
+        icone: Storefront,
+        permissao: 'fornecedores.ver',
+      },
     ],
   },
   {

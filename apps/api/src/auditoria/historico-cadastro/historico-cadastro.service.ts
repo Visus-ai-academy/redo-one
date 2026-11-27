@@ -9,7 +9,7 @@ import {
 } from './historico-cadastro.repository';
 
 /**
- * Histórico (log de mudanças) do cadastro de um médico, cliente ou exame, lido da auditoria. Quem
+ * Histórico (log de mudanças) do cadastro de um médico, cliente, exame ou fornecedor, lido da auditoria. Quem
  * vê o cadastro vê o histórico dele; no médico, as partes com permissão própria entram só para
  * quem pode vê-las.
  */
@@ -38,5 +38,9 @@ export class HistoricoCadastroService {
 
   doExame(id: string, paginacao: Paginacao): Promise<PaginaHistoricoCadastro> {
     return this.repo.listar({ cadastro: 'exame', id }, paginacao);
+  }
+
+  doFornecedor(id: string, paginacao: Paginacao): Promise<PaginaHistoricoCadastro> {
+    return this.repo.listar({ cadastro: 'fornecedor', id }, paginacao);
   }
 }

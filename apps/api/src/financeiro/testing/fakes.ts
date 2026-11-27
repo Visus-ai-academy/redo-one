@@ -11,8 +11,14 @@ import type {
   FiltroContasBancarias,
 } from '../application/ports/contas-bancarias.repository';
 import type { EmpresasFinanceiro } from '../application/ports/empresas';
+import type {
+  FiltroFornecedores,
+  Fornecedor,
+  FornecedoresRepository,
+} from '../application/ports/fornecedores.repository';
 import type { DadosCategoria, TipoCategoria } from '../domain/categoria-financeira';
 import type { DadosContaBancaria } from '../domain/conta-bancaria';
+import type { DadosFornecedor } from '../domain/fornecedor';
 
 /** Fatia a página como o banco faria. */
 export function paginar<T>(itens: T[], filtro: { pagina: number; porPagina: number }) {
@@ -184,6 +190,75 @@ export class ContasBancariasEmMemoria implements ContasBancariasRepository {
 
   async excluir(id: string) {
     if (this.usadas.has(id)) return false;
+    this.linhas.delete(id);
+    return true;
+  }
+}
+
+/** Fornecedores em memória; "com títulos" = está em `usados`. */
+export class FornecedoresEmMemoria implements FornecedoresRepository {
+  readonly linhas = new Map<string, DadosFornecedor>();
+  readonly usados = new Set<string>();
+
+  constructor(private readonly categorias: CategoriasEmMemoria) {}
+
+  private completo(id: string, d: DadosFornecedor): Fornecedor {
+    const categoria = d.categoriaPadraoId ? this.categorias.linhas.get(d.categoriaPadraoId) : null;
+    return { id, ...d, categoriaPadraoNome: categoria?.nome ?? null };
+  }
+
+  async listar(filtro: FiltroFornecedores) {
+    const termo = filtro.busca?.toLowerCase();
+    const itens = [...this.linhas.entries()]
+      .map(([id, d]) => this.completo(id, d))
+      .filter((f) => filtro.situacao === 'todas' || f.ativo === (filtro.situacao === 'ativas'))
+      .filter((f) => filtro.categoria === 'todas' || f.categoriaPadraoId === filtro.categoria.id)
+      .filter(
+        (f) =>
+          !termo ||
+          [f.razaoSocial, f.nomeFantasia].some((v) => v?.toLowerCase().includes(termo)) ||
+          f.cnpj === termo ||
+          f.cpf === termo,
+      )
+      .sort((a, b) => a.razaoSocial.localeCompare(b.razaoSocial))
+      .map((f) => ({
+        id: f.id,
+        tipoPessoa: f.tipoPessoa,
+        razaoSocial: f.razaoSocial,
+        nomeFantasia: f.nomeFantasia,
+        cnpj: f.cnpj,
+        cpfFinal: f.cpf ? f.cpf.slice(-2) : null,
+        categoriaPadraoId: f.categoriaPadraoId,
+        categoriaPadraoNome: f.categoriaPadraoNome,
+        ativo: f.ativo,
+      }));
+    return paginar(itens, filtro);
+  }
+
+  async buscar(id: string) {
+    const d = this.linhas.get(id);
+    return d ? this.completo(id, d) : null;
+  }
+
+  async buscarPorDocumento(documento: { cnpj: string } | { cpf: string }) {
+    const achado = [...this.linhas.entries()].find(([, f]) =>
+      'cnpj' in documento ? f.cnpj === documento.cnpj : f.cpf === documento.cpf,
+    );
+    return achado ? { id: achado[0], razaoSocial: achado[1].razaoSocial } : null;
+  }
+
+  async criar(dados: DadosFornecedor) {
+    const id = randomUUID();
+    this.linhas.set(id, { ...dados });
+    return id;
+  }
+
+  async atualizar(id: string, dados: DadosFornecedor) {
+    this.linhas.set(id, { ...dados });
+  }
+
+  async excluir(id: string) {
+    if (this.usados.has(id)) return false;
     this.linhas.delete(id);
     return true;
   }

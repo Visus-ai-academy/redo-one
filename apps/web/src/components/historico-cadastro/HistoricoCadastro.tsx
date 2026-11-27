@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { dadosFiscaisControllerHistoricoQueryOptions } from '../../gen/hooks/useDadosFiscaisControllerHistorico';
 import { historicoCadastroControllerDoClienteQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoCliente';
 import { historicoCadastroControllerDoExameQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoExame';
+import { historicoCadastroControllerDoFornecedorQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoFornecedor';
 import { historicoCadastroControllerDoMedicoQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoMedico';
 import type { PaginaHistoricoCadastroDto } from '../../gen/types/PaginaHistoricoCadastroDto';
 import { cn } from '../../lib/cn';
@@ -20,7 +21,7 @@ import {
 } from './historico-cadastro';
 
 /** `dados-fiscais`: os dados de faturamento do cliente (aba Faturamento, `id` do cliente). */
-export type CadastroComHistorico = 'medico' | 'cliente' | 'exame' | 'dados-fiscais';
+export type CadastroComHistorico = 'medico' | 'cliente' | 'exame' | 'fornecedor' | 'dados-fiscais';
 
 /** Num painel lateral, 10 mudanças por página (a API pagina). */
 const POR_PAGINA = 10;
@@ -44,6 +45,9 @@ function opcoesDaConsulta(
   const args = { path: { id }, query };
   if (cadastro === 'cliente') {
     return historicoCadastroControllerDoClienteQueryOptions(args) as unknown as OpcoesHistorico;
+  }
+  if (cadastro === 'fornecedor') {
+    return historicoCadastroControllerDoFornecedorQueryOptions(args) as unknown as OpcoesHistorico;
   }
   if (cadastro === 'exame') {
     return historicoCadastroControllerDoExameQueryOptions(args) as unknown as OpcoesHistorico;

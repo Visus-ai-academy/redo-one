@@ -12038,6 +12038,211 @@
         ]
       }
     },
+    "/financeiro/fornecedores": {
+      "get": {
+        "operationId": "FornecedoresController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome, do documento ou do código.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltro"
+            }
+          },
+          {
+            "name": "categoria",
+            "required": true,
+            "in": "query",
+            "description": "Id da categoria padrão ou `todas` (escolha explícita; nunca vazio).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "O CPF vem só com os dois últimos dígitos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaFornecedoresDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "FornecedoresController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FornecedorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Razão social ou documento faltando, e-mail, telefone, endereço, Pix ou categoria inválidos; `campos` diz qual."
+          },
+          "409": {
+            "description": "CNPJ ou CPF de outro fornecedor."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/fornecedores/{id}": {
+      "get": {
+        "operationId": "FornecedoresController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FornecedorDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "FornecedoresController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FornecedorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Razão social ou documento faltando, e-mail, telefone, endereço, Pix ou categoria inválidos; `campos` diz qual."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "CNPJ ou CPF de outro fornecedor."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "delete": {
+        "operationId": "FornecedoresController_excluir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Com títulos lançados: desative."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
     "/distribuicao/rodadas/viva": {
       "get": {
         "operationId": "RodadasController_viva",
@@ -14008,6 +14213,57 @@
         "responses": {
           "200": {
             "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga. Inclui os valores fora do padrão ligados ao exame.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaHistoricoCadastroDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "historico"
+        ]
+      }
+    },
+    "/financeiro/fornecedores/{id}/historico": {
+      "get": {
+        "operationId": "HistoricoCadastroController_doFornecedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27578,6 +27834,367 @@
         "required": [
           "id",
           "nome"
+        ]
+      },
+      "TipoPessoaFornecedor": {
+        "type": "string",
+        "enum": [
+          "PJ",
+          "PF"
+        ]
+      },
+      "FornecedorItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoPessoa": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoPessoaFornecedor"
+              }
+            ]
+          },
+          "razaoSocial": {
+            "type": "string"
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true,
+            "description": "Só dígitos."
+          },
+          "cpfFinal": {
+            "type": "string",
+            "nullable": true,
+            "description": "Os dois últimos dígitos do CPF (LGPD: a lista não mostra o CPF inteiro)."
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaPadraoNome": {
+            "type": "string",
+            "nullable": true,
+            "description": "\"Grupo › Categoria\"."
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "tipoPessoa",
+          "razaoSocial",
+          "nomeFantasia",
+          "cnpj",
+          "cpfFinal",
+          "categoriaPadraoId",
+          "categoriaPadraoNome",
+          "ativo"
+        ]
+      },
+      "PaginaFornecedoresDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FornecedorItemDto"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "TipoChavePixFornecedor": {
+        "type": "string",
+        "enum": [
+          "CPF",
+          "CNPJ",
+          "EMAIL",
+          "TELEFONE",
+          "ALEATORIA"
+        ]
+      },
+      "FornecedorDetalheDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoPessoa": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoPessoaFornecedor"
+              }
+            ]
+          },
+          "razaoSocial": {
+            "type": "string"
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "telefone": {
+            "type": "string",
+            "nullable": true
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true
+          },
+          "tipoChavePix": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoChavePixFornecedor"
+              }
+            ]
+          },
+          "chavePix": {
+            "type": "string",
+            "nullable": true
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "agencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "conta": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaPadraoNome": {
+            "type": "string",
+            "nullable": true
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tipoPessoa",
+          "razaoSocial",
+          "nomeFantasia",
+          "cnpj",
+          "cpf",
+          "email",
+          "telefone",
+          "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "uf",
+          "tipoChavePix",
+          "chavePix",
+          "bancoCodigo",
+          "agencia",
+          "conta",
+          "categoriaPadraoId",
+          "categoriaPadraoNome",
+          "ativo",
+          "observacoes"
+        ]
+      },
+      "FornecedorDto": {
+        "type": "object",
+        "properties": {
+          "tipoPessoa": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoPessoaFornecedor"
+              }
+            ]
+          },
+          "razaoSocial": {
+            "type": "string",
+            "example": "Ômega Serviços Contábeis Ltda.",
+            "maxLength": 200
+          },
+          "nomeFantasia": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "cnpj": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 18,
+            "example": "12.345.678/0001-90"
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 14,
+            "example": "123.456.789-09"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "telefone": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 9
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2,
+            "example": "SP"
+          },
+          "tipoChavePix": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoChavePixFornecedor"
+              }
+            ]
+          },
+          "chavePix": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "bancoCodigo": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 3,
+            "example": "341"
+          },
+          "agencia": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 10
+          },
+          "conta": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20
+          },
+          "categoriaPadraoId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Categoria de despesa."
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "tipoPessoa",
+          "razaoSocial",
+          "ativo"
         ]
       },
       "StatusRodada": {

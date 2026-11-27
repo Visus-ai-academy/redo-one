@@ -50,15 +50,17 @@ describe('HistoricoCadastroService', () => {
     ]);
   });
 
-  it('cliente e exame consultam o próprio cadastro', async () => {
+  it('cliente, exame e fornecedor consultam o próprio cadastro', async () => {
     const repo = new FakeRepo();
     const service = new HistoricoCadastroService(repo);
     await service.doCliente('c-1', pagina);
     await service.doExame('x-1', pagina);
+    await service.doFornecedor('f-1', pagina);
 
     expect(repo.alvos).toEqual([
       { cadastro: 'cliente', id: 'c-1' },
       { cadastro: 'exame', id: 'x-1' },
+      { cadastro: 'fornecedor', id: 'f-1' },
     ]);
   });
 });

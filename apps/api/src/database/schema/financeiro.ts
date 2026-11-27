@@ -14,7 +14,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { contratados } from './catalogo';
+import { contratados, tipoPessoa } from './catalogo';
+import { tipoChavePix } from './medicos';
 
 // Contexto `financeiro`: plano de categorias, contas bancárias, fornecedores e, depois, títulos e
 // baixas. Valores em centavos (`bigint`), datas de vencimento e pagamento como `date` (dia de
@@ -103,5 +104,56 @@ export const contasBancarias = pgTable(
       sql`(${t.integracao} = 'nenhuma') = (${t.credencial} is null)`,
     ),
     check('contas_bancarias_padrao_ativa_check', sql`not ${t.padraoRecebimento} or ${t.ativa}`),
+  ],
+);
+
+/**
+ * Empresa ou pessoa a quem a empresa paga e que não é médico (aluguel, software, contador...).
+ * Retenção: enquanto houver título ligado; sem título, o cadastro pode ser excluído.
+ */
+export const fornecedores = pgTable(
+  'fornecedores',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tipoPessoa: tipoPessoa('tipo_pessoa').notNull(),
+    /** Razão social (PJ) ou nome (PF). */
+    razaoSocial: text('razao_social').notNull(),
+    nomeFantasia: text('nome_fantasia'),
+    /** Só dígitos; só na pessoa jurídica. */
+    cnpj: text('cnpj'),
+    /** Só dígitos; só na pessoa física. */
+    cpf: text('cpf'), // LGPD: pessoal
+    email: text('email'), // LGPD: pessoal
+    /** Só dígitos, com DDD. */
+    telefone: text('telefone'), // LGPD: pessoal
+    cep: text('cep'),
+    logradouro: text('logradouro'),
+    numero: text('numero'),
+    complemento: text('complemento'),
+    bairro: text('bairro'),
+    cidade: text('cidade'),
+    uf: text('uf'),
+    tipoChavePix: tipoChavePix('tipo_chave_pix'),
+    chavePix: text('chave_pix'), // LGPD: pessoal
+    bancoCodigo: text('banco_codigo'),
+    agencia: text('agencia'),
+    conta: text('conta'),
+    /** Sugerida ao lançar uma despesa do fornecedor. */
+    categoriaPadraoId: uuid('categoria_padrao_id').references(() => categoriasFinanceiras.id),
+    ativo: boolean('ativo').notNull().default(true),
+    observacoes: text('observacoes'),
+    criadoEm: criadoEm(),
+    atualizadoEm: atualizadoEm(),
+  },
+  (t) => [
+    uniqueIndex('fornecedores_cnpj_key').on(t.cnpj).where(sql`${t.cnpj} is not null`),
+    uniqueIndex('fornecedores_cpf_key').on(t.cpf).where(sql`${t.cpf} is not null`),
+    index('fornecedores_razao_social_idx').on(sql`lower(${t.razaoSocial})`),
+    index('fornecedores_ativo_idx').on(t.ativo),
+    index('fornecedores_categoria_padrao_idx').on(t.categoriaPadraoId),
+    check(
+      'fornecedores_documento_check',
+      sql`(${t.tipoPessoa} = 'PJ' and ${t.cnpj} is not null and ${t.cpf} is null) or (${t.tipoPessoa} = 'PF' and ${t.cpf} is not null and ${t.cnpj} is null)`,
+    ),
   ],
 );

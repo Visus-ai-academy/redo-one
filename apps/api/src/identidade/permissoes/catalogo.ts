@@ -301,6 +301,16 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     ],
   },
   {
+    // Cadastros › Fornecedores: a quem a empresa paga e que não é médico. A categoria padrão vem
+    // do plano de categorias financeiras.
+    tela: 'fornecedores',
+    rotulo: 'Fornecedores',
+    area: 'Cadastros',
+    padrao: crud(),
+    especiais: [],
+    exige: ['categorias-financeiras'],
+  },
+  {
     tela: 'avisos',
     rotulo: 'Avisos de cadastro',
     area: 'Cadastros',

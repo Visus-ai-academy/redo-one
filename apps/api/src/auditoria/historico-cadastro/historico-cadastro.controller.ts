@@ -11,7 +11,7 @@ import { HistoricoCadastroService } from './historico-cadastro.service';
 const DESCRICAO = 'Mudanças registradas no cadastro, da mais nova para a mais antiga.';
 
 /**
- * Aba Histórico dos painéis de médico, cliente e exame. Uma rota por cadastro, junto das rotas
+ * Aba Histórico dos painéis de médico, cliente, exame e fornecedor. Uma rota por cadastro, junto das rotas
  * dele, cada uma com a permissão `ver` do cadastro; a consulta à auditoria é uma só.
  */
 @ApiTags('historico')
@@ -54,6 +54,16 @@ export class HistoricoCadastroController {
     @Query() query: PaginacaoDto,
   ): Promise<PaginaHistoricoCadastroDto> {
     return this.responder(this.historico.doExame(id, paginacao(query)), query);
+  }
+
+  @Get('financeiro/fornecedores/:id/historico')
+  @Permissao('fornecedores.ver')
+  @ApiOkResponse({ type: PaginaHistoricoCadastroDto, description: DESCRICAO })
+  doFornecedor(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginacaoDto,
+  ): Promise<PaginaHistoricoCadastroDto> {
+    return this.responder(this.historico.doFornecedor(id, paginacao(query)), query);
   }
 
   private async responder(
