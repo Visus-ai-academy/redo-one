@@ -46,7 +46,14 @@ describe('avisosSemPreco', () => {
         valor: 'Dra. Ana | MR|NEURO|SC|PLANTÃO sem preço de repasse em 2026-11',
         itens: ['CLINICADIA'],
         ocorrencias: 2,
-        entidades: [{ tipo: 'medico', id: 'ana' }],
+        // O médico e o arranjo: o atalho abre o preço já com o arranjo escolhido.
+        entidades: [
+          { tipo: 'medico', id: 'ana' },
+          { tipo: 'modalidade', id: 'mr' },
+          { tipo: 'especialidade', id: 'neuro' },
+          { tipo: 'categoria', id: 'sc' },
+          { tipo: 'prioridade', id: 'plantao' },
+        ],
         competencias: { desde: '2026-11', ate: '2026-11' },
       },
     ]);

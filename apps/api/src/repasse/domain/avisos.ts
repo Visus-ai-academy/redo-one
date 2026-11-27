@@ -27,7 +27,18 @@ export function avisosSemPreco(
         valor: `${nome(d.medicoId)} | ${ids.map((id) => (id ? nome(id) : '(sem cadastro)')).join('|')} sem preço de repasse em ${competencia}`,
         itens: [],
         ocorrencias: 0,
-        entidades: [{ tipo: 'medico', id: d.medicoId }],
+        // O médico e o arranjo: o atalho do aviso abre o preço do médico já com o arranjo.
+        entidades: [
+          { tipo: 'medico', id: d.medicoId },
+          ...(
+            [
+              ['modalidade', g.modalidadeId],
+              ['especialidade', g.especialidadeId],
+              ['categoria', g.categoriaId],
+              ['prioridade', g.prioridadeId],
+            ] as const
+          ).flatMap(([tipo, id]) => (id ? [{ tipo, id }] : [])),
+        ],
         competencias: { desde: competencia, ate: competencia },
       };
       const cliente = g.unidadeId ?? g.clienteId;

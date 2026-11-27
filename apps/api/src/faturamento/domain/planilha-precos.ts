@@ -61,7 +61,7 @@ export interface PlanilhaLida {
 const chave = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().replace(/\s+/g, ' ').toUpperCase();
 
-const celula = (v: string) => (/[;"\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+export const celula = (v: string) => (/[;"\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
 /** CSV com BOM (o Excel reconhece o UTF-8), `;` e vírgula decimal. */
 export function gerarPlanilhaPrecos(linhas: readonly LinhaPlanilhaPreco[]): string {
@@ -84,7 +84,7 @@ export function gerarPlanilhaPrecos(linhas: readonly LinhaPlanilhaPreco[]): stri
 }
 
 /** Separa as células de uma linha, com aspas como o Excel as escreve. */
-function celulas(linha: string): string[] {
+export function celulas(linha: string): string[] {
   const out: string[] = [];
   let atual = '';
   let aspas = false;

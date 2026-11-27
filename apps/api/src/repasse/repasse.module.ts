@@ -24,6 +24,10 @@ import {
 import { CONSULTAS_REPASSE, type ConsultasRepasse } from './application/ports/consultas-repasse';
 import { DADOS_REPASSE, type DadosRepasse } from './application/ports/dados-repasse';
 import { GERACOES_REPASSE, type GeracoesRepasse } from './application/ports/geracoes-repasse';
+import {
+  PRECOS_REPASSE_REPOSITORY,
+  type PrecosRepasseRepository,
+} from './application/ports/precos-repasse.repository';
 import { RECALCULO_REPASSE, type RecalculoRepasse } from './application/ports/recalculo-repasse';
 import { TAREFA_GERAR_PREVIAS, TAREFA_GERAR_REPASSE } from './application/tarefas';
 import {
@@ -47,7 +51,15 @@ import {
   TarifasDoLancamento,
 } from './application/use-cases/consultas';
 import { GerarRepasse } from './application/use-cases/gerar-repasse';
+import {
+  ExportarPrecosMedico,
+  HistoricoPrecoMedico,
+  ListarPrecosMedico,
+  MudarPrecosMedico,
+  OpcoesPrecosRepasse,
+} from './application/use-cases/precos-medico';
 import { RecalcularRepasse } from './application/use-cases/recalcular-repasse';
+import { PrecosRepasseController } from './infrastructure/http/precos-repasse.controller';
 import { RepasseController } from './infrastructure/http/repasse.controller';
 import { RepasseConsultasController } from './infrastructure/http/repasse-consultas.controller';
 import { AgendadorRepasseFila } from './infrastructure/jobs/agendador-repasse-fila';
@@ -62,6 +74,7 @@ import {
   type AoGravarGeracao,
   DrizzleGeracoesRepasse,
 } from './infrastructure/persistence/drizzle-geracoes-repasse';
+import { DrizzlePrecosRepasseRepository } from './infrastructure/persistence/drizzle-precos-repasse.repository';
 import { RecalculoRepasseAdapter } from './infrastructure/recalculo-repasse.adapter';
 
 const agora = () => new Date();
@@ -79,7 +92,7 @@ const CONFIGURACAO = [
  */
 @Module({
   imports: [FaturamentoModule, IngestaoModule],
-  controllers: [RepasseController, RepasseConsultasController],
+  controllers: [RepasseController, RepasseConsultasController, PrecosRepasseController],
   providers: [
     { provide: CONSULTAS_REPASSE, useClass: DrizzleConsultasRepasse },
     ...[ObterCompetenciaRepasse, ListarDemonstrativos, ObterDemonstrativo].map((Caso) => ({
@@ -113,6 +126,19 @@ const CONFIGURACAO = [
     { provide: GERACOES_REPASSE, useClass: DrizzleGeracoesRepasse },
     { provide: ADICIONAIS_REPOSITORY, useClass: DrizzleAdicionaisRepository },
     { provide: CONFIGURACAO_REPASSE, useClass: DrizzleConfiguracaoRepasseRepository },
+    { provide: PRECOS_REPASSE_REPOSITORY, useClass: DrizzlePrecosRepasseRepository },
+    ...[ListarPrecosMedico, HistoricoPrecoMedico, MudarPrecosMedico, ExportarPrecosMedico].map(
+      (Caso) => ({
+        provide: Caso,
+        inject: [PRECOS_REPASSE_REPOSITORY],
+        useFactory: (repo: PrecosRepasseRepository) => new Caso(repo, agora),
+      }),
+    ),
+    {
+      provide: OpcoesPrecosRepasse,
+      inject: [PRECOS_REPASSE_REPOSITORY],
+      useFactory: (repo: PrecosRepasseRepository) => new OpcoesPrecosRepasse(repo),
+    },
     { provide: AGENDADOR_REPASSE, useClass: AgendadorRepasseFila },
     {
       provide: RECALCULO_REPASSE,
