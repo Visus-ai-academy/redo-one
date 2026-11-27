@@ -155,10 +155,9 @@ export function PainelCategoria({
           }}
         >
           {(field) => (
-            <field.SelectField
+            <field.SegmentadaField
               label="Tipo"
               required
-              placeholder="Escolha o tipo"
               disabled={ehGrupo}
               opcoes={[
                 { valor: 'receita', rotulo: 'Receita' },

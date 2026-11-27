@@ -189,9 +189,8 @@ function PainelPrioridade({
         </form.AppField>
         <form.AppField name="urgencia">
           {(field) => (
-            <field.SelectField
+            <field.SegmentadaField
               label="Tratar como urgência"
-              placeholder="Escolha"
               opcoes={OPCOES_URGENCIA}
               description="A urgência passa na frente dentro da posição e usa a margem acima do teto."
               required

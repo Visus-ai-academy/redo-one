@@ -239,9 +239,8 @@ export function PainelCliente({
                 <div className="flex flex-wrap gap-4">
                   <form.AppField name="tipoPessoa">
                     {(field) => (
-                      <field.SelectField
+                      <field.SegmentadaField
                         label="Tipo de pessoa"
-                        placeholder="Escolha"
                         opcoes={[
                           { valor: 'PJ', rotulo: 'Pessoa jurídica' },
                           { valor: 'PF', rotulo: 'Pessoa física' },
@@ -477,23 +476,18 @@ function Apelidos({
           }}
           className="flex flex-col gap-3"
         >
-          <form.Subscribe selector={(estado) => estado.values.tipo}>
-            {(tipo) => (
-              <form.AppField name="tipo">
-                {(field) => (
-                  <field.SelectField
-                    label="Tipo do apelido"
-                    placeholder="Escolha o tipo"
-                    description={TIPOS_APELIDO[tipo].ajuda}
-                    opcoes={Object.entries(TIPOS_APELIDO).map(([valor, t]) => ({
-                      valor,
-                      rotulo: t.rotulo,
-                    }))}
-                  />
-                )}
-              </form.AppField>
+          <form.AppField name="tipo">
+            {(field) => (
+              <field.OpcoesField
+                label="Tipo do apelido"
+                opcoes={Object.entries(TIPOS_APELIDO).map(([valor, t]) => ({
+                  valor,
+                  rotulo: t.rotulo,
+                  ajuda: t.ajuda,
+                }))}
+              />
             )}
-          </form.Subscribe>
+          </form.AppField>
           <form.AppField name="padrao">
             {(field) => (
               <field.TextField

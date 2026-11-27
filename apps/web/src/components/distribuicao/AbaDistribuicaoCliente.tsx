@@ -245,9 +245,8 @@ function FormPrioridades({
                       </form.AppField>
                       <form.AppField name={`itens[${i}].nivel`}>
                         {(field) => (
-                          <field.SelectField
+                          <field.SegmentadaField
                             label={`Nível da frente ${i + 1}`}
-                            placeholder="Escolha"
                             required
                             opcoes={NIVEIS}
                             className="flex-[1_1_120px]"

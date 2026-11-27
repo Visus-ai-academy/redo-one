@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ResponseError } from '../../gen/.kubb/client';
 import type { TurnoItemDto } from '../../gen/types/TurnoItemDto';
-import { escolherOpcao } from '../../test/select';
+import { escolherOpcao, escolherSegmento } from '../../test/select';
 import { PainelTurno, type PainelTurnoProps } from './PainelTurno';
 
 const ESPECIALIDADES = [
@@ -73,7 +73,7 @@ describe('PainelTurno', () => {
 
     expect(screen.getByRole('dialog', { name: 'Novo turno' })).toBeInTheDocument();
     await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), 'Noite');
-    await escolherOpcao('Tipo', 'Lista');
+    await escolherSegmento('Tipo', 'Lista');
     await userEvent.type(screen.getByRole('textbox', { name: 'Início' }), '19:00');
     await userEvent.type(screen.getByRole('textbox', { name: 'Fim' }), '7:00');
     expect(

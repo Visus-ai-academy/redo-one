@@ -143,7 +143,9 @@ describe('AbaRepasseMedico', () => {
   it('regras: nova versão com recortes, "Todos os clientes" explícito', async () => {
     renderComRotas(aba({ parteInicial: 'regras' }));
     expect(await screen.findByText('Como os laudos contam hoje')).toBeInTheDocument();
-    await escolherOpcao('Como os laudos contam', 'Só os recortes cliente × especialidade');
+    await userEvent.click(
+      screen.getByRole('radio', { name: 'Só os recortes cliente × especialidade' }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Incluir recorte' }));
     await escolherOpcao('Cliente do recorte 1', 'Todos os clientes');
     await escolherOpcao('Especialidade do recorte 1', 'NEURO');

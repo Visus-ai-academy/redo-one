@@ -448,9 +448,8 @@ function NovaVigencia({
                 </form.AppField>
                 <form.AppField name="mes">
                   {(field) => (
-                    <field.SelectField
+                    <field.SegmentadaField
                       label="Mês do corte (data do laudo)"
-                      placeholder="Escolha o mês"
                       required
                       opcoes={MESES}
                       description="Em que mês, em relação à competência, cai o dia do corte."
@@ -492,9 +491,8 @@ function NovaVigencia({
                   </form.AppField>
                   <form.AppField name="exameMes">
                     {(field) => (
-                      <field.SelectField
+                      <field.SegmentadaField
                         label="Mês do corte (data do exame)"
-                        placeholder="Escolha o mês"
                         required
                         opcoes={MESES}
                         description="Em que mês, em relação à competência, cai o dia do corte."

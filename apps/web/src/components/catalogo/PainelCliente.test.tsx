@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ClienteDetalheDto } from '../../gen/types/ClienteDetalheDto';
-import { escolherOpcao } from '../../test/select';
+import { escolherOpcao, escolherSegmento } from '../../test/select';
 import { useAppForm } from '../form/form';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { PainelCliente, type PainelClienteProps } from './PainelCliente';
@@ -126,7 +126,7 @@ describe('PainelCliente', () => {
     const { onSalvar } = montar();
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Nome na MobileMed' }), 'DR FULANO');
-    await escolherOpcao('Tipo de pessoa', 'Pessoa física');
+    await escolherSegmento('Tipo de pessoa', 'Pessoa física');
     expect(screen.queryByRole('textbox', { name: 'CNPJ' })).not.toBeInTheDocument();
     await userEvent.type(screen.getByRole('textbox', { name: 'CPF' }), '123.456.789-09');
     await escolherOpcao('Empresa que fatura', '001 TELEIMAGEM');
@@ -142,9 +142,10 @@ describe('PainelCliente', () => {
 
     const apelidos = screen.getByRole('region', { name: 'Apelidos' });
     expect(within(apelidos).getByText('PRN TELE_')).toBeInTheDocument();
-    expect(within(apelidos).getByText('Começa com')).toBeInTheDocument();
+    // "Começa com" aparece no apelido da lista e na opção do tipo.
+    expect(within(apelidos).getAllByText('Começa com')).toHaveLength(2);
 
-    await escolherOpcao('Tipo do apelido', 'Igual a');
+    await userEvent.click(screen.getByRole('radio', { name: 'Igual a' }));
     await userEvent.type(
       within(apelidos).getByRole('textbox', { name: 'Grafia na origem' }),
       'PRN2',

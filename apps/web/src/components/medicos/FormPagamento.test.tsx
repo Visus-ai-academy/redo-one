@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PagamentoMedicoDto } from '../../gen/types/PagamentoMedicoDto';
-import { escolherOpcao } from '../../test/select';
+import { escolherOpcao, escolherSegmento } from '../../test/select';
 import { FormPagamento } from './FormPagamento';
 
 const vazio: PagamentoMedicoDto = {
@@ -24,7 +24,7 @@ describe('FormPagamento', () => {
     expect(
       screen.getByText(/Cada vez que esta aba abre, fica registrado na auditoria/),
     ).toBeInTheDocument();
-    await escolherOpcao('Sócio', 'Sim');
+    await escolherSegmento('Sócio', 'Sim');
     await userEvent.type(screen.getByRole('textbox', { name: 'CPF' }), '123.456.789-01');
     await escolherOpcao('Tipo da chave Pix', 'E-mail');
     await userEvent.type(screen.getByRole('textbox', { name: 'Chave Pix' }), 'a@pix.com');

@@ -8,7 +8,7 @@ import { prioridadesClienteControllerSalvar } from '../../gen/clients/prioridade
 import type { PrioridadeClienteDto } from '../../gen/types/PrioridadeClienteDto';
 import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
-import { escolherOpcao } from '../../test/select';
+import { escolherOpcao, escolherSegmento } from '../../test/select';
 import { AbaDistribuicaoCliente } from './AbaDistribuicaoCliente';
 
 vi.mock('../../gen/clients/opcoesControllerListas', () => ({ opcoesControllerListas: vi.fn() }));
@@ -58,7 +58,7 @@ describe('AbaDistribuicaoCliente', () => {
     renderComRotas(<AbaDistribuicaoCliente clienteId="c-1" podeEditar />);
     await userEvent.click(await screen.findByRole('button', { name: 'Adicionar frente' }));
     await escolherOpcao('Frente 2', 'CT');
-    await escolherOpcao('Nível da frente 2', 'Média');
+    await escolherSegmento('Nível da frente 2', 'Média');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar prioridades' }));
     expect(salvar).toHaveBeenCalledWith({
       path: { clienteId: 'c-1' },

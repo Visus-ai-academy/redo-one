@@ -183,9 +183,8 @@ export function PainelTurno({
         </form.AppField>
         <form.AppField name="tipo">
           {(field) => (
-            <field.SelectField
+            <field.SegmentadaField
               label="Tipo"
-              placeholder="Escolha o tipo"
               opcoes={TIPOS_TURNO}
               required
               description="Lista: a Lista de 24 h, com gratificação e regra própria no robô."

@@ -208,15 +208,14 @@ function Conteudo({
           <h4 className="text-base font-semibold">Nova versão</h4>
           <form.AppField name="modo">
             {(f) => (
-              <f.SelectField
+              <f.OpcoesField
                 label="Como os laudos contam"
                 required
-                placeholder="Escolha"
                 opcoes={(Object.keys(ROTULO_MODO) as ModoContagemRepasseKey[]).map((m) => ({
                   valor: m,
                   rotulo: ROTULO_MODO[m],
+                  ajuda: AJUDA_MODO[m],
                 }))}
-                description={modo ? AJUDA_MODO[modo as ModoContagemRepasseKey] : undefined}
               />
             )}
           </form.AppField>

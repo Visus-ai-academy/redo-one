@@ -139,9 +139,8 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
       {erro && <Alerta tom="erro">{erro}</Alerta>}
       <form.AppField name="socio">
         {(field) => (
-          <field.SelectField
+          <field.SegmentadaField
             label="Sócio"
-            placeholder="Não informado"
             description="Sócio e não sócio recebem o repasse de formas diferentes."
             opcoes={SIM_NAO}
           />
@@ -182,13 +181,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
         )}
       </form.AppField>
       <form.AppField name="optanteSimples">
-        {(field) => (
-          <field.SelectField
-            label="Optante do Simples"
-            placeholder="Não informado"
-            opcoes={SIM_NAO}
-          />
-        )}
+        {(field) => <field.SegmentadaField label="Optante do Simples" opcoes={SIM_NAO} />}
       </form.AppField>
       <div className="flex flex-wrap gap-4">
         <form.AppField name="tipoChavePix">

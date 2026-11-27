@@ -10,7 +10,7 @@ import { cortesControllerPrevia } from '../../gen/clients/cortesControllerPrevia
 import type { VigenciaCorteDto } from '../../gen/types/VigenciaCorteDto';
 import { acharAviso } from '../../test/avisos';
 import { renderComRotas } from '../../test/render';
-import { escolherOpcao } from '../../test/select';
+import { escolherOpcao, escolherSegmento } from '../../test/select';
 import { EditorCorte } from './editor-corte';
 
 vi.mock('../../gen/clients/cortesControllerListar', () => ({ cortesControllerListar: vi.fn() }));
@@ -155,11 +155,11 @@ describe('EditorCorte (padrão)', () => {
     await escolherOpcao('A partir de', '12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
     expect(await screen.findByRole('button', { name: 'Salvar vigência' })).toBeInTheDocument();
-    await escolherOpcao('Mês do corte (data do laudo)', 'No próprio mês');
+    await escolherSegmento('Mês do corte (data do laudo)', 'No próprio mês');
     expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
     // Voltar ao valor da prévia não a traz de volta: os laudos podem ter mudado.
-    await escolherOpcao('Mês do corte (data do laudo)', 'No mês seguinte');
+    await escolherSegmento('Mês do corte (data do laudo)', 'No mês seguinte');
     expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
   });
 
@@ -203,8 +203,11 @@ describe('EditorCorte (data do exame)', () => {
       within(exame).getByRole('combobox', { name: 'Dia do corte (data do exame)' }),
     ).toHaveTextContent('Último dia do mês');
     expect(
-      within(exame).getByRole('combobox', { name: 'Mês do corte (data do exame)' }),
-    ).toHaveTextContent('No próprio mês');
+      within(within(exame).getByRole('group', { name: 'Mês do corte (data do exame)' })).getByRole(
+        'button',
+        { name: 'No próprio mês' },
+      ),
+    ).toHaveAttribute('aria-pressed', 'true');
 
     await escolherOpcao('A partir de', '12/2026');
     await escolherOpcao('Dia do corte (data do exame)', '25');
@@ -298,13 +301,13 @@ describe('EditorCorte (alterações e corridas)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
     await escolherOpcao('A partir de', '12/2026');
     await userEvent.click(screen.getByRole('button', { name: 'Ver prévia' }));
-    await escolherOpcao('Mês do corte (data do laudo)', 'No próprio mês');
+    await escolherSegmento('Mês do corte (data do laudo)', 'No próprio mês');
     responder({ alterados: 120, movimentos: [{ de: '2026-11', para: '2026-12', laudos: 120 }] });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeEnabled());
     expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar vigência' })).not.toBeInTheDocument();
     // Nem volta ao voltar o campo: a prévia que chegou atrasada não ficou guardada.
-    await escolherOpcao('Mês do corte (data do laudo)', 'No mês seguinte');
+    await escolherSegmento('Mês do corte (data do laudo)', 'No mês seguinte');
     expect(screen.queryByText('120 laudos mudam de competência.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver prévia' })).toBeInTheDocument();
   });

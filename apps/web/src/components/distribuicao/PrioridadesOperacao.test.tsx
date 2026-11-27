@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PrioridadeOperacaoDto } from '../../gen/types/PrioridadeOperacaoDto';
-import { escolherOpcao } from '../../test/select';
+import { escolherSegmento } from '../../test/select';
 import { PrioridadesOperacao } from './PrioridadesOperacao';
 
 const AMBULATORIO: PrioridadeOperacaoDto = {
@@ -63,7 +63,7 @@ describe('PrioridadesOperacao', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Nova prioridade' }));
     await userEvent.type(await screen.findByRole('textbox', { name: /Nome/ }), 'TESTE');
     await userEvent.type(screen.getByRole('textbox', { name: /Posição na fila/ }), '4');
-    await escolherOpcao('Tratar como urgência', 'Perto do prazo');
+    await escolherSegmento('Tratar como urgência', 'Perto do prazo');
     await userEvent.type(
       await screen.findByRole('textbox', { name: /Urgência com menos de quantas horas/ }),
       '6',
@@ -119,7 +119,7 @@ describe('PrioridadesOperacao', () => {
   it('edita a que abriu e exclui com confirmação', async () => {
     const { onEditar, onExcluir } = montar();
     await userEvent.click(screen.getByRole('button', { name: /AMBULATÓRIO/ }));
-    await escolherOpcao('Tratar como urgência', 'Sempre');
+    await escolherSegmento('Tratar como urgência', 'Sempre');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(onEditar).toHaveBeenCalledWith(
       'op-amb',
