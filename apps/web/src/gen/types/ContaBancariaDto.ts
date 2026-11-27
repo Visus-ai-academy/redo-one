@@ -46,17 +46,17 @@ export type ContaBancariaDto = {
    */
   digito?: string | null;
   /**
-   * @description Em centavos; pode ser negativo.
-   * @type integer
+   * @description Ponto de partida do saldo pelo One, em centavos; pode ser negativo. Vem junto com a data. Sem integração, vazio é zero no dia da criação da conta; com o Itaú, não se pede (o saldo virá do extrato), e o já informado fica guardado.
+   * @type integer | undefined
    */
-  saldoInicialCentavos: number;
+  saldoInicialCentavos?: number | null;
   /**
    * @description
    * Format: `date`
    * @example 2026-12-01
-   * @type string
+   * @type string | undefined
    */
-  saldoInicialEm: string;
+  saldoInicialEm?: string | null;
   integracao: IntegracaoBancariaKey;
   /**
    * @description Prefixo das variáveis de ambiente da credencial; nunca o segredo.

@@ -55,13 +55,14 @@ describe('contas bancárias', () => {
     consultar = new ConsultarContasBancarias(repo, { existe: (nome) => variaveis.has(nome) });
   });
 
-  it('cria e audita; o saldo atual começa no inicial', async () => {
+  it('cria e audita; o saldo pelo One começa no inicial', async () => {
     const id = await salvar.criar(ator, dados());
 
     expect(await consultar.obter(id)).toMatchObject({
       apelido: 'Itaú cobrança',
       empresaNome: 'TeleImagem',
-      saldoAtualCentavos: 100_00,
+      saldoPeloOneCentavos: 100_00,
+      saldoContadoDesde: '2026-12-01',
       variaveisCredencial: [],
     });
     expect(auditoria.eventos).toEqual([
@@ -72,6 +73,51 @@ describe('contas bancárias', () => {
         depois: expect.objectContaining({ apelido: 'Itaú cobrança', saldoInicialCentavos: 100_00 }),
       }),
     ]);
+  });
+
+  it('sem saldo inicial, o saldo pelo One começa do zero no dia da criação', async () => {
+    repo.criadaEm = '2026-11-27';
+    const id = await salvar.criar(
+      ator,
+      dados({ saldoInicialCentavos: null, saldoInicialEm: null }),
+    );
+
+    expect(await consultar.obter(id)).toMatchObject({
+      saldoInicialCentavos: null,
+      saldoInicialEm: null,
+      saldoPeloOneCentavos: 0,
+      saldoContadoDesde: '2026-11-27',
+    });
+  });
+
+  it('trocar para o Itaú guarda o saldo inicial já informado; voltar o mantém', async () => {
+    const id = await salvar.criar(ator, dados());
+    const itau = { integracao: 'itau' as const, credencial: 'ITAU_TELE' };
+
+    await salvar.atualizar(ator, id, dados(itau));
+    expect(await consultar.obter(id)).toMatchObject({
+      integracao: 'itau',
+      saldoInicialCentavos: 100_00,
+      saldoInicialEm: '2026-12-01',
+    });
+    await salvar.atualizar(ator, id, dados());
+    expect(await consultar.obter(id)).toMatchObject({
+      integracao: 'nenhuma',
+      saldoInicialCentavos: 100_00,
+    });
+  });
+
+  it('com o Itaú, cria sem saldo inicial', async () => {
+    const id = await salvar.criar(
+      ator,
+      dados({
+        integracao: 'itau',
+        credencial: 'ITAU_TELE',
+        saldoInicialCentavos: null,
+        saldoInicialEm: null,
+      }),
+    );
+    expect(await consultar.obter(id)).toMatchObject({ saldoInicialCentavos: null });
   });
 
   it('recusa empresa que não usa o financeiro do One', async () => {

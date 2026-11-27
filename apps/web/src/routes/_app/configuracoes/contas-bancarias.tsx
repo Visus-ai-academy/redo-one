@@ -112,8 +112,8 @@ const colunas = [
     header: 'Banco · agência · conta',
     cell: (info) => <span className="whitespace-nowrap tabular-nums">{info.getValue()}</span>,
   }),
-  coluna.accessor('saldoAtualCentavos', {
-    header: () => direita('Saldo atual'),
+  coluna.accessor('saldoPeloOneCentavos', {
+    header: () => direita('Saldo pelo One'),
     cell: (info) =>
       direita(
         <span className="whitespace-nowrap tabular-nums">{moeda(info.getValue() / 100)}</span>,
@@ -222,7 +222,7 @@ function ContasBancarias({ permissoes }: { permissoes: PodeNaTela }) {
       vazio={{
         titulo: 'Nenhuma conta bancária cadastrada.',
         texto: permissoes.criar
-          ? 'Cadastre as contas onde o dinheiro de cada empresa entra e sai, com o saldo inicial e a data a partir da qual o One conta o saldo.'
+          ? 'Cadastre as contas onde o dinheiro de cada empresa entra e sai.'
           : 'Quem administra o financeiro cadastra as contas bancárias.',
       }}
       onFiltrar={filtrar}

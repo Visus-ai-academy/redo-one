@@ -16,10 +16,14 @@ export interface DadosContaBancaria {
   agencia: string | null;
   conta: string | null;
   digito: string | null;
-  /** Pode ser negativo. */
-  saldoInicialCentavos: number;
-  /** AAAA-MM-DD: a partir desse dia o One conta o saldo. */
-  saldoInicialEm: string;
+  /**
+   * Ponto de partida do saldo que o One conta pelas próprias baixas ("saldo pelo One"). Pode ser
+   * negativo. Vazio (com a data): o One começa do zero no dia em que a conta foi criada. Com o
+   * Itaú, não se pede: o saldo virá do extrato do banco.
+   */
+  saldoInicialCentavos: number | null;
+  /** AAAA-MM-DD: a partir desse dia o One conta o saldo. Vazio junto com o valor. */
+  saldoInicialEm: string | null;
   integracao: IntegracaoBancaria;
   /**
    * Prefixo das variáveis de ambiente da credencial do banco (ex.: ITAU_TELEIMAGEM). Nunca o
@@ -60,6 +64,27 @@ function diaValido(texto: string) {
 }
 
 /**
+ * O saldo inicial é opcional: valor e data vêm juntos ou nenhum dos dois. Com integração, o campo
+ * não aparece (o saldo virá do extrato): o que já estava informado fica, e o que veio pela metade
+ * vira vazio em vez de erro num campo escondido.
+ */
+function saldoInicial(
+  entrada: DadosContaBancaria,
+  erros: Record<string, string>,
+): Pick<DadosContaBancaria, 'saldoInicialCentavos' | 'saldoInicialEm'> {
+  const valor = entrada.saldoInicialCentavos;
+  const dia = entrada.saldoInicialEm;
+  if (valor === null && dia === null) return { saldoInicialCentavos: null, saldoInicialEm: null };
+  const valorOk = valor !== null && Number.isSafeInteger(valor);
+  const diaOk = dia !== null && diaValido(dia);
+  if (valorOk && diaOk) return { saldoInicialCentavos: valor, saldoInicialEm: dia };
+  if (entrada.integracao !== 'nenhuma') return { saldoInicialCentavos: null, saldoInicialEm: null };
+  if (!diaOk) erros.saldoInicialEm = 'Informe a data do saldo inicial.';
+  if (!valorOk) erros.saldoInicialCentavos = 'Informe o saldo inicial, em reais e centavos.';
+  return { saldoInicialCentavos: null, saldoInicialEm: null };
+}
+
+/**
  * Valida e normaliza a conta. Só a empresa que usa o financeiro do One tem conta; com integração,
  * a credencial (o prefixo das variáveis) é obrigatória; sem integração, fica vazia.
  */
@@ -78,12 +103,7 @@ export function prepararContaBancaria(
   if (bancoCodigo && !/^\d{3}$/.test(bancoCodigo)) {
     erros.bancoCodigo = 'O código do banco tem 3 dígitos (ex.: 341).';
   }
-  if (!diaValido(entrada.saldoInicialEm)) {
-    erros.saldoInicialEm = 'Informe a data do saldo inicial.';
-  }
-  if (!Number.isSafeInteger(entrada.saldoInicialCentavos)) {
-    erros.saldoInicialCentavos = 'Informe o saldo inicial, em reais e centavos.';
-  }
+  const saldo = saldoInicial(entrada, erros);
 
   let credencial: string | null = null;
   if (entrada.integracao !== 'nenhuma') {
@@ -107,8 +127,7 @@ export function prepararContaBancaria(
     agencia: aparar(entrada.agencia),
     conta: aparar(entrada.conta),
     digito: aparar(entrada.digito),
-    saldoInicialCentavos: entrada.saldoInicialCentavos,
-    saldoInicialEm: entrada.saldoInicialEm,
+    ...saldo,
     integracao: entrada.integracao,
     credencial,
     padraoRecebimento: entrada.padraoRecebimento,

@@ -73,6 +73,40 @@ describe('prepararContaBancaria', () => {
     ).toBe(-1500);
   });
 
+  it('sem integração, o saldo inicial é opcional: vazio, o One começa do zero', () => {
+    const vazio = { ...entrada, saldoInicialCentavos: null, saldoInicialEm: null };
+    const conta = prepararContaBancaria(vazio, usa);
+    expect(conta.saldoInicialCentavos).toBeNull();
+    expect(conta.saldoInicialEm).toBeNull();
+  });
+
+  it('sem integração, o saldo inicial vem com o valor e a data juntos', () => {
+    expect(
+      camposDoErro(() => prepararContaBancaria({ ...entrada, saldoInicialEm: null }, usa)),
+    ).toEqual({ saldoInicialEm: 'Informe a data do saldo inicial.' });
+    expect(
+      camposDoErro(() => prepararContaBancaria({ ...entrada, saldoInicialCentavos: null }, usa)),
+    ).toEqual({ saldoInicialCentavos: 'Informe o saldo inicial, em reais e centavos.' });
+  });
+
+  it('com o Itaú, não pede saldo inicial (virá do extrato), mas guarda o que já foi informado', () => {
+    const itau = { ...entrada, integracao: 'itau' as const, credencial: 'ITAU_TELE' };
+    const sem = prepararContaBancaria(
+      { ...itau, saldoInicialCentavos: null, saldoInicialEm: null },
+      usa,
+    );
+    expect([sem.saldoInicialCentavos, sem.saldoInicialEm]).toEqual([null, null]);
+
+    const com = prepararContaBancaria(itau, usa);
+    expect([com.saldoInicialCentavos, com.saldoInicialEm]).toEqual([25_000_000, '2026-12-01']);
+  });
+
+  it('com o Itaú, saldo inicial pela metade (campo escondido) não vira erro: fica vazio', () => {
+    const itau = { ...entrada, integracao: 'itau' as const, credencial: 'ITAU_TELE' };
+    const conta = prepararContaBancaria({ ...itau, saldoInicialEm: null }, usa);
+    expect([conta.saldoInicialCentavos, conta.saldoInicialEm]).toEqual([null, null]);
+  });
+
   it('o código do banco tem 3 dígitos', () => {
     expect(
       camposDoErro(() => prepararContaBancaria({ ...entrada, bancoCodigo: '34' }, usa)),

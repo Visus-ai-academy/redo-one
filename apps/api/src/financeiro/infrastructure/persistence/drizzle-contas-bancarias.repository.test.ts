@@ -77,8 +77,9 @@ describe.skipIf(!url)('DrizzleContasBancariasRepository e DrizzleEmpresas', () =
     expect(await repo.buscar(id)).toMatchObject({
       empresaNome: '001 TELEIMAGEM',
       saldoInicialCentavos: -1500,
-      saldoAtualCentavos: -1500,
+      saldoPeloOneCentavos: -1500,
       saldoInicialEm: '2026-12-01',
+      saldoContadoDesde: '2026-12-01',
     });
     const todas = await repo.listar({
       empresa: 'todas',
@@ -110,6 +111,26 @@ describe.skipIf(!url)('DrizzleContasBancariasRepository e DrizzleEmpresas', () =
     await expect(repo.criar(base({ apelido: 'Outra', padraoRecebimento: true }))).rejects.toThrow();
     await repo.desmarcarPadrao(id);
     expect(await repo.buscarPadrao(tele)).toBeNull();
+  });
+
+  it('sem saldo inicial, o saldo pelo One começa do zero no dia (de Brasília) da criação', async () => {
+    const id = await repo.criar(base({ saldoInicialCentavos: null, saldoInicialEm: null }));
+    const [linha] = await db
+      .execute<{ dia: string }>(
+        sql`select to_char(criado_em at time zone 'America/Sao_Paulo', 'YYYY-MM-DD') as dia from contas_bancarias where id = ${id}`,
+      )
+      .then((r) => r.rows);
+
+    expect(await repo.buscar(id)).toMatchObject({
+      saldoInicialCentavos: null,
+      saldoInicialEm: null,
+      saldoPeloOneCentavos: 0,
+      saldoContadoDesde: linha?.dia,
+    });
+  });
+
+  it('o banco recusa saldo inicial pela metade (valor sem data)', async () => {
+    await expect(repo.criar(base({ saldoInicialEm: null }))).rejects.toThrow();
   });
 
   it('o banco recusa integração sem credencial', async () => {

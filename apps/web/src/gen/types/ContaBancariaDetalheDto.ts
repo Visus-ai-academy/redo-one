@@ -27,18 +27,25 @@ export type ContaBancariaDetalheDto = {
   agencia: string | null;
   conta: string | null;
   digito: string | null;
-  saldoInicialCentavos: number;
+  saldoInicialCentavos: number | null;
   /**
    * @description
    * Format: `date`
    * @type string
    */
-  saldoInicialEm: string;
+  saldoInicialEm: string | null;
   /**
-   * @description Saldo inicial mais as baixas desde a data do saldo (as baixas vêm com os títulos).
+   * @description O dia do saldo inicial ou, sem ele, o da criação da conta (de Brasília).
+   *
+   * Format: `date`
+   * @type string
+   */
+  saldoContadoDesde: string;
+  /**
+   * @description Saldo pelo One: o saldo inicial (vazio é zero) mais as baixas não estornadas desde `saldoContadoDesde` (as baixas vêm com os títulos).
    * @type integer
    */
-  saldoAtualCentavos: number;
+  saldoPeloOneCentavos: number;
   integracao: IntegracaoBancariaKey;
   credencial: string | null;
   padraoRecebimento: boolean;

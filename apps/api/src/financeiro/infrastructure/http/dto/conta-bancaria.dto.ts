@@ -74,13 +74,22 @@ export class ContaBancariaDto {
   @MaxLength(2)
   digito: string | null = null;
 
-  @ApiProperty({ type: 'integer', description: 'Em centavos; pode ser negativo.' })
+  @ApiPropertyOptional({
+    type: 'integer',
+    nullable: true,
+    description:
+      'Ponto de partida do saldo pelo One, em centavos; pode ser negativo. Vem junto com a data. ' +
+      'Sem integração, vazio é zero no dia da criação da conta; com o Itaú, não se pede (o saldo ' +
+      'virá do extrato), e o já informado fica guardado.',
+  })
+  @IsOptional()
   @IsInt()
-  saldoInicialCentavos!: number;
+  saldoInicialCentavos: number | null = null;
 
-  @ApiProperty({ format: 'date', example: '2026-12-01' })
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'date', example: '2026-12-01' })
+  @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  saldoInicialEm!: string;
+  saldoInicialEm: string | null = null;
 
   @ApiProperty(INTEGRACAO)
   @IsIn(INTEGRACOES_BANCARIAS)
@@ -117,14 +126,20 @@ export class ContaBancariaItemDto {
   @ApiProperty({ type: String, nullable: true }) agencia!: string | null;
   @ApiProperty({ type: String, nullable: true }) conta!: string | null;
   @ApiProperty({ type: String, nullable: true }) digito!: string | null;
-  @ApiProperty({ type: 'integer' }) saldoInicialCentavos!: number;
-  @ApiProperty({ format: 'date' }) saldoInicialEm!: string;
+  @ApiProperty({ type: 'integer', nullable: true }) saldoInicialCentavos!: number | null;
+  @ApiProperty({ type: String, nullable: true, format: 'date' }) saldoInicialEm!: string | null;
+  @ApiProperty({
+    format: 'date',
+    description: 'O dia do saldo inicial ou, sem ele, o da criação da conta (de Brasília).',
+  })
+  saldoContadoDesde!: string;
   @ApiProperty({
     type: 'integer',
     description:
-      'Saldo inicial mais as baixas desde a data do saldo (as baixas vêm com os títulos).',
+      'Saldo pelo One: o saldo inicial (vazio é zero) mais as baixas não estornadas desde ' +
+      '`saldoContadoDesde` (as baixas vêm com os títulos).',
   })
-  saldoAtualCentavos!: number;
+  saldoPeloOneCentavos!: number;
   @ApiProperty(INTEGRACAO) integracao!: IntegracaoBancaria;
   @ApiProperty({ type: String, nullable: true }) credencial!: string | null;
   @ApiProperty() padraoRecebimento!: boolean;

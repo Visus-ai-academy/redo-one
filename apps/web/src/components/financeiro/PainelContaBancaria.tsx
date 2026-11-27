@@ -29,6 +29,7 @@ const INTEGRACOES = [
   { valor: 'itau', rotulo: 'Itaú' },
 ];
 const PREFIXO = /^[A-Z][A-Z0-9_]*$/;
+const MSG_SALDO = 'Informe o saldo inicial, com vírgula nos centavos.';
 const MSG_CREDENCIAL = 'Informe o prefixo das variáveis da credencial (ex.: ITAU_TELEIMAGEM).';
 
 const schema = z
@@ -49,20 +50,28 @@ const schema = z
     agencia: z.string().max(10, 'Use até 10 caracteres.'),
     conta: z.string().max(20, 'Use até 20 caracteres.'),
     digito: z.string().max(2, 'Use até 2 caracteres.'),
-    saldoInicial: z
-      .string()
-      .refine(
-        (v) => centavosDoTexto(v, { negativo: true }) !== null,
-        'Informe o saldo inicial, com vírgula nos centavos.',
-      ),
-    saldoInicialEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data do saldo inicial.'),
+    saldoInicial: z.string(),
+    saldoInicialEm: z.string(),
     integracao: z.enum(['nenhuma', 'itau']),
     credencial: z.string(),
     padraoRecebimento: z.boolean(),
     ativa: z.boolean(),
   })
   .superRefine((v, ctx) => {
-    if (v.integracao === 'nenhuma') return;
+    if (v.integracao === 'nenhuma') {
+      // Opcional, mas valor e data vêm juntos. Com o Itaú o campo some (o saldo virá do extrato).
+      const valor = v.saldoInicial.trim();
+      if (!valor && !v.saldoInicialEm) return;
+      if (centavosDoTexto(valor, { negativo: true }) === null)
+        ctx.addIssue({ code: 'custom', path: ['saldoInicial'], message: MSG_SALDO });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v.saldoInicialEm))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['saldoInicialEm'],
+          message: 'Informe a data do saldo inicial.',
+        });
+      return;
+    }
     const credencial = v.credencial.trim().toUpperCase();
     if (!credencial)
       ctx.addIssue({ code: 'custom', path: ['credencial'], message: MSG_CREDENCIAL });
@@ -110,7 +119,8 @@ export function PainelContaBancaria({
     agencia: conta?.agencia ?? '',
     conta: conta?.conta ?? '',
     digito: conta?.digito ?? '',
-    saldoInicial: conta ? textoDeCentavos(conta.saldoInicialCentavos) : '',
+    saldoInicial:
+      conta?.saldoInicialCentavos != null ? textoDeCentavos(conta.saldoInicialCentavos) : '',
     saldoInicialEm: conta?.saldoInicialEm ?? '',
     integracao: conta?.integracao ?? ('nenhuma' as const),
     credencial: conta?.credencial ?? '',
@@ -131,8 +141,10 @@ export function PainelContaBancaria({
           agencia: opcional(value.agencia),
           conta: opcional(value.conta),
           digito: opcional(value.digito),
-          saldoInicialCentavos: centavosDoTexto(value.saldoInicial, { negativo: true }) ?? 0,
-          saldoInicialEm: value.saldoInicialEm,
+          // Vazio vai vazio. Com o Itaú, o que já estava informado segue (a API guarda o par
+          // completo e descarta o que veio pela metade).
+          saldoInicialCentavos: centavosDoTexto(value.saldoInicial, { negativo: true }),
+          saldoInicialEm: value.saldoInicialEm || null,
           integracao: value.integracao,
           credencial:
             value.integracao === 'nenhuma' ? null : value.credencial.trim().toUpperCase() || null,
@@ -180,10 +192,17 @@ export function PainelContaBancaria({
           {erro && <Alerta tom="erro">{erro}</Alerta>}
           <CampoSomenteLeitura label="Tipo" value={ROTULO_TIPO[conta.tipo] ?? conta.tipo} />
           <CampoSomenteLeitura label="Banco · agência · conta" value={contaPorExtenso(conta)} />
-          <CampoSomenteLeitura
-            label="Saldo inicial"
-            value={`${moeda(conta.saldoInicialCentavos / 100)} em ${formatarDia(conta.saldoInicialEm)}`}
-          />
+          {conta.integracao === 'nenhuma' && (
+            <CampoSomenteLeitura
+              label="Saldo inicial"
+              value={
+                conta.saldoInicialCentavos != null && conta.saldoInicialEm
+                  ? `${moeda(conta.saldoInicialCentavos / 100)} em ${formatarDia(conta.saldoInicialEm)}`
+                  : 'Não informado'
+              }
+            />
+          )}
+          <SaldosDaConta conta={conta} />
           <CampoSomenteLeitura
             label="Padrão para recebimento"
             value={conta.padraoRecebimento ? 'Sim' : 'Não'}
@@ -301,31 +320,6 @@ export function PainelContaBancaria({
             )}
           </form.AppField>
         </div>
-        <div className="flex flex-wrap gap-4">
-          <form.AppField name="saldoInicial">
-            {(field) => (
-              <field.TextField
-                label="Saldo inicial (R$)"
-                required
-                placeholder="Ex.: 250.000,00"
-                inputMode="decimal"
-                spellCheck={false}
-                description="Vírgula nos centavos. Pode ser negativo."
-                className="flex-[1_1_160px]"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="saldoInicialEm">
-            {() => (
-              <DateField
-                label="Saldo em"
-                required
-                description="O One conta o saldo a partir deste dia."
-                className="flex-[1_1_160px]"
-              />
-            )}
-          </form.AppField>
-        </div>
         <form.AppField name="padraoRecebimento">
           {(field) => (
             <field.InterruptorField
@@ -391,6 +385,45 @@ export function PainelContaBancaria({
             ))}
         </fieldset>
 
+        <fieldset className="mt-2 flex flex-col gap-4">
+          <legend className="mb-2 font-semibold">Saldo</legend>
+          {integracao === 'nenhuma' ? (
+            <div className="flex flex-wrap gap-4">
+              <form.AppField name="saldoInicial">
+                {(field) => (
+                  <field.TextField
+                    label="Saldo inicial (R$)"
+                    placeholder="Ex.: 250.000,00"
+                    inputMode="decimal"
+                    spellCheck={false}
+                    description="Vírgula nos centavos. Pode ser negativo."
+                    className="flex-[1_1_160px]"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="saldoInicialEm">
+                {() => (
+                  <DateField
+                    label="Saldo em"
+                    description="O One conta o saldo a partir deste dia."
+                    className="flex-[1_1_160px]"
+                  />
+                )}
+              </form.AppField>
+              <p className="text-muted-foreground basis-full text-[13px]">
+                {!conta
+                  ? 'Sem saldo inicial, o One começa do zero no dia em que a conta é criada.'
+                  : conta.saldoInicialCentavos == null
+                    ? `Sem saldo inicial, o One conta do zero em ${formatarDia(conta.saldoContadoDesde)}, dia em que a conta foi criada.`
+                    : 'Sem saldo inicial, o One conta do zero desde o dia em que a conta foi criada.'}
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-[13px]">O saldo virá do extrato do Itaú.</p>
+          )}
+          {conta && <SaldosDaConta conta={conta} />}
+        </fieldset>
+
         <form.AppForm>
           <RodapePainel
             rotuloCriar="Criar conta"
@@ -401,5 +434,27 @@ export function PainelContaBancaria({
         </form.AppForm>
       </form>
     </PainelLateral>
+  );
+}
+
+/** O saldo que o One conta pelas baixas e, com o Itaú, o do extrato (quando a integração existir). */
+function SaldosDaConta({ conta }: { conta: ContaBancariaDetalheDto }) {
+  return (
+    <div className="flex flex-wrap gap-4">
+      <CampoSomenteLeitura
+        label="Saldo pelo One"
+        value={moeda(conta.saldoPeloOneCentavos / 100)}
+        description={`Saldo inicial mais as baixas desde ${formatarDia(conta.saldoContadoDesde)}.`}
+        className="flex-[1_1_160px]"
+      />
+      {conta.integracao === 'itau' && (
+        <CampoSomenteLeitura
+          label="Saldo no banco"
+          value="—"
+          description="Aguardando a integração com o Itaú."
+          className="flex-[1_1_160px]"
+        />
+      )}
+    </div>
   );
 }

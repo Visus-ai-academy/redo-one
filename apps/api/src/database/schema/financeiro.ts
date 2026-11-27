@@ -83,10 +83,13 @@ export const contasBancarias = pgTable(
     agencia: text('agencia'),
     conta: text('conta'),
     digito: text('digito'),
-    /** Pode ser negativo. */
-    saldoInicialCentavos: bigint('saldo_inicial_centavos', { mode: 'number' }).notNull(),
-    /** A partir desse dia (de Brasília) o One conta o saldo. */
-    saldoInicialEm: date('saldo_inicial_em').notNull(),
+    /**
+     * Ponto de partida do saldo pelo One; pode ser negativo. Vazio (com a data): zero no dia
+     * (de Brasília) em que a conta foi criada. Com o Itaú, o saldo virá do extrato.
+     */
+    saldoInicialCentavos: bigint('saldo_inicial_centavos', { mode: 'number' }),
+    /** A partir desse dia (de Brasília) o One conta o saldo. Vazio junto com o valor. */
+    saldoInicialEm: date('saldo_inicial_em'),
     integracao: integracaoBancaria('integracao').notNull().default('nenhuma'),
     /** Prefixo das variáveis de ambiente da credencial (ex.: ITAU_TELEIMAGEM); nunca o segredo. */
     credencial: text('credencial'),
@@ -107,6 +110,10 @@ export const contasBancarias = pgTable(
       sql`(${t.integracao} = 'nenhuma') = (${t.credencial} is null)`,
     ),
     check('contas_bancarias_padrao_ativa_check', sql`not ${t.padraoRecebimento} or ${t.ativa}`),
+    check(
+      'contas_bancarias_saldo_inicial_check',
+      sql`(${t.saldoInicialCentavos} is null) = (${t.saldoInicialEm} is null)`,
+    ),
   ],
 );
 

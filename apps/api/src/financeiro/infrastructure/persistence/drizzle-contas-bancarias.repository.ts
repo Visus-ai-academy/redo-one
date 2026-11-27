@@ -12,6 +12,10 @@ import type {
 } from '../../application/ports/contas-bancarias.repository';
 import type { DadosContaBancaria } from '../../domain/conta-bancaria';
 
+/** O dia do saldo inicial ou, sem ele, o dia (de Brasília) em que a conta foi criada. */
+const desde = sql<string>`coalesce(${c.saldoInicialEm}, (${c.criadoEm} at time zone 'America/Sao_Paulo')::date)`;
+const desdeTexto = sql<string>`(${desde})::text`;
+
 const selecao = {
   id: c.id,
   contratadoId: c.contratadoId,
@@ -28,13 +32,14 @@ const selecao = {
   credencial: c.credencial,
   padraoRecebimento: c.padraoRecebimento,
   ativa: c.ativa,
-  // O inicial, mais o que entrou (a receber) e menos o que saiu (a pagar) pelas baixas não
-  // estornadas desde a data do saldo inicial.
-  saldoAtualCentavos: sql<number>`(${c.saldoInicialCentavos} + coalesce((
+  saldoContadoDesde: desdeTexto,
+  // O inicial (vazio é zero), mais o que entrou (a receber) e menos o que saiu (a pagar) pelas
+  // baixas não estornadas desde o dia em que o One começa a contar.
+  saldoPeloOneCentavos: sql<number>`(coalesce(${c.saldoInicialCentavos}, 0) + coalesce((
     select sum(case when ${titulos.tipo} = 'receber' then ${baixas.valorMovimentadoCentavos} else -${baixas.valorMovimentadoCentavos} end)
     from ${baixas} join ${titulos} on ${titulos.id} = ${baixas.tituloId}
     where ${baixas.contaBancariaId} = ${c.id} and ${baixas.estornadaEm} is null
-      and ${baixas.pagoEm} >= ${c.saldoInicialEm}
+      and ${baixas.pagoEm} >= ${desde}
   ), 0))::bigint`.mapWith(Number),
 };
 

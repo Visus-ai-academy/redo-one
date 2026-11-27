@@ -149,6 +149,8 @@ export class EmpresasEmMemoria implements EmpresasFinanceiro {
 export class ContasBancariasEmMemoria implements ContasBancariasRepository {
   readonly linhas = new Map<string, DadosContaBancaria>();
   readonly usadas = new Set<string>();
+  /** O dia em que as contas "foram criadas" (de onde conta o saldo sem saldo inicial). */
+  criadaEm = '2026-01-01';
 
   constructor(private readonly empresas: EmpresasEmMemoria) {}
 
@@ -157,7 +159,8 @@ export class ContasBancariasEmMemoria implements ContasBancariasRepository {
       id,
       ...d,
       empresaNome: this.empresas.nome(d.contratadoId),
-      saldoAtualCentavos: d.saldoInicialCentavos,
+      saldoContadoDesde: d.saldoInicialEm ?? this.criadaEm,
+      saldoPeloOneCentavos: d.saldoInicialCentavos ?? 0,
     };
   }
 

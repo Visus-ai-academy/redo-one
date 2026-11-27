@@ -1,0 +1,3 @@
+ALTER TABLE "contas_bancarias" ALTER COLUMN "saldo_inicial_centavos" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "contas_bancarias" ALTER COLUMN "saldo_inicial_em" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "contas_bancarias" ADD CONSTRAINT "contas_bancarias_saldo_inicial_check" CHECK (("contas_bancarias"."saldo_inicial_centavos" is null) = ("contas_bancarias"."saldo_inicial_em" is null));

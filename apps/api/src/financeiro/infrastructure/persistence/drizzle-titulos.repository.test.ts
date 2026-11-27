@@ -217,7 +217,7 @@ describe.skipIf(!url)('DrizzleTitulosRepository e DrizzleFavorecidos', () => {
       return nova;
     });
 
-    expect((await contas.buscar(conta))?.saldoAtualCentavos).toBe(1_000_000 - 100_500);
+    expect((await contas.buscar(conta))?.saldoPeloOneCentavos).toBe(1_000_000 - 100_500);
     const detalhe = await repo.buscar(id);
     expect(detalhe).toMatchObject({ situacao: 'parcial', pagoCentavos: 100_000 });
     expect(detalhe?.baixas[0]).toMatchObject({ id: baixaId, contaNome: 'Itaú', forma: 'pix' });
@@ -233,7 +233,7 @@ describe.skipIf(!url)('DrizzleTitulosRepository e DrizzleFavorecidos', () => {
       });
       await escrita.atualizar({ pagoCentavos: 0, situacao: 'aberto' });
     });
-    expect((await contas.buscar(conta))?.saldoAtualCentavos).toBe(1_000_000);
+    expect((await contas.buscar(conta))?.saldoPeloOneCentavos).toBe(1_000_000);
     expect((await repo.buscar(id))?.baixas[0]?.motivoEstorno).toBe('errado');
   });
 

@@ -15,8 +15,13 @@ export interface FiltroContasBancarias extends Paginacao {
 export interface ContaBancaria extends DadosContaBancaria {
   id: string;
   empresaNome: string;
-  /** Saldo inicial mais as baixas não estornadas desde a data do saldo (as baixas vêm com os títulos). */
-  saldoAtualCentavos: number;
+  /** AAAA-MM-DD: o dia do saldo inicial ou, sem ele, o da criação da conta (de Brasília). */
+  saldoContadoDesde: string;
+  /**
+   * Saldo pelo One: o inicial (vazio é zero) mais as baixas não estornadas desde
+   * `saldoContadoDesde` (as baixas vêm com os títulos). O saldo no banco virá do extrato do Itaú.
+   */
+  saldoPeloOneCentavos: number;
 }
 
 export interface ContasBancariasRepository {
