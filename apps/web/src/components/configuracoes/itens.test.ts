@@ -61,12 +61,13 @@ describe('grupo Operação', () => {
 });
 
 describe('grupo Financeiro', () => {
-  it('tem o Faturamento (corte da competência), a Tipificação e a Tabela padrão de preços, com o ver do faturamento', () => {
+  it('tem o Faturamento, a Tipificação e a Tabela padrão de preços (ver do faturamento) e o Repasse (ver do repasse)', () => {
     const financeiro = GRUPOS_CONFIGURACOES.find((g) => g.titulo === 'Financeiro');
     expect(financeiro?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Faturamento', '/configuracoes/faturamento', 'faturamento.ver'],
       ['Tipificação', '/configuracoes/tipificacao', 'faturamento.ver'],
       ['Tabela padrão de preços', '/configuracoes/tabela-padrao', 'faturamento.ver'],
+      ['Repasse', '/configuracoes/repasse', 'repasse.ver'],
     ]);
   });
 });
