@@ -4,9 +4,9 @@
 */
 
 import * as z from 'zod'
-import { regrasDoRepasseDtoSchema } from './regrasDoRepasseDtoSchema'
+import { regrasComNomesDtoSchema } from './regrasComNomesDtoSchema'
 
-export const repasseControllerRegrasStatus200Schema = regrasDoRepasseDtoSchema
+export const repasseControllerRegrasStatus200Schema = regrasComNomesDtoSchema
 
 export type RepasseControllerRegrasStatus200SchemaType = z.infer<typeof repasseControllerRegrasStatus200Schema>
 

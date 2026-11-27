@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import type { ParametrosRepasseDto } from './ParametrosRepasseDto'
+import type { ParametrosComVersoesDto } from './ParametrosComVersoesDto'
 
-export type RepasseControllerParametrosStatus200 = ParametrosRepasseDto[];
+export type RepasseControllerParametrosStatus200 = ParametrosComVersoesDto;
 
 export type RepasseControllerParametrosOptions = {
   body?: never;

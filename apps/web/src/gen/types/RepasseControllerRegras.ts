@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import type { RegrasDoRepasseDto } from './RegrasDoRepasseDto'
+import type { RegrasComNomesDto } from './RegrasComNomesDto'
 
-export type RepasseControllerRegrasStatus200 = RegrasDoRepasseDto;
+export type RepasseControllerRegrasStatus200 = RegrasComNomesDto;
 
 export type RepasseControllerRegrasOptions = {
   body?: never;

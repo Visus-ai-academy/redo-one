@@ -4,9 +4,9 @@
 */
 
 import * as z from 'zod'
-import { parametrosRepasseDtoSchema } from './parametrosRepasseDtoSchema'
+import { parametrosComVersoesDtoSchema } from './parametrosComVersoesDtoSchema'
 
-export const repasseControllerParametrosStatus200Schema = z.array(parametrosRepasseDtoSchema)
+export const repasseControllerParametrosStatus200Schema = parametrosComVersoesDtoSchema
 
 export type RepasseControllerParametrosStatus200SchemaType = z.infer<typeof repasseControllerParametrosStatus200Schema>
 
