@@ -334,6 +334,12 @@ describe.skipIf(!url)('DrizzleConsultasRepasse', () => {
     });
     expect(det?.grupos).toEqual([
       expect.objectContaining({
+        arranjo: {
+          modalidadeId: ids.tc,
+          especialidadeId: ids.neuro,
+          categoriaId: ids.sc,
+          prioridadeId: ids.rotina,
+        },
         modalidade: 'TC',
         especialidade: 'NEURO',
         categoria: 'SC',

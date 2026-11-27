@@ -270,6 +270,10 @@ export class DrizzleConsultasRepasse implements ConsultasRepasse {
         .select({
           id: i.id,
           tipo: i.tipo,
+          modalidadeId: i.modalidadeId,
+          especialidadeId: i.especialidadeId,
+          categoriaId: i.categoriaId,
+          prioridadeId: i.prioridadeId,
           modalidade: modalidades.codigo,
           especialidade: especialidades.nome,
           categoria: categoriasExame.nome,
@@ -311,6 +315,12 @@ export class DrizzleConsultasRepasse implements ConsultasRepasse {
         .filter((x) => x.tipo === 'exames')
         .map((x) => ({
           id: x.id,
+          arranjo: {
+            modalidadeId: x.modalidadeId,
+            especialidadeId: x.especialidadeId,
+            categoriaId: x.categoriaId,
+            prioridadeId: x.prioridadeId,
+          },
           modalidade: x.modalidade,
           especialidade: x.especialidade,
           categoria: x.categoria,

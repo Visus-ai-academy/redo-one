@@ -25,6 +25,7 @@ import {
   type OrdemRepasse,
   TabelaMedicosRepasse,
 } from '../../components/repasse/TabelaMedicosRepasse';
+import { textoDoArranjo } from '../../components/repasse-medico/fonte-precos';
 import { CamposCarregando } from '../../components/skeleton/CamposCarregando';
 import { ComEsqueleto } from '../../components/skeleton/ComEsqueleto';
 import { useFaseDoCarregamento } from '../../components/skeleton/use-fase-do-carregamento';
@@ -388,12 +389,28 @@ function DetalheDoDemonstrativo({
         })
       }
       onFechar={onFechar}
-      definirPreco={(medicoId) =>
+      definirPreco={(medicoId, arranjo) =>
         podeDefinirPreco ? (
-          // A aba Repasse do cadastro do médico, onde se definem os preços dele.
+          // A aba Repasse do cadastro do médico, com o arranjo do grupo já em "Incluir preço".
           <Link
             to="/medicos"
-            search={{ id: medicoId, aba: 'repasse' } as never}
+            search={{
+              id: medicoId,
+              aba: 'repasse',
+              parte: 'precos',
+              arranjo:
+                arranjo.modalidadeId &&
+                arranjo.especialidadeId &&
+                arranjo.categoriaId &&
+                arranjo.prioridadeId
+                  ? textoDoArranjo({
+                      modalidadeId: arranjo.modalidadeId,
+                      especialidadeId: arranjo.especialidadeId,
+                      categoriaId: arranjo.categoriaId,
+                      prioridadeId: arranjo.prioridadeId,
+                    })
+                  : undefined,
+            }}
             className="underline underline-offset-2"
           >
             Definir preço

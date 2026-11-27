@@ -4,10 +4,12 @@
 */
 
 import * as z from 'zod'
+import { arranjoGrupoRepasseDtoSchema } from './arranjoGrupoRepasseDtoSchema'
 import { origemPrecoRepasseSchema } from './origemPrecoRepasseSchema'
 
 export const grupoRepasseDtoSchema = z.object({
   id: z.uuid(),
+  arranjo: arranjoGrupoRepasseDtoSchema.describe('Ids do arranjo (o atalho "Definir preço" abre o preço do médico com ele).'),
   modalidade: z.string().nullable(),
   especialidade: z.string().nullable(),
   categoria: z.string().nullable(),

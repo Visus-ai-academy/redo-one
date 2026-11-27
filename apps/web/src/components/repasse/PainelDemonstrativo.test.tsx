@@ -7,6 +7,7 @@ import { PainelDemonstrativo } from './PainelDemonstrativo';
 
 const grupo = (extra: Partial<DemonstrativoDetalheDto['grupos'][number]>) => ({
   id: Math.random().toString(),
+  arranjo: { modalidadeId: 'tc', especialidadeId: 'neuro', categoriaId: 'sc', prioridadeId: 'rot' },
   modalidade: 'TC',
   especialidade: 'NEURO',
   categoria: 'SC',
@@ -66,7 +67,9 @@ function montar(aba: 'grupos' | 'dias' | 'adicionais' | 'laudos' = 'grupos') {
       aba={aba}
       onAba={onAba}
       onFechar={vi.fn()}
-      definirPreco={(medicoId) => <a href={`/medicos?id=${medicoId}&aba=repasse`}>Definir preço</a>}
+      definirPreco={(medicoId, a) => (
+        <a href={`/medicos?id=${medicoId}&aba=repasse&arranjo=${a.modalidadeId}`}>Definir preço</a>
+      )}
       laudos={<p>laudos aqui</p>}
     />,
   );
@@ -96,7 +99,7 @@ describe('PainelDemonstrativo', () => {
     expect(semPreco).toHaveTextContent('Sem preço · Definir preço');
     expect(within(semPreco).getByRole('link', { name: 'Definir preço' })).toHaveAttribute(
       'href',
-      '/medicos?id=m1&aba=repasse',
+      '/medicos?id=m1&aba=repasse&arranjo=tc',
     );
     // A regra de apuração entra junto dos grupos, como no demonstrativo do médico.
     expect(within(painel).getByText('Coordenação: 6% de CARDIO')).toBeInTheDocument();

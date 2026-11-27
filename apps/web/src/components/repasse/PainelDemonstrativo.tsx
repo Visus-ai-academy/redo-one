@@ -28,8 +28,11 @@ type PainelDemonstrativoProps = {
   aba: AbaDemonstrativo;
   onAba: (aba: AbaDemonstrativo) => void;
   onFechar: () => void;
-  /** Link para definir o preço que falta (a aba Repasse do médico); nulo sem permissão. */
-  definirPreco: (medicoId: string) => ReactNode;
+  /**
+   * Link para definir o preço que falta (a aba Repasse do médico, com o arranjo do grupo já em
+   * "Incluir preço"); nulo sem permissão.
+   */
+  definirPreco: (medicoId: string, arranjo: GrupoRepasseDto['arranjo']) => ReactNode;
   /** Conteúdo da aba Laudos (paginada pela API). */
   laudos: ReactNode;
 };
@@ -121,7 +124,6 @@ function Grupos({
       })),
   ];
   const pagina = usePaginaLocal(linhas, POR_PAGINA_NO_PAINEL);
-  const linkDefinir = definirPreco(d.medicoId);
   const colunas = [
     colunaGrupo.display({
       id: 'arranjo',
@@ -176,7 +178,10 @@ function Grupos({
         ) : l.origem === 'sem_preco' ? (
           <span className="text-warning font-medium whitespace-nowrap">
             Sem preço
-            {linkDefinir && <> · {linkDefinir}</>}
+            {(() => {
+              const link = definirPreco(d.medicoId, l.arranjo);
+              return link && <> · {link}</>;
+            })()}
           </span>
         ) : (
           <span className="text-muted-foreground">{origemDoPreco(l)}</span>

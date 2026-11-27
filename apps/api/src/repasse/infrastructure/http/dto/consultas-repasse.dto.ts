@@ -121,8 +121,20 @@ export class PaginaDemonstrativosRepasseDto {
   totais!: TotaisRepasseDto;
 }
 
+export class ArranjoGrupoRepasseDto {
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) modalidadeId!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) especialidadeId!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) categoriaId!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) prioridadeId!: string | null;
+}
+
 export class GrupoRepasseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({
+    type: ArranjoGrupoRepasseDto,
+    description: 'Ids do arranjo (o atalho "Definir preço" abre o preço do médico com ele).',
+  })
+  arranjo!: ArranjoGrupoRepasseDto;
   @ApiProperty({ type: String, nullable: true }) modalidade!: string | null;
   @ApiProperty({ type: String, nullable: true }) especialidade!: string | null;
   @ApiProperty({ type: String, nullable: true }) categoria!: string | null;

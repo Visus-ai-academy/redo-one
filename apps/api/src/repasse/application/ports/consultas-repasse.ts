@@ -106,6 +106,13 @@ export type OrigemPrecoLida = 'unidade' | 'cliente' | 'todos' | 'tarifa_propria'
 /** Grupo de laudos (arranjo × cliente) com os nomes resolvidos e de onde veio o preço. */
 export interface GrupoLido {
   id: string;
+  /** Os ids do arranjo (nulo: o catálogo não resolveu), para o atalho "Definir preço". */
+  arranjo: {
+    modalidadeId: string | null;
+    especialidadeId: string | null;
+    categoriaId: string | null;
+    prioridadeId: string | null;
+  };
   modalidade: string | null;
   especialidade: string | null;
   categoria: string | null;

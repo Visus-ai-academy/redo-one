@@ -23660,6 +23660,37 @@
           "totais"
         ]
       },
+      "ArranjoGrupoRepasseDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId"
+        ]
+      },
       "OrigemPrecoRepasse": {
         "type": "string",
         "enum": [
@@ -23676,6 +23707,14 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "arranjo": {
+            "description": "Ids do arranjo (o atalho \"Definir preço\" abre o preço do médico com ele).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ArranjoGrupoRepasseDto"
+              }
+            ]
           },
           "modalidade": {
             "type": "string",
@@ -23726,6 +23765,7 @@
         },
         "required": [
           "id",
+          "arranjo",
           "modalidade",
           "especialidade",
           "categoria",

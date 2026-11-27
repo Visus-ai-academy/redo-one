@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { ArranjoGrupoRepasseDto } from './ArranjoGrupoRepasseDto'
 import type { OrigemPrecoRepasseKey } from './OrigemPrecoRepasse'
 
 export type GrupoRepasseDto = {
@@ -12,6 +13,11 @@ export type GrupoRepasseDto = {
    * @type string
    */
   id: string;
+  /**
+   * @description Ids do arranjo (o atalho "Definir preço" abre o preço do médico com ele).
+   * @type object
+   */
+  arranjo: ArranjoGrupoRepasseDto;
   modalidade: string | null;
   especialidade: string | null;
   categoria: string | null;
