@@ -10668,6 +10668,307 @@
         ]
       }
     },
+    "/repasse/regua/{nivelId}": {
+      "get": {
+        "operationId": "ReguaNivelController_regua",
+        "parameters": [
+          {
+            "name": "nivelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Todas as versões das linhas do nível.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReguaNivelDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nível não encontrado."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      },
+      "post": {
+        "operationId": "ReguaNivelController_incluir",
+        "parameters": [
+          {
+            "name": "nivelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncluirLinhaReguaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Valor ou \"vale a partir de\" inválido (só competência aberta ou futura)."
+          },
+          "404": {
+            "description": "Nível não encontrado."
+          },
+          "409": {
+            "description": "O nível já tem valor para o arranjo no período."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/regua/{nivelId}/{id}": {
+      "put": {
+        "operationId": "ReguaNivelController_alterar",
+        "parameters": [
+          {
+            "name": "nivelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlterarLinhaReguaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A versão nova; a anterior vale até a véspera.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Valor ou \"vale a partir de\" inválido (só competência aberta ou futura)."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Alterada por outra pessoa no meio."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/regua/{nivelId}/{id}/encerrar": {
+      "post": {
+        "operationId": "ReguaNivelController_encerrar",
+        "parameters": [
+          {
+            "name": "nivelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncerrarLinhaReguaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Encerrada (a programada que nunca valeu é cancelada)."
+          },
+          "400": {
+            "description": "Valor ou \"vale a partir de\" inválido (só competência aberta ou futura)."
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/medicos/{medicoId}/precos/preencher-pela-regua": {
+      "post": {
+        "operationId": "ReguaNivelController_preencher",
+        "parameters": [
+          {
+            "name": "medicoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreencherPelaReguaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "O que muda nos preços de todos os clientes; com `confirmar`, já gravado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaPreenchimentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Competência inválida ou médico sem nível."
+          },
+          "404": {
+            "description": "Médico não encontrado."
+          },
+          "409": {
+            "description": "Alterado por outra pessoa no meio."
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
+    "/repasse/regras-apuracao": {
+      "get": {
+        "operationId": "ReguaNivelController_regrasGeral",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome do médico ou da descrição da regra.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "description": "Sem ele, todos os tipos (a tela escolhe \"Todos\").",
+            "schema": {
+              "$ref": "#/components/schemas/TipoRegraApuracao"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As que valem ou vão valer, de todos os médicos (só leitura).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRegrasApuracaoGeralDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repasse"
+        ]
+      }
+    },
     "/ingestao/importacoes": {
       "get": {
         "operationId": "ImportacoesController_listar",
@@ -24965,6 +25266,496 @@
           }
         },
         "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina"
+        ]
+      },
+      "NomesLinhaReguaDto": {
+        "type": "object",
+        "properties": {
+          "modalidade": {
+            "type": "string"
+          },
+          "especialidade": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nulo = todas as categorias."
+          },
+          "prioridade": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nulo = todas as prioridades."
+          }
+        },
+        "required": [
+          "modalidade",
+          "especialidade",
+          "categoria",
+          "prioridade"
+        ]
+      },
+      "LinhaReguaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nivelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "nullable": true
+          },
+          "prioridadeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true
+          },
+          "nomes": {
+            "$ref": "#/components/schemas/NomesLinhaReguaDto"
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reabertoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "reabertoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nivelId",
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "valorCentavos",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "nomes",
+          "criadoPor",
+          "criadoEm",
+          "encerradoPor",
+          "encerradoEm",
+          "reabertoPor",
+          "reabertoEm"
+        ]
+      },
+      "ReguaNivelDto": {
+        "type": "object",
+        "properties": {
+          "mesAtual": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "aPartirDeMinimo": {
+            "type": "string"
+          },
+          "aPartirDeSugerido": {
+            "type": "string"
+          },
+          "linhas": {
+            "description": "Todas as versões das linhas.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaReguaDto"
+            }
+          }
+        },
+        "required": [
+          "mesAtual",
+          "aPartirDeMinimo",
+          "aPartirDeSugerido",
+          "linhas"
+        ]
+      },
+      "IncluirLinhaReguaDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "todasCategorias": {
+            "type": "boolean",
+            "description": "Vale para todas as categorias (explícito)."
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "todasPrioridades": {
+            "type": "boolean",
+            "description": "Vale para todas as prioridades (explícito)."
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Centavos, maior que zero."
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "modalidadeId",
+          "especialidadeId",
+          "todasCategorias",
+          "categoriaId",
+          "todasPrioridades",
+          "prioridadeId",
+          "valorCentavos"
+        ]
+      },
+      "AlterarLinhaReguaDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "description": "Centavos, maior que zero."
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "valorCentavos"
+        ]
+      },
+      "EncerrarLinhaReguaDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12"
+          }
+        },
+        "required": [
+          "aPartirDe"
+        ]
+      },
+      "PreencherPelaReguaDto": {
+        "type": "object",
+        "properties": {
+          "aPartirDe": {
+            "type": "string",
+            "example": "2026-12"
+          },
+          "confirmar": {
+            "type": "boolean",
+            "description": "Falso: só a prévia. Verdadeiro: grava as versões."
+          }
+        },
+        "required": [
+          "aPartirDe",
+          "confirmar"
+        ]
+      },
+      "AcaoPreenchimentoRegua": {
+        "type": "string",
+        "enum": [
+          "incluir",
+          "alterar",
+          "igual",
+          "programado"
+        ]
+      },
+      "NomesArranjoPreenchimentoDto": {
+        "type": "object",
+        "properties": {
+          "modalidade": {
+            "type": "string"
+          },
+          "especialidade": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "prioridade": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "modalidade",
+          "especialidade",
+          "categoria",
+          "prioridade"
+        ]
+      },
+      "ItemPreenchimentoDto": {
+        "type": "object",
+        "properties": {
+          "modalidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "especialidadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prioridadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "atualCentavos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "novoCentavos": {
+            "type": "integer"
+          },
+          "acao": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AcaoPreenchimentoRegua"
+              }
+            ]
+          },
+          "nomes": {
+            "$ref": "#/components/schemas/NomesArranjoPreenchimentoDto"
+          }
+        },
+        "required": [
+          "modalidadeId",
+          "especialidadeId",
+          "categoriaId",
+          "prioridadeId",
+          "atualCentavos",
+          "novoCentavos",
+          "acao",
+          "nomes"
+        ]
+      },
+      "PreviaPreenchimentoDto": {
+        "type": "object",
+        "properties": {
+          "nivel": {
+            "type": "string"
+          },
+          "aPartirDe": {
+            "type": "string"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemPreenchimentoDto"
+            }
+          }
+        },
+        "required": [
+          "nivel",
+          "aPartirDe",
+          "itens"
+        ]
+      },
+      "RegraApuracaoGeralDto": {
+        "type": "object",
+        "properties": {
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "criadoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "encerradoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "encerradoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "reabertoEm": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reabertoPor": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TipoRegraApuracao"
+              }
+            ]
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "valorCentavos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "percentualPpm": {
+            "type": "integer",
+            "nullable": true
+          },
+          "divisor": {
+            "type": "integer"
+          },
+          "modalidadeIds": {
+            "nullable": true,
+            "description": "Nulo = todas.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "especialidadeIds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prioridadeIds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nomes": {
+            "$ref": "#/components/schemas/NomesRegraDto"
+          },
+          "vigenciaDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "vigenciaAte": {
+            "type": "string",
+            "nullable": true
+          },
+          "medicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "medico": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "criadoEm",
+          "criadoPor",
+          "encerradoEm",
+          "encerradoPor",
+          "reabertoEm",
+          "reabertoPor",
+          "id",
+          "tipo",
+          "descricao",
+          "valorCentavos",
+          "percentualPpm",
+          "divisor",
+          "modalidadeIds",
+          "especialidadeIds",
+          "prioridadeIds",
+          "nomes",
+          "vigenciaDesde",
+          "vigenciaAte",
+          "medicoId",
+          "medico"
+        ]
+      },
+      "PaginaRegrasApuracaoGeralDto": {
+        "type": "object",
+        "properties": {
+          "mesAtual": {
+            "type": "string",
+            "example": "2026-11"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegraApuracaoGeralDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mesAtual",
           "itens",
           "total",
           "pagina",
