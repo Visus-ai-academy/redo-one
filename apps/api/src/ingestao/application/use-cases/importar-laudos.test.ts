@@ -312,6 +312,26 @@ describe('ImportarLaudos', () => {
     expect(laudos.ativos().map((l) => l.competencia)).toEqual(['2026-11']);
   });
 
+  it('com todas as linhas de competência bloqueada, conclui sem mexer nos laudos', async () => {
+    await importar('i1', [registro('1')]);
+    competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+
+    const r = await importar('i2', [registro('1'), registro('2')]);
+
+    expect(r?.status).toBe('concluida');
+    expect(r?.resultado).toMatchObject({
+      linhasArquivo: 2,
+      invalidas: 0,
+      ignoradasCompetenciaFechada: 2,
+      inseridos: 0,
+      atualizados: 0,
+      inalterados: 0,
+      removidos: 0,
+    });
+    expect(r?.resultado?.mensagem).toBeUndefined();
+    expect(laudos.ativos()).toHaveLength(1);
+  });
+
   it('o corte do cliente decide a competência do laudo', async () => {
     cortes.porCliente.set('c-x', [
       { desde: '2026-11', corte: { dia: 25, mes: 'proprio', consideraExame: false } },
@@ -583,6 +603,25 @@ describe('ImportarLaudos', () => {
 
       expect(r?.resultado).toMatchObject({ linhasArquivo: 1, inseridos: 1 });
       expect(laudos.ativos().map((l) => l.empresaOrigem)).toEqual(['CRD_APOIO']);
+    });
+
+    it('compartilhamento só de competência fechada conclui, sem erro', async () => {
+      competencias.competencias.set('2026-10', { status: 'fechada', importacaoTravada: false });
+
+      const r = await importarMobileMed(
+        [registro('1', { EMPRESA: 'CRD_APOIO' }), registro('2', { EMPRESA: 'CRD_APOIO' })],
+        'compartilhamento',
+      );
+
+      expect(r?.status).toBe('concluida');
+      expect(r?.resultado).toMatchObject({
+        linhasArquivo: 2,
+        ignoradasCompetenciaFechada: 2,
+        inseridos: 0,
+        removidos: 0,
+        janelaInicio: '2026-10-01',
+        janelaFim: '2026-10-07',
+      });
     });
 
     it('falha da MobileMed termina com erro e a mensagem, sem mexer nos laudos', async () => {

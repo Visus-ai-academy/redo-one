@@ -104,6 +104,21 @@ export class ImportarLaudos {
       ignoradasCompetenciaFechada: ignoradas.size,
       errosLinhas,
     };
+    // Tudo de competência bloqueada: não há o que gravar nem o que conferir, e o gravado fica
+    // como está (nada é removido).
+    if (preparados.length === 0 && ignoradas.size > 0) {
+      return {
+        ...resultado,
+        ...(importacao.origem === 'mobilemed' && {
+          janelaInicio: importacao.periodo.inicio,
+          janelaFim: importacao.periodo.fim,
+        }),
+        inseridos: 0,
+        atualizados: 0,
+        inalterados: 0,
+        removidos: 0,
+      };
+    }
     if (preparados.length === 0) {
       const mensagem =
         importacao.origem === 'mobilemed' && planilha.linhas.length === 0
