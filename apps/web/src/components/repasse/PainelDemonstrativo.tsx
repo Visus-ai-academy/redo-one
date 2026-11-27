@@ -121,6 +121,7 @@ function Grupos({
       })),
   ];
   const pagina = usePaginaLocal(linhas, POR_PAGINA_NO_PAINEL);
+  const linkDefinir = definirPreco(d.medicoId);
   const colunas = [
     colunaGrupo.display({
       id: 'arranjo',
@@ -140,7 +141,11 @@ function Grupos({
     colunaGrupo.display({
       id: 'cliente',
       header: 'Cliente',
-      cell: ({ row: { original: l } }) => (l.tipo === 'grupo' ? (l.cliente ?? '—') : '—'),
+      cell: ({ row: { original: l } }) => (
+        <span className="[overflow-wrap:anywhere]">
+          {l.tipo === 'grupo' ? (l.cliente ?? '—') : '—'}
+        </span>
+      ),
     }),
     colunaGrupo.display({
       id: 'volume',
@@ -169,9 +174,9 @@ function Grupos({
         l.tipo === 'regra' ? (
           <span className="text-muted-foreground">Regra de apuração</span>
         ) : l.origem === 'sem_preco' ? (
-          <span className="text-warning flex flex-wrap items-center gap-x-2 font-medium">
-            <span>Sem preço</span>
-            {definirPreco(d.medicoId)}
+          <span className="text-warning font-medium whitespace-nowrap">
+            Sem preço
+            {linkDefinir && <> · {linkDefinir}</>}
           </span>
         ) : (
           <span className="text-muted-foreground">{origemDoPreco(l)}</span>

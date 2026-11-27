@@ -74,7 +74,7 @@ export function CabecalhoRepasse({
               valor: c.competencia,
               rotulo: `Competência: ${nomeCompetencia(c.competencia)}`,
             }))}
-            className="w-[240px]"
+            className="w-[260px]"
           />
           {dados && dados.versoes.length > 0 && (
             <Select

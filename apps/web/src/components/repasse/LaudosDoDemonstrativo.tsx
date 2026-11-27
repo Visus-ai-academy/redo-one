@@ -10,7 +10,10 @@ const coluna = createDataTableColumnHelper<LaudoDemonstrativoDto>();
 const direita = (texto: string) => <span className="block text-right">{texto}</span>;
 
 const COLUNAS = [
-  coluna.accessor('dataLaudo', { header: 'Data', cell: (i) => dataDeBrasilia(i.getValue()) }),
+  coluna.accessor('dataLaudo', {
+    header: 'Data',
+    cell: (i) => <span className="whitespace-nowrap">{dataDeBrasilia(i.getValue())}</span>,
+  }),
   coluna.accessor('exame', {
     header: 'Exame',
     cell: (i) => (
@@ -24,7 +27,11 @@ const COLUNAS = [
       </span>
     ),
   }),
-  coluna.accessor('cliente', { header: 'Cliente', cell: (i) => i.getValue() ?? '—' }),
+  coluna.accessor('cliente', {
+    header: 'Cliente',
+    // Os nomes da MobileMed vêm com "_" (UNIMED_MARQUES_VALENCA): quebram onde precisar.
+    cell: (i) => <span className="[overflow-wrap:anywhere]">{i.getValue() ?? '—'}</span>,
+  }),
   coluna.accessor('paciente', {
     id: 'paciente',
     header: 'Paciente',

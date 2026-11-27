@@ -120,7 +120,7 @@ export function ListaAdicionaisRepasse({
   return (
     <section
       aria-label="Adicionais da competência"
-      className="bg-card min-w-0 rounded-lg border md:flex md:max-h-[calc(100dvh-8rem)] md:flex-col"
+      className="bg-card min-w-0 rounded-lg border md:flex md:min-h-0 md:flex-col"
     >
       <div className="flex flex-none flex-wrap gap-2 border-b p-3">
         <BuscaSelecao

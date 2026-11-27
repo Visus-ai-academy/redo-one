@@ -178,7 +178,8 @@ function Repasse() {
     queryClient.invalidateQueries({ queryKey: [{ url: prefixo }] });
 
   return (
-    <div className="flex flex-col gap-5">
+    // No computador, a tela cabe na janela: a lista rola por dentro, com a paginação à vista.
+    <div className="flex flex-col gap-5 md:h-[calc(100dvh-4rem)]">
       <CabecalhoRepasse
         competencias={competencias}
         competencia={competencia}

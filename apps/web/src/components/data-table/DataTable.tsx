@@ -130,7 +130,7 @@ export function DataTable<TData extends RowData>({
                 }}
                 className={cn(
                   'hover:bg-muted aria-selected:bg-accent border-t',
-                  linhaEmDestaque?.(row.original) && 'bg-warning-soft',
+                  linhaEmDestaque?.(row.original) && 'bg-warning-soft hover:bg-warning-soft',
                   onRowClick ? 'cursor-pointer' : 'has-[a[data-abre-linha]]:cursor-pointer',
                 )}
               >

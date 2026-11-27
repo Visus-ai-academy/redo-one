@@ -93,7 +93,7 @@ describe('PainelDemonstrativo', () => {
       .getByText('RX · TÓRAX · — · Plantão')
       .closest('tr') as HTMLElement;
     expect(semPreco).toHaveClass('bg-warning-soft');
-    expect(within(semPreco).getByText('Sem preço')).toBeInTheDocument();
+    expect(semPreco).toHaveTextContent('Sem preço · Definir preço');
     expect(within(semPreco).getByRole('link', { name: 'Definir preço' })).toHaveAttribute(
       'href',
       '/medicos?id=m1&aba=repasse',
