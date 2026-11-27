@@ -6,8 +6,13 @@ import {
   PeerReviewJaPagoError,
 } from '../../domain/adicional';
 import { competenciaDestino } from '../../domain/vigencia';
-import type { AdicionaisRepository, AdicionalGravado } from '../ports/adicionais.repository';
+import type {
+  AdicionaisRepository,
+  AdicionalGravado,
+  FiltroAdicionais,
+} from '../ports/adicionais.repository';
 import type { AgendadorRepasse } from '../ports/agendador-repasse';
+import type { PaginaRepasse } from '../ports/consultas-repasse';
 import type { RecalculoRepasse } from '../ports/recalculo-repasse';
 
 export class MedicoNaoEncontradoError extends ErroDeDominio {
@@ -27,7 +32,7 @@ export class AdicionalNaoEncontradoError extends ErroDeDominio {
 export class AdicionalCanceladoError extends ErroDeDominio {
   readonly tipo = 'conflito';
   constructor() {
-    super('O lançamento já foi cancelado.');
+    super('O lançamento já foi cancelado.', { codigo: 'ja_cancelado' });
   }
 }
 
@@ -45,6 +50,7 @@ export class CancelarNaFechadaError extends ErroDeDominio {
   constructor() {
     super(
       'A competência do lançamento está fechada: lance o valor contrário (na próxima aberta ou, com justificativa, na fechada).',
+      { codigo: 'competencia_fechada' },
     );
   }
 }
@@ -144,7 +150,7 @@ export class CancelarAdicional {
 export class ListarAdicionais {
   constructor(private readonly repo: AdicionaisRepository) {}
 
-  executar(competencia: string): Promise<AdicionalGravado[]> {
-    return this.repo.listar(competencia);
+  executar(filtro: FiltroAdicionais): Promise<PaginaRepasse<AdicionalGravado>> {
+    return this.repo.listar(filtro);
   }
 }

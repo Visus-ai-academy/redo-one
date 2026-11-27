@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { aliasedTable, and, desc, eq, gte, isNull, lte, sql } from 'drizzle-orm';
+import { aliasedTable, and, count, desc, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '../../../database/database';
 import { adicionaisRepasse, medicos, parametrosRepasse, usuarios } from '../../../database/schema';
 import type {
   AdicionaisRepository,
   AdicionalGravado,
+  FiltroAdicionais,
 } from '../../application/ports/adicionais.repository';
 import type { AdicionalMontado } from '../../domain/adicional';
 
@@ -121,9 +122,20 @@ export class DrizzleAdicionaisRepository implements AdicionaisRepository {
       .where(and(eq(adicionaisRepasse.id, id), isNull(adicionaisRepasse.canceladoEm)));
   }
 
-  listar(competencia: string): Promise<AdicionalGravado[]> {
-    return this.consulta()
-      .where(eq(adicionaisRepasse.competencia, competencia))
-      .orderBy(desc(adicionaisRepasse.lancadoEm), sql`${adicionaisRepasse.id}`);
+  async listar(f: FiltroAdicionais) {
+    const onde = and(
+      eq(adicionaisRepasse.competencia, f.competencia),
+      f.medicoId ? eq(adicionaisRepasse.medicoId, f.medicoId) : undefined,
+      f.tipo ? eq(adicionaisRepasse.tipo, f.tipo) : undefined,
+    );
+    const [itens, [total]] = await Promise.all([
+      this.consulta()
+        .where(onde)
+        .orderBy(desc(adicionaisRepasse.lancadoEm), sql`${adicionaisRepasse.id}`)
+        .limit(f.porPagina)
+        .offset((f.pagina - 1) * f.porPagina),
+      this.db.select({ n: count() }).from(adicionaisRepasse).where(onde),
+    ]);
+    return { itens, total: total?.n ?? 0, pagina: f.pagina, porPagina: f.porPagina };
   }
 }

@@ -1,4 +1,5 @@
-import type { AdicionalMontado } from '../../domain/adicional';
+import type { AdicionalMontado, TipoAdicional } from '../../domain/adicional';
+import type { PaginaRepasse } from './consultas-repasse';
 
 export const ADICIONAIS_REPOSITORY = Symbol('ADICIONAIS_REPOSITORY');
 
@@ -12,6 +13,15 @@ export interface AdicionalGravado extends AdicionalMontado {
   canceladoEm: Date | null;
   canceladoPor: string | null;
   motivoCancelamento: string | null;
+}
+
+/** Sem `medicoId` ou `tipo`: todos (a tela escolhe "Todos" explicitamente). */
+export interface FiltroAdicionais {
+  competencia: string;
+  medicoId?: string;
+  tipo?: TipoAdicional;
+  pagina: number;
+  porPagina: number;
 }
 
 export interface AdicionaisRepository {
@@ -31,5 +41,5 @@ export interface AdicionaisRepository {
   obter(id: string): Promise<AdicionalGravado | null>;
   cancelar(id: string, por: string, em: Date, motivo: string): Promise<void>;
   /** Da competência, os cancelados também, mais novos primeiro. */
-  listar(competencia: string): Promise<AdicionalGravado[]>;
+  listar(filtro: FiltroAdicionais): Promise<PaginaRepasse<AdicionalGravado>>;
 }

@@ -10,6 +10,8 @@ import {
 import { RegistroRecalculadores } from '../faturamento/application/recalculadores';
 import { RecalcularCompetenciaFechada } from '../faturamento/application/use-cases/recalcular-competencia';
 import { FaturamentoModule } from '../faturamento/faturamento.module';
+import { LerPacientesDosLaudos } from '../ingestao/application/use-cases/ler-pacientes-dos-laudos';
+import { IngestaoModule } from '../ingestao/ingestao.module';
 import {
   ADICIONAIS_REPOSITORY,
   type AdicionaisRepository,
@@ -19,6 +21,7 @@ import {
   CONFIGURACAO_REPASSE,
   type ConfiguracaoRepasseRepository,
 } from './application/ports/configuracao-repasse.repository';
+import { CONSULTAS_REPASSE, type ConsultasRepasse } from './application/ports/consultas-repasse';
 import { DADOS_REPASSE, type DadosRepasse } from './application/ports/dados-repasse';
 import { GERACOES_REPASSE, type GeracoesRepasse } from './application/ports/geracoes-repasse';
 import { RECALCULO_REPASSE, type RecalculoRepasse } from './application/ports/recalculo-repasse';
@@ -36,14 +39,23 @@ import {
   ListarParametros,
   ListarRegrasDoRepasse,
 } from './application/use-cases/configuracao';
+import {
+  ListarDemonstrativos,
+  ListarLaudosDoDemonstrativo,
+  ObterCompetenciaRepasse,
+  ObterDemonstrativo,
+  TarifasDoLancamento,
+} from './application/use-cases/consultas';
 import { GerarRepasse } from './application/use-cases/gerar-repasse';
 import { RecalcularRepasse } from './application/use-cases/recalcular-repasse';
 import { RepasseController } from './infrastructure/http/repasse.controller';
+import { RepasseConsultasController } from './infrastructure/http/repasse-consultas.controller';
 import { AgendadorRepasseFila } from './infrastructure/jobs/agendador-repasse-fila';
 import { enfileirarRepasse } from './infrastructure/jobs/enfileirar-repasse';
 import { AvisosDaGeracao } from './infrastructure/persistence/avisos-da-geracao';
 import { DrizzleAdicionaisRepository } from './infrastructure/persistence/drizzle-adicionais.repository';
 import { DrizzleConfiguracaoRepasseRepository } from './infrastructure/persistence/drizzle-configuracao-repasse.repository';
+import { DrizzleConsultasRepasse } from './infrastructure/persistence/drizzle-consultas-repasse';
 import { DrizzleDadosRepasse } from './infrastructure/persistence/drizzle-dados-repasse';
 import {
   AO_GRAVAR_GERACAO,
@@ -66,9 +78,27 @@ const CONFIGURACAO = [
  * recálculo da fechada (com motivo) são os do `faturamento` (fechamento único).
  */
 @Module({
-  imports: [FaturamentoModule],
-  controllers: [RepasseController],
+  imports: [FaturamentoModule, IngestaoModule],
+  controllers: [RepasseController, RepasseConsultasController],
   providers: [
+    { provide: CONSULTAS_REPASSE, useClass: DrizzleConsultasRepasse },
+    ...[ObterCompetenciaRepasse, ListarDemonstrativos, ObterDemonstrativo].map((Caso) => ({
+      provide: Caso,
+      inject: [CONSULTAS_REPASSE],
+      useFactory: (c: ConsultasRepasse) => new Caso(c),
+    })),
+    {
+      provide: ListarLaudosDoDemonstrativo,
+      inject: [CONSULTAS_REPASSE, LerPacientesDosLaudos],
+      useFactory: (c: ConsultasRepasse, pacientes: LerPacientesDosLaudos) =>
+        new ListarLaudosDoDemonstrativo(c, pacientes),
+    },
+    {
+      provide: TarifasDoLancamento,
+      inject: [GERACOES_REPASSE, ADICIONAIS_REPOSITORY],
+      useFactory: (g: GeracoesRepasse, repo: AdicionaisRepository) =>
+        new TarifasDoLancamento(g, repo),
+    },
     { provide: DADOS_REPASSE, useClass: DrizzleDadosRepasse },
     AvisosDaGeracao,
     {

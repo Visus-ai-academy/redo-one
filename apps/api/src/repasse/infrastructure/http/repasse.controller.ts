@@ -26,12 +26,11 @@ import {
   ListarRegrasDoRepasse,
 } from '../../application/use-cases/configuracao';
 import { RecalcularRepasse } from '../../application/use-cases/recalcular-repasse';
+import { ListarAdicionaisDto, PaginaAdicionaisDto } from './dto/consultas-repasse.dto';
 import {
-  AdicionalDto,
   AdicionalLancadoDto,
   APartirDeDto,
   CompetenciaRepasseParamDto,
-  CompetenciaRepasseQueryDto,
   CriadoDto,
   CriarAlternativaPrecoDto,
   CriarParametrosRepasseDto,
@@ -192,9 +191,12 @@ export class RepasseController {
 
   @Get('adicionais')
   @Permissao('repasse.ver')
-  @ApiOkResponse({ type: [AdicionalDto], description: 'Da competência, os cancelados também.' })
-  adicionais(@Query() { competencia }: CompetenciaRepasseQueryDto): Promise<AdicionalDto[]> {
-    return this.listarAdicionaisCaso.executar(competencia);
+  @ApiOkResponse({
+    type: PaginaAdicionaisDto,
+    description: 'Da competência, os cancelados também, mais novos primeiro.',
+  })
+  adicionais(@Query() filtro: ListarAdicionaisDto): Promise<PaginaAdicionaisDto> {
+    return this.listarAdicionaisCaso.executar(filtro);
   }
 
   @Post('adicionais')
@@ -222,7 +224,10 @@ export class RepasseController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Cancelado (fica registrado); a prévia é refeita.' })
   @ApiNotFoundResponse()
-  @ApiConflictResponse({ description: 'Já cancelado, ou a competência está fechada.' })
+  @ApiConflictResponse({
+    description:
+      'Já cancelado (`codigo: "ja_cancelado"`) ou a competência está fechada (`codigo: "competencia_fechada"`).',
+  })
   cancelar(
     @PrincipalAtual() ator: PrincipalUsuario,
     @Param() { id }: IdParamDto,

@@ -5,8 +5,10 @@ import type { AdicionaisRepository, AdicionalGravado } from '../ports/adicionais
 import {
   AdicionalCanceladoError,
   CancelarAdicional,
+  CancelarNaFechadaError,
   LancarAdicional,
   LancarNaFechadaSemPermissaoError,
+  ListarAdicionais,
   MedicoNaoEncontradoError,
 } from './adicionais';
 
@@ -16,6 +18,7 @@ function montar(fechadas: string[] = ['2026-09', '2026-10']) {
   const linhas = new Map<string, AdicionalGravado>();
   const previas: string[] = [];
   const recalculos: { competencia: string; motivo: string }[] = [];
+  const filtros: Parameters<AdicionaisRepository['listar']>[0][] = [];
   const repo: AdicionaisRepository = {
     medicoExiste: async (id) => id === 'ana',
     tarifas: async () => ({ peerReviewCentavos: 2100, plantaoCentavos: 35000 }),
@@ -50,7 +53,15 @@ function montar(fechadas: string[] = ['2026-09', '2026-10']) {
       const a = linhas.get(id);
       if (a) Object.assign(a, { canceladoEm: em, motivoCancelamento: motivo });
     },
-    listar: async () => [...linhas.values()],
+    listar: async (f) => {
+      filtros.push(f);
+      return {
+        itens: [...linhas.values()],
+        total: linhas.size,
+        pagina: f.pagina,
+        porPagina: f.porPagina,
+      };
+    },
   };
   const deps = {
     repo,
@@ -76,7 +87,8 @@ function montar(fechadas: string[] = ['2026-09', '2026-10']) {
     () => AGORA,
   );
   const cancelar = new CancelarAdicional(deps.repo, deps.competencias, deps.agendador, () => AGORA);
-  return { lancar, cancelar, linhas, previas, recalculos };
+  const listar = new ListarAdicionais(deps.repo);
+  return { lancar, cancelar, listar, linhas, previas, recalculos, filtros };
 }
 
 const pedido = {
@@ -161,5 +173,39 @@ describe('CancelarAdicional', () => {
     });
     expect(previas).toEqual(['2026-11', '2026-11']);
     await expect(cancelar.executar('u', 'a1', 'de novo')).rejects.toThrow(AdicionalCanceladoError);
+  });
+
+  it('o 409 diz qual conflito é: já cancelado ou competência fechada', async () => {
+    const { lancar, cancelar, linhas } = montar();
+    await lancar.executar({ usuarioId: 'u', podeLancarNaFechada: false }, pedido);
+    await cancelar.executar('u', 'a1', 'Lançado em dobro');
+    await expect(cancelar.executar('u', 'a1', 'de novo')).rejects.toMatchObject({
+      detalhes: { codigo: 'ja_cancelado' },
+    });
+    await lancar.executar(
+      { usuarioId: 'u', podeLancarNaFechada: true },
+      { ...pedido, competencia: '2026-10', lancarNaFechada: true, motivo: 'Plantão esquecido' },
+    );
+    expect(linhas.get('a2')?.competencia).toBe('2026-10');
+    const fechada = cancelar.executar('u', 'a2', 'errado');
+    await expect(fechada).rejects.toThrow(CancelarNaFechadaError);
+    await expect(fechada).rejects.toMatchObject({ detalhes: { codigo: 'competencia_fechada' } });
+  });
+});
+
+describe('ListarAdicionais', () => {
+  it('passa os filtros e a página ao repositório', async () => {
+    const { listar, filtros } = montar();
+    const r = await listar.executar({
+      competencia: '2026-11',
+      medicoId: 'ana',
+      tipo: 'plantao',
+      pagina: 2,
+      porPagina: 10,
+    });
+    expect(filtros).toEqual([
+      { competencia: '2026-11', medicoId: 'ana', tipo: 'plantao', pagina: 2, porPagina: 10 },
+    ]);
+    expect(r).toMatchObject({ pagina: 2, porPagina: 10 });
   });
 });
