@@ -119,21 +119,32 @@ export function CaixasField({
   );
 }
 
-/** Uma escolha entre poucas opções, todas à vista, sobre o RadioGroup do Base UI. */
+/**
+ * Uma escolha entre poucas opções, todas à vista, sobre o RadioGroup do Base UI. Com `required`,
+ * leva o `*` e mostra o erro do esquema (ex.: "Escolha o tipo.") abaixo das opções.
+ */
 export function OpcoesField({
   label,
   opcoes,
+  required = false,
   description,
   className,
 }: {
   label: string;
   opcoes: Opcao[];
+  required?: boolean;
   description?: ReactNode;
   className?: string;
 }) {
-  const { field, aoSair, ref } = useErros();
+  const { field, erros, invalido, aoSair, ref } = useErros();
   return (
-    <Field.Root ref={ref} name={field.name} className={cn('flex flex-col gap-2', className)}>
+    <Field.Root
+      ref={ref}
+      name={field.name}
+      invalid={invalido}
+      touched={field.state.meta.isTouched}
+      className={cn('flex flex-col gap-2', className)}
+    >
       <Fieldset.Root
         render={
           <RadioGroup
@@ -146,7 +157,7 @@ export function OpcoesField({
         }
         className="flex flex-col gap-2"
       >
-        <Legenda required={false}>{label}</Legenda>
+        <Legenda required={required}>{label}</Legenda>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
           {opcoes.map((opcao) => (
             <Field.Item key={opcao.valor}>
@@ -168,6 +179,7 @@ export function OpcoesField({
           </Field.Description>
         )}
       </Fieldset.Root>
+      <FieldError invalid={invalido}>{erros.join(', ')}</FieldError>
     </Field.Root>
   );
 }

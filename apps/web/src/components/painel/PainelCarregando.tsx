@@ -22,6 +22,8 @@ type PainelCarregandoProps = {
   /** Caminho de volta para a lista no 404. */
   voltar?: ComponentProps<typeof EstadoDoErro>['voltar'];
   onTentarDeNovo?: () => void;
+  /** A largura do painel que vai aparecer, para nada pular quando os dados chegam. */
+  largura?: ComponentProps<typeof PainelLateral>['largura'];
 };
 
 /**
@@ -35,6 +37,7 @@ export function PainelCarregando({
   oQue = 'os dados',
   voltar,
   onTentarDeNovo,
+  largura,
 }: PainelCarregandoProps) {
   // O painel abre na hora; as formas só aparecem depois de ~200ms (o lugar já fica reservado).
   // Para o mínimo de ~400ms à vista, a tela troca para o painel de verdade pelo
@@ -58,6 +61,7 @@ export function PainelCarregando({
         )
       }
       ocupado={!erro}
+      largura={largura}
       onFechar={onFechar}
     >
       {erro && erro !== true ? (

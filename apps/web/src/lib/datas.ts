@@ -36,6 +36,11 @@ export function dataDeBrasilia(iso: string) {
   return `${p.dia}/${p.mes}/${p.ano}`;
 }
 
+/** "14:15". */
+export function horaDeBrasilia(iso: string) {
+  return partes(new Date(iso)).hora;
+}
+
 /** Formato curto das tabelas: "Hoje, 09:12", "Ontem, 21:40", "12/11 19:31" ou "30/12/2025 10:00". */
 export function dataHoraCurta(iso: string, agora = new Date()) {
   const p = partes(new Date(iso));

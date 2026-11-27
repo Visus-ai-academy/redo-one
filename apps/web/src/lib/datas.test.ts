@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { dataDeBrasilia, dataHoraCurta, mesDeBrasilia } from './datas';
+import { dataDeBrasilia, dataHoraCurta, horaDeBrasilia, mesDeBrasilia } from './datas';
 
 describe('dataDeBrasilia', () => {
   it('formata a data no fuso de Brasília', () => {
     // 02:00 UTC de 3/10 ainda é 2/10 em Brasília.
     expect(dataDeBrasilia('2026-10-03T02:00:00.000Z')).toBe('02/10/2026');
+  });
+});
+
+describe('horaDeBrasilia', () => {
+  it('formata a hora no fuso de Brasília', () => {
+    expect(horaDeBrasilia('2026-10-03T02:05:00.000Z')).toBe('23:05');
   });
 });
 

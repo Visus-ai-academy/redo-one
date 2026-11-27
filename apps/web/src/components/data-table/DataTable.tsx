@@ -1,4 +1,5 @@
 import { type ColumnDef, type RowData, useTable } from '@tanstack/react-table';
+import type { ReactNode } from 'react';
 
 import { cn } from '../../lib/cn';
 import { type DataTableFeatures, dataTableFeatures } from './columns';
@@ -26,6 +27,14 @@ type DataTableProps<TData extends RowData> = {
    * `aria-busy`, até os dados novos chegarem (`placeholderData: keepPreviousData` + `isFetching`).
    */
   recarregando?: boolean;
+  /**
+   * Linha de total no `tfoot`, uma célula por coluna (na mesma ordem; `null` = vazia). Fica fixa
+   * embaixo quando a tabela rola por dentro. Números alinhados à direita como no corpo: passe o
+   * conteúdo já com `text-right`.
+   */
+  rodape?: ReactNode[];
+  /** Linha que pede atenção (ex.: grupo sem preço): fundo de atenção, sempre com texto que diz por quê. */
+  linhaEmDestaque?: (row: TData) => boolean;
   /** Classes do contêiner que rola (ex.: altura limitada para a tabela rolar por dentro). */
   className?: string;
 };
@@ -43,6 +52,8 @@ export function DataTable<TData extends RowData>({
   onRowClick,
   ordenacao,
   recarregando = false,
+  rodape,
+  linhaEmDestaque,
   className,
 }: DataTableProps<TData>) {
   const table = useTable({
@@ -119,6 +130,7 @@ export function DataTable<TData extends RowData>({
                 }}
                 className={cn(
                   'hover:bg-muted aria-selected:bg-accent border-t',
+                  linhaEmDestaque?.(row.original) && 'bg-warning-soft',
                   onRowClick ? 'cursor-pointer' : 'has-[a[data-abre-linha]]:cursor-pointer',
                 )}
               >
@@ -131,6 +143,18 @@ export function DataTable<TData extends RowData>({
             ))
           )}
         </tbody>
+        {rodape && (
+          <tfoot>
+            <tr className="bg-muted sticky bottom-0 z-10 font-semibold shadow-[inset_0_1px_0_var(--border)]">
+              {rodape.map((celula, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: uma célula por coluna, em ordem fixa.
+                <td key={i} className="h-11 px-4 py-2 align-middle">
+                  {celula}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );

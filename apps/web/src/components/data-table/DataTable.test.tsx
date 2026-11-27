@@ -159,4 +159,38 @@ describe('DataTable: link na linha, ordenação e recarga', () => {
     expect(within(tabela).getByRole('cell', { name: 'Ada' })).toBeInTheDocument();
     expect(tabela.querySelector('tbody')).toHaveClass('opacity-60');
   });
+
+  it('com rodapé, a linha de total fica no tfoot, fixa embaixo quando a tabela rola', () => {
+    render(
+      <DataTable
+        caption="Usuários"
+        columns={columns}
+        data={[{ name: 'Ada', email: 'ada@example.com' }]}
+        rodape={['Total (1 usuário)', null]}
+      />,
+    );
+    const tabela = screen.getByRole('table', { name: 'Usuários' });
+    const rodape = tabela.querySelector('tfoot');
+    expect(rodape).not.toBeNull();
+    const celulas = within(rodape as HTMLElement).getAllByRole('cell');
+    expect(celulas.map((c) => c.textContent)).toEqual(['Total (1 usuário)', '']);
+    expect(rodape?.querySelector('tr')).toHaveClass('sticky', 'bottom-0');
+  });
+
+  it('linha em destaque ganha o fundo de atenção', () => {
+    render(
+      <DataTable
+        caption="Usuários"
+        columns={columns}
+        data={[
+          { name: 'Ada', email: 'ada@example.com' },
+          { name: 'Alan', email: 'alan@example.com' },
+        ]}
+        linhaEmDestaque={(u) => u.name === 'Alan'}
+      />,
+    );
+    const tabela = screen.getByRole('table', { name: 'Usuários' });
+    expect(within(tabela).getByText('Alan').closest('tr')).toHaveClass('bg-warning-soft');
+    expect(within(tabela).getByText('Ada').closest('tr')).not.toHaveClass('bg-warning-soft');
+  });
 });

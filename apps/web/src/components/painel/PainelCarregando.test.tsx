@@ -18,6 +18,14 @@ describe('PainelCarregando', () => {
     await waitFor(() => expect(onFechar).toHaveBeenCalled());
   });
 
+  it('largo, já abre na largura do painel que vem (nada pula quando os dados chegam)', () => {
+    render(<PainelCarregando onFechar={vi.fn()} largura="larga" />);
+    expect(screen.getByRole('dialog', { name: 'Carregando…' })).toHaveAttribute(
+      'data-painel-lateral',
+      'larga',
+    );
+  });
+
   it('se falhar, diz o que houve e deixa tentar de novo', async () => {
     const tentar = vi.fn();
     render(<PainelCarregando onFechar={vi.fn()} erro onTentarDeNovo={tentar} />);
