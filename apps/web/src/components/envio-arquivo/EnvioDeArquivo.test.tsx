@@ -58,7 +58,10 @@ describe('EnvioDeArquivo', () => {
       'aria-valuenow',
       '40',
     );
-    expect(screen.getByRole('button', { name: 'Enviando…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Enviando…' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     terminar();
   });
 

@@ -32,6 +32,8 @@ describe('SubmitButton', () => {
 
     const botao = await screen.findByRole('button', { name: 'Entrando…' });
     expect(botao).toHaveAttribute('aria-disabled', 'true');
+    // A largura não muda: o rótulo de sempre fica, invisível, e o "Entrando…" vai por cima.
+    expect(screen.getByText('Entrar')).toHaveClass('invisible');
     concluir();
     expect(await screen.findByRole('button', { name: 'Entrar' })).not.toHaveAttribute(
       'aria-disabled',

@@ -5,12 +5,14 @@ import { z } from 'zod';
 import type { AusenciaItemDto } from '../../gen/types/AusenciaItemDto';
 import { dataHoraCurta } from '../../lib/datas';
 import { Alerta } from '../alerta/Alerta';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
 import { useAvisarAlterado } from '../escala/use-avisar-alterado';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
+import { RodapeDeAcoes } from '../painel/RodapeDeAcoes';
 import { diasDaSemana, diasRecortados, periodoCompleto, situacaoDaAusencia } from './ausencias';
 
 function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
@@ -170,19 +172,18 @@ export function DetalheAusencia({
           >
             Recusar
           </Button>
-          <Button
+          <BotaoComCarregamento
             type="button"
-            disabled={aprovando}
-            focusableWhenDisabled
+            carregando={aprovando}
+            rotuloCarregando="Aprovando…"
             onClick={async () => {
               setAprovando(true);
               await tentar(onAprovar, 'Não foi possível aprovar agora. Tente de novo.');
               setAprovando(false);
             }}
-            className={buttonClassName()}
           >
-            {aprovando ? 'Aprovando…' : 'Aprovar'}
-          </Button>
+            Aprovar
+          </BotaoComCarregamento>
         </div>
       )}
 
@@ -226,26 +227,31 @@ export function DetalheAusencia({
       )}
 
       {(podeEditar || podeExcluir) && (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-          {podeExcluir && (
-            <ConfirmarAcao
-              acao="Excluir ausência"
-              titulo="Excluir esta ausência?"
-              consequencia={`A ausência de ${ausencia.medico.nome} (${periodo}) sai da escala e o médico volta a contar como disponível nesses dias.`}
-              onConfirmar={() =>
-                tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.')
-              }
-            />
-          )}
-          {podeEditar && (
-            <Button
-              type="button"
-              onClick={onEditar}
-              className={buttonClassName({ variant: 'secondary', className: 'ml-auto' })}
-            >
-              Editar
-            </Button>
-          )}
+        <div className="border-t pt-4">
+          <RodapeDeAcoes
+            inicio={
+              podeExcluir && (
+                <ConfirmarAcao
+                  acao="Excluir ausência"
+                  titulo="Excluir esta ausência?"
+                  consequencia={`A ausência de ${ausencia.medico.nome} (${periodo}) sai da escala e o médico volta a contar como disponível nesses dias.`}
+                  onConfirmar={() =>
+                    tentar(onExcluir, 'Não foi possível excluir agora. Tente de novo.')
+                  }
+                />
+              )
+            }
+          >
+            {podeEditar && (
+              <Button
+                type="button"
+                onClick={onEditar}
+                className={buttonClassName({ variant: 'secondary' })}
+              >
+                Editar
+              </Button>
+            )}
+          </RodapeDeAcoes>
         </div>
       )}
     </div>

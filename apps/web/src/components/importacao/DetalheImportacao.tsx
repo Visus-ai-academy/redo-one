@@ -1,4 +1,3 @@
-import { Button } from '@base-ui/react/button';
 import { DownloadSimple } from '@phosphor-icons/react';
 import { type ReactNode, useId, useState } from 'react';
 
@@ -7,7 +6,7 @@ import { dataHoraCurta } from '../../lib/datas';
 import { numero as formatar } from '../../lib/formato';
 import { periodoDosLaudos, situacaoDaImportacao } from '../../lib/importacao';
 import { Alerta } from '../alerta/Alerta';
-import { buttonClassName } from '../button/button-class';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -148,9 +147,10 @@ export function DetalheImportacao({
 
       {onBaixar && i.nomeArquivo && (
         <div>
-          <Button
+          <BotaoComCarregamento
             type="button"
-            disabled={baixando}
+            carregando={baixando}
+            rotuloCarregando="Preparando…"
             onClick={async () => {
               setBaixando(true);
               try {
@@ -159,11 +159,11 @@ export function DetalheImportacao({
                 setBaixando(false);
               }
             }}
-            className={buttonClassName({ variant: 'secondary' })}
+            variant="secondary"
           >
             <DownloadSimple size={16} aria-hidden />
-            {baixando ? 'Preparando…' : 'Baixar planilha'}
-          </Button>
+            Baixar planilha
+          </BotaoComCarregamento>
         </div>
       )}
     </div>

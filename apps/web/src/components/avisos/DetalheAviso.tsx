@@ -1,4 +1,3 @@
-import { Button } from '@base-ui/react/button';
 import { type ReactNode, useEffect, useState } from 'react';
 import { z } from 'zod';
 
@@ -7,7 +6,7 @@ import { competenciasDoAviso, situacaoDoAviso } from '../../lib/avisos';
 import { dataHoraCurta } from '../../lib/datas';
 import { numero } from '../../lib/formato';
 import { Alerta } from '../alerta/Alerta';
-import { buttonClassName } from '../button/button-class';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { useAppForm } from '../form/form';
@@ -245,9 +244,10 @@ export function DetalheAviso({
 
       {podeTriar && aviso.status === 'ignorado' && (
         <div className="flex justify-end border-t pt-4">
-          <Button
+          <BotaoComCarregamento
             type="button"
-            disabled={reabrindo}
+            carregando={reabrindo}
+            rotuloCarregando="Reabrindo…"
             onClick={async () => {
               setReabrindo(true);
               await tentar(
@@ -256,10 +256,10 @@ export function DetalheAviso({
               );
               setReabrindo(false);
             }}
-            className={buttonClassName({ variant: 'secondary' })}
+            variant="secondary"
           >
-            {reabrindo ? 'Reabrindo…' : 'Reabrir aviso'}
-          </Button>
+            Reabrir aviso
+          </BotaoComCarregamento>
         </div>
       )}
     </div>

@@ -15,6 +15,7 @@ import { useTurnosControllerListar } from '../../gen/hooks/useTurnosControllerLi
 import type { EscopoDto } from '../../gen/types/EscopoDto';
 import type { ReferenciaEscopoDto } from '../../gen/types/ReferenciaEscopoDto';
 import { Alerta } from '../alerta/Alerta';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { Skeleton } from '../skeleton/Skeleton';
@@ -257,13 +258,15 @@ function EditorRecorte({
         </>
       )}
       <div className="flex justify-end">
-        <Button
+        <BotaoComCarregamento
           type="submit"
-          disabled={!mudou || definir.isPending}
-          className={buttonClassName({ variant: 'secondary' })}
+          disabled={!mudou}
+          carregando={definir.isPending}
+          rotuloCarregando="Salvando…"
+          variant="secondary"
         >
-          {definir.isPending ? 'Salvando…' : 'Salvar recorte'}
-        </Button>
+          Salvar recorte
+        </BotaoComCarregamento>
       </div>
     </form>
   );

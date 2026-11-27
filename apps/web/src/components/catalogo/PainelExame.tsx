@@ -7,6 +7,7 @@ import type { ExameDto } from '../../gen/types/ExameDto';
 import type { OpcoesCatalogoDto } from '../../gen/types/OpcoesCatalogoDto';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
@@ -435,9 +436,10 @@ function QuebraDoExame({
         <>
           <p className="text-muted-foreground">Este estudo não se quebra.</p>
           {podeCriar && (
-            <Button
+            <BotaoComCarregamento
               type="button"
-              disabled={criando}
+              carregando={criando}
+              rotuloCarregando="Criando…"
               onClick={async () => {
                 setErro(undefined);
                 setCriando(true);
@@ -451,10 +453,11 @@ function QuebraDoExame({
                   setCriando(false);
                 }
               }}
-              className={buttonClassName({ variant: 'secondary', className: 'self-start' })}
+              variant="secondary"
+              className="self-start"
             >
-              {criando ? 'Criando…' : 'Criar quebra'}
-            </Button>
+              Criar quebra
+            </BotaoComCarregamento>
           )}
         </>
       )}

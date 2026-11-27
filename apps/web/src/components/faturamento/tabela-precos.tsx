@@ -27,6 +27,7 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { SeloAviso } from '../avisos/SeloAviso';
 import { CampoBusca } from '../busca/CampoBusca';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { ConfirmarAcao } from '../confirmacao/ConfirmarAcao';
@@ -964,9 +965,9 @@ function ImportarPlanilha({
       onEnviar={() => void importar()}
       alterado={Boolean(arquivo)}
       acao={
-        <Button type="submit" disabled={enviando} className={buttonClassName({})}>
-          {enviando ? 'Importando…' : 'Importar planilha'}
-        </Button>
+        <BotaoComCarregamento type="submit" carregando={enviando} rotuloCarregando="Importando…">
+          Importar planilha
+        </BotaoComCarregamento>
       }
     >
       <div className="flex flex-col gap-2">

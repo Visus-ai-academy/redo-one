@@ -1,11 +1,10 @@
-import { Button } from '@base-ui/react/button';
 import { Progress } from '@base-ui/react/progress';
 import { FileArrowUp, FileXls } from '@phosphor-icons/react';
 import { type DragEvent, type ReactNode, useId, useState } from 'react';
 
 import { cn } from '../../lib/cn';
 import { Alerta } from '../alerta/Alerta';
-import { buttonClassName } from '../button/button-class';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 
 type EnvioDeArquivoProps = {
   /** Extensão aceita, com o ponto (ex.: `.xlsx`). */
@@ -147,15 +146,15 @@ export function EnvioDeArquivo({
       {erro && <Alerta tom="erro">{erro}</Alerta>}
 
       <div className="flex justify-end">
-        <Button
+        <BotaoComCarregamento
           type="button"
           // Só desabilita durante o envio; sem arquivo, o clique diz o que falta.
-          disabled={enviando}
+          carregando={enviando}
+          rotuloCarregando="Enviando…"
           onClick={() => void enviar()}
-          className={buttonClassName()}
         >
-          {enviando ? 'Enviando…' : rotuloEnviar}
-        </Button>
+          {rotuloEnviar}
+        </BotaoComCarregamento>
       </div>
     </div>
   );

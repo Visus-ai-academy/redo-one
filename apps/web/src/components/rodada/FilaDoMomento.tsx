@@ -18,6 +18,7 @@ import { AjudaContextual } from '../ajuda/AjudaContextual';
 import { Alerta } from '../alerta/Alerta';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
 import { CampoBusca } from '../busca/CampoBusca';
+import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
@@ -110,16 +111,17 @@ const COLUNAS = [
 /** "Ler agora": pede a leitura única da fila (desabilitado enquanto ela anda). */
 export function BotaoLerAgora({ lendo, onLerAgora }: { lendo: boolean; onLerAgora: () => void }) {
   return (
-    <Button
+    <BotaoComCarregamento
       type="button"
-      disabled={lendo}
-      focusableWhenDisabled
+      carregando={lendo}
+      rotuloCarregando="Lendo…"
       onClick={onLerAgora}
-      className={buttonClassName({ variant: 'secondary', className: 'h-8 px-3' })}
+      variant="secondary"
+      className="h-8 px-3"
     >
-      <ArrowClockwise size={16} aria-hidden className={cn(lendo && 'animate-spin')} />
-      {lendo ? 'Lendo…' : 'Ler agora'}
-    </Button>
+      <ArrowClockwise size={16} aria-hidden />
+      Ler agora
+    </BotaoComCarregamento>
   );
 }
 
