@@ -562,27 +562,30 @@ export function PainelFornecedor({
                   />
                 )}
               </form.AppField>
-              <form.AppField name="conta">
-                {(field) => (
-                  <field.TextField
-                    label="Conta"
-                    placeholder="45678"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    className="flex-[2_1_112px]"
-                  />
-                )}
-              </form.AppField>
-              <form.AppField name="digito">
-                {(field) => (
-                  <field.TextField
-                    label="Dígito"
-                    placeholder="9"
-                    autoComplete="off"
-                    className="flex-[0_1_72px]"
-                  />
-                )}
-              </form.AppField>
+              {/* Conta e dígito sempre juntos na mesma linha. */}
+              <div className="flex flex-[2_1_176px] gap-2">
+                <form.AppField name="conta">
+                  {(field) => (
+                    <field.TextField
+                      label="Conta"
+                      placeholder="45678"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      className="min-w-0 flex-1"
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="digito">
+                  {(field) => (
+                    <field.TextField
+                      label="Dígito"
+                      placeholder="9"
+                      autoComplete="off"
+                      className="w-16 flex-none"
+                    />
+                  )}
+                </form.AppField>
+              </div>
             </div>
           </fieldset>
 

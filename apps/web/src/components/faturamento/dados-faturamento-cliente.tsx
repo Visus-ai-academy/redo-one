@@ -499,27 +499,30 @@ function FormDados({
               />
             )}
           </form.AppField>
-          <form.AppField name="bancoConta">
-            {(field) => (
-              <field.TextField
-                label="Conta"
-                placeholder="Ex.: 12345"
-                inputMode="numeric"
-                spellCheck={false}
-                className="flex-[1_1_120px]"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="bancoDigito">
-            {(field) => (
-              <field.TextField
-                label="Dígito"
-                placeholder="6"
-                spellCheck={false}
-                className="flex-[0_1_72px]"
-              />
-            )}
-          </form.AppField>
+          {/* Conta e dígito sempre juntos na mesma linha. */}
+          <div className="flex flex-[1_1_176px] gap-2">
+            <form.AppField name="bancoConta">
+              {(field) => (
+                <field.TextField
+                  label="Conta"
+                  placeholder="Ex.: 12345"
+                  inputMode="numeric"
+                  spellCheck={false}
+                  className="min-w-0 flex-1"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="bancoDigito">
+              {(field) => (
+                <field.TextField
+                  label="Dígito"
+                  placeholder="6"
+                  spellCheck={false}
+                  className="w-16 flex-none"
+                />
+              )}
+            </form.AppField>
+          </div>
         </Linha>
       </Grupo>
 
