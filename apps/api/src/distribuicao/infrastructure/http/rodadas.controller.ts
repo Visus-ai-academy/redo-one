@@ -141,6 +141,7 @@ export class RodadasController {
       ...(q.status?.length ? { status: q.status } : {}),
       ...(q.solicitadaPorId ? { solicitadaPorId: q.solicitadaPorId } : {}),
       ...(q.desde ? { desde: new Date(q.desde) } : {}),
+      ...(q.ate ? { ate: new Date(q.ate) } : {}),
     });
     return { itens, total, pagina: q.pagina, porPagina: q.porPagina };
   }

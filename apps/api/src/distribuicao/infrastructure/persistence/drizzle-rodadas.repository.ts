@@ -799,6 +799,7 @@ export class DrizzleRodadasRepository implements RodadasRepository, ConsultaRoda
     if (f.status?.length) filtros.push(inArray(rodadas.status, f.status));
     if (f.solicitadaPorId) filtros.push(eq(rodadas.solicitadaPorId, f.solicitadaPorId));
     if (f.desde) filtros.push(gte(rodadas.criadoEm, f.desde));
+    if (f.ate) filtros.push(lt(rodadas.criadoEm, f.ate));
     const onde = and(...filtros);
     const { pagina, porPagina } = f;
     const [linhas, [total]] = await Promise.all([

@@ -14207,6 +14207,16 @@
               "format": "date-time",
               "type": "string"
             }
+          },
+          {
+            "name": "ate",
+            "required": false,
+            "in": "query",
+            "description": "Pedidas antes deste instante (o começo do dia seguinte ao último do período).",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
           }
         ],
         "responses": {

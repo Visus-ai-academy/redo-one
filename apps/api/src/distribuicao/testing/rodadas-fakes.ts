@@ -551,7 +551,8 @@ export class RodadasEmMemoria implements RodadasRepository, ConsultaRodadas {
   async historico(f: FiltroHistorico) {
     const todas = [...this.rodadas.values()]
       .reverse()
-      .filter((r) => !f.status?.length || f.status.includes(r.status));
+      .filter((r) => !f.status?.length || f.status.includes(r.status))
+      .filter((r) => (!f.desde || r.criadoEm >= f.desde) && (!f.ate || r.criadoEm < f.ate));
     const { pagina, porPagina } = f;
     return {
       itens: todas.slice((pagina - 1) * porPagina, pagina * porPagina).map((r) => ({

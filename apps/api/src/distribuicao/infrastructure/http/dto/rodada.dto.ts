@@ -451,6 +451,14 @@ export class HistoricoQueryDto extends PaginacaoDto {
   @IsOptional()
   @IsDateString()
   desde?: string;
+
+  @ApiPropertyOptional({
+    format: 'date-time',
+    description: 'Pedidas antes deste instante (o começo do dia seguinte ao último do período).',
+  })
+  @IsOptional()
+  @IsDateString()
+  ate?: string;
 }
 
 export class ExplicacaoQueryDto {

@@ -493,6 +493,14 @@ describe.skipIf(!url)('repositório Drizzle das rodadas', () => {
         (r) => r.id === id,
       ),
     ).toBe(false);
+    // Período: `desde` inclui o instante; `ate` não (é o começo do dia seguinte ao último).
+    const noPeriodo = async (desde: Date, ate: Date) =>
+      (await repo.historico({ pagina: 1, porPagina: 10, desde, ate })).itens.some(
+        (r) => r.id === id,
+      );
+    const agora = Date.now();
+    expect(await noPeriodo(new Date(agora - 3_600_000), new Date(agora + 3_600_000))).toBe(true);
+    expect(await noPeriodo(new Date(agora - 7_200_000), new Date(agora - 3_600_000))).toBe(false);
     expect((await repo.nomesUsuarios([usuarioId])).get(usuarioId)).toBe('Maria Operação');
   });
 });

@@ -27,6 +27,10 @@ export const rodadasControllerHistoricoQueryDesdeSchema = z.iso.datetime().optio
 
 export type RodadasControllerHistoricoQueryDesdeSchemaType = z.infer<typeof rodadasControllerHistoricoQueryDesdeSchema>
 
+export const rodadasControllerHistoricoQueryAteSchema = z.iso.datetime().optional().describe('Pedidas antes deste instante (o começo do dia seguinte ao último do período).')
+
+export type RodadasControllerHistoricoQueryAteSchemaType = z.infer<typeof rodadasControllerHistoricoQueryAteSchema>
+
 export const rodadasControllerHistoricoStatus200Schema = paginaRodadasDtoSchema
 
 export type RodadasControllerHistoricoStatus200SchemaType = z.infer<typeof rodadasControllerHistoricoStatus200Schema>
@@ -41,6 +45,7 @@ export const rodadasControllerHistoricoQuerySchema = z.object({
   status: z.array(statusRodadaSchema).optional(),
   solicitadaPorId: z.uuid().optional().describe('Quem pediu.'),
   desde: z.iso.datetime().optional().describe('Pedidas a partir deste instante.'),
+  ate: z.iso.datetime().optional().describe('Pedidas antes deste instante (o começo do dia seguinte ao último do período).'),
 })
 
 export type RodadasControllerHistoricoQuerySchemaType = z.infer<typeof rodadasControllerHistoricoQuerySchema>

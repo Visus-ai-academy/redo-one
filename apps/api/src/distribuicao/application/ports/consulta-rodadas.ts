@@ -143,6 +143,8 @@ export interface FiltroHistorico {
   status?: StatusRodada[];
   solicitadaPorId?: string;
   desde?: Date;
+  /** Exclusivo: antes deste instante. */
+  ate?: Date;
   pagina: number;
   porPagina: number;
 }

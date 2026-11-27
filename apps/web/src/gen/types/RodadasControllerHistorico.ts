@@ -35,6 +35,13 @@ export type RodadasControllerHistoricoQuery = {
    * @type string | undefined
    */
   desde?: string;
+  /**
+   * @description Pedidas antes deste instante (o começo do dia seguinte ao último do período).
+   *
+   * Format: `date-time`
+   * @type string | undefined
+   */
+  ate?: string;
 };
 
 export type RodadasControllerHistoricoStatus200 = PaginaRodadasDto;

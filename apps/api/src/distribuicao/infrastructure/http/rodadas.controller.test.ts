@@ -182,12 +182,14 @@ describe('controller das rodadas', () => {
       porPagina: 10,
       status: ['concluida'],
       desde: '2026-11-11T00:00:00.000Z',
+      ate: '2026-11-18T03:00:00.000Z',
     });
     expect(c.consultar.historico).toHaveBeenCalledWith({
       pagina: 2,
       porPagina: 10,
       status: ['concluida'],
       desde: new Date('2026-11-11T00:00:00.000Z'),
+      ate: new Date('2026-11-18T03:00:00.000Z'),
     });
   });
 
