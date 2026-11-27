@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   diaDeHoje,
   etiquetaDaSituacao,
+  faixasDoTexto,
   numeroDoTitulo,
   periodoDoVencimento,
+  rotulosDasFaixas,
   somarDias,
 } from './titulos';
 
@@ -52,5 +54,23 @@ describe('títulos', () => {
     expect(
       periodoDoVencimento({ vence: 'periodo', de: '2026-11-01', ate: '2026-11-30' }, hoje),
     ).toEqual({ vencimentoDe: '2026-11-01', vencimentoAte: '2026-11-30' });
+  });
+});
+
+describe('faixas da inadimplência', () => {
+  it('rótulos a partir do começo de cada faixa', () => {
+    expect(rotulosDasFaixas([1, 6, 16, 31])).toEqual([
+      '1–5 dias',
+      '6–15 dias',
+      '16–30 dias',
+      'Mais de 30 dias',
+    ]);
+    expect(rotulosDasFaixas([1, 2])).toEqual(['1 dia', 'Mais de 1 dia']);
+  });
+
+  it('lê o texto digitado, em ordem; recusa o que não é número', () => {
+    expect(faixasDoTexto('16, 1; 6 31')).toEqual([1, 6, 16, 31]);
+    expect(faixasDoTexto('1, seis')).toBeNull();
+    expect(faixasDoTexto('  ')).toBeNull();
   });
 });

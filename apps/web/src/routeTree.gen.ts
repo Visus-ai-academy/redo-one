@@ -18,6 +18,7 @@ import { Route as AppSplatRouteImport } from './routes/_app/$'
 import { Route as AppAvisosRouteImport } from './routes/_app/avisos'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as AppContasPagarRouteImport } from './routes/_app/contas-pagar'
+import { Route as AppContasReceberRouteImport } from './routes/_app/contas-receber'
 import { Route as AppExamesRouteImport } from './routes/_app/exames'
 import { Route as AppFornecedoresRouteImport } from './routes/_app/fornecedores'
 import { Route as AppImportacaoRouteImport } from './routes/_app/importacao'
@@ -38,6 +39,7 @@ import { Route as AppConfiguracoesImportacaoRouteImport } from './routes/_app/co
 import { Route as AppConfiguracoesMeuPerfilRouteImport } from './routes/_app/configuracoes/meu-perfil'
 import { Route as AppConfiguracoesNiveisMedicoRouteImport } from './routes/_app/configuracoes/niveis-medico'
 import { Route as AppConfiguracoesPapeisRouteImport } from './routes/_app/configuracoes/papeis'
+import { Route as AppConfiguracoesRegrasFinanceirasRouteImport } from './routes/_app/configuracoes/regras-financeiras'
 import { Route as AppConfiguracoesRepasseRouteImport } from './routes/_app/configuracoes/repasse'
 import { Route as AppConfiguracoesTabelaPadraoRouteImport } from './routes/_app/configuracoes/tabela-padrao'
 import { Route as AppConfiguracoesTipificacaoRouteImport } from './routes/_app/configuracoes/tipificacao'
@@ -91,6 +93,11 @@ const AppClientesRoute = AppClientesRouteImport.update({
 const AppContasPagarRoute = AppContasPagarRouteImport.update({
   id: '/contas-pagar',
   path: '/contas-pagar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContasReceberRoute = AppContasReceberRouteImport.update({
+  id: '/contas-receber',
+  path: '/contas-receber',
   getParentRoute: () => AppRoute,
 } as any)
 const AppExamesRoute = AppExamesRouteImport.update({
@@ -202,6 +209,12 @@ const AppConfiguracoesPapeisRoute = AppConfiguracoesPapeisRouteImport.update({
   path: '/configuracoes/papeis',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfiguracoesRegrasFinanceirasRoute =
+  AppConfiguracoesRegrasFinanceirasRouteImport.update({
+    id: '/configuracoes/regras-financeiras',
+    path: '/configuracoes/regras-financeiras',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppConfiguracoesRepasseRoute = AppConfiguracoesRepasseRouteImport.update({
   id: '/configuracoes/repasse',
   path: '/configuracoes/repasse',
@@ -267,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/avisos': typeof AppAvisosRoute
   '/clientes': typeof AppClientesRoute
   '/contas-pagar': typeof AppContasPagarRoute
+  '/contas-receber': typeof AppContasReceberRoute
   '/exames': typeof AppExamesRoute
   '/fornecedores': typeof AppFornecedoresRoute
   '/importacao': typeof AppImportacaoRoute
@@ -286,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
+  '/configuracoes/regras-financeiras': typeof AppConfiguracoesRegrasFinanceirasRoute
   '/configuracoes/repasse': typeof AppConfiguracoesRepasseRoute
   '/configuracoes/tabela-padrao': typeof AppConfiguracoesTabelaPadraoRoute
   '/configuracoes/tipificacao': typeof AppConfiguracoesTipificacaoRoute
@@ -306,6 +321,7 @@ export interface FileRoutesByTo {
   '/avisos': typeof AppAvisosRoute
   '/clientes': typeof AppClientesRoute
   '/contas-pagar': typeof AppContasPagarRoute
+  '/contas-receber': typeof AppContasReceberRoute
   '/exames': typeof AppExamesRoute
   '/fornecedores': typeof AppFornecedoresRoute
   '/importacao': typeof AppImportacaoRoute
@@ -326,6 +342,7 @@ export interface FileRoutesByTo {
   '/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
+  '/configuracoes/regras-financeiras': typeof AppConfiguracoesRegrasFinanceirasRoute
   '/configuracoes/repasse': typeof AppConfiguracoesRepasseRoute
   '/configuracoes/tabela-padrao': typeof AppConfiguracoesTabelaPadraoRoute
   '/configuracoes/tipificacao': typeof AppConfiguracoesTipificacaoRoute
@@ -348,6 +365,7 @@ export interface FileRoutesById {
   '/_app/avisos': typeof AppAvisosRoute
   '/_app/clientes': typeof AppClientesRoute
   '/_app/contas-pagar': typeof AppContasPagarRoute
+  '/_app/contas-receber': typeof AppContasReceberRoute
   '/_app/exames': typeof AppExamesRoute
   '/_app/fornecedores': typeof AppFornecedoresRoute
   '/_app/importacao': typeof AppImportacaoRoute
@@ -368,6 +386,7 @@ export interface FileRoutesById {
   '/_app/configuracoes/meu-perfil': typeof AppConfiguracoesMeuPerfilRoute
   '/_app/configuracoes/niveis-medico': typeof AppConfiguracoesNiveisMedicoRoute
   '/_app/configuracoes/papeis': typeof AppConfiguracoesPapeisRoute
+  '/_app/configuracoes/regras-financeiras': typeof AppConfiguracoesRegrasFinanceirasRoute
   '/_app/configuracoes/repasse': typeof AppConfiguracoesRepasseRoute
   '/_app/configuracoes/tabela-padrao': typeof AppConfiguracoesTabelaPadraoRoute
   '/_app/configuracoes/tipificacao': typeof AppConfiguracoesTipificacaoRoute
@@ -391,6 +410,7 @@ export interface FileRouteTypes {
     | '/avisos'
     | '/clientes'
     | '/contas-pagar'
+    | '/contas-receber'
     | '/exames'
     | '/fornecedores'
     | '/importacao'
@@ -410,6 +430,7 @@ export interface FileRouteTypes {
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
+    | '/configuracoes/regras-financeiras'
     | '/configuracoes/repasse'
     | '/configuracoes/tabela-padrao'
     | '/configuracoes/tipificacao'
@@ -430,6 +451,7 @@ export interface FileRouteTypes {
     | '/avisos'
     | '/clientes'
     | '/contas-pagar'
+    | '/contas-receber'
     | '/exames'
     | '/fornecedores'
     | '/importacao'
@@ -450,6 +472,7 @@ export interface FileRouteTypes {
     | '/configuracoes/meu-perfil'
     | '/configuracoes/niveis-medico'
     | '/configuracoes/papeis'
+    | '/configuracoes/regras-financeiras'
     | '/configuracoes/repasse'
     | '/configuracoes/tabela-padrao'
     | '/configuracoes/tipificacao'
@@ -471,6 +494,7 @@ export interface FileRouteTypes {
     | '/_app/avisos'
     | '/_app/clientes'
     | '/_app/contas-pagar'
+    | '/_app/contas-receber'
     | '/_app/exames'
     | '/_app/fornecedores'
     | '/_app/importacao'
@@ -491,6 +515,7 @@ export interface FileRouteTypes {
     | '/_app/configuracoes/meu-perfil'
     | '/_app/configuracoes/niveis-medico'
     | '/_app/configuracoes/papeis'
+    | '/_app/configuracoes/regras-financeiras'
     | '/_app/configuracoes/repasse'
     | '/_app/configuracoes/tabela-padrao'
     | '/_app/configuracoes/tipificacao'
@@ -574,6 +599,13 @@ declare module '@tanstack/react-router' {
       path: '/contas-pagar'
       fullPath: '/contas-pagar'
       preLoaderRoute: typeof AppContasPagarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contas-receber': {
+      id: '/_app/contas-receber'
+      path: '/contas-receber'
+      fullPath: '/contas-receber'
+      preLoaderRoute: typeof AppContasReceberRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/exames': {
@@ -716,6 +748,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesPapeisRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configuracoes/regras-financeiras': {
+      id: '/_app/configuracoes/regras-financeiras'
+      path: '/configuracoes/regras-financeiras'
+      fullPath: '/configuracoes/regras-financeiras'
+      preLoaderRoute: typeof AppConfiguracoesRegrasFinanceirasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/configuracoes/repasse': {
       id: '/_app/configuracoes/repasse'
       path: '/configuracoes/repasse'
@@ -794,6 +833,7 @@ interface AppRouteChildren {
   AppAvisosRoute: typeof AppAvisosRoute
   AppClientesRoute: typeof AppClientesRoute
   AppContasPagarRoute: typeof AppContasPagarRoute
+  AppContasReceberRoute: typeof AppContasReceberRoute
   AppExamesRoute: typeof AppExamesRoute
   AppFornecedoresRoute: typeof AppFornecedoresRoute
   AppImportacaoRoute: typeof AppImportacaoRoute
@@ -814,6 +854,7 @@ interface AppRouteChildren {
   AppConfiguracoesMeuPerfilRoute: typeof AppConfiguracoesMeuPerfilRoute
   AppConfiguracoesNiveisMedicoRoute: typeof AppConfiguracoesNiveisMedicoRoute
   AppConfiguracoesPapeisRoute: typeof AppConfiguracoesPapeisRoute
+  AppConfiguracoesRegrasFinanceirasRoute: typeof AppConfiguracoesRegrasFinanceirasRoute
   AppConfiguracoesRepasseRoute: typeof AppConfiguracoesRepasseRoute
   AppConfiguracoesTabelaPadraoRoute: typeof AppConfiguracoesTabelaPadraoRoute
   AppConfiguracoesTipificacaoRoute: typeof AppConfiguracoesTipificacaoRoute
@@ -832,6 +873,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAvisosRoute: AppAvisosRoute,
   AppClientesRoute: AppClientesRoute,
   AppContasPagarRoute: AppContasPagarRoute,
+  AppContasReceberRoute: AppContasReceberRoute,
   AppExamesRoute: AppExamesRoute,
   AppFornecedoresRoute: AppFornecedoresRoute,
   AppImportacaoRoute: AppImportacaoRoute,
@@ -853,6 +895,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesMeuPerfilRoute: AppConfiguracoesMeuPerfilRoute,
   AppConfiguracoesNiveisMedicoRoute: AppConfiguracoesNiveisMedicoRoute,
   AppConfiguracoesPapeisRoute: AppConfiguracoesPapeisRoute,
+  AppConfiguracoesRegrasFinanceirasRoute:
+    AppConfiguracoesRegrasFinanceirasRoute,
   AppConfiguracoesRepasseRoute: AppConfiguracoesRepasseRoute,
   AppConfiguracoesTabelaPadraoRoute: AppConfiguracoesTabelaPadraoRoute,
   AppConfiguracoesTipificacaoRoute: AppConfiguracoesTipificacaoRoute,

@@ -74,6 +74,7 @@ describe('grupo Financeiro', () => {
         'categorias-financeiras.ver',
       ],
       ['Contas bancárias', '/configuracoes/contas-bancarias', 'contas-bancarias.ver'],
+      ['Regras financeiras', '/configuracoes/regras-financeiras', 'financeiro-config.ver'],
     ]);
   });
 });

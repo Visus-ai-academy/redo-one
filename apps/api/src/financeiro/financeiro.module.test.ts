@@ -9,9 +9,16 @@ import { FinanceiroModule } from './financeiro.module';
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { FocusNfeEmissor } from './infrastructure/focus-nfe/focus-nfe-emissor';
 import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
+import {
+  ConfiguracoesFinanceirasController,
+  InadimplenciaController,
+} from './infrastructure/http/configuracoes.controller';
 import { ContasBancariasController } from './infrastructure/http/contas-bancarias.controller';
 import { FornecedoresController } from './infrastructure/http/fornecedores.controller';
-import { ContasPagarTitulosController } from './infrastructure/http/titulos.controller';
+import {
+  ContasPagarTitulosController,
+  ContasReceberTitulosController,
+} from './infrastructure/http/titulos.controller';
 import { SimuladorEmissorNfse } from './infrastructure/simulador/simulador-emissor-nfse';
 
 const config = (valores: Record<string, string>) => ({ get: (nome: string) => valores[nome] });
@@ -57,5 +64,12 @@ describe('FinanceiroModule', () => {
     expect(modulo.get(ContasBancariasController)).toBeInstanceOf(ContasBancariasController);
     expect(modulo.get(FornecedoresController)).toBeInstanceOf(FornecedoresController);
     expect(modulo.get(ContasPagarTitulosController)).toBeInstanceOf(ContasPagarTitulosController);
+    expect(modulo.get(ContasReceberTitulosController)).toBeInstanceOf(
+      ContasReceberTitulosController,
+    );
+    expect(modulo.get(InadimplenciaController)).toBeInstanceOf(InadimplenciaController);
+    expect(modulo.get(ConfiguracoesFinanceirasController)).toBeInstanceOf(
+      ConfiguracoesFinanceirasController,
+    );
   });
 });

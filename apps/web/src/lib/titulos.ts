@@ -75,3 +75,25 @@ export const ROTULO_ORIGEM: Record<string, string> = {
   carga_omie: 'Carga inicial',
   recorrencia: 'Recorrência',
 };
+
+const dias = (n: number) => (n === 1 ? '1 dia' : `${n} dias`);
+
+/** "1–5 dias", "6–15 dias", "Mais de 30 dias": o rótulo de cada faixa pelo começo dela. */
+export function rotulosDasFaixas(faixas: readonly number[]): string[] {
+  return faixas.map((inicio, i) => {
+    const proxima = faixas[i + 1];
+    if (proxima === undefined) return `Mais de ${dias(inicio - 1)}`;
+    if (proxima - 1 === inicio) return dias(inicio);
+    return `${inicio}–${proxima - 1} dias`;
+  });
+}
+
+/** "1, 6, 16, 31" → [1, 6, 16, 31] em ordem; `null` se algum pedaço não é número inteiro. */
+export function faixasDoTexto(texto: string): number[] | null {
+  const partes = texto
+    .split(/[,;\s]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (partes.length === 0 || !partes.every((p) => /^\d+$/.test(p))) return null;
+  return partes.map(Number).sort((a, b) => a - b);
+}

@@ -12,6 +12,7 @@ import {
   Robot,
   Stethoscope,
   Storefront,
+  TrayArrowDown,
   TrayArrowUp,
 } from '@phosphor-icons/react';
 import type { LinkProps } from '@tanstack/react-router';
@@ -76,6 +77,12 @@ export const GRUPOS_MENU: GrupoMenu[] = [
         permissao: 'faturamento.ver',
       },
       { nome: 'Repasse', to: '/repasse', icone: HandCoins, permissao: 'repasse.ver' },
+      {
+        nome: 'Contas a receber',
+        to: '/contas-receber',
+        icone: TrayArrowDown,
+        permissao: 'contas-receber.ver',
+      },
       {
         nome: 'Contas a pagar',
         to: '/contas-pagar',

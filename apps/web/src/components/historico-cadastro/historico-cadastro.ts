@@ -82,6 +82,7 @@ const NOME_DA_ENTIDADE: Record<string, string> = {
   cliente_dados_fiscais: 'Dados de faturamento',
   fornecedor: 'Fornecedor',
   titulo: 'Título',
+  configuracao_financeira: 'Regras financeiras',
 };
 
 /** No médico, o evento da equipe diz o que mudou para ele; `nome` é o da equipe. */

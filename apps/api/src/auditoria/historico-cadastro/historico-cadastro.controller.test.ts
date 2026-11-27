@@ -13,8 +13,8 @@ describe('HistoricoCadastroController', () => {
 
   it('uma rota por cadastro, cada uma com o ver do cadastro', () => {
     expect(
-      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor, p.doTituloPagar].map((h) =>
-        reflector.get(PATH_METADATA, h),
+      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor, p.doTituloPagar, p.doTituloReceber].map(
+        (h) => reflector.get(PATH_METADATA, h),
       ),
     ).toEqual([
       'medicos/:id/historico',
@@ -22,10 +22,11 @@ describe('HistoricoCadastroController', () => {
       'catalogo/exames/:id/historico',
       'financeiro/fornecedores/:id/historico',
       'financeiro/contas-pagar/titulos/:id/historico',
+      'financeiro/contas-receber/titulos/:id/historico',
     ]);
     expect(
-      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor, p.doTituloPagar].map((h) =>
-        reflector.get(PERMISSOES_EXIGIDAS, h),
+      [p.doMedico, p.doCliente, p.doExame, p.doFornecedor, p.doTituloPagar, p.doTituloReceber].map(
+        (h) => reflector.get(PERMISSOES_EXIGIDAS, h),
       ),
     ).toEqual([
       ['medicos.ver'],
@@ -33,6 +34,7 @@ describe('HistoricoCadastroController', () => {
       ['exames.ver'],
       ['fornecedores.ver'],
       ['contas-pagar.ver'],
+      ['contas-receber.ver'],
     ]);
   });
 

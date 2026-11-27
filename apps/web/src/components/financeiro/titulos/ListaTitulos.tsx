@@ -447,7 +447,7 @@ function PainelDoTitulo({
         erro={consulta.error ?? empresas.error ?? categorias.error ?? contas.error ?? undefined}
         oQue="o título"
         voltar={{
-          to: ROTA_DO_TIPO[tipo] as '/contas-pagar',
+          to: ROTA_DO_TIPO[tipo],
           rotulo: `Voltar para ${TEXTOS_DO_TIPO[tipo].titulo}`,
         }}
         onTentarDeNovo={() => {
@@ -490,7 +490,7 @@ function PainelDoTitulo({
     );
   }
 
-  const cadastro: CadastroComHistorico = tipo === 'pagar' ? 'titulo-pagar' : 'titulo-pagar';
+  const cadastro: CadastroComHistorico = tipo === 'pagar' ? 'titulo-pagar' : 'titulo-receber';
   return (
     <PainelTitulo
       tipo={tipo}

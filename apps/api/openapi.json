@@ -12701,6 +12701,596 @@
         ]
       }
     },
+    "/financeiro/contas-receber/titulos": {
+      "get": {
+        "operationId": "ContasReceberTitulosController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Nome do favorecido, nº (R-0123), documento ou descrição.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa",
+            "required": true,
+            "in": "query",
+            "description": "Id da empresa ou `todas` (escolha explícita).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "situacao",
+            "required": true,
+            "in": "query",
+            "description": "`em_aberto` = aberto ou parcial; `vencidos` = em aberto com vencimento antes de hoje.",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoFiltroTitulo"
+            }
+          },
+          {
+            "name": "origem",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/OrigemFiltroTitulo"
+            }
+          },
+          {
+            "name": "categoria",
+            "required": true,
+            "in": "query",
+            "description": "Id da categoria ou `todas`.",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "favorecidoTipo",
+            "required": false,
+            "in": "query",
+            "description": "Com `favorecidoId`: só os títulos dele.",
+            "schema": {
+              "$ref": "#/components/schemas/TipoFavorecido"
+            }
+          },
+          {
+            "name": "favorecidoId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vencimentoDe",
+            "required": false,
+            "in": "query",
+            "description": "Vencimento a partir deste dia.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vencimentoAte",
+            "required": false,
+            "in": "query",
+            "description": "Vencimento até este dia.",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTitulosDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Títulos, por vencimento, com os totais em aberto e vencido.",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "post": {
+        "operationId": "ContasReceberTitulosController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TituloDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          }
+        },
+        "summary": "Lança o título à mão.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/favorecidos": {
+      "get": {
+        "operationId": "ContasReceberTitulosController_favorecidos",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpcaoFavorecidoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Clientes principais ativos para o título.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/titulos/{id}": {
+      "get": {
+        "operationId": "ContasReceberTitulosController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TituloDetalheDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        },
+        "summary": "O título, com as baixas (estornadas inclusive).",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "ContasReceberTitulosController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TituloDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Título liquidado ou cancelado."
+          }
+        },
+        "summary": "Edita o título em aberto ou parcial.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/titulos/{id}/prorrogacao": {
+      "post": {
+        "operationId": "ContasReceberTitulosController_prorrogar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProrrogacaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Título liquidado ou cancelado."
+          }
+        },
+        "summary": "Novo vencimento, com motivo; o original fica guardado.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/titulos/{id}/baixas": {
+      "post": {
+        "operationId": "ContasReceberTitulosController_baixar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaixaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "O id da baixa.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdCriadoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algum campo inválido; `campos` diz qual e por quê."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Título liquidado ou cancelado."
+          }
+        },
+        "summary": "Dá baixa (total ou parcial) numa conta bancária da empresa.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/titulos/{id}/baixas/{baixaId}/estorno": {
+      "post": {
+        "operationId": "ContasReceberTitulosController_estornar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "baixaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Motivo faltando."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "A baixa já foi estornada."
+          }
+        },
+        "summary": "Estorna a baixa, com motivo; o título volta a ter saldo.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/titulos/{id}/cancelamento": {
+      "post": {
+        "operationId": "ContasReceberTitulosController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Motivo faltando."
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": "Com baixa ativa ou já cancelado."
+          }
+        },
+        "summary": "Cancela o título sem baixa ativa, com motivo.",
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/inadimplencia": {
+      "get": {
+        "operationId": "InadimplenciaController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "description": "Parte do nome do cliente.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa",
+            "required": true,
+            "in": "query",
+            "description": "Id da empresa ou `todas` (escolha explícita).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          },
+          {
+            "name": "faixa",
+            "required": true,
+            "in": "query",
+            "description": "O começo (em dias) da faixa de atraso, ou `todas` (escolha explícita).",
+            "schema": {
+              "example": "todas",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaInadimplenciaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/configuracoes": {
+      "get": {
+        "operationId": "ConfiguracoesFinanceirasController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfiguracaoEmpresaDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
+    "/financeiro/configuracoes/{empresaId}": {
+      "put": {
+        "operationId": "ConfiguracoesFinanceirasController_atualizar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfiguracaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Faixas inválidas ou empresa fora do financeiro."
+          }
+        },
+        "tags": [
+          "financeiro"
+        ]
+      }
+    },
     "/distribuicao/rodadas/viva": {
       "get": {
         "operationId": "RodadasController_viva",
@@ -14739,6 +15329,57 @@
     "/financeiro/contas-pagar/titulos/{id}/historico": {
       "get": {
         "operationId": "HistoricoCadastroController_doTituloPagar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mudanças registradas no cadastro, da mais nova para a mais antiga. Edição, baixas, estornos, prorrogação e cancelamento do título.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaHistoricoCadastroDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "historico"
+        ]
+      }
+    },
+    "/financeiro/contas-receber/titulos/{id}/historico": {
+      "get": {
+        "operationId": "HistoricoCadastroController_doTituloReceber",
         "parameters": [
           {
             "name": "id",
@@ -29384,6 +30025,195 @@
           "contaBancariaId",
           "principalCentavos",
           "forma"
+        ]
+      },
+      "FaixaDaLinhaDto": {
+        "type": "object",
+        "properties": {
+          "inicio": {
+            "type": "integer",
+            "description": "O dia em que a faixa começa."
+          },
+          "rotulo": {
+            "type": "string",
+            "example": "6–15 dias"
+          },
+          "indice": {
+            "type": "integer",
+            "description": "Posição da faixa (0 = a primeira)."
+          },
+          "de": {
+            "type": "integer",
+            "description": "Quantas faixas a empresa tem."
+          }
+        },
+        "required": [
+          "inicio",
+          "rotulo",
+          "indice",
+          "de"
+        ]
+      },
+      "LinhaInadimplenciaDto": {
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clienteNome": {
+            "type": "string"
+          },
+          "contratadoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "titulos": {
+            "type": "integer",
+            "description": "Títulos vencidos."
+          },
+          "maisAntigo": {
+            "type": "string",
+            "format": "date",
+            "description": "Vencimento do mais antigo."
+          },
+          "diasDeAtraso": {
+            "type": "integer",
+            "description": "Dias de atraso do mais antigo."
+          },
+          "faixa": {
+            "$ref": "#/components/schemas/FaixaDaLinhaDto"
+          },
+          "totalVencidoCentavos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "clienteId",
+          "clienteNome",
+          "contratadoId",
+          "empresaNome",
+          "titulos",
+          "maisAntigo",
+          "diasDeAtraso",
+          "faixa",
+          "totalVencidoCentavos"
+        ]
+      },
+      "FaixaDto": {
+        "type": "object",
+        "properties": {
+          "inicio": {
+            "type": "integer",
+            "description": "O dia em que a faixa começa."
+          },
+          "rotulo": {
+            "type": "string",
+            "example": "6–15 dias"
+          }
+        },
+        "required": [
+          "inicio",
+          "rotulo"
+        ]
+      },
+      "PaginaInadimplenciaDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaInadimplenciaDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Clientes."
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "porPagina": {
+            "type": "integer"
+          },
+          "totalVencidoCentavos": {
+            "type": "integer",
+            "description": "Vencido de tudo que o filtro pega."
+          },
+          "faixas": {
+            "description": "As faixas das empresas em vista (o filtro).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaixaDto"
+            }
+          }
+        },
+        "required": [
+          "itens",
+          "total",
+          "pagina",
+          "porPagina",
+          "totalVencidoCentavos",
+          "faixas"
+        ]
+      },
+      "ConfiguracaoEmpresaDto": {
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaNome": {
+            "type": "string"
+          },
+          "faixasInadimplencia": {
+            "example": [
+              1,
+              6,
+              16,
+              31
+            ],
+            "description": "Começo (em dias de atraso) de cada faixa da inadimplência: de 2 a 8, a primeira no dia 1.",
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "padrao": {
+            "type": "boolean",
+            "description": "A empresa ainda não gravou as suas: vale o padrão."
+          }
+        },
+        "required": [
+          "empresaId",
+          "empresaNome",
+          "faixasInadimplencia",
+          "padrao"
+        ]
+      },
+      "ConfiguracaoDto": {
+        "type": "object",
+        "properties": {
+          "faixasInadimplencia": {
+            "example": [
+              1,
+              6,
+              16,
+              31
+            ],
+            "description": "Começo (em dias de atraso) de cada faixa da inadimplência: de 2 a 8, a primeira no dia 1.",
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "faixasInadimplencia"
         ]
       },
       "StatusRodada": {

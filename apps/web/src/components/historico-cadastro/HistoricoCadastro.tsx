@@ -8,6 +8,7 @@ import { historicoCadastroControllerDoExameQueryOptions } from '../../gen/hooks/
 import { historicoCadastroControllerDoFornecedorQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoFornecedor';
 import { historicoCadastroControllerDoMedicoQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoMedico';
 import { historicoCadastroControllerDoTituloPagarQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoTituloPagar';
+import { historicoCadastroControllerDoTituloReceberQueryOptions } from '../../gen/hooks/useHistoricoCadastroControllerDoTituloReceber';
 import type { PaginaHistoricoCadastroDto } from '../../gen/types/PaginaHistoricoCadastroDto';
 import { cn } from '../../lib/cn';
 import { dataHoraCurta } from '../../lib/datas';
@@ -28,7 +29,8 @@ export type CadastroComHistorico =
   | 'exame'
   | 'fornecedor'
   | 'dados-fiscais'
-  | 'titulo-pagar';
+  | 'titulo-pagar'
+  | 'titulo-receber';
 
 /** Num painel lateral, 10 mudanças por página (a API pagina). */
 const POR_PAGINA = 10;
@@ -55,6 +57,11 @@ function opcoesDaConsulta(
   }
   if (cadastro === 'fornecedor') {
     return historicoCadastroControllerDoFornecedorQueryOptions(args) as unknown as OpcoesHistorico;
+  }
+  if (cadastro === 'titulo-receber') {
+    return historicoCadastroControllerDoTituloReceberQueryOptions(
+      args,
+    ) as unknown as OpcoesHistorico;
   }
   if (cadastro === 'titulo-pagar') {
     return historicoCadastroControllerDoTituloPagarQueryOptions(args) as unknown as OpcoesHistorico;

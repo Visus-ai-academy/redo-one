@@ -23,11 +23,12 @@ describe('GRUPOS_MENU', () => {
     ]);
   });
 
-  it('Financeiro tem Faturamento, Repasse e Contas a pagar, cada um com a permissão ver', () => {
+  it('Financeiro tem Faturamento, Repasse, Contas a receber e Contas a pagar, com o ver de cada um', () => {
     const financeiro = GRUPOS_MENU.find((g) => g.titulo === 'Financeiro');
     expect(financeiro?.itens.map((i) => [i.nome, i.to, i.permissao])).toEqual([
       ['Faturamento', '/faturamento/competencias', 'faturamento.ver'],
       ['Repasse', '/repasse', 'repasse.ver'],
+      ['Contas a receber', '/contas-receber', 'contas-receber.ver'],
       ['Contas a pagar', '/contas-pagar', 'contas-pagar.ver'],
     ]);
   });

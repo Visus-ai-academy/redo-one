@@ -493,6 +493,35 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
     especiais: [],
   },
   {
+    // Financeiro › Contas a receber: títulos dos clientes, as baixas e a aba Inadimplência (que
+    // vem junto com o ver). Lê as categorias de receita e as contas bancárias de cada empresa.
+    tela: 'contas-receber',
+    rotulo: 'Contas a receber',
+    area: 'Financeiro',
+    padrao: so('ver', 'criar', 'editar'),
+    especiais: [
+      {
+        chave: 'contas-receber.baixar',
+        rotulo: 'Dar baixa',
+        descricao: 'Registrar o recebimento de um título, total ou parcial, numa conta bancária.',
+        sensivel: true,
+      },
+      {
+        chave: 'contas-receber.estornar',
+        rotulo: 'Estornar baixa',
+        descricao: 'Desfazer uma baixa, com motivo; o título volta a ter saldo.',
+        sensivel: true,
+      },
+      {
+        chave: 'contas-receber.cancelar',
+        rotulo: 'Cancelar',
+        descricao: 'Cancelar título sem baixa ativa, com motivo.',
+        sensivel: true,
+      },
+    ],
+    exige: ['categorias-financeiras', 'contas-bancarias'],
+  },
+  {
     // Financeiro › Contas a pagar: títulos a fornecedores e médicos e as baixas deles. Lê as
     // categorias de despesa e as contas bancárias de cada empresa.
     tela: 'contas-pagar',
@@ -520,6 +549,15 @@ export const CATALOGO_PERMISSOES: readonly TelaCatalogo[] = [
       },
     ],
     exige: ['categorias-financeiras', 'contas-bancarias'],
+  },
+  {
+    // Configurações › Financeiro › Regras financeiras: o que vale para cada empresa (faixas da
+    // inadimplência; depois, vencimento e conta dos títulos do faturamento).
+    tela: 'financeiro-config',
+    rotulo: 'Regras financeiras',
+    area: 'Financeiro',
+    padrao: [{ acao: 'ver' }, { acao: 'editar', sensivel: true }],
+    especiais: [],
   },
   {
     tela: 'usuarios',

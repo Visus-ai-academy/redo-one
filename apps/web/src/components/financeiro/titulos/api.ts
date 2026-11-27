@@ -8,10 +8,19 @@ import { contasPagarTitulosControllerCriar } from '../../../gen/clients/contasPa
 import { contasPagarTitulosControllerEstornar } from '../../../gen/clients/contasPagarTitulosControllerEstornar';
 import { contasPagarTitulosControllerFavorecidos } from '../../../gen/clients/contasPagarTitulosControllerFavorecidos';
 import { contasPagarTitulosControllerProrrogar } from '../../../gen/clients/contasPagarTitulosControllerProrrogar';
+import { contasReceberTitulosControllerAtualizar } from '../../../gen/clients/contasReceberTitulosControllerAtualizar';
+import { contasReceberTitulosControllerBaixar } from '../../../gen/clients/contasReceberTitulosControllerBaixar';
+import { contasReceberTitulosControllerCancelar } from '../../../gen/clients/contasReceberTitulosControllerCancelar';
+import { contasReceberTitulosControllerCriar } from '../../../gen/clients/contasReceberTitulosControllerCriar';
+import { contasReceberTitulosControllerEstornar } from '../../../gen/clients/contasReceberTitulosControllerEstornar';
+import { contasReceberTitulosControllerFavorecidos } from '../../../gen/clients/contasReceberTitulosControllerFavorecidos';
+import { contasReceberTitulosControllerProrrogar } from '../../../gen/clients/contasReceberTitulosControllerProrrogar';
 import { categoriasFinanceirasControllerOpcoesQueryOptions } from '../../../gen/hooks/useCategoriasFinanceirasControllerOpcoes';
 import { contasBancariasControllerListarQueryOptions } from '../../../gen/hooks/useContasBancariasControllerListar';
 import { contasPagarTitulosControllerListarQueryOptions } from '../../../gen/hooks/useContasPagarTitulosControllerListar';
 import { contasPagarTitulosControllerObterQueryOptions } from '../../../gen/hooks/useContasPagarTitulosControllerObter';
+import { contasReceberTitulosControllerListarQueryOptions } from '../../../gen/hooks/useContasReceberTitulosControllerListar';
+import { contasReceberTitulosControllerObterQueryOptions } from '../../../gen/hooks/useContasReceberTitulosControllerObter';
 import { empresasFinanceiroControllerListarQueryOptions } from '../../../gen/hooks/useEmpresasFinanceiroControllerListar';
 import type { TipoTitulo } from '../../../lib/titulos';
 
@@ -30,15 +39,23 @@ const pagar = {
 
 export type ApiTitulos = typeof pagar;
 
-export const API_TITULOS: Partial<Record<TipoTitulo, ApiTitulos>> & { pagar: ApiTitulos } = {
-  pagar,
+const receber: ApiTitulos = {
+  tela: 'contas-receber',
+  // Mesma resposta da de pagar; só a chave do cache (a URL) muda de tipo.
+  listar: contasReceberTitulosControllerListarQueryOptions as unknown as ApiTitulos['listar'],
+  obter: contasReceberTitulosControllerObterQueryOptions as unknown as ApiTitulos['obter'],
+  criar: contasReceberTitulosControllerCriar,
+  atualizar: contasReceberTitulosControllerAtualizar,
+  baixar: contasReceberTitulosControllerBaixar,
+  estornar: contasReceberTitulosControllerEstornar,
+  cancelar: contasReceberTitulosControllerCancelar,
+  prorrogar: contasReceberTitulosControllerProrrogar,
+  favorecidos: contasReceberTitulosControllerFavorecidos,
 };
 
-export function apiDoTipo(tipo: TipoTitulo): ApiTitulos {
-  const api = API_TITULOS[tipo];
-  if (!api) throw new Error(`Sem API para os títulos a ${tipo}.`);
-  return api;
-}
+const API_TITULOS: Record<TipoTitulo, ApiTitulos> = { pagar, receber };
+
+export const apiDoTipo = (tipo: TipoTitulo): ApiTitulos => API_TITULOS[tipo];
 
 /** Textos que mudam com o tipo. */
 export const TEXTOS_DO_TIPO = {

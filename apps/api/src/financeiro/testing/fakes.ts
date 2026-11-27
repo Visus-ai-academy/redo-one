@@ -5,6 +5,7 @@ import type {
   CategoriasRepository,
   FiltroCategorias,
 } from '../application/ports/categorias.repository';
+import type { ConfiguracoesFinanceiras } from '../application/ports/configuracoes-financeiras';
 import type {
   ContaBancaria,
   ContasBancariasRepository,
@@ -28,6 +29,7 @@ import type {
   TituloTravado,
 } from '../application/ports/titulos.repository';
 import type { DadosCategoria, TipoCategoria } from '../domain/categoria-financeira';
+import type { ConfiguracaoFinanceira } from '../domain/configuracao-financeira';
 import type { DadosContaBancaria } from '../domain/conta-bancaria';
 import type { DadosFornecedor } from '../domain/fornecedor';
 import type { BaixaPreparada, Favorecido, TipoFavorecido, TipoTitulo } from '../domain/titulo';
@@ -546,5 +548,19 @@ export class TitulosEmMemoria implements TitulosRepository {
     const resultado = await fn(travado, escrita);
     if (copia) this.linhas.set(id, copia);
     return resultado;
+  }
+}
+
+/** Configurações financeiras gravadas, por empresa. */
+export class ConfiguracoesEmMemoria implements ConfiguracoesFinanceiras {
+  readonly linhas = new Map<string, ConfiguracaoFinanceira>();
+
+  async buscar(contratadoId: string) {
+    const c = this.linhas.get(contratadoId);
+    return c ? structuredClone(c) : null;
+  }
+
+  async salvar(contratadoId: string, dados: ConfiguracaoFinanceira, _porId?: string) {
+    this.linhas.set(contratadoId, structuredClone(dados));
   }
 }

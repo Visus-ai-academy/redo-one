@@ -8,6 +8,12 @@ import {
   type CategoriasRepository,
 } from './application/ports/categorias.repository';
 import {
+  CONFIGURACOES_FINANCEIRAS,
+  type ConfiguracoesFinanceiras,
+  INADIMPLENCIA,
+  type Inadimplencia,
+} from './application/ports/configuracoes-financeiras';
+import {
   CONTAS_BANCARIAS_REPOSITORY,
   type ContasBancariasRepository,
 } from './application/ports/contas-bancarias.repository';
@@ -30,6 +36,11 @@ import {
   SalvarCategoria,
 } from './application/use-cases/categorias';
 import {
+  ConsultarConfiguracoes,
+  ConsultarInadimplencia,
+  SalvarConfiguracao,
+} from './application/use-cases/configuracoes';
+import {
   ConsultarContasBancarias,
   ExcluirContaBancaria,
   ListarEmpresas,
@@ -51,12 +62,23 @@ import {
 import { criarEmissorNfse } from './infrastructure/criar-emissor-nfse';
 import { CategoriasFinanceirasController } from './infrastructure/http/categorias-financeiras.controller';
 import {
+  ConfiguracoesFinanceirasController,
+  InadimplenciaController,
+} from './infrastructure/http/configuracoes.controller';
+import {
   ContasBancariasController,
   EmpresasFinanceiroController,
 } from './infrastructure/http/contas-bancarias.controller';
 import { FornecedoresController } from './infrastructure/http/fornecedores.controller';
-import { ContasPagarTitulosController } from './infrastructure/http/titulos.controller';
+import {
+  ContasPagarTitulosController,
+  ContasReceberTitulosController,
+} from './infrastructure/http/titulos.controller';
 import { DrizzleCategoriasRepository } from './infrastructure/persistence/drizzle-categorias.repository';
+import {
+  DrizzleConfiguracoesFinanceiras,
+  DrizzleInadimplencia,
+} from './infrastructure/persistence/drizzle-configuracoes-financeiras';
 import { DrizzleContasBancariasRepository } from './infrastructure/persistence/drizzle-contas-bancarias.repository';
 import { DrizzleEmpresas } from './infrastructure/persistence/drizzle-empresas';
 import { DrizzleFavorecidos } from './infrastructure/persistence/drizzle-favorecidos';
@@ -65,8 +87,9 @@ import { DrizzleTitulosRepository } from './infrastructure/persistence/drizzle-t
 import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
 
 /**
- * Contexto financeiro: plano de categorias, contas bancárias, fornecedores, títulos a pagar e as
- * baixas deles, e a integração de saída com a Focus NFe (ou o simulador).
+ * Contexto financeiro: plano de categorias, contas bancárias, fornecedores, títulos a pagar e a
+ * receber com as baixas, inadimplência, regras financeiras por empresa e a integração de saída com
+ * a Focus NFe (ou o simulador).
  */
 @Module({
   controllers: [
@@ -75,6 +98,9 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
     EmpresasFinanceiroController,
     FornecedoresController,
     ContasPagarTitulosController,
+    ContasReceberTitulosController,
+    InadimplenciaController,
+    ConfiguracoesFinanceirasController,
   ],
   providers: [
     { provide: CLOCK, useValue: systemClock },
@@ -210,6 +236,34 @@ import { variaveisDoConfig } from './infrastructure/variaveis-ambiente-config';
       provide: OpcoesDeFavorecido,
       inject: [FAVORECIDOS],
       useFactory: (favorecidos: Favorecidos) => new OpcoesDeFavorecido(favorecidos),
+    },
+    { provide: CONFIGURACOES_FINANCEIRAS, useClass: DrizzleConfiguracoesFinanceiras },
+    { provide: INADIMPLENCIA, useClass: DrizzleInadimplencia },
+    {
+      provide: ConsultarConfiguracoes,
+      inject: [EMPRESAS_FINANCEIRO, CONFIGURACOES_FINANCEIRAS],
+      useFactory: (empresas: EmpresasFinanceiro, configs: ConfiguracoesFinanceiras) =>
+        new ConsultarConfiguracoes(empresas, configs),
+    },
+    {
+      provide: SalvarConfiguracao,
+      inject: [EMPRESAS_FINANCEIRO, CONFIGURACOES_FINANCEIRAS, AUDITORIA, CLOCK],
+      useFactory: (
+        empresas: EmpresasFinanceiro,
+        configs: ConfiguracoesFinanceiras,
+        auditoria: Auditoria,
+        clock: Clock,
+      ) => new SalvarConfiguracao(empresas, configs, auditoria, clock),
+    },
+    {
+      provide: ConsultarInadimplencia,
+      inject: [INADIMPLENCIA, EMPRESAS_FINANCEIRO, CONFIGURACOES_FINANCEIRAS, CLOCK],
+      useFactory: (
+        fonte: Inadimplencia,
+        empresas: EmpresasFinanceiro,
+        configs: ConfiguracoesFinanceiras,
+        clock: Clock,
+      ) => new ConsultarInadimplencia(fonte, empresas, configs, clock),
     },
   ],
   exports: [EMISSOR_NFSE],

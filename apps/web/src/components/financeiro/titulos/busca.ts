@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { periodoDoVencimento, type TipoTitulo } from '../../../lib/titulos';
+import type { TomEtiqueta } from '../../etiqueta/Etiqueta';
 
 const TODAS = 'todas';
 
@@ -24,6 +25,8 @@ export const buscaTitulosSchema = z.object({
     .enum(['manual', 'faturamento', 'pre_pago', 'repasse', 'carga_omie'])
     .optional()
     .catch(undefined),
+  /** Inadimplência: o começo (em dias) da faixa de atraso. */
+  faixa: z.coerce.number().int().min(1).optional().catch(undefined),
   favorecidoTipo: z.enum(['cliente', 'fornecedor', 'medico']).optional().catch(undefined),
   favorecidoId: z.uuid().optional().catch(undefined),
   /** Nome do favorecido filtrado (para o aviso acima da lista). */
@@ -60,3 +63,21 @@ export const ROTA_DO_TIPO = {
   pagar: '/contas-pagar',
   receber: '/contas-receber',
 } as const satisfies Record<TipoTitulo, string>;
+
+export const POR_PAGINA_INADIMPLENCIA = 25;
+
+/** Tom da faixa: a primeira neutra, a do meio de atenção, as últimas de erro. */
+export function tomDaFaixa(indice: number, de: number): TomEtiqueta {
+  if (indice === 0) return 'inativo';
+  return indice >= Math.ceil(de / 2) ? 'erro' : 'atencao';
+}
+
+export const consultaDaInadimplencia = (busca: BuscaTitulos) => ({
+  query: {
+    empresa: busca.empresa ?? TODAS,
+    faixa: busca.faixa ? String(busca.faixa) : TODAS,
+    busca: busca.busca,
+    pagina: busca.pagina ?? 1,
+    porPagina: POR_PAGINA_INADIMPLENCIA,
+  },
+});

@@ -81,7 +81,9 @@ describe('catálogo de permissões', () => {
       contratos: ['Financeiro', crud],
       'categorias-financeiras': ['Financeiro', crud],
       'contas-bancarias': ['Financeiro', crud],
+      'contas-receber': ['Financeiro', ['ver', 'criar', 'editar']],
       'contas-pagar': ['Financeiro', ['ver', 'criar', 'editar']],
+      'financeiro-config': ['Financeiro', ['ver', 'editar']],
       usuarios: ['Configurações', ['ver', 'criar', 'editar']],
       papeis: ['Configurações', crud],
       catalogo: ['Configurações', crud],
@@ -163,6 +165,14 @@ describe('catálogo de permissões', () => {
       'contas-pagar.cancelar',
     ]);
     expect(tela('contas-pagar').exige).toEqual(['categorias-financeiras', 'contas-bancarias']);
+    expect(especiais('contas-receber')).toEqual([
+      'contas-receber.baixar',
+      'contas-receber.estornar',
+      'contas-receber.cancelar',
+    ]);
+    expect(tela('contas-receber').exige).toEqual(['categorias-financeiras', 'contas-bancarias']);
+    expect(especiais('financeiro-config')).toEqual([]);
+    expect(sensiveis('financeiro-config')).toEqual(['financeiro-config.editar']);
     expect(sensiveis('contas-bancarias')).toEqual([
       'contas-bancarias.editar',
       'contas-bancarias.excluir',

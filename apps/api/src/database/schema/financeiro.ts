@@ -317,3 +317,17 @@ export const baixas = pgTable(
     ),
   ],
 );
+
+/**
+ * Regras financeiras de cada empresa que não dependem de vigência (por enquanto, as faixas da
+ * inadimplência). Sem linha, a empresa usa o padrão (`CONFIGURACAO_PADRAO` do domínio).
+ */
+export const configuracoesFinanceiras = pgTable('configuracoes_financeiras', {
+  contratadoId: uuid('contratado_id')
+    .primaryKey()
+    .references(() => contratados.id),
+  /** Começo (em dias de atraso) de cada faixa, em ordem, a primeira no dia 1. */
+  faixasInadimplencia: integer('faixas_inadimplencia').array().notNull(),
+  atualizadoPorId: uuid('atualizado_por_id').references(() => usuarios.id),
+  atualizadoEm: atualizadoEm(),
+});
