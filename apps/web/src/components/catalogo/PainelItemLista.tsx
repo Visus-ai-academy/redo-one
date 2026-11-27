@@ -194,8 +194,9 @@ export function PainelItemLista({
       {variante === 'subespecialidade' && (
         <form.AppField name="especialidadeIds">
           {(field) => (
-            <field.CheckboxListField
+            <field.SelecaoMultiplaField
               label="Especialidades"
+              placeholder="Escolha as especialidades"
               required
               description="A subespecialidade é um recorte dentro delas (ex.: COLUNAS em NEURO e MSK)."
               opcoes={especialidades.map((e) => ({ valor: e.id, rotulo: e.nome, cor: e.cor }))}

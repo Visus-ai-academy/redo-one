@@ -1,10 +1,10 @@
 import { useStore } from '@tanstack/react-form';
 import { type ReactNode, useState } from 'react';
 import { z } from 'zod';
-
 import type { CategoriaItemDto } from '../../gen/types/CategoriaItemDto';
 import type { FornecedorDetalheDto } from '../../gen/types/FornecedorDetalheDto';
 import type { FornecedorDto } from '../../gen/types/FornecedorDto';
+import { juntarDigito, separarDigito } from '../../lib/conta-digito';
 import { formatarCep, formatarCnpj, formatarCpf, soDigitos } from '../../lib/documentos';
 import { contaPorExtenso, rotuloDaCategoria } from '../../lib/financeiro';
 import { aplicarMascara, type Mascara } from '../../lib/mascaras';
@@ -73,7 +73,8 @@ const schema = z
         'O código do banco tem 3 dígitos (ex.: 341).',
       ),
     agencia: z.string().max(10),
-    conta: z.string().max(20),
+    conta: z.string().max(17, 'Use até 17 caracteres.'),
+    digito: z.string().max(2, 'Use até 2 caracteres.'),
     categoriaPadraoId: z.string(),
     ativo: z.boolean(),
     observacoes: z.string().max(2000, 'Use até 2.000 caracteres.'),
@@ -148,7 +149,7 @@ export function PainelFornecedor({
         : (fornecedor?.chavePix ?? ''),
     bancoCodigo: fornecedor?.bancoCodigo ?? '',
     agencia: fornecedor?.agencia ?? '',
-    conta: fornecedor?.conta ?? '',
+    ...separarDigito(fornecedor?.conta ?? ''),
     categoriaPadraoId: fornecedor?.categoriaPadraoId ?? '',
     ativo: fornecedor?.ativo ?? true,
     observacoes: fornecedor?.observacoes ?? '',
@@ -181,7 +182,7 @@ export function PainelFornecedor({
             : opcional(value.chavePix),
           bancoCodigo: opcional(value.bancoCodigo),
           agencia: opcional(value.agencia),
-          conta: opcional(value.conta),
+          conta: opcional(juntarDigito(value.conta, value.digito)),
           categoriaPadraoId: value.categoriaPadraoId || null,
           ativo: value.ativo,
           observacoes: opcional(value.observacoes),
@@ -565,9 +566,20 @@ export function PainelFornecedor({
                 {(field) => (
                   <field.TextField
                     label="Conta"
-                    placeholder="45678-9"
+                    placeholder="45678"
+                    inputMode="numeric"
                     autoComplete="off"
                     className="flex-[2_1_112px]"
+                  />
+                )}
+              </form.AppField>
+              <form.AppField name="digito">
+                {(field) => (
+                  <field.TextField
+                    label="Dígito"
+                    placeholder="9"
+                    autoComplete="off"
+                    className="flex-[0_1_72px]"
                   />
                 )}
               </form.AppField>

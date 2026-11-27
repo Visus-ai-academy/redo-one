@@ -503,9 +503,20 @@ function FormDados({
             {(field) => (
               <field.TextField
                 label="Conta"
-                placeholder="Ex.: 12345-6"
+                placeholder="Ex.: 12345"
+                inputMode="numeric"
                 spellCheck={false}
-                className="flex-[1_1_160px]"
+                className="flex-[1_1_120px]"
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="bancoDigito">
+            {(field) => (
+              <field.TextField
+                label="Dígito"
+                placeholder="6"
+                spellCheck={false}
+                className="flex-[0_1_72px]"
               />
             )}
           </form.AppField>

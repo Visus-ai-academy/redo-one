@@ -131,8 +131,10 @@ describe('PainelItemLista', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Criar subespecialidade' }));
     expect(await screen.findByText('Escolha ao menos uma especialidade.')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'NEURO' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'MUSCULO ESQUELETICO' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Especialidades' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'NEURO' }));
+    await userEvent.click(screen.getByRole('option', { name: 'MUSCULO ESQUELETICO' }));
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Criar subespecialidade' }));
 
     expect(onSalvar).toHaveBeenCalledWith(

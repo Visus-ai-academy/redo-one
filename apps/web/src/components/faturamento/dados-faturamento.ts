@@ -1,7 +1,7 @@
 import { z } from 'zod';
-
 import type { DadosFiscaisClienteDto } from '../../gen/types/DadosFiscaisClienteDto';
 import type { DadosFiscaisDto } from '../../gen/types/DadosFiscaisDto';
+import { juntarDigito, separarDigito } from '../../lib/conta-digito';
 import { soDigitos } from '../../lib/documentos';
 import { aplicarMascara } from '../../lib/mascaras';
 
@@ -56,6 +56,7 @@ export type ValoresDadosFaturamento = {
   bancoCodigo: string;
   bancoAgencia: string;
   bancoConta: string;
+  bancoDigito: string;
 };
 
 const ENDERECO = [
@@ -91,6 +92,7 @@ export const esquemaDadosFaturamento = z
     bancoCodigo: z.string(),
     bancoAgencia: z.string(),
     bancoConta: z.string(),
+    bancoDigito: z.string().max(2, 'Use até 2 caracteres.'),
   })
   .superRefine((v, ctx) => {
     const erro = (campo: string | [string, number], message: string) =>
@@ -139,7 +141,9 @@ export function valoresIniciais(d: DadosFiscaisClienteDto): ValoresDadosFaturame
     telefone: d.telefone ?? '',
     bancoCodigo: d.bancoCodigo ?? '',
     bancoAgencia: d.bancoAgencia ?? '',
-    bancoConta: d.bancoConta ?? '',
+    ...(({ conta, digito }) => ({ bancoConta: conta, bancoDigito: digito }))(
+      separarDigito(d.bancoConta ?? ''),
+    ),
   };
 }
 
@@ -191,7 +195,7 @@ export function corpoDosDados(
     telefone,
     bancoCodigo: opcional(v.bancoCodigo),
     bancoAgencia: opcional(v.bancoAgencia),
-    bancoConta: opcional(v.bancoConta),
+    bancoConta: opcional(juntarDigito(v.bancoConta, v.bancoDigito)),
   };
 }
 

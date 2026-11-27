@@ -116,3 +116,19 @@ describe('dados de faturamento: formulário', () => {
     ).toBe('Luísa (11) 99999-0000');
   });
 });
+
+describe('conta bancária com o dígito à parte', () => {
+  it('abre separada e salva junta, igual ao que estava gravado', () => {
+    const gravado = salvo({ bancoConta: '45678-9' });
+    const v = valoresIniciais(gravado);
+    expect(v.bancoConta).toBe('45678');
+    expect(v.bancoDigito).toBe('9');
+    expect(corpoDosDados(v, gravado).bancoConta).toBe('45678-9');
+  });
+
+  it('sem dígito, a conta vai sozinha', () => {
+    const gravado = salvo();
+    const v = { ...valoresIniciais(gravado), bancoConta: '12345', bancoDigito: '' };
+    expect(corpoDosDados(v, gravado).bancoConta).toBe('12345');
+  });
+});
