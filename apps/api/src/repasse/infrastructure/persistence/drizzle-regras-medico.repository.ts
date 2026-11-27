@@ -205,7 +205,7 @@ export class DrizzleRegrasMedicoRepository implements RegrasMedicoRepository {
       .from(r)
       .innerJoin(medicos, eq(medicos.id, r.medicoId))
       .where(onde)
-      .orderBy(asc(medicos.nome), asc(r.descricao), asc(r.vigenciaDesde), asc(r.id))
+      .orderBy(asc(medicos.chaveNormalizada), asc(r.descricao), asc(r.vigenciaDesde), asc(r.id))
       .limit(filtro.porPagina)
       .offset((filtro.pagina - 1) * filtro.porPagina);
     const ids = pagina.map((p) => p.id);
