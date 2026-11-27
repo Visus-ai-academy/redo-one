@@ -26,6 +26,40 @@ describe('Select', () => {
     );
   });
 
+  it('nome longo no gatilho corta com reticências e mostra o nome inteiro no title, sem alargar o campo', () => {
+    const longa = 'Padrão da empresa (posterga para o próximo dia útil)';
+    const { rerender } = render(
+      <Select
+        aria-label="Fim de semana ou feriado"
+        value=""
+        onValueChange={vi.fn()}
+        opcoes={[{ valor: '', rotulo: longa }, ...opcoes.slice(1)]}
+      />,
+    );
+    const verificar = () => {
+      const gatilho = screen.getByRole('combobox', { name: 'Fim de semana ou feriado' });
+      expect(gatilho).toHaveAttribute('title', longa);
+      const texto = within(gatilho).getByText(longa);
+      expect(texto).toHaveClass('truncate');
+      // A largura 0 com flex-1 tira o texto da largura mínima do gatilho: o campo encolhe com o
+      // painel (ou a linha) em vez de empurrá-lo e criar rolagem horizontal.
+      expect(texto.parentElement).toHaveClass('w-0', 'flex-1', 'min-w-0');
+    };
+    verificar();
+
+    // Com busca (mais de 7 opções), o mesmo.
+    const muitas = Array.from({ length: 8 }, (_, i) => ({ valor: `o${i}`, rotulo: `Opção ${i}` }));
+    rerender(
+      <Select
+        aria-label="Fim de semana ou feriado"
+        value=""
+        onValueChange={vi.fn()}
+        opcoes={[{ valor: '', rotulo: longa }, ...muitas]}
+      />,
+    );
+    verificar();
+  });
+
   it('abre a lista e escolhe uma opção', async () => {
     const onValueChange = vi.fn();
     render(

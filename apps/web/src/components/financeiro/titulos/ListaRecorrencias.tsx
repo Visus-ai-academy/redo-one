@@ -317,6 +317,8 @@ function PainelDaRecorrencia({
     return (
       <PainelCarregando
         onFechar={fechar}
+        // Sem id, vem o painel de lançar, que é largo: nada pula quando os dados chegam.
+        largura={id ? undefined : 'larga'}
         erro={consulta.error ?? empresas.error ?? categorias.error ?? contas.error ?? undefined}
         oQue="a recorrência"
         voltar={{ to: ROTA_DO_TIPO[tipo], rotulo: `Voltar para ${TEXTOS_DO_TIPO[tipo].titulo}` }}

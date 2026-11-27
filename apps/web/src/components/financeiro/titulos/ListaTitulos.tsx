@@ -444,6 +444,8 @@ function PainelDoTitulo({
     return (
       <PainelCarregando
         onFechar={fechar}
+        // Sem id, vem o painel de lançar, que é largo: nada pula quando os dados chegam.
+        largura={id ? undefined : 'larga'}
         erro={consulta.error ?? empresas.error ?? categorias.error ?? contas.error ?? undefined}
         oQue="o título"
         voltar={{

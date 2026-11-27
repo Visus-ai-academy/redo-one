@@ -22,6 +22,12 @@ const classeGatilho = cn(
   'hover:border-subtle-foreground focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2',
   'aria-invalid:border-destructive data-[popup-open]:border-ring data-[disabled]:bg-muted data-[disabled]:text-muted-foreground data-[disabled]:cursor-not-allowed',
 );
+/**
+ * O nome escolhido no gatilho: largura 0 + `flex-1` tira o texto da largura mínima do gatilho
+ * (corta com reticências; o `title` mostra inteiro). Sem isso, um nome longo alarga o campo, a
+ * linha e o painel, que ganha rolagem horizontal.
+ */
+const classeValor = 'flex w-0 min-w-0 flex-1 items-center gap-2';
 const classePopup =
   'bg-popover text-popover-foreground origin-(--transform-origin) rounded-lg border shadow-lg transition-[opacity,scale] duration-150 ease-out data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 motion-reduce:transition-none';
 const classeItem =
@@ -106,13 +112,11 @@ function SelectSimples({
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid || undefined}
+        title={rotulos[value] || undefined}
         className={cn(classeGatilho, className)}
       >
         <BaseSelect.Value
-          className={cn(
-            'flex min-w-0 items-center gap-2',
-            mostrandoPlaceholder && 'text-subtle-foreground',
-          )}
+          className={cn(classeValor, mostrandoPlaceholder && 'text-subtle-foreground')}
         >
           {(valor: string | null) => (
             <RotuloComCor
@@ -196,16 +200,19 @@ function SelectComBusca({
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid || undefined}
+        title={escolhida?.rotulo || placeholder || undefined}
         className={cn(classeGatilho, className)}
       >
         <Combobox.Value>
           {(opcao: OpcaoSelect | null) =>
             opcao ? (
-              <span className="flex min-w-0 items-center gap-2">
+              <span className={classeValor}>
                 <RotuloComCor opcao={opcao} rotulo={opcao.rotulo} />
               </span>
             ) : (
-              <span className="text-subtle-foreground truncate">{placeholder}</span>
+              <span className={cn(classeValor, 'text-subtle-foreground')}>
+                <span className="truncate">{placeholder}</span>
+              </span>
             )
           }
         </Combobox.Value>

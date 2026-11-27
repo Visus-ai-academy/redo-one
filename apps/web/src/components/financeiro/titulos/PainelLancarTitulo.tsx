@@ -358,6 +358,9 @@ export function PainelLancarTitulo({
       }
       onFechar={onFechar}
       alterado={alterado}
+      // Largo: a recorrência põe dois campos por linha (frequência e dia, primeiro vencimento e
+      // fim de semana); no padrão de 400px eles ficam apertados.
+      largura="larga"
     >
       <form
         method="post"
@@ -531,7 +534,7 @@ export function PainelLancarTitulo({
           </form.AppField>
         )}
         {repetir && (
-          <fieldset className="bg-muted/40 flex flex-col gap-4 rounded-lg border p-4">
+          <fieldset className="bg-muted/40 flex min-w-0 flex-col gap-4 rounded-lg border p-4">
             <legend className="px-1 font-semibold">Recorrência</legend>
             {travaAgenda && (
               <p className="text-muted-foreground text-[13px]">

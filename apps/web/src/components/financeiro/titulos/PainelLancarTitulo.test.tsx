@@ -76,6 +76,31 @@ describe('PainelLancarTitulo', () => {
     );
   });
 
+  it('abre no painel largo: a recorrência (duas colunas) cabe sem rolagem horizontal', async () => {
+    comQuery(
+      <PainelLancarTitulo
+        tipo="pagar"
+        empresas={empresas}
+        categorias={categorias}
+        contas={contas}
+        buscarFavorecidos={buscarFavorecidos}
+        onSalvar={vi.fn()}
+        onFechar={vi.fn()}
+        recorrencia={{ prever: vi.fn(async () => new Promise<never>(() => {})), onSalvar: vi.fn() }}
+      />,
+    );
+
+    await screen.findByRole('combobox', { name: 'Favorecido' });
+    expect(document.querySelector('[data-painel-lateral]')).toHaveAttribute(
+      'data-painel-lateral',
+      'larga',
+    );
+
+    // O fieldset da recorrência encolhe com o painel (o padrão do navegador é min-content).
+    await userEvent.click(screen.getByRole('switch', { name: /Repetir/ }));
+    expect(screen.getByRole('group', { name: 'Recorrência' })).toHaveClass('min-w-0');
+  });
+
   it('diz o que falta e recusa vencimento antes da emissão', async () => {
     const onSalvar = vi.fn();
     comQuery(

@@ -191,6 +191,14 @@
     cursor: not-allowed;
   }
 
+  /*
+   * O navegador dá ao fieldset `min-width: min-content`: um conteúdo largo (rótulo longo num campo,
+   * duas colunas) o alarga além do painel e cria rolagem horizontal. Aqui ele encolhe como um div.
+   */
+  fieldset {
+    min-width: 0;
+  }
+
   /* Números que mudam (tabelas, valores, datas, contadores) não "dançam". */
   table,
   time,
