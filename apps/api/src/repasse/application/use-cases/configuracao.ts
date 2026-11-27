@@ -123,6 +123,19 @@ const recorte = (lista: Recorte, rotulo: string) => {
     );
 };
 
+/** Descrição, recortes com "todos" explícito e ao menos um destino (criar e alterar). */
+export function validarReclassificacao(
+  r: Omit<Reclassificacao, 'id' | 'vigenciaDesde' | 'vigenciaAte'>,
+): void {
+  if (!r.descricao.trim()) throw new ConfiguracaoInvalidaError('Descreva a reclassificação.');
+  recorte(r.modalidadeIds, 'Modalidades');
+  recorte(r.especialidadeIds, 'Especialidades');
+  recorte(r.categoriaIds, 'Categorias');
+  recorte(r.equipeIds, 'Equipes');
+  if (!r.especialidadeDestinoId && !r.categoriaDestinoId)
+    throw new ConfiguracaoInvalidaError('Informe a especialidade ou a categoria de destino.');
+}
+
 export class CriarReclassificacao extends MudancaConfiguracao {
   async executar(
     usuarioId: string,
@@ -130,13 +143,7 @@ export class CriarReclassificacao extends MudancaConfiguracao {
     r: Omit<Reclassificacao, 'id' | 'vigenciaDesde' | 'vigenciaAte'>,
   ): Promise<string> {
     await this.validar(aPartirDe);
-    if (!r.descricao.trim()) throw new ConfiguracaoInvalidaError('Descreva a reclassificação.');
-    recorte(r.modalidadeIds, 'Modalidades');
-    recorte(r.especialidadeIds, 'Especialidades');
-    recorte(r.categoriaIds, 'Categorias');
-    recorte(r.equipeIds, 'Equipes');
-    if (!r.especialidadeDestinoId && !r.categoriaDestinoId)
-      throw new ConfiguracaoInvalidaError('Informe a especialidade ou a categoria de destino.');
+    validarReclassificacao(r);
     const id = await this.repo.criarReclassificacao(
       { ...r, descricao: r.descricao.trim(), vigenciaDesde: aPartirDe },
       usuarioId,

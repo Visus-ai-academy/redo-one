@@ -81,9 +81,12 @@ export class PrecosRepasseController {
     private readonly opcoesCaso: OpcoesPrecosRepasse,
   ) {}
 
-  @Get('precos/opcoes')
+  @Get('opcoes')
   @Permissao('repasse.ver')
-  @ApiOkResponse({ type: OpcoesPrecoRepasseDto, description: 'Cadastros ativos para o editor.' })
+  @ApiOkResponse({
+    type: OpcoesPrecoRepasseDto,
+    description: 'Cadastros ativos para os editores do repasse.',
+  })
   opcoes(): Promise<OpcoesPrecoRepasseDto> {
     return this.opcoesCaso.executar();
   }

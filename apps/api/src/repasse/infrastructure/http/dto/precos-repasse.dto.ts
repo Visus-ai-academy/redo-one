@@ -159,6 +159,9 @@ export class OpcoesPrecoRepasseDto {
   @ApiProperty({ type: [OpcaoRepasseDto] }) prioridades!: OpcaoRepasseDto[];
   @ApiProperty({ type: [OpcaoRepasseDto], description: 'Clientes ativos (nome na MobileMed).' })
   clientes!: OpcaoRepasseDto[];
+  @ApiProperty({ type: [OpcaoRepasseDto] }) equipes!: OpcaoRepasseDto[];
+  @ApiProperty({ type: [OpcaoRepasseDto], description: 'Pela razão social.' })
+  contratados!: OpcaoRepasseDto[];
 }
 
 export class PlanilhaPrecosRepasseDto {

@@ -30,6 +30,10 @@ export interface OpcoesPrecoRepasse {
   categorias: OpcaoPrecoRepasse[];
   prioridades: OpcaoPrecoRepasse[];
   clientes: OpcaoPrecoRepasse[];
+  /** Equipes de médicos (recorte das reclassificações). */
+  equipes: OpcaoPrecoRepasse[];
+  /** Contratados (o do registro do repasse), pela razão social. */
+  contratados: OpcaoPrecoRepasse[];
 }
 
 export interface EventoVersaoPreco {

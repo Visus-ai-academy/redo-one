@@ -52,6 +52,8 @@ function montar(versoes: VersaoPrecoComNomes[] = []) {
       categorias: [{ id: 'sc', nome: 'SC' }],
       prioridades: [{ id: 'rot', nome: 'Rotina' }],
       clientes: [{ id: 'h1', nome: 'Hospital Exemplo' }],
+      equipes: [],
+      contratados: [],
     }),
     eventos: async () => new Map([['a', [{ acao: 'criado', quem: 'Bruno Reis', em: AGORA }]]]),
   };

@@ -22,10 +22,13 @@ import {
   CriarReclassificacao,
   CriarVersaoParametros,
   EncerrarConfiguracao,
-  ListarParametros,
-  ListarRegrasDoRepasse,
 } from '../../application/use-cases/configuracao';
+import {
+  ListarParametrosComAutoria,
+  ListarRegrasComNomes,
+} from '../../application/use-cases/configuracao-versoes';
 import { RecalcularRepasse } from '../../application/use-cases/recalcular-repasse';
+import { ParametrosComVersoesDto, RegrasComNomesDto } from './dto/configuracao-versoes.dto';
 import { ListarAdicionaisDto, PaginaAdicionaisDto } from './dto/consultas-repasse.dto';
 import {
   AdicionalLancadoDto,
@@ -38,9 +41,7 @@ import {
   IdParamDto,
   LancarAdicionalDto,
   MotivoDto,
-  ParametrosRepasseDto,
   RecalculoRepasseCriadoDto,
-  RegrasDoRepasseDto,
 } from './dto/repasse.dto';
 
 const recorte = (r: { todos: boolean; ids: string[] }) => (r.todos ? null : r.ids);
@@ -55,9 +56,9 @@ const recorte = (r: { todos: boolean; ids: string[] }) => (r.todos ? null : r.id
 export class RepasseController {
   constructor(
     private readonly recalcularCaso: RecalcularRepasse,
-    private readonly listarParametrosCaso: ListarParametros,
+    private readonly listarParametrosCaso: ListarParametrosComAutoria,
     private readonly criarParametrosCaso: CriarVersaoParametros,
-    private readonly listarRegrasCaso: ListarRegrasDoRepasse,
+    private readonly listarRegrasCaso: ListarRegrasComNomes,
     private readonly criarReclassificacaoCaso: CriarReclassificacao,
     private readonly criarAlternativaCaso: CriarAlternativaPreco,
     private readonly encerrarCaso: EncerrarConfiguracao,
@@ -86,8 +87,11 @@ export class RepasseController {
 
   @Get('parametros')
   @Permissao('repasse.ver')
-  @ApiOkResponse({ type: [ParametrosRepasseDto], description: 'Versões, a mais antiga primeiro.' })
-  parametros(): Promise<ParametrosRepasseDto[]> {
+  @ApiOkResponse({
+    type: ParametrosComVersoesDto,
+    description: 'Versões, a mais nova primeiro, com o contratado e quem criou.',
+  })
+  parametros(): Promise<ParametrosComVersoesDto> {
     return this.listarParametrosCaso.executar();
   }
 
@@ -113,10 +117,10 @@ export class RepasseController {
   @Get('regras')
   @Permissao('repasse.ver')
   @ApiOkResponse({
-    type: RegrasDoRepasseDto,
-    description: 'Reclassificações e alternativas, todas as versões.',
+    type: RegrasComNomesDto,
+    description: 'Reclassificações e alternativas, todas as versões, com os nomes e a autoria.',
   })
-  regras(): Promise<RegrasDoRepasseDto> {
+  regras(): Promise<RegrasComNomesDto> {
     return this.listarRegrasCaso.executar();
   }
 

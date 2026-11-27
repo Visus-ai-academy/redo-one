@@ -8,6 +8,8 @@ import {
   categoriasExame,
   clientes,
   competencias,
+  contratados,
+  equipes,
   especialidades,
   eventosAuditoria,
   medicos,
@@ -236,6 +238,16 @@ export class DrizzlePrecosRepasseRepository implements PrecosRepasseRepository {
         .from(clientes)
         .where(eq(clientes.ativo, true))
         .orderBy(asc(clientes.nome)),
+      equipes: await this.db
+        .select({ id: equipes.id, nome: equipes.nome })
+        .from(equipes)
+        .where(eq(equipes.ativo, true))
+        .orderBy(asc(equipes.ordem), asc(equipes.nome)),
+      contratados: await this.db
+        .select({ id: contratados.id, nome: contratados.razaoSocial })
+        .from(contratados)
+        .where(eq(contratados.ativo, true))
+        .orderBy(asc(contratados.razaoSocial)),
     };
   }
 

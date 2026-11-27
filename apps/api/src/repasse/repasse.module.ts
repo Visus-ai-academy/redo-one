@@ -33,6 +33,10 @@ import {
   REGRAS_MEDICO_REPOSITORY,
   type RegrasMedicoRepository,
 } from './application/ports/regras-medico.repository';
+import {
+  VERSOES_CONFIGURACAO,
+  type VersoesConfiguracaoRepository,
+} from './application/ports/versoes-configuracao.repository';
 import { TAREFA_GERAR_PREVIAS, TAREFA_GERAR_REPASSE } from './application/tarefas';
 import {
   CancelarAdicional,
@@ -48,6 +52,13 @@ import {
   ListarParametros,
   ListarRegrasDoRepasse,
 } from './application/use-cases/configuracao';
+import {
+  AlterarAlternativaPreco,
+  AlterarReclassificacao,
+  CancelarVersaoConfiguracao,
+  ListarParametrosComAutoria,
+  ListarRegrasComNomes,
+} from './application/use-cases/configuracao-versoes';
 import {
   ListarDemonstrativos,
   ListarLaudosDoDemonstrativo,
@@ -74,6 +85,7 @@ import {
   ListarRegrasApuracao,
   NovaVersaoContagem,
 } from './application/use-cases/regras-medico';
+import { ConfiguracaoVersoesController } from './infrastructure/http/configuracao-versoes.controller';
 import { PrecosRepasseController } from './infrastructure/http/precos-repasse.controller';
 import { RegrasMedicoController } from './infrastructure/http/regras-medico.controller';
 import { RepasseController } from './infrastructure/http/repasse.controller';
@@ -92,6 +104,7 @@ import {
 } from './infrastructure/persistence/drizzle-geracoes-repasse';
 import { DrizzlePrecosRepasseRepository } from './infrastructure/persistence/drizzle-precos-repasse.repository';
 import { DrizzleRegrasMedicoRepository } from './infrastructure/persistence/drizzle-regras-medico.repository';
+import { DrizzleVersoesConfiguracaoRepository } from './infrastructure/persistence/drizzle-versoes-configuracao.repository';
 import { RecalculoRepasseAdapter } from './infrastructure/recalculo-repasse.adapter';
 
 const agora = () => new Date();
@@ -114,6 +127,7 @@ const CONFIGURACAO = [
     RepasseConsultasController,
     PrecosRepasseController,
     RegrasMedicoController,
+    ConfiguracaoVersoesController,
   ],
   providers: [
     { provide: CONSULTAS_REPASSE, useClass: DrizzleConsultasRepasse },
@@ -157,6 +171,23 @@ const CONFIGURACAO = [
       }),
     ),
     { provide: REGRAS_MEDICO_REPOSITORY, useClass: DrizzleRegrasMedicoRepository },
+    { provide: VERSOES_CONFIGURACAO, useClass: DrizzleVersoesConfiguracaoRepository },
+    ...[
+      ListarRegrasComNomes,
+      ListarParametrosComAutoria,
+      AlterarReclassificacao,
+      AlterarAlternativaPreco,
+      CancelarVersaoConfiguracao,
+    ].map((Caso) => ({
+      provide: Caso,
+      inject: [CONFIGURACAO_REPASSE, VERSOES_CONFIGURACAO, AUDITORIA, AGENDADOR_REPASSE],
+      useFactory: (
+        repo: ConfiguracaoRepasseRepository,
+        versoes: VersoesConfiguracaoRepository,
+        auditoria: Auditoria,
+        a: AgendadorRepasse,
+      ) => new Caso(repo, versoes, auditoria, a, agora),
+    })),
     ...[
       ListarContagemMedico,
       NovaVersaoContagem,
