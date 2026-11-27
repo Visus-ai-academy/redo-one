@@ -9,6 +9,7 @@ import { useState } from 'react';
 
 import { BuscaField } from './BuscaField';
 import { CaixasComContagemField } from './CaixasComContagemField';
+import { CaixasField } from './CaixasField';
 import { CheckboxListField } from './CheckboxListField';
 import { fieldContext, formContext } from './context';
 import { EscolhaMultiplaField } from './EscolhaMultiplaField';
@@ -16,9 +17,11 @@ import { EscolhidosField } from './EscolhidosField';
 import { EtiquetasField } from './EtiquetasField';
 import { InterruptorField } from './InterruptorField';
 import { NumberField } from './NumberField';
+import { OpcoesField } from './OpcoesField';
 import { PasswordField } from './PasswordField';
 import { RequiredLegend } from './RequiredLegend';
 import { campoDoKit, camposParaAparar, focarPrimeiro } from './registro';
+import { SegmentadaField } from './SegmentadaField';
 import { SelecaoMultiplaField } from './SelecaoMultiplaField';
 import { SelectField } from './SelectField';
 import { SubmitButton } from './SubmitButton';
@@ -42,6 +45,9 @@ const kit = createFormHook({
     CaixasComContagemField,
     EscolhidosField,
     EtiquetasField,
+    OpcoesField,
+    SegmentadaField,
+    CaixasField,
   },
   formComponents: { SubmitButton, RequiredLegend },
 });

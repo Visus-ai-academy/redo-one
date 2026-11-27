@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -116,5 +116,13 @@ describe('EscolhaMultiplaField', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByText('Escolha ao menos um médico.')).toBeInTheDocument();
     expect(onEnviar).not.toHaveBeenCalled();
+  });
+
+  it('obrigatório: o envio com erro marca a busca como inválida e põe o foco nela', async () => {
+    montar({ iniciais: [], onEnviar: vi.fn(), exigir: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    const busca = screen.getByRole('combobox', { name: 'Adicionar médico' });
+    await waitFor(() => expect(busca).toHaveFocus());
+    expect(busca).toHaveAttribute('aria-invalid', 'true');
   });
 });

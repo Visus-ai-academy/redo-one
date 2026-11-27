@@ -7,7 +7,6 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
-import { CaixasField } from '../escala/campos';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import type { OpcaoMarcar } from '../form/CheckboxListField';
 import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
@@ -16,7 +15,6 @@ import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { DIAS_DA_SEMANA } from './ausencias';
-import { CampoMedicos } from './campos';
 
 type Opcao = { valor: string; rotulo: string };
 /** Tipo e turno levam a cor (a bolinha antes do nome). */
@@ -178,7 +176,18 @@ export function FormAusencia({
           />
         ) : (
           <form.AppField name="medicos">
-            {() => <CampoMedicos buscar={buscarMedicos} />}
+            {(field) => (
+              <field.EscolhaMultiplaField
+                label="Médicos"
+                required
+                rotuloAdicionar="Adicionar médico"
+                placeholder="Digite o nome do médico"
+                chave="medicos-ausencia"
+                buscar={buscarMedicos}
+                vazio="Nenhum médico escolhido."
+                descricaoDaBusca="Escolha um ou vários: cada médico ganha a sua ausência."
+              />
+            )}
           </form.AppField>
         )}
         <form.AppField name="tipoId">
@@ -219,8 +228,8 @@ export function FormAusencia({
           </form.AppField>
         )}
         <form.AppField name="diasSemana">
-          {() => (
-            <CaixasField
+          {(field) => (
+            <field.CaixasField
               label="Dias da semana"
               required
               todas="Todos os dias"

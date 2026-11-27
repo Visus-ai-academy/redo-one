@@ -5,9 +5,14 @@ import { cn } from '../../lib/cn';
 
 type EscolhaSegmentadaProps<V extends string> = {
   opcoes: readonly { valor: V; rotulo: string }[];
-  valor: V;
+  /** `''` quando nada foi escolhido ainda (campo obrigatório sem valor padrão). */
+  valor: V | '';
   onMudar: (valor: V) => void;
-  'aria-label': string;
+  'aria-label'?: string;
+  /** No formulário, o id do título do campo. */
+  'aria-labelledby'?: string;
+  'aria-invalid'?: boolean;
+  onBlur?: () => void;
   /** Desabilita a escolha inteira (ex.: enquanto salva). */
   disabled?: boolean;
   className?: string;
@@ -15,26 +20,37 @@ type EscolhaSegmentadaProps<V extends string> = {
 
 /**
  * Uma escolha entre poucas opções sempre à vista (ex.: Semana | Mês | Por médico), sobre o
- * ToggleGroup do Base UI: a marcada fica com o fundo do acento suave. Sempre há uma marcada.
+ * ToggleGroup do Base UI: a marcada fica com o fundo do acento suave. Clicar na marcada não a
+ * desmarca. Setas do teclado andam entre as opções. No formulário, o `SegmentadaField`.
  */
 export function EscolhaSegmentada<V extends string>({
   opcoes,
   valor,
   onMudar,
   'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledby,
+  'aria-invalid': ariaInvalid,
+  onBlur,
   disabled,
   className,
 }: EscolhaSegmentadaProps<V>) {
   return (
     <ToggleGroup
       aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledby}
+      aria-invalid={ariaInvalid || undefined}
+      onBlur={onBlur}
       disabled={disabled}
-      value={[valor]}
+      value={valor ? [valor] : []}
       onValueChange={(valores) => {
         const novo = valores[0] as V | undefined;
         if (novo && novo !== valor) onMudar(novo);
       }}
-      className={cn('border-input bg-card inline-flex h-9 rounded-md border p-0.5', className)}
+      className={cn(
+        'border-input bg-card inline-flex h-9 max-w-full rounded-md border p-0.5',
+        'aria-[invalid]:border-destructive',
+        className,
+      )}
     >
       {opcoes.map((opcao) => (
         <Toggle

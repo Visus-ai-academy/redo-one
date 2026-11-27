@@ -9,7 +9,6 @@ import type { RotuloDto } from '../../gen/types/RotuloDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
-import { CaixasField } from '../escala/campos';
 import { iguaisSemMaiusculas } from '../form/etiquetas';
 import { useAppForm } from '../form/form';
 import { Painel } from '../painel/Painel';
@@ -463,7 +462,9 @@ export function FormConfiguracaoDistribuicao({
               tem && (
                 <>
                   <form.AppField name="turnoIds">
-                    {() => <CaixasField label="Turnos posteriores" required opcoes={opcoesTurno} />}
+                    {(field) => (
+                      <field.CaixasField label="Turnos posteriores" required opcoes={opcoesTurno} />
+                    )}
                   </form.AppField>
                   <form.AppField name="cheiaEm">
                     {(field) => (

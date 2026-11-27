@@ -15,7 +15,7 @@ import { BarraEmpilhada } from '../barra/BarraEmpilhada';
 import { FaixaDeNumeros } from '../barra/FaixaDeNumeros';
 import { createDataTableColumnHelper } from '../data-table/columns';
 import { DataTable } from '../data-table/DataTable';
-import { EscolhaSegmentada } from '../escala/EscolhaSegmentada';
+import { EscolhaSegmentada } from '../escolha-segmentada/EscolhaSegmentada';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';

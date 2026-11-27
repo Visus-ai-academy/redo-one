@@ -12,7 +12,6 @@ import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { OPCOES_DIAS } from './alocacao-form';
 import { dataCurta } from './calendario';
-import { CaixasField } from './campos';
 import {
   type CoberturaAtual,
   esquemaCobertura,
@@ -115,8 +114,8 @@ export function PainelCobertura({
           Dentro da escala do titular ({vigencia}).
         </p>
         <form.AppField name="diasSemana">
-          {() => (
-            <CaixasField
+          {(field) => (
+            <field.CaixasField
               label="Dias cobertos"
               opcoes={OPCOES_DIAS.filter((d) => titular.diasSemana.includes(Number(d.valor)))}
               required

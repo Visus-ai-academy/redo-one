@@ -1,6 +1,6 @@
 import { Button } from '@base-ui/react/button';
+import { Field } from '@base-ui/react/field';
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field';
-import { Radio } from '@base-ui/react/radio';
 import { RadioGroup } from '@base-ui/react/radio-group';
 import { Clock, Prohibit } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
@@ -13,6 +13,7 @@ import { buttonClassName } from '../button/button-class';
 import { CelulaComPopover } from '../celula-popover/CelulaComPopover';
 import { Etiqueta } from '../etiqueta/Etiqueta';
 import { controlClassName } from '../form/control-class';
+import { ListaDeOpcoes } from '../opcoes/ListaDeOpcoes';
 import {
   aplicarNasCelulas,
   chaveCelula,
@@ -197,44 +198,43 @@ function EditorDaCelula({
           Na grade geral: {rotuloRecebimento(herdada)}
         </p>
       )}
-      <RadioGroup
-        aria-label="Regra de recebimento"
-        value={atual.tipo}
-        onValueChange={(tipo) => {
-          const t = tipo as ValorCelula['tipo'];
-          onMudar({ tipo: t, horas: t === 'prazo_minimo' ? atual.horas || '24' : '' });
-        }}
-        className="flex flex-col gap-2"
-      >
-        {opcoes.map((o) => (
-          <div key={o.valor} className="flex flex-col gap-0.5">
-            <div className="flex min-h-9 items-center gap-3">
-              {/* biome-ignore lint/a11y/noLabelWithoutControl: o Radio do Base UI renderiza o controle dentro do label. */}
-              <label className="flex items-center gap-2 font-medium">
-                <Radio.Root
-                  value={o.valor}
-                  className="border-input bg-card focus-visible:outline-ring data-[checked]:border-primary flex size-4 flex-none items-center justify-center rounded-full border focus-visible:outline-2 focus-visible:outline-offset-2"
-                >
-                  <Radio.Indicator className="bg-primary size-2 rounded-full data-[unchecked]:hidden" />
-                </Radio.Root>
-                {o.rotulo}
-              </label>
-              {o.valor === 'prazo_minimo' && atual.tipo === 'prazo_minimo' && (
-                <CampoHoras
-                  valor={atual.horas}
-                  onChange={(horas) => onMudar({ ...atual, horas })}
-                  rotulo="Horas mínimas até o prazo"
-                  invalido={Boolean(erro)}
-                />
-              )}
-            </div>
-            {o.ajuda && <p className="text-muted-foreground pl-6 text-[13px]">{o.ajuda}</p>}
-            {o.valor === 'prazo_minimo' && atual.tipo === 'prazo_minimo' && erro && (
-              <p className="text-destructive pl-6 text-[13px]">{erro}</p>
-            )}
-          </div>
-        ))}
-      </RadioGroup>
+      <Field.Root>
+        <RadioGroup
+          aria-label="Regra de recebimento"
+          value={atual.tipo}
+          onValueChange={(tipo) => {
+            const t = tipo as ValorCelula['tipo'];
+            onMudar({ tipo: t, horas: t === 'prazo_minimo' ? atual.horas || '24' : '' });
+          }}
+        >
+          <ListaDeOpcoes
+            direcao="coluna"
+            opcoes={opcoes.map((o) => {
+              const comHoras = o.valor === 'prazo_minimo' && atual.tipo === 'prazo_minimo';
+              return {
+                ...o,
+                anexo: comHoras && (
+                  <CampoHoras
+                    valor={atual.horas}
+                    onChange={(horas) => onMudar({ ...atual, horas })}
+                    rotulo="Horas mínimas até o prazo"
+                    invalido={Boolean(erro)}
+                  />
+                ),
+                ajuda:
+                  comHoras && erro ? (
+                    <>
+                      {o.ajuda}
+                      <span className="text-destructive block">{erro}</span>
+                    </>
+                  ) : (
+                    o.ajuda
+                  ),
+              };
+            })}
+          />
+        </RadioGroup>
+      </Field.Root>
       <div className="-mx-3 flex flex-col items-start gap-1 border-t px-1.5 pt-2">
         <Button
           type="button"

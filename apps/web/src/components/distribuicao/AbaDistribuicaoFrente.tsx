@@ -14,7 +14,6 @@ import type { RegrasFrenteDto } from '../../gen/types/RegrasFrenteDto';
 import { Alerta } from '../alerta/Alerta';
 import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
-import { CaixasField, OpcoesField } from '../escala/campos';
 import { TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
@@ -287,8 +286,8 @@ function FormRegras({
                             }
                           >
                             <form.AppField name={`horariosSemRobo[${i}].diasSemana`}>
-                              {() => (
-                                <CaixasField
+                              {(field) => (
+                                <field.CaixasField
                                   label="Dias"
                                   required
                                   todas="Todos os dias"
@@ -363,7 +362,9 @@ function FormRegras({
         {ehEspecialidade && (
           <>
             <form.AppField name="divisao">
-              {() => <OpcoesField label="Divisão entre os médicos" opcoes={OPCOES_DIVISAO} />}
+              {(field) => (
+                <field.OpcoesField label="Divisão entre os médicos" opcoes={OPCOES_DIVISAO} />
+              )}
             </form.AppField>
             <form.Subscribe selector={(s) => s.values.divisao}>
               {(divisao) =>

@@ -28,7 +28,6 @@ import { mensagemDaApi } from '../../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../../busca/BuscaSelecao';
 import { RodapePainel } from '../../catalogo/rodape-painel';
 import { Chave } from '../../chave/Chave';
-import { OpcoesField } from '../../escala/campos';
 import { CampoSomenteLeitura } from '../../form/CampoSomenteLeitura';
 import { DateField } from '../../form/DateField';
 import { mostrarErrosDoServidor } from '../../form/erros-do-servidor';
@@ -638,8 +637,8 @@ export function PainelLancarTitulo({
               )}
             </form.AppField>
             <form.AppField name="termino">
-              {() => (
-                <OpcoesField
+              {(field) => (
+                <field.OpcoesField
                   label="Término"
                   required
                   opcoes={[

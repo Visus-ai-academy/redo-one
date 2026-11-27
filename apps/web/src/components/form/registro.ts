@@ -36,7 +36,7 @@ export function camposParaAparar(form: Formulario) {
 }
 
 const FOCAVEL =
-  'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), [role="combobox"], [role="checkbox"], [role="switch"], button:not([disabled])';
+  'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), [role="combobox"], [role="checkbox"], [role="radio"], [role="switch"], button:not([disabled])';
 
 /** Foca (e rola até) o primeiro campo, na ordem da tela, entre os `nomes` informados. */
 export function focarPrimeiro(form: Formulario, nomes: string[]) {

@@ -7,7 +7,6 @@ import { numeroDoTitulo, type TipoTitulo } from '../../../lib/titulos';
 import { Alerta } from '../../alerta/Alerta';
 import { mensagemDaApi } from '../../alerta/mensagem-da-api';
 import { Dialogo } from '../../dialogo/Dialogo';
-import { OpcoesField } from '../../escala/campos';
 import { useAppForm } from '../../form/form';
 
 /**
@@ -53,8 +52,8 @@ export function DialogoValeParaOsGerados({
     >
       {erro && <Alerta tom="erro">{erro}</Alerta>}
       <form.AppField name="alcance">
-        {() => (
-          <OpcoesField
+        {(field) => (
+          <field.OpcoesField
             label="Vale para"
             opcoes={[
               { valor: 'todos', rotulo: `Também nos ${quantos} já gerados, em aberto e sem baixa` },

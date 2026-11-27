@@ -27,7 +27,6 @@ import {
   TODOS_OS_DIAS,
   valoresIniciais,
 } from './alocacao-form';
-import { CaixasField, OpcoesField } from './campos';
 import { opcoesDeFrentes } from './opcoes-frentes';
 
 export type PainelAlocacaoProps = {
@@ -296,8 +295,8 @@ export function PainelAlocacao({
                       },
                     }}
                   >
-                    {() => (
-                      <OpcoesField
+                    {(field) => (
+                      <field.OpcoesField
                         label="Vigência"
                         opcoes={[
                           { valor: 'fixa', rotulo: 'Escala fixa' },
@@ -333,12 +332,14 @@ export function PainelAlocacao({
                   </form.AppField>
                 </div>
                 <form.AppField name="diasSemana">
-                  {() => <CaixasField label="Dias da semana" opcoes={OPCOES_DIAS} required />}
+                  {(field) => (
+                    <field.CaixasField label="Dias da semana" opcoes={OPCOES_DIAS} required />
+                  )}
                 </form.AppField>
                 {!gratificado && (
                   <form.AppField name="semanasDoMes">
-                    {() => (
-                      <CaixasField
+                    {(field) => (
+                      <field.CaixasField
                         label="Semanas do mês"
                         opcoes={OPCOES_SEMANAS}
                         todas="Toda semana"
@@ -393,8 +394,8 @@ export function PainelAlocacao({
                   }
                 </form.AppField>
                 <form.AppField name="prioridadeIds">
-                  {() => (
-                    <CaixasField
+                  {(field) => (
+                    <field.CaixasField
                       label="Prioridades"
                       opcoes={prioridades.map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor }))}
                       todas="Sem restrição"
@@ -407,7 +408,7 @@ export function PainelAlocacao({
                   {(field) =>
                     // Só com frente de especialidade que tem subespecialidades (ou algo já marcado).
                     (subs.length > 0 || field.state.value.some((v) => v !== TODAS)) && (
-                      <CaixasField
+                      <field.CaixasField
                         label="Segmentos"
                         opcoes={[
                           ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),

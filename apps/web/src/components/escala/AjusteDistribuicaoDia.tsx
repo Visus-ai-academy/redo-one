@@ -15,7 +15,6 @@ import { buttonClassName } from '../button/button-class';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
-import { CaixasField } from './campos';
 import { useAvisarAlterado } from './use-avisar-alterado';
 
 type Props = {
@@ -263,8 +262,8 @@ function FormAjuste({
       className="flex flex-col gap-3"
     >
       <form.AppField name="prioridadeIdsLiberadas">
-        {() => (
-          <CaixasField
+        {(field) => (
+          <field.CaixasField
             label="Aceita também estas prioridades"
             description="Além das do arranjo e da escala."
             opcoes={opcoes}

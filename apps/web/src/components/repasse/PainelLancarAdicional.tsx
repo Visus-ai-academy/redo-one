@@ -18,7 +18,6 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
-import { OpcoesField } from '../escala/campos';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
 import { useAlterado } from '../painel/fechamento';
@@ -249,8 +248,8 @@ export function PainelLancarAdicional({
           )}
         </form.AppField>
         <form.AppField name="tipo">
-          {() => (
-            <OpcoesField
+          {(field) => (
+            <field.OpcoesField
               label="Tipo"
               required
               opcoes={(['avulso', 'plantao', 'peer_review'] as const).map((tipo) => ({

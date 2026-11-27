@@ -6,7 +6,7 @@ import { distribuicaoEquipeControllerSalvarUso } from '../../gen/clients/distrib
 import { distribuicaoEquipeControllerObterQueryOptions } from '../../gen/hooks/useDistribuicaoEquipeControllerObter';
 import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
-import { EscolhaSegmentada } from '../escala/EscolhaSegmentada';
+import { EscolhaSegmentada } from '../escolha-segmentada/EscolhaSegmentada';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAvisos } from '../toast/use-avisos';
 import { ArranjosDistribuicao } from './ArranjosDistribuicao';

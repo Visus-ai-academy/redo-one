@@ -103,7 +103,8 @@ describe('FormAusencia', () => {
       diasSemana: [1, 3],
       observacoes: 'Viagem',
     });
-  });
+    // Teste longo (muitos cliques): no primeiro do arquivo, o ambiente ainda está frio.
+  }, 15_000);
 
   it('começa em todas as escalas, o dia inteiro e todos os dias ("todos" explícito)', async () => {
     const { onSalvar } = montar({ inicial: { medico: ana, de: '2026-12-05' } });

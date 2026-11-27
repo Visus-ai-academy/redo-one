@@ -21,6 +21,7 @@ import { CampoBusca } from '../busca/CampoBusca';
 import { useBuscaComEspera } from '../busca/use-busca-com-espera';
 import { buttonClassName } from '../button/button-class';
 import { Dica } from '../dica/Dica';
+import { EscolhaSegmentada } from '../escolha-segmentada/EscolhaSegmentada';
 import { EstadoDoErro } from '../estado/EstadoDoErro';
 import { Skeleton } from '../skeleton/Skeleton';
 import { useFaseDoCarregamento } from '../skeleton/use-fase-do-carregamento';
@@ -48,7 +49,6 @@ import {
   rotuloPeriodo,
 } from './calendario';
 import { type ContextoDescricao, chaveDoPlantao, descreverPlantao } from './descricao-plantao';
-import { EscolhaSegmentada } from './EscolhaSegmentada';
 import { FiltroMultiplo } from './FiltroMultiplo';
 import { MesCalendario } from './MesCalendario';
 import { MesDoMedico, ResumoDoMes } from './MesDoMedico';

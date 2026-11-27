@@ -12,7 +12,6 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { buttonClassName } from '../button/button-class';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { GERAL } from '../escala/alocacao-form';
-import { CaixasField, OpcoesField } from '../escala/campos';
 import { BuscaMultiplaField } from '../form/BuscaMultiplaField';
 import { TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
@@ -255,7 +254,7 @@ function FormArranjo({
   }) => (
     <div className="flex flex-col gap-3">
       <form.AppField name={campoModo}>
-        {() => <OpcoesField label={eixo} opcoes={OPCOES_MODO_CLIENTES} />}
+        {(field) => <field.OpcoesField label={eixo} opcoes={OPCOES_MODO_CLIENTES} />}
       </form.AppField>
       <form.Subscribe selector={(estado) => estado.values[campoModo]}>
         {(modo) =>
@@ -386,8 +385,8 @@ function FormArranjo({
           }}
         </form.Subscribe>
         <form.AppField name="prioridadeIds">
-          {() => (
-            <CaixasField
+          {(field) => (
+            <field.CaixasField
               label="Prioridades"
               opcoes={catalogo.prioridades.map((p) => ({
                 valor: p.id,

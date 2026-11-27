@@ -2,10 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-
-import { esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
-import { useAppForm } from '../form/form';
-import { CaixasField } from './campos';
+import { CaixasField } from './CaixasField';
+import { esquemaCaixasComTodas, TODAS } from './caixas-todas';
+import { useAppForm } from './form';
 
 const schema = z.object({
   nome: z.string(),

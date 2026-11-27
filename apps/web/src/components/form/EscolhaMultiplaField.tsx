@@ -10,6 +10,7 @@ import { buttonClassName } from '../button/button-class';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useFieldContext } from './context';
+import { FieldError } from './field-parts';
 import { useCampo } from './use-campo';
 
 /** Num painel lateral, 5 por página (regra das listas dentro de painel). */
@@ -27,6 +28,8 @@ type EscolhaMultiplaFieldProps = {
   /** O que dizer com a lista vazia. */
   vazio: string;
   description?: string;
+  /** Ajuda abaixo da busca (ex.: "Escolha um ou vários: cada médico ganha a sua ausência."). */
+  descricaoDaBusca?: string;
   somenteLeitura?: boolean;
   required?: boolean;
   className?: string;
@@ -44,12 +47,13 @@ export function EscolhaMultiplaField({
   buscar,
   vazio,
   description,
+  descricaoDaBusca,
   somenteLeitura = false,
   required = false,
   className,
 }: EscolhaMultiplaFieldProps) {
   const field = useFieldContext<OpcaoBusca[]>();
-  const { erros, aoSair, ref } = useCampo(field);
+  const { erros, invalido, aoSair, ref } = useCampo(field);
   const tituloId = useId();
   // Remonta a busca depois de cada escolha: o campo volta vazio para a próxima.
   const [rodada, setRodada] = useState(0);
@@ -62,7 +66,7 @@ export function EscolhaMultiplaField({
   };
 
   return (
-    <Fieldset.Root ref={ref} className={cn('flex flex-col gap-2', className)}>
+    <Fieldset.Root className={cn('flex flex-col gap-2', className)}>
       <Fieldset.Legend id={tituloId} className="text-foreground font-medium">
         {label}
         {required && (
@@ -105,13 +109,15 @@ export function EscolhaMultiplaField({
         />
       )}
       {!somenteLeitura && (
-        <Field.Root className="flex flex-col gap-2">
+        // O `ref` aqui: o envio com erro põe o foco na busca.
+        <Field.Root ref={ref} name={field.name} invalid={invalido} className="flex flex-col gap-2">
           <Field.Label className="text-muted-foreground text-[13px]">{rotuloAdicionar}</Field.Label>
           <BuscaSelecao
             key={rodada}
             chave={chave}
             buscar={buscar}
             valor={null}
+            aria-invalid={invalido || undefined}
             onMudar={(opcao) => {
               if (!opcao) return;
               if (!escolhidos.some((item) => item.valor === opcao.valor)) {
@@ -122,9 +128,15 @@ export function EscolhaMultiplaField({
             }}
             placeholder={placeholder}
           />
+          {descricaoDaBusca && (
+            <Field.Description className="text-muted-foreground text-[13px]">
+              {descricaoDaBusca}
+            </Field.Description>
+          )}
+          <FieldError invalid={invalido}>{erros.join(', ')}</FieldError>
         </Field.Root>
       )}
-      {erros.length > 0 && (
+      {somenteLeitura && erros.length > 0 && (
         <p role="alert" className="text-destructive text-[13px]">
           {erros.join(', ')}
         </p>
