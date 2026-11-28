@@ -13,16 +13,28 @@ export function FieldLabel({
   children: ReactNode;
 }) {
   return (
-    // O `*` fica fora do <label> para não entrar no nome do campo; `required` já informa o leitor de tela.
+    // O `*` fica fora do <label> para não entrar no nome do campo; `required` já informa o leitor de
+    // tela. Rótulo e `*` correm no mesmo texto: se o rótulo quebra linha, o `*` vai junto da última
+    // palavra, nunca solto na borda.
     <div className="flex items-baseline gap-1">
-      <Field.Label className="text-foreground font-medium">{children}</Field.Label>
-      {required && (
-        <span aria-hidden="true" className="text-destructive">
-          *
-        </span>
-      )}
-      {action && <span className="ml-auto text-[13px]">{action}</span>}
+      <span className="min-w-0">
+        <Field.Label className="text-foreground font-medium">{children}</Field.Label>
+        {required && <MarcaObrigatorio />}
+      </span>
+      {action && <span className="ml-auto shrink-0 text-[13px]">{action}</span>}
     </div>
+  );
+}
+
+/**
+ * O `*` vermelho de campo obrigatório, colado ao fim do texto do rótulo ou da legenda (espaço que
+ * não quebra antes dele). Ponha logo depois do texto, num elemento que não seja flex.
+ */
+export function MarcaObrigatorio() {
+  return (
+    <span aria-hidden="true" className="text-destructive">
+      {'\u00a0*'}
+    </span>
   );
 }
 

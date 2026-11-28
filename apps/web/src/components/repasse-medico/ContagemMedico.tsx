@@ -21,6 +21,7 @@ import { AbaComErro } from '../distribuicao/estados';
 import { mesAno } from '../faturamento/competencias';
 import { HistoricoVigencias } from '../faturamento/historico-vigencias';
 import { opcoesAPartirDe, TODOS_OS_CLIENTES } from '../faturamento/precos';
+import { MarcaObrigatorio } from '../form/field-parts';
 import { useAppForm } from '../form/form';
 import { RequiredLegend } from '../form/RequiredLegend';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
@@ -236,10 +237,7 @@ function Conteudo({
                   <fieldset className="flex flex-col gap-2" aria-describedby={idRecortes}>
                     <legend className="mb-1 font-medium">
                       Recortes
-                      <span aria-hidden className="text-destructive">
-                        {' '}
-                        *
-                      </span>
+                      <MarcaObrigatorio />
                     </legend>
                     <p id={idRecortes} className="text-muted-foreground text-[13px]">
                       Cada recorte é um cliente (ou todos) com uma especialidade (ou todas). Conta o

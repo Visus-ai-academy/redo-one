@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { useFieldContext } from './context';
-import { FieldError } from './field-parts';
+import { FieldError, MarcaObrigatorio } from './field-parts';
 import { useCampo } from './use-campo';
 
 export type OpcaoComContagem = {
@@ -63,13 +63,9 @@ export function CaixasComContagemField({
         render={<CheckboxGroup value={marcados} onValueChange={mudar} allValues={marcaveis} />}
         className="flex flex-col gap-1"
       >
-        <Fieldset.Legend className="mb-1 flex items-baseline gap-1 font-medium">
+        <Fieldset.Legend className="mb-1 font-medium">
           {label}
-          {required && (
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          )}
+          {required && <MarcaObrigatorio />}
         </Fieldset.Legend>
         {todos && (
           <Field.Item>

@@ -190,7 +190,7 @@ describe('EditorCorte (data do exame)', () => {
     editor();
     await userEvent.click(await screen.findByRole('button', { name: 'Nova vigência' }));
     const laudo = screen.getByRole('group', { name: 'Data do laudo' });
-    expect(within(laudo).getByText('Data do laudo')).toHaveTextContent('Data do laudo*');
+    expect(within(laudo).getByText('Data do laudo')).toHaveTextContent('Data do laudo *');
     expect(
       within(screen.getByRole('group', { name: 'Data do exame' })).getByText('Data do exame'),
     ).toHaveTextContent(/^Data do exame$/);

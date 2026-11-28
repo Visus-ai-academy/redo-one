@@ -295,3 +295,44 @@
     background-size: 40px 40px;
   }
 }
+
+/*
+ * Campos lado a lado (`LinhaDeCampos` do kit). Regra no sistema.md da skill ui-design, seção
+ * "Formulários": cada campo ocupa 4 linhas da grade (rótulo, controle, descrição, erro) por
+ * subgrid, e assim os controles e as descrições alinham entre si mesmo quando um rótulo quebra.
+ * O rótulo curto desce até o controle. Os espaços são margens (8px entre as partes do campo, 16px
+ * abaixo de cada campo, que a margem negativa da grade devolve), não `row-gap`: a linha vazia (sem
+ * descrição ou sem erro) não deixa espaço sobrando.
+ */
+@layer components {
+  .linha-de-campos {
+    display: grid;
+    column-gap: 1rem;
+    row-gap: 0;
+    margin-bottom: -1rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  }
+}
+
+@layer utilities {
+  .linha-de-campos > * {
+    margin-bottom: 1rem;
+  }
+
+  .linha-de-campos > :not(.col-span-full) {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    align-content: start;
+    min-width: 0;
+  }
+
+  .linha-de-campos > :not(.col-span-full) > :first-child {
+    align-self: end;
+  }
+
+  .linha-de-campos > :not(.col-span-full) > * + * {
+    margin-top: 0.5rem;
+  }
+}

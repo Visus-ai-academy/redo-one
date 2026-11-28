@@ -4,7 +4,7 @@ import { type ReactNode, useId } from 'react';
 import { cn } from '../../lib/cn';
 import { EscolhaSegmentada } from '../escolha-segmentada/EscolhaSegmentada';
 import { useFieldContext } from './context';
-import { FieldError } from './field-parts';
+import { FieldError, MarcaObrigatorio } from './field-parts';
 import { useCampo } from './use-campo';
 
 /**
@@ -42,13 +42,9 @@ export function SegmentadaField({
     >
       <div className="flex flex-col gap-2">
         {/* Título do grupo de botões (o ToggleGroup é o grupo, nomeado por ele). */}
-        <span className="flex items-baseline gap-1 font-medium">
+        <span className="font-medium">
           <span id={tituloId}>{label}</span>
-          {required && (
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          )}
+          {required && <MarcaObrigatorio />}
         </span>
         <EscolhaSegmentada
           aria-labelledby={tituloId}

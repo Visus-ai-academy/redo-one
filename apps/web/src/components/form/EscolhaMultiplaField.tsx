@@ -10,7 +10,7 @@ import { buttonClassName } from '../button/button-class';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useFieldContext } from './context';
-import { FieldError } from './field-parts';
+import { FieldError, MarcaObrigatorio } from './field-parts';
 import { useCampo } from './use-campo';
 
 /** Num painel lateral, 5 por página (regra das listas dentro de painel). */
@@ -69,11 +69,7 @@ export function EscolhaMultiplaField({
     <Fieldset.Root className={cn('flex flex-col gap-2', className)}>
       <Fieldset.Legend id={tituloId} className="text-foreground font-medium">
         {label}
-        {required && (
-          <span aria-hidden="true" className="text-destructive ml-1">
-            *
-          </span>
-        )}
+        {required && <MarcaObrigatorio />}
       </Fieldset.Legend>
       {description && <p className="text-muted-foreground -mt-1 text-[13px]">{description}</p>}
       {escolhidos.length === 0 ? (

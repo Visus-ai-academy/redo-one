@@ -77,9 +77,14 @@ export function NumberField({
     >
       <FieldLabel required={required}>
         {label}
-        {/* A unidade à vista é decorativa; o leitor de tela a ouve no nome do campo. */}
-        {unidade && ' '}
-        {unidade && <span className="sr-only">({unidade})</span>}
+        {/* A unidade à vista é decorativa; o leitor de tela a ouve no nome do campo ("Prazo (dias)").
+            Sem espaço visível antes dela, para não afastar o `*` do rótulo: o `sr-only` já é bloco
+            (absoluto), e bloco ganha espaço em volta no nome acessível. */}
+        {unidade && (
+          <span className="sr-only" style={{ display: 'block' }}>
+            ({unidade})
+          </span>
+        )}
       </FieldLabel>
       <BaseNumberField.Root
         value={field.state.value.trim() === '' ? null : Number(field.state.value)}

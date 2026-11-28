@@ -1,16 +1,13 @@
 import { Fieldset } from '@base-ui/react/fieldset';
 import type { ReactNode } from 'react';
+import { MarcaObrigatorio } from './field-parts';
 
 /** Título de um grupo de opções (Fieldset do Base UI), com o `*` nos obrigatórios. */
 export function Legenda({ required, children }: { required: boolean; children: ReactNode }) {
   return (
-    <Fieldset.Legend className="flex items-baseline gap-1 font-medium">
+    <Fieldset.Legend className="font-medium">
       {children}
-      {required && (
-        <span aria-hidden="true" className="text-destructive">
-          *
-        </span>
-      )}
+      {required && <MarcaObrigatorio />}
     </Fieldset.Legend>
   );
 }

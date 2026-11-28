@@ -16,6 +16,7 @@ import { DataTable } from '../data-table/DataTable';
 import { Etiqueta, type TomEtiqueta } from '../etiqueta/Etiqueta';
 import { mesAno } from '../faturamento/competencias';
 import { opcoesAPartirDe } from '../faturamento/precos';
+import { MarcaObrigatorio } from '../form/field-parts';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { Select } from '../select/Select';
@@ -149,10 +150,7 @@ export function PreencherPelaRegua({
         <div className="flex max-w-[320px] flex-col gap-1">
           <label htmlFor={idCompetencia} className="font-medium">
             Vale a partir de
-            <span aria-hidden className="text-destructive">
-              {' '}
-              *
-            </span>
+            <MarcaObrigatorio />
           </label>
           <Select
             id={idCompetencia}

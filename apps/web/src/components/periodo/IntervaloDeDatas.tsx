@@ -2,6 +2,7 @@ import { useId } from 'react';
 
 import { cn } from '../../lib/cn';
 import { CampoData } from '../campo-data/CampoData';
+import { MarcaObrigatorio } from '../form/field-parts';
 
 /**
  * De e Até lado a lado (`CampoData`), com o erro do intervalo abaixo, ligado ao "Até". Peça comum
@@ -26,15 +27,11 @@ export function IntervaloDeDatas({
   const ateId = useId();
   const erroId = useId();
   const rotulo = (id: string, texto: string) => (
-    <span className="flex items-baseline gap-1">
+    <span>
       <label htmlFor={id} className="font-medium">
         {texto}
       </label>
-      {obrigatorio && (
-        <span aria-hidden="true" className="text-destructive">
-          *
-        </span>
-      )}
+      {obrigatorio && <MarcaObrigatorio />}
     </span>
   );
   return (

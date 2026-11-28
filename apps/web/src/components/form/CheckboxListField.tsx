@@ -8,7 +8,7 @@ import { CaixaDeSelecao } from '../checkbox/CaixaDeSelecao';
 import { agruparOpcoes, temGrupos } from '../select/grupos';
 import { marcadasAoMudar, marcadasNaTela } from './caixas-todas';
 import { useFieldContext } from './context';
-import { FieldError } from './field-parts';
+import { FieldError, MarcaObrigatorio } from './field-parts';
 import { useCampo } from './use-campo';
 
 export type OpcaoMarcar = {
@@ -87,13 +87,9 @@ export function CheckboxListField({
         }
         className="flex flex-col gap-2"
       >
-        <Fieldset.Legend className="flex items-baseline gap-1 font-medium">
+        <Fieldset.Legend className="font-medium">
           {label}
-          {required && (
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          )}
+          {required && <MarcaObrigatorio />}
         </Fieldset.Legend>
         {description && (
           <Field.Description className="text-muted-foreground -mt-1 text-[13px]">

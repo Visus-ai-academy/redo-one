@@ -6,7 +6,7 @@ import { type ReactNode, useId, useState } from 'react';
 import { cn } from '../../lib/cn';
 import { BuscaSelecao, type OpcaoBusca } from '../busca/BuscaSelecao';
 import { useFieldContext } from './context';
-import { FieldError } from './field-parts';
+import { FieldError, MarcaObrigatorio } from './field-parts';
 import { useCampo } from './use-campo';
 
 /**
@@ -53,12 +53,7 @@ export function EscolhidosField({
     >
       <label htmlFor={id} className="text-foreground font-medium">
         {label}
-        {required && (
-          <span aria-hidden className="text-destructive">
-            {' '}
-            *
-          </span>
-        )}
+        {required && <MarcaObrigatorio />}
       </label>
       <BuscaSelecao
         id={id}

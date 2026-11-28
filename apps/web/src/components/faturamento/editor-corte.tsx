@@ -26,6 +26,7 @@ import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { AbaComErro } from '../distribuicao/estados';
 import { Etiqueta } from '../etiqueta/Etiqueta';
+import { MarcaObrigatorio } from '../form/field-parts';
 import { useAppForm } from '../form/form';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
@@ -284,13 +285,9 @@ function Grupo({
 }) {
   return (
     <Fieldset.Root className="flex flex-col gap-3">
-      <Fieldset.Legend className="flex items-baseline gap-1 font-medium">
+      <Fieldset.Legend className="font-medium">
         {legenda}
-        {required && (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        )}
+        {required && <MarcaObrigatorio />}
       </Fieldset.Legend>
       {children}
     </Fieldset.Root>

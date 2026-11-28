@@ -37,6 +37,7 @@ import { Dialogo } from '../dialogo/Dialogo';
 import { AbaComErro } from '../distribuicao/estados';
 import { SeletorDeArquivo } from '../envio-arquivo/EnvioDeArquivo';
 import { Etiqueta } from '../etiqueta/Etiqueta';
+import { MarcaObrigatorio } from '../form/field-parts';
 import { useAppForm } from '../form/form';
 import { RequiredLegend } from '../form/RequiredLegend';
 import { Paginacao } from '../paginacao/Paginacao';
@@ -957,11 +958,9 @@ function ImportarPlanilha({
       }
     >
       <div className="flex flex-col gap-2">
-        <span className="flex items-baseline gap-1 font-medium">
+        <span className="font-medium">
           Planilha (CSV com ;)
-          <span aria-hidden className="text-destructive">
-            *
-          </span>
+          <MarcaObrigatorio />
         </span>
         <SeletorDeArquivo
           arquivo={arquivo}
