@@ -58,4 +58,20 @@ describe('FormRegrasFinanceiras', () => {
     );
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
+
+  it('antecedência com a unidade fixa no campo, lado a lado com o vencimento na mesma grade', () => {
+    render(<FormRegrasFinanceiras configuracao={configuracao} podeEditar onSalvar={vi.fn()} />);
+    const antecedencia = screen.getByRole('textbox', {
+      name: 'Antecedência para gerar os títulos (meses)',
+    });
+    expect(antecedencia).toHaveValue('3');
+    expect(screen.queryByText(/\(meses\)/, { ignore: '.sr-only' })).not.toBeInTheDocument();
+    expect(screen.getByText('meses')).toHaveAttribute('aria-hidden');
+    const vencimento = screen.getByRole('combobox', {
+      name: 'Vencimento em fim de semana ou feriado',
+    });
+    const linha = antecedencia.closest('.linha-de-campos');
+    expect(linha).not.toBeNull();
+    expect(vencimento.closest('.linha-de-campos')).toBe(linha);
+  });
 });

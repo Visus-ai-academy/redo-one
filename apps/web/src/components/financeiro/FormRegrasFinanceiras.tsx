@@ -10,6 +10,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { mostrarErrosDoServidor } from '../form/erros-do-servidor';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { RodapeDeAcoes } from '../painel/RodapeDeAcoes';
 
@@ -89,7 +90,7 @@ export function FormRegrasFinanceiras({
           value={resumoDasFaixas(iniciais.faixasInadimplencia) ?? iniciais.faixasInadimplencia}
         />
         <CampoSomenteLeitura
-          label="Gerar os títulos das recorrências com antecedência de"
+          label="Antecedência para gerar os títulos"
           value={`${configuracao.horizonteRecorrenciaMeses} meses`}
         />
         <CampoSomenteLeitura
@@ -128,17 +129,17 @@ export function FormRegrasFinanceiras({
         )}
       </form.AppField>
       <h2 className="mt-2 font-semibold">Contas recorrentes</h2>
-      <div className="flex flex-wrap gap-4">
+      <LinhaDeCampos>
         <form.AppField name="horizonteRecorrenciaMeses">
           {(field) => (
             <field.NumberField
-              label="Gerar os títulos com antecedência de (meses)"
+              label="Antecedência para gerar os títulos"
               required
               placeholder="3"
               min={1}
               max={24}
+              unidade="meses"
               description="Os títulos aparecem nas contas a pagar e a receber antes de vencer."
-              className="flex-[1_1_220px]"
             />
           )}
         </form.AppField>
@@ -150,11 +151,10 @@ export function FormRegrasFinanceiras({
               placeholder="Escolha"
               description="Padrão das recorrências; cada uma pode trocar. Feriados ainda não entram."
               opcoes={Object.entries(ROTULO_AJUSTE).map(([valor, rotulo]) => ({ valor, rotulo }))}
-              className="flex-[1_1_220px]"
             />
           )}
         </form.AppField>
-      </div>
+      </LinhaDeCampos>
       {configuracao.padrao && (
         <p className="text-muted-foreground text-[13px]">
           A empresa ainda usa o padrão. Salvar grava as regras dela.
