@@ -18,6 +18,7 @@ import { AbaComErro } from '../distribuicao/estados';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { mostrarErrosDoServidor } from '../form/erros-do-servidor';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { HistoricoCadastro } from '../historico-cadastro/HistoricoCadastro';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { CamposCarregando } from '../skeleton/CamposCarregando';
@@ -59,7 +60,7 @@ function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
   );
 }
 
-/** Dois ou três campos na mesma linha, que quebram no celular. */
+/** Banco: código, agência e o par conta + dígito, que fica sempre junto na mesma linha. */
 const Linha = ({ children }: { children: ReactNode }) => (
   <div className="flex flex-wrap gap-4 *:min-w-0">{children}</div>
 );
@@ -141,7 +142,7 @@ function Rodape({ dados, agora }: { dados: DadosFiscaisClienteDto; agora: Date }
 }
 
 function Leitura({ dados, agora }: { dados: DadosFiscaisClienteDto; agora: Date }) {
-  const campo = (label: string, value: string, className = 'flex-[1_1_200px]') => (
+  const campo = (label: string, value: string, className?: string) => (
     <CampoSomenteLeitura label={label} value={value} className={className} />
   );
   return (
@@ -168,33 +169,33 @@ function Leitura({ dados, agora }: { dados: DadosFiscaisClienteDto; agora: Date 
         )}
       </Grupo>
       <Grupo titulo="Endereço">
-        <Linha>
-          {campo('CEP', formatarCep(dados.cep), 'flex-[1_1_120px]')}
-          {campo('Logradouro', ou(dados.logradouro), 'flex-[3_1_220px]')}
-        </Linha>
-        <Linha>
-          {campo('Número', ou(dados.numero), 'flex-[1_1_100px]')}
+        <LinhaDeCampos className="@[356px]:grid-cols-[minmax(120px,1fr)_minmax(220px,3fr)]">
+          {campo('CEP', formatarCep(dados.cep))}
+          {campo('Logradouro', ou(dados.logradouro))}
+        </LinhaDeCampos>
+        <LinhaDeCampos>
+          {campo('Número', ou(dados.numero))}
           {campo('Complemento', ou(dados.complemento))}
           {campo('Bairro', ou(dados.bairro))}
-        </Linha>
-        <Linha>
-          {campo('Cidade', ou(dados.cidade), 'flex-[3_1_200px]')}
-          {campo('UF', ou(dados.uf), 'flex-[1_1_80px]')}
-        </Linha>
+        </LinhaDeCampos>
+        <LinhaDeCampos className="@[316px]:grid-cols-[minmax(200px,3fr)_minmax(100px,1fr)]">
+          {campo('Cidade', ou(dados.cidade))}
+          {campo('UF', ou(dados.uf))}
+        </LinhaDeCampos>
       </Grupo>
       <Grupo titulo="Contato">
-        <Linha>
+        <LinhaDeCampos>
           {campo('Nome do contato', ou(dados.contatoNome))}
           {campo('E-mail', ou(dados.email))}
           {campo('Telefone', telefoneParaLer(dados.telefone))}
-        </Linha>
+        </LinhaDeCampos>
       </Grupo>
       <Grupo titulo="Banco">
-        <Linha>
-          {campo('Código do banco', ou(dados.bancoCodigo), 'flex-[1_1_120px]')}
-          {campo('Agência', ou(dados.bancoAgencia), 'flex-[1_1_120px]')}
-          {campo('Conta', ou(dados.bancoConta), 'flex-[1_1_160px]')}
-        </Linha>
+        <LinhaDeCampos>
+          {campo('Código do banco', ou(dados.bancoCodigo))}
+          {campo('Agência', ou(dados.bancoAgencia))}
+          {campo('Conta', ou(dados.bancoConta))}
+        </LinhaDeCampos>
       </Grupo>
       <Rodape dados={dados} agora={agora} />
     </div>
@@ -353,7 +354,7 @@ function FormDados({
         <p className="text-muted-foreground -mt-2 text-[13px]">
           Opcional. Começou a preencher, CEP, logradouro, cidade e UF passam a ser obrigatórios.
         </p>
-        <Linha>
+        <LinhaDeCampos className="@[356px]:grid-cols-[minmax(120px,1fr)_minmax(220px,3fr)]">
           <form.AppField name="cep">
             {(field) => (
               <field.TextField
@@ -365,7 +366,6 @@ function FormDados({
                   cepNoFormato(dados.cep) ? undefined : 'Veio do dashboards-one fora do formato.'
                 }
                 required={exigeEndereco}
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
@@ -375,48 +375,28 @@ function FormDados({
                 label="Logradouro"
                 placeholder="Ex.: Av. Paulista"
                 required={exigeEndereco}
-                className="flex-[3_1_220px]"
               />
             )}
           </form.AppField>
-        </Linha>
-        <Linha>
+        </LinhaDeCampos>
+        <LinhaDeCampos>
           <form.AppField name="numero">
-            {(field) => (
-              <field.TextField
-                label="Número"
-                placeholder="Ex.: 1000"
-                className="flex-[1_1_100px]"
-              />
-            )}
+            {(field) => <field.TextField label="Número" placeholder="Ex.: 1000" />}
           </form.AppField>
           <form.AppField name="complemento">
-            {(field) => (
-              <field.TextField
-                label="Complemento"
-                placeholder="Ex.: Sala 12"
-                className="flex-[1_1_160px]"
-              />
-            )}
+            {(field) => <field.TextField label="Complemento" placeholder="Ex.: Sala 12" />}
           </form.AppField>
           <form.AppField name="bairro">
-            {(field) => (
-              <field.TextField
-                label="Bairro"
-                placeholder="Ex.: Centro"
-                className="flex-[1_1_160px]"
-              />
-            )}
+            {(field) => <field.TextField label="Bairro" placeholder="Ex.: Centro" />}
           </form.AppField>
-        </Linha>
-        <Linha>
+        </LinhaDeCampos>
+        <LinhaDeCampos className="@[316px]:grid-cols-[minmax(200px,3fr)_minmax(100px,1fr)]">
           <form.AppField name="cidade">
             {(field) => (
               <field.TextField
                 label="Cidade"
                 placeholder="Ex.: São Paulo"
                 required={exigeEndereco}
-                className="flex-[3_1_200px]"
               />
             )}
           </form.AppField>
@@ -427,23 +407,16 @@ function FormDados({
                 placeholder="Escolha"
                 opcoes={opcoesUf}
                 required={exigeEndereco}
-                className="flex-[1_1_100px]"
               />
             )}
           </form.AppField>
-        </Linha>
+        </LinhaDeCampos>
       </Grupo>
 
       <Grupo titulo="Contato">
-        <Linha>
+        <LinhaDeCampos>
           <form.AppField name="contatoNome">
-            {(field) => (
-              <field.TextField
-                label="Nome do contato"
-                placeholder="Ex.: Maria Souza"
-                className="flex-[1_1_200px]"
-              />
-            )}
+            {(field) => <field.TextField label="Nome do contato" placeholder="Ex.: Maria Souza" />}
           </form.AppField>
           <form.AppField name="email">
             {(field) => (
@@ -451,7 +424,6 @@ function FormDados({
                 label="E-mail"
                 placeholder="financeiro@empresa.com.br"
                 type="email"
-                className="flex-[1_1_200px]"
               />
             )}
           </form.AppField>
@@ -469,11 +441,10 @@ function FormDados({
                     ? undefined
                     : 'Veio do dashboards-one com mais de um contato. Reescreva como deve ficar: o que estiver aqui ao salvar é o que fica.'
                 }
-                className="flex-[1_1_160px]"
               />
             )}
           </form.AppField>
-        </Linha>
+        </LinhaDeCampos>
       </Grupo>
 
       <Grupo titulo="Banco">

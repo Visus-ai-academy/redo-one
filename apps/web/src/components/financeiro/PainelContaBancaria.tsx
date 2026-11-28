@@ -16,6 +16,7 @@ import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { DateField } from '../form/DateField';
 import { mostrarErrosDoServidor } from '../form/erros-do-servidor';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 
@@ -236,7 +237,7 @@ export function PainelContaBancaria({
         className="flex flex-col gap-4 p-4"
       >
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           <form.AppField name="contratadoId">
             {(field) => (
               <field.SelectField
@@ -249,7 +250,6 @@ export function PainelContaBancaria({
                     ? 'Nenhuma empresa usa o financeiro do One: marque isso no contratado.'
                     : undefined
                 }
-                className="flex-[1_1_180px]"
               />
             )}
           </form.AppField>
@@ -260,11 +260,10 @@ export function PainelContaBancaria({
                 required
                 placeholder="Escolha o tipo"
                 opcoes={TIPOS}
-                className="flex-[1_1_160px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="apelido">
           {(field) => (
             <field.TextField
@@ -275,7 +274,7 @@ export function PainelContaBancaria({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[336px]:grid-cols-[minmax(64px,1fr)_minmax(80px,1fr)_minmax(96px,2fr)_minmax(48px,1fr)]">
           <form.AppField name="bancoCodigo">
             {(field) => (
               <field.TextField
@@ -283,7 +282,6 @@ export function PainelContaBancaria({
                 placeholder="341"
                 inputMode="numeric"
                 autoComplete="off"
-                className="flex-[1_1_64px]"
               />
             )}
           </form.AppField>
@@ -294,7 +292,6 @@ export function PainelContaBancaria({
                 placeholder="0123"
                 inputMode="numeric"
                 autoComplete="off"
-                className="flex-[1_1_80px]"
               />
             )}
           </form.AppField>
@@ -305,21 +302,13 @@ export function PainelContaBancaria({
                 placeholder="45678"
                 inputMode="numeric"
                 autoComplete="off"
-                className="flex-[2_1_96px]"
               />
             )}
           </form.AppField>
           <form.AppField name="digito">
-            {(field) => (
-              <field.TextField
-                label="Dígito"
-                placeholder="9"
-                autoComplete="off"
-                className="flex-[1_1_48px]"
-              />
-            )}
+            {(field) => <field.TextField label="Dígito" placeholder="9" autoComplete="off" />}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="padraoRecebimento">
           {(field) => (
             <field.InterruptorField
@@ -400,7 +389,7 @@ export function PainelContaBancaria({
         <fieldset className="mt-2 flex flex-col gap-4">
           <legend className="mb-2 font-semibold">Saldo</legend>
           {integracao === 'nenhuma' ? (
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos>
               <form.AppField name="saldoInicial">
                 {(field) => (
                   <field.TextField
@@ -409,7 +398,6 @@ export function PainelContaBancaria({
                     inputMode="decimal"
                     spellCheck={false}
                     description="Vírgula nos centavos. Pode ser negativo."
-                    className="flex-[1_1_160px]"
                   />
                 )}
               </form.AppField>
@@ -418,18 +406,17 @@ export function PainelContaBancaria({
                   <DateField
                     label="Saldo em"
                     description="O One conta o saldo a partir deste dia."
-                    className="flex-[1_1_160px]"
                   />
                 )}
               </form.AppField>
-              <p className="text-muted-foreground basis-full text-[13px]">
+              <p className="text-muted-foreground col-span-full text-[13px]">
                 {!conta
                   ? 'Sem saldo inicial, o One começa do zero no dia em que a conta é criada.'
                   : conta.saldoInicialCentavos == null
                     ? `Sem saldo inicial, o One conta do zero em ${formatarDia(conta.saldoContadoDesde)}, dia em que a conta foi criada.`
                     : 'Sem saldo inicial, o One conta do zero desde o dia em que a conta foi criada.'}
               </p>
-            </div>
+            </LinhaDeCampos>
           ) : (
             <p className="text-muted-foreground text-[13px]">O saldo virá do extrato do Itaú.</p>
           )}
@@ -452,21 +439,19 @@ export function PainelContaBancaria({
 /** O saldo que o One conta pelas baixas e, com o Itaú, o do extrato (quando a integração existir). */
 function SaldosDaConta({ conta }: { conta: ContaBancariaDetalheDto }) {
   return (
-    <div className="flex flex-wrap gap-4">
+    <LinhaDeCampos>
       <CampoSomenteLeitura
         label="Saldo pelo One"
         value={moeda(conta.saldoPeloOneCentavos / 100)}
         description={`Saldo inicial mais as baixas desde ${formatarDia(conta.saldoContadoDesde)}.`}
-        className="flex-[1_1_160px]"
       />
       {conta.integracao === 'itau' && (
         <CampoSomenteLeitura
           label="Saldo no banco"
           value="—"
           description="Aguardando a integração com o Itaú."
-          className="flex-[1_1_160px]"
         />
       )}
-    </div>
+    </LinhaDeCampos>
   );
 }

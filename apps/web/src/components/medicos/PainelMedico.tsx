@@ -16,6 +16,7 @@ import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
@@ -295,15 +296,10 @@ function FormCadastro({
           />
         )}
       </form.AppField>
-      <div className="flex flex-wrap gap-4">
+      <LinhaDeCampos className="@[336px]:grid-cols-2">
         <form.AppField name="crm">
           {(field) => (
-            <field.TextField
-              label="CRM"
-              placeholder="Ex.: 123456-SP"
-              autoComplete="off"
-              className="flex-[1_1_160px]"
-            />
+            <field.TextField label="CRM" placeholder="Ex.: 123456-SP" autoComplete="off" />
           )}
         </form.AppField>
         <form.AppField name="idMobilemed">
@@ -313,12 +309,11 @@ function FormCadastro({
               placeholder="Ex.: 1234"
               min={1}
               description="A conta principal: o robô entrega os exames nela."
-              className="flex-[1_1_160px]"
             />
           )}
         </form.AppField>
-      </div>
-      <div className="flex flex-wrap gap-4">
+      </LinhaDeCampos>
+      <LinhaDeCampos>
         <form.AppField name="email">
           {(field) => (
             <field.TextField
@@ -327,7 +322,6 @@ function FormCadastro({
               placeholder="nome@clinica.com.br"
               autoComplete="off"
               description="Sem e-mail, o médico não recebe o demonstrativo."
-              className="flex-[1_1_200px]"
             />
           )}
         </form.AppField>
@@ -339,12 +333,11 @@ function FormCadastro({
               type="tel"
               placeholder="(11) 98888-7777"
               autoComplete="off"
-              className="flex-[1_1_160px]"
             />
           )}
         </form.AppField>
-      </div>
-      <div className="flex flex-wrap gap-4">
+      </LinhaDeCampos>
+      <LinhaDeCampos className="@[336px]:grid-cols-2">
         <form.AppField name="nivelId">
           {(field) => (
             <field.SelectField
@@ -355,7 +348,6 @@ function FormCadastro({
                 { valor: '', rotulo: 'Sem nível' },
                 ...opcoesNivel.map((n) => ({ valor: n.id, rotulo: n.nome })),
               ]}
-              className="flex-[1_1_160px]"
             />
           )}
         </form.AppField>
@@ -368,11 +360,10 @@ function FormCadastro({
                 { valor: '', rotulo: 'Não informada' },
                 ...Object.entries(FUNCOES).map(([valor, rotulo]) => ({ valor, rotulo })),
               ]}
-              className="flex-[1_1_160px]"
             />
           )}
         </form.AppField>
-      </div>
+      </LinhaDeCampos>
       <form.AppField name="dataInicioVinculo">
         {() => (
           <DateField label="Início do vínculo" description="Quando começou a prestar serviço." />
@@ -721,16 +712,10 @@ function OutrasContas({
           }}
           className="flex flex-col gap-3"
         >
-          <div className="flex flex-wrap gap-4">
+          <LinhaDeCampos className="@[356px]:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <form.AppField name="idMobilemed">
               {(field) => (
-                <field.NumberField
-                  label="ID da conta"
-                  placeholder="Ex.: 19053"
-                  min={1}
-                  required
-                  className="flex-[1_1_140px]"
-                />
+                <field.NumberField label="ID da conta" placeholder="Ex.: 19053" min={1} required />
               )}
             </form.AppField>
             <form.AppField name="observacao">
@@ -739,11 +724,10 @@ function OutrasContas({
                   label="Observação"
                   placeholder="Ex.: login do plantão"
                   autoComplete="off"
-                  className="flex-[2_1_200px]"
                 />
               )}
             </form.AppField>
-          </div>
+          </LinhaDeCampos>
           <form.AppForm>
             <div className="flex flex-wrap items-center gap-3">
               <form.SubmitButton pendingLabel="Adicionando…" variant="secondary">

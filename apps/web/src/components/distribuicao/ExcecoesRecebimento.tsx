@@ -14,6 +14,7 @@ import { Etiqueta } from '../etiqueta/Etiqueta';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useAlterado } from '../painel/fechamento';
@@ -229,7 +230,7 @@ function PainelExcecao({
             />
           )}
         </form.AppField>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <LinhaDeCampos>
           {comecou ? (
             <CampoSomenteLeitura
               label="Primeiro dia"
@@ -255,7 +256,7 @@ function PainelExcecao({
               </form.AppField>
             )}
           </form.Subscribe>
-        </div>
+        </LinhaDeCampos>
         <form.AppForm>
           <RodapePainel
             rotuloCriar="Criar exceção"

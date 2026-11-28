@@ -8,6 +8,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import {
@@ -167,10 +168,10 @@ export function PainelTipoAusencia({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           <form.AppField name="cor">
             {(field) => (
-              <field.CorField description="Cor da ausência na escala." className="basis-full" />
+              <field.CorField description="Cor da ausência na escala." className="col-span-full" />
             )}
           </form.AppField>
           <form.AppField name="ordem">
@@ -182,11 +183,10 @@ export function PainelTipoAusencia({
                 max={9999}
                 required
                 description="Menor aparece primeiro."
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="ativo">
           {(field) => (
             <field.InterruptorField

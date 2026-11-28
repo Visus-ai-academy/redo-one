@@ -9,6 +9,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import {
@@ -191,7 +192,7 @@ export function PainelTurno({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[256px]:grid-cols-2">
           <form.AppField name="horarioInicio">
             {(field) => (
               <field.TextField
@@ -200,7 +201,6 @@ export function PainelTurno({
                 mascara="hora"
                 autoComplete="off"
                 required
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
@@ -212,11 +212,10 @@ export function PainelTurno({
                 mascara="hora"
                 autoComplete="off"
                 required
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <p className="text-muted-foreground -mt-2 text-[13px]">
           Fim antes do início: o turno passa da meia-noite; igual ao início: 24 h.
         </p>
@@ -227,26 +226,18 @@ export function PainelTurno({
           <p className="text-muted-foreground -mt-1 text-[13px]">
             Onde os médicos do turno laudam. Vêm do catálogo de classificação dos exames.
           </p>
-          <div className="flex flex-wrap gap-4">
+          <LinhaDeCampos>
             <form.AppField name="especialidadeIds">
               {(field) => (
-                <field.SelecaoMultiplaField
-                  label="Especialidades"
-                  opcoes={opcoesEspecialidades}
-                  className="flex-[1_1_180px]"
-                />
+                <field.SelecaoMultiplaField label="Especialidades" opcoes={opcoesEspecialidades} />
               )}
             </form.AppField>
             <form.AppField name="modalidadeIds">
               {(field) => (
-                <field.SelecaoMultiplaField
-                  label="Modalidades"
-                  opcoes={opcoesModalidades}
-                  className="flex-[1_1_180px]"
-                />
+                <field.SelecaoMultiplaField label="Modalidades" opcoes={opcoesModalidades} />
               )}
             </form.AppField>
-          </div>
+          </LinhaDeCampos>
         </Fieldset.Root>
         <form.AppField name="descricao">
           {(field) => (
@@ -257,12 +248,12 @@ export function PainelTurno({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           <form.AppField name="cor">
             {(field) => (
               <field.CorField
                 description="Cor do turno na grade da escala."
-                className="basis-full"
+                className="col-span-full"
               />
             )}
           </form.AppField>
@@ -275,11 +266,10 @@ export function PainelTurno({
                 max={9999}
                 required
                 description="Menor aparece primeiro."
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="ativo">
           {(field) => (
             <field.InterruptorField

@@ -126,7 +126,8 @@ export function PainelExameForaPadrao({
           <form.AppField name="valores">
             {(field) => (
               <field.NumberField
-                label="Vale (unidades)"
+                label="Vale"
+                unidade="unidades"
                 placeholder="Ex.: 2"
                 min={0}
                 max={999}

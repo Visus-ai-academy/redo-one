@@ -23,6 +23,7 @@ import { mesAno } from '../faturamento/competencias';
 import { HistoricoVigencias } from '../faturamento/historico-vigencias';
 import { opcoesAPartirDe } from '../faturamento/precos';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { Painel } from '../painel/Painel';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -290,14 +291,13 @@ function NovaVersao({
           escolhida. Os campos vêm com os valores da versão vigente.
         </p>
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           <form.AppField name="tarifaPeerReview">
             {(f) => (
               <f.MoedaField
                 label="Tarifa do Peer Review"
                 required
                 description="Por avaliação; sugerida ao lançar o adicional."
-                className="flex-[1_1_160px]"
               />
             )}
           </form.AppField>
@@ -307,11 +307,10 @@ function NovaVersao({
                 label="Tarifa do Plantão"
                 required
                 description="Por plantão; sugerida ao lançar o adicional."
-                className="flex-[1_1_160px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="contratadoRegistroId">
           {(f) => (
             <f.SelectField
@@ -335,7 +334,7 @@ function NovaVersao({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           <form.AppField name="diaVencimento">
             {(f) => (
               <f.NumberField
@@ -345,7 +344,6 @@ function NovaVersao({
                 min={1}
                 max={28}
                 description="Do mês seguinte à competência (1 a 28)."
-                className="flex-[1_1_160px]"
               />
             )}
           </form.AppField>
@@ -358,19 +356,17 @@ function NovaVersao({
                 min={1}
                 max={28}
                 description="Depois dele, a competência não se antecipa (1 a 28)."
-                className="flex-[1_1_160px]"
               />
             )}
           </form.AppField>
-        </div>
-        <div className="flex flex-wrap gap-4">
+        </LinhaDeCampos>
+        <LinhaDeCampos>
           <form.AppField name="categoriaFinanceiraSocio">
             {(f) => (
               <f.TextField
                 label="Categoria financeira do sócio"
                 required
                 placeholder="Ex.: Radiologistas/Sócios"
-                className="flex-[1_1_200px]"
               />
             )}
           </form.AppField>
@@ -380,11 +376,10 @@ function NovaVersao({
                 label="Categoria financeira do não sócio"
                 required
                 placeholder="Ex.: Radiologistas/Terceiros"
-                className="flex-[1_1_200px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.Field name="faixas">
           {(field) => {
             const faixas = field.state.value;

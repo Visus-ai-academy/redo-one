@@ -32,6 +32,7 @@ import { CampoSomenteLeitura } from '../../form/CampoSomenteLeitura';
 import { DateField } from '../../form/DateField';
 import { mostrarErrosDoServidor } from '../../form/erros-do-servidor';
 import { useAppForm } from '../../form/form';
+import { LinhaDeCampos } from '../../form/LinhaDeCampos';
 import { useAlterado } from '../../painel/fechamento';
 import { PainelLateral } from '../../painel/PainelLateral';
 import { TEXTOS_DO_TIPO } from './api';
@@ -451,22 +452,18 @@ export function PainelLancarTitulo({
           )}
         </form.AppField>
         {!repetir && (
-          <div className="flex flex-wrap gap-4">
+          <LinhaDeCampos>
             <form.AppField name="emissaoEm">
-              {() => <DateField label="Emissão" required className="flex-[1_1_150px]" />}
+              {() => <DateField label="Emissão" required />}
             </form.AppField>
             <form.AppField name="vencimento">
-              {() => <DateField label="Vencimento" required className="flex-[1_1_150px]" />}
+              {() => <DateField label="Vencimento" required />}
             </form.AppField>
-          </div>
+          </LinhaDeCampos>
         )}
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           {travado && titulo ? (
-            <CampoSomenteLeitura
-              label="Valor (R$)"
-              value={textoDeCentavos(titulo.valorCentavos)}
-              className="flex-[1_1_150px]"
-            />
+            <CampoSomenteLeitura label="Valor (R$)" value={textoDeCentavos(titulo.valorCentavos)} />
           ) : (
             <form.AppField name="valorCentavos">
               {(field) => (
@@ -476,7 +473,6 @@ export function PainelLancarTitulo({
                   placeholder="Ex.: 3.800,00"
                   inputMode="decimal"
                   spellCheck={false}
-                  className="flex-[1_1_150px]"
                 />
               )}
             </form.AppField>
@@ -489,13 +485,12 @@ export function PainelLancarTitulo({
                   placeholder="11/2026"
                   inputMode="numeric"
                   autoComplete="off"
-                  className="flex-[1_1_120px]"
                 />
               )}
             </form.AppField>
           )}
-        </div>
-        <div className="flex flex-wrap gap-4">
+        </LinhaDeCampos>
+        <LinhaDeCampos>
           {!repetir && (
             <form.AppField name="documento">
               {(field) => (
@@ -503,7 +498,6 @@ export function PainelLancarTitulo({
                   label="Documento"
                   placeholder="Nº da NF ou do boleto"
                   autoComplete="off"
-                  className="flex-[1_1_150px]"
                 />
               )}
             </form.AppField>
@@ -515,11 +509,10 @@ export function PainelLancarTitulo({
                 placeholder={empresa ? 'Nenhuma' : 'Escolha a empresa antes'}
                 disabled={!empresa}
                 opcoes={opcoesConta}
-                className="flex-[1_1_150px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         {recorrencia && !titulo && !rec && (
           <form.AppField name="repetir">
             {(field) => (
@@ -541,12 +534,11 @@ export function PainelLancarTitulo({
                 encerre esta e crie outra.
               </p>
             )}
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos>
               {travaAgenda && rec ? (
                 <CampoSomenteLeitura
                   label="Frequência"
                   value={ROTULO_FREQUENCIA[rec.frequencia] ?? rec.frequencia}
-                  className="flex-[1_1_150px]"
                 />
               ) : (
                 <form.AppField name="frequencia">
@@ -556,7 +548,6 @@ export function PainelLancarTitulo({
                       required
                       placeholder="Escolha"
                       opcoes={ROTULOS_FREQUENCIA}
-                      className="flex-[1_1_150px]"
                     />
                   )}
                 </form.AppField>
@@ -570,18 +561,16 @@ export function PainelLancarTitulo({
                       placeholder="5"
                       min={1}
                       max={31}
-                      className="flex-[1_1_120px]"
                     />
                   )}
                 </form.AppField>
               )}
-            </div>
-            <div className="flex flex-wrap gap-4">
+            </LinhaDeCampos>
+            <LinhaDeCampos>
               {travaAgenda && rec ? (
                 <CampoSomenteLeitura
                   label="Primeiro vencimento"
                   value={formatarDia(rec.primeiroVencimento)}
-                  className="flex-[1_1_150px]"
                 />
               ) : (
                 <form.AppField
@@ -595,9 +584,7 @@ export function PainelLancarTitulo({
                     },
                   }}
                 >
-                  {() => (
-                    <DateField label="Primeiro vencimento" required className="flex-[1_1_150px]" />
-                  )}
+                  {() => <DateField label="Primeiro vencimento" required />}
                 </form.AppField>
               )}
               <form.AppField name="ajusteDiaNaoUtil">
@@ -617,11 +604,10 @@ export function PainelLancarTitulo({
                         rotulo,
                       })),
                     ]}
-                    className="flex-[1_1_200px]"
                   />
                 )}
               </form.AppField>
-            </div>
+            </LinhaDeCampos>
             <p className="text-muted-foreground -mt-2 text-[13px]">
               Dia que não existe no mês (31 em fevereiro) vira o último dia. Feriados ainda não
               entram: só sábado e domingo.

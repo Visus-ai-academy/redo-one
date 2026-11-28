@@ -15,6 +15,7 @@ import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { TODAS } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import {
@@ -311,26 +312,16 @@ export function PainelAlocacao({
                     )}
                   </form.AppField>
                 )}
-                <div className="flex flex-wrap gap-4">
+                <LinhaDeCampos className="@[316px]:grid-cols-2">
                   <form.AppField name="dataInicio">
-                    {() => (
-                      <DateField
-                        label={comFim ? 'Início' : 'A partir de'}
-                        required
-                        className="flex-[1_1_150px]"
-                      />
-                    )}
+                    {() => <DateField label={comFim ? 'Início' : 'A partir de'} required />}
                   </form.AppField>
                   <form.AppField name="dataFim">
                     {() =>
-                      comFim ? (
-                        <DateField label="Fim" required className="flex-[1_1_150px]" />
-                      ) : (
-                        <DateField label="Até" className="flex-[1_1_150px]" />
-                      )
+                      comFim ? <DateField label="Fim" required /> : <DateField label="Até" />
                     }
                   </form.AppField>
-                </div>
+                </LinhaDeCampos>
                 <form.AppField name="diasSemana">
                   {(field) => (
                     <field.CaixasField label="Dias da semana" opcoes={OPCOES_DIAS} required />
@@ -348,7 +339,7 @@ export function PainelAlocacao({
                     )}
                   </form.AppField>
                 )}
-                <div className="flex flex-wrap gap-4">
+                <LinhaDeCampos className="@[256px]:grid-cols-2">
                   <form.AppField name="horarioInicio">
                     {(field) => (
                       <field.TextField
@@ -356,7 +347,6 @@ export function PainelAlocacao({
                         placeholder={turno?.horarioInicio ?? '07:00'}
                         mascara="hora"
                         autoComplete="off"
-                        className="flex-[1_1_120px]"
                       />
                     )}
                   </form.AppField>
@@ -367,11 +357,10 @@ export function PainelAlocacao({
                         placeholder={turno?.horarioFim ?? '13:00'}
                         mascara="hora"
                         autoComplete="off"
-                        className="flex-[1_1_120px]"
                       />
                     )}
                   </form.AppField>
-                </div>
+                </LinhaDeCampos>
                 <p className="text-muted-foreground -mt-2 text-[13px]">
                   Vazio: o horário do turno. Precisa caber no turno.
                 </p>
@@ -387,7 +376,8 @@ export function PainelAlocacao({
                       />
                     ) : (
                       <field.NumberField
-                        label="Produtividade (registros por turno)"
+                        label="Produtividade"
+                        unidade="registros por turno"
                         placeholder="Ex.: 40"
                         min={0}
                         description="Vazio: não informada (diferente de zero)."

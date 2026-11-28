@@ -8,6 +8,7 @@ import { RodapePainel } from '../catalogo/rodape-painel';
 import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { OPCOES_DIAS } from './alocacao-form';
@@ -86,7 +87,7 @@ export function PainelCobertura({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[316px]:grid-cols-2">
           <form.AppField name="dataInicio">
             {() => (
               <DateField
@@ -94,7 +95,6 @@ export function PainelCobertura({
                 min={titular.dataInicio}
                 max={titular.dataFim ?? undefined}
                 required
-                className="flex-[1_1_150px]"
               />
             )}
           </form.AppField>
@@ -105,11 +105,10 @@ export function PainelCobertura({
                 min={titular.dataInicio}
                 max={titular.dataFim ?? undefined}
                 required
-                className="flex-[1_1_150px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <p className="text-muted-foreground -mt-2 text-[13px]">
           Dentro da escala do titular ({vigencia}).
         </p>
@@ -123,7 +122,7 @@ export function PainelCobertura({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[256px]:grid-cols-2">
           <form.AppField name="horarioInicio">
             {(field) => (
               <field.TextField
@@ -131,7 +130,6 @@ export function PainelCobertura({
                 placeholder={titular.horarioInicio}
                 mascara="hora"
                 autoComplete="off"
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
@@ -142,15 +140,15 @@ export function PainelCobertura({
                 placeholder={titular.horarioFim}
                 mascara="hora"
                 autoComplete="off"
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="produtividade">
           {(field) => (
             <field.NumberField
-              label="Produtividade (registros por turno)"
+              label="Produtividade"
+              unidade="registros por turno"
               placeholder="Ex.: 40"
               min={0}
               description="Vem a do titular. Vazio: não informada."

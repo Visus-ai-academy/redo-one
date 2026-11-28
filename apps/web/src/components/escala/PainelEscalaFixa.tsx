@@ -19,6 +19,7 @@ import { FALHA_AO_SALVAR } from '../escala-config/comum';
 import { controlClassName } from '../form/control-class';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { PainelLateral } from '../painel/PainelLateral';
 import { Skeleton } from '../skeleton/Skeleton';
 import { dataCurta, NOMES_DIAS, NOMES_DIAS_LONGOS } from './calendario';
@@ -179,7 +180,7 @@ export function PainelEscalaFixa({
         className="flex flex-col gap-4 p-4"
       >
         {erro && <Alerta tom="erro">{erro}</Alerta>}
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[346px]:grid-cols-2">
           <form.AppField
             name="frenteId"
             listeners={{
@@ -197,14 +198,13 @@ export function PainelEscalaFixa({
                 placeholder="Escolha a frente"
                 opcoes={opcoesFrentes}
                 required
-                className="flex-[1_1_180px]"
               />
             )}
           </form.AppField>
           <form.AppField name="aPartirDe">
-            {() => <DateField label="A partir de" required className="flex-[1_1_150px]" />}
+            {() => <DateField label="A partir de" required />}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
 
         {!frenteId ? (
           <p className="text-muted-foreground bg-muted rounded-md p-3 text-[13px]">

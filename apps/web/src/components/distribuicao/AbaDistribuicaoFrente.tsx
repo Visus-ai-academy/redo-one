@@ -16,6 +16,7 @@ import { buttonClassName } from '../button/button-class';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 import { Select } from '../select/Select';
 import { useAvisos } from '../toast/use-avisos';
@@ -295,7 +296,7 @@ function FormRegras({
                                 />
                               )}
                             </form.AppField>
-                            <div className="flex flex-wrap gap-4">
+                            <LinhaDeCampos>
                               <form.AppField name={`horariosSemRobo[${i}].inicio`}>
                                 {(field) => (
                                   <field.TextField
@@ -304,7 +305,6 @@ function FormRegras({
                                     mascara="hora"
                                     autoComplete="off"
                                     required
-                                    className="flex-[1_1_100px]"
                                   />
                                 )}
                               </form.AppField>
@@ -316,11 +316,10 @@ function FormRegras({
                                     mascara="hora"
                                     autoComplete="off"
                                     required
-                                    className="flex-[1_1_100px]"
                                   />
                                 )}
                               </form.AppField>
-                            </div>
+                            </LinhaDeCampos>
                           </ItemDaLista>
                         ))}
                       </ul>
@@ -393,7 +392,7 @@ function FormRegras({
                                   />
                                 }
                               >
-                                <div className="flex flex-wrap gap-4">
+                                <LinhaDeCampos className="@[272px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                                   <form.AppField name={`proporcoes[${i}].modalidadeId`}>
                                     {(field) => (
                                       <field.SelectField
@@ -405,7 +404,6 @@ function FormRegras({
                                           rotulo: m.nome,
                                           cor: m.cor,
                                         }))}
-                                        className="flex-[2_1_140px]"
                                       />
                                     )}
                                   </form.AppField>
@@ -418,11 +416,10 @@ function FormRegras({
                                         min={1}
                                         max={100}
                                         required
-                                        className="flex-[1_1_100px]"
                                       />
                                     )}
                                   </form.AppField>
-                                </div>
+                                </LinhaDeCampos>
                               </ItemDaLista>
                             ))}
                           </ul>
@@ -493,14 +490,13 @@ function FormRegras({
                           />
                         )}
                       </form.AppField>
-                      <div className="flex flex-wrap gap-4">
+                      <LinhaDeCampos>
                         <form.AppField name={`segmentos[${i}].teto`}>
                           {(field) => (
                             <field.NumberField
                               label="Teto por rodada"
                               placeholder="Sem teto"
                               min={1}
-                              className="flex-[1_1_120px]"
                             />
                           )}
                         </form.AppField>
@@ -511,11 +507,10 @@ function FormRegras({
                               placeholder="Sem piso"
                               description="Recebe logo depois das urgências."
                               min={1}
-                              className="flex-[1_1_120px]"
                             />
                           )}
                         </form.AppField>
-                      </div>
+                      </LinhaDeCampos>
                       <form.AppField name={`segmentos[${i}].reduzido`}>
                         {(field) => (
                           <field.InterruptorField
@@ -525,7 +520,7 @@ function FormRegras({
                         )}
                       </form.AppField>
                       {segmento.reduzido && (
-                        <div className="flex flex-wrap gap-4">
+                        <LinhaDeCampos>
                           <form.AppField name={`segmentos[${i}].produtividadeAte`}>
                             {(field) => (
                               <field.NumberField
@@ -533,7 +528,6 @@ function FormRegras({
                                 placeholder="Ex.: 20"
                                 min={1}
                                 required
-                                className="flex-[1_1_120px]"
                               />
                             )}
                           </form.AppField>
@@ -544,11 +538,10 @@ function FormRegras({
                                 placeholder="Ex.: 4"
                                 min={0}
                                 required
-                                className="flex-[1_1_120px]"
                               />
                             )}
                           </form.AppField>
-                        </div>
+                        </LinhaDeCampos>
                       )}
                       <form.AppField name={`segmentos[${i}].pacoteAParte`}>
                         {(field) => (
@@ -609,7 +602,7 @@ function FormRegras({
                           />
                         }
                       >
-                        <div className="flex flex-wrap gap-4">
+                        <LinhaDeCampos>
                           <form.AppField name={`mistura[${i}].especialidadeId`}>
                             {(field) => (
                               <field.SelectField
@@ -624,7 +617,6 @@ function FormRegras({
                                     cor: e.cor,
                                   })),
                                 ]}
-                                className="flex-[1_1_140px]"
                               />
                             )}
                           </form.AppField>
@@ -637,11 +629,10 @@ function FormRegras({
                                   { valor: '', rotulo: 'Geral (sem segmento)' },
                                   ...subs.map((s) => ({ valor: s.id, rotulo: s.nome })),
                                 ]}
-                                className="flex-[1_1_140px]"
                               />
                             )}
                           </form.AppField>
-                        </div>
+                        </LinhaDeCampos>
                       </ItemDaLista>
                     );
                   })}

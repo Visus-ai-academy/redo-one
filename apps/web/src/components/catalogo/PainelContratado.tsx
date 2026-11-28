@@ -10,6 +10,7 @@ import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { UFS } from '../faturamento/dados-faturamento';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { RodapePainel, RodapeSomenteLeitura } from './rodape-painel';
@@ -213,25 +214,15 @@ export function PainelContratado({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[400px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <form.AppField name="cidade">
             {(field) => (
-              <field.TextField
-                label="Cidade"
-                placeholder="Ex.: São Paulo"
-                autoComplete="off"
-                className="flex-[2_1_160px]"
-              />
+              <field.TextField label="Cidade" placeholder="Ex.: São Paulo" autoComplete="off" />
             )}
           </form.AppField>
           <form.AppField name="uf">
             {(field) => (
-              <field.SelectField
-                label="UF"
-                placeholder="UF"
-                opcoes={opcoesDeUf(iniciais.uf)}
-                className="flex-[1_1_88px]"
-              />
+              <field.SelectField label="UF" placeholder="UF" opcoes={opcoesDeUf(iniciais.uf)} />
             )}
           </form.AppField>
           <form.AppField name="cep">
@@ -241,11 +232,10 @@ export function PainelContratado({
                 mascara="cep"
                 placeholder="00000-000"
                 autoComplete="off"
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="contratadoRepasseId">
           {(field) => (
             <field.SelectField

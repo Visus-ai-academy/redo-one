@@ -10,6 +10,7 @@ import { RodapePainel, RodapeSomenteLeitura } from '../catalogo/rodape-painel';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 
@@ -141,10 +142,10 @@ export function PainelEquipe({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos>
           <form.AppField name="cor">
             {(field) => (
-              <field.CorField description="Cor do selo nas telas." className="basis-full" />
+              <field.CorField description="Cor do selo nas telas." className="col-span-full" />
             )}
           </form.AppField>
           <form.AppField name="ordem">
@@ -155,11 +156,10 @@ export function PainelEquipe({
                 min={0}
                 max={9999}
                 description="Menor aparece primeiro."
-                className="flex-[1_1_120px]"
               />
             )}
           </form.AppField>
-        </div>
+        </LinhaDeCampos>
         <form.AppField name="ativo">
           {(field) => (
             <field.InterruptorField

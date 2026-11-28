@@ -7,6 +7,7 @@ import { Alerta } from '../alerta/Alerta';
 import { useErroDoPainel } from '../catalogo/use-erro-do-painel';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado, useInformarAlterado } from '../painel/fechamento';
 
 type FormPagamentoProps = {
@@ -146,7 +147,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
           />
         )}
       </form.AppField>
-      <div className="flex flex-wrap gap-4">
+      <LinhaDeCampos className="@[356px]:grid-cols-2">
         <form.AppField name="cpf">
           {(field) => (
             <field.TextField
@@ -154,7 +155,6 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
               mascara="cpf"
               placeholder="000.000.000-00"
               autoComplete="off"
-              className="flex-[1_1_160px]"
             />
           )}
         </form.AppField>
@@ -166,11 +166,10 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
               placeholder="00.000.000/0000-00"
               autoComplete="off"
               description="Quando recebe como pessoa jurídica."
-              className="flex-[1_1_180px]"
             />
           )}
         </form.AppField>
-      </div>
+      </LinhaDeCampos>
       <form.AppField name="razaoSocial">
         {(field) => (
           <field.TextField
@@ -183,7 +182,7 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
       <form.AppField name="optanteSimples">
         {(field) => <field.SegmentadaField label="Optante do Simples" opcoes={SIM_NAO} />}
       </form.AppField>
-      <div className="flex flex-wrap gap-4">
+      <LinhaDeCampos>
         <form.AppField name="tipoChavePix">
           {(field) => (
             <field.SelectField
@@ -193,7 +192,6 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
                 { valor: '', rotulo: 'Sem chave' },
                 ...Object.entries(TIPOS_PIX).map(([valor, rotulo]) => ({ valor, rotulo })),
               ]}
-              className="flex-[1_1_160px]"
             />
           )}
         </form.AppField>
@@ -208,13 +206,12 @@ export function FormPagamento({ dados, podeEditar, onSalvar }: FormPagamentoProp
                   mascara={MASCARA_PIX[tipo]}
                   placeholder="Onde o médico recebe"
                   autoComplete="off"
-                  className="flex-[1_1_200px]"
                 />
               )}
             </form.AppField>
           )}
         </form.Subscribe>
-      </div>
+      </LinhaDeCampos>
       <form.AppForm>
         <form.SubmitButton pendingLabel="Salvando…" className="self-end">
           Salvar pagamento

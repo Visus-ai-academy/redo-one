@@ -14,6 +14,7 @@ import type { OpcaoBusca } from '../busca/BuscaSelecao';
 import { RodapePainel } from '../catalogo/rodape-painel';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 
@@ -313,7 +314,7 @@ export function PainelLancarAdicional({
         {(v.tipo === 'plantao' || v.tipo === 'peer_review') && (
           <>
             {v.tipo === 'peer_review' && (
-              <div className="flex flex-wrap gap-4">
+              <LinhaDeCampos>
                 <form.AppField name="referenciaDesde">
                   {(field) => (
                     <field.SelectField
@@ -321,7 +322,6 @@ export function PainelLancarAdicional({
                       required
                       placeholder="Escolha o mês"
                       opcoes={mesesAvaliados(v.competencia)}
-                      className="flex-[1_1_160px]"
                     />
                   )}
                 </form.AppField>
@@ -332,30 +332,21 @@ export function PainelLancarAdicional({
                       required
                       placeholder="Escolha o mês"
                       opcoes={mesesAvaliados(v.competencia)}
-                      className="flex-[1_1_160px]"
                     />
                   )}
                 </form.AppField>
-              </div>
+              </LinhaDeCampos>
             )}
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos>
               <form.AppField name="quantidade">
                 {(field) => (
-                  <field.NumberField
-                    label="Quantidade"
-                    required
-                    placeholder="Ex.: 3"
-                    min={1}
-                    className="flex-[1_1_120px]"
-                  />
+                  <field.NumberField label="Quantidade" required placeholder="Ex.: 3" min={1} />
                 )}
               </form.AppField>
               <form.AppField name="unitario">
-                {(field) => (
-                  <field.MoedaField label="Valor unitário" required className="flex-[1_1_160px]" />
-                )}
+                {(field) => <field.MoedaField label="Valor unitário" required />}
               </form.AppField>
-            </div>
+            </LinhaDeCampos>
             <p className="text-muted-foreground text-[13px] tabular-nums" aria-live="polite">
               Total:{' '}
               <strong className="text-foreground font-semibold">

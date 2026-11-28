@@ -16,6 +16,7 @@ import { UFS } from '../faturamento/dados-faturamento';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { mostrarErrosDoServidor } from '../form/erros-do-servidor';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -382,14 +383,13 @@ export function PainelFornecedor({
               )}
             </form.AppField>
           )}
-          <div className="flex flex-wrap gap-4">
+          <LinhaDeCampos className="@[366px]:grid-cols-[minmax(200px,2fr)_minmax(150px,1fr)]">
             <form.AppField name="email">
               {(field) => (
                 <field.TextField
                   label="E-mail"
                   type="email"
                   placeholder="financeiro@empresa.com.br"
-                  className="flex-[2_1_200px]"
                 />
               )}
             </form.AppField>
@@ -400,11 +400,10 @@ export function PainelFornecedor({
                   mascara="telefone"
                   placeholder="(11) 3456-7890"
                   autoComplete="off"
-                  className="flex-[1_1_150px]"
                 />
               )}
             </form.AppField>
-          </div>
+          </LinhaDeCampos>
           <form.AppField name="categoriaPadraoId">
             {(field) => (
               <field.SelectField
@@ -418,7 +417,7 @@ export function PainelFornecedor({
 
           <fieldset className="mt-2 flex flex-col gap-4">
             <legend className="mb-2 font-semibold">Endereço</legend>
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos className="@[336px]:grid-cols-[minmax(120px,1fr)_minmax(200px,3fr)]">
               <form.AppField name="cep">
                 {(field) => (
                   <field.TextField
@@ -426,7 +425,6 @@ export function PainelFornecedor({
                     mascara="cep"
                     placeholder="00000-000"
                     autoComplete="off"
-                    className="flex-[1_1_120px]"
                   />
                 )}
               </form.AppField>
@@ -436,52 +434,31 @@ export function PainelFornecedor({
                     label="Logradouro"
                     placeholder="Ex.: Av. Paulista"
                     autoComplete="off"
-                    className="flex-[3_1_200px]"
                   />
                 )}
               </form.AppField>
-            </div>
-            <div className="flex flex-wrap gap-4">
+            </LinhaDeCampos>
+            <LinhaDeCampos className="@[236px]:grid-cols-[minmax(80px,1fr)_minmax(140px,2fr)]">
               <form.AppField name="numero">
                 {(field) => (
-                  <field.TextField
-                    label="Número"
-                    placeholder="1000"
-                    autoComplete="off"
-                    className="flex-[1_1_80px]"
-                  />
+                  <field.TextField label="Número" placeholder="1000" autoComplete="off" />
                 )}
               </form.AppField>
               <form.AppField name="complemento">
                 {(field) => (
-                  <field.TextField
-                    label="Complemento"
-                    placeholder="Sala 12"
-                    autoComplete="off"
-                    className="flex-[2_1_140px]"
-                  />
+                  <field.TextField label="Complemento" placeholder="Sala 12" autoComplete="off" />
                 )}
               </form.AppField>
-            </div>
-            <div className="flex flex-wrap gap-4">
+            </LinhaDeCampos>
+            <LinhaDeCampos className="@[400px]:grid-cols-[minmax(140px,2fr)_minmax(140px,2fr)_minmax(88px,1fr)]">
               <form.AppField name="bairro">
                 {(field) => (
-                  <field.TextField
-                    label="Bairro"
-                    placeholder="Bela Vista"
-                    autoComplete="off"
-                    className="flex-[2_1_140px]"
-                  />
+                  <field.TextField label="Bairro" placeholder="Bela Vista" autoComplete="off" />
                 )}
               </form.AppField>
               <form.AppField name="cidade">
                 {(field) => (
-                  <field.TextField
-                    label="Cidade"
-                    placeholder="São Paulo"
-                    autoComplete="off"
-                    className="flex-[2_1_140px]"
-                  />
+                  <field.TextField label="Cidade" placeholder="São Paulo" autoComplete="off" />
                 )}
               </form.AppField>
               <form.AppField name="uf">
@@ -493,11 +470,10 @@ export function PainelFornecedor({
                       { valor: '', rotulo: '—' },
                       ...UFS.map((uf) => ({ valor: uf, rotulo: uf })),
                     ]}
-                    className="flex-[1_1_88px]"
                   />
                 )}
               </form.AppField>
-            </div>
+            </LinhaDeCampos>
             <p className="text-muted-foreground text-[13px]">
               Opcional. Começado, pede CEP, logradouro, cidade e UF.
             </p>
@@ -505,7 +481,7 @@ export function PainelFornecedor({
 
           <fieldset className="mt-2 flex flex-col gap-4">
             <legend className="mb-2 font-semibold">Pagamento</legend>
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos className="@[346px]:grid-cols-[minmax(150px,1fr)_minmax(180px,2fr)]">
               <form.AppField
                 name="tipoChavePix"
                 listeners={{
@@ -518,7 +494,6 @@ export function PainelFornecedor({
                     label="Tipo de chave Pix"
                     placeholder="Sem Pix"
                     opcoes={[{ valor: '', rotulo: 'Sem Pix' }, ...TIPOS_PIX]}
-                    className="flex-[1_1_150px]"
                   />
                 )}
               </form.AppField>
@@ -534,11 +509,10 @@ export function PainelFornecedor({
                     }
                     autoComplete="off"
                     spellCheck={false}
-                    className="flex-[2_1_180px]"
                   />
                 )}
               </form.AppField>
-            </div>
+            </LinhaDeCampos>
             <div className="flex flex-wrap gap-4">
               <form.AppField name="bancoCodigo">
                 {(field) => (

@@ -36,6 +36,7 @@ import { mesAno } from '../faturamento/competencias';
 import { opcoesAPartirDe, textoDaVigencia } from '../faturamento/precos';
 import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { Paginacao } from '../paginacao/Paginacao';
 import { usePaginaLocal } from '../paginacao/use-pagina-local';
 import { useAlterado } from '../painel/fechamento';
@@ -452,7 +453,7 @@ function PainelReclassificacao({
         )}
         {erro && <Alerta tom="erro">{erro}</Alerta>}
         <fieldset disabled={!edita} className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-4">
+          <LinhaDeCampos className="@[336px]:grid-cols-[120px_minmax(0,1fr)]">
             <form.AppField name="ordem">
               {(f) => (
                 <f.NumberField
@@ -461,21 +462,15 @@ function PainelReclassificacao({
                   placeholder="1"
                   min={0}
                   description="Menor vale primeiro."
-                  className="flex-[0_1_120px]"
                 />
               )}
             </form.AppField>
             <form.AppField name="descricao">
               {(f) => (
-                <f.TextField
-                  label="Descrição"
-                  required
-                  placeholder="Ex.: Coluna do neurologista"
-                  className="flex-[1_1_200px]"
-                />
+                <f.TextField label="Descrição" required placeholder="Ex.: Coluna do neurologista" />
               )}
             </form.AppField>
-          </div>
+          </LinhaDeCampos>
           <h3 className="font-medium">Quando o laudo é de</h3>
           <form.AppField name="modalidades">
             {(f) => (
@@ -522,7 +517,7 @@ function PainelReclassificacao({
             )}
           </form.AppField>
           <h3 className="font-medium">Vira</h3>
-          <div className="flex flex-wrap gap-4">
+          <LinhaDeCampos>
             <form.AppField name="especialidadeDestino">
               {(f) => (
                 <f.SelectField
@@ -530,7 +525,6 @@ function PainelReclassificacao({
                   required
                   placeholder="Escolha"
                   opcoes={destino(opcoes.especialidades, 'Mantém a do laudo')}
-                  className="flex-[1_1_200px]"
                 />
               )}
             </form.AppField>
@@ -541,11 +535,10 @@ function PainelReclassificacao({
                   required
                   placeholder="Escolha"
                   opcoes={destino(opcoes.categorias, 'Mantém a do laudo')}
-                  className="flex-[1_1_200px]"
                 />
               )}
             </form.AppField>
-          </div>
+          </LinhaDeCampos>
           <CampoAPartirDe form={form} dados={dados} />
         </fieldset>
         {edita ? (

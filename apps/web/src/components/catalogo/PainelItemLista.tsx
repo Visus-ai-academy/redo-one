@@ -5,6 +5,7 @@ import { Alerta } from '../alerta/Alerta';
 import { mensagemDaApi } from '../alerta/mensagem-da-api';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { type AbaExtra, AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
@@ -204,10 +205,10 @@ export function PainelItemLista({
           )}
         </form.AppField>
       )}
-      <div className="flex flex-wrap gap-4">
+      <LinhaDeCampos>
         <form.AppField name="cor">
           {(field) => (
-            <field.CorField description="Cor do selo nas telas." className="basis-full" />
+            <field.CorField description="Cor do selo nas telas." className="col-span-full" />
           )}
         </form.AppField>
         <form.AppField name="ordem">
@@ -219,11 +220,10 @@ export function PainelItemLista({
               max={9999}
               required
               description="Menor aparece primeiro."
-              className="flex-[1_1_120px]"
             />
           )}
         </form.AppField>
-      </div>
+      </LinhaDeCampos>
       {variante === 'prioridade' && (
         <form.AppField name="urgente">
           {(field) => (

@@ -11,6 +11,7 @@ import { BotaoComCarregamento } from '../button/BotaoComCarregamento';
 import { buttonClassName } from '../button/button-class';
 import { CampoSomenteLeitura } from '../form/CampoSomenteLeitura';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { AbasComHistorico } from '../historico-cadastro/AbasComHistorico';
 import { BotaoCancelar } from '../painel/BotaoCancelar';
 import { useAlterado } from '../painel/fechamento';
@@ -161,15 +162,10 @@ export function PainelExame({
                 />
               )}
             </form.AppField>
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos className="@[296px]:grid-cols-2">
               <form.AppField name="codigo">
                 {(field) => (
-                  <field.TextField
-                    label="Código"
-                    placeholder="Ex.: 40808041"
-                    autoComplete="off"
-                    className="flex-[1_1_140px]"
-                  />
+                  <field.TextField label="Código" placeholder="Ex.: 40808041" autoComplete="off" />
                 )}
               </form.AppField>
               <form.AppField name="modalidadeId">
@@ -178,11 +174,10 @@ export function PainelExame({
                     label="Modalidade"
                     placeholder="Sem modalidade"
                     opcoes={[nenhum('Sem modalidade'), ...comoOpcoesComCor(opcoes.modalidades)]}
-                    className="flex-[1_1_140px]"
                   />
                 )}
               </form.AppField>
-            </div>
+            </LinhaDeCampos>
             <form.AppField name="descricao">
               {(field) => (
                 <field.TextField
@@ -234,14 +229,13 @@ export function PainelExame({
                 </>
               )}
             </form.Subscribe>
-            <div className="flex flex-wrap gap-4">
+            <LinhaDeCampos className="@[296px]:grid-cols-2">
               <form.AppField name="categoriaId">
                 {(field) => (
                   <field.SelectField
                     label="Categoria"
                     placeholder="Sem categoria"
                     opcoes={[nenhum('Sem categoria'), ...comoOpcoes(opcoes.categoriasExame)]}
-                    className="flex-[1_1_140px]"
                   />
                 )}
               </form.AppField>
@@ -251,11 +245,10 @@ export function PainelExame({
                     label="Prioridade"
                     placeholder="Sem prioridade"
                     opcoes={[nenhum('Sem prioridade'), ...comoOpcoes(opcoes.prioridades)]}
-                    className="flex-[1_1_140px]"
                   />
                 )}
               </form.AppField>
-            </div>
+            </LinhaDeCampos>
             <form.AppField name="exigeRevisaoManual">
               {(field) => (
                 <field.InterruptorField

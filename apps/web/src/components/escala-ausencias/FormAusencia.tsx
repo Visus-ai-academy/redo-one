@@ -12,6 +12,7 @@ import type { OpcaoMarcar } from '../form/CheckboxListField';
 import { caixasDaApi, caixasParaApi, esquemaCaixasComTodas, TODAS } from '../form/caixas-todas';
 import { DateField } from '../form/DateField';
 import { useAppForm } from '../form/form';
+import { LinhaDeCampos } from '../form/LinhaDeCampos';
 import { useAlterado } from '../painel/fechamento';
 import { PainelLateral } from '../painel/PainelLateral';
 import { DIAS_DA_SEMANA } from './ausencias';
@@ -200,14 +201,12 @@ export function FormAusencia({
             />
           )}
         </form.AppField>
-        <div className="flex flex-wrap gap-4">
+        <LinhaDeCampos className="@[316px]:grid-cols-2">
           <form.AppField name="dataInicio">
-            {() => <DateField label="Início" required className="flex-[1_1_150px]" />}
+            {() => <DateField label="Início" required />}
           </form.AppField>
-          <form.AppField name="dataFim">
-            {() => <DateField label="Fim" required className="flex-[1_1_150px]" />}
-          </form.AppField>
-        </div>
+          <form.AppField name="dataFim">{() => <DateField label="Fim" required />}</form.AppField>
+        </LinhaDeCampos>
         {frentes.length > 0 && (
           <form.AppField name="frenteIds">
             {(field) => (
